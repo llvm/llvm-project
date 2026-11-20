@@ -2771,7 +2771,6 @@ static ManagedStatic<CommandLineCommonOptions> CommonOptions;
 static void initCommonOptions() {
   *CommonOptions;
   initDebugCounterOptions();
-  initFPFoldOptions();
   initGraphWriterOptions();
   initSignalsOptions();
   initStatisticOptions();

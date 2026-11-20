@@ -59,28 +59,23 @@ LLVM_ABI std::optional<APFloat> getFPValue(std::optional<FPFoldResult> Res);
 /// Returns std::nullopt when the modes do not specify one result. In
 /// particular, this occurs when a dynamic denormal mode could change an input
 /// or output value.
-/// OverrideDefaultFlushingMode bypasses -const-folding-denormal-mode and uses
-/// Denorms unchanged, for operations with explicit denormal semantics.
 LLVM_ABI std::optional<FPFoldResult>
-tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms,
-          bool OverrideDefaultFlushingMode = false);
+tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args, DenormalMode Denorms);
 
 /// Try to evaluate a floating-point operation with an explicit rounding mode.
 /// Dynamic is evaluated using RN, but folding is declined if evaluation is
 /// inexact. Fixed-rounding operations still select their own rounding mode.
-/// OverrideDefaultFlushingMode has the same meaning as in tryFoldFP.
-LLVM_ABI std::optional<FPFoldResult>
-tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
-                DenormalMode Denorms, bool OverrideDefaultFlushingMode = false);
+LLVM_ABI std::optional<FPFoldResult> tryFoldFPWithRM(FPOp Opcode,
+                                                     ArrayRef<APFloat> Args,
+                                                     RoundingMode RM,
+                                                     DenormalMode Denorms);
 
 /// Try to compare two floating-point values.
 ///
 /// A comparison has no rounding or output-denormal mode, but is not foldable
 /// when dynamic input-denormal handling could alter an operand.
-/// OverrideDefaultFlushingMode has the same meaning as in tryFoldFP.
 LLVM_ABI std::optional<APFloat::cmpResult>
-tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms,
-            bool OverrideDefaultFlushingMode = false);
+tryFoldFCmp(const APFloat &LHS, const APFloat &RHS, DenormalMode Denorms);
 
 } // namespace llvm
 
