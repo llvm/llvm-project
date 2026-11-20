@@ -2344,6 +2344,26 @@ $fix[[  $diag[[#include "unused.h"]]
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
 }
 
+TEST(DiagnosticsTest, IncludeCleanerWithMissingHeader) {
+  // Behind a header that is not found, no include seems unused.
+  Annotations Test(R"cpp(
+    #include $[["not-found.h"]] // error-ok
+    #include "unused.h"
+  )cpp");
+  TestTU TU = TestTU::withCode(Test.code());
+  TU.AdditionalFiles["unused.h"] = R"cpp(
+    #pragma once
+    void unused() {}
+  )cpp";
+  Config Cfg;
+  Cfg.Diagnostics.UnusedIncludes = Config::IncludesPolicy::Strict;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ElementsAre(::testing::AllOf(
+                  Diag(Test.range(), "'not-found.h' file not found"),
+                  diagName("pp_file_not_found"))));
+}
+
 TEST(DiagnosticsTest, FixItFromHeader) {
   llvm::StringLiteral Header(R"cpp(
     void foo(int *);
