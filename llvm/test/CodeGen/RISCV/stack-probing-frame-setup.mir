@@ -286,6 +286,7 @@ body:             |
   ; RV32I-NEXT: {{  $}}
   ; RV32I-NEXT:   $x2 = frame-setup ADDI $x2, -16
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 16
+  ; RV32I-NEXT:   frame-setup SW $x0, $x2, 0
   ; RV32I-NEXT:   frame-setup SW killed $x1, $x2, 12 :: (store (s32) into %stack.1)
   ; RV32I-NEXT:   frame-setup SW killed $x8, $x2, 8 :: (store (s32) into %stack.2)
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION offset $x1, -4

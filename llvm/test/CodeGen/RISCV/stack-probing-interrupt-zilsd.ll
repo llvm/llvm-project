@@ -7,6 +7,7 @@ define void @interrupt_zilsd() nounwind "interrupt"="machine" "probe-stack"="inl
 ; CHECK-LABEL: interrupt_zilsd:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    addi sp, sp, -2032
+; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    sw t0, 2028(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sw t1, 2024(sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    sd a0, 2016(sp) # 8-byte Folded Spill
@@ -20,6 +21,7 @@ define void @interrupt_zilsd() nounwind "interrupt"="machine" "probe-stack"="inl
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    addi sp, sp, -2048
 ; CHECK-NEXT:    addi sp, sp, -1744
+; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    lui a0, 12
 ; CHECK-NEXT:    addi a1, sp, 16
 ; CHECK-NEXT:    add a0, a1, a0

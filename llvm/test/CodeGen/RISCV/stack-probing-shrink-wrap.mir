@@ -49,6 +49,7 @@ body:             |
   ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $x2
   ; RV64I-NEXT:   $x2 = frame-setup ADDI $x2, -1712
   ; RV64I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 100016
+  ; RV64I-NEXT:   frame-setup SD $x0, $x2, 0
   ; RV64I-NEXT:   $x5 = ADDI $x0, 1
   ; RV64I-NEXT:   $x6 = ADDI $x0, 2
   ; RV64I-NEXT:   $x7 = ADDI $x0, 3
@@ -100,6 +101,7 @@ body:             |
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_register $x2
   ; RV32I-NEXT:   $x2 = frame-setup ADDI $x2, -1712
   ; RV32I-NEXT:   frame-setup CFI_INSTRUCTION def_cfa_offset 100016
+  ; RV32I-NEXT:   frame-setup SW $x0, $x2, 0
   ; RV32I-NEXT:   $x5 = ADDI $x0, 1
   ; RV32I-NEXT:   $x6 = ADDI $x0, 2
   ; RV32I-NEXT:   $x7 = ADDI $x0, 3

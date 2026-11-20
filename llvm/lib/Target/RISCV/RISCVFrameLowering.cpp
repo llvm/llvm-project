@@ -1308,7 +1308,8 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
         // Realigning may move SP down by more than the probe size. Compute
         // that amount (SP modulo MaxAlignment) and allocate it with the
         // probing loop used for the RVV area.
-        Register AmountReg = findScratchNonCalleeSaveRegister(&MBB, RISCV::X6);
+        Register AmountReg =
+            findScratchNonCalleeSaveRegister(&MBB, MBBI, RISCV::X6);
         assert(AmountReg.isValid() &&
                "No available scratch register for stack probing");
         unsigned ShiftAmount = STI.getXLen() - Log2(MaxAlignment);

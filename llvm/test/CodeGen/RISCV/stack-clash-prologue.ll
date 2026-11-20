@@ -643,12 +643,12 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    slli t1, sp, 49
 ; RV64I-NEXT:    srli t1, t1, 49
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sub t1, t1, t2
-; RV64I-NEXT:    bge t1, t2, .LBB11_3
+; RV64I-NEXT:    sub t1, t1, t0
+; RV64I-NEXT:    bge t1, t0, .LBB11_3
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    sub sp, sp, t1
 ; RV64I-NEXT:    sd zero, 0(sp)
@@ -711,12 +711,12 @@ define void @f11(i32 %vla_size, i64 %i) #0 {
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    slli t1, sp, 17
 ; RV32I-NEXT:    srli t1, t1, 17
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB11_3: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sub t1, t1, t2
-; RV32I-NEXT:    bge t1, t2, .LBB11_3
+; RV32I-NEXT:    sub t1, t1, t0
+; RV32I-NEXT:    bge t1, t0, .LBB11_3
 ; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    sub sp, sp, t1
 ; RV32I-NEXT:    sw zero, 0(sp)
@@ -987,12 +987,12 @@ define void @f16() #0 {
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    slli t1, sp, 51
 ; RV64I-NEXT:    srli t1, t1, 51
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sub t1, t1, t2
-; RV64I-NEXT:    bge t1, t2, .LBB16_1
+; RV64I-NEXT:    sub t1, t1, t0
+; RV64I-NEXT:    bge t1, t0, .LBB16_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    sub sp, sp, t1
 ; RV64I-NEXT:    sd zero, 0(sp)
@@ -1032,12 +1032,12 @@ define void @f16() #0 {
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    slli t1, sp, 19
 ; RV32I-NEXT:    srli t1, t1, 19
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB16_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sub t1, t1, t2
-; RV32I-NEXT:    bge t1, t2, .LBB16_1
+; RV32I-NEXT:    sub t1, t1, t0
+; RV32I-NEXT:    bge t1, t0, .LBB16_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    sub sp, sp, t1
 ; RV32I-NEXT:    sw zero, 0(sp)
@@ -1072,9 +1072,9 @@ define void @f17() #0 {
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    lui a0, 31
 ; RV64I-NEXT:    sub t1, sp, a0
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    bne sp, t1, .LBB17_1
 ; RV64I-NEXT:  # %bb.2:
@@ -1083,12 +1083,12 @@ define void @f17() #0 {
 ; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    slli t1, sp, 48
 ; RV64I-NEXT:    srli t1, t1, 48
-; RV64I-NEXT:    lui t2, 1
+; RV64I-NEXT:    lui t0, 1
 ; RV64I-NEXT:  .LBB17_3: # =>This Inner Loop Header: Depth=1
-; RV64I-NEXT:    sub sp, sp, t2
+; RV64I-NEXT:    sub sp, sp, t0
 ; RV64I-NEXT:    sd zero, 0(sp)
-; RV64I-NEXT:    sub t1, t1, t2
-; RV64I-NEXT:    bge t1, t2, .LBB17_3
+; RV64I-NEXT:    sub t1, t1, t0
+; RV64I-NEXT:    bge t1, t0, .LBB17_3
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    sub sp, sp, t1
 ; RV64I-NEXT:    sd zero, 0(sp)
@@ -1118,9 +1118,9 @@ define void @f17() #0 {
 ; RV32I-NEXT:    .cfi_def_cfa s0, 0
 ; RV32I-NEXT:    lui a0, 31
 ; RV32I-NEXT:    sub t1, sp, a0
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB17_1: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    bne sp, t1, .LBB17_1
 ; RV32I-NEXT:  # %bb.2:
@@ -1129,12 +1129,12 @@ define void @f17() #0 {
 ; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    slli t1, sp, 16
 ; RV32I-NEXT:    srli t1, t1, 16
-; RV32I-NEXT:    lui t2, 1
+; RV32I-NEXT:    lui t0, 1
 ; RV32I-NEXT:  .LBB17_3: # =>This Inner Loop Header: Depth=1
-; RV32I-NEXT:    sub sp, sp, t2
+; RV32I-NEXT:    sub sp, sp, t0
 ; RV32I-NEXT:    sw zero, 0(sp)
-; RV32I-NEXT:    sub t1, t1, t2
-; RV32I-NEXT:    bge t1, t2, .LBB17_3
+; RV32I-NEXT:    sub t1, t1, t0
+; RV32I-NEXT:    bge t1, t0, .LBB17_3
 ; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    sub sp, sp, t1
 ; RV32I-NEXT:    sw zero, 0(sp)

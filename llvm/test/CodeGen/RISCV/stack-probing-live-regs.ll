@@ -12,6 +12,7 @@ define void @nest(ptr nest %chain) nounwind "probe-stack"="inline-asm" {
 ; RV64I-LABEL: nest:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a0, 23
 ; RV64I-NEXT:    sub t1, sp, a0
@@ -23,6 +24,7 @@ define void @nest(ptr nest %chain) nounwind "probe-stack"="inline-asm" {
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -1728
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi a1, sp, 8
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    call use
@@ -36,6 +38,7 @@ define void @nest(ptr nest %chain) nounwind "probe-stack"="inline-asm" {
 ; RV32I-LABEL: nest:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, 23
 ; RV32I-NEXT:    sub t1, sp, a0
@@ -47,6 +50,7 @@ define void @nest(ptr nest %chain) nounwind "probe-stack"="inline-asm" {
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -1728
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi a1, sp, 12
 ; RV32I-NEXT:    mv a0, t2
 ; RV32I-NEXT:    call use
@@ -65,6 +69,7 @@ define void @nest_rvv(ptr nest %chain) nounwind "probe-stack"="inline-asm" "targ
 ; RV64I-LABEL: nest_rvv:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -32
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    csrr t1, vlenb
 ; RV64I-NEXT:    slli t1, t1, 1
@@ -76,6 +81,7 @@ define void @nest_rvv(ptr nest %chain) nounwind "probe-stack"="inline-asm" "targ
 ; RV64I-NEXT:    bge t1, t0, .LBB1_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    sub sp, sp, t1
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    call use
@@ -89,6 +95,7 @@ define void @nest_rvv(ptr nest %chain) nounwind "probe-stack"="inline-asm" "targ
 ; RV32I-LABEL: nest_rvv:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -32
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    csrr t1, vlenb
 ; RV32I-NEXT:    slli t1, t1, 1
@@ -100,6 +107,7 @@ define void @nest_rvv(ptr nest %chain) nounwind "probe-stack"="inline-asm" "targ
 ; RV32I-NEXT:    bge t1, t0, .LBB1_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    sub sp, sp, t1
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    mv a0, t2
 ; RV32I-NEXT:    call use
@@ -119,6 +127,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV64I-LABEL: nest_fixed_and_rvv:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd s0, 2016(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    lui a0, 23
@@ -131,6 +140,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -1744
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    csrr t1, vlenb
 ; RV64I-NEXT:    slli t1, t1, 1
 ; RV64I-NEXT:    lui t0, 1
@@ -141,6 +151,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV64I-NEXT:    bge t1, t0, .LBB2_3
 ; RV64I-NEXT:  # %bb.4:
 ; RV64I-NEXT:    sub sp, sp, t1
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    mv s0, t2
 ; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    mv a0, t2
@@ -164,6 +175,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV32I-LABEL: nest_fixed_and_rvv:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw s0, 2024(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    lui a0, 23
@@ -176,6 +188,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -1744
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    csrr t1, vlenb
 ; RV32I-NEXT:    slli t1, t1, 1
 ; RV32I-NEXT:    lui t0, 1
@@ -186,6 +199,7 @@ define void @nest_fixed_and_rvv(ptr nest %chain) nounwind "probe-stack"="inline-
 ; RV32I-NEXT:    bge t1, t0, .LBB2_3
 ; RV32I-NEXT:  # %bb.4:
 ; RV32I-NEXT:    sub sp, sp, t1
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    mv s0, t2
 ; RV32I-NEXT:    addi a1, sp, 8
 ; RV32I-NEXT:    mv a0, t2
@@ -217,6 +231,7 @@ define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe
 ; RV64I-LABEL: nest_preserve_most:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd ra, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd a0, 2016(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd a1, 2008(sp) # 8-byte Folded Spill
@@ -239,6 +254,7 @@ define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -1824
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    mv a0, t2
 ; RV64I-NEXT:    call use
@@ -263,6 +279,7 @@ define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe
 ; RV32I-LABEL: nest_preserve_most:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw ra, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw a0, 2024(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw a1, 2020(sp) # 4-byte Folded Spill
@@ -285,6 +302,7 @@ define preserve_mostcc void @nest_preserve_most(ptr nest %chain) nounwind "probe
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -1776
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    mv a0, t2
 ; RV32I-NEXT:    call use
@@ -314,6 +332,7 @@ define void @interrupt() nounwind "interrupt"="machine" "probe-stack"="inline-as
 ; RV64I-LABEL: interrupt:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -2032
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd t0, 2024(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd t1, 2016(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd a0, 2008(sp) # 8-byte Folded Spill
@@ -328,6 +347,7 @@ define void @interrupt() nounwind "interrupt"="machine" "probe-stack"="inline-as
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    addi sp, sp, -2048
 ; RV64I-NEXT:    addi sp, sp, -1760
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    lui a0, 12
 ; RV64I-NEXT:    addi a1, sp, 16
 ; RV64I-NEXT:    add a0, a1, a0
@@ -346,6 +366,7 @@ define void @interrupt() nounwind "interrupt"="machine" "probe-stack"="inline-as
 ; RV32I-LABEL: interrupt:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -2032
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw t0, 2028(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw t1, 2024(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw a0, 2020(sp) # 4-byte Folded Spill
@@ -360,6 +381,7 @@ define void @interrupt() nounwind "interrupt"="machine" "probe-stack"="inline-as
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    addi sp, sp, -2048
 ; RV32I-NEXT:    addi sp, sp, -1744
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    lui a0, 12
 ; RV32I-NEXT:    addi a1, sp, 16
 ; RV32I-NEXT:    add a0, a1, a0
@@ -384,6 +406,7 @@ define void @interrupt_rvv() nounwind "interrupt"="machine" "probe-stack"="inlin
 ; RV64I-LABEL: interrupt_rvv:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    addi sp, sp, -64
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    sd t0, 56(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd t1, 48(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sd a0, 40(sp) # 8-byte Folded Spill
@@ -397,6 +420,7 @@ define void @interrupt_rvv() nounwind "interrupt"="machine" "probe-stack"="inlin
 ; RV64I-NEXT:    bge t1, t0, .LBB5_1
 ; RV64I-NEXT:  # %bb.2:
 ; RV64I-NEXT:    sub sp, sp, t1
+; RV64I-NEXT:    sd zero, 0(sp)
 ; RV64I-NEXT:    csrr a0, vlenb
 ; RV64I-NEXT:    slli a0, a0, 1
 ; RV64I-NEXT:    add a0, sp, a0
@@ -423,6 +447,7 @@ define void @interrupt_rvv() nounwind "interrupt"="machine" "probe-stack"="inlin
 ; RV32I-LABEL: interrupt_rvv:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    addi sp, sp, -48
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    sw t0, 44(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw t1, 40(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sw a0, 36(sp) # 4-byte Folded Spill
@@ -436,6 +461,7 @@ define void @interrupt_rvv() nounwind "interrupt"="machine" "probe-stack"="inlin
 ; RV32I-NEXT:    bge t1, t0, .LBB5_1
 ; RV32I-NEXT:  # %bb.2:
 ; RV32I-NEXT:    sub sp, sp, t1
+; RV32I-NEXT:    sw zero, 0(sp)
 ; RV32I-NEXT:    csrr a0, vlenb
 ; RV32I-NEXT:    slli a0, a0, 1
 ; RV32I-NEXT:    add a0, sp, a0
