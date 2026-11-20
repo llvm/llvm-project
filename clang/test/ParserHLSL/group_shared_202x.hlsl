@@ -21,9 +21,8 @@ void foo() {
 
 extern groupshared float f;
 const float cf = f;
-// expected-error@#func{{'auto' return without trailing return type; deduced return types are a C++14 extension}}
-auto func() { // #func
-  return f; // expected-warning{{implicit conversion turns floating-point number into integer: 'float' to 'int'}}
+auto func() {
+  return f;
 }
 
 void other() {

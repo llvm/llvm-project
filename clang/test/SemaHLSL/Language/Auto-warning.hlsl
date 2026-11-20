@@ -16,6 +16,11 @@ auto foo(float A) -> float {
   return A;
 }
 
+// expected-warning@+1{{'auto' type specifier is an HLSL 202x extension}}
+auto deduced_return(float A) {
+  return A;
+}
+
 void bar(float A) {
 // expected-warning@+1{{'auto' type specifier is an HLSL 202x extension}}
   auto C = A;

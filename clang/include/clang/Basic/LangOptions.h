@@ -828,6 +828,8 @@ public:
 
   bool allowArrayReturnTypes() const { return HLSL; }
 
+  bool hasDeducedReturnTypes() const { return CPlusPlus14 || HLSL; }
+
   /// Remap path prefix according to -fmacro-prefix-path option.
   void remapPathPrefix(SmallVectorImpl<char> &Path) const;
 
