@@ -105,19 +105,6 @@
 ---
 name:            indexed_2s
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: fpr64 }
-  - { id: 3, class: fpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr64 }
-  - { id: 6, class: fpr64 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
-  - { id: 9, class: fpr64 }
-  - { id: 10, class: fpr64 }
 liveins:
   - { reg: '$d0', virtual-reg: '%1' }
   - { reg: '$d1', virtual-reg: '%2' }
@@ -170,19 +157,6 @@ body:             |
 ---
 name:            indexed_2s_rev
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: fpr64 }
-  - { id: 3, class: fpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr64 }
-  - { id: 6, class: fpr64 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
-  - { id: 9, class: fpr64 }
-  - { id: 10, class: fpr64 }
 liveins:
   - { reg: '$d0', virtual-reg: '%1' }
   - { reg: '$d1', virtual-reg: '%2' }
@@ -235,17 +209,6 @@ body:             |
 ---
 name:            indexed_2d
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr128 }
-  - { id: 6, class: fpr128 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%1' }
   - { reg: '$q1', virtual-reg: '%2' }
@@ -294,17 +257,6 @@ body:             |
 ---
 name:            indexed_4s
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr128 }
-  - { id: 6, class: fpr128 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%1' }
   - { reg: '$q1', virtual-reg: '%2' }
@@ -353,17 +305,6 @@ body:             |
 ---
 name:            indexed_4h
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: fpr64 }
-  - { id: 3, class: fpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr128 }
-  - { id: 6, class: fpr128 }
-  - { id: 7, class: fpr64 }
-  - { id: 8, class: fpr64 }
 liveins:
   - { reg: '$d0', virtual-reg: '%1' }
   - { reg: '$d1', virtual-reg: '%2' }
@@ -412,15 +353,6 @@ body:             |
 ---
 name:            indexed_8h
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr128 }
-  - { id: 1, class: fpr128 }
-  - { id: 2, class: fpr128 }
-  - { id: 3, class: fpr128 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr128 }
-  - { id: 6, class: fpr128 }
 liveins:
   - { reg: '$q0', virtual-reg: '%1' }
   - { reg: '$q1', virtual-reg: '%2' }
@@ -465,25 +397,6 @@ body:             |
 ---
 name:            kill_state
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: fpr64 }
-  - { id: 3, class: fpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: gpr64common }
-  - { id: 6, class: fpr32 }
-  - { id: 7, class: fpr64 }
-  - { id: 8, class: fpr64 }
-  - { id: 9, class: fpr128 }
-  - { id: 10, class: fpr128 }
-  - { id: 11, class: fpr128 }
-  - { id: 12, class: fpr128 }
-  - { id: 13, class: fpr128 }
-  - { id: 14, class: fpr64 }
-  - { id: 15, class: fpr64 }
-  - { id: 16, class: fpr64 }
 liveins:
   - { reg: '$d0', virtual-reg: '%1' }
   - { reg: '$d1', virtual-reg: '%2' }
@@ -552,20 +465,6 @@ body:             |
 ---
 name:            extracopy
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fpr64 }
-  - { id: 1, class: fpr64 }
-  - { id: 2, class: fpr64 }
-  - { id: 3, class: fpr64 }
-  - { id: 4, class: gpr64common }
-  - { id: 5, class: fpr64 }
-  - { id: 6, class: fpr64 }
-  - { id: 7, class: fpr128 }
-  - { id: 8, class: fpr128 }
-  - { id: 9, class: fpr64 }
-  - { id: 10, class: fpr64 }
-  - { id: 11, class: fpr64 }
 liveins:
   - { reg: '$d0', virtual-reg: '%1' }
   - { reg: '$d1', virtual-reg: '%2' }

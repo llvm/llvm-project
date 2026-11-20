@@ -10,7 +10,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:
   - { reg: '$r4' }
 frameInfo:

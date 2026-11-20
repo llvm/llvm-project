@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcuda-is-device -triple spirv64 -o - -emit-llvm -x cuda %s  | FileCheck %s
-// RUN: %clang_cc1 -fcuda-is-device -triple spirv32 -o - -emit-llvm -x cuda %s  | FileCheck %s
+// RUN: %clang_cc1 -fno-module-local-hints -fcuda-is-device -triple spirv64 -o - -emit-llvm -x cuda %s  | FileCheck %s
+// RUN: %clang_cc1 -fno-module-local-hints -fcuda-is-device -triple spirv32 -o - -emit-llvm -x cuda %s  | FileCheck %s
 
 #define __global__ __attribute__((global))
 

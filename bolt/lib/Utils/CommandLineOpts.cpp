@@ -124,7 +124,7 @@ EnableBAT("enable-bat",
 cl::opt<bool> EqualizeBBCounts(
     "equalize-bb-counts",
     cl::desc("use same count for BBs that should have equivalent count (used "
-             "in non-LBR and shrink wrapping)"),
+             "in non-brstack mode and shrink wrapping)"),
     cl::init(false), cl::Hidden, cl::cat(BoltOptCategory));
 
 llvm::cl::opt<bool> ForcePatch(
@@ -282,6 +282,8 @@ cl::opt<bool>
     Instrument("instrument",
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
+
+cl::LibraryOptionsContext LibraryOptionsCtx;
 
 cl::opt<bool> LargeCodeModel(
     "large-code-model",

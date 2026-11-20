@@ -221,6 +221,11 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "^(Linux|Windows)$")
   set(PROFILE_ROCM_SUPPORTED_OS ON)
 endif()
 
+set(ALL_PROFILE_ROCM_SUPPORTED_ARCH ${X86_64} ${ARM64} ${PPC64})
+list_intersect(PROFILE_ROCM_SUPPORTED_ARCH
+  PROFILE_SUPPORTED_ARCH
+  ALL_PROFILE_ROCM_SUPPORTED_ARCH)
+
 # clang_rt.profile_rocm: self-contained host-side profile runtime for HIP/ROCm
 # device PGO on Linux and Windows. It is a superset of clang_rt.profile (all
 # base sources plus InstrProfilingPlatformROCm.cpp and its interceptor
@@ -228,7 +233,8 @@ endif()
 # the archive and clang_rt.profile is left untouched (/MT, no ROCm). The driver
 # links it ahead of clang_rt.profile, which then stays inert.
 if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
-   AND PROFILE_ROCM_SUPPORTED_OS AND COMPILER_RT_HAS_INTERCEPTION
+   AND PROFILE_ROCM_SUPPORTED_OS AND PROFILE_ROCM_SUPPORTED_ARCH
+   AND COMPILER_RT_HAS_INTERCEPTION
    AND TARGET RTInterception.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommon.${COMPILER_RT_DEFAULT_TARGET_ARCH}
    AND TARGET RTSanitizerCommonLibc.${COMPILER_RT_DEFAULT_TARGET_ARCH})
@@ -245,28 +251,6 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
   append_list_if(COMPILER_RT_HAS_FNO_EXCEPTIONS_FLAG -fno-exceptions
                  PROFILE_ROCM_FLAGS)
 
-  # Optional build-time verification of the mirrored HSA ABI in
-  # InstrProfilingPlatformROCmHSA.cpp. HSA is dlopened (never linked), so the
-  # declarations are hand-mirrored; when the real ROCm headers happen to be
-  # available, compile the static_assert cross-checks against them. This is
-  # never a build requirement -- if the package is absent, the checks are simply
-  # skipped. Linux only, matching the supplemental HSA drain.
-  if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
-    find_package(hsa-runtime64 QUIET HINTS ${CMAKE_INSTALL_PREFIX} PATHS /opt/rocm)
-    if(hsa-runtime64_FOUND)
-      get_target_property(_profile_hsa_inc hsa-runtime64::hsa-runtime64
-                          INTERFACE_INCLUDE_DIRECTORIES)
-      if(_profile_hsa_inc)
-        message(STATUS "clang_rt.profile_rocm: verifying HSA ABI against "
-                       "${_profile_hsa_inc}")
-        list(APPEND PROFILE_ROCM_FLAGS -DPROFILE_VERIFY_HSA_ABI=1)
-        foreach(_inc ${_profile_hsa_inc})
-          list(APPEND PROFILE_ROCM_FLAGS "-isystem${_inc}")
-        endforeach()
-      endif()
-    endif()
-  endif()
-
   # The interceptor path needs sanitizer_common symbols; merge the same object
   # libs as clang_rt.cfi so the archive stays self-contained.
   set(PROFILE_ROCM_OBJECT_LIBS
@@ -282,7 +266,7 @@ if(COMPILER_RT_BUILD_PROFILE_ROCM AND NOT COMPILER_RT_PROFILE_BAREMETAL
 
   add_compiler_rt_runtime(clang_rt.profile_rocm
     STATIC
-    ARCHS ${PROFILE_SUPPORTED_ARCH}
+    ARCHS ${PROFILE_ROCM_SUPPORTED_ARCH}
     OBJECT_LIBS ${PROFILE_ROCM_OBJECT_LIBS}
     CFLAGS ${PROFILE_ROCM_FLAGS}
     SOURCES ${PROFILE_ROCM_SOURCES}

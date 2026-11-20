@@ -10,16 +10,16 @@
 #define LLDB_SOURCE_PLUGINS_REGISTER_CORE_REGISTERCONTEXTCORE_S390X_H
 
 #include "Register/Arch/RegisterContext_s390x.h"
-#include "Register/RegisterInfoInterface.h"
 #include "Register/Arch/lldb-s390x-register-enums.h"
+#include "Register/RegisterInfoInterface.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Utility/Log.h"
 
 class RegisterContextCore_s390x : public lldb_private::RegisterContext {
 public:
-  RegisterContextCore_s390x(
-      lldb_private::Thread &thread, uint32_t concrete_frame_idx,
-      lldb_private::RegisterInfoInterface *register_info);
+  RegisterContextCore_s390x(lldb_private::Thread &thread,
+                            uint32_t concrete_frame_idx,
+                            lldb_private::RegisterInfoInterface *register_info);
 
   ~RegisterContextCore_s390x() override;
 

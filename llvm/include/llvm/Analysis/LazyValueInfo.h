@@ -96,8 +96,14 @@ namespace llvm {
 
     /// Return the ConstantRange constraint that is known to hold for the value
     /// at a specific use-site.
-    LLVM_ABI ConstantRange getConstantRangeAtUse(const Use &U,
-                                                 bool UndefAllowed);
+    /// \p UndefAllowed: the range may ignore that the value is known to
+    /// possibly be undef.
+    /// \p AssumeFrozen: use select conditions that may be undef, the range then
+    /// only holds after the value is frozen and its uses replaced.
+    LLVM_ABI ConstantRange getConstantRangeAtUse(
+        const Use &U, bool UndefAllowed,
+        SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr,
+        bool AssumeFrozen = false);
 
     /// Determine whether the specified value is known to be a
     /// constant on the specified edge.  Return null if not.

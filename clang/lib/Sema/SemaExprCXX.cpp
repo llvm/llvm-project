@@ -1395,13 +1395,15 @@ bool Sema::CheckCXXThisCapture(SourceLocation Loc, const bool Explicit,
   for (int idx = MaxFunctionScopesIndex; NumCapturingClosures;
        --idx, --NumCapturingClosures) {
     CapturingScopeInfo *CSI = cast<CapturingScopeInfo>(FunctionScopes[idx]);
+    // An enclosing block or captured region can only capture the pointer.
+    bool CaptureByCopy = ByCopy && isa<LambdaScopeInfo>(CSI);
 
     // The type of the corresponding data member (not a 'this' pointer if 'by
     // copy').
-    QualType CaptureType = ByCopy ? ThisTy->getPointeeType() : ThisTy;
+    QualType CaptureType = CaptureByCopy ? ThisTy->getPointeeType() : ThisTy;
 
     bool isNested = NumCapturingClosures > 1;
-    CSI->addThisCapture(isNested, Loc, CaptureType, ByCopy);
+    CSI->addThisCapture(isNested, Loc, CaptureType, CaptureByCopy);
   }
   return false;
 }
@@ -6927,8 +6929,12 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
              ExpressionEvaluationContextRecord::EK_Decltype &&
          "not in a decltype expression");
 
-  // Give up here so we don't try to evaluate it later.
-  if (isa<RecoveryExpr>(E))
+  // RecoveryExpr is always instantiation-dependent regardless of its
+  // type. If the type is essentially non-dependent, we continue to build
+  // a dependent decltype expression to avoid confusing diagnostics with wrong
+  // type. If the type is dependent, we will recover with int.
+  // FIXME: Maybe RecoveryExpr shouldn't be always instantiation-dependent.
+  if (isa<RecoveryExpr>(E) && E->isTypeDependent())
     return ExprError();
 
   ExprResult Result = CheckPlaceholderExpr(E);

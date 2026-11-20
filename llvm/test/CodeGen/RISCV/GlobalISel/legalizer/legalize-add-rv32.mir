@@ -3,11 +3,13 @@
 # RUN: | FileCheck %s
 ---
 name:            add_i7
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: add_i7
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[ADD]](s32)
@@ -24,11 +26,13 @@ body:             |
 ...
 ---
 name:            add_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: add_i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[ADD]](s32)
@@ -45,11 +49,13 @@ body:             |
 ...
 ---
 name:            add_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: add_i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[ADD]](s32)
@@ -66,11 +72,13 @@ body:             |
 ...
 ---
 name:            add_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; CHECK-LABEL: name: add_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[ADD]](s32)
@@ -84,16 +92,18 @@ body:             |
 ...
 ---
 name:            add_i48
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: add_i48
-    ; CHECK: %xlo:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %xlo:_(s32) = COPY $x10
     ; CHECK-NEXT: %xhi:_(s32) = COPY $x11
     ; CHECK-NEXT: %ylo:_(s32) = COPY $x12
     ; CHECK-NEXT: %yhi:_(s32) = COPY $x13
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD %xlo, %ylo
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD]](s32), %ylo
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD]](s32), %ylo
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD %xhi, %yhi
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[ICMP]]
@@ -119,16 +129,18 @@ body:             |
 ...
 ---
 name:            add_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: add_i64
-    ; CHECK: %lo1:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s32) = COPY $x10
     ; CHECK-NEXT: %hi1:_(s32) = COPY $x11
     ; CHECK-NEXT: %lo2:_(s32) = COPY $x12
     ; CHECK-NEXT: %hi2:_(s32) = COPY $x13
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD %lo1, %lo2
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD]](s32), %lo2
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD]](s32), %lo2
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD %hi1, %hi2
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[ICMP]]
@@ -151,26 +163,28 @@ body:             |
 ...
 ---
 name:            add_i96
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13, $x14, $x15
     ; CHECK-LABEL: name: add_i96
-    ; CHECK: %lo1:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13, $x14, $x15
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %lo1:_(s32) = COPY $x10
     ; CHECK-NEXT: %mid1:_(s32) = COPY $x11
     ; CHECK-NEXT: %hi1:_(s32) = COPY $x12
     ; CHECK-NEXT: %lo2:_(s32) = COPY $x13
     ; CHECK-NEXT: %mid2:_(s32) = COPY $x14
     ; CHECK-NEXT: %hi2:_(s32) = COPY $x15
     ; CHECK-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD %lo1, %lo2
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD]](s32), %lo2
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD]](s32), %lo2
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
     ; CHECK-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD %mid1, %mid2
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[ADD1]](s32), %mid1
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[ADD1]](s32), %mid1
     ; CHECK-NEXT: [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ADD1]], [[ICMP]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[ADD2]](s32), [[C]]
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ICMP2]], [[ICMP]]
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ICMP1]], [[AND]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[ADD2]](s32), [[C]]
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[ICMP2]], [[ICMP]]
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ICMP1]], [[AND]]
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
     ; CHECK-NEXT: [[ADD3:%[0-9]+]]:_(s32) = G_ADD %hi1, %hi2
     ; CHECK-NEXT: [[ADD4:%[0-9]+]]:_(s32) = G_ADD [[ADD3]], [[OR]]

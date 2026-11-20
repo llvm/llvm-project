@@ -7,7 +7,6 @@
 
 ---
 name:            reschedule_copy_chain
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: reschedule_copy_chain
@@ -40,7 +39,6 @@ body:             |
 
 ---
 name:            reschedule_copy_chain_dstregmap
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 body:             |

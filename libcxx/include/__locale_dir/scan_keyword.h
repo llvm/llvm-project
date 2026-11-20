@@ -40,7 +40,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 //  If the input is "a", the first keyword matches and eofbit is set.
 //  If the input is "abc", no match is found and "ab" are consumed.
 template <class _InputIterator, class _ForwardIterator, class _Ctype>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator __scan_keyword(
+_ForwardIterator __scan_keyword(
     _InputIterator& __b,
     _InputIterator __e,
     _ForwardIterator __kb,
