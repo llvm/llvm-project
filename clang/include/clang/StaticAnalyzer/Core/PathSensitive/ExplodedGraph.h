@@ -320,6 +320,7 @@ protected:
 
   /// NumNodes - The number of nodes in the graph.
   int64_t NumNodes = 0;
+  int64_t NumReclaimedNodes = 0;
 
   /// A list of recently allocated nodes that can potentially be recycled.
   NodeVector ChangedNodes;
@@ -376,6 +377,7 @@ public:
 
   bool empty() const { return NumNodes == 0; }
   unsigned size() const { return NumNodes; }
+  unsigned reclaimedNodes() const { return NumReclaimedNodes; }
 
   void reserve(unsigned NodeCount) { Nodes.reserve(NodeCount); }
 
