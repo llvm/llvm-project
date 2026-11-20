@@ -3,14 +3,23 @@
 # AArch64 Branch Target Enforcement treats the BR and BLR indirect branch
 # instructions differently. The BLR instruction can only target a BTI C
 # instruction, and the BR instruction can only target a BTI J instruction. We
-# always start indirectly-called functions with BTI C, so the outliner must not
-# transform a BLR instruction into a BR instruction.
+# always start indirectly-called functions with BTI C.
+#
+# However, BR X16 and BR X17 can also target a BTI C instruction. When outlining
+# an indirect call as a thunk under branch-target-enforcement, the outliner moves
+# the target register to X16 (or X17) and emits a tail-call using TCRETURNrix16x17
+# (or TCRETURNrix17).
 
-# There is an exception to this: BR X16 and BR X17 can also target a BTI C
-# instruction. We make of this for general tail-calls (tested elsewhere), but
-# don't currently make use of this in the outliner.
+# CHECK-LABEL: name: bar
+# CHECK:       BL @OUTLINED_FUNCTION_0
+# CHECK:       BL @OUTLINED_FUNCTION_0
+# CHECK:       BL @OUTLINED_FUNCTION_0
+# CHECK:       BL @OUTLINED_FUNCTION_0
 
-# CHECK-NOT: OUTLINED_FUNCTION_
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:       STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g
+# CHECK-NEXT:  $x16 = ORRXrs $xzr, $x19, 0
+# CHECK-NEXT:  TCRETURNrix16x17 $x16, 0, implicit $sp
 
 --- |
   @g = hidden local_unnamed_addr global i32 0, align 4
@@ -29,6 +38,9 @@ body:             |
     liveins: $x20, $x21, $lr, $x19
 
     HINT 34
+
+    STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
+    BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
 
     STRWui renamable $w21, renamable $x20, target-flags(aarch64-pageoff, aarch64-nc) @g :: (store (s32) into @g)
     BLR renamable $x19, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp

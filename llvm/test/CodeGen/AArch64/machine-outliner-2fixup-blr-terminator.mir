@@ -1,6 +1,11 @@
 # RUN: llc -mtriple=aarch64--- -run-pass=machine-outliner %s -o - | FileCheck %s
 
-# CHECK-NOT: OUTLINED_FUNCTION
+# Under branch-target-enforcement, an indirect call at the end of the candidate
+# is safely outlined as a thunk via X16 without requiring stack fixups.
+
+# CHECK-LABEL: name: OUTLINED_FUNCTION_0
+# CHECK:       $x16 = ORRXrs $xzr, $x20, 0
+# CHECK-NEXT:  TCRETURNrix16x17 $x16, 0, implicit $sp
 
 --- |
   define void @f1() #0 { ret void }
