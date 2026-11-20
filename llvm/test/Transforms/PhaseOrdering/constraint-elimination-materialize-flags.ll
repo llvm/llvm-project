@@ -155,8 +155,8 @@ define void @iterator_distance_index(ptr %out, ptr %arr, i1 %skip) {
 ; CHECK-NEXT:    store ptr [[GEP]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    store i32 0, ptr [[OUT]], align 8
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i32 [[J1]], 1
-; CHECK-NEXT:    [[J_GT_I_NOT:%.*]] = icmp samesign ult i32 [[J1]], [[I2]]
-; CHECK-NEXT:    br i1 [[J_GT_I_NOT]], label %[[INNER_BODY_PREHEADER]], label %[[OUTER_LATCH]]
+; CHECK-NEXT:    [[J_GT_I:%.*]] = icmp samesign ugt i32 [[J_NEXT]], [[I2]]
+; CHECK-NEXT:    br i1 [[J_GT_I]], label %[[OUTER_LATCH]], label %[[INNER_BODY_PREHEADER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i32 [[I2]], 1
 ; CHECK-NEXT:    br label %[[INNER_PREHEADER]]

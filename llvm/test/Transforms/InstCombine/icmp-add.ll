@@ -1979,6 +1979,51 @@ define <2 x i1> @slt_zero_add_nsw_splat_vec(<2 x i8> %a) {
   ret <2 x i1> %cmp
 }
 
+define void @latch_inc_phi_user(i32 %sub) {
+; CHECK-LABEL: @latch_inc_phi_user(
+; CHECK: [[INC:%.*]] = add nuw nsw i32 [[J:%.*]], 1
+; CHECK: icmp sgt i32 [[INC]], [[SUB:%.*]]
+  entry:
+  br label %loop
+
+loop:
+  %j = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %inc = add nuw nsw i32 %j, 1
+  %cmp = icmp sgt i32 %inc, %sub
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @latch_inc_phi_user_sle(i32 %sub) {
+; CHECK-LABEL: @latch_inc_phi_user_sle(
+; CHECK: icmp sgt i32 [[INC:%.*]], [[SUB:%.*]]
+  entry:
+  br label %loop
+loop:
+  %j = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %inc = add nsw i32 %j, 1
+  %cmp = icmp sle i32 %inc, %sub
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
+define void @latch_inc_phi_user_ugt(i32 %sub) {
+; CHECK-LABEL: @latch_inc_phi_user_ugt(
+; CHECK: icmp ugt i32 [[INC:%.*]], [[SUB:%.*]]
+  entry:
+  br label %loop
+loop:
+  %j = phi i32 [ 0, %entry ], [ %inc, %loop ]
+  %inc = add nuw i32 %j, 1
+  %cmp = icmp ugt i32 %inc, %sub
+  br i1 %cmp, label %exit, label %loop
+exit:
+  ret void
+}
+
 ; Test the edges - instcombine should not interfere with simplification to constants.
 ; Constant subtraction does not overflow, but this is false.
 
