@@ -2442,6 +2442,23 @@ APFloat::opStatus IEEEFloat::roundToIntegral(roundingMode rounding_mode) {
   if (exponent + 1 >= (int)APFloat::semanticsPrecision(*semantics))
     return opOK;
 
+  // Some small formats cannot represent the power of two used below. Round
+  // through an integer instead. The exponent check above bounds the rounded
+  // magnitude by 2^(precision-1), so precision+1 signed bits are sufficient.
+  if (semantics->maxExponent < static_cast<int>(semantics->precision) - 1) {
+    unsigned Width = semantics->precision + 1;
+    SmallVector<integerPart, 1> Parts(partCountForBits(Width));
+    bool IsExact;
+    bool InputSign = sign;
+    opStatus Status =
+        convertToInteger(Parts, Width, true, rounding_mode, &IsExact);
+    Status = static_cast<opStatus>(
+        Status | convertFromAPInt(APInt(Width, Parts), true, rounding_mode));
+    // Integer conversion cannot preserve negative zero.
+    sign = InputSign;
+    return Status;
+  }
+
   // The algorithm here is quite simple: we add 2^(p-1), where p is the
   // precision of our format, and then subtract it back off again.  The choice
   // of rounding modes for the addition/subtraction determines the rounding mode
