@@ -165,10 +165,14 @@ define preserve_allcc void @trigger_stack_spill() {
 ; CHECK-WIN-NEXT:    .seh_save_any_reg_p q28, 480
 ; CHECK-WIN-NEXT:    stp q30, q31, [sp, #512] // 32-byte Folded Spill
 ; CHECK-WIN-NEXT:    .seh_save_any_reg_p q30, 512
+; CHECK-WIN-NEXT:    sub sp, sp, #16
+; CHECK-WIN-NEXT:    .seh_stackalloc 16
 ; CHECK-WIN-NEXT:    .seh_endprologue
 ; CHECK-WIN-NEXT:    //APP
 ; CHECK-WIN-NEXT:    //NO_APP
 ; CHECK-WIN-NEXT:    .seh_startepilogue
+; CHECK-WIN-NEXT:    add sp, sp, #16
+; CHECK-WIN-NEXT:    .seh_stackalloc 16
 ; CHECK-WIN-NEXT:    ldp q30, q31, [sp, #512] // 32-byte Folded Reload
 ; CHECK-WIN-NEXT:    .seh_save_any_reg_p q30, 512
 ; CHECK-WIN-NEXT:    ldp q28, q29, [sp, #480] // 32-byte Folded Reload

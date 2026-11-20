@@ -911,6 +911,7 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
     if (FixedOff > Offset) Offset = FixedOff;
   }
 
+  int64_t FixedCSStart = Offset;
   Align MaxAlign = MFI.getMaxAlign();
   // First assign frame offsets to stack objects that are used to spill
   // callee saved registers.
@@ -928,13 +929,22 @@ void PEIImpl::calculateFrameObjectOffsets(MachineFunction &MF) {
     AdjustStackOffset(MFI, FI, StackGrowsDown, Offset, MaxAlign);
   }
 
+  // FixedCSEnd is the stack offset to the end of the fixed and callee-save
+  // stack area.
+  int64_t FixedCSEnd = Offset;
+
   assert(MaxAlign == MFI.getMaxAlign() &&
          "MFI.getMaxAlign should already account for all callee-saved "
          "registers without a fixed stack slot");
 
-  // FixedCSEnd is the stack offset to the end of the fixed and callee-save
-  // stack area.
-  int64_t FixedCSEnd = Offset;
+  // The callee-save area size is aligned to TFI.calleeSaveAreaAlignment().
+  {
+    int64_t FixedCSSize = FixedCSEnd - FixedCSStart;
+    int64_t AlignedFixedCSSize =
+        alignTo(FixedCSSize, TFI.calleeSaveAreaAlignment());
+    Offset += (AlignedFixedCSSize - FixedCSSize);
+    FixedCSEnd = Offset;
+  }
 
   // Make sure the special register scavenging spill slot is closest to the
   // incoming stack pointer if a frame pointer is required and is closer
