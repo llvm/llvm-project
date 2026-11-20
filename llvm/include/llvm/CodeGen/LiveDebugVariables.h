@@ -55,6 +55,13 @@ public:
   /// than identical consecutive ones.
   LLVM_ABI void canonicalizeIndexes(const SlotIndexes &SI);
 
+  /// Replace locations in virtual registers that \p VRM has assigned to
+  /// physical registers with those physical registers, without emitting
+  /// anything. This is for register allocation that is split into stages:
+  /// the VirtRegMap of an earlier stage is not available when debug values are
+  /// finally emitted.
+  LLVM_ABI void rewriteAssignedLocations(VirtRegMap &VRM);
+
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes
   /// that happened during register allocation.
   /// @param VRM Rename virtual registers according to map.
