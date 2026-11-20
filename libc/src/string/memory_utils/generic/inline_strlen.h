@@ -20,7 +20,7 @@ namespace clang_vector {
 template <typename byte_ty>
 LIBC_INLINE constexpr cpp::simd_mask<byte_ty> shift_mask(cpp::simd_mask<char> m,
                                                          size_t shift) {
-  using bitmask_ty = cpp::internal::get_as_integer_type_t<cpp::simd_mask<char>>;
+  using bitmask_ty = cpp::simd_bitmask<char>;
   bitmask_ty r = cpp::bit_cast<bitmask_ty>(m) >> shift;
   return cpp::bit_cast<cpp::simd_mask<byte_ty>>(r);
 }
