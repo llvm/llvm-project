@@ -57,6 +57,9 @@ namespace internal {
 struct SourceLocationRef {
   SourceLocationRef(StringRef FileNameRef, uint32_t Line)
       : FileName(FileNameRef), Line(Line) {}
+  bool operator==(const SourceLocationRef &Other) const {
+    return FileName == Other.FileName && Line == Other.Line;
+  }
   // The filename where the data is located.
   StringRef FileName;
   // The line number in the source code.
@@ -168,6 +171,9 @@ public:
                                       ArrayRef<SourceLocation> Locations);
   /// Add a symbol that's seen in the profiled binary without samples.
   LLVM_ABI Error addKnownSymbolWithoutSamples(SymbolHandleRef SymbolID);
+
+  /// Merge data access profile records from \p Other with weight \p Weight.
+  LLVM_ABI void merge(const DataAccessProfData &Other, uint64_t Weight = 1);
 
   /// The following methods return array reference for various internal data
   /// structures.

@@ -26,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfileSummary.h"
+#include "llvm/ProfileData/MemProfYAML.h"
 #include "llvm/ProfileData/ProfileCommon.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include "llvm/Support/CommandLine.h"
@@ -80,6 +81,25 @@ void SampleProfileReader::dump(raw_ostream &OS) {
   sortFuncProfiles(Profiles, V);
   for (const auto &I : V)
     dumpFunctionProfile(*I.second, OS);
+
+  if (!DataAccessProfileData || DataAccessProfileData->empty())
+    return;
+
+  OS << "DataAccessProfiles:\n";
+  memprof::YamlDataAccessProfData YamlData;
+  for (const auto &[SymHandleRef, RecordRef] :
+       DataAccessProfileData->getRecords())
+    YamlData.Records.emplace_back(SymHandleRef, RecordRef.AccessCount,
+                                  RecordRef.Locations);
+
+  for (StringRef ColdSymbol : DataAccessProfileData->getKnownColdSymbols())
+    YamlData.KnownColdSymbols.push_back(ColdSymbol.str());
+
+  for (uint64_t Hash : DataAccessProfileData->getKnownColdHashes())
+    YamlData.KnownColdStrHashes.push_back(Hash);
+
+  yaml::Output Yout(OS);
+  Yout << YamlData;
 }
 
 static void dumpFunctionProfileJson(const FunctionSamples &S,
@@ -396,6 +416,12 @@ std::error_code SampleProfileReaderText::readImpl() {
     // The only requirement we place on the identifier, then, is that it
     // should not begin with a number.
     if ((*LineIt)[0] != ' ') {
+      if (*LineIt == "[DataAccessProfiles]") {
+        if (std::error_code EC = readDataAccessProfiles(LineIt))
+          return EC;
+        break;
+      }
+
       uint64_t NumSamples, NumHeadSamples;
       StringRef FName;
       if (!ParseHead(*LineIt, FName, NumSamples, NumHeadSamples)) {
@@ -536,6 +562,48 @@ std::error_code SampleProfileReaderText::readImpl() {
   return Result;
 }
 
+std::error_code
+SampleProfileReaderText::readDataAccessProfiles(line_iterator &LI) {
+  if ((++LI).is_at_eof())
+    return sampleprof_error::success;
+
+  StringRef YamlBuf(LI->begin(), Buffer->getBufferEnd() - LI->begin());
+  memprof::YamlDataAccessProfData YamlData;
+  yaml::Input Yin(YamlBuf);
+  Yin >> YamlData;
+  if (Yin.error())
+    return sampleprof_error::malformed;
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  for (const auto &Record : YamlData.Records) {
+    memprof::SymbolHandleRef SymRef =
+        std::holds_alternative<std::string>(Record.SymHandle)
+            ? memprof::SymbolHandleRef(std::get<std::string>(Record.SymHandle))
+            : memprof::SymbolHandleRef(std::get<uint64_t>(Record.SymHandle));
+    if (Error E = DataAccessProfileData->setDataAccessProfile(
+            SymRef, Record.AccessCount, Record.Locations)) {
+      reportError(LI.line_number(), toString(std::move(E)));
+      return sampleprof_error::malformed;
+    }
+  }
+
+  for (const uint64_t Hash : YamlData.KnownColdStrHashes) {
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Hash)) {
+      reportError(LI.line_number(), toString(std::move(E)));
+      return sampleprof_error::malformed;
+    }
+  }
+
+  for (const std::string &Sym : YamlData.KnownColdSymbols) {
+    if (Error E = DataAccessProfileData->addKnownSymbolWithoutSamples(Sym)) {
+      reportError(LI.line_number(), toString(std::move(E)));
+      return sampleprof_error::malformed;
+    }
+  }
+
+  return sampleprof_error::success;
+}
+
 bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   bool result = false;
 
@@ -543,6 +611,11 @@ bool SampleProfileReaderText::hasFormat(const MemoryBuffer &Buffer) {
   line_iterator LineIt(Buffer, /*SkipBlanks=*/true, '#');
   if (!LineIt.is_at_eof()) {
     if ((*LineIt)[0] != ' ') {
+      // Check for a standalone data access profile, which does not have
+      // function headers.
+      if (*LineIt == "[DataAccessProfiles]")
+        return true;
+
       uint64_t NumSamples, NumHeadSamples;
       StringRef FName;
       result = ParseHead(*LineIt, FName, NumSamples, NumHeadSamples);
@@ -1062,11 +1135,32 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
             hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5)))
       return EC;
     break;
+  case SecDataAccessProfile:
+    if (std::error_code EC = readDataAccessProfiles())
+      return EC;
+    break;
   default:
     if (std::error_code EC = readCustomSection(Entry))
       return EC;
     break;
   }
+  return sampleprof_error::success;
+}
+
+std::error_code SampleProfileReaderExtBinaryBase::readDataAccessProfiles() {
+  if (Data >= End)
+    return sampleprof_error::success;
+
+  DataAccessProfileData = std::make_unique<memprof::DataAccessProfData>();
+  const unsigned char *Ptr = Data;
+  if (Error E = DataAccessProfileData->deserialize(Ptr)) {
+    consumeError(std::move(E));
+    return sampleprof_error::malformed;
+  }
+  if (Ptr != End)
+    return sampleprof_error::malformed;
+
+  Data = Ptr;
   return sampleprof_error::success;
 }
 
