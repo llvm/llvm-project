@@ -1483,8 +1483,18 @@ def ZNWMST11ALIGN_VAL_T : RuntimeLibcall<Ptr, [ULong, AlignValT]>;
 def ZNWMST11ALIGN_VAL_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, UInt8]>;
 def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr]>;
 def ZNWMST11ALIGN_VAL_TRKST9NOTHROW_T12__HOT_COLD_T : RuntimeLibcall<Ptr, [ULong, AlignValT, Ptr, UInt8]>;
-def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]>;
-def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]>;
+def KMPC_ALLOC_SHARED : RuntimeLibcall<Ptr, [SizeT]> {
+  let FnAttrs = [NoUnwind, NoSync,
+                 AllocKindAttr<"AllocFnKind::Alloc | AllocFnKind::Uninitialized">,
+                 AllocSizeAttr<0>, AllocFamilyAttr<"__kmpc_alloc_shared">];
+  let RetAttrs = [NoAlias];
+}
+
+def KMPC_FREE_SHARED : RuntimeLibcall<Void, [Ptr, SizeT]> {
+  let FnAttrs = [NoUnwind, NoSync, AllocKindAttr<"AllocFnKind::Free">,
+                 AllocFamilyAttr<"__kmpc_alloc_shared">];
+  let ParamAttrs = [[AllocatedPointer, CapturesNone]];
+}
 
 //--------------------------------------------------------------------
 // Global variable references

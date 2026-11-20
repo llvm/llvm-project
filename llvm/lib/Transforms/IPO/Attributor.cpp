@@ -1053,6 +1053,9 @@ bool Attributor::getAttrsFromAssumes(const IRPosition &IRP,
   if (A2K.empty())
     return false;
 
+  if (!canUseBodyFor(IRP))
+    return false;
+
   LLVMContext &Ctx = AssociatedValue.getContext();
   unsigned AttrsSize = Attrs.size();
   const Instruction *CtxI = IRP.getCtxI();
