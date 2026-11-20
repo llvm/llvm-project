@@ -23,12 +23,15 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Use.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdaterImpl.h"
+#include "llvm/Transforms/Utils/VNCoercion.h"
 #include <cassert>
 #include <utility>
 
@@ -387,6 +390,21 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
   SmallVector<LoadInst *, 32> LiveInLoads;
   DenseMap<Value *, Value *> ReplacedLoads;
 
+  // A memset defines the value GVN would forward from it to the loads. For a
+  // variable byte, that is a splat inserted before the memset, which is deleted
+  // again at the end if nothing uses it. A byte-sized value is the memset's own
+  // operand instead, which can be one of the loads being promoted.
+  SmallVector<Instruction *, 2> MemSetValues;
+  auto GetMemSetValue = [&](MemSetInst *MSI) {
+    Value *V = VNCoercion::getMemInstValueForLoad(
+        MSI, /*Offset=*/0, getLoadStoreType(Insts.front()), MSI,
+        MSI->getDataLayout());
+    auto *I = dyn_cast<Instruction>(V);
+    if (I && I != MSI->getValue())
+      MemSetValues.push_back(I);
+    return V;
+  };
+
   for (Instruction *User : Insts) {
     BasicBlock *BB = User->getParent();
     TinyPtrVector<Instruction *> &BlockUses = UsesByBlock[BB];
@@ -404,6 +422,8 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
       } else if (auto *AI = dyn_cast<AllocaInst>(User)) {
         // We treat AllocaInst as a store of an getValueToUseForAlloca value.
         SSA.AddAvailableValue(BB, getValueToUseForAlloca(AI));
+      } else if (auto *MSI = dyn_cast<MemSetInst>(User)) {
+        SSA.AddAvailableValue(BB, GetMemSetValue(MSI));
       } else {
         // Otherwise it is a load, queue it to rewrite as a live-in load.
         LiveInLoads.push_back(cast<LoadInst>(User));
@@ -415,7 +435,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     // Otherwise, check to see if this block is all loads.
     bool HasStore = false;
     for (Instruction *I : BlockUses) {
-      if (isa<StoreInst>(I) || isa<AllocaInst>(I)) {
+      if (isa<StoreInst, AllocaInst, MemSetInst>(I)) {
         HasStore = true;
         break;
       }
@@ -467,6 +487,8 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
         // Check if this an alloca, in which case we treat it as a store of
         // getValueToUseForAlloca.
         StoredValue = getValueToUseForAlloca(AI);
+      } else if (auto *MSI = dyn_cast<MemSetInst>(I)) {
+        StoredValue = GetMemSetValue(MSI);
       }
     }
 
@@ -494,7 +516,8 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
   // Now that everything is rewritten, delete the old instructions from the
   // function.  They should all be dead now.
   for (Instruction *User : Insts) {
-    if (!shouldDelete(User))
+    // A memset can also write memory outside the promoted location.
+    if (isa<MemSetInst>(User) || !shouldDelete(User))
       continue;
 
     // If this is a load that still has uses, then the load must have been added
@@ -521,4 +544,7 @@ void LoadAndStorePromoter::run(const SmallVectorImpl<Instruction *> &Insts) {
     instructionDeleted(User);
     User->eraseFromParent();
   }
+
+  for (Instruction *I : MemSetValues)
+    RecursivelyDeleteTriviallyDeadInstructions(I);
 }

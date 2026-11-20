@@ -49,4 +49,82 @@ define target("spirv.DeviceEvent") @viai64(target("spirv.DeviceEvent") %arg) {
   ret target("spirv.DeviceEvent") %ret
 }
 
+define target("spirv.DeviceEvent") @memset_zero() {
+; CHECK-LABEL: @memset_zero(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca target("spirv.DeviceEvent"), align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    ret target("spirv.DeviceEvent") zeroinitializer
+;
+  %val = alloca target("spirv.DeviceEvent")
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 8, i1 false)
+  %ret = load target("spirv.DeviceEvent"), ptr %val
+  ret target("spirv.DeviceEvent") %ret
+}
+
+define target("spirv.DeviceEvent") @memset_variable(i8 %v) {
+; CHECK-LABEL: @memset_variable(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca target("spirv.DeviceEvent"), align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 [[V:%.*]], i64 8, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load target("spirv.DeviceEvent"), ptr [[VAL]], align 8
+; CHECK-NEXT:    ret target("spirv.DeviceEvent") [[RET]]
+;
+  %val = alloca target("spirv.DeviceEvent")
+  call void @llvm.memset.p0.i64(ptr %val, i8 %v, i64 8, i1 false)
+  %ret = load target("spirv.DeviceEvent"), ptr %val
+  ret target("spirv.DeviceEvent") %ret
+}
+
+; spirv.Image has no zero value.
+define target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) @memset_zero_no_zeroinit() {
+; CHECK-LABEL: @memset_zero_no_zeroinit(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0), align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0), ptr [[VAL]], align 8
+; CHECK-NEXT:    ret target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) [[RET]]
+;
+  %val = alloca target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0)
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 8, i1 false)
+  %ret = load target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0), ptr %val
+  ret target("spirv.Image", void, 0, 0, 0, 0, 0, 0, 0) %ret
+}
+
+define <2 x target("spirv.TypedPointerType", i8, 0)> @memset_zero_vector() {
+; CHECK-LABEL: @memset_zero_vector(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <2 x target("spirv.TypedPointerType", i8, 0)>, align 16
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret <2 x target("spirv.TypedPointerType", i8, 0)> zeroinitializer
+;
+  %val = alloca <2 x target("spirv.TypedPointerType", i8, 0)>
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 16, i1 false)
+  %ret = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr %val
+  ret <2 x target("spirv.TypedPointerType", i8, 0)> %ret
+}
+
+define <2 x target("spirv.TypedPointerType", i8, 0)> @memset_nonzero_vector() {
+; CHECK-LABEL: @memset_nonzero_vector(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <2 x target("spirv.TypedPointerType", i8, 0)>, align 16
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr [[VAL]], align 16
+; CHECK-NEXT:    ret <2 x target("spirv.TypedPointerType", i8, 0)> [[RET]]
+;
+  %val = alloca <2 x target("spirv.TypedPointerType", i8, 0)>
+  call void @llvm.memset.p0.i64(ptr %val, i8 1, i64 16, i1 false)
+  %ret = load <2 x target("spirv.TypedPointerType", i8, 0)>, ptr %val
+  ret <2 x target("spirv.TypedPointerType", i8, 0)> %ret
+}
+
+; llvm.test.vectorelement has no zero value, so neither does a vector of it.
+define <2 x target("llvm.test.vectorelement")> @memset_zero_vector_no_zeroinit() {
+; CHECK-LABEL: @memset_zero_vector_no_zeroinit(
+; CHECK-NEXT:    [[VAL:%.*]] = alloca <2 x target("llvm.test.vectorelement")>, align 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[VAL]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = load <2 x target("llvm.test.vectorelement")>, ptr [[VAL]], align 8
+; CHECK-NEXT:    ret <2 x target("llvm.test.vectorelement")> [[RET]]
+;
+  %val = alloca <2 x target("llvm.test.vectorelement")>
+  call void @llvm.memset.p0.i64(ptr %val, i8 0, i64 8, i1 false)
+  %ret = load <2 x target("llvm.test.vectorelement")>, ptr %val
+  ret <2 x target("llvm.test.vectorelement")> %ret
+}
+
 declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
