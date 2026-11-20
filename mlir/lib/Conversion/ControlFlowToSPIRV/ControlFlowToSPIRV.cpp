@@ -99,6 +99,40 @@ struct CondBranchOpPattern final : OpConversionPattern<cf::CondBranchOp> {
     return success();
   }
 };
+
+/// Converts cf.assert to a conditional branch to a block ending in
+/// spirv.KHR.Abort. Mirrors the llvm.trap lowering of the LLVM SPIR-V backend
+/// by passing an all-ones i32 as the message.
+struct AssertOpPattern final : OpConversionPattern<cf::AssertOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(cf::AssertOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
+    if (!typeConverter.allows(spirv::Capability::AbortKHR) ||
+        !typeConverter.getTargetEnv().allows(spirv::Extension::SPV_KHR_abort))
+      return rewriter.notifyMatchFailure(
+          op, "requires the AbortKHR capability and SPV_KHR_abort extension");
+
+    Location loc = op.getLoc();
+    Block *opBlock = op->getBlock();
+    Block *continuationBlock =
+        rewriter.splitBlock(opBlock, std::next(op->getIterator()));
+
+    Block *abortBlock = rewriter.createBlock(continuationBlock);
+    Type i32Type = rewriter.getI32Type();
+    Value message = spirv::ConstantOp::create(
+        rewriter, loc, i32Type, rewriter.getIntegerAttr(i32Type, -1));
+    spirv::KHRAbortOp::create(rewriter, loc, message);
+
+    rewriter.setInsertionPoint(op);
+    rewriter.replaceOpWithNewOp<spirv::BranchConditionalOp>(
+        op, adaptor.getArg(), continuationBlock, ValueRange(), abortBlock,
+        ValueRange());
+    return success();
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -109,5 +143,6 @@ void mlir::cf::populateControlFlowToSPIRVPatterns(
     const SPIRVTypeConverter &typeConverter, RewritePatternSet &patterns) {
   MLIRContext *context = patterns.getContext();
 
-  patterns.add<BranchOpPattern, CondBranchOpPattern>(typeConverter, context);
+  patterns.add<AssertOpPattern, BranchOpPattern, CondBranchOpPattern>(
+      typeConverter, context);
 }
