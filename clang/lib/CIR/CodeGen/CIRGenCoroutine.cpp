@@ -157,80 +157,8 @@ RValue CIRGenFunction::emitCoroutineFrame() {
     return RValue::get(curCoro.data->coroBegin);
   }
 
-  if (curAwaitSuspendWrapper.framePtr)
-    return RValue::get(curAwaitSuspendWrapper.framePtr);
-
   cgm.errorNYI("NYI");
   return RValue();
-}
-
-cir::FuncOp
-CIRGenFunction::generateAwaitSuspendWrapper(llvm::StringRef coroutineName,
-                                            llvm::StringRef suspendPointName,
-                                            const CoroutineSuspendExpr &s) {
-  llvm::SmallString<128> functionName(coroutineName);
-  functionName += ".__await_suspend_wrapper__";
-  functionName += suspendPointName;
-
-  ASTContext &context = getContext();
-
-  auto *awaiterDecl = ImplicitParamDecl::Create(context, context.VoidPtrTy,
-                                                ImplicitParamKind::Other);
-  auto *frameDecl = ImplicitParamDecl::Create(context, context.VoidPtrTy,
-                                              ImplicitParamKind::Other);
-
-  QualType returnTy = s.getSuspendExpr()->getType();
-
-  FunctionArgList args;
-  args.push_back(awaiterDecl);
-  args.push_back(frameDecl);
-
-  const CIRGenFunctionInfo &functionInfo =
-      cgm.getTypes().arrangeBuiltinFunctionDeclaration(returnTy, args);
-
-  cir::FuncType functionType = cgm.getTypes().getFunctionType(functionInfo);
-
-  cir::FuncOp function =
-      cgm.createCIRFunction(getLoc(s.getSourceRange()), functionName,
-                            functionType, /*funcDecl=*/nullptr);
-
-  function.setLinkage(cir::GlobalLinkageKind::InternalLinkage);
-
-  cgm.setCIRFunctionAttributes(GlobalDecl(), functionInfo, function,
-                               /*isThunk=*/false);
-
-  mlir::OpBuilder::InsertionGuard insertionGuard(builder);
-  SourceLocRAIIObject functionLocation(*this, s.getSourceRange());
-
-  mlir::Location location = getLoc(s.getSourceRange());
-  mlir::Block *entryBlock = function.addEntryBlock();
-
-  SymTableScopeTy variableScope(symbolTable);
-  {
-    LexicalScope lexicalScope(*this, location, entryBlock);
-    startFunction(GlobalDecl(), returnTy, function, functionType, args,
-                  s.getBeginLoc(), s.getBeginLoc());
-    mlir::Value awaiterPtr =
-        builder.createLoad(location, getAddrOfLocalVar(awaiterDecl));
-
-    QualType awaiterTy = s.getOpaqueValue()->getType();
-    mlir::Type awaiterType = convertTypeForMem(awaiterTy);
-    awaiterPtr = builder.createPtrBitcast(awaiterPtr, awaiterType);
-
-    LValue awaiterLValue = makeNaturalAlignAddrLValue(awaiterPtr, awaiterTy);
-    curAwaitSuspendWrapper.framePtr =
-        builder.createLoad(location, getAddrOfLocalVar(frameDecl));
-
-    OpaqueValueMapping awaiterBinder(*this, s.getOpaqueValue(), awaiterLValue);
-
-    mlir::Value suspendResult = emitScalarExpr(s.getSuspendExpr());
-    if (suspendResult)
-      builder.createStore(location, suspendResult, returnValue);
-
-    curAwaitSuspendWrapper.framePtr = nullptr;
-    finishFunction(s.getEndLoc());
-  }
-  return function;
 }
 
 static void createCoroData(CIRGenFunction &cgf,
@@ -864,8 +792,19 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
     aggSlot.setExternallyDestructed();
   }
 
+  auto coroutineFunction = mlir::cast<cir::FuncOp>(cgf.curFn);
+  mlir::Value awaiterPointer =
+      cgf.getOrCreateOpaqueLValueMapping(s.getOpaqueValue()).getPointer();
+  assert(coro.coroBegin && "expected coroutine frame");
+
+  llvm::SmallString<128> suspendWrapperName(coroutineFunction.getSymName());
+  suspendWrapperName += ".__await_suspend_wrapper__";
+  suspendWrapperName += suspendPointName;
+  mlir::StringAttr suspendWrapper = builder.getStringAttr(suspendWrapperName);
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
+      mlir::ValueRange{awaiterPointer, coro.coroBegin}, suspendWrapper,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         Expr *condExpr = s.getReadyExpr()->IgnoreParens();
@@ -877,44 +816,20 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
-        cir::FuncOp coroutineFunction = mlir::cast<cir::FuncOp>(cgf.curFn);
-
-        CIRGenFunction wrapperCGF(cgf.cgm, builder);
-
-        cir::FuncOp suspendWrapper = wrapperCGF.generateAwaitSuspendWrapper(
-            coroutineFunction.getSymName(), suspendPointName, s);
-
-        mlir::Value awaiterPointer =
-            cgf.getOrCreateOpaqueLValueMapping(s.getOpaqueValue()).getPointer();
-
-        assert(coro.coroBegin && "expected coroutine frame");
-
-        cir::PointerType wrapperPointerType =
-            cir::PointerType::get(suspendWrapper.getFunctionType());
-
-        mlir::Value wrapperPointer = cir::GetGlobalOp::create(
-            builder, loc, wrapperPointerType, suspendWrapper.getSymName());
+        mlir::Value suspendResult = cgf.emitScalarExpr(s.getSuspendExpr());
 
         switch (s.getSuspendReturnType()) {
-        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
-          cir::CoroAwaitSuspendBoolOp suspendRet =
-              cir::CoroAwaitSuspendBoolOp::create(
-                  builder, loc, awaiterPointer, coro.coroBegin, wrapperPointer);
-          // Veto suspension if requested by bool returning await_suspend.
-          cir::CoroSuspendPoint::create(builder, loc, suspendRet.getResult());
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool:
+          assert(suspendResult && "expected bool await_suspend result");
+          cir::CoroSuspendPoint::create(builder, loc, suspendResult);
           break;
-        }
         case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
-          cir::CoroAwaitSuspendVoidOp::create(builder, loc, awaiterPointer,
-                                              coro.coroBegin, wrapperPointer);
-          // Signals the parent that execution flows to next region.
+          assert(!suspendResult && "unexpected void await_suspend result");
           cir::CoroSuspendPoint::create(builder, loc);
           break;
         case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
-          // TODO(cir): Handle exceptions when resuming the returned coroutine.
-          cir::CoroAwaitSuspendHandleOp::create(builder, loc, awaiterPointer,
-                                                coro.coroBegin, wrapperPointer);
-          cir::CoroSuspendPoint::create(builder, loc);
+          assert(suspendResult && "expected handle await_suspend result");
+          cir::CoroSuspendPoint::create(builder, loc, suspendResult);
           break;
         }
       },

@@ -118,14 +118,6 @@ public:
   };
   CGCoroInfo curCoro;
 
-  // Holds the coroutine frame parameter while generating an await_suspend
-  // wrapper. The wrapper is not itself a coroutine, so it has no coro.begin.
-  struct AwaitSuspendWrapperInfo {
-    mlir::Value framePtr;
-  };
-
-  AwaitSuspendWrapperInfo curAwaitSuspendWrapper;
-
   bool isCoroutine() const { return curCoro.data != nullptr; }
 
   /// The temporary alloca to hold the return value. This is
@@ -2127,9 +2119,6 @@ public:
   LValue emitCompoundLiteralLValue(const CompoundLiteralExpr *e);
 
   void emitConstructorBody(FunctionArgList &args);
-  cir::FuncOp generateAwaitSuspendWrapper(llvm::StringRef coroutineName,
-                                          llvm::StringRef suspendPointName,
-                                          const CoroutineSuspendExpr &s);
 
   mlir::LogicalResult emitCoroutineBody(const CoroutineBodyStmt &s);
   cir::CoroEndOp emitCoroEndBuiltinCall(const CallExpr *e);
