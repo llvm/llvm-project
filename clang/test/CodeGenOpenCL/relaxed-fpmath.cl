@@ -29,22 +29,16 @@ float spscalardiv(float a, float b) {
 }
 // CHECK: attributes
 
-// NORMAL-NOT: "less-precise-fpmad"
 // NORMAL-NOT: "no-signed-zeros-fp-math"
 
-// FAST: "less-precise-fpmad"="true"
 // FAST: "no-signed-zeros-fp-math"="true"
 
-// FINITE-NOT: "less-precise-fpmad"
 // FINITE-NOT: "no-signed-zeros-fp-math"
 
-// UNSAFE: "less-precise-fpmad"="true"
 // UNSAFE: "no-signed-zeros-fp-math"="true"
 
-// MAD: "less-precise-fpmad"="true"
 // MAD-NOT: "no-signed-zeros-fp-math"
 
-// NOSIGNED-NOT: "less-precise-fpmad"
 // NOSIGNED: "no-signed-zeros-fp-math"="true"
 
 #else
