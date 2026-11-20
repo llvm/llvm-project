@@ -31,6 +31,13 @@ void parallel_taskgroup() {
 #pragma omp taskgroup
   foo();
 }
+
+// The barrier reads CapturedStmtInfo, which the taskgroup must restore.
+void taskgroup_barrier() {
+#pragma omp taskgroup
+  foo();
+#pragma omp barrier
+}
 #endif
 
 
@@ -116,6 +123,25 @@ void parallel_taskgroup() {
 // CHECK1-NEXT:    unreachable
 //
 //
+// CHECK1-LABEL: define {{[^@]+}}@_Z17taskgroup_barrierv
+// CHECK1-SAME: () #[[ATTR6]] personality ptr @__gxx_personality_v0 {
+// CHECK1-NEXT:  entry:
+// CHECK1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
+// CHECK1-NEXT:    invoke void @_Z3foov()
+// CHECK1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]]
+// CHECK1:       invoke.cont:
+// CHECK1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[TMP0]])
+// CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[TMP0]])
+// CHECK1-NEXT:    ret void
+// CHECK1:       terminate.lpad:
+// CHECK1-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+// CHECK1-NEXT:            catch ptr null
+// CHECK1-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 0
+// CHECK1-NEXT:    call void @__clang_call_terminate(ptr [[TMP2]]) #[[ATTR8]]
+// CHECK1-NEXT:    unreachable
+//
+//
 // DEBUG1-LABEL: define {{[^@]+}}@_Z3foov
 // DEBUG1-SAME: () #[[ATTR0:[0-9]+]] !dbg [[DBG6:![0-9]+]] {
 // DEBUG1-NEXT:  entry:
@@ -186,6 +212,25 @@ void parallel_taskgroup() {
 // DEBUG1-NEXT:    unreachable, !dbg [[DBG25]]
 //
 //
+// DEBUG1-LABEL: define {{[^@]+}}@_Z17taskgroup_barrierv
+// DEBUG1-SAME: () #[[ATTR6]] personality ptr @__gxx_personality_v0 !dbg [[DBG28:![0-9]+]] {
+// DEBUG1-NEXT:  entry:
+// DEBUG1-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB9:[0-9]+]]), !dbg [[DBG29:![0-9]+]]
+// DEBUG1-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB9]], i32 [[TMP0]]), !dbg [[DBG29]]
+// DEBUG1-NEXT:    invoke void @_Z3foov()
+// DEBUG1-NEXT:            to label [[INVOKE_CONT:%.*]] unwind label [[TERMINATE_LPAD:%.*]], !dbg [[DBG30:![0-9]+]]
+// DEBUG1:       invoke.cont:
+// DEBUG1-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB9]], i32 [[TMP0]]), !dbg [[DBG30]]
+// DEBUG1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB11:[0-9]+]], i32 [[TMP0]]), !dbg [[DBG31:![0-9]+]]
+// DEBUG1-NEXT:    ret void, !dbg [[DBG32:![0-9]+]]
+// DEBUG1:       terminate.lpad:
+// DEBUG1-NEXT:    [[TMP1:%.*]] = landingpad { ptr, i32 }
+// DEBUG1-NEXT:            catch ptr null, !dbg [[DBG30]]
+// DEBUG1-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i32 } [[TMP1]], 0, !dbg [[DBG30]]
+// DEBUG1-NEXT:    call void @__clang_call_terminate(ptr [[TMP2]]) #[[ATTR8]], !dbg [[DBG30]]
+// DEBUG1-NEXT:    unreachable, !dbg [[DBG30]]
+//
+//
 // CHECK2-LABEL: define {{[^@]+}}@_Z3foov
 // CHECK2-SAME: () #[[ATTR0:[0-9]+]] {
 // CHECK2-NEXT:  entry:
@@ -250,5 +295,19 @@ void parallel_taskgroup() {
 // CHECK2:       .fini:
 // CHECK2-NEXT:    br label [[OMP_PAR_EXIT_EXITSTUB:%.*]]
 // CHECK2:       omp.par.exit.exitStub:
+// CHECK2-NEXT:    ret void
+//
+//
+// CHECK2-LABEL: define {{[^@]+}}@_Z17taskgroup_barrierv
+// CHECK2-SAME: () #[[ATTR0]] {
+// CHECK2-NEXT:  entry:
+// CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK2-NEXT:    call void @__kmpc_taskgroup(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK2-NEXT:    call void @_Z3foov()
+// CHECK2-NEXT:    br label [[TASKGROUP_EXIT:%.*]]
+// CHECK2:       taskgroup.exit:
+// CHECK2-NEXT:    call void @__kmpc_end_taskgroup(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM]])
+// CHECK2-NEXT:    [[OMP_GLOBAL_THREAD_NUM1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK2-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB2:[0-9]+]], i32 [[OMP_GLOBAL_THREAD_NUM1]])
 // CHECK2-NEXT:    ret void
 //

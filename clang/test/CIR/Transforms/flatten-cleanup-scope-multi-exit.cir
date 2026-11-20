@@ -1280,3 +1280,30 @@ cir.func @test_goto_in_nested_cleanup() {
 // CHECK:         cir.br ^[[END]]
 // CHECK:       ^[[END]]:
 // CHECK:         cir.return
+
+// A volatile load of the returned value must happen before the cleanup runs,
+// so it is spilled to a temporary instead of being sunk past the cleanup.
+// CHECK-LABEL: cir.func @test_return_volatile_load(
+// CHECK:         %[[TMP:.*]] = cir.alloca "__ret_operand_tmp"
+// CHECK:         %[[OBJ:.*]] = cir.alloca "c"
+// CHECK:         %[[X:.*]] = cir.alloca "x"
+// CHECK:         %[[VAL:.*]] = cir.load volatile %[[X]]
+// CHECK-NEXT:    cir.store %[[VAL]], %[[TMP]]
+// CHECK:         cir.call @dtor(%[[OBJ]])
+// CHECK:         %[[RET:.*]] = cir.load %[[TMP]]
+// CHECK-NEXT:    cir.return %[[RET]] : !s32i
+cir.func @test_return_volatile_load(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "c" align(4) init : !cir.ptr<!rec_SomeClass>
+  %1 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>
+  cir.store %arg0, %1 : !s32i, !cir.ptr<!s32i>
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    %2 = cir.load volatile %1 : !cir.ptr<!s32i>, !s32i
+    cir.return %2 : !s32i
+  } cleanup normal {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  %3 = cir.const #cir.int<0> : !s32i
+  cir.return %3 : !s32i
+}

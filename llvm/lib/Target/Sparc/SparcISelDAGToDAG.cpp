@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Sparc.h"
 #include "SparcSelectionDAGInfo.h"
 #include "SparcTargetMachine.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
@@ -413,10 +415,15 @@ bool SparcDAGToDAGISel::SelectInlineAsmMemoryOperand(
   return false;
 }
 
+SparcDAGToDAGISelPass::SparcDAGToDAGISelPass(SparcTargetMachine &TM,
+                                             CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(std::make_unique<SparcDAGToDAGISel>(TM, OptLevel)) {}
+
 /// createSparcISelDag - This pass converts a legalized DAG into a
 /// SPARC-specific DAG, ready for instruction scheduling.
 ///
-FunctionPass *llvm::createSparcISelDag(SparcTargetMachine &TM,
-                                       CodeGenOptLevel OptLevel) {
+FunctionPass *
+llvm::createSparcDAGToDAGISelLegacyPass(SparcTargetMachine &TM,
+                                        CodeGenOptLevel OptLevel) {
   return new SparcDAGToDAGISelLegacy(TM, OptLevel);
 }

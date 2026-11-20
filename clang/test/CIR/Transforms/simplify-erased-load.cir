@@ -1,0 +1,21 @@
+// RUN: cir-opt %s -cir-simplify | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+// Phase 1 folds the select and dead-op cleanup erases the load feeding
+// its condition. The fused load list must not keep the dead load.
+cir.func @select_same_const(%arg0: !cir.bool) -> !s32i {
+  %b = cir.alloca "b" align(1) init : !cir.ptr<!cir.bool>
+  cir.store %arg0, %b : !cir.bool, !cir.ptr<!cir.bool>
+  %cond = cir.load align(1) %b : !cir.ptr<!cir.bool>, !cir.bool
+  %c1 = cir.const #cir.int<1> : !s32i
+  %c2 = cir.const #cir.int<1> : !s32i
+  %sel = cir.select if %cond then %c1 else %c2 : (!cir.bool, !s32i, !s32i) -> !s32i
+  cir.return %sel : !s32i
+}
+
+// CHECK-LABEL: cir.func @select_same_const
+// CHECK: %[[C:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NOT: cir.select
+// CHECK-NOT: cir.load
+// CHECK: cir.return %[[C]] : !s32i
