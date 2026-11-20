@@ -1283,7 +1283,6 @@ linkAndWrapDeviceFiles(ArrayRef<SmallVector<OffloadFile>> LinkerInputFiles,
         return TripleA > TripleB;
       if (ArchA != ArchB)
         return ArchA > ArchB;
-      // SYCL images with the same architecture differ in "code".
       StringRef CodeA = A.StringData.lookup("code");
       StringRef CodeB = B.StringData.lookup("code");
       if (CodeA != CodeB)
