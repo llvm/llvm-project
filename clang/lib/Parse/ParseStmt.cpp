@@ -2723,7 +2723,7 @@ StmtResult Parser::ParseCXXTryBlockCommon(SourceLocation TryLoc, bool FnTry) {
     if (Handlers.empty())
       return StmtError();
 
-    return Actions.ActOnCXXTryBlock(TryLoc, TryBlock.get(), Handlers);
+    return Actions.ActOnCXXTryBlock(TryLoc, TryBlock.get(), Handlers, FnTry);
   }
 }
 

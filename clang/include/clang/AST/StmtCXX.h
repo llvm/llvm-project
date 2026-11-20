@@ -73,20 +73,24 @@ class CXXTryStmt final : public Stmt,
   friend class ASTStmtReader;
 
   SourceLocation TryLoc;
-  unsigned NumHandlers;
+  unsigned NumHandlers : 31;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned IsFunctionTryBlock : 1;
   size_t numTrailingObjects(OverloadToken<Stmt *>) const { return NumHandlers; }
 
   CXXTryStmt(SourceLocation tryLoc, CompoundStmt *tryBlock,
-             ArrayRef<Stmt *> handlers);
+             ArrayRef<Stmt *> handlers, bool IsFunctionTryBlock);
   CXXTryStmt(EmptyShell Empty, unsigned numHandlers)
-    : Stmt(CXXTryStmtClass), NumHandlers(numHandlers) { }
+      : Stmt(CXXTryStmtClass), NumHandlers(numHandlers),
+        IsFunctionTryBlock(false) {}
 
   Stmt *const *getStmts() const { return getTrailingObjects(); }
   Stmt **getStmts() { return getTrailingObjects(); }
 
 public:
   static CXXTryStmt *Create(const ASTContext &C, SourceLocation tryLoc,
-                            CompoundStmt *tryBlock, ArrayRef<Stmt *> handlers);
+                            CompoundStmt *tryBlock, ArrayRef<Stmt *> handlers,
+                            bool IsFunctionTryBlock = false);
 
   static CXXTryStmt *Create(const ASTContext &C, EmptyShell Empty,
                             unsigned numHandlers);
@@ -97,6 +101,11 @@ public:
   SourceLocation getEndLoc() const {
     return getStmts()[NumHandlers]->getEndLoc();
   }
+
+  /// Whether this is a function-try-block,
+  /// e.g. 'void f() try {} catch (...) {}'.
+  bool isFunctionTryBlock() const { return IsFunctionTryBlock; }
+  void setIsFunctionTryBlock(bool V) { IsFunctionTryBlock = V; }
 
   CompoundStmt *getTryBlock() {
     return cast<CompoundStmt>(getStmts()[0]);

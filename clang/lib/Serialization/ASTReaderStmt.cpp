@@ -1773,6 +1773,7 @@ void ASTStmtReader::VisitCXXTryStmt(CXXTryStmt *S) {
   VisitStmt(S);
   assert(Record.peekInt() == S->getNumHandlers() && "NumStmtFields is wrong ?");
   Record.skipInts(1);
+  S->setIsFunctionTryBlock(Record.readInt());
   S->TryLoc = readSourceLocation();
   S->getStmts()[0] = Record.readSubStmt();
   for (unsigned i = 0, e = S->getNumHandlers(); i != e; ++i)

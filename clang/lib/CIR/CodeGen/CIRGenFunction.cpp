@@ -902,7 +902,7 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
   Stmt *body = ctor->getBody(definition);
   assert(definition == ctor && "emitting wrong constructor body");
 
-  bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
+  auto *tryBody = dyn_cast_or_null<CXXTryStmt>(body);
 
   // A type that handles the emission of the constructor body, that can be
   // called directly for cases where we don't have a try-body, or passed to
@@ -913,9 +913,9 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
     FunctionArgList &args;
     Stmt *emitterBody = nullptr;
     ctorTryBodyEmitter(const CXXConstructorDecl *ctor, CXXCtorType ctorType,
-                       FunctionArgList &args, bool isTryBody, Stmt *b)
+                       FunctionArgList &args, CXXTryStmt *tryBody, Stmt *b)
         : ctor(ctor), ctorType(ctorType), args(args),
-          emitterBody(isTryBody ? cast<CXXTryStmt>(b)->getTryBlock() : b) {}
+          emitterBody(tryBody ? tryBody : b) {}
     ~ctorTryBodyEmitter() override = default;
 
     mlir::LogicalResult operator()(CIRGenFunction &cgf) override {
@@ -930,11 +930,9 @@ void CIRGenFunction::emitConstructorBody(FunctionArgList &args) {
     }
   };
 
-  ctorTryBodyEmitter emitter{ctor, ctorType, args, isTryBody, body};
+  ctorTryBodyEmitter emitter{ctor, ctorType, args, tryBody, body};
   mlir::LogicalResult bodyRes =
-      isTryBody ? emitCXXTryStmt(*cast<CXXTryStmt>(body), emitter,
-                                 /*isFnTryBlock=*/true)
-                : emitter(*this);
+      tryBody ? emitCXXTryStmt(*tryBody, emitter) : emitter(*this);
 
   // TODO(cir): propagate this result via mlir::logical result. Just
   // unreachable now just to have it handled.
@@ -995,8 +993,8 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
 
   // If the body is a function-try-block, enter the try before
   // anything else.
-  const bool isTryBody = isa_and_nonnull<CXXTryStmt>(body);
-  if (isTryBody)
+  const auto *tryBody = dyn_cast_or_null<CXXTryStmt>(body);
+  if (tryBody)
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 
   assert(!cir::MissingFeatures::sanitizers());
@@ -1025,7 +1023,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     // Enter the cleanup scopes for virtual bases.
     enterDtorCleanups(dtor, Dtor_Complete);
 
-    if (!isTryBody) {
+    if (!tryBody) {
       QualType thisTy = dtor->getFunctionObjectParameterType();
       emitCXXDestructorCall(dtor, Dtor_Base, /*forVirtualBase=*/false,
                             /*delegating=*/false, loadCXXThisAddress(), thisTy);
@@ -1054,7 +1052,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
     if (needsVTableInit)
       initializeVTablePointers(getLoc(dtor->getBeginLoc()), dtor->getParent());
 
-    if (isTryBody) {
+    if (tryBody) {
       cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
     } else if (body) {
       (void)emitStmt(body, /*useCurrentScope=*/true);
@@ -1073,7 +1071,7 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   dtorEpilogue.forceCleanup();
 
   // Exit the try if applicable.
-  if (isTryBody)
+  if (tryBody)
     cgm.errorNYI(dtor->getSourceRange(), "function-try-block destructor");
 }
 

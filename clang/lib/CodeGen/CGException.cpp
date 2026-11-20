@@ -482,7 +482,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
     ExitCXXTryStmt(S);
 }
 
-void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
+void CodeGenFunction::EnterCXXTryStmt(const CXXTryStmt &S) {
   // HIPStdPar device compilation emits unannotated host functions and removes
   // the ones that are not reachable from an accelerator kernel in the middle
   // end. Device code generation otherwise drops the EH representation of
@@ -1085,7 +1085,7 @@ void CodeGenFunction::WasmEmitFallthroughRethrow(
   EmitNoreturnRuntimeCallOrInvoke(RethrowInCatchFn, {});
 }
 
-void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
+void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S) {
   unsigned NumHandlers = S.getNumHandlers();
   EHCatchScope &CatchScope = cast<EHCatchScope>(*EHStack.begin());
   assert(CatchScope.getNumHandlers() == NumHandlers);
@@ -1118,7 +1118,7 @@ void CodeGenFunction::ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock) {
   // Determine if we need an implicit rethrow for all these catch handlers;
   // see the comment below.
   bool doImplicitRethrow = false;
-  if (IsFnTryBlock)
+  if (S.isFunctionTryBlock())
     doImplicitRethrow = isa<CXXDestructorDecl>(CurCodeDecl) ||
                         isa<CXXConstructorDecl>(CurCodeDecl);
 

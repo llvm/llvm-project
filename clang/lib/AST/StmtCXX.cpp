@@ -25,10 +25,11 @@ QualType CXXCatchStmt::getCaughtType() const {
 
 CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, SourceLocation tryLoc,
                                CompoundStmt *tryBlock,
-                               ArrayRef<Stmt *> handlers) {
+                               ArrayRef<Stmt *> handlers,
+                               bool IsFunctionTryBlock) {
   const size_t Size = totalSizeToAlloc<Stmt *>(handlers.size() + 1);
   void *Mem = C.Allocate(Size, alignof(CXXTryStmt));
-  return new (Mem) CXXTryStmt(tryLoc, tryBlock, handlers);
+  return new (Mem) CXXTryStmt(tryLoc, tryBlock, handlers, IsFunctionTryBlock);
 }
 
 CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
@@ -39,8 +40,9 @@ CXXTryStmt *CXXTryStmt::Create(const ASTContext &C, EmptyShell Empty,
 }
 
 CXXTryStmt::CXXTryStmt(SourceLocation tryLoc, CompoundStmt *tryBlock,
-                       ArrayRef<Stmt *> handlers)
-    : Stmt(CXXTryStmtClass), TryLoc(tryLoc), NumHandlers(handlers.size()) {
+                       ArrayRef<Stmt *> handlers, bool IsFunctionTryBlock)
+    : Stmt(CXXTryStmtClass), TryLoc(tryLoc), NumHandlers(handlers.size()),
+      IsFunctionTryBlock(IsFunctionTryBlock) {
   Stmt **Stmts = getStmts();
   Stmts[0] = tryBlock;
   llvm::copy(handlers, Stmts + 1);

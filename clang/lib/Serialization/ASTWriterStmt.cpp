@@ -1786,6 +1786,7 @@ void ASTStmtWriter::VisitCXXCatchStmt(CXXCatchStmt *S) {
 void ASTStmtWriter::VisitCXXTryStmt(CXXTryStmt *S) {
   VisitStmt(S);
   Record.push_back(S->getNumHandlers());
+  Record.push_back(S->isFunctionTryBlock());
   Record.AddSourceLocation(S->getTryLoc());
   Record.AddStmt(S->getTryBlock());
   for (unsigned i = 0, e = S->getNumHandlers(); i != e; ++i)

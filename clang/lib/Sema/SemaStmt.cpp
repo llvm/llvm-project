@@ -4511,7 +4511,8 @@ public:
 }
 
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
-                                  ArrayRef<Stmt *> Handlers) {
+                                  ArrayRef<Stmt *> Handlers,
+                                  bool IsFunctionTryBlock) {
   DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
 
   sema::FunctionScopeInfo *FSI = getCurFunction();
@@ -4598,7 +4599,7 @@ StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
   FSI->setHasCXXTry(TryLoc);
 
   return CXXTryStmt::Create(Context, TryLoc, cast<CompoundStmt>(TryBlock),
-                            Handlers);
+                            Handlers, IsFunctionTryBlock);
 }
 
 void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {

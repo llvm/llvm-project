@@ -2712,8 +2712,10 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildCXXTryStmt(SourceLocation TryLoc, Stmt *TryBlock,
-                               ArrayRef<Stmt *> Handlers) {
-    return getSema().ActOnCXXTryBlock(TryLoc, TryBlock, Handlers);
+                               ArrayRef<Stmt *> Handlers,
+                               bool IsFunctionTryBlock) {
+    return getSema().ActOnCXXTryBlock(TryLoc, TryBlock, Handlers,
+                                      IsFunctionTryBlock);
   }
 
   /// Build a new C++0x range-based for statement.
@@ -9478,7 +9480,7 @@ StmtResult TreeTransform<Derived>::TransformCXXTryStmt(CXXTryStmt *S) {
     return S;
 
   return getDerived().RebuildCXXTryStmt(S->getTryLoc(), TryBlock.get(),
-                                        Handlers);
+                                        Handlers, S->isFunctionTryBlock());
 }
 
 template<typename Derived>

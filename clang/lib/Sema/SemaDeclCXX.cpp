@@ -2423,6 +2423,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
   SmallVector<SourceLocation, 4> ReturnStmts;
 
   if (isa<CXXTryStmt>(Body)) {
+    assert((cast<CXXTryStmt>(Body)->isFunctionTryBlock()));
     // C++11 [dcl.constexpr]p3:
     //  The definition of a constexpr function shall satisfy the following
     //  constraints: [...]

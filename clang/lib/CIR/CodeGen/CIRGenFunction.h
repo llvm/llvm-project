@@ -2282,8 +2282,7 @@ public:
   void emitBeginCatch(const CXXCatchStmt *catchStmt, mlir::Value ehToken);
 
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s,
-                                     cxxTryBodyEmitter &bodyCallback,
-                                     bool isFnTryBlock = false);
+                                     cxxTryBodyEmitter &bodyCallback);
   mlir::LogicalResult emitCXXTryStmt(const clang::CXXTryStmt &s);
 
   void emitCtorPrologue(const clang::CXXConstructorDecl *ctor,

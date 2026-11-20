@@ -3805,8 +3805,8 @@ public:
 
   void EmitSYCLKernelCallStmt(const SYCLKernelCallStmt &S);
 
-  void EnterCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
-  void ExitCXXTryStmt(const CXXTryStmt &S, bool IsFnTryBlock = false);
+  void EnterCXXTryStmt(const CXXTryStmt &S);
+  void ExitCXXTryStmt(const CXXTryStmt &S);
 
   void EmitCXXTryStmt(const CXXTryStmt &S);
   void EmitSEHTryStmt(const SEHTryStmt &S);

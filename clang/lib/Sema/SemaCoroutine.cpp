@@ -1252,7 +1252,8 @@ static CompoundStmt *buildCoroutineBody(Stmt *Body, ASTContext &Context) {
   // The body of the coroutine may be a try statement if it is in
   // 'function-try-block' syntax. Here we wrap it into a compound
   // statement for consistency.
-  assert(isa<CXXTryStmt>(Body) && "Unimaged coroutine body type");
+  assert(cast<CXXTryStmt>(Body)->isFunctionTryBlock() &&
+         "Unimaged coroutine body type");
   return CompoundStmt::Create(Context, {Body}, FPOptionsOverride(),
                               SourceLocation(), SourceLocation());
 }

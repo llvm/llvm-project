@@ -801,9 +801,9 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
 
   // Enter the function-try-block before the constructor prologue if
   // applicable.
-  bool IsTryBody = isa_and_nonnull<CXXTryStmt>(Body);
-  if (IsTryBody)
-    EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
+  const auto *TryBody = dyn_cast_or_null<CXXTryStmt>(Body);
+  if (TryBody)
+    EnterCXXTryStmt(*TryBody);
 
   incrementProfileCounter(Body);
   maybeCreateMCDCCondBitmap();
@@ -818,8 +818,8 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
   EmitCtorPrologue(Ctor, CtorType, Args);
 
   // Emit the body of the statement.
-  if (IsTryBody)
-    EmitStmt(cast<CXXTryStmt>(Body)->getTryBlock());
+  if (TryBody)
+    EmitStmt(TryBody->getTryBlock());
   else if (Body)
     EmitStmt(Body);
 
@@ -829,8 +829,8 @@ void CodeGenFunction::EmitConstructorBody(FunctionArgList &Args) {
   // constructed.
   RunCleanups.ForceCleanup();
 
-  if (IsTryBody)
-    ExitCXXTryStmt(*cast<CXXTryStmt>(Body), true);
+  if (TryBody)
+    ExitCXXTryStmt(*TryBody);
 }
 
 namespace {
@@ -1455,9 +1455,9 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
 
   // If the body is a function-try-block, enter the try before
   // anything else.
-  bool isTryBody = isa_and_nonnull<CXXTryStmt>(Body);
-  if (isTryBody)
-    EnterCXXTryStmt(*cast<CXXTryStmt>(Body), true);
+  const auto *TryBody = dyn_cast_or_null<CXXTryStmt>(Body);
+  if (TryBody)
+    EnterCXXTryStmt(*TryBody);
   EmitAsanPrologueOrEpilogue(false);
 
   // Enter the epilogue cleanups.
@@ -1485,7 +1485,7 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
     // Enter the cleanup scopes for virtual bases.
     EnterDtorCleanups(Dtor, Dtor_Complete);
 
-    if (!isTryBody) {
+    if (!TryBody) {
       QualType ThisTy = Dtor->getFunctionObjectParameterType();
       EmitCXXDestructorCall(Dtor, Dtor_Base, /*ForVirtualBase=*/false,
                             /*Delegating=*/false, LoadCXXThisAddress(), ThisTy);
@@ -1511,8 +1511,8 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
       InitializeVTablePointers(Dtor->getParent());
     }
 
-    if (isTryBody)
-      EmitStmt(cast<CXXTryStmt>(Body)->getTryBlock());
+    if (TryBody)
+      EmitStmt(TryBody->getTryBlock());
     else if (Body)
       EmitStmt(Body);
     else {
@@ -1531,8 +1531,8 @@ void CodeGenFunction::EmitDestructorBody(FunctionArgList &Args) {
   DtorEpilogue.ForceCleanup();
 
   // Exit the try if applicable.
-  if (isTryBody)
-    ExitCXXTryStmt(*cast<CXXTryStmt>(Body), true);
+  if (TryBody)
+    ExitCXXTryStmt(*TryBody);
 }
 
 void CodeGenFunction::emitImplicitAssignmentOperatorBody(

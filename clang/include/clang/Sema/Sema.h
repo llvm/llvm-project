@@ -11480,7 +11480,8 @@ public:
   /// ActOnCXXTryBlock - Takes a try compound-statement and a number of
   /// handlers and creates a try statement from them.
   StmtResult ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
-                              ArrayRef<Stmt *> Handlers);
+                              ArrayRef<Stmt *> Handlers,
+                              bool IsFunctionTryBlock = false);
 
   void DiagnoseExceptionUse(SourceLocation Loc, bool IsTry);
 

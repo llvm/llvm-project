@@ -495,8 +495,9 @@ void CIRGenFunction::emitBeginCatch(const CXXCatchStmt *catchStmt,
                  catchStmt->getBeginLoc());
 }
 
-mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
-    const CXXTryStmt &s, cxxTryBodyEmitter &bodyCallback, bool isFnTryBlock) {
+mlir::LogicalResult
+CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s,
+                               cxxTryBodyEmitter &bodyCallback) {
   mlir::Location loc = getLoc(s.getSourceRange());
 
   // Create a scope to hold try local storage for catch params.
@@ -588,8 +589,8 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(
   // Determine if we need an implicit rethrow for all these catch handlers;
   // see the comment below.
   const bool doImplicitRethrow =
-      isFnTryBlock && (isa<CXXConstructorDecl>(curCodeDecl) ||
-                       isa<CXXDestructorDecl>(curCodeDecl));
+      s.isFunctionTryBlock() && (isa<CXXConstructorDecl>(curCodeDecl) ||
+                                 isa<CXXDestructorDecl>(curCodeDecl));
 
   // Emit the catch handler bodies. This has to be done after the try op is
   // created and in place so that we can find the insertion point for the

@@ -16994,7 +16994,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << SKEPAttr << diag::InvalidSKEPReason::Coroutine;
       SKEPAttr->setInvalidAttr();
-    } else if (Body && isa<CXXTryStmt>(Body)) {
+    } else if (isa_and_nonnull<CXXTryStmt>(Body)) {
       Diag(SKEPAttr->getLocation(), diag::err_sycl_entry_point_invalid)
           << SKEPAttr << diag::InvalidSKEPReason::FunctionTryBlock;
       SKEPAttr->setInvalidAttr();
@@ -17368,8 +17368,10 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
       // C++ constructors that have function-try-blocks can't have return
       // statements in the handlers of that block. (C++ [except.handle]p14)
       // Verify this.
-      if (FD && isa<CXXConstructorDecl>(FD) && isa<CXXTryStmt>(Body))
-        DiagnoseReturnInConstructorExceptionHandler(cast<CXXTryStmt>(Body));
+      auto *Try = dyn_cast<CXXTryStmt>(Body);
+      if (Try && Try->isFunctionTryBlock() &&
+          isa_and_nonnull<CXXConstructorDecl>(FD))
+        DiagnoseReturnInConstructorExceptionHandler(Try);
 
       // Verify that gotos and switch cases don't jump into scopes illegally.
       if (FSI->NeedsScopeChecking() && !PP.isCodeCompletionEnabled())
