@@ -201,11 +201,11 @@ define <8 x float> @var_shuffle_v8f32_v8f32_xxxxxxxx_i32(<8 x float> %x, i32 %i0
 ; ALL-NEXT:    vmovaps %ymm0, (%rsp)
 ; ALL-NEXT:    andl $7, %r9d
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
@@ -252,11 +252,11 @@ define <8 x float> @var_shuffle_v8f32_v4f32_xxxxxxxx_i32(<4 x float> %x, i32 %i0
 ; ALL-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; ALL-NEXT:    andl $3, %r9d
 ; ALL-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; ALL-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],zero,zero
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; ALL-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1,2],mem[0]
 ; ALL-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0

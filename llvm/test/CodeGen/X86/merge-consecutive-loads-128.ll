@@ -1519,7 +1519,7 @@ define <4 x float> @merge_4f32_f32_2345_volatile(ptr %ptr) nounwind uwtable noin
 ; SSE41-LABEL: merge_4f32_f32_2345_volatile:
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; SSE41-NEXT:    retq
@@ -1527,7 +1527,7 @@ define <4 x float> @merge_4f32_f32_2345_volatile(ptr %ptr) nounwind uwtable noin
 ; AVX-LABEL: merge_4f32_f32_2345_volatile:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; AVX-NEXT:    retq
@@ -1545,7 +1545,7 @@ define <4 x float> @merge_4f32_f32_2345_volatile(ptr %ptr) nounwind uwtable noin
 ; X86-SSE41:       # %bb.0:
 ; X86-SSE41-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE41-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],mem[0],zero,zero
 ; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; X86-SSE41-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],mem[0]
 ; X86-SSE41-NEXT:    retl

@@ -92,8 +92,8 @@ define <4 x float> @fmul_pow2_ldexp_4xfloat(<4 x i32> %i) {
 ; CHECK-AVX2-NEXT:    vmovd %xmm0, %edi
 ; CHECK-AVX2-NEXT:    vmovss {{.*#+}} xmm0 = [9.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; CHECK-AVX2-NEXT:    callq ldexpf@PLT
-; CHECK-AVX2-NEXT:    vinsertps $16, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],xmm0[2,3]
+; CHECK-AVX2-NEXT:    vinsertps $28, (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
+; CHECK-AVX2-NEXT:    # xmm0 = xmm0[0],mem[0],zero,zero
 ; CHECK-AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
 ; CHECK-AVX2-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
 ; CHECK-AVX2-NEXT:    vextractps $2, %xmm0, %edi

@@ -48,7 +48,7 @@ define <4 x float> @test_buildvector_v4f32(float %a0, float %a1, float %a2, floa
 ;
 ; SSE41-64-LABEL: test_buildvector_v4f32:
 ; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; SSE41-64-NEXT:    retq
@@ -60,7 +60,7 @@ define <4 x float> @test_buildvector_v4f32(float %a0, float %a1, float %a2, floa
 ;
 ; AVX-64-LABEL: test_buildvector_v4f32:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],xmm2[0],xmm0[3]
 ; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1,2],xmm3[0]
 ; AVX-64-NEXT:    retq
@@ -1420,7 +1420,7 @@ define <4 x float> @PR37502(float %x, float %y) {
 ;
 ; SSE41-64-LABEL: PR37502:
 ; SSE41-64:       # %bb.0:
-; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE41-64-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE41-64-NEXT:    movddup {{.*#+}} xmm0 = xmm0[0,0]
 ; SSE41-64-NEXT:    retq
 ;
@@ -1431,7 +1431,7 @@ define <4 x float> @PR37502(float %x, float %y) {
 ;
 ; AVX-64-LABEL: PR37502:
 ; AVX-64:       # %bb.0:
-; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; AVX-64-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; AVX-64-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; AVX-64-NEXT:    retq
   %i0 = insertelement <4 x float> undef, float %x, i32 0

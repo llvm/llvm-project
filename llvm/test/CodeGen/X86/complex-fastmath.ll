@@ -19,7 +19,7 @@ define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; SSE-NEXT:    mulss %xmm0, %xmm0
 ; SSE-NEXT:    mulss %xmm1, %xmm1
 ; SSE-NEXT:    subss %xmm1, %xmm0
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_square_f32:
@@ -30,7 +30,7 @@ define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; AVX1-NEXT:    vmulss %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    vmulss %xmm1, %xmm1, %xmm1
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm2[0],zero,zero
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_square_f32:
@@ -40,7 +40,7 @@ define <2 x float> @complex_square_f32(<2 x float>) #0 {
 ; FMA-NEXT:    vmulss %xmm2, %xmm1, %xmm2
 ; FMA-NEXT:    vmulss %xmm1, %xmm1, %xmm1
 ; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm1 = (xmm0 * xmm0) - xmm1
-; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm2[0],xmm1[2,3]
+; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0],xmm2[0],zero,zero
 ; FMA-NEXT:    retq
   %2 = extractelement <2 x float> %0, i32 0
   %3 = extractelement <2 x float> %0, i32 1
@@ -116,7 +116,7 @@ define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; SSE-NEXT:    addss %xmm4, %xmm1
 ; SSE-NEXT:    mulss %xmm2, %xmm3
 ; SSE-NEXT:    subss %xmm3, %xmm0
-; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[2,3]
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],xmm1[0],zero,zero
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: complex_mul_f32:
@@ -129,7 +129,7 @@ define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; AVX1-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    vmulss %xmm2, %xmm3, %xmm1
 ; AVX1-NEXT:    vsubss %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm4[0],xmm0[2,3]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],xmm4[0],zero,zero
 ; AVX1-NEXT:    retq
 ;
 ; FMA-LABEL: complex_mul_f32:
@@ -140,7 +140,7 @@ define <2 x float> @complex_mul_f32(<2 x float>, <2 x float>) #0 {
 ; FMA-NEXT:    vfmadd231ss {{.*#+}} xmm4 = (xmm3 * xmm0) + xmm4
 ; FMA-NEXT:    vmulss %xmm2, %xmm3, %xmm2
 ; FMA-NEXT:    vfmsub231ss {{.*#+}} xmm2 = (xmm1 * xmm0) - xmm2
-; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm4[0],xmm2[2,3]
+; FMA-NEXT:    vinsertps {{.*#+}} xmm0 = xmm2[0],xmm4[0],zero,zero
 ; FMA-NEXT:    retq
   %3 = extractelement <2 x float> %0, i32 0
   %4 = extractelement <2 x float> %0, i32 1
