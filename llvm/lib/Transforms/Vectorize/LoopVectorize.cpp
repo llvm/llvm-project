@@ -6454,8 +6454,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                      RecipeBuilder, CostCtx))
     RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
-                 PSE);
+  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI);
 
   // Convert remaining VPInstructions to widen or replicate recipes.
   // TODO: This legacy code should eventually be migrated to VPlan.
@@ -7389,6 +7388,22 @@ static void preparePlanForEpilogueVectorLoop(
               : cast<VPConditionalInductionPHIRecipe>(&R)->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
+      auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+      if (IntOrFpIV && IntOrFpIV->isTruncated()) {
+        // The resume value is for the original induction. Preserve any offset
+        // folded into the truncated induction's start.
+        // TODO: This is a short-term solution, as it relies on the induction
+        // descriptor's IR start value. Compute the resume value with
+        // createDerivedIV from the recipe's start and step instead.
+        VPValue *OrigStart = Plan.getOrAddLiveIn(
+            IntOrFpIV->getInductionDescriptor().getStartValue());
+        VPValue *NarrowStart = IntOrFpIV->getStartValue();
+        if (NarrowStart != OrigStart) {
+          VPBuilder OffsetBuilder(VectorPH);
+          VPValue *Offset = OffsetBuilder.createSub(NarrowStart, OrigStart);
+          ResumeVPV = OffsetBuilder.createAdd(ResumeVPV, Offset);
+        }
+      }
     }
     assert(ResumeVPV && "Must have a resume value");
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);
