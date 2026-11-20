@@ -462,21 +462,26 @@ static Value createTransferMask(OpBuilder &builder, Location loc,
   // A transposing map selects them out of order.
   llvm::sort(maskedDims);
 
-  SmallVector<OpFoldResult> baseSizes =
-      isa<MemRefType>(base.getType())
-          ? memref::getMixedSizes(builder, loc, base)
-          : tensor::getMixedSizes(builder, loc, base);
   ArrayRef<int64_t> baseShape = cast<ShapedType>(base.getType()).getShape();
 
   // For each masked dim, collect the mask size (`dim - index`), index and base
-  // size.
+  // size. A mask size known statically creates no op, so none is left unused
+  // when the mask folds away.
   SmallVector<OpFoldResult> maskSizes;
   SmallVector<Value> maskedIndices;
   SmallVector<int64_t> maskedShape;
   for (int64_t dim : maskedDims) {
-    Value size = getValueOrCreateConstantIndexOp(builder, loc, baseSizes[dim]);
-    maskSizes.push_back(
-        builder.createOrFold<arith::SubIOp>(loc, size, indices[dim]));
+    std::optional<int64_t> cstIndex = getConstantIntValue(indices[dim]);
+    if (ShapedType::isStatic(baseShape[dim]) && cstIndex) {
+      maskSizes.push_back(builder.getIndexAttr(baseShape[dim] - *cstIndex));
+    } else {
+      OpFoldResult size = isa<MemRefType>(base.getType())
+                              ? memref::getMixedSize(builder, loc, base, dim)
+                              : tensor::getMixedSize(builder, loc, base, dim);
+      maskSizes.push_back(builder.createOrFold<arith::SubIOp>(
+          loc, getValueOrCreateConstantIndexOp(builder, loc, size),
+          indices[dim]));
+    }
     maskedIndices.push_back(indices[dim]);
     maskedShape.push_back(baseShape[dim]);
   }
