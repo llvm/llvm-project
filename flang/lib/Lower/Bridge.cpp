@@ -3955,6 +3955,9 @@ private:
       for (Fortran::lower::pft::Evaluation &e :
            getEval().getNestedEvaluations())
         genFIR(e);
+    // An unstructured acc.loop recorded the DOs whose induction variables it
+    // privatizes; they are all lowered now.
+    Fortran::lower::clearIvPrivatizedDoConstructs(getEval());
 
     if (!isCacheConstruct)
       localSymbols.popScope();
