@@ -4,21 +4,17 @@
 ; The following tests check that we can correctly detect cases where an
 ; extractelement is free due to being able to be fused with all of its uses.
 
-; FIXME: We currently fail to optimize any of these, as the extractelement is
-; never considered to be free.
-
 ; The extracts here cost nothing: the fmul can use the "by element" variant, and
 ; in the store element 0 can be accessed via the scalar register.
 define void @test_fmul(ptr %p, ptr %q, float %arg) {
 ; CHECK-LABEL: define void @test_fmul(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], float [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[VAL0:%.*]] = load float, ptr [[P]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = load float, ptr [[P_4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[VAL0]], 5.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[VAL1]], 5.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 5.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[ARG]], [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
 ; CHECK-NEXT:    store float [[TMP3]], ptr [[P]], align 4
 ; CHECK-NEXT:    store float [[MUL]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void
@@ -105,13 +101,12 @@ define void @test_fma(ptr %p, ptr %q, float %arg1, float %arg2) {
 ; CHECK-LABEL: define void @test_fma(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], float [[ARG1:%.*]], float [[ARG2:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P]], i64 4
-; CHECK-NEXT:    [[VAL0:%.*]] = load float, ptr [[P]], align 4
-; CHECK-NEXT:    [[VAL1:%.*]] = load float, ptr [[P_4]], align 4
-; CHECK-NEXT:    [[TMP3:%.*]] = fadd float [[VAL0]], 5.000000e+00
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[VAL1]], 5.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[TMP0]], splat (float 5.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x float> [[TMP1]], i64 1
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul contract float [[ARG1]], [[TMP2]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd contract float [[ARG2]], [[MUL]]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x float> [[TMP1]], i64 0
 ; CHECK-NEXT:    store float [[TMP3]], ptr [[P]], align 4
 ; CHECK-NEXT:    store float [[ADD]], ptr [[Q]], align 4
 ; CHECK-NEXT:    ret void

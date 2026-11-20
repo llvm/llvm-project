@@ -27,23 +27,23 @@ define double @test(double %a, <2 x double> %v0, <2 x double> %v1) {
   ret double %res
 }
 
+; FIXME: We shouldn't be vectorizing here, as the cost of spilling/reloading due
+; to the two function calls negates the benefit of vectorization.
+
 define double @test1(double %x) {
 ; CHECK-LABEL: define double @test1(
 ; CHECK-SAME: double [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[M0:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[M0_USE:%.*]] = fmul double [[M0]], 0.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 1.000000e+00>, double [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x double> [[TMP0]], <double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 1.000000e+00>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x double> [[TMP1]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = fmul <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[M0_USE:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
 ; CHECK-NEXT:    call void @use(double [[M0_USE]])
-; CHECK-NEXT:    [[M1:%.*]] = fmul double [[X]], 0.000000e+00
-; CHECK-NEXT:    [[M1_USE:%.*]] = fmul double [[M1]], 0.000000e+00
+; CHECK-NEXT:    [[M1_USE:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    call void @use(double [[M1_USE]])
-; CHECK-NEXT:    [[R0:%.*]] = fmul contract double [[M0]], 0.000000e+00
-; CHECK-NEXT:    [[R1:%.*]] = fmul double [[M1]], 0.000000e+00
-; CHECK-NEXT:    [[A0:%.*]] = fadd reassoc contract double [[R0]], [[R1]]
-; CHECK-NEXT:    [[M2:%.*]] = fmul double 0.000000e+00, 0.000000e+00
-; CHECK-NEXT:    [[R2:%.*]] = fmul double [[M2]], 0.000000e+00
-; CHECK-NEXT:    [[A1:%.*]] = fadd reassoc double [[A0]], [[R2]]
-; CHECK-NEXT:    [[A2:%.*]] = fadd reassoc double [[A1]], 0.000000e+00
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> zeroinitializer, [[TMP1]]
+; CHECK-NEXT:    [[A2:%.*]] = call reassoc double @llvm.vector.reduce.fadd.v4f64(double -0.000000e+00, <4 x double> [[TMP6]])
 ; CHECK-NEXT:    ret double [[A2]]
 ;
 entry:
