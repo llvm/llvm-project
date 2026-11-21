@@ -19,8 +19,13 @@ func.func @complex_abs(%arg: complex<f32>) -> f32 {
 // CHECK: %[[RATIO_SQ_PLUS_ONE:.*]] = llvm.fadd %[[RATIO_SQ]], %[[ONE]] : f32
 // CHECK: %[[SQRT:.*]] = llvm.intr.sqrt(%[[RATIO_SQ_PLUS_ONE]]) : (f32) -> f32
 // CHECK: %[[RESULT:.*]] = llvm.fmul %[[MAX]], %[[SQRT]] : f32
-// CHECK: %[[IS_NAN:.*]] = llvm.fcmp "uno" %[[RESULT]], %11 : f32
-// CHECK: %[[RET:.*]] = llvm.select %[[IS_NAN]], %[[MIN]], %[[RESULT]] : i1, f32
+// CHECK: %[[IS_NAN:.*]] = llvm.fcmp "uno" %[[RESULT]], %[[RESULT]] : f32
+// CHECK: %[[FALLBACK:.*]] = llvm.select %[[IS_NAN]], %[[MIN]], %[[RESULT]] : i1, f32
+// CHECK: %[[INF:.*]] = llvm.mlir.constant(0x7F800000 : f32) : f32
+// CHECK: %[[IS_REAL_INF:.*]] = llvm.fcmp "oeq" %[[ABS_REAL]], %[[INF]] : f32
+// CHECK: %[[IS_IMAG_INF:.*]] = llvm.fcmp "oeq" %[[ABS_IMAG]], %[[INF]] : f32
+// CHECK: %[[IS_INF:.*]] = llvm.or %[[IS_REAL_INF]], %[[IS_IMAG_INF]] : i1
+// CHECK: %[[RET:.*]] = llvm.select %[[IS_INF]], %[[INF]], %[[FALLBACK]] : i1, f32
 // CHECK: llvm.return %[[RET]] : f32
 
 // CHECK-LABEL: llvm.func @complex_eq
