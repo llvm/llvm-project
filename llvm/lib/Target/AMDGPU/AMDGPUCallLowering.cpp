@@ -16,6 +16,7 @@
 #include "AMDGPU.h"
 #include "AMDGPULegalizerInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "AMDGPUGlobalISelUtils.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
@@ -176,8 +177,10 @@ struct AMDGPUIncomingArgHandler : public CallLowering::IncomingValueHandler {
     }
 
     auto Copy = MIRBuilder.buildCopy(MRI.getType(ValVReg), PhysReg);
-    MIRBuilder.buildIntrinsic(Intrinsic::amdgcn_readfirstlane, ValVReg)
-        .addReg(Copy.getReg(0));
+    AMDGPU::buildReadAnyLane(MIRBuilder, ValVReg, Copy.getReg(0),
+                         *MIRBuilder.getMF()
+                              .getSubtarget<GCNSubtarget>()
+                              .getRegBankInfo());
   }
 
   void assignValueToReg(Register ValVReg, Register PhysReg,
