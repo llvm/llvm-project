@@ -226,7 +226,6 @@ define i32 @loadExti32(ptr %ref) {
 ; CHECK-LE-LABEL: loadExti32:
 ; CHECK-LE:       // %bb.0:
 ; CHECK-LE-NEXT:    ldr s0, [x0]
-; CHECK-LE-NEXT:    ushll v0.8h, v0.8b, #0
 ; CHECK-LE-NEXT:    umov w8, v0.h[0]
 ; CHECK-LE-NEXT:    and w0, w8, #0xff
 ; CHECK-LE-NEXT:    ret
