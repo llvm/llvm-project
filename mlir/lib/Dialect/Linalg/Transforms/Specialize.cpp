@@ -212,9 +212,12 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
       indexingMaps.insert(indexingMaps.begin() + scalarOprIdx,
                           scalarBroadcastMap);
     }
+    SmallVector<NamedAttribute> preservedAttrs =
+        linalg::getPrunedAttributeList(genericOp);
     auto newOp = ElementwiseOp::create(
         rewriter, genericOp.getLoc(), inputs, genericOp.getDpsInits(), kind,
         rewriter.getAffineMapArrayAttr(indexingMaps));
+    newOp->setDiscardableAttrs(preservedAttrs);
 
     rewriter.replaceOp(genericOp, newOp);
     return newOp;
@@ -266,9 +269,12 @@ static FailureOr<LinalgOp> specializeLinalgElementwise(RewriterBase &rewriter,
 static FailureOr<LinalgOp>
 specializeLinalgReductions(RewriterBase &rewriter, GenericOp genericOp,
                            ArrayRef<int64_t> reductionDims) {
+  SmallVector<NamedAttribute> preservedAttrs =
+      linalg::getPrunedAttributeList(genericOp);
   auto reduceOp = ReduceOp::create(
       rewriter, genericOp.getLoc(), genericOp.getDpsInputs(),
       genericOp.getDpsInits(), reductionDims, /*bodyBuild=*/nullptr);
+  reduceOp->setDiscardableAttrs(preservedAttrs);
 
   // Move the generic's payload region into the reduce's combiner.
   rewriter.inlineRegionBefore(genericOp.getRegion(), reduceOp.getCombiner(),
@@ -370,9 +376,12 @@ static LinalgOp replaceWithMatmulVariant(RewriterBase &rewriter, GenericOp op,
       "indexing_maps", rewriter.getArrayAttr(indexingMapsAttrVal));
   attributes.push_back(indexingMapsAttr);
 
+  SmallVector<NamedAttribute> preservedAttrs =
+      linalg::getPrunedAttributeList(op);
   LinalgOp namedOp = rewriter.replaceOpWithNewOp<NamedOpTy>(
       op, ValueRange{op.getDpsInputs()[0], op.getDpsInputs()[1]},
       ValueRange{op.getDpsInits()[0]}, attributes);
+  namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
 
   return namedOp;
 }
@@ -612,6 +621,8 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
                                       ? TypeRange(ValueRange(outputs))
                                       : TypeRange{};
   LinalgOp namedOp;
+  SmallVector<NamedAttribute> preservedAttrs =
+      linalg::getPrunedAttributeList(genericOp);
   // Ops with no dilations and no strides.
   if constexpr (std::is_same_v<ConvOpTy, linalg::Conv1DOp> ||
                 std::is_same_v<ConvOpTy, linalg::Conv2DOp> ||
@@ -624,6 +635,7 @@ specializeToConvOp(RewriterBase &rewriter, GenericOp genericOp,
     namedOp = rewriter.replaceOpWithNewOp<ConvOpTy>(
         genericOp, resultTypes, inputs, outputs, stridesAttr, dilationsAttr);
   }
+  namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
   return namedOp;
 }
 
@@ -724,16 +736,22 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
 
   // Copy
   if (isaCopyOpInterface(genericOp)) {
+    SmallVector<NamedAttribute> preservedAttrs =
+        linalg::getPrunedAttributeList(genericOp);
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<CopyOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0]);
+    namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
     return namedOp;
   }
 
   // Fill
   if (std::optional<Value> fillValue = isaFillOpInterface(genericOp)) {
     // Always use the detected fill value, regardless of pattern
+    SmallVector<NamedAttribute> preservedAttrs =
+        linalg::getPrunedAttributeList(genericOp);
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<FillOp>(
         genericOp, *fillValue, genericOp.getDpsInits()[0]);
+    namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
     return namedOp;
   }
 
@@ -742,9 +760,12 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
       isaBroadcastOpInterface(genericOp);
   if (equivalentToBroadcast) {
     auto dims = *equivalentToBroadcast;
+    SmallVector<NamedAttribute> preservedAttrs =
+        linalg::getPrunedAttributeList(genericOp);
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<BroadcastOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
         dims);
+    namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
     return namedOp;
   }
 
@@ -753,9 +774,12 @@ FailureOr<LinalgOp> mlir::linalg::specializeGenericOp(RewriterBase &rewriter,
       isaTransposeOpInterface(genericOp);
   if (equivalentToTranspose) {
     auto permutation = *equivalentToTranspose;
+    SmallVector<NamedAttribute> preservedAttrs =
+        linalg::getPrunedAttributeList(genericOp);
     LinalgOp namedOp = rewriter.replaceOpWithNewOp<TransposeOp>(
         genericOp, genericOp.getDpsInputs()[0], genericOp.getDpsInits()[0],
         permutation);
+    namedOp.getOperation()->setDiscardableAttrs(preservedAttrs);
     return namedOp;
   }
 
