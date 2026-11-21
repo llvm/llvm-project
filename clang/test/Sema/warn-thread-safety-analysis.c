@@ -736,6 +736,34 @@ void test_trylock_void_conditional_via_var(void) {
   mutex_unlock(&mu1);
 }
 
+struct Task *next_task(void);
+
+// Incrementing or decrementing a local variable must keep BuildLockset's
+// LocalVariableMap context synchronized for subsequent local aliases.
+void test_incdec_preserves_local_var_ctx(int count) {
+  int local = count;
+  local--;
+  --local;
+  ++local;
+  {
+    mutex_exclusive_lock(&mu1);
+    struct Mutex *guard __attribute__((cleanup(unlock_scope))) = &mu1;
+    (void)guard;
+    work_data = 1;
+  }
+
+  int n = 0;
+  struct Task *t;
+  while (n < count) {
+    n++;
+    t = next_task();
+    mutex_exclusive_lock(&t->mu);
+    if (n == 1)
+      do_some_work();
+    mutex_unlock(&t->mu);
+  }
+}
+
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
 void run(void) __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}
