@@ -5,10 +5,9 @@
 define <16 x i16> @mul_low(<16 x i16> %even, <16 x i16> %odd) {
 ; CHECK-LABEL: mul_low:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
-; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm1
+; CHECK-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; CHECK-NEXT:    vpsllw $3, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; CHECK-NEXT:    retq
 ;
 ; AVX512-LABEL: mul_low:
@@ -24,10 +23,9 @@ define <16 x i16> @mul_low(<16 x i16> %even, <16 x i16> %odd) {
 define <16 x i16> @shl_high(<16 x i16> %even, <16 x i16> %odd) {
 ; CHECK-LABEL: shl_high:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
-; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm1
+; CHECK-NEXT:    vpsllw $2, %ymm1, %ymm1
 ; CHECK-NEXT:    vpsllw $3, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm1[1],ymm0[2],ymm1[3],ymm0[4],ymm1[5],ymm0[6],ymm1[7],ymm0[8],ymm1[9],ymm0[10],ymm1[11],ymm0[12],ymm1[13],ymm0[14],ymm1[15]
+; CHECK-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
 ; CHECK-NEXT:    retq
 ;
 ; AVX512-LABEL: shl_high:
@@ -44,15 +42,11 @@ define <16 x i16> @shl_high(<16 x i16> %even, <16 x i16> %odd) {
 define void @mul_pair(ptr %dst, <16 x i16> %even, <16 x i16> %odd) {
 ; CHECK-LABEL: mul_pair:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpsllw $2, %ymm1, %ymm1
+; CHECK-NEXT:    vpsllw $3, %ymm0, %ymm0
 ; CHECK-NEXT:    vpunpcklwd {{.*#+}} ymm2 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[2],ymm1[2],ymm0[3],ymm1[3],ymm0[8],ymm1[8],ymm0[9],ymm1[9],ymm0[10],ymm1[10],ymm0[11],ymm1[11]
 ; CHECK-NEXT:    vpunpckhwd {{.*#+}} ymm0 = ymm0[4],ymm1[4],ymm0[5],ymm1[5],ymm0[6],ymm1[6],ymm0[7],ymm1[7],ymm0[12],ymm1[12],ymm0[13],ymm1[13],ymm0[14],ymm1[14],ymm0[15],ymm1[15]
-; CHECK-NEXT:    vpsllw $2, %ymm2, %ymm1
-; CHECK-NEXT:    vpsllw $3, %ymm2, %ymm2
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm1 = ymm2[0],ymm1[1],ymm2[2],ymm1[3],ymm2[4],ymm1[5],ymm2[6],ymm1[7],ymm2[8],ymm1[9],ymm2[10],ymm1[11],ymm2[12],ymm1[13],ymm2[14],ymm1[15]
-; CHECK-NEXT:    vpsllw $2, %ymm0, %ymm2
-; CHECK-NEXT:    vpsllw $3, %ymm0, %ymm0
-; CHECK-NEXT:    vpblendw {{.*#+}} ymm0 = ymm0[0],ymm2[1],ymm0[2],ymm2[3],ymm0[4],ymm2[5],ymm0[6],ymm2[7],ymm0[8],ymm2[9],ymm0[10],ymm2[11],ymm0[12],ymm2[13],ymm0[14],ymm2[15]
-; CHECK-NEXT:    vmovdqa %ymm1, (%rdi)
+; CHECK-NEXT:    vmovdqa %ymm2, (%rdi)
 ; CHECK-NEXT:    vmovdqa %ymm0, 32(%rdi)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
