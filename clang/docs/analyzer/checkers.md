@@ -2207,6 +2207,41 @@ for possible later error handling.
 >   To avoid possible false-positives `errno` is allowed to be used in this
 >   case.
 
+(unix-fsetpos)=
+
+#### unix.fsetpos (C)
+
+Check for calls to `fsetpos` that do not take a "`pos`" argument that was obtained from a previous call to `fgetpos` (on the same file).
+This includes cases where the "`pos`" argument is set to a fixed value, or was returned from a `fgetpos` call on a different file, or the value is undefined.
+This corresponds to CERT rule [FIO44-C Only use values for fsetpos() that are returned from fgetpos()](https://cmu-sei.github.io/secure-coding-standards/sei-cert-c-coding-standard/rules/input-output-fio/fio44-c/).
+
+```c
+void set_pos_1() {
+  FILE *F = tmpfile();
+  if (!F)
+    return;
+  fpos_t Pos;
+  memset(&Pos, 0, sizeof(Pos));
+  fsetpos(F, &Pos); // warn
+}
+
+void set_pos_2() {
+  FILE *F1 = tmpfile();
+  if (!F1)
+    return;
+  FILE *F2 = tmpfile();
+  if (!F2) {
+    fclose(F1);
+    return;
+  }
+  fpos_t Pos1, Pos2;
+  fgetpos(F1, &Pos1);
+  fgetpos(F2, &Pos2);
+  fsetpos(F1, &Pos1);
+  fsetpos(F2, &Pos1); // warn
+}
+```
+
 (unix-malloc)=
 
 #### unix.Malloc (C)
