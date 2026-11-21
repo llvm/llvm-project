@@ -17,6 +17,7 @@ add_object_library(
     .${LIBC_TARGET_ARCHITECTURE}.linux_${LIBC_TARGET_ARCHITECTURE}_util
     libc.src.__support.common
     libc.src.__support.CPP.string_view
+    libc.src.__support.macros.sanitizer
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
 )
