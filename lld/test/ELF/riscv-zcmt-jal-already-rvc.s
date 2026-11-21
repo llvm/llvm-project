@@ -3,7 +3,7 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax tail64.s -o tail64.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt tail64.o -o tail64
+# RUN: ld.lld -e _start --relax-tbljal tail64.o -o tail64
 # RUN: llvm-readelf -S -s tail64 | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases tail64 \
@@ -11,7 +11,7 @@
 # RUN:     --implicit-check-not=cm.jalt
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c,+zcmt,+relax call32.s -o call32.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt call32.o -o call32
+# RUN: ld.lld -e _start --relax-tbljal call32.o -o call32
 # RUN: llvm-readelf -S -s call32 | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases call32 \

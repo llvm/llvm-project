@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax shared.s -o shared.o
 # RUN: ld.lld -shared shared.o -o shared.so
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax main.s -o main.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt main.o shared.so -o main
+# RUN: ld.lld -e _start --relax-tbljal main.o shared.so -o main
 # RUN: llvm-readelf -S -s main | FileCheck %s --check-prefix=SEC
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases main | FileCheck %s --check-prefix=DIS
 

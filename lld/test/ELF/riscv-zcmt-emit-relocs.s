@@ -1,7 +1,7 @@
 # REQUIRES: riscv
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax %s -o %t.o
-# RUN: ld.lld -e _start --emit-relocs --riscv-relax-zcmt %t.o -o %t
+# RUN: ld.lld -e _start --emit-relocs --relax-tbljal %t.o -o %t
 # RUN: llvm-readelf -r %t | FileCheck %s --check-prefix=RELOCS \
 # RUN:   --implicit-check-not=R_RISCV_CALL \
 # RUN:   --implicit-check-not=R_RISCV_CALL_PLT \

@@ -2,7 +2,7 @@
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax a.s -o a.o
-# RUN: ld.lld -T lds --riscv-relax-zcmt a.o -o a
+# RUN: ld.lld -T lds --relax-tbljal a.o -o a
 # RUN: llvm-readelf -s a | FileCheck %s --check-prefix=SYM
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases a | FileCheck %s --check-prefix=DIS
 

@@ -3,45 +3,45 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax noattr.s -o noattr.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt noattr.o -o noattr
+# RUN: ld.lld -e _start --relax-tbljal noattr.o -o noattr
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases noattr | FileCheck %s --check-prefix=JUMP
 # RUN: llvm-readelf -S -s noattr | FileCheck %s --check-prefix=HAS-JVT
 # RUN: llvm-readelf -A noattr | FileCheck %s --check-prefix=ATTR
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax noattr-nocandidate.s -o noattr-nocandidate.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt noattr-nocandidate.o -o noattr-nocandidate
+# RUN: ld.lld -e _start --relax-tbljal noattr-nocandidate.o -o noattr-nocandidate
 # RUN: llvm-readelf -h -S -l -s -A noattr-nocandidate | FileCheck %s \
 # RUN:   --check-prefix=NO-ATTR --implicit-check-not=.riscv.attributes \
 # RUN:   --implicit-check-not=RISCV_ATTRIBUTES --implicit-check-not=__jvt_base$ \
 # RUN:   --implicit-check-not="TagName: arch"
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax nozcmt.s -o nozcmt.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt nozcmt.o -o nozcmt
+# RUN: ld.lld -e _start --relax-tbljal nozcmt.o -o nozcmt
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases nozcmt | FileCheck %s --check-prefix=JUMP
 # RUN: llvm-readelf -S -s nozcmt | FileCheck %s --check-prefix=HAS-JVT
 # RUN: llvm-readelf -A nozcmt | FileCheck %s --check-prefix=ATTR
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax candidate.s -o candidate.o
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax support-nozcmt.s -o support-nozcmt.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt candidate.o support-nozcmt.o -o mixed
+# RUN: ld.lld -e _start --relax-tbljal candidate.o support-nozcmt.o -o mixed
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases mixed | FileCheck %s --check-prefix=JUMP
 # RUN: llvm-readelf -S -s mixed | FileCheck %s --check-prefix=HAS-JVT
 # RUN: llvm-readelf -A mixed | FileCheck %s --check-prefix=ATTR
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax compatible-nocandidate.s -o compatible-nocandidate.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt compatible-nocandidate.o -o compatible-nocandidate
+# RUN: ld.lld -e _start --relax-tbljal compatible-nocandidate.o -o compatible-nocandidate
 # RUN: llvm-readelf -S -s compatible-nocandidate | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax zcd.s -o zcd.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt zcd.o -o zcd 2>&1 | FileCheck %s --check-prefix=ZCD
+# RUN: ld.lld -e _start --relax-tbljal zcd.o -o zcd 2>&1 | FileCheck %s --check-prefix=ZCD
 # RUN: llvm-readelf -S -s zcd | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 
 ## Only the first code range uses the JVT. Preserve its M extension, the
 ## incompatible Zcd range, the intervening data and the untouched M range.
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax regions.s -o regions.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt regions.o -o regions
+# RUN: ld.lld -e _start --relax-tbljal regions.o -o regions
 # RUN: llvm-readelf -sW regions | FileCheck %s --check-prefix=REGION-SYM
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases regions | FileCheck %s --check-prefix=REGION-DIS
 
@@ -65,7 +65,7 @@
 # ATTR-SAME: zca
 # ATTR-SAME: zcmt
 # NO-ATTR: ELF Header:
-# ZCD: warning: --riscv-relax-zcmt is disabled because
+# ZCD: warning: --relax-tbljal is disabled because
 # ZCD-SAME: advertises incompatible Zcd/compressed-FP profile
 
 #--- noattr.s

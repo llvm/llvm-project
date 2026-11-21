@@ -269,7 +269,7 @@ static bool hasZcmtCompatibleProfile(Ctx &ctx, InputFile *file, bool diagnose) {
     RISCVAttributeParser parser;
     if (Error e = parser.parse(sec->content(), llvm::endianness::little)) {
       if (diagnose)
-        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec
+        Warn(ctx) << "--relax-tbljal is disabled because " << sec
                   << " could not be parsed: " << std::move(e);
       else
         consumeError(std::move(e));
@@ -283,7 +283,7 @@ static bool hasZcmtCompatibleProfile(Ctx &ctx, InputFile *file, bool diagnose) {
     auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(*arch);
     if (!maybeInfo) {
       if (diagnose)
-        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec << ": "
+        Warn(ctx) << "--relax-tbljal is disabled because " << sec << ": "
                   << *arch << ": " << maybeInfo.takeError();
       else
         consumeError(maybeInfo.takeError());
@@ -293,7 +293,7 @@ static bool hasZcmtCompatibleProfile(Ctx &ctx, InputFile *file, bool diagnose) {
     const RISCVISAInfo &info = **maybeInfo;
     if (info.hasExtension("zcd")) {
       if (diagnose)
-        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << sec
+        Warn(ctx) << "--relax-tbljal is disabled because " << sec
                   << " advertises incompatible Zcd/compressed-FP profile";
       return false;
     }
@@ -308,7 +308,7 @@ bool RISCV::zcmtEnabled() const {
 
   if (ctx.arg.shared || ctx.arg.pie) {
     if (!zcmtWarnedDisabled) {
-      Warn(ctx) << "--riscv-relax-zcmt is disabled for PIE and shared links";
+      Warn(ctx) << "--relax-tbljal is disabled for PIE and shared links";
       zcmtWarnedDisabled = true;
     }
     return false;
@@ -316,7 +316,7 @@ bool RISCV::zcmtEnabled() const {
 
   if (!ctx.arg.relax) {
     if (!zcmtWarnedDisabled) {
-      Warn(ctx) << "--riscv-relax-zcmt requires --relax";
+      Warn(ctx) << "--relax-tbljal requires --relax";
       zcmtWarnedDisabled = true;
     }
     return false;
@@ -325,7 +325,7 @@ bool RISCV::zcmtEnabled() const {
   for (InputFile *file : ctx.objectFiles)
     if ((getEFlags(ctx, file) & EF_RISCV_RVC) == 0) {
       if (!zcmtWarnedDisabled) {
-        Warn(ctx) << "--riscv-relax-zcmt is disabled because " << file
+        Warn(ctx) << "--relax-tbljal is disabled because " << file
                   << " is not marked RVC-capable";
         zcmtWarnedDisabled = true;
       }
@@ -1638,7 +1638,7 @@ bool RISCV::relaxOnce(int pass) const {
   const bool enableZcmt = zcmtEnabled();
   if (!enableZcmt && jvtSec && jvtSec->keep) {
     if (jvtSym)
-      Err(ctx) << "__jvt_base$ is referenced but --riscv-relax-zcmt could not "
+      Err(ctx) << "__jvt_base$ is referenced but --relax-tbljal could not "
                   "emit a jump table";
     jvtSec->keep = false;
     discardEmptyJvt();

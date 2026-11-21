@@ -3,7 +3,7 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax jt.s -o jt.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt jt.o -o jt
+# RUN: ld.lld -e _start --relax-tbljal jt.o -o jt
 # RUN: llvm-readelf -S -s jt | FileCheck %s --check-prefix=JT-SEC
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases jt | FileCheck %s --check-prefix=JT-DIS
 
@@ -22,7 +22,7 @@
 # JT-DIS-LABEL: <callee>:
 
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+c,+zcmt,+relax jalt.s -o jalt.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt jalt.o -o jalt
+# RUN: ld.lld -e _start --relax-tbljal jalt.o -o jalt
 # RUN: llvm-readelf -S -s jalt | FileCheck %s --check-prefix=JALT-SEC
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases jalt | FileCheck %s --check-prefix=JALT-DIS
 

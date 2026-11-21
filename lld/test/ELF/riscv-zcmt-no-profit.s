@@ -1,7 +1,7 @@
 # REQUIRES: riscv
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax %s -o %t.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt %t.o -o %t
+# RUN: ld.lld -e _start --relax-tbljal %t.o -o %t
 # RUN: llvm-readelf -S -s %t | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 # RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases %t | FileCheck %s \

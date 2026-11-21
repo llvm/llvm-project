@@ -3,14 +3,14 @@
 # RUN: rm -rf %t && split-file %s %t && cd %t
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax duplicate.s -o duplicate.o
-# RUN: not ld.lld -e _start --riscv-relax-zcmt duplicate.o -o duplicate 2>&1 | FileCheck %s --check-prefix=DUP
+# RUN: not ld.lld -e _start --relax-tbljal duplicate.o -o duplicate 2>&1 | FileCheck %s --check-prefix=DUP
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax ref-profit.s -o ref-profit.o
-# RUN: ld.lld -e _start --riscv-relax-zcmt ref-profit.o -o ref-profit
+# RUN: ld.lld -e _start --relax-tbljal ref-profit.o -o ref-profit
 # RUN: llvm-readelf -s ref-profit | FileCheck %s --check-prefix=REF --implicit-check-not=__jvt_base$
 
 # RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+zcmt,+relax ref-noprofit.s -o ref-noprofit.o
-# RUN: not ld.lld -e _start --riscv-relax-zcmt ref-noprofit.o -o ref-noprofit 2>&1 | FileCheck %s --check-prefix=REF-NOPROFIT
+# RUN: not ld.lld -e _start --relax-tbljal ref-noprofit.o -o ref-noprofit 2>&1 | FileCheck %s --check-prefix=REF-NOPROFIT
 
 # DUP: error: duplicate definition of __jvt_base$
 # REF: __jvt_base$
