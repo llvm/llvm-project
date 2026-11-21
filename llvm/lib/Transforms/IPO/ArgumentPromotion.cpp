@@ -6,25 +6,38 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass promotes "by reference" arguments to be "by value" arguments.  In
-// practice, this means looking for internal functions that have pointer
-// arguments.  If it can prove, through the use of alias analysis, that an
-// argument is *only* loaded, then it can pass the value into the function
-// instead of the address of the value.  This can cause recursive simplification
-// of code and lead to the elimination of allocas (especially in C++ template
-// code like the STL).
+// This pass changes the signatures of internal functions whose callers are all
+// known (direct calls only). It does the following transforms:
 //
-// This pass also handles aggregate arguments that are passed into a function,
-// scalarizing them if the elements of the aggregate are only loaded.  Note that
-// by default it refuses to scalarize aggregates which would require passing in
-// more than three operands to the function, because passing thousands of
-// operands for a large array or structure is unprofitable! This limit can be
-// configured or disabled, however.
+// * Promoting "by reference" arguments to "by value" arguments. If the pass can
+//   prove, through the use of alias analysis, that a pointer argument is *only*
+//   loaded, then it can pass the value into the function instead of the
+//   address of the value. This can cause recursive simplification of code and
+//   lead to the elimination of allocas (especially in C++ template code like
+//   the STL).
 //
-// Note that this transformation could also be done for arguments that are only
-// stored to (returning the value instead), but does not currently.  This case
-// would be best handled when and if LLVM begins supporting multiple return
-// values from functions.
+//   This could also be done for arguments that are only stored to (returning
+//   the value instead), but is not currently. This case would be best handled
+//   when and if LLVM begins supporting multiple return values from functions.
+//
+// * Scalarizing aggregate arguments that are passed into a function, if the
+//   elements of the aggregate are only loaded. By default the pass refuses to
+//   scalarize aggregates which would require passing in more than three
+//   operands to the function, because passing thousands of operands for a
+//   large array or structure is unprofitable! This limit can be configured or
+//   disabled, however.
+//
+// * Retyping arguments and return values to types that are cheaper to pass.
+//   For example, the calling convention can turn an aggregate that
+//   holds vector or floating-point data into an integer too wide for one
+//   register, which is then split across several integer registers, so every
+//   call boundary costs moves between register files.
+//
+//   Currently, this only retypes:
+//   - integers (that the target cannot keep in one register) into vectors
+//
+//   - TODO: also retype from and into arrays, structs and fp
+//   - TODO: also retype between vector types (e.g. into a legal one)
 //
 //===----------------------------------------------------------------------===//
 
@@ -84,6 +97,8 @@ using namespace llvm;
 
 STATISTIC(NumArgumentsPromoted, "Number of pointer arguments promoted");
 STATISTIC(NumArgumentsDead, "Number of dead pointer args eliminated");
+STATISTIC(NumArgumentsRetyped, "Number of arguments retyped");
+STATISTIC(NumReturnsRetyped, "Number of return values retyped");
 
 namespace {
 
@@ -109,13 +124,15 @@ static Value *createByteGEP(IRBuilderBase &IRB, const DataLayout &DL,
 /// DoPromotion - This method actually performs the promotion of the specified
 /// arguments, and returns the new function.  At this point, we know that it's
 /// safe to do so.
-static Function *
-doPromotion(Function *F, FunctionAnalysisManager &FAM,
-            const DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>>
-                &ArgsToPromote) {
+static Function *doPromotion(
+    Function *F, FunctionAnalysisManager &FAM,
+    const DenseMap<Argument *, SmallVector<OffsetAndArgPart, 4>> &ArgsToPromote,
+    const DenseMap<Argument *, Type *> &ArgsToRetype, Type *RetTy) {
   // Start by computing a new prototype for the function, which is the same as
   // the old function, but has modified arguments.
   FunctionType *FTy = F->getFunctionType();
+  bool RetypeRet = RetTy != FTy->getReturnType();
+
   std::vector<Type *> Params;
 
   // Attribute - Keep track of the parameter attributes for the arguments
@@ -133,7 +150,19 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgNo) {
     auto It = ArgsToPromote.find(&*I);
-    if (It == ArgsToPromote.end()) {
+    if (Type *Ty = ArgsToRetype.lookup(&*I)) {
+      // Retyped argument
+      Params.push_back(Ty);
+      ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
+      NewArgIndices.push_back(NewArgNo++);
+      ++NumArgumentsRetyped;
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "ArgumentRetyped", F)
+               << "retyping argument " << ore::NV("ArgName", I->getName())
+               << "(" << ore::NV("ArgIndex", ArgNo) << ") to "
+               << ore::NV("Type", Ty);
+      });
+    } else if (It == ArgsToPromote.end()) {
       // Unchanged argument
       Params.push_back(I->getType());
       ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
@@ -167,7 +196,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     }
   }
 
-  Type *RetTy = FTy->getReturnType();
+  if (RetypeRet)
+    ++NumReturnsRetyped;
 
   // Construct the new function type using the new arguments.
   FunctionType *NFTy = FunctionType::get(RetTy, Params, FTy->isVarArg());
@@ -187,7 +217,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                     << "From: " << *F);
 
   uint64_t LargestVectorWidth = 0;
-  for (auto *I : Params)
+  for (auto *I : concat<Type *const>(Params, ArrayRef(RetTy)))
     if (auto *VT = dyn_cast<llvm::VectorType>(I))
       LargestVectorWidth = std::max(
           LargestVectorWidth, VT->getPrimitiveSizeInBits().getKnownMinValue());
@@ -226,16 +256,22 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     assert(CB.getCalledFunction() == F);
     const AttributeList &CallPAL = CB.getAttributes();
     IRBuilder<NoFolder> IRB(&CB);
+    IRBuilder<> RetypeIRB(&CB);
 
-    // Loop over the operands, inserting GEP and loads in the caller as
-    // appropriate.
+    // Loop over the operands, inserting GEP and loads, or casts, in the caller
+    // as appropriate.
     auto *AI = CB.arg_begin();
     ArgNo = 0;
     for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
          ++I, ++AI, ++ArgNo) {
       auto ArgIt = ArgsToPromote.find(&*I);
-      if (ArgIt == ArgsToPromote.end()) {
-        Args.push_back(*AI); // Unmodified argument
+      if (Type *Ty = ArgsToRetype.lookup(&*I)) {
+        // Retyped argument
+        Args.push_back(RetypeIRB.CreateBitCast(*AI, Ty));
+        ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
+      } else if (ArgIt == ArgsToPromote.end()) {
+        // Unmodified argument
+        Args.push_back(*AI);
         ArgAttrVec.push_back(CallPAL.getParamAttrs(ArgNo));
       } else if (!I->use_empty()) {
         Value *V = *AI;
@@ -298,7 +334,11 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
                                                   LargestVectorWidth);
 
     if (!CB.use_empty()) {
-      CB.replaceAllUsesWith(NewCS);
+      Value *Res = NewCS;
+      if (RetypeRet)
+        Res = CastInst::Create(Instruction::BitCast, NewCS, CB.getType(), "",
+                               std::next(NewCS->getIterator()));
+      CB.replaceAllUsesWith(Res);
       NewCS->takeName(&CB);
     }
 
@@ -322,6 +362,16 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   // the new arguments, also transferring over the names as well.
   Function::arg_iterator I2 = NF->arg_begin();
   for (Argument &Arg : F->args()) {
+    if (ArgsToRetype.count(&Arg)) {
+      I2->setName(Arg.getName() + ".retyped");
+      Value *NewV =
+          IRBuilder<>(&NF->begin()->front()).CreateBitCast(&*I2, Arg.getType());
+      Arg.replaceAllUsesWith(NewV);
+      NewV->takeName(&Arg);
+      ++I2;
+      continue;
+    }
+
     if (!ArgsToPromote.count(&Arg)) {
       // If this is an unmodified argument, move the name and users over to the
       // new version.
@@ -428,6 +478,12 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     auto &AC = FAM.getResult<AssumptionAnalysis>(*NF);
     PromoteMemToReg(Allocas, DT, &AC);
   }
+
+  if (RetypeRet)
+    for (BasicBlock &BB : *NF)
+      if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+        RI->setOperand(
+            0, IRBuilder<>(RI).CreateBitCast(RI->getReturnValue(), RetTy));
 
   // If argument(s) are dead (hence removed) or promoted, the function probably
   // does not follow the standard calling convention anymore. Add DW_CC_nocall
@@ -797,6 +853,128 @@ static bool areTypesABICompatible(ArrayRef<Type *> Types, const Function &F,
   });
 }
 
+static bool isUsedAsInteger(Value *V) {
+  // A constant passed or returned says nothing about how it is used.
+  if (!isa<Instruction, Argument>(V))
+    return false;
+
+  Type *IntTy = V->getType();
+  auto IsArith = [&](Value *X) {
+    if (auto *Cmp = dyn_cast<ICmpInst>(X))
+      return Cmp->getOperand(0)->getType() == IntTy;
+    if (X->getType() != IntTy)
+      return false;
+    if (isa<IntrinsicInst>(X))
+      return true;
+
+    // Bitwise logic and shifts by a constant only move bits (commonly used by
+    // SROA to pack/unpack vectors).
+    auto *BO = dyn_cast<BinaryOperator>(X);
+    if (!BO)
+      return false;
+    if (BO->isBitwiseLogicOp())
+      return false;
+    if (BO->isShift() && isa<Constant>(BO->getOperand(1)))
+      return false;
+
+    // Any other binary operator is real arithmetic.
+    return true;
+  };
+
+  // Look at V's def, its users, and the operands of its def: e.g. the multiply
+  // in `(a * b) >> 64`, whose shift alone only moves bits.
+  auto *I = dyn_cast<Instruction>(V);
+  return IsArith(V) || any_of(V->users(), IsArith) ||
+         (I && any_of(I->operands(), IsArith));
+}
+
+static Type *getDominantBitcastType(ArrayRef<Value *> Vals) {
+  SmallVector<std::pair<Type *, unsigned>, 4> Votes;
+  auto Vote = [&](Type *T) {
+    for (auto &[VT, N] : Votes)
+      if (VT == T) {
+        ++N;
+        return;
+      }
+    Votes.push_back({T, 1});
+  };
+
+  for (Value *V : Vals) {
+    if (auto *BC = dyn_cast<BitCastInst>(V); BC && BC->getSrcTy()->isVectorTy())
+      Vote(BC->getSrcTy());
+    if (!isa<Instruction, Argument>(V))
+      continue;
+    for (User *U : V->users())
+      if (isa<BitCastInst>(U) && U->getType()->isVectorTy())
+        Vote(U->getType());
+  }
+
+  Type *Best = nullptr;
+  unsigned BestVotes = 0;
+  for (auto [T, N] : Votes)
+    if (N > BestVotes) {
+      Best = T;
+      BestVotes = N;
+    }
+  return Best;
+}
+
+/// Argument/retval retyping policy: Currently, only integers that don't fit a
+/// register of the target, while a vector of the same size does. We find the
+/// dominant bitcast type, and re-type into that, with a fallback of the
+/// target's largest legal int.
+
+/// Cheap check on the type alone.
+static bool isRetypingCandidate(Type *Ty, const DataLayout &DL,
+                                const TargetTransformInfo &TTI) {
+  auto *IntTy = dyn_cast<IntegerType>(Ty);
+  if (!IntTy || TTI.isTypeLegal(IntTy))
+    return false;
+
+  unsigned Bits = IntTy->getBitWidth();
+  unsigned LaneBits = DL.getLargestLegalIntTypeSizeInBits();
+  if (!LaneBits || Bits <= LaneBits || Bits % LaneBits != 0)
+    return false;
+
+  Type *VecTy = FixedVectorType::get(
+      IntegerType::get(IntTy->getContext(), LaneBits), Bits / LaneBits);
+  return TTI.isTypeLegal(VecTy);
+}
+
+static Type *chooseRetypedType(Type *Ty, ArrayRef<Value *> Vals,
+                               const Function &F,
+                               const TargetTransformInfo &TTI) {
+  const DataLayout &DL = F.getDataLayout();
+  assert(isRetypingCandidate(Ty, DL, TTI) && "not a retyping candidate");
+
+  // Used for arithmetics? If yes, don't re-type.
+  if (any_of(Vals, isUsedAsInteger))
+    return nullptr;
+
+  // Explicitly do not detect presence of bitcasts or other casts as signal for
+  // whether to re-type or not. Values worth retyping often don't have them -- a
+  // function may only forward the value (the casts are in its callers or
+  // callees), only load and store it, or split it into lanes with shifts and
+  // truncations, so that only the lanes are cast.
+  //
+  // Once nothing does integer arithmetic on the values, passing them
+  // as a vector costs nothing extra anyway.
+
+  // The vector type that the values are mostly bitcast to or from.
+  Type *NewTy = getDominantBitcastType(Vals);
+  if (!NewTy || !TTI.isTypeLegal(NewTy)) {
+    // Fall back to a vector of the target's largest legal integer lanes.
+    Type *LaneTy = DL.getLargestLegalIntType(Ty->getContext());
+    unsigned NumLanes = Ty->getIntegerBitWidth() / LaneTy->getIntegerBitWidth();
+    NewTy = FixedVectorType::get(LaneTy, NumLanes);
+  }
+
+  if (!areTypesABICompatible(NewTy, F, TTI))
+    return nullptr;
+
+  return NewTy;
+}
+
 /// PromoteArguments - This method checks the specified function to see if there
 /// are any promotable arguments and if it is safe to promote the function (for
 /// example, all callers are direct).  If safe to promote some arguments, it
@@ -830,12 +1008,19 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
   if (F->getAttributes().hasAttrSomewhere(Attribute::InAlloca))
     return nullptr;
 
-  // First check: see if there are any pointer arguments!  If not, quick exit.
+  const DataLayout &DL = F->getDataLayout();
+  const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
+
+  // First check: see if there are any pointer arguments, or arguments or a
+  // return value that may be retyped
   SmallVector<Argument *, 16> PointerArgs;
-  for (Argument &I : F->args())
+  bool AnyRetype = isRetypingCandidate(F->getReturnType(), DL, TTI);
+  for (Argument &I : F->args()) {
     if (I.getType()->isPointerTy())
       PointerArgs.push_back(&I);
-  if (PointerArgs.empty())
+    AnyRetype |= isRetypingCandidate(I.getType(), DL, TTI);
+  }
+  if (PointerArgs.empty() && !AnyRetype)
     return nullptr;
 
   // Second check: make sure that all callers are direct callers.  We can't
@@ -862,9 +1047,7 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     if (BB.getTerminatingMustTailCall())
       return nullptr;
 
-  const DataLayout &DL = F->getDataLayout();
   auto &AAR = FAM.getResult<AAManager>(*F);
-  const auto &TTI = FAM.getResult<TargetIRAnalysis>(*F);
 
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
@@ -900,14 +1083,51 @@ static Function *promoteArguments(Function *F, FunctionAnalysisManager &FAM,
     }
   }
 
-  // No promotable pointer arguments.
-  if (ArgsToPromote.empty())
+  // Retype arguments and the return value to types that are cheaper to pass,
+  // if all their uses in the callee and at every call site allow it.
+  DenseMap<Argument *, Type *> ArgsToRetype;
+  Type *RetTy = F->getReturnType();
+  SmallVector<Value *, 8> Vals;
+
+  // (1) arguments
+  for (Argument &Arg : F->args()) {
+    if (ArgsToPromote.count(&Arg) ||
+        !isRetypingCandidate(Arg.getType(), DL, TTI))
+      continue;
+
+    // Gather the argument and its operand at every call site: the values
+    // whose uses decide whether to retype it.
+    Vals.assign({&Arg});
+    for (User *U : F->users())
+      Vals.push_back(cast<CallBase>(U)->getArgOperand(Arg.getArgNo()));
+
+    if (Type *NewTy = chooseRetypedType(Arg.getType(), Vals, *F, TTI))
+      ArgsToRetype[&Arg] = NewTy;
+  }
+
+  // (2) return value - TODO: also support InvokeInst
+  bool AllUsersAreCalls = all_of(F->users(), IsaPred<CallInst>);
+  if (AllUsersAreCalls && isRetypingCandidate(RetTy, DL, TTI)) {
+    // Gather the returned values and the result at every call site: the
+    // values whose uses decide whether to retype the return value.
+    Vals.assign(F->user_begin(), F->user_end());
+    for (BasicBlock &BB : *F)
+      if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+        Vals.push_back(RI->getReturnValue());
+
+    if (Type *NewTy = chooseRetypedType(RetTy, Vals, *F, TTI))
+      RetTy = NewTy;
+  }
+
+  // Nothing to promote or retype.
+  if (ArgsToPromote.empty() && ArgsToRetype.empty() &&
+      RetTy == F->getReturnType())
     return nullptr;
 
   if (NumArgsAfterPromote > TTI.getMaxNumArgs())
     return nullptr;
 
-  return doPromotion(F, FAM, ArgsToPromote);
+  return doPromotion(F, FAM, ArgsToPromote, ArgsToRetype, RetTy);
 }
 
 PreservedAnalyses ArgumentPromotionPass::run(LazyCallGraph::SCC &C,
