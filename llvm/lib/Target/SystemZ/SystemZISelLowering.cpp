@@ -297,6 +297,8 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX},
                          MVT::i128, Legal);
+
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, MVT::i128, Legal);
     }
   }
 
@@ -511,6 +513,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
 
       setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VT,
                          Legal);
+      setOperationAction({ISD::AVGCEILS, ISD::AVGCEILU}, VT, Legal);
     }
   }
 
