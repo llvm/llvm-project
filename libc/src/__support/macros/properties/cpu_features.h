@@ -110,6 +110,10 @@
 #endif
 #endif
 
+#if defined(__riscv_mul)
+#define LIBC_TARGET_CPU_HAS_RISCV_MUL
+#endif
+
 #if defined(__riscv_flen)
 // https://github.com/riscv-non-isa/riscv-c-api-doc/blob/main/src/c-api.adoc
 #if defined(__riscv_zfhmin)
