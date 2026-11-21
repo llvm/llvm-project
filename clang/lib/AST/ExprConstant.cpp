@@ -17817,7 +17817,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered: {
+  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig: {
     APFloat LHS(0.0);
     APFloat RHS(0.0);
     if (!EvaluateFloat(E->getArg(0), LHS, Info) ||
@@ -17842,6 +17843,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           }
           case Builtin::BI__builtin_isunordered:
             return LHS.compare(RHS) == APFloat::cmpResult::cmpUnordered;
+          case Builtin::BI__builtin_iseqsig:
+            return LHS.compare(RHS) == APFloat::cmpResult::cmpEqual;
           default:
             llvm_unreachable("Unexpected builtin ID: Should be a floating "
                              "point comparison function");
