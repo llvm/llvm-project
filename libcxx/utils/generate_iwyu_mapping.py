@@ -45,6 +45,10 @@ def IWYU_mapping(header: str) -> typing.Optional[typing.List[str]]:
         return ["utility"]
     elif header == "__fwd/subrange.h":
         return ["ranges"]
+    elif header == "__fwd/vector2.h":  # PROTOTYPE: P3866R0
+        return ["vector"]
+    elif header == "__cpp_release_namespaces.h":  # PROTOTYPE: P3866R0
+        return ["version"]
     elif re.match("__fwd/(fstream|ios|istream|ostream|sstream|streambuf)[.]h", header):
         return ["iosfwd"]
     # Handle remaining forward declaration headers

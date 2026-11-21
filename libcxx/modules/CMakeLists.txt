@@ -112,6 +112,7 @@ set(LIBCXX_MODULE_STD_SOURCES
   std/variant.inc
   std/vector.inc
   std/version.inc
+  std/cpp_release_namespaces.inc # PROTOTYPE: P3866R0
 )
 
 set(LIBCXX_MODULE_STD_COMPAT_SOURCES

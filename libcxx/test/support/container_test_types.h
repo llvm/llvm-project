@@ -444,6 +444,12 @@ namespace TCT {
 
 template <class T = CopyInsertable<1>>
 using vector = std::vector<T, ContainerTestAllocator<T, T> >;
+
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 29
+// PROTOTYPE: P3866R0 std::vector2
+template <class T = CopyInsertable<1> >
+using vector2 = std::vector2<T, ContainerTestAllocator<T, T> >;
+#endif
 template <class T = CopyInsertable<1>>
 using deque = std::deque<T, ContainerTestAllocator<T, T> >;
 template <class T = CopyInsertable<1>>

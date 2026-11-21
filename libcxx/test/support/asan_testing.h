@@ -33,6 +33,25 @@ TEST_CONSTEXPR bool is_contiguous_container_asan_correct(const std::vector<T, Al
 }
 #endif // TEST_HAS_FEATURE(address_sanitizer)
 
+// PROTOTYPE: P3866R0 std::vector2
+#if defined(_LIBCPP_VERSION) && TEST_STD_VER >= 29
+#  if TEST_HAS_FEATURE(address_sanitizer)
+template <typename T, typename Alloc>
+TEST_CONSTEXPR bool is_contiguous_container_asan_correct(const std::vector2<T, Alloc>& c) {
+  if (TEST_IS_CONSTANT_EVALUATED)
+    return true;
+  if (std::is_same<Alloc, std::allocator<T> >::value && c.data() != NULL)
+    return __sanitizer_verify_contiguous_container(c.data(), c.data() + c.size(), c.data() + c.capacity()) != 0;
+  return true;
+}
+#  else
+template <typename T, typename Alloc>
+TEST_CONSTEXPR bool is_contiguous_container_asan_correct(const std::vector2<T, Alloc>&) {
+  return true;
+}
+#  endif // TEST_HAS_FEATURE(address_sanitizer)
+#endif
+
 #if TEST_HAS_FEATURE(address_sanitizer)
 extern "C" int __sanitizer_verify_double_ended_contiguous_container(
     const void* beg, const void* con_beg, const void* con_end, const void* end);
