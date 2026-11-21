@@ -190,25 +190,25 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                     MachineIRBuilder &MIRBuilder) {
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
-        .addDef(createTypeVReg(MIRBuilder))
-        .addImm(Width);
-  });
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+            .addDef(createTypeVReg(MIRBuilder))
+            .addImm(Width);
+      });
 }
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                     MachineIRBuilder &MIRBuilder,
                                     SPIRV::FPEncoding::FPEncoding FPEncode) {
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
-        .addDef(createTypeVReg(MIRBuilder))
-        .addImm(Width)
-        .addImm(FPEncode);
-  });
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+            .addDef(createTypeVReg(MIRBuilder))
+            .addImm(Width)
+            .addImm(FPEncode);
+      });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
@@ -1132,13 +1132,13 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   if (!Reg.isValid())
     Reg = createTypeVReg(MIRBuilder);
 
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    return MIRBuilder.buildInstr(SPIRV::OpTypePointer)
-        .addDef(Reg)
-        .addImm(static_cast<uint32_t>(SC))
-        .addUse(getSPIRVTypeID(ElemType));
-  });
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildInstr(SPIRV::OpTypePointer)
+            .addDef(Reg)
+            .addImm(static_cast<uint32_t>(SC))
+            .addUse(getSPIRVTypeID(ElemType));
+      });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeFunction(
@@ -1153,15 +1153,15 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeFunction(
         Fn, "SPIR-V shaders do not support variadic functions",
         MIRBuilder.getDebugLoc()));
   }
-  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
-                                                              &MIRBuilder) {
-    auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
-                   .addDef(createTypeVReg(MIRBuilder))
-                   .addUse(getSPIRVTypeID(RetType));
-    for (auto &ArgType : ArgTypes)
-      MIB.addUse(getSPIRVTypeID(ArgType));
-    return MIB;
-  });
+  return createConstOrTypeAtFunctionEntry(
+      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
+                       .addDef(createTypeVReg(MIRBuilder))
+                       .addUse(getSPIRVTypeID(RetType));
+        for (auto &ArgType : ArgTypes)
+          MIB.addUse(getSPIRVTypeID(ArgType));
+        return MIB;
+      });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
@@ -1345,7 +1345,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::restOfCreateSPIRVType(
 
   // TODO: We could end up with two SPIR-V types pointing to the same llvm type.
   // Is that a problem?
-  SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
+  // spirv.Padding lowers to a plain integer type shared with real members;
+  // keep that integer's IR type instead of remapping it to the target type.
+  auto *PadTy = dyn_cast<TargetExtType>(Ty);
+  if (!(PadTy && PadTy->getName() == "spirv.Padding"))
+    SPIRVToLLVMType[SpirvType] = unifyPtrType(Ty);
 
   if (SpirvType->getOpcode() == SPIRV::OpTypeForwardPointer ||
       SpirvType->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
@@ -1621,12 +1625,25 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 }
 
 SPIRVTypeInst
-SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
-  auto Key = SPIRV::irhandle_padding();
+SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                            uint64_t PaddingSizeInBytes) {
+  // Member offsets are explicit, so the padding member only needs to be a
+  // valid integer that fits the gap. Use the widest of i32/i16/i8 that divides
+  // the size: i8 members require the Int8 capability and, in Vulkan,
+  // uniformAndStorageBuffer8BitAccess.
+  // Note: the member's offset is not considered. Padding that starts at an
+  // offset not aligned to the chosen width would produce a misaligned member.
+  assert(PaddingSizeInBytes != 0 && "spirv.Padding must not be empty");
+  unsigned Width = 8;
+  if (PaddingSizeInBytes % 4 == 0)
+    Width = 32;
+  else if (PaddingSizeInBytes % 2 == 0)
+    Width = 16;
+  auto Key = SPIRV::irhandle_padding(Width);
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;
-  auto *T = Type::getInt8Ty(MIRBuilder.getContext());
-  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
+  auto *T = Type::getIntNTy(MIRBuilder.getContext(), Width);
+  SPIRVTypeInst R = getOrCreateSPIRVIntegerType(Width, MIRBuilder);
   finishCreatingSPIRVType(T, R);
   add(Key, R);
   return R;
