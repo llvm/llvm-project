@@ -34,28 +34,30 @@
 define dso_local void @testLdSt(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testLdSt:
 ; LE-PAIRED:       # %bb.0: # %entry
+; LE-PAIRED-NEXT:    paddi r3, 0, f@PCREL, 1
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+64(0), 1
-; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+80(0), 1
-; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+96(0), 1
-; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+112(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+176(0), 1
-; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+160(0), 1
-; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+144(0), 1
-; LE-PAIRED-NEXT:    pstxv vs3, f@PCREL+128(0), 1
+; LE-PAIRED-NEXT:    lxv vs2, 80(r3)
+; LE-PAIRED-NEXT:    lxv vs1, 96(r3)
+; LE-PAIRED-NEXT:    lxv vs0, 112(r3)
+; LE-PAIRED-NEXT:    stxv vs0, 176(r3)
+; LE-PAIRED-NEXT:    stxv vs1, 160(r3)
+; LE-PAIRED-NEXT:    stxv vs2, 144(r3)
+; LE-PAIRED-NEXT:    stxv vs3, 128(r3)
 ; LE-PAIRED-NEXT:    blr
 ;
 ; LE-PAIRED-WACC-LABEL: testLdSt:
 ; LE-PAIRED-WACC:       # %bb.0: # %entry
+; LE-PAIRED-WACC-NEXT:    paddi r3, 0, f@PCREL, 1
 ; LE-PAIRED-WACC-NEXT:    plxv v3, f@PCREL+64(0), 1
-; LE-PAIRED-WACC-NEXT:    plxv v5, f@PCREL+96(0), 1
-; LE-PAIRED-WACC-NEXT:    plxv v2, f@PCREL+80(0), 1
-; LE-PAIRED-WACC-NEXT:    plxv v4, f@PCREL+112(0), 1
+; LE-PAIRED-WACC-NEXT:    lxv v2, 80(r3)
+; LE-PAIRED-WACC-NEXT:    lxv v5, 96(r3)
+; LE-PAIRED-WACC-NEXT:    lxv v4, 112(r3)
 ; LE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; LE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; LE-PAIRED-WACC-NEXT:    pstxv v4, f@PCREL+176(0), 1
-; LE-PAIRED-WACC-NEXT:    pstxv v5, f@PCREL+160(0), 1
-; LE-PAIRED-WACC-NEXT:    pstxv v2, f@PCREL+144(0), 1
-; LE-PAIRED-WACC-NEXT:    pstxv v3, f@PCREL+128(0), 1
+; LE-PAIRED-WACC-NEXT:    stxv v4, 176(r3)
+; LE-PAIRED-WACC-NEXT:    stxv v5, 160(r3)
+; LE-PAIRED-WACC-NEXT:    stxv v2, 144(r3)
+; LE-PAIRED-WACC-NEXT:    stxv v3, 128(r3)
 ; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdSt:
@@ -332,9 +334,10 @@ define dso_local void @testUnalignedLdSt() {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv vs3, f@PCREL+11(0), 1
 ; LE-PAIRED-NEXT:    plxv vs2, f@PCREL+27(0), 1
+; LE-PAIRED-NEXT:    paddi r3, 0, f@PCREL, 1
 ; LE-PAIRED-NEXT:    plxv vs1, f@PCREL+43(0), 1
 ; LE-PAIRED-NEXT:    plxv vs0, f@PCREL+59(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, f@PCREL+67(0), 1
+; LE-PAIRED-NEXT:    pstxv vs0, 67(r3), 0
 ; LE-PAIRED-NEXT:    pstxv vs1, f@PCREL+51(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs2, f@PCREL+35(0), 1
 ; LE-PAIRED-NEXT:    pstxv vs3, f@PCREL+19(0), 1
@@ -346,9 +349,10 @@ define dso_local void @testUnalignedLdSt() {
 ; LE-PAIRED-WACC-NEXT:    plxv v5, f@PCREL+43(0), 1
 ; LE-PAIRED-WACC-NEXT:    plxv v2, f@PCREL+27(0), 1
 ; LE-PAIRED-WACC-NEXT:    plxv v4, f@PCREL+59(0), 1
+; LE-PAIRED-WACC-NEXT:    paddi r3, 0, f@PCREL, 1
 ; LE-PAIRED-WACC-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
 ; LE-PAIRED-WACC-NEXT:    dmxxextfdmr512 vsp34, vsp36, wacc0, 0
-; LE-PAIRED-WACC-NEXT:    pstxv v4, f@PCREL+67(0), 1
+; LE-PAIRED-WACC-NEXT:    pstxv v4, 67(r3), 0
 ; LE-PAIRED-WACC-NEXT:    pstxv v5, f@PCREL+51(0), 1
 ; LE-PAIRED-WACC-NEXT:    pstxv v2, f@PCREL+35(0), 1
 ; LE-PAIRED-WACC-NEXT:    pstxv v3, f@PCREL+19(0), 1
@@ -482,18 +486,19 @@ entry:
 define dso_local void @testLdStPair(i64 %SrcIdx, i64 %DstIdx) {
 ; LE-PAIRED-LABEL: testLdStPair:
 ; LE-PAIRED:       # %bb.0: # %entry
-; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+48(0), 1
+; LE-PAIRED-NEXT:    paddi r3, 0, g@PCREL, 1
 ; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+32(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+80(0), 1
-; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+64(0), 1
+; LE-PAIRED-NEXT:    lxv vs0, 48(r3)
+; LE-PAIRED-NEXT:    stxv vs1, 64(r3)
+; LE-PAIRED-NEXT:    stxv vs0, 80(r3)
 ; LE-PAIRED-NEXT:    blr
 ;
 ; LE-PAIRED-WACC-LABEL: testLdStPair:
 ; LE-PAIRED-WACC:       # %bb.0: # %entry
 ; LE-PAIRED-WACC-NEXT:    paddi r3, 0, g@PCREL+32, 1
 ; LE-PAIRED-WACC-NEXT:    lxvpx vsp34, 0, r3
-; LE-PAIRED-WACC-NEXT:    paddi r3, 0, g@PCREL+64, 1
-; LE-PAIRED-WACC-NEXT:    stxvpx vsp34, 0, r3
+; LE-PAIRED-WACC-NEXT:    paddi r3, 0, g@PCREL, 1
+; LE-PAIRED-WACC-NEXT:    stxvp vsp34, 64(r3)
 ; LE-PAIRED-WACC-NEXT:    blr
 ;
 ; BE-PAIRED-LABEL: testLdStPair:
@@ -686,7 +691,8 @@ define dso_local void @testUnalignedLdStPair() {
 ; LE-PAIRED:       # %bb.0: # %entry
 ; LE-PAIRED-NEXT:    plxv vs0, g@PCREL+27(0), 1
 ; LE-PAIRED-NEXT:    plxv vs1, g@PCREL+11(0), 1
-; LE-PAIRED-NEXT:    pstxv vs0, g@PCREL+35(0), 1
+; LE-PAIRED-NEXT:    paddi r3, 0, g@PCREL, 1
+; LE-PAIRED-NEXT:    pstxv vs0, 35(r3), 0
 ; LE-PAIRED-NEXT:    pstxv vs1, g@PCREL+19(0), 1
 ; LE-PAIRED-NEXT:    blr
 ;
