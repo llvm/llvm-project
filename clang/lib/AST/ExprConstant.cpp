@@ -23096,7 +23096,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::CXXInheritedCtorInitExprClass:
   case Expr::CXXStdInitializerListExprClass:
   case Expr::CXXBindTemporaryExprClass:
-  case Expr::ExprWithCleanupsClass:
   case Expr::CXXTemporaryObjectExprClass:
   case Expr::CXXUnresolvedConstructExprClass:
   case Expr::CXXDependentScopeMemberExprClass:
@@ -23183,6 +23182,11 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
 
   case Expr::ConstantExprClass:
     return CheckICE(cast<ConstantExpr>(E)->getSubExpr(), Ctx);
+
+  case Expr::ExprWithCleanupsClass:
+    // Temporaries the operand evaluates are rejected by the operand itself;
+    // the wrapper alone, e.g. around an array bound, does not break an ICE.
+    return CheckICE(cast<ExprWithCleanups>(E)->getSubExpr(), Ctx);
 
   case Expr::ParenExprClass:
     return CheckICE(cast<ParenExpr>(E)->getSubExpr(), Ctx);

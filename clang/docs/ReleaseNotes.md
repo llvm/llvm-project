@@ -942,6 +942,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `declare mapper` directive. (#GH223366)
 - Fixed an assertion failure when a variable implicitly mapped by an OpenMP `target` directive has a class type
   (such as `std::map`) whose mapper lookup instantiates a class template specialization. (#GH154704)
+- Fixed a crash when a C compound literal appears in a variable length array bound; array bounds are now full-expressions, so a temporary with a constexpr destructor can also appear in a constant array bound. (#GH237441)
 - Fixed a bug where repeated #imports of modular headers in non-modular compilation were translated to #pragma clang module import. (#GH216924)
 - Fixed an assertion when `#pragma omp declare simd` or `#pragma omp declare variant` is followed by another OpenMP declarative directive containing a qualified identifier. (#GH217204)
 - Fixed crashes on an OpenMP `target` region inside a lambda or block at namespace scope, including when the region used a global reference; such a region in a lambda is now also emitted for the offloading device. (#GH223397, #GH136652)

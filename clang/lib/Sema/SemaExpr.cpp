@@ -21031,6 +21031,14 @@ ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
   return CheckLValueToRValueConversionOperand(Res.get());
 }
 
+ExprResult Sema::ActOnArrayBound(ExprResult Bound) {
+  // Wrap now, before the bound's context drops the cleanups, with the lvalue
+  // conversion inside the wrapper.
+  if (!Bound.isUsable())
+    return Bound;
+  return MaybeCreateExprWithCleanups(DefaultLvalueConversion(Bound.get()));
+}
+
 void Sema::CleanupVarDeclMarking() {
   // Iterate through a local copy in case MarkVarDeclODRUsed makes a recursive
   // call.
