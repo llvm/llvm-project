@@ -115,6 +115,40 @@ subroutine array_dup_second
   data a /1, 2, 3/
 end subroutine
 
+! An array member initialized with a scalar in both appearances.
+subroutine array_scalar_dup_first
+  real :: x(10) = 1.0
+  common /cj/ x
+end subroutine
+subroutine array_scalar_dup_second
+  !PORTABILITY: Multiple initialization of COMMON block /cj/ is not standard; this appearance duplicates the previous initialization [-Wmultiple-common-block-init]
+  real :: x(10) = 1.0
+  common /cj/ x
+end subroutine
+
+! An array member initialized with a scalar in one appearance and with the
+! same values by a DATA statement in the other, in either order.
+subroutine array_scalar_data_first
+  real :: x(10) = 1.0
+  common /ck/ x
+end subroutine
+subroutine array_scalar_data_second
+  !PORTABILITY: Multiple initialization of COMMON block /ck/ is not standard; this appearance duplicates the previous initialization [-Wmultiple-common-block-init]
+  real :: x(10)
+  common /ck/ x
+  data x /10*1.0/
+end subroutine
+subroutine array_data_scalar_first
+  integer :: a(0:2)
+  common /cl/ a
+  data a /3*7/
+end subroutine
+subroutine array_data_scalar_second
+  !PORTABILITY: Multiple initialization of COMMON block /cl/ is not standard; this appearance duplicates the previous initialization [-Wmultiple-common-block-init]
+  integer :: a(0:2) = 7
+  common /cl/ a
+end subroutine
+
 !-------------------------------------------------------------------------
 ! Rejected: genuinely conflicting initialization.
 !-------------------------------------------------------------------------
@@ -214,4 +248,17 @@ subroutine zero_second
   real :: x
   common /df/ x
   data x /-0.0/
+end subroutine
+
+! An array member initialized with a scalar in one appearance and by a DATA
+! statement that differs in one element in the other.
+subroutine array_scalar_conflict_first
+  real :: x(3) = 1.0
+  common /dg/ x
+end subroutine
+subroutine array_scalar_conflict_second
+  !ERROR: Multiple initialization of COMMON block /dg/
+  real :: x(3)
+  common /dg/ x
+  data x /1.0, 1.0, 2.0/
 end subroutine

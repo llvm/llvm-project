@@ -37,6 +37,7 @@
 #include "resolve-labels.h"
 #include "resolve-names.h"
 #include "rewrite-parse-tree.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
@@ -381,7 +382,8 @@ public:
       // commons.
       const Symbol &isInitialized{DEREF(CommonBlockIsInitialized(common))};
       const Symbol &previousInit{DEREF(CommonBlockIsInitialized(previous))};
-      if (AreCommonBlockInitializationsDuplicate(common, previous)) {
+      if (AreCommonBlockInitializationsDuplicate(
+              common, previous, context.foldingContext())) {
         if (auto *msg{context.Warn(
                 common::LanguageFeature::MultipleCommonBlockInit,
                 isInitialized.name(),
@@ -441,8 +443,8 @@ private:
   // pointers, indirect initialization via an equivalenced object, or
   // default component initialization of a derived type without an
   // explicit initializer) are conservatively treated as non-duplicate.
-  static bool AreCommonBlockInitializationsDuplicate(
-      const Symbol &common1, const Symbol &common2) {
+  static bool AreCommonBlockInitializationsDuplicate(const Symbol &common1,
+      const Symbol &common2, evaluate::FoldingContext &foldingContext) {
     const auto &objects1{
         common1.get<Fortran::semantics::CommonBlockDetails>().objects()};
     const auto &objects2{
@@ -472,8 +474,24 @@ private:
         if (!object1 || !object2 || !object1->init() || !object2->init()) {
           return false;
         }
-        if (!(*object1->init() == *object2->init())) {
-          return false;
+        const SomeExpr &init1{*object1->init()};
+        const SomeExpr &init2{*object2->init()};
+        if (init1.Rank() == init2.Rank()) {
+          if (!(init1 == init2)) {
+            return false;
+          }
+        } else {
+          // A scalar initializer of an array is kept unexpanded, while DATA
+          // produces a full array; expand the scalar to compare them.
+          const Symbol &memberWithScalarInit{
+              init1.Rank() == 0 ? member1 : member2};
+          const SomeExpr &scalarInit{init1.Rank() == 0 ? init1 : init2};
+          const SomeExpr &arrayInit{init1.Rank() == 0 ? init2 : init1};
+          auto expanded{evaluate::ExpandScalarInitializer(
+              memberWithScalarInit, scalarInit, foldingContext)};
+          if (!expanded || !(*expanded == arrayInit)) {
+            return false;
+          }
         }
       }
     }

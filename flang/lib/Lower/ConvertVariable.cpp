@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/ConvertVariable.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Lower/AbstractConverter.h"
 #include "flang/Lower/Allocatable.h"
@@ -635,8 +636,12 @@ fir::GlobalOp Fortran::lower::defineGlobal(
     if (oeDetails->init()) {
       createGlobalInitialization(
           builder, global, [&](fir::FirOpBuilder &builder) {
+            // A scalar initializer of an array is normally emitted as a dense
+            // splat above; this fall back path needs one value per element.
+            auto expanded = Fortran::evaluate::ExpandScalarInitializer(
+                objSym, *oeDetails->init(), converter.getFoldingContext());
             fir::ExtendedValue initVal = genInitializerExprValue(
-                converter, loc, oeDetails->init().value());
+                converter, loc, expanded ? *expanded : *oeDetails->init());
             mlir::Value castTo =
                 builder.createConvert(loc, symTy, fir::getBase(initVal));
             fir::HasValueOp::create(builder, loc, castTo);
@@ -2322,7 +2327,10 @@ static void finalizeCommonBlockDefinition(
         if (memDet->init()) {
           LLVM_DEBUG(llvm::dbgs()
                      << "offset: " << mem->offset() << " is " << *mem << '\n');
-          auto initExpr = memDet->init().value();
+          // The aggregate needs one value per element of each member.
+          auto expanded = Fortran::evaluate::ExpandScalarInitializer(
+              *mem, *memDet->init(), converter.getFoldingContext());
+          const auto &initExpr = expanded ? *expanded : *memDet->init();
           fir::ExtendedValue initVal =
               Fortran::semantics::IsPointer(*mem)
                   ? Fortran::lower::genInitialDataTarget(
