@@ -468,6 +468,8 @@ public:
     case RecurKind::FMul:
     case RecurKind::FMinNum:
     case RecurKind::FMaxNum:
+    case RecurKind::FMinSelect:
+    case RecurKind::FMaxSelect:
     case RecurKind::FMinimum:
     case RecurKind::FMaximum:
     case RecurKind::FMinimumNum:
