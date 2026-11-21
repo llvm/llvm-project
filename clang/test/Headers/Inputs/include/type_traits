@@ -41,3 +41,18 @@ template <typename _Tp> struct enable_if<true, _Tp>{
 };
 
 }
+
+#ifdef _MSVC_STL_VERSION
+namespace std {
+// Like MSVC's std::swap, which is constexpr from C++20 on.
+template <class _Tp>
+#if _HAS_CXX20
+constexpr
+#endif
+void swap(_Tp &__a, _Tp &__b) noexcept {
+  _Tp __t = static_cast<_Tp &&>(__a);
+  __a = static_cast<_Tp &&>(__b);
+  __b = static_cast<_Tp &&>(__t);
+}
+}
+#endif
