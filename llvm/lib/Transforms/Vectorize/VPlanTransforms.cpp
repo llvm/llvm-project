@@ -4713,15 +4713,13 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
       continue;
     }
 
-    // For now, we only support full interleave groups storing load interleave
-    // groups.
-    if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
-          VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
-          if (!DefR)
-            return false;
-          auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
-          return IR && IR->getInterleaveGroup()->isFull() &&
-                 IR->getVPValue(Op.index()) == Op.value();
+    // For now, we only support full interleave groups storing a single full
+    // load interleave group in order.
+    auto *LoadGroup =
+        dyn_cast_or_null<VPInterleaveRecipe>(Member0->getDefiningRecipe());
+    if (LoadGroup && LoadGroup->getInterleaveGroup()->isFull() &&
+        all_of(enumerate(InterleaveR->getStoredValues()), [LoadGroup](auto Op) {
+          return LoadGroup->getVPValue(Op.index()) == Op.value();
         })) {
       StoreGroups.push_back(InterleaveR);
       continue;

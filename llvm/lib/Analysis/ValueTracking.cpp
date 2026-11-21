@@ -4895,12 +4895,19 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return 1;
     }
 
-    case Instruction::ExtractElement:
-      // Look through extract element. At the moment we keep this simple and
-      // skip tracking the specific element. But at least we might find
-      // information valid for all elements of the vector (for example if vector
-      // is sign extended, shifted, etc).
-      return ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+    case Instruction::ExtractElement: {
+      const Value *Vec = U->getOperand(0);
+      auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
+      if (!VecTy)
+        return ComputeNumSignBits(Vec, Q, Depth + 1);
+
+      unsigned NumElts = VecTy->getNumElements();
+      APInt DemandedVecElts = APInt::getAllOnes(NumElts);
+      if (auto *CIdx = dyn_cast<ConstantInt>(U->getOperand(1)))
+        if (CIdx->getValue().ult(NumElts))
+          DemandedVecElts = APInt::getOneBitSet(NumElts, CIdx->getZExtValue());
+      return ComputeNumSignBits(Vec, DemandedVecElts, Q, Depth + 1);
+    }
 
     case Instruction::ShuffleVector: {
       // Collect the minimum number of sign bits that are shared by every vector
