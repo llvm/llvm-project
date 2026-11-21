@@ -3045,14 +3045,9 @@ RangeConstraintManager::removeDeadBindings(ProgramStateRef State,
   }
 
   // 2. We don't need to track classes for dead symbols.
-  for (std::pair<SymbolRef, EquivalenceClass> SymbolClassPair : Map) {
-    SymbolRef Sym = SymbolClassPair.first;
-
-    if (SymReaper.isDead(Sym)) {
-      ClassMapChanged = true;
-      NewMap = ClassFactory.remove(NewMap, Sym);
-    }
-  }
+  NewMap = ClassFactory.filter(
+      Map, [&](const auto &E) { return !SymReaper.isDead(E.first); });
+  ClassMapChanged = NewMap != Map;
 
   // 3. Remove dead members from classes and remove dead non-trivial classes
   //    and their constraints.

@@ -301,6 +301,12 @@ public:
     return ImmutableMapRef(NewT, Factory);
   }
 
+  /// Returns this map without the entries for which \p Pred is false (see
+  /// ImutAVLFactory::filterTree).
+  template <typename PredFn> ImmutableMapRef filter(PredFn Pred) const {
+    return ImmutableMapRef(Factory->filterTree(Root.get(), Pred), Factory);
+  }
+
   [[nodiscard]] bool contains(key_type_ref K) const {
     return Root ? Root->contains(K) : false;
   }
