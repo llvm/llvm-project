@@ -39,6 +39,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DivisionByConstantInfo.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FPFold.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
@@ -5208,13 +5209,10 @@ bool CombinerHelper::matchConstantFoldBinOp(MachineInstr &MI,
   return true;
 }
 
-// Vector FP constant folding assumes IEEE denormal arithmetic. Flush-to-zero
-// and dynamic modes can produce a different value, so skip those folds.
+// Conversions, sqrt, and log2 do not yet use the denormal-aware folding
+// helpers. Keep their vector folds restricted to IEEE denormal arithmetic.
 // Targets such as RISC-V represent FP values as untyped scalars
 // (s16/s32/s64/s128). getFltSemanticForLLT maps those onto the IEEE formats.
-//
-// TODO: Honor non-IEEE and dynamic denormal modes instead of skipping the
-// vector folds. Scalar folds have the same limitation and stay unchanged here.
 static bool vectorFPFoldUsesIEEEDenormals(const MachineFunction &MF, LLT Ty) {
   LLT ScalarTy = Ty.getScalarType();
   if (!ScalarTy.isFloat() && !ScalarTy.isAnyScalar())
@@ -5234,8 +5232,6 @@ bool CombinerHelper::matchConstantFoldFPBinOp(MachineInstr &MI,
     return false;
 
   if (DstTy.isFixedVector()) {
-    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
-      return false;
     SmallVector<APFloat> Csts =
         ConstantFoldVectorFPBinop(MI.getOpcode(), Op1, Op2, MRI);
     if (Csts.empty())
@@ -5265,12 +5261,21 @@ bool CombinerHelper::matchConstantFoldFPUnary(MachineInstr &MI,
   if (!isFPConstantLegalOrBeforeLegalizer(DstTy))
     return false;
 
-  // Source and destination element types can differ (G_FPEXT/G_FPTRUNC) and
-  // can have different denormal modes.
-  if (SrcTy.isVector() &&
-      (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), SrcTy) ||
-       !vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy)))
-    return false;
+  switch (MI.getOpcode()) {
+  case TargetOpcode::G_FPEXT:
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FSQRT:
+  case TargetOpcode::G_FLOG2:
+    // Source and destination element types can differ (G_FPEXT/G_FPTRUNC) and
+    // can have different denormal modes.
+    if (SrcTy.isVector() &&
+        (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), SrcTy) ||
+         !vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy)))
+      return false;
+    break;
+  default:
+    break;
+  }
 
   SmallVector<APFloat> Csts =
       ConstantFoldUnaryFPOp(MI.getOpcode(), DstTy, Src, MRI);
@@ -5293,19 +5298,16 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
   auto [_, Op1, Op2, Op3] = MI.getFirst4Regs();
   LLT DstTy = MRI.getType(Dst);
 
-  auto FoldFMA = [](const APFloat &A, const APFloat &B,
-                    const APFloat &C) -> APFloat {
-    APFloat Res(A);
-    Res.fusedMultiplyAdd(B, C, APFloat::rmNearestTiesToEven);
-    return Res;
+  auto FoldFMA = [&](const APFloat &A, const APFloat &B,
+                     const APFloat &C) -> std::optional<APFloat> {
+    auto DM = MI.getMF()->getDenormalMode(A.getSemantics());
+    return getFPValue(tryFoldFP(FPOp::FMA, {A, B, C}, DM));
   };
 
   if (DstTy.isScalableVector())
     return false;
 
   if (DstTy.isFixedVector()) {
-    if (!vectorFPFoldUsesIEEEDenormals(getMachineFunction(), DstTy))
-      return false;
     auto *BV1 = getOpcodeDef<GBuildVector>(Op1, MRI);
     auto *BV2 = getOpcodeDef<GBuildVector>(Op2, MRI);
     auto *BV3 = getOpcodeDef<GBuildVector>(Op3, MRI);
@@ -5321,8 +5323,11 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
       const ConstantFP *C3 = getConstantFPVRegVal(BV3->getSourceReg(I), MRI);
       if (!C1 || !C2 || !C3)
         return false;
-      Csts.push_back(
-          FoldFMA(C1->getValueAPF(), C2->getValueAPF(), C3->getValueAPF()));
+      auto Res =
+          FoldFMA(C1->getValueAPF(), C2->getValueAPF(), C3->getValueAPF());
+      if (!Res)
+        return false;
+      Csts.push_back(std::move(*Res));
     }
     MatchInfo = [Dst, Csts = std::move(Csts)](MachineIRBuilder &B) {
       B.buildBuildVectorFConstant(Dst, Csts);
@@ -5336,9 +5341,13 @@ bool CombinerHelper::matchConstantFoldFMA(MachineInstr &MI,
   if (!Op1Cst || !Op2Cst || !Op3Cst)
     return false;
 
-  APFloat Res = FoldFMA(Op1Cst->getValueAPF(), Op2Cst->getValueAPF(),
-                        Op3Cst->getValueAPF());
-  MatchInfo = [Dst, Res](MachineIRBuilder &B) { B.buildFConstant(Dst, Res); };
+  auto Res = FoldFMA(Op1Cst->getValueAPF(), Op2Cst->getValueAPF(),
+                     Op3Cst->getValueAPF());
+  if (!Res)
+    return false;
+  MatchInfo = [Dst, Res = std::move(*Res)](MachineIRBuilder &B) {
+    B.buildFConstant(Dst, Res);
+  };
   return true;
 }
 
