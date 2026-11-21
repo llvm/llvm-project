@@ -22,6 +22,7 @@
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
 #include "llvm/LTO/LTO.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/Caching.h"
 #include "llvm/Support/CommandLine.h"
@@ -33,6 +34,10 @@
 #include "llvm/Support/TimeProfiler.h"
 #include <atomic>
 #include <list>
+
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
 
 using namespace llvm;
 using namespace lto;
@@ -205,6 +210,11 @@ static cl::opt<std::string>
 static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
+
+static cl::list<std::string>
+    PluginArgs("plugin-arg",
+               cl::desc("Pass <arg> to the pass plugin named <plugin>"),
+               cl::value_desc("plugin>,<arg"));
 
 static cl::opt<LTO::LTOKind> UnifiedLTOMode(
     "unified-lto", cl::desc("Set LTO mode with the following options:"),
@@ -392,7 +402,24 @@ static int run(int argc, char **argv) {
 
   Conf.OptLevel = OptLevel - '0';
   Conf.Freestanding = EnableFreestanding;
-  llvm::append_range(Conf.PassPluginFilenames, PassPlugins);
+  // Loaded plugins must outlive the LTO object
+  SmallVector<PassPlugin, 0> LoadedPlugins;
+  for (const std::string &Filename : PassPlugins) {
+    Expected<PassPlugin> Plugin = PassPlugin::load(Filename);
+    if (!Plugin)
+      check(Plugin.takeError(), "-load-pass-plugin");
+    LoadedPlugins.push_back(std::move(*Plugin));
+  }
+  SmallVector<PassPluginLibraryInfo, 0> Extensions;
+  for (PassPlugin &Plugin : LoadedPlugins) {
+    Conf.LoadedPassPlugins.push_back(&Plugin);
+    Extensions.push_back(Plugin.getInfo());
+  }
+#define HANDLE_EXTENSION(Ext) Extensions.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  // LTO copies the library options into the context of each backend
+  check(passPluginArguments(Extensions, PluginArgs, LibraryOptions),
+        "-plugin-arg");
   if (auto Level = CodeGenOpt::parseLevel(CGOptLevel)) {
     Conf.CGOptLevel = *Level;
   } else {
