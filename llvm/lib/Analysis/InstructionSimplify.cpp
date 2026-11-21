@@ -7366,34 +7366,13 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     break;
   case Intrinsic::ldexp:
     return simplifyLdexp(Op0, Op1, Q, false);
-  case Intrinsic::fptrunc_round: {
-    // fptrunc_round ( fpext X, rm ) --> X
-    // Truncating back from an fpext is exact under any rounding mode, unless
-    // the fpext is lossy or a denormal must be flushed along the way.
-    Value *X;
-    const Function *F = Q.getFunction();
-    if (!F || !match(Op0, m_FPExt(m_Value(X))) || X->getType() != ReturnType)
-      break;
-    const fltSemantics &NarrowSem =
-        X->getType()->getScalarType()->getFltSemantics();
-    const fltSemantics &WideSem =
-        Op0->getType()->getScalarType()->getFltSemantics();
-    // fpext value must be representable in the wide type.
-    if (!APFloat::isLosslesslyConvertibleTo(NarrowSem, WideSem,
-                                            /*IgnoreNaNs=*/true))
-      break;
-    // The fpext must not turn a denormal X into 0.
-    if (F->getDenormalMode(NarrowSem).inputsMayBeZero())
-      break;
-    // The fptrunc_round reads the widened value and must not turn it into 0.
-    // It can only be denormal if narrow denormals stay denormal
-    // in the wide type.
-    // e.g. bfloat->float
-    if (!APFloat::isRepresentableAsNormalIn(NarrowSem, WideSem) &&
-        F->getDenormalMode(WideSem).inputsMayBeZero())
-      break;
-    return X;
-  }
+  case Intrinsic::fptrunc_round:
+    // fptrunc_round ( fpext X, rm ) --> X, like fptrunc (fpext X).
+    // Only match with the default rounding mode.
+    if (match(Op0, m_FPExt(m_Value())))
+      return simplifyCastInst(Instruction::FPTrunc, Op0, ReturnType, Q,
+                              RecursionLimit);
+    break;
   case Intrinsic::copysign:
     // copysign X, X --> X
     if (Op0 == Op1)

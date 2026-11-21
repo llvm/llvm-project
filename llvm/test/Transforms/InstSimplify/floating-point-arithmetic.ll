@@ -1300,8 +1300,7 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
   ret <2 x float> %abs2
 }
 
-; fptrunc_round (fpext X) --> X when the extension is lossless and no
-; denormal input may be flushed; the rounding mode then doesn't matter.
+; fptrunc_round (fpext X) --> X, like fptrunc (fpext X).
 
 define half @fpext_fptrunc_round_towardzero(half %x) {
 ; CHECK-LABEL: @fpext_fptrunc_round_towardzero(
@@ -1328,6 +1327,34 @@ define <2 x half> @fpext_fptrunc_round_vec(<2 x half> %x) {
   %ext = fpext <2 x half> %x to <2 x float>
   %r = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %ext, metadata !"round.towardzero")
   ret <2 x half> %r
+}
+
+define <vscale x 2 x half> @fpext_fptrunc_round_scalable_vec(<vscale x 2 x half> %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_scalable_vec(
+; CHECK-NEXT:    ret <vscale x 2 x half> [[X:%.*]]
+;
+  %ext = fpext <vscale x 2 x half> %x to <vscale x 2 x float>
+  %r = call <vscale x 2 x half> @llvm.fptrunc.round.nxv2f16.nxv2f32(<vscale x 2 x float> %ext, metadata !"round.towardzero")
+  ret <vscale x 2 x half> %r
+}
+
+define bfloat @fpext_fptrunc_round_bf16(bfloat %x) {
+; CHECK-LABEL: @fpext_fptrunc_round_bf16(
+; CHECK-NEXT:    ret bfloat [[X:%.*]]
+;
+  %ext = fpext bfloat %x to float
+  %r = call bfloat @llvm.fptrunc.round.bf16.f32(float %ext, metadata !"round.towardzero")
+  ret bfloat %r
+}
+
+; Denormal modes are ignored, as for fptrunc (fpext X).
+define half @fpext_fptrunc_round_denormal_mode(half %x) denormal_fpenv(preservesign) {
+; CHECK-LABEL: @fpext_fptrunc_round_denormal_mode(
+; CHECK-NEXT:    ret half [[X:%.*]]
+;
+  %ext = fpext half %x to float
+  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
+  ret half %r
 }
 
 ; Negative test: the result type differs from the original type.
@@ -1366,138 +1393,12 @@ define half @fpext_fadd_fptrunc_round(half %x) {
   ret half %r
 }
 
-; Denormal modes: the fpext must not flush a denormal X, and the truncation
-; must not flush its input when that input can be denormal.
-
-; Negative test: half denormal inputs are flushed, so fpext of a denormal X is 0.
-define half @fpext_fptrunc_round_half_daz(half %x) denormal_fpenv(preservesign) {
-; CHECK-LABEL: @fpext_fptrunc_round_half_daz(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[EXT]], metadata !"round.towardzero")
+; Negative test: don't fold a constant with the default rounding mode.
+define half @fptrunc_round_constant() {
+; CHECK-LABEL: @fptrunc_round_constant(
+; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float 1.000700e+00, metadata !"round.towardzero")
 ; CHECK-NEXT:    ret half [[R]]
 ;
-  %ext = fpext half %x to float
-  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
+  %r = call half @llvm.fptrunc.round.f16.f32(float 0x3FF002DE00000000, metadata !"round.towardzero")
   ret half %r
-}
-
-; Negative test: the denormal mode is not known at compile time.
-define half @fpext_fptrunc_round_half_dynamic(half %x) denormal_fpenv(dynamic) {
-; CHECK-LABEL: @fpext_fptrunc_round_half_dynamic(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext half [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[EXT]], metadata !"round.towardzero")
-; CHECK-NEXT:    ret half [[R]]
-;
-  %ext = fpext half %x to float
-  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
-  ret half %r
-}
-
-; Only outputs are flushed, which is optional, so this still folds.
-define half @fpext_fptrunc_round_half_ftz_output_only(half %x) denormal_fpenv(preservesign|ieee) {
-; CHECK-LABEL: @fpext_fptrunc_round_half_ftz_output_only(
-; CHECK-NEXT:    ret half [[X:%.*]]
-;
-  %ext = fpext half %x to float
-  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
-  ret half %r
-}
-
-; Flushing float inputs does not matter: every half value is a normal float.
-define half @fpext_fptrunc_round_half_float_daz(half %x) denormal_fpenv(float: preservesign) {
-; CHECK-LABEL: @fpext_fptrunc_round_half_float_daz(
-; CHECK-NEXT:    ret half [[X:%.*]]
-;
-  %ext = fpext half %x to float
-  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
-  ret half %r
-}
-
-define bfloat @fpext_fptrunc_round_bf16(bfloat %x) {
-; CHECK-LABEL: @fpext_fptrunc_round_bf16(
-; CHECK-NEXT:    ret bfloat [[X:%.*]]
-;
-  %ext = fpext bfloat %x to float
-  %r = call bfloat @llvm.fptrunc.round.bf16.f32(float %ext, metadata !"round.towardzero")
-  ret bfloat %r
-}
-
-; Negative test: bfloat denormals stay denormal as float, and float inputs are
-; flushed, so the truncation would see 0.
-define bfloat @fpext_fptrunc_round_bf16_float_daz(bfloat %x) denormal_fpenv(float: preservesign) {
-; CHECK-LABEL: @fpext_fptrunc_round_bf16_float_daz(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float [[EXT]], metadata !"round.towardzero")
-; CHECK-NEXT:    ret bfloat [[R]]
-;
-  %ext = fpext bfloat %x to float
-  %r = call bfloat @llvm.fptrunc.round.bf16.f32(float %ext, metadata !"round.towardzero")
-  ret bfloat %r
-}
-
-; Negative test: x86_fp80 has a wider exponent range than ppc_fp128, so the
-; fpext is not lossless.
-define x86_fp80 @fpext_fptrunc_round_not_lossless(x86_fp80 %x) {
-; CHECK-LABEL: @fpext_fptrunc_round_not_lossless(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext x86_fp80 [[X:%.*]] to ppc_fp128
-; CHECK-NEXT:    [[R:%.*]] = call x86_fp80 @llvm.fptrunc.round.f80.ppcf128(ppc_fp128 [[EXT]], metadata !"round.towardzero")
-; CHECK-NEXT:    ret x86_fp80 [[R]]
-;
-  %ext = fpext x86_fp80 %x to ppc_fp128
-  %r = call x86_fp80 @llvm.fptrunc.round.f80.ppcf128(ppc_fp128 %ext, metadata !"round.towardzero")
-  ret x86_fp80 %r
-}
-
-; Lossless: ppc_fp128 holds any double exactly in its high part.
-define double @fpext_fptrunc_round_double_ppc(double %x) {
-; CHECK-LABEL: @fpext_fptrunc_round_double_ppc(
-; CHECK-NEXT:    ret double [[X:%.*]]
-;
-  %ext = fpext double %x to ppc_fp128
-  %r = call double @llvm.fptrunc.round.f64.ppcf128(ppc_fp128 %ext, metadata !"round.towardzero")
-  ret double %r
-}
-
-; Flushing a float mode that is unknown does not matter for half.
-define half @fpext_fptrunc_round_half_float_dynamic(half %x) denormal_fpenv(float: dynamic) {
-; CHECK-LABEL: @fpext_fptrunc_round_half_float_dynamic(
-; CHECK-NEXT:    ret half [[X:%.*]]
-;
-  %ext = fpext half %x to float
-  %r = call half @llvm.fptrunc.round.f16.f32(float %ext, metadata !"round.towardzero")
-  ret half %r
-}
-
-; Negative test: bfloat denormals stay denormal as float, and float inputs may
-; be flushed.
-define bfloat @fpext_fptrunc_round_bf16_float_dynamic(bfloat %x) denormal_fpenv(float: dynamic) {
-; CHECK-LABEL: @fpext_fptrunc_round_bf16_float_dynamic(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext bfloat [[X:%.*]] to float
-; CHECK-NEXT:    [[R:%.*]] = call bfloat @llvm.fptrunc.round.bf16.f32(float [[EXT]], metadata !"round.towardzero")
-; CHECK-NEXT:    ret bfloat [[R]]
-;
-  %ext = fpext bfloat %x to float
-  %r = call bfloat @llvm.fptrunc.round.bf16.f32(float %ext, metadata !"round.towardzero")
-  ret bfloat %r
-}
-
-; Negative test: the denormal checks use the vector element type.
-define <2 x half> @fpext_fptrunc_round_vec_half_daz(<2 x half> %x) denormal_fpenv(preservesign) {
-; CHECK-LABEL: @fpext_fptrunc_round_vec_half_daz(
-; CHECK-NEXT:    [[EXT:%.*]] = fpext <2 x half> [[X:%.*]] to <2 x float>
-; CHECK-NEXT:    [[R:%.*]] = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> [[EXT]], metadata !"round.towardzero")
-; CHECK-NEXT:    ret <2 x half> [[R]]
-;
-  %ext = fpext <2 x half> %x to <2 x float>
-  %r = call <2 x half> @llvm.fptrunc.round.v2f16.v2f32(<2 x float> %ext, metadata !"round.towardzero")
-  ret <2 x half> %r
-}
-
-define <vscale x 2 x half> @fpext_fptrunc_round_scalable_vec(<vscale x 2 x half> %x) {
-; CHECK-LABEL: @fpext_fptrunc_round_scalable_vec(
-; CHECK-NEXT:    ret <vscale x 2 x half> [[X:%.*]]
-;
-  %ext = fpext <vscale x 2 x half> %x to <vscale x 2 x float>
-  %r = call <vscale x 2 x half> @llvm.fptrunc.round.nxv2f16.nxv2f32(<vscale x 2 x float> %ext, metadata !"round.towardzero")
-  ret <vscale x 2 x half> %r
 }
