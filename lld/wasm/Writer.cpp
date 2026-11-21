@@ -426,8 +426,10 @@ void Writer::layoutMemory() {
   // Even in the absence of any actual TLS data, this symbol can still be
   // referenced (for example by __builtin_thread_pointer, which should not
   // return NULL).
-  if (!ctx.arg.isMultithreaded() && ctx.sym.tlsBase) {
-    setGlobalPtr(ctx.sym.tlsBase, fixedTLSBase);
+  if (!ctx.arg.relocatable && !ctx.arg.isMultithreaded()) {
+    ctx.fixedTLSBase = fixedTLSBase;
+    if (ctx.sym.tlsBase)
+      setGlobalPtr(ctx.sym.tlsBase, fixedTLSBase);
   }
 
   // Make space for the memory initialization flag

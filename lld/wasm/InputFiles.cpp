@@ -189,6 +189,11 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
     if (isa<UndefinedData>(sym) || sym->isShared() || sym->isUndefWeak())
       return 0;
     auto D = cast<DefinedData>(sym);
+    // A fixed TLS block is part of linear memory. Use the base named by
+    // the relocation even when the defining object used a different TLS model.
+    if (ctx.fixedTLSBase && (reloc.Type == R_WASM_MEMORY_ADDR_TLS_SLEB ||
+                             reloc.Type == R_WASM_MEMORY_ADDR_TLS_SLEB64))
+      return D->getVA(/*absolute=*/true) + reloc.Addend - *ctx.fixedTLSBase;
     uint64_t value = D->getVA() + reloc.Addend;
     if (reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
         reloc.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) {
