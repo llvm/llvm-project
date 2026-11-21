@@ -77,15 +77,13 @@ def deleteMatchingLines(fileName: str, pattern: str) -> bool:
     return True
 
 
-def getListOfFiles(clang_tidy_path: str) -> List[str]:
+def getListOfFiles(clang_tidy_path: str, checkers_path: str) -> List[str]:
     files = glob.glob(os.path.join(clang_tidy_path, "**"), recursive=True)
     files += [
         os.path.normpath(os.path.join(clang_tidy_path, "../docs/ReleaseNotes.md"))
     ]
-    files += glob.glob(
-        os.path.join(clang_tidy_path, "..", "test", "clang-tidy", "checkers", "**"),
-        recursive=True,
-    )
+    files += glob.glob(os.path.join(checkers_path, "**"), recursive=True)
+    files += glob.glob(os.path.join(checkers_path, "**", ".clang-tidy"), recursive=True)
     docs_path = os.path.join(clang_tidy_path, "..", "docs", "clang-tidy", "checks")
     # TODO: Stop discovering reST files once all clang-tidy check
     # documentation has been migrated to MyST.
@@ -277,6 +275,14 @@ def main() -> None:
 
     old_module_path = os.path.join(clang_tidy_path, old_module)
     new_module_path = os.path.join(clang_tidy_path, new_module)
+    checkers_path = os.path.join(
+        clang_tidy_path, "..", "test", "clang-tidy", "checkers"
+    )
+    old_test_dir = os.path.join(checkers_path, old_module, old_name)
+    new_test_dir = os.path.join(checkers_path, new_module, new_name)
+    move_test_dir = old_test_dir != new_test_dir and os.path.isdir(old_test_dir)
+    if move_test_dir and os.path.lexists(new_test_dir):
+        sys.exit(f"Cannot move tests to {new_test_dir}: the path already exists.")
 
     if old_module != new_module:
         # Remove the check from the old module.
@@ -302,10 +308,12 @@ def main() -> None:
             "\\b" + check_name_camel + "|\\b" + args.old_check_name,
         )
 
-    for filename in getListOfFiles(clang_tidy_path):
-        filename = fileRename(
-            filename, old_module + "/" + old_name, new_module + "/" + new_name
-        )
+    for filename in getListOfFiles(clang_tidy_path, checkers_path):
+        # Move per-check test directories as a unit after updating their files.
+        if not filename.startswith(old_test_dir + os.sep):
+            filename = fileRename(
+                filename, old_module + "/" + old_name, new_module + "/" + new_name
+            )
         filename = fileRename(filename, args.old_check_name, args.new_check_name)
         filename = fileRename(filename, check_name_camel, new_check_name_camel)
         for header_guard in header_guard_variants:
@@ -335,6 +343,10 @@ def main() -> None:
             filename, old_module + "/" + old_name, new_module + "/" + new_name
         )
         replaceInFile(filename, check_name_camel, new_check_name_camel)
+
+    if move_test_dir:
+        os.makedirs(os.path.dirname(new_test_dir), exist_ok=True)
+        fileRename(old_test_dir, old_test_dir, new_test_dir)
 
     if old_module != new_module or new_module == "llvm":
         if new_module == "llvm":

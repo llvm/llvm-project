@@ -310,7 +310,7 @@ def write_test(
 ) -> None:
     test_standard = f"-std={test_standard}-or-later " if test_standard else ""
     check_name_dashes = f"{module}-{check_name}"
-    filename = os.path.normpath(
+    test_dir = os.path.normpath(
         os.path.join(
             module_path,
             "..",
@@ -319,9 +319,11 @@ def write_test(
             "clang-tidy",
             "checkers",
             module,
-            f"{check_name}.{test_extension}",
+            check_name,
         )
     )
+    os.makedirs(test_dir, exist_ok=True)
+    filename = os.path.join(test_dir, f"test.{test_extension}")
     print(f"Creating {filename}...")
     with open(filename, "w", encoding="utf8", newline="\n") as f:
         f.write(
