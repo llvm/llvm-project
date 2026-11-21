@@ -108,12 +108,7 @@ public:
   /// Checks if the block is temporary.
   bool isTemporary() const { return Desc->IsTemporary; }
   bool isWeak() const { return Flags.V & BlockFlags::Weak; }
-  bool isDynamic() const {
-    bool Result = (DynAllocId != std::nullopt);
-    assert((Result == Desc->isDynAlloc()) &&
-           "Inconsistent block/descriptor dynamic alloc state");
-    return Result;
-  }
+  bool isDynamic() const { return DynAllocId != std::nullopt; }
   bool isDead() const { return Flags.V & BlockFlags::Dead; }
   bool isConstexprUnknown() const {
     return Flags.V & BlockFlags::ConstexprUnknown;
