@@ -74,40 +74,26 @@ static mlir::Value emitMapInfoForVar(CIRGenFunction &cgf,
       /*partial_map=*/builder.getBoolAttr(false));
 }
 
-bool OpenMPClauseEmitter::emitProcBind(
-    mlir::omp::ProcBindClauseOps &result) const {
+bool OpenMPClauseEmitter::emitDefault() const {
   for (const OMPClause *clause : clauses) {
-    const auto *pbc = dyn_cast<OMPProcBindClause>(clause);
-    if (!pbc)
+    const auto *dc = dyn_cast<OMPDefaultClause>(clause);
+    if (!dc)
       continue;
 
-    llvm::omp::ProcBindKind kind = pbc->getProcBindKind();
-    assert(kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown &&
-           "unknown proc-bind kind");
-    // The 'default' kind has no dialect counterpart; leave the attribute unset.
-    if (kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_default)
-      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
-          builder.getContext(), mlir::omp::convertProcBindKind(kind));
-    return true;
-  }
-  return false;
-}
-
-bool OpenMPClauseEmitter::emitNumThreads(
-    mlir::omp::NumThreadsClauseOps &result) const {
-  for (const OMPClause *clause : clauses) {
-    const auto *ntc = dyn_cast<OMPNumThreadsClause>(clause);
-    if (!ntc)
-      continue;
-
-    for (const Expr *expr : ntc->getNumThreads()) {
-      mlir::Value numThreadsValue = cgf.emitScalarExpr(expr);
-      auto intType = builder.getIntegerType(32);
-      numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
-      result.numThreadsVars.push_back(numThreadsValue);
+    switch (dc->getDefaultKind()) {
+    case llvm::omp::OMP_DEFAULT_none:
+    case llvm::omp::OMP_DEFAULT_shared:
+      return true;
+    case llvm::omp::OMP_DEFAULT_private:
+    case llvm::omp::OMP_DEFAULT_firstprivate:
+    case llvm::omp::OMP_DEFAULT_unknown:
+      const char *default_kind_name = clang::getOpenMPSimpleClauseTypeName(
+          llvm::omp::OMPC_default, static_cast<unsigned>(dc->getDefaultKind()));
+      cgm.errorNYI(dc->getBeginLoc(),
+                   std::string("Lowering for the default clause with kind '") +
+                       default_kind_name + ("' not yet implemented."));
+      return false;
     }
-
-    return true;
   }
   return false;
 }
@@ -189,4 +175,42 @@ bool OpenMPClauseEmitter::emitMap(
     }
   }
   return found;
+}
+
+bool OpenMPClauseEmitter::emitNumThreads(
+    mlir::omp::NumThreadsClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *ntc = dyn_cast<OMPNumThreadsClause>(clause);
+    if (!ntc)
+      continue;
+
+    for (const Expr *expr : ntc->getNumThreads()) {
+      mlir::Value numThreadsValue = cgf.emitScalarExpr(expr);
+      auto intType = builder.getIntegerType(32);
+      numThreadsValue = builder.createBuiltinIntCast(numThreadsValue, intType);
+      result.numThreadsVars.push_back(numThreadsValue);
+    }
+
+    return true;
+  }
+  return false;
+}
+
+bool OpenMPClauseEmitter::emitProcBind(
+    mlir::omp::ProcBindClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    const auto *pbc = dyn_cast<OMPProcBindClause>(clause);
+    if (!pbc)
+      continue;
+
+    llvm::omp::ProcBindKind kind = pbc->getProcBindKind();
+    assert(kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_unknown &&
+           "unknown proc-bind kind");
+    // The 'default' kind has no dialect counterpart; leave the attribute unset.
+    if (kind != llvm::omp::ProcBindKind::OMP_PROC_BIND_default)
+      result.procBindKind = mlir::omp::ClauseProcBindKindAttr::get(
+          builder.getContext(), mlir::omp::convertProcBindKind(kind));
+    return true;
+  }
+  return false;
 }
