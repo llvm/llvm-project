@@ -691,7 +691,7 @@ define i64 @shuf_reverse_of_op1_crash(i16 %call, ptr %coerce, <2 x i8> %vec) {
 ; CHECK-NEXT:    store i16 [[CALL:%.*]], ptr [[COERCE:%.*]], align 2
 ; CHECK-NEXT:    br label [[LBL_CONT1:%.*]]
 ; CHECK:       lbl_cont1:
-; CHECK-NEXT:    store i16 poison, ptr null, align 2
+; CHECK-NEXT:    store <2 x i8> poison, ptr null, align 2
 ; CHECK-NEXT:    br label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    br label [[LBL_CONT1]]
