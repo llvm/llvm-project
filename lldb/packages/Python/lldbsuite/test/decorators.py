@@ -779,18 +779,18 @@ def _usingLLDBServerOnWindows():
     )
 
 
-def expectedFailureWindowsAndLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
-def expectedFailureWindowsAndNoLLDBServer(bugnumber=None):
+def expectedFailureWindowsAndNoLLDBServer(bugnumber=None, archs=None):
     """Mark a test as xfail on Windows when using the in-process plugin."""
     if _usingLLDBServerOnWindows():
         return lambda func: func
-    return expectedFailureOS(["windows"], bugnumber)
+    return expectedFailureOS(["windows"], bugnumber, archs=archs)
 
 
 # TODO: This decorator does not do anything. Remove it.
@@ -1033,11 +1033,11 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsAndLLDBServer(func):
+def skipIfWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Skip tests on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
-        return func
-    return skipIfPlatform(["windows"])(func)
+        return lambda func: func
+    return skipIf(oslist=["windows"], bugnumber=bugnumber, archs=archs)
 
 
 def skipIfWindowsAndNoLLDBServer(func):
@@ -1503,7 +1503,9 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
                 return "No llvm-nm or nm binary."
 
             # Check that we actually see ubsan instrumentation in the binary.
-            nm_output = subprocess.check_output([nm_bin, outputf.path], text=True)
+            nm_output = subprocess.check_output(
+                [nm_bin, outputf.path], stderr=subprocess.PIPE, text=True
+            )
             if "__ubsan_handle_divrem_overflow" not in nm_output:
                 return "Division by zero instrumentation is missing"
 

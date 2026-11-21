@@ -1,6 +1,7 @@
 ; asm-verbose=0 keeps AsmPrinter's ;DEBUG_VALUE: comments out of the output so
 ; the CHECK-NEXT chains track SPIR-V instructions only.
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugDeclare
+; RUN: llc -enable-new-pm --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --asm-verbose=0 --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugDeclare
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; A direct DBG_VALUE whose virtual register is defined by an emitted SPIR-V

@@ -281,6 +281,22 @@ func.func @sample_implicit_proj_dref_multi_sampled(%arg0 : !spirv.sampled_image<
 
 // -----
 
+func.func @sample_implicit_proj_dref_cube(%arg0 : !spirv.sampled_image<!spirv.image<f32, Cube, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
+  // expected-error @+1 {{the Dim operand of the underlying image must be Dim1D or Dim2D or Dim3D or Rect}}
+  %0 = spirv.ImageSampleProjDrefImplicitLod %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<f32, Cube, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> f32
+  spirv.Return
+}
+
+// -----
+
+func.func @sample_implicit_proj_dref_arrayed(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
+  // expected-error @+1 {{the Arrayed operand of the underlying image type must be NonArrayed}}
+  %0 = spirv.ImageSampleProjDrefImplicitLod %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, Arrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> f32
+  spirv.Return
+}
+
+// -----
+
 func.func @sample_implicit_proj_dref(%arg0 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, %arg1 : vector<4xf32>, %arg2 : f32) -> () {
   // expected-error @+1 {{type of 'result' matches image type of 'sampled_image'}}
   %0 = spirv.ImageSampleProjDrefImplicitLod %arg0, %arg1, %arg2 : !spirv.sampled_image<!spirv.image<f32, Dim2D, IsDepth, NonArrayed, SingleSampled, NeedSampler, Rgba8>>, vector<4xf32>, f32 -> i32

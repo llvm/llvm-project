@@ -507,13 +507,45 @@ def getSubstitutions(sourcepath):
     ]
 
 
+ELSE_RE = re.compile(r"\s*%else\s*%{")
+
+
+def _unwrap(line, nested):
+    """Return the unwrapped text up to the end of the scope (the end of the
+    line, or the closing '%}' if nested), and the rest of the line."""
+    result = ""
+    while line:
+        if nested and line.startswith("%}"):
+            break
+        if line.startswith("%if "):
+            line = line[line.index("%{") + 2 :]
+            branch_if, line = _unwrap(line, nested=True)
+            line = line[2:]  # Eat '%}'.
+            match = ELSE_RE.match(line)
+            if match:
+                _, line = _unwrap(line[match.end() :], nested=True)
+                line = line[2:]
+            result += branch_if
+        else:
+            # Copy text up to the next '%if ', or '%}' if nested.
+            match = re.search(r"%if |%}" if nested else r"%if ", line)
+            end = match.start() if match else len(line)
+            result += line[:end]
+            line = line[end:]
+    return result, line
+
+
+def unwrap_lit_if(run_line):
+    """Replace each `%if <condition> %{ <a> %} [%else %{ <b> %}]` in a RUN line
+    with <a>, without evaluating the condition."""
+    if ELSE_RE.search(run_line):
+        warn("Ignoring the %else branches of RUN line: " + run_line)
+    return _unwrap(run_line, nested=False)[0]
+
+
 def split_run_line(run_line):
     """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
-    if "%if" in run_line:
-        match = re.search(r"%{\s*(.*?)\s*%}", run_line)
-        if match:
-            run_line = match.group(1)
-
+    run_line = unwrap_lit_if(run_line)
     commands = [cmd.strip() for cmd in run_line.split("|")]
     assert len(commands) >= 2
     preprocess_cmd = " | ".join(commands[:-2]) or None

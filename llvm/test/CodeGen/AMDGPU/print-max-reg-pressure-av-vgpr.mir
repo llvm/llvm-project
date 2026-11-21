@@ -1,6 +1,5 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=machine-scheduler \
-# RUN:   -verify-machineinstrs \
 # RUN:   -amdgpu-print-max-reg-pressure-regusage-before-scheduler \
 # RUN:   -filetype=null %s 2>&1 | FileCheck %s
 

@@ -142,14 +142,14 @@ define half @load_half(ptr %fptr) {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-SSE2-NEXT:    movd %eax, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_half:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movzwl (%eax), %eax
-; X86-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovd %eax, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: load_half:
@@ -161,13 +161,13 @@ define half @load_half(ptr %fptr) {
 ; X64-SSE-LABEL: load_half:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movzwl (%rdi), %eax
-; X64-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-SSE-NEXT:    movd %eax, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_half:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movzwl (%rdi), %eax
-; X64-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X64-AVX-NEXT:    vmovd %eax, %xmm0
 ; X64-AVX-NEXT:    retq
   %v = load atomic half, ptr %fptr unordered, align 2
   ret half %v
@@ -317,7 +317,7 @@ define half @exchange_half(ptr %fptr, half %x) {
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE2-NEXT:    xchgw %cx, (%eax)
-; X86-SSE2-NEXT:    pinsrw $0, %ecx, %xmm0
+; X86-SSE2-NEXT:    movd %ecx, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: exchange_half:
@@ -325,7 +325,7 @@ define half @exchange_half(ptr %fptr, half %x) {
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX-NEXT:    xchgw %cx, (%eax)
-; X86-AVX-NEXT:    vpinsrw $0, %ecx, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovd %ecx, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: exchange_half:
@@ -339,14 +339,14 @@ define half @exchange_half(ptr %fptr, half %x) {
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    pextrw $0, %xmm0, %eax
 ; X64-SSE-NEXT:    xchgw %ax, (%rdi)
-; X64-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-SSE-NEXT:    movd %eax, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: exchange_half:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vpextrw $0, %xmm0, %eax
 ; X64-AVX-NEXT:    xchgw %ax, (%rdi)
-; X64-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X64-AVX-NEXT:    vmovd %eax, %xmm0
 ; X64-AVX-NEXT:    retq
   %v = atomicrmw xchg ptr %fptr, half %x monotonic, align 2
   ret half %v
@@ -850,14 +850,14 @@ define bfloat @load_bfloat(ptr %fptr) {
 ; X86-SSE2:       # %bb.0:
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE2-NEXT:    movzwl (%eax), %eax
-; X86-SSE2-NEXT:    pinsrw $0, %eax, %xmm0
+; X86-SSE2-NEXT:    movd %eax, %xmm0
 ; X86-SSE2-NEXT:    retl
 ;
 ; X86-AVX-LABEL: load_bfloat:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movzwl (%eax), %eax
-; X86-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X86-AVX-NEXT:    vmovd %eax, %xmm0
 ; X86-AVX-NEXT:    retl
 ;
 ; X86-NOSSE-LABEL: load_bfloat:
@@ -876,13 +876,13 @@ define bfloat @load_bfloat(ptr %fptr) {
 ; X64-SSE-LABEL: load_bfloat:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movzwl (%rdi), %eax
-; X64-SSE-NEXT:    pinsrw $0, %eax, %xmm0
+; X64-SSE-NEXT:    movd %eax, %xmm0
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: load_bfloat:
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    movzwl (%rdi), %eax
-; X64-AVX-NEXT:    vpinsrw $0, %eax, %xmm0, %xmm0
+; X64-AVX-NEXT:    vmovd %eax, %xmm0
 ; X64-AVX-NEXT:    retq
   %v = load atomic bfloat, ptr %fptr unordered, align 2
   ret bfloat %v

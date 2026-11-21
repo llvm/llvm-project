@@ -836,6 +836,7 @@ enum AttributeKindCodes {
   ATTR_KIND_NOIPA = 109,
   ATTR_KIND_NOFREEOBJ = 110,
   ATTR_KIND_SANITIZE_CONCURRENCY = 111,
+  ATTR_KIND_LIKELY_MODULE_LOCAL = 112,
 };
 
 enum ComdatSelectionKindCodes {

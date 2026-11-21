@@ -418,7 +418,7 @@ bool SanitizerArgs::needsCfiCrossDsoRt() const {
 }
 
 bool SanitizerArgs::needsCfiCrossDsoDiagRt() const {
-  // UBSsan handles CFI diagnostics without cross-DSO suppport.
+  // UBSsan handles CFI diagnostics without cross-DSO support.
   return (Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;
 }
@@ -533,18 +533,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
-      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-        StringRef CM = A->getValue();
-        if (CM != "small" &&
-            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
-          if (DiagnoseErrors)
-            D.Diag(diag::err_drv_argument_only_allowed_with)
-                << "-fsanitize=function"
-                << "-mcmodel=small";
-          Add &= ~SanitizerKind::Function;
-          DiagnosedKinds |= SanitizerKind::Function;
-        }
-      }
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
@@ -1456,7 +1444,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     return;
   // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
   bool GPUSanitize = false;
-  if (TC.getTriple().isAMDGPU()) {
+  if (TC.getTriple().isAMDGPU() ||
+      (TC.getTriple().isSPIRV() &&
+       TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)) {
     if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                       true))
       return;

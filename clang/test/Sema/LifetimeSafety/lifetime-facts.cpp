@@ -24,8 +24,8 @@ MyObj* return_local_addr() {
 // CHECK:   OriginFlow:
 // CHECK-NEXT:       Dest: [[O_RET_VAL:[0-9]+]] (Expr: ImplicitCastExpr, Type : MyObj *) has loans to { x }
 // CHECK-NEXT:       Src:  [[O_P]] (Decl: p, Type : MyObj *)
-// CHECK:   Expire (x)
 // CHECK:   Expire (p, Origin: [[O_P]] (Decl: p, Type : MyObj *))
+// CHECK:   Expire (x)
 // CHECK:   OriginEscapes ([[O_RET_VAL]] (Expr: ImplicitCastExpr, Type : MyObj *), via Return)
 }
 
@@ -293,4 +293,19 @@ void naming_a_variable_is_not_an_access(int *p) {
 // CHECK:       Dest: [[O_DEREF:[0-9]+]] (Expr: UnaryOperator, Type : int &) has loans to { $p }
 // CHECK:   Use ([[O_DEREF]] (Expr: UnaryOperator, Type : int &))
 // CHECK-NOT:   Use ({{[0-9]+}} (Expr: DeclRefExpr
+}
+
+struct TwoRefs {
+  const int &a;
+  const int &b;
+};
+
+// Every temporary extended by a variable expires with it.
+// CHECK-LABEL: Function: aggregate_extends_two_temporaries
+void aggregate_extends_two_temporaries() {
+  TwoRefs s{1, 2};
+// CHECK:   Issue ({{[0-9]+}} (Path: MaterializeTemporaryExpr at [[MTE_A:0x[0-9a-f]+]])
+// CHECK:   Issue ({{[0-9]+}} (Path: MaterializeTemporaryExpr at [[MTE_B:0x[0-9a-f]+]])
+// CHECK:   Expire (MaterializeTemporaryExpr at [[MTE_A]])
+// CHECK:   Expire (MaterializeTemporaryExpr at [[MTE_B]])
 }

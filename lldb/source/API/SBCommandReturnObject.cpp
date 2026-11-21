@@ -352,7 +352,7 @@ void SBCommandReturnObject::SetError(lldb::SBError &error,
                                      const char *fallback_error_cstr) {
   LLDB_INSTRUMENT_VA(this, error, fallback_error_cstr);
 
-  if (error.IsValid() && !error.Fail())
+  if (error.IsValid())
     ref().SetError(error.ref().Clone());
   else if (fallback_error_cstr)
     ref().SetError(Status::FromErrorString(fallback_error_cstr));

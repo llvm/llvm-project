@@ -157,6 +157,9 @@ bool CheckArraySize(InterpState &S, CodePtr OpPC, SizeT NumElements,
   if (ElemSize == 0)
     return true;
 
+  if (!NumElements.isNumber())
+    return Invalid(S, OpPC);
+
   // Can't be too many elements if the bitwidth of NumElements is lower than
   // that of Descriptor::MaxArrayElemBytes.
   if ((NumElements.bitWidth() - NumElements.isSigned()) <
