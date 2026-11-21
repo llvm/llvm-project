@@ -165,8 +165,13 @@ static void walkRegionBackward(Region &region,
         visitor.visitTerminator(terminator);
       } else if (auto regionOp = dyn_cast<RegionBranchOpInterface>(&op)) {
         visitor.visitRegionOp(regionOp);
-        for (unsigned i = 0; i < xegpu::kMaxRegionRevisits &&
-                             visitor.shouldRevisitRegions(regionOp);
+        // Pipelined loops pass values along iter_arg chains; each walk moves a
+        // layout request back one iter_arg: allow region args + 1 walks.
+        unsigned numRegionArgs = 0;
+        for (Region &region : op.getRegions())
+          numRegionArgs += region.getNumArguments();
+        for (unsigned i = 0;
+             i < numRegionArgs + 1 && visitor.shouldRevisitRegions(regionOp);
              ++i) {
           walkNestedRegions();
           visitor.visitRegionOp(regionOp);

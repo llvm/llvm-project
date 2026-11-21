@@ -83,10 +83,6 @@ void propagateRegionResultsToYieldOperands(
     RegionBranchTerminatorOpInterface terminator,
     GetLayoutFnTy getLayoutOfValue, SetOperandLayoutFnTy setOperandLayout);
 
-/// Upper bound on how often walkBackward walks the regions of one region op
-/// again for a single visit of that op (see shouldRevisitRegions).
-constexpr unsigned kMaxRegionRevisits = 2;
-
 /// Callbacks for walkBackward.
 class BackwardLayoutVisitor {
 public:
@@ -116,8 +112,8 @@ public:
 /// edge (scf.for's yield -> iter_args) and, for scf.while, the uses in its
 /// after region of what scf.condition passes on. A visitor can ask for the
 /// regions of a region op to be walked again (shouldRevisitRegions) once such
-/// a consumer has been seen; this happens at most kMaxRegionRevisits times per
-/// visit of the op.
+/// a consumer has been seen; this happens at most once more than the number of
+/// region arguments of the op, per visit of the op.
 void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within

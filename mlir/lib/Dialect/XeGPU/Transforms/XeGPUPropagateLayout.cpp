@@ -108,6 +108,9 @@ namespace {
 ///   - forwardFillRegularOp infers a result's layout from its operand
 ///     layouts, and warns "op has users but no layout assigned" when it
 ///     can't;
+///   - forwardInitsToRegionArgs gives each loop init operand without a decided
+///     layout the layout of its init value, to which the region argument it
+///     feeds is bound;
 ///   - forwardYieldOperandsToRegionResults gives each region result the layout
 ///     of the terminator operand that feeds it;
 ///   - updateFunctionOpInterface updates the function signatures.
@@ -118,7 +121,8 @@ public:
   LayoutPropagation(Operation *scopeRoot, xegpu::LayoutKind layoutKind)
       : scopeRoot(scopeRoot), layoutKind(layoutKind) {}
 
-  /// Runs the backward scan over every function under `scopeRoot`.
+  /// Runs the backward scan over every function under `scopeRoot` and emits
+  /// its diagnostics. The IR is unchanged until commitDecisions().
   LogicalResult run();
 
   /// Returns the layout requested by consumers of `val`, or null if unknown.
@@ -128,6 +132,9 @@ public:
 
   /// Prints requested layouts for function arguments and op results.
   void print(llvm::raw_ostream &os);
+
+  /// Writes the decisions of the walk into the IR.
+  void commitDecisions();
 
 private:
   // Propagation functions fill `operands` with requested layouts. `results`
@@ -175,8 +182,6 @@ private:
   xegpu::DistributeLayoutAttr getOperandDecision(OpOperand &operand) const {
     return operandDecisions.lookup(&operand);
   }
-  // Writes all decisions into the IR.
-  void commitDecisions();
   // Diagnostics reported by the visits of each op, emitted only after the
   // walk: a later visit of the op replaces them, like its decisions.
   struct PendingDiagnostic {
@@ -1126,6 +1131,10 @@ void LayoutPropagation::visitLoadGatherOp(xegpu::LoadGatherOp load,
     requiredAnchorLayoutAttr = xegpu::setupLoadGatherAnchorLayout(
         layoutKind, resVecTy, contigChunkSize, consumerLayoutAttr,
         numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      markWarning(load, "Failed to determine required layout for load_gather.");
+      return;
+    }
     anchorLayouts.emplace_back(load.getLayoutAttrName(),
                                requiredAnchorLayoutAttr);
   }
@@ -1234,6 +1243,11 @@ void LayoutPropagation::visitLoadMatrixOp(xegpu::LoadMatrixOp loadMatrixOp,
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
         layoutKind, resVecTy, chunkSize, consumerLayoutAttr,
         numSgOrErr.value_or(0), uArch);
+    if (!requiredAnchorLayoutAttr) {
+      markWarning(loadMatrixOp,
+                  "Failed to determine required layout for load_matrix.");
+      return;
+    }
     anchorLayouts.emplace_back(loadMatrixOp.getLayoutAttrName(),
                                requiredAnchorLayoutAttr);
   }
@@ -1337,9 +1351,6 @@ LogicalResult LayoutPropagation::emitPendingDiagnostics() {
 
 LogicalResult LayoutPropagation::run() {
   xegpu::walkBackward(scopeRoot, *this);
-  // Write the decisions into the IR now that no visit can revise them.
-  commitDecisions();
-  // Stop before forward filling if any visitor reported a fatal error.
   return emitPendingDiagnostics();
 }
 
@@ -1927,6 +1938,22 @@ struct XeGPUPropagateLayoutPass final
 };
 } // namespace
 
+/// Give each init operand of a loop without a layout decided for it the layout
+/// of its init value: the region argument it feeds is bound to that value.
+static void forwardInitsToRegionArgs(RegionBranchOpInterface regionOp,
+                                     GetLayoutFnTy getLayoutOfValue) {
+  auto loop = dyn_cast<LoopLikeOpInterface>(regionOp.getOperation());
+  if (!loop)
+    return;
+  for (OpOperand &init : loop.getInitsMutable()) {
+    if (!isa<VectorType>(init.get().getType()) ||
+        xegpu::getTemporaryLayout(init))
+      continue;
+    if (xegpu::DistributeLayoutAttr layout = getLayoutOfValue(init.get()))
+      xegpu::setTemporaryLayout(init, layout);
+  }
+}
+
 /// Assign each region result the layout of the terminator operand forwarded
 /// to it. Fails if a forwarded vector operand has no layout.
 static LogicalResult forwardYieldOperandsToRegionResults(
@@ -1946,7 +1973,11 @@ static LogicalResult forwardYieldOperandsToRegionResults(
       if (!isa<VectorType>(successorInput.getType()))
         continue;
       xegpu::DistributeLayoutAttr successorOperandLayout =
-          getLayoutOfValue(successorOperand->get());
+          xegpu::getTemporaryLayout(*successorOperand);
+      // Without a layout decided for the operand, use the layout that forward
+      // filling has just found for the forwarded value.
+      if (!successorOperandLayout)
+        successorOperandLayout = getLayoutOfValue(successorOperand->get());
       // The forwarded operand must carry a layout to propagate.
       if (!successorOperandLayout)
         return failure();
@@ -1999,26 +2030,33 @@ static LogicalResult updateFunctionOpInterface(mlir::OpBuilder &builder,
 static LogicalResult
 forwardFillUnassignedLayouts(OpBuilder &builder, Operation *target,
                              GetLayoutFnTy getLayoutOfValue) {
-  WalkResult walkResult = target->walk([&](Operation *op) -> WalkResult {
-    if (op == target)
-      return WalkResult::advance();
-    LogicalResult r = success();
-    TypeSwitch<Operation *>(op)
-        .Case([&](RegionBranchTerminatorOpInterface terminator) {
-          r = forwardYieldOperandsToRegionResults(terminator, getLayoutOfValue);
-        })
-        .Case([&](FunctionOpInterface funcOp) {
-          r = updateFunctionOpInterface(builder, funcOp, getLayoutOfValue);
-        })
-        .Default([&](Operation *op) {
-          r = forwardFillRegularOp(builder, op, getLayoutOfValue);
-        });
-    if (failed(r)) {
-      op->emitError("Failed to update operation with the layout.");
-      return WalkResult::interrupt();
-    }
-    return WalkResult::advance();
-  });
+  // Pre-order: a region op is visited before its regions, so its init
+  // operands are filled before the ops that use the region arguments.
+  WalkResult walkResult =
+      target->walk<WalkOrder::PreOrder>([&](Operation *op) -> WalkResult {
+        if (op == target)
+          return WalkResult::advance();
+        LogicalResult r = success();
+        TypeSwitch<Operation *>(op)
+            .Case([&](RegionBranchTerminatorOpInterface terminator) {
+              r = forwardYieldOperandsToRegionResults(terminator,
+                                                      getLayoutOfValue);
+            })
+            .Case([&](FunctionOpInterface funcOp) {
+              r = updateFunctionOpInterface(builder, funcOp, getLayoutOfValue);
+            })
+            .Case([&](RegionBranchOpInterface regionOp) {
+              forwardInitsToRegionArgs(regionOp, getLayoutOfValue);
+            })
+            .Default([&](Operation *op) {
+              r = forwardFillRegularOp(builder, op, getLayoutOfValue);
+            });
+        if (failed(r)) {
+          op->emitError("Failed to update operation with the layout.");
+          return WalkResult::interrupt();
+        }
+        return WalkResult::advance();
+      });
   return failure(walkResult.wasInterrupted());
 }
 
@@ -2027,13 +2065,16 @@ LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
                                       unsigned /*indexBitWidth*/,
                                       bool printOnly) {
   LayoutPropagation propagation(target, layoutKind);
-  if (failed(propagation.run()))
-    return failure();
-  // Print the analysis result and exit. (for debugging purposes)
-  if (printOnly) {
-    propagation.print(llvm::outs());
-    return success();
+  LogicalResult result = propagation.run();
+  // Print the analysis result (for debugging purposes), or stop on a fatal
+  // error; either way, leave the IR unchanged.
+  if (printOnly || failed(result)) {
+    if (printOnly)
+      propagation.print(llvm::outs());
+    return result;
   }
+  // Write the decisions into the IR now that no visit can revise them.
+  propagation.commitDecisions();
   // Prefer the producer layout in the IR. Fall back to the requested layout
   // for values without one, such as vector function arguments.
   return forwardFillUnassignedLayouts(
