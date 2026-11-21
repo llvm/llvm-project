@@ -1394,6 +1394,13 @@ struct AAAMDGPUMinAGPRAlloc
         return CB.hasFnAttr(Attribute::NoCallback) ||
                !CB.hasFnAttr("trap-func-name");
       default:
+        // An intrinsic tagged !amdgpu.mfma !{!"agpr"} asks for AGPRs. How
+        // many depends on how many such results are live at once, so do not
+        // limit them.
+        if (AMDGPU::getMFMAAGPRHint(CB)) {
+          Maximum.indicatePessimisticFixpoint();
+          return false;
+        }
         // Some intrinsics may use AGPRs, but if we have a choice, we are not
         // required to use AGPRs.
         // Assume !nocallback intrinsics may call a function which requires

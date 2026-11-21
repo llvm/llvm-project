@@ -1665,6 +1665,14 @@ bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val) {
   return false;
 }
 
+MDNode *getMFMAAGPRHint(const Instruction &I) {
+  MDNode *MD = I.getMetadata("amdgpu.mfma");
+  if (!MD || MD->getNumOperands() != 1)
+    return nullptr;
+  auto *Form = dyn_cast_if_present<MDString>(MD->getOperand(0).get());
+  return Form && Form->getString() == "agpr" ? MD : nullptr;
+}
+
 unsigned getVmcntBitMask(const IsaVersion &Version) {
   return (1 << (getVmcntBitWidthLo(Version.Major) +
                 getVmcntBitWidthHi(Version.Major))) -

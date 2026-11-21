@@ -36,6 +36,7 @@ struct Align;
 class Argument;
 class Function;
 class GlobalValue;
+class Instruction;
 class MachineInstr;
 class MCInstrInfo;
 class MCRegisterClass;
@@ -1065,6 +1066,10 @@ inline bool isTgSplitEnabled(const Function &F) {
 
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
+
+/// \returns the !amdgpu.mfma metadata of \p I if it is !{!"agpr"}, which
+/// requests the AGPR form of an MFMA. \returns nullptr otherwise.
+MDNode *getMFMAAGPRHint(const Instruction &I);
 
 // The following methods are only meaningful on targets that support
 // S_WAITCNT.
