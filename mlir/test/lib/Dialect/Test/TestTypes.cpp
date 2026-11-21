@@ -500,7 +500,9 @@ void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
 
 Type TestRecursiveAliasType::getBody() const { return getImpl()->body; }
 
-void TestRecursiveAliasType::setBody(Type type) { (void)Base::mutate(type); }
+LogicalResult TestRecursiveAliasType::setBody(Type type) {
+  return Base::mutate(type);
+}
 
 StringRef TestRecursiveAliasType::getName() const { return getImpl()->name; }
 
@@ -529,8 +531,11 @@ Type TestRecursiveAliasType::parse(AsmParser &parser) {
     return nullptr;
   if (!subtype || failed(parser.parseGreater()))
     return Type();
-
-  rec.setBody(subtype);
+  if (failed(rec.setBody(subtype))) {
+    parser.emitError(parser.getNameLoc(), "recursive alias '")
+        << name << "' redefined with a different body";
+    return Type();
+  }
 
   return rec;
 }
@@ -541,7 +546,7 @@ void TestRecursiveAliasType::print(AsmPrinter &printer) const {
       printer.tryStartCyclicPrint(*this);
 
   printer << "<" << getName();
-  if (succeeded(cyclicPrint)) {
+  if (succeeded(cyclicPrint) && getBody()) {
     printer << ", ";
     printer << getBody();
   }
