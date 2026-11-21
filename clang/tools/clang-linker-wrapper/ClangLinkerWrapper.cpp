@@ -502,8 +502,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
-  // Add the real devices to the output name, so that device links for the
-  // same architecture don't overwrite each other's output file.
+  // Two device links can have the same architecture, e.g. igca_30r for
+  // xe-mtl-u and for xe-mtl-h, so add the real devices to the output name.
   std::vector<std::string> Devices = Args.getAllArgValues(OPT_code_EQ);
   for (const std::string &Device : Devices)
     OutputFileBase += "." + Device;
