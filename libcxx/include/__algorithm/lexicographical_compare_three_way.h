@@ -10,14 +10,25 @@
 #define _LIBCPP___ALGORITHM_LEXICOGRAPHICAL_COMPARE_THREE_WAY_H
 
 #include <__algorithm/min.h>
+#include <__algorithm/mismatch.h>
 #include <__algorithm/three_way_comp_ref_type.h>
+#include <__algorithm/unwrap_iter.h>
 #include <__compare/compare_three_way.h>
 #include <__compare/ordering.h>
 #include <__concepts/arithmetic.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
+#include <__string/constexpr_c_functions.h>
 #include <__type_traits/common_type.h>
+#include <__type_traits/desugars_to.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_pointer.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_trivially_lexicographically_comparable.h>
+#include <__type_traits/is_volatile.h>
+#include <__type_traits/remove_const.h>
+#include <__type_traits/remove_pointer.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -50,13 +61,31 @@ constexpr auto __lexicographical_compare_three_way_fast_path(
   _Len2 __len2      = __last2 - __first2;
   _Common __min_len = std::min<_Common>(__len1, __len2);
 
-  for (_Common __i = 0; __i < __min_len; ++__i) {
-    auto __c = __comp(*__first1, *__first2);
-    if (__c != 0) {
-      return __c;
+  using _Tp = remove_const_t<remove_pointer_t<_InputIterator1>>;
+  if constexpr (is_pointer_v<_InputIterator1> && is_pointer_v<_InputIterator2> &&
+                is_same_v<_Tp, remove_const_t<remove_pointer_t<_InputIterator2>>> &&
+                __desugars_to_v<__compare_three_way_tag, _Cmp, _Tp, _Tp> && !is_volatile_v<_Tp> &&
+                __is_trivially_equality_comparable_v<_Tp, _Tp>) {
+    const _Tp* __f1 = __first1;
+    const _Tp* __f2 = __first2;
+    if constexpr (__is_trivially_lexicographically_comparable_v<_Tp, _Tp>) {
+      auto __res = std::__constexpr_memcmp(__f1, __f2, __element_count(__min_len));
+      if (__res != 0)
+        return __res <=> 0;
+    } else {
+      auto __res = std::mismatch(__f1, __f1 + __min_len, __f2);
+      if (__res.first != __f1 + __min_len)
+        return *__res.first <=> *__res.second;
     }
-    ++__first1;
-    ++__first2;
+  } else {
+    for (_Common __i = 0; __i < __min_len; ++__i) {
+      auto __c = __comp(*__first1, *__first2);
+      if (__c != 0) {
+        return __c;
+      }
+      ++__first1;
+      ++__first2;
+    }
   }
 
   return __len1 <=> __len2;
@@ -101,7 +130,11 @@ template <class _InputIterator1, class _InputIterator2, class _Cmp>
   if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
                 __has_random_access_iterator_category<_InputIterator2>::value) {
     return std::__lexicographical_compare_three_way_fast_path(
-        std::move(__first1), std::move(__last1), std::move(__first2), std::move(__last2), __wrapped_comp_ref);
+        std::__unwrap_iter(__first1),
+        std::__unwrap_iter(__last1),
+        std::__unwrap_iter(__first2),
+        std::__unwrap_iter(__last2),
+        __wrapped_comp_ref);
   } else {
     // Unoptimized implementation which compares the iterators against the end in every loop iteration
     return std::__lexicographical_compare_three_way_slow_path(
