@@ -31,6 +31,7 @@ class Decl;
 class Expr;
 class IdentifierInfo;
 class LabelDecl;
+class QualType;
 class Stmt;
 class VarDecl;
 
@@ -49,6 +50,11 @@ bool isOverflowHandlerCheckedOp(ASTContext &Ctx, const Expr *E);
 /// \p SearchStmtExprs.
 bool containsOverflowHandlerCheckedOp(ASTContext &Ctx, const Stmt *S,
                                       bool SearchStmtExprs = true);
+
+/// Returns true if an implicit or explicit integral conversion from \p Src to
+/// \p Dst emits a trap overflow behavior type truncation or sign change check.
+bool isOverflowHandlerCheckedConversion(ASTContext &Ctx, QualType Src,
+                                        QualType Dst);
 
 /// Returns the function-level (non-local) overflow handler label defined in
 /// the body of \p CodeDecl (a function, block, or captured declaration), or
