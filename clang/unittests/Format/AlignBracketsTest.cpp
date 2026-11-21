@@ -861,6 +861,103 @@ TEST_F(AlignBracketsTest, BlockIndentAndNamespace) {
       Style);
 }
 
+TEST_F(AlignBracketsTest, BreakAfterOpenBracketIfStatement) {
+  auto Style = getLLVMStyleWithColumns(40);
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.BreakAfterOpenBracketIf = true;
+
+  verifyFormat("void f() {\n"
+               "  if (\n"
+               "      call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "           bbbbbbbbbbbbbbbbbbbb,\n"
+               "           cccccccccccccccccccc) < 0)\n"
+               "    return;\n"
+               "}",
+               "void f() {\n"
+               "  if (call(aaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbb, "
+               "cccccccccccccccccccc) < 0) return;\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignBracketsTest, BreakAfterOpenBracketFunctionCall) {
+  auto Style = getLLVMStyleWithColumns(40);
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.BreakAfterOpenBracketFunction = true;
+
+  verifyFormat("void f() {\n"
+               "  g(\n"
+               "      aaaaaaaaaaaaaaaaaaaa,\n"
+               "      bbbbbbbbbbbbbbbbbbbb,\n"
+               "      cccccccccccccccccccc);\n"
+               "}",
+               "void f() {\n"
+               "  g(aaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbb, "
+               "cccccccccccccccccccc);\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignBracketsTest, BreakAfterOpenBracketLoopStatement) {
+  auto Style = getLLVMStyleWithColumns(40);
+  Style.ContinuationIndentWidth = 7;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.BreakAfterOpenBracketLoop = true;
+
+  verifyFormat("void f() {\n"
+               "  while (\n"
+               "         call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "              bbbbbbbbbbbbbbbbbbbb,\n"
+               "              cccccccccccccccccccc) < 0)\n"
+               "    return;\n"
+               "}",
+               "void f() {\n"
+               "  while (call(aaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbb, "
+               "cccccccccccccccccccc) < 0) return;\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignBracketsTest, BreakAfterOpenBracketSwitchStatement) {
+  auto Style = getLLVMStyleWithColumns(40);
+  Style.ContinuationIndentWidth = 8;
+  Style.PackArguments.BinPack = FormatStyle::BPAS_OnePerLine;
+  Style.BreakAfterOpenBracketSwitch = true;
+
+  verifyFormat("void f() {\n"
+               "  switch (\n"
+               "          call(aaaaaaaaaaaaaaaaaaaa,\n"
+               "               bbbbbbbbbbbbbbbbbbbb,\n"
+               "               cccccccccccccccccccc)) {\n"
+               "  default:\n"
+               "    return;\n"
+               "  }\n"
+               "}",
+               "void f() {\n"
+               "  switch (call(aaaaaaaaaaaaaaaaaaaa, bbbbbbbbbbbbbbbbbbbb, "
+               "cccccccccccccccccccc)) { default: return; }\n"
+               "}",
+               Style);
+}
+
+TEST_F(AlignBracketsTest, BreakAfterOpenBracketBracedList) {
+  auto Style = getLLVMStyle();
+  Style.ContinuationIndentWidth = 11;
+  Style.BreakAfterOpenBracketBracedList = true;
+
+  verifyFormat("void f() {\n"
+               "  int a[] = {\n"
+               "             111111111111111111, 222222222222222222, "
+               "333333333333333333,\n"
+               "             444444444444444444};\n"
+               "}",
+               "void f() {\n"
+               "  int a[] = {111111111111111111, 222222222222222222, "
+               "333333333333333333, 444444444444444444};\n"
+               "}",
+               Style);
+}
+
 } // namespace
 } // namespace test
 } // namespace format
