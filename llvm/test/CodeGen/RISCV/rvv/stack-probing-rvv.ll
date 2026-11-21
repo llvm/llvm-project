@@ -18,13 +18,13 @@ define void @f_vector(ptr %out) #0 {
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 1
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -16
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB0_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB0_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB0_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -41,13 +41,13 @@ define void @f_vector(ptr %out) #0 {
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 1
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -16
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB0_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB0_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB0_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -70,13 +70,13 @@ define void @f4_vector(ptr %out) #0 {
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 3
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -64
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB1_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB1_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB1_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -93,13 +93,13 @@ define void @f4_vector(ptr %out) #0 {
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 3
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -64
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB1_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB1_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB1_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -127,13 +127,13 @@ define void @f16_vector(ptr %out) #0 {
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 5
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -256
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB2_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB2_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB2_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -150,13 +150,13 @@ define void @f16_vector(ptr %out) #0 {
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 5
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -256
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB2_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB2_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB2_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -195,13 +195,13 @@ define void @f17_vector(ptr %out) #0 {
 ; RV64IV-NEXT:    li a0, 34
 ; RV64IV-NEXT:    mul t1, t1, a0
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -272
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB3_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB3_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB3_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -220,13 +220,13 @@ define void @f17_vector(ptr %out) #0 {
 ; RV32IV-NEXT:    li a0, 34
 ; RV32IV-NEXT:    mul t1, t1, a0
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -272
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB3_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB3_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB3_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -269,13 +269,13 @@ define void @f1_vector_16_arr(ptr %out) #0 {
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 1
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -16
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB4_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB4_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB4_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -297,13 +297,13 @@ define void @f1_vector_16_arr(ptr %out) #0 {
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 1
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -16
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB4_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB4_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB4_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -344,13 +344,13 @@ define void @f1_vector_4096_arr(ptr %out) #0 {
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 7
 ; RV64IV-NEXT:    .cfi_def_cfa t1, -1024
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB5_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB5_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB5_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    .cfi_def_cfa_register sp
 ; RV64IV-NEXT:    sub sp, sp, t1
@@ -386,13 +386,13 @@ define void @f1_vector_4096_arr(ptr %out) #0 {
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 7
 ; RV32IV-NEXT:    .cfi_def_cfa t1, -1024
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB5_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB5_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB5_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    .cfi_def_cfa_register sp
 ; RV32IV-NEXT:    sub sp, sp, t1
@@ -429,10 +429,10 @@ define void @f1_vector_realign(ptr %out) #0 {
 ; RV64IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IV-NEXT:    lui a0, 9
 ; RV64IV-NEXT:    sub t1, sp, a0
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB6_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    bne sp, t1, .LBB6_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
@@ -441,25 +441,25 @@ define void @f1_vector_realign(ptr %out) #0 {
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 1
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB6_3: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB6_3
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB6_3
 ; RV64IV-NEXT:  # %bb.4: # %entry
 ; RV64IV-NEXT:    sub sp, sp, t1
 ; RV64IV-NEXT:    sd zero, 0(sp)
 ; RV64IV-NEXT:    slli t1, sp, 51
 ; RV64IV-NEXT:    srli t1, t1, 51
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB6_5: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB6_5
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB6_5
 ; RV64IV-NEXT:  # %bb.6: # %entry
 ; RV64IV-NEXT:    sub sp, sp, t1
 ; RV64IV-NEXT:    sd zero, 0(sp)
@@ -486,10 +486,10 @@ define void @f1_vector_realign(ptr %out) #0 {
 ; RV32IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IV-NEXT:    lui a0, 9
 ; RV32IV-NEXT:    sub t1, sp, a0
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB6_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    bne sp, t1, .LBB6_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
@@ -498,25 +498,25 @@ define void @f1_vector_realign(ptr %out) #0 {
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 1
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB6_3: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB6_3
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB6_3
 ; RV32IV-NEXT:  # %bb.4: # %entry
 ; RV32IV-NEXT:    sub sp, sp, t1
 ; RV32IV-NEXT:    sw zero, 0(sp)
 ; RV32IV-NEXT:    slli t1, sp, 19
 ; RV32IV-NEXT:    srli t1, t1, 19
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB6_5: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB6_5
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB6_5
 ; RV32IV-NEXT:  # %bb.6: # %entry
 ; RV32IV-NEXT:    sub sp, sp, t1
 ; RV32IV-NEXT:    sw zero, 0(sp)
@@ -557,13 +557,13 @@ define void @f1_vector_realign_small_call(ptr %out) #0 {
 ; RV64IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 1
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB7_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB7_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB7_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    sub sp, sp, t1
 ; RV64IV-NEXT:    sd zero, 0(sp)
@@ -611,13 +611,13 @@ define void @f1_vector_realign_small_call(ptr %out) #0 {
 ; RV32IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 1
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB7_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB7_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB7_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    sub sp, sp, t1
 ; RV32IV-NEXT:    sw zero, 0(sp)
@@ -678,13 +678,13 @@ define void @f1_vector_realign_large_call(ptr %out) #0 {
 ; RV64IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV64IV-NEXT:    csrr t1, vlenb
 ; RV64IV-NEXT:    slli t1, t1, 1
-; RV64IV-NEXT:    lui t2, 1
+; RV64IV-NEXT:    lui t0, 1
 ; RV64IV-NEXT:  .LBB8_1: # %entry
 ; RV64IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64IV-NEXT:    sub sp, sp, t2
+; RV64IV-NEXT:    sub sp, sp, t0
 ; RV64IV-NEXT:    sd zero, 0(sp)
-; RV64IV-NEXT:    sub t1, t1, t2
-; RV64IV-NEXT:    bge t1, t2, .LBB8_1
+; RV64IV-NEXT:    sub t1, t1, t0
+; RV64IV-NEXT:    bge t1, t0, .LBB8_1
 ; RV64IV-NEXT:  # %bb.2: # %entry
 ; RV64IV-NEXT:    sub sp, sp, t1
 ; RV64IV-NEXT:    sd zero, 0(sp)
@@ -737,13 +737,13 @@ define void @f1_vector_realign_large_call(ptr %out) #0 {
 ; RV32IV-NEXT:    .cfi_def_cfa s0, 0
 ; RV32IV-NEXT:    csrr t1, vlenb
 ; RV32IV-NEXT:    slli t1, t1, 1
-; RV32IV-NEXT:    lui t2, 1
+; RV32IV-NEXT:    lui t0, 1
 ; RV32IV-NEXT:  .LBB8_1: # %entry
 ; RV32IV-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32IV-NEXT:    sub sp, sp, t2
+; RV32IV-NEXT:    sub sp, sp, t0
 ; RV32IV-NEXT:    sw zero, 0(sp)
-; RV32IV-NEXT:    sub t1, t1, t2
-; RV32IV-NEXT:    bge t1, t2, .LBB8_1
+; RV32IV-NEXT:    sub t1, t1, t0
+; RV32IV-NEXT:    bge t1, t0, .LBB8_1
 ; RV32IV-NEXT:  # %bb.2: # %entry
 ; RV32IV-NEXT:    sub sp, sp, t1
 ; RV32IV-NEXT:    sw zero, 0(sp)
