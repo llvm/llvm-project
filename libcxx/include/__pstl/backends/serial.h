@@ -23,6 +23,7 @@
 #include <__algorithm/partition.h>
 #include <__algorithm/partition_copy.h>
 #include <__algorithm/reverse.h>
+#include <__algorithm/rotate.h>
 #include <__algorithm/search.h>
 #include <__algorithm/search_n.h>
 #include <__algorithm/set_difference.h>
@@ -176,6 +177,15 @@ struct __reverse<__serial_backend_tag, _ExecutionPolicy> {
   operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
     std::reverse(std::move(__first), std::move(__last));
     return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __rotate<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator>
+  optional<_ForwardIterator>
+  operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last) const noexcept {
+    return std::rotate(std::move(__first), std::move(__middle), std::move(__last));
   }
 };
 
