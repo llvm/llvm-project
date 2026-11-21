@@ -3,10 +3,9 @@
 
 define i32 @computeNumSignBits_add1(i32 %in) {
 ; CHECK-LABEL: @computeNumSignBits_add1(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IN:%.*]], 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ADD]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[ADD]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[IN:%.*]], i32 -1, i32 42) ]
+; CHECK-NEXT:    [[ADD:%.*]] = shl i32 [[IN]], 3
+; CHECK-NEXT:    [[SH:%.*]] = add i32 [[ADD]], 8
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
   %add = add i32 %in, 1
@@ -19,8 +18,7 @@ define i32 @computeNumSignBits_add1(i32 %in) {
 define i32 @computeNumSignBits_add2(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @computeNumSignBits_add2(
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[IN1:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[ADD]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[ADD]], i32 0, i32 43) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[ADD]], 3
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
@@ -34,8 +32,7 @@ define i32 @computeNumSignBits_add2(i32 %in1, i32 %in2) {
 define i32 @computeNumSignBits_sub1(i32 %in) {
 ; CHECK-LABEL: @computeNumSignBits_sub1(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 1, [[IN:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[SUB]], i32 0, i32 43) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[SUB]], 3
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
@@ -48,11 +45,10 @@ define i32 @computeNumSignBits_sub1(i32 %in) {
 
 define i32 @computeNumSignBits_sub2(i32 %in) {
 ; CHECK-LABEL: @computeNumSignBits_sub2(
-; CHECK-NEXT:    [[SUB:%.*]] = add nsw i32 [[IN:%.*]], -1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[SUB:%.*]], i32 1, i32 44) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[SUB]], 3
-; CHECK-NEXT:    ret i32 [[SH]]
+; CHECK-NEXT:    [[SH1:%.*]] = add nsw i32 [[SH]], -8
+; CHECK-NEXT:    ret i32 [[SH1]]
 ;
   %sub = sub i32 %in, 1
   %cond = icmp ule i32 %sub, 42
@@ -64,8 +60,7 @@ define i32 @computeNumSignBits_sub2(i32 %in) {
 define i32 @computeNumSignBits_sub3(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @computeNumSignBits_sub3(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[IN1:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SUB]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[SUB]], i32 0, i32 43) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[SUB]], 3
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
@@ -79,8 +74,7 @@ define i32 @computeNumSignBits_sub3(i32 %in1, i32 %in2) {
 define i32 @computeNumSignBits_mul(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: @computeNumSignBits_mul(
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[IN1:%.*]], [[IN2:%.*]]
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[MUL]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[MUL]], i32 0, i32 43) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[MUL]], 3
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;
@@ -94,8 +88,7 @@ define i32 @computeNumSignBits_mul(i32 %in1, i32 %in2) {
 define i32 @computeNumSignBits_select(i32 %in, i1 %s) {
 ; CHECK-LABEL: @computeNumSignBits_select(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[S:%.*]], i32 [[IN:%.*]], i32 1
-; CHECK-NEXT:    [[COND:%.*]] = icmp ult i32 [[SEL]], 43
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[SEL]], i32 0, i32 43) ]
 ; CHECK-NEXT:    [[SH:%.*]] = shl nuw nsw i32 [[SEL]], 3
 ; CHECK-NEXT:    ret i32 [[SH]]
 ;

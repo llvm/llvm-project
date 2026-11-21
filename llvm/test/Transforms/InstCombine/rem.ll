@@ -1050,10 +1050,8 @@ define <2 x i32> @PR62401(<2 x i1> %x, <2 x i32> %y) {
 define i16 @rem_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-LABEL: @rem_pow2_or_zero(
 ; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i16 1, 17) i16 @llvm.ctpop.i16(i16 [[Y:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp samesign ult i16 [[POPCNT]], 2
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[Y]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[POPCNT]], i16 1, i16 2) ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i16 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[REM]]
 ;
   %popcnt = call i16 @llvm.ctpop.i16(i16 %y)
@@ -1066,10 +1064,8 @@ define i16 @rem_pow2_or_zero(i16 %x, i16 %y) {
 define i16 @rem_pow2(i16 %x, i16 %y) {
 ; CHECK-LABEL: @rem_pow2(
 ; CHECK-NEXT:    [[POPCNT:%.*]] = call range(i16 1, 17) i16 @llvm.ctpop.i16(i16 [[Y:%.*]])
-; CHECK-NEXT:    [[COND:%.*]] = icmp eq i16 [[POPCNT]], 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[Y]], -1
-; CHECK-NEXT:    [[REM:%.*]] = and i16 [[X:%.*]], [[TMP1]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[POPCNT]], i16 1, i16 2) ]
+; CHECK-NEXT:    [[REM:%.*]] = urem i16 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[REM]]
 ;
   %popcnt = call i16 @llvm.ctpop.i16(i16 %y)

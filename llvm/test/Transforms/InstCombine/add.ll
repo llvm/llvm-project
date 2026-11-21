@@ -3888,8 +3888,7 @@ define i8 @signum_i8_i8_wrong_pred(i8 %x) {
 
 define i32 @dec_zext_add_assume_nonzero(i8 %x) {
 ; CHECK-LABEL: @dec_zext_add_assume_nonzero(
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[C:%.*]] = zext i8 [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[C]]
 ;

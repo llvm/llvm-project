@@ -535,8 +535,7 @@ define i32 @ptr_add_in_int_nusw(i32 %x, i32 %y) {
 
 define i32 @ptr_add_in_int_nusw_nneg(i32 %x, i32 %y) {
 ; CHECK-LABEL: @ptr_add_in_int_nusw_nneg(
-; CHECK-NEXT:    [[NNEG:%.*]] = icmp sgt i32 [[Y:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[NNEG]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[Y:%.*]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[R:%.*]] = add nuw i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

@@ -11,8 +11,7 @@ declare void @llvm.assume(i1)
 
 define i8 @t0(i8 %x, i8 %y) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[X_IS_NONNEGATIVE:%.*]] = icmp sgt i8 [[X:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[X_IS_NONNEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[DIV1:%.*]] = lshr i8 [[X]], 5
 ; CHECK-NEXT:    [[DIV:%.*]] = sub nsw i8 0, [[DIV1]]
 ; CHECK-NEXT:    ret i8 [[DIV]]
@@ -24,8 +23,7 @@ define i8 @t0(i8 %x, i8 %y) {
 }
 define i8 @n1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n1(
-; CHECK-NEXT:    [[X_IS_NONNEGATIVE:%.*]] = icmp sgt i8 [[X:%.*]], -2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[X_IS_NONNEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -1, i8 -128) ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X]], -32
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;
@@ -36,8 +34,7 @@ define i8 @n1(i8 %x, i8 %y) {
 }
 define i8 @n2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n2(
-; CHECK-NEXT:    [[X_IS_NONNEGATIVE:%.*]] = icmp sgt i8 [[X:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[X_IS_NONNEGATIVE]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 0, i8 -128) ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X]], -31
 ; CHECK-NEXT:    ret i8 [[DIV]]
 ;

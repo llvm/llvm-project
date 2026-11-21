@@ -7,9 +7,9 @@ declare i32 @llvm.ctpop.i32(i32)
 define i32 @pow2_32_assume(i32 %x) {
 ; CHECK-LABEL: @pow2_32_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 5) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 4
+; CHECK-NEXT:    ret i32 [[AND2]]
 ;
   %and = and i32 %x, 4
   %cmp = icmp ne i32 %and, 0
@@ -21,8 +21,7 @@ define i32 @pow2_32_assume(i32 %x) {
 define i32 @not_pow2_32_assume(i32 %x) {
 ; CHECK-LABEL: @not_pow2_32_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 3
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 4) ]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 3
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -49,8 +48,7 @@ define i64 @pow2_64_assume(i64 %x) {
 define i64 @not_pow2_64_assume(i64 %x) {
 ; CHECK-LABEL: @not_pow2_64_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[X:%.*]], 2147483647
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[AND]], i64 1, i64 2147483648) ]
 ; CHECK-NEXT:    [[OR:%.*]] = or i64 [[X]], 2147483647
 ; CHECK-NEXT:    ret i64 [[OR]]
 ;
@@ -64,9 +62,9 @@ define i64 @not_pow2_64_assume(i64 %x) {
 define i16 @pow2_16_assume(i16 %x) {
 ; CHECK-LABEL: @pow2_16_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 16384
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i16 16384
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[AND]], i16 1, i16 16385) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X]], 16384
+; CHECK-NEXT:    ret i16 [[AND2]]
 ;
   %and = and i16 %x, 16384
   %cmp = icmp eq i16 %and, 16384
@@ -78,8 +76,7 @@ define i16 @pow2_16_assume(i16 %x) {
 define i16 @not_pow2_16_assume(i16 %x) {
 ; CHECK-LABEL: @not_pow2_16_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[AND]], 7
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[AND]], i16 0, i16 7) ]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i16 [[X]], 7
 ; CHECK-NEXT:    ret i16 [[AND2]]
 ;
@@ -92,8 +89,7 @@ define i16 @not_pow2_16_assume(i16 %x) {
 
 define i8 @pow2_8_assume(i8 %x) {
 ; CHECK-LABEL: @pow2_8_assume(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    ret i8 [[X]]
 ;
   %and = and i8 %x, 128
@@ -106,8 +102,7 @@ define i8 @pow2_8_assume(i8 %x) {
 define i8 @not_pow2_8_assume(i8 %x) {
 ; CHECK-LABEL: @not_pow2_8_assume(
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[X:%.*]], 127
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 127
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[AND]], i8 0, i8 127) ]
 ; CHECK-NEXT:    [[OR:%.*]] = or i8 [[X]], 127
 ; CHECK-NEXT:    ret i8 [[OR]]
 ;
@@ -284,11 +279,9 @@ False:
 define i32 @pow2_32_nonconst_assume(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pow2_32_nonconst_assume(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp eq i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 1, i32 2) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 0) ]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -306,8 +299,7 @@ define i32 @pow2_32_nonconst_assume(i32 %x, i32 %y) {
 define i32 @pow2_32_gtnonconst_assume(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pow2_32_gtnonconst_assume(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp eq i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 1, i32 2) ]
 ; CHECK-NEXT:    [[YGT:%.*]] = icmp ugt i32 [[Y]], [[X:%.*]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[YGT]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], [[Y]]
@@ -327,11 +319,9 @@ define i32 @pow2_32_gtnonconst_assume(i32 %x, i32 %y) {
 define i32 @not_pow2_32_nonconst_assume(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_pow2_32_nonconst_assume(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp ne i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 2, i32 1) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 0) ]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -349,11 +339,9 @@ define i32 @not_pow2_32_nonconst_assume(i32 %x, i32 %y) {
 define i32 @pow2_or_zero_32_nonconst_assume(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pow2_or_zero_32_nonconst_assume(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp samesign ult i32 [[CTPOP]], 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 0, i32 2) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 0) ]
 ; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[AND2]]
 ;
@@ -371,8 +359,7 @@ define i32 @pow2_or_zero_32_nonconst_assume(i32 %x, i32 %y) {
 define i32 @pow2_32_nonconst_assume_br(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pow2_32_nonconst_assume_br(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp eq i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 1, i32 2) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
@@ -398,8 +385,7 @@ False:
 define i32 @not_pow2_32_nonconst_assume_br(i32 %x, i32 %y) {
 ; CHECK-LABEL: @not_pow2_32_nonconst_assume_br(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp ne i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 2, i32 1) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
@@ -425,8 +411,7 @@ False:
 define i32 @pow2_or_zero_32_nonconst_assume_br(i32 %x, i32 %y) {
 ; CHECK-LABEL: @pow2_or_zero_32_nonconst_assume_br(
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 0, 33) i32 @llvm.ctpop.i32(i32 [[Y:%.*]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp samesign ult i32 [[CTPOP]], 2
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 0, i32 2) ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FALSE:%.*]], label [[TRUE:%.*]]
@@ -513,8 +498,7 @@ define i32 @maybe_pow2_32_noncont(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[YGT8]], label [[CONT1:%.*]], label [[CONT2:%.*]]
 ; CHECK:       Cont1:
 ; CHECK-NEXT:    [[CTPOP:%.*]] = call range(i32 1, 33) i32 @llvm.ctpop.i32(i32 [[Y]])
-; CHECK-NEXT:    [[YP2:%.*]] = icmp eq i32 [[CTPOP]], 1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[YP2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[CTPOP]], i32 1, i32 2) ]
 ; CHECK-NEXT:    br i1 true, label [[CONT2]], label [[FALSE:%.*]]
 ; CHECK:       Cont2:
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], [[Y]]

@@ -8,9 +8,9 @@ declare void @llvm.assume(i1) #1
 define i32 @test1(i32 %a) #0 {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 5
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 5, i32 6) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = and i32 %a, 15
   %cmp = icmp eq i32 %and, 5
@@ -22,9 +22,9 @@ define i32 @test1(i32 %a) #0 {
 define i32 @test2(i32 %a) #0 {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 10
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 2
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 10, i32 11) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = and i32 %a, 15
   %nand = xor i32 %and, -1
@@ -37,9 +37,9 @@ define i32 @test2(i32 %a) #0 {
 define i32 @test3(i32 %a) #0 {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 5
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[TMP1]], i32 5, i32 6) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %v = or i32 %a, 4294967280
   %cmp = icmp eq i32 %v, 4294967285
@@ -51,9 +51,9 @@ define i32 @test3(i32 %a) #0 {
 define i32 @test4(i32 %a) #0 {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], 15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 10
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 2
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[TMP1]], i32 10, i32 11) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 7
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %v = or i32 %a, 4294967280
   %nv = xor i32 %v, -1
@@ -65,8 +65,7 @@ define i32 @test4(i32 %a) #0 {
 
 define i32 @test5(i32 %a) #0 {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 4
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 4, i32 5) ]
 ; CHECK-NEXT:    ret i32 4
 ;
   %v = xor i32 %a, 1
@@ -79,9 +78,9 @@ define i32 @test5(i32 %a) #0 {
 define i32 @test6(i32 %a) #0 {
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:    [[V_MASK:%.*]] = and i32 [[A:%.*]], 1073741823
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V_MASK]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 5
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V_MASK]], i32 5, i32 6) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 63
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %v = shl i32 %a, 2
   %cmp = icmp eq i32 %v, 20
@@ -93,9 +92,9 @@ define i32 @test6(i32 %a) #0 {
 define i32 @test7(i32 %a) #0 {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[V_MASK:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V_MASK]], 20
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V_MASK]], i32 20, i32 21) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 252
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %v = lshr i32 %a, 2
   %cmp = icmp eq i32 %v, 5
@@ -107,9 +106,9 @@ define i32 @test7(i32 %a) #0 {
 define i32 @test8(i32 %a) #0 {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:    [[V_MASK:%.*]] = and i32 [[A:%.*]], -4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V_MASK]], 20
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 20
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V_MASK]], i32 20, i32 21) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 252
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %v = lshr i32 %a, 2
   %cmp = icmp eq i32 %v, 5
@@ -120,8 +119,7 @@ define i32 @test8(i32 %a) #0 {
 
 define i32 @test9(i32 %a) #0 {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 6, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %cmp = icmp sgt i32 %a, 5
@@ -132,8 +130,7 @@ define i32 @test9(i32 %a) #0 {
 
 define i32 @test10(i32 %a) #0 {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A:%.*]], -1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 -2147483648, i32 -1) ]
 ; CHECK-NEXT:    ret i32 -2147483648
 ;
   %cmp = icmp sle i32 %a, -2
@@ -144,8 +141,7 @@ define i32 @test10(i32 %a) #0 {
 
 define i32 @test11(i32 %a) #0 {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[A:%.*]], 257
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 0, i32 257) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %cmp = icmp ule i32 %a, 256

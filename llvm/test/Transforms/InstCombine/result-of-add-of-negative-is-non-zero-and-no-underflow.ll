@@ -44,8 +44,7 @@ define i1 @t0_bad_logical(i8 %base, i8 %offset) {
 ; Ok, base is non-zero.
 define i1 @t1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -65,8 +64,7 @@ define i1 @t1(i8 %base, i8 %offset) {
 
 define i1 @t1_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t1_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -87,8 +85,7 @@ define i1 @t1_logical(i8 %base, i8 %offset) {
 ; Ok, offset is non-zero.
 define i1 @t2(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
@@ -108,8 +105,7 @@ define i1 @t2(i8 %base, i8 %offset) {
 
 define i1 @t2_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t2_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[OFFSET:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[OFFSET:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE:%.*]], [[OFFSET]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[OFFSET]]
@@ -130,8 +126,7 @@ define i1 @t2_logical(i8 %base, i8 %offset) {
 ; We need to produce extra instruction, so one of icmp's must go away.
 define i1 @t3_oneuse0(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t3_oneuse0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
@@ -154,8 +149,7 @@ define i1 @t3_oneuse0(i8 %base, i8 %offset) {
 
 define i1 @t3_oneuse0_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t3_oneuse0_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
@@ -177,8 +171,7 @@ define i1 @t3_oneuse0_logical(i8 %base, i8 %offset) {
 }
 define i1 @t4_oneuse1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t4_oneuse1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
@@ -201,8 +194,7 @@ define i1 @t4_oneuse1(i8 %base, i8 %offset) {
 
 define i1 @t4_oneuse1_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t4_oneuse1_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NO_UNDERFLOW:%.*]] = icmp ult i8 [[ADJUSTED]], [[BASE]]
@@ -224,8 +216,7 @@ define i1 @t4_oneuse1_logical(i8 %base, i8 %offset) {
 }
 define i1 @t5_oneuse2_bad(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t5_oneuse2_bad(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
@@ -250,8 +241,7 @@ define i1 @t5_oneuse2_bad(i8 %base, i8 %offset) {
 
 define i1 @t5_oneuse2_bad_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t5_oneuse2_bad_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[NOT_NULL:%.*]] = icmp ne i8 [[ADJUSTED]], 0
@@ -276,8 +266,7 @@ define i1 @t5_oneuse2_bad_logical(i8 %base, i8 %offset) {
 
 define i1 @t6_commutativity0(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutativity0(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -297,8 +286,7 @@ define i1 @t6_commutativity0(i8 %base, i8 %offset) {
 
 define i1 @t6_commutativity0_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t6_commutativity0_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -317,8 +305,7 @@ define i1 @t6_commutativity0_logical(i8 %base, i8 %offset) {
 }
 define i1 @t7_commutativity1(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7_commutativity1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -338,8 +325,7 @@ define i1 @t7_commutativity1(i8 %base, i8 %offset) {
 
 define i1 @t7_commutativity1_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7_commutativity1_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -358,8 +344,7 @@ define i1 @t7_commutativity1_logical(i8 %base, i8 %offset) {
 }
 define i1 @t7_commutativity3(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7_commutativity3(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -379,8 +364,7 @@ define i1 @t7_commutativity3(i8 %base, i8 %offset) {
 
 define i1 @t7_commutativity3_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t7_commutativity3_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -401,8 +385,7 @@ define i1 @t7_commutativity3_logical(i8 %base, i8 %offset) {
 ; We could have the opposite question, did we get null or overflow happened?
 define i1 @t8(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -422,8 +405,7 @@ define i1 @t8(i8 %base, i8 %offset) {
 
 define i1 @t8_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t8_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -444,8 +426,7 @@ define i1 @t8_logical(i8 %base, i8 %offset) {
 ; The comparison can be with any of the values being added.
 define i1 @t9(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t9(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]
@@ -465,8 +446,7 @@ define i1 @t9(i8 %base, i8 %offset) {
 
 define i1 @t9_logical(i8 %base, i8 %offset) {
 ; CHECK-LABEL: @t9_logical(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[BASE:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[BASE:%.*]], i8 -128, i8 0) ]
 ; CHECK-NEXT:    [[ADJUSTED:%.*]] = add i8 [[BASE]], [[OFFSET:%.*]]
 ; CHECK-NEXT:    call void @use8(i8 [[ADJUSTED]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i8 0, [[BASE]]

@@ -87,8 +87,7 @@ define void @align_with_offset_less_than_align(ptr %ptr) {
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[AND]], i64 0, i64 1) ]
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -108,8 +107,7 @@ define void @align_with_offset_greater_than_align(ptr %ptr) {
 ; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[PTR:%.*]] to i64
 ; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[INT]], 6
 ; CHECK-NEXT:    [[AND:%.*]] = and i64 [[ADD]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[AND]], i64 0, i64 1) ]
 ; CHECK-NEXT:    call void @use_i64(i64 [[AND]])
 ; CHECK-NEXT:    ret void
 ;
@@ -285,8 +283,7 @@ define i32 @foo2(ptr %a) #0 {
 
 define i32 @simple(i32 %a) #1 {
 ; CHECK-LABEL: @simple(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[A:%.*]], 4
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 4, i32 5) ]
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %cmp = icmp eq i32 %a, 4
@@ -351,8 +348,7 @@ define i32 @can2_logical(i1 %a, i1 %b, i1 %c) {
 define i32 @bar1(i32 %a) #0 {
 ; CHECK-LABEL: @bar1(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 2) ]
 ; CHECK-NEXT:    ret i32 1
 ;
   %and1 = and i32 %a, 3
@@ -365,9 +361,9 @@ define i32 @bar1(i32 %a) #0 {
 define i32 @bar2(i32 %a) #0 {
 ; CHECK-LABEL: @bar2(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 2) ]
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[A]], 3
+; CHECK-NEXT:    ret i32 [[AND1]]
 ;
   %and = and i32 %a, 7
   %cmp = icmp eq i32 %and, 1
@@ -381,8 +377,7 @@ define i32 @bar3(i32 %a, i1 %x, i1 %y) #0 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[X:%.*]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 2) ]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -411,8 +406,7 @@ define i32 @known_bits_recursion_via_assumes(i32 %a, i32 %b) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[AND1:%.*]] = and i32 [[B:%.*]], 3
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 1
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 1, i32 2) ]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i32 [[A]], [[B]]
 ; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP2]])
 ; CHECK-NEXT:    ret i32 [[AND1]]
@@ -429,10 +423,8 @@ entry:
 
 define i32 @icmp1(i32 %a) #0 {
 ; CHECK-LABEL: @icmp1(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    ret i32 [[CONV]]
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 6, i32 -2147483648) ]
+; CHECK-NEXT:    ret i32 1
 ;
   %cmp = icmp sgt i32 %a, 5
   tail call void @llvm.assume(i1 %cmp)
@@ -442,8 +434,7 @@ define i32 @icmp1(i32 %a) #0 {
 
 define i32 @icmp2(i32 %a) #0 {
 ; CHECK-LABEL: @icmp2(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A:%.*]], 5
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A:%.*]], i32 6, i32 -2147483648) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %cmp = icmp sgt i32 %a, 5
@@ -511,8 +502,7 @@ define i1 @nonnull1(ptr %a) {
 define i1 @nonnull2(ptr %a) {
 ; CHECK-LABEL: @nonnull2(
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[LOAD]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LOAD]], i32 1, i32 0) ]
 ; CHECK-NEXT:    ret i1 false
 ;
   %load = load i32, ptr %a
@@ -701,8 +691,7 @@ define i32 @PR40940(<4 x i8> %x) {
 ; CHECK-LABEL: @PR40940(
 ; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <4 x i8> [[X:%.*]], <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[T2:%.*]] = bitcast <4 x i8> [[SHUF]] to i32
-; CHECK-NEXT:    [[T3:%.*]] = icmp ult i32 [[T2]], 65536
-; CHECK-NEXT:    call void @llvm.assume(i1 [[T3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[T2]], i32 0, i32 65536) ]
 ; CHECK-NEXT:    ret i32 [[T2]]
 ;
   %shuf = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
@@ -961,8 +950,7 @@ define i32 @unreachable_assume(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y]], -2
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 104
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 105, i32 104) ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    unreachable
@@ -998,8 +986,7 @@ define i32 @unreachable_assume_logical(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y]], -2
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 104
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 105, i32 104) ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    unreachable
@@ -1035,8 +1022,7 @@ define i32 @unreachable_assumes_and_store(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y]], -2
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 104
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 105, i32 104) ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    unreachable
@@ -1075,8 +1061,7 @@ define i32 @unreachable_assumes_and_store_logical(i32 %x, i32 %y, ptr %p) {
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[IF:%.*]], label [[EXIT:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[A:%.*]] = and i32 [[Y]], -2
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i32 [[A]], 104
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[CMP3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[A]], i32 105, i32 104) ]
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    unreachable
@@ -1117,9 +1102,9 @@ define void @canonicalize_assume(ptr %0) {
 define void @assume_makes_and_known_assume_on_arg(ptr %p, i32 %x) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_arg(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 0, i32 1) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %and = and i32 %x, 1
@@ -1134,9 +1119,9 @@ define void @assume_makes_and_known_assume_on_mul(ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_mul(
 ; CHECK-NEXT:    [[X:%.*]] = mul i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 0, i32 1) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = mul i32 %a, %b
@@ -1152,9 +1137,9 @@ define void @assume_makes_and_known_assume_on_bitwise(ptr %p, i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume_makes_and_known_assume_on_bitwise(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    store i32 0, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[AND]], i32 0, i32 1) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i32 [[X]], 1
+; CHECK-NEXT:    store i32 [[AND2]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %x = or i32 %a, %b
@@ -1169,9 +1154,9 @@ define void @assume_makes_and_known_assume_on_bitwise(ptr %p, i32 %a, i32 %b) {
 define i32 @range_16_31_top28(i32 %x) {
 ; CHECK-LABEL: @range_16_31_top28(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 16
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 16
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[TMP1]], i32 16, i32 17) ]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -16
+; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %add = add i32 %x, -16
   %cmp = icmp ult i32 %add, 16
@@ -1183,9 +1168,8 @@ define i32 @range_16_31_top28(i32 %x) {
 define i32 @range_16_31_top29(i32 %x) {
 ; CHECK-LABEL: @range_16_31_top29(
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 16
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 24
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[TMP1]], i32 16, i32 17) ]
+; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], -8
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
   %add = add i32 %x, -16
@@ -1197,9 +1181,7 @@ define i32 @range_16_31_top29(i32 %x) {
 
 define i32 @range_16_30_top28(i32 %x) {
 ; CHECK-LABEL: @range_16_30_top28(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 15
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 16, i32 31) ]
 ; CHECK-NEXT:    ret i32 16
 ;
   %add = add i32 %x, -16
@@ -1211,9 +1193,7 @@ define i32 @range_16_30_top28(i32 %x) {
 
 define i32 @range_16_32_top28(i32 %x) {
 ; CHECK-LABEL: @range_16_32_top28(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 16, i32 33) ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 48
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -1226,9 +1206,7 @@ define i32 @range_16_32_top28(i32 %x) {
 
 define i32 @range_16_32_top27(i32 %x) {
 ; CHECK-LABEL: @range_16_32_top27(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 16, i32 33) ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 32
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -1241,9 +1219,7 @@ define i32 @range_16_32_top27(i32 %x) {
 
 define i32 @range_16_32_top26(i32 %x) {
 ; CHECK-LABEL: @range_16_32_top26(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 17
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 16, i32 33) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %add = add i32 %x, -16
@@ -1255,9 +1231,7 @@ define i32 @range_16_32_top26(i32 %x) {
 
 define i32 @range_15_31_top28(i32 %x) {
 ; CHECK-LABEL: @range_15_31_top28(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 16
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 15, i32 31) ]
 ; CHECK-NEXT:    [[RES:%.*]] = and i32 [[X]], 16
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -1270,9 +1244,7 @@ define i32 @range_15_31_top28(i32 %x) {
 
 define i32 @range_15_31_top27(i32 %x) {
 ; CHECK-LABEL: @range_15_31_top27(
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X:%.*]], -15
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 16
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X:%.*]], i32 15, i32 31) ]
 ; CHECK-NEXT:    ret i32 0
 ;
   %add = add i32 %x, -15

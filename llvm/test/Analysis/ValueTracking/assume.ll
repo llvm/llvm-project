@@ -5,9 +5,8 @@ define i32 @assume_add(i32 %a, i32 %b) {
 ; CHECK-LABEL: @assume_add(
 ; CHECK-NEXT:    [[T1:%.*]] = add i32 [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[LAST_TWO_DIGITS:%.*]] = and i32 [[T1]], 3
-; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[LAST_TWO_DIGITS]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = or disjoint i32 [[T1]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[LAST_TWO_DIGITS]], i32 0, i32 1) ]
+; CHECK-NEXT:    [[T3:%.*]] = add i32 [[T1]], 3
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t1 = add i32 %a, %b

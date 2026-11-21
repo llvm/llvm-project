@@ -101,8 +101,7 @@ define i32 @test1(ptr nocapture %a, i64 %n) {
 ; CHECK:       header.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT_7]], [[LATCHEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[SUM_02_EPIL_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD3:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[XTRAITER]], i64 1, i64 8) ]
 ; CHECK-NEXT:    br label [[HEADER_EPIL:%.*]]
 ; CHECK:       header.epil:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[LATCH_EPIL:%.*]] ], [ [[INDVARS_IV_EPIL_INIT]], [[HEADER_EPIL_PREHEADER]] ]
@@ -826,8 +825,7 @@ define i32 @test5(ptr nocapture %a, i64 %n) {
 ; CHECK:       header.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[INDVARS_IV_NEXT_7]], [[LATCHEXIT_UNR_LCSSA]] ]
 ; CHECK-NEXT:    [[SUM_02_EPIL_INIT:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[ADD_7]], [[LATCHEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD3:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD3]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[XTRAITER]], i64 1, i64 8) ]
 ; CHECK-NEXT:    br label [[HEADER_EPIL:%.*]]
 ; CHECK:       header.epil:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL:%.*]] = phi i64 [ [[INDVARS_IV_NEXT_EPIL:%.*]], [[LATCH_EPIL:%.*]] ], [ [[INDVARS_IV_EPIL_INIT]], [[HEADER_EPIL_PREHEADER]] ]

@@ -4195,6 +4195,14 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
     }
 
+    CmpPredicate Pred;
+    ConstantInt *CInt;
+    if (match(IIOperand, m_ICmp(Pred, m_Value(A), m_ConstantInt(CInt)))) {
+      Builder.CreateRangeAssumption(
+          A, ConstantRange::makeExactICmpRegion(Pred, CInt->getValue()));
+      return eraseInstFromFunction(*II);
+    }
+
     // Remove assumes on true/false
     if (auto *CI = dyn_cast<ConstantInt>(IIOperand);
         CI || isa<UndefValue, PoisonValue>(IIOperand)) {

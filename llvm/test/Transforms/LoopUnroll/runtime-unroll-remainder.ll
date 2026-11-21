@@ -21,8 +21,7 @@ define i32 @unroll(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %N)
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    [[INDVARS_IV_EPIL_INIT:%.*]] = phi i64 [ 0, [[FOR_BODY_LR_PH]] ], [ [[INDVARS_IV_NEXT_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
 ; CHECK-NEXT:    [[C_010_EPIL_INIT:%.*]] = phi i32 [ 0, [[FOR_BODY_LR_PH]] ], [ [[ADD_3:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]] ]
-; CHECK-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i64 [[XTRAITER]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[XTRAITER]], i64 1, i64 4) ]
 ; CHECK-NEXT:    br label [[FOR_BODY_EPIL:%.*]]
 ; CHECK:       for.body.epil:
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds [4 x i8], ptr [[A:%.*]], i64 [[INDVARS_IV_EPIL_INIT]]

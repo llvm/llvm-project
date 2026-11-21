@@ -591,8 +591,7 @@ define <2 x i1> @icmp_ult_usub_sat_lhs_zero_constant_vector(<2 x i8> %x) {
 define i1 @icmp_eq_usub_sat_lhs_known_nonzero_rhs(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i1 @icmp_eq_usub_sat_lhs_known_nonzero_rhs
 ; CHECK-SAME: (i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i64 [[Y]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[Y]], i64 1, i64 0) ]
 ; CHECK-NEXT:    [[SAT:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[SAT]], [[X]]
 ; CHECK-NEXT:    ret i1 [[CMP]]

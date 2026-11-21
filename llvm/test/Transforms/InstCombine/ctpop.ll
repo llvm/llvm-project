@@ -32,8 +32,7 @@ define i1 @test2(i32 %arg) {
 
 define i1 @test3(i32 %arg) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[ASSUME:%.*]] = icmp eq i32 [[ARG:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ASSUME]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[ARG:%.*]], i32 0, i32 1) ]
 ; CHECK-NEXT:    ret i1 false
 ;
   ;; Use an assume to make all the bits known without triggering constant

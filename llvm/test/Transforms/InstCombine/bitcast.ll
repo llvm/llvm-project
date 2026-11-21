@@ -727,8 +727,7 @@ define float @copysign_idiom_constant(float %x) {
 
 define float @copysign_idiom(float %x, i32 %mag) {
 ; CHECK-LABEL: @copysign_idiom(
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[MAG:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[MAG:%.*]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
 ; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
 ; CHECK-NEXT:    ret float [[Y]]
@@ -746,10 +745,11 @@ define float @copysign_idiom(float %x, i32 %mag) {
 define float @copysign_idiom_commuted(float %x, i32 %magx) {
 ; CHECK-LABEL: @copysign_idiom_commuted(
 ; CHECK-NEXT:    [[MAG:%.*]] = add i32 [[MAGX:%.*]], -1
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[MAG]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[MAG]] to float
-; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.copysign.f32(float [[TMP1]], float [[X:%.*]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[MAGX]], i32 1, i32 -2147483647) ]
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
+; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483648
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[MAG]], [[SIGN]]
+; CHECK-NEXT:    [[Y:%.*]] = bitcast i32 [[RES]] to float
 ; CHECK-NEXT:    ret float [[Y]]
 ;
   %mag = add i32 %magx, -1 ; thwart complexity-based canonicalization
@@ -779,8 +779,7 @@ define float @copysign_idiom_abs(float %x, float %mag) {
 
 define double @copysign_idiom_f64(double %x, i64 %mag) {
 ; CHECK-LABEL: @copysign_idiom_f64(
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i64 [[MAG:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[MAG:%.*]], i64 0, i64 -9223372036854775808) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i64 [[MAG]] to double
 ; CHECK-NEXT:    [[Y:%.*]] = call double @llvm.copysign.f64(double [[TMP1]], double [[X:%.*]])
 ; CHECK-NEXT:    ret double [[Y]]
@@ -826,8 +825,7 @@ define float @copysign_idiom_without_nneg(float %x, i32 %mag) {
 
 define float @copysign_idiom_not_signmask(float %x, i32 %mag) {
 ; CHECK-LABEL: @copysign_idiom_not_signmask(
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[MAG:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[MAG:%.*]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    [[BITS:%.*]] = bitcast float [[X:%.*]] to i32
 ; CHECK-NEXT:    [[SIGN:%.*]] = and i32 [[BITS]], -2147483647
 ; CHECK-NEXT:    [[RES:%.*]] = or i32 [[SIGN]], [[MAG]]
@@ -847,8 +845,7 @@ define float @copysign_idiom_not_signmask(float %x, i32 %mag) {
 define float @copysign_idiom_constant_wrong_type1(<1 x i32> %x) {
 ; CHECK-LABEL: @copysign_idiom_constant_wrong_type1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <1 x i32> [[X:%.*]], i64 0
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i32 [[TMP1]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[TMP1]], i32 0, i32 -2147483648) ]
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %bits = bitcast <1 x i32> %x to i32
@@ -863,8 +860,7 @@ define float @copysign_idiom_constant_wrong_type1(<1 x i32> %x) {
 
 define half @copysign_idiom_constant_wrong_type2(bfloat %x, i16 %mag) {
 ; CHECK-LABEL: @copysign_idiom_constant_wrong_type2(
-; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i16 [[MAG:%.*]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[COND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[MAG:%.*]], i16 0, i16 -32768) ]
 ; CHECK-NEXT:    [[BITS:%.*]] = bitcast bfloat [[X:%.*]] to i16
 ; CHECK-NEXT:    [[SIGN:%.*]] = and i16 [[BITS]], -32768
 ; CHECK-NEXT:    [[RES:%.*]] = or disjoint i16 [[SIGN]], [[MAG]]

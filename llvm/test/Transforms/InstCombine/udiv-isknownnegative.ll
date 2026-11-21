@@ -3,8 +3,7 @@
 
 define i32 @udiv_var_neg(i32 %x, i32 %y) {
 ; CHECK-LABEL: @udiv_var_neg(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[Y:%.*]], i32 -2147483648, i32 0) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp uge i32 [[X:%.*]], [[Y]]
 ; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[DIV]]

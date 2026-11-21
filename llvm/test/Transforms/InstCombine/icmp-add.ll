@@ -2948,8 +2948,7 @@ define i1 @icmp_add_add_C_extra_use2(i32 %a, i32 %b) {
 
 define i1 @icmp_dec_assume_nonzero(i8 %x) {
 ; CHECK-LABEL: @icmp_dec_assume_nonzero(
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 8
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
@@ -2962,8 +2961,7 @@ define i1 @icmp_dec_assume_nonzero(i8 %x) {
 
 define i1 @icmp_dec_sub_assume_nonzero(i8 %x) {
 ; CHECK-LABEL: @icmp_dec_sub_assume_nonzero(
-; CHECK-NEXT:    [[Z:%.*]] = icmp ne i8 [[X:%.*]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Z]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 1, i8 0) ]
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 [[X]], 12
 ; CHECK-NEXT:    ret i1 [[C]]
 ;

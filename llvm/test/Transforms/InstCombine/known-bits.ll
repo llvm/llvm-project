@@ -366,9 +366,9 @@ define i32 @test_icmp_trunc_assume(i32 %x) {
 ; CHECK-LABEL: @test_icmp_trunc_assume(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[Y:%.*]] = trunc i32 [[X:%.*]] to i16
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[Y]], 7
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i32 7
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i16 [[Y]], i16 7, i16 8) ]
+; CHECK-NEXT:    [[Z:%.*]] = and i32 [[X]], 15
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
 entry:
   %y = trunc i32 %x to i16
@@ -581,9 +581,9 @@ if.else:
 define i8 @and_eq_bits_must_be_set(i8 %x, i8 %y) {
 ; CHECK-LABEL: @and_eq_bits_must_be_set(
 ; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i8 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 123, i8 124) ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 1
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = and i8 %x, %y
   %cmp = icmp eq i8 %xy, 123
@@ -791,9 +791,9 @@ if.else:
 define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @and_eq_bits_must_be_set2(
 ; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i8 11
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 123, i8 124) ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 11
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = and i8 %x, %y
   %cmp = icmp eq i8 %xy, 123
@@ -805,8 +805,7 @@ define i8 @and_eq_bits_must_be_set2(i8 %x, i8 %y) {
 define i8 @and_eq_bits_must_be_set2_partial_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @and_eq_bits_must_be_set2_partial_fail(
 ; CHECK-NEXT:    [[XY:%.*]] = and i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 123
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 123, i8 124) ]
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 111
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -820,9 +819,9 @@ define i8 @and_eq_bits_must_be_set2_partial_fail(i8 %x, i8 %y) {
 define i8 @or_eq_bits_must_be_unset(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_eq_bits_must_be_unset(
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 124, i8 125) ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = or i8 %x, %y
   %cmp = icmp eq i8 %xy, 124
@@ -834,9 +833,9 @@ define i8 @or_eq_bits_must_be_unset(i8 %x, i8 %y) {
 define i8 @or_eq_bits_must_be_unset2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_eq_bits_must_be_unset2(
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 124, i8 125) ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 1
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = or i8 %x, %y
   %cmp = icmp eq i8 %xy, 124
@@ -848,9 +847,8 @@ define i8 @or_eq_bits_must_be_unset2(i8 %x, i8 %y) {
 define i8 @or_eq_bits_must_be_unset2_partial_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_eq_bits_must_be_unset2_partial_fail(
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[XY]], 124
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 4
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 124, i8 125) ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[Y]], 7
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xy = or i8 %x, %y
@@ -863,8 +861,7 @@ define i8 @or_eq_bits_must_be_unset2_partial_fail(i8 %x, i8 %y) {
 define i8 @or_ne_bits_must_be_unset2_fail(i8 %x, i8 %y) {
 ; CHECK-LABEL: @or_ne_bits_must_be_unset2_fail(
 ; CHECK-NEXT:    [[XY:%.*]] = or i8 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[XY]], 124
-; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XY]], i8 125, i8 124) ]
 ; CHECK-NEXT:    [[R:%.*]] = and i8 [[X]], 3
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -1016,12 +1013,9 @@ define i1 @extract_value_uadd_fail3(<2 x i8> %xx, <2 x i8> %yy) {
 
 define i1 @extract_value_sadd(i8 %xx, i8 %yy) {
 ; CHECK-LABEL: @extract_value_sadd(
-; CHECK-NEXT:    [[X:%.*]] = add nuw i8 [[XX:%.*]], 1
-; CHECK-NEXT:    [[Y:%.*]] = add nuw i8 [[YY:%.*]], 1
-; CHECK-NEXT:    [[X_LEMMA:%.*]] = icmp sgt i8 [[X]], -1
-; CHECK-NEXT:    [[Y_LEMMA:%.*]] = icmp sgt i8 [[Y]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[X_LEMMA]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_LEMMA]])
+; CHECK-NEXT:    [[X:%.*]] = add nuw nsw i8 [[XX:%.*]], 1
+; CHECK-NEXT:    [[Y:%.*]] = add nuw nsw i8 [[YY:%.*]], 1
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[XX]], i8 0, i8 127), "range"(i8 [[YY]], i8 0, i8 127) ]
 ; CHECK-NEXT:    [[ADD_SOV:%.*]] = call { i8, i1 } @llvm.sadd.with.overflow.i8(i8 [[X]], i8 [[Y]])
 ; CHECK-NEXT:    [[SOV:%.*]] = extractvalue { i8, i1 } [[ADD_SOV]], 1
 ; CHECK-NEXT:    call void @use.i1(i1 [[SOV]])
@@ -1739,11 +1733,12 @@ if.else:
 
 define i8 @simplifydemanded_context(i8 %x, i8 %y) {
 ; CHECK-LABEL: @simplifydemanded_context(
+; CHECK-NEXT:    [[AND1:%.*]] = and i8 [[X:%.*]], 1
 ; CHECK-NEXT:    call void @dummy()
-; CHECK-NEXT:    [[X_LOBITS:%.*]] = and i8 [[X:%.*]], 3
-; CHECK-NEXT:    [[PRECOND:%.*]] = icmp eq i8 [[X_LOBITS]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[PRECOND]])
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[X_LOBITS:%.*]] = and i8 [[X]], 3
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X_LOBITS]], i8 0, i8 1) ]
+; CHECK-NEXT:    [[AND2:%.*]] = and i8 [[AND1]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[AND2]]
 ;
   %and1 = and i8 %x, 1
   call void @dummy() ; may unwind

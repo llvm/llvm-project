@@ -212,8 +212,7 @@ define i32 @divceil_trunc_nuw_range(i32 range(i32 0, 33) %x_wide) {
 ; X in [0,246] via an assume, Y in [1,10], so max X+(Y-1) = 255 <= 255.
 define i16 @divceil_i8_var_divisor_assume_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_zext(
-; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], -9
-; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 0, i8 -9) ]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X]], [[TMP1]]
 ; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[TMP2]], [[Y]]
@@ -235,12 +234,11 @@ define i16 @divceil_i8_var_divisor_assume_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; Assume comes after add but still applies.
 define i16 @divceil_i8_var_divisor_assume_after_add_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_after_add_zext(
-; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], 101
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i8 [[Y:%.*]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add nuw i8 [[X:%.*]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = udiv i8 [[TMP2]], [[Y]]
 ; CHECK-NEXT:    [[RESULT:%.*]] = zext i8 [[TMP3]] to i16
-; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X]], i8 0, i8 101) ]
 ; CHECK-NEXT:    ret i16 [[RESULT]]
 ;
   %bound = icmp ule i8 %x, 100
@@ -257,8 +255,7 @@ define i16 @divceil_i8_var_divisor_assume_after_add_zext(i8 %x, i8 range(i8 1, 1
 ; Negative: X in [0,247] via an assume, Y in [1,10] so max X+(Y-1) = 256 > 255.
 define i16 @divceil_i8_var_divisor_assume_too_large_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_too_large_zext(
-; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], -8
-; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X:%.*]], i8 0, i8 -8) ]
 ; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
@@ -282,15 +279,14 @@ define i16 @divceil_i8_var_divisor_assume_too_large_zext(i8 %x, i8 range(i8 1, 1
 ; to execute and X is unbounded at the add.
 define i16 @divceil_i8_var_divisor_assume_not_guaranteed_zext(i8 %x, i8 range(i8 1, 11) %y) {
 ; CHECK-LABEL: @divceil_i8_var_divisor_assume_not_guaranteed_zext(
-; CHECK-NEXT:    [[BOUND:%.*]] = icmp ult i8 [[X:%.*]], 101
-; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[X]], [[Y:%.*]]
+; CHECK-NEXT:    [[Q:%.*]] = udiv i8 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[R:%.*]] = urem i8 [[X]], [[Y]]
 ; CHECK-NEXT:    [[COND:%.*]] = icmp ne i8 [[R]], 0
 ; CHECK-NEXT:    [[Q_EXT:%.*]] = zext i8 [[Q]] to i16
 ; CHECK-NEXT:    [[ROUND:%.*]] = zext i1 [[COND]] to i16
 ; CHECK-NEXT:    [[RESULT:%.*]] = add nuw nsw i16 [[ROUND]], [[Q_EXT]]
 ; CHECK-NEXT:    call void @use16(i16 [[RESULT]])
-; CHECK-NEXT:    call void @llvm.assume(i1 [[BOUND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X]], i8 0, i8 101) ]
 ; CHECK-NEXT:    ret i16 [[RESULT]]
 ;
   %bound = icmp ule i8 %x, 100

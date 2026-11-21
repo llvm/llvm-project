@@ -8,8 +8,7 @@ declare i8 @llvm.ctpop.i8(i8)
 define i8 @and_add_shl(i8 %x) {
 ; CHECK-LABEL: define i8 @and_add_shl
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X]], i8 0, i8 6) ]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[SUB:%.*]] = and i8 [[NOTMASK]], 32
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 32
@@ -27,8 +26,7 @@ define i8 @and_add_shl(i8 %x) {
 define i8 @and_not_shl(i8 %x) {
 ; CHECK-LABEL: define i8 @and_not_shl
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 6
-; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X]], i8 0, i8 6) ]
 ; CHECK-NEXT:    [[SHIFT:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[NOT:%.*]] = and i8 [[SHIFT]], 32
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[NOT]], 32
@@ -46,8 +44,7 @@ define i8 @and_not_shl(i8 %x) {
 define i8 @and_add_shl_overlap(i8 %x) {
 ; CHECK-LABEL: define i8 @and_add_shl_overlap
 ; CHECK-SAME: (i8 [[X:%.*]]) {
-; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 7
-; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i8 [[X]], i8 0, i8 7) ]
 ; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
 ; CHECK-NEXT:    [[SUB:%.*]] = and i8 [[NOTMASK]], 32
 ; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 32

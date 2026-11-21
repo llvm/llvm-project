@@ -39,8 +39,7 @@ define i32 @cnt_not_known_lt_scalable() {
 define i32 @cnt_known_lt_runtime(i32 %x) {
 ; CHECK-LABEL: define i32 @cnt_known_lt_runtime(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[X]], 4
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X]], i32 0, i32 4) ]
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %icmp = icmp ule i32 %x, 3
@@ -52,8 +51,7 @@ define i32 @cnt_known_lt_runtime(i32 %x) {
 define i32 @cnt_known_lt_runtime_trunc(i64 %x) {
 ; CHECK-LABEL: define i32 @cnt_known_lt_runtime_trunc(
 ; CHECK-SAME: i64 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i64 [[X]], 4
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[X]], i64 0, i64 4) ]
 ; CHECK-NEXT:    [[Y:%.*]] = trunc nuw nsw i64 [[X]] to i32
 ; CHECK-NEXT:    ret i32 [[Y]]
 ;
@@ -68,8 +66,7 @@ define i32 @cnt_known_lt_runtime_trunc(i64 %x) {
 define i32 @cnt_known_lt_runtime_assumption(i32 %x) {
 ; CHECK-LABEL: define i32 @cnt_known_lt_runtime_assumption(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[X]], 3
-; CHECK-NEXT:    call void @llvm.assume(i1 [[ICMP]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[X]], i32 0, i32 3) ]
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
   %icmp = icmp ule i32 %x, 2

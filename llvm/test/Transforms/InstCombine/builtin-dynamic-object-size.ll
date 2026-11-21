@@ -9,8 +9,7 @@ define i64 @weird_identity_but_ok(i64 %sz) {
 ; CHECK-LABEL: define i64 @weird_identity_but_ok
 ; CHECK-SAME: (i64 [[SZ:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[SZ]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[SZ]], i64 0, i64 -1) ]
 ; CHECK-NEXT:    ret i64 [[SZ]]
 ;
 entry:
@@ -140,8 +139,7 @@ define void @bdos_cmpm1(i64 %alloc) {
 ; CHECK-SAME: (i64 [[ALLOC:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @malloc(i64 [[ALLOC]])
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[ALLOC]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[ALLOC]], i64 0, i64 -1) ]
 ; CHECK-NEXT:    br i1 false, label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @fortified_chk(ptr [[OBJ]], i64 [[ALLOC]])
@@ -175,8 +173,7 @@ define void @bdos_cmpm1_expr(i64 %alloc, i64 %part) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SZ:%.*]] = udiv i64 [[ALLOC]], [[PART]]
 ; CHECK-NEXT:    [[OBJ:%.*]] = call ptr @malloc(i64 [[SZ]])
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp ne i64 [[SZ]], -1
-; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i64 [[SZ]], i64 0, i64 -1) ]
 ; CHECK-NEXT:    br i1 false, label [[IF_ELSE:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    call void @fortified_chk(ptr [[OBJ]], i64 [[SZ]])
