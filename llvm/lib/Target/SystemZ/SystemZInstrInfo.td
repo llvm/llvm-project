@@ -985,6 +985,52 @@ let Predicates = [FeatureMiscellaneousExtensions4] in {
             (LLXAG ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
   def : Pat<(add ADDR64:$base, (shl4 (assertzext32 ADDR64:$index))),
             (LLXAQ ADDR64:$base, 0, (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+
+  // Peepholes for add + shift of an extended value with scaled displacement.
+  def : Pat<(add (add ADDR64:$base, (shl1 (assertsext32 ADDR64:$index))), disp20imm64scaled1:$disp),
+            (LXAH ADDR64:$base, (disp20scaled1 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl2 (assertsext32 ADDR64:$index))), disp20imm64scaled2:$disp),
+            (LXAF ADDR64:$base, (disp20scaled2 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl3 (assertsext32 ADDR64:$index))), disp20imm64scaled3:$disp),
+            (LXAG ADDR64:$base, (disp20scaled3 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl4 (assertsext32 ADDR64:$index))), disp20imm64scaled4:$disp),
+            (LXAQ ADDR64:$base, (disp20scaled4 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl1 (assertzext32 ADDR64:$index))), disp20imm64scaled1:$disp),
+            (LLXAH ADDR64:$base, (disp20scaled1 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl2 (assertzext32 ADDR64:$index))), disp20imm64scaled2:$disp),
+            (LLXAF ADDR64:$base, (disp20scaled2 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl3 (assertzext32 ADDR64:$index))), disp20imm64scaled3:$disp),
+            (LLXAG ADDR64:$base, (disp20scaled3 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (shl4 (assertzext32 ADDR64:$index))), disp20imm64scaled4:$disp),
+            (LLXAQ ADDR64:$base, (disp20scaled4 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+
+  // Peepholes for shift of an extended value with scaled displacement (no base).
+  def : Pat<(add (shl1 (assertsext32 ADDR64:$index)), disp20imm64scaled1:$disp),
+            (LXAH zero_reg, (disp20scaled1 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl2 (assertsext32 ADDR64:$index)), disp20imm64scaled2:$disp),
+            (LXAF zero_reg, (disp20scaled2 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl3 (assertsext32 ADDR64:$index)), disp20imm64scaled3:$disp),
+            (LXAG zero_reg, (disp20scaled3 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl4 (assertsext32 ADDR64:$index)), disp20imm64scaled4:$disp),
+            (LXAQ zero_reg, (disp20scaled4 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl1 (assertzext32 ADDR64:$index)), disp20imm64scaled1:$disp),
+            (LLXAH zero_reg, (disp20scaled1 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl2 (assertzext32 ADDR64:$index)), disp20imm64scaled2:$disp),
+            (LLXAF zero_reg, (disp20scaled2 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl3 (assertzext32 ADDR64:$index)), disp20imm64scaled3:$disp),
+            (LLXAG zero_reg, (disp20scaled3 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (shl4 (assertzext32 ADDR64:$index)), disp20imm64scaled4:$disp),
+            (LLXAQ zero_reg, (disp20scaled4 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+
+  // Peepholes for add of an extended value with unscaled displacement (LXAB / LLXAB).
+  def : Pat<(add (add ADDR64:$base, (assertsext32 ADDR64:$index)), disp20imm64:$disp),
+            (LXAB ADDR64:$base, (disp20scaled0 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add (add ADDR64:$base, (assertzext32 ADDR64:$index)), disp20imm64:$disp),
+            (LLXAB ADDR64:$base, (disp20scaled0 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (add (assertsext32 ADDR64:$index), disp20imm64:$disp)),
+            (LXAB ADDR64:$base, (disp20scaled0 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
+  def : Pat<(add ADDR64:$base, (add (assertzext32 ADDR64:$index), disp20imm64:$disp)),
+            (LLXAB ADDR64:$base, (disp20scaled0 $disp), (EXTRACT_SUBREG ADDR64:$index, subreg_l32))>;
 }
 
 //===----------------------------------------------------------------------===//
