@@ -45,6 +45,8 @@
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
+#include <cassert>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <numeric>
@@ -99,6 +101,10 @@ public:
       : allocBlock(allocBlock), deallocBlocks(deallocBlocks) {}
   llvm::BasicBlock *allocBlock;
   llvm::SmallVector<llvm::BasicBlock *> deallocBlocks;
+  /// Set to true when this alloca frame encloses an omp.parallel operation.
+  /// The alloca insertion point of a function in which a parallel op is
+  /// defined may be used to allocate the temporary buffer for scan reductions.
+  bool containsParallelOp = false;
 };
 
 /// Stack frame to hold a \see llvm::CanonicalLoopInfo representing the
@@ -108,7 +114,17 @@ class OpenMPLoopInfoStackFrame
     : public StateStackFrameBase<OpenMPLoopInfoStackFrame> {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(OpenMPLoopInfoStackFrame)
+  /// For constructs like `scan`, a single `omp.loop_nest` is split into an
+  /// input loop and a scan loop. In that case `loopInfo` holds the input loop
+  /// info and `scanloopInfo` holds the scan loop info.
   llvm::CanonicalLoopInfo *loopInfo = nullptr;
+  llvm::CanonicalLoopInfo *scanloopInfo = nullptr;
+  llvm::ScanInfo *scanInfo = nullptr;
+  /// Map reduction variables to their LLVM types. Populated when the reduction
+  /// clause is processed and used when a `scan` directive is encountered in the
+  /// loop body.
+  std::unique_ptr<llvm::DenseMap<llvm::Value *, llvm::Type *>>
+      reductionVarToType = nullptr;
 };
 
 /// OpenMP state that lives as long as the module translation: the
@@ -549,6 +565,10 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         !op.getDependIterated().empty() || op.getDependIteratedKinds())
       result = todo("depend");
   };
+  auto checkExclusive = [&todo](auto op, LogicalResult &result) {
+    if (!op.getExclusiveVars().empty())
+      result = todo("exclusive");
+  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -610,16 +630,52 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       omp::ReductionModifier mod = op.getReductionModifier(i);
       if (mod == omp::ReductionModifier::defaultmod)
         continue;
-      // Task modifiers are supported only on parallel and worksharing
-      // constructs, and only for non-byref reduction variables.
+      // The `task` reduction modifier is supported on the parallel and
+      // worksharing (do/for and sections) constructs, and only for non-byref
+      // reduction variables. The `inscan` modifier is supported on the
+      // worksharing-loop construct (it is translated as a scan reduction).
+      // Other modifiers, and these modifiers on other constructs, are not yet
+      // implemented.
       bool taskModifierSupported =
           mod == omp::ReductionModifier::task &&
           isa<omp::ParallelOp, omp::WsloopOp, omp::SectionsOp>(op);
-      if (!taskModifierSupported) {
+      bool inscanModifierSupported =
+          mod == omp::ReductionModifier::inscan && isa<omp::WsloopOp>(op);
+      if (!taskModifierSupported && !inscanModifierSupported) {
         result = todo("reduction with modifier");
-      } else if (auto byref = op.getReductionByref()) {
-        if ((*byref)[i])
-          result = todo("task reduction modifier with by-ref reduction");
+      } else if (taskModifierSupported) {
+        // The task reduction modifier lowering only handles non-byref
+        // reductions for now.
+        if (auto byref = op.getReductionByref())
+          if ((*byref)[i])
+            result = todo("task reduction modifier with by-ref reduction");
+      } else if (inscanModifierSupported) {
+        // Scan reductions (inscan modifier) only support by-value (scalar)
+        // reductions for now.
+        if (auto byref = op.getReductionByref())
+          if ((*byref)[i])
+            result = todo("inscan reduction modifier with by-ref reduction");
+      }
+    }
+    if (auto wsloopOp = dyn_cast<omp::WsloopOp>(op.getOperation())) {
+      if (!wsloopOp.hasReductionModifier(omp::ReductionModifier::inscan))
+        return;
+      // Scan reductions allocate a shared temporary buffer in the alloca
+      // frame of the enclosing parallel region. An orphaned worksharing loop
+      // has no such frame in its own function, so the buffer would be
+      // allocated per-thread and produce wrong results.
+      if (!op->template getParentOfType<omp::ParallelOp>())
+        result = todo("inscan reduction on an orphaned worksharing loop "
+                      "(no enclosing parallel region)");
+      if (!wsloopOp.getLinearVars().empty())
+        result = todo("inscan reduction with linear clause");
+      if (auto loopNest =
+              dyn_cast_or_null<omp::LoopNestOp>(wsloopOp.getWrappedLoop())) {
+        if (loopNest.getNumLoops() > 1)
+          result = todo("inscan reduction on a collapsed "
+                        "(multi-dimensional) loop nest");
+        if (loopNest.getTileSizes())
+          result = todo("inscan reduction on a tiled loop nest");
       }
     }
   };
@@ -697,6 +753,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkOrder(op, result);
       })
+      .Case([&](omp::ScanOp op) { checkExclusive(op, result); })
       .Case([&](omp::SectionsOp op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
@@ -887,6 +944,96 @@ findCurrentLoopInfo(LLVM::ModuleTranslation &moduleTranslation) {
         return WalkResult::interrupt();
       });
   return loopInfo;
+}
+
+/// Find the scan loop information structure for the scan loop nest being
+/// translated. It will return a `null` value unless called from the
+/// translation function for a loop wrapper operation after successfully
+/// translating its body.
+static llvm::CanonicalLoopInfo *
+findCurrentScanLoopInfo(LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::CanonicalLoopInfo *scanLoopInfo = nullptr;
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](OpenMPLoopInfoStackFrame &frame) {
+        scanLoopInfo = frame.scanloopInfo;
+        return WalkResult::interrupt();
+      });
+  return scanLoopInfo;
+}
+
+/// Find the `ScanInfo` stored on the loop stack frame. Upon encountering an
+/// `inscan` reduction modifier, `scanInfoInitialize` initializes the
+/// `ScanInfo`, which is then used when a `scan` directive is encountered in the
+/// body of the loop nest.
+static llvm::ScanInfo *
+findScanInfo(LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::ScanInfo *scanInfo = nullptr;
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](OpenMPLoopInfoStackFrame &frame) {
+        scanInfo = frame.scanInfo;
+        return WalkResult::interrupt();
+      });
+  return scanInfo;
+}
+
+/// The types of reduction variables are used for lowering a `scan` directive
+/// that appears in the body of the loop. The types are stored in the loop frame
+/// when the reduction clause is encountered and used when the `scan` directive
+/// is encountered.
+static llvm::DenseMap<llvm::Value *, llvm::Type *> *
+findReductionVarTypes(LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType = nullptr;
+  moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+      [&](OpenMPLoopInfoStackFrame &frame) {
+        if (!frame.reductionVarToType)
+          frame.reductionVarToType =
+              std::make_unique<llvm::DenseMap<llvm::Value *, llvm::Type *>>();
+        reductionVarToType = frame.reductionVarToType.get();
+        return WalkResult::interrupt();
+      });
+  return reductionVarToType;
+}
+
+/// Scan reduction requires a shared buffer to be allocated to perform the
+/// reduction. The allocation needs to be done outside the parallel region in
+/// which the scan operation is used.
+static llvm::OpenMPIRBuilder::InsertPointTy
+findParallelAllocaIP(llvm::IRBuilderBase &builder,
+                     LLVM::ModuleTranslation &moduleTranslation) {
+  // If there is an alloca insertion point on the stack belonging to a frame
+  // that encloses a parallel op, use it.
+  llvm::OpenMPIRBuilder::InsertPointTy allocaInsertPoint;
+  WalkResult walkResult = moduleTranslation.stackWalk<OpenMPAllocStackFrame>(
+      [&](OpenMPAllocStackFrame &frame) {
+        if (frame.containsParallelOp) {
+          allocaInsertPoint = frame.allocBlock->getFirstInsertionPt();
+          return WalkResult::interrupt();
+        }
+        return WalkResult::skip();
+      });
+  if (walkResult.wasInterrupted())
+    return allocaInsertPoint;
+  // Otherwise, insert into the entry block of the surrounding function.
+  // If the current IRBuilder InsertPoint is the function's entry, it cannot
+  // also be used for alloca insertion which would result in insertion order
+  // confusion. Create a new BasicBlock for the Builder and use the entry block
+  // for the allocs.
+  // TODO: Create a dedicated alloca BasicBlock at function creation such that
+  // we do not need to move the current InsertPoint here.
+  if (builder.GetInsertBlock() ==
+      &builder.GetInsertBlock()->getParent()->getEntryBlock()) {
+    assert(builder.GetInsertPoint() == builder.GetInsertBlock()->end() &&
+           "Assuming end of basic block");
+    llvm::BasicBlock *entryBB = llvm::BasicBlock::Create(
+        builder.getContext(), "entry", builder.GetInsertBlock()->getParent(),
+        builder.GetInsertBlock()->getNextNode());
+    builder.CreateBr(entryBB);
+    builder.SetInsertPoint(entryBB);
+  }
+
+  llvm::BasicBlock &funcEntryBlock =
+      builder.GetInsertBlock()->getParent()->getEntryBlock();
+  return funcEntryBlock.getFirstInsertionPt();
 }
 
 /// Converts the given region that appears within an OpenMP dialect operation to
@@ -1582,6 +1729,7 @@ struct ReductionVarsInfo {
     mlir::Value mlirVar;
     omp::DeclareReductionOp decl;
     bool byRef;
+    omp::ReductionModifier modifier;
     llvm::Value *privateVar = nullptr;
     llvm::Value *storage = nullptr;
   };
@@ -1605,9 +1753,9 @@ struct ReductionVarsInfo {
     ArrayRef<bool> byRefs = attr ? *attr : ArrayRef<bool>();
 
     vars.reserve(blockArgs.size());
-    for (auto [blockArg, mlirVar, decl, byRef] :
-         llvm::zip_equal(blockArgs, op.getReductionVars(), decls, byRefs))
-      vars.push_back({blockArg, mlirVar, decl, byRef});
+    for (unsigned i = 0, e = blockArgs.size(); i != e; ++i)
+      vars.push_back({blockArgs[i], op.getReductionVars()[i], decls[i],
+                      byRefs[i], op.getReductionModifier(i)});
   }
 
   SmallVector<VarInfo> vars;
@@ -1792,11 +1940,18 @@ initReductionVars(Operation &op, llvm::IRBuilderBase &builder,
   for (auto [data, addr] : redInfo.deferredStores)
     builder.CreateStore(data, addr);
 
+  llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType =
+      findReductionVarTypes(moduleTranslation);
   // Before the loop, store the initial values of reductions into reduction
   // variables. Although this could be done after allocas, we don't want to mess
   // up with the alloca insertion point.
-  for (auto [var, byRefVar] : llvm::zip_equal(redInfo.vars, byRefVars)) {
+  for (auto [i, var] : llvm::enumerate(redInfo.vars)) {
     SmallVector<llvm::Value *, 1> phis;
+    llvm::Type *reductionType =
+        moduleTranslation.convertType(var.decl.getType());
+    if (var.modifier == omp::ReductionModifier::inscan &&
+        reductionVarToType != nullptr)
+      (*reductionVarToType)[var.privateVar] = reductionType;
 
     // map block argument to initializer region
     mapInitializationArgs(moduleTranslation, builder, var);
@@ -1826,8 +1981,8 @@ initReductionVars(Operation &op, llvm::IRBuilderBase &builder,
 
       // Store the result of the inlined region to the allocated reduction var
       // ptr
-      builder.CreateStore(phis[0], byRefVar);
-      var.privateVar = byRefVar;
+      builder.CreateStore(phis[0], byRefVars[i]);
+      var.privateVar = byRefVars[i];
 
       moduleTranslation.mapValue(var.blockArg, phis[0]);
       var.storage = phis[0];
@@ -1941,7 +2096,8 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
                            LLVM::ModuleTranslation &moduleTranslation,
                            llvm::OpenMPIRBuilder::InsertPointTy &allocaIP,
                            ReductionVarsInfo &redInfo, bool isNowait = false,
-                           bool isTeamsReduction = false) {
+               bool isTeamsReduction = false,
+               bool excludeInscan = false) {
   // Process the reductions if required.
   if (redInfo.size() == 0)
     return success();
@@ -1959,6 +2115,23 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
                        owningAtomicReductionGens,
                        owningReductionGenRefDataPtrGens, reductionInfos);
 
+  SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> selectedInfos;
+  SmallVector<bool> selectedByRef;
+  SmallVector<Region *> selectedRegions;
+  SmallVector<llvm::Value *> selectedVariables;
+  SmallVector<ReductionVarsInfo::VarInfo *> selectedVars;
+  for (auto [i, var] : llvm::enumerate(redInfo.vars)) {
+    if (excludeInscan && var.modifier == omp::ReductionModifier::inscan)
+      continue;
+    selectedInfos.push_back(reductionInfos[i]);
+    selectedByRef.push_back(var.byRef);
+    selectedRegions.push_back(&var.decl.getCleanupRegion());
+    selectedVariables.push_back(var.privateVar);
+    selectedVars.push_back(&var);
+  }
+  if (selectedInfos.empty())
+    return success();
+
   // The call to createReductions below expects the block to have a
   // terminator. Create an unreachable instruction to serve as terminator
   // and remove it later.
@@ -1966,9 +2139,8 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
   builder.SetInsertPoint(tempTerminator);
   llvm::DebugLoc reductionLoc = builder.getCurrentDebugLocation();
   llvm::OpenMPIRBuilder::InsertPointOrErrorTy contInsertPoint =
-      ompBuilder->createReductions(builder, allocaIP, reductionInfos,
-                                   redInfo.getIsByRef(), isNowait,
-                                   isTeamsReduction);
+      ompBuilder->createReductions(builder, allocaIP, selectedInfos,
+                                   selectedByRef, isNowait, isTeamsReduction);
 
   if (failed(handleError(contInsertPoint, op)))
     return failure();
@@ -1991,21 +2163,16 @@ createReductionsAndCleanup(Operation &op, llvm::IRBuilderBase &builder,
   builder.restoreIP(afterIP);
 
   // after the construct, deallocate private reduction variables
-  SmallVector<Region *> reductionRegions;
-  llvm::transform(redInfo.vars, std::back_inserter(reductionRegions),
-                  [](ReductionVarsInfo::VarInfo &var) {
-                    return &var.decl.getCleanupRegion();
-                  });
   LogicalResult result = inlineOmpRegionCleanup(
-      reductionRegions, redInfo.getPrivateReductionVariables(),
-      moduleTranslation, builder, "omp.reduction.cleanup");
+      selectedRegions, selectedVariables, moduleTranslation, builder,
+      "omp.reduction.cleanup");
 
   bool useDeviceSharedMem = omp::opInSharedDeviceContext(op);
   if (useDeviceSharedMem) {
-    for (ReductionVarsInfo::VarInfo &var : redInfo.vars)
+    for (ReductionVarsInfo::VarInfo *var : selectedVars)
       ompBuilder->createOMPFreeShared(
-          builder, var.privateVar,
-          moduleTranslation.convertType(var.decl.getType()));
+          builder, var->privateVar,
+          moduleTranslation.convertType(var->decl.getType()));
   }
 
   return result;
@@ -5035,6 +5202,8 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
     return failure();
 
   assert(afterAllocas.get()->getSinglePredecessor());
+  bool isInScanRegion =
+      wsloopOp.hasReductionModifier(mlir::omp::ReductionModifier::inscan);
   if (failed(initReductionVars(*wsloopOp, builder, moduleTranslation,
                                afterAllocas.get()->getSinglePredecessor(),
                                reductionInfo)))
@@ -5070,6 +5239,7 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   SmallVector<llvm::UncondBrInst *> cancelTerminators;
   pushCancelFinalizationCB(cancelTerminators, builder, *ompBuilder, wsloopOp,
                            llvm::omp::Directive::OMPD_for);
+  llvm::BasicBlock *wsloopContinuationBB = nullptr;
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
 
@@ -5098,27 +5268,113 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(handleError(regionBlock, opInst)))
     return failure();
 
+  // Generates the loop body for a worksharing loop, including linear-variable
+  // handling and the call into the OpenMPIRBuilder's worksharing-loop helper.
+  // For scan reductions this lambda is invoked twice: once for the input loop
+  // and once for the scan loop.
+  const auto &&wsloopCodeGen = [&](llvm::CanonicalLoopInfo *loopInfo,
+                                   bool noLoopMode,
+                                   bool inputScanLoop) -> LogicalResult {
+    // Emit Initialization and Update IR for linear variables
+    if (!wsloopOp.getLinearVars().empty()) {
+      if (failed(handleError(
+              linearClauseProcessor.initLinearVar(builder, moduleTranslation,
+                                                  loopInfo->getPreheader()),
+              opInst)))
+        return failure();
+      llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
+          getOpenMPBuilder(moduleTranslation)
+              ->createBarrier(builder, llvm::omp::OMPD_barrier);
+      if (failed(handleError(afterBarrierIP, *loopOp)))
+        return failure();
+      builder.restoreIP(*afterBarrierIP);
+      if (failed(handleError(linearClauseProcessor.updateLinearVar(
+                                 builder, moduleTranslation,
+                                 loopInfo->getBody(), loopInfo->getIndVar()),
+                             opInst)))
+        return failure();
+      linearClauseProcessor.splitLinearFiniBB(builder, loopInfo->getExit());
+    }
+
+    builder.SetInsertPoint((*regionBlock)->begin());
+
+    // Scan reductions manage the barriers around the shared temporary buffer
+    // explicitly:
+    //  * The input (first) loop always needs its trailing barrier so that every
+    //    thread has finished writing the buffer before the masked prefix-sum
+    //    reads it; this is required even under `nowait`.
+    //  * The scan (second) loop must not emit its own trailing barrier here.
+    //    `emitScanReduction` emits a barrier *before* the masked region frees
+    //    the buffer (so no thread frees it while another is still reading it)
+    //    and, unless `nowait` is present, a barrier *after* it for
+    //    end-of-construct synchronization.
+    bool needsBarrier = isInScanRegion ? inputScanLoop : loopNeedsBarrier;
+    // Nested regions (e.g. an inner parallel before the scan loop) can move the
+    // instruction referenced by allocaIP, so recompute it from the alloca
+    // block.
+    allocaIP = allocaBlock->getFirstInsertionPt();
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
+        ompBuilder->applyWorkshareLoop(
+            ompLoc.DL, loopInfo, allocaIP, needsBarrier,
+            convertToScheduleKind(schedule), chunk, isSimd,
+            scheduleMod == omp::ScheduleModifier::monotonic,
+            scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
+            workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk,
+            !wsloopOp.getLinearVars().empty());
+
+    if (failed(handleError(wsloopIP, opInst)))
+      return failure();
+
+    // Save the continuation block before linear var finalization, which may
+    // invalidate the wsloopIP iterator.
+    wsloopContinuationBB = wsloopIP->getNodeParent();
+
+    // Emit finalization for linear vars.
+    if (!wsloopOp.getLinearVars().empty()) {
+      llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
+      assert(loopInfo->getLastIter() &&
+             "`lastiter` in CanonicalLoopInfo is nullptr");
+      llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
+          linearClauseProcessor.finalizeLinearVar(builder, moduleTranslation,
+                                                  loopInfo->getLastIter());
+      if (failed(handleError(afterBarrierIP, *loopOp)))
+        return failure();
+
+      builder.restoreIP(oldIP);
+    }
+
+    return success();
+  };
+
   llvm::CanonicalLoopInfo *loopInfo = findCurrentLoopInfo(moduleTranslation);
 
-  // Emit Initialization and Update IR for linear variables
-  if (!wsloopOp.getLinearVars().empty()) {
-    if (failed(handleError(
-            linearClauseProcessor.initLinearVar(builder, moduleTranslation,
-                                                loopInfo->getPreheader()),
-            opInst)))
+  if (isInScanRegion) {
+    // Emit the scan reduction combiner between the input loop and the scan
+    // loop, operating on the per-iteration partial values stored in the shared
+    // buffer.
+    auto inputLoopFinishIp = loopInfo->getAfterIP();
+    builder.restoreIP(inputLoopFinishIp);
+    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> reductionInfos;
+    SmallVector<OwningReductionGen> owningReductionGens;
+    SmallVector<OwningAtomicReductionGen> owningAtomicReductionGens;
+    SmallVector<OwningDataPtrPtrReductionGen> owningReductionGenRefDataPtrGens;
+    collectReductionInfo(builder, moduleTranslation, reductionInfo,
+                         owningReductionGens, owningAtomicReductionGens,
+                         owningReductionGenRefDataPtrGens, reductionInfos);
+    SmallVector<llvm::OpenMPIRBuilder::ReductionInfo, 2> scanReductionInfos;
+    for (auto [i, var] : llvm::enumerate(reductionInfo.vars))
+      if (var.modifier == omp::ReductionModifier::inscan)
+        scanReductionInfos.push_back(reductionInfos[i]);
+    llvm::BasicBlock *cont = splitBB(builder, false, "omp.scan.loop.cont");
+    llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
+    llvm::OpenMPIRBuilder::InsertPointOrErrorTy redIP =
+        ompBuilder->emitScanReduction(builder, scanReductionInfos, scanInfo,
+                                      wsloopOp.getNowait());
+    if (failed(handleError(redIP, opInst)))
       return failure();
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
-        getOpenMPBuilder(moduleTranslation)
-            ->createBarrier(builder, llvm::omp::OMPD_barrier);
-    if (failed(handleError(afterBarrierIP, *loopOp)))
-      return failure();
-    builder.restoreIP(*afterBarrierIP);
-    if (failed(handleError(linearClauseProcessor.updateLinearVar(
-                               builder, moduleTranslation, loopInfo->getBody(),
-                               loopInfo->getIndVar()),
-                           opInst)))
-      return failure();
-    linearClauseProcessor.splitLinearFiniBB(builder, loopInfo->getExit());
+
+    builder.restoreIP(*redIP);
+    builder.CreateBr(cont);
   }
 
   builder.SetInsertPoint((*regionBlock)->begin());
@@ -5137,36 +5393,37 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
       noLoopMode = true;
   }
 
-  // Nested regions can move the instruction referenced by allocaIP.
-  allocaIP = allocaBlock->getFirstInsertionPt();
-  llvm::OpenMPIRBuilder::InsertPointOrErrorTy wsloopIP =
-      ompBuilder->applyWorkshareLoop(
-          ompLoc.DL, loopInfo, allocaIP, loopNeedsBarrier,
-          convertToScheduleKind(schedule), chunk, isSimd,
-          scheduleMod == omp::ScheduleModifier::monotonic,
-          scheduleMod == omp::ScheduleModifier::nonmonotonic, isOrdered,
-          workshareLoopType, noLoopMode, hasDistSchedule, distScheduleChunk,
-          !wsloopOp.getLinearVars().empty());
-
-  if (failed(handleError(wsloopIP, opInst)))
+  // For scan loops, the input loop does not pop the cancellation finalization
+  // callback; that happens after the scan loop is generated below.
+  bool inputScanLoop = isInScanRegion;
+  if (failed(wsloopCodeGen(loopInfo, noLoopMode, inputScanLoop)))
     return failure();
+  inputScanLoop = false;
 
-  // Save the continuation block before linear var finalization, which may
-  // invalidate the wsloopIP iterator.
-  llvm::BasicBlock *wsloopContinuationBB = wsloopIP->getNodeParent();
-
-  // Emit finalization and in-place rewrites for linear vars.
-  if (!wsloopOp.getLinearVars().empty()) {
-    llvm::OpenMPIRBuilder::InsertPointTy oldIP = builder.saveIP();
-    assert(loopInfo->getLastIter() &&
-           "`lastiter` in CanonicalLoopInfo is nullptr");
-    llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterBarrierIP =
-        linearClauseProcessor.finalizeLinearVar(builder, moduleTranslation,
-                                                loopInfo->getLastIter());
-    if (failed(handleError(afterBarrierIP, *loopOp)))
+  if (isInScanRegion) {
+    llvm::CanonicalLoopInfo *scanLoopInfo =
+        findCurrentScanLoopInfo(moduleTranslation);
+    if (failed(wsloopCodeGen(scanLoopInfo, noLoopMode, inputScanLoop)))
       return failure();
-
-    builder.restoreIP(oldIP);
+    SmallVector<Region *> reductionRegions;
+    SmallVector<llvm::Value *> scanVariables;
+    for (ReductionVarsInfo::VarInfo &var : reductionInfo.vars) {
+      if (var.modifier != omp::ReductionModifier::inscan)
+        continue;
+      reductionRegions.push_back(&var.decl.getCleanupRegion());
+      scanVariables.push_back(var.privateVar);
+    }
+    if (failed(inlineOmpRegionCleanup(reductionRegions, scanVariables,
+                                      moduleTranslation, builder,
+                                      "omp.reduction.cleanup")))
+      return failure();
+    if (omp::opInSharedDeviceContext(*wsloopOp)) {
+      for (ReductionVarsInfo::VarInfo &var : reductionInfo.vars)
+        if (var.modifier == omp::ReductionModifier::inscan)
+          ompBuilder->createOMPFreeShared(
+              builder, var.privateVar,
+              moduleTranslation.convertType(var.decl.getType()));
+    }
   }
 
   // Set the correct branch target for task cancellation
@@ -5181,9 +5438,9 @@ convertOmpWsloop(Operation &opInst, llvm::IRBuilderBase &builder,
   if (failed(createReductionsAndCleanup(*wsloopOp, builder, moduleTranslation,
                                         allocaIP, reductionInfo,
                                         wsloopOp.getNowait(),
-                                        /*isTeamsReduction=*/false)))
+                      /*isTeamsReduction=*/false,
+                      /*excludeInscan=*/isInScanRegion)))
     return failure();
-
   return cleanupPrivateVars(wsloopOp, builder, moduleTranslation,
                             wsloopOp.getLoc(), privateVarsInfo);
 }
@@ -5213,6 +5470,34 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
   // skipped, leaving the modifier init unbalanced.
   bool isTaskReductionMod =
       opInst.hasReductionModifier(omp::ReductionModifier::task);
+
+  // Mark the alloca stack frame of the region immediately enclosing this
+  // parallel op as containing a parallel op. Scan reductions allocate a shared
+  // temporary buffer at that frame's alloca insertion point: the buffer must be
+  // shared across this parallel's team (one buffer per team) yet private to
+  // each instance of the enclosing region, so that independent nested parallel
+  // teams do not race on a single buffer. `stackWalk` visits the innermost
+  // frame first, and this parallel op's own frame has not been pushed yet (that
+  // happens later inside `bodyGenCB`), so the first frame visited is exactly
+  // the immediately enclosing region. If there is no enclosing frame (a
+  // top-level parallel), nothing is marked and `findParallelAllocaIP` falls
+  // back to the enclosing function's entry block.
+  //
+  // The mark is scoped to this parallel's conversion and restored below once
+  // the body is translated: otherwise a sibling parallel nested in the same
+  // enclosing region would leave that frame marked, and a later scan in the
+  // region would allocate its shared buffer one level too deep (per-thread in
+  // this parallel's scope) instead of in the enclosing scope, corrupting the
+  // scan and crashing at runtime.
+  OpenMPAllocStackFrame *enclosingAllocFrame = nullptr;
+  bool enclosingFrameWasMarked = false;
+  moduleTranslation.stackWalk<OpenMPAllocStackFrame>(
+      [&](OpenMPAllocStackFrame &frame) {
+        enclosingAllocFrame = &frame;
+        enclosingFrameWasMarked = frame.containsParallelOp;
+        frame.containsParallelOp = true;
+        return WalkResult::interrupt();
+      });
 
   auto bodyGenCB =
       [&](InsertPointTy allocaIP, InsertPointTy codeGenIP,
@@ -5381,6 +5666,11 @@ convertOmpParallel(omp::ParallelOp opInst, llvm::IRBuilderBase &builder,
       ompBuilder->createParallel(ompLoc, allocaIP, deallocBlocks, bodyGenCB,
                                  privCB, finiCB, ifCond, numThreads, pbKind,
                                  isCancellable);
+
+  // This parallel's body (and any scan within it) is now translated, so undo
+  // the enclosing-frame mark to avoid misdirecting a later sibling scan.
+  if (enclosingAllocFrame)
+    enclosingAllocFrame->containsParallelOp = enclosingFrameWasMarked;
 
   if (failed(handleError(afterIP, *opInst)))
     return failure();
@@ -5582,6 +5872,96 @@ convertOmpSimd(Operation &opInst, llvm::IRBuilderBase &builder,
                             privateVarsInfo);
 }
 
+static LogicalResult
+convertOmpScan(Operation &opInst, llvm::IRBuilderBase &builder,
+               LLVM::ModuleTranslation &moduleTranslation) {
+  if (failed(checkImplementationStatus(opInst)))
+    return failure();
+  auto scanOp = cast<omp::ScanOp>(opInst);
+  bool isInclusive = scanOp.hasInclusiveVars();
+  SmallVector<llvm::Value *> llvmScanVars;
+  SmallVector<llvm::Type *> llvmScanVarsType;
+  mlir::OperandRange mlirScanVars = scanOp.getInclusiveVars();
+  if (!isInclusive)
+    mlirScanVars = scanOp.getExclusiveVars();
+
+  llvm::DenseMap<llvm::Value *, llvm::Type *> *reductionVarToType =
+      findReductionVarTypes(moduleTranslation);
+  for (auto val : mlirScanVars) {
+    llvm::Value *llvmVal = moduleTranslation.lookupValue(val);
+    llvmScanVars.push_back(llvmVal);
+    llvmScanVarsType.push_back((*reductionVarToType)[llvmVal]);
+  }
+  llvm::OpenMPIRBuilder::InsertPointTy allocaIP =
+      findParallelAllocaIP(builder, moduleTranslation);
+  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
+  llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
+  llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+      getOpenMPBuilder(moduleTranslation)
+          ->createScan(ompLoc, allocaIP, llvmScanVars, llvmScanVarsType,
+                       isInclusive, scanInfo);
+  if (failed(handleError(afterIP, opInst)))
+    return failure();
+  builder.restoreIP(*afterIP);
+  return success();
+}
+
+/// Re-initialize the scan reduction variables to their identity at the start of
+/// each input-loop iteration of a scan reduction. This is required because the
+/// OpenMPIRBuilder stores the per-iteration reduction value into the scan
+/// buffer (`buffer[i] = red`) and `emitScanReduction` then computes the prefix
+/// sum across the buffer. Without resetting `red` to the reduction identity
+/// each iteration, the buffer would hold a running sum and the prefix sum would
+/// be computed twice. This reset only applies to the input loop; in the scan
+/// loop the reduction variable is loaded back from the buffer.
+static LogicalResult
+initScanReductionVars(omp::LoopNestOp loopOp, llvm::IRBuilderBase &builder,
+                      LLVM::ModuleTranslation &moduleTranslation) {
+  auto wsloopOp = loopOp->getParentOfType<omp::WsloopOp>();
+  if (!wsloopOp ||
+      !wsloopOp.hasReductionModifier(omp::ReductionModifier::inscan))
+    return success();
+
+  // Only reset in the input loop; in the scan loop the reduction variable holds
+  // the value loaded from the buffer and must not be overwritten.
+  llvm::ScanInfo *scanInfo = findScanInfo(moduleTranslation);
+  if (!scanInfo || !scanInfo->OMPFirstScanLoop)
+    return success();
+
+  ReductionVarsInfo reductionInfo(wsloopOp);
+  if (reductionInfo.size() == 0)
+    return success();
+
+  for (auto [i, var] : llvm::enumerate(reductionInfo.vars)) {
+    // Scan reductions only support by-value (scalar) reductions.
+    if (var.modifier != omp::ReductionModifier::inscan || var.byRef)
+      continue;
+    var.privateVar = moduleTranslation.lookupValue(var.blockArg);
+    var.storage = var.privateVar;
+    SmallVector<llvm::Value *, 1> phis;
+    mapInitializationArgs(moduleTranslation, builder, var);
+    if (failed(inlineConvertOmpRegions(var.decl.getInitializerRegion(),
+                                       "omp.scan.reduction.init", builder,
+                                       moduleTranslation, &phis)))
+      return failure();
+    assert(phis.size() == 1 &&
+           "expected one value to be yielded from the reduction init region");
+    setInsertPointForPossiblyEmptyBlock(builder);
+
+    // Reset the private reduction variable to the reduction identity at the
+    // start of every input-loop iteration. The original variable's incoming
+    // value (orig-val) must not be folded into any single iteration here: per
+    // the OpenMP scan semantics it is a separate prefix element that is
+    // combined once into the scan buffer (see `emitScanReduction`). Seeding a
+    // particular iteration would be lost whenever the input phase overwrites
+    // the reduction variable (e.g. `x = i`), producing incorrect results.
+    llvm::Value *identity = phis[0];
+    builder.CreateStore(identity, var.privateVar);
+    moduleTranslation.forgetMapping(var.decl.getInitializerRegion());
+  }
+  return success();
+}
+
 /// Select Virtual only for two constant-count host worksharing loops.
 static llvm::OpenMPIRBuilder::CollapseIVMapping
 selectCollapseIVMapping(omp::LoopNestOp loopOp, bool isTargetDevice,
@@ -5639,6 +6019,10 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // Convert the body of the loop.
     builder.restoreIP(ip);
+    // For scan reductions, reset the reduction variables to their identity at
+    // the start of each input-loop iteration, before the input phase runs.
+    if (failed(initScanReductionVars(loopOp, builder, moduleTranslation)))
+      return llvm::make_error<PreviouslyReportedError>();
     llvm::Expected<llvm::BasicBlock *> regionBlock = convertOmpOpRegions(
         loopOp.getRegion(), "omp.loop_nest.region", builder, moduleTranslation);
     if (!regionBlock)
@@ -5669,6 +6053,44 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
       loc = llvm::OpenMPIRBuilder::LocationDescription(bodyInsertPoints.back(),
                                                        ompLoc.DL);
       computeIP = loopInfos.front()->getPreheaderIP();
+    }
+
+    // If this loop is the worksharing loop of a scan reduction, generate a
+    // pair of canonical loops (an input loop and a scan loop) instead of a
+    // single loop. The `scan` directive in the body is translated against the
+    // `ScanInfo` recorded here.
+    bool isInScanRegion = false;
+    if (auto wsloopOp = loopOp->getParentOfType<omp::WsloopOp>())
+      isInScanRegion =
+          wsloopOp.hasReductionModifier(mlir::omp::ReductionModifier::inscan);
+    if (isInScanRegion) {
+      llvm::Expected<llvm::ScanInfo *> res = ompBuilder->scanInfoInitialize();
+      if (failed(handleError(res, *loopOp)))
+        return failure();
+      llvm::ScanInfo *scanInfo = res.get();
+      moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+          [&](OpenMPLoopInfoStackFrame &frame) {
+            frame.scanInfo = scanInfo;
+            return WalkResult::interrupt();
+          });
+      llvm::Expected<llvm::SmallVector<llvm::CanonicalLoopInfo *>> loopResults =
+          ompBuilder->createCanonicalScanLoops(
+              loc, bodyGen, lowerBound, upperBound, step,
+              /*IsSigned=*/true, loopOp.getLoopInclusive(), computeIP, "loop",
+              scanInfo);
+
+      if (failed(handleError(loopResults, *loopOp)))
+        return failure();
+      llvm::CanonicalLoopInfo *inputLoop = loopResults.get().front();
+      llvm::CanonicalLoopInfo *scanLoop = loopResults.get().back();
+      moduleTranslation.stackWalk<OpenMPLoopInfoStackFrame>(
+          [&](OpenMPLoopInfoStackFrame &frame) {
+            frame.loopInfo = inputLoop;
+            frame.scanloopInfo = scanLoop;
+            return WalkResult::interrupt();
+          });
+      builder.restoreIP(scanLoop->getAfterIP());
+      return success();
     }
 
     llvm::Expected<llvm::CanonicalLoopInfo *> loopResult =
@@ -11454,6 +11876,9 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::convertOperation(
           })
           .Case([&](omp::WsloopOp) {
             return convertOmpWsloop(*op, builder, moduleTranslation);
+          })
+          .Case([&](omp::ScanOp) {
+            return convertOmpScan(*op, builder, moduleTranslation);
           })
           .Case([&](omp::SimdOp) {
             return convertOmpSimd(*op, builder, moduleTranslation);
