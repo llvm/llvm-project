@@ -5594,15 +5594,15 @@ define amdgpu_kernel void @local_zextload_v4i16_to_v4i64(ptr addrspace(3) %out, 
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
 ; SI-NEXT:    ds_read_b64 v[0:1], v0
-; SI-NEXT:    v_mov_b32_e32 v10, s0
-; SI-NEXT:    v_mov_b32_e32 v9, v3
+; SI-NEXT:    v_mov_b32_e32 v8, s0
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
-; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v0
-; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v1
-; SI-NEXT:    ds_write2_b64 v10, v[4:5], v[2:3] offset0:2 offset1:3
-; SI-NEXT:    ds_write2_b64 v10, v[6:7], v[8:9] offset1:1
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v3
+; SI-NEXT:    ds_write2_b64 v8, v[6:7], v[2:3] offset0:2 offset1:3
+; SI-NEXT:    ds_write2_b64 v8, v[0:1], v[4:5] offset1:1
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-NO-DS128-LABEL: local_zextload_v4i16_to_v4i64:
@@ -5904,30 +5904,30 @@ define amdgpu_kernel void @local_zextload_v8i16_to_v8i64(ptr addrspace(3) %out, 
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 m0, -1
 ; SI-NEXT:    v_mov_b32_e32 v5, 0
+; SI-NEXT:    v_mov_b32_e32 v11, v5
 ; SI-NEXT:    v_mov_b32_e32 v7, v5
-; SI-NEXT:    v_mov_b32_e32 v12, v5
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v0, s1
 ; SI-NEXT:    ds_read2_b64 v[0:3], v0 offset1:1
-; SI-NEXT:    v_mov_b32_e32 v13, s0
+; SI-NEXT:    v_mov_b32_e32 v14, s0
 ; SI-NEXT:    v_mov_b32_e32 v9, v5
+; SI-NEXT:    v_mov_b32_e32 v13, v5
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v2
-; SI-NEXT:    v_and_b32_e32 v11, 0xffff, v2
-; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v3
 ; SI-NEXT:    v_mov_b32_e32 v3, v5
 ; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
 ; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    ds_write2_b64 v13, v[2:3], v[6:7] offset0:6 offset1:7
+; SI-NEXT:    ds_write2_b64 v14, v[2:3], v[10:11] offset0:4 offset1:5
 ; SI-NEXT:    v_mov_b32_e32 v2, v5
-; SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    ds_write2_b64 v13, v[1:2], v[4:5] offset0:2 offset1:3
+; SI-NEXT:    ds_write2_b64 v14, v[1:2], v[4:5] offset0:2 offset1:3
 ; SI-NEXT:    v_mov_b32_e32 v1, v5
-; SI-NEXT:    ds_write2_b64 v13, v[11:12], v[8:9] offset0:4 offset1:5
-; SI-NEXT:    v_mov_b32_e32 v11, v5
-; SI-NEXT:    ds_write2_b64 v13, v[0:1], v[10:11] offset1:1
+; SI-NEXT:    ds_write2_b64 v14, v[12:13], v[6:7] offset0:6 offset1:7
+; SI-NEXT:    ds_write2_b64 v14, v[0:1], v[8:9] offset1:1
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-NO-DS128-LABEL: local_zextload_v8i16_to_v8i64:
@@ -6415,133 +6415,129 @@ define amdgpu_kernel void @local_zextload_v16i16_to_v16i64(ptr addrspace(3) %out
 ; SI-NEXT:    v_mov_b32_e32 v13, v9
 ; SI-NEXT:    v_mov_b32_e32 v11, v9
 ; SI-NEXT:    s_waitcnt lgkmcnt(1)
-; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
-; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v5
-; SI-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; SI-NEXT:    ds_write2_b64 v18, v[16:17], v[14:15] offset0:10 offset1:11
-; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v7
 ; SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
-; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; SI-NEXT:    ds_write2_b64 v18, v[14:15], v[12:13] offset0:14 offset1:15
-; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v3
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v2
-; SI-NEXT:    v_mov_b32_e32 v2, v9
-; SI-NEXT:    v_lshrrev_b32_e32 v7, 16, v0
-; SI-NEXT:    ds_write2_b64 v18, v[12:13], v[10:11] offset0:6 offset1:7
-; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; SI-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
-; SI-NEXT:    v_lshrrev_b32_e32 v12, 16, v6
-; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v6
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v4
 ; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v4
-; SI-NEXT:    ds_write2_b64 v18, v[1:2], v[8:9] offset0:2 offset1:3
-; SI-NEXT:    v_mov_b32_e32 v4, v9
-; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    ds_write2_b64 v18, v[16:17], v[14:15] offset0:8 offset1:9
+; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v5
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v5
+; SI-NEXT:    v_mov_b32_e32 v5, v9
+; SI-NEXT:    ds_write2_b64 v18, v[4:5], v[14:15] offset0:10 offset1:11
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v6
+; SI-NEXT:    v_and_b32_e32 v14, 0xffff, v6
+; SI-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
+; SI-NEXT:    ds_write2_b64 v18, v[14:15], v[4:5] offset0:12 offset1:13
+; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v7
 ; SI-NEXT:    v_mov_b32_e32 v6, v9
-; SI-NEXT:    v_mov_b32_e32 v8, v9
-; SI-NEXT:    ds_write2_b64 v18, v[16:17], v[10:11] offset0:8 offset1:9
-; SI-NEXT:    ds_write2_b64 v18, v[14:15], v[12:13] offset0:12 offset1:13
-; SI-NEXT:    ds_write2_b64 v18, v[3:4], v[5:6] offset0:4 offset1:5
-; SI-NEXT:    ds_write2_b64 v18, v[0:1], v[7:8] offset1:1
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; SI-NEXT:    ds_write2_b64 v18, v[5:6], v[12:13] offset0:14 offset1:15
+; SI-NEXT:    v_mov_b32_e32 v5, v9
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v3
+; SI-NEXT:    v_mov_b32_e32 v3, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v8, 16, v1
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; SI-NEXT:    ds_write2_b64 v18, v[2:3], v[4:5] offset0:4 offset1:5
+; SI-NEXT:    v_mov_b32_e32 v2, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; SI-NEXT:    v_mov_b32_e32 v7, v9
+; SI-NEXT:    ds_write2_b64 v18, v[1:2], v[8:9] offset0:2 offset1:3
+; SI-NEXT:    v_mov_b32_e32 v1, v9
+; SI-NEXT:    ds_write2_b64 v18, v[6:7], v[10:11] offset0:6 offset1:7
+; SI-NEXT:    ds_write2_b64 v18, v[0:1], v[14:15] offset1:1
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-NO-DS128-LABEL: local_zextload_v16i16_to_v16i64:
 ; VI-NO-DS128:       ; %bb.0:
 ; VI-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NO-DS128-NEXT:    s_mov_b32 m0, -1
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v8, 0
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v10, v8
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v13, v8
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v9, 0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v15, v9
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v17, v9
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NO-DS128-NEXT:    v_mov_b32_e32 v4, s1
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v4 offset1:1
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v4 offset0:2 offset1:3
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v14, s0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v18, s0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v11, v9
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v13, v9
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v0
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v5
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[12:13], v[9:10] offset0:10 offset1:11
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v6
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v6
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v6, v8
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[5:6], v[9:10] offset0:12 offset1:13
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v7
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[5:6], v[9:10] offset0:14 offset1:15
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v4
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v4, v8
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[12:13], v[7:8] offset0:8 offset1:9
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[3:4], v[9:10] offset0:6 offset1:7
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v8
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v7, v8
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[2:3], v[6:7] offset0:4 offset1:5
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v2, v8
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v6, v8
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[1:2], v[5:6] offset0:2 offset1:3
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v1, v8
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v12, v8
-; VI-NO-DS128-NEXT:    ds_write2_b64 v14, v[0:1], v[11:12] offset1:1
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v4
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v4
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[14:15], v[16:17] offset0:8 offset1:9
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v5
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v5
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v5, v9
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[14:15], v[4:5] offset0:10 offset1:11
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v6
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v6
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[14:15] offset0:12 offset1:13
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v7
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v7
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v7, v9
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[6:7] offset0:14 offset1:15
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v2
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v9
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v0
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v12, 16, v1
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v1, v9
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[2:3], v[6:7] offset0:6 offset1:7
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[14:15] offset0:4 offset1:5
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[0:1], v[12:13] offset0:2 offset1:3
+; VI-NO-DS128-NEXT:    ds_write2_b64 v18, v[10:11], v[8:9] offset1:1
 ; VI-NO-DS128-NEXT:    s_endpgm
 ;
 ; GFX9-NO-DS128-LABEL: local_zextload_v16i16_to_v16i64:
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v8, 0
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v10, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v14, v8
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, 0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v15, v9
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v17, v9
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, v9
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, s1
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v4 offset1:1
 ; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v4 offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v15, s0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v18, s0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v9
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v0
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v5
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[11:12], v[9:10] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v6
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v6
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v6, v8
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[5:6], v[9:10] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v7
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[5:6], v[9:10] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v4
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v4
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, v8
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v3
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[10:11], v[7:8] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v10, v8
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v2
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[3:4], v[9:10] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v8
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[2:3], v[6:7] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v8
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v6, v8
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[1:2], v[5:6] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v8
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v15, v[0:1], v[13:14] offset1:1
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v4
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v4
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[14:15], v[16:17] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v5
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v5
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[14:15], v[4:5] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v6
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v6
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[14:15] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v7
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v9
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[6:7] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v3
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v9
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v0
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v12, 16, v1
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[2:3], v[6:7] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[4:5], v[14:15] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[0:1], v[12:13] offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v18, v[10:11], v[8:9] offset1:1
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_zextload_v16i16_to_v16i64:
@@ -7285,239 +7281,234 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 m0, -1
-; SI-NEXT:    v_mov_b32_e32 v15, 0
-; SI-NEXT:    v_mov_b32_e32 v17, v15
-; SI-NEXT:    v_mov_b32_e32 v19, v15
+; SI-NEXT:    v_mov_b32_e32 v17, 0
+; SI-NEXT:    v_mov_b32_e32 v19, v17
+; SI-NEXT:    v_mov_b32_e32 v21, v17
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_mov_b32_e32 v11, s1
-; SI-NEXT:    ds_read2_b64 v[0:3], v11 offset1:1
-; SI-NEXT:    ds_read2_b64 v[4:7], v11 offset0:2 offset1:3
-; SI-NEXT:    v_mov_b32_e32 v20, s0
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v7
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v7
-; SI-NEXT:    ds_read2_b64 v[7:10], v11 offset0:4 offset1:5
-; SI-NEXT:    ds_read2_b64 v[11:14], v11 offset0:6 offset1:7
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:14 offset1:15
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v5
+; SI-NEXT:    v_mov_b32_e32 v12, s1
+; SI-NEXT:    ds_read2_b64 v[0:3], v12 offset1:1
+; SI-NEXT:    ds_read2_b64 v[4:7], v12 offset0:2 offset1:3
+; SI-NEXT:    v_mov_b32_e32 v22, s0
+; SI-NEXT:    ds_read2_b64 v[8:11], v12 offset0:4 offset1:5
+; SI-NEXT:    ds_read2_b64 v[12:15], v12 offset0:6 offset1:7
+; SI-NEXT:    s_waitcnt lgkmcnt(2)
+; SI-NEXT:    v_lshrrev_b32_e32 v18, 16, v6
+; SI-NEXT:    v_and_b32_e32 v20, 0xffff, v6
+; SI-NEXT:    ds_write2_b64 v22, v[20:21], v[18:19] offset0:12 offset1:13
+; SI-NEXT:    v_lshrrev_b32_e32 v18, 16, v7
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v7
+; SI-NEXT:    v_mov_b32_e32 v7, v17
+; SI-NEXT:    ds_write2_b64 v22, v[6:7], v[18:19] offset0:14 offset1:15
+; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v5
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:10 offset1:11
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v3
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v3
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:6 offset1:7
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v1
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v1
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:2 offset1:3
-; SI-NEXT:    s_waitcnt lgkmcnt(4)
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v14
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v14
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:30 offset1:31
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v12
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v12
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:26 offset1:27
-; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v10
-; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v10
-; SI-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:22 offset1:23
-; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v6
-; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v6
-; SI-NEXT:    v_mov_b32_e32 v6, v15
-; SI-NEXT:    ds_write2_b64 v20, v[16:17], v[5:6] offset0:12 offset1:13
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
-; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v4
-; SI-NEXT:    v_mov_b32_e32 v4, v15
-; SI-NEXT:    ds_write2_b64 v20, v[5:6], v[3:4] offset0:8 offset1:9
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v2
-; SI-NEXT:    v_and_b32_e32 v3, 0xffff, v2
-; SI-NEXT:    v_mov_b32_e32 v2, v15
-; SI-NEXT:    ds_write2_b64 v20, v[3:4], v[1:2] offset0:4 offset1:5
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    ds_write2_b64 v22, v[18:19], v[6:7] offset0:10 offset1:11
+; SI-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; SI-NEXT:    v_and_b32_e32 v18, 0xffff, v4
+; SI-NEXT:    v_mov_b32_e32 v6, v17
+; SI-NEXT:    ds_write2_b64 v22, v[18:19], v[5:6] offset0:8 offset1:9
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v2
+; SI-NEXT:    v_mov_b32_e32 v5, v17
+; SI-NEXT:    v_and_b32_e32 v6, 0xffff, v2
+; SI-NEXT:    ds_write2_b64 v22, v[6:7], v[4:5] offset0:4 offset1:5
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; SI-NEXT:    v_and_b32_e32 v2, 0xffff, v3
+; SI-NEXT:    v_mov_b32_e32 v3, v17
+; SI-NEXT:    ds_write2_b64 v22, v[2:3], v[4:5] offset0:6 offset1:7
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v0
-; SI-NEXT:    v_mov_b32_e32 v5, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v14, 16, v8
-; SI-NEXT:    ds_write2_b64 v20, v[4:5], v[1:2] offset1:1
-; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v8
-; SI-NEXT:    v_lshrrev_b32_e32 v3, 16, v9
-; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v7
-; SI-NEXT:    v_and_b32_e32 v5, 0xffff, v7
-; SI-NEXT:    v_and_b32_e32 v7, 0xffff, v9
-; SI-NEXT:    v_lshrrev_b32_e32 v9, 16, v13
-; SI-NEXT:    v_and_b32_e32 v13, 0xffff, v13
-; SI-NEXT:    ds_write2_b64 v20, v[1:2], v[14:15] offset0:18 offset1:19
-; SI-NEXT:    v_mov_b32_e32 v14, v15
-; SI-NEXT:    v_mov_b32_e32 v10, v15
-; SI-NEXT:    v_lshrrev_b32_e32 v12, 16, v11
-; SI-NEXT:    v_and_b32_e32 v16, 0xffff, v11
-; SI-NEXT:    v_mov_b32_e32 v8, v15
-; SI-NEXT:    ds_write2_b64 v20, v[13:14], v[9:10] offset0:28 offset1:29
-; SI-NEXT:    v_mov_b32_e32 v13, v15
-; SI-NEXT:    v_mov_b32_e32 v4, v15
-; SI-NEXT:    v_mov_b32_e32 v1, v15
-; SI-NEXT:    ds_write2_b64 v20, v[16:17], v[12:13] offset0:24 offset1:25
-; SI-NEXT:    ds_write2_b64 v20, v[7:8], v[3:4] offset0:20 offset1:21
-; SI-NEXT:    ds_write2_b64 v20, v[5:6], v[0:1] offset0:16 offset1:17
+; SI-NEXT:    ds_write2_b64 v22, v[4:5], v[2:3] offset1:1
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v1
+; SI-NEXT:    v_mov_b32_e32 v1, v17
+; SI-NEXT:    ds_write2_b64 v22, v[4:5], v[0:1] offset0:2 offset1:3
+; SI-NEXT:    s_waitcnt lgkmcnt(8)
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v15
+; SI-NEXT:    ds_write2_b64 v22, v[4:5], v[0:1] offset0:30 offset1:31
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v14
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v14
+; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v13
+; SI-NEXT:    ds_write2_b64 v22, v[4:5], v[0:1] offset0:28 offset1:29
+; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v12
+; SI-NEXT:    v_and_b32_e32 v4, 0xffff, v13
+; SI-NEXT:    v_and_b32_e32 v12, 0xffff, v12
+; SI-NEXT:    v_mov_b32_e32 v13, v17
+; SI-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
+; SI-NEXT:    v_lshrrev_b32_e32 v2, 16, v11
+; SI-NEXT:    ds_write2_b64 v22, v[4:5], v[6:7] offset0:26 offset1:27
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v10
+; SI-NEXT:    ds_write2_b64 v22, v[12:13], v[0:1] offset0:24 offset1:25
+; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v9
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v10
+; SI-NEXT:    v_and_b32_e32 v9, 0xffff, v11
+; SI-NEXT:    v_mov_b32_e32 v10, v17
+; SI-NEXT:    ds_write2_b64 v22, v[9:10], v[2:3] offset0:22 offset1:23
+; SI-NEXT:    v_mov_b32_e32 v2, v17
+; SI-NEXT:    v_lshrrev_b32_e32 v6, 16, v8
+; SI-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; SI-NEXT:    ds_write2_b64 v22, v[1:2], v[4:5] offset0:20 offset1:21
+; SI-NEXT:    v_mov_b32_e32 v1, v17
+; SI-NEXT:    v_mov_b32_e32 v9, v17
+; SI-NEXT:    ds_write2_b64 v22, v[0:1], v[16:17] offset0:18 offset1:19
+; SI-NEXT:    ds_write2_b64 v22, v[8:9], v[6:7] offset0:16 offset1:17
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-NO-DS128-LABEL: local_zextload_v32i16_to_v32i64:
 ; VI-NO-DS128:       ; %bb.0:
 ; VI-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NO-DS128-NEXT:    s_mov_b32 m0, -1
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v16, 0
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v18, v16
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v20, v16
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v17, 0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v19, v17
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v21, v17
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NO-DS128-NEXT:    v_mov_b32_e32 v12, s1
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v12 offset0:6 offset1:7
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v12 offset0:4 offset1:5
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v21, s0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v22, s0
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[8:11], v12 offset0:2 offset1:3
 ; VI-NO-DS128-NEXT:    ds_read2_b64 v[12:15], v12 offset1:1
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(3)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v2
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v2
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[17:18], v[19:20] offset0:28 offset1:29
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v1
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v2, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[17:18], v[1:2] offset0:26 offset1:27
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v0
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v0
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[1:2], v[17:18] offset0:24 offset1:25
-; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v7
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v1, v16
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v7
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[0:1], v[17:18] offset0:22 offset1:23
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v6
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v6
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v7, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[0:1], v[6:7] offset0:20 offset1:21
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v0, 0xffff, v5
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v6, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[0:1], v[5:6] offset0:18 offset1:19
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v3
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v3
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[20:21], v[18:19] offset0:30 offset1:31
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v2
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v2
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v17
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[18:19] offset0:28 offset1:29
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v1
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[18:19], v[2:3] offset0:26 offset1:27
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v0
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v2, v17
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[18:19], v[1:2] offset0:24 offset1:25
+; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(6)
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v7
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v1, v17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v7
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[0:1] offset0:22 offset1:23
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v6
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v6
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[0:1] offset0:20 offset1:21
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v5
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v5
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[0:1] offset0:18 offset1:19
 ; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v4
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v4
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v5, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[0:1] offset0:16 offset1:17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v4
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v4, v17
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(8)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v11
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[0:1] offset0:14 offset1:15
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v10
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[0:1] offset0:12 offset1:13
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v10
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[3:4], v[0:1] offset0:16 offset1:17
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v10
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v7, v17
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v11
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[6:7], v[2:3] offset0:12 offset1:13
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v6, v17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v11
 ; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v9
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[0:1] offset0:10 offset1:11
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v8
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[3:4], v[5:6] offset0:14 offset1:15
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v9
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v8
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v17
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v9, v17
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(10)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v12
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v8
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v8
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v12
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v15
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v15
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v15, 0xffff, v3
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v3
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v12, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[15:16], v[11:12] offset0:30 offset1:31
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v11, v16
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v9, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[1:2] offset0:8 offset1:9
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v14
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v7, 0xffff, v14
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[10:11], v[8:9] offset0:6 offset1:7
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v8, v16
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v3, v16
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v13
-; VI-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v13
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[7:8], v[2:3] offset0:4 offset1:5
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v2, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[1:2] offset0:2 offset1:3
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v7, v16
-; VI-NO-DS128-NEXT:    v_mov_b32_e32 v1, v16
-; VI-NO-DS128-NEXT:    ds_write2_b64 v21, v[6:7], v[0:1] offset1:1
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v14
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[5:6], v[0:1] offset0:10 offset1:11
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v12
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v13
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v10, 0xffff, v13
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[8:9], v[2:3] offset0:8 offset1:9
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v12
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v5, v17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v14
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v13, v17
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
+; VI-NO-DS128-NEXT:    v_mov_b32_e32 v11, v17
+; VI-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v15
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[12:13], v[4:5] offset0:4 offset1:5
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[8:9], v[0:1] offset0:6 offset1:7
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[2:3], v[6:7] offset1:1
+; VI-NO-DS128-NEXT:    ds_write2_b64 v22, v[10:11], v[16:17] offset0:2 offset1:3
 ; VI-NO-DS128-NEXT:    s_endpgm
 ;
 ; GFX9-NO-DS128-LABEL: local_zextload_v32i16_to_v32i64:
 ; GFX9-NO-DS128:       ; %bb.0:
 ; GFX9-NO-DS128-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v16, 0
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v18, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v20, v16
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v15, 0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v17, v15
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v19, v15
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, s1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v12 offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v12 offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v21, s0
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[8:11], v12 offset1:1
-; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[12:15], v12 offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(2)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v6
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v6
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[17:18], v[19:20] offset0:28 offset1:29
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v5
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v5
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v6, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[17:18], v[5:6] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v4
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v4
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[5:6], v[17:18] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[4:5], v[17:18] offset0:22 offset1:23
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v2
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[3:4], v[5:6] offset0:20 offset1:21
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v1
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[2:3], v[4:5] offset0:18 offset1:19
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v11, s1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[0:3], v11 offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[4:7], v11 offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v20, s0
+; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v7
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[7:10], v11 offset1:1
+; GFX9-NO-DS128-NEXT:    ds_read2_b64 v[11:14], v11 offset0:2 offset1:3
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:30 offset1:31
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v6
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v6
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:28 offset1:29
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v5
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v5
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v6, v15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[5:6], v[16:17] offset0:26 offset1:27
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v4
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v4
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[5:6] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v3
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[4:5] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[5:6], v[3:4] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[4:5], v[2:3] offset0:18 offset1:19
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v0
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[3:4], v[1:2] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v0
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v15
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(7)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v15
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[2:3], v[0:1] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v13
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[4:5], v[1:2] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v4, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v13
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v14
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v14
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[2:3], v[0:1] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v13
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v2, 0xffff, v13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[2:3], v[0:1] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v12
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v12
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v2, v16
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v15, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[5:6], v[3:4] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v14
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v12
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[5:6], v[0:1] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v3, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v12
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v11
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[5:6], v[2:3] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v8
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v11
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v8
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v5, v15
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v9
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, v15
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v10
 ; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v12, 16, v7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v8
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v5, 0xffff, v8
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[3:4], v[1:2] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v9
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v3, 0xffff, v9
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v10
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v10
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v11
-; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v11
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[15:16], v[12:13] offset0:30 offset1:31
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v12, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v10, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[11:12], v[9:10] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v9, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[8:9], v[6:7] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[3:4], v[1:2] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v6, v16
-; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v1, v16
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v21, v[5:6], v[0:1] offset1:1
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v13, v15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[4:5] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v7
+; GFX9-NO-DS128-NEXT:    v_and_b32_e32 v6, 0xffff, v10
+; GFX9-NO-DS128-NEXT:    v_mov_b32_e32 v7, v15
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[8:9], v[0:1] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[6:7], v[2:3] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[4:5], v[12:13] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[14:15] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_zextload_v32i16_to_v32i64:
@@ -7824,92 +7815,92 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; VI-DS128-NEXT:    ds_read_b128 v[0:3], v9
 ; VI-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:16
 ; VI-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v0
 ; VI-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
-; VI-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v5
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v4
-; VI-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v4
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v7
-; VI-DS128-NEXT:    v_and_b32_e32 v23, 0xffff, v7
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v6
-; VI-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v6
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v5
+; VI-DS128-NEXT:    v_and_b32_e32 v19, 0xffff, v5
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v24, 16, v4
+; VI-DS128-NEXT:    v_and_b32_e32 v22, 0xffff, v4
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v27, 16, v7
+; VI-DS128-NEXT:    v_and_b32_e32 v25, 0xffff, v7
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v30, 16, v6
+; VI-DS128-NEXT:    v_and_b32_e32 v28, 0xffff, v6
 ; VI-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:32
-; VI-DS128-NEXT:    ds_read_b128 v[29:32], v9 offset:48
-; VI-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v0
+; VI-DS128-NEXT:    ds_read_b128 v[31:34], v9 offset:48
+; VI-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v0
 ; VI-DS128-NEXT:    v_mov_b32_e32 v0, s0
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v3
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v3
 ; VI-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v38, 16, v4
-; VI-DS128-NEXT:    v_and_b32_e32 v36, 0xffff, v4
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v44, 16, v6
-; VI-DS128-NEXT:    v_and_b32_e32 v42, 0xffff, v6
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v40, 16, v4
+; VI-DS128-NEXT:    v_and_b32_e32 v38, 0xffff, v4
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v46, 16, v6
+; VI-DS128-NEXT:    v_and_b32_e32 v44, 0xffff, v6
 ; VI-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v30
-; VI-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v30
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v50, 16, v32
-; VI-DS128-NEXT:    v_and_b32_e32 v48, 0xffff, v32
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v32, 16, v31
-; VI-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v31, 0
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v47, 16, v29
-; VI-DS128-NEXT:    v_and_b32_e32 v45, 0xffff, v29
-; VI-DS128-NEXT:    v_mov_b32_e32 v49, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v51, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v27, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v29, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[48:51] offset:240
-; VI-DS128-NEXT:    v_mov_b32_e32 v46, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v48, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[26:29] offset:96
-; VI-DS128-NEXT:    v_mov_b32_e32 v24, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v26, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[45:48] offset:192
-; VI-DS128-NEXT:    v_mov_b32_e32 v43, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v45, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[23:26] offset:112
-; VI-DS128-NEXT:    v_mov_b32_e32 v21, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v23, v31
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v41, 16, v7
-; VI-DS128-NEXT:    v_and_b32_e32 v39, 0xffff, v7
-; VI-DS128-NEXT:    ds_write_b128 v0, v[42:45] offset:160
-; VI-DS128-NEXT:    v_mov_b32_e32 v40, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v42, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[20:23] offset:64
-; VI-DS128-NEXT:    v_mov_b32_e32 v18, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v20, v31
-; VI-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v3
-; VI-DS128-NEXT:    ds_write_b128 v0, v[39:42] offset:176
-; VI-DS128-NEXT:    v_mov_b32_e32 v37, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v39, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[17:20] offset:80
-; VI-DS128-NEXT:    v_mov_b32_e32 v15, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v17, v31
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v5
-; VI-DS128-NEXT:    v_and_b32_e32 v33, 0xffff, v5
-; VI-DS128-NEXT:    v_mov_b32_e32 v5, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v7, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[36:39] offset:128
-; VI-DS128-NEXT:    v_mov_b32_e32 v34, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v36, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[14:17] offset:48
-; VI-DS128-NEXT:    v_mov_b32_e32 v12, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v14, v31
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
-; VI-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v1
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v32
+; VI-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v32
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v52, 16, v34
+; VI-DS128-NEXT:    v_and_b32_e32 v50, 0xffff, v34
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v34, 16, v33
+; VI-DS128-NEXT:    v_and_b32_e32 v32, 0xffff, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v33, 0
+; VI-DS128-NEXT:    v_mov_b32_e32 v51, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v53, v33
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v49, 16, v31
+; VI-DS128-NEXT:    v_and_b32_e32 v47, 0xffff, v31
+; VI-DS128-NEXT:    ds_write_b128 v0, v[50:53] offset:240
+; VI-DS128-NEXT:    v_mov_b32_e32 v48, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v50, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[47:50] offset:192
+; VI-DS128-NEXT:    v_mov_b32_e32 v45, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v47, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v29, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v31, v33
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v43, 16, v7
+; VI-DS128-NEXT:    v_and_b32_e32 v41, 0xffff, v7
+; VI-DS128-NEXT:    ds_write_b128 v0, v[44:47] offset:160
+; VI-DS128-NEXT:    v_mov_b32_e32 v42, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v44, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[28:31] offset:96
+; VI-DS128-NEXT:    v_mov_b32_e32 v26, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v28, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[41:44] offset:176
+; VI-DS128-NEXT:    v_mov_b32_e32 v39, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v41, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[25:28] offset:112
+; VI-DS128-NEXT:    v_mov_b32_e32 v23, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v25, v33
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v37, 16, v5
+; VI-DS128-NEXT:    v_and_b32_e32 v35, 0xffff, v5
+; VI-DS128-NEXT:    v_mov_b32_e32 v5, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v7, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[38:41] offset:128
+; VI-DS128-NEXT:    v_mov_b32_e32 v36, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v38, v33
+; VI-DS128-NEXT:    ds_write_b128 v0, v[22:25] offset:64
+; VI-DS128-NEXT:    v_mov_b32_e32 v20, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v22, v33
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v1
+; VI-DS128-NEXT:    v_and_b32_e32 v16, 0xffff, v1
+; VI-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v3
 ; VI-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; VI-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; VI-DS128-NEXT:    ds_write_b128 v0, v[4:7] offset:208
-; VI-DS128-NEXT:    ds_write_b128 v0, v[33:36] offset:144
-; VI-DS128-NEXT:    v_mov_b32_e32 v2, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v4, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v33, v31
-; VI-DS128-NEXT:    ds_write_b128 v0, v[11:14]
-; VI-DS128-NEXT:    v_mov_b32_e32 v9, v31
-; VI-DS128-NEXT:    v_mov_b32_e32 v11, v31
+; VI-DS128-NEXT:    ds_write_b128 v0, v[35:38] offset:144
+; VI-DS128-NEXT:    ds_write_b128 v0, v[19:22] offset:80
+; VI-DS128-NEXT:    v_mov_b32_e32 v2, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v4, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v35, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v9, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v11, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v13, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v15, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v17, v33
+; VI-DS128-NEXT:    v_mov_b32_e32 v19, v33
 ; VI-DS128-NEXT:    ds_write_b128 v0, v[1:4] offset:32
-; VI-DS128-NEXT:    ds_write_b128 v0, v[30:33] offset:224
-; VI-DS128-NEXT:    ds_write_b128 v0, v[8:11] offset:16
+; VI-DS128-NEXT:    ds_write_b128 v0, v[32:35] offset:224
+; VI-DS128-NEXT:    ds_write_b128 v0, v[8:11] offset:48
+; VI-DS128-NEXT:    ds_write_b128 v0, v[12:15]
+; VI-DS128-NEXT:    ds_write_b128 v0, v[16:19] offset:16
 ; VI-DS128-NEXT:    s_endpgm
 ;
 ; GFX9-DS128-LABEL: local_zextload_v32i16_to_v32i64:
@@ -7920,92 +7911,92 @@ define amdgpu_kernel void @local_zextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    ds_read_b128 v[0:3], v9
 ; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:16
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v13, 16, v0
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v0
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v5
-; GFX9-DS128-NEXT:    v_and_b32_e32 v17, 0xffff, v5
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v4
-; GFX9-DS128-NEXT:    v_and_b32_e32 v20, 0xffff, v4
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v25, 16, v7
-; GFX9-DS128-NEXT:    v_and_b32_e32 v23, 0xffff, v7
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v28, 16, v6
-; GFX9-DS128-NEXT:    v_and_b32_e32 v26, 0xffff, v6
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v20, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v18, 0xffff, v5
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v23, 16, v4
+; GFX9-DS128-NEXT:    v_and_b32_e32 v21, 0xffff, v4
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v26, 16, v7
+; GFX9-DS128-NEXT:    v_and_b32_e32 v24, 0xffff, v7
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v29, 16, v6
+; GFX9-DS128-NEXT:    v_and_b32_e32 v27, 0xffff, v6
 ; GFX9-DS128-NEXT:    ds_read_b128 v[4:7], v9 offset:32
-; GFX9-DS128-NEXT:    ds_read_b128 v[29:32], v9 offset:48
-; GFX9-DS128-NEXT:    v_and_b32_e32 v11, 0xffff, v0
+; GFX9-DS128-NEXT:    ds_read_b128 v[30:33], v9 offset:48
+; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v0
 ; GFX9-DS128-NEXT:    v_mov_b32_e32 v0, s0
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v3
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v3
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(1)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v38, 16, v4
-; GFX9-DS128-NEXT:    v_and_b32_e32 v36, 0xffff, v4
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v44, 16, v6
-; GFX9-DS128-NEXT:    v_and_b32_e32 v42, 0xffff, v6
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v39, 16, v4
+; GFX9-DS128-NEXT:    v_and_b32_e32 v37, 0xffff, v4
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v45, 16, v6
+; GFX9-DS128-NEXT:    v_and_b32_e32 v43, 0xffff, v6
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v30
-; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v30
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v50, 16, v32
-; GFX9-DS128-NEXT:    v_and_b32_e32 v48, 0xffff, v32
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v32, 16, v31
-; GFX9-DS128-NEXT:    v_and_b32_e32 v30, 0xffff, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v31, 0
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v47, 16, v29
-; GFX9-DS128-NEXT:    v_and_b32_e32 v45, 0xffff, v29
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v49, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v51, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v27, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v29, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[48:51] offset:240
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v46, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v48, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[26:29] offset:96
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v26, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[45:48] offset:192
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v43, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v45, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[23:26] offset:112
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v23, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v41, 16, v7
-; GFX9-DS128-NEXT:    v_and_b32_e32 v39, 0xffff, v7
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[42:45] offset:160
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v40, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v42, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[20:23] offset:64
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v20, v31
-; GFX9-DS128-NEXT:    v_and_b32_e32 v14, 0xffff, v3
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[39:42] offset:176
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v37, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v39, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[17:20] offset:80
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v15, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v17, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v35, 16, v5
-; GFX9-DS128-NEXT:    v_and_b32_e32 v33, 0xffff, v5
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v7, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[36:39] offset:128
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v34, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v36, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[14:17] offset:48
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v12, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v14, v31
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v1
-; GFX9-DS128-NEXT:    v_and_b32_e32 v8, 0xffff, v1
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v31
+; GFX9-DS128-NEXT:    v_and_b32_e32 v4, 0xffff, v31
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v51, 16, v33
+; GFX9-DS128-NEXT:    v_and_b32_e32 v49, 0xffff, v33
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v33, 16, v32
+; GFX9-DS128-NEXT:    v_and_b32_e32 v31, 0xffff, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v32, 0
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v50, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v52, v32
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v48, 16, v30
+; GFX9-DS128-NEXT:    v_and_b32_e32 v46, 0xffff, v30
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[49:52] offset:240
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v47, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v49, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v28, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v30, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[46:49] offset:192
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v44, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v46, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[27:30] offset:96
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v25, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v27, v32
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v42, 16, v7
+; GFX9-DS128-NEXT:    v_and_b32_e32 v40, 0xffff, v7
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[43:46] offset:160
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v41, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v43, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[24:27] offset:112
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v22, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v24, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[40:43] offset:176
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v38, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v40, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[21:24] offset:64
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v19, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v21, v32
+; GFX9-DS128-NEXT:    v_and_b32_e32 v15, 0xffff, v3
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v36, 16, v5
+; GFX9-DS128-NEXT:    v_and_b32_e32 v34, 0xffff, v5
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v5, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v7, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[37:40] offset:128
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v35, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v37, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[18:21] offset:80
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v16, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v18, v32
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v1
+; GFX9-DS128-NEXT:    v_and_b32_e32 v12, 0xffff, v1
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
 ; GFX9-DS128-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v0, v[4:7] offset:208
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[33:36] offset:144
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v2, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v33, v31
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[11:14]
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, v31
-; GFX9-DS128-NEXT:    v_mov_b32_e32 v11, v31
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[34:37] offset:144
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v2, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v4, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v34, v32
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[15:18] offset:48
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v9, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v11, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v13, v32
+; GFX9-DS128-NEXT:    v_mov_b32_e32 v15, v32
 ; GFX9-DS128-NEXT:    ds_write_b128 v0, v[1:4] offset:32
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[30:33] offset:224
-; GFX9-DS128-NEXT:    ds_write_b128 v0, v[8:11] offset:16
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[31:34] offset:224
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[8:11]
+; GFX9-DS128-NEXT:    ds_write_b128 v0, v[12:15] offset:16
 ; GFX9-DS128-NEXT:    s_endpgm
   %load = load <32 x i16>, ptr addrspace(3) %in
   %ext = zext <32 x i16> %load to <32 x i64>
@@ -8148,87 +8139,88 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v1, 0, 16
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[2:3] offset0:26 offset1:27
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v18, v3, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v1, 0, 16
 ; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[18:19] offset0:24 offset1:25
-; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v3, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v18, v7, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v6
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:22 offset1:23
-; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v3, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v7
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[0:1], v[2:3] offset0:24 offset1:25
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v16, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v7, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:22 offset1:23
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v17, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v5
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:20 offset1:21
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v18, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v5, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:18 offset1:19
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v19, 0, 16
+; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(8)
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v10
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[0:1], v[2:3] offset0:16 offset1:17
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v7, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v10, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v11
+; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(8)
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v13
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:12 offset1:13
+; VI-NO-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v4, v11, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v9
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v8
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[4:5], v[2:3] offset0:14 offset1:15
+; VI-NO-DS128-NEXT:    v_bfe_i32 v4, v16, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v6, v9, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v14
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
-; VI-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v13
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[6:7], v[16:17] offset0:20 offset1:21
-; VI-NO-DS128-NEXT:    v_bfe_i32 v6, v3, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; VI-NO-DS128-NEXT:    v_bfe_i32 v9, v17, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v8, 0, 16
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v15
+; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v12
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[6:7], v[4:5] offset0:10 offset1:11
+; VI-NO-DS128-NEXT:    v_bfe_i32 v6, v18, 0, 16
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v5, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v14
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[6:7] offset0:18 offset1:19
-; VI-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v4
-; VI-NO-DS128-NEXT:    v_bfe_i32 v3, v4, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v18, v0, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v8, v12, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v12, v14, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v2, v22, 0, 16
+; VI-NO-DS128-NEXT:    v_bfe_i32 v4, v21, 0, 16
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; VI-NO-DS128-NEXT:    v_bfe_i32 v18, v13, 0, 16
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[9:10] offset0:8 offset1:9
+; VI-NO-DS128-NEXT:    v_bfe_i32 v10, v15, 0, 16
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v11
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[3:4], v[18:19] offset0:16 offset1:17
-; VI-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v18, v11, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[3:4] offset0:14 offset1:15
-; VI-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[10:11], v[3:4] offset0:12 offset1:13
-; VI-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v9, v9, 0, 16
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v15
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v8
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[9:10], v[3:4] offset0:10 offset1:11
-; VI-NO-DS128-NEXT:    v_bfe_i32 v3, v7, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v9, v0, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v7, v8, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
-; VI-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v12
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[7:8], v[9:10] offset0:8 offset1:9
-; VI-NO-DS128-NEXT:    v_bfe_i32 v7, v13, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v13, v15, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; VI-NO-DS128-NEXT:    v_bfe_i32 v11, v12, 0, 16
-; VI-NO-DS128-NEXT:    v_bfe_i32 v9, v14, 0, 16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v12, 31, v11
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
-; VI-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[13:14], v[3:4] offset0:6 offset1:7
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[9:10], v[16:17] offset0:4 offset1:5
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[7:8], v[5:6] offset0:2 offset1:3
-; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[11:12], v[1:2] offset1:1
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[12:13], v[6:7] offset0:4 offset1:5
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[10:11], v[4:5] offset0:6 offset1:7
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[8:9], v[2:3] offset1:1
+; VI-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[0:1] offset0:2 offset1:3
 ; VI-NO-DS128-NEXT:    s_endpgm
 ;
 ; GFX9-NO-DS128-LABEL: local_sextload_v32i16_to_v32i64:
@@ -8259,88 +8251,87 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v1, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[2:3] offset0:26 offset1:27
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v1, 0, 16
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[18:19] offset0:24 offset1:25
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v6
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[16:17] offset0:22 offset1:23
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
-; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(6)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[6:7], v[16:17] offset0:20 offset1:21
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v3, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v5, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v5, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v10
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[16:17], v[6:7] offset0:18 offset1:19
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v16, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v4
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v4, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v7
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[0:1], v[2:3] offset0:24 offset1:25
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v16, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v7, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v6
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:22 offset1:23
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v17, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v5
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:20 offset1:21
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v18, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v5, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v19, 16, v4
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:18 offset1:19
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v19, 0, 16
 ; GFX9-NO-DS128-NEXT:    s_waitcnt lgkmcnt(7)
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v15
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[3:4], v[18:19] offset0:16 offset1:17
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v15, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v14
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[3:4] offset0:14 offset1:15
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v14, v14, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v13
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[14:15], v[3:4] offset0:12 offset1:13
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v13, 0, 16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v11
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v14
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[0:1], v[2:3] offset0:16 offset1:17
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v7, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v14, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v15
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v9
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[2:3], v[0:1] offset0:12 offset1:13
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v15, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v16, 16, v13
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v17, 16, v12
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[4:5], v[2:3] offset0:14 offset1:15
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v16, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v13, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v17, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v15, v12, 0, 16
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v18, 16, v10
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v0, 16, v12
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[13:14], v[3:4] offset0:10 offset1:11
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v3, v7, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v0, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v12, 0, 16
-; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v1, 16, v8
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v18, v8, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v16, 31, v15
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v11
+; GFX9-NO-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v8
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[6:7], v[4:5] offset0:10 offset1:11
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v6, v18, 0, 16
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[15:16], v[13:14] offset0:8 offset1:9
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v13, v10, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v2, v22, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v4, v21, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v17, v9, 0, 16
+; GFX9-NO-DS128-NEXT:    v_bfe_i32 v8, v8, 0, 16
 ; GFX9-NO-DS128-NEXT:    v_bfe_i32 v11, v11, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v1, v1, 0, 16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v4, 31, v3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[7:8], v[13:14] offset0:8 offset1:9
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v7, v9, 0, 16
-; GFX9-NO-DS128-NEXT:    v_bfe_i32 v9, v10, 0, 16
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v14, 31, v13
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v18, 31, v17
+; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v12, 31, v11
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v6, 31, v5
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v17, 31, v16
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v19, 31, v18
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v8, 31, v7
-; GFX9-NO-DS128-NEXT:    v_ashrrev_i32_e32 v10, 31, v9
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[11:12], v[3:4] offset0:6 offset1:7
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[9:10], v[16:17] offset0:4 offset1:5
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[7:8], v[5:6] offset0:2 offset1:3
-; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[18:19], v[1:2] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[13:14], v[6:7] offset0:4 offset1:5
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[11:12], v[4:5] offset0:6 offset1:7
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[8:9], v[2:3] offset1:1
+; GFX9-NO-DS128-NEXT:    ds_write2_b64 v20, v[17:18], v[0:1] offset0:2 offset1:3
 ; GFX9-NO-DS128-NEXT:    s_endpgm
 ;
 ; EG-LABEL: local_sextload_v32i16_to_v32i64:
@@ -8698,9 +8689,9 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; VI-DS128-NEXT:    ds_read_b128 v[12:15], v16 offset:16
 ; VI-DS128-NEXT:    ds_read_b128 v[16:19], v16
 ; VI-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; VI-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; VI-DS128-NEXT:    v_bfe_i32 v10, v2, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
@@ -8712,79 +8703,79 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; VI-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:240
 ; VI-DS128-NEXT:    v_bfe_i32 v10, v2, 0, 16
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; VI-DS128-NEXT:    v_bfe_i32 v8, v0, 0, 16
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; VI-DS128-NEXT:    v_bfe_i32 v0, v1, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; VI-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:192
+; VI-DS128-NEXT:    s_waitcnt lgkmcnt(5)
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v6
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:208
-; VI-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
+; VI-DS128-NEXT:    v_bfe_i32 v2, v8, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v0, v6, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:160
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v7
+; VI-DS128-NEXT:    v_bfe_i32 v2, v9, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v0, v7, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:176
+; VI-DS128-NEXT:    v_bfe_i32 v2, v10, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; VI-DS128-NEXT:    v_bfe_i32 v4, v5, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; VI-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:144
-; VI-DS128-NEXT:    s_waitcnt lgkmcnt(7)
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v5
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:128
+; VI-DS128-NEXT:    v_bfe_i32 v0, v5, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v2, v11, 0, 16
+; VI-DS128-NEXT:    s_waitcnt lgkmcnt(8)
 ; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v14
-; VI-DS128-NEXT:    v_bfe_i32 v4, v14, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; VI-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:96
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v15
-; VI-DS128-NEXT:    v_bfe_i32 v4, v15, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; VI-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:192
-; VI-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:112
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v12
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:144
+; VI-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v0, v14, 0, 16
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v15
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:96
+; VI-DS128-NEXT:    v_bfe_i32 v0, v15, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v2, v7, 0, 16
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v12
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:112
+; VI-DS128-NEXT:    v_bfe_i32 v0, v12, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v2, v4, 0, 16
 ; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v13
-; VI-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v4, v12, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
+; VI-DS128-NEXT:    s_waitcnt lgkmcnt(10)
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v17
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v18
+; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:64
+; VI-DS128-NEXT:    v_bfe_i32 v2, v8, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v8, v13, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; VI-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v19
+; VI-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v16
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
-; VI-DS128-NEXT:    s_waitcnt lgkmcnt(9)
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v14, 16, v18
-; VI-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:128
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v17
-; VI-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:64
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v16
-; VI-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:80
-; VI-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v19
 ; VI-DS128-NEXT:    v_bfe_i32 v12, v18, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v14, v14, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v14, v21, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v0, v17, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v6, v5, 0, 16
 ; VI-DS128-NEXT:    v_bfe_i32 v4, v16, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
+; VI-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:80
 ; VI-DS128-NEXT:    v_bfe_i32 v8, v19, 0, 16
-; VI-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
+; VI-DS128-NEXT:    v_bfe_i32 v10, v22, 0, 16
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; VI-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
@@ -8810,9 +8801,9 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    ds_read_b128 v[12:15], v16
 ; GFX9-DS128-NEXT:    ds_read_b128 v[16:19], v16 offset:16
 ; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(3)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v2
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v2, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
-; GFX9-DS128-NEXT:    v_bfe_i32 v10, v2, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
@@ -8824,78 +8815,78 @@ define amdgpu_kernel void @local_sextload_v32i16_to_v32i64(ptr addrspace(3) %out
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX9-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:240
 ; GFX9-DS128-NEXT:    v_bfe_i32 v10, v2, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v0, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v1
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v1, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:192
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(5)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v6
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:208
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(5)
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v6
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v8, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v6, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v9, 16, v7
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
 ; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:160
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v7
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v9, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v7, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v4
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v5
 ; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:176
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v10, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v0, v4, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v5, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:144
-; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(6)
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v11, 16, v5
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:128
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v5, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v11, 0, 16
+; GFX9-DS128-NEXT:    s_waitcnt lgkmcnt(7)
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v18
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v18, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:96
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v19
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v19, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:192
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:144
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v6, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v18, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v7, 16, v19
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:96
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v19, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v7, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v4, 16, v16
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:112
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v16, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v4, 0, 16
 ; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v17
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:112
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v8, 16, v13
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
+; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v21, 16, v14
+; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:64
+; GFX9-DS128-NEXT:    v_bfe_i32 v2, v8, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v17, 0, 16
 ; GFX9-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v16, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v22, 16, v15
+; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v5, 16, v12
+; GFX9-DS128-NEXT:    v_bfe_i32 v4, v12, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v9, 31, v8
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v11, 31, v10
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v3, 31, v2
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v5, 31, v4
-; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v7, 31, v6
+; GFX9-DS128-NEXT:    v_bfe_i32 v12, v14, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v14, v21, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v0, v13, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v6, v5, 0, 16
 ; GFX9-DS128-NEXT:    ds_write_b128 v20, v[8:11] offset:80
 ; GFX9-DS128-NEXT:    v_bfe_i32 v8, v15, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v10, 16, v15
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v15, 16, v14
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[0:3] offset:128
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v2, 16, v13
-; GFX9-DS128-NEXT:    ds_write_b128 v20, v[4:7] offset:64
-; GFX9-DS128-NEXT:    v_bfe_i32 v4, v12, 0, 16
-; GFX9-DS128-NEXT:    v_lshrrev_b32_e32 v6, 16, v12
-; GFX9-DS128-NEXT:    v_bfe_i32 v12, v14, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v14, v15, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v0, v13, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v2, v2, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v6, v6, 0, 16
-; GFX9-DS128-NEXT:    v_bfe_i32 v10, v10, 0, 16
+; GFX9-DS128-NEXT:    v_bfe_i32 v10, v22, 0, 16
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v13, 31, v12
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v15, 31, v14
 ; GFX9-DS128-NEXT:    v_ashrrev_i32_e32 v1, 31, v0

@@ -131,35 +131,37 @@ define amdgpu_kernel void @v9f64_uniform_idx(ptr addrspace(1) %out, double %a, d
 ; CHECK-NEXT:    v_lshlrev_b32_e32 v32, 7, v0
 ; CHECK-NEXT:    s_load_dword s4, s[4:5], 0x18
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_load_dwordx4 v[28:31], v32, s[0:1] offset:112
+; CHECK-NEXT:    global_load_dwordx4 v[24:27], v32, s[0:1] offset:96
+; CHECK-NEXT:    global_load_dwordx4 v[20:23], v32, s[0:1] offset:80
 ; CHECK-NEXT:    global_load_dwordx4 v[16:19], v32, s[0:1] offset:64
 ; CHECK-NEXT:    global_load_dwordx4 v[12:15], v32, s[0:1] offset:48
 ; CHECK-NEXT:    global_load_dwordx4 v[8:11], v32, s[0:1] offset:32
 ; CHECK-NEXT:    global_load_dwordx4 v[4:7], v32, s[0:1] offset:16
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v32, s[0:1]
-; CHECK-NEXT:    s_waitcnt vmcnt(4)
-; CHECK-NEXT:    v_mov_b32_e32 v18, s2
-; CHECK-NEXT:    v_mov_b32_e32 v33, s3
-; CHECK-NEXT:    v_mov_b32_e32 v34, s6
+; CHECK-NEXT:    v_mov_b32_e32 v33, s2
+; CHECK-NEXT:    v_mov_b32_e32 v34, s3
+; CHECK-NEXT:    v_mov_b32_e32 v35, s6
 ; CHECK-NEXT:    s_lshl_b32 s4, s4, 1
 ; CHECK-NEXT:    s_add_i32 s2, s4, 2
 ; CHECK-NEXT:    s_add_i32 s3, s4, 3
-; CHECK-NEXT:    v_mov_b32_e32 v35, s7
+; CHECK-NEXT:    v_mov_b32_e32 v36, s7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_set_gpr_idx_on s4, gpr_idx(DST)
-; CHECK-NEXT:    v_mov_b32_e32 v0, v18
-; CHECK-NEXT:    v_mov_b32_e32 v1, v33
+; CHECK-NEXT:    v_mov_b32_e32 v0, v33
+; CHECK-NEXT:    v_mov_b32_e32 v1, v34
 ; CHECK-NEXT:    s_set_gpr_idx_off
 ; CHECK-NEXT:    s_set_gpr_idx_on s2, gpr_idx(DST)
-; CHECK-NEXT:    v_mov_b32_e32 v0, v34
-; CHECK-NEXT:    s_set_gpr_idx_off
-; CHECK-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v35
 ; CHECK-NEXT:    s_set_gpr_idx_off
-; CHECK-NEXT:    global_store_dwordx2 v32, v[16:17], s[0:1] offset:64
+; CHECK-NEXT:    s_set_gpr_idx_on s3, gpr_idx(DST)
+; CHECK-NEXT:    v_mov_b32_e32 v0, v36
+; CHECK-NEXT:    s_set_gpr_idx_off
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[8:11], s[0:1] offset:32
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[12:15], s[0:1] offset:48
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[0:3], s[0:1]
 ; CHECK-NEXT:    global_store_dwordx4 v32, v[4:7], s[0:1] offset:16
+; CHECK-NEXT:    global_store_dwordx2 v32, v[16:17], s[0:1] offset:64
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <9 x double>, ptr addrspace(1) %out, i32 %tid
@@ -224,14 +226,14 @@ define amdgpu_kernel void @v5f16_uniform_idx(ptr addrspace(1) %out, half %a, hal
 ; CHECK-NEXT:    s_or_b32 s2, s2, 0
 ; CHECK-NEXT:    s_or_b32 s3, s3, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    scratch_store_short off, v4, off offset:8
 ; CHECK-NEXT:    scratch_store_dwordx2 off, v[2:3], off
+; CHECK-NEXT:    scratch_store_short off, v4, off offset:8
 ; CHECK-NEXT:    scratch_store_short off, v1, s2
 ; CHECK-NEXT:    scratch_store_short_d16_hi off, v1, s3
 ; CHECK-NEXT:    scratch_load_dwordx4 v[2:5], off, off
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    global_store_short v0, v4, s[0:1] offset:8
 ; CHECK-NEXT:    global_store_dwordx2 v0, v[2:3], s[0:1]
+; CHECK-NEXT:    global_store_short v0, v4, s[0:1] offset:8
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr <5 x half>, ptr addrspace(1) %out, i32 %tid

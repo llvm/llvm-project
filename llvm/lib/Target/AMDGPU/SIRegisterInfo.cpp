@@ -554,6 +554,17 @@ unsigned SIRegisterInfo::getSubRegFromChannel(uint64_t Channel,
   return SubRegFromChannelTable[NumRegIndex - 1][Channel];
 }
 
+unsigned SIRegisterInfo::getSubRegFromChannelOrNone(unsigned Channel,
+                                                    unsigned NumRegs) {
+  if (NumRegs >= SubRegFromChannelTableWidthMap.size())
+    return AMDGPU::NoSubRegister;
+  unsigned NumRegIndex = SubRegFromChannelTableWidthMap[NumRegs];
+  if (NumRegIndex == 0 ||
+      Channel >= SubRegFromChannelTable[NumRegIndex - 1].size())
+    return AMDGPU::NoSubRegister;
+  return SubRegFromChannelTable[NumRegIndex - 1][Channel];
+}
+
 bool SIRegisterInfo::isCFISavedRegsSpillEnabled() const {
   return ST.getCLOpts().spill_cfi_saved_regs;
 }

@@ -188,47 +188,26 @@ define void @copy_v6i32(ptr addrspace(1) inreg %out, ptr addrspace(13) inreg %in
 }
 
 define void @copy_v7i32(ptr addrspace(1) inreg %out, ptr addrspace(13) inreg %in) {
-; GFX12-SDAG-LABEL: copy_v7i32:
-; GFX12-SDAG:       ; %bb.0:
-; GFX12-SDAG-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_expcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s2, 2
-; GFX12-SDAG-NEXT:    v_mov_b32_e32 v7, 0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v4, v4
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v5, v5
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v6, v6
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v1
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v2
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v3, v3
-; GFX12-SDAG-NEXT:    s_clause 0x1
-; GFX12-SDAG-NEXT:    global_store_b96 v7, v[4:6], s[0:1] offset:16
-; GFX12-SDAG-NEXT:    global_store_b128 v7, v[0:3], s[0:1]
-; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX12-GISEL-LABEL: copy_v7i32:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_expcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-GISEL-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-NEXT:    s_lshr_b32 m0, s2, 2
-; GFX12-GISEL-NEXT:    v_mov_b32_e32 v7, 0
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v0, v0
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v1, v1
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v2, v2
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v3, v3
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v4, v4
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v5, v5
-; GFX12-GISEL-NEXT:    v_movrels_b32_e32 v6, v6
-; GFX12-GISEL-NEXT:    s_clause 0x1
-; GFX12-GISEL-NEXT:    global_store_b128 v7, v[0:3], s[0:1]
-; GFX12-GISEL-NEXT:    global_store_b96 v7, v[4:6], s[0:1] offset:16
-; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
+; GFX12-LABEL: copy_v7i32:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    s_lshr_b32 m0, s2, 2
+; GFX12-NEXT:    v_mov_b32_e32 v7, 0
+; GFX12-NEXT:    v_movrels_b32_e32 v0, v0
+; GFX12-NEXT:    v_movrels_b32_e32 v1, v1
+; GFX12-NEXT:    v_movrels_b32_e32 v2, v2
+; GFX12-NEXT:    v_movrels_b32_e32 v3, v3
+; GFX12-NEXT:    v_movrels_b32_e32 v4, v4
+; GFX12-NEXT:    v_movrels_b32_e32 v5, v5
+; GFX12-NEXT:    v_movrels_b32_e32 v6, v6
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_store_b128 v7, v[0:3], s[0:1]
+; GFX12-NEXT:    global_store_b96 v7, v[4:6], s[0:1] offset:16
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %x = load <7 x i32>, ptr addrspace(13) %in
   store <7 x i32> %x, ptr addrspace(1) %out
   ret void
@@ -293,7 +272,6 @@ define void @copy_v9i32(ptr addrspace(1) inreg %out, ptr addrspace(13) inreg %in
 ; GFX12-SDAG-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s2, 2
 ; GFX12-SDAG-NEXT:    v_mov_b32_e32 v9, 0
-; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v8, v8
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v4, v4
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v5, v5
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v6, v6
@@ -302,10 +280,11 @@ define void @copy_v9i32(ptr addrspace(1) inreg %out, ptr addrspace(13) inreg %in
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v1, v1
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v2, v2
 ; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v3, v3
+; GFX12-SDAG-NEXT:    v_movrels_b32_e32 v8, v8
 ; GFX12-SDAG-NEXT:    s_clause 0x2
-; GFX12-SDAG-NEXT:    global_store_b32 v9, v8, s[0:1] offset:32
 ; GFX12-SDAG-NEXT:    global_store_b128 v9, v[4:7], s[0:1] offset:16
 ; GFX12-SDAG-NEXT:    global_store_b128 v9, v[0:3], s[0:1]
+; GFX12-SDAG-NEXT:    global_store_b32 v9, v8, s[0:1] offset:32
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: copy_v9i32:
