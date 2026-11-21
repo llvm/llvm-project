@@ -12,10 +12,7 @@ define void @caller() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[AGG:%.*]] = alloca [[CLASS_ANON:%.*]], align 8
 ; CHECK-NEXT:    [[OFF:%.*]] = getelementptr inbounds [[CLASS_ANON]], ptr [[AGG]], i32 0, i32 2
-; CHECK-NEXT:    [[DOTFCA_0_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 0
-; CHECK-NEXT:    store i64 1, ptr [[DOTFCA_0_GEP]], align 8, !tbaa [[CHAR_TBAA0:![0-9]+]]
-; CHECK-NEXT:    [[DOTFCA_1_GEP:%.*]] = getelementptr inbounds { i64, i64 }, ptr [[OFF]], i32 0, i32 1
-; CHECK-NEXT:    store i64 2, ptr [[DOTFCA_1_GEP]], align 8, !tbaa [[CHAR_TBAA0]]
+; CHECK-NEXT:    store { i64, i64 } { i64 1, i64 2 }, ptr [[OFF]], align 8, !tbaa [[CHAR_TBAA0:![0-9]+]]
 ; CHECK-NEXT:    call void @use(ptr [[AGG]])
 ; CHECK-NEXT:    ret void
 ;
@@ -27,7 +24,25 @@ entry:
   ret void
 }
 
+define void @caller_memcpy(ptr %dst) {
+; CHECK-LABEL: define void @caller_memcpy(
+; CHECK-SAME: ptr [[DST:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    store i64 1, ptr [[DST]], align 8
+; CHECK-NEXT:    [[AGG_SROA_2_8_DST_SROA_IDX:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    store i64 2, ptr [[AGG_SROA_2_8_DST_SROA_IDX]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %agg = alloca %class.anon, align 8
+  %off = getelementptr inbounds %class.anon, ptr %agg, i32 0, i32 2
+  store { i64, i64 } { i64 1, i64 2 }, ptr %off, align 8, !tbaa !7
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %off, i64 16, i1 false)
+  ret void
+}
+
 declare void @use(ptr %this)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
 
 !3 = !{!"omnipotent char", !4, i64 0}
 !4 = !{!"Simple C++ TBAA"}
@@ -35,6 +50,8 @@ declare void @use(ptr %this)
 !7 = !{!8, !3, i64 8}
 !8 = !{!"_ZTSZN2ax2baEMS_FvvE2an2arE3$_0", !9, i64 0, !3, i64 8}
 !9 = !{!"_ZTS2ar"}
+;.
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[CHAR_TBAA0]] = !{[[META1:![0-9]+]], [[META3:![0-9]+]], i64 8}
 ; CHECK: [[META1]] = !{!"_ZTSZN2ax2baEMS_FvvE2an2arE3$_0", [[META2:![0-9]+]], i64 0, [[META3]], i64 8}
