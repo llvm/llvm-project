@@ -769,7 +769,7 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   uint32_t frame_idx = unwind_idx;
   StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
   while (frame_sp) {
-    if (frame_sp->GetFrameIndex() == unwind_idx)
+    if (frame_sp->GetConcreteFrameIndex() == unwind_idx)
       break;
     frame_sp = GetFrameAtIndex(++frame_idx);
   }
