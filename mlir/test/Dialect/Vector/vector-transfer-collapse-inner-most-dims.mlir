@@ -283,6 +283,36 @@ func.func @contiguous_inner_most_with_mask(%src: memref<1x1x8x1xf32, strided<[30
 
 // -----
 
+func.func @contiguous_inner_most_with_vector_mask(%src: memref<8x1xf32>, %mask: vector<4x1xi1>) -> vector<4x1xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask { vector.transfer_read %src[%c0, %c0], %pad : memref<8x1xf32>, vector<4x1xf32> } : vector<4x1xi1> -> vector<4x1xf32>
+  return %v : vector<4x1xf32>
+}
+//      CHECK: func @contiguous_inner_most_with_vector_mask(%[[SRC:.+]]: memref<8x1xf32>, %[[MASK:.+]]: vector<4x1xi1>)
+//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
+//      CHECK:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<4x1xi1> to vector<4xi1>
+//      CHECK:   %[[VEC:.+]] = vector.mask %[[REDUCED_MASK]] { vector.transfer_read %[[SRC_0]]
+// CHECK-SAME:    memref<8xf32, strided<[1]>>, vector<4xf32> } : vector<4xi1> -> vector<4xf32>
+//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]] : vector<4xf32> to vector<4x1xf32>
+//      CHECK:   return %[[RESULT]]
+
+// -----
+
+func.func @contiguous_inner_most_with_vector_mask_passthru(%src: memref<8x1xf32>, %mask: vector<4x1xi1>, %passthru: vector<4x1xf32>) -> vector<4x1xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask, %passthru { vector.transfer_read %src[%c0, %c0], %pad : memref<8x1xf32>, vector<4x1xf32> } : vector<4x1xi1> -> vector<4x1xf32>
+  return %v : vector<4x1xf32>
+}
+//      CHECK: func @contiguous_inner_most_with_vector_mask_passthru(%[[SRC:.+]]: memref<8x1xf32>, %[[MASK:.+]]: vector<4x1xi1>, %[[PASSTHRU:.+]]: vector<4x1xf32>)
+//  CHECK-DAG:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<4x1xi1> to vector<4xi1>
+//  CHECK-DAG:   %[[REDUCED_PASSTHRU:.+]] = vector.shape_cast %[[PASSTHRU]] : vector<4x1xf32> to vector<4xf32>
+//      CHECK:   %[[VEC:.+]] = vector.mask %[[REDUCED_MASK]], %[[REDUCED_PASSTHRU]] { vector.transfer_read
+//      CHECK:   vector.shape_cast %[[VEC]] : vector<4xf32> to vector<4x1xf32>
+
+// -----
+
 // NOTE: This is an out-of-bounds access.
 
 func.func @negative_non_unit_inner_vec_dim(%src: memref<4x1xf32>) -> vector<4x8xf32> {
@@ -609,6 +639,20 @@ func.func @contiguous_inner_most_with_mask(%dest: memref<1x1x8x1xf32, strided<[3
 //      CHECK:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x8x1xi1> to vector<1x8xi1>
 //      CHECK:   vector.transfer_write %[[REDUCED_VEC]], %[[DEST_0]]{{.*}}, %[[REDUCED_MASK]]
 // CHECK-SAME:    vector<1x8xf32>, memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>
+// -----
+
+func.func @contiguous_inner_most_with_vector_mask(%dest: memref<8x1xf32>, %vec: vector<4x1xf32>, %mask: vector<4x1xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %vec, %dest[%c0, %c0] : vector<4x1xf32>, memref<8x1xf32> } : vector<4x1xi1>
+  return
+}
+//      CHECK: func @contiguous_inner_most_with_vector_mask(%[[DEST:.+]]: memref<8x1xf32>, %[[VEC:.+]]: vector<4x1xf32>, %[[MASK:.+]]: vector<4x1xi1>)
+//      CHECK:   %[[DEST_0:.+]] = memref.subview %[[DEST]]
+//      CHECK:   %[[REDUCED_VEC:.+]] = vector.shape_cast %[[VEC]] : vector<4x1xf32> to vector<4xf32>
+//      CHECK:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<4x1xi1> to vector<4xi1>
+//      CHECK:   vector.mask %[[REDUCED_MASK]] { vector.transfer_write %[[REDUCED_VEC]], %[[DEST_0]]
+// CHECK-SAME:    vector<4xf32>, memref<8xf32, strided<[1]>> } : vector<4xi1>
+
 // -----
 
 // NOTE: This is an out-of-bounds access.
