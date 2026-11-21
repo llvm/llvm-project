@@ -194,9 +194,14 @@ static ::llvm::LogicalResult {0}(
 }
 )";
 
-/// Code for an attribute constraint. These may be called from ops only.
-/// Attribute constraints cannot reference anything other than `$_self` and
-/// `$_op`.
+/// Code for an attribute constraint that does not reference `$_op`.
+/// Two overloads are emitted. The first reports errors through `emitError`, so
+/// it can be called before the op exists. The second reports errors on `op`.
+/// These constraints cannot reference anything other than `$_self`.
+///
+/// {0}: name of function
+/// {1}: condition
+/// {2}: constraint summary
 ///
 /// TODO: Unique constraints for adaptors. However, most Adaptor::verify
 /// functions are stripped anyways.
@@ -213,6 +218,24 @@ static ::llvm::LogicalResult {0}(
   return {0}(attr, attrName, [op]() {{
     return op->emitOpError();
   });
+}
+)";
+
+/// Code for an attribute constraint that references `$_op`. Only the overload
+/// taking `op` is emitted because the constraint cannot be evaluated without an
+/// op. These constraints cannot reference anything other than `$_self` and
+/// `$_op`.
+///
+/// {0}: name of function
+/// {1}: condition
+/// {2}: constraint summary
+static const char *const attrConstraintWithOpCode = R"(
+static ::llvm::LogicalResult {0}(
+    ::mlir::Operation *op, ::mlir::Attribute attr, ::llvm::StringRef attrName) {{
+  if (attr && !({1}))
+    return op->emitOpError() << "attribute '" << attrName
+        << "' failed to satisfy constraint: {2}";
+  return ::mlir::success();
 }
 )";
 
@@ -301,8 +324,16 @@ void StaticVerifierFunctionEmitter::emitTypeConstraints() {
 }
 
 void StaticVerifierFunctionEmitter::emitAttrConstraints() {
-  emitConstraints(attrConstraints, "attr", attrConstraintCode,
-                  ErrorStreamType::InString);
+  FmtContext ctx;
+  ctx.addSubst("_op", "*op").withSelf("attr");
+  for (const auto &it : attrConstraints) {
+    std::string condition = tgfmt(it.first.getConditionTemplate(), &ctx);
+    std::string summary = buildErrorStreamingString(it.first.getSummary(), ctx);
+    const char *codeTemplate = constraintReferencesOp(it.first)
+                                   ? attrConstraintWithOpCode
+                                   : attrConstraintCode;
+    os << formatv(codeTemplate, it.second, condition, summary);
+  }
 }
 
 /// Unlike with the other helpers, this one has to substitute in the interface
@@ -473,4 +504,11 @@ std::string mlir::tblgen::escapeString(StringRef value) {
   raw_string_ostream os(ret);
   os.write_escaped(value);
   return ret;
+}
+
+bool mlir::tblgen::constraintReferencesOp(const Constraint &constraint) {
+  Pred pred = constraint.getPredicate();
+  if (!pred.isNull() && StringRef(pred.getCondition()).contains("$_op"))
+    return true;
+  return constraint.getSummary().contains("$_op");
 }

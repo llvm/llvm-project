@@ -1015,3 +1015,24 @@ func.func @type_attr_of_fail() {
     test.type_attr_of i32
     return
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test attribute constraints referencing $_op
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @operand_index_attr_pass
+func.func @operand_index_attr_pass(%arg0: i32, %arg1: i32) {
+  // CHECK: "test.operand_index_attr"(%arg0, %arg1) <{index = 1 : i64}>
+  "test.operand_index_attr"(%arg0, %arg1) {index = 1 : i64} : (i32, i32) -> ()
+  return
+}
+
+// -----
+
+func.func @operand_index_attr_fail(%arg0: i32, %arg1: i32) {
+  // expected-error @+1 {{'test.operand_index_attr' op attribute 'index' failed to satisfy constraint: 64-bit signless integer attribute whose value is less than the number of operands}}
+  "test.operand_index_attr"(%arg0, %arg1) {index = 2 : i64} : (i32, i32) -> ()
+  return
+}
