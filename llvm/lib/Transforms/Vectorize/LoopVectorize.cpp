@@ -974,7 +974,7 @@ private:
   /// presence of a cost for an instruction in the mapping indicates that the
   /// instruction will be scalarized when vectorizing with the associated
   /// vectorization factor. The entries are VF-ScalarCostTy pairs.
-  MapVector<ElementCount, ScalarCostsTy> InstsToScalarize;
+  DenseMap<ElementCount, ScalarCostsTy> InstsToScalarize;
 
   /// Holds the instructions known to be uniform after vectorization.
   /// The data is collected per VF.
@@ -3716,14 +3716,9 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(
 
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
   assert(VF.isVector() && "Expected VF >= 2");
-
-  // If we've already collected the instructions to scalarize or the predicated
-  // BBs after vectorization, there's nothing to do. Collection may already have
-  // occurred if we have a user-selected VF and are now computing the expected
-  // cost for interleaving.
-  if (InstsToScalarize.contains(VF) ||
-      PredicatedBBsAfterVectorization.contains(VF))
-    return;
+  assert(!InstsToScalarize.contains(VF) &&
+         !PredicatedBBsAfterVectorization.contains(VF) &&
+         "Routine expected to be called once per VF");
 
   // Initialize a mapping for VF in InstsToScalalarize. If we find that it's
   // not profitable to scalarize any instructions, the presence of VF in the
@@ -4917,6 +4912,15 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
            !TheLoop->contains(cast<Instruction>(U)->getParent());
   };
 
+  // Returns true if the address of interleaved access I is used by its group.
+  // VPlan uses the address of member 0 for store groups. For load groups, it
+  // may use the address of the insert position instead.
+  auto IsGroupAddress = [this](Instruction *I) {
+    auto *Group = getInterleavedAccessGroup(I);
+    return isa<StoreInst>(I) ? Group->getMember(0) == I
+                             : Group->getInsertPos() == I;
+  };
+
   LoopBlocksDFS DFS(TheLoop);
   DFS.perform(LI);
   for (BasicBlock *BB : reverse(make_range(DFS.beginRPO(), DFS.endRPO())))
@@ -4934,11 +4938,10 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
         DeadOps.push_back(&I);
 
       // For interleave groups, we only create a pointer for the start of the
-      // interleave group. Queue up addresses of group members except the insert
-      // position for further processing.
+      // interleave group. Queue up addresses of group members not used by the
+      // group for further processing.
       if (isAccessInterleaved(&I)) {
-        auto *Group = getInterleavedAccessGroup(&I);
-        if (Group->getInsertPos() == &I)
+        if (IsGroupAddress(&I))
           continue;
         Value *PointerOp = getLoadStorePointerOperand(&I);
         DeadInterleavePointerOps.push_back(PointerOp);
@@ -4954,11 +4957,11 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
   // by other dead computations.
   for (unsigned I = 0; I != DeadInterleavePointerOps.size(); ++I) {
     auto *Op = dyn_cast<Instruction>(DeadInterleavePointerOps[I]);
-    if (!Op || !TheLoop->contains(Op) || any_of(Op->users(), [this](User *U) {
+    if (!Op || !TheLoop->contains(Op) ||
+        any_of(Op->users(), [this, &IsGroupAddress](User *U) {
           Instruction *UI = cast<Instruction>(U);
           return !VecValuesToIgnore.contains(U) &&
-                 (!isAccessInterleaved(UI) ||
-                  getInterleavedAccessGroup(UI)->getInsertPos() == UI);
+                 (!isAccessInterleaved(UI) || IsGroupAddress(UI));
         }))
       continue;
     VecValuesToIgnore.insert(Op);
@@ -6451,8 +6454,7 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                      RecipeBuilder, CostCtx))
     RUN_VPLAN_PASS(VPlanTransforms::makeScalarizationDecisions, *Plan, Range);
 
-  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI,
-                 PSE);
+  RUN_VPLAN_PASS(VPlanTransforms::narrowInductionTruncates, *Plan, Range, TTI);
 
   // Convert remaining VPInstructions to widen or replicate recipes.
   // TODO: This legacy code should eventually be migrated to VPlan.
@@ -6746,19 +6748,53 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
-      FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeReductionResult, {ReductionOp}, Flags, ExitDL);
-      if (ExtendOpc != Instruction::CastOpsEnd)
-        FinalReductionResult = Builder.createScalarCast(
-            ExtendOpc, FinalReductionResult, PhiTy, {});
+      auto CreateResult = [&](VPValue *V) {
+        VPInstruction *Res = Builder.createNaryOp(
+            VPInstruction::ComputeReductionResult, {V}, Flags, ExitDL);
+        if (ExtendOpc != Instruction::CastOpsEnd)
+          Res = Builder.createScalarCast(ExtendOpc, Res, PhiTy, {});
+        return Res;
+      };
+      FinalReductionResult = CreateResult(ReductionOp);
+
+      // On early exits, lanes up to and including the exiting lane use the
+      // updated accumulators, the other lanes the phi.
+      for (VPUser *U : to_vector(OrigExitingVPV->users())) {
+        VPValue *Lane;
+        if (!match(U, m_ExtractLane(
+                          m_VPValue(Lane, m_FirstActiveLane(m_VPValue())),
+                          m_Specific(OrigExitingVPV))))
+          continue;
+        auto *ExtractR = cast<VPInstruction>(U);
+        Builder.setInsertPoint(ExtractR);
+        Type *LaneTy = Lane->getScalarType();
+        VPValue *One = Plan->getConstantInt(LaneTy, 1);
+        VPValue *Mask = Builder.createNaryOp(
+            VPInstruction::WideActiveLaneMask,
+            {Plan->getZero(LaneTy), Builder.createAdd(Lane, One), One});
+        Mask = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                    {Mask, Plan->getConstantInt(64, 0)});
+        VPValue *Blend = Builder.createSelect(Mask, OrigExitingVPV, PhiR);
+        if (ExtendOpc != Instruction::CastOpsEnd)
+          Blend = Builder.createWidenCast(Instruction::Trunc, Blend,
+                                          RdxDesc.getRecurrenceType());
+        ExtractR->replaceAllUsesWith(CreateResult(Blend));
+        ExtractR->eraseFromParent();
+      }
     }
 
-    // Update all users outside the vector region. Also replace redundant
-    // extracts.
+    // Update all users in the middle block, which computes the final result.
+    // Also replace redundant extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
+      if (Parent != MiddleVPBB) {
+        assert(match(U, m_Select(m_VPValue(), m_Specific(OrigExitingVPV),
+                                 m_Specific(PhiR))) &&
+               "only users outside middle block must be blends created above");
+        continue;
+      }
       // Skip ComputeReductionResult and FindIV reductions when they are not the
       // final result.
       if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
@@ -7149,11 +7185,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  for (VPRecipeBase &R :
-       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
-    ResumePhi->eraseFromParent();
+  for (VPPhi &ResumePhi : make_early_inc_range(
+           map_range(MainPlan.getScalarPreheader()->phis(), CastTo<VPPhi>))) {
+    ResumePhi.replaceAllUsesWith(ResumePhi.getOperand(1));
+    ResumePhi.eraseFromParent();
   }
   return {VectorTCMarker, std::move(ResumeValues)};
 }
@@ -7386,6 +7421,22 @@ static void preparePlanForEpilogueVectorLoop(
               : cast<VPConditionalInductionPHIRecipe>(&R)->getPHINode();
       ResumeVPV =
           GetResumeValue(IRPhiToResumeForEpi.at(IndPhi), "bc.resume.val");
+      auto *IntOrFpIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R);
+      if (IntOrFpIV && IntOrFpIV->isTruncated()) {
+        // The resume value is for the original induction. Preserve any offset
+        // folded into the truncated induction's start.
+        // TODO: This is a short-term solution, as it relies on the induction
+        // descriptor's IR start value. Compute the resume value with
+        // createDerivedIV from the recipe's start and step instead.
+        VPValue *OrigStart = Plan.getOrAddLiveIn(
+            IntOrFpIV->getInductionDescriptor().getStartValue());
+        VPValue *NarrowStart = IntOrFpIV->getStartValue();
+        if (NarrowStart != OrigStart) {
+          VPBuilder OffsetBuilder(VectorPH);
+          VPValue *Offset = OffsetBuilder.createSub(NarrowStart, OrigStart);
+          ResumeVPV = OffsetBuilder.createAdd(ResumeVPV, Offset);
+        }
+      }
     }
     assert(ResumeVPV && "Must have a resume value");
     cast<VPHeaderPHIRecipe>(&R)->setStartValue(ResumeVPV);

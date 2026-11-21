@@ -9734,9 +9734,15 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     Function *F = CI->getCalledFunction();
     unsigned NumArgs = CI->arg_size();
     SmallVector<Value *, 4> ScalarArgs(NumArgs, nullptr);
-    for (unsigned J = 0; J != NumArgs; ++J)
-      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI))
+    for (unsigned J = 0; J != NumArgs; ++J) {
+      if (isVectorIntrinsicWithScalarOpAtArg(ID, J, TTI)) {
         ScalarArgs[J] = CI->getArgOperand(J);
+      } else if (!isValidElementType(CI->getArgOperand(J)->getType(),
+                                     Opts.slp_revec)) {
+        LLVM_DEBUG(dbgs() << "SLP: Non-vectorizable call argument type.\n");
+        return TreeEntry::NeedToGather;
+      }
+    }
     // Skip copyables (idempotent stand-ins) and poisons.
     for (Value *V : make_filter_range(VL, [&](Value *V) {
            return !isa<PoisonValue>(V) && !S.isCopyableElement(V);
@@ -24027,7 +24033,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
     if (!GatherShuffles.empty()) {
       unsigned SliceSize = getPartNumElems(VF, NumParts);
-      if (Mask.size() == E->Scalars.size())
+      // Single shuffle of the same entry covers the whole vector.
+      if (GatherShuffles.size() == 1)
+        SliceSize = Mask.size();
+      else if (Mask.size() == E->Scalars.size())
         SliceSize = getPartNumElems(
             E->Scalars.size(),
             getNumberOfParts(VecTy, ScalarTy, E->Scalars.size()));

@@ -876,6 +876,52 @@ move(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __l
 
 template <class _ExecutionPolicy,
           class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _Tp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator
+remove_copy(_ExecutionPolicy&& __policy,
+            _ForwardIterator __first,
+            _ForwardIterator __last,
+            _ForwardOutIterator __result,
+            const _Tp& __value) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "remove_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "remove_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "remove_copy requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__remove_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__result), __value);
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _Predicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator remove_copy_if(
+    _ExecutionPolicy&& __policy,
+    _ForwardIterator __first,
+    _ForwardIterator __last,
+    _ForwardOutIterator __result,
+    _Predicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "remove_copy_if requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "remove_copy_if requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "remove_copy_if requires an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__remove_copy_if, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result),
+      std::move(__pred));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
           class _Pred,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
@@ -961,6 +1007,18 @@ void replace_copy(_ExecutionPolicy&& __policy,
       std::move(__result),
       __old_value,
       __new_value);
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+_ForwardIterator
+rotate(_ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __middle, _ForwardIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "rotate requires ForwardIterators");
+  using _Implementation = __pstl::__dispatch<__pstl::__rotate, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__middle), std::move(__last));
 }
 
 template <class _ExecutionPolicy,

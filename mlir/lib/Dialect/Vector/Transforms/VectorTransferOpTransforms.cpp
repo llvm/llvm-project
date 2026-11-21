@@ -571,8 +571,12 @@ class TransferReadDropUnitDimsPattern
       auto shapeCastMask = rewriter.createOrFold<vector::ShapeCastOp>(
           loc, reducedVectorType.cloneWith(std::nullopt, rewriter.getI1Type()),
           maskingOp.getMask());
+      Value passthru;
+      if (maskingOp.hasPassthru())
+        passthru = rewriter.createOrFold<vector::ShapeCastOp>(
+            loc, reducedVectorType, maskingOp.getPassthru());
       newTransferReadOp = mlir::vector::maskOperation(
-          rewriter, newTransferReadOp, shapeCastMask);
+          rewriter, newTransferReadOp, shapeCastMask, passthru);
     }
 
     auto shapeCast = rewriter.createOrFold<vector::ShapeCastOp>(

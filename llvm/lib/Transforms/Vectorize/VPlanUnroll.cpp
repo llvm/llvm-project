@@ -528,6 +528,17 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
       for (VPInstruction &VPI :
            make_early_inc_range(make_isa_range<VPInstruction>(*VPBB))) {
+        // With UF 1, the last part is the operand itself; with UF > 1,
+        // unrollBlock already replaced all uses.
+        VPValue *Op;
+        if (match(&VPI, m_ExtractLastPart(m_VPValue(Op)))) {
+          if (UF == 1)
+            VPI.replaceAllUsesWith(Op);
+          assert(VPI.user_empty() &&
+                 "ExtractLastPart must be resolved by unrolling");
+          VPI.eraseFromParent();
+          continue;
+        }
         if (VPI.getOpcode() == VPInstruction::CanonicalIVIncrementForPart &&
             VPI.getOperand(1) == &Plan.getVF()) {
           VPI.replaceAllUsesWith(VPI.getOperand(0));
@@ -853,19 +864,18 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
-  for (auto &R : FirstLaneExiting->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    if (vputils::onlyFirstLaneUsed(Phi))
+  for (VPPhi &Phi : map_range(FirstLaneExiting->phis(), CastTo<VPPhi>)) {
+    if (vputils::onlyFirstLaneUsed(&Phi))
       continue;
 
-    Type *ScalarTy = Phi->getScalarType();
+    Type *ScalarTy = Phi.getScalarType();
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    if (!vputils::onlyScalarValuesOrLanesUsed(Phi))
+    if (!vputils::onlyScalarValuesOrLanesUsed(&Phi))
       BuildVectors.push_back(BV);
-    Phi->replaceAllUsesWith(BV);
-    BV->setOperand(0, Phi);
+    Phi.replaceAllUsesWith(BV);
+    BV->setOperand(0, &Phi);
     BV->insertBefore(Successor->getFirstNonPhi());
   }
 

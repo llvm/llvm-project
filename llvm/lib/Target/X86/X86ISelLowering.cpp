@@ -2627,6 +2627,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   //   vdpbf16ps (AVX512-BF16)
   //   vdpphps (AVX10.2)
   // 512-bit shapes are split in two when only the VEX encoding is available.
+  // Without VNNI, the signed i16 dot product uses pmaddwd + paddd instead.
   if (!Subtarget.useSoftFloat()) {
     bool HasVNNI = Subtarget.hasVNNI() || Subtarget.hasAVXVNNI();
     bool HasVNNIINT8 = Subtarget.hasAVXVNNIINT8() || Subtarget.hasAVX10_2();
@@ -2641,6 +2642,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       if (HasVNNI) {
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SUMLA, AccVT, I8VT,
                                   Custom);
+        setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
+                                  Custom);
+      } else if (Subtarget.hasSSE2() &&
+                 (AccVT != MVT::v16i32 || Subtarget.useBWIRegs())) {
+        // Mark v8i32 on SSE targets too, as the combines only check the types
+        // after one step of type legalization.
         setPartialReduceMLAAction(ISD::PARTIAL_REDUCE_SMLA, AccVT, I16VT,
                                   Custom);
       }
@@ -11360,17 +11367,23 @@ static SDValue lowerShuffleWithPACK(const SDLoc &DL, MVT VT, SDValue V1,
 /// Try to emit a bitmask instruction for a shuffle.
 ///
 /// This handles cases where we can model a blend exactly as a bitmask due to
-/// one of the inputs being zeroable.
+/// one of the inputs being zeroable, and freezing the other to prevent
+/// AND(poison,0) -> poison folds.
 static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
                                      const APInt &Zeroable, SelectionDAG &DAG) {
   unsigned EltSizeInBIts = VT.getScalarSizeInBits();
   APInt Zero = APInt::getZero(EltSizeInBIts);
   APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  APInt DemandedElts = APInt::getAllOnes(Mask.size());
 
   SmallVector<APInt, 16> VMaskOps(Mask.size(), Zero);
   SDValue V;
   for (int I = 0, Size = Mask.size(); I != Size; ++I) {
+    if (Mask[I] < 0) {
+      DemandedElts.clearBit(I);
+      continue;
+    }
     if (Zeroable[I])
       continue;
     if (Mask[I] % Size != I)
@@ -11387,6 +11400,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
+  V = DAG.getFreeze(V, DemandedElts, UndefPoisonKind::PoisonOnly);
   V = DAG.getBitcast(LogicVT, V);
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
@@ -13062,7 +13076,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -34785,10 +34799,15 @@ static SDValue LowerCVTPS2PH(SDValue Op, SelectionDAG &DAG) {
 static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
                              SelectionDAG &DAG) {
   unsigned IsData = Op.getConstantOperandVal(4);
+  unsigned RW = Op.getConstantOperandVal(2);
+  unsigned Locality = Op.getConstantOperandVal(3);
 
-  // We don't support non-data prefetch without PREFETCHI.
-  // Just preserve the chain.
-  if (!IsData && !Subtarget.hasPREFETCHI())
+  // PREFETCHI only supports instruction read prefetch with T0 (locality 3)
+  // or T1 (locality 2) hints in 64-bit mode. If PREFETCHI is not supported,
+  // or if the instruction prefetch is a write or has locality not in {2, 3},
+  // drop it and preserve the chain.
+  if (!IsData && (!Subtarget.hasPREFETCHI() || !Subtarget.is64Bit() ||
+                  RW != 0 || (Locality != 2 && Locality != 3)))
     return Op.getOperand(0);
 
   return Op;
@@ -34923,7 +34942,7 @@ static SDValue LowerPARTIAL_REDUCE_FMLA(SDValue Op,
 }
 
 /// Lower an i8 x i8 -> i32 or i16 x i16 -> i32 partial reduction to the
-/// matching VNNI dot product.
+/// matching VNNI dot product, or to PMADDWD for i16 x i16 -> i32 without VNNI.
 static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
                                        const X86Subtarget &Subtarget,
                                        SelectionDAG &DAG) {
@@ -34933,6 +34952,22 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
   SDValue LHS = Op.getOperand(1);
   SDValue RHS = Op.getOperand(2);
   bool IsI8 = LHS.getSimpleValueType().getScalarType() == MVT::i8;
+
+  // Without VNNI, PMADDWD sign extends the i16 elements, multiplies them and
+  // adds each adjacent pair of products into an i32 lane. The partial
+  // reduction doesn't fix which products are added together, so add the
+  // accumulator to that. Like VPDPWSSD, the i32 sums wrap.
+  if (Op.getOpcode() == ISD::PARTIAL_REDUCE_SMLA && !IsI8 &&
+      !Subtarget.hasVNNI() && !Subtarget.hasAVXVNNI()) {
+    auto PMADDWDBuilder = [](SelectionDAG &DAG, const SDLoc &DL,
+                             ArrayRef<SDValue> Ops) {
+      MVT ResVT = MVT::getVectorVT(MVT::i32, Ops[0].getValueSizeInBits() / 32);
+      return DAG.getNode(X86ISD::VPMADDWD, DL, ResVT, Ops[0], Ops[1]);
+    };
+    SDValue MAdd =
+        SplitOpsAndApply(DAG, Subtarget, DL, VT, {LHS, RHS}, PMADDWDBuilder);
+    return DAG.getNode(ISD::ADD, DL, VT, Acc, MAdd);
+  }
 
   // Pick the instruction, and whether the 512-bit EVEX and the VEX encodings
   // exist for it.
@@ -45619,6 +45654,15 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           else {
             MVT ShufSVT = MVT::getFloatingPointVT(VT.getScalarSizeInBits());
             MVT ShufVT = HalfVT.changeVectorElementType(ShufSVT);
+            // VPERMILPD selects with bit#1 of the index vector, so scale the
+            // f64 mask elts (VPERMV masks hold plain element indices).
+            if (VT.getScalarSizeInBits() == 64) {
+              SmallVector<int, 8> ShufMask;
+              for (int MaskElt : Mask)
+                ShufMask.push_back(MaskElt < 0 ? MaskElt : MaskElt * 2);
+              M = getConstVector(ShufMask, MVT::getVectorVT(MVT::i64, HalfElts),
+                                 TLO.DAG, DL, /*IsMask=*/true);
+            }
             Ext = TLO.DAG.getNode(X86ISD::VPERMILPV, DL, ShufVT,
                                   TLO.DAG.getBitcast(ShufVT, V), M);
             Ext = TLO.DAG.getBitcast(HalfVT, Ext);
@@ -48040,32 +48084,24 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
-  // The operand is expected to be zero extended from i8.
-  // In order to convert to i64 and above, additional any/zero/sign
-  // extend is expected.
-  // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend
-  // (extends the sign bit which is zero).
-  // So it is correct to skip the sign/zero extend instruction.
-  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
-      Root.getOpcode() == ISD::ZERO_EXTEND ||
-      Root.getOpcode() == ISD::ANY_EXTEND)
-    Root = Root.getOperand(0);
-
   // Check whether we have an vXi8 abdu pattern.
+  // The operand is expected to be zero extended from i8, for
+  // abs(sub(zext,zext)) patterns the sign extend is basically zero extend
+  // (extends the sign bit which is zero).
   // TODO: Just match ISD::ABDU once the DAG is topological sorted.
   SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_AnyOf(
+          m_ZExtOrSelf(m_AnyOf(
               m_SpecificVectorElementVT(
                   MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(m_Sub(
+              m_SExtOrSelf(m_Abs(m_Sub(
                   m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+                  m_Value(Src1,
+                          m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))))
     return SDValue();
 
   // Create the SAD instruction.
@@ -61403,6 +61439,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61412,6 +61450,18 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
                                                      /*AllowOpaques*/ false);
   };
+
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      VT.isVectorOf(MVT::i64)) {
+    SDValue X;
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+    }
+  }
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with

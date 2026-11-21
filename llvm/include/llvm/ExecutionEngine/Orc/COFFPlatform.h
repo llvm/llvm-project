@@ -123,7 +123,6 @@ private:
     Error registerObjectPlatformSectionsInBootstrap(jitlink::LinkGraph &G,
                                                     JITDylib &JD);
 
-    std::mutex PluginMutex;
     COFFPlatform &CP;
   };
 

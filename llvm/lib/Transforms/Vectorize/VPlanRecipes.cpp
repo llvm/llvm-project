@@ -4340,7 +4340,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
                   PredR->getOperand(0)->getUnderlyingValue()),
               VF.isVector());
         }))
-      break;
+      return Ctx.getLegacyCost(UI, VF);
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(this->getScalarType(),
@@ -4371,7 +4371,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       // (PtrSCEV is unused) or predicated (legacy cost includes the region).
       const VPRegionBlock *ParentRegion = getRegion();
       if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
-        break;
+        return Ctx.getLegacyCost(UI, VF);
       PtrSCEV = nullptr;
     }
 
@@ -4454,9 +4454,12 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   }
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);
+  default:
+    // This opcode is unknown. Assume that it is the same as 'mul'.
+    return Ctx.TTI.getArithmeticInstrCost(Instruction::Mul,
+                                          this->getScalarType(), Ctx.CostKind) *
+           (isSingleScalar() ? 1 : VF.getFixedValue());
   }
-
-  return Ctx.getLegacyCost(UI, VF);
 }
 
 InstructionCost VPReplicateRecipe::computeCallCost(

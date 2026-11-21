@@ -15686,8 +15686,8 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
                                    Load->getMemoryVT(), Load->getMemOperand());
 
   SDLoc DL1(N1);
-  SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad,
-                              N1.getOperand(1));
+  SDValue ShiftAmt = DAG.getShiftAmountOperand(VT, N1.getOperand(1));
+  SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad, ShiftAmt);
 
   APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
   SDLoc DL0(N0);
@@ -31715,9 +31715,6 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   unsigned BinOpc = N1.getOpcode();
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc) ||
       (N1.getResNo() != N2.getResNo()))
-    return SDValue();
-
-  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
     return SDValue();
 
   // The use checks are intentionally on SDNode because we may be dealing

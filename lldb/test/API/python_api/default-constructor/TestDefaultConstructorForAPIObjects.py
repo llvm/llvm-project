@@ -6,9 +6,9 @@ There are also some cases of boundary condition testings sprinkled throughout
 the tests where None is passed to SB API which expects (const char *) in the
 C++ API counterpart.  Passing None should not crash lldb!
 
-There are three exceptions to the above general rules, though; API objects
-SBCommandReturnObject, SBStream, and SBSymbolContextList, are all valid objects
-after default construction.
+There are four exceptions to the above general rules, though; API objects
+SBCommandReturnObject, SBInitializationOptions, SBStream, and
+SBSymbolContextList, are all valid objects after default construction.
 """
 
 import lldb
@@ -182,6 +182,13 @@ class APIDefaultConstructorTestCase(TestBase):
         e, n = sbf.Read(buffer)
         self.assertEqual(n, 0)
         self.assertTrue(e.Fail())
+
+    def test_SBInitializationOptions(self):
+        """SBInitializationOptions object is valid after default construction."""
+        obj = lldb.SBInitializationOptions()
+        if self.TraceOn():
+            print(obj)
+        self.assertTrue(obj)
 
     def test_SBInstruction(self):
         obj = lldb.SBInstruction()

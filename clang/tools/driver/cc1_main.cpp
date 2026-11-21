@@ -53,6 +53,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -111,9 +112,33 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
-/// Print supported cpus of the given target.
-static int PrintSupportedCPUs(std::string TargetStr) {
+/// Print supported cpus (or tuning cpus if Tune is set) of the given target.
+static int PrintSupportedCPUs(std::string TargetStr, bool Tune = false) {
   llvm::Triple Triple(TargetStr);
+
+  // RISC-V has different lists of names for -mcpu/-mtune and RV32/RV64.
+  // FIXME: Migrate other targets by using TargetInfo. This would fix similar
+  // issues like x86-32 vs x86-64.
+  if (Triple.isRISCV()) {
+    llvm::SmallVector<llvm::StringRef, 64> Values;
+    if (Tune)
+      llvm::RISCV::fillValidTuneCPUArchList(Values, Triple.isRISCV64());
+    else
+      llvm::RISCV::fillValidCPUArchList(Values, Triple.isRISCV64());
+
+    llvm::errs() << (Tune ? "Available tuning CPUs for this target:\n\n"
+                          : "Available CPUs for this target:\n\n");
+    for (llvm::StringRef Name : Values)
+      llvm::errs() << "\t" << Name << "\n";
+    llvm::errs() << "\n";
+    if (Tune)
+      llvm::errs() << "Use -mtune to specify the target's tuning processor.\n";
+    else
+      llvm::errs() << "Use -mcpu or -mtune to specify the target's "
+                      "processor.\n";
+    return 0;
+  }
+
   std::string Error;
   const llvm::Target *TheTarget =
       llvm::TargetRegistry::lookupTarget(Triple, Error);
@@ -263,6 +288,10 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+
+  // --print-supported-tune-cpus takes priority over the actual compilation.
+  if (Clang->getFrontendOpts().PrintSupportedTuneCPUs)
+    return PrintSupportedCPUs(Clang->getTargetOpts().Triple, /*Tune=*/true);
 
   // --print-supported-extensions takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedExtensions)

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
+#include "Utils.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -66,6 +67,7 @@
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/ScriptedMetadata.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
@@ -162,7 +164,8 @@ SBModule SBTarget::GetModuleAtIndexFromEvent(const uint32_t idx,
 const char *SBTarget::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Target::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Target::GetStaticBroadcasterClass());
 }
 
 bool SBTarget::IsValid() const {
@@ -932,7 +935,7 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateByNames(
                      symbol_language, module_list, comp_unit_list);
 
   return BreakpointCreateByNames(symbol_names, num_names, name_type_mask,
-                                 eLanguageTypeUnknown, 0, module_list,
+                                 symbol_language, 0, module_list,
                                  comp_unit_list);
 }
 
@@ -1733,7 +1736,8 @@ const char *SBTarget::GetLabel() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetLabel()).AsCString(nullptr);
+    return GetDebuggerStringPool(*target_sp)
+        .InternNonEmpty(target_sp->GetLabel());
   return nullptr;
 }
 
@@ -1749,7 +1753,8 @@ const char *SBTarget::GetTargetSessionName() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())
-    return ConstString(target_sp->GetTargetSessionName()).AsCString(nullptr);
+    return GetDebuggerStringPool(*target_sp)
+        .InternNonEmpty(target_sp->GetTargetSessionName());
   return nullptr;
 }
 
@@ -1867,8 +1872,8 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
     function_options.include_inlines = true;
 
     FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
-    target_sp->GetImages().FindFunctions(ConstString(name), mask,
-                                         function_options, *sb_sc_list);
+    target_sp->GetImages().FindFunctions(name, mask, function_options,
+                                         *sb_sc_list);
   }
   return sb_sc_list;
 }
@@ -1903,8 +1908,7 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
                                              function_options, *sb_sc_list);
         break;
       default:
-        target_sp->GetImages().FindFunctions(ConstString(name),
-                                             eFunctionNameTypeAny,
+        target_sp->GetImages().FindFunctions(name, eFunctionNameTypeAny,
                                              function_options, *sb_sc_list);
         break;
       }
@@ -2091,7 +2095,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
 
   if (TargetSP target_sp = GetSP(); target_sp && name) {
     VariableList variable_list;
-    target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
+    target_sp->GetImages().FindGlobalVariables(name, max_matches,
                                                variable_list);
     if (!variable_list.Empty()) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
@@ -2123,7 +2127,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
     std::string regexstr;
     switch (matchtype) {
     case eMatchTypeNormal:
-      target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
+      target_sp->GetImages().FindGlobalVariables(name, max_matches,
                                                  variable_list);
       break;
     case eMatchTypeRegex:
@@ -2457,8 +2461,8 @@ lldb::SBSymbolContextList SBTarget::FindSymbols(const char *name,
   SBSymbolContextList sb_sc_list;
   if (name && name[0]) {
     if (TargetSP target_sp = GetSP()) {
-      target_sp->GetImages().FindSymbolsWithNameAndType(
-          ConstString(name), symbol_type, *sb_sc_list);
+      target_sp->GetImages().FindSymbolsWithNameAndType(name, symbol_type,
+                                                        *sb_sc_list);
     }
   }
   return sb_sc_list;

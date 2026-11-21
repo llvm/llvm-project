@@ -29,6 +29,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
             console=Console.INTEGRATED_TERMINAL,
             args=["no_cmd"],
             env=["FOO=bar"],
+            cwd=self.getBuildDir(),
         )
         with session.configure(launch_args) as ctx:
             breakpoint_line = line_number(source, "// breakpoint")
@@ -38,6 +39,7 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
         self.assertIn(self.lldb_dap_exe, request_args.args)
         self.assertIn(program, request_args.args)
         self.assertIn("no_cmd", request_args.args)
+        self.assertEqual(request_args.cwd, self.getBuildDir())
         request_env = self.expect_not_none(request_args.env)
         self.assertIn("FOO", request_env)
         if sys.platform == "win32":
@@ -99,7 +101,10 @@ class TestDAP_runInTerminal(DAPTestCaseBase):
             LaunchArgs(program, console=Console.INTEGRATED_TERMINAL, env={"FOO": "BAR"})
         )
 
-        request_env = self.expect_not_none(self.run_in_terminal_args(session).env)
+        request_args = self.run_in_terminal_args(session)
+        self.assertEqual(request_args.cwd, "")
+
+        request_env = self.expect_not_none(request_args.env)
         self.assertIn("FOO", request_env)
         self.assertEqual("BAR", request_env["FOO"])
 

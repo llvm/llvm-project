@@ -170,6 +170,11 @@ namespace __pstl {
 // - __inclusive_scan_init
 // - __transform_inclusive_scan
 //
+// copy_if family
+// --------------
+// - remove_copy
+// - remove_copy_if
+//
 
 //////////////////////////////////////////////////////////////
 // find_if family
@@ -1043,6 +1048,42 @@ struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
             std::move(__init));
     }
     return __result;
+  }
+};
+
+//////////////////////////////////////////////////////////////
+// copy_if family
+//////////////////////////////////////////////////////////////
+
+template <class _ExecutionPolicy>
+struct __remove_copy<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Tp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  operator()(_Policy&& __policy,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _ForwardOutIterator __out_it,
+             const _Tp& __value) const noexcept {
+    using _CopyIf = __dispatch<__copy_if, __current_configuration, _ExecutionPolicy>;
+    using _Ref    = __iterator_reference<_ForwardIterator>;
+    return _CopyIf()(__policy, std::move(__first), std::move(__last), std::move(__out_it), [&](_Ref __element) {
+      return !(__element == __value);
+    });
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __remove_copy_if<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Pred>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  operator()(_Policy&& __policy,
+             _ForwardIterator __first,
+             _ForwardIterator __last,
+             _ForwardOutIterator __out_it,
+             _Pred&& __pred) const noexcept {
+    using _CopyIf = __dispatch<__copy_if, __current_configuration, _ExecutionPolicy>;
+    return _CopyIf()(
+        __policy, std::move(__first), std::move(__last), std::move(__out_it), std::not_fn(std::forward<_Pred>(__pred)));
   }
 };
 
