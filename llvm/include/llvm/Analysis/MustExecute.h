@@ -167,6 +167,8 @@ public:
   /// from its block. It will make all cache updates to keep it correct after
   /// this removal.
   void removeInstruction(const Instruction *Inst);
+
+  void removeUsersOf(const Instruction *Inst);
 };
 
 LLVM_ABI bool mayContainIrreducibleControl(const Function &F,
