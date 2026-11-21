@@ -1479,6 +1479,67 @@ void logical_and(bool b, bool c) {
 // OGCG:       if.then:
 // OGCG-NEXT:    call void @_ZN3ObjD1Ev(
 
+// The partial array destroy of an array initialization is deactivated at the
+// end of the initialization as well.
+
+void array_ternary(bool b, bool c) {
+  Obj arr[2] = {Obj{'a'}, b ? ({
+                            if (c)
+                              return;
+                            Obj{'b'};
+                          })
+                            : Obj{'c'}};
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z13array_ternarybb(
+// CIR:         %[[ARR:.*]] = cir.alloca "arr"
+// CIR:         %[[END:.*]] = cir.alloca "arrayinit.endOfInit"
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive"
+// CIR:         %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]]
+// CIR:         cir.store %{{.*}}, %[[ACTIVE]]
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.call @_ZN3ObjC1Ec(%[[BEGIN]],
+// CIR:           %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]]
+// CIR-NEXT:      cir.store {{.*}} %[[SECOND]], %[[END]]
+// CIR:           cir.if
+// CIR:             cir.if
+// CIR-NEXT:          cir.return
+// CIR:           } else {
+// CIR:             cir.call @_ZN3ObjC1Ec(%[[SECOND]],
+// CIR-NEXT:      } loc(
+// CIR-NEXT:      %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup normal {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.load {{.*}} %[[END]]
+// CIR:             cir.do {
+// CIR:               cir.call @_ZN3ObjD1Ev(
+
+// LLVMCIR-LABEL: define dso_local void @_Z13array_ternarybb(
+// LLVMCIR:         store i8 1, ptr %[[ACTIVE:[0-9]+]]
+// LLVMCIR:         call void @_ZN3ObjC1Ec(ptr {{.*}}, i8 noundef signext 97)
+// LLVMCIR:         store i32 1, ptr %[[SLOT:[0-9]+]]
+// LLVMCIR-NEXT:    br label %[[CLEANUP:[0-9]+]]
+// LLVMCIR:         call void @_ZN3ObjC1Ec(ptr {{.*}}, i8 noundef signext 99)
+// LLVMCIR-NEXT:    br label %[[END:[0-9]+]]
+// LLVMCIR:       [[END]]:
+// LLVMCIR-NEXT:    store i8 0, ptr %[[ACTIVE]]
+// LLVMCIR-NEXT:    store i32 0, ptr %[[SLOT]]
+// LLVMCIR-NEXT:    br label %[[CLEANUP]]
+// LLVMCIR:       [[CLEANUP]]:
+// LLVMCIR-NEXT:    %[[FLAG:.*]] = load i8, ptr %[[ACTIVE]]
+// LLVMCIR-NEXT:    %[[IS_ACTIVE:.*]] = trunc i8 %[[FLAG]] to i1
+// LLVMCIR-NEXT:    br i1 %[[IS_ACTIVE]], label %{{.*}}, label %{{.*}}
+// LLVMCIR:         call void @_ZN3ObjD1Ev(
+
+// OGCG-LABEL: define dso_local void @_Z13array_ternarybb(
+// OGCG:       if.then:
+// OGCG-NEXT:    load ptr, ptr %arrayinit.endOfInit
+// OGCG:       arraydestroy.body:
+// OGCG:         call void @_ZN3ObjD1Ev(
+
 // The cleanup of an initialized member or init-capture, or the operator delete
 // or partial-array cleanup of a new-expression, is deactivated once the object
 // is initialized.
@@ -1554,14 +1615,16 @@ void array_new(bool b) {
 }
 
 // The member of the first element is deactivated with a flag, which keeps it
-// on the EH stack above the partial-array cleanup. Without exceptions, that
-// cleanup is EH-only and therefore neither a normal nor an EH cleanup, so its
-// deactivation needs no flag.
+// on the EH stack above the partial-array cleanup, so that cleanup is
+// deactivated with a flag as well.
 // CIR-LABEL: cir.func {{.*}} @_Z9array_newb(
 // CIR:         %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_Obj>
 // CIR:         %[[COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
+// CIR-NEXT:    %[[ARRAY_ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>
 // CIR:         %[[ARRAY:.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!void> -> !cir.ptr<!rec_Agg>
+// CIR-NEXT:    %[[ARRAY_TRUE:.*]] = cir.const #true
+// CIR-NEXT:    cir.store %[[ARRAY_TRUE]], %[[ARRAY_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:         %[[A:.*]] = cir.get_member %[[ARRAY]][0] {name = "o"}
 // CIR:         cir.call @_ZN3ObjC1Ec(%[[A]], %{{.*}})
 // CIR-NEXT:    %[[TRUE:.*]] = cir.const #true
@@ -1574,6 +1637,8 @@ void array_new(bool b) {
 // CIR-NEXT:        cir.store %[[FALSE]], %[[ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:             %[[C:.*]] = cir.const #cir.int<99> : !s8i
 // CIR-NEXT:        cir.call @_ZN3ObjC1Ec(%{{.*}}, %[[C]])
+// CIR:             %[[ARRAY_FALSE:.*]] = cir.const #false
+// CIR-NEXT:        cir.store %[[ARRAY_FALSE]], %[[ARRAY_ACTIVE]] : !cir.bool, !cir.ptr<!cir.bool>
 // CIR:             %[[G:.*]] = cir.call @_Z1gv()
 // CIR-NEXT:        cir.call @_Z9use_arrayP3Aggi(%[[ARRAY]], %[[G]])
 // CIR-NEXT:        cir.yield
@@ -1589,6 +1654,11 @@ void array_new(bool b) {
 // CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
 // CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
 // CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]]){{.*}}
+// CIR:         } cleanup normal {
+// CIR-NEXT:      %[[IS_ARRAY_ACTIVE:.*]] = cir.load {{.*}} %[[ARRAY_ACTIVE]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR-NEXT:      cir.if %[[IS_ARRAY_ACTIVE]] {
+// CIR:             cir.do {
+// CIR:               cir.call @_ZN3AggD1Ev(
 
 void use_int(int, int);
 

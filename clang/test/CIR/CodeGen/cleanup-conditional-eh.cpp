@@ -851,6 +851,44 @@ void logical_and(bool b, bool c) {
 // CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
 // CIR-NEXT:        cir.call @_ZN3ObjD1Ev(%[[A]])
 
+// The partial array destroy of an array initialization is deactivated at the
+// end of the initialization as well.
+
+void array_ternary(bool b, bool c) {
+  Obj arr[2] = {Obj{'a'}, b ? ({
+                            if (c)
+                              return;
+                            Obj{'b'};
+                          })
+                            : Obj{'c'}};
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z13array_ternarybb(
+// CIR:         %[[ARR:.*]] = cir.alloca "arr"
+// CIR:         %[[END:.*]] = cir.alloca "arrayinit.endOfInit"
+// CIR:         %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive"
+// CIR:         %[[BEGIN:.*]] = cir.cast array_to_ptrdecay %[[ARR]]
+// CIR:         cir.store %{{.*}}, %[[ACTIVE]]
+// CIR-NEXT:    cir.cleanup.scope {
+// CIR:           cir.call @_ZN3ObjC1Ec(%[[BEGIN]],
+// CIR:           %[[SECOND:.*]] = cir.ptr_stride %[[BEGIN]]
+// CIR-NEXT:      cir.store {{.*}} %[[SECOND]], %[[END]]
+// CIR:           cir.if
+// CIR:             cir.if
+// CIR-NEXT:          cir.return
+// CIR:           } else {
+// CIR:             cir.call @_ZN3ObjC1Ec(%[[SECOND]],
+// CIR-NEXT:      } loc(
+// CIR-NEXT:      %[[FALSE:.*]] = cir.const #false
+// CIR-NEXT:      cir.store %[[FALSE]], %[[ACTIVE]]
+// CIR-NEXT:      cir.yield
+// CIR-NEXT:    } cleanup all {
+// CIR-NEXT:      %[[IS_ACTIVE:.*]] = cir.load {{.*}} %[[ACTIVE]]
+// CIR-NEXT:      cir.if %[[IS_ACTIVE]] {
+// CIR-NEXT:        cir.load {{.*}} %[[END]]
+// CIR:             cir.do {
+// CIR:               cir.call @_ZN3ObjD1Ev(
+
 // The cleanup of an initialized member or init-capture, or the operator delete
 // or partial-array cleanup of a new-expression, is deactivated once the object
 // is initialized.
