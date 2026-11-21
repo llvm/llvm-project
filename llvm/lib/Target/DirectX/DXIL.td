@@ -20,7 +20,7 @@ class Version<int major, int minor> {
 }
 
 // Valid DXIL Version records
-foreach i = 0...8 in {
+foreach i = 0...10 in {
   def DXIL1_ #i : Version<1, i>;
 }
 
@@ -103,6 +103,7 @@ defset list<DXILOpClass> OpClasses = {
   def createNodeOutputHandle : DXILOpClass;
   def cutStream : DXILOpClass;
   def cycleCounterLegacy : DXILOpClass;
+  def debugBreak : DXILOpClass;
   def discard : DXILOpClass;
   def dispatchMesh : DXILOpClass;
   def dispatchRaysDimensions : DXILOpClass;
@@ -336,6 +337,8 @@ defvar SignedOpKind_Unsigned = 1;
 defvar QuadOpKind_ReadAcrossX = 0;
 defvar QuadOpKind_ReadAcrossY = 1;
 defvar QuadOpKind_ReadAcrossDiagonal = 2;
+
+defvar QuadVoteOpKind_All = 1;
 
 // Intrinsic arg selection
 class IntrinArgSelectType;
@@ -1662,6 +1665,20 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
 }
 
+def QuadVote : DXILOp<222, quadVote> {
+  let Doc = "compares a boolean condition across a quad";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_all,
+                 [IntrinArgIndex<0>, IntrinArgI8<QuadVoteOpKind_All>]>
+  ];
+  let arguments = [Int1Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_7, [Int1Ty]>];
+  let stages = [
+    Stages<DXIL1_7, [library, compute, amplification, mesh, pixel, node]>
+  ];
+}
+
 def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
   let Doc = "inserts a memory barrier for the specified memory types";
   let intrinsics = [IntrinSelect<int_dx_barrier_by_memory_type>];
@@ -1694,4 +1711,12 @@ def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
   let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
   let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def DebugBreak : DXILOp<343, debugBreak> {
+  let Doc = "triggers a breakpoint if a debugger is attached";
+  let intrinsics = [IntrinSelect<int_debugtrap>];
+  let arguments = [];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_10, [all_stages]>];
 }

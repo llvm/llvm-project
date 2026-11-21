@@ -417,7 +417,7 @@ TEST_F(OpenMPContextTest, ScoringMatchAnyWithoutMatchingConstructs) {
 TEST_F(OpenMPContextTest, ScoringInvalidProperty) {
   OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
   VariantMatchInfo Unknown;
-  Unknown.addTrait(TraitProperty::invalid, "bogus_vendor");
+  Unknown.addUnknownTrait(TraitSelector::implementation_vendor);
   EXPECT_FALSE(isVariantApplicableInContext(Unknown, Context));
   Unknown.addTrait(TraitProperty::implementation_extension_match_none, "");
   EXPECT_TRUE(isVariantApplicableInContext(Unknown, Context));
@@ -432,6 +432,35 @@ TEST_F(OpenMPContextTest, ScoringInvalidProperty) {
   APInt Score(64, 1);
   Candidates[1].addTrait(TraitProperty::user_condition_true, "", &Score);
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // A selector with only unknown properties keeps its score: 1 + 2 beats 1 + 1.
+  APInt UnknownScore(64, 2);
+  Candidates[0] = VariantMatchInfo();
+  Candidates[0].addUnknownTrait(TraitSelector::implementation_vendor,
+                                &UnknownScore);
+  Candidates[0].addTrait(TraitProperty::implementation_extension_match_none,
+                         "");
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+}
+
+TEST_F(OpenMPContextTest, ScoringUnknownDeviceProperties) {
+  OMPContext Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  Context.addTrait(TraitProperty::construct_parallel_parallel);
+  // With one enclosing construct, kind is worth 2 and arch 4, matched or not.
+  for (auto [Selector, Weight] : {std::pair(TraitSelector::device_kind, 2u),
+                                  std::pair(TraitSelector::device_arch, 4u)}) {
+    SCOPED_TRACE(unsigned(Selector));
+    VariantMatchInfo Unknown, Scored;
+    Unknown.addUnknownTrait(Selector);
+    Unknown.addTrait(TraitProperty::implementation_extension_match_none, "");
+    APInt Score(64, Weight - 1);
+    Scored.addTrait(TraitProperty::user_condition_true, "", &Score);
+    SmallVector<VariantMatchInfo, 2> Candidates{Scored, Unknown};
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+    Score = APInt(64, Weight);
+    Candidates[0].addTrait(TraitProperty::user_condition_true, "", &Score);
+    EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
+  }
 }
 
 TEST_F(OpenMPContextTest, ScoringUserScoreOncePerSelector) {
@@ -447,6 +476,14 @@ TEST_F(OpenMPContextTest, ScoringUserScoreOncePerSelector) {
 
   // The vendor score counts once: 1 + 10 loses to 1 + 11.
   SmallVector<VariantMatchInfo, 2> Candidates{TwoVendors, Scored};
+  EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
+
+  // The same holds when one of the vendors is unknown.
+  VariantMatchInfo Mixed;
+  Mixed.addTrait(TraitProperty::implementation_vendor_llvm, "", &VendorScore);
+  Mixed.addUnknownTrait(TraitSelector::implementation_vendor, &VendorScore);
+  Mixed.addTrait(TraitProperty::implementation_extension_match_any, "");
+  Candidates[0] = Mixed;
   EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 1);
 }
 
@@ -752,6 +789,83 @@ TEST_F(OpenMPContextTest, ConstructOrderInStrictSubset) {
     std::swap(Candidates[0], Candidates[1]);
     EXPECT_EQ(getBestVariantMatchForContext(Candidates, Context), 0);
   }
+}
+
+TEST_F(OpenMPContextTest, StrictSubsetOfLaterTiedVariant) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo Subset, Other, Superset;
+  Subset.addTrait(TraitProperty::user_condition_true, "");
+  Subset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  Other.addTrait(TraitProperty::device_kind_cpu, "");
+  Other.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  Superset.addTrait(TraitProperty::user_condition_true, "");
+  Superset.addTrait(TraitProperty::device_kind_host, "");
+  Superset.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 3>(VMIs),
+                                         HostLinux);
+  };
+
+  // All three score 5. Subset is a strict subset of Superset, and the first of
+  // the other two wins.
+  EXPECT_EQ(Best({Subset, Other, Superset}), 1);
+  EXPECT_EQ(Best({Subset, Superset, Other}), 1);
+}
+
+TEST_F(OpenMPContextTest, StrictSubsetsOfAlternatingTiedSupersets) {
+  OMPContext HostLinux(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3);
+  VariantMatchInfo Host, CPU, HostSuperset, CPUSuperset;
+  Host.addTrait(TraitProperty::device_kind_host, "");
+  Host.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  CPU.addTrait(TraitProperty::device_kind_cpu, "");
+  CPU.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  HostSuperset = Host;
+  HostSuperset.addTrait(TraitProperty::user_condition_true, "");
+  CPUSuperset = CPU;
+  CPUSuperset.addTrait(TraitProperty::user_condition_true, "");
+
+  auto Best = [&](std::initializer_list<VariantMatchInfo> VMIs) {
+    return getBestVariantMatchForContext(SmallVector<VariantMatchInfo, 6>(VMIs),
+                                         HostLinux);
+  };
+
+  // All score 5. Host and CPU are strict subsets of different supersets, so
+  // the supersets they lose to alternate. The first variant that isn't a strict
+  // subset of another one wins.
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, HostSuperset, CPUSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, CPU, CPUSuperset, HostSuperset}), 4);
+  EXPECT_EQ(Best({Host, CPU, Host, HostSuperset}), 1);
+}
+
+TEST_F(OpenMPContextTest, ISANamesInStrictSubset) {
+  struct ISAContext : OMPContext {
+    using OMPContext::OMPContext;
+    bool matchesISATrait(StringRef) const override { return true; }
+  } Context(false, Triple("x86_64-unknown-linux"), Triple(), -1);
+  APInt Three(64, 3), Four(64, 4);
+  VariantMatchInfo SSE, AVX;
+  SSE.addTrait(TraitProperty::device_isa___ANY, "sse");
+  SSE.addTrait(TraitProperty::implementation_vendor_llvm, "", &Four);
+  AVX.addTrait(TraitProperty::device_isa___ANY, "avx");
+  AVX.addTrait(TraitProperty::implementation_vendor_llvm, "", &Three);
+  AVX.addTrait(TraitProperty::device_kind_host, "");
+  auto Best = [&](const VariantMatchInfo &First,
+                  const VariantMatchInfo &Second) {
+    return getBestVariantMatchForContext(
+        SmallVector<VariantMatchInfo, 2>{First, Second}, Context);
+  };
+
+  // Both score 9. AVX requires more traits, but not the `sse` ISA name.
+  EXPECT_EQ(Best(SSE, AVX), 0);
+  EXPECT_EQ(Best(AVX, SSE), 0);
+
+  // With all of SSE's ISA names, AVX is a strict superset.
+  AVX.addTrait(TraitProperty::device_isa___ANY, "sse");
+  EXPECT_EQ(Best(SSE, AVX), 1);
+  EXPECT_EQ(Best(AVX, SSE), 0);
 }
 
 } // namespace

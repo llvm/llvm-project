@@ -129,6 +129,9 @@ CODEGENOPT(EmitCompactUnwindNonCanonical, 1, 0, Benign)
 
 CODEGENOPT(EmitSFrameUnwind, 1, 0, Benign) ///< Set when -sframe is enabled.
 
+/// Set when -grelocatable-dwarf is enabled.
+CODEGENOPT(MachORelocatableDwarf, 1, 0, Benign)
+
 ///< Set when -fxray-always-emit-customevents is enabled.
 CODEGENOPT(XRayAlwaysEmitCustomEvents , 1, 0, Benign)
 
@@ -168,8 +171,6 @@ CODEGENOPT(MNopMCount , 1, 0, Benign) ///< Set when -mnop-mcount is enabled.
 CODEGENOPT(RecordMCount , 1, 0, Benign) ///< Set when -mrecord-mcount is enabled.
 CODEGENOPT(StackProtectorGuardRecord, 1, 0, Benign) ///< Set when -mstack-protector-guard-record is enabled.
 CODEGENOPT(PackedStack , 1, 0, Benign) ///< Set when -mpacked-stack is enabled.
-CODEGENOPT(LessPreciseFPMAD  , 1, 0, Benign) ///< Enable less precise MAD instructions to
-                                             ///< be generated.
 CODEGENOPT(PrepareForLTO     , 1, 0, Benign) ///< Set when -flto is enabled on the
                                              ///< compile step.
 CODEGENOPT(PrepareForThinLTO , 1, 0, Benign) ///< Set when -flto=thin is enabled on the
@@ -386,6 +387,7 @@ VALUE_CODEGENOPT(StackAlignment    , 32, 0, Benign) ///< Overrides default stack
 VALUE_CODEGENOPT(StackProbeSize    , 32, 4096, Benign) ///< Overrides default stack
                                                        ///< probe size, even if 0.
 VALUE_CODEGENOPT(WarnStackSize     , 32, UINT_MAX, Benign) ///< Set via -fwarn-stack-size.
+VALUE_CODEGENOPT(HLXVectorStackLimit, 32, UINT_MAX, Benign) ///< Set via -fhlx-vector-stack-limit.
 CODEGENOPT(NoStackArgProbe, 1, 0, Benign) ///< Set when -mno-stack-arg-probe is used
 CODEGENOPT(EmitLLVMUseLists, 1, 0, Benign) ///< Control whether to serialize use-lists.
 
@@ -546,13 +548,18 @@ CODEGENOPT(DisableOutlining, 1, 0, Benign)
 
 /// Marks inline functions and template instantiations defined in the main
 /// source file as likely_module_local (`-fmodule-local-hints`)
-CODEGENOPT(ModuleLocalHints, 1, 0, Benign)
+CODEGENOPT(ModuleLocalHints, 1, 1, Benign)
 
 /// Controlls the emission of function name in PPA1 on z/OS.
 CODEGENOPT(ZOSPPA1Name, 1, 1, Benign)
 
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
+
+/// Which ABIs small integer argument passing on X86 platforms should be
+/// compatible with: Platform, Clang, Both.
+ENUM_CODEGENOPT(SmallIntABICompat, SmallIntABICompatKind, 2,
+                SmallIntABICompatKind::Both, Benign)
 
 #undef CODEGENOPT
 #undef ENUM_CODEGENOPT

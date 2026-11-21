@@ -395,8 +395,12 @@ static bool shouldFunctionGenerateHereOnly(const FunctionDecl *FD) {
        Ctx.getLangOpts().BuildingPCHWithObjectFile))
     // Under -fmodules-codegen, codegen is performed for all non-internal,
     // non-always_inline functions, unless they are available elsewhere.
-    if (!FD->hasAttr<AlwaysInlineAttr>() && Linkage != GVA_Internal &&
-        Linkage != GVA_AvailableExternally)
+    // Functions excluded from explicit instantiation are emitted by every user
+    // instead, as they are usually hidden and the module's object file may be
+    // linked into a different shared library.
+    if (!FD->hasAttr<AlwaysInlineAttr>() &&
+        !FD->hasAttr<ExcludeFromExplicitInstantiationAttr>() &&
+        Linkage != GVA_Internal && Linkage != GVA_AvailableExternally)
       return true;
 
   Module *M = FD->getOwningModule();
@@ -1470,7 +1474,7 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->isConversionFromLambda());
   Record.push_back(D->doesNotEscape());
   Record.push_back(D->canAvoidCopyToHeap());
-  Record.push_back(D->capturesCXXThis());
+  Record.AddTypeRef(D->getCXXThisType());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {
     Record.AddDeclRef(capture.getVariable());

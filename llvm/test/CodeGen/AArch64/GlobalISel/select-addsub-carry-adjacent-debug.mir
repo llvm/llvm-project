@@ -15,7 +15,6 @@ machineMetadataNodes:
   - '!7 = !DILocation(line: 1, column: 1, scope: !4)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -57,7 +56,6 @@ machineMetadataNodes:
   - '!7 = !DILocation(line: 2, column: 1, scope: !4)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3, $w4
@@ -102,7 +100,6 @@ machineMetadataNodes:
   - '!7 = !DILocation(line: 3, column: 1, scope: !4)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -144,7 +141,6 @@ machineMetadataNodes:
   - '!7 = !DILocation(line: 4, column: 1, scope: !4)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3, $w4
@@ -190,7 +186,6 @@ machineMetadataNodes:
   - '!8 = !DILabel(scope: !4, name: "carry_label", file: !1, line: 5)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0, $x1, $x2, $x3
@@ -237,7 +232,6 @@ machineMetadataNodes:
   - '!8 = !DILabel(scope: !4, name: "block_start", file: !1, line: 6)'
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: uadde_dbg_block_start
   ; CHECK: bb.0:

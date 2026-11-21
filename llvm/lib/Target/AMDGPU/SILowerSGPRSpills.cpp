@@ -614,9 +614,14 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     if (UnusedLowSGPR && TRI->getHWRegIndex(UnusedLowSGPR) <
                              TRI->getHWRegIndex(FuncInfo->getSGPRForEXECCopy()))
       FuncInfo->setSGPRForEXECCopy(UnusedLowSGPR);
-  } else {
-    // No SGPR spills to virtual VGPR lanes and hence there won't be any WWM
-    // spills/copies. Reset the SGPR reserved for EXEC copy.
+  } else if (!ST.needsAsyncBarrierArriveReplayWorkaround() ||
+             none_of(MRI.def_instructions(AMDGPU::ASYNCcnt),
+                     [](const MachineInstr &MI) {
+                       return MI.getOpcode() ==
+                              AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64;
+                     })) {
+    // Neither SGPR spills to virtual VGPR lanes nor the barrier workaround
+    // needs the reserved register for EXEC copy.
     FuncInfo->setSGPRForEXECCopy(AMDGPU::NoRegister);
   }
 

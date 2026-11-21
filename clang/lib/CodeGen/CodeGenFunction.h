@@ -2640,6 +2640,11 @@ public:
   void EmitVTablePtrCheck(const CXXRecordDecl *RD, llvm::Value *VTable,
                           CFITypeCheckKind TCK, SourceLocation Loc);
 
+  /// Emit a CFI check failure handler or trap for a vtable type test result.
+  void EmitVTableCheck(CFITypeCheckKind TCK, CanQualType T, llvm::Metadata *MD,
+                       llvm::Value *VTable, llvm::Value *TypeTest,
+                       SourceLocation Loc, bool UseCrossDsoSlowPath);
+
   /// If whole-program virtual table optimization is enabled, emit an assumption
   /// that VTable is a member of RD's type identifier. Or, if vptr CFI is
   /// enabled, emit a check that VTable is a member of RD's type identifier.
@@ -2655,7 +2660,8 @@ public:
   llvm::Value *EmitVTableTypeCheckedLoad(const CXXRecordDecl *RD,
                                          llvm::Value *VTable,
                                          llvm::Type *VTableTy,
-                                         uint64_t VTableByteOffset);
+                                         uint64_t VTableByteOffset,
+                                         SourceLocation Loc);
 
   /// EnterDtorCleanups - Enter the cleanups necessary to complete the
   /// given phase of destruction for a destructor.  The end result
@@ -3701,9 +3707,12 @@ public:
                                     SourceLocation Loc,
                                     SourceLocation AssumptionLoc,
                                     llvm::Value *Alignment,
-                                    llvm::Value *OffsetValue,
-                                    llvm::Value *TheCheck,
-                                    llvm::Instruction *Assumption);
+                                    llvm::Value *OffsetValue = nullptr);
+
+  void emitReturnAlignmentAssumptionCheck(llvm::Value *Ptr, QualType Ty,
+                                          SourceLocation AssumptionLoc,
+                                          llvm::Value *Alignment,
+                                          llvm::Value *OffsetValue = nullptr);
 
   void emitAlignmentAssumption(llvm::Value *PtrValue, QualType Ty,
                                SourceLocation Loc, SourceLocation AssumptionLoc,
@@ -3765,6 +3774,8 @@ public:
   void EmitDefaultStmt(const DefaultStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmt(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
   void EmitCaseStmtRange(const CaseStmt &S, ArrayRef<const Attr *> Attrs);
+  void EmitBPFRelocatedCaseStmt(const CaseStmt &S,
+                                ArrayRef<const Attr *> Attrs);
   void EmitDeferStmt(const DeferStmt &S);
   void EmitAsmStmt(const AsmStmt &S);
 
@@ -4096,7 +4107,8 @@ public:
   void EmitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &S);
   void EmitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &S);
-  void EmitOMPTargetSimdDirective(const OMPTargetSimdDirective &S);
+  /// Also emits 'target loop'.
+  void EmitOMPTargetSimdDirective(const OMPLoopDirective &S);
   void EmitOMPTeamsDistributeDirective(const OMPTeamsDistributeDirective &S);
   void
   EmitOMPTeamsDistributeSimdDirective(const OMPTeamsDistributeSimdDirective &S);
@@ -4151,10 +4163,10 @@ public:
   static void EmitOMPTargetTeamsDistributeSimdDeviceFunction(
       CodeGenModule &CGM, StringRef ParentName,
       const OMPTargetTeamsDistributeSimdDirective &S);
-  /// Emit device code for the target simd directive.
+  /// Emit device code for the target simd and target loop directives.
   static void EmitOMPTargetSimdDeviceFunction(CodeGenModule &CGM,
                                               StringRef ParentName,
-                                              const OMPTargetSimdDirective &S);
+                                              const OMPLoopDirective &S);
   /// Emit device code for the target teams distribute parallel for simd
   /// directive.
   static void EmitOMPTargetTeamsDistributeParallelForSimdDeviceFunction(
@@ -5466,6 +5478,8 @@ public:
     BCK_CTZPassedZero,
     BCK_CLZPassedZero,
     BCK_AssumePassedFalse,
+    BCK_NonUniformLane,
+    BCK_InactiveLane,
   };
 
   /// Emits an argument for a call to a builtin. If the builtin sanitizer is
