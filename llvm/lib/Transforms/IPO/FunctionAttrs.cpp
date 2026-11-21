@@ -2500,6 +2500,8 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
   // module.
   bool Changed = false;
   LazyCallGraph &CG = MAM.getResult<LazyCallGraphAnalysis>(M);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   CG.buildRefSCCs();
 
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
@@ -2525,14 +2527,17 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
     if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
       F.setDoesNotRecurse();
       ++NumNoRecurse;
+      invalidateChangedFunction(FAM, F);
       Changed = true;
     }
   }
 
+  if (!Changed)
+    return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
-  if (Changed)
-    PA.preserve<LazyCallGraphAnalysis>();
-  else
-    PA = PreservedAnalyses::all();
+  PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
