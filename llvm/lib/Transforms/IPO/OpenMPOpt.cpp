@@ -5914,6 +5914,19 @@ static bool shouldSpecializeIndirectCallee(Attributor &A,
   return NumAssumedCallees <= A.Opts.openmp_opt_max_callees_for_specialization;
 }
 
+/// Invalidate the analyses of each function individually, so analyses which
+/// never need to be invalidated, such as TargetLibraryInfo, are kept.
+static PreservedAnalyses invalidateFunctions(Module &M,
+                                             FunctionAnalysisManager &FAM) {
+  for (Function &F : M)
+    FAM.invalidate(F, PreservedAnalyses::none());
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
+}
+
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
@@ -5974,7 +5987,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     }
 
   if (SCC.empty())
-    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+    return Changed ? invalidateFunctions(M, FAM) : PreservedAnalyses::all();
 
   AnalysisGetter AG(FAM);
 
@@ -5984,6 +5997,8 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   BumpPtrAllocator Allocator;
   CallGraphUpdater CGUpdater;
+  // Clear the analyses of functions the Attributor deletes.
+  CGUpdater.initialize(FAM);
 
   bool PostLink = LTOPhase == ThinOrFullLTOPhase::FullLTOPostLink ||
                   LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink ||
@@ -6021,7 +6036,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     LLVM_DEBUG(dbgs() << TAG << "Module after OpenMPOpt Module Pass:\n" << M);
 
   if (Changed)
-    return PreservedAnalyses::none();
+    return invalidateFunctions(M, FAM);
 
   return PreservedAnalyses::all();
 }
