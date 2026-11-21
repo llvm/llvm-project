@@ -841,11 +841,14 @@ bool GreedyPatternRewriteDriver::processWorklist() {
 
   bool changed = false;
   int64_t numRewrites = 0;
+  const std::function<bool(Operation *)> &reachability =
+      config.getReachability();
   while (!worklist.empty() &&
          (numRewrites < config.getMaxNumRewrites() ||
           config.getMaxNumRewrites() == GreedyRewriteConfig::kNoLimit)) {
     auto *op = worklist.pop();
-    if (!reachabilityListener.isReachable(op)) {
+    if (reachability ? !reachability(op)
+                     : !reachabilityListener.isReachable(op)) {
       LLVM_DEBUG(logger.startLine() << "Skipping unreachable operation : '"
                                     << op->getName() << "'(" << op << ")\n");
       continue;
