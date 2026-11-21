@@ -563,3 +563,196 @@ define i32 @freeze_ucmp(i32 %a0) nounwind {
   %z = call i32 @llvm.ucmp.i32(i32 %y, i32 1)
   ret i32 %z
 }
+
+define i1 @freeze_vecreduce_and(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_and:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    and x8, x8, x8, lsr #32
+; CHECK-SD-NEXT:    lsr x9, x8, #16
+; CHECK-SD-NEXT:    tst w8, w9
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_and:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    and w8, w8, w9
+; CHECK-GI-NEXT:    and w9, w10, w11
+; CHECK-GI-NEXT:    and w8, w8, w9
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.and.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_or(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_or:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    lsr x9, x8, #32
+; CHECK-SD-NEXT:    orr w8, w8, w9
+; CHECK-SD-NEXT:    orr w8, w8, w8, lsr #16
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_or:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    orr w8, w8, w9
+; CHECK-GI-NEXT:    orr w9, w10, w11
+; CHECK-GI-NEXT:    orr w8, w8, w9
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.or.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_xor(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_xor:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    mov d1, v0.d[1]
+; CHECK-SD-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-SD-NEXT:    fmov x8, d0
+; CHECK-SD-NEXT:    lsr x9, x8, #32
+; CHECK-SD-NEXT:    eor w8, w8, w9
+; CHECK-SD-NEXT:    eor w8, w8, w8, lsr #16
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_xor:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    eor v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    umov w8, v0.h[0]
+; CHECK-GI-NEXT:    umov w9, v0.h[1]
+; CHECK-GI-NEXT:    umov w10, v0.h[2]
+; CHECK-GI-NEXT:    umov w11, v0.h[3]
+; CHECK-GI-NEXT:    eor w8, w8, w9
+; CHECK-GI-NEXT:    eor w9, w10, w11
+; CHECK-GI-NEXT:    eor w8, w8, w9
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.xor.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_smin(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_smin:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    sminv h0, v0.8h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_smin:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    sminv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.smin.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_smax(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_smax:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    smaxv h0, v0.8h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_smax:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    smaxv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.smax.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_umin(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_umin:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    uminv h0, v0.8h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_umin:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    uminv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.umin.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
+
+define i1 @freeze_vecreduce_umax(<8 x i16> %a0) nounwind {
+; CHECK-SD-LABEL: freeze_vecreduce_umax:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    umaxv h0, v0.8h
+; CHECK-SD-NEXT:    fmov w8, s0
+; CHECK-SD-NEXT:    tst w8, #0xffff
+; CHECK-SD-NEXT:    cset w0, eq
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: freeze_vecreduce_umax:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    umaxv h0, v0.8h
+; CHECK-GI-NEXT:    fmov w8, s0
+; CHECK-GI-NEXT:    uxth w8, w8
+; CHECK-GI-NEXT:    cmp w8, #0
+; CHECK-GI-NEXT:    cset w0, eq
+; CHECK-GI-NEXT:    ret
+  %r = call i16 @llvm.vector.reduce.umax.v8i16(<8 x i16> %a0)
+  %f = freeze i16 %r
+  %c = icmp eq i16 %f, 0
+  ret i1 %c
+}
