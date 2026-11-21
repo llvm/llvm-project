@@ -370,6 +370,10 @@ void DerivedTypeSpec::Instantiate(Scope &containingScope) {
     return;
   }
   instantiated_ = true;
+  // The instance is cached, so a DATA statement value that happens to trigger
+  // it must not affect how its component initializers are folded.
+  auto dataStmtValueRestorer{
+      containingScope.context().foldingContext().WithoutDataStmtValue()};
 
   if (IsEnumerationType()) {
     // Enumeration types have no components, no parameters, and need

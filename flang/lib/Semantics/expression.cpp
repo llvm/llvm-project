@@ -4927,6 +4927,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Selector &selector) {
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::DataStmtConstant &x) {
   auto restorer{common::ScopedSet(inDataStmtConstant_, true)};
+  auto foldingRestorer{foldingContext_.WithDataStmtValue()};
   return ExprOrVariable(x, x.source);
 }
 
