@@ -1610,6 +1610,52 @@ TEST(TypeHints, SinglyInstantiatedTemplate) {
                   ExpectedHint{": void *", "a"});
 }
 
+TEST(TypeHints, GenericLambdaRequiresExpression) {
+  assertTypeHints(R"cpp(
+    struct Foo {
+      template <class Fn>
+      void call(Fn &&fn) requires requires { fn(*this); } {
+        fn(*this);
+      }
+      template <class Fn>
+      void call(Fn &&fn) const requires requires { fn(*this); } {
+        fn(*this);
+      }
+    };
+    void test() {
+      Foo foo;
+      foo.call([](auto &&$param[[x]]) {});
+    }
+  )cpp",
+                  ExpectedHint{": Foo &", "param"});
+
+  assertTypeHints(R"cpp(
+    namespace std {
+    template <class T, class U>
+    concept same_as = __is_same(T, U) && __is_same(U, T);
+    }
+
+    template <class Fn>
+    void invoke(Fn &&fn)
+        requires requires { { fn(0) } -> std::same_as<int>; }
+    {
+      fn(0);
+    }
+
+    template <class Fn>
+    void invoke(Fn &&fn)
+        requires requires { { fn(0.0) } -> std::same_as<long>; }
+    {
+      fn(0.0);
+    }
+
+    int main() {
+      invoke([](auto &&$param[[x]]) { return static_cast<int>(x); });
+    }
+  )cpp",
+                  ExpectedHint{": int &&", "param"});
+}
+
 TEST(TypeHints, Aliased) {
   // Check that we don't crash for functions without a FunctionTypeLoc.
   // https://github.com/clangd/clangd/issues/1140

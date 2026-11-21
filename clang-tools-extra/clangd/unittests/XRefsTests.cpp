@@ -1009,6 +1009,23 @@ TEST(LocateSymbol, All) {
         int x = Lambda(Bar{});
       )cpp",
 
+      R"cpp(// Generic lambda passed to constrained const/non-const overloads.
+        struct [[Foo]] {
+          template <class Fn>
+          void call(Fn &&fn) requires requires { fn(*this); } {
+            fn(*this);
+          }
+          template <class Fn>
+          void call(Fn &&fn) const requires requires { fn(*this); } {
+            fn(*this);
+          }
+        };
+        void test() {
+          Foo foo;
+          foo.call([](^auto &&x) {});
+        }
+      )cpp",
+
       R"cpp(// decltype(auto) in function return
         struct [[Bar]] {};
         ^decltype(auto) test() {
