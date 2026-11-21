@@ -1,9 +1,14 @@
-//===-- Unittests for strstr ----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for strstr.
+///
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strstr.h"
@@ -111,4 +116,20 @@ TEST(LlvmLibcStrStrTest, MorphedNeedle) {
   ASSERT_STREQ(LIBC_NAMESPACE::strstr(haystack, "tome"), nullptr);
   ASSERT_STREQ(LIBC_NAMESPACE::strstr(haystack, "tire"), nullptr);
   ASSERT_STREQ(LIBC_NAMESPACE::strstr(haystack, "timo"), nullptr);
+}
+
+TEST(LlvmLibcStrStrTest, PeriodicAndOverlappingNeedles) {
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("bbababab", "ababab"), "ababab");
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("xxabaaabaaab", "aaabaaab"), "aaabaaab");
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("xbabcababcab", "ababcab"), "ababcab");
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("xaaaabaaaa", "baaaa"), "baaaa");
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("aaaaaaaaab", "aaaab"), "aaaab");
+  ASSERT_STREQ(LIBC_NAMESPACE::strstr("aaaaaaaaaa", "aaaab"), nullptr);
+}
+
+TEST(LlvmLibcStrStrTest, HighBitCharacters) {
+  const char haystack[] = "\x80\xff\x7f\x80\xff\x81";
+  const char needle[] = "\x80\xff\x81";
+  ASSERT_EQ(static_cast<const char *>(LIBC_NAMESPACE::strstr(haystack, needle)),
+            haystack + 3);
 }

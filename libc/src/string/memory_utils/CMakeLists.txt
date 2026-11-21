@@ -96,10 +96,16 @@ add_header_library(
   inline_strstr
   HDRS
     inline_strstr.h
+  DEPENDS
+    .inline_memmem
 )
 
 add_header_library(
   inline_memmem
   HDRS
     inline_memmem.h
+  DEPENDS
+    libc.src.__support.CPP.span
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
