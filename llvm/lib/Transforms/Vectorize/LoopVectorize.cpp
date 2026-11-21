@@ -3074,13 +3074,6 @@ static EpilogueLowering getEpilogueTailLowering(
     return CM_EpilogueAllowed;
   }
 
-  if (!LVL.getReductionVars().empty()) {
-    reportVectorizationInfo(
-        "Epilogue tail-folding is not supported with reductions",
-        "InvalidTailFoldedEpilogue", ORE, L);
-    return CM_EpilogueAllowed;
-  }
-
   if (!LVL.getFixedOrderRecurrences().empty()) {
     reportVectorizationInfo(
         "Epilogue tail-folding is not supported with fixed-order recurrence",
@@ -5190,6 +5183,20 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
     return false;
   }
 
+  // MaxFactors isn't validated against the epilogue VF (see TODO above), so
+  // check explicitly that the target supports the loop's reductions for a
+  // scalable epilogue VF.
+  if (EpilogueVectorizationForceVF.isScalable() &&
+      !all_of(Legal->getReductionVars(), [&](const auto &Reduction) {
+        return TTI.isLegalToVectorizeReduction(Reduction.second,
+                                               EpilogueVectorizationForceVF);
+      })) {
+    reportVectorizationInfo("Scalable tail-folded epilogue is not supported "
+                            "for the reduction operations found in this loop",
+                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    return false;
+  }
+
   if (EpilogueTfCM.getTailFoldingStyle() !=
       TailFoldingStyle::DataAndControlFlow) {
     reportVectorizationInfo("Right now tail-folded epilogue is supported only "
@@ -5214,13 +5221,18 @@ bool LoopVectorizationPlanner::planForEpilogueTF() {
   EpilogueTfCM.collectNonVectorizedAndSetWideningDecisions(
       EpilogueVectorizationForceVF);
 
-  [[maybe_unused]] size_t NumPlansBefore = VPlans.size();
+  size_t NumPlansBefore = VPlans.size();
   buildVPlans(*VPlan1, EpilogueVectorizationForceVF,
               EpilogueVectorizationForceVF, EpilogueTfCM);
 
+  // Building the tail-folded VPlan may fail, e.g. maxnum/minnum reductions
+  // without nnan need a scalar tail.
   // Check that a Vplan is successfully built:
-  assert(VPlans.size() == NumPlansBefore + 1 &&
-         "Expected to build a single tail-folded VPlan");
+  if (VPlans.size() == NumPlansBefore) {
+    reportVectorizationInfo("Failed to build tail-folded epilogue VPlan",
+                            "InvalidTailFoldedEpilogue", ORE, OrigLoop);
+    return false;
+  }
   VPlan &Plan = *VPlans.back();
   assert(Plan.getSingleVF() == EpilogueVectorizationForceVF &&
          Plan.hasTailFolded() &&
