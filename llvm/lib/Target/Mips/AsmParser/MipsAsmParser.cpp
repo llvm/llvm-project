@@ -4439,17 +4439,17 @@ bool MipsAsmParser::expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU,
     MCRegister ATReg = getATReg(IDLoc);
     if (!ATReg)
       return true;
-    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, STI);
-    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, STI);
+    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::FCR31, IDLoc, STI);
+    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::FCR31, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     TOut.emitRRI(Mips::ORi, ATReg, ThirdReg, 0x3, IDLoc, STI);
     TOut.emitRRI(Mips::XORi, ATReg, ATReg, 0x2, IDLoc, STI);
-    TOut.emitRR(Mips::CTC1, Mips::RA, ATReg, IDLoc, STI);
+    TOut.emitRR(Mips::CTC1, Mips::FCR31, ATReg, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     TOut.emitRR(IsDouble ? (Is64FPU ? Mips::CVT_W_D64 : Mips::CVT_W_D32)
                          : Mips::CVT_W_S,
                 FirstReg, SecondReg, IDLoc, STI);
-    TOut.emitRR(Mips::CTC1, Mips::RA, ThirdReg, IDLoc, STI);
+    TOut.emitRR(Mips::CTC1, Mips::FCR31, ThirdReg, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     return false;
   }
