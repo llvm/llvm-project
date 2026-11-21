@@ -114,7 +114,6 @@ void GCNHazardRecognizer::schedulerReset() {
              << CyclesUntilTRANS << ", VALU=" << CyclesUntilVALU << "\n";
   });
   CurrentCoExecStage = std::nullopt;
-  CoExecWindowStartCycle = 0;
   CyclesUntilTRANS = 0;
   CyclesUntilVALU = 0;
   ActiveCoExecInfo = AMDGPU::CoExecInfo();

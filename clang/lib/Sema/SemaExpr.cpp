@@ -4985,7 +4985,8 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
   if (!TInfo)
     return ExprError();
 
-  if (!TInfo->getType()->isDependentType()) {
+  if (!TInfo->getType()->isDependentType() &&
+      TInfo->getType().getCanonicalType()->isVariablyModifiedType()) {
     // The operand of sizeof is parsed in an unevaluated context, but a
     // variably modified operand is evaluated if the sizeof itself is.
     // FIXME: TransformToPotentiallyEvaluated() above should take care of this,

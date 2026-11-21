@@ -2801,6 +2801,43 @@ void advanceRegisterCursors(CIRBaseBuilderTy &b, mlir::Location loc,
   }
 }
 
+/// Advances the pointer cursor at \p valist past the argument's slots and
+/// returns the argument's address, which is the old cursor.
+mlir::Value buildSlotAddrAndAdvance(CIRBaseBuilderTy &b, mlir::Location loc,
+                                    mlir::Value valist, mlir::Type resultTy,
+                                    uint64_t slotSize,
+                                    const mlir::DataLayout &dl) {
+  mlir::Value cur = b.createLoad(loc, valist);
+  mlir::Value bytePtr = b.createPtrBitcast(cur, b.getUIntNTy(8));
+  uint64_t stride =
+      llvm::alignTo(dl.getTypeAllocSize(resultTy).getFixedValue(), slotSize);
+  mlir::Value next =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, stride, 32));
+  b.createStore(loc, b.createBitcast(next, cur.getType()), valist);
+  return bytePtr;
+}
+
+/// Replaces \p op's result with the value at \p addr, which is \p align
+/// aligned, and erases \p op.
+mlir::LogicalResult replaceVAArgResult(CIRBaseBuilderTy &b, cir::VAArgOp op,
+                                       mlir::Value addr, uint64_t align,
+                                       const mlir::DataLayout &dl) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value resultAddr = b.createPtrBitcast(addr, resultTy);
+  if (mlir::isa<cir::RecordType>(resultTy)) {
+    SmallPtrSet<mlir::Operation *, 1> noExceptions;
+    if (failed(rewireRecordUses(b, loc, op.getResult(), resultAddr, align, dl,
+                                noExceptions)))
+      return mlir::failure();
+  } else {
+    op.getResult().replaceAllUsesWith(
+        b.createAlignedLoad(loc, resultAddr, align));
+  }
+  op->erase();
+  return mlir::success();
+}
+
 } // namespace
 
 mlir::LogicalResult
@@ -2809,9 +2846,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
                                    mlir::OpBuilder &opBuilder) {
   auto op = mlir::cast<cir::VAArgOp>(vaArgOp);
   CIRBaseBuilderTy builder(opBuilder);
-  mlir::Location loc = op.getLoc();
-  mlir::Type resultTy = op.getType();
-  mlir::Value valist = op.getArgList();
 
   // An ignored type travels in no register and no stack slot, so the fetch
   // reads nothing and must leave the cursor unchanged.  The value holds no
@@ -2819,10 +2853,41 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   if (ac.kind == ArgKind::Ignore) {
     builder.setInsertionPoint(op);
     op.getResult().replaceAllUsesWith(
-        createIgnoredValue(builder, loc, resultTy));
+        createIgnoredValue(builder, op.getLoc(), op.getType()));
     op->erase();
     return mlir::success();
   }
+
+  switch (target) {
+  case cir::CallConvTarget::X86_64:
+    return rewriteVAArgX86_64(op, ac, builder);
+  case cir::CallConvTarget::AMDGPU:
+    return rewriteVAArgAMDGPU(op, ac, builder);
+  case cir::CallConvTarget::None:
+  case cir::CallConvTarget::Test:
+  case cir::CallConvTarget::SPIRV:
+  case cir::CallConvTarget::AArch64:
+    break;
+  }
+  return reportVAArgNYI(op, "a type on this target");
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
+         "AMDGPU reads every variadic argument in place from its slots");
+  builder.setInsertionPoint(op);
+  uint64_t slotSize = ac.directAlign->value();
+  mlir::Value addr = buildSlotAddrAndAdvance(
+      builder, op.getLoc(), op.getArgList(), op.getType(), slotSize, dl);
+  return replaceVAArgResult(builder, op, addr, slotSize, dl);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
+    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+  mlir::Location loc = op.getLoc();
+  mlir::Type resultTy = op.getType();
+  mlir::Value valist = op.getArgList();
 
   if (ac.kind == ArgKind::Indirect && !ac.byVal)
     return reportVAArgNYI(op, "a non-trivially-copyable type");
@@ -2935,17 +3000,6 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
   }
 
   // Every path above places the result at least this well aligned.
-  mlir::Value resultAddr = builder.createPtrBitcast(addr, resultTy);
-  uint64_t resultAlign = argumentAreaAlign(resultTy, module);
-  if (mlir::isa<cir::RecordType>(resultTy)) {
-    SmallPtrSet<mlir::Operation *, 1> noExceptions;
-    if (failed(rewireRecordUses(builder, loc, op.getResult(), resultAddr,
-                                resultAlign, dl, noExceptions)))
-      return mlir::failure();
-  } else {
-    op.getResult().replaceAllUsesWith(
-        builder.createAlignedLoad(loc, resultAddr, resultAlign));
-  }
-  op->erase();
-  return mlir::success();
+  return replaceVAArgResult(builder, op, addr,
+                            argumentAreaAlign(resultTy, module), dl);
 }
