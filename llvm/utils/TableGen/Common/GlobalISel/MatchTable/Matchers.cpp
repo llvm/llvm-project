@@ -668,10 +668,6 @@ void RuleMatcher::addRequiredSimplePredicate(StringRef PredName) {
   RequiredSimplePredicates.push_back(PredName.str());
 }
 
-const std::vector<std::string> &RuleMatcher::getRequiredSimplePredicates() {
-  return RequiredSimplePredicates;
-}
-
 void RuleMatcher::defineOperand(StringRef SymbolicName, OperandMatcher &OM) {
   if (DefinedOperands.try_emplace(SymbolicName, &OM).second)
     return;
@@ -890,8 +886,6 @@ unsigned RuleMatcher::countRendererFns() const {
                            return A + Matcher->countRendererFns();
                          });
 }
-
-void RuleMatcher::roots_pop_front() { Roots.erase(Roots.begin()); }
 
 //===- PredicateMatcher ---------------------------------------------------===//
 
@@ -1150,11 +1144,6 @@ void OperandLeafPredicateMatcher::emitPredicateOpcodes(
 
 //===- OperandMatcher -----------------------------------------------------===//
 
-std::string OperandMatcher::getOperandExpr(unsigned InsnVarID) const {
-  return "State.MIs[" + llvm::to_string(InsnVarID) + "]->getOperand(" +
-         llvm::to_string(OpIdx) + ")";
-}
-
 unsigned OperandMatcher::getInsnVarID() const { return Insn.getInsnVarID(); }
 
 TempTypeIdx OperandMatcher::getTempTypeIdx(RuleMatcher &Rule) {
@@ -1334,11 +1323,6 @@ StringRef InstructionOpcodeMatcher::getOpcode() const {
 bool InstructionOpcodeMatcher::isVariadicNumOperands() const {
   // If one is variadic, they all should be.
   return Insts[0]->Operands.isVariadic;
-}
-
-StringRef InstructionOpcodeMatcher::getOperandType(unsigned OpIdx) const {
-  // Types expected to be uniform for all alternatives.
-  return Insts[0]->Operands[OpIdx].OperandType;
 }
 
 //===- InstructionNumOperandsMatcher --------------------------------------===//

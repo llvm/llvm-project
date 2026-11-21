@@ -39,8 +39,6 @@ class HexagonLiveVariablesImpl {
   friend class llvm::HexagonLiveVariables;
   typedef MachineBasicBlock::const_instr_iterator MICInstIterType;
 
-  MachineFunction *MF;
-
   MachineRegisterInfo *MRI;
 
   const TargetRegisterInfo *TRI;
@@ -372,7 +370,6 @@ bool HexagonLiveVariablesImpl::runOnMachineFunction(
   LLVM_DEBUG(dbgs() << "\nHexagon Live Variables";);
   Fn.RenumberBlocks();
 
-  MF = &Fn;
   MRI = &Fn.getRegInfo();
   auto &ST = Fn.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();

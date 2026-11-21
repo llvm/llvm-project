@@ -864,19 +864,18 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
-  for (auto &R : FirstLaneExiting->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    if (vputils::onlyFirstLaneUsed(Phi))
+  for (VPPhi &Phi : map_range(FirstLaneExiting->phis(), CastTo<VPPhi>)) {
+    if (vputils::onlyFirstLaneUsed(&Phi))
       continue;
 
-    Type *ScalarTy = Phi->getScalarType();
+    Type *ScalarTy = Phi.getScalarType();
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    if (!vputils::onlyScalarValuesOrLanesUsed(Phi))
+    if (!vputils::onlyScalarValuesOrLanesUsed(&Phi))
       BuildVectors.push_back(BV);
-    Phi->replaceAllUsesWith(BV);
-    BV->setOperand(0, Phi);
+    Phi.replaceAllUsesWith(BV);
+    BV->setOperand(0, &Phi);
     BV->insertBefore(Successor->getFirstNonPhi());
   }
 
