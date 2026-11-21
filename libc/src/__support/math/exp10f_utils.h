@@ -51,7 +51,7 @@ struct ExpBase {
       0x1.ffffffffe5bc8p-2, 0x1.555555555cd67p-3, 0x1.5555c2a9b48b4p-5,
       0x1.11112a0e34bdbp-7};
 
-  LIBC_INLINE static double powb_lo(double dx) {
+  LIBC_INLINE static LIBC_CONSTEXPR_DEFAULT double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     double c0 = 1.0 + dx;
@@ -89,7 +89,7 @@ struct Exp10Base : public ExpBase {
                                        0x1.0470591dff149p1, 0x1.2bd7c0a9fbc4dp0,
                                        0x1.1429e74a98f43p-1};
 
-  LIBC_INLINE static double powb_lo(double dx) {
+  LIBC_INLINE static LIBC_CONSTEXPR_DEFAULT double powb_lo(double dx) {
     using fputil::multiply_add;
     double dx2 = dx * dx;
     // c0 = 1 + COEFFS[0] * dx

@@ -37,7 +37,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE double
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
 cos_accurate(double x, uint16_t x_e, unsigned k,
              const range_reduction_double_internal::LargeRangeReduction
                  &range_reduction_large) {
@@ -77,7 +77,7 @@ cos_accurate(double x, uint16_t x_e, unsigned k,
 }
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
-LIBC_INLINE double cos(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double cos(double x) {
   using namespace range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);

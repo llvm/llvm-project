@@ -63,7 +63,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_INLINE float log2f(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float log2f(float x) {
   using namespace common_constants_internal;
   using FPBits = typename fputil::FPBits<float>;
 

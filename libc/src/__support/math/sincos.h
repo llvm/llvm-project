@@ -34,7 +34,8 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE void sincos(double x, double *sin_x, double *cos_x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT void sincos(double x, double *sin_x,
+                                               double *cos_x) {
   using DoubleDouble = fputil::DoubleDouble;
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;

@@ -34,7 +34,7 @@ namespace lgammaf_internal {
 // P_M2(d), d = t - 1.5, approximates lgamma(t)/((t-1)(t-2)) on [1, 2].
 // Degree 18 centered-monomial coefficients from a 250-bit Chebyshev fit,
 // max relative error 2^-51.6
-LIBC_INLINE double lgamma_m2_poly(double d) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double lgamma_m2_poly(double d) {
   constexpr double POLY_M2[19] = {
       0x1.eeb95b094c191p-2,   -0x1.2aed059bd613dp-3,  0x1.01af62a292eb9p-4,
       -0x1.007aa83cc458bp-5,  0x1.13342351db068p-6,   -0x1.34dbda42244dep-7,
@@ -66,7 +66,7 @@ LIBC_INLINE double lgamma_m2_poly(double d) {
 
 } // namespace lgammaf_internal
 
-LIBC_INLINE float lgammaf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float lgammaf(float x) {
   using namespace gamma_internal;
   using namespace lgammaf_internal;
   using FPBits = fputil::FPBits<float>;
@@ -105,7 +105,7 @@ LIBC_INLINE float lgammaf(float x) {
 
   double xd = fputil::cast<double>(x);
   double abs_xd = xd < 0.0 ? -xd : xd;
-  double lgamma_val;
+  double lgamma_val{};
 
   // For very tiny |x| (< 2^-23), use the truncated Laurent series:
   //   lgamma(x)  = -log(x) - gamma*x + O(x^2)  for tiny x > 0

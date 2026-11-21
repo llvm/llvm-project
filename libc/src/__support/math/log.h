@@ -721,7 +721,8 @@ LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[3]{
 // Reuse the output of the fast pass range reduction.
 // -2^-8 <= m_x < 2^-7
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log_accurate(int e_x, int index,
+                                                       double m_x) {
   DFloat128 e_x_f128(static_cast<float>(e_x));
   DFloat128 sum = fputil::quick_mul(LOG_2, e_x_f128);
   sum = fputil::quick_add(sum, LOG_TABLE.step_1[index]);
@@ -743,7 +744,7 @@ LIBC_INLINE double log_accurate(int e_x, int index, double m_x) {
 
 } // namespace log_internal
 
-LIBC_INLINE LIBC_CONSTEXPR double log(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double log(double x) {
   using namespace log_internal;
   using FPBits_t = typename fputil::FPBits<double>;
 

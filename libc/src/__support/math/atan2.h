@@ -116,7 +116,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble EXCEPTS[3][3][2] = {
 
 } // namespace atan2_internal
 
-LIBC_INLINE double atan2(double y, double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double atan2(double y, double x) {
   using namespace atan_internal;
   using namespace atan2_internal;
   using FPBits = fputil::FPBits<double>;

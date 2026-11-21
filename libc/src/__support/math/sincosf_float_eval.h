@@ -81,7 +81,8 @@ LIBC_INLINE_VAR constexpr float SIN_K_PI_OVER_8[16] = {
 //   p_k <= 7.
 // We set the bound for p_k to be 6 so that we can have some more wiggle room
 // for computations.
-LIBC_INLINE unsigned sincosf_range_reduction_small(float x, float &u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT unsigned
+sincosf_range_reduction_small(float x, float &u) {
   // > display=hexadecimal;
   // > a = round(pi/8, 18, RN);
   // > b = round(pi/8 - a, 18, RN);
@@ -99,7 +100,8 @@ LIBC_INLINE unsigned sincosf_range_reduction_small(float x, float &u) {
 }
 
 // TODO: Add non-FMA version of large range reduction.
-LIBC_INLINE unsigned sincosf_range_reduction_large(float x, float &u) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT unsigned
+sincosf_range_reduction_large(float x, float &u) {
   using FPBits = typename fputil::FPBits<float>;
   using fputil::FloatFloat;
   FPBits xbits(x);
@@ -145,12 +147,12 @@ LIBC_INLINE unsigned sincosf_range_reduction_large(float x, float &u) {
   return static_cast<unsigned>(static_cast<int>(k));
 }
 
-template <bool IS_SIN> LIBC_INLINE float sincosf_eval(float x) {
+template <bool IS_SIN> LIBC_INLINE constexpr float sincosf_eval(float x) {
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
   uint32_t x_abs = cpp::bit_cast<uint32_t>(x) & 0x7fff'ffffU;
 
-  float y;
+  float y = 0.0f;
   unsigned k = 0;
   if (x_abs < 0x4880'0000U) {
     k = sincosf_range_reduction_small(x, y);

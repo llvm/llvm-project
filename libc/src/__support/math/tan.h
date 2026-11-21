@@ -39,7 +39,8 @@ namespace tan_internal {
 using DoubleDouble = fputil::DoubleDouble;
 using DFloat128 = typename fputil::DyadicFloat<128>;
 
-LIBC_INLINE double tan_eval(const DoubleDouble &u, DoubleDouble &result) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double tan_eval(const DoubleDouble &u,
+                                                   DoubleDouble &result) {
   // Evaluate tan(y) = tan(x - k * (pi/128))
   // We use the degree-9 Taylor approximation:
   //   tan(y) ~ P(y) = y + y^3/3 + 2*y^5/15 + 17*y^7/315 + 62*y^9/2835
@@ -97,7 +98,8 @@ LIBC_INLINE_VAR constexpr DFloat128 TAN_COEFFS[9] = {
 };
 
 // Accurate evaluation of tan for small u.
-[[maybe_unused]] LIBC_INLINE DFloat128 tan_eval(const DFloat128 &u) {
+[[maybe_unused]] LIBC_INLINE LIBC_CONSTEXPR_DEFAULT DFloat128
+tan_eval(const DFloat128 &u) {
   DFloat128 u_sq = fputil::quick_mul(u, u);
   return fputil::quick_mul(u, fputil::loop_polyeval(u_sq, TAN_COEFFS));
 }
@@ -105,9 +107,8 @@ LIBC_INLINE_VAR constexpr DFloat128 TAN_COEFFS[9] = {
 // Calculation a / b = a * (1/b) for DFloat128.
 // Using the initial approximation of q ~ (1/b), then apply 2 Newton-Raphson
 // iterations, before multiplying by a.
-[[maybe_unused]] LIBC_INLINE DFloat128 newton_raphson_div(const DFloat128 &a,
-                                                          DFloat128 b,
-                                                          double q) {
+[[maybe_unused]] LIBC_INLINE LIBC_BIT_CAST_CONSTEXPR DFloat128
+newton_raphson_div(const DFloat128 &a, DFloat128 b, double q) {
   DFloat128 q0(q);
   LIBC_BIT_CAST_CONSTEXPR_VAR DFloat128 TWO(2.0);
   b.sign = (b.sign == Sign::POS) ? Sign::NEG : Sign::POS;
@@ -121,7 +122,7 @@ LIBC_INLINE_VAR constexpr DFloat128 TAN_COEFFS[9] = {
 
 } // namespace tan_internal
 
-LIBC_INLINE double tan(double x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double tan(double x) {
   using namespace tan_internal;
   using namespace math::range_reduction_double_internal;
   using FPBits = typename fputil::FPBits<double>;
@@ -129,8 +130,8 @@ LIBC_INLINE double tan(double x) {
 
   uint16_t x_e = xbits.get_biased_exponent();
 
-  DoubleDouble y;
-  unsigned k;
+  DoubleDouble y{};
+  unsigned k{};
   LargeRangeReduction range_reduction_large{};
 
   // |x| < 2^16

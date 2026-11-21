@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR float copysignf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float copysignf(float x, float y) {
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) && !defined(LIBC_USE_CONSTEXPR)
   return __builtin_copysignf(x, y);
 #else

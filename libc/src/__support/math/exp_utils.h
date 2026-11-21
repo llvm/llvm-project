@@ -109,7 +109,8 @@ LIBC_INLINE_VAR constexpr DoubleDouble LOG2_E_DD = {0x1.777d0ffda0d24p-56,
 // exp, exp2, and exp10. Callers have already verified that x is in the exact
 // tiny, underflow, or overflow/inf/nan range for the specific function before
 // calling this helper.
-LIBC_NOINLINE LIBC_INLINE double set_exceptional(double x) {
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+set_exceptional(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 
@@ -460,7 +461,7 @@ LIBC_INLINE_VAR constexpr DoubleDouble EXP2_MID[128] = {
 //     with |lo_u - err_d| << r_hi.
 //   - err_d: Ziv error bound on r_hi + r_lo.
 //   - log2_base: pointer to 192-bit log2(b) table (or nullptr when b = 2).
-LIBC_NOINLINE LIBC_INLINE double
+LIBC_NOINLINE LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
 exp_denorm(double x, int hi, double r_hi, double lo_u, double err_d,
            const ExpBase192 *log2_base = nullptr) {
   using FPBits = fputil::FPBits<double>;
@@ -504,9 +505,9 @@ exp_denorm(double x, int hi, double r_hi, double lo_u, double err_d,
 //   - idx: table index k & 0x7f in [0, 127].
 //   - err_d: Ziv error bound on the double-double approximation r_hi + r_lo.
 //   - log2_base: pointer to 192-bit log2(b) table (or nullptr when b = 2).
-LIBC_ALWAYS_INLINE double exp2_eval(double x, DoubleDouble u, int hi,
-                                    unsigned idx, double err_d = EXP2_ERR_D,
-                                    const ExpBase192 *log2_base = nullptr) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double
+exp2_eval(double x, DoubleDouble u, int hi, unsigned idx,
+          double err_d = EXP2_ERR_D, const ExpBase192 *log2_base = nullptr) {
   DoubleDouble exp2_mid = EXP2_MID[idx];
 
   // Reconstruction of 2^(idx / 2^7) * exp(u) ~ exp2_mid * (1 + u + u^2 * P(u))

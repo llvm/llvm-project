@@ -28,7 +28,7 @@ namespace float_eval {
 
 // Float-only tanf, requiring FMA. The maximum error, checked exhaustively in
 // round-to-nearest mode against MPFR, is 3.37 ULP.
-LIBC_INLINE float tanf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float tanf(float x) {
   using namespace sincosf_float_eval;
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);
@@ -46,8 +46,8 @@ LIBC_INLINE float tanf(float x) {
     return fputil::multiply_add(x, 0x1.0p-25f, x);
   }
 
-  float y;
-  unsigned k;
+  float y{};
+  unsigned k{};
   if (x_abs < 0x4880'0000U) {
     k = sincosf_range_reduction_small(x, y);
   } else {

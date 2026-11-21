@@ -15,7 +15,7 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE LIBC_CONSTEXPR double copysign(double x, double y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double copysign(double x, double y) {
 #if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) && !defined(LIBC_USE_CONSTEXPR)
   return __builtin_copysign(x, y);
 #else

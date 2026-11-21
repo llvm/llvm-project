@@ -93,7 +93,8 @@ LIBC_INLINE_VAR constexpr fputil::DoubleDouble POWF_EXP2_COEFFS_DD[9] = {
 };
 
 // Accurate evaluation in DoubleDouble precision when Ziv's test fails.
-LIBC_INLINE double powf_accurate(float x, float y, double e_x, uint64_t sign) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double
+powf_accurate(float x, float y, double e_x, uint64_t sign) {
   using FloatBits = fputil::FPBits<float>;
   using DoubleBits = fputil::FPBits<double>;
   using fputil::DoubleDouble;
@@ -200,7 +201,7 @@ LIBC_INLINE double powf_accurate(float x, float y, double e_x, uint64_t sign) {
 //   range [-1022, 1023] of double precision.
 // We compute exact_d = exact_m * 2^exact_exp in double precision and cast to
 // float for the final rounded result.
-LIBC_INLINE cpp::optional<float>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT cpp::optional<float>
 check_exact_boundary(float x, float y, uint64_t sign,
                      Sign out_sign = Sign::POS) {
   uint32_t exact_m = 0;
@@ -307,7 +308,7 @@ LIBC_INLINE_VAR constexpr double POWF_EXP2_COEFFS[8] = {
 //    y * (e_x + hi) is exact in double precision.
 // 3. Exponent reduction with 64-entry EXP2_MID1 table and degree-8 polynomial
 //    in DoubleDouble.
-LIBC_INLINE float powf(float x, float y) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float powf(float x, float y) {
   using FloatBits = fputil::FPBits<float>;
   using DoubleBits = fputil::FPBits<double>;
   using fputil::DoubleDouble;

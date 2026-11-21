@@ -34,7 +34,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace double_eval {
 
-LIBC_ALWAYS_INLINE double exp2(double x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT double exp2(double x) {
   using FPBits = fputil::FPBits<double>;
   FPBits xbits(x);
 

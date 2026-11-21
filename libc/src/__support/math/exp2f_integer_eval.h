@@ -28,8 +28,8 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace static_rounding {
 
-LIBC_ALWAYS_INLINE uint32_t exp2f_bits(uint32_t x_u,
-                                       [[maybe_unused]] int rounding) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT uint32_t
+exp2f_bits(uint32_t x_u, [[maybe_unused]] int rounding) {
   using FPBits = fputil::FPBits<float>;
 
   bool is_neg = (x_u >> 31) != 0;
@@ -113,7 +113,8 @@ LIBC_ALWAYS_INLINE uint32_t exp2f_bits(uint32_t x_u,
 
 // Statically rounded, no-except implementation of exp2f using integer-only
 // arithmetic.
-LIBC_ALWAYS_INLINE float exp2f(float x, [[maybe_unused]] int rounding) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT float
+exp2f(float x, [[maybe_unused]] int rounding) {
   return cpp::bit_cast<float>(exp2f_bits(cpp::bit_cast<uint32_t>(x), rounding));
 }
 
@@ -121,7 +122,7 @@ LIBC_ALWAYS_INLINE float exp2f(float x, [[maybe_unused]] int rounding) {
 
 namespace integer_eval {
 
-LIBC_ALWAYS_INLINE float exp2f(float x) {
+LIBC_ALWAYS_INLINE LIBC_CONSTEXPR_DEFAULT float exp2f(float x) {
   return static_rounding::exp2f(x, FE_TONEAREST);
 }
 

@@ -19,7 +19,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float atanhf(float x) {
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float atanhf(float x) {
   using namespace acoshf_internal;
   using FPBits = typename fputil::FPBits<float>;
 

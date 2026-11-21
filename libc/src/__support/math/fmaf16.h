@@ -20,7 +20,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE float16 fmaf16(float16 x, float16 y, float16 z) {
+LIBC_INLINE constexpr float16 fmaf16(float16 x, float16 y, float16 z) {
   return fputil::fma<float16>(x, y, z);
 }
 
