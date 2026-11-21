@@ -34,7 +34,7 @@ define float @t3(float %x, float %y) {
 ; CHECK-LABEL: @t3(
 ; CHECK-NEXT:    [[T1:%.*]] = fcmp ogt float [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd fast float [[X]], 1.000000e+00
-; CHECK-NEXT:    [[T3:%.*]] = select i1 [[T1]], float [[TMP1]], float 2.000000e+00
+; CHECK-NEXT:    [[T3:%.*]] = select nnan ninf i1 [[T1]], float [[TMP1]], float 2.000000e+00
 ; CHECK-NEXT:    ret float [[T3]]
 ;
   %t1 = fcmp ogt float %x, %y

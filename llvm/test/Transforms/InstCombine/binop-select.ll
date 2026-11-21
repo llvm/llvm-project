@@ -335,7 +335,7 @@ define i32 @sub_sel_op1_use(i1 %b) {
 
 define float @fadd_sel_op0(i1 %b, float %x) {
 ; CHECK-LABEL: @fadd_sel_op0(
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[B:%.*]], float -inf, float +inf
+; CHECK-NEXT:    [[R:%.*]] = select nnan i1 [[B:%.*]], float -inf, float +inf
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %s = select i1 %b, float -inf, float +inf
