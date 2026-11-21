@@ -220,9 +220,15 @@ bool ISD::isConstantSplatVectorAllOnes(SDValue V, bool BuildVectorOnly) {
 }
 
 bool ISD::isConstantSplatVectorAllZeros(SDValue V, bool BuildVectorOnly) {
+  if (!V.getValueType().isVector())
+    return false;
+
   // Look through a bit convert.
   while (V.getOpcode() == ISD::BITCAST)
     V = V.getOperand(0);
+
+  if (!BuildVectorOnly && (isNullConstant(V) || isNullFPConstant(V)))
+    return true;
 
   if (!BuildVectorOnly && V.getOpcode() == ISD::SPLAT_VECTOR) {
     APInt SplatVal;
