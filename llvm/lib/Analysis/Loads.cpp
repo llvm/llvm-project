@@ -446,7 +446,8 @@ static bool suppressSpeculativeLoadForSanitizers(const Instruction &CtxI) {
          F.hasFnAttribute(Attribute::SanitizeConcurrency) ||
          // Speculative load may load data from dirty regions.
          F.hasFnAttribute(Attribute::SanitizeAddress) ||
-         F.hasFnAttribute(Attribute::SanitizeHWAddress);
+         F.hasFnAttribute(Attribute::SanitizeHWAddress) ||
+         F.hasFnAttribute(Attribute::SanitizeDeviceAddress);
 }
 
 bool llvm::mustSuppressSpeculation(const LoadInst &LI) {

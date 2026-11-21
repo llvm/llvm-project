@@ -935,6 +935,7 @@ Function *CodeExtractor::constructFunctionDeclaration(
       case Attribute::SanitizeConcurrency:
       case Attribute::SanitizeType:
       case Attribute::SanitizeHWAddress:
+      case Attribute::SanitizeDeviceAddress:
       case Attribute::SanitizeMemTag:
       case Attribute::SanitizeRealtime:
       case Attribute::SanitizeRealtimeBlocking:
