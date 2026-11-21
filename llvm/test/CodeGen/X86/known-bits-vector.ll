@@ -678,3 +678,57 @@ define <2 x double> @knownbits_lshr_subvector_uitofp(<4 x i32> %x)  {
   %3 = uitofp <2 x i32> %2 to <2 x double>
   ret <2 x double> %3
 }
+
+define <4 x i32> @knownbits_sadd_sat_shuffle_ashr(<4 x i32> %a0, <4 x i32> %a1) nounwind {
+; X86-LABEL: knownbits_sadd_sat_shuffle_ashr:
+; X86:       # %bb.0:
+; X86-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: knownbits_sadd_sat_shuffle_ashr:
+; X64:       # %bb.0:
+; X64-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = and <4 x i32> %a0, <i32 2147483647, i32 -1, i32 -1, i32 2147483647>
+  %y = and <4 x i32> %a1, <i32 2147483647, i32 -1, i32 -1, i32 2147483647>
+  %s = call <4 x i32> @llvm.sadd.sat.v4i32(<4 x i32> %x, <4 x i32> %y)
+  %shuf = shufflevector <4 x i32> %s, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %r = ashr <4 x i32> %shuf, splat (i32 31)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @knownbits_uadd_sat_shuffle_ashr(<4 x i32> %a0, <4 x i32> %a1) nounwind {
+; X86-LABEL: knownbits_uadd_sat_shuffle_ashr:
+; X86:       # %bb.0:
+; X86-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: knownbits_uadd_sat_shuffle_ashr:
+; X64:       # %bb.0:
+; X64-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = or <4 x i32> %a0, <i32 1073741824, i32 0, i32 0, i32 1073741824>
+  %y = or <4 x i32> %a1, <i32 1073741824, i32 0, i32 0, i32 1073741824>
+  %s = call <4 x i32> @llvm.uadd.sat.v4i32(<4 x i32> %x, <4 x i32> %y)
+  %shuf = shufflevector <4 x i32> %s, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %r = ashr <4 x i32> %shuf, splat (i32 31)
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @knownbits_ssub_sat_shuffle_ashr(<4 x i32> %a0, <4 x i32> %a1) nounwind {
+; X86-LABEL: knownbits_ssub_sat_shuffle_ashr:
+; X86:       # %bb.0:
+; X86-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: knownbits_ssub_sat_shuffle_ashr:
+; X64:       # %bb.0:
+; X64-NEXT:    vpcmpeqd %xmm0, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %x = or <4 x i32> %a0, <i32 -2147483648, i32 0, i32 0, i32 -2147483648>
+  %y = and <4 x i32> %a1, <i32 2147483647, i32 -1, i32 -1, i32 2147483647>
+  %s = call <4 x i32> @llvm.ssub.sat.v4i32(<4 x i32> %x, <4 x i32> %y)
+  %shuf = shufflevector <4 x i32> %s, <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 3, i32 3>
+  %r = ashr <4 x i32> %shuf, splat (i32 31)
+  ret <4 x i32> %r
+}
