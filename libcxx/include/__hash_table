@@ -1695,6 +1695,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(key_type const& 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 template <class _NodeHandle>
 _LIBCPP_HIDE_FROM_ABI _NodeHandle __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_handle_extract(const_iterator __p) {
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
+      __p != end(), "unordered container::extract(iterator) called with a non-dereferenceable iterator");
   allocator_type __alloc(__node_alloc());
   return _NodeHandle(remove(__p).release(), __alloc);
 }
