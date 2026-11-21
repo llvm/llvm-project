@@ -48,7 +48,6 @@ class SpillPlacement {
 
   struct Node;
 
-  const MachineFunction *MF = nullptr;
   const EdgeBundles *bundles = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
 

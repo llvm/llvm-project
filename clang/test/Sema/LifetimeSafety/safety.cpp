@@ -5492,6 +5492,54 @@ void DowncastReferenceWithinScopeIsOk() {
   use(static_cast<Derived &>(b)); // ok
 }
 
+struct PolyBase { virtual ~PolyBase(); };
+struct PolyDerived : PolyBase {};
+PolyDerived *DynamicDowncastReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase *b = &d;                       // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return dynamic_cast<PolyDerived *>(b);  // expected-note {{returned here}}
+}
+
+PolyDerived *DynamicDowncastReferenceReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase &b = d;                        // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return &dynamic_cast<PolyDerived &>(b); // expected-note {{returned here}}
+}
+
+void *DynamicCastToVoidReturnsStackAddress() {
+  PolyDerived d;
+  PolyBase *b = &d;                       // expected-warning {{stack memory associated with local variable 'd' is returned}}
+  return dynamic_cast<void *>(b);         // expected-note {{returned here}}
+}
+
+void use(PolyDerived *);
+void DynamicDowncastUseAfterFree() {
+  PolyBase *b = new PolyDerived;          // expected-warning {{allocated object does not live long enough}}
+  PolyDerived *d = dynamic_cast<PolyDerived *>(b); // expected-note {{local variable 'b' aliases the storage of allocated object}}
+  delete b;                               // expected-note {{allocated object is freed here}}
+  use(d);                                 // expected-note {{later used here}}
+}
+
+void DynamicDowncastWithinScopeIsOk() {
+  PolyDerived d;
+  PolyBase *b = &d;
+  use(dynamic_cast<PolyDerived *>(b)); // ok
+}
+
+struct PolyBase2 { virtual ~PolyBase2(); };
+struct PolyBoth : PolyBase, PolyBase2 {};
+PolyBase2 *DynamicCrossCastReturnsStackAddress() {
+  PolyBoth x;
+  PolyBase *b = &x;                      // expected-warning {{stack memory associated with local variable 'x' is returned}}
+  return dynamic_cast<PolyBase2 *>(b);   // expected-note {{returned here}}
+}
+
+// The origin shapes differ, so the borrow is dropped.
+struct [[gsl::Pointer]] PolyView : PolyBase {};
+void DynamicCastShapeMismatch(PolyBase *b) {
+  (void)dynamic_cast<PolyView *>(b);
+}
+
 } // namespace DowncastTests
 
 namespace DifferentOriginShapes {

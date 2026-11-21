@@ -261,7 +261,6 @@ private:
 
   MachineRegisterInfo *MRI = nullptr;
   const X86InstrInfo *TII = nullptr;
-  const X86RegisterInfo *TRI = nullptr;
 };
 
 class X86OptimizeLEAsLegacy : public MachineFunctionPass {
@@ -685,7 +684,6 @@ bool X86OptimizeLEAsImpl::runOnMachineFunction(
 
   MRI = &MF.getRegInfo();
   TII = ST.getInstrInfo();
-  TRI = ST.getRegisterInfo();
 
   // Process all basic blocks.
   for (auto &MBB : MF) {

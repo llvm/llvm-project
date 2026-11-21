@@ -13076,7 +13076,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -48084,32 +48084,24 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
-  // The operand is expected to be zero extended from i8.
-  // In order to convert to i64 and above, additional any/zero/sign
-  // extend is expected.
-  // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend
-  // (extends the sign bit which is zero).
-  // So it is correct to skip the sign/zero extend instruction.
-  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
-      Root.getOpcode() == ISD::ZERO_EXTEND ||
-      Root.getOpcode() == ISD::ANY_EXTEND)
-    Root = Root.getOperand(0);
-
   // Check whether we have an vXi8 abdu pattern.
+  // The operand is expected to be zero extended from i8, for
+  // abs(sub(zext,zext)) patterns the sign extend is basically zero extend
+  // (extends the sign bit which is zero).
   // TODO: Just match ISD::ABDU once the DAG is topological sorted.
   SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_AnyOf(
+          m_ZExtOrSelf(m_AnyOf(
               m_SpecificVectorElementVT(
                   MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(m_Sub(
+              m_SExtOrSelf(m_Abs(m_Sub(
                   m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+                  m_Value(Src1,
+                          m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))))
     return SDValue();
 
   // Create the SAD instruction.
@@ -61447,6 +61439,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61456,6 +61450,18 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
                                                      /*AllowOpaques*/ false);
   };
+
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      VT.isVectorOf(MVT::i64)) {
+    SDValue X;
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+    }
+  }
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with

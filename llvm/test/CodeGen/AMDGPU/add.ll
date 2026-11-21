@@ -1353,11 +1353,11 @@ endif:
 define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
 ; GFX6-LABEL: add_select_vop3:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    v_add_i32_e64 v0, s[0:1], s0, v0
-; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def vcc
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    v_add_i32_e64 v0, s[0:1], s0, v0
+; GFX6-NEXT:    s_mov_b32 m0, -1
 ; GFX6-NEXT:    ds_write_b32 v0, v0
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; use vcc
@@ -1366,11 +1366,11 @@ define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
 ;
 ; GFX8-LABEL: add_select_vop3:
 ; GFX8:       ; %bb.0:
-; GFX8-NEXT:    v_add_u32_e64 v0, s[0:1], s0, v0
-; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; def vcc
 ; GFX8-NEXT:    ;;#ASMEND
+; GFX8-NEXT:    v_add_u32_e64 v0, s[0:1], s0, v0
+; GFX8-NEXT:    s_mov_b32 m0, -1
 ; GFX8-NEXT:    ds_write_b32 v0, v0
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use vcc
@@ -1379,10 +1379,10 @@ define amdgpu_ps void @add_select_vop3(i32 inreg %s, i32 %v) {
 ;
 ; GFX9-LABEL: add_select_vop3:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_add_u32_e32 v0, s0, v0
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; def vcc
 ; GFX9-NEXT:    ;;#ASMEND
+; GFX9-NEXT:    v_add_u32_e32 v0, s0, v0
 ; GFX9-NEXT:    ds_write_b32 v0, v0
 ; GFX9-NEXT:    ;;#ASMSTART
 ; GFX9-NEXT:    ; use vcc

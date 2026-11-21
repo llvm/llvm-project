@@ -583,6 +583,27 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::bf16, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
+
+    for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
+                    ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
+                    ISD::FROUNDEVEN, ISD::FTRUNC})
+      setOperationAction(Op, MVT::bf16, Promote);
+
+    for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
+                    ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
+                    ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
+                    ISD::FASIN,         ISD::FATAN,        ISD::FATAN2,
+                    ISD::FCOSH,         ISD::FSINH,        ISD::FTANH,
+                    ISD::FTAN,          ISD::FEXP,         ISD::FEXP2,
+                    ISD::FEXP10,        ISD::FLOG,         ISD::FLOG2,
+                    ISD::FLOG10,        ISD::STRICT_FREM,  ISD::STRICT_FPOW,
+                    ISD::STRICT_FPOWI,  ISD::STRICT_FCOS,  ISD::STRICT_FSIN,
+                    ISD::STRICT_FACOS,  ISD::STRICT_FASIN, ISD::STRICT_FATAN,
+                    ISD::STRICT_FATAN2, ISD::STRICT_FCOSH, ISD::STRICT_FSINH,
+                    ISD::STRICT_FTANH,  ISD::STRICT_FEXP,  ISD::STRICT_FEXP2,
+                    ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
+                    ISD::STRICT_FTAN})
+      setOperationAction(Op, MVT::bf16, Promote);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
