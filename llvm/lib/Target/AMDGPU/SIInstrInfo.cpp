@@ -6491,6 +6491,7 @@ unsigned SIInstrInfo::getVALUOp(unsigned Opc) const {
   case AMDGPU::PHI: return AMDGPU::PHI;
   case AMDGPU::INSERT_SUBREG: return AMDGPU::INSERT_SUBREG;
   case AMDGPU::WQM: return AMDGPU::WQM;
+  case AMDGPU::FREEZE: return AMDGPU::FREEZE;
   case AMDGPU::SOFT_WQM: return AMDGPU::SOFT_WQM;
   case AMDGPU::STRICT_WWM: return AMDGPU::STRICT_WWM;
   case AMDGPU::STRICT_WQM: return AMDGPU::STRICT_WQM;
@@ -10131,6 +10132,7 @@ void SIInstrInfo::addUsersToMoveToVALUWorklist(
     case AMDGPU::SOFT_WQM:
     case AMDGPU::STRICT_WWM:
     case AMDGPU::STRICT_WQM:
+    case AMDGPU::FREEZE:
     case AMDGPU::REG_SEQUENCE:
     case AMDGPU::PHI:
     case AMDGPU::INSERT_SUBREG:
@@ -10366,7 +10368,8 @@ const TargetRegisterClass *SIInstrInfo::getDestEquivalentVGPRClass(
   case AMDGPU::WQM:
   case AMDGPU::SOFT_WQM:
   case AMDGPU::STRICT_WWM:
-  case AMDGPU::STRICT_WQM: {
+  case AMDGPU::STRICT_WQM:
+  case AMDGPU::FREEZE: {
     const TargetRegisterClass *SrcRC = getOpRegClass(Inst, 1);
     if (RI.isAGPRClass(SrcRC)) {
       if (RI.isAGPRClass(NewDstRC))
