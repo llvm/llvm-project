@@ -18,6 +18,9 @@ class ObjectFilePCHContainerReader : public PCHContainerReader {
   ArrayRef<StringRef> getFormats() const override;
 
   /// Returns a buffer with the serialized AST inside the PCH container Buffer.
+  /// This may copy a part of the buffer if the AST is not properly aligned.
+  /// That can happen with some object file formats like COFF that don't align
+  /// section contents within the file.
   std::unique_ptr<llvm::MemoryBuffer>
   ExtractPCH(std::unique_ptr<llvm::MemoryBuffer> Buffer) const override;
 };
