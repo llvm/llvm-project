@@ -432,6 +432,84 @@ func.func @transfer_write_unroll_dynamic_index(%mem : memref<4x4xf32>, %vec : ve
 
 // -----
 
+// A scalable dim that the target shape does not split is kept whole, and the
+// tiles stay scalable.
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @transfer_read_unroll_dynamic_index_scalable(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x?xf32>, %[[IDX:.*]]: index
+//       ALL:   %[[R0:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %{{.*}} : memref<4x?xf32>, vector<2x[2]xf32>
+//       ALL:   %[[V0:.*]] = vector.insert_strided_slice %[[R0]], %{{.*}} offsets = [0, 0], strides = [1, 1] : vector<2x[2]xf32> into vector<4x[2]xf32>
+//       ALL:   %[[MAP:.*]] = affine.apply {{.*}}(%[[IDX]])
+//       ALL:   %[[R1:.*]] = vector.transfer_read %[[MEM]][%[[MAP]], %[[IDX]]], %{{.*}} : memref<4x?xf32>, vector<2x[2]xf32>
+//       ALL:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [2, 0], strides = [1, 1] : vector<2x[2]xf32> into vector<4x[2]xf32>
+//       ALL:   return %[[V1]]
+func.func @transfer_read_unroll_dynamic_index_scalable(%mem : memref<4x?xf32>, %idx : index) -> vector<4x[2]xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%idx, %idx], %cf0 : memref<4x?xf32>, vector<4x[2]xf32>
+  return %res : vector<4x[2]xf32>
+}
+
+// -----
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @transfer_read_unroll_dynamic_index_scalable_outer(
+//  ALL-SAME:     %[[MEM:.*]]: memref<?x4xf32>, %[[IDX:.*]]: index
+//       ALL:   %[[R0:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]]], %{{.*}} : memref<?x4xf32>, vector<[2]x2xf32>
+//       ALL:   %[[V0:.*]] = vector.insert_strided_slice %[[R0]], %{{.*}} offsets = [0, 0], strides = [1, 1] : vector<[2]x2xf32> into vector<[2]x4xf32>
+//       ALL:   %[[MAP:.*]] = affine.apply {{.*}}(%[[IDX]])
+//       ALL:   %[[R1:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[MAP]]], %{{.*}} : memref<?x4xf32>, vector<[2]x2xf32>
+//       ALL:   %[[V1:.*]] = vector.insert_strided_slice %[[R1]], %[[V0]] offsets = [0, 2], strides = [1, 1] : vector<[2]x2xf32> into vector<[2]x4xf32>
+//       ALL:   return %[[V1]]
+func.func @transfer_read_unroll_dynamic_index_scalable_outer(%mem : memref<?x4xf32>, %idx : index) -> vector<[2]x4xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%idx, %idx], %cf0 : memref<?x4xf32>, vector<[2]x4xf32>
+  return %res : vector<[2]x4xf32>
+}
+
+// -----
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @transfer_write_unroll_dynamic_index_scalable(
+//  ALL-SAME:     %[[MEM:.*]]: memref<4x?xf32>, %[[VEC:.*]]: vector<4x[2]xf32>, %[[IDX:.*]]: index
+//       ALL:   %[[S0:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [0, 0], sizes = [2, 2], strides = [1, 1] : vector<4x[2]xf32> to vector<2x[2]xf32>
+//       ALL:   vector.transfer_write %[[S0]], %[[MEM]][%[[IDX]], %[[IDX]]] : vector<2x[2]xf32>, memref<4x?xf32>
+//       ALL:   %[[S1:.*]] = vector.extract_strided_slice %[[VEC]] offsets = [2, 0], sizes = [2, 2], strides = [1, 1] : vector<4x[2]xf32> to vector<2x[2]xf32>
+//       ALL:   %[[MAP:.*]] = affine.apply {{.*}}(%[[IDX]])
+//       ALL:   vector.transfer_write %[[S1]], %[[MEM]][%[[MAP]], %[[IDX]]] : vector<2x[2]xf32>, memref<4x?xf32>
+//  ALL-NEXT:   return
+func.func @transfer_write_unroll_dynamic_index_scalable(%mem : memref<4x?xf32>, %vec : vector<4x[2]xf32>, %idx : index) {
+  vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[2]xf32>, memref<4x?xf32>
+  return
+}
+
+// -----
+
+// Not supported yet: the target shape would split a scalable dim.
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @negative_transfer_read_scalable_split(
+//       ALL:   %[[R:.*]] = vector.transfer_read {{.*}} : memref<4x?xf32>, vector<4x[4]xf32>
+//  ALL-NEXT:   return %[[R]]
+func.func @negative_transfer_read_scalable_split(%mem : memref<4x?xf32>, %idx : index) -> vector<4x[4]xf32> {
+  %cf0 = arith.constant 0.0 : f32
+  %res = vector.transfer_read %mem[%idx, %idx], %cf0 : memref<4x?xf32>, vector<4x[4]xf32>
+  return %res : vector<4x[4]xf32>
+}
+
+// -----
+
+// TargetShape is [2x2]
+// ALL-LABEL: func @negative_transfer_write_scalable_split(
+//  ALL-NEXT:   vector.transfer_write {{.*}} : vector<4x[4]xf32>, memref<4x?xf32>
+//  ALL-NEXT:   return
+func.func @negative_transfer_write_scalable_split(%mem : memref<4x?xf32>, %vec : vector<4x[4]xf32>, %idx : index) {
+  vector.transfer_write %vec, %mem[%idx, %idx] : vector<4x[4]xf32>, memref<4x?xf32>
+  return
+}
+
+// -----
+
 // Transfers masked by vector.mask are unrolled into one vector.mask per tile,
 // each with its tile of the mask (and of the passthru, if any). The first three
 // tests check tile [0, 2], which would not match if the mask dims were swapped,

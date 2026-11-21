@@ -183,6 +183,18 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   return success();
 }
 
+/// Return true if unrolling `vectorType` into tiles of `targetShape` would
+/// split one of its scalable dims. The unrolling patterns use static tile
+/// offsets, so scalable dims must remain unsplit.
+static bool splitsScalableDim(VectorType vectorType,
+                              ArrayRef<int64_t> targetShape) {
+  for (auto [dim, dimIsScalable, targetDim] : llvm::zip_equal(
+           vectorType.getShape(), vectorType.getScalableDims(), targetShape))
+    if (dimIsScalable && dim != targetDim)
+      return true;
+  return false;
+}
+
 /// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
 /// tile of `maskingOp`'s mask (and passthru, if any) at `offsets` with shape
 /// `sizes`. `maskingOp` is the vector.mask around the original transfer;
@@ -243,13 +255,18 @@ struct UnrollTransferReadPattern
       return rewriter.notifyMatchFailure(
           readOp,
           "expected source input vector rank to match target shape rank");
+    if (splitsScalableDim(sourceVectorType, *targetShape))
+      return rewriter.notifyMatchFailure(
+          readOp, "target shape would split a scalable dim");
 
     // Prepare the result vector;
     Value result =
         arith::ConstantOp::create(rewriter, loc, sourceVectorType,
                                   rewriter.getZeroAttr(sourceVectorType));
+    // Scalable dims are not split, so the tiles keep them scalable.
     auto targetType =
-        VectorType::get(*targetShape, sourceVectorType.getElementType());
+        VectorType::get(*targetShape, sourceVectorType.getElementType(),
+                        sourceVectorType.getScalableDims());
     SmallVector<Value> originalIndices(readOp.getIndices().begin(),
                                        readOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
@@ -315,6 +332,9 @@ struct UnrollTransferWritePattern
       return rewriter.notifyMatchFailure(
           writeOp,
           "expected source input vector rank to match target shape rank");
+    if (splitsScalableDim(sourceVectorType, *targetShape))
+      return rewriter.notifyMatchFailure(
+          writeOp, "target shape would split a scalable dim");
 
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
