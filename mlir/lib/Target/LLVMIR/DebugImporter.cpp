@@ -142,6 +142,14 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
       symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero), extraData);
 }
 
+DIEnumeratorAttr DebugImporter::translateImpl(llvm::DIEnumerator *node) {
+  const APInt &value = node->getValue();
+  auto valueAttr =
+      IntegerAttr::get(IntegerType::get(context, value.getBitWidth()), value);
+  return DIEnumeratorAttr::get(context, getStringAttrOrNull(node->getRawName()),
+                               valueAttr, node->isUnsigned());
+}
+
 DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
   return DIStringTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
@@ -419,6 +427,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DICompositeType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIEnumerator>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIStringType>(node))
       return translateImpl(casted);

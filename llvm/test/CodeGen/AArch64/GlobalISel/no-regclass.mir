@@ -9,12 +9,11 @@
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
   define void @unused_reg() { ret void }
-
+...
 ---
 name:            unused_reg
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body:             |

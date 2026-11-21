@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -21,7 +20,9 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
@@ -442,7 +443,13 @@ getLaneConstantCmp(const Instruction *I) {
 }
 
 CmpSamePredicateHelper::MaskType
-CmpSamePredicateHelper::getLaneMask(const Instruction *I) {
+CmpSamePredicateHelper::getLaneMask(const Value *V) {
+  if (isa<ConstantInt, UndefValue>(V) && !isa<PoisonValue>(V) &&
+      V->getType()->isIntegerTy(1))
+    return AllPreds;
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return 0;
   if (std::optional<std::pair<CmpInst::Predicate, APInt>> Cmp =
           getLaneConstantCmp(I)) {
     MaskType M = getFormsMask(Cmp->first, Cmp->second);
@@ -467,10 +474,10 @@ bool CmpSamePredicateHelper::isBitTest(const Instruction *I) {
   return Family && Family->second.isZero();
 }
 
-bool CmpSamePredicateHelper::add(const Instruction *I) {
-  if (auto *CI = dyn_cast<ICmpInst>(I))
+bool CmpSamePredicateHelper::add(const Value *V) {
+  if (auto *CI = dyn_cast<ICmpInst>(V))
     SeenBefore |= getBit(CI->getPredicate());
-  Mask &= getLaneMask(I);
+  Mask &= getLaneMask(V);
   return Mask != 0;
 }
 
@@ -489,17 +496,15 @@ CmpInst::Predicate
 CmpSamePredicateHelper::getSharedPredicate(ArrayRef<Value *> VL,
                                            const ICmpInst *Preferred) {
   CmpSamePredicateHelper Helper;
-  if (!all_of(VL, [&](Value *V) {
-        auto *I = dyn_cast<Instruction>(V);
-        return isa<PoisonValue>(V) || (I && Helper.add(I));
-      }))
+  if (!all_of(VL,
+              [&](Value *V) { return isa<PoisonValue>(V) || Helper.add(V); }))
     return CmpInst::BAD_ICMP_PREDICATE;
   return Helper.getPredicate(Preferred);
 }
 
-bool CmpSamePredicateHelper::canConvertTo(const Instruction *I,
+bool CmpSamePredicateHelper::canConvertTo(const Value *V,
                                           CmpInst::Predicate Pred) {
-  return CmpInst::isIntPredicate(Pred) && (getLaneMask(I) & getBit(Pred)) != 0;
+  return CmpInst::isIntPredicate(Pred) && (getLaneMask(V) & getBit(Pred)) != 0;
 }
 
 Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
@@ -517,6 +522,24 @@ Constant *CmpSamePredicateHelper::getAdjustedConstant(const Instruction *I,
   const auto &[IsComplement, K] = *Family;
   return ConstantInt::get(I->getOperand(0)->getType(),
                           getFamilyConstant(IsComplement, K, Pred));
+}
+
+SmallVector<Value *>
+CmpSamePredicateHelper::getConstantLaneOperands(const Value *V,
+                                                const ICmpInst *Cmp) {
+  const CmpInst::Predicate Pred = Cmp->getPredicate();
+  assert(isa<Constant>(V) && canConvertTo(V, Pred) &&
+         "Expected an i1 constant lane.");
+  Type *Ty = Cmp->getOperand(0)->getType();
+  const unsigned BW = Ty->getIntegerBitWidth();
+  // Any comparison of constants refines the undef lane.
+  auto *CI = dyn_cast<ConstantInt>(V);
+  for (auto [LHS, RHS] :
+       {std::make_pair(0, 0), std::make_pair(0, 1), std::make_pair(1, 0)})
+    if (!CI ||
+        ICmpInst::compare(APInt(BW, LHS), APInt(BW, RHS), Pred) == CI->isOne())
+      return {ConstantInt::get(Ty, LHS), ConstantInt::get(Ty, RHS)};
+  llvm_unreachable("Expected the comparison of constants for the lane.");
 }
 
 bool isFMAOrFMulAdd(const Instruction *I) {
@@ -607,6 +630,10 @@ bool InstructionsState::isCopyableElement(Value *V) const {
     return C && C->getValue().getActiveBits() <=
                     cast<CastInst>(MainOp)->getSrcTy()->getIntegerBitWidth();
   }
+  // Copyable lanes of an integer compare node are limited to the i1
+  // constants.
+  if (auto *Cmp = dyn_cast<ICmpInst>(MainOp))
+    return !I && CmpSamePredicateHelper::canConvertTo(V, Cmp->getPredicate());
   if (!I)
     return !isa<PoisonValue>(V);
   // For a GEP main op only single-index GEPs with the same source element
@@ -1047,6 +1074,32 @@ bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
   return Blocks.size() > 1;
 }
 
+/// Checks if \p BB, dominated by \p Entry, is executed as often as \p Entry:
+/// every path from \p Entry passes \p BB before it leaves the blocks, dominated
+/// by \p Entry, or returns to \p Entry. The paths, ending with unreachable or
+/// in the cycles without exits, never return and do not matter.
+static bool isControlEquivalentToEntry(const BasicBlock *Entry,
+                                       const BasicBlock *BB,
+                                       const DominatorTree &DT) {
+  // shortcut: the regions of more than 64 blocks are rejected, the walk is not
+  // cached; upgrade to the post-dominator tree, if it becomes available.
+  constexpr unsigned MaxBlocks = 64;
+  SmallVector<const BasicBlock *> Worklist(successors(Entry));
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  while (!Worklist.empty()) {
+    const BasicBlock *Succ = Worklist.pop_back_val();
+    if (Succ == BB || !Visited.insert(Succ).second)
+      continue;
+    if (Succ == Entry || Visited.size() > MaxBlocks ||
+        !DT.dominates(Entry, Succ))
+      return false;
+    if (succ_empty(Succ) && !isa<UnreachableInst>(Succ->getTerminator()))
+      return false;
+    append_range(Worklist, successors(Succ));
+  }
+  return true;
+}
+
 BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
                                const DominatorTree &DT) {
   if (!S || S.isAltShuffle())
@@ -1066,11 +1119,8 @@ BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
     }
     if (!doesNotNeedToBeScheduled(I))
       return nullptr;
-    // The common dominator already dominates the visited blocks, only the
-    // instructions of its own block may precede it.
-    if (Blocks.insert(I->getParent()).second ||
-        I->getParent() == InsertPt->getParent())
-      InsertPt = InsertPt ? DT.findNearestCommonDominator(InsertPt, I) : I;
+    Blocks.insert(I->getParent());
+    InsertPt = InsertPt ? DT.findNearestCommonDominator(InsertPt, I) : I;
   }
   // The vector code is emitted before the first scalar in the entry block, so
   // the entry must have such a scalar and the operands must be defined outside
@@ -1079,24 +1129,25 @@ BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
   BasicBlock *Entry = InsertPt->getParent();
   if (InsertPt->isTerminator() || Entry->isEHPad())
     return nullptr;
-  SmallDenseMap<const BasicBlock *, bool, 4> DominatingBlocks;
-  if (all_of(Insts, [&](Instruction *I) {
+  if (!all_of(Insts, [&](Instruction *I) {
         if (S.isCopyableElement(I))
           return I->getParent() == Entry;
         // The operands dominate the scalars, so they dominate the entry if
         // their blocks do.
         auto Ops = make_isa_range<Instruction>(I->operands());
         return all_of(Ops, [&](Instruction *OpI) {
-          if (OpI->getParent() == Entry)
-            return isa<PHINode>(OpI);
-          auto [It, Inserted] = DominatingBlocks.try_emplace(OpI->getParent());
-          if (Inserted)
-            It->second = DT.dominates(OpI->getParent(), Entry);
-          return It->second;
+          return OpI->getParent() == Entry
+                     ? isa<PHINode>(OpI)
+                     : DT.dominates(OpI->getParent(), Entry);
         });
       }))
-    return Entry;
-  return nullptr;
+    return nullptr;
+  // The scalars are executed as often as the vector code in the entry.
+  if (any_of(Blocks, [&](const BasicBlock *BB) {
+        return BB != Entry && !isControlEquivalentToEntry(Entry, BB, DT);
+      }))
+    return nullptr;
+  return Entry;
 }
 
 std::pair<Instruction *, SmallVector<Value *>>
@@ -1209,4 +1260,85 @@ SmallVector<SmallVector<Value *>> scanAltAssociativeOperands(
       SubLanes.set(Lane);
   return Columns;
 }
+
+std::pair<Instruction *, Instruction *>
+getMainAltOpsNoStateVL(ArrayRef<Value *> VL) {
+  Instruction *MainOp = nullptr;
+  Instruction *AltOp = nullptr;
+  for (Value *V :
+       make_filter_range(VL, [](Value *V) { return !isa<PoisonValue>(V); })) {
+    auto *I = dyn_cast<Instruction>(V);
+    if (!I)
+      return {};
+    if (!MainOp) {
+      MainOp = I;
+      continue;
+    }
+    if (MainOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != MainOp->getParent())
+        return {};
+      continue;
+    }
+    if (!AltOp) {
+      AltOp = I;
+      continue;
+    }
+    if (AltOp->getOpcode() == I->getOpcode()) {
+      if (I->getParent() != AltOp->getParent())
+        return {};
+      continue;
+    }
+    return {};
+  }
+  if (!AltOp)
+    return {};
+  assert(MainOp && AltOp && MainOp->getOpcode() != AltOp->getOpcode() &&
+         "Expected different main and alt instructions.");
+  return std::make_pair(MainOp, AltOp);
+}
+
+bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
+                         const TargetLibraryInfo &TLI,
+                         SmallVectorImpl<unsigned> &Indices,
+                         SmallVectorImpl<Value *> &Calls) {
+  assert(S && S.getOpcode() == Instruction::ExtractValue &&
+         "Expected extractvalue instruction state.");
+  if (!all_of(VL, IsaPred<ExtractValueInst>))
+    return false;
+  auto *VL0 = cast<ExtractValueInst>(S.getMainOp());
+  ArrayRef<unsigned> VL0Indices = VL0->getIndices();
+  SmallVector<Value *> Aggregates;
+  for (Value *V : VL) {
+    if (V == VL0) {
+      Aggregates.push_back(VL0->getAggregateOperand());
+      continue;
+    }
+    auto *IV = cast<ExtractValueInst>(V);
+    if (IV->getIndices() != VL0Indices ||
+        isa<ScalableVectorType>(IV->getType()))
+      return false;
+    Value *Agg = IV->getAggregateOperand();
+    Aggregates.push_back(Agg);
+  }
+  const InstructionsState AggState = getSameOpcode(Aggregates, TLI);
+  if (AggState && AggState.getOpcode() == Instruction::Call &&
+      !AggState.isAltShuffle() &&
+      isa<StructType>(AggState.getMainOp()->getType()) &&
+      canVectorizeTy(AggState.getMainOp()->getType()) &&
+      allSameBlock(Aggregates)) {
+    // The struct-returning call may have non-bundle users too. The external
+    // extraction code rebuilds scalars by extractvalue + extractelement,
+    // which only works when every user of the call is an ExtractValueInst.
+    // Bail out if any aggregate has a different kind of user.
+    for (Value *Agg : Aggregates) {
+      if (!all_of(Agg->users(), IsaPred<ExtractValueInst>))
+        return false;
+    }
+    Indices.assign(VL0Indices.begin(), VL0Indices.end());
+    Calls.swap(Aggregates);
+    return true;
+  }
+  return false;
+}
+
 } // namespace llvm::slpvectorizer

@@ -468,6 +468,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S, ArrayRef<const Attr *> Attrs) {
     EmitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*S));
     break;
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetGenericLoopDirective>(*S));
+    break;
   case Stmt::OMPParallelMaskedDirectiveClass:
     EmitOMPParallelMaskedDirective(cast<OMPParallelMaskedDirective>(*S));
     break;
@@ -1744,6 +1747,99 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
   EmitBranchThroughCleanup(GetDestForLoopControlStmt(S)->ContinueBlock);
 }
 
+/// Return whether S has an enumerator of a BPF preserve_access_index enum,
+/// which Sema keeps as a pseudo-object for __builtin_preserve_enum_value().
+static bool hasBPFEnumeratorRef(const Stmt *S) {
+  if (!S)
+    return false;
+  if (const auto *POE = dyn_cast<PseudoObjectExpr>(S))
+    if (const auto *DRE = dyn_cast<DeclRefExpr>(POE->getSyntacticForm());
+        DRE && isa<EnumConstantDecl>(DRE->getDecl()))
+      return true;
+  return llvm::any_of(S->children(), hasBPFEnumeratorRef);
+}
+
+/// If the case value E has a relocated enumerator, see
+/// SemaBPF::verifyCaseExpr(), return E without its ConstantExpr and casts.
+/// Sema does not check it for duplicates, so it is not added to the switch even
+/// without debug info, where its local value is used.
+static const Expr *getBPFRelocatedCaseValue(CodeGenFunction &CGF,
+                                            const Expr *E) {
+  if (!E || !CGF.getTarget().getTriple().isBPF())
+    return nullptr;
+  while (const auto *ICE = dyn_cast<ImplicitCastExpr>(E))
+    E = ICE->getSubExpr();
+  const auto *CE = dyn_cast<ConstantExpr>(E);
+  if (!CE || !hasBPFEnumeratorRef(CE->getSubExpr()))
+    return nullptr;
+  return CE->getSubExpr();
+}
+
+static bool isBPFRelocatedCase(CodeGenFunction &CGF, const CaseStmt &S) {
+  return getBPFRelocatedCaseValue(CGF, S.getLHS()) ||
+         getBPFRelocatedCaseValue(CGF, S.getRHS());
+}
+
+/// Emit a case statement whose value is relocated: move the switch to a new
+/// block, and in its old block, branch to the case if the condition matches the
+/// relocated value, otherwise to the switch. So the relocated cases are checked
+/// in source order, before the other cases. E.g., with relocated A, B and C,
+///
+///   switch (x) { case 1: ... case A: ... case B ... C: ... }
+///
+/// is emitted like:
+///
+///   if (x == A) goto case_A;
+///   if (x >= B && x <= C) goto case_BC;
+///   switch (x) { case 1: ... }
+void CodeGenFunction::EmitBPFRelocatedCaseStmt(const CaseStmt &S,
+                                               ArrayRef<const Attr *> Attrs) {
+  llvm::BasicBlock *CaseDest = createBasicBlock("sw.bb");
+  EmitBlockWithFallThrough(CaseDest, &S);
+
+  llvm::BasicBlock *CheckBB = SwitchInsn->getParent();
+  llvm::BasicBlock *SwitchBB = createBasicBlock("sw.dispatch");
+  CurFn->insert(std::next(CheckBB->getIterator()), SwitchBB);
+  SwitchInsn->removeFromParent();
+  SwitchInsn->insertInto(SwitchBB, SwitchBB->end());
+
+  // Emit the check at the end of CheckBB, then come back to the case body.
+  {
+    llvm::IRBuilderBase::InsertPointGuard IPG(Builder);
+    Builder.SetInsertPoint(CheckBB);
+    ApplyDebugLocation DL(*this, S.getLHS());
+    llvm::Value *CondV = SwitchInsn->getCondition();
+    auto EmitCaseValue = [&](const Expr *E) -> llvm::Value * {
+      if (const Expr *Reloc = getBPFRelocatedCaseValue(*this, E))
+        return Builder.CreateIntCast(
+            EmitScalarExpr(Reloc), CondV->getType(),
+            Reloc->getType()->isSignedIntegerOrEnumerationType());
+      return Builder.getInt(E->EvaluateKnownConstInt(getContext()));
+    };
+
+    llvm::Value *Cond;
+    if (!S.getRHS()) {
+      Cond = Builder.CreateICmpEQ(CondV, EmitCaseValue(S.getLHS()));
+    } else {
+      // The relocated range may be empty.
+      bool IsSigned = S.getLHS()->getType()->isSignedIntegerOrEnumerationType();
+      llvm::Value *Lo = Builder.CreateICmp(IsSigned ? llvm::CmpInst::ICMP_SGE
+                                                    : llvm::CmpInst::ICMP_UGE,
+                                           CondV, EmitCaseValue(S.getLHS()));
+      llvm::Value *Hi = Builder.CreateICmp(IsSigned ? llvm::CmpInst::ICMP_SLE
+                                                    : llvm::CmpInst::ICMP_ULE,
+                                           CondV, EmitCaseValue(S.getRHS()));
+      Cond = Builder.CreateAnd(Lo, Hi);
+    }
+    if (SwitchLikelihood)
+      Cond = emitCondLikelihoodViaExpectIntrinsic(Cond,
+                                                  Stmt::getLikelihood(Attrs));
+    Builder.CreateCondBr(Cond, CaseDest, SwitchBB);
+  }
+
+  EmitStmt(S.getSubStmt());
+}
+
 /// EmitCaseStmtRange - If case statement range is not too big then
 /// add multiple cases to switch instruction, one for each value within
 /// the range. If range is too big then emit "if" condition check.
@@ -1845,6 +1941,11 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
     return;
   }
 
+  if (isBPFRelocatedCase(*this, S)) {
+    EmitBPFRelocatedCaseStmt(S, Attrs);
+    return;
+  }
+
   // Handle case ranges.
   if (S.getRHS()) {
     EmitCaseStmtRange(S, Attrs);
@@ -1914,7 +2015,8 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S,
   const CaseStmt *NextCase = dyn_cast<CaseStmt>(S.getSubStmt());
 
   // Otherwise, iteratively add consecutive cases to this switch stmt.
-  while (NextCase && NextCase->getRHS() == nullptr) {
+  while (NextCase && NextCase->getRHS() == nullptr &&
+         !isBPFRelocatedCase(*this, *NextCase)) {
     CurCase = NextCase;
     llvm::ConstantInt *CaseVal =
       Builder.getInt(CurCase->getLHS()->EvaluateKnownConstInt(getContext()));
@@ -2335,6 +2437,15 @@ getLikelihoodWeights(ArrayRef<Stmt::Likelihood> Likelihoods) {
   return Result;
 }
 
+static bool hasBPFRelocatedCase(CodeGenFunction &CGF, const SwitchStmt &S) {
+  for (const SwitchCase *SC = S.getSwitchCaseList(); SC;
+       SC = SC->getNextSwitchCase())
+    if (const auto *CS = dyn_cast<CaseStmt>(SC);
+        CS && isBPFRelocatedCase(CGF, *CS))
+      return true;
+  return false;
+}
+
 void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   // Handle nested switch statements.
   llvm::SwitchInst *SavedSwitchInsn = SwitchInsn;
@@ -2343,9 +2454,11 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   llvm::BasicBlock *SavedCRBlock = CaseRangeBlock;
 
   // See if we can constant fold the condition of the switch and therefore only
-  // emit the live case statement (if any) of the switch.
+  // emit the live case statement (if any) of the switch. A relocated case value
+  // is not known until load time.
   llvm::APSInt ConstantCondValue;
-  if (ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue)) {
+  if (!hasBPFRelocatedCase(*this, S) &&
+      ConstantFoldsToSimpleInteger(S.getCond(), ConstantCondValue)) {
     SmallVector<const Stmt*, 4> CaseStmts;
     const SwitchCase *Case = nullptr;
     if (FindCaseStatementsForValue(S, ConstantCondValue, CaseStmts,
@@ -2807,6 +2920,10 @@ void AsmConstraintsInfo::EmitAsmStmt() {
       CBRRegResults;
 
   if (IsGCCAsmGoto) {
+    if (CGF.HaveInsertPoint() && !CGF.Bypasses.isAlwaysBypassed()) {
+      CGF.emitBypassedVarInitsForSource(&S);
+      CGF.BypassingForwardJumps.push_back({Builder.GetInsertBlock(), &S});
+    }
     CBR = Builder.CreateCallBr(IA, DefaultDest, IndirectDests, Args);
     CGF.EmitBlock(DefaultDest);
     UpdateAsmCallInst(*CBR, HasSideEffect,
@@ -3348,9 +3465,15 @@ void AsmConstraintsInfo::EmitAsmStores(
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
 
+    // ResultTypeRequiresCast elements correspond to the first
+    // ResultTypeRequiresCast.size() elements of RegResults.
+    const bool RequiresCast =
+        i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i];
+
     // If the result type of the LLVM IR asm doesn't match the result type of
-    // the expression, do the conversion.
-    if (ResultRegTypes[i] != TruncTy) {
+    // the expression, do the conversion. An output returned as an integer is
+    // converted where it's stored below.
+    if (ResultRegTypes[i] != TruncTy && !RequiresCast) {
       // Truncate the integer result to the right size, note that TruncTy can be
       // a pointer.
       if (TruncTy->isFloatingPointTy())
@@ -3376,14 +3499,13 @@ void AsmConstraintsInfo::EmitAsmStores(
     ApplyAtomGroup Grp(CGF.getDebugInfo());
     LValue Dest = ResultRegDests[i];
 
-    // ResultTypeRequiresCast elements correspond to the first
-    // ResultTypeRequiresCast.size() elements of RegResults.
-    if (i < ResultTypeRequiresCast.size() && ResultTypeRequiresCast[i]) {
+    if (RequiresCast) {
       unsigned Size = getContext().getTypeSize(ResultRegQualTys[i]);
       Address A = Dest.getAddress().withElementType(ResultRegTypes[i]);
 
       if (getTargetHooks().isScalarizableAsmOperand(CGF, TruncTy)) {
-        llvm::StoreInst *S = Builder.CreateStore(Tmp, A);
+        llvm::StoreInst *S =
+            Builder.CreateStore(Tmp, A, Dest.isVolatileQualified());
         CGF.addInstToCurrentSourceAtom(S, S->getValueOperand());
         continue;
       }
@@ -3396,11 +3518,24 @@ void AsmConstraintsInfo::EmitAsmStores(
         return;
       }
 
+      // The output's type may not be an integer: an output tied to a larger
+      // input has the input's type (e.g., a pointer), and a mask register
+      // output ("k" on X86) is a vector of i1. Convert it to an integer of the
+      // same size, then store only the destination's bits.
+      llvm::Type *IntTy = llvm::IntegerType::get(CTX, Size);
+      uint64_t TmpSize = CGM.getDataLayout().getTypeSizeInBits(Tmp->getType());
+      Tmp = Builder.CreateBitOrPointerCast(
+          Tmp, llvm::IntegerType::get(CTX, (unsigned)TmpSize));
+      Tmp = Builder.CreateTrunc(Tmp, IntTy);
+
       // The store writes all of the destination's members at once, so it must
       // be allowed to alias an access to any of them. A TBAA access type must
-      // be a scalar, so use may-alias (char), which aliases any access.
-      Dest = CGF.MakeAddrLValue(A, Ty, Dest.getBaseInfo(),
-                                TBAAAccessInfo::getMayAliasInfo());
+      // be a scalar, so use may-alias (char), which aliases any access. Keep
+      // the destination's qualifiers, such as volatile.
+      Dest = CGF.MakeAddrLValue(
+          Dest.getAddress().withElementType(IntTy),
+          getContext().getQualifiedType(Ty, Dest.getQuals()),
+          Dest.getBaseInfo(), TBAAAccessInfo::getMayAliasInfo());
     }
 
     CGF.EmitStoreThroughLValue(RValue::get(Tmp), Dest);

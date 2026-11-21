@@ -16,6 +16,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/dyadic_float.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/frac128.h"
 #include "src/__support/frac64.h"
@@ -104,9 +105,7 @@ LIBC_NOINLINE LIBC_INLINE double tanh_small_accurate_128(double x) {
   // High-degree alternating Horner steps (k = 12, 11, 10, 9 -> 8) using 64-bit
   // multiplications since val[1] == 0 for c_9..c_12:
   Frac64 w_hi = w.to_frac64(); // lsb = 2^-64
-  Frac64 p_lo = TANH_SMALL_W_LO64[3];
-  for (int i = 2; i >= 0; --i)
-    p_lo = TANH_SMALL_W_LO64[i] - p_lo * w_hi;
+  Frac64 p_lo = fputil::altpolyeval(w_hi, TANH_SMALL_W_LO64);
   p_lo = Frac64(TANH_SMALL_W_128[8].val[0]) - p_lo * w_hi;
 
   // Low-degree alternating Horner steps (k = 7..0) in 128-bit fixed-point:

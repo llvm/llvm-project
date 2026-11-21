@@ -62,7 +62,6 @@ struct RecordsEntry {
 
   void dump() const;
 
-  RecordsEntry() = default;
   RecordsEntry(std::unique_ptr<Record> Rec);
   RecordsEntry(std::unique_ptr<ForeachLoop> Loop);
   RecordsEntry(std::unique_ptr<Record::AssertionInfo> Assertion);
@@ -207,9 +206,6 @@ public:
     return true;
   }
   bool TokError(const Twine &Msg) const { return Error(Lex.getLoc(), Msg); }
-  const TGLexer::DependenciesSetTy &getDependencies() const {
-    return Lex.getDependencies();
-  }
 
   TGVarScope *PushScope() {
     CurScope = std::make_unique<TGVarScope>(std::move(CurScope));

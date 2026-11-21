@@ -49,7 +49,7 @@ entry:
 define i32 @testmuws(float %a) {
 ; CHECK-LABEL: testmuws:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtmu w0, s0
+; CHECK-NEXT:    fcvtzu w0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.floor.f32(float %a)
@@ -60,7 +60,7 @@ entry:
 define i64 @testmuxs(float %a) {
 ; CHECK-LABEL: testmuxs:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtmu x0, s0
+; CHECK-NEXT:    fcvtzu x0, s0
 ; CHECK-NEXT:    ret
 entry:
   %call = call float @llvm.floor.f32(float %a)
@@ -71,7 +71,7 @@ entry:
 define i32 @testmuwd(double %a) {
 ; CHECK-LABEL: testmuwd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtmu w0, d0
+; CHECK-NEXT:    fcvtzu w0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.floor.f64(double %a)
@@ -82,7 +82,7 @@ entry:
 define i64 @testmuxd(double %a) {
 ; CHECK-LABEL: testmuxd:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    fcvtmu x0, d0
+; CHECK-NEXT:    fcvtzu x0, d0
 ; CHECK-NEXT:    ret
 entry:
   %call = call double @llvm.floor.f64(double %a)

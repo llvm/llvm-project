@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-unknown-linux -emit-llvm %s \
 // RUN:   -Wno-source-uses-openmp -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fopenmp -triple x86_64-unknown-linux -emit-llvm %s   -Wno-source-uses-openmp -o - | FileCheck %s %}
 
 // Device and target_device ISA selectors are matched independently.
 

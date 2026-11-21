@@ -61,6 +61,10 @@ class LongJmpPass : public BinaryFunctionPass {
   /// Used to identify the stub size
   DenseMap<const BinaryBasicBlock *, int> StubBits;
 
+  /// Stats about the number of users of the stubs that are non-call
+  /// instructions targeting this stub.
+  DenseMap<const BinaryBasicBlock *, uint32_t> NumStubUsers;
+
   /// Stats about number of stubs inserted
   uint32_t NumHotStubs{0};
   uint32_t NumColdStubs{0};
@@ -76,9 +80,6 @@ class LongJmpPass : public BinaryFunctionPass {
   /// be relaxed.
   bool relaxLocalBranches(BinaryFunction &BF,
                           const BranchLivenessInfo *BLI = nullptr);
-
-  /// Relax calls and direct unconditional branches using one cluster layout.
-  void relaxWithClusters(BinaryContext &BC);
 
   ///                 -- Layout estimation methods --
   /// Try to do layout before running the emitter, by looking at BinaryFunctions

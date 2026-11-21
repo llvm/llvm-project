@@ -188,7 +188,8 @@ struct CombineContractABTranspose final
       return failure();
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhs, rhs, contractOp.getAcc(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -263,7 +264,8 @@ struct CombineContractResultTranspose final
 
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         resTOp, contractOp.getLhs(), contractOp.getRhs(), accTOp.getVector(),
-        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes());
+        rewriter.getAffineMapArrayAttr(maps), contractOp.getIteratorTypes(),
+        contractOp.getKind(), contractOp.getFastmath());
     return success();
   }
 };
@@ -417,7 +419,8 @@ FailureOr<Value> combineContractAndBroadcast(vector::ContractionOp contractOp,
 
   Operation *newOp = vector::ContractionOp::create(
       rewriter, contractOp.getLoc(), lhs, rhs, contractOp.getAcc(),
-      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators));
+      rewriter.getAffineMapArrayAttr(maps), rewriter.getArrayAttr(iterators),
+      contractOp.getKind(), contractOp.getFastmath());
 
   // Handle the mask.
   if (maskingOp) {
@@ -1896,7 +1899,7 @@ struct CanonicalizeContractMatmulToMMT final
     }
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         op, lhs, rhs, res, rewriter.getAffineMapArrayAttr(canonicalForm),
-        op.getIteratorTypes());
+        op.getIteratorTypes(), op.getKind(), op.getFastmath());
     return success();
   };
 
@@ -1937,10 +1940,19 @@ struct FoldArithExtIntoContractionOp
                                          "no defining op on contract operands");
     }
 
+    // The contraction requires lhs and rhs to have the same element type, so
+    // the two extensions must also start from the same one.
+    if (getElementTypeOrSelf(lhsDefOp.getIn().getType()) !=
+        getElementTypeOrSelf(rhsDefOp.getIn().getType())) {
+      return rewriter.notifyMatchFailure(
+          contractOp, "lhs and rhs are extended from different element types");
+    }
+
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
         contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
-        contractOp.getIteratorTypesAttr());
+        contractOp.getIteratorTypesAttr(), contractOp.getKind(),
+        contractOp.getFastmath());
 
     return success();
   }
@@ -1973,8 +1985,16 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
     if (!acc.getType().isIntOrFloat())
       return failure();
 
+    // The parent reduction produces `op`'s accumulator. Fold only when it is
+    // an `add` reduction too.
     auto parentReduction = acc.getDefiningOp<vector::ReductionOp>();
-    if (!parentReduction)
+    if (!parentReduction ||
+        parentReduction.getKind() != vector::CombiningKind::ADD)
+      return failure();
+
+    // Fold only when the parent's result has one use. Then the parent is dead
+    // after the fold and can be removed.
+    if (!parentReduction.getResult().hasOneUse())
       return failure();
 
     Location loc = op.getLoc();

@@ -3,7 +3,7 @@
 ; REQUIRES: asserts
 target triple = "aarch64"
 
-define void @foo(ptr noalias %in, ptr noalias %out, i64 %n) "target-features"="+sve" {
+define void @foo(ptr noalias %in, ptr noalias %out, i64 %n) "target-features"="+sve" vscale_range(1,16) {
 ; CHECK-LABEL: 'foo'
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<[[VP6:%[0-9]+]]> = first-order splice ir<%prev>, ir<%cur>
 ; CHECK:  Cost of Invalid for VF vscale x 1: EMIT vp<[[VP6]]> = first-order splice ir<%prev>, ir<%cur>

@@ -32,6 +32,7 @@ body: |
 name: ExtractSubvector_KnownZero
 body: |
   bb.0:
+    liveins: $q0
   ; CHECK-LABEL: name: @ExtractSubvector_KnownZero
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
@@ -76,6 +77,7 @@ body: |
 name: ExtractSubvector_Scalable
 body: |
   bb.0:
+    liveins: $z0
   ; CHECK-LABEL: name: @ExtractSubvector_Scalable
   ; CHECK-NEXT: %0:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:0000000011111111 SignBits:8 IsKnownNeverZero:1
@@ -89,12 +91,12 @@ body: |
     %4:_(<vscale x 2 x i16>) = G_EXTRACT_SUBVECTOR %3, 0
 ...
 ---
----
 # computeNumSignBits: sign bits propagate through extract subvector
 # Tests both lower and upper half extraction
 name: ExtractSubvector_Sext
 body: |
   bb.0:
+    liveins: $b0, $h1
   ; CHECK-LABEL: name: @ExtractSubvector_Sext
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -114,6 +116,7 @@ body: |
 name: ExtractSubvector_Sext_HighIndex
 body: |
   bb.0:
+    liveins: $b0, $h1
   ; CHECK-LABEL: name: @ExtractSubvector_Sext_HighIndex
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:1 IsKnownNeverZero:0
@@ -131,6 +134,7 @@ body: |
 name: ExtractSubvector_Sext_Scalable
 body: |
   bb.0:
+    liveins: $z0
   ; CHECK-LABEL: name: @ExtractSubvector_Sext_Scalable
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????????????? SignBits:9 IsKnownNeverZero:0

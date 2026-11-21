@@ -82,8 +82,7 @@ public:
                         TargetTransformInfo *TTI_, TargetLibraryInfo *TLI_,
                         AAResults *AA_, LoopInfo *LI_, DominatorTree *DT_,
                         AssumptionCache *AC_, DemandedBits *DB_,
-                        OptimizationRemarkEmitter *ORE_,
-                        FunctionAnalysisManager &AM);
+                        OptimizationRemarkEmitter *ORE_);
 
 private:
   /// Collect store and getelementptr instructions and organize them

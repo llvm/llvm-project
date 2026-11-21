@@ -47,22 +47,27 @@ exit:
   ret void
 }
 
-; The lane from %then is speculated in %bb.
+; The lane from %then is not speculated in %bb.
 define void @phi_operands(ptr %p, ptr %q, i1 %c, <2 x i32> %y) {
 ; CHECK-LABEL: define void @phi_operands(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]], <2 x i32> [[Y:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[X0:%.*]] = load <2 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X1:%.*]] = load <2 x i32>, ptr [[P1]], align 4
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[Y]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smax.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[A0:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X0]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[A1:%.*]] = call <2 x i32> @llvm.smax.v2i32(<2 x i32> [[X1]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i32> [ [[TMP2]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[R0:%.*]] = phi <2 x i32> [ [[A0]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[R1:%.*]] = phi <2 x i32> [ [[A1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <2 x i32> [[R0]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[Q]], i64 1
+; CHECK-NEXT:    store <2 x i32> [[R1]], ptr [[Q1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -88,7 +93,7 @@ exit:
   ret void
 }
 
-; The subvector shuffles are in different blocks of the region.
+; The subvector shuffles in the conditional block are not speculated.
 define void @shuffles(ptr %p, ptr %q, i1 %c) {
 ; CHECK-LABEL: define void @shuffles(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
@@ -96,14 +101,17 @@ define void @shuffles(ptr %p, ptr %q, i1 %c) {
 ; CHECK-NEXT:    [[X:%.*]] = load <4 x i32>, ptr [[P]], align 4
 ; CHECK-NEXT:    br label %[[BB:.*]]
 ; CHECK:       [[BB]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[A0:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[EXIT:.*]]
 ; CHECK:       [[THEN]]:
+; CHECK-NEXT:    [[A1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ [[TMP1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
-; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[R0:%.*]] = phi <2 x i32> [ [[A0]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    [[R1:%.*]] = phi <2 x i32> [ [[A1]], %[[THEN]] ], [ zeroinitializer, %[[BB]] ]
+; CHECK-NEXT:    store <2 x i32> [[R0]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[Q1:%.*]] = getelementptr inbounds <2 x i32>, ptr [[Q]], i64 1
+; CHECK-NEXT:    store <2 x i32> [[R1]], ptr [[Q1]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -121,6 +129,50 @@ then:
 exit:
   %r0 = phi <2 x i32> [ %a0, %then ], [ zeroinitializer, %bb ]
   %r1 = phi <2 x i32> [ %a1, %then ], [ zeroinitializer, %bb ]
+  store <2 x i32> %r0, ptr %q, align 4
+  %q1 = getelementptr inbounds <2 x i32>, ptr %q, i64 1
+  store <2 x i32> %r1, ptr %q1, align 4
+  ret void
+}
+
+; The subvector shuffles are in different blocks of the region.
+define void @shuffles_ce(ptr %p, ptr %q, i1 %c) {
+; CHECK-LABEL: define void @shuffles_ce(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i1 [[C:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[X:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[BB:.*]]
+; CHECK:       [[BB]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[SKIP:.*]]
+; CHECK:       [[THEN]]:
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[SKIP]]:
+; CHECK-NEXT:    br label %[[THEN]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = phi <4 x i32> [ [[TMP1]], %[[THEN]] ]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[Q]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load <4 x i32>, ptr %p, align 4
+  br label %bb
+
+bb:
+  %a0 = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  br i1 %c, label %then, label %skip
+
+then:
+  %a1 = shufflevector <4 x i32> %x, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  br label %exit
+
+skip:
+  br label %then
+
+exit:
+  %r0 = phi <2 x i32> [ %a0, %then ]
+  %r1 = phi <2 x i32> [ %a1, %then ]
   store <2 x i32> %r0, ptr %q, align 4
   %q1 = getelementptr inbounds <2 x i32>, ptr %q, i64 1
   store <2 x i32> %r1, ptr %q1, align 4

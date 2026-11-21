@@ -17,8 +17,6 @@ class TestFrameVarDILAssignment(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         self.expect("frame variable 'i += 1'", substrs=["2"])
         self.expect("frame variable 's += i'", substrs=["9"])
         self.expect("frame variable 'i += 2'", substrs=["4"])

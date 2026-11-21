@@ -135,9 +135,9 @@ defm : ValueField<"vectorize-num-stores-pred", "unsigned", "1",
 defm : ValueField<"vectorize-scev-check-threshold", "unsigned", "16",
   "The maximum number of SCEV checks allowed">;
 // Loops with a known constant trip count below this number are vectorized only
-// if no scalar iteration overheads are incurred.
+// if no scalar epilogue is required.
 defm : ValueField<"vectorizer-min-trip-count", "unsigned", "16",
-  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar iteration overheads are incurred">;
+  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar epilogue is required">;
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
@@ -296,7 +296,7 @@ defm : ValueField<"slp-runtime-alias-checks-max-scalar-cost-percent", "unsigned"
 defm : ValueField<"slp-schedule-budget", "int", "200000",
   "Limit the size of the SLP scheduling region per block">;
 defm : BoolField<"slp-sese-region-vectorization", "true",
-  "Vectorize non-schedulable instructions from different blocks of a single-entry single-exit region at the region entry">;
+  "Vectorize non-schedulable instructions from different control equivalent blocks of the same loop (or out of loops) in the block of one of them, which dominates the others">;
 defm : BoolField<"slp-split-alternate-instructions", "true",
   "Improve the code quality by splitting alternate instructions">;
 defm : OptionalValueField<"slp-threshold", "int",

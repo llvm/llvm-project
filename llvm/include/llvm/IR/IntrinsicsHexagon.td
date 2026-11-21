@@ -17,16 +17,20 @@ let TargetPrefix = "hexagon" in {
   /// Hexagon_Intrinsic - Base class for the majority of Hexagon intrinsics.
   class Hexagon_Intrinsic<string GCCIntSuffix, list<LLVMType> ret_types,
                               list<LLVMType> param_types,
-                              list<IntrinsicProperty> properties>
+                              list<IntrinsicProperty> properties,
+                              list<SDNodeProperty> sdnode_properties = []>
     : ClangBuiltin<!strconcat("__builtin_", GCCIntSuffix)>,
-      DefaultAttrsIntrinsic<ret_types, param_types, properties>;
+      DefaultAttrsIntrinsic<ret_types, param_types, properties, "",
+                            sdnode_properties>;
 
   /// Hexagon_NonGCC_Intrinsic - Base class for bitcode convertible Hexagon
   /// intrinsics.
   class Hexagon_NonGCC_Intrinsic<list<LLVMType> ret_types,
                                  list<LLVMType> param_types,
-                                 list<IntrinsicProperty> properties>
-    : DefaultAttrsIntrinsic<ret_types, param_types, properties>;
+                                 list<IntrinsicProperty> properties,
+                                 list<SDNodeProperty> sdnode_properties = []>
+    : DefaultAttrsIntrinsic<ret_types, param_types, properties, "",
+                            sdnode_properties>;
 }
 
 class Hexagon_mem_memmemsi_Intrinsic<string GCCIntSuffix>
