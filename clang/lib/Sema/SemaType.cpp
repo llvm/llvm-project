@@ -2055,8 +2055,14 @@ static ExprResult checkArraySize(Sema &S, Expr *&ArraySize,
     // allow non-constant expressions and constant-folding. We only need to use
     // the converted constant expression rules (to properly convert the source)
     // when the source expression is of class type.
-    return S.CheckConvertedConstantExpression(
-        ArraySize, S.Context.getSizeType(), SizeVal, CCEKind::ArrayBound);
+    //
+    // Convert the bound itself, inside the ExprWithCleanups ActOnArrayBound
+    // may have wrapped it in.
+    Expr *Bound = ArraySize;
+    if (auto *Cleanups = dyn_cast<ExprWithCleanups>(Bound))
+      Bound = Cleanups->getSubExpr();
+    return S.CheckConvertedConstantExpression(Bound, S.Context.getSizeType(),
+                                              SizeVal, CCEKind::ArrayBound);
   }
 
   // If the size is an ICE, it certainly isn't a VLA. If we're in a GNU mode

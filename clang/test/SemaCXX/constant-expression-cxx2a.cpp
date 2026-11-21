@@ -1550,4 +1550,10 @@ namespace GH237441 {
   static_assert(sizeof(a) == 4 * sizeof(int));
   template <typename T> constexpr int f() { int b[T().a]; return sizeof(b); }
   static_assert(f<S>() == 4 * sizeof(int));
+
+  struct C { constexpr operator int() const { return 4; } constexpr ~C() {} };
+  int c[C()];
+  static_assert(sizeof(c) == 4 * sizeof(int));
+  template <typename T> constexpr int g() { int b[T()]; return sizeof(b); }
+  static_assert(g<C>() == 4 * sizeof(int));
 }

@@ -20970,9 +20970,8 @@ ExprResult Sema::ActOnConstantExpression(ExprResult Res) {
 
 ExprResult Sema::ActOnArrayBound(ExprResult Bound) {
   // Wrap now, before the bound's context drops the cleanups, with the lvalue
-  // conversion inside the wrapper. A class-typed bound is converted later by
-  // BuildArrayType and is left alone.
-  if (!Bound.isUsable() || Bound.get()->getType()->isRecordType())
+  // conversion inside the wrapper.
+  if (!Bound.isUsable())
     return Bound;
   return MaybeCreateExprWithCleanups(DefaultLvalueConversion(Bound.get()));
 }
