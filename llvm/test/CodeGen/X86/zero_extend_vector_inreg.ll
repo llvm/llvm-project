@@ -6219,10 +6219,10 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512F-SLOW:       # %bb.0:
 ; AVX512F-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512F-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX512F-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX512F-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512F-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512F-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
+; AVX512F-SLOW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512F-SLOW-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,1,1,3,4,5,5,7]
 ; AVX512F-SLOW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512F-SLOW-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
@@ -6241,7 +6241,7 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512F-FAST-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX512F-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
 ; AVX512F-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,0,1,0,8,0,9,0]
+; AVX512F-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,1,3,8,9,9,11]
 ; AVX512F-FAST-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512F-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512F-FAST-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
@@ -6258,10 +6258,10 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW-SLOW:       # %bb.0:
 ; AVX512BW-SLOW-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512BW-SLOW-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
-; AVX512BW-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX512BW-SLOW-NEXT:    vpsrld $16, %xmm0, %xmm1
+; AVX512BW-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,zero,zero,zero,zero,xmm1[1],zero,zero,zero,zero,zero,zero,zero
 ; AVX512BW-SLOW-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-SLOW-NEXT:    vinserti32x4 $2, %xmm0, %zmm1, %zmm0
+; AVX512BW-SLOW-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512BW-SLOW-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,1,1,3,4,5,5,7]
 ; AVX512BW-SLOW-NEXT:    vbroadcasti32x4 {{.*#+}} zmm1 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512BW-SLOW-NEXT:    # zmm1 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
@@ -6277,7 +6277,7 @@ define void @vec512_v64i8_to_v4i128_factor16(ptr %in.vec.base.ptr, ptr %in.vec.b
 ; AVX512BW-FAST-NEXT:    vpaddb (%rsi), %xmm0, %xmm0
 ; AVX512BW-FAST-NEXT:    vpshufb {{.*#+}} xmm1 = xmm0[2,u,u,u,u,u,u,u,3,u,u,u,u,u,u,u]
 ; AVX512BW-FAST-NEXT:    vpmovzxbq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero
-; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,0,1,0,8,0,9,0]
+; AVX512BW-FAST-NEXT:    vpmovsxbq {{.*#+}} zmm2 = [0,1,1,3,8,9,9,11]
 ; AVX512BW-FAST-NEXT:    vpermi2q %zmm1, %zmm0, %zmm2
 ; AVX512BW-FAST-NEXT:    vbroadcasti32x4 {{.*#+}} zmm0 = [255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 ; AVX512BW-FAST-NEXT:    # zmm0 = mem[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
