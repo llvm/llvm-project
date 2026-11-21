@@ -6,33 +6,34 @@
 define dso_local signext i32 @b() local_unnamed_addr #0 {
 ; CHECK-LABEL: b:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    stdu r1, -144(r1)
-; CHECK-NEXT:    std r0, 160(r1)
 ; CHECK-NEXT:    addis r3, r2, a@toc@ha
 ; CHECK-NEXT:    lfd f0, a@toc@l(r3)
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    lfs f1, .LCPI0_0@toc@l(r3)
-; CHECK-NEXT:    fsub f2, f0, f1
-; CHECK-NEXT:    fctidz f2, f2
-; CHECK-NEXT:    stfd f2, 128(r1)
-; CHECK-NEXT:    fctidz f2, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
-; CHECK-NEXT:    stfd f2, 120(r1)
-; CHECK-NEXT:    blt cr0, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    ld r3, 128(r1)
-; CHECK-NEXT:    li r4, 1
-; CHECK-NEXT:    rldic r4, r4, 63, 0
-; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    b .LBB0_3
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    ld r3, 120(r1)
-; CHECK-NEXT:  .LBB0_3: # %entry
-; CHECK-NEXT:    std r3, 112(r1)
+; CHECK-NEXT:    bc 4, lt, .LBB0_2
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_1@toc@ha
-; CHECK-NEXT:    lfd f0, 112(r1)
 ; CHECK-NEXT:    lfs f1, .LCPI0_1@toc@l(r3)
+; CHECK-NEXT:  .LBB0_2: # %entry
+; CHECK-NEXT:    mflr r0
+; CHECK-NEXT:    stdu r1, -144(r1)
+; CHECK-NEXT:    fsub f0, f0, f1
+; CHECK-NEXT:    fctidz f0, f0
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    std r0, 160(r1)
+; CHECK-NEXT:    stfd f0, 128(r1)
+; CHECK-NEXT:    bc 12, lt, .LBB0_4
+; CHECK-NEXT:  # %bb.3: # %entry
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:  .LBB0_4: # %entry
+; CHECK-NEXT:    ld r4, 128(r1)
+; CHECK-NEXT:    sldi r3, r3, 63
+; CHECK-NEXT:    xor r3, r4, r3
+; CHECK-NEXT:    std r3, 120(r1)
+; CHECK-NEXT:    addis r3, r2, .LCPI0_2@toc@ha
+; CHECK-NEXT:    lfd f0, 120(r1)
+; CHECK-NEXT:    lfs f1, .LCPI0_2@toc@l(r3)
 ; CHECK-NEXT:    fcfid f0, f0
 ; CHECK-NEXT:    fmul f0, f0, f1
 ; CHECK-NEXT:    fctiwz f0, f0
