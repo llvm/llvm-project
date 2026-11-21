@@ -376,9 +376,11 @@ without pre-commit review if you have commit access.
   a specific target, prefer putting it in a target-specific test
   subdirectory rather than requiring a specific backend to be built with a
   `REQUIRES:` line.
-- Tests that only run an IR pass with `opt` belong under that pass's
-  `test/Transforms` directory, even if they are target-specific (e.g.,
-  `test/Transforms/LoopVectorize/AArch64`), not in `test/CodeGen/<target>`.
+- Tests that only run a target-independent IR pass with `opt` belong under
+  that pass's `test/Transforms` directory, even if they are target-specific
+  (e.g., `test/Transforms/LoopVectorize/AArch64`), not in
+  `test/CodeGen/<target>`. Tests for IR passes defined by a target go in
+  `test/CodeGen/<target>`.
 - Use a minimal number of non-default (`CHECK-<prefix>`) check prefixes.
   Avoid setting a check prefix if all `FileCheck` invocations in the test
   expect the same output.
