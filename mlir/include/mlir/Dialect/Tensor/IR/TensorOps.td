@@ -326,7 +326,7 @@ def Tensor_EmptyOp : Tensor_Op<"empty",
 
 def Tensor_ExtractOp : Tensor_Op<"extract", [
     DeclareOpInterfaceMethods<OpAsmOpInterface, ["getAsmResultNames"]>,
-    Pure,
+    ConditionallySpeculatable, NoMemoryEffect,
     TypesMatchWith<"result type matches element type of tensor",
                    "tensor", "result",
                    "::llvm::cast<TensorType>($_self).getElementType()">]> {
@@ -336,6 +336,8 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
     specified by the given indices. The result of the op is a value with the
     same type as the elements of the tensor. The arity of indices must match
     the rank of the accessed value. All indices should all be of `index` type.
+    The indices must be in bounds: `0 <= idx < dim_size`. Otherwise, the
+    behavior is undefined.
 
     Example:
 
@@ -348,6 +350,11 @@ def Tensor_ExtractOp : Tensor_Op<"extract", [
   let arguments = (ins AnyRankedTensor:$tensor, Variadic<Index>:$indices);
   let results = (outs AnyType:$result);
   let assemblyFormat = "$tensor `[` $indices `]` attr-dict `:` type($tensor)";
+
+  let extraClassDeclaration = [{
+    /// Interface method for ConditionallySpeculatable.
+    Speculation::Speculatability getSpeculatability();
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
