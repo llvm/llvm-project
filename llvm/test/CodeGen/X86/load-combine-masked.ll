@@ -147,7 +147,7 @@ define i32 @load_4_bytes_bswap_masked(ptr %p) {
 define i32 @load_4_bytes_nested_shl_masked(ptr %p) {
 ; CHECK-LABEL: load_4_bytes_nested_shl_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-61441, %eax # imm = 0xFFFF0FFF
+; CHECK-NEXT:    movl $268435455, %eax # imm = 0xFFFFFFF
 ; CHECK-NEXT:    andl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %p2 = getelementptr i8, ptr %p, i64 2
@@ -171,7 +171,7 @@ define i32 @load_4_bytes_nested_shl_masked(ptr %p) {
 define i32 @load_4_bytes_bswap_nested_shl_masked(ptr %p) {
 ; CHECK-LABEL: load_4_bytes_bswap_nested_shl_masked:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $-61441, %eax # imm = 0xFFFF0FFF
+; CHECK-NEXT:    movl $-241, %eax
 ; CHECK-NEXT:    andl (%rdi), %eax
 ; CHECK-NEXT:    retq
   %p1 = getelementptr i8, ptr %p, i64 1

@@ -183,14 +183,14 @@ define i32 @load_4_bytes_nested_shl_masked(ptr %p) {
 ; LE-LABEL: load_4_bytes_nested_shl_masked:
 ; LE:       ; %bb.0:
 ; LE-NEXT:    ldr w8, [x0]
-; LE-NEXT:    and w0, w8, #0xffff0fff
+; LE-NEXT:    and w0, w8, #0xfffffff
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_4_bytes_nested_shl_masked:
 ; BE:       // %bb.0:
 ; BE-NEXT:    ldr w8, [x0]
 ; BE-NEXT:    rev w8, w8
-; BE-NEXT:    and w0, w8, #0xffff0fff
+; BE-NEXT:    and w0, w8, #0xfffffff
 ; BE-NEXT:    ret
   %p1 = getelementptr i8, ptr %p, i64 1
   %p2 = getelementptr i8, ptr %p, i64 2
@@ -220,14 +220,14 @@ define i32 @load_4_bytes_bswap_nested_shl_masked(ptr %p) {
 ; LE-LABEL: load_4_bytes_bswap_nested_shl_masked:
 ; LE:       ; %bb.0:
 ; LE-NEXT:    ldr w8, [x0]
-; LE-NEXT:    and w0, w8, #0xffff0fff
+; LE-NEXT:    and w0, w8, #0xffffff0f
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: load_4_bytes_bswap_nested_shl_masked:
 ; BE:       // %bb.0:
 ; BE-NEXT:    ldr w8, [x0]
 ; BE-NEXT:    rev w8, w8
-; BE-NEXT:    and w0, w8, #0xffff0fff
+; BE-NEXT:    and w0, w8, #0xffffff0f
 ; BE-NEXT:    ret
   %p1 = getelementptr i8, ptr %p, i64 1
   %p2 = getelementptr i8, ptr %p, i64 2
