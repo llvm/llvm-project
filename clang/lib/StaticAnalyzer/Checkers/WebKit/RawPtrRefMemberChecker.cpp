@@ -126,7 +126,8 @@ public:
       for (auto it : map)
         visitObjCPropertyDecl(CD, it.second);
 
-      if (auto *Interface = ID->getClassInterface()) {
+      auto *Interface = ID->getClassInterface();
+      if (Interface) {
         for (auto *Ivar : Interface->ivars())
           visitIvarDecl(CD, Ivar);
       }
@@ -134,6 +135,12 @@ public:
         visitPropImpl(CD, PropImpl);
       for (auto *Ivar : ID->ivars())
         visitIvarDecl(CD, Ivar);
+      if (Interface) {
+        for (auto *Ext : Interface->known_extensions()) {
+          for (auto *Ivar : Ext->ivars())
+            visitIvarDecl(CD, Ivar);
+        }
+      }
       return;
     }
   }
