@@ -31,6 +31,7 @@ set(LLVM_LINK_COMPONENTS
 add_tablegen(llvm-tblgen LLVM
   DESTINATION "${LLVM_TOOLS_INSTALL_DIR}"
   EXPORT LLVM
+  IntrinsicFeatureEmitter.cpp
   AsmMatcherEmitter.cpp
   AsmWriterEmitter.cpp
   CallingConvEmitter.cpp
