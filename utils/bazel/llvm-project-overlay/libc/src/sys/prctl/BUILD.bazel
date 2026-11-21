@@ -26,7 +26,7 @@ libc_function(
     deps = [
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
-        "//libc/src/__support/OSUtil:syscall",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:prctl",
         "//libc/src/__support/macros:config",
         "//libc/src/errno",
     ],
