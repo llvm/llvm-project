@@ -703,8 +703,8 @@ protected:
     return false;
   }
 
-  void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
-                             int FI) const override;
+  void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops, int FI,
+                             int64_t Offset) const override;
 
 private:
   /// This is a helper for convertToThreeAddress for 8 and 16-bit instructions.
