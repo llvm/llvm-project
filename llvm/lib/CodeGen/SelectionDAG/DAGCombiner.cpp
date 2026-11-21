@@ -9776,15 +9776,12 @@ SDValue DAGCombiner::MatchRotate(SDValue LHS, SDValue RHS, const SDLoc &DL,
 /// contribute to the byte ultimately come from the ExtractVectorElements of the
 /// Load, we don't care if the Load has uses other than ExtractVectorElements,
 /// because those operations are independent from the pattern to be combined.
-/// For vector loads, we simply care that the ByteProviders are adjacent
-/// positions of the same vector, and their index matches the byte that is being
-/// provided. This is captured by the \p VectorIndex algorithm. \p VectorIndex
-/// is the index used in an ExtractVectorElement, and \p StartingIndex is the
-/// byte position we are trying to provide for the LoadCombine. If these do
-/// not match, then we can not combine the vector loads. \p Index uses the
-/// byte position we are trying to provide for and is matched against the
-/// shl and load size. The \p Index algorithm ensures the requested byte is
-/// provided for by the pattern, and the pattern does not over provide bytes.
+/// For vector loads, \p VectorIndex is the index used in an
+/// ExtractVectorElement, which MatchLoadCombine uses to check that the
+/// provided bytes are adjacent in memory. \p Index uses the byte position we
+/// are trying to provide for and is matched against the shl and load size. The
+/// \p Index algorithm ensures the requested byte is provided for by the
+/// pattern, and the pattern does not over provide bytes.
 ///
 ///
 /// The supported LoadCombine pattern for vector loads is as follows
@@ -9808,7 +9805,7 @@ using SDByteProvider = ByteProvider<SDNode *>;
 static std::optional<SDByteProvider>
 calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                       std::optional<uint64_t> VectorIndex,
-                      unsigned StartingIndex = 0, uint8_t *ByteMask = nullptr) {
+                      uint8_t *ByteMask = nullptr) {
 
   // Typical i64 by i8 pattern requires recursion up to 8 calls depth
   if (Depth == 10)
@@ -9835,11 +9832,11 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
   switch (Op.getOpcode()) {
   case ISD::OR: {
     auto LHS = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
+                                     VectorIndex, ByteMask);
     if (!LHS)
       return std::nullopt;
     auto RHS = calculateByteProvider(Op->getOperand(1), Index, Depth + 1,
-                                     VectorIndex, StartingIndex, ByteMask);
+                                     VectorIndex, ByteMask);
     if (!RHS)
       return std::nullopt;
 
@@ -9866,7 +9863,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     return Index < ByteShift
                ? SDByteProvider::getConstantZero()
                : calculateByteProvider(Op->getOperand(0), Index - ByteShift,
-                                       Depth + 1, VectorIndex, Index, ByteMask);
+                                       Depth + 1, VectorIndex, ByteMask);
   }
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -9883,12 +9880,11 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
                        SDByteProvider::getConstantZero())
                  : std::nullopt;
     return calculateByteProvider(NarrowOp, Index, Depth + 1, VectorIndex,
-                                 StartingIndex, ByteMask);
+                                 ByteMask);
   }
   case ISD::BSWAP:
     return calculateByteProvider(Op->getOperand(0), ByteWidth - Index - 1,
-                                 Depth + 1, VectorIndex, StartingIndex,
-                                 ByteMask);
+                                 Depth + 1, VectorIndex, ByteMask);
   case ISD::AND: {
     // Constants are canonicalized to the RHS of AND, so only operand 1 needs
     // to be checked.
@@ -9903,7 +9899,7 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
       return SDByteProvider::getConstantZero();
 
     auto Result = calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                        VectorIndex, StartingIndex, ByteMask);
+                                        VectorIndex, ByteMask);
     if (!Result)
       return std::nullopt;
 
@@ -9923,6 +9919,8 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     VectorIndex = OffsetOp->getZExtValue();
 
     SDValue NarrowOp = Op->getOperand(0);
+    if (*VectorIndex >= NarrowOp.getValueType().getVectorMinNumElements())
+      return std::nullopt;
     unsigned NarrowBitWidth = NarrowOp.getScalarValueSizeInBits();
     if (NarrowBitWidth % 8 != 0)
       return std::nullopt;
@@ -9932,19 +9930,8 @@ calculateByteProvider(SDValue Op, unsigned Index, unsigned Depth,
     if (Index >= NarrowByteWidth)
       return std::nullopt;
 
-    // Check to see if the position of the element in the vector corresponds
-    // with the byte we are trying to provide for. In the case of a vector of
-    // i8, this simply means the VectorIndex == StartingIndex. For non i8 cases,
-    // the element will provide a range of bytes. For example, if we have a
-    // vector of i16s, each element provides two bytes (V[1] provides byte 2 and
-    // 3).
-    if (*VectorIndex * NarrowByteWidth > StartingIndex)
-      return std::nullopt;
-    if ((*VectorIndex + 1) * NarrowByteWidth <= StartingIndex)
-      return std::nullopt;
-
     return calculateByteProvider(Op->getOperand(0), Index, Depth + 1,
-                                 VectorIndex, StartingIndex, ByteMask);
+                                 VectorIndex, ByteMask);
   }
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
@@ -10306,9 +10293,8 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SmallVector<uint8_t, 8> ByteMasks(ByteWidth, 0xFF);
   unsigned ZeroExtendedBytes = 0;
   for (int i = ByteWidth - 1; i >= 0; --i) {
-    auto P =
-        calculateByteProvider(SDValue(N, 0), i, 0, /*VectorIndex*/ std::nullopt,
-                              /*StartingIndex*/ i, &ByteMasks[i]);
+    auto P = calculateByteProvider(SDValue(N, 0), i, 0,
+                                   /*VectorIndex*/ std::nullopt, &ByteMasks[i]);
     if (!P)
       return SDValue();
 

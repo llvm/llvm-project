@@ -772,6 +772,56 @@ define void @short_vector_elt1_to_i16_bswap_strict_align(ptr %in, ptr %out, ptr 
 }
 
 ; x1 = x0
+define void @short_vector_nested_shl_to_i32(ptr %in, ptr %out, ptr %p) {
+; CHECK-LABEL: short_vector_nested_shl_to_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldr w8, [x0]
+; CHECK-NEXT:    str w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, ptr %in, align 4
+  %lo = load i16, ptr %in, align 4
+
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z2 = zext i8 %e3 to i16
+  %z3 = zext i8 %e4 to i16
+
+  %s3 = shl nuw i16 %z3, 8
+  %hi = or i16 %s3, %z2
+
+  %lo.z = zext i16 %lo to i32
+  %hi.z = zext i16 %hi to i32
+  %hi.s = shl nuw i32 %hi.z, 16
+  %i = or i32 %hi.s, %lo.z
+
+  store i32 %i, ptr %out
+  ret void
+}
+
+; x1 = x0[2:3]
+define void @short_vector_high_half_to_i16(ptr %in, ptr %out, ptr %p) {
+; CHECK-LABEL: short_vector_high_half_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldrh w8, [x0, #2]
+; CHECK-NEXT:    strh w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <4 x i8>, ptr %in, align 4
+
+  %e3 = extractelement <4 x i8> %ld, i32 2
+  %e4 = extractelement <4 x i8> %ld, i32 3
+
+  %z2 = zext i8 %e3 to i16
+  %z3 = zext i8 %e4 to i16
+
+  %s3 = shl nuw i16 %z3, 8
+  %i = or i16 %s3, %z2
+
+  store i16 %i, ptr %out
+  ret void
+}
+
+; x1 = x0
 define void @scalable_vector_to_i32(ptr %in, ptr %out, ptr %p) #0 {
 ; CHECK-LABEL: scalable_vector_to_i32:
 ; CHECK:       // %bb.0:
@@ -945,6 +995,34 @@ define void @scalable_vector_to_i64(ptr %in, ptr %out, ptr %p) #0 {
   %i3 = or i64 %i2, %s3
 
   store i64 %i3, ptr %out
+  ret void
+}
+
+; x1 = x0[4:5], past the known minimum size of the vector load
+define void @scalable_vector_elt4_to_i16(ptr %in, ptr %out, ptr %p) #0 {
+; CHECK-LABEL: scalable_vector_elt4_to_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld1b { z0.s }, p0/z, [x0]
+; CHECK-NEXT:    mov z1.s, z0.s[4]
+; CHECK-NEXT:    mov z0.s, z0.s[5]
+; CHECK-NEXT:    fmov w8, s1
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    orr w8, w8, w9, lsl #8
+; CHECK-NEXT:    strh w8, [x1]
+; CHECK-NEXT:    ret
+  %ld = load <vscale x 4 x i8>, ptr %in, align 4
+
+  %e5 = extractelement <vscale x 4 x i8> %ld, i32 4
+  %e6 = extractelement <vscale x 4 x i8> %ld, i32 5
+
+  %z4 = zext i8 %e5 to i16
+  %z5 = zext i8 %e6 to i16
+
+  %s5 = shl nuw i16 %z5, 8
+  %i = or i16 %s5, %z4
+
+  store i16 %i, ptr %out
   ret void
 }
 
