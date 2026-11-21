@@ -332,10 +332,10 @@
 ; M68K-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; M68K-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; M68K-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; M68K-NEXT: declare i32 @fegetenv(ptr)
-; M68K-NEXT: declare i32 @fegetmode(ptr)
-; M68K-NEXT: declare i32 @fesetenv(ptr)
-; M68K-NEXT: declare i32 @fesetmode(ptr)
+; M68K-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; M68K-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; M68K-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; M68K-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; M68K-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -425,6 +425,7 @@
 ; M68K-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; M68K-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; M68K-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; M68K-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; M68K-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; M68K-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

@@ -367,10 +367,10 @@
 ; MIPS32-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; MIPS32-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; MIPS32-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; MIPS32-NEXT: declare i32 @fegetenv(ptr)
-; MIPS32-NEXT: declare i32 @fegetmode(ptr)
-; MIPS32-NEXT: declare i32 @fesetenv(ptr)
-; MIPS32-NEXT: declare i32 @fesetmode(ptr)
+; MIPS32-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; MIPS32-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; MIPS32-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; MIPS32-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; MIPS32-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; MIPS32-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -463,6 +463,7 @@
 ; MIPS32-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; MIPS32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; MIPS32-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; MIPS32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MIPS32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -820,10 +821,10 @@
 ; MIPS64-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; MIPS64-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @fdiml(fp128, fp128) [[ERRNO_ATTRS]]
-; MIPS64-NEXT: declare i32 @fegetenv(ptr)
-; MIPS64-NEXT: declare i32 @fegetmode(ptr)
-; MIPS64-NEXT: declare i32 @fesetenv(ptr)
-; MIPS64-NEXT: declare i32 @fesetmode(ptr)
+; MIPS64-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; MIPS64-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; MIPS64-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; MIPS64-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; MIPS64-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; MIPS64-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
@@ -953,6 +954,7 @@
 ; MIPS64-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; MIPS64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MIPS64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; MIPS64-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; MIPS64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MIPS64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
