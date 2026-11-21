@@ -1897,6 +1897,26 @@ func.func @contractions(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4
   return %1, %i8_1: vector<2x4xf32>, vector<2x4xi8>
 }
 
+// The add is not folded into a `maxnumf` contract.
+
+// CHECK-LABEL: func @negative_contractions_maxnumf
+//  CHECK-SAME:   %[[A:[0-9a-zA-Z]+]]: vector<2x3xf32>
+//  CHECK-SAME:   %[[B:[0-9a-zA-Z]+]]: vector<3x4xf32>
+//  CHECK-SAME:   %[[C:[0-9a-zA-Z]+]]: vector<2x4xf32>
+//       CHECK:   %[[ZERO:.*]] = arith.constant dense<0.000000e+00>
+//       CHECK:   %[[D:.*]] = vector.contract {{.*}}kind = #vector.kind<maxnumf>{{.*}} %[[A]], %[[B]], %[[ZERO]]
+//       CHECK:   %[[E:.*]] = arith.addf %[[D]], %[[C]]
+//       CHECK:   return %[[E]]
+func.func @negative_contractions_maxnumf(%a: vector<2x3xf32>, %b: vector<3x4xf32>, %c: vector<2x4xf32>)
+  -> vector<2x4xf32>
+{
+  %vf_0 = arith.constant dense <0.0>: vector<2x4xf32>
+  %0 = vector.contract {indexing_maps = #contraction_accesses0, iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>}
+    %a, %b, %vf_0 : vector<2x3xf32>, vector<3x4xf32> into vector<2x4xf32>
+  %1 = arith.addf %0, %c: vector<2x4xf32>
+  return %1: vector<2x4xf32>
+}
+
 // -----
 
 // CHECK-LABEL: func @transfer_folding_1
