@@ -20,9 +20,10 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-/// The default data layout used during the translation.
+/// The default data layout used during the translation. It matches the
+/// defaults of llvm::DataLayout.
 static constexpr StringRef kDefaultDataLayout =
-    "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-"
+    "e-p:64:64:64-i8:8:8-i16:16:16-i32:32:32-i64:32:64-"
     "f16:16:16-f64:64:64-f128:128:128";
 
 FloatType mlir::LLVM::detail::getFloatType(MLIRContext *context,

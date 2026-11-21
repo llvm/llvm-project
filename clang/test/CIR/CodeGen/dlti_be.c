@@ -9,7 +9,6 @@ void foo() {}
 // BIG-DAG:     i16 = dense<[16, 32]> : vector<2xi64>,
 // BIG-DAG:     i32 = dense<32> : vector<2xi64>,
 // BIG-DAG:     i8 = dense<[8, 32]> : vector<2xi64>,
-// BIG-DAG:     i1 = dense<8> : vector<2xi64>,
 // BIG-DAG:     !llvm.ptr = dense<64> : vector<4xi64>,
 // BIG-DAG:     i128 = dense<128> : vector<2xi64>,
 // BIG-DAG:     !llvm.ptr<272> = dense<64> : vector<4xi64>,
