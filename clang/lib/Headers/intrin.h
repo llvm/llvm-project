@@ -7,10 +7,21 @@
  *===-----------------------------------------------------------------------===
  */
 
-/* Only include this if we're compiling for the windows platform. */
-#ifndef _MSC_VER
+// Not in MSVC-compatible mode
+#if !defined(_MSC_VER)
+// If on Windows or there is another <intrin.h> later in the search path, defer
+// to it via #include_next. On Windows, always defer, even if no such header to
+// get expected file not found error.
+#if defined(_WIN32) || __has_include_next(<intrin.h>)
 #include_next <intrin.h>
 #else
+// This is a Windows-only header. Diagnose rather than silently falling through
+// to a missing file.
+#error                                                                         \
+    "<intrin.h> is a Windows-only header and is not available on this platform"
+#endif
+#else
+// MSVC-compatible mode intrinsics declarations
 
 #ifndef __INTRIN_H
 #define __INTRIN_H
