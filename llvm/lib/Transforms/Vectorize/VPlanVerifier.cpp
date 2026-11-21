@@ -224,6 +224,30 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
   return true;
 }
 
+/// Verify that the oracle arguments of \p SpecLoad, its operands after the
+/// pointer, from-end flag and oracle, match the Argument recipes forming the
+/// oracle plan's entry block.
+static bool verifySpeculativeLoad(const VPWidenIntrinsicRecipe &SpecLoad) {
+  auto *Oracle = dyn_cast_if_present<VPSpeculativeLoadOracleRecipe>(
+      SpecLoad.getOperand(2)->getDefiningRecipe());
+  if (!Oracle) {
+    errs() << "Speculative load must use an oracle recipe!\n";
+    return false;
+  }
+  const VPBasicBlock &Entry = *Oracle->getOraclePlan().getEntry();
+  auto Args = drop_begin(SpecLoad.operands(), 3);
+  auto Matches = [](auto Pair) {
+    auto &[ArgR, V] = Pair;
+    return match(&ArgR, m_VPInstruction<VPInstruction::Argument>()) &&
+           ArgR.getVPSingleValue()->getScalarType() == V->getScalarType();
+  };
+  if (Entry.size() != range_size(Args) || !all_of(zip(Entry, Args), Matches)) {
+    errs() << "Speculative load operands do not match oracle arguments!\n";
+    return false;
+  }
+  return true;
+}
+
 bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   if (!verifyPhiRecipes(VPBB))
     return false;
@@ -329,6 +353,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
+    if (match(&R, m_WidenIntrinsic<Intrinsic::speculative_load>()) &&
+        !verifySpeculativeLoad(cast<VPWidenIntrinsicRecipe>(R)))
+      return false;
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
       switch (VPI->getOpcode()) {
       case Instruction::Ret:
@@ -343,9 +370,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         if (!verifyLastActiveLaneRecipe(*VPI))
           return false;
         break;
-      case VPInstruction::LiveIn:
+      case VPInstruction::Argument:
         if (VPBB != VPBB->getPlan()->getEntry()) {
-          errs() << "Live-in must be in the plan's entry block!\n";
+          errs() << "Argument must be in the plan's entry block!\n";
           return false;
         }
         break;

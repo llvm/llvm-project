@@ -343,12 +343,13 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i16, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i16, ptr [[TMP2]], align 2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i16, ptr [[TMP4]], align 2
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i16, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i16, ptr [[TMP10]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i16 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
@@ -356,7 +357,7 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[ORACLE_EXIT]], label %[[LOOP]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[BYTES:%.*]] = shl i64 [[LANES]], 1
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 2
 ; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
@@ -366,12 +367,13 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP2]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i32, ptr [[TMP4]], align 4
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i32, ptr [[TMP10]], align 4
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i32 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
@@ -379,7 +381,7 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[ORACLE_EXIT]], label %[[LOOP]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[BYTES:%.*]] = shl i64 [[LANES]], 2
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 4
 ; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
@@ -389,9 +391,10 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP8]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = bitcast double [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
@@ -401,7 +404,7 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT]], label %[[LOOP]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[BYTES:%.*]] = shl i64 [[LANES]], 3
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 8
 ; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;.

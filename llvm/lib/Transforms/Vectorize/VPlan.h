@@ -1356,8 +1356,10 @@ public:
     // Represents the incoming loop-invariant alias-mask. All memory accesses
     // in the loop must stay within the active lanes.
     IncomingAliasMask,
-    // Yields a distinct scalar input, bound by its position in the entry block.
-    LiveIn,
+    // A scalar argument of the function generated from the plan. Arguments
+    // must be in the plan's entry block; the N-th recipe in the entry block is
+    // bound to the function's N-th argument.
+    Argument,
     // Increment the canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
     // Abstract instruction that compares two values and branches. This is
@@ -3637,7 +3639,7 @@ public:
 /// Defines the oracle function for a @llvm.speculative.load intrinsic call. It
 /// contains a nested VPlan which is used to generate the oracle function,
 /// returning the number of bytes read by the intrinsic. The entry block holds
-/// LiveIn recipes in argument order. The oracle executes with VF=1; its lane
+/// Argument recipes in argument order. The oracle executes with VF=1; its lane
 /// limit is passed as an ordinary argument.
 class VPSpeculativeLoadOracleRecipe : public VPSingleDefRecipe {
   std::unique_ptr<VPlan> OraclePlan;

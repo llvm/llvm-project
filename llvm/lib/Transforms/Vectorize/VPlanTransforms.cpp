@@ -2329,8 +2329,8 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     if (!C || (!C->first && C->second == Instruction::Alloca))
       return false;
 
-    // Each live-in represents a distinct external input.
-    if (match(Def, m_VPInstruction<VPInstruction::LiveIn>()))
+    // Each argument represents a distinct external input.
+    if (match(Def, m_VPInstruction<VPInstruction::Argument>()))
       return false;
 
     // Loads are handled as cse() only reuses them within a block with no
