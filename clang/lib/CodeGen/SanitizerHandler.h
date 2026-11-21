@@ -75,7 +75,10 @@
   /* therefore, no trap reason is emitted for this case. */                    \
   SANITIZER_CHECK(BoundsSafety, bounds_safety, 0, "")                          \
   SANITIZER_CHECK(ReturnAlignmentAssumption, return_alignment_assumption, 0,   \
-                  "Alignment assumption violated")
+                  "Alignment assumption violated")                             \
+  SANITIZER_CHECK(PointerSubtraction, pointer_subtraction, 0,                  \
+                  "Pointer subtraction where the byte distance is not a "      \
+                  "multiple of the element size")
 
 enum SanitizerHandler {
 #define SANITIZER_CHECK(Enum, Name, Version, Msg) Enum,

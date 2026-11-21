@@ -901,6 +901,41 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
   Die();
 }
 
+void __ubsan::handlePointerSubtractionImpl(PointerSubtractionData *Data,
+                                           ValueHandle Diff,
+                                           ValueHandle EltSize,
+                                           ReportOptions Opts) {
+  SourceLocation Loc = Data->Loc.acquire();
+  ErrorType ET = ErrorType::PointerSubtraction;
+
+  if (ignoreReport(Loc, Opts, ET))
+    return;
+
+  ScopedReport R(Opts, Loc, ET);
+
+  bool Negative = static_cast<sptr>(Diff) < 0;
+  uptr Magnitude = Negative ? -static_cast<uptr>(Diff) : Diff;
+  Diag(Loc, DL_Error, ET,
+       "pointer subtraction with byte distance %0%1 that is not a multiple of "
+       "the element size %2")
+      << (Negative ? "-" : "") << (unsigned long long)Magnitude
+      << (unsigned long long)EltSize;
+}
+
+void __ubsan::__ubsan_handle_pointer_subtraction(PointerSubtractionData *Data,
+                                                 ValueHandle Diff,
+                                                 ValueHandle EltSize) {
+  GET_REPORT_OPTIONS(false);
+  handlePointerSubtractionImpl(Data, Diff, EltSize, Opts);
+}
+
+void __ubsan::__ubsan_handle_pointer_subtraction_abort(
+    PointerSubtractionData *Data, ValueHandle Diff, ValueHandle EltSize) {
+  GET_REPORT_OPTIONS(true);
+  handlePointerSubtractionImpl(Data, Diff, EltSize, Opts);
+  Die();
+}
+
 // Returns true if this is an artificial debug location created by the
 // LowerTypeTests pass (see createJumpTableDebugInfo in LLVM).
 static bool isArtificialStack(const SymbolizedStack *S) {

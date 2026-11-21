@@ -1683,6 +1683,9 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
+- Introduced `-fsanitize=pointer-subtraction`, a new UndefinedBehaviorSanitizer check that
+  flags subtraction of two pointers whose byte distance is not a multiple of the element size.
+  It is part of the `undefined` group, except when `-fdefined-pointer-subtraction` is enabled.
 
 ### Python Binding Changes
 

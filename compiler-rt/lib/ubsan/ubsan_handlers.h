@@ -221,6 +221,15 @@ struct PointerOverflowData {
 RECOVERABLE(pointer_overflow, PointerOverflowData *Data, ValueHandle Base,
             ValueHandle Result)
 
+struct PointerSubtractionData {
+  SourceLocation Loc;
+};
+
+/// \brief Handle a pointer subtraction whose byte distance \p Diff is not a
+/// multiple of the element size \p EltSize.
+RECOVERABLE(pointer_subtraction, PointerSubtractionData *Data, ValueHandle Diff,
+            ValueHandle EltSize)
+
 /// \brief Known CFI check kinds.
 /// Keep in sync with the enum of the same name in CodeGenFunction.h
 enum CFITypeCheckKind : unsigned char {
