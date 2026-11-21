@@ -2245,3 +2245,9 @@ let ArchGuard = "defined(__aarch64__)", TargetGuard = "fp8,neon" in {
   def FSCALE_V128 : WInst<"vscale", "..(.S)", "QdQfQh">;
   def FSCALE_V64 : WInst<"vscale", "(.q)(.q)(.qS)", "fh">;
 }
+
+let ArchGuard = "defined(__aarch64__)", TargetGuard = "lsui,neon" in {
+  // unprivileged non-temporal pair load/stores
+  def VLDTN_X2 : SInst<"vldtn_x2", "2(c*!)", "QcQsQiQlQUcQUsQUiQUlQfQhQdQbQm">;
+  def VSTTN_X2 : SInst<"vsttn_x2", "v(*)(2!)", "QcQsQiQlQUcQUsQUiQUlQfQhQdQbQm">;
+}

@@ -6850,6 +6850,42 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Ops[1] = Builder.CreateCall(F, ArrayRef(Ops).slice(1), "vld4_lane");
     return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
   }
+  case NEON::BI__builtin_neon_vldtnq_s8_x2:
+  case NEON::BI__builtin_neon_vldtnq_s16_x2:
+  case NEON::BI__builtin_neon_vldtnq_s32_x2:
+  case NEON::BI__builtin_neon_vldtnq_s64_x2:
+  case NEON::BI__builtin_neon_vldtnq_u8_x2:
+  case NEON::BI__builtin_neon_vldtnq_u16_x2:
+  case NEON::BI__builtin_neon_vldtnq_u32_x2:
+  case NEON::BI__builtin_neon_vldtnq_u64_x2:
+  case NEON::BI__builtin_neon_vldtnq_f16_x2:
+  case NEON::BI__builtin_neon_vldtnq_bf16_x2:
+  case NEON::BI__builtin_neon_vldtnq_f32_x2:
+  case NEON::BI__builtin_neon_vldtnq_f64_x2:
+  case NEON::BI__builtin_neon_vldtnq_mf8_x2: {
+    llvm::Type *Tys[2] = {VTy, Ops[1]->getType()};
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_neon_vldtn_x2, Tys);
+    Ops[1] = Builder.CreateCall(F, ArrayRef(Ops).slice(1), "vldtn_x2");
+    return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
+  }
+  case NEON::BI__builtin_neon_vsttnq_s8_x2:
+  case NEON::BI__builtin_neon_vsttnq_s16_x2:
+  case NEON::BI__builtin_neon_vsttnq_s32_x2:
+  case NEON::BI__builtin_neon_vsttnq_s64_x2:
+  case NEON::BI__builtin_neon_vsttnq_u8_x2:
+  case NEON::BI__builtin_neon_vsttnq_u16_x2:
+  case NEON::BI__builtin_neon_vsttnq_u32_x2:
+  case NEON::BI__builtin_neon_vsttnq_u64_x2:
+  case NEON::BI__builtin_neon_vsttnq_f16_x2:
+  case NEON::BI__builtin_neon_vsttnq_bf16_x2:
+  case NEON::BI__builtin_neon_vsttnq_f32_x2:
+  case NEON::BI__builtin_neon_vsttnq_f64_x2:
+  case NEON::BI__builtin_neon_vsttnq_mf8_x2: {
+    std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
+    llvm::Type *Tys[2] = {VTy, Ops[2]->getType()};
+    return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_vsttn_x2, Tys),
+                        Ops, "");
+  }
   case NEON::BI__builtin_neon_vst2_v:
   case NEON::BI__builtin_neon_vst2q_v: {
     std::rotate(Ops.begin(), Ops.begin() + 1, Ops.end());
