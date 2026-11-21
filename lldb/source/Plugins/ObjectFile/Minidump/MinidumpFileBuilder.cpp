@@ -598,10 +598,9 @@ Status MinidumpFileBuilder::FixThreadStacks() {
   // If we have anything in the heap flush it.
   FlushBufferToDisk();
   m_core_file->SeekFromStart(m_thread_list_start);
-  for (auto &pair : m_thread_by_range_end) {
+  for (const llvm::minidump::Thread &thread : m_threads) {
     // The thread objects will get a new memory descriptor added
     // When we are emitting the memory list and then we write it here
-    const llvm::minidump::Thread &thread = pair.second;
     size_t bytes_to_write = sizeof(llvm::minidump::Thread);
     size_t bytes_written = bytes_to_write;
     error = m_core_file->Write(&thread, bytes_written);
@@ -692,7 +691,9 @@ Status MinidumpFileBuilder::AddThreadList() {
     t.Stack = stack, t.Context = thread_context_memory_locator;
 
     // We save off the stack object so we can circle back and clean it up.
-    m_thread_by_range_end[sp_region.GetRange().GetRangeEnd()] = t;
+    m_thread_indexes_by_range_end[sp_region.GetRange().GetRangeEnd()].push_back(
+        m_threads.size());
+    m_threads.push_back(t);
     m_data.AppendData(&t, sizeof(llvm::minidump::Thread));
   }
 
@@ -871,7 +872,7 @@ Status MinidumpFileBuilder::AddMemoryList() {
   uint64_t total_size = GetCurrentDataEndOffset();
   auto iterator = all_core_memory_vec.begin();
   while (iterator != all_core_memory_vec.end()) {
-    if (m_thread_by_range_end.count(iterator->range.end()) > 0) {
+    if (m_thread_indexes_by_range_end.count(iterator->range.end()) > 0) {
       // We don't save stacks twice.
       ranges_32.push_back(*iterator);
       total_size +=
@@ -1074,8 +1075,10 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     descriptor.Memory.RVA =
         static_cast<llvm::support::ulittle32_t>(offset_for_data);
     descriptors.push_back(descriptor);
-    if (m_thread_by_range_end.count(end) > 0)
-      m_thread_by_range_end[end].Stack = descriptor;
+    auto thread_indexes = m_thread_indexes_by_range_end.find(end);
+    if (thread_indexes != m_thread_indexes_by_range_end.end())
+      for (size_t index : thread_indexes->second)
+        m_threads[index].Stack = descriptor;
   }
 
   // Add a directory that references this list
