@@ -60,7 +60,8 @@ createAddDebugInfoPass(fir::AddDebugInfoOptions options = {});
 std::unique_ptr<mlir::Pass> createAnnotateConstantOperandsPass();
 std::unique_ptr<mlir::Pass> createAlgebraicSimplificationPass();
 std::unique_ptr<mlir::Pass>
-createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config);
+createAlgebraicSimplificationPass(const mlir::GreedyRewriteConfig &config,
+                                  bool keepDeviceComplexPowi = true);
 
 std::unique_ptr<mlir::Pass> createVScaleAttrPass();
 std::unique_ptr<mlir::Pass>

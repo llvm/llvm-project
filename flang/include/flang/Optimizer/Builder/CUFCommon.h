@@ -106,6 +106,14 @@ struct DeviceCodeSet {
 DeviceCodeSet collectDeviceCode(mlir::ModuleOp mod, mlir::SymbolTable &symTab,
                                 bool rejectDynamicDispatch = false);
 
+/// Collect the functions of \p mod whose whole body is OpenACC or CUDA Fortran
+/// device code: the procedures with a device side and the functions that
+/// device code references, directly or through other functions. The body of
+/// such a function may be inlined into device code or compiled for the device
+/// later. A host_device procedure that already has a device copy is host code.
+llvm::SetVector<mlir::func::FuncOp>
+collectFunctionsExecutingOnDevice(mlir::ModuleOp mod);
+
 /// Point every fir.call and fir.address_of under \p root whose symbol is a key
 /// of \p map at the mapped symbol instead.
 void remapProcedureSymbols(
