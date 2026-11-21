@@ -433,8 +433,9 @@ void AIX::AddClangCXXStdlibIncludeArgs(
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libstdcxx:
+  case ToolChain::CST_MSVCSTL:
     llvm::report_fatal_error(
-        "picking up libstdc++ headers is unimplemented on AIX");
+        "picking up non-libc++ headers is unimplemented on AIX");
   case ToolChain::CST_Libcxx: {
     llvm::StringRef Sysroot = GetHeaderSysroot(DriverArgs);
     SmallString<128> PathCPP(Sysroot);
@@ -468,7 +469,8 @@ void AIX::AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                               llvm::opt::ArgStringList &CmdArgs) const {
   switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libstdcxx:
-    llvm::report_fatal_error("linking libstdc++ unimplemented on AIX");
+  case ToolChain::CST_MSVCSTL:
+    llvm::report_fatal_error("linking non-libc++ unimplemented on AIX");
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
     if (Args.hasArg(options::OPT_fexperimental_library))

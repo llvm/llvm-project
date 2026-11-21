@@ -267,6 +267,7 @@ void OHOS::AddCXXStdlibLibArgs(const ArgList &Args,
     break;
 
   case ToolChain::CST_Libstdcxx:
+  case ToolChain::CST_MSVCSTL:
     llvm_unreachable("invalid stdlib name");
   }
 }
