@@ -3165,39 +3165,28 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         return CI->getArgOperand(0);
       }
 
-      FPClassTest SrcDemandedMask = DemandedMask & fcNan;
-      if (DemandedMask & fcNan)
-        SrcDemandedMask |= fcNan;
+      FPClassTest SrcDemandedMask = fcAllFlags;
 
-      if (DemandedMask & fcZero) {
-        // exp(-infinity) = 0
-        SrcDemandedMask |= fcNegInf;
+      if ((DemandedMask & fcNan) == fcNone)
+        SrcDemandedMask &= ~fcSNan;
+      if ((DemandedMask & fcQNan) == fcNone)
+        SrcDemandedMask &= ~fcQNan;
 
-        // exp(-largest_normal) = 0
-        //
-        // Negative numbers of sufficiently large magnitude underflow to 0. No
-        // subnormal input has a 0 result.
-        SrcDemandedMask |= fcNegNormal;
-      }
-
-      if (DemandedMask & fcPosSubnormal) {
-        // Negative numbers of sufficiently large magnitude underflow to 0. No
-        // subnormal input has a 0 result.
-        SrcDemandedMask |= fcNegNormal;
-      }
-
-      if (DemandedMask & fcPosNormal) {
-        // exp(0) = 1
-        // exp(+/- smallest_normal) = 1
-        // exp(+/- largest_denormal) = 1
-        // exp(+/- smallest_denormal) = 1
-        // exp(-1) = pos normal
-        SrcDemandedMask |= fcNormal | fcSubnormal | fcZero;
-      }
-
-      // exp(inf), exp(largest_normal) = inf
-      if (DemandedMask & fcPosInf)
-        SrcDemandedMask |= fcPosInf | fcPosNormal;
+      // exp(-inf) == +0.0
+      if ((DemandedMask & fcPosZero) == fcNone)
+        SrcDemandedMask &= ~fcNegInf;
+      // exp(nnorm) == [+0.0, +1.0]
+      if ((DemandedMask & fcPosFinite) == fcNone)
+        SrcDemandedMask &= ~fcNegNormal;
+      // exp(zero | sub) == +1.0
+      if ((DemandedMask & fcPosNormal) == fcNone)
+        SrcDemandedMask &= ~(fcZero | fcSubnormal);
+      // exp(pnorm) == [+1.0, +inf]
+      if ((DemandedMask & (fcPosNormal | fcPosInf)) == fcNone)
+        SrcDemandedMask &= ~fcPosNormal;
+      // exp(+inf) == +inf
+      if ((DemandedMask & fcPosInf) == fcNone)
+        SrcDemandedMask &= ~fcPosInf;
 
       KnownFPClass KnownSrc;
 
