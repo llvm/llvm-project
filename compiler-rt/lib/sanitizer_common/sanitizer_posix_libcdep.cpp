@@ -36,12 +36,13 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
-#undef MAP_NORESERVE
-#define MAP_NORESERVE 0
-#endif
+// AIX does not provide MAP_NORESERVE.
+#    undef MAP_NORESERVE
+#    define MAP_NORESERVE 0
+#  endif
 
 typedef void (*sa_sigaction_t)(int, siginfo_t *, void *);
 
@@ -443,8 +444,20 @@ bool MmapFixedSuperNoReserve(uptr fixed_addr, uptr size, const char *name) {
 }
 
 uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
+#  if SANITIZER_AIX
+  // AIX cannot map over an existing mapping, so a range cannot be reserved
+  // inaccessible and mapped later. Map it readable and writable up front;
+  // Map() and MapOrDie() then have nothing left to do.
+  if (fixed_addr) {
+    MmapFixedOrDie(fixed_addr, size, name);
+    base_ = reinterpret_cast<void*>(fixed_addr);
+  } else {
+    base_ = MmapOrDie(size, name);
+  }
+#  else
   base_ = fixed_addr ? MmapFixedNoAccess(fixed_addr, size, name)
                      : MmapNoAccess(size);
+#  endif
   size_ = size;
   name_ = name;
   (void)os_handle_;  // unsupported
@@ -454,13 +467,23 @@ uptr ReservedAddressRange::Init(uptr size, const char *name, uptr fixed_addr) {
 // Uses fixed_addr for now.
 // Will use offset instead once we've implemented this function for real.
 uptr ReservedAddressRange::Map(uptr fixed_addr, uptr size, const char *name) {
+#  if SANITIZER_AIX
+  // The whole range was mapped by Init().
+  return fixed_addr;
+#  else
   return reinterpret_cast<uptr>(
       MmapFixedOrDieOnFatalError(fixed_addr, size, name));
+#  endif
 }
 
 uptr ReservedAddressRange::MapOrDie(uptr fixed_addr, uptr size,
                                     const char *name) {
+#  if SANITIZER_AIX
+  // The whole range was mapped by Init().
+  return fixed_addr;
+#  else
   return reinterpret_cast<uptr>(MmapFixedOrDie(fixed_addr, size, name));
+#  endif
 }
 
 void ReservedAddressRange::Unmap(uptr addr, uptr size) {
@@ -492,7 +515,10 @@ real_pthread_attr_getstack(void *attr, void **addr, size_t *size);
 } // extern "C"
 
 int internal_pthread_attr_getstack(void *attr, void **addr, uptr *size) {
-#if !SANITIZER_GO && !SANITIZER_APPLE
+// On AIX, an undefined weak symbol must still be resolved at link time.
+// real_pthread_attr_getstack is defined only by runtimes that intercept
+// pthread_attr_getstack, so it is not referenced on AIX.
+#  if !SANITIZER_GO && !SANITIZER_APPLE && !SANITIZER_AIX
   if (&real_pthread_attr_getstack)
     return real_pthread_attr_getstack((pthread_attr_t *)attr, addr,
                                       (size_t *)size);
