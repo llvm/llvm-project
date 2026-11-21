@@ -190,22 +190,37 @@ llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
   llvm::SmallString<64> Name;
   GlobalDecl D(FD);
 
+  std::string LibName = Context.BuiltinInfo.getName(BuiltinID).substr(10);
+
   // If the builtin has been declared explicitly with an assembler label,
   // use the mangled name. This differs from the plain label on platforms
-  // that prefix labels.
+  // that prefix labels. Likewise, if the library function the builtin maps to
+  // has been declared with an assembler label, use that, as GCC does.
   if (FD->hasAttr<AsmLabelAttr>())
     Name = getMangledName(D);
+  else if (std::optional<StringRef> Label = getAsmLabelForLibFunction(LibName))
+    Name = *Label;
   else if (StringRef TargetName = CodeGenUtils::getTargetBuiltinLibFunctionName(
                BuiltinID, getTarget());
            !TargetName.empty())
     Name = TargetName;
   else
-    Name = Context.BuiltinInfo.getName(BuiltinID).substr(10);
+    Name = LibName;
 
   llvm::FunctionType *Ty =
     cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
 
   return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable=*/false);
+}
+
+std::optional<StringRef>
+CodeGenModule::getAsmLabelForLibFunction(StringRef Name) {
+  for (const NamedDecl *ND :
+       Context.getTranslationUnitDecl()->lookup(&Context.Idents.get(Name)))
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND))
+      if (FD->isExternC() && FD->hasAttr<AsmLabelAttr>())
+        return getMangledName(GlobalDecl(FD));
+  return std::nullopt;
 }
 
 void appendDefaultIntrinsicArgs(SmallVectorImpl<llvm::Value *> &Args,
