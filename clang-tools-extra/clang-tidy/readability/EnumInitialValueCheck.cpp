@@ -74,6 +74,32 @@ static bool isInitializedByLiteral(const EnumConstantDecl *Enumerator) {
   return Init->isIntegerConstantExpr(Enumerator->getASTContext());
 }
 
+/// Returns true if all but the last enumerator are explicitly initialized
+/// with consecutive integer constant expression values and the last
+/// enumerator's value is left implicit, e.g.
+///   enum E { A = 10, B = 11, C = 12, Size };
+static bool hasConsecutiveInitialValuesExceptLast(const EnumDecl &Node) {
+  const auto Enumerators = Node.enumerators();
+  auto It = Enumerators.begin();
+  const auto End = Enumerators.end();
+  if (It == End || !isInitializedByLiteral(*It))
+    return false;
+
+  llvm::APSInt PrevValue = (*It)->getInitVal();
+  while (++It != End) {
+    const EnumConstantDecl *Enumerator = *It;
+    if (Enumerator->getInitVal() != ++PrevValue)
+      return false;
+
+    if (std::next(It) == End)
+      return Enumerator->getInitExpr() == nullptr;
+
+    if (!isInitializedByLiteral(Enumerator))
+      return false;
+  }
+  return false;
+}
+
 static void cleanInitialValue(const DiagnosticBuilder &Diag,
                               const EnumConstantDecl *ECD,
                               const SourceManager &SM,
@@ -101,10 +127,13 @@ AST_MATCHER(EnumDecl, isMacro) {
   return Loc.isMacroID();
 }
 
-AST_MATCHER_P(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs) {
+AST_MATCHER_P2(EnumDecl, hasConsistentInitialValues, bool, AllowSelfRefs, bool,
+               AllowConsecutiveExceptLast) {
   return isNoneEnumeratorsInitialized(Node, AllowSelfRefs) ||
          isOnlyFirstEnumeratorInitialized(Node, AllowSelfRefs) ||
-         areAllEnumeratorsInitialized(Node);
+         areAllEnumeratorsInitialized(Node) ||
+         (AllowConsecutiveExceptLast &&
+          hasConsecutiveInitialValuesExceptLast(Node));
 }
 
 AST_MATCHER_P(EnumDecl, hasZeroInitialValueForFirstEnumerator, bool,
@@ -164,7 +193,9 @@ EnumInitialValueCheck::EnumInitialValueCheck(StringRef Name,
       AllowExplicitSequentialInitialValues(
           Options.get("AllowExplicitSequentialInitialValues", true)),
       AllowReferencedInitialValues(
-          Options.get("AllowReferencedInitialValues", false)) {}
+          Options.get("AllowReferencedInitialValues", false)),
+      AllowConsecutiveInitialValuesExceptLast(
+          Options.get("AllowConsecutiveInitialValuesExceptLast", false)) {}
 
 void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowExplicitZeroFirstInitialValue",
@@ -173,14 +204,18 @@ void EnumInitialValueCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 AllowExplicitSequentialInitialValues);
   Options.store(Opts, "AllowReferencedInitialValues",
                 AllowReferencedInitialValues);
+  Options.store(Opts, "AllowConsecutiveInitialValuesExceptLast",
+                AllowConsecutiveInitialValuesExceptLast);
 }
 
 void EnumInitialValueCheck::registerMatchers(MatchFinder *Finder) {
   const bool AllowSelfRefs = AllowReferencedInitialValues;
-  Finder->addMatcher(enumDecl(isDefinition(), unless(isMacro()),
-                              unless(hasConsistentInitialValues(AllowSelfRefs)))
-                         .bind("inconsistent"),
-                     this);
+  Finder->addMatcher(
+      enumDecl(isDefinition(), unless(isMacro()),
+               unless(hasConsistentInitialValues(
+                   AllowSelfRefs, AllowConsecutiveInitialValuesExceptLast)))
+          .bind("inconsistent"),
+      this);
   if (!AllowExplicitZeroFirstInitialValue)
     Finder->addMatcher(
         enumDecl(isDefinition(),
