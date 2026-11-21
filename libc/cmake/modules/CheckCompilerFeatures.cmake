@@ -29,6 +29,7 @@ set(
   CPU_ONLY_COMPILER_FEATURES
     "float80"
     "float128"
+    "stdc_fenv_access"
 )
 
 # Function to check whether the compiler supports the provided set of features.
