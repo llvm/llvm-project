@@ -33,7 +33,7 @@ declare double @anint (double);
 declare double @asin (double);
 declare double @asinh (double);
 declare double @atan (double);
-declare double @atan2 (double);
+declare double @atan2 (double, double);
 declare double @atanh (double);
 declare double @cbrt (double);
 declare double @copysign (double, double);
@@ -369,12 +369,12 @@ entry:
   ret double %call
 }
 
-define double @atan2_f64(double %a) {
+define double @atan2_f64(double %a, double %b) {
 ; CHECK-LABEL: atan2_f64
 ; CHECK: __xl_atan2_finite
 ; CHECK: blr
 entry:
-  %call = tail call nnan ninf afn nsz double @atan2(double %a)
+  %call = tail call nnan ninf afn nsz double @atan2(double %a, double %b)
   ret double %call
 }
 
