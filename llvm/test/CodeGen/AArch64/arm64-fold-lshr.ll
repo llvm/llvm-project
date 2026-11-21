@@ -36,8 +36,8 @@ define i16 @load16_shr1(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load16_shr1:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #1
-; CHECK-NEXT:    ldrh w0, [x2, x8, lsl #1]
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffe
+; CHECK-NEXT:    ldrh w0, [x2, x8]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
@@ -66,8 +66,8 @@ define i32 @load32_shr2(i64 %a, i64 %b, ptr %table) {
 ; CHECK-LABEL: load32_shr2:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mul x8, x1, x0
-; CHECK-NEXT:    lsr x8, x8, #2
-; CHECK-NEXT:    ldr w0, [x2, x8, lsl #2]
+; CHECK-NEXT:    and x8, x8, #0xfffffffffffffffc
+; CHECK-NEXT:    ldr w0, [x2, x8]
 ; CHECK-NEXT:    ret
 entry:
   %mul = mul i64 %b, %a
