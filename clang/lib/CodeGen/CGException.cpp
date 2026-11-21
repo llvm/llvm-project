@@ -70,7 +70,7 @@ llvm::FunctionCallee CodeGenModule::getTerminateFn() {
              getLangOpts().ObjCRuntime.hasTerminate())
     name = "objc_terminate";
   else
-    name = "abort";
+    name = getAsmLabelForLibFunction("abort").value_or("abort");
   return CreateRuntimeFunction(FTy, name);
 }
 

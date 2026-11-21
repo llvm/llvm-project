@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple=i686-pc-linux-gnu -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,LINUX
 // RUN: %clang_cc1 -triple=i686-apple-darwin9 -emit-llvm %s -o - | FileCheck %s --check-prefixes=CHECK,DARWIN
+// RUN: %clang_cc1 -triple=i686-pc-linux-gnu -fexceptions -emit-llvm %s -o - | FileCheck %s --check-prefix=EH
 
 char *strerror(int) asm("alias");
 int x __asm("foo");
@@ -53,3 +54,41 @@ double sin(double x) asm("real_sin");
 double test_sin(double d) { return __builtin_sin(d); }
 // CHECK-LABEL: @test_sin(
 // LINUX:         call double @llvm.sin.f64(
+
+/// A call through the __builtin_ alias of a library function uses the asm
+/// label of the library function, as a direct call does.
+extern char *stpcpy(char *__restrict, const char *__restrict);
+extern __typeof(stpcpy) stpcpy asm("__GI_stpcpy");
+char *test_builtin_stpcpy(char *d, const char *s) {
+  return __builtin_stpcpy(d, s);
+}
+// CHECK-LABEL: @test_builtin_stpcpy(
+// LINUX:         call ptr @__GI_stpcpy(
+// DARWIN:        call ptr @"\01__GI_stpcpy"(
+
+extern void abort(void) __attribute__((noreturn));
+extern __typeof(abort) abort asm("__GI_abort");
+void test_builtin_abort(int x) {
+  if (x)
+    __builtin_abort();
+}
+// CHECK-LABEL: @test_builtin_abort(
+// LINUX:         call void @__GI_abort(
+// DARWIN:        call void @"\01__GI_abort"(
+
+/// The abort call in the terminate landing pad for an EH cleanup also uses
+/// the asm label.
+void release(int *);
+void use(int *);
+void test_cleanup_terminate(void) {
+  int v __attribute__((cleanup(release))) = 0;
+  use(&v);
+}
+// EH-LABEL: @test_cleanup_terminate(
+// EH:         invoke void @release(
+// EH-NEXT:      to label %{{.*}} unwind label %[[TERM:.*]]
+// EH:       [[TERM]]:
+// EH-NEXT:    landingpad { ptr, i32 }
+// EH-NEXT:      catch ptr null
+// EH-NEXT:    call void @__GI_abort()
+// EH-NOT:   call void @abort()
