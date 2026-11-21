@@ -1281,6 +1281,52 @@ module attributes {transform.with_named_sequence} {
 #map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
 #map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
 #map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
+// The x86 packed loads read every lane, so a masked read is not lowered.
+func.func @negative_masked_read(
+  %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC, %mask: vector<1x8x2xi1>) -> !vecC
+{
+  %c0 = arith.constant 0 : index
+  %0 = arith.constant 0.0 : bf16
+
+  %1 = vector.transfer_read %arg0[%c0, %c0, %c0], %0 {in_bounds = [true, true, true]} :
+        !memrefA, !vecA
+  %2 = vector.transfer_read %arg1[%c0, %c0, %c0], %0, %mask {in_bounds = [true, true, true]} :
+        !memrefB, !vecB
+  %3 = vector.contract {
+    indexing_maps = [#map, #map1, #map2],
+    iterator_types = ["reduction", "parallel", "parallel", "reduction"],
+    kind = #vector.kind<add>}
+    %1, %2, %arg2
+    : !vecA, !vecB into !vecC
+  return %3 : !vecC
+}
+
+// CHECK-LABEL: @negative_masked_read(
+// CHECK-SAME:    %[[MASK:[^:]*]]: vector<1x8x2xi1>
+// CHECK:         %[[READ:.*]] = vector.transfer_read {{.*}}, %[[MASK]] {in_bounds = [true, true, true]}
+// CHECK:         vector.contract {{.*}}, %[[READ]], %{{.*}} :
+// CHECK-NOT:     vector.fma
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %func {
+      transform.apply_patterns.x86.vector_contract_bf16_to_fma
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+!vecA = vector<1x1x2xbf16>
+!vecB = vector<1x8x2xbf16>
+!vecC = vector<1x8xf32>
+!memrefA = memref<4x1x2xbf16>
+!memrefB = memref<1x32x2xbf16>
+#map = affine_map<(d4, d1, d2, d3) -> (d1, d3, d4)>
+#map1 = affine_map<(d4, d1, d2, d3) -> (d3, d2, d4)>
+#map2 = affine_map<(d4, d1, d2, d3) -> (d1, d2)>
 func.func @negative_no_dynamic_vnni_offset(
   %arg0: !memrefA, %arg1: !memrefB, %arg2: !vecC, %arg3: index) -> !vecC
 {
