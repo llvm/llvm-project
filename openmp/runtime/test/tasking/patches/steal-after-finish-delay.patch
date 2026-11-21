@@ -1,0 +1,57 @@
+diff --git a/openmp/runtime/src/kmp_tasking.cpp b/openmp/runtime/src/kmp_tasking.cpp
+--- a/openmp/runtime/src/kmp_tasking.cpp
++++ b/openmp/runtime/src/kmp_tasking.cpp
+@@ -3184,6 +3184,14 @@
+   while (1) { // Outer loop keeps trying to find tasks in case of single thread
+     // getting tasks from target constructs
+     while (1) { // Inner loop to find a task and execute it
++#ifdef LIBOMP_REPRO_DELAY
++      // BUG REPRODUCTION: Workers that already marked finished delay before
++      // checking deques. This prevents them from stealing the proxy task
++      // that was re-enqueued by the OOO path, giving the primary time to
++      // deactivate the task team with the proxy still in a deque.
++      if (final_spin && *thread_finished && !KMP_MASTER_TID(tid))
++        usleep(10000);  // 10ms: worker already finished, prevent stealing
++#endif
+ #if ENABLE_LIBOMPTARGET
+       // Give an opportunity to the offload runtime to make progress
+       if (UNLIKELY(kmp_target_sync_cb))
+@@ -3366,6 +3374,13 @@
+       }
+     }
+
++#ifdef LIBOMP_REPRO_DELAY
++    // BUG REPRODUCTION: Widen the race window between "no tasks found"
++    // and the ICC check below. Gives the external proxy-task fulfiller
++    // time to re-enqueue the proxy and decrement ICC to 0.
++    if (final_spin)
++      usleep(500);
++#endif
++
+     // The task source has been exhausted. If in final spin loop of barrier,
+     // check if termination condition is satisfied. The work queue may be empty
+     // but there might be proxy tasks still executing.
+@@ -4077,6 +4092,22 @@
+     TCW_SYNC_4(task_team->tt.tt_active, FALSE);
+     KMP_MB();
+
+     TCW_PTR(this_thr->th.th_task_team, NULL);
++
++#ifdef LIBOMP_REPRO_DELAY
++    // SAFETY PROPERTY CHECK: after deactivation, no deque should have tasks.
++    if (task_team->tt.tt_threads_data) {
++      for (int i = 0; i < task_team->tt.tt_nproc; i++) {
++        int ntasks = TCR_4(task_team->tt.tt_threads_data[i].td.td_deque_ntasks);
++        if (ntasks > 0) {
++          fprintf(stderr,
++                  "\n*** BUG REPRODUCED: orphaned task after deactivation ***\n"
++                  "  deque[%d] has %d task(s) in deactivated task team %p\n"
++                  "  This is the steal-after-finish race.\n\n",
++                  i, ntasks, (void *)task_team);
++          abort();
++        }
++      }
++    }
++#endif
+   }
+ }
