@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/Target/LLVMIR/Import.h"
 #include "mlir/Target/LLVMIR/LLVMImportInterface.h"
 #include "mlir/Target/LLVMIR/TypeFromLLVM.h"
@@ -150,8 +151,10 @@ public:
 
   /// Converts an LLVM value to an MLIR value, or returns failure if the
   /// conversion fails. Uses the `convertConstant` method to translate constant
-  /// LLVM values.
-  FailureOr<Value> convertValue(llvm::Value *value);
+  /// LLVM values. Conversion failures are diagnosed with `severity`.
+  FailureOr<Value>
+  convertValue(llvm::Value *value,
+               DiagnosticSeverity severity = DiagnosticSeverity::Error);
 
   /// Converts an LLVM metadata value to an MLIR value, or returns failure if
   /// the conversion fails. Uses the `convertConstant` method to translate
@@ -160,7 +163,9 @@ public:
 
   /// Converts a range of LLVM values to a range of MLIR values using the
   /// `convertValue` method, or returns failure if the conversion fails.
-  FailureOr<SmallVector<Value>> convertValues(ArrayRef<llvm::Value *> values);
+  FailureOr<SmallVector<Value>>
+  convertValues(ArrayRef<llvm::Value *> values,
+                DiagnosticSeverity severity = DiagnosticSeverity::Error);
 
   /// Converts `value` to an integer attribute. Asserts if the matching fails.
   IntegerAttr matchIntegerAttr(llvm::Value *value);
@@ -301,15 +306,16 @@ public:
   /// attributes for LLVM_IntrOpBase. Attributes correspond to LLVM immargs. The
   /// list `immArgPositions` contains the positions of immargs on the LLVM
   /// intrinsic, and `immArgAttrNames` list (of the same length) contains the
-  /// corresponding MLIR attribute names.
-  LogicalResult
-  convertIntrinsicArguments(ArrayRef<llvm::Value *> values,
-                            ArrayRef<llvm::OperandBundleUse> opBundles,
-                            bool requiresOpBundles,
-                            ArrayRef<unsigned> immArgPositions,
-                            ArrayRef<StringLiteral> immArgAttrNames,
-                            SmallVectorImpl<Value> &valuesOut,
-                            SmallVectorImpl<NamedAttribute> &attrsOut);
+  /// corresponding MLIR attribute names. With a non-error severity, skip
+  /// bundles whose operands cannot be converted.
+  LogicalResult convertIntrinsicArguments(
+      Location loc, ArrayRef<llvm::Value *> values,
+      ArrayRef<llvm::OperandBundleUse> opBundles, bool requiresOpBundles,
+      ArrayRef<unsigned> immArgPositions,
+      ArrayRef<StringLiteral> immArgAttrNames,
+      SmallVectorImpl<Value> &valuesOut,
+      SmallVectorImpl<NamedAttribute> &attrsOut,
+      DiagnosticSeverity bundleSeverity = DiagnosticSeverity::Error);
 
   /// Converts the argument and result attributes attached to `call` and adds
   /// them to `attrsOp`. For intrinsic calls, filters out attributes
@@ -390,7 +396,9 @@ private:
   LogicalResult convertIntrinsic(llvm::CallInst *inst);
   /// Converts an LLVM instruction to an MLIR LLVM dialect operation if an MLIR
   /// counterpart exists. Otherwise, returns failure.
-  LogicalResult convertInstruction(llvm::Instruction *inst);
+  LogicalResult
+  convertInstruction(llvm::Instruction *inst,
+                     DiagnosticSeverity severity = DiagnosticSeverity::Error);
   /// Converts the metadata attached to the original instruction `inst` if
   /// a dialect interfaces supports the specific kind of metadata and attaches
   /// the resulting dialect attributes to the converted operation `op`. Emits a
@@ -420,6 +428,21 @@ private:
   LogicalResult convertBranchArgs(llvm::Instruction *branch,
                                   llvm::BasicBlock *target,
                                   SmallVectorImpl<Value> &blockArguments);
+  /// Converted operand bundles, with flattened operands and one size and tag
+  /// per bundle.
+  struct OperandBundles {
+    SmallVector<Value> operands;
+    DenseI32ArrayAttr sizes;
+    ArrayAttr tags;
+  };
+
+  /// Converts operand bundles, preserving their order and empty bundles.
+  /// On an unconvertible operand, either return failure or warn and skip the
+  /// bundle, according to `severity`.
+  FailureOr<OperandBundles>
+  convertOperandBundles(Location loc, ArrayRef<llvm::OperandBundleUse> bundles,
+                        DiagnosticSeverity severity);
+
   /// Convert `callInst` operands. For indirect calls, the method additionally
   /// inserts the called function at the beginning of the returned `operands`
   /// array.  If `allowInlineAsm` is set to false (the default), it will return
@@ -450,11 +473,14 @@ private:
   /// Returns the builtin type equivalent to the given LLVM dialect type or
   /// nullptr if there is no equivalent. The returned type can be used to create
   /// an attribute for a GlobalOp or a ConstantOp.
-  Type getBuiltinTypeForAttr(Type type);
+  Type getBuiltinTypeForAttr(
+      Type type, DiagnosticSeverity severity = DiagnosticSeverity::Error);
   /// Returns `constant` as an attribute to attach to a GlobalOp or ConstantOp
   /// or nullptr if the constant is not convertible. It supports scalar integer
   /// and float constants as well as shaped types thereof including strings.
-  Attribute getConstantAsAttr(llvm::Constant *constant);
+  Attribute
+  getConstantAsAttr(llvm::Constant *constant,
+                    DiagnosticSeverity severity = DiagnosticSeverity::Error);
   /// Returns the topologically sorted set of transitive dependencies needed to
   /// convert the given constant.
   SetVector<llvm::Constant *> getConstantsToConvert(llvm::Constant *constant);
@@ -462,13 +488,16 @@ private:
   /// conversion fails. The MLIR value may be produced by a ConstantOp,
   /// AddressOfOp, NullOp, or a side-effect free operation (for ConstantExprs or
   /// ConstantGEPs).
-  FailureOr<Value> convertConstant(llvm::Constant *constant);
+  FailureOr<Value> convertConstant(llvm::Constant *constant,
+                                   DiagnosticSeverity severity);
   /// Converts an LLVM constant and its transitive constant dependencies to MLIR
   /// operations by converting them in topological order using the
   /// `convertConstant` method, or returns failure if the conversion of any of
   /// them fails. All operations are inserted at the start of the current
   /// function entry block.
-  FailureOr<Value> convertConstantExpr(llvm::Constant *constant);
+  FailureOr<Value>
+  convertConstantExpr(llvm::Constant *constant,
+                      DiagnosticSeverity severity = DiagnosticSeverity::Error);
   /// Returns a global comdat operation that serves as a container for LLVM
   /// comdat selectors. Creates the global comdat operation on the first
   /// invocation.

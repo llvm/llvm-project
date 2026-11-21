@@ -538,6 +538,11 @@ private:
   std::unique_ptr<detail::DiagnosticEngineImpl> impl;
 };
 
+/// Emits an error, warning, or remark at the given location.
+/// A trivially empty `message` is omitted from the diagnostic.
+InFlightDiagnostic emitDiag(Location loc, DiagnosticSeverity severity,
+                            const Twine &message);
+
 /// Utility method to emit an error message using this location.
 InFlightDiagnostic emitError(Location loc);
 InFlightDiagnostic emitError(Location loc, const Twine &message);

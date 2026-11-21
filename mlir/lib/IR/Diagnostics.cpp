@@ -352,11 +352,9 @@ void DiagnosticEngine::emit(Diagnostic &&diag) {
   impl->emit(std::move(diag));
 }
 
-/// Helper function used to emit a diagnostic with an optionally empty twine
-/// message. If the message is empty, then it is not inserted into the
-/// diagnostic.
-static InFlightDiagnostic
-emitDiag(Location location, DiagnosticSeverity severity, const Twine &message) {
+InFlightDiagnostic mlir::emitDiag(Location location,
+                                  DiagnosticSeverity severity,
+                                  const Twine &message) {
   MLIRContext *ctx = location->getContext();
   auto &diagEngine = ctx->getDiagEngine();
   auto diag = diagEngine.emit(location, severity);

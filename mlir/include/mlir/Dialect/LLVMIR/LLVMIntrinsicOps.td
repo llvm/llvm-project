@@ -558,7 +558,7 @@ class LLVM_ConstrainedIntr<string mnem, int numArgs,
     SmallVector<Value> mlirOperands;
     SmallVector<NamedAttribute> mlirAttrs;
     if (failed(moduleImport.convertIntrinsicArguments(
-        llvmOperands.take_front( }] # numArgs # [{), {}, false,
+        $_location, llvmOperands.take_front( }] # numArgs # [{), {}, false,
         {}, {}, mlirOperands, mlirAttrs))) {
       return failure();
     }
