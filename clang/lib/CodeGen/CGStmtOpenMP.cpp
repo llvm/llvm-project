@@ -4058,6 +4058,24 @@ struct ScheduleKindModifiersTy {
 };
 } // namespace
 
+/// Return the for-init of a lastprivate loop counter. Empty loops still run
+/// that init in sequential code. Skip collapse nests and
+/// distribute: their empty lastprivate values are not a single init store.
+static const Expr *getEmptyLoopLastprivateInit(const OMPLoopDirective &S) {
+  if (S.counters().size() != 1 ||
+      isOpenMPDistributeDirective(S.getDirectiveKind()))
+    return nullptr;
+  const Decl *CounterVD =
+      cast<DeclRefExpr>(S.counters().front())->getDecl()->getCanonicalDecl();
+  for (const auto *C : S.getClausesOfKind<OMPLastprivateClause>()) {
+    for (const Expr *Ref : C->varlist()) {
+      if (cast<DeclRefExpr>(Ref)->getDecl()->getCanonicalDecl() == CounterVD)
+        return S.inits().front();
+    }
+  }
+  return nullptr;
+}
+
 bool CodeGenFunction::EmitOMPWorksharingLoop(
     const OMPLoopDirective &S, Expr *EUB,
     const CodeGenLoopBoundsTy &CodeGenLoopBounds,
@@ -4087,14 +4105,25 @@ bool CodeGenFunction::EmitOMPWorksharingLoop(
     // whole loop.
     bool CondConstant;
     llvm::BasicBlock *ContBlock = nullptr;
+    const Expr *EmptyLoopInit = getEmptyLoopLastprivateInit(S);
     if (ConstantFoldsToSimpleInteger(S.getPreCond(), CondConstant)) {
-      if (!CondConstant)
+      if (!CondConstant) {
+        if (EmptyLoopInit)
+          EmitIgnoredExpr(EmptyLoopInit);
         return false;
+      }
     } else {
       llvm::BasicBlock *ThenBlock = createBasicBlock("omp.precond.then");
       ContBlock = createBasicBlock("omp.precond.end");
-      emitPreCond(*this, S, S.getPreCond(), ThenBlock, ContBlock,
+      llvm::BasicBlock *EmptyBlock =
+          EmptyLoopInit ? createBasicBlock("omp.precond.empty") : ContBlock;
+      emitPreCond(*this, S, S.getPreCond(), ThenBlock, EmptyBlock,
                   getProfileCount(&S));
+      if (EmptyLoopInit) {
+        EmitBlock(EmptyBlock);
+        EmitIgnoredExpr(EmptyLoopInit);
+        EmitBranch(ContBlock);
+      }
       EmitBlock(ThenBlock);
       incrementProfileCounter(&S);
     }
