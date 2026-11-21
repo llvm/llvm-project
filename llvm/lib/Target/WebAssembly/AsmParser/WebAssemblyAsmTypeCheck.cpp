@@ -292,6 +292,29 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCOperand &TableOp,
   return false;
 }
 
+bool WebAssemblyAsmTypeCheck::getFunctionTableIndexType(
+    SMLoc ErrorLoc, const MCOperand &TableOp, wasm::ValType &Type) {
+  const MCSymbolWasm *Table = nullptr;
+  if (TableOp.isImm()) {
+    // Without reference-types or call-indirect-overlong, the default table is
+    // encoded as an immediate zero rather than a symbol operand.
+    assert(TableOp.getImm() == 0 && "expected the default table operand");
+    Table = static_cast<const MCSymbolWasm *>(
+        Parser.getContext().lookupSymbol("__indirect_function_table"));
+  } else {
+    const MCSymbolRefExpr *SymRef;
+    if (getSymRef(ErrorLoc, TableOp, SymRef))
+      return true;
+    Table = static_cast<const MCSymbolWasm *>(&SymRef->getSymbol());
+  }
+  if (!Table || !Table->isFunctionTable())
+    return typeError(ErrorLoc, "expected funcref table");
+  Type = Table->getTableType().Limits.Flags & wasm::WASM_LIMITS_FLAG_IS_64
+             ? wasm::ValType::I64
+             : wasm::ValType::I32;
+  return false;
+}
+
 bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
                                            const MCOperand &SigOp,
                                            wasm::WasmSymbolType Type,
@@ -606,8 +629,11 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "call_indirect" || Name == "return_call_indirect") {
-    // Function value.
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
+    // The callee index has the address type of the selected table.
+    wasm::ValType IndexType = wasm::ValType::I32;
+    bool Error =
+        getFunctionTableIndexType(ErrorLoc, Inst.getOperand(1), IndexType);
+    Error |= popType(ErrorLoc, Error ? StackType(Any{}) : StackType(IndexType));
     Error |= checkSig(ErrorLoc, LastSig);
     if (Name == "return_call_indirect") {
       Error |= endOfFunction(ErrorLoc, false);
