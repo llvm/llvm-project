@@ -917,7 +917,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
           "__sancov_gen_cov_switch_values");
       if (Options.GatedCallbacks) {
         auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-        IRBuilder<> GateIRB(GateBranch);
+        InstrumentationIRBuilder GateIRB(GateBranch);
         createRuntimeCall(GateIRB, SanCovTraceSwitchFunction, {Cond, GV});
       } else {
         createRuntimeCall(IRB, SanCovTraceSwitchFunction, {Cond, GV});
@@ -1029,7 +1029,7 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
       auto Ty = Type::getIntNTy(*C, TypeSize);
       if (Options.GatedCallbacks) {
         auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-        IRBuilder<> GateIRB(GateBranch);
+        InstrumentationIRBuilder GateIRB(GateBranch);
         createRuntimeCall(GateIRB, CallbackFunc,
                           {GateIRB.CreateIntCast(A0, Ty, true),
                            GateIRB.CreateIntCast(A1, Ty, true)});
@@ -1074,7 +1074,9 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
     if (Options.GatedCallbacks) {
       Instruction *I = &*IP;
       auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
-      IRBuilder<> GateIRB(GateBranch);
+      InstrumentationIRBuilder GateIRB(GateBranch);
+      if (EntryLoc)
+        GateIRB.SetCurrentDebugLocation(EntryLoc);
       createRuntimeCall(GateIRB, SanCovTracePCGuard, GuardPtr)
           ->setCannotMerge();
     } else {
