@@ -717,12 +717,22 @@ public:
         SemaSYCLRef(SR) {}
 
   void checkParameter(const ParmVarDecl *PVD) {
+    QualType ParamTy = PVD->getType();
+    if (PVD->isInvalidDecl() ||
+        (ParamTy->isReferenceType() &&
+         SemaSYCLRef.SemaRef.RequireCompleteType(
+             PVD->getLocation(), ParamTy.getNonReferenceType(),
+             diag::err_typecheck_decl_incomplete_type))) {
+      IsValid = false;
+      return;
+    }
+
     ObjectAccessPath.push_back(PVD);
     // Check the immediate type of the parameter.
-    if (checkType(PVD->getType())) {
+    if (checkType(ParamTy)) {
       // If type checking wasn't short circuited, visit subobjects to check
       // them.
-      visit(PVD->getType());
+      visit(ParamTy);
     }
     ObjectAccessPath.pop_back();
     assert(ObjectAccessPath.empty());
