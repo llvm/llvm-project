@@ -1,0 +1,342 @@
+# REQUIRES: aarch64-registered-target
+# DEFINE: %{raw} = llvm-profgen --skip-symbolization --binary=%t/main
+# DEFINE: %{infer} = %{raw} --infer-lbr-leaf-range
+# DEFINE: %{check} = FileCheck %s --match-full-lines
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/binary.yaml -o %t/main
+# RUN: %{raw} -ps %t/lbr -o %t/base 2>%t/off.err
+# RUN: %{raw} -ps %t/lbr --check-lbr-ranges -o %t/checked
+# RUN: diff %t/base %t/checked
+# RUN: %{infer} -ps %t/lbr -o %t/infer
+# RUN: %{infer} -ps %t/lbr --check-lbr-ranges --show-detailed-warning -o %t/both 2>%t/both.err
+# RUN: diff %t/infer %t/both
+# RUN: %{raw} -ps %t/lbr --infer-lbr-leaf-range=false --check-lbr-ranges=false -o %t/false
+# RUN: diff %t/base %t/false
+# RUN: cat %t/infer %t/both.err | %{check} --check-prefixes=RANGES,WARN,COMPARE
+# RUN: llvm-profgen --binary=%t/main -ps %t/lbr --infer-lbr-leaf-range --format=text -o %t/lbr.text
+# RUN: %{check} --check-prefix=LBR-TEXT --input-file=%t/lbr.text
+# RUN: yaml2obj -DZERO=C0035FD6 -DLAST=1F2003D5 %t/binary.yaml -o %t/ret
+# RUN: llvm-profgen --binary=%t/ret -ps %t/ends --infer-lbr-leaf-range --check-lbr-ranges --show-detailed-warning \
+# RUN:   --skip-symbolization -o %t/ret.profile 2>%t/ret.err
+# RUN: %{infer} -ps %t/ends --check-lbr-ranges --show-detailed-warning -o %t/end.profile 2>%t/end.err
+# RUN: cat %t/ret.profile %t/end.err %t/ret.err | %{check} --check-prefixes=ZERO,ENDS,RET-ENDS
+# RUN: llvm-objcopy --strip-debug %t/main %t/stripped
+# RUN: llvm-profgen --binary=%t/stripped -ps %t/ends --infer-lbr-leaf-range --check-lbr-ranges \
+# RUN:   --show-detailed-warning --skip-symbolization -o %t/uncovered 2>%t/uncovered.err
+# RUN: cat %t/uncovered %t/uncovered.err | %{check} --check-prefix=UNCOVERED
+# RUN: %{raw} -ps %t/hybrid -o %t/cs-base
+# RUN: %{raw} -ps %t/hybrid --check-lbr-ranges -o %t/cs-check 2>%t/cs.err
+# RUN: diff %t/cs-base %t/cs-check
+# RUN: %{infer} -ps %t/hybrid -o %t/cs
+# RUN: %{infer} -ps %t/hybrid --check-lbr-ranges -o %t/cs-both
+# RUN: diff %t/cs %t/cs-both
+# RUN: cat %t/cs %t/cs.err | %{check} --check-prefixes=CS,CS-CHECK --implicit-check-not=category= \
+# RUN:   --implicit-check-not='{{(1000|1018|102[48]|1044|1200|200[08]|2010)-[0-9a-f]+:}}'
+# RUN: llvm-profgen --binary=%t/main -ps %t/hybrid --infer-lbr-leaf-range --format=text \
+# RUN:   --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 -o %t/text
+# RUN: %{check} --check-prefix=TEXT --input-file=%t/text
+# RUN: %{infer} -ps %t/hybrid --ignore-stack-samples -o %t/ignored
+# RUN: %{check} --check-prefix=IGNORE --implicit-check-not='[' --input-file=%t/ignored
+# RUN: %{raw} -ps %t/single -o %t/single-base 2>%t/single-off.err
+# RUN: cat %t/off.err %t/single-off.err | %{check} --check-prefixes=OFF,WARN
+# RUN: %{raw} -ps %t/single --check-lbr-ranges -o %t/single-check 2>%t/single.err
+# RUN: diff %t/single-base %t/single-check
+# RUN: FileCheck %s --check-prefix=EMPTY --input-file=%t/single.err
+# RUN: %python -c \
+# RUN:   "import pathlib,re; p=pathlib.Path(r'%t/lbr'); pathlib.Path(r'%t/reversed').write_text(''.join(reversed(re.findall(r'(?:[0-9]+\n)?[^\n]*/[^\n]*\n', p.read_text()))))"
+# RUN: %{raw} -ps %t/reversed --check-lbr-ranges --show-detailed-warning -o %t/reversed.out 2>%t/reversed.err
+# RUN: FileCheck %s --check-prefix=COMPARE --input-file=%t/reversed.err
+# RUN: not %{raw} --unsymbolized-profile=%t/base --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=MODE
+# RUN: not %{raw} --llvm-sample-profile=%t/base --infer-lbr-leaf-range -o %t/unused 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=MODE
+# RUN: not %{raw} --etm=%t/base --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s --check-prefix=MODE
+# RUN: not llvm-profgen --binary=%t/main --show-disassembly-only --infer-lbr-leaf-range -o %t/unused 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=DISASM
+# RUN: not %{raw} -ps %t/lbr --show-disassembly-only --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=DISASM
+# RUN: llvm-profgen --binary=%t/main --show-disassembly-only --infer-lbr-leaf-range=false --check-lbr-ranges=false \
+# RUN:   -o %t/unused >%t/disasm
+
+## Static ranges include their ending instruction; identical leaves add weights.
+# OFF-NOT: LBR range comparison
+# RANGES: 28
+# RANGES: 0-4:1
+# RANGES-NEXT: 100-100:5
+# RANGES: 108-108:1
+# RANGES-NEXT: 110-110:3
+# RANGES-NEXT: 110-11c:3
+# RANGES-COUNT-3: [[S:1[234]]]0-[[S]]0:1
+# RANGES-NEXT: 150-150:2
+# RANGES-COUNT-2: [[S:1[67]]]0-[[S]]0:1
+# RANGES: 174-174:1
+# RANGES: 180-180:1
+# RANGES: 184-184:1
+# RANGES: 190-194:1
+# RANGES: 198-198:1
+# RANGES: 33
+# RANGES-COUNT-10: 1->{{1[0-9]0:[123]}}
+# RANGES-COUNT-10: [[B:1[0-9]]]c->[[B]]0:{{[123]}}
+# LBR-TEXT: low:12:2
+# LBR-TEXT-NEXT: 0: 2 low:1
+## Checking preserves counters and warnings for histories crossing static ends.
+# WARN: warning: 4.76%(1/21) of samples are from ranges that do not belong to any functions.
+# WARN-NEXT: warning: 19.05%(4/21) of samples are from ranges that do cross function boundaries.
+# OFF-NOT: LBR range comparison
+# COMPARE: LBR range comparison (weighted ranges): total=21{{$}}
+# COMPARE-NEXT: longer-dynamic: 15{{$}}
+# COMPARE-NEXT: not-comparable: 2{{$}}
+# COMPARE-NEXT: same: 1{{$}}
+# COMPARE-NEXT: shorter-dynamic: 1{{$}}
+# COMPARE-NEXT: longer-fallthrough-dynamic: 1{{$}}
+# COMPARE-NEXT: no-function-coverage: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed call: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed return: 2{{$}}
+# COMPARE-NEXT: longer-dynamic crossed branch: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed trap: 5{{$}}
+# COMPARE-NEXT: longer-dynamic crossed SVC: 3{{$}}
+# COMPARE-NEXT: longer-dynamic crossed code gap: 1{{$}}
+# COMPARE-NEXT: longer-dynamic crossed function boundary: 2{{$}}
+# COMPARE-NEXT: [100,10c] category=longer-dynamic static-end=108 (trap){{$}}
+# COMPARE-NEXT: [108,100] category=not-comparable no comparable static range{{$}}
+# COMPARE-NEXT: [110,11c] category=longer-dynamic static-end=110 (SVC){{$}}
+# COMPARE-NEXT: [120,12c] category=longer-dynamic static-end=120 (branch){{$}}
+# COMPARE-NEXT: [130,13c] category=longer-dynamic static-end=130 (return){{$}}
+# COMPARE-NEXT: [140,14c] category=longer-dynamic static-end=140 (call){{$}}
+# COMPARE-NEXT: [150,15c] category=longer-dynamic static-end=150 (trap){{$}}
+# COMPARE-NEXT: [160,16c] category=longer-dynamic static-end=160 (return){{$}}
+# COMPARE-NOT: {{^}}  [
+# ZERO: 0-0:1
+# ENDS: [190,19c] category=longer-dynamic static-end=194 (function boundary){{$}}
+# ENDS-NEXT: [2000,200c] category=shorter-dynamic static-end=2010 (return){{$}}
+# RET-ENDS: [0,4] category=longer-dynamic static-end=0 (return){{$}}
+# RET-ENDS: [2000,200c] category=shorter-dynamic static-end=2010 (end of known code){{$}}
+# UNCOVERED: 2000-2000:1{{$}}
+# UNCOVERED: LBR range comparison (weighted ranges): total=3{{$}}
+# UNCOVERED-NEXT: no-function-coverage: 3{{$}}
+## Leaf ranges use the sampled caller context, as ordinary dynamic ranges do.
+# CS-LABEL: []
+# CS: 2000-2010:1
+# CS-LABEL: [A:0 @ low]
+# CS-NEXT: 2
+# CS-NEXT: 1030-1030:1
+# CS-NEXT: 1200-1210:1
+# CS-LABEL: [A:1 @ low]
+# CS: 1018-101c:1
+# CS-NEXT: 1024-102c:1
+# CS-NEXT: 1028-102c:1
+# CS-LABEL: [A:1 @ low:16 @ low]
+# CS-NEXT: 1
+# CS-NEXT: 1000-1004:1
+# CS-LABEL: [A:1 @ low:5 @ high]
+# CS: 2000-2010:1
+# CS-LABEL: [low]
+# CS: 1010-1010:3
+# CS-NEXT: 1044-1048:3
+# CS-LABEL: [low:14 @ high]
+# CS: 2000-2010:1
+# CS-NEXT: 2008-2010:1
+# CS-LABEL: [low:2 @ A:2 @ high]
+# CS: 2000-2010:1
+# CS-LABEL: [low:3 @ high]
+# CS: 2010-2010:3
+# CS-CHECK: longer-dynamic crossed trap: 1{{$}}
+# TEXT: [low:14 @ high]:8:0
+# TEXT: [A:1 @ low]:7:1
+# TEXT: 9: 1
+# TEXT-NEXT: 10: 2
+# TEXT-NEXT: 11: 2
+# TEXT: [low:2 @ A:2 @ high]:5:1
+# TEXT: [high]:0:2
+# IGNORE: 1044-1048:3
+# EMPTY: LBR range comparison (weighted ranges): total=0{{$}}
+# EMPTY-NOT: {{^}}  {{[a-z-]+}}:
+# MODE: --infer-lbr-leaf-range and --check-lbr-ranges require --perfscript or --perfdata input
+# DISASM: --infer-lbr-leaf-range and --check-lbr-ranges cannot be used with --show-disassembly-only
+
+#--- lbr
+100 0x10c/0x100/P/-/-/0 0x9000/0x100/P/-/-/0
+3
+110 0x11c/0x110/P/-/-/0 0x9000/0x110/P/-/-/0
+120 0x12c/0x120/P/-/-/0 0x9000/0x120/P/-/-/0
+130 0x13c/0x130/P/-/-/0 0x9000/0x130/P/-/-/0
+140 0x14c/0x140/P/-/-/0 0x9000/0x140/P/-/-/0
+2
+150 0x15c/0x150/P/-/-/0 0x9000/0x150/P/-/-/0
+160 0x16c/0x160/P/-/-/0 0x9000/0x160/P/-/-/0
+170 0x17c/0x170/P/-/-/0 0x9000/0x170/P/-/-/0
+180 0x18c/0x180/P/-/-/0 0x9000/0x180/P/-/-/0
+190 0x19c/0x190/P/-/-/0 0x9000/0x190/P/-/-/0
+104 0x104/0x100/P/-/-/0 0x9000/0x100/P/-/-/0
+174 0x17c/0x174/P/-/-/0 0x9000/0x174/P/-/-/0
+184 0x18c/0x184/P/-/-/0 0x9000/0x184/P/-/-/0
+198 0x19c/0x198/P/-/-/0 0x9000/0x198/P/-/-/0
+100 0x100/0x100/P/-/-/0 0x9000/0x100/P/-/-/0
+100 0x100/0x108/P/-/-/0 0x9000/0x108/P/-/-/0
+0 0x2010/0x0/P/-/-/0
+1000 0x1000/0x1000/P/-/-/0 0x2010/0x1000/P/-/-/0
+100 0x100/0x100/P/-/-/0 0x2010/0x9000/P/-/-/0
+#--- hybrid
+3
+        1044
+0x1010/0x1044/P/-/-/0 0x2010/0x1010/P/-/-/0
+
+        2008
+        110c
+        100c
+0x1108/0x2000/P/-/-/0 0x1008/0x1100/P/-/-/0
+
+        1018
+        1108
+0x2010/0x1018/P/-/-/0 0x1014/0x2000/P/-/-/0 0x1104/0x1000/P/-/-/0
+
+        2008
+        103c
+0x3000/0x2000/P/-/-/0 0x1038/0x3000/P/-/-/0
+
+        2008
+        103c
+0x3000/0x2008/P/-/-/0 0x1038/0x3000/P/-/-/0
+
+3
+        2008
+        1010
+0x100c/0x2010/P/-/-/0
+
+        1024
+        1108
+0x101c/0x1024/P/-/-/0
+
+        1024
+        1108
+0x1020/0x1028/P/-/-/0
+
+        1208
+        1104
+0x1030/0x1200/P/-/-/0 0x1100/0x1030/P/-/-/0
+
+        1008
+        1044
+        1108
+0x1040/0x1000/P/-/-/0
+
+        2008
+        130c
+        104c
+0x1308/0x2000/P/-/-/0 0x1048/0x1300/P/-/-/0
+#--- ends
+0 0x4/0x0/P/-/-/0 0x2010/0x0/P/-/-/0
+2000 0x200c/0x2000/P/-/-/0 0x2010/0x2000/P/-/-/0
+190 0x19c/0x190/P/-/-/0 0x2010/0x190/P/-/-/0
+#--- single
+1000 0x2010/0x1000/P/-/-/0
+#--- binary.yaml
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_DYN, Machine: EM_AARCH64 }
+Sections:
+  ## The symbol starts at uncovered 0xfc; check coverage per instruction.
+  ## CBZ also has CBZ/BRK; FFFFFFFF after UDF is a code gap; ISB continues in the next section.
+  - { Name: .text.matrix, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0xfc, Offset: 0xfc, Content: "1F2003D5000000B4000000B4000020D4C0035FD6010000D41F2003D51F2003D5C0035FD6000000141F2003D51F2003D5C0035FD6C0035FD61F2003D5\
+        1F2003D5C0035FD6010000941F2003D51F2003D5C0035FD60004E0D41F2003D51F2003D5C0035FD6E003FFD61F2003D51F2003D5C0035FD6\
+        000000001F2003D5FFFFFFFFC0035FD6000040D41F2003D51F2003D5C0035FD6DF3F03D5" }
+  - { Name: .text.matrix2, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x194, Offset: 0x194, Content: "000000B41F2003D5C0035FD6" }
+  ## Place code at virtual address zero without overwriting the ELF headers.
+  - { Name: .text.zero, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x0, Offset: 0x800, Content: "[[ZERO=1F2003D5]]C0035FD6" }
+  ## low calls A, high, an interior label, its cold range, PLT, itself and unknown.
+  - { Name: .text.low, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x1000, Offset: 0x1000, Content: "1F2003D5000020D43E000094010400940D000014FB0300941F2003D502000094020000141F2003D51F2003D5C0035FD6740000941F2003D5\
+        F20700941F2003D5F0FFFF971F2003D5AE000094C0035FD6" }
+  - { Name: .text.A, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x1100, Offset: 0x1100, Content: "CCFFFF97BFFFFF97BE0300941F2003D5C0035FD6" }
+  - { Name: .text.cold, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x1200, Offset: 0x1200, Content: "1F2003D51F2003D51F2003D51F2003D5C0035FD6" }
+  - { Name: .text.unknown, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x1300, Offset: 0x1300, Content: "1F2003D51F2003D53E0300941F2003D5C0035FD6" }
+  - { Name: .text.high, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x2000, Offset: 0x2000, Content: "1F2003D51F2003D51F2003D51F2003D5[[LAST=C0035FD6]]" }
+  - { Name: .plt, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
+      Address: 0x3000, Offset: 0x3000, Content: "00021FD6" }
+  ## Reverse section order to exercise address ordering.
+  - Type: SectionHeaderTable
+    Sections: [{ Name: .plt }, { Name: .text.high }, { Name: .text.unknown }, { Name: .text.cold },
+        { Name: .text.A }, { Name: .text.low }, { Name: .text.matrix2 }, { Name: .text.matrix },
+        { Name: .text.zero }, { Name: .debug_line }, { Name: .debug_abbrev }, { Name: .debug_info },
+        { Name: .debug_ranges }, { Name: .symtab }, { Name: .strtab }, { Name: .shstrtab }]
+ProgramHeaders:
+  - { Type: PT_LOAD, Flags: [ PF_X, PF_R ], Offset: 0, VAddr: 0, FileSize: 0x3004, MemSize: 0x4000 }
+## yaml2obj removes " (entry2)" from emitted symbol names.
+Symbols:
+  - { Name: zero, Type: STT_FUNC, Section: .text.zero, Value: 0x0, Size: 0x8 }
+  - { Name: cases, Type: STT_FUNC, Section: .text.matrix, Value: 0xfc, Size: 0x98 }
+  - { Name: matrix_label, Type: STT_NOTYPE, Section: .text.matrix2, Value: 0x194, Size: 0x4 }
+  - { Name: cases (entry2), Type: STT_FUNC, Section: .text.matrix2, Value: 0x198, Size: 0x4 }
+  - { Name: other, Type: STT_FUNC, Section: .text.matrix2, Value: 0x19c, Size: 0x4 }
+  - { Name: low, Type: STT_FUNC, Section: .text.low, Value: 0x1000, Size: 0x50 }
+  - { Name: low (entry2), Type: STT_FUNC, Section: .text.low, Value: 0x1030, Size: 0x20 }
+  - { Name: A, Type: STT_FUNC, Section: .text.A, Value: 0x1100, Size: 0x14 }
+  - { Name: cold_label, Type: STT_NOTYPE, Section: .text.cold, Value: 0x1200, Size: 0x14 }
+  - { Name: unknown, Type: STT_FUNC, Section: .text.unknown, Value: 0x1300, Size: 0x14 }
+  - { Name: high, Type: STT_FUNC, Section: .text.high, Value: 0x2000, Size: 0x14 }
+DWARF:
+  debug_abbrev:
+    - Table:
+        - { Code: 1, Tag: DW_TAG_compile_unit, Children: DW_CHILDREN_yes, Attributes: [
+            { Attribute: DW_AT_name, Form: DW_FORM_string }, { Attribute: DW_AT_stmt_list, Form: DW_FORM_sec_offset },
+            { Attribute: DW_AT_low_pc, Form: DW_FORM_addr }, { Attribute: DW_AT_high_pc, Form: DW_FORM_data8 }] }
+        - { Code: 2, Tag: DW_TAG_subprogram, Children: DW_CHILDREN_no, Attributes: [
+            { Attribute: DW_AT_name, Form: DW_FORM_string }, { Attribute: DW_AT_low_pc, Form: DW_FORM_addr },
+            { Attribute: DW_AT_high_pc, Form: DW_FORM_data8 }, { Attribute: DW_AT_decl_line, Form: DW_FORM_data1 }] }
+        - { Code: 3, Tag: DW_TAG_subprogram, Children: DW_CHILDREN_no, Attributes: [
+            { Attribute: DW_AT_name, Form: DW_FORM_string }, { Attribute: DW_AT_low_pc, Form: DW_FORM_addr },
+            { Attribute: DW_AT_ranges, Form: DW_FORM_sec_offset }, { Attribute: DW_AT_decl_line, Form: DW_FORM_data1 }] }
+  debug_info:
+    - Version: 4
+      Entries:
+        - { AbbrCode: 1, Values: [{ CStr: ranges.c }, { Value: 0 }, { Value: 0 }, { Value: 0x2014 }] }
+        - { AbbrCode: 2, Values: [{ CStr: zero }, { Value: 0x0 }, { Value: 0x8 }, { Value: 1 }] }
+        - { AbbrCode: 3, Values: [{ CStr: cases }, { Value: 0x0 }, { Value: 0x40 }, { Value: 1 }] }
+        - { AbbrCode: 2, Values: [{ CStr: other }, { Value: 0x19c }, { Value: 0x4 }, { Value: 1 }] }
+        - { AbbrCode: 3, Values: [{ CStr: low }, { Value: 0x0 }, { Value: 0x0 }, { Value: 10 }] }
+        - { AbbrCode: 2, Values: [{ CStr: A }, { Value: 0x1100 }, { Value: 0x14 }, { Value: 30 }] }
+        - { AbbrCode: 2, Values: [{ CStr: high }, { Value: 0x2000 }, { Value: 0x14 }, { Value: 20 }] }
+        - AbbrCode: 0
+  ## 184 is uncovered; ranges join at 194, but 198 is a function entry.
+  debug_ranges:
+    - Entries: [{ LowOffset: 0x1000, HighOffset: 0x1030 }, { LowOffset: 0x1030, HighOffset: 0x1050 },
+        { LowOffset: 0x1200, HighOffset: 0x1214 }]
+    - Entries: [{ LowOffset: 0x100, HighOffset: 0x184 }, { LowOffset: 0x188, HighOffset: 0x194 },
+        { LowOffset: 0x194, HighOffset: 0x198 }, { LowOffset: 0x198, HighOffset: 0x19c }]
+  debug_line:
+    - Version: 4
+      MinInstLength: 1
+      MaxOpsPerInst: 1
+      DefaultIsStmt: 1
+      LineBase: 251
+      LineRange: 14
+      Files: [{ Name: ranges.c, DirIdx: 0, ModTime: 0, Length: 0 }]
+      ## 0x4b advances four bytes and one source line, then emits a row.
+      Opcodes: [
+        { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_set_address, Data: 0x1000 },
+        { Opcode: DW_LNS_advance_line, SData: 9 }, { Opcode: DW_LNS_copy },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: DW_LNS_advance_pc, Data: 4 }, { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_end_sequence },
+        { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_set_address, Data: 0x1100 },
+        { Opcode: DW_LNS_advance_line, SData: 29 }, { Opcode: DW_LNS_copy },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: DW_LNS_advance_pc, Data: 4 }, { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_end_sequence },
+        { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_set_address, Data: 0x1200 },
+        { Opcode: DW_LNS_advance_line, SData: 9 }, { Opcode: DW_LNS_copy },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: DW_LNS_advance_pc, Data: 4 }, { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_end_sequence },
+        { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_set_address, Data: 0x2000 },
+        { Opcode: DW_LNS_advance_line, SData: 19 }, { Opcode: DW_LNS_copy },
+        { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b }, { Opcode: 0x4b },
+        { Opcode: DW_LNS_advance_pc, Data: 4 }, { Opcode: DW_LNS_extended_op, SubOpcode: DW_LNE_end_sequence }
+        ]
