@@ -76,6 +76,29 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
     return NameII == *II; // Fast case.
   }
 
+  // Avoid the stringification below where the printed name is known.
+  StringRef FuncName = getFunctionName();
+  switch (Name.getNameKind()) {
+  case DeclarationName::CXXDestructorName:
+    if (!FuncName.consume_front("~"))
+      return false;
+    [[fallthrough]];
+  case DeclarationName::CXXConstructorName:
+    // Constructor and destructor names are printed using the record name.
+    if (const auto *RT = Name.getCXXNameType()->getAsCanonical<RecordType>())
+      if (const IdentifierInfo *RecordII = RT->getDecl()->getIdentifier())
+        return RecordII->getName() == FuncName;
+    break;
+  case DeclarationName::CXXOperatorName:
+  case DeclarationName::CXXLiteralOperatorName:
+  case DeclarationName::CXXConversionFunctionName:
+    if (!FuncName.starts_with("operator"))
+      return false;
+    break;
+  default:
+    break;
+  }
+
   // Fallback to the slow stringification and comparison for:
   // C++ overloaded operators, constructors, destructors, etc.
   // FIXME This comparison is way SLOWER than comparing pointers.
