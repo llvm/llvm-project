@@ -2376,22 +2376,28 @@ SDValue NVPTXTargetLowering::LowerINT_TO_FP(SDValue Op,
       F32 = DAG.getNode(Op.getOpcode(), Loc, MVT::f32, Src);
     } else {
       // Rounding to f32 and then to bf16 can round twice. Instead, round to
-      // f32 towards zero and set the lowest bit if that was inexact
-      // (round-to-odd), which makes the f32 -> bf16 rounding exact.
+      // odd: convert rounding down and up and pick the odd result (both are
+      // equal if the value is exact in f32). This makes the f32 -> bf16
+      // conversion correctly rounded.
       assert((SrcVT == MVT::i32 || SrcVT == MVT::i64) && "Unexpected type");
-      Intrinsic::ID IID =
+      Intrinsic::ID RMID =
           SrcVT == MVT::i64
-              ? (IsSigned ? Intrinsic::nvvm_ll2f_rz : Intrinsic::nvvm_ull2f_rz)
-              : (IsSigned ? Intrinsic::nvvm_i2f_rz : Intrinsic::nvvm_ui2f_rz);
-      SDValue RZ = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
-                               DAG.getConstant(IID, Loc, MVT::i32), Src);
-      SDValue Back = DAG.getNode(IsSigned ? ISD::FP_TO_SINT : ISD::FP_TO_UINT,
-                                 Loc, SrcVT, RZ);
-      SDValue Inexact = DAG.getSetCC(Loc, MVT::i1, Back, Src, ISD::SETNE);
-      SDValue Bits =
-          DAG.getNode(ISD::OR, Loc, MVT::i32, DAG.getBitcast(MVT::i32, RZ),
-                      DAG.getZExtOrTrunc(Inexact, Loc, MVT::i32));
-      F32 = DAG.getBitcast(MVT::f32, Bits);
+              ? (IsSigned ? Intrinsic::nvvm_ll2f_rm : Intrinsic::nvvm_ull2f_rm)
+              : (IsSigned ? Intrinsic::nvvm_i2f_rm : Intrinsic::nvvm_ui2f_rm);
+      Intrinsic::ID RPID =
+          SrcVT == MVT::i64
+              ? (IsSigned ? Intrinsic::nvvm_ll2f_rp : Intrinsic::nvvm_ull2f_rp)
+              : (IsSigned ? Intrinsic::nvvm_i2f_rp : Intrinsic::nvvm_ui2f_rp);
+      SDValue RM = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
+                               DAG.getConstant(RMID, Loc, MVT::i32), Src);
+      SDValue RP = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, Loc, MVT::f32,
+                               DAG.getConstant(RPID, Loc, MVT::i32), Src);
+      SDValue IsOdd = DAG.getSetCC(
+          Loc, MVT::i1,
+          DAG.getNode(ISD::AND, Loc, MVT::i32, DAG.getBitcast(MVT::i32, RM),
+                      DAG.getConstant(1, Loc, MVT::i32)),
+          DAG.getConstant(0, Loc, MVT::i32), ISD::SETNE);
+      F32 = DAG.getSelect(Loc, MVT::f32, IsOdd, RM, RP);
     }
     return DAG.getNode(ISD::FP_ROUND, Loc, MVT::bf16, F32,
                        DAG.getIntPtrConstant(0, Loc, /*isTarget=*/true));
