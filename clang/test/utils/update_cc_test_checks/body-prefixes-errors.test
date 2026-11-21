@@ -1,0 +1,49 @@
+## Errors for RUN line setups that would otherwise leave checks missing, stale
+## or wrong. All of them stop the script before the test file is written. None
+## needs CIR: the errors are reported before any -emit-cir RUN line runs.
+
+## Two RUN lines share the body prefix LLVM but produce different bodies (one
+## runs mem2reg, one doesn't), e.g. classic codegen vs. CIR lowering.
+# RUN: cp %S/Inputs/errors-conflicting-bodies.c %t-conflict.c
+# RUN: not %update_cc_test_checks --body-prefixes LLVM %t-conflict.c 2>&1 | FileCheck %s --check-prefix=CONFLICT
+# RUN: diff -u %S/Inputs/errors-conflicting-bodies.c %t-conflict.c
+# CONFLICT: ERROR: prefix LLVM has conflicting bodies for ['add_one']; use a separate prefix for the RUN lines that differ
+
+## A RUN line with only body prefixes has no label to share the bodies under.
+# RUN: cp %S/Inputs/errors-only-body-prefixes.c %t-only-body.c
+# RUN: not %update_cc_test_checks --body-prefixes LLVM %t-only-body.c 2>&1 | FileCheck %s --check-prefix=ONLY-BODY
+# RUN: diff -u %S/Inputs/errors-only-body-prefixes.c %t-only-body.c
+# ONLY-BODY: ERROR: a RUN line has only body prefixes; add a label prefix (e.g. C) to every RUN line that uses --body-prefixes: {{.*}}.c
+
+## A RUN line with no body prefix would only get -LABEL lines, so its body
+## would go unchecked.
+# RUN: cp %S/Inputs/errors-no-body-prefix.c %t-no-body.c
+# RUN: not %update_cc_test_checks --body-prefixes LLVM %t-no-body.c 2>&1 | FileCheck %s --check-prefix=NO-BODY
+# RUN: diff -u %S/Inputs/errors-no-body-prefix.c %t-no-body.c
+# NO-BODY: ERROR: a RUN line has no body prefix; add one of ['LLVM'] to every RUN line when using --body-prefixes: {{.*}}.c
+
+## LLVM IR and CIR bodies never match, so they can't share a prefix.
+# RUN: cp %S/Inputs/errors-mixed-formats.c %t-mixed.c
+# RUN: not %update_cc_test_checks %t-mixed.c 2>&1 | FileCheck %s --check-prefix=MIXED
+# RUN: not %update_cc_test_checks --body-prefixes LLVM %t-mixed.c 2>&1 | FileCheck %s --check-prefix=MIXED-BODY
+# RUN: diff -u %S/Inputs/errors-mixed-formats.c %t-mixed.c
+# MIXED: ERROR: prefixes ['C', 'LLVM'] are used for both LLVM IR and CIR; use separate prefixes or --body-prefixes
+# MIXED-BODY: ERROR: body prefixes ['LLVM'] are used for both LLVM IR and CIR
+
+## A %clang shortcut that no lit.local.cfg of the test defines.
+# RUN: cp %S/Inputs/errors-unknown-substitution.c %t-subst.c
+# RUN: not %update_cc_test_checks %t-subst.c 2>&1 | FileCheck %s --check-prefix=SUBST
+# SUBST: ERROR: unknown substitution %clang_cc1_no_such_shortcut: it is not defined by a lit.local.cfg of this test: {{.*}}.c
+
+## --include-generated-funcs can't place CIR checks.
+# RUN: cp %S/Inputs/cir-basic.c %t-generated.c
+# RUN: not %update_cc_test_checks --include-generated-funcs %t-generated.c 2>&1 | FileCheck %s --check-prefix=GENERATED
+# RUN: diff -u %S/Inputs/cir-basic.c %t-generated.c
+# GENERATED: ERROR: --include-generated-funcs doesn't support -emit-cir
+
+## Without CIR, -fclangir -emit-llvm silently uses classic codegen, so a clang
+## built without CIR must be rejected rather than generate classic checks.
+# RUN: %if !system-windows %{ cp %S/Inputs/errors-no-cir.c %t-no-cir.c %}
+# RUN: %if !system-windows %{ not %update_cc_test_checks --clang %S/Inputs/clang-without-cir.sh %t-no-cir.c 2>&1 | FileCheck %s --check-prefix=NO-CIR %}
+# RUN: %if !system-windows %{ diff -u %S/Inputs/errors-no-cir.c %t-no-cir.c %}
+# NO-CIR: ERROR: RUN lines use -fclangir, but {{.*}}clang-without-cir.sh was built without CIR (build it with -DCLANG_ENABLE_CIR=ON): {{.*}}.c

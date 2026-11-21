@@ -1,0 +1,14 @@
+# REQUIRES: cir-enabled
+## CIR checks with a plain prefix, without --body-prefixes. element() has
+## "%2[%5" in its output, which needs escaping as "{{\[}}".
+
+# RUN: cp %S/Inputs/cir-basic.c %t.c
+# RUN: %update_cc_test_checks --version 6 --function-signature %t.c
+# RUN: diff -u %S/Inputs/cir-basic.c.expected %t.c
+
+## The generated checks must hold against the real output.
+# RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -o - %t.c | FileCheck %t.c --check-prefix=CIR
+
+## Re-running doesn't change the output.
+# RUN: %update_cc_test_checks %t.c
+# RUN: diff -u %S/Inputs/cir-basic.c.expected %t.c

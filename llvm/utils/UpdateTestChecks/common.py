@@ -880,6 +880,66 @@ def scrub_body(body):
     return body
 
 
+IR_FUNC_DEF_RE = re.compile(r"^define .*?^}$", re.M | re.S)
+IR_TYPE_DEF_RE = re.compile(r"^(%[\w.$-]+) = type\b", re.M)
+IR_LOCAL_RE = re.compile(r"%(?:[\w.$-]+|\"[^\"]*\")")
+IR_ATTR_GROUP_RE = re.compile(r"^attributes #\d+ = \{.*\}\n", re.M)
+IR_METADATA_RE = re.compile(r"^!(?:\d+|llvm\.[\w.]+) = .*\n", re.M)
+IR_LABEL_RE = re.compile(r"^([\w.$-]+):", re.M)
+IR_ENTRY_REF_RE = re.compile(r"%entry(?![\w.$-])")
+
+
+def normalize_local_names(ir):
+    """Give local values the same names, whichever path produced the IR.
+
+    Classic CodeGen and CIR emit the same code with different names, for
+    example %op.addr in one and %0 in the other. This function:
+      - drops the "entry:" label when nothing jumps to it,
+      - renames arguments, instructions and numbered block labels to %0, %1,
+        ... in the order they first appear,
+      - keeps named block labels and named types as they are,
+      - removes the "attributes #N = {...}" and "!N = ..." lines at the end
+        of the module, because the two paths emit different ones.
+
+    The output of both paths then looks the same and can share CHECK lines.
+
+    TODO: Currently, this is only used for tests that don't check attributes
+    or metadata. Support checking them.
+    """
+    ir = IR_METADATA_RE.sub("", IR_ATTR_GROUP_RE.sub("", ir))
+    types = set(IR_TYPE_DEF_RE.findall(ir))
+
+    def normalize(m):
+        body = m.group(0)
+        labels = set(IR_LABEL_RE.findall(body))
+        if "entry" in labels and not IR_ENTRY_REF_RE.search(body):
+            body = re.sub(r"^entry:.*\n", "", body, count=1, flags=re.M)
+            labels.discard("entry")
+        # Numbered labels (and the unnamed entry block) share their numbers
+        # with values, so they are renumbered from the same counter.
+        named_labels = {"%" + l for l in labels if not l.isdigit()}
+        names = {}
+
+        def number(name):
+            return str(names.setdefault(name, len(names)))
+
+        def rename(n):
+            name = n.group(0)
+            if name in named_labels or name in types:
+                return name
+            return "%" + number(name)
+
+        def rename_label(n):
+            if n.group(1).isdigit():
+                return number("%" + n.group(1)) + ":"
+            return n.group(0)
+
+        body = IR_LOCAL_RE.sub(rename, body)
+        return IR_LABEL_RE.sub(rename_label, body)
+
+    return IR_FUNC_DEF_RE.sub(normalize, ir)
+
+
 def do_scrub(body, scrubber, scrubber_args, extra):
     if scrubber_args:
         local_args = copy.deepcopy(scrubber_args)
@@ -1316,8 +1376,10 @@ class GeneralizerInfo:
         regexp_prefix,
         regexp_suffix,
         no_meta_details=False,
+        func_keyword="define",
     ):
         self._version = version
+        self._func_keyword = func_keyword
         self._mode = mode
         self._nameless_values = nameless_values
 
@@ -1358,6 +1420,9 @@ class GeneralizerInfo:
 
     def get_version(self):
         return self._version
+
+    def get_func_keyword(self):
+        return self._func_keyword
 
     def is_ir(self):
         return self._mode == GeneralizerInfo.MODE_IR
@@ -2464,9 +2529,9 @@ def add_ir_checks(
     assert ginfo.is_ir()
     # Label format is based on IR string.
     if function_sig and ginfo.get_version() > 1:
-        function_def_regex = "define %s"
+        function_def_regex = ginfo.get_func_keyword() + " %s"
     elif function_sig:
-        function_def_regex = "define {{[^@]+}}%s"
+        function_def_regex = ginfo.get_func_keyword() + " {{[^@]+}}%s"
     else:
         function_def_regex = "%s"
     check_label_format = "{} %s-LABEL: {}@%s%s%s".format(

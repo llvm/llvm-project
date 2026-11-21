@@ -1,0 +1,27 @@
+## --normalize-local-names gives local values the same names on every path.
+## Each case checks the generated checks against .expected, and then against
+## the real output: .expected only catches changes, the real output catches
+## wrong checks.
+
+## Without value names, block labels and values are numbered from one counter
+## and the entry block is unnamed. They must be renumbered together, or a value
+## and a label end up with the same number.
+# RUN: cp %S/Inputs/normalize-local-names-branches.c %t-branches.c
+# RUN: %update_cc_test_checks --version 6 --normalize-local-names %t-branches.c
+# RUN: diff -u %S/Inputs/normalize-local-names-branches.c.expected %t-branches.c
+# RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -discard-value-names -disable-O0-optnone -o - %t-branches.c \
+# RUN:   | opt -passes=mem2reg -S | FileCheck %t-branches.c
+
+## %entryv is not a reference to the "entry:" label, so the label is dropped.
+# RUN: cp %S/Inputs/normalize-local-names-entry.c %t-entry.c
+# RUN: %update_cc_test_checks --version 6 --normalize-local-names %t-entry.c
+# RUN: diff -u %S/Inputs/normalize-local-names-entry.c.expected %t-entry.c
+# RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-O0-optnone -o - %t-entry.c \
+# RUN:   | opt -passes=mem2reg -S | FileCheck %t-entry.c
+
+## Classic codegen and CIR lowering then share one body.
+# RUN: %if cir-enabled %{ cp %S/Inputs/normalize-local-names-shared.c %t-shared.c %}
+# RUN: %if cir-enabled %{ %update_cc_test_checks --version 6 --body-prefixes LLVM --normalize-local-names %t-shared.c %}
+# RUN: %if cir-enabled %{ diff -u %S/Inputs/normalize-local-names-shared.c.expected %t-shared.c %}
+# RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -disable-O0-optnone -o - %t-shared.c | opt -passes=mem2reg -S | FileCheck %t-shared.c --check-prefixes=C,LLVM %}
+# RUN: %if cir-enabled %{ %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm -disable-O0-optnone -o - %t-shared.c | opt -passes=mem2reg -S | FileCheck %t-shared.c --check-prefixes=C,LLVM %}
