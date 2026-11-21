@@ -3537,43 +3537,52 @@ def Test_TilingNoDpsOp : TEST_Op<"tiling_no_dps_op",
 //===----------------------------------------------------------------------===//
 
 def TestNVVMRequiresSMOp :
-    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<80>]> {
+    TEST_Op<"nvvm_requires_sm_80", [NVVMRequiresSM<[SM80]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMArchCondOp :
-    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSMa<[90]>]> {
+    TEST_Op<"nvvm_requires_sm_90a", [NVVMRequiresSM<[SM90a]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequirestSMArchCondMultiOp :
-    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a", [NVVMRequiresSMa<[90, 100]>]> {
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100a",
+            [NVVMRequiresSM<[SM90a, SM100a]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMFamilyCondOp :
-    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSMf<[100]>]> {
+    TEST_Op<"nvvm_requires_sm_100f", [NVVMRequiresSM<[SM100f]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMFamilyCondHigherOp :
-    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSMf<[103]>]> {
+    TEST_Op<"nvvm_requires_sm_103f", [NVVMRequiresSM<[SM103f]>]> {
+  let arguments = (ins );
+  let assemblyFormat = "attr-dict";
+}
+
+def TestNVVMRequiresSMFamily110Op :
+    TEST_Op<"nvvm_requires_sm_110f", [NVVMRequiresSM<[SM110f]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMFamilyCondMultiOp :
-    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f", [NVVMRequiresSMf<[100, 120]>]> {
+    TEST_Op<"nvvm_requires_sm_100f_or_sm_120f",
+            [NVVMRequiresSM<[SM100f, SM120f]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }
 
 def TestNVVMRequiresSMArchOrFamilyCondOp :
-    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f", [NVVMRequiresSMaOrSMf<[90], [100]>]> {
+    TEST_Op<"nvvm_requires_sm_90a_or_sm_100f",
+            [NVVMRequiresSM<[SM90a, SM100f]>]> {
   let arguments = (ins );
   let assemblyFormat = "attr-dict";
 }

@@ -45,6 +45,26 @@ gpu.module @check_valid_SM_family_4[#nvvm.target<chip = "sm_103f">] {
   test.nvvm_requires_sm_100f
 }
 
+gpu.module @check_valid_SM_family_5 [#nvvm.target<chip = "sm_107a">] {
+  test.nvvm_requires_sm_103f
+}
+
+gpu.module @check_valid_SM_family_6 [#nvvm.target<chip = "sm_110f">] {
+  test.nvvm_requires_sm_110f
+}
+
+gpu.module @check_valid_SM_family_renamed_1 [#nvvm.target<chip = "sm_101f">] {
+  test.nvvm_requires_sm_110f
+}
+
+gpu.module @check_valid_SM_family_renamed_2 [#nvvm.target<chip = "sm_101a">] {
+  test.nvvm_requires_sm_110f
+}
+
+gpu.module @check_valid_SM_arch_acc_later_family [#nvvm.target<chip = "sm_121a">] {
+  test.nvvm_requires_sm_80
+}
+
 gpu.module @check_valid_SM_family_multi_1 [#nvvm.target<chip = "sm_100f">] {
   test.nvvm_requires_sm_100f_or_sm_120f
 }
@@ -143,6 +163,34 @@ gpu.module @check_invalid_SM_family [#nvvm.target<chip = "sm_110a">] {
 gpu.module @check_invalid_SM_family_higher [#nvvm.target<chip = "sm_100f">] {
   // expected-error @below {{is not supported on sm_100f}}
   test.nvvm_requires_sm_103f
+}
+
+// -----
+
+gpu.module @check_invalid_SM_family_base [#nvvm.target<chip = "sm_103">] {
+  // expected-error @below {{is not supported on sm_103}}
+  test.nvvm_requires_sm_100f
+}
+
+// -----
+
+gpu.module @check_invalid_SM_family_renamed [#nvvm.target<chip = "sm_101f">] {
+  // expected-error @below {{is not supported on sm_101f}}
+  test.nvvm_requires_sm_100f
+}
+
+// -----
+
+gpu.module @check_invalid_SM_family_renamed_base [#nvvm.target<chip = "sm_101">] {
+  // expected-error @below {{is not supported on sm_101}}
+  test.nvvm_requires_sm_110f
+}
+
+// -----
+
+gpu.module @check_invalid_SM_arch_acc_other_version [#nvvm.target<chip = "sm_103a">] {
+  // expected-error @below {{is not supported on sm_103a}}
+  test.nvvm_requires_sm_90a_or_sm_100a
 }
 
 // -----

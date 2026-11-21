@@ -13,3 +13,20 @@
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.cpp.inc"
+
+using namespace mlir;
+
+llvm::NVPTX::GPUKind NVVM::parseTargetArch(StringRef chip) {
+  using namespace llvm::NVPTX;
+  GPUKind arch = parseArch(chip);
+  switch (arch) {
+  case GK_SM_101:
+    return GK_SM_110;
+  case GK_SM_101f:
+    return GK_SM_110f;
+  case GK_SM_101a:
+    return GK_SM_110a;
+  default:
+    return arch;
+  }
+}
