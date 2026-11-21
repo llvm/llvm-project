@@ -1086,9 +1086,9 @@ KMP_LABEL(invoke_3):
         DEBUG_INFO __kmp_xchg_real64
 
 
-# endif /* !KMP_MIC */
-
 # endif /* !KMP_ASM_INTRINS */
+
+# endif /* !KMP_MIC */
 
 //------------------------------------------------------------------------
 // int
