@@ -109,8 +109,10 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
     return true;
   }
 
-  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &) {
-    // TODO: check read_provenance
+  auto *MO = Ctx.checkProvenance(Ptr, [&](const Provenance &Prov) {
+    CaptureComponents CC = Prov.capability();
+    if (!capturesAnyProvenance(CC))
+      return false;
     // TODO: check nofree for attributes/metadata.
     return true;
   });
@@ -1162,7 +1164,8 @@ public:
       : ExecutorBase(C, H), DL(Ctx.getDataLayout()),
         Lib(Ctx, Handler, DL, static_cast<ExecutorBase &>(*this)) {
     CallStack.emplace_back(F, /*CallSite=*/nullptr, /*LastFrame=*/nullptr, Args,
-                           RetVal, Ctx.getTLIImpl());
+                           RetVal, Ctx.getTLIImpl(),
+                           Frame::CapturedProvenanceList{});
   }
 
   void visitReturnInst(ReturnInst &RI) {
@@ -2536,8 +2539,53 @@ public:
     }
   }
 
+  /// Drop the address components, which are not modeled.
+  static CaptureInfo getProvenanceCaptureInfo(CaptureInfo CI) {
+    constexpr CaptureComponents Mask = CaptureComponents::Provenance;
+    return CaptureInfo(CI.getOtherComponents() & Mask,
+                       CI.getRetComponents() & Mask);
+  }
+
+  /// Update all provenances derived from captured arguments and the scalar
+  /// pointer return value.
+  void applyCaptures(Frame::CapturedProvenanceList &Captures,
+                     AnyValue &RetVal) {
+    for (auto &[Prov, CI] : Captures) {
+      bool IsReturned = false;
+      CaptureComponents RetCapability = CaptureComponents::None;
+      if (RetVal.isPointer()) {
+        auto &RetProv = RetVal.asPointer().provenance();
+        if (RetProv.isDerivedFrom(*Prov)) {
+          IsReturned = true;
+          RetCapability = RetProv.capability() & CI.getRetComponents();
+        }
+      }
+
+      Prov->captureCapability(CI.getOtherComponents());
+
+      if (IsReturned) {
+        const Pointer &RetPtr = RetVal.asPointer();
+        Provenance *RetParent = Prov->getParent();
+        assert(RetParent && "Captured provenance must have a parent.");
+        // Recover the original provenance and tag only when doing so does not
+        // add back permissions that an inner capture already removed.
+        if (capturesFullProvenance(CI.getRetComponents()) &&
+            RetParent->capability() == RetCapability) {
+          RetVal = RetPtr.getWithNewProvenance(RetParent);
+        } else {
+          // Return and other captures never share provenance. This copy gets
+          // its own tag and is attached outside this capture boundary.
+          auto NewProv = RetPtr.provenance().cloneWithCapability(RetCapability,
+                                                                 *RetParent);
+          RetVal = RetPtr.getWithNewProvenance(std::move(NewProv));
+        }
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
+    Function *Oracle = getSpeculativeLoadOracle(CB);
     // TODO: handle initializes
     auto &CalleeArgs = CurrentFrame->CalleeArgs;
     assert(CalleeArgs.empty() &&
@@ -2587,6 +2635,7 @@ public:
 
     // Handle parameter attributes (Attributes from resolved callee should be
     // applied if available).
+    Frame::CapturedProvenanceList Captures;
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
@@ -2653,11 +2702,23 @@ public:
         }
       }
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
+
+      if (ArgVal.isPointer() && !CB.isByValArgument(I) && (!Oracle || I >= 3)) {
+        CaptureInfo CI = getProvenanceCaptureInfo(
+            AttrsAtCallSite.getCaptureInfo() & AttrsAtCallee.getCaptureInfo());
+        // Don't create new provenance when the full provenance is captured.
+        if (!capturesFullProvenance(CI.getOtherComponents()) ||
+            !capturesFullProvenance(CI.getRetComponents())) {
+          auto NewProv = ArgVal.asPointer().provenance().clone();
+          Captures.emplace_back(NewProv, CI);
+          ArgVal = ArgVal.asPointer().getWithNewProvenance(std::move(NewProv));
+        }
+      }
     }
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;
-    if (Function *Oracle = getSpeculativeLoadOracle(CB)) {
+    if (Oracle) {
       Args = Args.drop_front(3);
       for (auto [Arg, ArgVal] :
            zip_equal(Oracle->args(), MutableArrayRef(CalleeArgs).drop_front(3)))
@@ -2667,10 +2728,12 @@ public:
     }
     if (Callee->isIntrinsic()) {
       CurrentFrame->CalleeRetVal = callIntrinsic(CB, CalleeArgs);
+      applyCaptures(Captures, CurrentFrame->CalleeRetVal);
       returnFromCallee();
       return;
     } else if (Callee->isDeclaration()) {
       CurrentFrame->CalleeRetVal = callLibFunc(CB, Callee, CalleeArgs);
+      applyCaptures(Captures, CurrentFrame->CalleeRetVal);
       returnFromCallee();
       return;
     } else {
@@ -2684,7 +2747,7 @@ public:
       AnyValue &RetVal = CurrentFrame->CalleeRetVal;
       CurrentFrame->State = FrameState::Pending;
       CallStack.emplace_back(*Callee, &CB, CurrentFrame, Args, RetVal,
-                             Ctx.getTLIImpl());
+                             Ctx.getTLIImpl(), std::move(Captures));
     }
   }
 
@@ -3335,6 +3398,7 @@ public:
       if (Top.State == FrameState::Exit) {
         assert((Top.Func.getReturnType()->isVoidTy() || !Top.RetVal.isNone()) &&
                "Expected return value to be set on function exit.");
+        applyCaptures(Top.CapturedProvenances, Top.RetVal);
         Handler.onFunctionExit(Top.Func, Top.RetVal);
         // Free stack objects allocated in this frame.
         for (auto &Obj : Top.Allocas)
