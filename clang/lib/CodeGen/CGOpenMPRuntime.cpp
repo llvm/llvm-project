@@ -8456,8 +8456,11 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
+      // An array shaping expression maps the shaped storage only as the whole
+      // list item; as the base of array sections it just reinterprets the
+      // pointer.
       bool IsPointer =
-          OAShE ||
+          (OAShE && Next == CE) ||
           (OASE && ArraySectionExpr::getBaseOriginalType(OASE)
                        .getCanonicalType()
                        ->isAnyPointerType()) ||
@@ -8754,6 +8757,14 @@ private:
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     uint64_t ElementTypeSize;
 
+    // Only array sections and subscripts add a dimension.
+    unsigned NumArrayDims = llvm::count_if(
+        Components,
+        [](const OMPClauseMappableExprCommon::MappableComponent &Component) {
+          return isa<ArraySectionExpr, ArraySubscriptExpr>(
+              Component.getAssociatedExpression());
+        });
+
     // Collect Size information for each dimension and get the element size as
     // the first Stride. For example, for `int arr[10][10]`, the DimSizes
     // should be [10, 10] and the first stride is 4 btyes.
@@ -8813,7 +8824,7 @@ private:
       }
       // Get dimension value except for the last dimension since we don't need
       // it.
-      if (DimSizes.size() < Components.size() - 1) {
+      if (DimSizes.size() < NumArrayDims) {
         if (CAT)
           DimSizes.push_back(
               llvm::ConstantInt::get(CGF.Int64Ty, CAT->getZExtSize()));
