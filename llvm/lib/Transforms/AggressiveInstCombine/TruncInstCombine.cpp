@@ -14,8 +14,9 @@
 //   2. Supported leaves: ZExtInst, SExtInst, TruncInst and Constant value.
 //   3. Can be evaluated into type with reduced legal bit-width.
 //   4. All instructions in the graph must not have users outside the graph.
-//      The only exception is for {ZExt, SExt}Inst with operand type equal to
-//      the new reduced type evaluated in (3).
+//      The exceptions are {ZExt, SExt}Inst with operand type equal to the new
+//      reduced type evaluated in (3), and ICmpInst whose operands are known
+//      to fit in that type.
 //
 // The motivation for this optimization is that evaluating and expression using
 // smaller bit-width is preferable, especially for vectorization where we can
@@ -32,6 +33,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/KnownBits.h"
 
@@ -43,6 +45,8 @@ STATISTIC(NumExprsReduced, "Number of truncations eliminated by reducing bit "
                            "width of expression graph");
 STATISTIC(NumInstrsReduced,
           "Number of instructions whose bit width was reduced");
+STATISTIC(NumICmpsReduced,
+          "Number of icmp users whose bit width was reduced with a graph");
 
 /// Return whether operand \p OpNo of \p I is reducible.
 static bool isRelevantOperand(const Instruction *I, unsigned OpNo) {
@@ -286,7 +290,27 @@ unsigned TruncInstCombine::getMinBitWidth() {
   return MinBitWidth;
 }
 
+bool TruncInstCombine::canNarrowICmp(ICmpInst *Cmp, unsigned BitWidth) const {
+  if (Cmp->getOperand(0)->getType()->isVectorTy())
+    return false;
+  SimplifyQuery SQ(DL, &DT, &AC, Cmp);
+  ConstantRange LHS = computeConstantRangeIncludingKnownBits(
+      Cmp->getOperand(0), /*ForSigned=*/false, SQ);
+  ConstantRange RHS = computeConstantRangeIncludingKnownBits(
+      Cmp->getOperand(1), /*ForSigned=*/false, SQ);
+  // Truncation keeps the order of values that fit in BitWidth bits as
+  // unsigned, or as signed values for signed predicates.
+  bool FitUnsigned =
+      LHS.getActiveBits() <= BitWidth && RHS.getActiveBits() <= BitWidth;
+  bool FitSigned =
+      LHS.getMinSignedBits() <= BitWidth && RHS.getMinSignedBits() <= BitWidth;
+  if (Cmp->isEquality())
+    return FitUnsigned || FitSigned;
+  return Cmp->isSigned() ? FitSigned : FitUnsigned;
+}
+
 Type *TruncInstCombine::getBestTruncatedType() {
+  ICmpUsers.clear();
   if (!buildTruncExpressionGraph())
     return nullptr;
 
@@ -305,6 +329,13 @@ Type *TruncInstCombine::getBestTruncatedType() {
         if (UI != CurrentTruncInst &&
             (!InstInfoMap.count(UI) ||
              !isRelevantOperand(UI, U.getOperandNo()))) {
+          // An icmp can be narrowed with the graph if its operands fit in the
+          // reduced type. This is checked once the type is known.
+          if (auto *Cmp = dyn_cast<ICmpInst>(UI)) {
+            if (!is_contained(ICmpUsers, Cmp))
+              ICmpUsers.push_back(Cmp);
+            continue;
+          }
           if (!IsExtInst)
             return nullptr;
           // If this is an extension from the dest type, we can eliminate it,
@@ -388,6 +419,9 @@ Type *TruncInstCombine::getBestTruncatedType() {
   if (MinBitWidth >= OrigBitWidth ||
       (DesiredBitWidth && DesiredBitWidth != MinBitWidth))
     return nullptr;
+  for (ICmpInst *Cmp : ICmpUsers)
+    if (!canNarrowICmp(Cmp, MinBitWidth))
+      return nullptr;
   return IntegerType::get(CurrentTruncInst->getContext(), MinBitWidth);
 }
 
@@ -540,6 +574,26 @@ void TruncInstCombine::ReduceExpressionGraph(Type *SclTy) {
       NewPN->addIncoming(getReducedOperand(std::get<0>(Incoming), SclTy),
                          std::get<1>(Incoming));
   }
+
+  // Rewrite the icmp users outside the graph before the old graph is erased.
+  for (ICmpInst *Cmp : ICmpUsers) {
+    IRBuilder<> Builder(Cmp);
+    auto GetNarrowOperand = [&](Value *V) -> Value * {
+      if (isa<Constant>(V) ||
+          (isa<Instruction>(V) && InstInfoMap.count(cast<Instruction>(V))))
+        return getReducedOperand(V, SclTy);
+      return Builder.CreateTrunc(V, getReducedType(V, SclTy));
+    };
+    Value *LHS = GetNarrowOperand(Cmp->getOperand(0));
+    Value *RHS = GetNarrowOperand(Cmp->getOperand(1));
+    Value *NewCmp = Builder.CreateICmp(Cmp->getPredicate(), LHS, RHS);
+    if (auto *NewI = dyn_cast<Instruction>(NewCmp))
+      NewI->takeName(Cmp);
+    Cmp->replaceAllUsesWith(NewCmp);
+    Cmp->eraseFromParent();
+    ++NumICmpsReduced;
+  }
+  ICmpUsers.clear();
 
   Value *Res = getReducedOperand(CurrentTruncInst->getOperand(0), SclTy);
   Type *DstTy = CurrentTruncInst->getType();
