@@ -1537,6 +1537,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
 
+- Removed the `-Wcuda-compat` warning about a parenthesized argument to
+  `#pragma unroll` in CUDA and HIP. `nvcc` accepts both `#pragma unroll N` and
+  `#pragma unroll (N)` with identical results, and the CUDA C++ Programming
+  Guide documents the parenthesized form, so the warning was incorrect.
+
 - Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
 - Clang now provides device-side definitions of `__cxa_pure_virtual()` and
