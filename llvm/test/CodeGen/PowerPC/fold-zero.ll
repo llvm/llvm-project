@@ -14,19 +14,16 @@ define i32 @test1(i1 %a, i32 %c) nounwind  {
 ;
 ; CHECK-CRB-LABEL: test1:
 ; CHECK-CRB:       # %bb.0:
-; CHECK-CRB-NEXT:    andi. 3, 3, 1
-; CHECK-CRB-NEXT:    li 3, 0
-; CHECK-CRB-NEXT:    iselgt 3, 4, 3
+; CHECK-CRB-NEXT:    clrldi 3, 3, 63
+; CHECK-CRB-NEXT:    neg 3, 3
+; CHECK-CRB-NEXT:    and 3, 3, 4
 ; CHECK-CRB-NEXT:    blr
 ;
 ; CHECK-NO-ISEL-LABEL: test1:
 ; CHECK-NO-ISEL:       # %bb.0:
-; CHECK-NO-ISEL-NEXT:    andi. 3, 3, 1
-; CHECK-NO-ISEL-NEXT:    bc 12, 1, .LBB0_2
-; CHECK-NO-ISEL-NEXT:  # %bb.1:
-; CHECK-NO-ISEL-NEXT:    li 4, 0
-; CHECK-NO-ISEL-NEXT:  .LBB0_2:
-; CHECK-NO-ISEL-NEXT:    mr 3, 4
+; CHECK-NO-ISEL-NEXT:    clrldi 3, 3, 63
+; CHECK-NO-ISEL-NEXT:    neg 3, 3
+; CHECK-NO-ISEL-NEXT:    and 3, 3, 4
 ; CHECK-NO-ISEL-NEXT:    blr
   %x = select i1 %a, i32 %c, i32 0
   ret i32 %x
