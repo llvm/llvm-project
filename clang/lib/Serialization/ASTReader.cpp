@@ -9226,11 +9226,12 @@ void ASTReader::StartTranslationUnit(ASTConsumer *Consumer) {
 void ASTReader::PrintStats() {
   std::fprintf(stderr, "*** AST File Statistics:\n");
 
-  unsigned NumTypesLoaded =
-      TypesLoaded.size() - llvm::count(TypesLoaded.materialized(), QualType());
-  unsigned NumDeclsLoaded =
-      DeclsLoaded.size() -
-      llvm::count(DeclsLoaded.materialized(), (Decl *)nullptr);
+  // Only count the elements of materialized pages, the others haven't been
+  // read yet.
+  unsigned NumTypesLoaded = llvm::count_if(
+      TypesLoaded.materialized(), [](QualType T) { return !T.isNull(); });
+  unsigned NumDeclsLoaded = llvm::count_if(
+      DeclsLoaded.materialized(), [](Decl *D) { return D != nullptr; });
   unsigned NumIdentifiersLoaded =
       IdentifiersLoaded.size() -
       llvm::count(IdentifiersLoaded, (IdentifierInfo *)nullptr);
