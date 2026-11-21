@@ -3884,47 +3884,60 @@ _LIBCPP_HIDE_FROM_ABI constexpr _String __integer_to_string(_Integer __val) {
 #    if !defined(_LIBCPP_BUILDING_LIBRARY)
 
 // TODO: Remove `inline` on these function defintions when https://llvm.org/PR175043 is fixed.
-// TODO: These function definitions can't have ABI annotations.
+#      ifdef _LIBCPP_COMPILER_GCC // TODO: GCC doesn't support `inline` here.
+#        define _LIBCPP_TO_STRING_INLINE
+#      else
+#        define _LIBCPP_TO_STRING_INLINE inline
+#      endif
 
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(int __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string to_string(int __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(unsigned __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string to_string(unsigned __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string to_string(long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(unsigned long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string
+to_string(unsigned long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(long long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string
+to_string(long long __val) {
   return std::__integer_to_string<string>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr string to_string(unsigned long long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr string
+to_string(unsigned long long __val) {
   return std::__integer_to_string<string>(__val);
 }
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(int __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring to_wstring(int __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(unsigned __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring
+to_wstring(unsigned __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring to_wstring(long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(unsigned long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring
+to_wstring(unsigned long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(long long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring
+to_wstring(long long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
-[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] inline constexpr wstring to_wstring(unsigned long long __val) {
+[[__gnu__::__gnu_inline__, __gnu__::__noinline__]] _LIBCPP_TO_STRING_INLINE constexpr wstring
+to_wstring(unsigned long long __val) {
   return std::__integer_to_string<wstring>(__val);
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
+
+#      undef _LIBCPP_TO_STRING_INLINE
 
 #    endif // !defined(_LIBCPP_BUILDING_LIBRARY)
 

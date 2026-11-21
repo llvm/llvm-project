@@ -91,7 +91,7 @@
 "[P3369R0](https://wg21.link/P3369R0)","constexpr for `uninitialized_default_construct`","2024-11 (Wrocław)","{{Complete}}","23","[#118380](https://github.com/llvm/llvm-project/issues/118380)",""
 "[P3370R1](https://wg21.link/P3370R1)","Add new library headers from C23","2024-11 (Wrocław)","","","[#118381](https://github.com/llvm/llvm-project/issues/118381)",""
 "[P3309R3](https://wg21.link/P3309R3)","constexpr `atomic` and `atomic_ref`","2024-11 (Wrocław)","","","[#118382](https://github.com/llvm/llvm-project/issues/118382)",""
-"[P1928R15](https://wg21.link/P1928R15)","`std::simd` �merge data-parallel types from the Parallelism TS 2","2024-11 (Wrocław)","","","[#118384](https://github.com/llvm/llvm-project/issues/118384)",""
+"[P1928R15](https://wg21.link/P1928R15)","`std::simd` — merge data-parallel types from the Parallelism TS 2","2024-11 (Wrocław)","","","[#118384](https://github.com/llvm/llvm-project/issues/118384)",""
 "[P3325R5](https://wg21.link/P3325R5)","A Utility for Creating Execution Environments","2024-11 (Wrocław)","","","[#118385](https://github.com/llvm/llvm-project/issues/118385)",""
 "[P3068R6](https://wg21.link/P3068R6)","Allowing exception throwing in constant-evaluation","2024-11 (Wrocław)","","","[#118386](https://github.com/llvm/llvm-project/issues/118386)",""
 "[P3247R2](https://wg21.link/P3247R2)","Deprecate the notion of trivial types","2024-11 (Wrocław)","{{Complete}}","21","[#118387](https://github.com/llvm/llvm-project/issues/118387)",""
