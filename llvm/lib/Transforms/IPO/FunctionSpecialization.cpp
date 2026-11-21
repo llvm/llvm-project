@@ -1106,7 +1106,7 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
 
   // SCCP solver does not record an argument that will be constructed on
   // stack.
-  if (A->hasByValAttr() && !A->getParent()->onlyReadsMemory())
+  if (A->hasByValAttr() && !SCCPSolver::canPropagateByValArg(A))
     return false;
 
   // For non-argument-tracked functions every argument is overdefined.
