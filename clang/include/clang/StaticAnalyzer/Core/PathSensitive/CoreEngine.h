@@ -171,10 +171,10 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
-  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+  ExplodedNode *makeNode(const ProgramPoint &Loc, const ProgramStateRef &State,
                          ExplodedNode *Pred, bool MarkAsSink = false) const;
 
-  ExplodedNode *makePostStmtNode(const Stmt *S, ProgramStateRef State,
+  ExplodedNode *makePostStmtNode(const Stmt *S, const ProgramStateRef &State,
                                  ExplodedNode *Pred,
                                  bool MarkAsSink = false) const {
     PostStmt Loc(S, Pred->getStackFrame(), /*tag=*/nullptr);

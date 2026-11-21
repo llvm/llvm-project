@@ -16,19 +16,15 @@ namespace clang {
 namespace ento {
   class ProgramState;
   class ProgramStateManager;
-  void ProgramStateRetain(const ProgramState *state);
-  void ProgramStateRelease(const ProgramState *state);
 }
 }
 
 namespace llvm {
   template <> struct IntrusiveRefCntPtrInfo<const clang::ento::ProgramState> {
-    static void retain(const clang::ento::ProgramState *state) {
-      clang::ento::ProgramStateRetain(state);
-    }
-    static void release(const clang::ento::ProgramState *state) {
-      clang::ento::ProgramStateRelease(state);
-    }
+    // These are templates so that their bodies are only instantiated where
+    // ProgramState is complete, which lets them be inlined.
+    template <typename T> static void retain(T *state) { state->retain(); }
+    template <typename T> static void release(T *state) { state->release(); }
   };
 }
 

@@ -346,9 +346,8 @@ public:
   /// Retrieve the node associated with a (Location, State) pair, where the
   /// 'Location' is a ProgramPoint in the CFG. If no node for this pair exists,
   /// it is created. IsNew is set to true if the node was freshly created.
-  ExplodedNode *getNode(const ProgramPoint &L, ProgramStateRef State,
-                        bool IsSink = false,
-                        bool* IsNew = nullptr);
+  ExplodedNode *getNode(const ProgramPoint &L, const ProgramStateRef &State,
+                        bool IsSink = false, bool *IsNew = nullptr);
 
   /// Create a node for a (Location, State) pair, but don't store it for
   /// deduplication later. This is useful when copying some nodes from an
