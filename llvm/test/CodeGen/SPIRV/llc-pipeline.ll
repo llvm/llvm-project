@@ -203,6 +203,7 @@
 ; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Machine Optimization Remark Emitter
 ; SPIRV-Opt-NEXT:      Prologue/Epilogue Insertion & Frame Finalization
+; SPIRV-Opt-NEXT:      Lazy Machine Block Frequency Analysis
 ; SPIRV-Opt-NEXT:      Tail Duplication
 ; SPIRV-Opt-NEXT:      Post-RA pseudo instruction expansion pass
 ; SPIRV-Opt-NEXT:      Analyze Machine Code For Garbage Collection
