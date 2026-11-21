@@ -450,6 +450,15 @@ bool InputChunk::generateRelocationCode(raw_ostream &os) const {
   // here to apply them.
   for (const WasmRelocation &rel : relocations) {
     Symbol *sym = file->getSymbol(rel);
+    // For locally bound location-relative references, the load base cancels
+    // between the symbol and the relocation location. The static relocation
+    // already contains their difference.
+    if ((rel.Type == R_WASM_MEMORY_ADDR_LOCREL_I32 ||
+         rel.Type == R_WASM_MEMORY_ADDR_LOCREL_I64) &&
+        sym->getChunk() && !sym->isTLS() && !isTLS() &&
+        (sym->isHidden() || sym->isLocal() || !ctx.arg.shared ||
+         ctx.arg.bsymbolic))
+      continue;
     // Runtime relocations are needed when we don't know the address of
     // a symbol statically.
     bool requiresRuntimeReloc = ctx.isPic || sym->hasGOTIndex();
