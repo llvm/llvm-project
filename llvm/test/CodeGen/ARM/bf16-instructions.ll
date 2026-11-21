@@ -1148,8 +1148,6 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
   ret bfloat %r
 }
 
-; away the (fpext (fp_round <result>)) here.
-
 define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ; CHECK-CVT-LABEL: test_copysign_extended:
 ; CHECK-CVT:       @ %bb.0:
@@ -1207,40 +1205,173 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
   ret float %xr
 }
 
-;define bfloat @test_floor(bfloat %a) #0 {
-;  %r = call bfloat @llvm.floor.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_floor(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_floor:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintm.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_floor:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintm.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.floor.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_ceil(bfloat %a) #0 {
-;  %r = call bfloat @llvm.ceil.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_ceil(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_ceil:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintp.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_ceil:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintp.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.ceil.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_trunc(bfloat %a) #0 {
-;  %r = call bfloat @llvm.trunc.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_trunc(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_trunc:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintz.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_trunc:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintz.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.trunc.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_rint(bfloat %a) #0 {
-;  %r = call bfloat @llvm.rint.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_rint(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_rint:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintx.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_rint:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintx.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.rint.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_nearbyint(bfloat %a) #0 {
-;  %r = call bfloat @llvm.nearbyint.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_nearbyint(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_nearbyint:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintr.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_nearbyint:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintr.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.nearbyint.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_round(bfloat %a) #0 {
-;  %r = call bfloat @llvm.round.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_round(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_round:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrinta.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_round:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrinta.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.round.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_roundeven(bfloat %a) #0 {
-;  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_roundeven(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_roundeven:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vrintn.f32 s0, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_roundeven:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    vrintn.f32 s0, s0
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    bx lr
+  %r = call bfloat @llvm.roundeven.bf16(bfloat %a)
+  ret bfloat %r
+}
 
 define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) #0 {
 ; CHECK-CVT-LABEL: test_fmuladd:
