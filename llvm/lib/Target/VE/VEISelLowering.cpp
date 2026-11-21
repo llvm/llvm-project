@@ -268,6 +268,8 @@ void VETargetLowering::initSPUActions() {
   setMaxAtomicSizeInBitsSupported(64);
   setMinCmpXchgSizeInBits(32);
   setSupportsUnalignedAtomics(false);
+  for (MVT VT : {MVT::i32, MVT::i64})
+    setAtomicLoadExtAction(ISD::EXTLOAD, VT, {MVT::i8, MVT::i16}, Legal);
 
   // Use custom inserter for ATOMIC_FENCE.
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Custom);

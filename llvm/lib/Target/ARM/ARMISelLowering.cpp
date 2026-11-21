@@ -1153,6 +1153,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                        LibCall);
   }
 
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
+
   // Compute supported atomic widths.
   if (TT.isOSLinux() || (!Subtarget->isMClass() && Subtarget->hasV6Ops())) {
     // For targets where __sync_* routines are reliably available, we use them

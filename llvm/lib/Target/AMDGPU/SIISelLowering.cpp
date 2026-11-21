@@ -662,6 +662,11 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
         setOperationAction(ISD::ATOMIC_LOAD, VT, Promote);
         AddPromotedToType(ISD::ATOMIC_LOAD, VT, MVT::i32);
       }
+      setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD},
+                             MVT::i16, MVT::i8, Promote);
+    } else {
+      setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD}, MVT::i16, MVT::i8,
+                             Legal);
     }
 
     if (!Subtarget->useRealTrue16Insts()) {

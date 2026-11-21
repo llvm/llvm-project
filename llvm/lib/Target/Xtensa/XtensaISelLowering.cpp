@@ -258,6 +258,8 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::f64, MVT::f16, Expand);
   setTruncStoreAction(MVT::f32, MVT::f16, Expand);
 
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
+
   if (Subtarget.hasS32C1I()) {
     setMaxAtomicSizeInBitsSupported(32);
     setMinCmpXchgSizeInBits(32);

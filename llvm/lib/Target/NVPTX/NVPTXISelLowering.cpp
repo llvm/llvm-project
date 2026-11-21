@@ -1116,6 +1116,8 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                       ISD::ATOMIC_STORE},
                      MVT::i128, Custom);
 
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i16, MVT::i8, Legal);
+
   // Now deduce the information based on the above mentioned
   // actions
   computeRegisterProperties(STI.getRegisterInfo());

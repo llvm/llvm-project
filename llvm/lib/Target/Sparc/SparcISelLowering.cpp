@@ -1887,12 +1887,16 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Custom Lower Atomic LOAD/STORE
   setOperationAction(ISD::ATOMIC_LOAD, MVT::i32, Custom);
   setOperationAction(ISD::ATOMIC_STORE, MVT::i32, Custom);
+  setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD}, MVT::i32,
+                         {MVT::i8, MVT::i16}, Custom);
 
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Legal);
     setOperationAction(ISD::ATOMIC_SWAP, MVT::i64, Legal);
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
+    setAtomicLoadExtAction({ISD::EXTLOAD, ISD::ZEXTLOAD, ISD::SEXTLOAD},
+                           MVT::i64, {MVT::i8, MVT::i16, MVT::i32}, Custom);
   }
 
   if (!Subtarget->isV9()) {

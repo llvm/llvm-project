@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgpu7.04 < %s | FileCheck -check-prefix=GFX7 %s
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefix=GFX9 %s
 ; RUN: llc -mtriple=amdgpu10.30 < %s | FileCheck -check-prefix=GFX10 %s
-; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-TRUE16 %s
-; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefixes=GFX11,GFX11-FAKE16 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 < %s | FileCheck -check-prefix=GFX11 %s
 
 define i32 @load_i32(ptr addrspace(2) %ptr) {
 ; GFX6-LABEL: load_i32:
@@ -1535,30 +1535,17 @@ define i32 @atomic_load_zext_i8(ptr addrspace(2) %ptr) {
 ; GFX10-NEXT:    s_waitcnt expcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: atomic_load_zext_i8:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_mov_b32 m0, 0
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    ds_load_u8 v0, v0 gds
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_gl1_inv
-; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: atomic_load_zext_i8:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_mov_b32 m0, 0
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    ds_load_u8 v0, v0 gds
-; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    buffer_gl1_inv
-; GFX11-FAKE16-NEXT:    buffer_gl0_inv
-; GFX11-FAKE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: atomic_load_zext_i8:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 m0, 0
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_load_u8 v0, v0 gds
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
+; GFX11-NEXT:    s_waitcnt expcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i8, ptr addrspace(2) %ptr seq_cst, align 1
   %ext = zext i8 %load to i32
   ret i32 %ext
@@ -1673,30 +1660,17 @@ define i32 @atomic_load_zext_i16(ptr addrspace(2) %ptr) {
 ; GFX10-NEXT:    s_waitcnt expcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: atomic_load_zext_i16:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_mov_b32 m0, 0
-; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-TRUE16-NEXT:    ds_load_u16 v0, v0 gds
-; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    buffer_gl1_inv
-; GFX11-TRUE16-NEXT:    buffer_gl0_inv
-; GFX11-TRUE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-TRUE16-NEXT:    v_cvt_u32_u16_e32 v0, v0.l
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: atomic_load_zext_i16:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_mov_b32 m0, 0
-; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v0 gds
-; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    buffer_gl1_inv
-; GFX11-FAKE16-NEXT:    buffer_gl0_inv
-; GFX11-FAKE16-NEXT:    s_waitcnt expcnt(0)
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: atomic_load_zext_i16:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_mov_b32 m0, 0
+; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    ds_load_u16 v0, v0 gds
+; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-NEXT:    buffer_gl1_inv
+; GFX11-NEXT:    buffer_gl0_inv
+; GFX11-NEXT:    s_waitcnt expcnt(0)
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i16, ptr addrspace(2) %ptr seq_cst, align 2
   %ext = zext i16 %load to i32
   ret i32 %ext

@@ -63789,8 +63789,8 @@ static SDValue combineEXTEND_VECTOR_INREG(SDNode *N, SelectionDAG &DAG,
                                  ? ISD::SEXTLOAD
                                  : ISD::ZEXTLOAD;
       EVT MemVT = VT.changeVectorElementType(*DAG.getContext(), SVT);
-      if (TLI.isLoadLegal(VT, MemVT, Ld->getAlign(), Ld->getAddressSpace(), Ext,
-                          false)) {
+      if (TLI.isLoadLegal(VT, MemVT, Ld->getAlign(), Ld->getAddressSpace(),
+                          Ext)) {
         SDValue Load = DAG.getExtLoad(
             Ext, DL, VT, Ld->getChain(), Ld->getBasePtr(), Ld->getPointerInfo(),
             MemVT, Ld->getBaseAlign(), Ld->getMemOperand()->getFlags());
