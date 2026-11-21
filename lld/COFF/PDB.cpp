@@ -45,6 +45,7 @@
 #include "llvm/Support/CRC.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -1676,14 +1677,29 @@ void PDBLinker::addSections(ArrayRef<uint8_t> sectionTable) {
   addCommonLinkerModuleSymbols(nativePath, linkerModule);
 
   // Add section contributions. They must be ordered by ascending RVA.
+  // Prefix-sum of per-section chunk counts, so the flat parallelFor below can
+  // map a global index back to a chunk in OutputSection::chunks without
+  // materializing a combined list. CRC computation thus parallelizes across all
+  // sections at once rather than one serial region per section.
+  std::vector<size_t> offsets;
+  offsets.reserve(ctx.outputSections.size());
+  size_t total = 0;
   for (OutputSection *os : ctx.outputSections) {
     addLinkerModuleSectionSymbol(linkerModule, *os, ctx.config.mingw);
-    for (Chunk *c : os->chunks) {
-      pdb::SectionContrib sc =
-          createSectionContrib(ctx, c, linkerModule.getModuleIndex());
-      builder.getDbiBuilder().addSectionContrib(sc);
-    }
+    offsets.push_back(total);
+    total += os->chunks.size();
   }
+
+  std::vector<pdb::SectionContrib> contribs(total);
+  uint32_t modi = linkerModule.getModuleIndex();
+  parallelFor(0, total, [&](size_t i) {
+    size_t s = llvm::upper_bound(offsets, i) - offsets.begin() - 1;
+    const Chunk *c = ctx.outputSections[s]->chunks[i - offsets[s]];
+    contribs[i] = createSectionContrib(ctx, c, modi);
+  });
+
+  for (auto &sc : contribs)
+    dbiBuilder.addSectionContrib(sc);
 
   // The * Linker * first section contrib is only used along with /INCREMENTAL,
   // to provide trampolines thunks for incremental function patching. Set this
