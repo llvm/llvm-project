@@ -1756,6 +1756,33 @@ async coroutine until after coroutine splitting.
 The first argument should be an async coroutine of type `void (ptr, ptr, ptr)`.
 Lowering will replace this intrinsic with its coroutine function argument.
 
+(coro.prepare.retcon)=
+
+#### 'llvm.coro.prepare.retcon' Intrinsic
+```
+
+declare ptr @llvm.coro.prepare.retcon(ptr <coroutine function>)
+```
+
+##### Overview:
+
+The '`llvm.coro.prepare.retcon`' intrinsic keeps calls to a returned-continuation
+coroutine opaque to interprocedural optimizations until coroutine splitting.
+This prevents those optimizations from treating the pre-split body's exits as
+the returns from a call to the coroutine's ramp.
+
+Generic optimizations must not replace the prepared pointer with its argument
+before splitting. CoroSplit lowers the intrinsic to its function-pointer
+argument once it is safe to expose the ramp. For a separated local body, this
+requires that the body has been split; an imported body declaration instead
+refers to the ramp supplied by its defining module.
+
+##### Arguments:
+
+The argument is a pointer to a retcon or retcon.once coroutine. It may be a
+function reference or a computed function pointer. The result is a callable
+pointer with the same function signature and calling convention.
+
 (coro.suspend.retcon)=
 
 #### 'llvm.coro.suspend.retcon' Intrinsic
@@ -2068,6 +2095,16 @@ The CoroEarly pass ensures later middle end passes correctly interpret coroutine
 semantics and lowers coroutine intrinsics that not needed to be preserved to
 help later coroutine passes. This pass lowers {ref}`coro.promise`, {ref}`coro.frame` and
 {ref}`coro.done` intrinsics.
+
+For returned-continuation coroutines, CoroEarly separates the callable entry
+from the pre-split body. The entry forwards through `llvm.coro.prepare.retcon`
+to an internal body marked `"coro-retcon-body"`. The prepared pointer stays
+opaque until that body has been split: its exits alone do not describe the
+values returned to the caller at suspension points. CoroSplit then exposes
+the concrete ramp, allowing ordinary interprocedural optimization to resume.
+An imported body declaration names an external ramp whose definition is split
+in its owning module. The intrinsic signatures and frontend IR remain
+unchanged. This does not change the switched-resume or async lowering.
 
 (CoroSplit)=
 

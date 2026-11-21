@@ -19,8 +19,7 @@ define { ptr, i32 } @f(ptr %buffer, i32 %n) {
 ; CHECK-NEXT:    [[INC4:%.*]] = add i32 [[INC3]], 4
 ; CHECK-NEXT:    [[INC5:%.*]] = add i32 [[INC4]], 5
 ; CHECK-NEXT:    [[INC6:%.*]] = add i32 [[INC5]], 6
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } poison, ptr @f.resume.0, 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } [[TMP0]], i32 [[INC6]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } { ptr @f.coro.body.resume.0, i32 poison }, i32 [[INC6]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP1]]
 ;
 entry:
