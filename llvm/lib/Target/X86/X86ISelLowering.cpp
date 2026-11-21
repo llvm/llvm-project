@@ -1350,6 +1350,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, RoundedTy,  Legal);
 
       setOperationAction(ISD::FROUND,            RoundedTy,  Custom);
+      setOperationAction(ISD::FMODF,             RoundedTy,  Custom);
     }
 
     setOperationAction(ISD::SMAX,               MVT::v16i8, Legal);
@@ -1456,6 +1457,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::FABS,              VT, Custom);
       setOperationAction(ISD::FCOPYSIGN,         VT, Custom);
       setOperationAction(ISD::FCANONICALIZE,     VT, Expand);
+      setOperationAction(ISD::FMODF,             VT, Custom);
       SetFPMinMaxAction(VT);
     }
 
@@ -1957,6 +1959,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
       setOperationAction(ISD::FROUND,            VT, Custom);
+      setOperationAction(ISD::FMODF,             VT, Custom);
     }
 
     for (auto VT : {MVT::v32i16, MVT::v16i32, MVT::v8i64}) {
@@ -2355,6 +2358,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       setOperationAction(ISD::STRICT_FROUNDEVEN, VT, Legal);
 
       setOperationAction(ISD::FROUND,             VT, Custom);
+      setOperationAction(ISD::FMODF,              VT, Custom);
 
       setOperationAction(ISD::LOAD,               VT, Legal);
       setOperationAction(ISD::STORE,              VT, Legal);
@@ -2535,6 +2539,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
         setOperationPromotedToType(Opc, VT,
                                    VT.changeVectorElementType(MVT::f32));
       setOperationAction(ISD::SETCC, VT, Custom);
+      setOperationAction(ISD::FMODF, VT, Custom);
     }
     setOperationAction(ISD::FP_ROUND, MVT::v8bf16, Custom);
   }
@@ -2556,6 +2561,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
                            ISD::FNEARBYINT, ISD::FROUNDEVEN, ISD::FROUND})
         setOperationPromotedToType(Opc, MVT::v32bf16, MVT::v32f32);
       setOperationAction(ISD::SETCC, MVT::v32bf16, Custom);
+      setOperationAction(ISD::FMODF, MVT::v32bf16, Custom);
     } else {
       for (unsigned Opc : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV})
         setOperationAction(Opc, MVT::v32bf16, Expand);
@@ -23402,6 +23408,19 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
                                      DAG.getVectorIdxConstant(0, dl));
 }
 
+static SDValue LowerFMODF(SDValue Op, SelectionDAG &DAG) {
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+  EVT VT = Op.getValueType();
+  if (!TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
+      !(VT.isVector() &&
+        TLI.getOperationAction(ISD::FTRUNC, VT) == TargetLowering::Promote))
+    return SDValue();
+  SmallVector<SDValue, 2> Results;
+  if (TLI.expandMODF(Op.getNode(), DAG, Results))
+    return DAG.getMergeValues(Results, SDLoc(Op));
+  return SDValue();
+}
+
 static SDValue LowerFGETSIGN(SDValue Op, SelectionDAG &DAG) {
   SDValue N0 = Op.getOperand(0);
   SDLoc dl(Op);
@@ -35099,6 +35118,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FABS:
   case ISD::FNEG:               return LowerFABSorFNEG(Op, DAG);
   case ISD::FCOPYSIGN:          return LowerFCOPYSIGN(Op, DAG);
+  case ISD::FMODF:              return LowerFMODF(Op, DAG);
   case ISD::FGETSIGN:           return LowerFGETSIGN(Op, DAG);
   case ISD::LRINT:
   case ISD::LLRINT:             return LowerLRINT_LLRINT(Op, DAG);
