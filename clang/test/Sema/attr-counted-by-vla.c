@@ -110,7 +110,12 @@ struct not_a_c99_fam {
 // by counted_by.
 struct fam_not_last {
   int count;
-  struct bar *fam[] __counted_by(count); // expected-error {{flexible array member 'fam' with type}}
+  // FIXME: In late-parse mode the attribute is applied after the record's
+  // fields are checked, so the type in the diagnostic doesn't have it yet.
+  // This will be addressed once the new late-parsing approach lands.
+  // immediate-error@+2{{flexible array member 'fam' with type 'struct bar *[] __counted_by(count)' (aka 'struct bar *[]') is not at the end of struct}}
+  // late-error@+1{{flexible array member 'fam' with type 'struct bar *[]' is not at the end of struct}}
+  struct bar *fam[] __counted_by(count);
   int x; // expected-note {{next field declaration is here}}
 };
 

@@ -227,9 +227,9 @@ struct on_nested_pointer_outer {
   struct size_known **__counted_by(count) buf;
 };
 
-// The attribute on a pointer's chunk is checked against where the chunk is in
-// the declarator. An array chunk counts as a level of nesting, just like a
-// pointer chunk does.
+// An attribute written on a pointer is checked against how deeply that pointer
+// is nested in the declared type. An array counts as a level of nesting, just
+// like a pointer does.
 struct on_pointers_to_arrays {
   int count;
   // On the outermost pointer, to an array of known size.
@@ -252,8 +252,8 @@ struct on_pointers_to_arrays {
   // attributes.
   // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
   int *__counted_by(count) (*nested)[4];
-  // On the array a pointer points to, written inside the parentheses, which
-  // puts it on the parentheses chunk. Same as above in late-parse mode.
+  // On the array a pointer points to: an attribute right after `(` applies to
+  // the type inside the parentheses. Same as above in late-parse mode.
   // immediate-error@+1{{'counted_by' attribute on nested pointer type is not allowed}}
   int (__counted_by(count) *nested_array)[4];
   // The same, on an incomplete array, the only array that can be counted. In

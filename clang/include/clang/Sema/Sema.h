@@ -2559,8 +2559,8 @@ public:
   /// Check a counted_by-family attribute in type position and initialize
   /// \p Flags from \p AttrKind. \p PointerNestLevel counts the pointer and
   /// array declarator chunks enclosing the attribute, up to the nearest
-  /// function declarator chunk. \p OnReturnType is true if a function chunk
-  /// encloses it, i.e. the attribute is in a function's return type.
+  /// function declarator chunk. \p OnReturnType is true if the attribute is on
+  /// a function's return type.
   ///
   /// \returns false after diagnosing an attribute that must be dropped (see
   /// ValidateBoundsAttrTypeShape).

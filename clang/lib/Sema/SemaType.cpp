@@ -9112,8 +9112,10 @@ static bool distributeBoundsAttrFromDeclSpec(TypeProcessingState &State,
     DeclaratorChunk &Chunk = D.getTypeObject(i);
     if (Chunk.Kind == DeclaratorChunk::Paren)
       continue;
-    // The DeclSpec attributes are shared by every declarator, so restore
-    // them once this one is processed.
+    // The DeclSpec attributes are shared by every declarator of the
+    // declaration, as `a` and `b` in `__counted_by(n) int *a, *b;`. Save them
+    // so ~TypeProcessingState puts this attribute back on the DeclSpec once
+    // this declarator is done, for the next declarator to see.
     State.saveDeclSpecAttrs();
     moveAttrFromListToList(Attr, State.getCurrentAttributes(),
                            Chunk.getAttrs());
@@ -9172,8 +9174,8 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
 bool Sema::ProcessLateParsedTypeAttr(LateParsedTypeAttrInfo &LA, QualType &QT) {
   // A DeclSpec attribute runs this once per declarator, as in
-  // `IP __counted_by(n) a, b;`. Reuse one node, as the eager path does, so no
-  // node is left without a count.
+  // `typedef int *int_ptr; int_ptr __counted_by(n) a, b;`. Reuse one node, as
+  // the eager path does, so no node is left without a count.
   if (LA.TypeToComplete) {
     QT = QualType(LA.TypeToComplete, 0);
     return true;
@@ -9451,10 +9453,13 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
       if (state.getSema().getLangOpts().ExperimentalLateParseAttributes &&
           attr.isGNUAttribute())
         break;
-      // The attribute only applies to fields for now. Leave it to declaration
-      // attribute processing, which diagnoses the GNU spelling. That doesn't
-      // see a [[]] one on a declarator chunk, so diagnose it here as the
-      // default case would.
+      // The attribute only applies to fields for now. If it's not on a field,
+      // diagnose the [[]] spelling on a declarator chunk here. The GNU
+      // spelling, and the [[]] spelling at the start of the declaration or
+      // after the name, are diagnosed by the subject check in declaration
+      // attribute processing.
+      //
+      // FIXME: [[]] after the type specifiers isn't diagnosed.
       if (state.getDeclarator().getContext() != DeclaratorContext::Member) {
         if (!attr.isGNUAttribute() && TAL == TAL_DeclChunk) {
           state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
@@ -10212,8 +10217,8 @@ bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
   auto *CATy = cast<CountAttributedType>(BATy);
 
   auto Reject = [&]() -> bool {
-    // Guarded so shared declarators (`IP __counted_by(n) a, b;`) only complete
-    // the node once.
+    // Guarded so shared declarators (`int_ptr __counted_by(n) a, b;`) only
+    // complete the node once.
     if (!CATy->getCountExpr())
       Context.completeCountAttributedType(CATy, Arg, {});
     FD->setInvalidDecl();
@@ -10230,8 +10235,8 @@ bool Sema::ActOnLateParsedTypeAttrArgument(BoundsAttributedType *BATy,
   llvm::SmallVector<TypeCoupledDeclRefInfo, 1> Decls;
   BuildTypeCoupledDecls(Arg, Decls);
   // Several declarators can share one node when the attribute was written in
-  // declaration-specifier position (`IP __counted_by(n) a, b;`), so this runs
-  // once per field
+  // declaration-specifier position (`int_ptr __counted_by(n) a, b;`), so this
+  // runs once per field
   if (!CATy->getCountExpr())
     Context.completeCountAttributedType(CATy, Arg, Decls);
 

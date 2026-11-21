@@ -3,8 +3,6 @@
 // counted_by-family attributes aren't supported yet on function return types,
 // including the return type of the function a function-pointer or
 // block-pointer member points to. They're rejected with a dedicated diagnostic.
-// They used to be reported as a nested pointer, because the function chunk
-// counted as a level of pointer nesting.
 
 #define __counted_by(f) __attribute__((counted_by(f)))
 #define __sized_by(f) __attribute__((sized_by(f)))

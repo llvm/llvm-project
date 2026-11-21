@@ -93,21 +93,19 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
                                        BoundsAttrFlags &Flags,
                                        StringRef AttrSpelling, bool AllowRedecl,
                                        Expr *AttrArg, bool UpdateFlags) {
-  if (getLangOpts().hasBoundsSafetyAttributes())
+  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
+
+  if (getLangOpts().hasBoundsSafetyAttributes()) {
     if (std::optional<bool> Result = checkBoundsAttrTypeConflictsAndMisc(
             *this, Ty, AttrLoc, Flags, AttrSpelling, AllowRedecl, AttrArg))
       return *Result;
-
-  BoundsAttributedType::BoundsAttrKind Kind = getBoundsAttrKind(Flags);
-
-  // A pointer takes only one bounds attribute. This sees one applied eagerly
-  // or late, since a late-parsed one is an incomplete CountAttributedType until
-  // its count is parsed.
-  //
-  // TODO: Converge with the -fbounds-safety attribute model checks in
-  // checkBoundsAttrTypeConflictsAndMisc.
-  if (const auto *CATy = Ty->getAs<CountAttributedType>();
-      CATy && !getLangOpts().hasBoundsSafetyAttributes()) {
+  } else if (const auto *CATy = Ty->getAs<CountAttributedType>()) {
+    // A pointer takes only one bounds attribute. This sees one applied eagerly
+    // or late, since a late-parsed one is an incomplete CountAttributedType
+    // until its count is parsed.
+    //
+    // TODO: Converge with the -fbounds-safety attribute model checks in
+    // checkBoundsAttrTypeConflictsAndMisc.
     Diag(AttrLoc, diag::err_counted_by_on_bounds_attributed_type)
         << Kind << CATy->getKind() << AttrRange;
     return false;
@@ -283,7 +281,8 @@ bool Sema::CheckCountedByAttrInRecord(const DeclContext *DC, QualType Ty,
   // Check the context the attribute is used in. It's null for an Objective-C
   // instance variable.
   const auto *RD = dyn_cast<RecordDecl>(DC);
-  assert((RD || isa<ObjCContainerDecl>(DC)) && "not a field or an ivar");
+  assert((RD || isa<ObjCContainerDecl>(DC)) &&
+         "context must be a record or an Objective-C container");
 
   if (RD && RD->isUnion()) {
     Diag(Loc, diag::err_count_attr_in_union) << Kind << Range;
