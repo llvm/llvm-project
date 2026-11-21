@@ -37,15 +37,15 @@ using namespace clang;
 Module::Module(ModuleConstructorTag, StringRef Name,
                SourceLocation DefinitionLoc, Module *Parent, bool IsFramework,
                bool IsExplicit, unsigned VisibilityID)
-    : Name(Name), DefinitionLoc(DefinitionLoc), Parent(Parent),
-      VisibilityID(VisibilityID), IsUnimportable(false),
-      HasIncompatibleModuleFile(false), IsAvailable(true),
-      IsFromModuleFile(false), IsFramework(IsFramework), IsExplicit(IsExplicit),
-      IsSystem(false), IsExternC(false), IsInferred(false),
-      InferSubmodules(false), InferExplicitSubmodules(false),
+    : Name(Name), DefinitionLoc(DefinitionLoc), VisibilityID(VisibilityID),
+      Parent(Parent), IsUnimportable(false), HasIncompatibleModuleFile(false),
+      IsAvailable(true), IsFromModuleFile(false), IsFramework(IsFramework),
+      IsExplicit(IsExplicit), IsSystem(false), IsExternC(false),
+      IsInferred(false), InferSubmodules(false), InferExplicitSubmodules(false),
       InferExportWildcard(false), ConfigMacrosExhaustive(false),
       NoUndeclaredIncludes(false), ModuleMapIsPrivate(false),
       NamedModuleHasInit(true), UnresolvedWildcardExport(false),
+      Kind(ModuleMapModule), UseExportAsModuleLinkName(false),
       NameVisibility(Hidden) {
   if (Parent) {
     IsAvailable = Parent->isAvailable();
