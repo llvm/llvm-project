@@ -541,7 +541,18 @@ GCNSubtarget::getBaseReservedNumSGPRs(const bool HasFlatScratch) const {
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  return getBaseReservedNumSGPRs(MFI.getUserSGPRInfo().hasFlatScratchInit());
+  // The SGPRs used by a callable function count towards the SGPRs of the
+  // kernels calling it, together with the FLAT_SCRATCH SGPRs of those kernels.
+  // On targets where that total must not exceed the number of addressable
+  // SGPRs (see the check in AMDGPUAsmPrinter), reserve the FLAT_SCRATCH SGPRs
+  // in callable functions as well. Elsewhere, only the SGPRs of the function
+  // itself are limited, so do not reduce its budget, e.g. with amdgpu-num-sgpr.
+  const bool TotalSGPRsLimited =
+      getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS || hasSGPRInitBug();
+  const bool HasFlatScratch =
+      MFI.getUserSGPRInfo().hasFlatScratchInit() ||
+      (!MFI.isEntryFunction() && TotalSGPRsLimited && hasFlatAddressSpace());
+  return getBaseReservedNumSGPRs(HasFlatScratch);
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const Function &F) const {

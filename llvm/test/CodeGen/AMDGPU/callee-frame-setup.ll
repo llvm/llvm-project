@@ -1272,9 +1272,9 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; HAWAII-NEXT:    s_mov_b32 s33, s32
 ; HAWAII-NEXT:    v_mov_b32_e32 v0, s4
 ; HAWAII-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
-; HAWAII-NEXT:    v_mov_b32_e32 v0, s76
+; HAWAII-NEXT:    v_mov_b32_e32 v0, s74
 ; HAWAII-NEXT:    buffer_store_dword v0, off, s[0:3], s33 ; 4-byte Folded Spill
-; HAWAII-NEXT:    v_mov_b32_e32 v0, s77
+; HAWAII-NEXT:    v_mov_b32_e32 v0, s75
 ; HAWAII-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; HAWAII-NEXT:    ;;#ASMSTART
 ; HAWAII-NEXT:    ; clobber nonpreserved SGPRs
@@ -1289,11 +1289,11 @@ define void @callee_need_to_spill_fp_to_memory() #3 {
 ; HAWAII-NEXT:    v_readfirstlane_b32 s4, v0
 ; HAWAII-NEXT:    buffer_load_dword v0, off, s[0:3], s33 ; 4-byte Folded Reload
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
-; HAWAII-NEXT:    v_readfirstlane_b32 s76, v0
+; HAWAII-NEXT:    v_readfirstlane_b32 s74, v0
 ; HAWAII-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; HAWAII-NEXT:    s_mov_b32 s33, s4
 ; HAWAII-NEXT:    s_waitcnt vmcnt(0)
-; HAWAII-NEXT:    v_readfirstlane_b32 s77, v0
+; HAWAII-NEXT:    v_readfirstlane_b32 s75, v0
 ; HAWAII-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-LABEL: callee_need_to_spill_fp_to_memory:
