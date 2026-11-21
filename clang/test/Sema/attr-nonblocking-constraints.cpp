@@ -394,6 +394,116 @@ void nb21() [[clang::nonblocking]] {
 void nb22(int param = badForDefaultArg()) [[clang::nonblocking]] { // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForDefaultArg'}}
 }
 
+// Template default arguments and parameter traversal
+
+// Safe default argument (used and unused).
+template <typename T>
+int tmplDefaultSafe() noexcept [[clang::nonblocking]] {
+  return 0;
+}
+
+template <typename T>
+auto tmplDefault(T a = tmplDefaultSafe<T>()) noexcept
+    [[clang::nonblocking]] {
+  return a;
+}
+
+void testTmplDefaultExplicit(int x) [[clang::nonblocking]] {
+  tmplDefault(x);
+}
+
+void testTmplDefaultImplicit() [[clang::nonblocking]] {
+  tmplDefault<int>();
+}
+
+// Unsafe non-dependent default argument (used vs unused).
+int badForTmplDefaultArg(); // expected-note 2{{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+template <typename T>
+auto tmplDefaultBad(T a = badForTmplDefaultArg()) noexcept // expected-warning 2{{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badForTmplDefaultArg'}}
+    [[clang::nonblocking]] {
+  return a;
+}
+
+void testTmplDefaultBadExplicit(int x) [[clang::nonblocking]] {
+  tmplDefaultBad(x); // OK: default argument unused
+}
+
+void testTmplDefaultBadImplicit() [[clang::nonblocking]] {
+  tmplDefaultBad<int>(); // expected-note {{in evaluating default argument here}}
+}
+
+// Unused dependent default argument
+template <typename T>
+int f1() noexcept [[clang::nonblocking]] {
+  return 0;
+}
+
+template <typename T>
+auto f2(T a = f1<T>()) noexcept [[clang::nonblocking]] {
+  return a;
+}
+
+void testDependentDefaultExplicit(int argc) [[clang::nonblocking]] {
+  f2(argc);
+}
+
+// By-value parameter with dependent default argument and unsafe destructor.
+// Parameter declaration traversal must run so destructor analysis is performed.
+struct ParamWithDtor {
+  ~ParamWithDtor(); // expected-note 5{{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+};
+
+template <typename T>
+T makeDependentDefault();
+
+template <typename T>
+void byValueWithDependentDefault(
+    T x = makeDependentDefault<T>()) // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'ParamWithDtor::~ParamWithDtor'}}
+    [[clang::nonblocking]] {}
+
+void testByValueWithDependentDefault(ParamWithDtor &arg) {
+  byValueWithDependentDefault(arg); // expected-note {{in template expansion here}}
+}
+
+template <typename T>
+void byValueWithUnusedDefaultDtor(
+    T, ParamWithDtor = ParamWithDtor()) // expected-warning {{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'ParamWithDtor::~ParamWithDtor'}}
+    [[clang::nonblocking]] {}
+
+void testUnusedDefaultDtor(ParamWithDtor &arg) {
+  byValueWithUnusedDefaultDtor(1, arg); // expected-note {{in template expansion here}}
+}
+
+template <typename T>
+void byValueWithUsedDefaultDtor(
+    T, ParamWithDtor = ParamWithDtor()) // expected-warning 3{{function with 'nonblocking' attribute must not call non-'nonblocking' destructor 'ParamWithDtor::~ParamWithDtor'}}
+    [[clang::nonblocking]] {}
+
+void testUsedDefaultDtor() [[clang::nonblocking]] {
+  byValueWithUsedDefaultDtor(1); // expected-note {{in evaluating default argument here}} \
+                                 // expected-note 2{{in template expansion here}}
+}
+
+// Used dependent default argument.
+int badForDependentDefault(); // expected-note 2{{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
+
+template <typename T>
+int badDependentCaller() {
+  return badForDependentDefault(); // expected-note 2{{function cannot be inferred 'nonblocking' because it calls non-'nonblocking' function 'badForDependentDefault'}}
+}
+
+template <typename T>
+auto usedDependentDefault(T a = badDependentCaller<T>()) noexcept // expected-warning 2{{function with 'nonblocking' attribute must not call non-'nonblocking' function 'badDependentCaller<int>'}} \
+                                                                  // expected-note 2{{in template expansion here}}
+    [[clang::nonblocking]] {
+  return a;
+}
+
+void testUsedDependentDefault() [[clang::nonblocking]] {
+  usedDependentDefault<int>(); // expected-note {{in evaluating default argument here}}
+}
+
 // Verify traversal of implicit code paths - constructors and destructors.
 struct Unsafe {
   static void problem1();   // expected-note {{declaration cannot be inferred 'nonblocking' because it has no definition in this translation unit}}
