@@ -4292,18 +4292,18 @@ bool AMDGPUAsmParser::validateMFMA(const MCInst &Inst,
       unsigned CBSZ = Inst.getOperand(CbszIdx).getImm();
       unsigned BLGP = Inst.getOperand(BlgpIdx).getImm();
 
-      // Validate the correct register size was used for the floating point
-      // format operands
+      // Validate that the register tuples are large enough for the floating
+      // point format operands.
 
       bool Success = true;
-      if (Info->NumRegsSrcA != mfmaScaleF8F6F4FormatToNumRegs(CBSZ)) {
+      if (Info->NumRegsSrcA < mfmaScaleF8F6F4FormatToNumRegs(CBSZ)) {
         int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
         Error(getOperandLoc(Operands, Src0Idx),
               "wrong register tuple size for cbsz value " + Twine(CBSZ));
         Success = false;
       }
 
-      if (Info->NumRegsSrcB != mfmaScaleF8F6F4FormatToNumRegs(BLGP)) {
+      if (Info->NumRegsSrcB < mfmaScaleF8F6F4FormatToNumRegs(BLGP)) {
         int Src1Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1);
         Error(getOperandLoc(Operands, Src1Idx),
               "wrong register tuple size for blgp value " + Twine(BLGP));
@@ -5527,7 +5527,7 @@ bool AMDGPUAsmParser::validateWMMA(const MCInst &Inst,
         TRI->getRegClass(MII.getOpRegClassID(Desc.operands()[SrcIdx], HwMode))
             .getSizeInBits();
 
-    if (RegSize == AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
+    if (RegSize >= AMDGPU::wmmaScaleF8F6F4FormatToNumRegs(Fmt) * 32)
       return true;
 
     Error(getOperandLoc(Operands, SrcIdx),
