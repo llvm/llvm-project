@@ -175,4 +175,53 @@ define void @foo_lmul8() nounwind #0 {
   ret void
 }
 
+define void @foo_lmul1_realign() nounwind #0 {
+; CHECK-RV32-LABEL: foo_lmul1_realign:
+; CHECK-RV32:       # %bb.0:
+; CHECK-RV32-NEXT:    addi sp, sp, -144
+; CHECK-RV32-NEXT:    sw ra, 140(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw s0, 136(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    sw a0, 132(sp) # 4-byte Folded Spill
+; CHECK-RV32-NEXT:    addi s0, sp, 144
+; CHECK-RV32-NEXT:    csrr a0, vlenb
+; CHECK-RV32-NEXT:    slli a0, a0, 1
+; CHECK-RV32-NEXT:    sub sp, sp, a0
+; CHECK-RV32-NEXT:    csrr a0, vlenb
+; CHECK-RV32-NEXT:    slli a0, a0, 1
+; CHECK-RV32-NEXT:    sub a0, s0, a0
+; CHECK-RV32-NEXT:    addi a0, a0, -16
+; CHECK-RV32-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
+; CHECK-RV32-NEXT:    andi sp, sp, -64
+; CHECK-RV32-NEXT:    sw zero, 64(sp)
+; CHECK-RV32-NEXT:    lui a0, %hi(a)
+; CHECK-RV32-NEXT:    addi a0, a0, %lo(a)
+; CHECK-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-RV32-NEXT:    vle32.v v8, (a0)
+; CHECK-RV32-NEXT:    lui a0, %hi(b)
+; CHECK-RV32-NEXT:    addi a0, a0, %lo(b)
+; CHECK-RV32-NEXT:    vle32.v v9, (a0)
+; CHECK-RV32-NEXT:    vadd.vv v8, v9, v8
+; CHECK-RV32-NEXT:    lui a0, %hi(c)
+; CHECK-RV32-NEXT:    addi a0, a0, %lo(c)
+; CHECK-RV32-NEXT:    vse32.v v8, (a0)
+; CHECK-RV32-NEXT:    csrr a0, vlenb
+; CHECK-RV32-NEXT:    slli a0, a0, 1
+; CHECK-RV32-NEXT:    sub a0, s0, a0
+; CHECK-RV32-NEXT:    addi a0, a0, -16
+; CHECK-RV32-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
+; CHECK-RV32-NEXT:    addi sp, s0, -144
+; CHECK-RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw s0, 136(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    lw a0, 132(sp) # 4-byte Folded Reload
+; CHECK-RV32-NEXT:    addi sp, sp, 144
+; CHECK-RV32-NEXT:    mret
+  %local = alloca i32, align 64
+  store volatile i32 0, ptr %local
+  %1 = load <4 x i32>, ptr @a
+  %2 = load <4 x i32>, ptr @b
+  %add = add nsw <4 x i32> %2, %1
+  store <4 x i32> %add, ptr @c
+  ret void
+}
+
 attributes #0 = { "interrupt"="machine" }
