@@ -1392,11 +1392,40 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   return Res;
 }
 
+/// Return true if \p V is poison whenever \p PN is poison, because \p V is
+/// computed from \p PN through poison-propagating, non-PHI uses. Unlike
+/// impliesPoison(), this is never vacuously true, so it also holds when \p PN
+/// being poison would be immediate UB.
+static bool isPoisonPropagatedFrom(const PHINode &PN, const Value *V,
+                                   unsigned Depth = 0) {
+  if (V == &PN)
+    return true;
+  const unsigned MaxDepth = 2;
+  const auto *I = dyn_cast<Instruction>(V);
+  if (!I || Depth == MaxDepth)
+    return false;
+  return any_of(I->operands(), [&PN, Depth](const Use &U) {
+    return propagatesPoison(U) &&
+           isPoisonPropagatedFrom(PN, U.get(), Depth + 1);
+  });
+}
+
 // PHINode simplification
 //
 Instruction *InstCombinerImpl::visitPHINode(PHINode &PN) {
   if (Value *V = simplifyInstruction(&PN, SQ.getWithInstruction(&PN)))
     return replaceInstUsesWith(PN, V);
+
+  // A PHI is poison if each incoming value is poison or is computed from the
+  // PHI through poison-propagating uses, as in
+  // phi [poison, entry], [add(phi, x), loop]. Such a value is dominated by the
+  // PHI, so the first execution of the PHI takes a poison input, and each later
+  // input is computed from an earlier, poison, value of the PHI.
+  if (any_of(PN.incoming_values(), IsaPred<PoisonValue>) &&
+      all_of(PN.incoming_values(), [&PN](Value *V) {
+        return isa<PoisonValue>(V) || isPoisonPropagatedFrom(PN, V);
+      }))
+    return replaceInstUsesWith(PN, PoisonValue::get(PN.getType()));
 
   if (Instruction *Result = foldPHIArgZextsIntoPHI(PN))
     return Result;
