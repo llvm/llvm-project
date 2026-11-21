@@ -1,0 +1,11 @@
+! RUN: %python %S/test_errors.py %s %flang_fc1
+! !DIR$ ALIGN is not supported for CUDA Fortran variables yet, ALLOCATABLE
+! ones included.
+
+module m
+  !dir$ align(64) :: dv, da
+  !ERROR: !DIR$ ALIGN is not yet supported for CUDA Fortran variable 'dv'
+  real, device :: dv(10)
+  !ERROR: !DIR$ ALIGN is not yet supported for CUDA Fortran variable 'da'
+  real, device, allocatable :: da(:)
+end module

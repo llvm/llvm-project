@@ -588,6 +588,9 @@ llvm::raw_ostream &operator<<(
   if (!x.ignoreTKR_.empty()) {
     x.ignoreTKR_.Dump(os << ' ', common::EnumToString);
   }
+  if (x.alignment_) {
+    os << " alignment: " << *x.alignment_;
+  }
   if (x.cudaDataAttr()) {
     os << " cudaDataAttr: " << common::EnumToString(*x.cudaDataAttr());
   }
