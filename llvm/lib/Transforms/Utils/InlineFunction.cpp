@@ -935,25 +935,80 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
   }
 }
 
-/// Collect all calls that produce RetVal, following only pointer-preserving
-/// instructions (cast, phi, select).
-static void collectPointerReturningCalls(Value *RetVal,
-                                         SmallVectorImpl<CallBase *> &Out) {
+/// Returns true for a {begin pointer, size} pair. This is the only span shape
+/// returned by malloc_span functions whose begin pointer is known from the
+/// type: a {pointer, pointer} pair may be in either order, and a span coerced
+/// by the ABI (e.g. to [2 x i64] on AArch64) has no pointer field at all, so
+/// those are only followed when returned as a whole.
+static bool isPointerSizeSpan(Type *Ty) {
+  auto *STy = dyn_cast<StructType>(Ty);
+  return STy && STy->getNumElements() == 2 &&
+         STy->getElementType(0)->isPointerTy() &&
+         STy->getElementType(1)->isIntegerTy();
+}
+
+/// Collect the calls whose result RetVal returns, either as a whole or, for a
+/// {pointer, size} span, as its begin pointer. Follows casts, phis and
+/// selects; field 0 of such a span (extractvalue, insertvalue); and a local
+/// temporary the value is stored to at offset 0 and loaded from, as emitted
+/// for returned aggregates before SROA.
+static void collectReturnedCalls(Value *RetVal,
+                                 SmallVectorImpl<CallBase *> &Out) {
+  auto IsField0 = [](ArrayRef<unsigned> Indices) {
+    return Indices.size() == 1 && Indices[0] == 0;
+  };
   SmallVector<Value *, 8> Worklist{RetVal};
   SmallPtrSet<Value *, 8> Visited;
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
-    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+    if (!Visited.insert(V).second)
       continue;
-    if (auto *CB = dyn_cast<CallBase>(V))
+    if (auto *CB = dyn_cast<CallBase>(V)) {
       Out.push_back(CB);
-    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+    } else if (isa<BitCastInst, AddrSpaceCastInst>(V)) {
       Worklist.push_back(cast<CastInst>(V)->getOperand(0));
-    else if (auto *PN = dyn_cast<PHINode>(V))
+    } else if (auto *PN = dyn_cast<PHINode>(V)) {
       append_range(Worklist, PN->incoming_values());
-    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+    } else if (auto *SI = dyn_cast<SelectInst>(V)) {
       Worklist.push_back(SI->getTrueValue());
       Worklist.push_back(SI->getFalseValue());
+    } else if (auto *EVI = dyn_cast<ExtractValueInst>(V)) {
+      // The begin pointer of a span.
+      if (isPointerSizeSpan(EVI->getAggregateOperand()->getType()) &&
+          IsField0(EVI->getIndices()))
+        Worklist.push_back(EVI->getAggregateOperand());
+    } else if (auto *IVI = dyn_cast<InsertValueInst>(V)) {
+      // A span built from its begin pointer.
+      if (isPointerSizeSpan(IVI->getType()))
+        Worklist.push_back(IsField0(IVI->getIndices())
+                               ? IVI->getInsertedValueOperand()
+                               : IVI->getAggregateOperand());
+    } else if (auto *LI = dyn_cast<LoadInst>(V)) {
+      // The values stored at offset 0 of a local temporary: the whole value,
+      // or the begin pointer of a span.
+      auto *AI =
+          dyn_cast<AllocaInst>(LI->getPointerOperand()->stripPointerCasts());
+      if (!AI)
+        continue;
+      Type *Ty = LI->getType();
+      SmallVector<Value *, 4> Ptrs{AI};
+      while (!Ptrs.empty()) {
+        Value *Ptr = Ptrs.pop_back_val();
+        for (User *U : Ptr->users()) {
+          if (auto *St = dyn_cast<StoreInst>(U)) {
+            Value *Stored = St->getValueOperand();
+            if (St->getPointerOperand() == Ptr &&
+                (Stored->getType() == Ty ||
+                 (isPointerSizeSpan(Ty) && Stored->getType()->isPointerTy())))
+              Worklist.push_back(Stored);
+          } else if (auto *GEP = dyn_cast<GetElementPtrInst>(U)) {
+            if (GEP->hasAllZeroIndices())
+              Ptrs.push_back(GEP);
+          } else if (isa<BitCastInst, AddrSpaceCastInst>(U)) {
+            Ptrs.push_back(U);
+          }
+        }
+      }
     }
   }
 }
@@ -974,7 +1029,7 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
   for (BasicBlock &BB : *CalledFunc)
     if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
       if (Value *RV = RI->getReturnValue())
-        collectPointerReturningCalls(RV, AllocCalls);
+        collectReturnedCalls(RV, AllocCalls);
 
   for (CallBase *OrigCall : AllocCalls) {
     auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
