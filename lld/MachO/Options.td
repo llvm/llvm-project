@@ -103,6 +103,41 @@ def lto_CGO: Joined<["--"], "lto-CGO">,
     HelpText<"Set codegen optimization level for LTO (default: 2)">,
     MetaVarName<"<cgopt-level>">,
     Group<grp_lld>;
+def opt_remarks_filename: Separate<["--"], "opt-remarks-filename">,
+    HelpText<"Output file for LTO optimization remarks">,
+    MetaVarName<"<file>">,
+    Group<grp_lld>;
+def opt_remarks_filename_eq: Joined<["--"], "opt-remarks-filename=">,
+    Alias<!cast<Separate>(opt_remarks_filename)>,
+    Group<grp_lld>;
+def opt_remarks_hotness_threshold:
+    Separate<["--"], "opt-remarks-hotness-threshold">,
+    HelpText<"Minimum profile count required for an optimization remark to be "
+             "output. Use 'auto' to apply the threshold from profile summary.">,
+    MetaVarName<"<value>">,
+    Group<grp_lld>;
+def opt_remarks_hotness_threshold_eq:
+    Joined<["--"], "opt-remarks-hotness-threshold=">,
+    Alias<!cast<Separate>(opt_remarks_hotness_threshold)>,
+    Group<grp_lld>;
+def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
+    HelpText<"Regex for the passes that need to be serialized to the output "
+             "file">,
+    MetaVarName<"<regex>">,
+    Group<grp_lld>;
+def opt_remarks_passes_eq: Joined<["--"], "opt-remarks-passes=">,
+    Alias<!cast<Separate>(opt_remarks_passes)>,
+    Group<grp_lld>;
+def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
+    HelpText<"Include hotness information in the optimization remarks file">,
+    Group<grp_lld>;
+def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
+    HelpText<"The format used for serializing remarks (default: YAML)">,
+    MetaVarName<"<format>">,
+    Group<grp_lld>;
+def opt_remarks_format_eq: Joined<["--"], "opt-remarks-format=">,
+    Alias<!cast<Separate>(opt_remarks_format)>,
+    Group<grp_lld>;
 def disable_verify : Flag<["--"], "disable_verify">,
                      HelpText<"Do not verify LLVM modules during LTO">,
                      Group<grp_lld>;
