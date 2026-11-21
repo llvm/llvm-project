@@ -43,8 +43,8 @@ public:
 
   LLVM_ABI void analyze(MachineFunction &MF, LiveIntervals *LIS);
   /// splitRegister - Move any user variables in OldReg to the live ranges in
-  /// NewRegs where they are live. Mark the values as unavailable where no new
-  /// register is live.
+  /// NewRegs where they are live. Keep other locations in OldReg for spill-slot
+  /// rewriting. NewRegs must not include OldReg.
   LLVM_ABI void splitRegister(Register OldReg, ArrayRef<Register> NewRegs,
                               LiveIntervals &LIS);
 
@@ -54,6 +54,11 @@ public:
   /// intervals resolving to one position now emit a single DBG_VALUE rather
   /// than identical consecutive ones.
   LLVM_ABI void canonicalizeIndexes(const SlotIndexes &SI);
+
+  /// Mark locations outside Reg's remaining live interval as unavailable after
+  /// deleting definitions. Call splitRegister first for any split components.
+  /// Reg must not describe a value kept in a spill slot.
+  LLVM_ABI void shrinkRegister(Register Reg);
 
   /// emitDebugValues - Emit new DBG_VALUE instructions reflecting the changes
   /// that happened during register allocation.

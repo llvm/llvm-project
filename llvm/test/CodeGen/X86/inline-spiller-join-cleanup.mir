@@ -1,0 +1,95 @@
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes=greedy,virt-reg-rewriter,stack-slot-coloring -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o %t
+
+# Constructed from an optional loop and a second loop consuming its initialized
+# vector accumulators. Greedy creates the spill slots and split ancestry.
+# Both incoming paths reload the same slot solely for the join store.
+# Cleanup removes that store and both reloads.
+
+# CHECK-LABEL: name: full_join
+# CHECK: bb.2:
+# CHECK: lr-split COPY
+# OFF: [[VALUE:%[0-9]+]]:vr128 = MOVAPSrm [[SLOT:%stack.[0-9]+]],
+# ON-NOT: MOVAPSrm
+# CHECK: JMP_1 %bb.4
+# CHECK: bb.3:
+# CHECK: lr-split COPY
+# OFF: [[VALUE]]:vr128 = MOVAPSrm [[SLOT]],
+# ON-NOT: MOVAPSrm
+# CHECK: JMP_1 %bb.4
+# CHECK: bb.4:
+# OFF: MOVAPSmr [[SLOT]], 1, $noreg, 0, $noreg, [[VALUE]]
+# ON-NOT: MOVAPSmr
+# CHECK: JMP_1 %bb.5
+
+--- |
+  define void @full_join() { ret void }
+...
+---
+name: full_join
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $rdi, $edx, $ecx, $xmm0, $xmm1
+    %0:gr64 = COPY $rdi
+    %1:gr32 = COPY $edx
+    %2:gr32 = COPY $ecx
+    %3:vr128 = COPY $xmm0
+    %4:vr128 = COPY $xmm1
+    %5:vr128 = COPY %3
+    %5:vr128 = PADDDrr %5, %4
+    %6:vr128 = COPY %5
+    %6:vr128 = PADDDrr %6, %4
+    %7:vr128 = COPY %6
+    %7:vr128 = PADDDrr %7, %4
+    %8:vr128 = COPY %7
+    %8:vr128 = PADDDrr %8, %4
+    TEST32rr %2, %2, implicit-def $eflags
+    JCC_1 %bb.2, 4, implicit $eflags
+    JMP_1 %bb.1
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.3(0x08000000)
+    %5:vr128 = PADDDrr %5, %4
+    %6:vr128 = PADDDrr %6, %4
+    %7:vr128 = PADDDrr %7, %4
+    %8:vr128 = PADDDrr %8, %4
+    %1:gr32 = SUB32ri8 %1, 1, implicit-def $eflags
+    JCC_1 %bb.1, 5, implicit $eflags
+    JMP_1 %bb.3
+  bb.2:
+    successors: %bb.4
+    JMP_1 %bb.4
+  bb.3:
+    successors: %bb.4
+    JMP_1 %bb.4
+  bb.4:
+    successors: %bb.5
+    JMP_1 %bb.5
+  bb.5:
+    successors: %bb.5(0x78000000), %bb.6(0x08000000)
+    %9:vr128 = MOVDQUrm %0, 1, $noreg, 0, $noreg :: (load (s128))
+    %10:vr128 = COPY %9
+    %10:vr128 = PADDDrr %10, %5
+    MOVDQUmr %0, 1, $noreg, 0, $noreg, %10 :: (store (s128))
+    %11:vr128 = MOVDQUrm %0, 1, $noreg, 16, $noreg :: (load (s128))
+    %12:vr128 = COPY %11
+    %12:vr128 = PADDDrr %12, %6
+    MOVDQUmr %0, 1, $noreg, 16, $noreg, %12 :: (store (s128))
+    %13:vr128 = MOVDQUrm %0, 1, $noreg, 32, $noreg :: (load (s128))
+    %14:vr128 = COPY %13
+    %14:vr128 = PADDDrr %14, %7
+    MOVDQUmr %0, 1, $noreg, 32, $noreg, %14 :: (store (s128))
+    %15:vr128 = MOVDQUrm %0, 1, $noreg, 48, $noreg :: (load (s128))
+    %16:vr128 = COPY %15
+    %16:vr128 = PADDDrr %16, %8
+    MOVDQUmr %0, 1, $noreg, 48, $noreg, %16 :: (store (s128))
+    %2:gr32 = SUB32ri8 %2, 1, implicit-def $eflags
+    JCC_1 %bb.5, 5, implicit $eflags
+    JMP_1 %bb.6
+  bb.6:
+    RET 0
+...

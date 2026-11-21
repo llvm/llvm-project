@@ -1,0 +1,643 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc -enable-spill-join-cleanup=false %s -o - | FileCheck %s --check-prefixes=CHECK,OFF
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes=greedy -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o - | FileCheck %s --check-prefixes=CHECK,ON
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -passes=greedy,virt-reg-rewriter,stack-slot-coloring -stress-regalloc=4 -verify-machineinstrs -verify-regalloc %s -o %t
+
+# Constructed from an optional loop followed by a second loop that consumes its
+# accumulators. All values are initialized; greedy creates the spill slots and
+# split ancestry. Each tuple is fully initialized by its four subregister
+# definitions. Check only the join and its predecessors.
+
+# Both incoming values come from the same slot. Remove the two reloads and
+# the join store, retaining the unrelated address reload.
+# CHECK-LABEL: name: full_join
+# CHECK: bb.2:
+# CHECK: SI_SPILL_AV128_SAVE
+# OFF: [[F:%[0-9]+]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[FS:%stack.[0-9]+]],
+# ON-NOT: SI_SPILL
+# CHECK: S_BRANCH %bb.4
+# CHECK: bb.3:
+# CHECK: SI_SPILL_AV128_SAVE
+# OFF: [[F]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[FS]],
+# ON-NOT: SI_SPILL
+# CHECK: S_BRANCH %bb.4
+# CHECK: bb.4:
+# OFF: SI_SPILL_AV128_SAVE [[F]], [[FS]],
+# ON-NOT: SI_SPILL_AV128_SAVE
+# CHECK: SI_SPILL_AV64_RESTORE
+# CHECK-NEXT: S_BRANCH %bb.5
+
+---
+name: full_join
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2, $sgpr7
+    $sgpr6 = S_MOV_B32 4
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vgpr_32 = V_ADD_U32_e32 1, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 2, %1, implicit $exec
+    %4:vgpr_32 = V_ADD_U32_e32 3, %1, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 4, %1, implicit $exec
+    undef %6.sub0:vreg_128_align2 = COPY %2
+    %6.sub1:vreg_128_align2 = COPY %3
+    %6.sub2:vreg_128_align2 = COPY %4
+    %6.sub3:vreg_128_align2 = COPY %5
+    %7:vgpr_32 = V_ADD_U32_e32 5, %1, implicit $exec
+    %8:vgpr_32 = V_ADD_U32_e32 6, %1, implicit $exec
+    %9:vgpr_32 = V_ADD_U32_e32 7, %1, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 8, %1, implicit $exec
+    undef %11.sub0:vreg_128_align2 = COPY %7
+    %11.sub1:vreg_128_align2 = COPY %8
+    %11.sub2:vreg_128_align2 = COPY %9
+    %11.sub3:vreg_128_align2 = COPY %10
+    %12:vgpr_32 = V_ADD_U32_e32 9, %1, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e32 10, %1, implicit $exec
+    %14:vgpr_32 = V_ADD_U32_e32 11, %1, implicit $exec
+    %15:vgpr_32 = V_ADD_U32_e32 12, %1, implicit $exec
+    undef %16.sub0:vreg_128_align2 = COPY %12
+    %16.sub1:vreg_128_align2 = COPY %13
+    %16.sub2:vreg_128_align2 = COPY %14
+    %16.sub3:vreg_128_align2 = COPY %15
+    %17:vgpr_32 = V_ADD_U32_e32 13, %1, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e32 14, %1, implicit $exec
+    %19:vgpr_32 = V_ADD_U32_e32 15, %1, implicit $exec
+    %20:vgpr_32 = V_ADD_U32_e32 16, %1, implicit $exec
+    undef %21.sub0:vreg_128_align2 = COPY %17
+    %21.sub1:vreg_128_align2 = COPY %18
+    %21.sub2:vreg_128_align2 = COPY %19
+    %21.sub3:vreg_128_align2 = COPY %20
+    S_CMP_EQ_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.3(0x08000000)
+    liveins: $sgpr7, $sgpr6
+    %6.sub0:vreg_128_align2 = V_ADD_U32_e32 1, %6.sub0, implicit $exec
+    %6.sub1:vreg_128_align2 = V_ADD_U32_e32 2, %6.sub1, implicit $exec
+    %6.sub2:vreg_128_align2 = V_ADD_U32_e32 3, %6.sub2, implicit $exec
+    %6.sub3:vreg_128_align2 = V_ADD_U32_e32 4, %6.sub3, implicit $exec
+    %11.sub0:vreg_128_align2 = V_ADD_U32_e32 2, %11.sub0, implicit $exec
+    %11.sub1:vreg_128_align2 = V_ADD_U32_e32 3, %11.sub1, implicit $exec
+    %11.sub2:vreg_128_align2 = V_ADD_U32_e32 4, %11.sub2, implicit $exec
+    %11.sub3:vreg_128_align2 = V_ADD_U32_e32 5, %11.sub3, implicit $exec
+    %16.sub0:vreg_128_align2 = V_ADD_U32_e32 3, %16.sub0, implicit $exec
+    %16.sub1:vreg_128_align2 = V_ADD_U32_e32 4, %16.sub1, implicit $exec
+    %16.sub2:vreg_128_align2 = V_ADD_U32_e32 5, %16.sub2, implicit $exec
+    %16.sub3:vreg_128_align2 = V_ADD_U32_e32 6, %16.sub3, implicit $exec
+    %21.sub0:vreg_128_align2 = V_ADD_U32_e32 4, %21.sub0, implicit $exec
+    %21.sub1:vreg_128_align2 = V_ADD_U32_e32 5, %21.sub1, implicit $exec
+    %21.sub2:vreg_128_align2 = V_ADD_U32_e32 6, %21.sub2, implicit $exec
+    %21.sub3:vreg_128_align2 = V_ADD_U32_e32 7, %21.sub3, implicit $exec
+    $sgpr7 = S_SUB_U32 $sgpr7, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.3
+  bb.2:
+    successors: %bb.4
+    liveins: $sgpr6
+    S_BRANCH %bb.4
+  bb.3:
+    successors: %bb.4
+    liveins: $sgpr6
+    S_BRANCH %bb.4
+  bb.4:
+    liveins: $sgpr6
+    successors: %bb.5
+    S_BRANCH %bb.5
+  bb.5:
+    successors: %bb.5(0x78000000), %bb.6(0x08000000)
+    liveins: $sgpr6
+    %22:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    %23:vgpr_32 = V_ADD_U32_e32 %22, %6.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %23, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    %24:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    %25:vgpr_32 = V_ADD_U32_e32 %24, %6.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %25, 4, 0, implicit $exec :: (store (s32), addrspace 1)
+    %26:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec :: (load (s32), addrspace 1)
+    %27:vgpr_32 = V_ADD_U32_e32 %26, %6.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %27, 8, 0, implicit $exec :: (store (s32), addrspace 1)
+    %28:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec :: (load (s32), addrspace 1)
+    %29:vgpr_32 = V_ADD_U32_e32 %28, %6.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %29, 12, 0, implicit $exec :: (store (s32), addrspace 1)
+    %30:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec :: (load (s32), addrspace 1)
+    %31:vgpr_32 = V_ADD_U32_e32 %30, %11.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %31, 16, 0, implicit $exec :: (store (s32), addrspace 1)
+    %32:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec :: (load (s32), addrspace 1)
+    %33:vgpr_32 = V_ADD_U32_e32 %32, %11.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %33, 20, 0, implicit $exec :: (store (s32), addrspace 1)
+    %34:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec :: (load (s32), addrspace 1)
+    %35:vgpr_32 = V_ADD_U32_e32 %34, %11.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %35, 24, 0, implicit $exec :: (store (s32), addrspace 1)
+    %36:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec :: (load (s32), addrspace 1)
+    %37:vgpr_32 = V_ADD_U32_e32 %36, %11.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %37, 28, 0, implicit $exec :: (store (s32), addrspace 1)
+    %38:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec :: (load (s32), addrspace 1)
+    %39:vgpr_32 = V_ADD_U32_e32 %38, %16.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %39, 32, 0, implicit $exec :: (store (s32), addrspace 1)
+    %40:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec :: (load (s32), addrspace 1)
+    %41:vgpr_32 = V_ADD_U32_e32 %40, %16.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %41, 36, 0, implicit $exec :: (store (s32), addrspace 1)
+    %42:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec :: (load (s32), addrspace 1)
+    %43:vgpr_32 = V_ADD_U32_e32 %42, %16.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %43, 40, 0, implicit $exec :: (store (s32), addrspace 1)
+    %44:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec :: (load (s32), addrspace 1)
+    %45:vgpr_32 = V_ADD_U32_e32 %44, %16.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %45, 44, 0, implicit $exec :: (store (s32), addrspace 1)
+    %46:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec :: (load (s32), addrspace 1)
+    %47:vgpr_32 = V_ADD_U32_e32 %46, %21.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %47, 48, 0, implicit $exec :: (store (s32), addrspace 1)
+    %48:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec :: (load (s32), addrspace 1)
+    %49:vgpr_32 = V_ADD_U32_e32 %48, %21.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %49, 52, 0, implicit $exec :: (store (s32), addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec :: (load (s32), addrspace 1)
+    %51:vgpr_32 = V_ADD_U32_e32 %50, %21.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %51, 56, 0, implicit $exec :: (store (s32), addrspace 1)
+    %52:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, implicit $exec :: (load (s32), addrspace 1)
+    %53:vgpr_32 = V_ADD_U32_e32 %52, %21.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %53, 60, 0, implicit $exec :: (store (s32), addrspace 1)
+    $sgpr6 = S_SUB_U32 $sgpr6, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+    S_BRANCH %bb.6
+  bb.6:
+    S_ENDPGM 0
+...
+
+# An intervening store prevents proving redundancy on bb.2. Keep its reload,
+# move the join store to that path, and remove the reload from bb.3.
+# CHECK-LABEL: name: partial_join
+# CHECK: bb.2:
+# CHECK: [[P:%[0-9]+]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[PS:%stack.[0-9]+]],
+# CHECK-NEXT: [[P2:%[0-9]+]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[PS2:%stack.[0-9]+]],
+# CHECK-NEXT: SI_SPILL_AV128_SAVE $vgpr10_vgpr11_vgpr12_vgpr13,
+# ON-NEXT: SI_SPILL_AV128_SAVE [[P]], [[PS]],
+# ON-NEXT: SI_SPILL_AV128_SAVE [[P2]], [[PS2]],
+# CHECK-NEXT: S_BRANCH %bb.4
+# CHECK: bb.3:
+# CHECK: SI_SPILL_AV128_SAVE
+# OFF-NEXT: [[P]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[PS]],
+# OFF-NEXT: [[P2]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[PS2]],
+# CHECK-NEXT: S_BRANCH %bb.4
+# CHECK: bb.4:
+# OFF: SI_SPILL_AV128_SAVE [[P]], [[PS]],
+# OFF-NEXT: SI_SPILL_AV128_SAVE [[P2]], [[PS2]],
+# ON-NOT: SI_SPILL_AV128_SAVE
+# CHECK: SI_SPILL_AV64_RESTORE
+# CHECK-NEXT: S_BRANCH %bb.5
+
+---
+name: partial_join
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2, $sgpr7, $vgpr10_vgpr11_vgpr12_vgpr13
+    $sgpr6 = S_MOV_B32 4
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vgpr_32 = V_ADD_U32_e32 1, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 2, %1, implicit $exec
+    %4:vgpr_32 = V_ADD_U32_e32 3, %1, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 4, %1, implicit $exec
+    undef %6.sub0:vreg_128_align2 = COPY %2
+    %6.sub1:vreg_128_align2 = COPY %3
+    %6.sub2:vreg_128_align2 = COPY %4
+    %6.sub3:vreg_128_align2 = COPY %5
+    %7:vgpr_32 = V_ADD_U32_e32 5, %1, implicit $exec
+    %8:vgpr_32 = V_ADD_U32_e32 6, %1, implicit $exec
+    %9:vgpr_32 = V_ADD_U32_e32 7, %1, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 8, %1, implicit $exec
+    undef %11.sub0:vreg_128_align2 = COPY %7
+    %11.sub1:vreg_128_align2 = COPY %8
+    %11.sub2:vreg_128_align2 = COPY %9
+    %11.sub3:vreg_128_align2 = COPY %10
+    %12:vgpr_32 = V_ADD_U32_e32 9, %1, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e32 10, %1, implicit $exec
+    %14:vgpr_32 = V_ADD_U32_e32 11, %1, implicit $exec
+    %15:vgpr_32 = V_ADD_U32_e32 12, %1, implicit $exec
+    undef %16.sub0:vreg_128_align2 = COPY %12
+    %16.sub1:vreg_128_align2 = COPY %13
+    %16.sub2:vreg_128_align2 = COPY %14
+    %16.sub3:vreg_128_align2 = COPY %15
+    %17:vgpr_32 = V_ADD_U32_e32 13, %1, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e32 14, %1, implicit $exec
+    %19:vgpr_32 = V_ADD_U32_e32 15, %1, implicit $exec
+    %20:vgpr_32 = V_ADD_U32_e32 16, %1, implicit $exec
+    undef %21.sub0:vreg_128_align2 = COPY %17
+    %21.sub1:vreg_128_align2 = COPY %18
+    %21.sub2:vreg_128_align2 = COPY %19
+    %21.sub3:vreg_128_align2 = COPY %20
+    S_CMP_EQ_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.3(0x08000000)
+    liveins: $sgpr7, $sgpr6
+    %6.sub0:vreg_128_align2 = V_ADD_U32_e32 1, %6.sub0, implicit $exec
+    %6.sub1:vreg_128_align2 = V_ADD_U32_e32 2, %6.sub1, implicit $exec
+    %6.sub2:vreg_128_align2 = V_ADD_U32_e32 3, %6.sub2, implicit $exec
+    %6.sub3:vreg_128_align2 = V_ADD_U32_e32 4, %6.sub3, implicit $exec
+    %11.sub0:vreg_128_align2 = V_ADD_U32_e32 2, %11.sub0, implicit $exec
+    %11.sub1:vreg_128_align2 = V_ADD_U32_e32 3, %11.sub1, implicit $exec
+    %11.sub2:vreg_128_align2 = V_ADD_U32_e32 4, %11.sub2, implicit $exec
+    %11.sub3:vreg_128_align2 = V_ADD_U32_e32 5, %11.sub3, implicit $exec
+    %16.sub0:vreg_128_align2 = V_ADD_U32_e32 3, %16.sub0, implicit $exec
+    %16.sub1:vreg_128_align2 = V_ADD_U32_e32 4, %16.sub1, implicit $exec
+    %16.sub2:vreg_128_align2 = V_ADD_U32_e32 5, %16.sub2, implicit $exec
+    %16.sub3:vreg_128_align2 = V_ADD_U32_e32 6, %16.sub3, implicit $exec
+    %21.sub0:vreg_128_align2 = V_ADD_U32_e32 4, %21.sub0, implicit $exec
+    %21.sub1:vreg_128_align2 = V_ADD_U32_e32 5, %21.sub1, implicit $exec
+    %21.sub2:vreg_128_align2 = V_ADD_U32_e32 6, %21.sub2, implicit $exec
+    %21.sub3:vreg_128_align2 = V_ADD_U32_e32 7, %21.sub3, implicit $exec
+    $sgpr7 = S_SUB_U32 $sgpr7, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.3
+  bb.2:
+    successors: %bb.4
+    liveins: $sgpr6, $vgpr10_vgpr11_vgpr12_vgpr13
+    %11:vreg_128_align2 = COPY $vgpr10_vgpr11_vgpr12_vgpr13
+    S_BRANCH %bb.4
+  bb.3:
+    successors: %bb.4
+    liveins: $sgpr6
+    S_BRANCH %bb.4
+  bb.4:
+    liveins: $sgpr6
+    successors: %bb.5
+    S_BRANCH %bb.5
+  bb.5:
+    successors: %bb.5(0x78000000), %bb.6(0x08000000)
+    liveins: $sgpr6
+    %22:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    %23:vgpr_32 = V_ADD_U32_e32 %22, %6.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %23, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    %24:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    %25:vgpr_32 = V_ADD_U32_e32 %24, %6.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %25, 4, 0, implicit $exec :: (store (s32), addrspace 1)
+    %26:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec :: (load (s32), addrspace 1)
+    %27:vgpr_32 = V_ADD_U32_e32 %26, %6.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %27, 8, 0, implicit $exec :: (store (s32), addrspace 1)
+    %28:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec :: (load (s32), addrspace 1)
+    %29:vgpr_32 = V_ADD_U32_e32 %28, %6.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %29, 12, 0, implicit $exec :: (store (s32), addrspace 1)
+    %30:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec :: (load (s32), addrspace 1)
+    %31:vgpr_32 = V_ADD_U32_e32 %30, %11.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %31, 16, 0, implicit $exec :: (store (s32), addrspace 1)
+    %32:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec :: (load (s32), addrspace 1)
+    %33:vgpr_32 = V_ADD_U32_e32 %32, %11.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %33, 20, 0, implicit $exec :: (store (s32), addrspace 1)
+    %34:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec :: (load (s32), addrspace 1)
+    %35:vgpr_32 = V_ADD_U32_e32 %34, %11.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %35, 24, 0, implicit $exec :: (store (s32), addrspace 1)
+    %36:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec :: (load (s32), addrspace 1)
+    %37:vgpr_32 = V_ADD_U32_e32 %36, %11.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %37, 28, 0, implicit $exec :: (store (s32), addrspace 1)
+    %38:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec :: (load (s32), addrspace 1)
+    %39:vgpr_32 = V_ADD_U32_e32 %38, %16.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %39, 32, 0, implicit $exec :: (store (s32), addrspace 1)
+    %40:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec :: (load (s32), addrspace 1)
+    %41:vgpr_32 = V_ADD_U32_e32 %40, %16.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %41, 36, 0, implicit $exec :: (store (s32), addrspace 1)
+    %42:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec :: (load (s32), addrspace 1)
+    %43:vgpr_32 = V_ADD_U32_e32 %42, %16.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %43, 40, 0, implicit $exec :: (store (s32), addrspace 1)
+    %44:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec :: (load (s32), addrspace 1)
+    %45:vgpr_32 = V_ADD_U32_e32 %44, %16.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %45, 44, 0, implicit $exec :: (store (s32), addrspace 1)
+    %46:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec :: (load (s32), addrspace 1)
+    %47:vgpr_32 = V_ADD_U32_e32 %46, %21.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %47, 48, 0, implicit $exec :: (store (s32), addrspace 1)
+    %48:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec :: (load (s32), addrspace 1)
+    %49:vgpr_32 = V_ADD_U32_e32 %48, %21.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %49, 52, 0, implicit $exec :: (store (s32), addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec :: (load (s32), addrspace 1)
+    %51:vgpr_32 = V_ADD_U32_e32 %50, %21.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %51, 56, 0, implicit $exec :: (store (s32), addrspace 1)
+    %52:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, implicit $exec :: (load (s32), addrspace 1)
+    %53:vgpr_32 = V_ADD_U32_e32 %52, %21.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %53, 60, 0, implicit $exec :: (store (s32), addrspace 1)
+    $sgpr6 = S_SUB_U32 $sgpr6, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+    S_BRANCH %bb.6
+  bb.6:
+    S_ENDPGM 0
+...
+
+# The terminator changes EXEC. The reload and store use different masks.
+# CHECK-LABEL: name: mask_join
+# CHECK: bb.2:
+# CHECK: [[M:%[0-9]+]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[MS:%stack.[0-9]+]],
+# CHECK-NEXT: S_BRANCH %bb.4
+# CHECK: bb.3:
+# CHECK: [[M]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[MS]],
+# CHECK-NEXT: S_BRANCH %bb.4, implicit-def $exec
+# CHECK: bb.4:
+# CHECK: SI_SPILL_AV128_SAVE [[M]], [[MS]],
+# CHECK-NEXT: {{%[0-9]+}}:vreg_64_align2 = SI_SPILL_AV64_RESTORE
+
+---
+name: mask_join
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2, $sgpr7
+    $sgpr6 = S_MOV_B32 4
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vgpr_32 = V_ADD_U32_e32 1, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 2, %1, implicit $exec
+    %4:vgpr_32 = V_ADD_U32_e32 3, %1, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 4, %1, implicit $exec
+    undef %6.sub0:vreg_128_align2 = COPY %2
+    %6.sub1:vreg_128_align2 = COPY %3
+    %6.sub2:vreg_128_align2 = COPY %4
+    %6.sub3:vreg_128_align2 = COPY %5
+    %7:vgpr_32 = V_ADD_U32_e32 5, %1, implicit $exec
+    %8:vgpr_32 = V_ADD_U32_e32 6, %1, implicit $exec
+    %9:vgpr_32 = V_ADD_U32_e32 7, %1, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 8, %1, implicit $exec
+    undef %11.sub0:vreg_128_align2 = COPY %7
+    %11.sub1:vreg_128_align2 = COPY %8
+    %11.sub2:vreg_128_align2 = COPY %9
+    %11.sub3:vreg_128_align2 = COPY %10
+    %12:vgpr_32 = V_ADD_U32_e32 9, %1, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e32 10, %1, implicit $exec
+    %14:vgpr_32 = V_ADD_U32_e32 11, %1, implicit $exec
+    %15:vgpr_32 = V_ADD_U32_e32 12, %1, implicit $exec
+    undef %16.sub0:vreg_128_align2 = COPY %12
+    %16.sub1:vreg_128_align2 = COPY %13
+    %16.sub2:vreg_128_align2 = COPY %14
+    %16.sub3:vreg_128_align2 = COPY %15
+    %17:vgpr_32 = V_ADD_U32_e32 13, %1, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e32 14, %1, implicit $exec
+    %19:vgpr_32 = V_ADD_U32_e32 15, %1, implicit $exec
+    %20:vgpr_32 = V_ADD_U32_e32 16, %1, implicit $exec
+    undef %21.sub0:vreg_128_align2 = COPY %17
+    %21.sub1:vreg_128_align2 = COPY %18
+    %21.sub2:vreg_128_align2 = COPY %19
+    %21.sub3:vreg_128_align2 = COPY %20
+    S_CMP_EQ_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.3(0x08000000)
+    liveins: $sgpr7, $sgpr6
+    %6.sub0:vreg_128_align2 = V_ADD_U32_e32 1, %6.sub0, implicit $exec
+    %6.sub1:vreg_128_align2 = V_ADD_U32_e32 2, %6.sub1, implicit $exec
+    %6.sub2:vreg_128_align2 = V_ADD_U32_e32 3, %6.sub2, implicit $exec
+    %6.sub3:vreg_128_align2 = V_ADD_U32_e32 4, %6.sub3, implicit $exec
+    %11.sub0:vreg_128_align2 = V_ADD_U32_e32 2, %11.sub0, implicit $exec
+    %11.sub1:vreg_128_align2 = V_ADD_U32_e32 3, %11.sub1, implicit $exec
+    %11.sub2:vreg_128_align2 = V_ADD_U32_e32 4, %11.sub2, implicit $exec
+    %11.sub3:vreg_128_align2 = V_ADD_U32_e32 5, %11.sub3, implicit $exec
+    %16.sub0:vreg_128_align2 = V_ADD_U32_e32 3, %16.sub0, implicit $exec
+    %16.sub1:vreg_128_align2 = V_ADD_U32_e32 4, %16.sub1, implicit $exec
+    %16.sub2:vreg_128_align2 = V_ADD_U32_e32 5, %16.sub2, implicit $exec
+    %16.sub3:vreg_128_align2 = V_ADD_U32_e32 6, %16.sub3, implicit $exec
+    %21.sub0:vreg_128_align2 = V_ADD_U32_e32 4, %21.sub0, implicit $exec
+    %21.sub1:vreg_128_align2 = V_ADD_U32_e32 5, %21.sub1, implicit $exec
+    %21.sub2:vreg_128_align2 = V_ADD_U32_e32 6, %21.sub2, implicit $exec
+    %21.sub3:vreg_128_align2 = V_ADD_U32_e32 7, %21.sub3, implicit $exec
+    $sgpr7 = S_SUB_U32 $sgpr7, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.3
+  bb.2:
+    successors: %bb.4
+    liveins: $sgpr6
+    S_BRANCH %bb.4
+  bb.3:
+    successors: %bb.4
+    liveins: $sgpr6
+    S_BRANCH %bb.4, implicit-def $exec
+  bb.4:
+    liveins: $sgpr6
+    successors: %bb.5
+    S_BRANCH %bb.5
+  bb.5:
+    successors: %bb.5(0x78000000), %bb.6(0x08000000)
+    liveins: $sgpr6
+    %22:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    %23:vgpr_32 = V_ADD_U32_e32 %22, %6.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %23, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    %24:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    %25:vgpr_32 = V_ADD_U32_e32 %24, %6.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %25, 4, 0, implicit $exec :: (store (s32), addrspace 1)
+    %26:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec :: (load (s32), addrspace 1)
+    %27:vgpr_32 = V_ADD_U32_e32 %26, %6.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %27, 8, 0, implicit $exec :: (store (s32), addrspace 1)
+    %28:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec :: (load (s32), addrspace 1)
+    %29:vgpr_32 = V_ADD_U32_e32 %28, %6.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %29, 12, 0, implicit $exec :: (store (s32), addrspace 1)
+    %30:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec :: (load (s32), addrspace 1)
+    %31:vgpr_32 = V_ADD_U32_e32 %30, %11.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %31, 16, 0, implicit $exec :: (store (s32), addrspace 1)
+    %32:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec :: (load (s32), addrspace 1)
+    %33:vgpr_32 = V_ADD_U32_e32 %32, %11.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %33, 20, 0, implicit $exec :: (store (s32), addrspace 1)
+    %34:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec :: (load (s32), addrspace 1)
+    %35:vgpr_32 = V_ADD_U32_e32 %34, %11.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %35, 24, 0, implicit $exec :: (store (s32), addrspace 1)
+    %36:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec :: (load (s32), addrspace 1)
+    %37:vgpr_32 = V_ADD_U32_e32 %36, %11.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %37, 28, 0, implicit $exec :: (store (s32), addrspace 1)
+    %38:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec :: (load (s32), addrspace 1)
+    %39:vgpr_32 = V_ADD_U32_e32 %38, %16.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %39, 32, 0, implicit $exec :: (store (s32), addrspace 1)
+    %40:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec :: (load (s32), addrspace 1)
+    %41:vgpr_32 = V_ADD_U32_e32 %40, %16.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %41, 36, 0, implicit $exec :: (store (s32), addrspace 1)
+    %42:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec :: (load (s32), addrspace 1)
+    %43:vgpr_32 = V_ADD_U32_e32 %42, %16.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %43, 40, 0, implicit $exec :: (store (s32), addrspace 1)
+    %44:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec :: (load (s32), addrspace 1)
+    %45:vgpr_32 = V_ADD_U32_e32 %44, %16.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %45, 44, 0, implicit $exec :: (store (s32), addrspace 1)
+    %46:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec :: (load (s32), addrspace 1)
+    %47:vgpr_32 = V_ADD_U32_e32 %46, %21.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %47, 48, 0, implicit $exec :: (store (s32), addrspace 1)
+    %48:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec :: (load (s32), addrspace 1)
+    %49:vgpr_32 = V_ADD_U32_e32 %48, %21.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %49, 52, 0, implicit $exec :: (store (s32), addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec :: (load (s32), addrspace 1)
+    %51:vgpr_32 = V_ADD_U32_e32 %50, %21.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %51, 56, 0, implicit $exec :: (store (s32), addrspace 1)
+    %52:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, implicit $exec :: (load (s32), addrspace 1)
+    %53:vgpr_32 = V_ADD_U32_e32 %52, %21.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %53, 60, 0, implicit $exec :: (store (s32), addrspace 1)
+    $sgpr6 = S_SUB_U32 $sgpr6, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+    S_BRANCH %bb.6
+  bb.6:
+    S_ENDPGM 0
+...
+
+# Unknown side effects on both incoming paths prevent removing the join store.
+# CHECK-LABEL: name: barrier_join
+# CHECK: bb.2:
+# CHECK: [[B:%[0-9]+]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[BS:%stack.[0-9]+]],
+# CHECK: INLINEASM
+# CHECK-NEXT: S_BRANCH %bb.4
+# CHECK: bb.3:
+# CHECK: [[B]]:av_128_align2 = SI_SPILL_AV128_RESTORE [[BS]],
+# CHECK: INLINEASM
+# CHECK-NEXT: S_BRANCH %bb.4
+# CHECK: bb.4:
+# CHECK: SI_SPILL_AV128_SAVE [[B]], [[BS]],
+# CHECK-NEXT: {{%[0-9]+}}:vreg_64_align2 = SI_SPILL_AV64_RESTORE
+
+---
+name: barrier_join
+tracksRegLiveness: true
+machineFunctionInfo:
+  stackPtrOffsetReg: '$sgpr32'
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $vgpr0_vgpr1, $vgpr2, $sgpr7
+    $sgpr6 = S_MOV_B32 4
+    %0:vreg_64_align2 = COPY $vgpr0_vgpr1
+    %1:vgpr_32 = COPY $vgpr2
+    %2:vgpr_32 = V_ADD_U32_e32 1, %1, implicit $exec
+    %3:vgpr_32 = V_ADD_U32_e32 2, %1, implicit $exec
+    %4:vgpr_32 = V_ADD_U32_e32 3, %1, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e32 4, %1, implicit $exec
+    undef %6.sub0:vreg_128_align2 = COPY %2
+    %6.sub1:vreg_128_align2 = COPY %3
+    %6.sub2:vreg_128_align2 = COPY %4
+    %6.sub3:vreg_128_align2 = COPY %5
+    %7:vgpr_32 = V_ADD_U32_e32 5, %1, implicit $exec
+    %8:vgpr_32 = V_ADD_U32_e32 6, %1, implicit $exec
+    %9:vgpr_32 = V_ADD_U32_e32 7, %1, implicit $exec
+    %10:vgpr_32 = V_ADD_U32_e32 8, %1, implicit $exec
+    undef %11.sub0:vreg_128_align2 = COPY %7
+    %11.sub1:vreg_128_align2 = COPY %8
+    %11.sub2:vreg_128_align2 = COPY %9
+    %11.sub3:vreg_128_align2 = COPY %10
+    %12:vgpr_32 = V_ADD_U32_e32 9, %1, implicit $exec
+    %13:vgpr_32 = V_ADD_U32_e32 10, %1, implicit $exec
+    %14:vgpr_32 = V_ADD_U32_e32 11, %1, implicit $exec
+    %15:vgpr_32 = V_ADD_U32_e32 12, %1, implicit $exec
+    undef %16.sub0:vreg_128_align2 = COPY %12
+    %16.sub1:vreg_128_align2 = COPY %13
+    %16.sub2:vreg_128_align2 = COPY %14
+    %16.sub3:vreg_128_align2 = COPY %15
+    %17:vgpr_32 = V_ADD_U32_e32 13, %1, implicit $exec
+    %18:vgpr_32 = V_ADD_U32_e32 14, %1, implicit $exec
+    %19:vgpr_32 = V_ADD_U32_e32 15, %1, implicit $exec
+    %20:vgpr_32 = V_ADD_U32_e32 16, %1, implicit $exec
+    undef %21.sub0:vreg_128_align2 = COPY %17
+    %21.sub1:vreg_128_align2 = COPY %18
+    %21.sub2:vreg_128_align2 = COPY %19
+    %21.sub3:vreg_128_align2 = COPY %20
+    S_CMP_EQ_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
+    S_BRANCH %bb.1
+  bb.1:
+    successors: %bb.1(0x78000000), %bb.3(0x08000000)
+    liveins: $sgpr7, $sgpr6
+    %6.sub0:vreg_128_align2 = V_ADD_U32_e32 1, %6.sub0, implicit $exec
+    %6.sub1:vreg_128_align2 = V_ADD_U32_e32 2, %6.sub1, implicit $exec
+    %6.sub2:vreg_128_align2 = V_ADD_U32_e32 3, %6.sub2, implicit $exec
+    %6.sub3:vreg_128_align2 = V_ADD_U32_e32 4, %6.sub3, implicit $exec
+    %11.sub0:vreg_128_align2 = V_ADD_U32_e32 2, %11.sub0, implicit $exec
+    %11.sub1:vreg_128_align2 = V_ADD_U32_e32 3, %11.sub1, implicit $exec
+    %11.sub2:vreg_128_align2 = V_ADD_U32_e32 4, %11.sub2, implicit $exec
+    %11.sub3:vreg_128_align2 = V_ADD_U32_e32 5, %11.sub3, implicit $exec
+    %16.sub0:vreg_128_align2 = V_ADD_U32_e32 3, %16.sub0, implicit $exec
+    %16.sub1:vreg_128_align2 = V_ADD_U32_e32 4, %16.sub1, implicit $exec
+    %16.sub2:vreg_128_align2 = V_ADD_U32_e32 5, %16.sub2, implicit $exec
+    %16.sub3:vreg_128_align2 = V_ADD_U32_e32 6, %16.sub3, implicit $exec
+    %21.sub0:vreg_128_align2 = V_ADD_U32_e32 4, %21.sub0, implicit $exec
+    %21.sub1:vreg_128_align2 = V_ADD_U32_e32 5, %21.sub1, implicit $exec
+    %21.sub2:vreg_128_align2 = V_ADD_U32_e32 6, %21.sub2, implicit $exec
+    %21.sub3:vreg_128_align2 = V_ADD_U32_e32 7, %21.sub3, implicit $exec
+    $sgpr7 = S_SUB_U32 $sgpr7, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr7, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.3
+  bb.2:
+    successors: %bb.4
+    liveins: $sgpr6
+    INLINEASM &"", sideeffect attdialect, implicit %6:vreg_128_align2
+    S_BRANCH %bb.4
+  bb.3:
+    successors: %bb.4
+    liveins: $sgpr6
+    INLINEASM &"", sideeffect attdialect, implicit %6:vreg_128_align2
+    S_BRANCH %bb.4
+  bb.4:
+    liveins: $sgpr6
+    successors: %bb.5
+    S_BRANCH %bb.5
+  bb.5:
+    successors: %bb.5(0x78000000), %bb.6(0x08000000)
+    liveins: $sgpr6
+    %22:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32), addrspace 1)
+    %23:vgpr_32 = V_ADD_U32_e32 %22, %6.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %23, 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    %24:vgpr_32 = GLOBAL_LOAD_DWORD %0, 4, 0, implicit $exec :: (load (s32), addrspace 1)
+    %25:vgpr_32 = V_ADD_U32_e32 %24, %6.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %25, 4, 0, implicit $exec :: (store (s32), addrspace 1)
+    %26:vgpr_32 = GLOBAL_LOAD_DWORD %0, 8, 0, implicit $exec :: (load (s32), addrspace 1)
+    %27:vgpr_32 = V_ADD_U32_e32 %26, %6.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %27, 8, 0, implicit $exec :: (store (s32), addrspace 1)
+    %28:vgpr_32 = GLOBAL_LOAD_DWORD %0, 12, 0, implicit $exec :: (load (s32), addrspace 1)
+    %29:vgpr_32 = V_ADD_U32_e32 %28, %6.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %29, 12, 0, implicit $exec :: (store (s32), addrspace 1)
+    %30:vgpr_32 = GLOBAL_LOAD_DWORD %0, 16, 0, implicit $exec :: (load (s32), addrspace 1)
+    %31:vgpr_32 = V_ADD_U32_e32 %30, %11.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %31, 16, 0, implicit $exec :: (store (s32), addrspace 1)
+    %32:vgpr_32 = GLOBAL_LOAD_DWORD %0, 20, 0, implicit $exec :: (load (s32), addrspace 1)
+    %33:vgpr_32 = V_ADD_U32_e32 %32, %11.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %33, 20, 0, implicit $exec :: (store (s32), addrspace 1)
+    %34:vgpr_32 = GLOBAL_LOAD_DWORD %0, 24, 0, implicit $exec :: (load (s32), addrspace 1)
+    %35:vgpr_32 = V_ADD_U32_e32 %34, %11.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %35, 24, 0, implicit $exec :: (store (s32), addrspace 1)
+    %36:vgpr_32 = GLOBAL_LOAD_DWORD %0, 28, 0, implicit $exec :: (load (s32), addrspace 1)
+    %37:vgpr_32 = V_ADD_U32_e32 %36, %11.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %37, 28, 0, implicit $exec :: (store (s32), addrspace 1)
+    %38:vgpr_32 = GLOBAL_LOAD_DWORD %0, 32, 0, implicit $exec :: (load (s32), addrspace 1)
+    %39:vgpr_32 = V_ADD_U32_e32 %38, %16.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %39, 32, 0, implicit $exec :: (store (s32), addrspace 1)
+    %40:vgpr_32 = GLOBAL_LOAD_DWORD %0, 36, 0, implicit $exec :: (load (s32), addrspace 1)
+    %41:vgpr_32 = V_ADD_U32_e32 %40, %16.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %41, 36, 0, implicit $exec :: (store (s32), addrspace 1)
+    %42:vgpr_32 = GLOBAL_LOAD_DWORD %0, 40, 0, implicit $exec :: (load (s32), addrspace 1)
+    %43:vgpr_32 = V_ADD_U32_e32 %42, %16.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %43, 40, 0, implicit $exec :: (store (s32), addrspace 1)
+    %44:vgpr_32 = GLOBAL_LOAD_DWORD %0, 44, 0, implicit $exec :: (load (s32), addrspace 1)
+    %45:vgpr_32 = V_ADD_U32_e32 %44, %16.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %45, 44, 0, implicit $exec :: (store (s32), addrspace 1)
+    %46:vgpr_32 = GLOBAL_LOAD_DWORD %0, 48, 0, implicit $exec :: (load (s32), addrspace 1)
+    %47:vgpr_32 = V_ADD_U32_e32 %46, %21.sub0, implicit $exec
+    GLOBAL_STORE_DWORD %0, %47, 48, 0, implicit $exec :: (store (s32), addrspace 1)
+    %48:vgpr_32 = GLOBAL_LOAD_DWORD %0, 52, 0, implicit $exec :: (load (s32), addrspace 1)
+    %49:vgpr_32 = V_ADD_U32_e32 %48, %21.sub1, implicit $exec
+    GLOBAL_STORE_DWORD %0, %49, 52, 0, implicit $exec :: (store (s32), addrspace 1)
+    %50:vgpr_32 = GLOBAL_LOAD_DWORD %0, 56, 0, implicit $exec :: (load (s32), addrspace 1)
+    %51:vgpr_32 = V_ADD_U32_e32 %50, %21.sub2, implicit $exec
+    GLOBAL_STORE_DWORD %0, %51, 56, 0, implicit $exec :: (store (s32), addrspace 1)
+    %52:vgpr_32 = GLOBAL_LOAD_DWORD %0, 60, 0, implicit $exec :: (load (s32), addrspace 1)
+    %53:vgpr_32 = V_ADD_U32_e32 %52, %21.sub3, implicit $exec
+    GLOBAL_STORE_DWORD %0, %53, 60, 0, implicit $exec :: (store (s32), addrspace 1)
+    $sgpr6 = S_SUB_U32 $sgpr6, 1, implicit-def $scc
+    S_CMP_LG_U32 $sgpr6, 0, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.5, implicit $scc
+    S_BRANCH %bb.6
+  bb.6:
+    S_ENDPGM 0
+...
