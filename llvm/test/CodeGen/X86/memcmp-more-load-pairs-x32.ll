@@ -101,8 +101,6 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    rolw $8, %cx
 ; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setg %al
@@ -150,8 +148,6 @@ define i32 @length3(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movzwl (%eax), %esi
 ; X86-NEXT:    rolw $8, %dx
 ; X86-NEXT:    rolw $8, %si
-; X86-NEXT:    movzwl %dx, %edx
-; X86-NEXT:    movzwl %si, %esi
 ; X86-NEXT:    shll $8, %edx
 ; X86-NEXT:    shll $8, %esi
 ; X86-NEXT:    movzbl 2(%ecx), %ecx

@@ -63,7 +63,6 @@ define i32 @length2_const(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    addl $-12594, %eax # imm = 0xCECE
 ; X86-NEXT:    retl
   %m = tail call i32 @memcmp(ptr %X, ptr getelementptr inbounds ([513 x i8], ptr @.str, i32 0, i32 1), i32 2) nounwind
@@ -76,7 +75,6 @@ define i1 @length2_gt_const(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    addl $-12594, %eax # imm = 0xCECE
 ; X86-NEXT:    testl %eax, %eax
 ; X86-NEXT:    setg %al
@@ -129,8 +127,6 @@ define i1 @length2_gt(ptr %X, ptr %Y) nounwind {
 ; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    rolw $8, %cx
 ; X86-NEXT:    rolw $8, %ax
-; X86-NEXT:    movzwl %cx, %ecx
-; X86-NEXT:    movzwl %ax, %eax
 ; X86-NEXT:    subl %eax, %ecx
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setg %al
