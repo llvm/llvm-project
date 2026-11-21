@@ -256,4 +256,145 @@ namespace GH153884 {
   }
 }
 
+namespace GH223003 {
+  int foo8_decl;
+
+  template <bool x>
+  void foo8() {
+    if constexpr (x)
+      extern int foo8_decl;
+    else
+      extern int foo8_decl;
+  }
+  template void foo8<false>();
+  template void foo8<true>();
+
+  template <bool x>
+  void foo8_use() {
+    if constexpr (x) {
+      extern int foo8_decl;
+      foo8_decl = 1;
+    } else {
+      extern int foo8_decl;
+      foo8_decl = 2;
+    }
+  }
+  template void foo8_use<false>();
+  template void foo8_use<true>();
+
+  template <bool x>
+  void plain_if() {
+    if (x) {
+      extern int foo8_decl;
+      foo8_decl = 1;
+    } else {
+      extern int foo8_decl;
+      foo8_decl = 2;
+    }
+  }
+  template void plain_if<false>();
+
+  extern int linked;
+  template <bool x>
+  constexpr int *addr() {
+    if constexpr (x) {
+      extern int linked;
+      return &linked;
+    } else {
+      extern int linked;
+      return &linked;
+    }
+  }
+  static_assert(addr<false>() == &linked, "");
+  static_assert(addr<true>() == &linked, "");
+
+  int three;
+  template <int n>
+  void three_decls() {
+    if constexpr (n == 1)
+      extern int three;
+    else if constexpr (n == 2)
+      extern int three;
+    else
+      extern int three;
+  }
+  template void three_decls<3>();
+  template void three_decls<2>();
+  template void three_decls<1>();
+
+  int nest;
+  template <bool a, bool b>
+  void nested() {
+    if constexpr (a) {
+      if constexpr (b)
+        extern int nest;
+      else
+        extern int nest;
+    } else {
+      extern int nest;
+    }
+  }
+  template void nested<false, false>();
+  template void nested<true, false>();
+  template void nested<true, true>();
+
+  template <bool x>
+  void local_prev() {
+    extern int local_only;
+    if constexpr (x)
+      extern int local_only;
+    else
+      extern int local_only;
+    local_only = 1;
+  }
+  template void local_prev<false>();
+
+  int in_lambda;
+  template <bool x>
+  void lambda() {
+    [] {
+      if constexpr (x)
+        extern int in_lambda;
+      else
+        extern int in_lambda;
+    }();
+  }
+  template void lambda<false>();
+
+  int in_generic;
+  void generic() {
+    [](auto x) {
+      if constexpr (sizeof(x) == 1)
+        extern int in_generic;
+      else
+        extern int in_generic;
+    }(0);
+  }
+
+  void fn_decl();
+  template <bool x>
+  void local_fn() {
+    if constexpr (x)
+      extern void fn_decl();
+    else
+      extern void fn_decl();
+    fn_decl();
+  }
+  template void local_fn<false>();
+
+  int dep; // #dep
+  template <typename T>
+  void dependent() {
+    if constexpr (sizeof(T) == 1)
+      extern T dep;
+    else
+      extern T dep; // #dep-else
+  }
+  template void dependent<long>(); // #dep-long
+  // expected-error@#dep-else {{redeclaration of 'dep' with a different type: 'long' vs 'int'}}
+  // expected-note@#dep-long {{in instantiation of function template specialization 'GH223003::dependent<long>' requested here}}
+  // expected-note@#dep {{previous definition is here}}
+  template void dependent<int>();
+}
+
 #endif
