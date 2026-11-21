@@ -59,3 +59,38 @@ entry:
   tail call void asm sideeffect "", "~{x10},~{x11},~{q8}"()
   ret void
 }
+
+; Same callee-saves as @d, plus a local. On Windows the callee-save area is
+; filled bottom up, so the 8-byte alignment gap sits between x10 and q8 rather
+; than at the top. The local must not be placed over the x10 spill slot.
+define preserve_allcc void @f(i64 %v) nounwind {
+; CHECK-LABEL: f:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str q8, [sp, #-32]! // 16-byte Folded Spill
+; CHECK-NEXT:    str x10, [sp, #16] // 8-byte Spill
+; CHECK-NEXT:    str x0, [sp, #24]
+; CHECK-NEXT:    //APP
+; CHECK-NEXT:    //NO_APP
+; CHECK-NEXT:    ldr x8, [sp, #24]
+; CHECK-NEXT:    ldr x10, [sp, #16] // 8-byte Reload
+; CHECK-NEXT:    ldr q8, [sp], #32 // 16-byte Folded Reload
+; CHECK-NEXT:    ret
+;
+; CHECK-WINDOWS-LABEL: f:
+; CHECK-WINDOWS:       // %bb.0: // %entry
+; CHECK-WINDOWS-NEXT:    str x10, [sp, #-32]! // 8-byte Folded Spill
+; CHECK-WINDOWS-NEXT:    str q8, [sp, #16] // 16-byte Spill
+; CHECK-WINDOWS-NEXT:    str x0, [sp, #8]
+; CHECK-WINDOWS-NEXT:    //APP
+; CHECK-WINDOWS-NEXT:    //NO_APP
+; CHECK-WINDOWS-NEXT:    ldr x8, [sp, #8]
+; CHECK-WINDOWS-NEXT:    ldr q8, [sp, #16] // 16-byte Reload
+; CHECK-WINDOWS-NEXT:    ldr x10, [sp], #32 // 8-byte Folded Reload
+; CHECK-WINDOWS-NEXT:    ret
+entry:
+  %a = alloca i64, align 8
+  store volatile i64 %v, ptr %a
+  tail call void asm sideeffect "", "~{x10},~{q8}"()
+  %l = load volatile i64, ptr %a
+  ret void
+}
