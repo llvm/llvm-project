@@ -906,17 +906,28 @@ class ReturnVisitor : public TrackingBugReporterVisitor {
     Satisfied
   } Mode = Initial;
 
-  bool EnableNullFPSuppression;
+  /// Whether the null value returned by the callee suppresses the report
+  /// (suppress-null-return-paths).
+  bool NullReturnSuppressesReport;
+  /// Whether tracking the returned expression may still apply the caller's
+  /// false-positive suppression (inlined defensive checks, macro null
+  /// returns). Unlike the flag above, this one is handed to the nested
+  /// tracking instead of deciding the fate of this report.
+  bool TrackWithFPSuppression;
+  /// Whether this visitor may still suppress the report. Cleared when the null
+  /// came from an argument, so the callee's null return is not to blame.
   bool ShouldInvalidate = true;
   AnalyzerOptions& Options;
   bugreporter::TrackingKind TKind;
 
 public:
   ReturnVisitor(TrackerRef ParentTracker, const StackFrame *Frame,
-                bool Suppressed, AnalyzerOptions &Options,
-                bugreporter::TrackingKind TKind)
+                bool NullReturnSuppresses, bool TrackSuppression,
+                AnalyzerOptions &Options, bugreporter::TrackingKind TKind)
       : TrackingBugReporterVisitor(ParentTracker), CalleeSF(Frame),
-        EnableNullFPSuppression(Suppressed), Options(Options), TKind(TKind) {}
+        NullReturnSuppressesReport(NullReturnSuppresses),
+        TrackWithFPSuppression(TrackSuppression), Options(Options),
+        TKind(TKind) {}
 
   static void *getTag() {
     static int Tag = 0;
@@ -926,7 +937,8 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override {
     ID.AddPointer(ReturnVisitor::getTag());
     ID.AddPointer(CalleeSF);
-    ID.AddBoolean(EnableNullFPSuppression);
+    ID.AddBoolean(NullReturnSuppressesReport);
+    ID.AddBoolean(TrackWithFPSuppression);
   }
 
   PathDiagnosticPieceRef visitNodeInitial(const ExplodedNode *N,
@@ -977,7 +989,7 @@ public:
     RetE = RetE->IgnoreParenCasts();
 
     // Let's track the return value.
-    getParentTracker().track(RetE, N, {TKind, EnableNullFPSuppression});
+    getParentTracker().track(RetE, N, {TKind, TrackWithFPSuppression});
 
     // Build an appropriate message based on the return value.
     SmallString<64> Msg;
@@ -991,7 +1003,7 @@ public:
         // If we have counter-suppression enabled, make sure we keep visiting
         // future nodes. We want to emit a path note as well, in case
         // the report is resurrected as valid later on.
-        if (EnableNullFPSuppression &&
+        if (NullReturnSuppressesReport &&
             Options.ShouldAvoidSuppressingNullArgumentPaths)
           Mode = MaybeUnsuppress;
 
@@ -1091,7 +1103,7 @@ public:
         continue;
 
       if (getParentTracker()
-              .track(ArgE, N, {TKind, EnableNullFPSuppression})
+              .track(ArgE, N, {TKind, NullReturnSuppressesReport})
               .FoundSomethingToTrack)
         ShouldInvalidate = false;
 
@@ -1120,7 +1132,7 @@ public:
 
   void finalizeVisitor(const ExplodedNode *, BugReporterContext &,
                        PathSensitiveBugReport &BR) override {
-    if (EnableNullFPSuppression && ShouldInvalidate)
+    if (NullReturnSuppressesReport && ShouldInvalidate)
       BR.markInvalid(ReturnVisitor::getTag(), CalleeSF);
   }
 };
@@ -2423,18 +2435,21 @@ class InlinedFunctionCallHandler final : public ExpressionHandler {
       if (std::optional<Loc> LValue = RetVal.getAs<Loc>())
         RetVal = State->getSVal(*LValue);
 
-    // See if the return value is NULL. If so, suppress the report.
-    AnalyzerOptions &Options = State->getAnalysisManager().options;
+    bool ReturnsNull = false;
+    if (std::optional<Loc> RetLoc = RetVal.getAs<Loc>())
+      ReturnsNull = State->isNull(*RetLoc).isConstrainedTrue();
 
-    bool EnableNullFPSuppression = false;
-    if (Opts.EnableNullFPSuppression && Options.ShouldSuppressNullReturnPaths)
-      if (std::optional<Loc> RetLoc = RetVal.getAs<Loc>())
-        EnableNullFPSuppression = State->isNull(*RetLoc).isConstrainedTrue();
+    // Keep the tracking permission separate from the decision to suppress the
+    // report: suppress-null-return-paths only governs the latter.
+    AnalyzerOptions &Options = State->getAnalysisManager().options;
+    bool TrackWithFPSuppression = Opts.EnableNullFPSuppression && ReturnsNull;
+    bool NullReturnSuppressesReport =
+        TrackWithFPSuppression && Options.ShouldSuppressNullReturnPaths;
 
     PathSensitiveBugReport &Report = getParentTracker().getReport();
-    Report.addVisitor<ReturnVisitor>(&getParentTracker(), CalleeSF,
-                                     EnableNullFPSuppression, Options,
-                                     Opts.Kind);
+    Report.addVisitor<ReturnVisitor>(
+        &getParentTracker(), CalleeSF, NullReturnSuppressesReport,
+        TrackWithFPSuppression, Options, Opts.Kind);
     return {true};
   }
 };

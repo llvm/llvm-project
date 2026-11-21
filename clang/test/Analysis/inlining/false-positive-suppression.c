@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-null-return-paths=false -verify %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -DSUPPRESSED=1 %s
 // RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config avoid-suppressing-null-argument-paths=true -DSUPPRESSED=1 -DNULL_ARGS=1 -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-config suppress-null-return-paths=false,suppress-inlined-defensive-checks=false -analyze-function=testInlineDefensiveCheckThroughReturn -verify=noidc %s
 
 int opaquePropertyCheck(void *object);
 int coin(void);
@@ -93,6 +94,27 @@ int triggerDivZero (void) {
   return 5/y; // expected-warning {{Division by zero}}
 }
 
+struct PointerWrapper {
+  int *ptr;
+};
+
+static int *getWrappedPointer(struct PointerWrapper *wrapper) {
+  return wrapper->ptr;
+}
+
+static void checkWrappedPointer(struct PointerWrapper *wrapper) {
+  if (!wrapper->ptr)
+    return;
+  *wrapper->ptr = 1;
+}
+
+// Defensive-check suppression must survive tracking through a getter even when
+// null-return suppression is disabled.
+int testInlineDefensiveCheckThroughReturn(struct PointerWrapper *wrapper) {
+  checkWrappedPointer(wrapper);
+  return *getWrappedPointer(wrapper); // noidc-warning {{Dereference of null pointer}}
+}
+
 // Treat a function-like macro similarly to an inlined function, so suppress
 // warnings along paths resulting from inlined checks.
 #define MACRO_WITH_CHECK(a) ( ((a) != 0) ? *a : 17)
@@ -101,6 +123,16 @@ void testInlineCheckInMacro(int *p) {
   (void)i;
 
   *p = 1; // no-warning
+}
+
+static int *getPointerAfterMacroCheck(int *p) {
+  int i = MACRO_WITH_CHECK(p);
+  (void)i;
+  return p;
+}
+
+int testInlineCheckInMacroThroughReturn(int *p) {
+  return *getPointerAfterMacroCheck(p); // no-warning
 }
 
 #define MACRO_WITH_NESTED_CHECK(a) ( { int j = MACRO_WITH_CHECK(a); j; } )
