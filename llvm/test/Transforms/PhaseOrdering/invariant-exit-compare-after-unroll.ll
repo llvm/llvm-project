@@ -75,3 +75,57 @@ trap:
   call void @llvm.trap()
   unreachable
 }
+
+define void @nest_unrolled_inner_invariant_exit_simple_store(ptr %p, i64 %n, i64 %k) {
+; CHECK-LABEL: define void @nest_unrolled_inner_invariant_exit_simple_store(
+; CHECK-SAME: ptr nofree writeonly captures(none) [[P:%.*]], i64 [[N:%.*]], i64 [[K:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[ENTER:%.*]] = icmp sgt i64 [[N]], 0
+; CHECK-NEXT:    br i1 [[ENTER]], label %[[OUTER_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK:       [[OUTER_PREHEADER]]:
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp slt i64 [[K]], 4
+; CHECK-NEXT:    br i1 [[DOTNOT]], label %[[TRAP:.*]], label %[[OUTER_PREHEADER_SPLIT:.*]]
+; CHECK:       [[OUTER_PREHEADER_SPLIT]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw i64 [[N]], 2
+; CHECK-NEXT:    tail call void @llvm.memset.p0.i64(ptr align 1 [[P]], i8 0, i64 [[TMP0]], i1 false)
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[TRAP]]:
+; CHECK-NEXT:    tail call void @llvm.trap()
+; CHECK-NEXT:    unreachable
+;
+entry:
+  %enter = icmp sgt i64 %n, 0
+  br i1 %enter, label %outer, label %exit
+
+outer:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  %row = shl i64 %i, 2
+  br label %inner
+
+inner:
+  %j = phi i64 [ 0, %outer ], [ %j.next, %inner.latch ]
+  %oob = icmp sge i64 %j, %k
+  br i1 %oob, label %trap, label %inner.latch
+
+inner.latch:
+  %idx = add i64 %row, %j
+  %g = getelementptr i8, ptr %p, i64 %idx
+  store i8 0, ptr %g
+  %j.next = add i64 %j, 1
+  %c = icmp ult i64 %j.next, 4
+  br i1 %c, label %inner, label %outer.latch
+
+outer.latch:
+  %i.next = add i64 %i, 1
+  %done = icmp eq i64 %i.next, %n
+  br i1 %done, label %exit, label %outer
+
+exit:
+  ret void
+
+trap:
+  call void @llvm.trap()
+  unreachable
+}
