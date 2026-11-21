@@ -74,6 +74,13 @@ mlir::convertElementwiseOpToMMA(Operation *op) {
 }
 
 bool mlir::elementwiseSupportsMMAMatrixType(Operation *op) {
+  // MMA matrices are 2-D. Scalar, index and other vector arithmetic must not
+  // be pulled into the conversion.
+  if (op->getNumResults() != 1)
+    return false;
+  auto vecType = dyn_cast<VectorType>(op->getResult(0).getType());
+  if (!vecType || vecType.getRank() != 2)
+    return false;
   return convertElementwiseOpToMMA(op).has_value();
 }
 
