@@ -86,6 +86,12 @@ mlirAsyncRuntimeCreateGroup(int64_t size);
 extern "C" MLIR_ASYNC_RUNTIME_EXPORT int64_t
 mlirAsyncRuntimeAddTokenToGroup(AsyncToken *, AsyncGroup *);
 
+// Allocates and frees coroutine frames.
+extern "C" MLIR_ASYNC_RUNTIME_EXPORT void *
+mlirAsyncRuntimeAlignedAlloc(int64_t alignment, int64_t size);
+
+extern "C" MLIR_ASYNC_RUNTIME_EXPORT void mlirAsyncRuntimeAlignedFree(void *);
+
 // Switches `async.token` to ready state and runs all awaiters.
 extern "C" MLIR_ASYNC_RUNTIME_EXPORT void
 mlirAsyncRuntimeEmplaceToken(AsyncToken *);

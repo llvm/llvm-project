@@ -8,10 +8,6 @@
 
 // FIXME: https://github.com/llvm/llvm-project/issues/57231
 // UNSUPPORTED: hwasan
-// FIXME: Windows does not have aligned_alloc
-// UNSUPPORTED: system-windows
-// Hangs or crashes on 32-bit x86
-// UNSUPPORTED: target-x86
 // XFAIL: system-aix
 
 func.func @main() {
