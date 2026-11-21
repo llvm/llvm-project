@@ -35,6 +35,7 @@
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/Error.h"
 
+#include <cinttypes>
 #include <string>
 #include <vector>
 
@@ -138,6 +139,18 @@ public:
             strm.PutCString("  ");
             so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
                              Address::DumpStyleResolvedDescription);
+          } else {
+            // The value may have authentication bits, retry without them.
+            const addr_t fixed_addr = process->FixAnyAddress(reg_addr);
+            if (fixed_addr != reg_addr &&
+                exe_ctx.GetTargetRef().ResolveLoadAddress(fixed_addr,
+                                                          so_reg_addr)) {
+              strm.Printf(" (0x%0*" PRIx64 ") ",
+                          static_cast<int>(2 * process->GetAddressByteSize()),
+                          fixed_addr);
+              so_reg_addr.Dump(&strm, exe_ctx.GetBestExecutionContextScope(),
+                               Address::DumpStyleResolvedDescription);
+            }
           }
         }
       }
