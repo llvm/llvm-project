@@ -16,11 +16,14 @@
 
 #include <sycl/__impl/aspect.hpp>
 #include <sycl/__impl/detail/config.hpp>
+#include <sycl/__impl/index_space_classes.hpp>
 #include <sycl/__impl/info/desc_base.hpp>
 #include <sycl/__impl/info/device_type.hpp>
 
+#include <cstddef>
 #include <cstdint>
 #include <string>
+#include <vector>
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
@@ -52,11 +55,136 @@ enum class partition_affinity_domain : std::uint32_t {
   next_partitionable
 };
 
+enum class fp_config : std::uint32_t {
+  denorm,
+  inf_nan,
+  round_to_nearest,
+  round_to_zero,
+  round_to_inf,
+  fma,
+  correctly_rounded_divide_sqrt,
+  soft_float
+};
+
 namespace device {
 // SYCL 2020 4.6.4.4. Information descriptors.
 
 struct device_type : detail::info_desc_tag<device_type, sycl::device> {
   using return_type = sycl::info::device_type;
+};
+struct vendor_id : detail::info_desc_tag<vendor_id, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct max_compute_units
+    : detail::info_desc_tag<max_compute_units, sycl::device> {
+  using return_type = std::uint32_t;
+};
+template <int Dimensions = 3> struct max_work_item_sizes;
+template <>
+struct max_work_item_sizes<1>
+    : detail::info_desc_tag<max_work_item_sizes<1>, sycl::device> {
+  using return_type = range<1>;
+};
+template <>
+struct max_work_item_sizes<2>
+    : detail::info_desc_tag<max_work_item_sizes<2>, sycl::device> {
+  using return_type = range<2>;
+};
+template <>
+struct max_work_item_sizes<3>
+    : detail::info_desc_tag<max_work_item_sizes<3>, sycl::device> {
+  using return_type = range<3>;
+};
+struct max_work_group_size
+    : detail::info_desc_tag<max_work_group_size, sycl::device> {
+  using return_type = std::size_t;
+};
+struct preferred_vector_width_char
+    : detail::info_desc_tag<preferred_vector_width_char, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_short
+    : detail::info_desc_tag<preferred_vector_width_short, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_int
+    : detail::info_desc_tag<preferred_vector_width_int, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_long
+    : detail::info_desc_tag<preferred_vector_width_long, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_float
+    : detail::info_desc_tag<preferred_vector_width_float, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_double
+    : detail::info_desc_tag<preferred_vector_width_double, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct preferred_vector_width_half
+    : detail::info_desc_tag<preferred_vector_width_half, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_char
+    : detail::info_desc_tag<native_vector_width_char, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_short
+    : detail::info_desc_tag<native_vector_width_short, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_int
+    : detail::info_desc_tag<native_vector_width_int, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_long
+    : detail::info_desc_tag<native_vector_width_long, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_float
+    : detail::info_desc_tag<native_vector_width_float, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_double
+    : detail::info_desc_tag<native_vector_width_double, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct native_vector_width_half
+    : detail::info_desc_tag<native_vector_width_half, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct max_clock_frequency
+    : detail::info_desc_tag<max_clock_frequency, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct address_bits : detail::info_desc_tag<address_bits, sycl::device> {
+  using return_type = std::uint32_t;
+};
+struct max_mem_alloc_size
+    : detail::info_desc_tag<max_mem_alloc_size, sycl::device> {
+  using return_type = std::uint64_t;
+};
+struct half_fp_config : detail::info_desc_tag<half_fp_config, sycl::device> {
+  using return_type = std::vector<info::fp_config>;
+};
+struct single_fp_config
+    : detail::info_desc_tag<single_fp_config, sycl::device> {
+  using return_type = std::vector<info::fp_config>;
+};
+struct double_fp_config
+    : detail::info_desc_tag<double_fp_config, sycl::device> {
+  using return_type = std::vector<info::fp_config>;
+};
+struct global_mem_size : detail::info_desc_tag<global_mem_size, sycl::device> {
+  using return_type = std::uint64_t;
+};
+struct local_mem_size : detail::info_desc_tag<local_mem_size, sycl::device> {
+  using return_type = std::uint64_t;
+};
+struct platform : detail::info_desc_tag<platform, sycl::device> {
+  using return_type = sycl::platform;
 };
 struct name : detail::info_desc_tag<name, sycl::device> {
   using return_type = std::string;
@@ -66,9 +194,6 @@ struct vendor : detail::info_desc_tag<vendor, sycl::device> {
 };
 struct driver_version : detail::info_desc_tag<driver_version, sycl::device> {
   using return_type = std::string;
-};
-struct platform : detail::info_desc_tag<platform, sycl::device> {
-  using return_type = sycl::platform;
 };
 
 } // namespace device
