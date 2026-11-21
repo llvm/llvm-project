@@ -6695,8 +6695,7 @@ void ASTWriter::WriteDeclUpdatesBlocks(ASTContext &Context,
         break;
 
       case DeclUpdateKind::CXXInstantiatedDefaultArgument:
-        Record.writeStmtRef(
-            cast<ParmVarDecl>(Update.getDecl())->getDefaultArg());
+        Record.writeStmtRef(cast<ParmVarDecl>(Update.getDecl())->getInit());
         break;
 
       case DeclUpdateKind::CXXInstantiatedDefaultMemberInitializer:
