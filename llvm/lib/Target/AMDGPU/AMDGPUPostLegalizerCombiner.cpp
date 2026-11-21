@@ -292,6 +292,12 @@ bool AMDGPUPostLegalizerCombinerImpl::matchCvtF32UByteN(
     else
       ShiftOffset -= ShiftAmt;
 
+    // The shift may be narrower than 32 bits if we looked through a G_ZEXT.
+    // Only fold if both bytes involved lie within the shift's width.
+    unsigned Width = MRI.getType(Src0).getSizeInBits();
+    if (std::max(8 * Offset, ShiftOffset) + 8 > Width)
+      return false;
+
     MatchInfo.CvtVal = Src0;
     MatchInfo.ShiftOffset = ShiftOffset;
     return ShiftOffset < 32 && ShiftOffset >= 8 && (ShiftOffset % 8) == 0;
