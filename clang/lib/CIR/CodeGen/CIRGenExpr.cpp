@@ -2732,6 +2732,13 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
+  // Builtins never have block type.
+  if (e->getCallee()->getType()->isBlockPointerType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCallExpr: block pointer type"));
+    return getUndefRValue(e->getType());
+  }
+
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);
 

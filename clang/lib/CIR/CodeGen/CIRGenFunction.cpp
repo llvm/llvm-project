@@ -1237,8 +1237,9 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   assert(!cir::MissingFeatures::generateDebugInfo());
   switch (e->getStmtClass()) {
   default:
-    getCIRGenModule().errorNYI(e->getSourceRange(),
-                               "emitLValue: unsupported l-value class");
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitLValue: unsupported l-value class: ") +
+                     e->getStmtClassName());
     return LValue();
 
   case Expr::ObjCPropertyRefExprClass:
