@@ -39,7 +39,7 @@ extern "C" __device__ int printf(const char *, ...);
 // CIR: cir.offload.printf(%[[FMT]], %[[V]]) : (!cir.ptr<!s8i{{(, target_address_space\(4\))?}}>, !s32i) -> !s32i
 // LLVM-LABEL: @_Z1pi(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str{{( to ptr.*\))?}}, i64 {{%.*}}, i32 0)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str{{( to ptr.*\))?}}, i64 4, i32 0)
 // LLVM: [[A:%.*]] = zext i32 {{%.*}} to i64
 // LLVM: call{{.*}} i64 @__ockl_printf_append_args(i64 [[D1]], i32 1, i64 [[A]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
 // BUFFERED-LABEL: @_Z1pi(
@@ -97,8 +97,8 @@ __device__ void eh(int v) { D d; printf("%d\n", v); }
 // CIR: cir.offload.printf({{.*}}) : (!cir.ptr<!s8i{{(, target_address_space\(4\))?}}>, !cir.ptr<!s8i{{(, target_address_space\(4\))?}}>, !cir.ptr<!s8i{{.*}}>) -> !s32i
 // LLVM-LABEL: @_Z1sPKc(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.1{{( to ptr.*\))?}}, i64 {{%.*}}, i32 0)
-// LLVM: [[D2:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}}@.str.2{{( to ptr.*\))?}}, i64 {{%.*}}, i32 0)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.1{{( to ptr.*\))?}}, i64 7, i32 0)
+// LLVM: [[D2:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}}@.str.2{{( to ptr.*\))?}}, i64 6, i32 0)
 // LLVM: [[ISNULL:%.*]] = icmp eq ptr{{( addrspace\(4\))?}} [[STR:%[^,]+]], null
 // LLVM: br i1 [[ISNULL]], label %[[JOIN:.*]], label %[[WHILE:.*]]
 // LLVM: [[WHILE]]:
@@ -172,7 +172,7 @@ __device__ void nf(const char *fmt, int v) { printf(fmt, v); }
 // CIR: cir.offload.printf(%{{.*}}) : (!cir.ptr<!s8i{{(, target_address_space\(4\))?}}>) -> !s32i
 // LLVM-LABEL: @_Z1zv(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.3{{( to ptr.*\))?}}, i64 {{%.*}}, i32 1)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.3{{( to ptr.*\))?}}, i64 7, i32 1)
 // LLVM-NOT: @__ockl_printf_append_args
 // LLVM: trunc i64 [[D1]] to i32
 // BUFFERED-LABEL: @_Z1zv(
@@ -188,7 +188,7 @@ __device__ void z() { printf("hello\n"); }
 // CIR: cir.offload.printf({{.*}}) : (!cir.ptr<!s8i{{(, target_address_space\(4\))?}}>, !s32i, !s64i, !cir.double, !cir.ptr<!void{{.*}}>, !cir.double, !s32i, !u64i, !s32i) -> !s32i
 // LLVM-LABEL: @_Z4manyildPvfcys(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.4{{( to ptr.*\))?}}, i64 {{%.*}}, i32 0)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@.str.4{{( to ptr.*\))?}}, i64 29, i32 0)
 // LLVM: [[A1:%.*]] = zext i32 {{%.*}} to i64
 // LLVM: [[D2:%.*]] = call{{.*}} i64 @__ockl_printf_append_args(i64 [[D1]], i32 1, i64 [[A1]], i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
 // LLVM: [[D3:%.*]] = call{{.*}} i64 @__ockl_printf_append_args(i64 [[D2]], i32 1, i64 {{%.*}}, i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 0)
@@ -229,9 +229,9 @@ __device__ void many(int a, long b, double c, void *d, float e, char f,
 // CIR: cir.offload.printf(%[[FMT]], %[[STR]])
 // LLVM-LABEL: @_Z3offv(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}} getelementptr {{.*}}@.str.5{{.*}}, i64 2), i64 {{%.*}}, i32 0)
+// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}} getelementptr {{.*}}@.str.5{{.*}}, i64 2), i64 5, i32 0)
 // LLVM-NOT: @__ockl_printf_append_args
-// LLVM: call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}} getelementptr {{.*}}@.str.6{{.*}}, i64 5), i64 {{%.*}}, i32 1)
+// LLVM: call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}} getelementptr {{.*}}@.str.6{{.*}}, i64 5), i64 3, i32 1)
 // BUFFERED-LABEL: @_Z3offv(
 // BUFFERED: [[BUF:%.*]] = call{{.*}} ptr addrspace(1) @__printf_alloc(i32 20)
 // BUFFERED: store i32 82, ptr addrspace(1) [[BUF]], align 4
@@ -257,9 +257,10 @@ __device__ void off() { printf(&"xx%s|\n"[2], "skip-me" + 5); }
 // CIR: cir.offload.printf(%[[FMT]], %[[STR]])
 // LLVM-LABEL: @_Z2bfv(
 // LLVM: [[D0:%.*]] = call{{.*}} i64 @__ockl_printf_begin(i64 0)
-// LLVM: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 {{%.*}}, i32 0)
+// LLVM-CIR: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 4, i32 0)
+// LLVM-OGCG: [[D1:%.*]] = call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D0]], ptr{{.*}}@_ZL9brace_fmt{{.*}}, i64 {{%.*}}, i32 0)
 // LLVM-CIR-NOT: @__ockl_printf_append_args
-// LLVM-CIR: call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}}@.str.7{{.*}}, i64 {{%.*}}, i32 1)
+// LLVM-CIR: call{{.*}} i64 @__ockl_printf_append_string_n(i64 [[D1]], ptr{{.*}}@.str.7{{.*}}, i64 2, i32 1)
 // LLVM-OGCG: call{{.*}} i64 @__ockl_printf_append_args(i64 [[D1]], i32 1, i64 ptrtoint ({{.*}}@.str.7{{.*}}), i64 0, i64 0, i64 0, i64 0, i64 0, i64 0, i32 1)
 // BUFFERED-LABEL: @_Z2bfv(
 // BUFFERED-CIR: [[BUF:%.*]] = call{{.*}} ptr addrspace(1) @__printf_alloc(i32 20)

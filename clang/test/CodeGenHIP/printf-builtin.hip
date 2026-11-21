@@ -15,49 +15,19 @@ extern "C" __device__ int printf(const char *format, ...);
 
 // HOSTCALL-LABEL: define dso_local noundef i32 @_Z4foo1v(
 // HOSTCALL-SAME: ) #[[ATTR0:[0-9]+]] {
-// HOSTCALL-NEXT:  [[ENTRY:.*]]:
+// HOSTCALL-NEXT:  [[ENTRY:.*:]]
 // HOSTCALL-NEXT:    [[TMP0:%.*]] = call i64 @__ockl_printf_begin(i64 0)
-// HOSTCALL-NEXT:    [[TMP1:%.*]] = icmp eq ptr addrspacecast (ptr addrspace(4) @.str to ptr), null
-// HOSTCALL-NEXT:    br i1 [[TMP1]], label %[[STRLEN_JOIN:.*]], label %[[STRLEN_WHILE:.*]]
-// HOSTCALL:       [[STRLEN_WHILE]]:
-// HOSTCALL-NEXT:    [[TMP2:%.*]] = phi ptr [ addrspacecast (ptr addrspace(4) @.str to ptr), %[[ENTRY]] ], [ [[TMP3:%.*]], %[[STRLEN_WHILE]] ]
-// HOSTCALL-NEXT:    [[TMP3]] = getelementptr i8, ptr [[TMP2]], i64 1
-// HOSTCALL-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP2]], align 1
-// HOSTCALL-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
-// HOSTCALL-NEXT:    br i1 [[TMP5]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
-// HOSTCALL:       [[STRLEN_WHILE_DONE]]:
-// HOSTCALL-NEXT:    [[TMP6:%.*]] = ptrtoaddr ptr [[TMP2]] to i64
-// HOSTCALL-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], ptrtoaddr (ptr addrspacecast (ptr addrspace(4) @.str to ptr) to i64)
-// HOSTCALL-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 1
-// HOSTCALL-NEXT:    br label %[[STRLEN_JOIN]]
-// HOSTCALL:       [[STRLEN_JOIN]]:
-// HOSTCALL-NEXT:    [[TMP9:%.*]] = phi i64 [ [[TMP8]], %[[STRLEN_WHILE_DONE]] ], [ 0, %[[ENTRY]] ]
-// HOSTCALL-NEXT:    [[TMP10:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP0]], ptr addrspacecast (ptr addrspace(4) @.str to ptr), i64 [[TMP9]], i32 1)
-// HOSTCALL-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-// HOSTCALL-NEXT:    ret i32 [[TMP11]]
+// HOSTCALL-NEXT:    [[TMP1:%.*]] = call i64 @__ockl_printf_append_string_n(i64 [[TMP0]], ptr addrspacecast (ptr addrspace(4) @.str to ptr), i64 13, i32 1)
+// HOSTCALL-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+// HOSTCALL-NEXT:    ret i32 [[TMP2]]
 //
 // HOSTCALL-AMDGCNSPIRV-LABEL: define spir_func noundef i32 @_Z4foo1v(
 // HOSTCALL-AMDGCNSPIRV-SAME: ) addrspace(4) #[[ATTR0:[0-9]+]] {
-// HOSTCALL-AMDGCNSPIRV-NEXT:  [[ENTRY:.*]]:
+// HOSTCALL-AMDGCNSPIRV-NEXT:  [[ENTRY:.*:]]
 // HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP0:%.*]] = call addrspace(4) i64 @__ockl_printf_begin(i64 0)
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = icmp eq ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), null
-// HOSTCALL-AMDGCNSPIRV-NEXT:    br i1 [[TMP1]], label %[[STRLEN_JOIN:.*]], label %[[STRLEN_WHILE:.*]]
-// HOSTCALL-AMDGCNSPIRV:       [[STRLEN_WHILE]]:
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = phi ptr addrspace(4) [ addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), %[[ENTRY]] ], [ [[TMP3:%.*]], %[[STRLEN_WHILE]] ]
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP3]] = getelementptr i8, ptr addrspace(4) [[TMP2]], i64 1
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP4:%.*]] = load i8, ptr addrspace(4) [[TMP2]], align 1
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
-// HOSTCALL-AMDGCNSPIRV-NEXT:    br i1 [[TMP5]], label %[[STRLEN_WHILE_DONE:.*]], label %[[STRLEN_WHILE]]
-// HOSTCALL-AMDGCNSPIRV:       [[STRLEN_WHILE_DONE]]:
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP6:%.*]] = ptrtoaddr ptr addrspace(4) [[TMP2]] to i64
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], ptrtoaddr (ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)) to i64)
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP8:%.*]] = add i64 [[TMP7]], 1
-// HOSTCALL-AMDGCNSPIRV-NEXT:    br label %[[STRLEN_JOIN]]
-// HOSTCALL-AMDGCNSPIRV:       [[STRLEN_JOIN]]:
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP9:%.*]] = phi i64 [ [[TMP8]], %[[STRLEN_WHILE_DONE]] ], [ 0, %[[ENTRY]] ]
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP10:%.*]] = call addrspace(4) i64 @__ockl_printf_append_string_n(i64 [[TMP0]], ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), i64 [[TMP9]], i32 1)
-// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP10]] to i32
-// HOSTCALL-AMDGCNSPIRV-NEXT:    ret i32 [[TMP11]]
+// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP1:%.*]] = call addrspace(4) i64 @__ockl_printf_append_string_n(i64 [[TMP0]], ptr addrspace(4) addrspacecast (ptr addrspace(1) @.str to ptr addrspace(4)), i64 13, i32 1)
+// HOSTCALL-AMDGCNSPIRV-NEXT:    [[TMP2:%.*]] = trunc i64 [[TMP1]] to i32
+// HOSTCALL-AMDGCNSPIRV-NEXT:    ret i32 [[TMP2]]
 //
 // BUFFERED-LABEL: define dso_local noundef i32 @_Z4foo1v(
 // BUFFERED-SAME: ) #[[ATTR0:[0-9]+]] {

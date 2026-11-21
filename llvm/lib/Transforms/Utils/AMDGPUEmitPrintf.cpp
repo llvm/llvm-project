@@ -164,7 +164,10 @@ static Value *callAppendStringN(IRBuilder<> &Builder, Value *Desc, Value *Str,
 
 static Value *appendString(IRBuilder<> &Builder, Value *Desc, Value *Arg,
                            bool IsLast) {
-  auto Length = getStrlenWithNull(Builder, Arg);
+  StringRef Str;
+  Value *Length = getConstantStringInfo(Arg, Str)
+                      ? Builder.getInt64(Str.size() + 1)
+                      : getStrlenWithNull(Builder, Arg);
   return callAppendStringN(Builder, Desc, Arg, Length, IsLast);
 }
 

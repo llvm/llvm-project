@@ -167,6 +167,10 @@ bool getConstantStringInfo(mlir::Value ptr, mlir::ModuleOp mod,
   if (!global.getConstant() || !init || !arrayTy ||
       !isByteType(arrayTy.getElementType()))
     return false;
+  // As in hasDefinitiveInitializer, the host or linker may replace the data.
+  if (cir::isInterposableLinkage(global.getLinkage()) ||
+      global->hasAttr(cir::CUDAExternallyInitializedAttr::getMnemonic()))
+    return false;
   if (auto constArr = mlir::dyn_cast<cir::ConstArrayAttr>(*init)) {
     if (auto strAttr = mlir::dyn_cast<mlir::StringAttr>(constArr.getElts())) {
       data = strAttr.getValue().str();
@@ -265,9 +269,10 @@ private:
   mlir::Value getStrlenWithNull(mlir::Value str);
   mlir::Value callAppendStringN(mlir::Value desc, mlir::Value str,
                                 mlir::Value length, bool isLast);
-  mlir::Value appendString(mlir::Value desc, mlir::Value arg, bool isLast);
-  mlir::Value processArg(mlir::Value desc, mlir::Value arg, bool specIsCString,
-                         bool isLast);
+  mlir::Value appendString(mlir::Value desc, mlir::Value arg,
+                           size_t operandIndex, bool isLast);
+  mlir::Value processArg(mlir::Value desc, mlir::Value arg, size_t operandIndex,
+                         bool specIsCString, bool isLast);
   bool isCStringArg(mlir::ValueRange args, size_t i) const;
   mlir::Value callBufferedPrintfStart(
       mlir::ValueRange args, mlir::Value fmt, bool isConstFmtStr,
@@ -516,15 +521,19 @@ mlir::Value AMDGPUPrintfLowering::callAppendStringN(mlir::Value desc,
 }
 
 mlir::Value AMDGPUPrintfLowering::appendString(mlir::Value desc,
-                                               mlir::Value arg, bool isLast) {
-  mlir::Value length = getStrlenWithNull(arg);
+                                               mlir::Value arg,
+                                               size_t operandIndex,
+                                               bool isLast) {
+  std::optional<std::string> str = getConstString(operandIndex);
+  mlir::Value length = str ? getI64(str->size() + 1) : getStrlenWithNull(arg);
   return callAppendStringN(desc, arg, length, isLast);
 }
 
 mlir::Value AMDGPUPrintfLowering::processArg(mlir::Value desc, mlir::Value arg,
+                                             size_t operandIndex,
                                              bool specIsCString, bool isLast) {
   if (specIsCString && mlir::isa<mlir::LLVM::LLVMPointerType>(arg.getType())) {
-    return appendString(desc, arg, isLast);
+    return appendString(desc, arg, operandIndex, isLast);
   }
   // If the format specifies a string but the argument is not, the frontend will
   // have printed a warning. We just rely on undefined behaviour and send the
@@ -792,7 +801,7 @@ mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
   }
 
   mlir::Value desc = callPrintfBegin(getI64(0));
-  desc = appendString(desc, fmt, numOps == 1);
+  desc = appendString(desc, fmt, /*operandIndex=*/0, numOps == 1);
 
   // FIXME: This invokes hostcall once for each argument. We can pack up to
   // seven scalar printf arguments in a single hostcall. See the signature of
@@ -800,7 +809,7 @@ mlir::Value AMDGPUPrintfLowering::emitAMDGPUPrintfCall(mlir::ValueRange args,
   for (unsigned int i = 1; i != numOps; ++i) {
     bool isLast = i == numOps - 1;
     bool isCString = specIsCString.test(i);
-    desc = processArg(desc, args[i], isCString, isLast);
+    desc = processArg(desc, args[i], i, isCString, isLast);
   }
 
   return mlir::LLVM::TruncOp::create(rewriter, op.getLoc(),
