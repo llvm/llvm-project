@@ -12,12 +12,16 @@
 
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 using namespace infer_alloc;
@@ -167,11 +171,11 @@ static QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
   return QualType();
 }
 
-QualType infer_alloc::inferPossibleType(const CallExpr *E,
-                                        const ASTContext &Ctx,
-                                        const CastExpr *CastE) {
+QualType infer_alloc::inferPossibleType(
+    const CallExpr *E, const ASTContext &Ctx, const CastExpr *CastE,
+    llvm::function_ref<QualType(const CallExpr *)> PlacementNewType) {
   QualType AllocType;
-  // First check arguments.
+  // First check arguments: a sizeof states what the allocation was sized for.
   for (const Expr *Arg : E->arguments()) {
     AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
     if (AllocType.isNull())
@@ -179,10 +183,189 @@ QualType infer_alloc::inferPossibleType(const CallExpr *E,
     if (!AllocType.isNull())
       break;
   }
+  // Then check for a placement new into the result, which names the object
+  // constructed there and is stronger evidence than a cast of the result.
+  if (AllocType.isNull() && PlacementNewType)
+    AllocType = PlacementNewType(E);
   // Then check later casts.
   if (AllocType.isNull())
     AllocType = inferPossibleTypeFromCastExpr(E, CastE);
   return AllocType;
+}
+
+/// Strips parentheses and non-static field accesses of a by-value object
+/// (e.g. the pointer member of a size-returning allocation result) from an
+/// lvalue, down to the expression naming the object. Indirect member accesses
+/// (`->`) name other storage and stop the walk.
+static const Expr *stripFields(const Expr *E) {
+  E = E->IgnoreParens();
+  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
+    if (ME->isArrow() || !isa<FieldDecl>(ME->getMemberDecl()))
+      break;
+    // The base of a member of a temporary is a MaterializeTemporaryExpr.
+    E = ME->getBase()->IgnoreParenImpCasts();
+  }
+  return E;
+}
+
+/// The size allocated by \p CE if it is a constant: the arguments named by
+/// alloc_size, or the only argument.
+static std::optional<uint64_t> getConstantAllocSize(const CallExpr *CE,
+                                                    const ASTContext &Ctx) {
+  SmallVector<const Expr *, 2> Args;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (const auto *A = FD ? FD->getAttr<AllocSizeAttr>() : nullptr) {
+    Args.push_back(CE->getArg(A->getElemSizeParam().getASTIndex()));
+    if (A->getNumElemsParam().isValid())
+      Args.push_back(CE->getArg(A->getNumElemsParam().getASTIndex()));
+  } else if (CE->getNumArgs() == 1) {
+    Args.push_back(CE->getArg(0));
+  }
+  if (Args.empty())
+    return std::nullopt;
+  uint64_t Size = 1;
+  for (const Expr *Arg : Args) {
+    Expr::EvalResult R;
+    if (Arg->isValueDependent() || !Arg->EvaluateAsInt(R, Ctx))
+      return std::nullopt;
+    Size *= R.Val.getInt().getZExtValue();
+  }
+  return Size;
+}
+
+/// Whether \p T ends in a flexible array member, or an array treated as one
+/// under -fstrict-flex-arrays, possibly in its last field or only base.
+static bool endsInFlexibleArray(QualType T, const ASTContext &Ctx) {
+  const RecordDecl *RD = T->getAsRecordDecl();
+  while (RD && RD->isCompleteDefinition() && !RD->isUnion()) {
+    const FieldDecl *Last = nullptr;
+    for (const FieldDecl *FD : RD->fields())
+      Last = FD;
+    if (!Last) {
+      const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+      if (!CXXRD || CXXRD->getNumBases() != 1)
+        return false;
+      RD = CXXRD->bases_begin()->getType()->getAsRecordDecl();
+      continue;
+    }
+    if (Last->getType()->isArrayType())
+      return Decl::isFlexibleArrayMemberLike(
+          Ctx, Last, Last->getType(),
+          Ctx.getLangOpts().getStrictFlexArraysLevel(),
+          /*IgnoreTemplateOrMacroSubstitution=*/true);
+    RD = Last->getType()->getAsRecordDecl();
+  }
+  return false;
+}
+
+/// Whether the object \p NE constructs into the storage allocated by \p CE
+/// describes all of it. It may construct only a header, with other data
+/// (possibly pointers) after it, e.g. `new (malloc(n + 8)) size_t(n)`. A
+/// pointer-free type is used only for a constant allocation of its size, an
+/// array new, or a type ending in a flexible array, whose elements are assumed
+/// to fill the rest.
+static bool coversAllocation(const CallExpr *CE, const CXXNewExpr *NE,
+                             const ASTContext &Ctx) {
+  QualType T = NE->getAllocatedType();
+  llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
+  bool IncompleteType = false;
+  if (NE->isArray() || typeContainsPointer(T, VisitedRD, IncompleteType) ||
+      IncompleteType)
+    return true;
+  std::optional<uint64_t> Size = getConstantAllocSize(CE, Ctx);
+  if (Size && *Size == uint64_t(Ctx.getTypeSizeInChars(T).getQuantity()))
+    return true;
+  return endsInFlexibleArray(T, Ctx);
+}
+
+namespace {
+/// Implements collectPlacementNewTypes(). A variable qualifies if every
+/// reference to it other than its initializer is an lvalue-to-rvalue read.
+class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
+public:
+  explicit PlacementNewCollector(const ASTContext &Ctx) : Ctx(Ctx) {}
+
+  // Resolved after the traversal: a use that is not a read may follow the
+  // placement new and still disqualify the variable.
+  llvm::DenseMap<const CallExpr *, QualType> finish() && {
+    for (const auto &[VD, NE] : Uses)
+      if (const CallExpr *CE = Defs.lookup(VD))
+        record(CE, NE);
+    return std::move(CallTypes);
+  }
+
+  bool VisitVarDecl(const VarDecl *VD) override {
+    const Expr *Init = VD->getInit();
+    if (Init && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
+      if (const auto *CE =
+              dyn_cast<CallExpr>(Init->IgnoreImplicit()->IgnoreParenCasts()))
+        Defs.try_emplace(VD, CE);
+    return true;
+  }
+
+  // A read of the variable or of one of its fields. Traversal is pre-order,
+  // so the conversion is seen before the DeclRefExpr below it.
+  bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) override {
+    if (ICE->getCastKind() == CK_LValueToRValue)
+      if (const auto *DRE =
+              dyn_cast<DeclRefExpr>(stripFields(ICE->getSubExpr())))
+        Reads.insert(DRE);
+    return true;
+  }
+
+  // Any other reference may modify the variable.
+  bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
+    if (!Reads.contains(DRE))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        Defs.erase(VD);
+    return true;
+  }
+
+  bool VisitCXXNewExpr(const CXXNewExpr *NE) override {
+    // Only the reserved placement form is known to construct into its
+    // argument; dependent new-expressions have no operator new yet.
+    const FunctionDecl *OperatorNew = NE->getOperatorNew();
+    if (NE->getNumPlacementArgs() != 1 || !OperatorNew ||
+        !OperatorNew->isReservedGlobalPlacementOperator())
+      return true;
+    const Expr *Source =
+        stripFields(NE->getPlacementArg(0)->IgnoreParenCasts());
+    if (const auto *CE = dyn_cast<CallExpr>(Source))
+      record(CE, NE);
+    else if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
+      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
+        Uses.emplace_back(VD, NE);
+    return true;
+  }
+
+private:
+  void record(const CallExpr *CE, const CXXNewExpr *NE) {
+    QualType T =
+        coversAllocation(CE, NE, Ctx) ? NE->getAllocatedType() : QualType();
+    auto [It, Inserted] = CallTypes.try_emplace(CE, T);
+    // Different types constructed into the same storage: ambiguous.
+    if (!Inserted && !It->second.isNull() &&
+        (T.isNull() || It->second.getCanonicalType() != T.getCanonicalType()))
+      It->second = QualType();
+  }
+
+  const ASTContext &Ctx;
+
+  llvm::DenseMap<const CallExpr *, QualType> CallTypes;
+  // Variable -> the allocation call initializing it; erased on any use that
+  // is not a read.
+  llvm::DenseMap<const VarDecl *, const CallExpr *> Defs;
+  llvm::SmallPtrSet<const DeclRefExpr *, 16> Reads;
+  llvm::SmallVector<std::pair<const VarDecl *, const CXXNewExpr *>> Uses;
+};
+} // namespace
+
+llvm::DenseMap<const CallExpr *, QualType>
+infer_alloc::collectPlacementNewTypes(const Stmt *Body, const ASTContext &Ctx) {
+  PlacementNewCollector Collector(Ctx);
+  if (Body)
+    Collector.TraverseStmt(Body);
+  return std::move(Collector).finish();
 }
 
 std::optional<llvm::AllocTokenMetadata>
