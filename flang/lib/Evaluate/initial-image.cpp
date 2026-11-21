@@ -151,13 +151,13 @@ public:
     std::optional<uint64_t> optElements{TotalElementCount(extents_)};
     CHECK(optElements);
     uint64_t elements{*optElements};
-    std::vector<Scalar> typedValue(elements);
     auto elemBytes{ToInt64(type_.MeasureSizeInBytes(
         context_, GetRank(extents_) > 0, charLength_))};
     CHECK(elemBytes && *elemBytes >= 0);
     std::size_t stride{static_cast<std::size_t>(*elemBytes)};
     CHECK(offset_ + elements * stride <= image_.data_.size() || padWithZero_);
     if constexpr (T::category == TypeCategory::Derived) {
+      std::vector<Scalar> typedValue(elements);
       const semantics::DerivedTypeSpec &derived{type_.GetDerivedTypeSpec()};
       for (auto iter : DEREF(derived.scope())) {
         const Symbol &component{*iter.second};
@@ -202,15 +202,14 @@ public:
     } else if constexpr (T::category == TypeCategory::Character) {
       auto length{static_cast<ConstantSubscript>(stride) / kind};
       llvm::SmallVector<char, 256> buffer;
+      CHECK(stride == static_cast<std::size_t>(length * kind));
       const char *data{GetTailPaddedData(offset_, elements * stride, buffer)};
-      for (std::size_t j{0}; j < elements; ++j) {
-        typedValue[j] = value::CharacterValue::FromRawBytes(
-            kind, data + j * stride, length * kind);
-      }
-      return AsGenericExpr(
-          Const{kind, length, std::move(typedValue), std::move(extents_)});
+      return AsGenericExpr(Const::FromContiguous(kind, length,
+          value::CharacterValue::FromRawBytes(kind, data, elements * stride),
+          std::move(extents_)));
     } else {
       // Lengthless intrinsic type
+      std::vector<Scalar> typedValue(elements);
       llvm::SmallVector<char, 256> buffer;
       const char *data{GetTailPaddedData(offset_,
           elements == 0 ? 0
