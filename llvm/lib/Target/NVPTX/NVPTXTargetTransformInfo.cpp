@@ -796,3 +796,8 @@ ValueUniformity NVPTXTTIImpl::getValueUniformity(const Value *V) const {
 
   return ValueUniformity::Default;
 }
+
+bool NVPTXTTIImpl::isReadOnlyAndFastAddressSpace(unsigned AddressSpace) const {
+  return AddressSpace == ADDRESS_SPACE_ENTRY_PARAM ||
+         AddressSpace == ADDRESS_SPACE_CONST;
+}
