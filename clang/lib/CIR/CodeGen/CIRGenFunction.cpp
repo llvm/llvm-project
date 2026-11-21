@@ -1239,7 +1239,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
   default:
     cgm.errorNYI(e->getSourceRange(),
                  std::string("emitLValue: unsupported l-value class: ") +
-                   e->getStmtClassName());
+                     e->getStmtClassName());
     return LValue();
 
   case Expr::ObjCPropertyRefExprClass:
