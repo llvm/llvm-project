@@ -2897,6 +2897,10 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
 
+  // For unsupported scalable vector.
+  if (!LT.first.isValid())
+    return LT.first;
+
   // This type is legalized to a scalar type.
   if (!LT.second.isVector()) {
     auto *FixedVecTy = cast<FixedVectorType>(Val);
@@ -2918,10 +2922,6 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(
                ? StoreCost * NumElems + LoadCost
                : (StoreCost + LoadCost) * NumElems + StoreCost;
   }
-
-  // For unsupported scalable vector.
-  if (LT.second.isScalableVector() && !LT.first.isValid())
-    return LT.first;
 
   // Mask vector extract/insert is expanded via e8.
   if (Val->getScalarSizeInBits() == 1) {
