@@ -4252,9 +4252,6 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
   if (!FVT)
     return false;
 
-  if (FVT->getNumElements() < 2)
-    return false;
-
   std::optional<Instruction::BinaryOps> CommonBinOp;
   std::optional<Intrinsic::ID> CommonCallOp;
 
@@ -4268,6 +4265,31 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     return false;
   }
 
+  // A shuffle is single-source if operand 1 is poison, both operands are the
+  // same, or its mask only references elements from a single operand.
+  auto GetSingleSource = [](ShuffleVectorInst *SVI) -> Value * {
+    if (isa<PoisonValue>(SVI->getOperand(1)) ||
+        SVI->getOperand(0) == SVI->getOperand(1))
+      return SVI->getOperand(0);
+    auto *Op0Ty = dyn_cast<FixedVectorType>(SVI->getOperand(0)->getType());
+    if (!Op0Ty)
+      return nullptr;
+    int NumSrcElts = Op0Ty->getNumElements();
+    ArrayRef<int> Mask = SVI->getShuffleMask();
+    bool UsesLHS = false, UsesRHS = false;
+    for (int I : Mask) {
+      if (I < 0)
+        continue;
+      UsesLHS |= (I < NumSrcElts);
+      UsesRHS |= (I >= NumSrcElts);
+      if (UsesLHS && UsesRHS)
+        return nullptr;
+    }
+    if (UsesRHS)
+      return SVI->getOperand(1);
+    return SVI->getOperand(0);
+  };
+
   // For floating-point reductions, track FMF intersection across all binops.
   FastMathFlags CommonFMF;
   bool IsFloatReduction = false;
@@ -4280,7 +4302,7 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     if (auto *MMI = dyn_cast<MinMaxIntrinsic>(V))
       return CommonCallOp && MMI->getIntrinsicID() == *CommonCallOp;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V))
-      return isa<PoisonValue>(SVI->getOperand(1));
+      return GetSingleSource(SVI) != nullptr;
     return false;
   };
 
@@ -4303,12 +4325,16 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
       return false;
     if (!IsChainNode(V))
       return AddSource(V);
-    // Chain shuffles always have poison as op1, so only op0 matters.
+    // Chain shuffles always have a single source, so only that source matters.
     auto *U = cast<Instruction>(V);
-    unsigned NumOps = isa<ShuffleVectorInst>(U) ? 1 : 2;
-    for (unsigned I = 0; I != NumOps; ++I)
-      if (!Walk(U->getOperand(I), Walk))
+    if (auto *SVI = dyn_cast<ShuffleVectorInst>(U)) {
+      if (!Walk(GetSingleSource(SVI), Walk))
         return false;
+    } else {
+      for (unsigned I = 0; I != 2; ++I)
+        if (!Walk(U->getOperand(I), Walk))
+          return false;
+    }
     if (isa<ShuffleVectorInst>(U) || Nodes.contains(U->getOperand(0)) ||
         Nodes.contains(U->getOperand(1))) {
       Nodes.insert(V);
@@ -4361,16 +4387,22 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     if (DV.Lanes.isZero())
       continue;
     if (auto *SVI = dyn_cast<ShuffleVectorInst>(V)) {
+      Value *Src = GetSingleSource(SVI);
       ArrayRef<int> Mask = SVI->getShuffleMask();
-      Demand &DS = DemandOf(SVI->getOperand(0));
+      Demand &DS = DemandOf(Src);
+      unsigned NumSrcElts = DS.Lanes.getBitWidth();
       for (unsigned I = 0, E = Mask.size(); I != E; ++I) {
         // Skip lanes that are undemanded or map to poison.
-        if (!DV.Lanes[I] || Mask[I] < 0 ||
-            (unsigned)Mask[I] >= DS.Lanes.getBitWidth())
+        if (!DV.Lanes[I] || Mask[I] < 0)
           continue;
-        if (DS.Lanes[Mask[I]] || DV.Duplicates[I])
-          DS.Duplicates.setBit(Mask[I]);
-        DS.Lanes.setBit(Mask[I]);
+        int SrcIdx = Mask[I];
+        if (SrcIdx >= (int)NumSrcElts)
+          SrcIdx -= NumSrcElts;
+        if (SrcIdx < 0 || (unsigned)SrcIdx >= NumSrcElts)
+          continue;
+        if (DS.Lanes[SrcIdx] || DV.Duplicates[I])
+          DS.Duplicates.setBit(SrcIdx);
+        DS.Lanes.setBit(SrcIdx);
       }
     } else {
       auto *U = cast<User>(V);
@@ -4391,14 +4423,22 @@ bool VectorCombine::foldShuffleChainsToReduce(Instruction &I) {
     Seen.insert(VecOpEE);
     while (!Worklist.empty()) {
       auto *U = cast<Instruction>(Worklist.pop_back_val());
-      unsigned NumOps = isa<ShuffleVectorInst>(U) ? 1 : 2;
-      for (unsigned I = 0; I != NumOps; ++I) {
-        Value *Op = U->getOperand(I);
-        if (Op == V || !Seen.insert(Op).second)
-          continue;
-        if (!Nodes.contains(Op))
-          return false;
-        Worklist.push_back(Op);
+      if (auto *SVI = dyn_cast<ShuffleVectorInst>(U)) {
+        Value *Op = GetSingleSource(SVI);
+        if (Op != V && Seen.insert(Op).second) {
+          if (!Nodes.contains(Op))
+            return false;
+          Worklist.push_back(Op);
+        }
+      } else {
+        for (unsigned I = 0; I != 2; ++I) {
+          Value *Op = U->getOperand(I);
+          if (Op == V || !Seen.insert(Op).second)
+            continue;
+          if (!Nodes.contains(Op))
+            return false;
+          Worklist.push_back(Op);
+        }
       }
     }
     return true;
