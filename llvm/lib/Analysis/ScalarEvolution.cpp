@@ -4427,6 +4427,9 @@ const SCEV *ScalarEvolution::getSCEV(Value *V) {
 const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
   assert(isSCEVable(V->getType()) && "Value is not SCEVable!");
 
+  // Values in ValueExprMap have a value handle (its key).
+  if (!V->hasValueHandle())
+    return nullptr;
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
@@ -8528,8 +8531,10 @@ void ScalarEvolution::visitAndClearUsers(
     if (!isSCEVable(I->getType()) && !isa<WithOverflowInst>(I))
       continue;
 
+    // Values in ValueExprMap have a value handle (its key).
     ValueExprMapType::iterator It =
-        ValueExprMap.find_as(static_cast<Value *>(I));
+        I->hasValueHandle() ? ValueExprMap.find_as(static_cast<Value *>(I))
+                            : ValueExprMap.end();
     if (It != ValueExprMap.end()) {
       ToForget.push_back(It->second);
       eraseValueFromMap(It->first);
