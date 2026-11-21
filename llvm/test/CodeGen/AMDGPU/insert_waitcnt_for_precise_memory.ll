@@ -582,13 +582,13 @@ define amdgpu_kernel void @udiv_i32(ptr addrspace(1) %out, i32 %x, i32 %y) {
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_cvt_f32_u32 s4, s3
 ; GFX12-NEXT:    s_sub_co_i32 s5, 0, s3
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(NEXT) | instid1(TRANS32_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    v_s_rcp_f32 s4, s4
 ; GFX12-NEXT:    s_mul_f32 s4, s4, 0x4f7ffffe
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2) | instskip(SKIP_1) | instid1(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_cvt_u32_f32 s4, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_mul_i32 s5, s5, s4
 ; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_mul_hi_u32 s5, s4, s5
