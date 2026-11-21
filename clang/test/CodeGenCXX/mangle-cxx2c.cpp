@@ -17,8 +17,7 @@ V...[I] bar() {return {};}
 template <int I, typename... T>
 using First = T...[0];
 
-// CHECK-LABEL: define {{.*}} @_ZN8GH1120033bazILi0EJiEEEvDy_SUBSTPACK_Li0E
-// FIXME: handle indexing of partially substituted packs
+// CHECK-LABEL: define {{.*}} @_ZN8GH1120033bazILi0EJiEEEvi
 template <int I, typename...V>
 void baz(First<I, int, V...>){};
 
