@@ -132,6 +132,18 @@ protected:
   std::string nameData;
 };
 
+class CodeMetaDataOutputSection : public CustomSection {
+public:
+  CodeMetaDataOutputSection(std::string name,
+                            ArrayRef<InputChunk *> inputSections)
+      : CustomSection(name, inputSections) {}
+
+  void writeTo(uint8_t *buf) override;
+  void finalizeContents() override;
+
+private:
+  std::string payload;
+};
 } // namespace wasm
 } // namespace lld
 
