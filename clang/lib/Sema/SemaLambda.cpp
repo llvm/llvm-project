@@ -289,8 +289,14 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   //    appear in a non-inline function in a non-module translation unit.
   static constexpr auto IsExternallyVisibleInModulePurview =
       [](const NamedDecl *ND) -> bool {
-    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-           ND->isExternallyVisible();
+    if (!ND->isInNamedModule() && !ND->isFromGlobalModule())
+      return false;
+    // The type of a variable declared with a deduced type may be deduced from
+    // the lambda being numbered, so don't compute (and cache) its linkage yet.
+    if (const auto *VD = dyn_cast<VarDecl>(ND);
+        VD && VD->getType()->isUndeducedType())
+      return isExternallyVisible(VD->getLinkageIgnoringType());
+    return ND->isExternallyVisible();
   };
 
   // Default arguments of member function parameters that appear in a class
