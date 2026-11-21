@@ -80,3 +80,17 @@ x:
         .bss
 bss_check:
         .fill 8, 1, 0
+
+# A non-empty discardable section is not loaded, so symbols in it resolve to
+# address zero. Checking this via a relocation which results in the address
+# zero.
+        .data
+discard_ptr:
+        .quad discard_var
+
+        .section .discard,"Dr"
+        .globl discard_var
+discard_var:
+        .long 42
+
+# rtdyld-check: *{8}discard_ptr = 0
