@@ -9214,7 +9214,7 @@ static std::pair<size_t, size_t> generateKeySubkey(
                             hash_value(CI->getOperand(0)->getType()));
     } else if (auto *Call = dyn_cast<CallInst>(I)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(Call, TLI);
-      if (isTriviallyVectorizable(ID)) {
+      if (isSLPVectorizableIntrinsic(ID)) {
         if (ID == Intrinsic::fmuladd)
           ID = Intrinsic::fma;
         SubKey = hash_combine(hash_value(I->getOpcode()), hash_value(ID),
@@ -9721,7 +9721,7 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
         false /*HasGlobalPred*/);
     Function *VecFunc = VFDatabase(*CI).getVectorizedFunction(Shape);
 
-    if (!VecFunc && !isTriviallyVectorizable(ID)) {
+    if (!VecFunc && !isSLPVectorizableIntrinsic(ID)) {
       LLVM_DEBUG(dbgs() << "SLP: Non-vectorizable call.\n");
       return TreeEntry::NeedToGather;
     }
@@ -13700,7 +13700,7 @@ uint64_t BoUpSLP::getNumScalarInsts(bool HasTreeLoop) {
         ++Count;
       if (auto *CI = dyn_cast<CallInst>(I)) {
         Intrinsic::ID BaseID = getVectorIntrinsicIDForCall(CI, TLI);
-        if (!isTriviallyVectorizable(BaseID))
+        if (!isSLPVectorizableIntrinsic(BaseID))
           ++Count;
       }
     }
@@ -36751,7 +36751,7 @@ static bool isNonVectorizableInst(const VectorizeOptions &Opts,
     }
     if (const auto *CI = dyn_cast<CallInst>(CB)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-      if (isTriviallyVectorizable(ID))
+      if (isSLPVectorizableIntrinsic(ID))
         return false;
       if (!VFDatabase::getMappings(*CI).empty())
         return false;
@@ -36775,7 +36775,7 @@ static bool isNonVectorizableInst(const VectorizeOptions &Opts,
     const auto *Arg = EV->getAggregateOperand();
     if (const auto *CI = dyn_cast<CallInst>(Arg)) {
       Intrinsic::ID ID = getVectorIntrinsicIDForCall(CI, TLI);
-      if (isTriviallyVectorizable(ID))
+      if (isSLPVectorizableIntrinsic(ID))
         return true;
       if (!VFDatabase::getMappings(*CI).empty())
         return true;

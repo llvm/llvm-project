@@ -42,6 +42,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include <cassert>
 #include <cstdint>
 #include <iterator>
@@ -1841,8 +1842,41 @@ SDValue VectorLegalizer::ExpandMaskedBinOp(SDNode *N) {
   // disabled lanes with 1 to avoid division by zero or overflow.
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
-  SDValue SafeDivisor = DAG.getSelect(
-      dl, VT, N->getOperand(2), N->getOperand(1), DAG.getConstant(1, dl, VT));
+  // In signed i1, 1 is -1 and is not a safe fallback divisor.
+  if (VT.getScalarType() == MVT::i1 && (N->getOpcode() == ISD::MASKED_SDIV ||
+                                        N->getOpcode() == ISD::MASKED_SREM))
+    return DAG.getConstant(0, dl, VT);
+
+  unsigned Opcode = ISD::getUnmaskedBinOpOpcode(N->getOpcode());
+  unsigned DivOpcode = Opcode;
+  if (DivOpcode == ISD::SREM)
+    DivOpcode = ISD::SDIV;
+  else if (DivOpcode == ISD::UREM)
+    DivOpcode = ISD::UDIV;
+  if (VT.isFixedLengthVector() && TLI.isIntDivRemTrapFree(VT.getScalarType()) &&
+      !TLI.isOperationLegalOrCustom(Opcode, VT) &&
+      !TLI.isOperationLegalOrCustom(DivOpcode, VT)) {
+    // Build scalar operations directly. Creating an ordinary vector node first
+    // could fold every lane to undef when one inactive divisor is zero.
+    EVT EltVT = VT.getScalarType();
+    SmallVector<SDValue> Results;
+    for (unsigned I = 0; I != VT.getVectorNumElements(); ++I) {
+      SDValue Divisor = DAG.getExtractVectorElt(dl, EltVT, N->getOperand(1), I);
+      Results.push_back(
+          Divisor.isUndef() || DAG.computeKnownBits(Divisor).isZero()
+              ? DAG.getConstant(0, dl, EltVT)
+              : DAG.getNode(
+                    Opcode, dl, EltVT,
+                    DAG.getExtractVectorElt(dl, EltVT, N->getOperand(0), I),
+                    Divisor));
+    }
+    return DAG.getBuildVector(VT, dl, Results);
+  }
+
+  // The mask was frozen before type legalization.
+  SDValue Mask = N->getOperand(2);
+  SDValue SafeDivisor =
+      DAG.getSelect(dl, VT, Mask, N->getOperand(1), DAG.getConstant(1, dl, VT));
   return DAG.getNode(ISD::getUnmaskedBinOpOpcode(N->getOpcode()), dl, VT,
                      N->getOperand(0), SafeDivisor);
 }

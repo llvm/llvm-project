@@ -32,6 +32,10 @@ class SanitizerArgs {
   SanitizerMaskCutoffs SkipHotCutoffs;
   SanitizerSet AnnotateDebugInfo;
   SanitizerSet SuppressUBSanFeature;
+  /// The integer-divide-by-zero and signed-integer-overflow-divide checks if
+  /// they are enabled only through -fsanitize=undefined. They are not part of
+  /// it under -fdefined-int-divrem, which is decided per input in addArgs.
+  SanitizerMask DivRemOnlyFromUndefined;
 
   std::vector<std::string> UserIgnorelistFiles;
   std::vector<std::string> SystemIgnorelistFiles;

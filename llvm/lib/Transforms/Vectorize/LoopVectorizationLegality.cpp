@@ -1431,7 +1431,8 @@ bool LoopVectorizationLegality::blockCanBePredicated(
     // TODO: Allow other calls if they have appropriate attributes... readonly
     // and argmemonly?
     if (CallInst *CI = dyn_cast<CallInst>(&I))
-      if (VFDatabase::hasMaskedVariant(*CI)) {
+      if (VFDatabase::hasMaskedVariant(*CI) ||
+          Intrinsic::getMaskedIntDivRemOpcode(CI->getIntrinsicID())) {
         MaskedOp.insert(CI);
         continue;
       }

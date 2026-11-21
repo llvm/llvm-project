@@ -116,21 +116,37 @@ declare <4 x i1> @llvm.experimental.vector.match.v4i32.v4i32(<4 x i32>, <4 x i32
 ; CHECK-NEXT: declare <8 x i1> @llvm.experimental.vector.match.v8i32.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
 declare <8 x i1> @llvm.experimental.vector.match.v8i32.v8i32(<8 x i32>, <8 x i32>, <8 x i32>)
 
-; CHECK: intrinsic return type (overload type 0) expected any integer vector, but got <4 x float>
+; CHECK: intrinsic return type (overload type 0) expected any integer or integer vector, but got <4 x float>
 ; CHECK-NEXT: declare <4 x float> @llvm.masked.udiv.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 declare <4 x float> @llvm.masked.udiv.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 
-; CHECK: intrinsic return type (overload type 0) expected any integer vector, but got <4 x float>
+; CHECK: intrinsic return type (overload type 0) expected any integer or integer vector, but got <4 x float>
 ; CHECK-NEXT: declare <4 x float> @llvm.masked.sdiv.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 declare <4 x float> @llvm.masked.sdiv.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 
-; CHECK: intrinsic return type (overload type 0) expected any integer vector, but got <4 x float>
+; CHECK: intrinsic return type (overload type 0) expected any integer or integer vector, but got <4 x float>
 ; CHECK-NEXT: declare <4 x float> @llvm.masked.urem.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 declare <4 x float> @llvm.masked.urem.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 
-; CHECK: intrinsic return type (overload type 0) expected any integer vector, but got <4 x float>
+; CHECK: intrinsic return type (overload type 0) expected any integer or integer vector, but got <4 x float>
 ; CHECK-NEXT: declare <4 x float> @llvm.masked.srem.v4f32(<4 x float>, <4 x float>, <4 x i1>)
 declare <4 x float> @llvm.masked.srem.v4f32(<4 x float>, <4 x float>, <4 x i1>)
+
+; CHECK: intrinsic argument 2 type (same vector width of overload type 0) expected scalar (overload type 0 is i32), but got <1 x i1>
+; CHECK-NEXT: declare i32 @llvm.masked.udiv.i32(i32, i32, <1 x i1>)
+declare i32 @llvm.masked.udiv.i32(i32, i32, <1 x i1>)
+
+; CHECK: intrinsic argument 2 type expected i1, but got i32
+; CHECK-NEXT: declare i32 @llvm.masked.sdiv.i32(i32, i32, i32)
+declare i32 @llvm.masked.sdiv.i32(i32, i32, i32)
+
+; CHECK: intrinsic argument 2 type (same vector width of overload type 0) expected vector (overload type 0 is <2 x i32>), but got i1
+; CHECK-NEXT: declare <2 x i32> @llvm.masked.urem.v2i32(<2 x i32>, <2 x i32>, i1)
+declare <2 x i32> @llvm.masked.urem.v2i32(<2 x i32>, <2 x i32>, i1)
+
+; CHECK: intrinsic return type (overload type 0) expected any integer or integer vector, but got float
+; CHECK-NEXT: declare float @llvm.masked.srem.f32(float, float, i1)
+declare float @llvm.masked.srem.f32(float, float, i1)
 
 ; CHECK: intrinsic argument 1 type (same vector width of overload type 0) expected vector with vscale x 4 elements (overload type 0 is <vscale x 4 x i32>), but got <4 x i1>
 ; CHECK-NEXT: declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(ptr, <4 x i1>, <vscale x 4 x i32>)

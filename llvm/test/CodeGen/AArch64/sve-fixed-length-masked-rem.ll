@@ -722,12 +722,10 @@ define void @srem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @srem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: srem_v1i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csinc x9, x9, xzr, ne
 ; CHECK-NEXT:    sdiv x10, x8, x9
 ; CHECK-NEXT:    msub x8, x10, x9, x8
 ; CHECK-NEXT:    fmov d0, x8
@@ -1618,12 +1616,10 @@ define void @urem_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @urem_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(1,0) #0 {
 ; CHECK-LABEL: urem_v1i64:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    csinc x9, x9, xzr, ne
 ; CHECK-NEXT:    udiv x10, x8, x9
 ; CHECK-NEXT:    msub x8, x10, x9, x8
 ; CHECK-NEXT:    fmov d0, x8

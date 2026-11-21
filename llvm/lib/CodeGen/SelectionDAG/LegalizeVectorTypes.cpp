@@ -26,6 +26,7 @@
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/KnownBits.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
@@ -331,6 +332,11 @@ SDValue DAGTypeLegalizer::ScalarizeVecRes_MaskedBinOp(SDNode *N) {
   SDLoc DL(N);
   SDValue LHS = GetScalarizedVector(N->getOperand(0));
   SDValue RHS = GetScalarizedVector(N->getOperand(1));
+  // The only defined signed i1 div/rem result is zero. In particular, 1 is
+  // -1 and would overflow for an inactive lane with dividend -1.
+  if (LHS.getValueType() == MVT::i1 && (N->getOpcode() == ISD::MASKED_SDIV ||
+                                        N->getOpcode() == ISD::MASKED_SREM))
+    return DAG.getConstant(0, DL, MVT::i1);
   SDValue Mask = N->getOperand(2);
   EVT MaskVT = Mask.getValueType();
   // The vselect result and input vectors need scalarizing, but it's
@@ -1487,10 +1493,16 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_MaskedBinOp(SDNode *N, unsigned OpNo) {
   EVT VT = N->getOperand(0).getValueType().getVectorElementType();
   SDValue LHS = DAG.getExtractVectorElt(DL, VT, N->getOperand(0), 0);
   SDValue RHS = DAG.getExtractVectorElt(DL, VT, N->getOperand(1), 0);
+  if (TLI.isIntDivRemTrapFree(VT)) {
+    SDValue BinOp = DAG.getNode(ISD::getUnmaskedBinOpOpcode(N->getOpcode()), DL,
+                                VT, LHS, RHS);
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, N->getValueType(0), BinOp);
+  }
   SDValue Mask = GetScalarizedVector(N->getOperand(2));
   // Vectors may have a different boolean contents to scalars, so truncate to i1
   // and let type legalization promote appropriately.
   Mask = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Mask);
+  // The mask was frozen before type legalization.
   // Masked binary ops don't have UB on disabled lanes but produce poison, so
   // use 1 as the divisor to avoid division by zero and overflow.
   SDValue BinOp =
