@@ -10,9 +10,6 @@
 // UNSUPPORTED: c++03, c++11, c++14
 // UNSUPPORTED: no-filesystem
 
-// On Android L, ~scoped_test_env() is unable to delete the temp dir using
-// chmod+rm because chmod is too broken.
-// XFAIL: LIBCXX-ANDROID-FIXME && android-device-api={{21|22}}
 
 // <filesystem>
 

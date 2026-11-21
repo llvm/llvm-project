@@ -30,9 +30,9 @@
 #include "format_string.h"
 
 // For creating socket files
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
-# include <sys/socket.h>
-# include <sys/un.h>
+#ifndef TEST_HAS_NO_SOCKETS
+#  include <sys/socket.h>
+#  include <sys/un.h>
 #endif
 namespace fs = std::filesystem;
 
@@ -190,9 +190,7 @@ struct scoped_test_env
         //
         // Android's chmod was buggy in old OSs, but skipping this assert is
         // sufficient to ensure that the `rm -rf` succeeds for almost all tests:
-        //  - Android L: chmod aborts after one error
-        //  - Android L and M: chmod -R tries to set permissions of a symlink
-        //    target.
+        //  - Android M: chmod -R tries to set permissions of a symlink target.
         // LIBCXX-ANDROID-FIXME: Other fixes to consider: place a toybox chmod
         // onto old devices, re-enable this assert for devices running Android N
         // and up, rewrite this chmod+rm in C or C++.
@@ -298,6 +296,7 @@ struct scoped_test_env
                                        true);
     }
 
+#ifndef TEST_HAS_NO_HARDLINKS
     std::string create_hardlink(fs::path source_path, fs::path to_path) {
         std::string source = source_path.string();
         std::string to = to_path.string();
@@ -307,8 +306,9 @@ struct scoped_test_env
         assert(ret == 0);
         return to;
     }
+#endif
 
-#ifndef _WIN32
+#ifndef TEST_HAS_NO_FIFOS
     std::string create_fifo(std::string file) {
         file = sanitize_path(std::move(file));
         int ret = ::mkfifo(file.c_str(), 0666); // rw-rw-rw- mode
@@ -317,9 +317,9 @@ struct scoped_test_env
     }
 #endif
 
-  // Some platforms doesn't support socket files so we shouldn't even
-  // allow tests to call this unguarded.
-#if !defined(__FreeBSD__) && !defined(__APPLE__) && !defined(_WIN32)
+    // Some platforms doesn't support socket files so we shouldn't even
+    // allow tests to call this unguarded.
+#ifndef TEST_HAS_NO_SOCKETS
     std::string create_socket(std::string file) {
       file = sanitize_path(std::move(file));
 
