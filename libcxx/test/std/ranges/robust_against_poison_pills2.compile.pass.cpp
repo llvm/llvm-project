@@ -12,7 +12,6 @@
 
 // Ordinary unqualified lookup should not be performed.
 
-
 namespace begin {}
 namespace end {}
 namespace cbegin {}
