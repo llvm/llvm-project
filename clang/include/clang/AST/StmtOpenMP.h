@@ -6630,21 +6630,36 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   /// directive has no 'otherwise' clause.
   bool HasImplicitOtherwise = false;
 
+  /// Number of OpenMP constructs that enclose the directive.
+  unsigned NumConstructTraits = 0;
+
+  /// True if the last child is the statement run by the variants without an
+  /// associated statement. Children: 2 * NumVariants + HasSharedStmt.
+  bool HasSharedStmt = false;
+
   OMPMetaDirective(SourceLocation StartLoc, SourceLocation EndLoc)
       : OMPExecutableDirective(OMPMetaDirectiveClass,
                                llvm::omp::OMPD_metadirective, StartLoc,
                                EndLoc) {}
 
-  /// Layout: the children hold the variants, then their conditions; the
-  /// trait infos follow the children.
-  static size_t getTraitInfosOffset(unsigned NumVariants) {
+  /// Layout: the children (variants, conditions, then the shared statement if
+  /// any), the trait infos, then the OpenMP constructs that enclose the
+  /// directive.
+  static size_t getTraitInfosOffset(unsigned NumVariants, bool HasSharedStmt) {
     return llvm::alignTo(OMPChildren::size(/*NumClauses=*/0,
                                            /*HasAssociatedStmt=*/false,
-                                           2 * NumVariants),
+                                           2 * NumVariants + HasSharedStmt),
                          alignof(OMPTraitInfo *));
   }
+  static size_t getConstructTraitsOffset(unsigned NumVariants,
+                                         bool HasSharedStmt) {
+    return llvm::alignTo(getTraitInfosOffset(NumVariants, HasSharedStmt) +
+                             NumVariants * sizeof(OMPTraitInfo *),
+                         alignof(llvm::omp::TraitProperty));
+  }
   static OMPMetaDirective *allocate(const ASTContext &C, unsigned NumVariants,
-                                    SourceLocation StartLoc,
+                                    unsigned NumConstructTraits,
+                                    bool HasSharedStmt, SourceLocation StartLoc,
                                     SourceLocation EndLoc);
 
   MutableArrayRef<Stmt *> getTrailingVariants() {
@@ -6658,7 +6673,7 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   MutableArrayRef<OMPTraitInfo *> getTrailingTraitInfos() {
     return {reinterpret_cast<OMPTraitInfo **>(
                 reinterpret_cast<char *>(Data) +
-                getTraitInfosOffset(getNumVariants())),
+                getTraitInfosOffset(getNumVariants(), HasSharedStmt)),
             getNumVariants()};
   }
   ArrayRef<Stmt *> getTrailingVariants() const {
@@ -6667,8 +6682,17 @@ class OMPMetaDirective final : public OMPExecutableDirective {
   ArrayRef<Expr *> getTrailingConditions() const {
     return const_cast<OMPMetaDirective *>(this)->getTrailingConditions();
   }
+  MutableArrayRef<llvm::omp::TraitProperty> getTrailingConstructTraits() {
+    return {reinterpret_cast<llvm::omp::TraitProperty *>(
+                reinterpret_cast<char *>(Data) +
+                getConstructTraitsOffset(getNumVariants(), HasSharedStmt)),
+            NumConstructTraits};
+  }
   ArrayRef<OMPTraitInfo *> getTrailingTraitInfos() const {
     return const_cast<OMPMetaDirective *>(this)->getTrailingTraitInfos();
+  }
+  ArrayRef<llvm::omp::TraitProperty> getTrailingConstructTraits() const {
+    return const_cast<OMPMetaDirective *>(this)->getTrailingConstructTraits();
   }
 
   void setHasImplicitOtherwise(bool V) { HasImplicitOtherwise = V; }
@@ -6677,9 +6701,12 @@ public:
   static OMPMetaDirective *
   Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
          ArrayRef<Stmt *> Variants, ArrayRef<Expr *> Conditions,
-         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise);
+         ArrayRef<OMPTraitInfo *> TraitInfos, bool HasImplicitOtherwise,
+         ArrayRef<llvm::omp::TraitProperty> ConstructTraits, Stmt *SharedStmt);
   static OMPMetaDirective *CreateEmpty(const ASTContext &C,
-                                       unsigned NumVariants, EmptyShell);
+                                       unsigned NumVariants,
+                                       unsigned NumConstructTraits,
+                                       bool HasSharedStmt, EmptyShell);
 
   unsigned getNumVariants() const { return Data->getChildren().size() / 2; }
   bool hasImplicitOtherwise() const { return HasImplicitOtherwise; }
@@ -6687,6 +6714,14 @@ public:
   ArrayRef<Expr *> conditions() const { return getTrailingConditions(); }
   ArrayRef<OMPTraitInfo *> traitInfos() const {
     return getTrailingTraitInfos();
+  }
+  ArrayRef<llvm::omp::TraitProperty> constructTraits() const {
+    return getTrailingConstructTraits();
+  }
+  /// The statement run by the variants without an associated statement, or
+  /// null.
+  Stmt *getSharedStmt() const {
+    return HasSharedStmt ? Data->getChildren().back() : nullptr;
   }
 
   child_range children() {

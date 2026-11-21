@@ -825,11 +825,15 @@ void StmtPrinter::VisitOMPMetaDirective(OMPMetaDirective *Node) {
     OS << ')';
   }
   OS << NL;
-  // Every variant has the same associated statement; print it once.
-  Stmt *Body = Variants.front();
-  if (auto *D = dyn_cast<OMPExecutableDirective>(Body))
-    Body = D->getRawStmt();
-  PrintStmt(Body);
+  // Print the statement once, from a variant that has it. If none has it,
+  // the statement follows the metadirective.
+  for (Stmt *V : Variants) {
+    auto *D = dyn_cast<OMPExecutableDirective>(V);
+    if (D && D->hasAssociatedStmt()) {
+      PrintStmt(D->getRawStmt());
+      break;
+    }
+  }
 }
 
 void StmtPrinter::VisitOMPParallelDirective(OMPParallelDirective *Node) {

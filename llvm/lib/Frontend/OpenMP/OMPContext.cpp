@@ -468,6 +468,55 @@ int llvm::omp::getBestVariantMatchForContext(
   return -1;
 }
 
+SmallVector<unsigned> llvm::omp::getOrderedVariantMatchesForContext(
+    const SmallVectorImpl<VariantMatchInfo> &VMIs, const OMPContext &Ctx,
+    ArrayRef<unsigned> ConditionIds) {
+  SmallVector<std::pair<APInt, unsigned>> Scores;
+  for (auto [Idx, VMI] : enumerate(VMIs)) {
+    SmallVector<unsigned, 8> ConstructMatches;
+    if (isVariantApplicableInContextHelper(
+            VMI, Ctx, &ConstructMatches,
+            /*DeviceOrImplementationSetOnly=*/false))
+      Scores.emplace_back(getVariantMatchScore(VMI, Ctx, ConstructMatches),
+                          Idx);
+  }
+  // OpenMP 6.0 [9.4]: higher scores first; ties keep the clause order.
+  stable_sort(Scores, [](const auto &LHS, const auto &RHS) {
+    unsigned Width = std::max(LHS.first.getBitWidth(), RHS.first.getBitWidth());
+    return LHS.first.zext(Width).ugt(RHS.first.zext(Width));
+  });
+  // As in getBestVariantMatchForContext, a strict subset only loses to a
+  // variant with the same score. OpenMP 6.0 [9.3] would give it a score of
+  // zero instead.
+  auto IsSubset = [&](unsigned I, unsigned J) {
+    unsigned Cond = ConditionIds.empty() ? 0 : ConditionIds[I];
+    return I != J && (Cond == 0 || Cond == ConditionIds[J]) &&
+           isStrictSubset(VMIs[I], VMIs[J]);
+  };
+  auto SameScore = [](const APInt &A, const APInt &B) {
+    unsigned Width = std::max(A.getBitWidth(), B.getBitWidth());
+    return A.zext(Width) == B.zext(Width);
+  };
+  SmallVector<unsigned> Order;
+  for (auto *Begin = Scores.begin(); Begin != Scores.end();) {
+    auto *End = std::find_if(Begin, Scores.end(), [&](const auto &Entry) {
+      return !SameScore(Entry.first, Begin->first);
+    });
+    // Take the first variant that isn't a strict subset of another one left.
+    SmallVector<unsigned> Tied =
+        to_vector(make_second_range(make_range(Begin, End)));
+    while (!Tied.empty()) {
+      auto *It = find_if(Tied, [&](unsigned I) {
+        return none_of(Tied, [&](unsigned J) { return IsSubset(I, J); });
+      });
+      Order.push_back(*It);
+      Tied.erase(It);
+    }
+    Begin = End;
+  }
+  return Order;
+}
+
 TraitSet llvm::omp::getOpenMPContextTraitSetKind(StringRef S) {
   return StringSwitch<TraitSet>(S)
 #define OMP_TRAIT_SET(Enum, Str) .Case(Str, TraitSet::Enum)
