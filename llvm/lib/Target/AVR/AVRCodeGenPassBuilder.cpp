@@ -42,6 +42,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void AVRCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Expand instructions like
   //   %result = shl i32 %n, %amount
@@ -80,8 +82,6 @@ void AVRCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void AVRCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(AVRAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void AVRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AVRPassRegistry.def"
