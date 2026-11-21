@@ -1282,6 +1282,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectDivScale(I);
   case Intrinsic::amdgcn_ballot:
     return selectBallot(I);
+  case Intrinsic::amdgcn_wqm_vote:
+    return selectWQMVote(I);
   case Intrinsic::amdgcn_reloc_constant:
     return selectRelocConstant(I);
   case Intrinsic::amdgcn_groupstaticsize:
@@ -1724,6 +1726,60 @@ bool AMDGPUInstructionSelector::selectBallot(MachineInstr &I) const {
         .addReg(HiReg)
         .addImm(AMDGPU::sub1);
   }
+
+  I.eraseFromParent();
+  return true;
+}
+
+bool AMDGPUInstructionSelector::selectWQMVote(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  const DebugLoc &DL = I.getDebugLoc();
+  Register DstReg = I.getOperand(0).getReg();
+  Register SrcReg = I.getOperand(2).getReg();
+  const bool IsWave64 = STI.isWave64();
+  const Register Exec = TRI.getExec();
+  const unsigned AndOpc = IsWave64 ? AMDGPU::S_AND_B64 : AMDGPU::S_AND_B32;
+  const unsigned WQMOpc = IsWave64 ? AMDGPU::S_WQM_B64 : AMDGPU::S_WQM_B32;
+
+  Register ConstReg = SrcReg;
+  MachineInstr *SrcDef = MRI->getVRegDef(SrcReg);
+
+  // Check for constant i1 input to wqm_vote
+  if (SrcDef && SrcDef->getOpcode() == AMDGPU::G_AMDGPU_COPY_VCC_SCC)
+    ConstReg = SrcDef->getOperand(1).getReg();
+  std::optional<ValueAndVReg> Arg =
+      getIConstantVRegValWithLookThrough(ConstReg, *MRI);
+
+  if (Arg) {
+    // Constant false can be simplified to 0
+    if (Arg->Value.isZero()) {
+      // DstReg = S_MOV 0
+      auto Mov =
+          BuildMI(*BB, &I, DL,
+                  TII.get(IsWave64 ? AMDGPU::S_MOV_B64 : AMDGPU::S_MOV_B32),
+                  DstReg)
+              .addImm(0);
+      constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+      I.eraseFromParent();
+      return true;
+    }
+
+    // SrcReg = EXEC for constant true
+    SrcReg = Exec;
+  } else {
+    // SrcReg = S_AND SrcReg, EXEC
+    Register MaskedSrc = MRI->createVirtualRegister(TRI.getBoolRC());
+    auto And = BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedSrc)
+                   .addReg(SrcReg)
+                   .addReg(Exec)
+                   .setOperandDead(3);
+    constrainSelectedInstRegOperands(*And, TII, TRI, RBI);
+    SrcReg = MaskedSrc;
+  }
+
+  auto Vote = BuildMI(*BB, &I, DL, TII.get(WQMOpc), DstReg);
+  Vote.addReg(SrcReg);
+  constrainSelectedInstRegOperands(*Vote, TII, TRI, RBI);
 
   I.eraseFromParent();
   return true;
