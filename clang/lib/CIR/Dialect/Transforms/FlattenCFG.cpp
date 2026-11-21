@@ -70,11 +70,14 @@ void walkRegionSkipping(
 /// until its nested structured ops are flat.
 ///
 /// CaseOps are excluded because they are structural children of SwitchOp and
-/// are handled by the SwitchOp flattening pattern.
+/// are handled by the SwitchOp flattening pattern. Ops from other dialects
+/// (e.g. OpenMP and OpenACC constructs) keep their regions after this pass, so
+/// they never block their parent; CIR ops nested inside them are still found.
 static bool hasNestedOpsToFlatten(mlir::Region &region) {
   return region
       .walk([](mlir::Operation *op) {
-        if (op->getNumRegions() > 0 && !isa<cir::CaseOp>(op))
+        if (op->getNumRegions() > 0 && !isa<cir::CaseOp>(op) &&
+            isa<cir::CIRDialect>(op->getDialect()))
           return mlir::WalkResult::interrupt();
         return mlir::WalkResult::advance();
       })
@@ -1240,7 +1243,9 @@ public:
               funcOp->getParentOfType<mlir::ModuleOp>());
           uint64_t alignment =
               dataLayout.getAlignment(operand.getType(), true).value();
-          cir::PointerType ptrType = cir::PointerType::get(operand.getType());
+          cir::PointerType ptrType = cir::PointerType::get(
+              operand.getType(),
+              dataLayout.getAllocaAddrSpace(rewriter.getContext()));
           alloca =
               cir::AllocaOp::create(rewriter, loc, ptrType, "__ret_operand_tmp",
                                     rewriter.getI64IntegerAttr(alignment));

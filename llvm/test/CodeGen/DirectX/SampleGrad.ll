@@ -379,3 +379,44 @@ define void @sample_grad_texture2d_scalarized(float %u, float %v, float %ddxu,
   call void @use_float4(<4 x float> %data)
   ret void
 }
+
+; Leading literals are folded into the constant base of the insertelement
+; chain, so those components come from the base rather than an insert.
+; CHECK-LABEL: define void @sample_grad_texture2d_constant_base(
+define void @sample_grad_texture2d_constant_base(float %v, float %ddxu,
+                                                 float %ddyv) {
+  %texture = call target("dx.Texture", <4 x float>, 0, 0, 0, 2)
+      @llvm.dx.resource.handlefrombinding.tdx.Texture_v4f32_0_0_0_2t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+  %sampler = call target("dx.Sampler", 0)
+      @llvm.dx.resource.handlefrombinding.tdx.Sampler_0t(
+          i32 0, i32 0, i32 1, i32 0, ptr null)
+
+  %coords = insertelement <2 x float> <float 0.5, float poison>, float %v, i32 1
+  %ddx = insertelement <2 x float> <float poison, float 0.0>, float %ddxu, i32 0
+  %ddy = insertelement <2 x float> <float 0.0, float poison>, float %ddyv, i32 1
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: %[[SAMPLE:.*]] = call %dx.types.ResRet.f32
+  ; CHECK-SAME: @dx.op.sampleGrad.f32(i32 63,
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: %dx.types.Handle %{{[^,]*}},
+  ; CHECK-SAME: float 5.000000e-01, float %v, float undef, float undef,
+  ; CHECK-SAME: i32 undef, i32 undef, i32 undef,
+  ; CHECK-SAME: float %ddxu, float 0.000000e+00, float undef,
+  ; CHECK-SAME: float 0.000000e+00, float %ddyv, float undef,
+  ; CHECK-SAME: float undef)
+  %data = call <4 x float>
+      @llvm.dx.resource.samplegrad.v4f32.tdx.Texture_v4f32_0_0_0_2t.tdx.Sampler_0t.v2f32.v2f32.v2f32.v2i32(
+          target("dx.Texture", <4 x float>, 0, 0, 0, 2) %texture,
+          target("dx.Sampler", 0) %sampler,
+          <2 x float> %coords, <2 x float> %ddx, <2 x float> %ddy,
+          <2 x i32> zeroinitializer)
+
+  ; CHECK-NOT: insertelement
+  ; CHECK-NOT: extractelement
+  ; CHECK: extractvalue %dx.types.ResRet.f32 %[[SAMPLE]], 0
+  call void @use_float4(<4 x float> %data)
+  ret void
+}

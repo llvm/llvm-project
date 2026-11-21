@@ -15,10 +15,10 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_DOUBLE_EVAL_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -54,7 +54,7 @@ LIBC_INLINE float exp2f(float x) {
 #endif // LIBC_TARGET_CPU_HAS_NEAREST_INT
 
     // dx = lo = x - (hi + mid) = x - kf * 2^(-5)
-    double dx = fputil::multiply_add(-0x1.0p-5f, kf, x);
+    double dx = fputil::sub_multiply(x, 0x1.0p-5f, kf);
 
     // hi = floor(kf * 2^(-4))
     // exp_hi = shift hi to the exponent field of double precision.

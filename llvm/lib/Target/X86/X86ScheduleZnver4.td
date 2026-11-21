@@ -573,14 +573,7 @@ def Zn4WritePDEP_PEXT : SchedWriteRes<[Zn4ALU1]> {
 def : InstRW<[Zn4WritePDEP_PEXT], (instrs PDEP32rr, PDEP64rr,
                                           PEXT32rr, PEXT64rr)>;
 
-defm : Zn4WriteResIntPair<WriteADC, [Zn4ALU0123], 1, [4], 1>; // Integer ALU + flags op.
-
-def Zn4WriteADC8mr_SBB8mr : SchedWriteRes<[Zn4AGU012, Zn4Load, Zn4ALU0123, Zn4Store]> {
-  let Latency = 1;
-  let ReleaseAtCycles = [1, 1, 7, 1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn4WriteADC8mr_SBB8mr], (instrs ADC8mr, SBB8mr)>;
+defm : Zn4WriteResIntPair<WriteADC, [Zn4ALU0123], 1, [1], 1>; // Integer ALU + flags op.
 
 // This is for simple LEAs with one or two input operands.
 defm : Zn4WriteResInt<WriteLEA, [Zn4AGU012], 1, [1], 1>;     // LEA instructions can't fold loads.
@@ -623,15 +616,15 @@ def Zn4SlowLEA16r : SchedWriteRes<[Zn4ALU0123]> {
 def : InstRW<[Zn4SlowLEA16r], (instrs LEA16r)>;
 
 // Integer multiplication
-defm : Zn4WriteResIntPair<WriteIMul8, [Zn4Multiplier], 3, [3], 1>; // Integer 8-bit multiplication.
-defm : Zn4WriteResIntPair<WriteIMul16, [Zn4Multiplier], 3, [3], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
+defm : Zn4WriteResIntPair<WriteIMul8, [Zn4Multiplier], 3, [1], 1>; // Integer 8-bit multiplication.
+defm : Zn4WriteResIntPair<WriteIMul16, [Zn4Multiplier], 3, [2], 3, /*LoadUOps=*/1>; // Integer 16-bit multiplication.
 defm : Zn4WriteResIntPair<WriteIMul16Imm, [Zn4Multiplier], 4, [4], 2>; // Integer 16-bit multiplication by immediate.
 defm : Zn4WriteResIntPair<WriteIMul16Reg, [Zn4Multiplier], 3, [1], 1>; // Integer 16-bit multiplication by register.
-defm : Zn4WriteResIntPair<WriteIMul32, [Zn4Multiplier], 3, [3], 2>;    // Integer 32-bit multiplication.
+defm : Zn4WriteResIntPair<WriteIMul32, [Zn4Multiplier], 3, [1], 2>;    // Integer 32-bit multiplication.
 defm : Zn4WriteResIntPair<WriteMULX32, [Zn4Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn4WriteResIntPair<WriteIMul32Imm, [Zn4Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by immediate.
 defm : Zn4WriteResIntPair<WriteIMul32Reg, [Zn4Multiplier], 3, [1], 1>; // Integer 32-bit multiplication by register.
-defm : Zn4WriteResIntPair<WriteIMul64, [Zn4Multiplier], 3, [3], 2>;    // Integer 64-bit multiplication.
+defm : Zn4WriteResIntPair<WriteIMul64, [Zn4Multiplier], 3, [1], 2>;    // Integer 64-bit multiplication.
 defm : Zn4WriteResIntPair<WriteMULX64, [Zn4Multiplier], 3, [1], 2>;    // Integer 32-bit Unsigned Multiply Without Affecting Flags.
 defm : Zn4WriteResIntPair<WriteIMul64Imm, [Zn4Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by immediate.
 defm : Zn4WriteResIntPair<WriteIMul64Reg, [Zn4Multiplier], 3, [1], 1>; // Integer 64-bit multiplication by register.
@@ -1184,9 +1177,10 @@ defm : Zn4WriteResXMMPair<WritePack, [Zn4FPFMisc12], 2, [1], 1>;  // Vector shuf
 defm : Zn4WriteResXMMPair<WritePackX, [Zn4FPFMisc12], 2, [1], 1>; // Vector shuffles (XMM).
 defm : Zn4WriteResYMMPair<WritePackY, [Zn4FPFMisc12], 2, [1], 1>; // Vector shuffles (YMM).
 defm : Zn4WriteResZMMPair<WritePackZ, [Zn4FPFMisc12], 2, [2], 1>; // Vector shuffles (ZMM).
-defm : Zn4WriteResXMMPair<WriteBlend, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends.
-defm : Zn4WriteResYMMPair<WriteBlendY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
-defm : Zn4WriteResZMMPair<WriteBlendZ, [Zn4FPVMisc0123], 1, [2], 1>; // Vector blends (ZMM).
+defm : Zn4WriteResXMMPair<WritePBLENDDX, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn4WriteResYMMPair<WritePBLENDDY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
+defm : Zn4WriteResXMMPair<WritePBLENDWX, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (XMM).
+defm : Zn4WriteResYMMPair<WritePBLENDWY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn4WriteResXMMPair<WriteVarBlend, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn4WriteResYMMPair<WriteVarBlendY, [Zn4FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
 defm : Zn4WriteResZMMPair<WriteVarBlendZ, [Zn4FPVMul01], 1, [2], 1>; // Vector variable blends (ZMM).

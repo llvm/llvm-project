@@ -1,0 +1,10 @@
+# REQUIRES: asserts, python
+#
+# JSON output includes deprecated settings, so it can be fed back to
+# "settings set".
+#
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.deprecated-setting true' \
+# RUN:   -o 'script import json; s = lldb.SBStream(); lldb.debugger.GetSetting("testing").GetAsJSON(s); d = json.loads(s.GetData()); print("value:", d["deprecated-setting"])' \
+# RUN:   2>&1 | FileCheck %s
+# CHECK: value: True

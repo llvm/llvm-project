@@ -16,6 +16,7 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 class raw_ostream;
 class Value;
 
@@ -23,6 +24,7 @@ namespace safestack {
 
 /// Compute the layout of an unsafe stack frame.
 class StackLayout {
+  const CodeGenOptions &Opts;
   Align MaxAlignment;
 
   struct StackRegion {
@@ -53,7 +55,8 @@ class StackLayout {
   void layoutObject(StackObject &Obj);
 
 public:
-  StackLayout(Align StackAlignment) : MaxAlignment(StackAlignment) {}
+  StackLayout(const CodeGenOptions &Opts, Align StackAlignment)
+      : Opts(Opts), MaxAlignment(StackAlignment) {}
 
   /// Add an object to the stack frame. Value pointer is opaque and used as a
   /// handle to retrieve the object's offset in the frame later.

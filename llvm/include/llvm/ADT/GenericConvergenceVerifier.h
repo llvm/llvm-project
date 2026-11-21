@@ -48,7 +48,6 @@ public:
 private:
   raw_ostream *OS;
   std::function<void(const Twine &Message)> FailureCB;
-  DominatorTreeT *DT;
   CycleInfoT CI;
   ContextT Context;
 

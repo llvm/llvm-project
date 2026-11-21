@@ -83,6 +83,7 @@ public:
                 MachineBlockPlacementPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
@@ -107,6 +108,8 @@ private:
   // Add passes that perform straight-line scalar optimizations.
   void addStraightLineScalarOptimizationPasses(PassManagerWrapper &PMW);
 };
+
+} // namespace
 
 void NVPTXCodeGenPassBuilder::addEarlyCSEOrGVNPass(PassManagerWrapper &PMW) {
   if (getOptLevel() == CodeGenOptLevel::Aggressive)
@@ -286,8 +289,6 @@ void NVPTXCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void NVPTXCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(NVPTXAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void NVPTXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "NVPTXPassRegistry.def"

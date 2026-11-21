@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -55,6 +56,8 @@ using namespace SCEVPatternMatch;
 #define DEBUG_TYPE "constraint-elimination"
 
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
+STATISTIC(NumDoesHoldDepthLimitHit,
+          "Number of doesHold queries cut off by the nesting depth limit");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
 
@@ -360,15 +363,30 @@ class ConstraintInfo {
 
   const DataLayout &DL;
 
+public:
+  /// Maximum nesting of doesHold queries. Deeper queries conservatively return
+  /// false.
+  static constexpr unsigned MaxDoesHoldDepth = 2;
+
+private:
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+  /// Current nesting depth of doesHold.
+  unsigned DoesHoldDepth = 0;
+
+  /// Number of doesHold queries that have been cut off by MaxDoesHoldDepth so
+  /// far.
+  unsigned NumDepthLimitHits = 0;
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
   getDecomposeCache() {
     return DecomposeCache;
   }
+
+  unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
 
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
@@ -767,35 +785,26 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
   if (It != Cache.end())
     return It->second;
 
+  unsigned HitsBefore = Info.getNumDepthLimitHits();
   Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
-  Info.getDecomposeCache().insert({Key, Result});
+  // If a doesHold query was cut off while decomposing, the result may be less
+  // precise than what a shallower query could compute, so don't cache it.
+  if (Info.getNumDepthLimitHits() == HitsBefore)
+    Info.getDecomposeCache().insert({Key, Result});
   return Result;
 }
 
 static Decomposition decomposeImpl(Value *V, ConstraintInfo &Info,
                                    bool IsSigned, const DataLayout &DL) {
-  auto MergeResults = [&Info, IsSigned, &DL](
-                          Value *A, Value *B, bool IsSignedB,
-                          bool IsSub = false) -> std::optional<Decomposition> {
+  auto MergeResults = [&Info, IsSigned,
+                       &DL](Value *A, Value *B,
+                            bool IsSignedB) -> std::optional<Decomposition> {
     auto ResA = decompose(A, Info, IsSigned, DL);
     auto ResB = decompose(B, Info, IsSignedB, DL);
-    if (IsSub ? ResA.sub(ResB) : ResA.add(ResB))
+    if (ResA.add(ResB))
       return std::nullopt;
     return ResA;
   };
-
-  // An add/sub.with.overflow is only decomposed for the fact queued on its
-  // no-overflow edge, where it does not overflow.
-  if (auto *WO = dyn_cast<WithOverflowInst>(V)) {
-    Instruction::BinaryOps Opc = WO->getBinaryOp();
-    if ((Opc == Instruction::Add || Opc == Instruction::Sub) &&
-        isKnownNoWrap(Opc, WO->getLHS(), WO->getRHS(), WO->getNoWrapKind(),
-                      Info, IsSigned))
-      if (auto Decomp = MergeResults(WO->getLHS(), WO->getRHS(), IsSigned,
-                                     Opc == Instruction::Sub))
-        return *Decomp;
-    return V;
-  }
 
   Type *Ty = V->getType()->getScalarType();
   if (Ty->isPointerTy() && !IsSigned) {
@@ -1151,6 +1160,15 @@ ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
 }
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
+  // Decomposing A and B may itself call doesHold, once per level of a chain of
+  // operations. Cut off deep nesting to bound stack usage and compile time.
+  if (DoesHoldDepth >= MaxDoesHoldDepth) {
+    ++NumDoesHoldDepthLimitHit;
+    ++NumDepthLimitHits;
+    return false;
+  }
+  SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
+
   auto R = getConstraintForSolving(Pred, A, B);
   if (R.empty())
     return false;
@@ -1839,17 +1857,6 @@ void State::addInfoFor(BasicBlock &BB) {
     return;
 
   Value *Cond = Br->getCondition();
-
-  // On the false successor of a branch on the overflow bit of an add/sub
-  // overflow intrinsic, its results equal the plain add/sub.
-  WithOverflowInst *WO;
-  if (match(Cond, m_ExtractValue<1>(m_WithOverflowInst(WO))) &&
-      WO->getBinaryOp() != Instruction::Mul &&
-      canAddSuccessor(BB, Br->getSuccessor(1)))
-    for (User *U : WO->users())
-      if (match(U, m_ExtractValue<0>(m_Value())))
-        WorkList.push_back(FactOrCheck::getConditionFact(
-            DT.getNode(Br->getSuccessor(1)), CmpInst::ICMP_EQ, U, WO));
 
   // If the condition is a chain of ORs/AND and the successor only has the
   // current block as predecessor, queue conditions for the successor.

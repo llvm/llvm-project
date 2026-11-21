@@ -86,6 +86,28 @@ func.func @transfer_read_and_vector_rank_reducing(
 //  CHECK-SAME:     memref<1x1x3x2x1xf32> to memref<3x2xf32>
 //       CHECK:   vector.transfer_read %[[SUBVIEW]]{{.*}} {in_bounds = [true, true]} : memref<3x2xf32>, vector<3x2xf32>
 
+func.func @transfer_read_and_vector_rank_reducing_masked_passthru(
+      %arg : memref<1x1x3x2x1xf32>,
+      %mask : vector<3x2x1xi1>,
+      %passthru : vector<3x2x1xf32>) -> vector<3x2x1xf32> {
+    %c0 = arith.constant 0 : index
+    %cst = arith.constant 0.0 : f32
+    %v = vector.mask %mask, %passthru {
+      vector.transfer_read %arg[%c0, %c0, %c0, %c0, %c0], %cst :
+        memref<1x1x3x2x1xf32>, vector<3x2x1xf32>
+    } : vector<3x2x1xi1> -> vector<3x2x1xf32>
+    return %v : vector<3x2x1xf32>
+}
+// CHECK-LABEL: func @transfer_read_and_vector_rank_reducing_masked_passthru
+//  CHECK-SAME:     %[[ARG:.+]]: memref<1x1x3x2x1xf32>
+//  CHECK-SAME:     %[[MASK:.+]]: vector<3x2x1xi1>
+//  CHECK-SAME:     %[[PASSTHRU:.+]]: vector<3x2x1xf32>
+//       CHECK:   %[[SUBVIEW:.+]] = memref.subview %[[ARG]]
+//   CHECK-DAG:   %[[MASK_2D:.+]] = vector.shape_cast %[[MASK]] : vector<3x2x1xi1> to vector<3x2xi1>
+//   CHECK-DAG:   %[[PASSTHRU_2D:.+]] = vector.shape_cast %[[PASSTHRU]] : vector<3x2x1xf32> to vector<3x2xf32>
+//       CHECK:   %[[READ:.+]] = vector.mask %[[MASK_2D]], %[[PASSTHRU_2D]] { vector.transfer_read %[[SUBVIEW]]
+//       CHECK:   vector.shape_cast %[[READ]] : vector<3x2xf32> to vector<3x2x1xf32>
+
 func.func @transfer_write_and_vector_rank_reducing(
       %arg : memref<1x1x3x2x1xf32>,
       %vec : vector<3x2x1xf32>) {

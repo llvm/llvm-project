@@ -49,6 +49,17 @@ clang:headers:
     - any-glob-to-any-file:
       - clang/lib/Headers/**/*
 
+clang-repl:
+  - changed-files:
+    - any-glob-to-any-file:
+      - clang/docs/ClangRepl.md
+      - clang/docs/ClangRepl_design.png
+      - clang/include/clang/Interpreter/**/*
+      - clang/lib/Interpreter/**/*
+      - clang/test/Interpreter/**/*
+      - clang/tools/clang-repl/**/*
+      - clang/unittests/Interpreter/**/*
+
 compiler-rt:
   - changed-files:
     - any-glob-to-any-file:
@@ -697,7 +708,7 @@ clang:ssaf:
       - clang/docs/ScalableStaticAnalysis/**
       - clang/include/clang/ScalableStaticAnalysis/**
       - clang/lib/ScalableStaticAnalysis/**
-      - clang/test/Analysis/Scalable/**
+      - clang/test/ScalableStaticAnalysis/**
       - clang/unittests/ScalableStaticAnalysis/**
 
 clang:static analyzer:
