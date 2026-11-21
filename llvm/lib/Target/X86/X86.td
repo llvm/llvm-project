@@ -596,6 +596,10 @@ def TuningSlowLEA : SubtargetFeature<"slow-lea", "SlowLEA", "true",
                                    "LEA instruction with certain arguments is slow",
                                    [], InlineIgnore>;
 
+def TuningSlowSSE4A : SubtargetFeature<"slow-sse4a", "SlowSSE4A", "true",
+                                   "SSE EXTRQ/INSERTQ SSE4A instruction are slow on AVX targets",
+                                   [], InlineIgnore>;
+
 // True if the LEA instruction has all three source operands: base, index,
 // and offset or if the LEA instruction uses base and index registers where
 // the base is EBP, RBP,or R13
@@ -1718,6 +1722,7 @@ def ProcessorFeatures {
                                      TuningSlowPDEP,
                                      TuningSlowPEXT,
                                      TuningSlowSHLD,
+                                     TuningSlowSSE4A,
                                      TuningSBBDepBreaking,
                                      TuningInsertVZEROUPPER,
                                      TuningAllowLight256Bit,
@@ -1747,9 +1752,10 @@ def ProcessorFeatures {
                                                 TuningSlowVecCompressStore,
                                                 TuningCOMPRESSFalseDeps,
                                                 TuningEXPANDFalseDeps];
+  list<SubtargetFeature> ZN4RemoveTuning = [TuningSlowSSE4A,
+                                            TuningSlowVecMaskStore];
   list<SubtargetFeature> ZN4Tuning =
-    !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning),
-                [TuningSlowVecMaskStore]);
+    !listremove(!listconcat(ZN3Tuning, ZN4AdditionalTuning), ZN4RemoveTuning);
   list<SubtargetFeature> ZN4AdditionalFeatures = [FeatureAVX512,
                                                   FeatureCDI,
                                                   FeatureDQI,
