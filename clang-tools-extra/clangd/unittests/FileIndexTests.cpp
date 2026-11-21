@@ -734,7 +734,15 @@ TEST(FileIndexTest, Profile) {
               UnorderedElementsAre(Pair("index", _), Pair("slabs", _)));
 
   ASSERT_THAT(MT.child("preamble").child("index").total(), Gt(0U));
-  ASSERT_THAT(MT.child("main_file").child("index").total(), Gt(0U));
+  // The main file has no symbols: its index has nothing but the slabs.
+  ASSERT_THAT(MT.child("main_file").total(), Gt(0U));
+
+  // The indexes keep the slabs alive, and count them. They must not be
+  // reported twice.
+  size_t Slabs = MT.child("preamble").child("slabs").total() +
+                 MT.child("main_file").child("slabs").total();
+  ASSERT_THAT(Slabs, Gt(0U));
+  EXPECT_LT(MT.total(), FI.estimateMemoryUsage() + Slabs);
 }
 
 TEST(FileSymbolsTest, Profile) {
@@ -746,9 +754,11 @@ TEST(FileSymbolsTest, Profile) {
             false);
   llvm::BumpPtrAllocator Alloc;
   MemoryTree MT(&Alloc);
-  FS.profile(MT);
+  size_t KeptAliveByIndex = FS.profile(MT);
   ASSERT_THAT(MT.children(), UnorderedElementsAre(Pair("f1", _), Pair("f2", _),
                                                   Pair("f3", _)));
+  // The symbols and the refs, which an index keeps alive.
+  EXPECT_EQ(KeptAliveByIndex, MT.child("f1").total() + MT.child("f2").total());
   EXPECT_THAT(MT.child("f1").children(), ElementsAre(Pair("symbols", _)));
   EXPECT_THAT(MT.child("f1").total(), Gt(0U));
   EXPECT_THAT(MT.child("f2").children(), ElementsAre(Pair("references", _)));
