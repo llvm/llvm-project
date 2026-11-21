@@ -39,6 +39,10 @@ static bool validateVectorContractOperands(Value prodOp, bool isVnni) {
     if (readOp.hasOutOfBoundsDim())
       return false;
 
+    // The x86 packed loads read every lane, so they cannot keep a mask.
+    if (readOp.getMask())
+      return false;
+
     if (!readOp.getPermutationMap().isMinorIdentity())
       return false;
   }
@@ -297,7 +301,7 @@ struct VectorContractBF16ToFMA : public AddContractionOpRewritePattern {
         !validateVectorContractOperands(contractOp.getRhs(), isVnni)) {
       return rewriter.notifyMatchFailure(
           contractOp, "The LHS or RHS is in an invalid format. Either it has "
-                      "false in-bounds, "
+                      "false in-bounds, a mask, "
                       "a non-identity permutation map, a non-zero VNNI offset, "
                       "a non-memref "
                       "source, or a non-unit VNNI stride");
