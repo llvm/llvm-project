@@ -227,6 +227,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI) const {
 
+  // X86 has no scalable vector types and the code below assumes a fixed-width
+  // type.
+  if (isa<ScalableVectorType>(Ty))
+    return InstructionCost::getInvalid();
+
   // vXi8 multiplications are always promoted to vXi16.
   // Sub-128-bit types can be extended/packed more efficiently.
   if (Opcode == Instruction::Mul && Ty->isVectorTy() &&
