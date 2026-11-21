@@ -187,6 +187,76 @@ return:                                           ; preds = %if.end, %if.then
   ret float %retval.0
 }
 
+; Flags of a hoisted nested GEP must be intersected with the GEPs at the same
+; position on the other paths, not with the outermost GEPs.
+define i32 @gep_flags_nested(i1 %b, ptr %p) {
+; CHECK-LABEL: define i32 @gep_flags_nested(
+; CHECK-SAME: i1 [[B:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[P]], i64 -4
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[VA:%.*]] = load i32, ptr [[TMP1]], align 4
+; CHECK-NEXT:    br i1 [[B]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[A0:%.*]] = getelementptr nuw i8, ptr [[P]], i64 -4
+; CHECK-NEXT:    [[A1:%.*]] = getelementptr nuw i8, ptr [[A0]], i64 4
+; CHECK-NEXT:    ret i32 [[VA]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[B0:%.*]] = getelementptr i8, ptr [[P]], i64 -4
+; CHECK-NEXT:    [[B1:%.*]] = getelementptr nuw i8, ptr [[B0]], i64 4
+; CHECK-NEXT:    ret i32 [[VA]]
+;
+entry:
+  br i1 %b, label %if.then, label %if.else
+
+if.then:
+  %a0 = getelementptr nuw i8, ptr %p, i64 -4
+  %a1 = getelementptr nuw i8, ptr %a0, i64 4
+  %va = load i32, ptr %a1, align 4
+  ret i32 %va
+
+if.else:
+  %b0 = getelementptr i8, ptr %p, i64 -4
+  %b1 = getelementptr nuw i8, ptr %b0, i64 4
+  %vb = load i32, ptr %b1, align 4
+  ret i32 %vb
+}
+
+; Flags of a hoisted stored-value GEP must be intersected with the stored-value
+; GEPs on the other paths, not with the pointer operand GEPs.
+define void @gep_flags_stored_value(i1 %b, ptr %p, ptr %q) {
+; CHECK-LABEL: define void @gep_flags_stored_value(
+; CHECK-SAME: i1 [[B:%.*]], ptr [[P:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[Q]], i64 -4
+; CHECK-NEXT:    store ptr [[TMP1]], ptr [[TMP0]], align 8
+; CHECK-NEXT:    br i1 [[B]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[PA:%.*]] = getelementptr nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[VA:%.*]] = getelementptr nuw i8, ptr [[Q]], i64 -4
+; CHECK-NEXT:    ret void
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[PB:%.*]] = getelementptr nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[VB:%.*]] = getelementptr i8, ptr [[Q]], i64 -4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %b, label %if.then, label %if.else
+
+if.then:
+  %pa = getelementptr nuw i8, ptr %p, i64 8
+  %va = getelementptr nuw i8, ptr %q, i64 -4
+  store ptr %va, ptr %pa, align 8
+  ret void
+
+if.else:
+  %pb = getelementptr nuw i8, ptr %p, i64 8
+  %vb = getelementptr i8, ptr %q, i64 -4
+  store ptr %vb, ptr %pb, align 8
+  ret void
+}
+
 
 !1 = !{!2, !2, i64 0}
 !2 = !{!"int", !3, i64 0}
