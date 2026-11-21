@@ -1,0 +1,31 @@
+## A BTF type section does not require a .BTF.ext section. --btf must not
+## consume the input file as an option argument.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objdump --btf %t | FileCheck %s --match-full-lines
+# RUN: llvm-objdump --btf=.BTF %t | FileCheck %s --match-full-lines
+# RUN: llvm-objdump --btf -j .BTF %t 2>&1 | FileCheck %s --check-prefix=FILTER
+# RUN: llvm-objdump --btf -j .text %t 2>&1 | FileCheck %s --check-prefix=OTHER
+# RUN: not llvm-objdump --btf= %t 2>&1 | FileCheck %s --check-prefix=EMPTY
+# RUN: not llvm-objdump --btf --raw-clang-ast %t 2>&1 | FileCheck %s --check-prefix=RAW
+# RUN: not llvm-objdump --btf --macho %t 2>&1 | FileCheck %s --check-prefix=MACHO
+# FILTER-NOT: warning:
+# FILTER: [1] INT 'int'
+# FILTER-NOT: warning:
+# OTHER-NOT: [1] INT
+# EMPTY: --btf= requires a non-empty section name
+# RAW: --btf cannot be used with --raw-clang-ast
+# MACHO: --btf cannot be used with --macho
+# CHECK: [1] INT 'int' size=4 bits_offset=0 nr_bits=32 encoding=SIGNED
+# CHECK-NEXT: [2] STRUCT 'foo' size=4 vlen=1
+# CHECK-NEXT: {{ *}}'a' type_id=1 bits_offset=0
+
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    Content: "9feb0100180000000000000028000000280000000b0000000100000000000001040000002000000105000000010000040400000009000000010000000000000000696e7400666f6f006100"

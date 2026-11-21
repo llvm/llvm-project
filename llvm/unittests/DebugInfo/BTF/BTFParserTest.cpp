@@ -34,6 +34,117 @@ static yaml::BinaryRef makeBinRef(const T *Ptr, size_t Size = sizeof(T)) {
 }
 
 namespace {
+TEST(BTFParserTest, TypesOnlyBounds) {
+  struct Input {
+    BTF::Header Header = {BTF::MAGIC,
+                          1,
+                          0,
+                          sizeof(BTF::Header),
+                          0,
+                          sizeof(BTF::CommonType),
+                          sizeof(BTF::CommonType),
+                          1};
+    BTF::CommonType Type = {0, BTF::BTF_KIND_PTR << 24, {0}};
+    char String = 0;
+  } Data;
+  auto Bytes = [&] {
+    return StringRef(reinterpret_cast<const char *>(&Data),
+                     offsetof(Input, String) + 1);
+  };
+  BTFParser Parser;
+  ASSERT_SUCCEEDED(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost));
+  EXPECT_EQ(Parser.typesCount(), 2u);
+  EXPECT_THAT_ERROR(
+      Parser.parseTypes(Bytes().take_front(8), sys::IsLittleEndianHost),
+      Failed());
+  Data.Header.TypeLen = 11;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Header.TypeLen = sizeof(BTF::CommonType);
+  Data.Type.NameOff = 2;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Type.NameOff = 0;
+  Data.Type.Info = 127u << 24;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Type.Info = BTF::BTF_KIND_PTR << 24;
+  Data.Header.StrOff = UINT32_MAX;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Header.StrOff = sizeof(BTF::CommonType);
+  Data.String = 'x';
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.String = 0;
+  Data.Header.HdrLen = 8;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+}
+
+TEST(BTFParserTest, TypesOnlyValidation) {
+  struct Input {
+    BTF::Header Header = {BTF::MAGIC, 1, 0, sizeof(BTF::Header), 0, 24, 24, 2};
+    BTF::CommonType Type = {0, (BTF::BTF_KIND_STRUCT << 24) | 1, {4}};
+    uint32_t Tail[3] = {0, 1, 0};
+    char Strings[2] = {0, 0};
+  } Data;
+  auto Bytes = [&] {
+    return StringRef(reinterpret_cast<const char *>(&Data),
+                     offsetof(Input, Strings) + sizeof(Data.Strings));
+  };
+  BTFParser Parser;
+  ASSERT_SUCCEEDED(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost));
+  Data.Header.TypeLen = 20;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Header.TypeLen = 24;
+  Data.Tail[0] = 2;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Tail[0] = 0;
+  Data.Strings[1] = 'x';
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+  Data.Strings[1] = 0;
+  Data.Header.StrOff = 20;
+  EXPECT_THAT_ERROR(Parser.parseTypes(Bytes(), sys::IsLittleEndianHost),
+                    Failed());
+}
+
+// A types-only section holding Words after Pad bytes, then an empty string
+// table. Only the property under test is invalid in each use below.
+static std::string makeTypesOnly(ArrayRef<uint32_t> Words, uint32_t Pad = 0) {
+  uint32_t TypeLen = Words.size() * sizeof(uint32_t);
+  BTF::Header H = {BTF::MAGIC, 1, 0, sizeof(BTF::Header), 0, 0, 0, 1};
+  H.TypeOff = Pad;
+  H.TypeLen = TypeLen;
+  H.StrOff = Pad + TypeLen;
+  std::string S(reinterpret_cast<const char *>(&H), sizeof(H));
+  S.append(Pad, '\0');
+  S.append(reinterpret_cast<const char *>(Words.data()), TypeLen);
+  S.push_back('\0');
+  return S;
+}
+
+TEST(BTFParserTest, TypesOnlyLayout) {
+  const uint32_t Ptr[] = {0, BTF::BTF_KIND_PTR << 24, 0};
+  const uint32_t PtrWithVlen[] = {0, (BTF::BTF_KIND_PTR << 24) | 1, 0};
+  BTFParser Parser;
+  ASSERT_SUCCEEDED(
+      Parser.parseTypes(makeTypesOnly(Ptr), sys::IsLittleEndianHost));
+  ASSERT_SUCCEEDED(
+      Parser.parseTypes(makeTypesOnly(Ptr, 4), sys::IsLittleEndianHost));
+  // Misaligned type records.
+  EXPECT_THAT_ERROR(
+      Parser.parseTypes(makeTypesOnly(Ptr, 1), sys::IsLittleEndianHost),
+      Failed());
+  // vlen is reserved for PTR.
+  EXPECT_THAT_ERROR(
+      Parser.parseTypes(makeTypesOnly(PtrWithVlen), sys::IsLittleEndianHost),
+      Failed());
+}
+
 // This is a mockup for an ELF file containing .BTF and .BTF.ext sections.
 // Binary content of these sections corresponds to the value of
 // MockData1::BTF and MockData1::Ext fields.

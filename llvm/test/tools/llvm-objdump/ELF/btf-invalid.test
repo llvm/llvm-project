@@ -1,0 +1,66 @@
+# RUN: yaml2obj %s --docnum=1 -o %t.missing
+# RUN: llvm-objdump --btf %t.missing 2>&1 | FileCheck %s --check-prefix=MISSING
+## With -j, the missing section is reported once, by the shared -j check.
+# RUN: llvm-objdump --btf -j .BTF %t.missing 2>&1 | FileCheck %s --check-prefix=FILTERED
+# RUN: yaml2obj %s --docnum=2 -o %t.header
+# RUN: llvm-objdump --btf %t.header 2>&1 | FileCheck %s --check-prefix=HEADER
+# RUN: yaml2obj %s --docnum=4 -o %t.record
+# RUN: llvm-objdump --btf %t.record 2>&1 | FileCheck %s --check-prefix=RECORD
+# RUN: yaml2obj %s --docnum=5 -o %t.string
+# RUN: llvm-objdump --btf %t.string 2>&1 | FileCheck %s --check-prefix=STRING
+# RUN: yaml2obj %s --docnum=6 -o %t.kind
+# RUN: llvm-objdump --btf %t.kind 2>&1 | FileCheck %s --check-prefix=KIND
+# RUN: llvm-objdump --btf=.BTF %t.header 2>&1 | FileCheck %s --check-prefix=HEADER
+# RUN: yaml2obj %s --docnum=7 -o %t.custom
+# RUN: llvm-objdump --btf=custom %t.custom 2>&1 | FileCheck %s --check-prefix=CUSTOM
+# RUN: yaml2obj %s --docnum=3 -o %t.range
+# RUN: llvm-objdump --btf %t.range 2>&1 | FileCheck %s --check-prefix=RANGE
+# MISSING: warning: {{.*}}section '.BTF' not found
+# FILTERED: warning: {{.*}}.BTF
+# FILTERED-NOT: warning:
+# HEADER: warning: {{.*}}error while reading BTF section '.BTF'
+# RECORD: warning: {{.*}}incomplete BTF type definition
+# STRING: warning: {{.*}}invalid BTF string offset
+# KIND: warning: {{.*}}unknown BTF type kind
+# CUSTOM: warning: {{.*}}error while reading BTF section 'custom':
+# RANGE: warning: {{.*}}error while reading BTF section '.BTF': The end of the file was unexpectedly encountered
+
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    Content: "9feb01"
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    ShOffset: 0xfffffff0
+    ShSize: 64
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    Content: "9feb010018000000000000000c0000000c0000000100000000000000000000010400000000"
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    Content: "9feb010018000000000000000c0000000c0000000100000001000000000000020000000000"
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: .BTF
+    Type: SHT_PROGBITS
+    Content: "9feb010018000000000000000c0000000c00000001000000000000000000007f0000000000"
+--- !ELF
+FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_REL, Machine: EM_X86_64 }
+Sections:
+  - Name: custom
+    Type: SHT_PROGBITS
+    Content: "9feb01"
