@@ -84,3 +84,20 @@ void test6(void) {
     }
   }
 }
+
+// GH242842: tentative array completed by later extern should not warn.
+int gh242842_a[];
+extern int gh242842_a[10];
+
+static int gh242842_b[];
+extern int gh242842_b[10];
+
+int gh242842_c[];
+extern int gh242842_c[10];
+extern int gh242842_c[];
+
+// Block-scope extern does not complete file-scope tentative definition.
+static int gh242842_d[]; // expected-warning {{tentative array definition assumed to have one element}}
+void gh242842_fn(void) {
+  extern int gh242842_d[10];
+}
