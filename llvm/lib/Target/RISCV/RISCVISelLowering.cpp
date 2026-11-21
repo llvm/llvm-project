@@ -626,6 +626,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                          Legal);
       setOperationAction({ISD::SELECT, ISD::VSELECT}, {MVT::v4i16, MVT::v8i8},
                          Custom);
+      setOperationAction(ISD::VSELECT, MVT::v2i32, Custom);
       setOperationAction({ISD::MUL, ISD::MULHS, ISD::MULHU},
                          {MVT::v4i16, MVT::v8i8}, Custom);
       setOperationAction(ISD::MUL, P32VecVTs, Custom);
@@ -3994,6 +3995,25 @@ lowerVectorStrictFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   return DAG.getMergeValues({Truncated, Chain}, DL);
 }
 
+static RTLIB::Libcall getRoundingLibcall(unsigned Opc, MVT VT) {
+  switch (Opc) {
+  case ISD::FTRUNC:
+    return RTLIB::getTRUNC(VT);
+  case ISD::FFLOOR:
+    return RTLIB::getFLOOR(VT);
+  case ISD::FCEIL:
+    return RTLIB::getCEIL(VT);
+  case ISD::FRINT:
+    return RTLIB::getRINT(VT);
+  case ISD::FROUND:
+    return RTLIB::getROUND(VT);
+  case ISD::FROUNDEVEN:
+    return RTLIB::getROUNDEVEN(VT);
+  default:
+    return RTLIB::UNKNOWN_LIBCALL;
+  }
+}
+
 static SDValue
 lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
                                 const RISCVSubtarget &Subtarget) {
@@ -4001,8 +4021,14 @@ lowerFTRUNC_FCEIL_FFLOOR_FROUND(SDValue Op, SelectionDAG &DAG,
   if (VT.isVector())
     return lowerVectorFTRUNC_FCEIL_FFLOOR_FROUND(Op, DAG, Subtarget);
 
-  if (DAG.shouldOptForSize())
-    return SDValue();
+  // Only fall back to libcall expansion for size optimization if a libcall is
+  // actually available (e.g. f16 has no standard math libcalls).
+  if (DAG.shouldOptForSize()) {
+    RTLIB::Libcall LC = getRoundingLibcall(Op.getOpcode(), VT);
+    if (LC != RTLIB::UNKNOWN_LIBCALL &&
+        DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported)
+      return SDValue();
+  }
 
   SDLoc DL(Op);
   SDValue Src = Op.getOperand(0);
@@ -6644,24 +6670,6 @@ static SDValue lowerVECTOR_SHUFFLEAsPSlide1(ShuffleVectorSDNode *SVN,
                      DAG.getBitcast(HalfVT, NewHi));
 }
 
-// Match the packed zero-extend shuffle mask <0, N, 2, N+2, ...>: even result
-// lanes keep operand 0's even lanes and odd result lanes come from operand 1.
-// The odd lanes may select any element of operand 1, which is looser than a
-// strict pair-even mask; DAGCombiner::XformToShuffleWithZero forms exactly this
-// from a packed zero-extend `and`, leaving each zeroed lane at its own
-// position, and lowerVECTOR_SHUFFLEAsPPair then forms the PPAIRE. Undef lanes
-// always match.
-static bool isPackedZExtShuffleMask(ArrayRef<int> Mask) {
-  unsigned NumElts = Mask.size();
-  if (NumElts % 2 != 0)
-    return false;
-  for (unsigned I = 0; I != NumElts / 2; ++I)
-    if ((Mask[2 * I] >= 0 && Mask[2 * I] != (int)(2 * I)) ||
-        (Mask[2 * I + 1] >= 0 && Mask[2 * I + 1] < (int)NumElts))
-      return false;
-  return true;
-}
-
 // Match a legalized deinterleave shuffle on two RV32 vector halves and lower
 // it to an RV32 P narrowing shift on the concatenated source.
 static SDValue
@@ -7465,6 +7473,35 @@ SDValue RISCVTargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return DAG.getNode(ISD::VSELECT, DL, VT, SelectMask, V2, V1);
 }
 
+// Match shuffle masks that can be lowered to a P extension packed pair.
+static bool isPackedPairShuffleMask(ArrayRef<int> Mask) {
+  unsigned NumElts = Mask.size();
+  if (NumElts % 2 != 0)
+    return false;
+
+  // Tracks the source number in bit 1 and the polarity in bit 0. -1 means we
+  // don't know anything yet.
+  int Src[2] = {-1, -1};
+  for (unsigned I = 0; I < NumElts; ++I) {
+    if (Mask[I] < 0)
+      continue;
+
+    // Each element must belong to the correct pair.
+    unsigned Local = unsigned(Mask[I]) % NumElts;
+    if (Local / 2 != I / 2)
+      return false;
+
+    unsigned Index = I % 2;
+    // Combine the source number and the polarity into a single value.
+    int Source = (unsigned(Mask[I]) / NumElts) * 2 + Local % 2;
+    if (Src[Index] >= 0 && Src[Index] != Source)
+      return false;
+    Src[Index] = Source;
+  }
+
+  return Src[0] >= 0 && Src[1] >= 0;
+}
+
 bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
                                                  EVT VT) const {
   // Enable DAGCombiner::XformToShuffleWithZero to rewrite a packed zero-extend
@@ -7475,10 +7512,8 @@ bool RISCVTargetLowering::isVectorClearMaskLegal(ArrayRef<int> M,
   if (!Subtarget.hasStdExtP() || !VT.isSimple())
     return false;
   MVT SVT = VT.getSimpleVT();
-  SmallVector<int> CommutedMask(M);
-  ShuffleVectorSDNode::commuteMask(CommutedMask);
   return (SVT == MVT::v4i8 || SVT == MVT::v8i8 || SVT == MVT::v4i16) &&
-         (isPackedZExtShuffleMask(M) || isPackedZExtShuffleMask(CommutedMask));
+         isPackedPairShuffleMask(M);
 }
 
 bool RISCVTargetLowering::isShuffleMaskLegal(ArrayRef<int> M, EVT VT) const {
@@ -9557,6 +9592,26 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerToScalableOp(Op, DAG);
   case ISD::VSELECT: {
     EVT VT = Op.getValueType();
+    // Lower v2i32 VSELECT on RV32 with P extension to (T & M) | (F & ~M) on
+    // each i32 element. The mask elements are all ones or all zeros.
+    if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() && VT == MVT::v2i32) {
+      SDLoc DL(Op);
+      SDValue Elts[2];
+      for (unsigned I = 0; I != 2; ++I) {
+        SDValue Idx = DAG.getVectorIdxConstant(I, DL);
+        SDValue M = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(0), Idx);
+        SDValue T = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(1), Idx);
+        SDValue F = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                                Op.getOperand(2), Idx);
+        SDValue NotM = DAG.getNOT(DL, M, MVT::i32);
+        Elts[I] = DAG.getNode(ISD::OR, DL, MVT::i32,
+                              DAG.getNode(ISD::AND, DL, MVT::i32, T, M),
+                              DAG.getNode(ISD::AND, DL, MVT::i32, F, NotM));
+      }
+      return DAG.getBuildVector(VT, DL, {Elts[0], Elts[1]});
+    }
     // Split 64-bit vector VSELECT on RV32 with P extension for v4i16 and v8i8
     if (Subtarget.hasStdExtP() && !Subtarget.is64Bit() &&
         (VT == MVT::v4i16 || VT == MVT::v8i8)) {
@@ -9667,8 +9722,13 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
         SDValue ShAmtVec = Op.getOperand(1);
         SDValue SplatVal = DAG.getSplatValue(ShAmtVec, /*LegalTypes=*/true);
 
-        if (!SplatVal)
+        if (!SplatVal) {
+          // Unroll non-splat v2i32 SSHLSAT on RV32 to scalar SSHLSAT (ssha).
+          if (Op.getOpcode() == ISD::SSHLSAT && !Subtarget.is64Bit() &&
+              Op.getValueType() == MVT::v2i32)
+            return DAG.UnrollVectorOp(Op.getNode());
           return SDValue();
+        }
 
         unsigned Opc;
         switch (Op.getOpcode()) {
@@ -17367,13 +17427,18 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
     assert(N->getValueType(0) == MVT::i32 && "Unexpected custom legalisation");
     if (getTypeAction(*DAG.getContext(), Op0.getValueType()) !=
         TargetLowering::TypeSoftenFloat) {
-      if (!isTypeLegal(Op0.getValueType()))
+      // [b]f16 that isn't legal can still be extended to f32 and converted with
+      // fcvt if f32 is legal.
+      bool PromoteViaF32 = ((Op0.getValueType() == MVT::f16 &&
+                             !Subtarget.hasStdExtZfhOrZhinx()) ||
+                            Op0.getValueType() == MVT::bf16) &&
+                           Subtarget.hasStdExtFOrZfinx();
+      if (!PromoteViaF32 && !isTypeLegal(Op0.getValueType()))
         return;
       if (IsStrict) {
         SDValue Chain = N->getOperand(0);
-        // In absence of Zfh, promote f16 to f32, then convert.
-        if (Op0.getValueType() == MVT::f16 &&
-            !Subtarget.hasStdExtZfhOrZhinx()) {
+        // In absence of Zfh, promote [b]f16 to f32, then convert.
+        if (PromoteViaF32) {
           Op0 = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {MVT::f32, MVT::Other},
                             {Chain, Op0});
           Chain = Op0.getValue(1);
@@ -17390,9 +17455,7 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
       }
       // For bf16, or f16 in absence of Zfh, promote [b]f16 to f32 and then
       // convert.
-      if ((Op0.getValueType() == MVT::f16 &&
-           !Subtarget.hasStdExtZfhOrZhinx()) ||
-          Op0.getValueType() == MVT::bf16)
+      if (PromoteViaF32)
         Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
       unsigned Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
@@ -21104,6 +21167,32 @@ static SDValue combineOrAndToBitfieldInsert(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(RISCVISD::QC_INSB, DL, MVT::i32, Ops);
 }
 
+// Fold (or (and X, C), (and Y, ~C)) -> (merge C, Y, X) for the P extension's
+// bitwise merge instruction.
+// TODO: Support vector types too.
+static SDValue combineOrOfMaskedToMerge(SDNode *N, SelectionDAG &DAG,
+                                        const RISCVSubtarget &Subtarget) {
+  if (!Subtarget.hasStdExtP())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  using namespace SDPatternMatch;
+  SDValue X, Y, Mask;
+  APInt MaskVal, InvMaskVal;
+  if (!sd_match(N, m_Or(m_OneUse(m_And(m_Value(X),
+                                       m_Value(Mask, m_ConstInt(MaskVal)))),
+                        m_OneUse(m_And(m_Value(Y), m_ConstInt(InvMaskVal))))) ||
+      MaskVal != ~InvMaskVal)
+    return SDValue();
+
+  SDLoc DL(N);
+  // MERGE computes (~mask & op1) | (mask & op2).
+  return DAG.getNode(RISCVISD::MERGE, DL, VT, Mask, Y, X);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const RISCVSubtarget &Subtarget) {
   SelectionDAG &DAG = DCI.DAG;
@@ -21113,6 +21202,9 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
+    return V;
+
+  if (SDValue V = combineOrOfMaskedToMerge(N, DAG, Subtarget))
     return V;
 
   if (DCI.isAfterLegalizeDAG()) {
@@ -21243,6 +21335,20 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
   }
 
   return Result;
+}
+
+// Specially handle negative power of two cases as to avoid
+// overflow conditions.
+// X * (-2^N) -> sub (0, (shl X, C1))
+static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
+                                    uint64_t MulAmt) {
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  SDValue X = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(Log2_64(MulAmtLowBit), VT, DL);
+  SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+  return DAG.getNegative(Shift, DL, VT);
 }
 
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
@@ -21443,8 +21549,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
+  // Only attempt to call expandMulToAddOrSubOfShl() on non
+  // power-of-two cases to avoid overflow conditions.
+  if (CNode->getAPIntValue().isNegatedPowerOf2()) {
+    return expandMulByNegPowTwo(N, DAG, MulAmt);
+  } else if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt)) {
     return V;
+  }
 
   if (!Subtarget.hasStdExtZmmul())
     return expandMulToNAFSequence(N, DAG, MulAmt);
@@ -28813,6 +28924,20 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
+  if (Subtarget.fixSiFiveMAL9174()) {
+    const RISCVVPseudosTable::PseudoInfo *RVV =
+        RISCVVPseudosTable::getPseudoInfo(MI.getOpcode());
+    if (RVV && (RVV->BaseInstr == RISCV::VLUXEI8_V ||
+                RVV->BaseInstr == RISCV::VLUXEI16_V ||
+                RVV->BaseInstr == RISCV::VLUXEI32_V ||
+                RVV->BaseInstr == RISCV::VLUXEI64_V ||
+                RVV->BaseInstr == RISCV::VLOXEI8_V ||
+                RVV->BaseInstr == RISCV::VLOXEI16_V ||
+                RVV->BaseInstr == RISCV::VLOXEI32_V ||
+                RVV->BaseInstr == RISCV::VLOXEI64_V))
+      MI.getOperand(0).setIsEarlyClobber(true);
+  }
+
   // If instruction defines FRM operand, conservatively set it as non-dead to
   // express data dependency with FRM users and prevent incorrect instruction
   // reordering.
@@ -30122,7 +30247,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
       }
       break;
     case 'R':
-      if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+      if (((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.hasStdExtZdinx())) &&
+           !Subtarget.is64Bit()) ||
           (VT == MVT::i128 && Subtarget.is64Bit()))
         return std::make_pair(0U, &RISCV::GPRPairNoX0RegClass);
       break;
@@ -30195,7 +30321,8 @@ RISCVTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
     if (!VT.isVector())
       return std::make_pair(0U, &RISCV::GPRCRegClass);
   } else if (Constraint == "cR") {
-    if (((VT == MVT::i64 || VT == MVT::f64) && !Subtarget.is64Bit()) ||
+    if (((VT == MVT::i64 || (VT == MVT::f64 && Subtarget.hasStdExtZdinx())) &&
+         !Subtarget.is64Bit()) ||
         (VT == MVT::i128 && Subtarget.is64Bit()))
       return std::make_pair(0U, &RISCV::GPRPairCRegClass);
   } else if (Constraint == "cf") {

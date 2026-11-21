@@ -215,6 +215,10 @@ public:
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
 /// parts that can be used from the rest of CodeGen.
+///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
@@ -3213,7 +3217,6 @@ public:
     case ISD::SADDO:
     case ISD::UADDO:
     case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
     case ISD::FMINNUM:

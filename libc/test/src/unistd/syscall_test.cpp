@@ -1,35 +1,49 @@
-//===-- Unittests for syscalls --------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Unittests for syscall.
+///
+//===----------------------------------------------------------------------===//
 
+#include "src/unistd/getpid.h"
 #include "src/unistd/syscall.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
+#include "hdr/errno_macros.h"
 #include "hdr/fcntl_macros.h"
 #include "hdr/sys_stat_macros.h" // For S_* flags.
-#include <sys/syscall.h> // For syscall numbers.
+#include <sys/syscall.h>         // For syscall numbers.
 #include <unistd.h>
 
-using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
+using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LlvmLibcSyscallTest = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 
 // We only do a smoke test here. Actual functionality tests are
 // done by the unit tests of the syscall wrappers like mmap.
 // The goal is to test syscalls with a wide number of args.
 
-// There is no function named "syscall" in llvm-libc, we instead use a macro to
-// set up the arguments properly. We still need to specify the namespace though
-// because the macro generates a call to the actual internal function
-// (__llvm_libc_syscall) which is inside the namespace.
-TEST_F(LlvmLibcSyscallTest, TrivialCall) {
-  ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_gettid), 0l);
+TEST_F(LlvmLibcSyscallTest, GetPid) {
+  ASSERT_EQ(LIBC_NAMESPACE::syscall(SYS_getpid),
+            static_cast<long>(LIBC_NAMESPACE::getpid()));
   ASSERT_ERRNO_SUCCESS();
+}
+
+TEST_F(LlvmLibcSyscallTest, InvalidSyscallNumber) {
+  // Use an out-of-range positive syscall number below 0x0f0000
+  // (__ARM_NR_BASE). On 32-bit ARM, syscall numbers >= 0x0f0000 (including -1,
+  // which wraps to 0xffffffff) are routed to the ARM-private syscall handler
+  // and raise SIGILL instead of returning ENOSYS.
+  constexpr long INVALID_SYSCALL_NUMBER = 0xffff;
+  ASSERT_THAT(LIBC_NAMESPACE::syscall(INVALID_SYSCALL_NUMBER),
+              Fails(ENOSYS, -1L));
 }
 
 TEST_F(LlvmLibcSyscallTest, SymlinkCreateDestroy) {
@@ -85,8 +99,12 @@ TEST_F(LlvmLibcSyscallTest, FileReadWrite) {
   ASSERT_GT(fd, 0l);
   ASSERT_ERRNO_SUCCESS();
 
-  ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_pwrite64, fd, HELLO, HELLO_SIZE, 0),
-            0l);
+  // Pass three zero args for the offset: 64-bit targets use arg4 and ignore the
+  // rest, 32-bit x86/RISC-V use arg4/arg5 for the split 64-bit offset, and
+  // 32-bit ARM EABI requires a padding register in arg4 before arg5/arg6.
+  ASSERT_GE(
+      LIBC_NAMESPACE::syscall(SYS_pwrite64, fd, HELLO, HELLO_SIZE, 0L, 0L, 0L),
+      0l);
   ASSERT_ERRNO_SUCCESS();
 
   ASSERT_GE(LIBC_NAMESPACE::syscall(SYS_fsync, fd), 0l);

@@ -2290,13 +2290,8 @@ static void computeKnownBitsFromOperator(const Operator *I,
         break;
       case Intrinsic::ctlz: {
         computeKnownBits(I->getOperand(0), DemandedElts, Known2, Q, Depth + 1);
-        // If we have a known 1, its position is our upper bound.
-        unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-        // If this call is poison for 0 input, the result will be less than 2^n.
-        if (II->getArgOperand(1) == ConstantInt::getTrue(II->getContext()))
-          PossibleLZ = std::min(PossibleLZ, BitWidth - 1);
-        unsigned LowBits = llvm::bit_width(PossibleLZ);
-        Known.Zero.setBitsFrom(LowBits);
+        bool ZeroIsPoison = match(II->getArgOperand(1), m_One());
+        Known = Known.unionWith(Known2.ctlz(ZeroIsPoison));
         break;
       }
       case Intrinsic::cttz: {
@@ -4675,7 +4670,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (isa<FixedVectorType>(Ty)) {
         // Fast case - sign splat can be simply split across the small elements.
         // This works for both vector and scalar sources
-        Tmp = ComputeNumSignBits(Src, Q, Depth + 1);
+        unsigned Scale = SrcBits / TyBits;
+        APInt SrcDemandedElts = APIntOps::ScaleBitMask(
+            DemandedElts, DemandedElts.getBitWidth() / Scale);
+        Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Q, Depth + 1);
         if (Tmp == SrcBits)
           return TyBits;
       }
@@ -4804,7 +4802,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
     case Instruction::Add:
       // Add can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1) break;
 
       // Special case decrementing a value (ADD X, -1):
@@ -4901,7 +4899,7 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       // If the input contained enough sign bits that some remain after the
       // truncation, then we can make use of that. Otherwise we don't know
       // anything.
-      Tmp = ComputeNumSignBits(U->getOperand(0), Q, Depth + 1);
+      Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       unsigned OperandTyBits = U->getOperand(0)->getType()->getScalarSizeInBits();
       if (Tmp > (OperandTyBits - TyBits))
         return Tmp - (OperandTyBits - TyBits);
@@ -5412,8 +5410,9 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       (InterestedClasses & KnownFPClass::OrderedLessThanZeroMask) != fcNone;
   bool WantNaN = (InterestedClasses & fcNan) != fcNone;
   bool WantNegZero = (InterestedClasses & fcNegZero) != fcNone;
+  bool WantSubnormal = (InterestedClasses & fcSubnormal) != fcNone;
 
-  if (!WantNaN && !WantNegative && !WantNegZero)
+  if (!WantNaN && !WantNegative && !WantNegZero && !WantSubnormal)
     return;
 
   FPClassTest InterestedSrcs = InterestedClasses;
@@ -5432,7 +5431,7 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
 
   if ((WantNaN && KnownRHS.isKnownNeverNaN()) ||
       (WantNegative && KnownRHS.cannotBeOrderedLessThanZero()) || WantNegZero ||
-      !IsAdd) {
+      WantSubnormal || !IsAdd) {
 
     // FIXME: Context function should always be passed in separately
     const Function *F = cast<Instruction>(Op)->getFunction();
@@ -5450,6 +5449,11 @@ computeKnownFPClassForFAddSub(const Operator *Op, const APInt &DemandedElts,
       if (!Self) {
         computeKnownFPClass(LHS, DemandedElts, InterestedSrcs, KnownLHS, Q,
                             Depth + 1);
+      }
+
+      if (const APFloat *CRHS; IsAdd && match(RHS, m_APFloat(CRHS))) {
+        Known = KnownFPClass::fadd(KnownLHS, *CRHS, RM, Mode);
+        return;
       }
 
       Known = IsAdd ? KnownFPClass::fadd(KnownLHS, KnownRHS, RM, Mode)
@@ -5968,11 +5972,11 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                           KnownSrc, Q, Depth + 1);
 
       const Function *F = II->getFunction();
-      DenormalMode DenormMode =
-          F ? F->getDenormalMode(
-                  II->getType()->getScalarType()->getFltSemantics())
-            : DenormalMode::getDynamic();
-      Known = KnownFPClass::canonicalize(KnownSrc, DenormMode);
+      const fltSemantics &Flt =
+          II->getType()->getScalarType()->getFltSemantics();
+      DenormalMode Mode =
+          F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
+      Known = KnownFPClass::canonicalize(KnownSrc, Flt, Mode);
       break;
     }
     case Intrinsic::vector_reduce_fmax:
@@ -11035,7 +11039,8 @@ ConstantRange llvm::computeConstantRange(const Value *V, bool ForSigned,
         computeConstantRange(SI->getTrueValue(), ForSigned, SQ, Depth + 1);
     ConstantRange CRFalse =
         computeConstantRange(SI->getFalseValue(), ForSigned, SQ, Depth + 1);
-    CR = CRTrue.unionWith(CRFalse);
+    CR = CRTrue.unionWith(CRFalse, ForSigned ? ConstantRange::Signed
+                                             : ConstantRange::Unsigned);
     CR = CR.intersectWith(getRangeForSelectPattern(*SI, SQ.IIQ));
   } else if (auto *TI = dyn_cast<TruncInst>(V)) {
     ConstantRange SrcCR =

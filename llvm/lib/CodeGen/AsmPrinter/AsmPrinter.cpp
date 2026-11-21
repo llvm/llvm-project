@@ -1254,6 +1254,15 @@ void AsmPrinter::emitImplicitDef(const MachineInstr *MI) const {
   OutStreamer->addBlankLine();
 }
 
+static void emitFreeze(const MachineInstr *MI, AsmPrinter &AP) {
+  AP.OutStreamer->getCommentOS()
+      << "freeze: "
+      << printReg(MI->getOperand(0).getReg(),
+                  AP.MF->getSubtarget().getRegisterInfo())
+      << '\n';
+  AP.OutStreamer->addBlankLine();
+}
+
 static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
   std::string Str;
   raw_string_ostream OS(Str);
@@ -1939,6 +1948,16 @@ void AsmPrinter::emitPCSections(const MachineFunction &MF) {
         ++I;
       const ArrayRef<MDOperand> Aux = Ops.slice(AuxBegin, I - AuxBegin);
 
+      // Metadata does not keep globals alive, and passes such as ThinLTO
+      // function import do not follow references from metadata, so a constant
+      // may have been dropped (nulled). Omit the records rather than emit them
+      // without their auxiliary data.
+      if (any_of(Aux, [](const MDOperand &MDO) {
+            const auto *AuxMDs = dyn_cast<MDNode>(MDO);
+            return AuxMDs && is_contained(AuxMDs->operands(), nullptr);
+          }))
+        continue;
+
       auto EmitAux = [&] {
         for (const MDOperand &MDO : Aux) {
           assert(isa<MDNode>(MDO) && "expecting either string or tuple");
@@ -2280,6 +2299,12 @@ void AsmPrinter::emitFunctionBody() {
       case TargetOpcode::INIT_UNDEF:
         // This is only used to influence register allocation behavior, no
         // actual initialization is needed.
+        break;
+      case TargetOpcode::FREEZE:
+        // Only a FREEZE of an undefined value is left. Whatever the register
+        // holds is a valid frozen value.
+        if (isVerbose())
+          emitFreeze(&MI, *this);
         break;
       case TargetOpcode::RELOC_NONE: {
         // Generate a temporary label for the current PC.

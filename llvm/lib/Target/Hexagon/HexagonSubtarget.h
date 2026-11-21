@@ -89,6 +89,9 @@ public:
   struct HVXMemLatencyMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  struct HMXActivateWeightMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
   struct CallMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   private:

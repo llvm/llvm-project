@@ -305,6 +305,17 @@ spirv.func @variable_array() "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @variable_array_with_initialization
+spirv.func @variable_array_with_initialization() "None" {
+  // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i32>
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x !llvm.array<2 x i32> : (i32) -> !llvm.ptr
+  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.array<2 x i32>, !llvm.ptr
+  %c = spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32>
+  %0 = spirv.Variable init(%c) : !spirv.ptr<!spirv.array<2 x i32>, Function>
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.CopyMemory
 //===----------------------------------------------------------------------===//

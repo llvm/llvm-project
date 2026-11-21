@@ -90,6 +90,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <set>
 #include <string>
 #include <system_error>
@@ -685,7 +686,6 @@ class LowerTypeTestsModule {
   const ModuleSummaryIndex *ImportSummary;
 
   Triple::ArchType Arch;
-  Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
 
   // Determines which kind of Thumb jump table we generate. If arch is
@@ -759,6 +759,11 @@ class LowerTypeTestsModule {
   // address taken functions in case they are address taken in other modules.
   bool CrossDsoCfi = M.getModuleFlag("Cross-DSO CFI") != nullptr;
 
+  std::optional<DIBuilder> JumpTableDIB;
+  DICompileUnit *JumpTableCU = nullptr;
+  DIFile *JumpTableFile = nullptr;
+  DISubroutineType *JumpTableFnTy = nullptr;
+
   bool shouldExportConstantsAsAbsoluteSymbols();
   uint8_t *exportTypeId(StringRef TypeId, const TypeIdLowering &TIL);
   TypeIdLowering importTypeId(StringRef TypeId);
@@ -800,6 +805,8 @@ class LowerTypeTestsModule {
   void findGlobalVariableUsersOf(Constant *C,
                                  SmallSetVector<GlobalVariable *, 8> &Out);
 
+  SmallVector<DILocation *>
+  createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions);
   void createJumpTable(Function *F, ArrayRef<GlobalTypeMember *> Functions,
                        Triple::ArchType JumpTableArch);
 
@@ -823,6 +830,10 @@ public:
   LowerTypeTestsModule(Module &M, ModuleAnalysisManager &AM,
                        ModuleSummaryIndex *ExportSummary,
                        const ModuleSummaryIndex *ImportSummary);
+  ~LowerTypeTestsModule() {
+    if (JumpTableDIB)
+      JumpTableDIB->finalize();
+  }
 
   bool lower();
 
@@ -1819,29 +1830,27 @@ Triple::ArchType LowerTypeTestsModule::selectJumpTableArmEncoding(
 // Create location for each function entry which should look like this:
 // frame #0: c::c() (.cfi_jt) at sanitizer/ubsan_interface.h:0:0
 // frame #1: __ubsan_check_cfi_icall_jt at sanitizer/ubsan_interface.h:0
-static SmallVector<DILocation *>
-createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
-  Module &M = *F->getParent();
-  DICompileUnit *CU = nullptr;
-  auto CUs = M.debug_compile_units();
-  if (!CUs.empty())
-    CU = *CUs.begin();
-
-  DIBuilder DIB(M, /*AllowUnresolved=*/true, CU);
-  DIFile *File = DIB.createFile("ubsan_interface.h", "sanitizer");
-  if (!CU) {
-    // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
-    // even if the rest of the program has debug info.
-    CU = DIB.createCompileUnit(
-        DISourceLanguageName(dwarf::DW_LANG_C), File, "llvm", true, "", 0, "",
-        DICompileUnit::DebugEmissionKind::LineTablesOnly);
+SmallVector<DILocation *> LowerTypeTestsModule::createJumpTableDebugInfo(
+    Function *F, ArrayRef<GlobalTypeMember *> Functions) {
+  if (!JumpTableDIB) {
+    auto CUs = M.debug_compile_units();
+    if (!CUs.empty())
+      JumpTableCU = *CUs.begin();
+    JumpTableDIB.emplace(M, /*AllowUnresolved=*/true, JumpTableCU);
+    JumpTableFile = JumpTableDIB->createFile("ubsan_interface.h", "sanitizer");
+    if (!JumpTableCU) {
+      // Synthetic module (like ld-temp.o), it frequently lacks a DICompileUnit
+      // even if the rest of the program has debug info.
+      JumpTableCU = JumpTableDIB->createCompileUnit(
+          DISourceLanguageName(dwarf::DW_LANG_C), JumpTableFile, "llvm", true,
+          "", 0, "", DICompileUnit::DebugEmissionKind::LineTablesOnly);
+    }
+    JumpTableFnTy = JumpTableDIB->createSubroutineType(nullptr);
   }
 
-  DISubroutineType *DIFnTy = DIB.createSubroutineType(nullptr);
-
-  DISubprogram *UbsanSP = DIB.createFunction(
-      CU, "__ubsan_check_cfi_icall_jt", {}, File, 0, DIFnTy, 0,
-      DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+  DISubprogram *UbsanSP = JumpTableDIB->createFunction(
+      JumpTableCU, "__ubsan_check_cfi_icall_jt", {}, JumpTableFile, 0,
+      JumpTableFnTy, 0, DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
 
   F->setSubprogram(UbsanSP);
 
@@ -1853,17 +1862,16 @@ createJumpTableDebugInfo(Function *F, ArrayRef<GlobalTypeMember *> Functions) {
   for (auto *Func : Functions) {
     StringRef FuncName = Func->getGlobal()->getName();
     FuncName.consume_back(".cfi");
-    DISubprogram *JumpSP = DIB.createFunction(
-        CU, (FuncName + ".cfi_jt").str(), {}, File, 0, DIFnTy, 0,
-        DINode::FlagArtificial, DISubprogram::SPFlagDefinition);
+    DISubprogram *JumpSP = JumpTableDIB->createFunction(
+        JumpTableCU, (FuncName + ".cfi_jt").str(), {}, JumpTableFile, 0,
+        JumpTableFnTy, 0, DINode::FlagArtificial,
+        DISubprogram::SPFlagDefinition);
 
     DILocation *EntryLoc =
         DILocation::get(M.getContext(), 0, 0, JumpSP, UbsanLoc);
 
     Locations.push_back(EntryLoc);
   }
-
-  DIB.finalize();
 
   return Locations;
 }
@@ -2284,7 +2292,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
         CanUseThumbBWJumpTable = true;
     }
   }
-  OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
 
   // Function annotation describes or applies to function itself, and
