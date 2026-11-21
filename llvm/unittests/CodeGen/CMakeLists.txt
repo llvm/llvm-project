@@ -45,6 +45,7 @@ add_llvm_unittest(CodeGenTests
   RegisterPressureTest.cpp
   RegisterTest.cpp
   PassManagerTest.cpp
+  PostIndexCandidateCacheTest.cpp
   RematerializerTest.cpp
   ScalableVectorMVTsTest.cpp
   SchedBoundary.cpp
