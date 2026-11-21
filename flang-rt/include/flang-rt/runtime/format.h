@@ -209,6 +209,19 @@ private:
   int formatLength_{0}; // in units of characters
   int offset_{0}; // next item is at format_[offset_]
 
+  // The most recently parsed data edit descriptor, reused when control
+  // returns to the same offset in the FORMAT (e.g., in a repeated group).
+  struct ParsedDataEdit {
+    int start{-1}; // offset of the descriptor in format_; -1 if none
+    int end{0}; // offset just past the descriptor
+    char descriptor{'\0'};
+    char variation{'\0'};
+    common::optional<int> width;
+    common::optional<int> digits;
+    common::optional<int> expoDigits;
+  };
+  ParsedDataEdit lastDataEdit_;
+
   // must be last, may be incomplete
   Iteration stack_[maxMaxHeight];
 };
