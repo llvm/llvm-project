@@ -1032,18 +1032,6 @@ llvm::TypeSize mlir::LLVM::getPrimitiveTypeSizeInBits(Type type) {
       });
 }
 
-//===----------------------------------------------------------------------===//
-// LLVMDialect
-//===----------------------------------------------------------------------===//
-
-void LLVMDialect::registerTypes() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/LLVMIR/LLVMTypes.cpp.inc"
-
-      >();
-}
-
 Type LLVMDialect::parseType(DialectAsmParser &parser) const {
   return detail::parseType(parser);
 }
