@@ -25,6 +25,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/MCValue.h"
@@ -931,6 +932,40 @@ unsigned ARMAsmBackend::adjustFixupValue(const MCAssembler &Asm,
     return swapHalfWords(out, Endian == llvm::endianness::little);
   }
   }
+}
+
+// LDR (literal), VLDR and ADR fixups encode the distance to the referenced
+// label rather than the label itself, so a label defined in the same section
+// can be resolved at assembly time regardless of its binding, as GNU as and
+// LLVM before bbc5d9f did. Branches are excluded, as a relocation to a
+// non-local symbol is required for interposition and interworking.
+bool ARMAsmBackend::mayResolvePcRelFixup(const MCFragment &F,
+                                         const MCFixup &Fixup,
+                                         const MCSymbol &Sym) const {
+  switch (Fixup.getKind()) {
+  case ARM::fixup_arm_ldst_pcrel_12:
+  case ARM::fixup_t2_ldst_pcrel_12:
+  case ARM::fixup_arm_pcrel_10_unscaled:
+  case ARM::fixup_arm_pcrel_10:
+  case ARM::fixup_t2_pcrel_10:
+  case ARM::fixup_arm_pcrel_9:
+  case ARM::fixup_t2_pcrel_9:
+  case ARM::fixup_arm_adr_pcrel_12:
+  case ARM::fixup_t2_adr_pcrel_12:
+  case ARM::fixup_thumb_adr_pcrel_10:
+  case ARM::fixup_arm_thumb_cp:
+    break;
+  default:
+    return false;
+  }
+  if (!getContext().isELF())
+    return false;
+  // A weak or ifunc symbol may be bound to a different definition.
+  const auto &ESym = cast<MCSymbolELF>(Sym);
+  if (ESym.getBinding() != ELF::STB_GLOBAL ||
+      ESym.getType() == ELF::STT_GNU_IFUNC)
+    return false;
+  return &ESym.getSection() == F.getParent();
 }
 
 bool ARMAsmBackend::shouldForceRelocation(const MCFixup &Fixup,

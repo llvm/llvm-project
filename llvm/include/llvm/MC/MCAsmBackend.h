@@ -118,6 +118,15 @@ public:
     return {};
   }
 
+  /// For a PC-relative fixup referencing a defined label, allow the assembler
+  /// to resolve it even though the object writer would emit a relocation for
+  /// it (e.g. because the label is global). Only meaningful for fixups that
+  /// encode the distance to the label; the default is false.
+  virtual bool mayResolvePcRelFixup(const MCFragment &F, const MCFixup &Fixup,
+                                    const MCSymbol &Sym) const {
+    return false;
+  }
+
   void maybeAddReloc(const MCFragment &, const MCFixup &, const MCValue &,
                      uint64_t &Value, bool IsResolved);
 
