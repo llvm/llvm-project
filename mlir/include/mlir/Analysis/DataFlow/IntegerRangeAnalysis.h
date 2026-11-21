@@ -61,7 +61,8 @@ private:
 
 /// Integer range analysis determines the integer value range of SSA values
 /// using operations that define `InferIntRangeInterface` and also sets the
-/// range of iteration indices of loops with known bounds.
+/// range of iteration indices of loops with known bounds. It also refines
+/// results of `ub.assume` with supported predicates (`arith.assume_cmpi`).
 ///
 /// This analysis depends on DeadCodeAnalysis, and will be a silent no-op
 /// if DeadCodeAnalysis is not loaded in the same solver context.
@@ -77,7 +78,8 @@ public:
   }
 
   /// Visit an operation. Invoke the transfer function on each operation that
-  /// implements `InferIntRangeInterface`.
+  /// implements `InferIntRangeInterface`, or propagate the predicated value's
+  /// range through `ub.assume`, refining it when the predicate is supported.
   LogicalResult
   visitOperation(Operation *op,
                  ArrayRef<const IntegerValueRangeLattice *> operands,

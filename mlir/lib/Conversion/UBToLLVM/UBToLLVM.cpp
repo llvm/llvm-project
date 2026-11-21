@@ -25,6 +25,25 @@ namespace mlir {
 using namespace mlir;
 
 //===----------------------------------------------------------------------===//
+// AssumeOpLowering
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct AssumeOpLowering : public ConvertOpToLLVMPattern<ub::AssumeOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(ub::AssumeOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Drop the assumption. It cannot be lowered to llvm.assume: a false
+    // predicate would then trigger immediate UB instead of poison.
+    rewriter.replaceOp(op, adaptor.getValue());
+    return success();
+  }
+};
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // PoisonOpLowering
 //===----------------------------------------------------------------------===//
 
@@ -115,7 +134,8 @@ struct UBToLLVMConversionPass
 
 void mlir::ub::populateUBToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  patterns.add<PoisonOpLowering, UnreachableOpLowering>(converter);
+  patterns.add<AssumeOpLowering, PoisonOpLowering, UnreachableOpLowering>(
+      converter);
 }
 
 //===----------------------------------------------------------------------===//

@@ -11,6 +11,7 @@
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc"
 
@@ -53,6 +54,42 @@ Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,
     return PoisonOp::create(builder, loc, type, attr);
 
   return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
+// AssumeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AssumeOp::verify() {
+  return getPredicate().verifyAssumption(getValue().getType(),
+                                         getPredicateOperands().getTypes(),
+                                         [&] { return emitOpError(); });
+}
+
+OpFoldResult AssumeOp::fold(FoldAdaptor adaptor) {
+  // Poison in => Poison out.
+  if (isa_and_nonnull<PoisonAttr>(adaptor.getValue()))
+    return PoisonAttr::get(getContext());
+
+  // Folds identical chained assumptions.
+  if (auto source = getValue().getDefiningOp<AssumeOp>()) {
+    if (source.getPredicate() == getPredicate() &&
+        llvm::equal(source.getPredicateOperands(), getPredicateOperands()))
+      return getValue();
+  }
+
+  // If the predicate evaluates to "true" based on the constant-folded value,
+  // drop the assumption. It didn't add any additional information.
+  std::optional<bool> holds = getPredicate().evaluate(
+      adaptor.getValue(), adaptor.getPredicateOperands());
+  if (!holds)
+    return {};
+  if (*holds)
+    return getValue();
+
+  // If the predicate evaluates to "false" based on the constant-folded value,
+  // fold it to poison.
+  return PoisonAttr::get(getContext());
 }
 
 OpFoldResult PoisonOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }

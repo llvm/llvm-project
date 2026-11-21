@@ -98,37 +98,42 @@ func.func @test() -> i8 {
 
 // -----
 
-// CHECK-LABEL: func @trivial_rem
-// CHECK: [[val:%.+]] = test.with_bounds
-// CHECK: return [[val]]
-func.func @trivial_rem() -> i8 {
+// CHECK-LABEL: func.func @trivial_rem(
+//  CHECK-SAME: %[[INPUT:[^:]+]]: i8) -> i8 {
+//  CHECK-NEXT:   %[[VALUE:.*]] = ub.assume %[[INPUT]], #arith.assume_cmpi<ule, 63 : i8>() : i8
+//  CHECK-NEXT:   return %[[VALUE]] : i8
+func.func @trivial_rem(%input: i8) -> i8 {
   %c64 = arith.constant 64 : i8
-  %val = test.with_bounds < umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 > : i8
+  %val = ub.assume %input, #arith.assume_cmpi<ule, 63 : i8>() : i8
   %mod = arith.remsi %val, %c64 : i8
   return %mod : i8
 }
 
 // -----
 
-// CHECK-LABEL: func @trivial_remui_sign_bit_set_modulus
-// CHECK: [[val:%.+]] = test.with_bounds
-// CHECK-NEXT: return [[val]]
-func.func @trivial_remui_sign_bit_set_modulus() -> i8 {
+// CHECK-LABEL: func.func @trivial_remui_sign_bit_set_modulus(
+//  CHECK-SAME: %[[INPUT:[^:]+]]: i8) -> i8 {
+//  CHECK-NEXT:   %[[VALUE:.*]] = ub.assume %[[INPUT]], #arith.assume_cmpi<ule, 63 : i8>() : i8
+//  CHECK-NEXT:   return %[[VALUE]] : i8
+func.func @trivial_remui_sign_bit_set_modulus(%input: i8) -> i8 {
   // The i8 bit pattern for -56 represents 200 when interpreted as unsigned.
   %c200 = arith.constant -56 : i8
-  %val = test.with_bounds < umin = 0 : ui8, umax = 63 : ui8, smin = 0 : si8, smax = 63 : si8 > : i8
+  %val = ub.assume %input, #arith.assume_cmpi<ule, 63 : i8>() : i8
   %mod = arith.remui %val, %c200 : i8
   return %mod : i8
 }
 
 // -----
 
-// CHECK-LABEL: func @trivial_remui_sign_bit_set_range
-// CHECK: [[val:%.+]] = test.with_bounds
-// CHECK-NEXT: return [[val]]
-func.func @trivial_remui_sign_bit_set_range() -> i8 {
+// CHECK-LABEL: func.func @trivial_remui_sign_bit_set_range(
+//  CHECK-SAME: %[[INPUT:[^:]+]]: i8) -> i8 {
+//  CHECK-NEXT:   %[[LOWER:.*]] = ub.assume %[[INPUT]], #arith.assume_cmpi<uge, -128 : i8>() : i8
+//  CHECK-NEXT:   %[[VALUE:.*]] = ub.assume %[[LOWER]], #arith.assume_cmpi<ule, -57 : i8>() : i8
+//  CHECK-NEXT:   return %[[VALUE]] : i8
+func.func @trivial_remui_sign_bit_set_range(%input: i8) -> i8 {
   %c200 = arith.constant -56 : i8
-  %val = test.with_bounds < umin = 128 : ui8, umax = 199 : ui8, smin = -128 : si8, smax = -57 : si8 > : i8
+  %lower = ub.assume %input, #arith.assume_cmpi<uge, -128 : i8>() : i8
+  %val = ub.assume %lower, #arith.assume_cmpi<ule, -57 : i8>() : i8
   %mod = arith.remui %val, %c200 : i8
   return %mod : i8
 }
@@ -149,25 +154,34 @@ func.func @non_trivial_remui_index_sign_bit_set_modulus(%arg: index) -> index {
 
 // -----
 
-// CHECK-LABEL: func @non_const_rhs
-// CHECK: [[mod:%.+]] = arith.remui
-// CHECK: return [[mod]]
-func.func @non_const_rhs() -> i8 {
-  %c64 = arith.constant 64 : i8
-  %val = test.with_bounds < umin = 0 : ui8, umax = 2 : ui8, smin = 0 : si8, smax = 2 : si8 > : i8
-  %rhs = test.with_bounds < umin = 63 : ui8, umax = 64 : ui8, smin = 63 : si8, smax = 64 : si8 > : i8
+// CHECK-LABEL: func.func @non_const_rhs(
+//  CHECK-SAME: %[[INPUT:[^:]+]]: i8, %[[DIVISOR:[^:]+]]: i8) -> i8 {
+//  CHECK-NEXT:   %[[VALUE:.*]] = ub.assume %[[INPUT]], #arith.assume_cmpi<ule, 2 : i8>() : i8
+//  CHECK-NEXT:   %[[LOWER:.*]] = ub.assume %[[DIVISOR]], #arith.assume_cmpi<uge, 63 : i8>() : i8
+//  CHECK-NEXT:   %[[RHS:.*]] = ub.assume %[[LOWER]], #arith.assume_cmpi<ule, 64 : i8>() : i8
+//  CHECK-NEXT:   %[[REMAINDER:.*]] = arith.remui %[[VALUE]], %[[RHS]] : i8
+//  CHECK-NEXT:   return %[[REMAINDER]] : i8
+func.func @non_const_rhs(%input: i8, %divisor: i8) -> i8 {
+  %val = ub.assume %input, #arith.assume_cmpi<ule, 2 : i8>() : i8
+  %lower = ub.assume %divisor, #arith.assume_cmpi<uge, 63 : i8>() : i8
+  %rhs = ub.assume %lower, #arith.assume_cmpi<ule, 64 : i8>() : i8
   %mod = arith.remui %val, %rhs : i8
   return %mod : i8
 }
 
 // -----
 
-// CHECK-LABEL: func @wraps
-// CHECK: [[mod:%.+]] = arith.remsi
-// CHECK: return [[mod]]
-func.func @wraps() -> i8 {
+// CHECK-LABEL: func.func @wraps(
+//  CHECK-SAME: %[[INPUT:[^:]+]]: i8) -> i8 {
+//  CHECK-NEXT:   %[[C64:.*]] = arith.constant 64 : i8
+//  CHECK-NEXT:   %[[LOWER:.*]] = ub.assume %[[INPUT]], #arith.assume_cmpi<uge, 63 : i8>() : i8
+//  CHECK-NEXT:   %[[VALUE:.*]] = ub.assume %[[LOWER]], #arith.assume_cmpi<ule, 65 : i8>() : i8
+//  CHECK-NEXT:   %[[REMAINDER:.*]] = arith.remsi %[[VALUE]], %[[C64]] : i8
+//  CHECK-NEXT:   return %[[REMAINDER]] : i8
+func.func @wraps(%input: i8) -> i8 {
   %c64 = arith.constant 64 : i8
-  %val = test.with_bounds < umin = 63 : ui8, umax = 65 : ui8, smin = 63 : si8, smax = 65 : si8 > : i8
+  %lower = ub.assume %input, #arith.assume_cmpi<uge, 63 : i8>() : i8
+  %val = ub.assume %lower, #arith.assume_cmpi<ule, 65 : i8>() : i8
   %mod = arith.remsi %val, %c64 : i8
   return %mod : i8
 }

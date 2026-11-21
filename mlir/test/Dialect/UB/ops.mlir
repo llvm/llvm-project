@@ -44,3 +44,12 @@ func.func @poison_tensor() -> tensor<8x?xf64> {
 func.func @unreachable() {
   ub.unreachable
 }
+
+// CHECK-LABEL: func.func @assume(
+//  CHECK-SAME: %[[VALUE:[^:]+]]: i32) -> i32 {
+//  CHECK-NEXT:   %[[ASSUMED:.*]] = ub.assume %[[VALUE]], #arith.assume_cmpi<sgt, 0 : i32>() : i32
+//  CHECK-NEXT:   return %[[ASSUMED]] : i32
+func.func @assume(%value: i32) -> i32 {
+  %assumed = ub.assume %value, #arith.assume_cmpi<sgt, 0 : i32>() : i32
+  return %assumed : i32
+}
