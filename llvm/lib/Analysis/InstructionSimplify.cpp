@@ -3866,11 +3866,15 @@ static Value *simplifyICmpWithIntrinsicOnLHS(CmpPredicate Pred, Value *LHS,
     return nullptr;
 
   case Intrinsic::ctpop:
-    if (Pred == ICmpInst::ICMP_ULE &&
-        match(RHS, m_Specific(II->getArgOperand(0))))
-      return ConstantInt::getTrue(getCompareTy(II));
-    return nullptr;
+    if (match(RHS, m_Specific(II->getArgOperand(0)))) {
 
+      if (Pred == ICmpInst::ICMP_ULE)
+        return ConstantInt::getTrue(getCompareTy(II));
+
+      if (Pred == ICmpInst::ICMP_UGT)
+        return ConstantInt::getFalse(getCompareTy(II));
+    }
+    return nullptr;
   default:
     return nullptr;
   }
