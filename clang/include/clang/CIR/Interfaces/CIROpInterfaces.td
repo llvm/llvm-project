@@ -378,6 +378,24 @@ let cppNamespace = "::cir" in {
     ];
   }
 
+  def CIR_SynthesizedTerminatorOpInterface
+      : OpInterface<"SynthesizedTerminatorOpInterface"> {
+    let description = [{
+      Interface for terminators that may be `implicit`: inserted by the
+      frontend at the end of a function body, with no corresponding statement
+      in the source.
+    }];
+
+    let methods = [
+      InterfaceMethod<
+        "Return whether the frontend inserted this terminator implicitly.",
+        "bool", "isImplicit", (ins), [{}],
+        /*defaultImplementation=*/[{
+          return $_op.getImplicit();
+        }]>,
+    ];
+  }
+
 } // namespace cir
 
 #endif // CLANG_CIR_INTERFACES_CIROPINTERFACES_TD
