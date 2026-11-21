@@ -29,22 +29,27 @@ end program
 ! ALL: Fortran::lower::VerifierPass
 ! ALL-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_mapper', 'omp.declare_reduction', 'omp.private']
 ! ALL-NEXT: 'fir.global' Pipeline
+! ALL-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
 ! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'func.func' Pipeline
+! ALL-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
 ! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_mapper' Pipeline
+! ALL-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
 ! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.declare_reduction' Pipeline
+! ALL-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
 ! ALL-NEXT:   InlineHLFIRAssign
 ! ALL-NEXT: 'omp.private' Pipeline
+! ALL-NEXT:   SimplifyHLFIRIntrinsics
 ! ALL-NEXT:   InlineElementals
 ! ALL-NEXT:   SeparateAllocatableAssign
 ! ALL-NEXT:   InlineHLFIRAssign

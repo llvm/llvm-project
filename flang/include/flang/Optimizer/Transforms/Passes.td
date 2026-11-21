@@ -298,7 +298,11 @@ def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
   let options = [
     Option<"enableExperimental", "enable-experimental", "bool",
            /*default=*/"false",
-           "Enable experimental code that may not always work correctly">
+           "Enable experimental code that may not always work correctly">,
+    Option<"compensatedSum", "compensated-sum", "bool",
+           /*default=*/"false",
+           "Preserve runtime calls that use compensated summation for "
+           "floating-point SUM">
   ];
 }
 

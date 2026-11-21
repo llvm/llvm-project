@@ -335,6 +335,9 @@ def fcheck_integer_mod_zero_divisor
     : Flag<["-"], "fcheck-integer-mod-zero-divisor">, Group<f_Group>,
       HelpText<"Check for a zero divisor in integer MOD and MODULO">;
 
+def fcompensated_sum : Flag<["-"], "fcompensated-sum">, Group<f_Group>,
+  HelpText<"Use compensated algorithm for SUM intrinsic for REAL and COMPLEX types">;
+
 defm fp_sum_reassociation
     : BoolOptionWithoutMarshalling<
           "f", "fp-sum-reassociation",

@@ -1290,6 +1290,9 @@ void SimplifyIntrinsicsPass::runOnOperation() {
         //                int dim, const Descriptor *mask)
         //
         if (funcName.starts_with(RTNAME_STRING(Sum))) {
+          if (this->compensatedSum && call.getNumResults() == 1 &&
+              mlir::isa<mlir::FloatType>(call.getResult(0).getType()))
+            return;
           simplifyIntOrFloatReduction(call, kindMap, genRuntimeSumBody);
           return;
         }
