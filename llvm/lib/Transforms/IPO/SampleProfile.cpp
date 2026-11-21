@@ -26,7 +26,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PriorityQueue.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
@@ -48,6 +47,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -357,6 +357,8 @@ protected:
   void emitOptimizationRemarksForInlineCandidates(
       const SmallVectorImpl<CallBase *> &Candidates, const Function &F,
       bool Hot);
+  SmallVector<std::pair<CallBase *, const FunctionSamples *>, 8>
+  collectNotInlinedCallSites(Function &F) const;
   void promoteMergeNotInlinedContextSamples(
       ArrayRef<std::pair<CallBase *, const FunctionSamples *>>
           NonInlinedCallSites,
@@ -623,40 +625,31 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return it.first->second;
 }
 
-/// Check whether the indirect call promotion history of \p Inst allows
-/// the promotion for \p Candidate.
-/// If the profile count for the promotion candidate \p Candidate is
-/// NOMORE_ICP_MAGICNUM, it means \p Candidate has already been promoted
-/// for \p Inst. If we already have at least MaxNumPromotions
-/// NOMORE_ICP_MAGICNUM count values in the value profile of \p Inst, we
-/// cannot promote for \p Inst anymore.
+/// Return the target GUIDs marked as already promoted in the value profile.
+static SmallVector<GlobalValue::GUID, 4> getPromotedCallTargets(
+    const Instruction &Inst,
+    uint32_t MaxEntries = std::numeric_limits<uint32_t>::max()) {
+  uint64_t TotalCount = 0;
+  SmallVector<GlobalValue::GUID, 4> Targets;
+  for (const auto &V : getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
+                                                MaxEntries, TotalCount,
+                                                /*GetNoICPValue=*/true))
+    if (V.Count == NOMORE_ICP_MAGICNUM)
+      Targets.push_back(V.Value);
+  return Targets;
+}
+
+/// Reject a repeated target or a call that has reached its promotion limit.
 static bool doesHistoryAllowICP(const IPOOptions &Opts, const Instruction &Inst,
                                 StringRef Candidate) {
-  uint64_t TotalCount = 0;
-  auto ValueData = getValueProfDataFromInst(Inst, IPVK_IndirectCallTarget,
-                                            Opts.sample_profile_icp_max_prom,
-                                            TotalCount, true);
-  // No valid value profile so no promoted targets have been recorded
-  // before. Ok to do ICP.
-  if (ValueData.empty())
+  auto PromotedTargets =
+      getPromotedCallTargets(Inst, Opts.sample_profile_icp_max_prom);
+  if (PromotedTargets.empty())
     return true;
-
-  unsigned NumPromoted = 0;
-  for (const auto &V : ValueData) {
-    if (V.Count != NOMORE_ICP_MAGICNUM)
-      continue;
-
-    // If the promotion candidate has NOMORE_ICP_MAGICNUM count in the
-    // metadata, it means the candidate has been promoted for this
-    // indirect call.
-    if (V.Value == Function::getGUIDAssumingExternalLinkage(Candidate))
-      return false;
-    NumPromoted++;
-    // If already have MaxNumPromotions promotion, don't do it anymore.
-    if (NumPromoted == Opts.sample_profile_icp_max_prom)
-      return false;
-  }
-  return true;
+  return PromotedTargets.size() < Opts.sample_profile_icp_max_prom &&
+         !llvm::is_contained(
+             PromotedTargets,
+             Function::getGUIDAssumingExternalLinkage(Candidate));
 }
 
 /// Update indirect call target profile metadata for \p Inst.
@@ -952,13 +945,13 @@ void SampleProfileLoader::findExternalInlineCandidate(
 /// find out callsites with corresponding inline instances.
 ///
 /// For such callsites,
-/// - If it is hot enough, inline the callsites and adds callsites of the callee
-///   into the caller. If the call is an indirect call, first promote
-///   it to direct call. Each indirect call is limited with a single target.
+/// - If a callsite is hot enough, inline it and add the callee's callsites
+///   to the caller. If the call is an indirect call, first promote
+///   it to a direct call. An indirect call can have multiple profiled targets.
 ///
-/// - If a callsite is not inlined, merge the its profile to the outline
-///   version (if --sample-profile-merge-inlinee is true), or scale the
-///   counters of standalone function based on the profile of inlined
+/// - After inlining finishes, merge profiles of remaining calls into their
+///   standalone functions (if --sample-profile-merge-inlinee is true), or scale
+///   the counters of the standalone function based on the profile of inlined
 ///   instances (if --sample-profile-merge-inlinee is false).
 ///
 ///   Later passes may consume the updated profiles.
@@ -978,7 +971,6 @@ bool SampleProfileLoader::inlineHotFunctions(
          "ProfAccForSymsInList should be false when profile-sample-accurate "
          "is enabled");
 
-  MapVector<CallBase *, const FunctionSamples *> LocalNotInlinedCallSites;
   bool Changed = false;
   bool LocalChanged = true;
   while (LocalChanged) {
@@ -996,9 +988,6 @@ bool SampleProfileLoader::inlineHotFunctions(
               assert((!FunctionSamples::UseMD5 || FS->GUIDToFuncNameMap) &&
                      "GUIDToFuncNameMap has to be populated");
               AllCandidates.push_back(CB);
-              if (FS->getHeadSamplesEstimate() > 0 ||
-                  FunctionSamples::ProfileIsCS)
-                LocalNotInlinedCallSites.insert({CB, FS});
               if (callsiteIsHot(FS, PSI, ProfAccForSymsInList))
                 Hot = true;
               else if (shouldInlineColdCallee(*CB))
@@ -1019,8 +1008,11 @@ bool SampleProfileLoader::inlineHotFunctions(
     }
     for (CallBase *I : CIS) {
       Function *CalledFunction = I->getCalledFunction();
-      InlineCandidate Candidate = {I, LocalNotInlinedCallSites.lookup(I),
-                                   0 /* dummy count */,
+      const FunctionSamples *CalleeSamples = findCalleeFunctionSamples(*I);
+      if (CalleeSamples && !FunctionSamples::ProfileIsCS &&
+          CalleeSamples->getHeadSamplesEstimate() == 0)
+        CalleeSamples = nullptr;
+      InlineCandidate Candidate = {I, CalleeSamples, 0 /* dummy count */,
                                    1.0 /* dummy distribution factor */};
       // Do not inline recursive calls.
       if (CalledFunction == &F)
@@ -1039,14 +1031,15 @@ bool SampleProfileLoader::inlineHotFunctions(
 
           Candidate = {I, FS, FS->getHeadSamplesEstimate(), 1.0};
           if (tryPromoteAndInlineCandidate(F, Candidate, SumOrigin, Sum)) {
-            LocalNotInlinedCallSites.erase(I);
             LocalChanged = true;
+          } else if (Candidate.CallInstr != I) {
+            // Promotion changes the IR even if the direct call is not inlined.
+            Changed = true;
           }
         }
       } else if (CalledFunction && CalledFunction->getSubprogram() &&
                  !CalledFunction->isDeclaration()) {
         if (tryInlineCandidate(Candidate)) {
-          LocalNotInlinedCallSites.erase(I);
           LocalChanged = true;
         }
       } else if (LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink) {
@@ -1061,8 +1054,7 @@ bool SampleProfileLoader::inlineHotFunctions(
   // For CS profile, profile for not inlined context will be merged when
   // base profile is being retrieved.
   if (!FunctionSamples::ProfileIsCS)
-    promoteMergeNotInlinedContextSamples(LocalNotInlinedCallSites.takeVector(),
-                                         F);
+    promoteMergeNotInlinedContextSamples(collectNotInlinedCallSites(F), F);
   return Changed;
 }
 
@@ -1378,6 +1370,41 @@ bool SampleProfileLoader::inlineHotFunctionsWithPriority(
   if (!FunctionSamples::ProfileIsCS)
     promoteMergeNotInlinedContextSamples(LocalNotInlinedCallSites, F);
   return Changed;
+}
+
+// Inspect surviving calls after all iterations. Promoted targets are handled
+// by any direct calls that remain, so exclude them from the indirect fallback.
+SmallVector<std::pair<CallBase *, const FunctionSamples *>, 8>
+SampleProfileLoader::collectNotInlinedCallSites(Function &F) const {
+  SmallVector<std::pair<CallBase *, const FunctionSamples *>, 8> CallSites;
+  const bool IsThinPreLink = LTOPhase == ThinOrFullLTOPhase::ThinLTOPreLink;
+  for (CallBase &CB : make_isa_range<CallBase>(instructions(F))) {
+    // Pre-link leaves indirect-call promotion to the backend.
+    if (isa<IntrinsicInst>(CB) || (IsThinPreLink && CB.isIndirectCall()))
+      continue;
+    if (!CB.isIndirectCall()) {
+      if (const FunctionSamples *FS = findCalleeFunctionSamples(CB);
+          FS && FS->getHeadSamplesEstimate() > 0)
+        CallSites.emplace_back(&CB, FS);
+      continue;
+    }
+    uint64_t Sum = 0;
+    auto CalleeSamples = findIndirectCallFunctionSamples(CB, Sum);
+    if (CalleeSamples.empty())
+      continue;
+    // Recovery needs the full history, even if the promotion limit was lowered.
+    auto PromotedTargets = getPromotedCallTargets(CB);
+    for (const FunctionSamples *FS : CalleeSamples) {
+      const Function *Callee = SymbolMap.lookup(FS->getFunction());
+      if (!Callee || FS->getHeadSamplesEstimate() == 0)
+        continue;
+      const auto GUID =
+          Function::getGUIDAssumingExternalLinkage(Callee->getName());
+      if (!llvm::is_contained(PromotedTargets, GUID))
+        CallSites.emplace_back(&CB, FS);
+    }
+  }
+  return CallSites;
 }
 
 void SampleProfileLoader::promoteMergeNotInlinedContextSamples(
