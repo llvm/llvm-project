@@ -1934,6 +1934,113 @@ View call_max_with_view_without_error() {
 
 } // namespace StdMaxStyleLifetimeBound
 
+namespace RefToPointerParams {
+// A `[[clang::lifetimebound]]` reference-to-pointer parameter returned by value
+// yields the pointer *value* read through the reference, so the result borrows
+// the pointee rather than the reference's own storage. This is the shape of
+// `std::exchange`, and of any function template taking `T&` / `T&&` and
+// returning `T` by value once `T` is instantiated with a pointer type.
+
+struct Obj {};
+void use(Obj *);
+
+// Exchange-shaped: returns the old value held in `slot`.
+Obj *exchange_ptr(Obj *&slot [[clang::lifetimebound]], Obj *newVal);
+
+// The returned pointer borrows the *pointee* (`local`), so returning it past
+// `local`'s scope is a use-after-scope.
+Obj *borrows_pointee() {
+  Obj *saved;
+  {
+    Obj local;
+    Obj *p = &local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+    saved = exchange_ptr(p, nullptr); // expected-note {{result of call to 'exchange_ptr' aliases the storage of local variable 'local'}}
+  }
+  return saved; // expected-note {{returned here}}
+}
+
+// Reassigning the result from a non-dangling source is fine: no false positive.
+Obj g;
+Obj *no_false_positive() {
+  Obj *p = &g;
+  Obj *saved = exchange_ptr(p, nullptr); // borrows 'g' (static), ok
+  return saved;                          // ok
+}
+
+// A by-value multi-level pointer parameter is NOT peeled: the returned `int**`
+// is tied to the argument's top-level origin (the address it holds), exercising
+// that the peel is gated to reference-to-pointer parameters only.
+int **return_inner(int ***ppp [[clang::lifetimebound]]);
+int **by_value_not_peeled() {
+  int *p = nullptr;
+  int **pp = &p;
+  int ***ppp = &pp; // expected-warning {{stack memory associated with local variable 'pp' is returned}}
+  return return_inner(ppp); // expected-note {{returned here}}
+}
+
+// A reference to a *multi-level* pointer must peel more than one level: the
+// result's indirection depth is two shallower than the lvalue argument, so the
+// loan must flow from the innermost pointee value (`local`), not from an
+// intermediate pointer's storage. `deref_slot` returns `*slot`.
+Obj *deref_slot(Obj **&slot [[clang::lifetimebound]]);
+
+// Returned pointer borrows the pointee `local`; returning past its scope is a
+// use-after-scope that names `local` (not the intermediate pointer `p`).
+Obj *multi_level_borrows_pointee() {
+  Obj *saved;
+  {
+    Obj local;
+    Obj *p = &local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+    Obj **pp = &p;
+    saved = deref_slot(pp); // expected-note {{result of call to 'deref_slot' aliases the storage of local variable 'local'}}
+  }
+  return saved; // expected-note {{returned here}}
+}
+
+// No false positive: the intermediate pointer `p` dies at the end of the block,
+// but the result aliases `g` (static), which outlives the use. Peeling only one
+// level would wrongly blame `p` here.
+Obj *multi_level_no_false_positive() {
+  Obj *saved;
+  {
+    Obj *p = &g;
+    Obj **pp = &p;
+    saved = deref_slot(pp); // borrows 'g' (static), ok
+  }
+  use(saved); // ok
+  return saved; // ok
+}
+
+// Function templates: instantiating `T` with a pointer type yields a (lvalue or
+// rvalue) reference-to-pointer parameter, which must behave like the
+// non-template cases above.
+template <class T, class U>
+T exchange_tmpl(T &slot [[clang::lifetimebound]], U &&newVal);
+
+Obj *tmpl_lvalue_borrows_pointee() {
+  Obj *saved;
+  {
+    Obj local;
+    Obj *p = &local; // expected-warning {{stack memory associated with local variable 'local' is returned}}
+    saved = exchange_tmpl(p, nullptr); // expected-note {{result of call to 'exchange_tmpl<RefToPointerParams::Obj *, std::nullptr_t>' aliases the storage of local variable 'local'}}
+  }
+  return saved; // expected-note {{returned here}}
+}
+
+template <class T>
+T take_rvalue(T &&slot [[clang::lifetimebound]]);
+
+Obj *tmpl_rvalue_borrows_pointee() {
+  Obj *saved;
+  {
+    Obj local;
+    saved = take_rvalue(static_cast<Obj *>(&local)); // expected-warning {{stack memory associated with local variable 'local' is returned}} expected-note {{result of call to 'take_rvalue<RefToPointerParams::Obj *>' aliases the storage of local variable 'local'}}
+  }
+  return saved; // expected-note {{returned here}}
+}
+
+} // namespace RefToPointerParams
+
 namespace CppCoverage {
 
 int getInt();

@@ -1127,6 +1127,58 @@ TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefViewParameter) {
   EXPECT_THAT(Origin("v2"), HasLoansTo({"v1"}, "p1"));
 }
 
+TEST_F(LifetimeAnalysisTest, LifetimeboundRefToPointerParameter) {
+  SetupTest(R"(
+    MyObj* ExchangePtr(MyObj*& slot [[clang::lifetimebound]], MyObj* newVal);
+    void target() {
+      MyObj a;
+      MyObj* p = &a;
+      MyObj* old = ExchangePtr(p, nullptr);
+      POINT(p1);
+    }
+  )");
+  // A lifetimebound reference-to-raw-pointer parameter returned by value yields
+  // the pointer value read through the reference, so `old` borrows the pointee
+  // `a` (not the referent `p`'s storage).
+  EXPECT_THAT(Origin("old"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundRefToPointerToPointerParameter) {
+  SetupTest(R"(
+    MyObj* DerefSlot(MyObj**& slot [[clang::lifetimebound]]);
+    void target() {
+      MyObj a;
+      MyObj* p = &a;
+      MyObj** pp = &p;
+      MyObj* old = DerefSlot(pp);
+      POINT(p1);
+    }
+  )");
+  // `DerefSlot` returns `*slot == *pp == p`, so `old` holds the value of `p`,
+  // which points to `a`; therefore `old` borrows `a`. The result is two
+  // indirection levels shallower than the lvalue argument `pp`, so both extra
+  // storage levels must be peeled (not just one) to reach the pointee-value
+  // origin that holds the loan to `a`.
+  EXPECT_THAT(Origin("old"), HasLoansTo({"a"}, "p1"));
+}
+
+TEST_F(LifetimeAnalysisTest, LifetimeboundRefToPointerToPointerExchange) {
+  SetupTest(R"(
+    MyObj** ExchangeInner(MyObj**& slot [[clang::lifetimebound]], MyObj** n);
+    void target() {
+      MyObj a;
+      MyObj* p = &a;
+      MyObj** pp = &p;
+      MyObj** old = ExchangeInner(pp, nullptr);
+      POINT(p1);
+    }
+  )");
+  // Exchange at the double-pointer level: the returned `MyObj**` is the old
+  // value held in `slot` (`pp`), which points to `p`. The result is one level
+  // shallower than the lvalue argument, so exactly one level is peeled.
+  EXPECT_THAT(Origin("old"), HasLoansTo({"p"}, "p1"));
+}
+
 TEST_F(LifetimeAnalysisTest, LifetimeboundConstRefObjParam) {
   SetupTest(R"(
     View Identity(const MyObj& o [[clang::lifetimebound]]);
