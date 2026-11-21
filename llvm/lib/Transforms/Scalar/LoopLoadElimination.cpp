@@ -125,8 +125,6 @@ struct StoreToLoadForwardingCandidate {
     return Val == TypeByteSize * StrideLoad;
   }
 
-  Value *getLoadPtr() const { return Load->getPointerOperand(); }
-
 #ifndef NDEBUG
   friend raw_ostream &operator<<(raw_ostream &OS,
                                  const StoreToLoadForwardingCandidate &Cand) {
@@ -308,27 +306,23 @@ public:
     });
   }
 
-  /// Given two pointers operations by their RuntimePointerChecking
+  /// Given two pointer operations by their RuntimePointerChecking
   /// indices, return true if they require an alias check.
   ///
   /// We need a check if one is a pointer for a candidate load and the other is
   /// a pointer for a possibly intervening store.
-  bool needsChecking(unsigned PtrIdx1, unsigned PtrIdx2,
-                     const SmallPtrSetImpl<Value *> &PtrsWrittenOnFwdingPath,
-                     const SmallPtrSetImpl<Value *> &CandLoadPtrs) {
-    Value *Ptr1 =
-        LAI.getRuntimePointerChecking()->getPointerInfo(PtrIdx1).PointerValue;
-    Value *Ptr2 =
-        LAI.getRuntimePointerChecking()->getPointerInfo(PtrIdx2).PointerValue;
-    return ((PtrsWrittenOnFwdingPath.count(Ptr1) && CandLoadPtrs.count(Ptr2)) ||
-            (PtrsWrittenOnFwdingPath.count(Ptr2) && CandLoadPtrs.count(Ptr1)));
+  static bool needsChecking(unsigned PtrIdx1, unsigned PtrIdx2,
+                            const SmallVectorImpl<bool> &IsStoreOnFwdingPath,
+                            const SmallVectorImpl<bool> &IsCandLoad) {
+    return (IsStoreOnFwdingPath[PtrIdx1] && IsCandLoad[PtrIdx2]) ||
+           (IsStoreOnFwdingPath[PtrIdx2] && IsCandLoad[PtrIdx1]);
   }
 
-  /// Return pointers that are possibly written to on the path from a
+  /// Return stores that are possibly executed on the path from a
   /// forwarding store to a load.
   ///
-  /// These pointers need to be alias-checked against the forwarding candidates.
-  SmallPtrSet<Value *, 4> findPointersWrittenOnForwardingPath(
+  /// These stores need to be alias-checked against the forwarding candidates.
+  SmallPtrSet<Instruction *, 4> findStoresOnForwardingPath(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
     // From FirstStore to LastLoad neither of the elimination candidate loads
     // should overlap with any of the stores.
@@ -366,20 +360,20 @@ public:
 
     // We're looking for stores after the first forwarding store until the end
     // of the loop, then from the beginning of the loop until the last
-    // forwarded-to load.  Collect the pointer for the stores.
-    SmallPtrSet<Value *, 4> PtrsWrittenOnFwdingPath;
+    // forwarded-to load.  Collect the stores.
+    SmallPtrSet<Instruction *, 4> StoresOnFwdingPath;
 
-    auto InsertStorePtr = [&](Instruction *I) {
+    auto InsertStore = [&](Instruction *I) {
       if (auto *S = dyn_cast<StoreInst>(I))
-        PtrsWrittenOnFwdingPath.insert(S->getPointerOperand());
+        StoresOnFwdingPath.insert(S);
     };
     const auto &MemInstrs = LAI.getDepChecker().getMemoryInstructions();
     std::for_each(MemInstrs.begin() + getInstrIndex(FirstStore) + 1,
-                  MemInstrs.end(), InsertStorePtr);
+                  MemInstrs.end(), InsertStore);
     std::for_each(MemInstrs.begin(), &MemInstrs[getInstrIndex(LastLoad)],
-                  InsertStorePtr);
+                  InsertStore);
 
-    return PtrsWrittenOnFwdingPath;
+    return StoresOnFwdingPath;
   }
 
   /// Determine the pointer alias checks to prove that there are no
@@ -387,30 +381,55 @@ public:
   SmallVector<RuntimePointerCheck, 4> collectMemchecks(
       const SmallVectorImpl<StoreToLoadForwardingCandidate> &Candidates) {
 
-    SmallPtrSet<Value *, 4> PtrsWrittenOnFwdingPath =
-        findPointersWrittenOnForwardingPath(Candidates);
+    SmallPtrSet<Instruction *, 4> StoresOnFwdingPath =
+        findStoresOnForwardingPath(Candidates);
 
-    // Collect the pointers of the candidate loads.
-    SmallPtrSet<Value *, 4> CandLoadPtrs;
+    // Collect the candidate loads.
+    SmallPtrSet<Instruction *, 4> CandLoads;
     for (const auto &Candidate : Candidates)
-      CandLoadPtrs.insert(Candidate.getLoadPtr());
+      CandLoads.insert(Candidate.Load);
 
-    const auto &AllChecks = LAI.getRuntimePointerChecking()->getChecks();
+    const auto &RtPtrChecking = *LAI.getRuntimePointerChecking();
+    unsigned NumPointers = RtPtrChecking.Pointers.size();
+    SmallVector<bool, 8> IsCandLoad(NumPointers, false);
+    SmallVector<bool, 8> IsStoreOnFwdingPath(NumPointers, false);
+
+    for (unsigned I = 0; I < NumPointers; ++I) {
+      const auto &PI = RtPtrChecking.getPointerInfo(I);
+      if (PI.IsWritePtr) {
+        for (Instruction *UI :
+             LAI.getInstructionsForAccess(PI.PointerValue, true)) {
+          if (StoresOnFwdingPath.contains(UI)) {
+            IsStoreOnFwdingPath[I] = true;
+            break;
+          }
+        }
+      }
+      for (Instruction *UI :
+           LAI.getInstructionsForAccess(PI.PointerValue, false)) {
+        if (CandLoads.contains(UI)) {
+          IsCandLoad[I] = true;
+          break;
+        }
+      }
+    }
+
+    const auto &AllChecks = RtPtrChecking.getChecks();
     SmallVector<RuntimePointerCheck, 4> Checks;
 
     copy_if(AllChecks, std::back_inserter(Checks),
             [&](const RuntimePointerCheck &Check) {
               for (auto PtrIdx1 : Check.first->Members)
                 for (auto PtrIdx2 : Check.second->Members)
-                  if (needsChecking(PtrIdx1, PtrIdx2, PtrsWrittenOnFwdingPath,
-                                    CandLoadPtrs))
+                  if (needsChecking(PtrIdx1, PtrIdx2, IsStoreOnFwdingPath,
+                                    IsCandLoad))
                     return true;
               return false;
             });
 
     LLVM_DEBUG(dbgs() << "\nPointer Checks (count: " << Checks.size()
                       << "):\n");
-    LLVM_DEBUG(LAI.getRuntimePointerChecking()->printChecks(dbgs(), Checks));
+    LLVM_DEBUG(RtPtrChecking.printChecks(dbgs(), Checks));
 
     return Checks;
   }
