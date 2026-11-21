@@ -72,6 +72,11 @@ using LatticeTransferState = TransferState<NoopLattice>;
 
 AST_MATCHER(CXXRecordDecl, expectedClass) { return isExpectedClass(Node); }
 
+AST_MATCHER(CXXRecordDecl, unexpectedClass) {
+  return Node.getDeclName().isIdentifier() && Node.getName() == "unexpected" &&
+         isSupportedNamespace(*Node.getDeclContext());
+}
+
 auto expectedMemberCall(ast_matchers::internal::Matcher<NamedDecl> Name) {
   return cxxMemberCallExpr(
       callee(cxxMethodDecl(Name, ofClass(expectedClass()))));
@@ -87,6 +92,11 @@ auto hasExpectedType() {
       recordType(hasDeclaration(cxxRecordDecl(expectedClass())))));
 }
 
+auto hasUnexpectedType() {
+  return hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(unexpectedClass())))));
+}
+
 /// Matches `operator==` and `operator!=` calls between an expected and an
 /// operand that matches `Other`, in either order.
 auto expectedComparisonCall(
@@ -99,6 +109,15 @@ auto expectedComparisonCall(
 
 auto expectedEqualityCall() {
   return expectedComparisonCall(hasExpectedType());
+}
+
+auto expectedValueEqualityCall() {
+  return expectedComparisonCall(
+      unless(anyOf(hasExpectedType(), hasUnexpectedType())));
+}
+
+auto expectedUnexpectedEqualityCall() {
+  return expectedComparisonCall(hasUnexpectedType());
 }
 
 /// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
@@ -119,6 +138,11 @@ const Formula &equalityFormula(Environment &Env, const CXXOperatorCallExpr &E) {
   if (E.getOperator() == OO_ExclaimEqual)
     return Env.arena().makeNot(Result);
   return Result;
+}
+
+/// Returns the expected operand of the comparison `E`, which has exactly one.
+const Expr &getExpectedOperand(const CXXOperatorCallExpr &E) {
+  return isExpectedType(E.getArg(0)->getType()) ? *E.getArg(0) : *E.getArg(1);
 }
 
 StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
@@ -175,6 +199,35 @@ void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
     Env.assume(A.makeImplies(A.makeAnd(LHasValue, RHasValue), EqVal));
 }
 
+void transferExpectedValueEqualityCall(const CXXOperatorCallExpr *E,
+                                       const MatchFinder::MatchResult &,
+                                       LatticeTransferState &State) {
+  Environment &Env = State.Env;
+  BoolValue *HasValueVal =
+      getHasValue(Env, Env.get<RecordStorageLocation>(getExpectedOperand(*E)));
+  if (HasValueVal == nullptr)
+    return;
+
+  // `e == v` --> `e.has_value() && *e == v`
+  Env.assume(Env.arena().makeImplies(equalityFormula(Env, *E),
+                                     HasValueVal->formula()));
+}
+
+void transferExpectedUnexpectedEqualityCall(const CXXOperatorCallExpr *E,
+                                            const MatchFinder::MatchResult &,
+                                            LatticeTransferState &State) {
+  Environment &Env = State.Env;
+  BoolValue *HasValueVal =
+      getHasValue(Env, Env.get<RecordStorageLocation>(getExpectedOperand(*E)));
+  if (HasValueVal == nullptr)
+    return;
+
+  // `e == u` --> `!e.has_value() && e.error() == u.error()`
+  Arena &A = Env.arena();
+  Env.assume(A.makeImplies(equalityFormula(Env, *E),
+                           A.makeNot(HasValueVal->formula())));
+}
+
 // FIXME: Model the constructors, assignments, `emplace` and `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
@@ -185,6 +238,13 @@ auto buildTransferMatchSwitch() {
       // operator==, operator!= between two expecteds
       .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedEqualityCall(),
                                           transferExpectedEqualityCall)
+      // operator==, operator!= between an expected and a value
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedValueEqualityCall(),
+                                          transferExpectedValueEqualityCall)
+      // operator==, operator!= between an expected and an unexpected
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(
+          expectedUnexpectedEqualityCall(),
+          transferExpectedUnexpectedEqualityCall)
       .Build();
 }
 
