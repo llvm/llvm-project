@@ -2811,13 +2811,15 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
   // Determine if we're switching to building a new submodule, and which one.
   // This does not apply for C++20 modules header units.
   if (ModuleToImport && !ModuleToImport->isHeaderUnit()) {
-    if (ModuleToImport->getTopLevelModule()->ShadowingModule) {
+    if (ModuleToImport->getTopLevelModule()->getShadowingModule()) {
       // We are building a submodule that belongs to a shadowed module. This
       // means we find header files in the shadowed module.
       Diag(ModuleToImport->DefinitionLoc,
            diag::err_module_build_shadowed_submodule)
           << ModuleToImport->getFullModuleName();
-      Diag(ModuleToImport->getTopLevelModule()->ShadowingModule->DefinitionLoc,
+      Diag(ModuleToImport->getTopLevelModule()
+               ->getShadowingModule()
+               ->DefinitionLoc,
            diag::note_previous_definition);
       return {ImportAction::None};
     }

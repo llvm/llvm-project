@@ -6621,18 +6621,18 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       SubmodulesLoaded[GlobalIndex] = CurrentModule;
 
       // Clear out data that will be replaced by what is in the module file.
-      CurrentModule->LinkLibraries.clear();
+      CurrentModule->clearLinkLibraries();
       CurrentModule->ConfigMacros.clear();
-      CurrentModule->UnresolvedConflicts.clear();
-      CurrentModule->Conflicts.clear();
+      CurrentModule->clearUnresolvedConflicts();
+      CurrentModule->clearConflicts();
 
       // The module is available unless it's missing a requirement; relevant
       // requirements will be (re-)added by SUBMODULE_REQUIRES records.
       // Missing headers that were present when the module was built do not
       // make it unavailable -- if we got this far, this must be an explicitly
       // imported module file.
-      CurrentModule->Requirements.clear();
-      CurrentModule->MissingHeaders.clear();
+      CurrentModule->clearRequirements();
+      CurrentModule->clearMissingHeaders();
       CurrentModule->IsUnimportable =
           ParentModule && ParentModule->IsUnimportable;
       CurrentModule->IsAvailable = !CurrentModule->IsUnimportable;
@@ -6697,8 +6697,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
     case SUBMODULE_AFFECTING_MODULES:
       for (unsigned Idx = 0; Idx != Record.size(); ++Idx) {
         SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx]);
-        CurrentModule->AffectingClangModules.push_back(
-            ModuleRef(this, GlobalID));
+        CurrentModule->addAffectingClangModule(ModuleRef(this, GlobalID));
       }
       break;
 
@@ -6724,7 +6723,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
 
     case SUBMODULE_LINK_LIBRARY:
       ModMap.resolveLinkAsDependencies(CurrentModule);
-      CurrentModule->LinkLibraries.push_back(
+      CurrentModule->addLinkLibrary(
           Module::LinkLibrary(std::string(Blob), Record[0]));
       break;
 
@@ -6737,7 +6736,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
       Module::Conflict Conflict;
       Conflict.Other = ModuleRef(this, GlobalID);
       Conflict.Message = Blob.str();
-      CurrentModule->Conflicts.push_back(Conflict);
+      CurrentModule->addConflict(std::move(Conflict));
       break;
     }
 
@@ -6755,7 +6754,7 @@ Module *ASTReader::getSubmodule(uint32_t GlobalID) {
     }
 
     case SUBMODULE_EXPORT_AS:
-      CurrentModule->ExportAsModule = Blob.str();
+      CurrentModule->setExportAsModule(Blob);
       ModMap.addLinkAsDependency(CurrentModule);
       break;
 

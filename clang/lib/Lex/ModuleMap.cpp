@@ -62,10 +62,10 @@ void ModuleMap::resolveLinkAsDependencies(Module *Mod) {
 }
 
 void ModuleMap::addLinkAsDependency(Module *Mod) {
-  if (findModule(Mod->ExportAsModule))
+  if (findModule(Mod->getExportAsModule()))
     Mod->UseExportAsModuleLinkName = true;
   else
-    PendingLinkAsModule[Mod->ExportAsModule].insert(Mod->Name);
+    PendingLinkAsModule[Mod->getExportAsModule()].insert(Mod->Name);
 }
 
 Module::HeaderKind ModuleMap::headerRoleToKind(ModuleHeaderRole Role) {
@@ -319,7 +319,7 @@ void ModuleMap::resolveHeader(Module *Mod,
   } else {
     // If we find a module that has a missing header, we mark this module as
     // unavailable and store the header directive for displaying diagnostics.
-    Mod->MissingHeaders.push_back(Header);
+    Mod->addMissingHeaders(Header);
     // A missing header with stat information doesn't make the module
     // unavailable; this keeps our behavior consistent as headers are lazily
     // resolved. (Such a module still can't be built though, except from
@@ -661,9 +661,9 @@ void ModuleMap::diagnoseDuplicateHeaderOwnership(SourceLocation FilenameLoc,
                    H.getRole() == ExcludedHeader;
           });
       if (!IsExcluded) {
-        OwningModules.push_back({TopLevel,
-                                 UmbrellaOwner.getModule()->UmbrellaDeclLoc,
-                                 /*IsUmbrella=*/true});
+        OwningModules.push_back(
+            {TopLevel, UmbrellaOwner.getModule()->getUmbrellaDeclLoc(),
+             /*IsUmbrella=*/true});
       }
     }
   }
@@ -1126,8 +1126,8 @@ static void inferFrameworkLink(Module *Mod) {
 
   StringRef FrameworkName(Mod->Name);
   FrameworkName.consume_back("_Private");
-  Mod->LinkLibraries.emplace_back(FrameworkName.str(),
-                                  /*IsFramework=*/true);
+  Mod->addLinkLibrary(
+      Module::LinkLibrary(FrameworkName.str(), /*IsFramework=*/true));
 }
 
 Module *ModuleMap::inferFrameworkModule(DirectoryEntryRef FrameworkDir,
@@ -1322,7 +1322,7 @@ Module *ModuleMap::createShadowedModule(StringRef Name, bool IsFramework,
   Module *Result = new (ModulesAlloc.Allocate())
       Module(ModuleConstructorTag{}, Name, SourceLocation(), /*Parent=*/nullptr,
              IsFramework, /*IsExplicit=*/false, NumCreatedModules++);
-  Result->ShadowingModule = ShadowingModule;
+  Result->setShadowingModule(ShadowingModule);
   Result->markUnavailable(/*Unimportable*/true);
   ModuleScopeIDs[Result] = CurrentModuleScopeID;
 
@@ -1335,11 +1335,8 @@ void ModuleMap::setUmbrellaHeaderAsWritten(
   Headers[UmbrellaHeader].push_back(KnownHeader(Mod, NormalHeader));
   if (Loc.isValid())
     HeaderOwnerLocs[{&UmbrellaHeader.getFileEntry(), Mod}] = Loc;
-  Mod->Umbrella = UmbrellaHeader;
-  Mod->UmbrellaDeclLoc = Loc;
-  Mod->UmbrellaAsWritten = NameAsWritten.str();
-  Mod->UmbrellaRelativeToRootModuleDirectory =
-      PathRelativeToRootModuleDirectory.str();
+  Mod->setUmbrella(UmbrellaHeader, Loc, NameAsWritten.str(),
+                   PathRelativeToRootModuleDirectory.str());
   UmbrellaDirs[UmbrellaHeader.getDir()] = Mod;
   // A header added next to the umbrella header doesn't change the module, but
   // it should rebuild to warn that the umbrella header doesn't include it.
@@ -1370,11 +1367,8 @@ void ModuleMap::canonicalizeDirectoryDependency(const FileManager &FileMgr,
 void ModuleMap::setUmbrellaDirAsWritten(
     Module *Mod, DirectoryEntryRef UmbrellaDir, const Twine &NameAsWritten,
     const Twine &PathRelativeToRootModuleDirectory, SourceLocation Loc) {
-  Mod->Umbrella = UmbrellaDir;
-  Mod->UmbrellaDeclLoc = Loc;
-  Mod->UmbrellaAsWritten = NameAsWritten.str();
-  Mod->UmbrellaRelativeToRootModuleDirectory =
-      PathRelativeToRootModuleDirectory.str();
+  Mod->setUmbrella(UmbrellaDir, Loc, NameAsWritten.str(),
+                   PathRelativeToRootModuleDirectory.str());
   UmbrellaDirs[UmbrellaDir] = Mod;
   // The umbrella directory tree is enumerated to collect the module's headers.
   recordDirectoryDependencies(Mod, UmbrellaDir.getName());
@@ -1407,7 +1401,7 @@ void ModuleMap::addUnresolvedHeader(Module *Mod,
       LazyHeadersByModTime[*Header.ModTime].push_back(Mod);
     else
       LazyHeadersBySize[*Header.Size].push_back(Mod);
-    Mod->UnresolvedHeaders.push_back(Header);
+    Mod->addUnresolvedHeader(Header);
     return;
   }
 
@@ -1439,7 +1433,7 @@ void ModuleMap::resolveHeaderDirectives(
   const auto Size = File ? (*File)->getSize() : 0;
   const auto ModTime = File ? (*File)->getModificationTime() : 0;
 
-  for (auto &Header : Mod->UnresolvedHeaders) {
+  for (auto &Header : Mod->takeUnresolvedHeaders()) {
     if (File && ((Header.ModTime && Header.ModTime != ModTime) ||
                  (Header.Size && Header.Size != Size)))
       NewHeaders.push_back(Header);
@@ -1448,7 +1442,8 @@ void ModuleMap::resolveHeaderDirectives(
       // the header information for this file.
       const_cast<ModuleMap *>(this)->resolveHeader(Mod, Header, NeedsFramework);
   }
-  Mod->UnresolvedHeaders.swap(NewHeaders);
+  for (auto &Header : NewHeaders)
+    Mod->addUnresolvedHeader(std::move(Header));
 }
 
 void ModuleMap::addHeader(Module *Mod, Module::Header Header,
@@ -1693,31 +1688,27 @@ bool ModuleMap::resolveExports(Module *Mod, bool Complain) {
 
 bool ModuleMap::resolveUses(Module *Mod, bool Complain) {
   auto *Top = Mod->getTopLevelModule();
-  auto Unresolved = std::move(Top->UnresolvedDirectUses);
-  Top->UnresolvedDirectUses.clear();
-  for (auto &UDU : Unresolved) {
+  for (auto &UDU : Top->takeUnresolvedDirectUses()) {
     Module *DirectUse = resolveModuleId(UDU, Top, Complain);
     if (DirectUse)
-      Top->DirectUses.push_back(DirectUse);
+      Top->addDirectUse(DirectUse);
     else
-      Top->UnresolvedDirectUses.push_back(UDU);
+      Top->addUnresolvedDirectUse(std::move(UDU));
   }
-  return !Top->UnresolvedDirectUses.empty();
+  return !Top->getUnresolvedDirectUses().empty();
 }
 
 bool ModuleMap::resolveConflicts(Module *Mod, bool Complain) {
-  auto Unresolved = std::move(Mod->UnresolvedConflicts);
-  Mod->UnresolvedConflicts.clear();
-  for (auto &UC : Unresolved) {
+  for (auto &UC : Mod->takeUnresolvedConflicts()) {
     if (Module *OtherMod = resolveModuleId(UC.Id, Mod, Complain)) {
       Module::Conflict Conflict;
       Conflict.Other = OtherMod;
       Conflict.Message = UC.Message;
-      Mod->Conflicts.push_back(Conflict);
+      Mod->addConflict(std::move(Conflict));
     } else
-      Mod->UnresolvedConflicts.push_back(UC);
+      Mod->addUnresolvedConflict(std::move(UC));
   }
-  return !Mod->UnresolvedConflicts.empty();
+  return !Mod->getUnresolvedConflicts().empty();
 }
 
 //----------------------------------------------------------------------------//
@@ -2040,7 +2031,7 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   // If the active module is a top-level framework, and there are no link
   // libraries, automatically link against the framework.
   if (ActiveModule->IsFramework && !ActiveModule->isSubFramework() &&
-      ActiveModule->LinkLibraries.empty())
+      ActiveModule->getLinkLibraries().empty())
     inferFrameworkLink(ActiveModule);
 
   // If the module meets all requirements but is still unavailable, mark the
@@ -2048,8 +2039,8 @@ void ModuleMapLoader::handleModuleDecl(const modulemap::ModuleDecl &MD) {
   if (!ActiveModule->IsAvailable && !ActiveModule->IsUnimportable &&
       ActiveModule->Parent) {
     ActiveModule->getTopLevelModule()->markUnavailable(/*Unimportable=*/false);
-    ActiveModule->getTopLevelModule()->MissingHeaders.append(
-      ActiveModule->MissingHeaders.begin(), ActiveModule->MissingHeaders.end());
+    ActiveModule->getTopLevelModule()->addMissingHeaders(
+        ActiveModule->getMissingHeaders());
   }
 
   // We're done parsing this module. Pop back to the previous module.
@@ -2154,8 +2145,7 @@ void ModuleMapLoader::handleHeaderDecl(const modulemap::HeaderDecl &HD) {
   Header.Kind = Map.headerRoleToKind(Role);
 
   // Check whether we already have an umbrella.
-  if (Header.IsUmbrella &&
-      !std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
+  if (Header.IsUmbrella && ActiveModule->hasUmbrella()) {
     Diags.Report(Header.FileNameLoc, diag::err_mmap_umbrella_clash)
       << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2200,7 +2190,7 @@ void ModuleMapLoader::handleUmbrellaDirDecl(
   std::string DirNameAsWritten = DirName;
 
   // Check whether we already have an umbrella.
-  if (!std::holds_alternative<std::monostate>(ActiveModule->Umbrella)) {
+  if (ActiveModule->hasUmbrella()) {
     Diags.Report(UDD.Location, diag::err_mmap_umbrella_clash)
         << ActiveModule->getFullModuleName();
     HadError = true;
@@ -2277,18 +2267,18 @@ void ModuleMapLoader::handleExportDecl(const modulemap::ExportDecl &ED) {
 void ModuleMapLoader::handleExportAsDecl(const modulemap::ExportAsDecl &EAD) {
   const auto &ModName = EAD.Id.front();
 
-  if (!ActiveModule->ExportAsModule.empty()) {
-    if (ActiveModule->ExportAsModule == ModName.first) {
+  if (!ActiveModule->getExportAsModule().empty()) {
+    if (ActiveModule->getExportAsModule() == ModName.first) {
       Diags.Report(ModName.second, diag::warn_mmap_redundant_export_as)
           << ActiveModule->Name << ModName.first;
     } else {
       Diags.Report(ModName.second, diag::err_mmap_conflicting_export_as)
-          << ActiveModule->Name << ActiveModule->ExportAsModule
+          << ActiveModule->Name << ActiveModule->getExportAsModule()
           << ModName.first;
     }
   }
 
-  ActiveModule->ExportAsModule = ModName.first;
+  ActiveModule->setExportAsModule(ModName.first);
   Map.addLinkAsDependency(ActiveModule);
 }
 
@@ -2296,12 +2286,12 @@ void ModuleMapLoader::handleUseDecl(const modulemap::UseDecl &UD) {
   if (ActiveModule->Parent)
     Diags.Report(UD.Location, diag::err_mmap_use_decl_submodule);
   else
-    ActiveModule->UnresolvedDirectUses.push_back(UD.Id);
+    ActiveModule->addUnresolvedDirectUse(UD.Id);
 }
 
 void ModuleMapLoader::handleLinkDecl(const modulemap::LinkDecl &LD) {
-  ActiveModule->LinkLibraries.emplace_back(std::string{LD.Library},
-                                           LD.Framework);
+  ActiveModule->addLinkLibrary(
+      Module::LinkLibrary(std::string{LD.Library}, LD.Framework));
 }
 
 void ModuleMapLoader::handleConfigMacros(
@@ -2327,7 +2317,7 @@ void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {
   Conflict.Message = CD.Message;
 
   // FIXME: when we move to C++20 we should consider using emplace_back
-  ActiveModule->UnresolvedConflicts.push_back(std::move(Conflict));
+  ActiveModule->addUnresolvedConflict(std::move(Conflict));
 }
 
 void ModuleMapLoader::handleInferredModuleDecl(
@@ -2350,8 +2340,8 @@ void ModuleMapLoader::handleInferredModuleDecl(
     // Check for redefinition of an inferred module.
     if (ActiveModule->InferSubmodules) {
       Diags.Report(StarLoc, diag::err_mmap_inferred_redef);
-      if (ActiveModule->InferredSubmoduleLoc.isValid())
-        Diags.Report(ActiveModule->InferredSubmoduleLoc,
+      if (ActiveModule->getInferredSubmoduleLoc().isValid())
+        Diags.Report(ActiveModule->getInferredSubmoduleLoc(),
                      diag::note_mmap_prev_definition);
       return;
     }
@@ -2369,7 +2359,7 @@ void ModuleMapLoader::handleInferredModuleDecl(
   if (ActiveModule) {
     // Note that we have an inferred submodule.
     ActiveModule->InferSubmodules = true;
-    ActiveModule->InferredSubmoduleLoc = StarLoc;
+    ActiveModule->setInferredSubmoduleLoc(StarLoc);
     ActiveModule->InferExplicitSubmodules = MD.Explicit;
   } else {
     // We'll be inferring framework modules for this directory.
