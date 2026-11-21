@@ -2306,8 +2306,7 @@ void ModuleMapLoader::handleConfigMacros(
   if (CMD.Exhaustive) {
     ActiveModule->ConfigMacrosExhaustive = true;
   }
-  ActiveModule->ConfigMacros.insert(ActiveModule->ConfigMacros.end(),
-                                    CMD.Macros.begin(), CMD.Macros.end());
+  ActiveModule->addConfigMacros(CMD.Macros);
 }
 
 void ModuleMapLoader::handleConflict(const modulemap::ConflictDecl &CD) {

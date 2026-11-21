@@ -16,7 +16,7 @@
 namespace clang {
 
 ASTSourceDescriptor::ASTSourceDescriptor(Module &M)
-    : Signature(M.Signature), ClangModule(&M) {
+    : Signature(M.getSignature()), ClangModule(&M) {
   if (M.Directory)
     Path = M.Directory->getName();
   if (auto FileKey = M.getASTFileName())

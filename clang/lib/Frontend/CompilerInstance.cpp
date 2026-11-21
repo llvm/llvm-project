@@ -1800,7 +1800,7 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
 static void checkConfigMacros(Preprocessor &PP, Module *M,
                               SourceLocation ImportLoc) {
   clang::Module *TopModule = M->getTopLevelModule();
-  for (const StringRef ConMacro : TopModule->ConfigMacros) {
+  for (const StringRef ConMacro : TopModule->getConfigMacros()) {
     checkConfigMacro(PP, ConMacro, M, ImportLoc);
   }
 }
