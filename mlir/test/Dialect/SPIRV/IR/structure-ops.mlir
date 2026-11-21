@@ -505,6 +505,66 @@ spirv.module Logical GLSL450 {
    spirv.EntryPoint "GLCompute" @do_nothing
    // CHECK: spirv.ExecutionModeId {{@.*}} "LocalSizeHintId" @x, @y, @z
    spirv.ExecutionModeId @do_nothing "LocalSizeHintId" @x, @y, @z
+   // CHECK: spirv.ExecutionModeId {{@.*}} "FPFastMathDefault" f32, 0 : i32
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f32, 0 : i32
+   // CHECK: spirv.ExecutionModeId {{@.*}} "FPFastMathDefault" f16, 458752 : i32
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f16, 458752 : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected Target Type to be a scalar float type}}
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" i32, 0 : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.SpecConstant @x = 0 : i32
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected Fast-Math Mode to be an i32 constant}}
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f32, @x
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected Fast-Math Mode to be a valid bitmask}}
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f32, 524288 : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected Fast-Math Mode to not include Fast}}
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f32, 16 : i32
+}
+
+// -----
+
+spirv.module Logical GLSL450 {
+   spirv.func @do_nothing() -> () "None" {
+     spirv.Return
+   }
+   spirv.EntryPoint "GLCompute" @do_nothing
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected Fast-Math Mode with AllowTransform to include AllowContract and AllowReassoc}}
+   spirv.ExecutionModeId @do_nothing "FPFastMathDefault" f32, 262144 : i32
 }
 
 // -----
@@ -553,7 +613,7 @@ spirv.module Logical GLSL450 {
      spirv.Return
    }
    spirv.EntryPoint "GLCompute" @do_nothing
-   // expected-error @+1 {{custom op 'spirv.ExecutionModeId' invalid kind of attribute specified}}
+   // expected-error @+1 {{'spirv.ExecutionModeId' op expected value operands to be symbol reference}}
    spirv.ExecutionModeId @do_nothing "LocalSizeId" @x, @y, 2
 }
 

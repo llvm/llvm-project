@@ -313,11 +313,15 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", [
 
     <!-- End of AutoGen section -->
 
+    Specialization constant operands are symbol references. FPFastMathDefault
+    takes a scalar float type and an i32 constant.
+
     ```
     execution-mode ::= "Invocations" | "SpacingEqual" |
                            <and other SPIR-V execution modes...>
     execution-mode-id-op ::= `spirv.ExecutionMode ` ssa-use execution-mode
-                              symbol-reference (`, ` symbol-reference)*
+                              id-operand (`, ` id-operand)*
+    id-operand ::= symbol-reference | type | integer-attribute
     ```
 
     #### Example:
@@ -325,6 +329,7 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", [
     ```mlir
     spirv.ExecutionModeId @foo "LocalSizeId" @var0, @var1, @var2
     spirv.ExecutionModeId @bar "LocalSizeHintId" @x, @y, @z
+    spirv.ExecutionModeId @baz "FPFastMathDefault" f32, 0 : i32
     ```
   }];
 
@@ -338,7 +343,7 @@ def SPIRV_ExecutionModeIdOp : SPIRV_Op<"ExecutionModeId", [
   let arguments = (ins
     FlatSymbolRefAttr:$fn,
     SPIRV_ExecutionModeAttr:$execution_mode, 
-    SymbolRefArrayAttr:$values
+    ArrayAttr:$values
   );
 
   let results = (outs);
