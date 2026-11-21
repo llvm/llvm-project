@@ -366,10 +366,9 @@ public:
   static InitializedEntity InitializeTemporary(ASTContext &Context,
                                                TypeSourceInfo *TypeInfo) {
     QualType Type = TypeInfo->getType();
-    if (Context.getLangOpts().OpenCLCPlusPlus) {
-      assert(!Type.hasAddressSpace() && "Temporary already has address space!");
+    // A written address space is kept so InitializeFrom can diagnose it.
+    if (Context.getLangOpts().OpenCLCPlusPlus && !Type.hasAddressSpace())
       Type = Context.getAddrSpaceQualType(Type, LangAS::opencl_private);
-    }
 
     return InitializeTemporary(TypeInfo, Type);
   }
@@ -1167,6 +1166,9 @@ public:
 
     /// HLSL initialization list flattening failed.
     FK_HLSLInitListFlatteningFailed,
+
+    /// Temporary is qualified with an address space it cannot be created in.
+    FK_TemporaryAddressSpace,
   };
 
 private:
