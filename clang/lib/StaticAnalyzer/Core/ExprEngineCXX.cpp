@@ -236,7 +236,8 @@ SVal ExprEngine::computeObjectUnderConstruction(
         QualType ReturnTy = RetE->getType();
         QualType RegionTy = ACtx.getPointerType(ReturnTy);
         return SVB.conjureSymbolVal(&TopLevelSymRegionTag, getCFGElementRef(),
-                                    SF, RegionTy, getNumVisitedCurrent());
+                                    getCurrStackFrame(), RegionTy,
+                                    getNumVisitedCurrent());
       }
       llvm_unreachable("Unhandled return value construction context!");
     }

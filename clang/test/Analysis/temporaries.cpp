@@ -24,6 +24,7 @@
 extern bool clang_analyzer_eval(bool);
 extern bool clang_analyzer_warnIfReached();
 void clang_analyzer_checkInlined(bool);
+void clang_analyzer_dump(void *);
 
 #include "Inputs/system-header-simulator-cxx.h"
 
@@ -1239,3 +1240,32 @@ void test() {
 }
 } // namespace arguments_of_operators
 #endif // __cplusplus >= 201103L
+
+namespace stack_frame_of_return_from_entrypoint {
+struct Obj {
+  int *p;
+  Obj() { p = new int; }
+  Obj(Obj &&s) : p(s.p) {
+    s.p = 0;
+    clang_analyzer_dump(this); // Note: We match LC3 - see later.
+    // expected-warning-re@-1 {{{{conj_\$[0-9]+{Obj \*, LC3, S[0-9]+, #[0-9]+}}}}}
+  }
+  ~Obj();  // Presumably releases 'p'.
+};
+
+Obj inner() {
+  // This is stack frame #3 (displayed as LC3 in the conjured symbol dump).
+  Obj o;
+  return o;
+}
+
+Obj middle() {
+  // This is stack frame #2 (would be displayed as LC2).
+  return inner();
+}
+
+Obj entrypoint() {
+  // This is stack frame #1 (would be displayed as LC1).
+  return middle();
+}
+} // namespace stack_frame_of_return_from_entrypoint
