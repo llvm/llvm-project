@@ -1,0 +1,77 @@
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -run-pass=regallocfast %s \
+# RUN:   -o - 2>&1 | FileCheck %s
+
+# The fast register allocator folds foldable ("rm") inline asm operands only
+# when that makes the asm's register operands fit, and folds nothing when it
+# can't, leaving allocation to report the error. The clobbers below leave six
+# GPRs.
+
+# CHECK: error: inline assembly requires more registers than available
+# CHECK: error: inline assembly requires more registers than available
+# CHECK: error: inline assembly requires more registers than available
+
+---
+# The folder folds every operand of a register, but the undef read of %0
+# can't be folded, so %0 isn't either, and seven values don't fit. (There is
+# no C source: instruction selection doesn't emit undef inline asm operands.)
+# CHECK-LABEL: name: undef_use
+# CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, killed renamable {{\$[a-z0-9]+}}, reguse:GR64, undef
+name: undef_use
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64, undef %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, clobber, implicit-def early-clobber $rax, clobber, implicit-def early-clobber $rbx, clobber, implicit-def early-clobber $rbp, clobber, implicit-def early-clobber $r10, clobber, implicit-def early-clobber $r11, clobber, implicit-def early-clobber $r12, clobber, implicit-def early-clobber $r13, clobber, implicit-def early-clobber $r14, clobber, implicit-def early-clobber $r15
+    RET 0
+...
+---
+# The same for a foldable output with an undef read.
+# CHECK-LABEL: name: undef_use_of_def
+# CHECK: INLINEASM &"", sideeffect attdialect, regdef-ec:GR64 foldable, def early-clobber renamable {{\$[a-z0-9]+}}, reguse:GR64, undef
+name: undef_use_of_def
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    INLINEASM &"", sideeffect attdialect, regdef-ec:GR64 foldable, def early-clobber %7:gr64, reguse:GR64, undef %7, reguse:GR64, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, clobber, implicit-def early-clobber $rax, clobber, implicit-def early-clobber $rbx, clobber, implicit-def early-clobber $rbp, clobber, implicit-def early-clobber $r10, clobber, implicit-def early-clobber $r11, clobber, implicit-def early-clobber $r12, clobber, implicit-def early-clobber $r13, clobber, implicit-def early-clobber $r14, clobber, implicit-def early-clobber $r15
+    $rax = COPY %7
+    RET 0, $rax
+...
+---
+# Seven "r" inputs don't fit even with the "rm" input folded, so it isn't.
+# CHECK-LABEL: name: cannot_fit
+# CHECK: INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, killed renamable
+name: cannot_fit
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, size: 8, alignment: 16, isImmutable: true }
+  - { id: 1, size: 8, alignment: 16, isImmutable: true }
+body: |
+  bb.0:
+    liveins: $rdi, $rsi, $rdx, $rcx, $r8, $r9
+    %0:gr64 = COPY $rdi
+    %1:gr64 = COPY $rsi
+    %2:gr64 = COPY $rdx
+    %3:gr64 = COPY $rcx
+    %4:gr64 = COPY $r8
+    %5:gr64 = COPY $r9
+    %6:gr64 = MOV64rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.0, align 16)
+    %7:gr64 = MOV64rm %fixed-stack.1, 1, $noreg, 0, $noreg :: (load (s64) from %fixed-stack.1, align 16)
+    INLINEASM &"", sideeffect attdialect, reguse:GR64 foldable, %0, reguse:GR64, %1, reguse:GR64, %2, reguse:GR64, %3, reguse:GR64, %4, reguse:GR64, %5, reguse:GR64, %6, reguse:GR64, %7, clobber, implicit-def early-clobber $rax, clobber, implicit-def early-clobber $rbx, clobber, implicit-def early-clobber $rbp, clobber, implicit-def early-clobber $r10, clobber, implicit-def early-clobber $r11, clobber, implicit-def early-clobber $r12, clobber, implicit-def early-clobber $r13, clobber, implicit-def early-clobber $r14, clobber, implicit-def early-clobber $r15
+    RET 0
+...
