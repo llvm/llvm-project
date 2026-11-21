@@ -18,6 +18,7 @@ void test(global uint* out, uint a, uint b, uint c, uint d) {
   *out = __builtin_amdgcn_permlane16(a, b, c, d, 1, 1); // expected-error {{'__builtin_amdgcn_permlane16' needs target feature gfx10-insts}}
   *out = __builtin_amdgcn_permlanex16(a, b, c, d, 1, 1);  // expected-error {{'__builtin_amdgcn_permlanex16' needs target feature gfx10-insts}}
   *out = __builtin_amdgcn_mov_dpp8(a, 1);  // expected-error {{'__builtin_amdgcn_mov_dpp8' needs target feature gfx10-insts}}
+  __builtin_amdgcn_s_wait_idle(); // expected-error {{'__builtin_amdgcn_s_wait_idle' needs target feature gfx10-insts}}
 }
 
 void test_mov_dpp8(global int* out, int src, int i, int2 i2, struct S s, float _Complex fc)

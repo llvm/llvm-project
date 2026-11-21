@@ -1854,9 +1854,10 @@ let SubtargetPredicate = isGFX10Plus in {
   def S_CLAUSE :
     SOPP_Pseudo<"s_clause", (ins s16imm:$simm16), "$simm16">;
   def S_WAIT_IDLE :
-    SOPP_Pseudo <"s_wait_idle", (ins)> {
+    SOPP_Pseudo <"s_wait_idle", (ins), "", [(int_amdgcn_s_wait_idle)]> {
       let simm16 = 0;
       let fixed_imm = 1;
+      let hasSideEffects = 1;
     }
   def S_WAITCNT_DEPCTR :
     SOPP_Pseudo <"s_waitcnt_depctr" , (ins DepCtr:$simm16), "$simm16">;

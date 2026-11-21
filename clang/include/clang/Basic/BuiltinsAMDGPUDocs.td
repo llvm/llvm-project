@@ -1050,3 +1050,25 @@ to instruction memory, with the length specified by ``len``, which should be
 0-31 (1-32 chunks, units of 128 bytes).
 }];
 }
+
+//===----------------------------------------------------------------------===//
+// Wait Builtins
+//===----------------------------------------------------------------------===//
+
+def DocCatAMDGPUWait : DocumentationCategory<"Wait Builtins"> {
+  let Content = [{
+These builtins provide access to AMDGPU instructions that stall a wave until
+outstanding operations have completed.
+}];
+}
+
+def DocSWaitIdle : Documentation {
+  let Category = DocCatAMDGPUWait;
+  let Content = [{
+Stalls the wave until all of its dependency and memory counters have reached
+zero, i.e., until all of its outstanding operations have completed.
+
+This builtin is not a memory fence and must not be used to establish
+synchronization or memory ordering.
+}];
+}
