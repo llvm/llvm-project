@@ -479,6 +479,8 @@ defm : OptionalBoolField<"msan-keep-going",
   "Keep going after reporting a UMR">;
 defm : OptionalBoolField<"msan-kernel",
   "Enable KernelMemorySanitizer instrumentation">;
+defm : OptionalBoolField<"msan-merge-checks",
+  "Merge per-function MSan warning blocks">;
 defm : OptionalValueField<"msan-origin-base", "uint64_t",
   "Define custom MSan OriginBase">;
 defm : BoolField<"msan-poison-stack", "true",

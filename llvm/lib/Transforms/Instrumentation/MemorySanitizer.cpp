@@ -434,7 +434,7 @@ public:
                   MemorySanitizerOptions Options)
       : Opts(Opts), CompileKernel(Options.Kernel),
         TrackOrigins(Options.TrackOrigins), Recover(Options.Recover),
-        EagerChecks(Options.EagerChecks) {
+        EagerChecks(Options.EagerChecks), MergeChecks(Options.MergeChecks) {
     initializeModule(M);
   }
 
@@ -473,6 +473,7 @@ private:
   int TrackOrigins;
   bool Recover;
   bool EagerChecks;
+  bool MergeChecks;
 
   Triple TargetTriple;
   LLVMContext *C;
@@ -592,8 +593,10 @@ void insertModuleCtor(const InstrumentationOptions &Opts, Module &M) {
 
 } // end anonymous namespace
 
-MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC)
-    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC) {}
+MemorySanitizerOptions::MemorySanitizerOptions(int TO, bool R, bool K, bool EC,
+                                               bool MC)
+    : Kernel(K), TrackOrigins(TO), Recover(R), EagerChecks(EC),
+      MergeChecks(MC) {}
 
 static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
                                              MemorySanitizerOptions O) {
@@ -602,6 +605,7 @@ static MemorySanitizerOptions resolveOptions(const InstrumentationOptions &Opts,
       Opts.msan_track_origins.value_or(O.Kernel ? 2 : O.TrackOrigins);
   O.Recover = valueOr(Opts.msan_keep_going, O.Kernel || O.Recover);
   O.EagerChecks = valueOr(Opts.msan_eager_checks, O.EagerChecks);
+  O.MergeChecks = valueOr(Opts.msan_merge_checks, O.MergeChecks);
   return O;
 }
 
@@ -1047,6 +1051,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   std::unique_ptr<VarArgHelper> VAHelper;
   const TargetLibraryInfo *TLI;
   Instruction *FnPrologueEnd;
+  BasicBlock *MergedWarningBB = nullptr;
   SmallVector<Instruction *, 16> Instructions;
 
   // The following flags disable parts of MSan instrumentation based on
@@ -1295,10 +1300,11 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     }
 
-    if (MS.CompileKernel || MS.TrackOrigins)
-      IRB.CreateCall(MS.WarningFn, Origin)->setCannotMerge();
-    else
-      IRB.CreateCall(MS.WarningFn)->setCannotMerge();
+    CallBase *CB = (MS.CompileKernel || MS.TrackOrigins)
+                       ? IRB.CreateCall(MS.WarningFn, Origin)
+                       : IRB.CreateCall(MS.WarningFn);
+    if (!MS.MergeChecks)
+      CB->setCannotMerge();
     // FIXME: Insert UnreachableInst if !MS.Recover?
     // This may invalidate some of the following checks and needs to be done
     // at the very end.
@@ -1337,12 +1343,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       }
     } else {
       Value *Cmp = convertToBool(ConvertedShadow, IRB, "_mscmp");
-      Instruction *CheckTerm = SplitBlockAndInsertIfThen(
-          Cmp, &*IRB.GetInsertPoint(),
-          /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
+      if (MS.MergeChecks && !MS.Recover && !MS.TrackOrigins &&
+          !MS.CompileKernel) {
+        bool NeedCall = (MergedWarningBB == nullptr);
+        Instruction *CheckTerm = SplitBlockAndInsertIfThen(
+            Cmp, &*IRB.GetInsertPoint(), /* Unreachable */ true,
+            MS.ColdCallWeights, /*DTU=*/nullptr, /*LI=*/nullptr,
+            MergedWarningBB);
+        if (NeedCall) {
+          MergedWarningBB = CheckTerm->getParent();
+          IRB.SetInsertPoint(CheckTerm);
+          insertWarningFn(IRB, Origin);
+        }
+      } else {
+        Instruction *CheckTerm = SplitBlockAndInsertIfThen(
+            Cmp, &*IRB.GetInsertPoint(),
+            /* Unreachable */ !MS.Recover, MS.ColdCallWeights);
 
-      IRB.SetInsertPoint(CheckTerm);
-      insertWarningFn(IRB, Origin);
+        IRB.SetInsertPoint(CheckTerm);
+        insertWarningFn(IRB, Origin);
+      }
       LLVM_DEBUG(dbgs() << "  CHECK: " << *Cmp << "\n");
     }
   }
