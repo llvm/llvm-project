@@ -126,8 +126,6 @@ public:
   bool IsVectorType(CompilerType *element_type = nullptr,
                     uint64_t *size = nullptr) const;
 
-  bool IsArrayOfScalarType() const;
-
   bool IsAggregateType() const;
 
   bool IsAnonymousType() const;
@@ -182,8 +180,6 @@ public:
   /// \param target_type    Can pass nullptr.
   bool IsPossibleDynamicType(CompilerType *target_type, bool check_cplusplus,
                              bool check_objc) const;
-
-  bool IsPointerToScalarType() const;
 
   bool IsRuntimeGeneratedType() const;
 
@@ -416,6 +412,10 @@ public:
   llvm::Expected<uint64_t> GetByteSize(ExecutionContextScope *exe_scope) const;
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
+
+  /// Return the stride of the type in bytes. This is the distance between
+  /// consecutive elements of this type in contiguous storage (e.g. array).
+  std::optional<uint64_t> GetByteStride() const;
 
   lldb::Encoding GetEncoding() const;
 

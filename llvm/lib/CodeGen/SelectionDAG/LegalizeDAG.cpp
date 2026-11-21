@@ -1526,6 +1526,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
   EVT PartVT = Part.getValueType();
+  bool IsInsertSubvector = Op.getOpcode() == ISD::INSERT_SUBVECTOR;
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1540,11 +1541,14 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Freeze the index so we don't poison the clamping code we're about to emit.
   Idx = DAG.getFreeze(Idx);
 
-  Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
+  // INSERT_VECTOR_ELT implicitly truncates an over-width scalar, so use the
+  // vector element type as the actual store type.
+  EVT PartMemVT = IsInsertSubvector ? PartVT : VecVT.getVectorElementType();
+  Type *PartTy = PartMemVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
   // Then store the inserted part.
-  if (PartVT.isVector()) {
+  if (IsInsertSubvector) {
     SDValue SubStackPtr =
         TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
 
@@ -4751,25 +4755,21 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
   case ISD::ATOMIC_CMP_SWAP: {
     MVT VT = cast<AtomicSDNode>(Node)->getMemoryVT().getSimpleVT();
     AtomicOrdering Order = cast<AtomicSDNode>(Node)->getMergedOrdering();
-    RTLIB::Libcall LC = RTLIB::getOUTLINE_ATOMIC(Opc, Order, VT);
+    RTLIB::AtomicLibcall LC =
+        RTLIB::selectAtomicLibcall(DAG.getLibcalls(), Opc, Order, VT);
     EVT RetVT = Node->getValueType(0);
     SmallVector<SDValue, 4> Ops;
-    if (DAG.getLibcalls().getLibcallImpl(LC) != RTLIB::Unsupported) {
+    if (LC.IsOutline) {
       // If outline atomic available, prepare its arguments and expand.
       Ops.append(Node->op_begin() + 2, Node->op_end());
       Ops.push_back(Node->getOperand(1));
-
     } else {
-      LC = RTLIB::getSYNC(Opc, VT);
-      assert(LC != RTLIB::UNKNOWN_LIBCALL &&
-             "Unexpected atomic op or value type!");
       // Arguments for expansion to sync libcall
       Ops.append(Node->op_begin() + 1, Node->op_end());
     }
-    std::pair<SDValue, SDValue> Tmp = TLI.makeLibCall(DAG, LC, RetVT,
-                                                      Ops, CallOptions,
-                                                      SDLoc(Node),
-                                                      Node->getOperand(0));
+    std::pair<SDValue, SDValue> Tmp =
+        TLI.makeLibCall(DAG, LC.Impl, RetVT, Ops, CallOptions, SDLoc(Node),
+                        Node->getOperand(0));
     Results.push_back(Tmp.first);
     Results.push_back(Tmp.second);
     break;

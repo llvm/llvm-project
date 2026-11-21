@@ -31,8 +31,8 @@ define i64 @fold_srem_1_i64(i64 %x) {
 define i16 @fold_srem_2_i16(i16 %x) {
 ; CHECK-LABEL: fold_srem_2_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, #0x8000
-; CHECK-NEXT:    add w8, w0, w8, lsr #15
+; CHECK-NEXT:    ubfx w8, w0, #15, #1
+; CHECK-NEXT:    add w8, w0, w8
 ; CHECK-NEXT:    and w8, w8, #0xfffffffe
 ; CHECK-NEXT:    sub w0, w0, w8
 ; CHECK-NEXT:    ret

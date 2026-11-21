@@ -80,6 +80,7 @@ set(hexagon_files
   hexagon_types.h
   hlx_hexagon_protos.h
   hvx_hexagon_protos.h
+  hmx_hexagon_protos.h
   )
 
 set(hip_files
@@ -97,6 +98,7 @@ set(hlsl_subdir_files
   hlsl/hlsl_basic_types.h
   hlsl/hlsl_alias_intrinsics.h
   hlsl/hlsl_compat_overloads.h
+  hlsl/hlsl_debugging.h
   hlsl/hlsl_intrinsic_helpers.h
   hlsl/hlsl_intrinsics.h
   hlsl/hlsl_detail.h

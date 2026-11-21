@@ -68,7 +68,8 @@ LoopVectorizeHints::LoopVectorizeHints(const VectorizeOptions &Opts,
             VectorizerParams::VectorizationFactor.getKnownMinValue(), HK_WIDTH),
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force(FK_Undefined), IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
-      Predicate(FK_Undefined), Scalable(SK_Unspecified), TheLoop(L), ORE(ORE) {
+      Predicate(FK_Undefined), Scalable(SK_Unspecified), FPUnsafe(FK_Undefined),
+      TheLoop(L), ORE(ORE) {
   // Populate values with existing loop metadata.
   getHintsFromMetadata();
 
@@ -205,6 +206,11 @@ void LoopVectorizeHints::emitRemarkWithHints() const {
 }
 
 bool LoopVectorizeHints::allowReordering() const {
+  // An explicit fp_unsafe hint takes precedence over the vectorize.enable
+  // default.
+  if (FPUnsafe != FK_Undefined)
+    return FPUnsafe == FK_Enabled;
+
   // Allow the vectorizer to change the order of operations if enabling
   // loop hints are provided
   ElementCount EC = getWidth();
@@ -250,6 +256,10 @@ void LoopVectorizeHints::getHintsFromMetadata() {
         Force = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.disable")
         Force = FK_Disabled;
+      else if (Name == "llvm.loop.vectorize.fp_unsafe.enable")
+        FPUnsafe = FK_Enabled;
+      else if (Name == "llvm.loop.vectorize.fp_unsafe.disable")
+        FPUnsafe = FK_Disabled;
       else if (Name == "llvm.loop.vectorize.predicate.enable")
         Predicate = FK_Enabled;
       else if (Name == "llvm.loop.vectorize.predicate.disable")
@@ -274,8 +284,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  // Force, Predicate, and Scalable are omitted: they are only spelled as
-  // single-operand enable/disable nodes, which never reach setHint().
+  // Force, Predicate, Scalable and FPUnsafe are omitted: they are only
+  // spelled as single-operand enable/disable nodes, which never reach
+  // setHint().
   Hint *Hints[] = {&Width, &Interleave, &IsVectorized};
   for (auto *H : Hints) {
     if (Name == H->Name) {
@@ -1042,12 +1053,15 @@ bool LoopVectorizationLegality::canVectorizeInstr(Instruction &I) {
 
     // FP instructions can allow unsafe algebra, thus vectorizable by
     // non-IEEE-754 compliant SIMD units.
-    // This applies to floating-point math operations and calls, not memory
-    // operations, shuffles, or casts, as they don't change precision or
-    // semantics.
-  } else if (I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp()) &&
+    // This applies to floating-point math operations, calls and compares
+    // other than NaN checks, not memory operations, shuffles, or casts, as they
+    // don't change precision or semantics.
+  } else if (((I.getType()->isFloatingPointTy() && (CI || I.isBinaryOp())) ||
+              (isa<FCmpInst>(I) &&
+               !is_contained({FCmpInst::FCMP_ORD, FCmpInst::FCMP_UNO},
+                             cast<FCmpInst>(I).getPredicate()))) &&
              !I.isFast()) {
-    LLVM_DEBUG(dbgs() << "LV: Found FP op with unsafe algebra.\n");
+    LLVM_DEBUG(dbgs() << "LV: Found potentially unsafe FP op.\n");
     Hints->setPotentiallyUnsafe();
   }
 

@@ -30,10 +30,6 @@ name:            test_add_v64i8
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -44,9 +40,9 @@ body:             |
     ; ALL: [[VPADDBZrr:%[0-9]+]]:vr512 = VPADDBZrr [[COPY]], [[COPY1]]
     ; ALL: $zmm0 = COPY [[VPADDBZrr]]
     ; ALL: RET 0, implicit $zmm0
-    %0(<64 x s8>) = COPY $zmm0
-    %1(<64 x s8>) = COPY $zmm1
-    %2(<64 x s8>) = G_ADD %0, %1
+    %0:vecr(<64 x s8>) = COPY $zmm0
+    %1:vecr(<64 x s8>) = COPY $zmm1
+    %2:vecr(<64 x s8>) = G_ADD %0, %1
     $zmm0 = COPY %2(<64 x s8>)
     RET 0, implicit $zmm0
 
@@ -56,10 +52,6 @@ name:            test_add_v32i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -70,9 +62,9 @@ body:             |
     ; ALL: [[VPADDWZrr:%[0-9]+]]:vr512 = VPADDWZrr [[COPY]], [[COPY1]]
     ; ALL: $zmm0 = COPY [[VPADDWZrr]]
     ; ALL: RET 0, implicit $zmm0
-    %0(<32 x s16>) = COPY $zmm0
-    %1(<32 x s16>) = COPY $zmm1
-    %2(<32 x s16>) = G_ADD %0, %1
+    %0:vecr(<32 x s16>) = COPY $zmm0
+    %1:vecr(<32 x s16>) = COPY $zmm1
+    %2:vecr(<32 x s16>) = G_ADD %0, %1
     $zmm0 = COPY %2(<32 x s16>)
     RET 0, implicit $zmm0
 
@@ -82,10 +74,6 @@ name:            test_add_v16i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -96,9 +84,9 @@ body:             |
     ; ALL: [[VPADDDZrr:%[0-9]+]]:vr512 = VPADDDZrr [[COPY]], [[COPY1]]
     ; ALL: $zmm0 = COPY [[VPADDDZrr]]
     ; ALL: RET 0, implicit $zmm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<16 x s32>) = COPY $zmm1
-    %2(<16 x s32>) = G_ADD %0, %1
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<16 x s32>) = COPY $zmm1
+    %2:vecr(<16 x s32>) = G_ADD %0, %1
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $zmm0
 
@@ -108,10 +96,6 @@ name:            test_add_v8i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $zmm1
@@ -122,9 +106,9 @@ body:             |
     ; ALL: [[VPADDQZrr:%[0-9]+]]:vr512 = VPADDQZrr [[COPY]], [[COPY1]]
     ; ALL: $zmm0 = COPY [[VPADDQZrr]]
     ; ALL: RET 0, implicit $zmm0
-    %0(<8 x s64>) = COPY $zmm0
-    %1(<8 x s64>) = COPY $zmm1
-    %2(<8 x s64>) = G_ADD %0, %1
+    %0:vecr(<8 x s64>) = COPY $zmm0
+    %1:vecr(<8 x s64>) = COPY $zmm1
+    %2:vecr(<8 x s64>) = G_ADD %0, %1
     $zmm0 = COPY %2(<8 x s64>)
     RET 0, implicit $zmm0
 

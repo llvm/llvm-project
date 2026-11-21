@@ -150,11 +150,11 @@ static bool isArithmeticCbzPair(const MachineInstr *FirstMI,
   return false;
 }
 
-// True unless the pair provably writes different physical registers. Pre-RA
-// the dests are still virtual, and post-RA it requires a genuine WAW (same dest
-// reg).
-static bool mayHaveWAWDependency(const MachineInstr &FirstMI,
-                                 const MachineInstr &SecondMI) {
+// True unless the pair provably defines different physical registers. This is
+// an exact match, so it doesn't account for subreg overlap. Pre-RA the dests
+// are still virtual, so it returns true.
+static bool mayDefSameReg(const MachineInstr &FirstMI,
+                          const MachineInstr &SecondMI) {
   Register DestFirst = FirstMI.getOperand(0).getReg();
   Register DestSecond = SecondMI.getOperand(0).getReg();
   if (!DestFirst.isPhysical() || !DestSecond.isPhysical())
@@ -176,7 +176,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESErr)
       return false;
     return SecondOpcode == AArch64::AESMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayDefSameReg(*FirstMI, SecondMI);
   // AES decode.
   case AArch64::AESIMCrr:
   case AArch64::AESIMCrrTied:
@@ -185,7 +185,7 @@ static bool isAESPair(const MachineInstr *FirstMI,
     if (FirstMI->getOpcode() != AArch64::AESDrr)
       return false;
     return SecondOpcode == AArch64::AESIMCrrTied ||
-           mayHaveWAWDependency(*FirstMI, SecondMI);
+           mayDefSameReg(*FirstMI, SecondMI);
   }
 
   return false;
@@ -583,7 +583,8 @@ static bool isFusableAppleSMEComputeOp(const MachineInstr &MI,
     return false;
 
   // (NOT write P)
-  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass}))
+  if (definesRegInClass(MI, {&AArch64::PPRRegClass, &AArch64::PPR2RegClass,
+                             &AArch64::PNRRegClass}))
     return false;
 
   // (NOT write GPR)
@@ -621,9 +622,12 @@ static bool isAppleSMEComputePair(const MachineInstr *FirstMI,
   return false;
 }
 
-enum class FMinFMaxKind { None, Scalar, Vector };
+namespace {
+enum class FMinFMaxKind { None, Scalar, Vector, ScalarNM, VectorNM };
+} // end anonymous namespace
 
-// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd).
+// Floating-point minimum or maximum, scalar (H/S/D) or vector (Vd), and their
+// number (NM) variants.
 static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   switch (Opcode) {
   case AArch64::FMAXHrr:
@@ -644,11 +648,29 @@ static FMinFMaxKind getFMinFMaxKind(unsigned Opcode) {
   case AArch64::FMINv4f32:
   case AArch64::FMINv2f64:
     return FMinFMaxKind::Vector;
+  case AArch64::FMAXNMHrr:
+  case AArch64::FMAXNMSrr:
+  case AArch64::FMAXNMDrr:
+  case AArch64::FMINNMHrr:
+  case AArch64::FMINNMSrr:
+  case AArch64::FMINNMDrr:
+    return FMinFMaxKind::ScalarNM;
+  case AArch64::FMAXNMv4f16:
+  case AArch64::FMAXNMv8f16:
+  case AArch64::FMAXNMv2f32:
+  case AArch64::FMAXNMv4f32:
+  case AArch64::FMAXNMv2f64:
+  case AArch64::FMINNMv4f16:
+  case AArch64::FMINNMv8f16:
+  case AArch64::FMINNMv2f32:
+  case AArch64::FMINNMv4f32:
+  case AArch64::FMINNMv2f64:
+    return FMinFMaxKind::VectorNM;
   }
   return FMinFMaxKind::None;
 }
 
-// FMIN + FMAX, both scalar or both vector.
+// FMIN + FMAX, or FMINNM + FMAXNM, both scalar or both vector.
 static bool isFMinFMaxPair(const MachineInstr *FirstMI,
                            const MachineInstr &SecondMI) {
   FMinFMaxKind SecondKind = getFMinFMaxKind(SecondMI.getOpcode());
@@ -662,7 +684,7 @@ static bool isFMinFMaxPair(const MachineInstr *FirstMI,
   if (getFMinFMaxKind(FirstMI->getOpcode()) != SecondKind)
     return false;
 
-  return mayHaveWAWDependency(*FirstMI, SecondMI);
+  return mayDefSameReg(*FirstMI, SecondMI);
 }
 
 /// \brief Check if the instr pair, FirstMI and SecondMI, should be fused

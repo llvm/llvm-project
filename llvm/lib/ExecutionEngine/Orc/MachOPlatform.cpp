@@ -100,19 +100,19 @@ struct CreatePThreadKey {
 };
 } // namespace llvm::orc::macho_sps_ci
 
-// Descriptors for the call-controller handlers that the MachO platform
-// runtime calls.
+// Specs for the call-controller handlers that the MachO platform runtime calls.
 namespace llvm::orc::macho_sps_handlers {
-struct PushInitializers {
+struct PushInitializers
+    : sps::HandlerSpec<SPSExpected<SPSMachOJITDylibDepInfoMap>(
+          SPSExecutorAddr)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_macho_push_initializers_tag");
-  using SPSSig = SPSExpected<SPSMachOJITDylibDepInfoMap>(SPSExecutorAddr);
 };
-struct PushSymbols {
+struct PushSymbols
+    : sps::HandlerSpec<SPSError(SPSExecutorAddr,
+                                SPSSequence<SPSTuple<SPSString, bool>>)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_macho_push_symbols_tag");
-  using SPSSig = SPSError(SPSExecutorAddr,
-                          SPSSequence<SPSTuple<SPSString, bool>>);
 };
 } // namespace llvm::orc::macho_sps_handlers
 
@@ -644,11 +644,9 @@ MachOPlatform::MachOPlatform(
 Error MachOPlatform::associateRuntimeSupportFunctions() {
   return ES.registerCallControllerHandlers(
       PlatformJD,
-      bindCallControllerHandler<
-          sps::HandlerSpec<macho_sps_handlers::PushInitializers>>(
+      bindCallControllerHandler<macho_sps_handlers::PushInitializers>(
           this, &MachOPlatform::rt_pushInitializers),
-      bindCallControllerHandler<
-          sps::HandlerSpec<macho_sps_handlers::PushSymbols>>(
+      bindCallControllerHandler<macho_sps_handlers::PushSymbols>(
           this, &MachOPlatform::rt_pushSymbols));
 }
 

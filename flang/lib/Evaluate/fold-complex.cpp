@@ -79,7 +79,7 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
     FoldingContext &context, ComplexConstructor &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using ComplexType = Type<TypeCategory::Complex>;
   if (auto folded{OperandsAreConstants(x)}) {

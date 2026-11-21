@@ -59,8 +59,13 @@ public:
                 PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
                 MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
                 BranchFolderPass, MachineBlockPlacementPass>();
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      Opt.DisableLSR = true;
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
   Error addIRTranslator(PassManagerWrapper &PMW) override;
@@ -79,6 +84,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -211,8 +218,6 @@ void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SPIRVPassRegistry.def"

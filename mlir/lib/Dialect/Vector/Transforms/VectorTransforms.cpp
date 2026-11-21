@@ -1977,8 +1977,16 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
     if (!acc.getType().isIntOrFloat())
       return failure();
 
+    // The parent reduction produces `op`'s accumulator. Fold only when it is
+    // an `add` reduction too.
     auto parentReduction = acc.getDefiningOp<vector::ReductionOp>();
-    if (!parentReduction)
+    if (!parentReduction ||
+        parentReduction.getKind() != vector::CombiningKind::ADD)
+      return failure();
+
+    // Fold only when the parent's result has one use. Then the parent is dead
+    // after the fold and can be removed.
+    if (!parentReduction.getResult().hasOneUse())
       return failure();
 
     Location loc = op.getLoc();

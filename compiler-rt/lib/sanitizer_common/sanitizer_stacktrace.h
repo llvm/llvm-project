@@ -22,7 +22,8 @@ struct BufferedStackTrace;
 
 static const u32 kStackTraceMax = 255;
 
-#if SANITIZER_LINUX && (defined(__mips__) || defined(__alpha__))
+#if SANITIZER_LINUX && \
+    (defined(__mips__) || defined(__alpha__) || defined(__hppa__))
 #  define SANITIZER_CAN_FAST_UNWIND 0
 #elif SANITIZER_WINDOWS
 #  define SANITIZER_CAN_FAST_UNWIND 0

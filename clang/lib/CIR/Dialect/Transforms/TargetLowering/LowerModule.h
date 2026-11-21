@@ -78,6 +78,8 @@ public:
 
   mlir::MLIRContext *getMLIRContext() { return module.getContext(); }
 
+  mlir::ModuleOp getModule() const { return module; }
+
   const TargetLoweringInfo &getTargetLoweringInfo();
 };
 

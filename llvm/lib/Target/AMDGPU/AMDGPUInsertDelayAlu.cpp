@@ -322,10 +322,11 @@ public:
       for (auto I = MachineBasicBlock::instr_iterator(LastDelayAlu),
                 E = MachineBasicBlock::instr_iterator(MI);
            ++I != E;) {
-        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+        if (I->getOpcode() == AMDGPU::S_SET_VGPR_MSB || I->isInlineAsm()) {
           // It is not deterministic whether the skip count counts
-          // S_SET_VGPR_MSB instructions or not, so do not include them in a
-          // skip region.
+          // S_SET_VGPR_MSB instructions or not, and we cannot reliably count
+          // the number of instructions in an inline asm, so do not include
+          // either in a skip region.
           Skip = 6;
           break;
         }
@@ -541,6 +542,19 @@ public:
       // instructions on the assumption that they will usually have to be issued
       // twice?
       State.advance(ProducerType, Cycles);
+
+      if (MI.getOpcode() == AMDGPU::GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay) {
+        // The load clears prior delays, but its MC expansion ends in an EXEC
+        // restore. Model that scalar write without an EXEC def in the MIR.
+        DelayInfo RestoreDelay(
+            SALU, SchedModel->computeInstrLatency(AMDGPU::S_MOV_B32));
+        if (!RestoreDelay.advance(SALU, 1)) {
+          for (MCRegUnit Unit : TRI->regunits(AMDGPU::EXEC_LO))
+            State[Unit] = RestoreDelay;
+        }
+        // A single MIR instruction expands to four ISA instructions.
+        LastDelayAlu = nullptr;
+      }
 
       // Track the preceding WMMA's dst for C-reuse; reset on anything else.
       if (SII->isWMMA(MI) || SII->isSWMMAC(MI)) {

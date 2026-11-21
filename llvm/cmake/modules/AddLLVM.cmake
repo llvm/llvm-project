@@ -80,6 +80,13 @@ function(llvm_update_compile_flags name)
 endfunction()
 
 function(llvm_update_pch name)
+  get_target_property(mode ${name} LLVM_ABI_MODE)
+  if(NOT mode)
+    message(FATAL_ERROR
+      "llvm_update_pch: ${name} has no LLVM_ABI_MODE, "
+      "call llvm_update_abi_definitions() first")
+  endif()
+
   if(LLVM_REQUIRES_RTTI OR LLVM_REQUIRES_EH)
     # Non-default RTTI/EH results in incompatible flags, precluding PCH reuse.
     set(ARG_DISABLE_PCH_REUSE ON)
@@ -139,11 +146,129 @@ function(llvm_update_pch name)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
     endif()
   elseif(pch_reuse AND NOT ARG_DISABLE_PCH_REUSE)
-    message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
-    target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    get_target_property(provider_mode ${pch_reuse} LLVM_ABI_MODE)
+    if("${mode}" STREQUAL "${provider_mode}")
+      # Same ABI mode: reuse the provider's PCH directly.
+      message(DEBUG "Using PCH ${pch_reuse} for ${name} (prio ${pch_priority})")
+      target_precompile_headers(${name} REUSE_FROM ${pch_reuse})
+    else()
+      # Different ABI mode: reuse the provider's variant for ours, if it exists.
+      set(variant "${pch_reuse}_pch_${mode}")
+      if(TARGET ${variant})
+        message(DEBUG "Using PCH ${variant} for ${name} (prio ${pch_priority})")
+        target_precompile_headers(${name} REUSE_FROM ${variant})
+        # The variant must be linked for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${variant}>)
+        # Record the variant so that libraries and executables can link it.
+        set_target_properties(${name} PROPERTIES LLVM_PCH_VARIANT ${variant})
+      else()
+        message(DEBUG "Using NO PCH for ${name} (${pch_reuse} has no ${mode} variant)")
+      endif()
+    endif()
   else()
     message(DEBUG "Using NO PCH for ${name}")
   endif()
+endfunction()
+
+# These are all of the compile definitions used by the ABI modes (see below).
+set(LLVM_ABI_DEFINITIONS_none "")
+set(LLVM_ABI_DEFINITIONS_export LLVM_EXPORTS LLVM_C_EXPORTS)
+set(LLVM_ABI_DEFINITIONS_import "")
+set(LLVM_ABI_DEFINITIONS_static LLVM_BUILD_STATIC)
+
+# llvm_update_abi_definitions(<name> [COMPONENT_LIB] [DISABLE_LLVM_LINK_LLVM_DYLIB])
+#
+# Add to target <name> the compile definitions that select how the export
+# annotations (LLVM_ABI, LLVM_C_ABI, ...) expand in its sources, and record the
+# resulting ABI mode in its LLVM_ABI_MODE property:
+#   none
+#     The target does not need to select a particular mode. Outside of Windows
+#     with MSVC/clang-cl, this is the only mode.
+#   export
+#     The target is a component library built into the LLVM DLL.
+#   import
+#     The target links the LLVM DLL.
+#   static
+#     The target links the LLVM libraries statically.
+#
+# The arguments (COMPONENT_LIB, DISABLE_LLVM_LINK_LLVM_DYLIB) are the same ones
+# used by add_llvm_library() and add_llvm_executable().
+function(llvm_update_abi_definitions name)
+  cmake_parse_arguments(ARG "COMPONENT_LIB;DISABLE_LLVM_LINK_LLVM_DYLIB" "" ""
+    ${ARGN})
+  if(NOT WIN32 OR MINGW OR NOT LLVM_BUILD_LLVM_DYLIB)
+    # Nothing to select when not building a DLL for Windows with MSVC/clang-cl.
+    set(mode none)
+  elseif(ARG_COMPONENT_LIB)
+    # This is a component library of LLVM, export its symbols.
+    set(mode export)
+  elseif(LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    # This target imports the annotated symbols from the shared library.
+    set(mode import)
+  else()
+    # This target links the annotated symbols statically.
+    set(mode static)
+  endif()
+  set_property(TARGET ${name} PROPERTY LLVM_ABI_MODE ${mode})
+  target_compile_definitions(${name} PRIVATE ${LLVM_ABI_DEFINITIONS_${mode}})
+endfunction()
+
+# llvm_add_pch_variants(<name> <header> [DEPENDS <targets>...])
+#
+# Give PCH provider <name>, with a certain LLVM_ABI_MODE, variants of its
+# precompiled header for every other ABI mode of this build, named
+# <name>_pch_<other mode>. This is used to provide the appropriate PCH for
+# consumers of <name>, depending on the own ABI mode.
+#
+# The variants are static libraries with a single empty source file, so its
+# only products are the PCH and the object that creates it. On MSVC, the object
+# that creates a PCH must be linked every every image that reuses it, so the
+# variants are linked into each consumer that needs them.
+#
+#   <header>
+#     The header the provider precompiles.
+#   DEPENDS
+#     The provider's dependencies.
+function(llvm_add_pch_variants name header)
+  cmake_parse_arguments(ARG "" "" "DEPENDS" ${ARGN})
+  get_target_property(mode ${name} LLVM_ABI_MODE)
+  if(mode STREQUAL "none")
+    return()
+  endif()
+
+  # Determine the other ABI modes for which to create PCH variants.
+  set(modes export import static)
+  list(REMOVE_ITEM modes ${mode})
+
+  # Create an empty translation unit to be used by all PCH variants.
+  set(empty_tu "${CMAKE_BINARY_DIR}/CMakeFiles/llvm_pch_variant_empty.cpp")
+  file(CONFIGURE OUTPUT "${empty_tu}" CONTENT
+       "// Intentionally empty; carries a shared PCH object.\n")
+  get_subproject_title(subproject_title)
+
+  foreach(variant_mode ${modes})
+    # Create the variant library.
+    set(variant_name "${name}_pch_${variant_mode}")
+    add_library(${variant_name} STATIC EXCLUDE_FROM_ALL "${empty_tu}")
+
+    # Set up the library compile flags and modes.
+    llvm_update_compile_flags(${variant_name})
+    target_compile_definitions(${variant_name} PRIVATE
+      ${LLVM_ABI_DEFINITIONS_${variant_mode}})
+    if(LLVM_BUILD_LLVM_DYLIB AND NOT LLVM_DYLIB_EXPORT_INLINES AND
+       MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
+      target_compile_options(${variant_name} PRIVATE /Zc:dllexportInlines-)
+    endif()
+    target_precompile_headers(${variant_name} PRIVATE
+      $<$<COMPILE_LANGUAGE:CXX>:${header}>)
+    set_target_properties(${variant_name} PROPERTIES
+      FOLDER "${subproject_title}/Precompiled Headers")
+
+    # Set up the target dependencies.
+    if(ARG_DEPENDS)
+      add_dependencies(${variant_name} ${ARG_DEPENDS})
+    endif()
+  endforeach()
 endfunction()
 
 function(add_llvm_symbol_exports target_name export_file)
@@ -475,14 +600,18 @@ endfunction()
 # into the output .exe or .dll.
 # TODO: Enable for MinGW Windows builds too.
 #
-function(add_windows_version_resource_file OUT_VAR)
+function(add_windows_version_resource_file OUT_VAR RESOURCE_VAR name)
   set(sources ${ARGN})
+  set(${RESOURCE_VAR} "" PARENT_SCOPE)
   if (MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
-    set(resource_file ${LLVM_SOURCE_DIR}/resources/windows_version_resource.rc)
-    if(EXISTS ${resource_file})
-      set(sources ${sources} ${resource_file})
-      source_group("Resource Files" ${resource_file})
-      set(windows_resource_file ${resource_file} PARENT_SCOPE)
+    set(resource_file "${LLVM_SOURCE_DIR}/resources/windows_version_resource.rc")
+    if(EXISTS "${resource_file}")
+      set(target_resource_file
+        "${CMAKE_CURRENT_BINARY_DIR}/${name}_windows_version_resource.rc")
+      configure_file("${resource_file}" "${target_resource_file}" COPYONLY)
+      list(APPEND sources "${target_resource_file}")
+      source_group("Resource Files" FILES "${target_resource_file}")
+      set(${RESOURCE_VAR} "${target_resource_file}" PARENT_SCOPE)
     endif()
   endif(MSVC AND CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows")
 
@@ -498,13 +627,15 @@ endfunction(add_windows_version_resource_file)
 #     Optional patchlevel version number (defaults to LLVM_VERSION_PATCH)
 #   VERSION_STRING
 #     Optional version string (defaults to PACKAGE_VERSION)
+#   FILE_DESCRIPTION
+#     Optional file description (defaults to the product and target names)
 #   PRODUCT_NAME
 #     Optional product name string (defaults to "LLVM")
 #   )
 function(set_windows_version_resource_properties name resource_file)
   cmake_parse_arguments(ARG
     ""
-    "VERSION_MAJOR;VERSION_MINOR;VERSION_PATCHLEVEL;VERSION_STRING;PRODUCT_NAME"
+    "VERSION_MAJOR;VERSION_MINOR;VERSION_PATCHLEVEL;VERSION_STRING;PRODUCT_NAME;FILE_DESCRIPTION"
     ""
     ${ARGN})
 
@@ -544,6 +675,10 @@ function(set_windows_version_resource_properties name resource_file)
     set(ARG_PRODUCT_NAME "LLVM")
   endif()
 
+  if(NOT DEFINED ARG_FILE_DESCRIPTION OR "${ARG_FILE_DESCRIPTION}" STREQUAL "")
+    set(ARG_FILE_DESCRIPTION "${ARG_PRODUCT_NAME} ${name}")
+  endif()
+
   set_property(SOURCE ${resource_file}
                PROPERTY COMPILE_FLAGS /nologo)
   set_property(SOURCE ${resource_file}
@@ -554,6 +689,9 @@ function(set_windows_version_resource_properties name resource_file)
                "RC_VERSION_FIELD_4=0"
                "RC_FILE_VERSION=\"${ARG_VERSION_STRING}\""
                "RC_INTERNAL_NAME=\"${name}\""
+               "RC_FILE_DESCRIPTION=\"${ARG_FILE_DESCRIPTION}\""
+               "RC_COPYRIGHT=\"Copyright (c) LLVM contributors.\""
+               "RC_ORIGINAL_FILENAME=\"$<TARGET_FILE_NAME:${name}>\""
                "RC_PRODUCT_NAME=\"${ARG_PRODUCT_NAME}\""
                "RC_PRODUCT_VERSION=\"${ARG_VERSION_STRING}\"")
 endfunction(set_windows_version_resource_properties)
@@ -570,6 +708,8 @@ endfunction(set_windows_version_resource_properties)
 #   DISABLE_LLVM_LINK_LLVM_DYLIB
 #     Do not link this library to libLLVM, even if
 #     LLVM_LINK_LLVM_DYLIB is enabled.
+#   FILE_DESCRIPTION description
+#     Description for the Windows version resource.
 #   OUTPUT_NAME name
 #     Corresponds to OUTPUT_NAME in target properties.
 #   DEPENDS targets...
@@ -601,7 +741,7 @@ endfunction(set_windows_version_resource_properties)
 function(llvm_add_library name)
   cmake_parse_arguments(ARG
     "MODULE;SHARED;STATIC;OBJECT;DISABLE_LLVM_LINK_LLVM_DYLIB;SONAME;NO_INSTALL_RPATH;COMPONENT_LIB;DISABLE_PCH_REUSE"
-    "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH"
+    "OUTPUT_NAME;PLUGIN_TOOL;ENTITLEMENTS;BUNDLE_PATH;FILE_DESCRIPTION"
     "ADDITIONAL_HEADERS;PRECOMPILE_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS;OBJLIBS"
     ${ARGN})
   list(APPEND LLVM_COMMON_DEPENDS ${ARG_DEPENDS})
@@ -652,6 +792,7 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_abi_definitions(${obj_name} ${ARGN})
     llvm_update_pch(${obj_name})
     if(CMAKE_GENERATOR STREQUAL "Xcode")
       set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
@@ -698,10 +839,6 @@ function(llvm_add_library name)
         endif()
       endforeach()
     endif()
-
-    if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-      target_compile_definitions(${obj_name} PRIVATE LLVM_BUILD_STATIC)
-    endif()
   endif()
 
   if(ARG_SHARED AND ARG_STATIC)
@@ -727,15 +864,19 @@ function(llvm_add_library name)
     set(ARG_STATIC)
   endif()
 
+  set(windows_resource_file "")
   if(ARG_MODULE)
     add_library(${name} MODULE ${ALL_FILES})
   elseif(ARG_SHARED)
-    add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
+    add_windows_version_resource_file(ALL_FILES windows_resource_file ${name} ${ALL_FILES})
     add_library(${name} SHARED ${ALL_FILES})
   else()
     add_library(${name} STATIC ${ALL_FILES})
   endif()
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Libraries")
+
+  # Set the ABI definitions and mode for the library.
+  llvm_update_abi_definitions(${name} ${ARGN})
 
   ## If were compiling with clang-cl use /Zc:dllexportInlines- to exclude inline
   ## class members from being dllexport'ed to reduce compile time.
@@ -752,9 +893,6 @@ function(llvm_add_library name)
 
   if(ARG_COMPONENT_LIB)
     set_target_properties(${name} PROPERTIES LLVM_COMPONENT TRUE)
-    if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
-      target_compile_definitions(${name} PRIVATE LLVM_EXPORTS LLVM_C_EXPORTS)
-    endif()
 
     # When building shared objects for each target there are some internal APIs
     # that are used across shared objects which we can't hide.
@@ -779,9 +917,11 @@ function(llvm_add_library name)
 
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
-  if(DEFINED windows_resource_file)
-    set_windows_version_resource_properties(${name} ${windows_resource_file})
-    set(windows_resource_file ${windows_resource_file} PARENT_SCOPE)
+  if(windows_resource_file)
+    set_windows_version_resource_properties(${name} ${windows_resource_file}
+      FILE_DESCRIPTION "${ARG_FILE_DESCRIPTION}")
+    set_property(TARGET ${name} PROPERTY LLVM_WINDOWS_VERSION_RESOURCE_FILE
+      "${windows_resource_file}")
   endif()
 
   set_output_directory(${name} BINARY_DIR ${LLVM_RUNTIME_OUTPUT_INTDIR} LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
@@ -795,7 +935,31 @@ function(llvm_add_library name)
       target_precompile_headers(${name} REUSE_FROM ${obj_name})
       get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+      get_target_property(pch_variant ${obj_name} LLVM_PCH_VARIANT)
+      if(pch_variant)
+        # Link the PCH variant library. This is needed for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${pch_variant}>)
+        # Archive the object that creates the variant PCH for static libraries.
+        # This ensures that the static library is usable outside of this build
+        # without the variant library. Executables and shared libraries get it
+        # from CMake's link flags.
+        # Exclude the empty TU object because it defines nothing and would just
+        # be noise.
+        get_target_property(lib_type ${name} TYPE)
+        if(lib_type STREQUAL "STATIC_LIBRARY")
+          target_sources(${name} PRIVATE
+            $<FILTER:$<TARGET_OBJECTS:${pch_variant}>,EXCLUDE,llvm_pch_variant_empty>)
+        endif()
+      endif()
     endif()
+  endif()
+
+  # A provider's PCH can only be reused in its own ABI mode. Give it variants
+  # for every other mode of this build.
+  get_target_property(pch_priority ${name} LLVM_PCH_PRIORITY)
+  if(pch_priority AND ARG_PRECOMPILE_HEADERS)
+    llvm_add_pch_variants(${name} "${ARG_PRECOMPILE_HEADERS}"
+                          DEPENDS ${LLVM_COMMON_DEPENDS})
   endif()
   add_link_opts( ${name} )
   if(ARG_OUTPUT_NAME)
@@ -870,9 +1034,6 @@ function(llvm_add_library name)
     if (LLVM_LINK_LLVM_DYLIB AND NOT ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
       set(llvm_libs LLVM)
     else()
-      if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
-        target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
-      endif()
       llvm_map_components_to_libnames(llvm_libs
         ${LLVM_LINK_COMPONENTS}
        )
@@ -1094,7 +1255,8 @@ macro(add_llvm_library name)
 endmacro(add_llvm_library name)
 
 macro(generate_llvm_objects name)
-  cmake_parse_arguments(ARG "GENERATE_DRIVER" "" "DEPENDS" ${ARGN})
+  cmake_parse_arguments(ARG "GENERATE_DRIVER;DISABLE_LLVM_LINK_LLVM_DYLIB" ""
+    "DEPENDS" ${ARGN})
 
   llvm_process_sources( ALL_FILES ${ARG_UNPARSED_ARGUMENTS} )
 
@@ -1108,6 +1270,7 @@ macro(generate_llvm_objects name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
+    llvm_update_abi_definitions(${obj_name} ${ARGN})
     llvm_update_pch(${obj_name})
     set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>")
     if(ARG_DEPENDS)
@@ -1161,8 +1324,13 @@ macro(add_llvm_executable name)
     "ENTITLEMENTS;BUNDLE_PATH"
     ""
     ${ARGN})
-  generate_llvm_objects(${name} ${ARG_UNPARSED_ARGUMENTS})
-  add_windows_version_resource_file(ALL_FILES ${ALL_FILES})
+
+  set(obj_args ${ARG_UNPARSED_ARGUMENTS})
+  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB)
+    list(APPEND obj_args DISABLE_LLVM_LINK_LLVM_DYLIB)
+  endif()
+  generate_llvm_objects(${name} ${obj_args})
+  add_windows_version_resource_file(ALL_FILES windows_resource_file ${name} ${ALL_FILES})
 
   if(XCODE)
     # Note: the dummy.cpp source file provides no definitions. However,
@@ -1178,6 +1346,9 @@ macro(add_llvm_executable name)
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Executables")
 
+  # Set the ABI definitions and mode for the executable.
+  llvm_update_abi_definitions(${name} ${ARGN})
+
   setup_dependency_debugging(${name} ${LLVM_COMMON_DEPENDS})
 
   if(NOT ARG_NO_INSTALL_RPATH)
@@ -1191,8 +1362,10 @@ macro(add_llvm_executable name)
     set_property(TARGET ${name} PROPERTY INSTALL_RPATH "${LLVM_LOCAL_RPATH}")
   endif()
 
-  if(DEFINED windows_resource_file)
+  if(windows_resource_file)
     set_windows_version_resource_properties(${name} ${windows_resource_file})
+    set_property(TARGET ${name} PROPERTY LLVM_WINDOWS_VERSION_RESOURCE_FILE
+      "${windows_resource_file}")
   endif()
 
   # CMake position-independent code sets -fPIE for source files in executables.
@@ -1214,6 +1387,11 @@ macro(add_llvm_executable name)
       target_precompile_headers(${name} REUSE_FROM ${obj_name})
       get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
       set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+      get_target_property(pch_variant ${obj_name} LLVM_PCH_VARIANT)
+      if(pch_variant)
+        # Link the PCH variant library to the executable. This is needed for MSVC.
+        target_link_libraries(${name} PRIVATE $<BUILD_LOCAL_INTERFACE:${pch_variant}>)
+      endif()
     endif()
   endif()
 
@@ -1279,10 +1457,6 @@ macro(add_llvm_executable name)
 
   if (ARG_EXPORT_SYMBOLS)
     export_executable_symbols(${name})
-  endif()
-
-  if(ARG_DISABLE_LLVM_LINK_LLVM_DYLIB OR NOT LLVM_LINK_LLVM_DYLIB)
-    target_compile_definitions(${name} PRIVATE LLVM_BUILD_STATIC)
   endif()
 
   if(LLVM_BUILD_LLVM_DYLIB_VIS AND NOT LLVM_DYLIB_EXPORT_INLINES AND MSVC)

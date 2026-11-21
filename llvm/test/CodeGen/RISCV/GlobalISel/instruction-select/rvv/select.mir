@@ -23,10 +23,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 2 x s8>) = G_SELECT %0(<vscale x 2 x s1>), %1, %1
-    $v8 = COPY %2(<vscale x 2 x s8>)
+    %0:vrb(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i8>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 2 x i8>) = G_SELECT %0(<vscale x 2 x i1>), %1, %1
+    $v8 = COPY %2(<vscale x 2 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -51,10 +51,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 8 x s8>) = G_SELECT %0(<vscale x 8 x s1>), %1, %1
-    $v8 = COPY %2(<vscale x 8 x s8>)
+    %0:vrb(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 8 x i8>) = G_SELECT %0(<vscale x 8 x i1>), %1, %1
+    $v8 = COPY %2(<vscale x 8 x i8>)
     PseudoRET implicit $v8
 
 ...
@@ -79,10 +79,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M4_:%[0-9]+]]:vrm4nov0 = PseudoVMERGE_VVM_M4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVMERGE_VVM_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 32 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 32 x s8>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 32 x s8>) = G_SELECT %0(<vscale x 32 x s1>), %1, %1
-    $v8m4 = COPY %2(<vscale x 32 x s8>)
+    %0:vrb(<vscale x 32 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 32 x i8>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 32 x i8>) = G_SELECT %0(<vscale x 32 x i1>), %1, %1
+    $v8m4 = COPY %2(<vscale x 32 x i8>)
     PseudoRET implicit $v8m4
 
 ...
@@ -107,10 +107,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF4_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 1 x s16>) = G_SELECT %0(<vscale x 1 x s1>), %1, %1
-    $v8 = COPY %2(<vscale x 1 x s16>)
+    %0:vrb(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i16>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 1 x i16>) = G_SELECT %0(<vscale x 1 x i1>), %1, %1
+    $v8 = COPY %2(<vscale x 1 x i16>)
     PseudoRET implicit $v8
 
 ...
@@ -135,10 +135,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M1_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_M1 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 4 x s16>) = G_SELECT %0(<vscale x 4 x s1>), %1, %1
-    $v8 = COPY %2(<vscale x 4 x s16>)
+    %0:vrb(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i16>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 4 x i16>) = G_SELECT %0(<vscale x 4 x i1>), %1, %1
+    $v8 = COPY %2(<vscale x 4 x i16>)
     PseudoRET implicit $v8
 
 ...
@@ -163,10 +163,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M4_:%[0-9]+]]:vrm4nov0 = PseudoVMERGE_VVM_M4 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8m4 = COPY [[PseudoVMERGE_VVM_M4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m4
-    %0:vrb(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 16 x s16>) = G_SELECT %0(<vscale x 16 x s1>), %1, %1
-    $v8m4 = COPY %2(<vscale x 16 x s16>)
+    %0:vrb(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 16 x i16>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 16 x i16>) = G_SELECT %0(<vscale x 16 x i1>), %1, %1
+    $v8m4 = COPY %2(<vscale x 16 x i16>)
     PseudoRET implicit $v8m4
 
 ...
@@ -191,10 +191,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_MF2_:%[0-9]+]]:vrnov0 = PseudoVMERGE_VVM_MF2 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMERGE_VVM_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 1 x s32>) = G_SELECT %0(<vscale x 1 x s1>), %1, %1
-    $v8 = COPY %2(<vscale x 1 x s32>)
+    %0:vrb(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i32>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 1 x i32>) = G_SELECT %0(<vscale x 1 x i1>), %1, %1
+    $v8 = COPY %2(<vscale x 1 x i32>)
     PseudoRET implicit $v8
 
 ...
@@ -219,10 +219,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M2_:%[0-9]+]]:vrm2nov0 = PseudoVMERGE_VVM_M2 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVMERGE_VVM_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 4 x s32>) = G_SELECT %0(<vscale x 4 x s1>), %1, %1
-    $v8m2 = COPY %2(<vscale x 4 x s32>)
+    %0:vrb(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i32>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 4 x i32>) = G_SELECT %0(<vscale x 4 x i1>), %1, %1
+    $v8m2 = COPY %2(<vscale x 4 x i32>)
     PseudoRET implicit $v8m2
 
 ...
@@ -247,10 +247,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M8_:%[0-9]+]]:vrm8nov0 = PseudoVMERGE_VVM_M8 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVMERGE_VVM_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 16 x s32>) = G_SELECT %0(<vscale x 16 x s1>), %1, %1
-    $v8m8 = COPY %2(<vscale x 16 x s32>)
+    %0:vrb(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 16 x i32>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 16 x i32>) = G_SELECT %0(<vscale x 16 x i1>), %1, %1
+    $v8m8 = COPY %2(<vscale x 16 x i32>)
     PseudoRET implicit $v8m8
 
 ...
@@ -275,10 +275,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M2_:%[0-9]+]]:vrm2nov0 = PseudoVMERGE_VVM_M2 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8m2 = COPY [[PseudoVMERGE_VVM_M2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m2
-    %0:vrb(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 2 x s64>) = G_SELECT %0(<vscale x 2 x s1>), %1, %1
-    $v8m2 = COPY %2(<vscale x 2 x s64>)
+    %0:vrb(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i64>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 2 x i64>) = G_SELECT %0(<vscale x 2 x i1>), %1, %1
+    $v8m2 = COPY %2(<vscale x 2 x i64>)
     PseudoRET implicit $v8m2
 
 ...
@@ -303,10 +303,10 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMERGE_VVM_M8_:%[0-9]+]]:vrm8nov0 = PseudoVMERGE_VVM_M8 [[DEF2]], [[DEF1]], [[DEF1]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8m8 = COPY [[PseudoVMERGE_VVM_M8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8m8
-    %0:vrb(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-    %2:vrb(<vscale x 8 x s64>) = G_SELECT %0(<vscale x 8 x s1>), %1, %1
-    $v8m8 = COPY %2(<vscale x 8 x s64>)
+    %0:vrb(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i64>) = G_IMPLICIT_DEF
+    %2:vrb(<vscale x 8 x i64>) = G_SELECT %0(<vscale x 8 x i1>), %1, %1
+    $v8m8 = COPY %2(<vscale x 8 x i64>)
     PseudoRET implicit $v8m8
 
 ...

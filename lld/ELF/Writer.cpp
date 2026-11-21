@@ -24,6 +24,7 @@
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Filesystem.h"
+#include "lld/Common/Parallel.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -456,7 +457,7 @@ static void demoteAndCopyLocalSymbols(Ctx &ctx) {
   llvm::TimeTraceScope timeScope("Add local symbols");
   auto symsVec =
       std::make_unique<SmallVector<Symbol *, 0>[]>(ctx.objectFiles.size());
-  parallelFor(0, ctx.objectFiles.size(), [&](size_t i) {
+  parallelForFineGrained(ctx.objectFiles.size(), [&](size_t i) {
     DenseMap<SectionBase *, size_t> sectionIndexMap;
     for (Symbol *b : ctx.objectFiles[i]->getLocalSymbols()) {
       assert(b->isLocal() && "should have been caught in initializeSymbols()");

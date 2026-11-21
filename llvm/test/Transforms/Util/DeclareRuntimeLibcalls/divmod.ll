@@ -17,8 +17,8 @@
 ; WINDOWS: declare arm_aapcscc inreg { i64, i64 } @__rt_udiv64(i64, i64) [[DIVMOD_ATTRS]]
 ; WINDOWS: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 
-; DARWIN: declare i32 @__divmodsi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[DIVMOD_ATTRS:#[0-9]+]]
-; DARWIN: declare i32 @__udivmodsi4(i32, i32, ptr noalias nonnull writeonly align 4 dereferenceable(4)) [[DIVMOD_ATTRS]]
+; DARWIN: declare i32 @__divmodsi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[DIVMOD_ATTRS:#[0-9]+]]
+; DARWIN: declare i32 @__udivmodsi4(i32, i32, ptr noalias nonnull writeonly align 4 captures(none) dereferenceable(4)) [[DIVMOD_ATTRS]]
 ; DARWIN-NOT: inreg { i32, i32 } @__divmodsi4
 ; DARWIN: attributes [[DIVMOD_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 
