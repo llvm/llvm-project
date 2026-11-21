@@ -1521,5 +1521,51 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
   ret float %mul
 }
 
+define nofpclass(nan inf nzero sub) float @ret__norm_pzero__fmul__nzero__unknown(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf nzero sub) float @ret__norm_pzero__fmul__nzero__unknown(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call float @returns_nzero()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -0.000000e+00, float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %nzero = call float @returns_nzero()
+  %select = select i1 %cond, float %nzero, float %unknown0
+  %mul = fmul float %unknown1, %select
+  ret float %mul
+}
+
+define nofpclass(nan inf pzero sub) float @ret__norm_nzero__fmul__pzero__unknown(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(nan inf pzero sub) float @ret__norm_nzero__fmul__pzero__unknown(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[PZERO:%.*]] = call float @returns_pzero()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float 0.000000e+00, float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %pzero = call float @returns_pzero()
+  %select = select i1 %cond, float %pzero, float %unknown0
+  %mul = fmul float %unknown1, %select
+  ret float %mul
+}
+
+define nofpclass(inf zero sub norm) float @ret__nan__fmul__pos_2_0__unknown(float %x) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fmul__pos_2_0__unknown(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    ret float +qnan
+;
+  %mul = fmul float 2.0, %x
+  ret float %mul
+}
+
+define nofpclass(inf zero sub norm) float @ret__nan__fmul__unknown__norm(float %x, float nofpclass(nan inf zero sub) %y) {
+; CHECK-LABEL: define nofpclass(inf zero sub norm) float @ret__nan__fmul__unknown__norm(
+; CHECK-SAME: float [[X:%.*]], float nofpclass(nan inf zero sub) [[Y:%.*]]) {
+; CHECK-NEXT:    ret float +qnan
+;
+  %mul = fmul float %x, %y
+  ret float %mul
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
