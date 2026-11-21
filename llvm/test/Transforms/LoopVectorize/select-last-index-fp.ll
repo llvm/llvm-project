@@ -21,7 +21,8 @@ define i64 @test_fmax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan nsz ole <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -99,7 +100,8 @@ define i64 @test_fmax_last_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan nsz oge <4 x float> [[WIDE_LOAD]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan nsz <4 x float> @llvm.maxnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -221,7 +223,8 @@ define i64 @test_fmin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan nsz oge <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -299,7 +302,8 @@ define i64 @test_fmin_last_idx_cond_flipped(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan nsz ole <4 x float> [[WIDE_LOAD]], [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan nsz <4 x float> @llvm.minnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -770,7 +774,8 @@ define i64 @test_fminimumnum_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan oge <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan <4 x float> @llvm.minimumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -980,7 +985,8 @@ define i64 @test_fmaximumnum_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp nnan ole <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call nnan <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1104,7 +1110,8 @@ define i64 @test_fmaximumnum_last_idx_no_nnan(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = fcmp ole <4 x float> [[VEC_PHI1]], [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP3]] = call <4 x float> @llvm.maximumnum.v4f32(<4 x float> [[WIDE_LOAD]], <4 x float> [[VEC_PHI1]])
-; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP2]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP12:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = select <4 x i1> [[TMP12]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
