@@ -26,7 +26,6 @@
 
 namespace mlir {
 namespace spirv {
-
 namespace detail {
 struct ArrayTypeStorage;
 struct CooperativeMatrixTypeStorage;
@@ -37,7 +36,6 @@ struct PointerTypeStorage;
 struct RuntimeArrayTypeStorage;
 struct SampledImageTypeStorage;
 struct StructTypeStorage;
-
 } // namespace detail
 
 // Base SPIR-V type for providing availability queries.
@@ -136,11 +134,28 @@ public:
   unsigned getArrayStride() const;
 };
 
+/// Returns whether a type contains a microscaling element, including through
+/// composite types and pointers. Set subByteOnly to restrict the check to
+/// FP4/FP6.
+bool containsMicroscalingType(Type type, bool subByteOnly = false);
+
 // SPIR-V image type
 class ImageType
     : public Type::TypeBase<ImageType, SPIRVType, detail::ImageTypeStorage> {
 public:
   using Base::Base;
+
+  static ImageType
+  getChecked(function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+             std::tuple<Type, Dim, ImageDepthInfo, ImageArrayedInfo,
+                        ImageSamplingInfo, ImageSamplerUseInfo, ImageFormat>
+                 value);
+
+  static LogicalResult verifyInvariants(
+      function_ref<InFlightDiagnostic()> emitError,
+      std::tuple<Type, Dim, ImageDepthInfo, ImageArrayedInfo, ImageSamplingInfo,
+                 ImageSamplerUseInfo, ImageFormat>
+          value);
 
   static constexpr StringLiteral name = "spirv.image";
 
@@ -178,6 +193,14 @@ class PointerType
                             VectorElementTypeInterface::Trait> {
 public:
   using Base::Base;
+
+  static PointerType getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                MLIRContext *context, Type pointeeType,
+                                StorageClass storageClass);
+
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type pointeeType, StorageClass storageClass);
 
   static constexpr StringLiteral name = "spirv.pointer";
 
@@ -414,6 +437,16 @@ class CooperativeMatrixType
 public:
   using Base::Base;
 
+  static CooperativeMatrixType
+  getChecked(function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+             Type elementType, uint32_t rows, uint32_t columns, Scope scope,
+             CooperativeMatrixUseKHR use);
+
+  static LogicalResult
+  verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                   Type elementType, uint32_t rows, uint32_t columns,
+                   Scope scope, CooperativeMatrixUseKHR use);
+
   static constexpr StringLiteral name = "spirv.coopmatrix";
 
   static CooperativeMatrixType get(Type elementType, uint32_t rows,
@@ -537,7 +570,6 @@ public:
   bool hasRank() const { return !getShape().empty(); }
   operator ShapedType() const { return cast<ShapedType>(*this); }
 };
-
 } // namespace spirv
 } // namespace mlir
 

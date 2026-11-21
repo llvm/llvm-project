@@ -1220,6 +1220,22 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
                    spirv::FPEncoding::Float8E5M2EXT &&
                bitWidth == 8)
         floatTy = opBuilder.getF8E5M2Type();
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float4E2M1EXT &&
+               bitWidth == 4)
+        floatTy = Float4E2M1FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float6E2M3EXT &&
+               bitWidth == 6)
+        floatTy = Float6E2M3FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float6E3M2EXT &&
+               bitWidth == 6)
+        floatTy = Float6E3M2FNType::get(context);
+      else if (spirv::FPEncoding(operands[2]) ==
+                   spirv::FPEncoding::Float8UnsignedE8M0EXT &&
+               bitWidth == 8)
+        floatTy = opBuilder.getF8E8M0Type();
       else
         return emitError(unknownLoc, "unsupported OpTypeFloat FP encoding: ")
                << operands[2] << " and bitWidth " << bitWidth;
@@ -1285,7 +1301,12 @@ spirv::Deserializer::processOpTypePointer(ArrayRef<uint32_t> operands) {
 
   uint32_t typePointerID = operands[0];
   auto storageClass = static_cast<spirv::StorageClass>(operands[1]);
-  typeMap[typePointerID] = spirv::PointerType::get(pointeeType, storageClass);
+  auto pointerType =
+      spirv::PointerType::getChecked([&] { return emitError(unknownLoc); },
+                                     context, pointeeType, storageClass);
+  if (!pointerType)
+    return failure();
+  typeMap[typePointerID] = pointerType;
 
   for (auto *deferredStructIt = std::begin(deferredStructTypesInfos);
        deferredStructIt != std::end(deferredStructTypesInfos);) {
@@ -1442,9 +1463,10 @@ LogicalResult spirv::Deserializer::processCooperativeMatrixTypeKHR(
            << operands[5];
   }
 
-  typeMap[operands[0]] =
-      spirv::CooperativeMatrixType::get(elementTy, rows, columns, *scope, *use);
-  return success();
+  typeMap[operands[0]] = spirv::CooperativeMatrixType::getChecked(
+      [&] { return emitError(unknownLoc); }, context, elementTy, rows, columns,
+      *scope, *use);
+  return success(static_cast<bool>(typeMap[operands[0]]));
 }
 
 LogicalResult
@@ -1582,8 +1604,9 @@ spirv::Deserializer::processMatrixType(ArrayRef<uint32_t> operands) {
   }
 
   uint32_t colsCount = operands[2];
-  typeMap[operands[0]] = spirv::MatrixType::get(elementTy, colsCount);
-  return success();
+  typeMap[operands[0]] = spirv::MatrixType::getChecked(
+      [&] { return emitError(unknownLoc); }, elementTy, colsCount);
+  return success(static_cast<bool>(typeMap[operands[0]]));
 }
 
 LogicalResult
@@ -1719,10 +1742,12 @@ spirv::Deserializer::processImageType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown Format for OpTypeImage: ")
            << operands[7];
 
-  typeMap[operands[0]] = spirv::ImageType::get(
-      elementTy, dim.value(), depthInfo.value(), arrayedInfo.value(),
-      samplingInfo.value(), samplerUseInfo.value(), format.value());
-  return success();
+  typeMap[operands[0]] = spirv::ImageType::getChecked(
+      [&] { return emitError(unknownLoc); }, context,
+      std::make_tuple(elementTy, dim.value(), depthInfo.value(),
+                      arrayedInfo.value(), samplingInfo.value(),
+                      samplerUseInfo.value(), format.value()));
+  return success(static_cast<bool>(typeMap[operands[0]]));
 }
 
 LogicalResult
@@ -1868,6 +1893,14 @@ LogicalResult spirv::Deserializer::processConstant(ArrayRef<uint32_t> operands,
     } else if (floatType.isF8E5M2()) {
       APInt data(8, operands[2]);
       value = APFloat(APFloat::Float8E5M2(), data);
+    } else if (isa<Float4E2M1FNType>(floatType)) {
+      value = APFloat(APFloat::Float4E2M1FN(), APInt(4, operands[2]));
+    } else if (isa<Float6E2M3FNType>(floatType)) {
+      value = APFloat(APFloat::Float6E2M3FN(), APInt(6, operands[2]));
+    } else if (isa<Float6E3M2FNType>(floatType)) {
+      value = APFloat(APFloat::Float6E3M2FN(), APInt(6, operands[2]));
+    } else if (isa<Float8E8M0FNUType>(floatType)) {
+      value = APFloat(APFloat::Float8E8M0FNU(), APInt(8, operands[2]));
     }
 
     auto attr = opBuilder.getFloatAttr(floatType, value);

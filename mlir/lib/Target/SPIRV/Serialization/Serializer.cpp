@@ -680,6 +680,18 @@ LogicalResult Serializer::prepareBasicType(
       operands.push_back(
           static_cast<uint32_t>(spirv::FPEncoding::Float8E5M2EXT));
     }
+    if (isa<Float4E2M1FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float4E2M1EXT));
+    if (isa<Float6E2M3FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float6E2M3EXT));
+    if (isa<Float6E3M2FNType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float6E3M2EXT));
+    if (isa<Float8E8M0FNUType>(floatType))
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8UnsignedE8M0EXT));
 
     return success();
   }
@@ -1351,10 +1363,12 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (llvm::is_contained({&APFloat::IEEEhalf(), &APFloat::BFloat(),
-                                 &APFloat::Float8E4M3FN(),
-                                 &APFloat::Float8E5M2()},
-                                semantics)) {
+  } else if (llvm::is_contained(
+                 {&APFloat::IEEEhalf(), &APFloat::BFloat(),
+                  &APFloat::Float8E4M3FN(), &APFloat::Float8E5M2(),
+                  &APFloat::Float4E2M1FN(), &APFloat::Float6E2M3FN(),
+                  &APFloat::Float6E3M2FN(), &APFloat::Float8E8M0FNU()},
+                 semantics)) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});

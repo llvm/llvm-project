@@ -1,0 +1,47 @@
+; REQUIRES: spirv-tools
+; RUN: split-file %s %t
+; RUN: spirv-as --target-env spv1.6 %t/fp4.spvasm -o %t/fp4.spv
+; RUN: not mlir-translate --deserialize-spirv %t/fp4.spv 2>&1 | FileCheck %s
+; RUN: spirv-as --target-env spv1.6 %t/fp6e2m3.spvasm -o %t/fp6e2m3.spv
+; RUN: not mlir-translate --deserialize-spirv %t/fp6e2m3.spv 2>&1 | FileCheck %s
+; RUN: spirv-as --target-env spv1.6 %t/fp6e3m2.spvasm -o %t/fp6e3m2.spv
+; RUN: not mlir-translate --deserialize-spirv %t/fp6e3m2.spv 2>&1 | FileCheck %s
+
+; Import directly from binary to exercise checked pointer type construction.
+; CHECK: error: FP4 and FP6 types require Function or Private storage
+
+;--- fp4.spvasm
+OpCapability Shader
+OpCapability Float4EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 4 Float4E2M1EXT
+%ptr = OpTypePointer Workgroup %float
+%var = OpVariable %ptr Workgroup
+
+;--- fp6e2m3.spvasm
+OpCapability Shader
+OpCapability Float6EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 6 Float6E2M3EXT
+%vector = OpTypeVector %float 2
+%ptr = OpTypePointer Workgroup %vector
+%var = OpVariable %ptr Workgroup
+
+;--- fp6e3m2.spvasm
+OpCapability Shader
+OpCapability Float6EXT
+OpExtension "SPV_EXT_float8"
+OpExtension "SPV_EXT_ocp_microscaling_types"
+OpMemoryModel Logical GLSL450
+%float = OpTypeFloat 6 Float6E3M2EXT
+%int = OpTypeInt 32 0
+%two = OpConstant %int 2
+%array = OpTypeArray %float %two
+%struct = OpTypeStruct %int %array
+%ptr = OpTypePointer Workgroup %struct
+%var = OpVariable %ptr Workgroup
+
