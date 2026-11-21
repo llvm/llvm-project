@@ -2816,6 +2816,32 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   return ReachingMemVal::getClobber(Loc.Ptr, ClobberI);
 }
 
+/// To enable load through select redundant elimination, we let the load's
+/// dependency be a select instruction (rather than a usual memory instruction),
+/// by having the MSSA backward walk report a select. For this to be correct,
+/// the select must come after the nearest access (ClobberMA) that may write the
+/// location we load from, thus ensuring nothing clobbers the memory location
+/// between the select and the load.
+static SelectInst *getSelectAddrDependency(Value *Addr, const BasicBlock *BB,
+                                           const MemoryAccess *ClobberMA,
+                                           const MemorySSA &MSSA) {
+  // The select must live in the block the walk is deciding a dependency for.
+  auto *Select = dyn_cast<SelectInst>(Addr);
+  if (!Select || Select->getParent() != BB)
+    return nullptr;
+  // If the nearest clobbering access lives in a predecessor, or it lies at the
+  // beginning of the block, we have determined it is reached before the select.
+  if (ClobberMA->getBlock() != BB || isa<MemoryPhi>(ClobberMA) ||
+      MSSA.isLiveOnEntryDef(ClobberMA))
+    return Select;
+  // If the nearest access and the select live in the same block, and the former
+  // comes before the latter, report the select.
+  auto *ClobberI = cast<MemoryUseOrDef>(ClobberMA)->getMemoryInst();
+  if (ClobberI->comesBefore(Select))
+    return Select;
+  return nullptr;
+}
+
 /// Collect the predecessors of block, while doing phi-translation of the memory
 /// address and the memory clobber. Return false if the block should be marked
 /// as clobbering the memory location in an unknown way.
@@ -2839,9 +2865,22 @@ bool GVNPassImpl::collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
     if (llvm::any_of(Preds, [Pred](const auto &P) { return P.first == Pred; }))
       continue;
 
+    std::optional<ReachingMemVal> SelectVal;
     PHITransAddr TransAddr = Addr;
-    if (TransAddr.needsPHITranslationFromBlock(BB))
+    if (TransAddr.needsPHITranslationFromBlock(BB)) {
       TransAddr.translateValue(BB, Pred, DT, false);
+      // On the chance that the translation failed because the address depends
+      // on a select, try translating the original address per each select arm.
+      if (!TransAddr.getAddr()) {
+        if (SelectInst *Sel = TransAddr.getSelect()) {
+          auto [TrueAddr, FalseAddr] = PHITransAddr(Addr).translateValue(
+              BB, Pred, DT, Sel->getCondition());
+          if (TrueAddr && FalseAddr)
+            SelectVal =
+                ReachingMemVal::getSelect(Pred, Sel, TrueAddr, FalseAddr);
+        }
+      }
+    }
 
     auto It = Blocks.find(Pred);
     if (It != Blocks.end()) {
@@ -2854,10 +2893,10 @@ bool GVNPassImpl::collectPredecessors(BasicBlock *BB, const PHITransAddr &Addr,
       continue;
     }
 
-    Preds.emplace_back(
-        Pred, DependencyBlockInfo(TransAddr,
-                                  MPhi ? MPhi->getIncomingValueForBlock(Pred)
-                                       : ClobberMA));
+    DependencyBlockInfo Info(
+        TransAddr, MPhi ? MPhi->getIncomingValueForBlock(Pred) : ClobberMA);
+    Info.MemVal = SelectVal;
+    Preds.emplace_back(Pred, std::move(Info));
   }
 
   // We collected the predecessors and stored them in Preds. Now, populate the
@@ -2958,6 +2997,16 @@ bool GVNPassImpl::findReachingValuesForLoad(
       return true;
     }
 
+    // If the load address is a select, and nothing between the select and the
+    // load modifies the location, report the select as a dependency, so that
+    // the load may be simplified as a select of the values being loaded at each
+    // address.
+    if (SelectInst *Select = getSelectAddrDependency(
+            L->getPointerOperand(), StartBlock, ClobberMA, MSSA)) {
+      Values.emplace_back(ReachingMemVal::getDef(Loc.Ptr, Select));
+      return true;
+    }
+
     // Exit from here, and proceed visiting predecessors if the clobbering
     // access is non-local or is a MemoryPhi.
     if (ClobberMA->getBlock() != StartBlock || isa<MemoryPhi>(ClobberMA))
@@ -3004,9 +3053,18 @@ bool GVNPassImpl::findReachingValuesForLoad(
     auto *BB = Worklist.pop_back_val();
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
-    // Phi-translation may have failed.
+    // Phi-translation may have failed, explore the other predecessors.
     if (!Info.Addr.getAddr())
       continue;
+
+    // If the load's address, possibly phi-translated, is computed by a select
+    // in this predecessor block, and the location of the load is not modified
+    // between the select and this block, record the select as a dependency.
+    if (auto *Select = getSelectAddrDependency(Info.Addr.getAddr(), BB,
+                                               Info.ClobberMA, MSSA)) {
+      Info.MemVal = ReachingMemVal::getDef(Info.Addr.getAddr(), Select);
+      continue;
+    }
 
     // If the clobbering memory access is in the current block and it indeed
     // clobbers our load location, record the dependency and do not visit the
@@ -3065,9 +3123,12 @@ bool GVNPassImpl::findReachingValuesForLoad(
     DependencyBlockInfo &Info = Blocks.find(BB)->second;
 
     // If phi-translation failed, assume the memory location is modified in
-    // unknown way.
+    // an unknown way, unless the address could be translated for both arms of a
+    // select it may depend upon.
     if (!Info.Addr.getAddr()) {
-      Values.push_back(ReachingMemVal::getUnknown(BB, nullptr));
+      auto MemVal =
+          Info.MemVal ? *Info.MemVal : ReachingMemVal::getUnknown(BB, nullptr);
+      Values.push_back(MemVal);
       continue;
     }
 
