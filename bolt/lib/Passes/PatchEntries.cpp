@@ -70,97 +70,113 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     FillerSize = BC.computeCodeSize(Seq.begin(), Seq.end());
   }
 
-  for (auto &BFI : BC.getBinaryFunctions()) {
-    BinaryFunction &Function = BFI.second;
+  // Keep entry patches pending until ignoring functions and scanning their
+  // references can no longer change which functions need patches.
+  std::vector<Patch> Patches;
+  bool NeedsRescan;
+  do {
+    NeedsRescan = false;
+    Patches.clear();
+    // Collect candidate entry patches in one full sweep.
+    for (auto &BFI : BC.getBinaryFunctions()) {
+      BinaryFunction &Function = BFI.second;
 
-    // Patch original code only for functions that will be emitted.
-    if (!BC.shouldEmit(Function))
-      continue;
+      // Patch original code only for functions that will be emitted.
+      if (!BC.shouldEmit(Function))
+        continue;
 
-    // Check if we can skip patching the function.
-    if (!opts::ForcePatch && !Function.hasEHRanges() &&
-        !Function.needsPatch() && Function.getSize() < PatchThreshold)
-      continue;
+      // Check if we can skip patching the function.
+      if (!opts::ForcePatch && !Function.hasEHRanges() &&
+          !Function.needsPatch() && Function.getSize() < PatchThreshold)
+        continue;
 
-    // List of patches for function entries. We either successfully patch
-    // all entries or, if we cannot patch one or more, do no patch any and
-    // mark the function as ignorable.
-    std::vector<Patch> PendingPatches;
+      // Store the index of where the current function's patches start.
+      const size_t FirstPatch = Patches.size();
 
-    uint64_t NextValidByte = 0; // offset of the byte past the last patch
-    bool Success = Function.forEachEntryPoint([&](uint64_t Offset,
-                                                  const MCSymbol *Symbol) {
-      if (Offset < NextValidByte) {
-        if (opts::Verbosity >= 1)
-          BC.outs() << "BOLT-INFO: unable to patch entry point in " << Function
-                    << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
-        return false;
+      uint64_t NextValidByte = 0; // offset of the byte past the last patch
+      bool Success = Function.forEachEntryPoint(
+          [&](uint64_t Offset, const MCSymbol *Symbol) {
+            if (Offset < NextValidByte) {
+              if (opts::Verbosity >= 1)
+                BC.outs() << "BOLT-INFO: unable to patch entry point in "
+                          << Function << " at offset 0x"
+                          << Twine::utohexstr(Offset) << '\n';
+              return false;
+            }
+
+            NextValidByte = Offset + PatchSize;
+            if (NextValidByte > Function.getMaxSize()) {
+              if (opts::Verbosity >= 1)
+                BC.outs() << "BOLT-INFO: function " << Function
+                          << " too small to patch its entry point\n";
+              return false;
+            }
+
+            const uint64_t PatchAddress = Function.getAddress() + Offset;
+            Patch P{Symbol, PatchAddress};
+
+            if (BC.isX86()) {
+              uint64_t OverwriteLength =
+                  Function.getInstructionSequenceLength(Offset, PatchSize);
+              P.PaddingAfter = OverwriteLength - PatchSize;
+              assert((Patches.size() == FirstPatch ||
+                      Patches.back().Address + PatchSize +
+                              Patches.back().PaddingAfter <=
+                          PatchAddress) &&
+                     "Entry point cannot overlap with instruction stream of "
+                     "previous entrypoint.");
+            }
+
+            Patches.emplace_back(P);
+            return true;
+          });
+
+      if (!Success) {
+        Patches.resize(FirstPatch);
+        // If the original function entries cannot be patched, then we cannot
+        // safely emit new function body.
+        BC.errs() << "BOLT-WARNING: failed to patch entries in " << Function
+                  << ". The function will not be optimized\n";
+        Function.setIgnored();
+        // Scanning references can ignore earlier functions or set needsPatch.
+        // Finish this sweep before collecting patches again, so independent
+        // failures do not each trigger another scan of the preceding functions.
+        NeedsRescan = true;
+        continue;
       }
+    }
+  } while (NeedsRescan);
 
-      NextValidByte = Offset + PatchSize;
-      if (NextValidByte > Function.getMaxSize()) {
-        if (opts::Verbosity >= 1)
-          BC.outs() << "BOLT-INFO: function " << Function
-                    << " too small to patch its entry point\n";
-        return false;
-      }
+  // Emit entry patches only after all ignore decisions and reference scans have
+  // settled, so no patch targets an ignored function or misses a required
+  // entry.
+  for (Patch &Patch : Patches) {
+    // Add instruction patch to the binary.
+    InstructionListType Instructions;
+    BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());
 
-      const uint64_t PatchAddress = Function.getAddress() + Offset;
-      Patch P{Symbol, PatchAddress};
-
-      if (BC.isX86()) {
-        uint64_t OverwriteLength =
-            Function.getInstructionSequenceLength(Offset, PatchSize);
-        P.PaddingAfter = OverwriteLength - PatchSize;
-        assert(PendingPatches.empty() ||
-               (PendingPatches.back().Address + PatchSize +
-                    PendingPatches.back().PaddingAfter <=
-                PatchAddress) &&
-                   "Entry point cannot overlap with instruction stream of "
-                   "previous entrypoint.");
-      }
-
-      PendingPatches.emplace_back(P);
-      return true;
-    });
-
-    if (!Success) {
-      // If the original function entries cannot be patched, then we cannot
-      // safely emit new function body.
-      BC.errs() << "BOLT-WARNING: failed to patch entries in " << Function
-                << ". The function will not be optimized\n";
-      Function.setIgnored();
-      continue;
+    if (BC.isX86()) {
+      assert(Patch.PaddingAfter % FillerSize == 0 &&
+             "Padding must be multiple of filler size.");
+      llvm::MCInst Inst;
+      BC.MIB->createBreakpoint(Inst);
+      Instructions.resize(Instructions.size() + Patch.PaddingAfter / FillerSize,
+                          Inst);
     }
 
-    for (Patch &Patch : PendingPatches) {
-      // Add instruction patch to the binary.
-      InstructionListType Instructions;
-      BC.MIB->createLongTailCall(Instructions, Patch.Symbol, BC.Ctx.get());
+    BinaryFunction *PatchFunction = BC.createInstructionPatch(
+        Patch.Address, Instructions,
+        NameResolver::append(Patch.Symbol->getName(), ".org.0"));
+    if (BC.usesBTI())
+      BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
+                                    *(Instructions.end() - 1));
 
-      if (BC.isX86()) {
-        assert(Patch.PaddingAfter % FillerSize == 0 &&
-               "Padding must be multiple of filler size.");
-        llvm::MCInst Inst;
-        BC.MIB->createBreakpoint(Inst);
-        Instructions.resize(
-            Instructions.size() + Patch.PaddingAfter / FillerSize, Inst);
-      }
-
-      BinaryFunction *PatchFunction = BC.createInstructionPatch(
-          Patch.Address, Instructions,
-          NameResolver::append(Patch.Symbol->getName(), ".org.0"));
-      if (BC.usesBTI())
-        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
-                                      *(Instructions.end() - 1));
-
-      // Verify the size requirements.
-      uint64_t HotSize, ColdSize;
-      std::tie(HotSize, ColdSize) = BC.calculateEmittedSize(*PatchFunction);
-      assert(!ColdSize && "unexpected cold code");
-      assert(HotSize <= PatchSize + Patch.PaddingAfter &&
-             "max patch size exceeded");
-    }
+    // Verify the size requirements.
+    uint64_t HotSize, ColdSize;
+    std::tie(HotSize, ColdSize) = BC.calculateEmittedSize(*PatchFunction);
+    assert(!ColdSize && "unexpected cold code");
+    assert(HotSize <= PatchSize + Patch.PaddingAfter &&
+           "max patch size exceeded");
   }
   return Error::success();
 }
