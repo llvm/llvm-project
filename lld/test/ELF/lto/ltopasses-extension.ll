@@ -1,7 +1,6 @@
 ; REQUIRES: x86, plugins, examples
 ; UNSUPPORTED: target={{.*windows.*}}
 ; RUN: opt -module-hash -module-summary %s -o %t.o
-; RUN: ld.lld -%loadnewpmbye --lto-newpm-passes="goodbye" -mllvm=%loadbye -mllvm=-wave-goodbye %t.o -o /dev/null 2>&1 | FileCheck %s
 ; RUN: ld.lld -%loadnewpmbye --lto-newpm-passes="goodbye" --pass-plugin-arg=Bye,-wave-goodbye %t.o -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not ld.lld -%loadnewpmbye --pass-plugin-arg=Nope,-x %t.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 

@@ -137,15 +137,8 @@ if config.build_examples:
     config.available_features.add("examples")
 
 if config.linked_bye_extension:
-    config.substitutions.append(("%loadbye", ""))
     config.substitutions.append(("%loadnewpmbye", ""))
 else:
-    config.substitutions.append(
-        (
-            "%loadbye",
-            "-load={}/Bye{}".format(config.llvm_shlib_dir, config.llvm_shlib_ext),
-        )
-    )
     config.substitutions.append(
         (
             "%loadnewpmbye",
