@@ -7,6 +7,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@requireThreadSupport
 class BreakpointSetRestart(TestBase):
     BREAKPOINT_TEXT = "Set a breakpoint here"
 

@@ -14,6 +14,8 @@ llvm_canonicalize_cmake_booleans(
   CLANG_LINK_CLANG_DYLIB
   CLANG_USE_XCSELECT
   ENABLE_BACKTRACES
+  HAVE_ICONV
+  HAVE_ICU
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
   LLVM_ENABLE_ZLIB
@@ -115,6 +117,7 @@ list(APPEND CLANG_TEST_DEPS
 
 if(CLANG_ENABLE_CIR)
   list(APPEND CLANG_TEST_DEPS
+    cir-offload-merge
     cir-opt
     cir-translate
     llvm-strings
@@ -275,6 +278,7 @@ if(CLANG_ENABLE_CIR)
   # directly by tests under clang/test/CIR.
   set(CLANG_CIR_TEST_DEPS
     clang
+    cir-offload-merge
     cir-opt
     cir-translate
     )

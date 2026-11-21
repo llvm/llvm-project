@@ -21,4 +21,39 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
     %9 = spirv.Variable init(%4) : !spirv.ptr<!spirv.struct<(!spirv.ptr<f32, CrossWorkgroup>, i32)>, Function>
     spirv.Return
   }
+
+  // CHECK-LABEL: @null_nested_array_const
+  spirv.func @null_nested_array_const() -> !spirv.array<2 x !spirv.array<3 x i32>> "None" {
+    // CHECK: spirv.Constant #spirv.null : !spirv.array<2 x !spirv.array<3 x i32>>
+    %0 = spirv.Constant #spirv.null : !spirv.array<2 x !spirv.array<3 x i32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x !spirv.array<3 x i32>>
+  }
+
+  // CHECK-LABEL: @null_vector_array_const
+  spirv.func @null_vector_array_const() -> !spirv.array<2 x vector<4xi32>> "None" {
+    // CHECK: spirv.Constant #spirv.null : !spirv.array<2 x vector<4xi32>>
+    %0 = spirv.Constant #spirv.null : !spirv.array<2 x vector<4xi32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x vector<4xi32>>
+  }
+
+  // CHECK-LABEL: @null_struct_const
+  spirv.func @null_struct_const() -> !spirv.struct<(i32, !spirv.array<2 x i32>)> "None" {
+    // CHECK: spirv.Constant #spirv.null : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    %0 = spirv.Constant #spirv.null : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+    spirv.ReturnValue %0 : !spirv.struct<(i32, !spirv.array<2 x i32>)>
+  }
+
+  // CHECK-LABEL: @null_empty_struct_const
+  spirv.func @null_empty_struct_const() -> !spirv.struct<()> "None" {
+    // CHECK: spirv.Constant #spirv.null : !spirv.struct<()>
+    %0 = spirv.Constant #spirv.null : !spirv.struct<()>
+    spirv.ReturnValue %0 : !spirv.struct<()>
+  }
+
+  // CHECK-LABEL: @null_array_constituent
+  spirv.func @null_array_constituent() -> !spirv.array<2 x !spirv.array<2 x i32>> "None" {
+    // CHECK: spirv.Constant [#spirv.null : !spirv.array<2 x i32>, [1 : i32, 2 : i32]] : !spirv.array<2 x !spirv.array<2 x i32>>
+    %0 = spirv.Constant [#spirv.null : !spirv.array<2 x i32>, [1 : i32, 2 : i32]] : !spirv.array<2 x !spirv.array<2 x i32>>
+    spirv.ReturnValue %0 : !spirv.array<2 x !spirv.array<2 x i32>>
+  }
 }

@@ -44,22 +44,21 @@ class TestCPPResultVariables(TestBase):
         )
         self.assertEqual(method_result.signed, 500, "Got the right result value")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
-    def test_virtual_dynamic_results(self):
-        self.do_test_dynamic_results(True)
-
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24663")
     def test_non_virtual_dynamic_results(self):
         self.do_test_dynamic_results(False)
+
+    @expectedFailureAll(oslist=["windows"])  # MS ABI doesn't recognize ::`vbptr'.
+    def test_virtual_dynamic_results(self):
+        self.do_test_dynamic_results(True)
 
     def do_test_dynamic_results(self, virtual):
         """Test that when we uses a result variable in a subsequent expression it
         uses the dynamic value - if that was requested when the result variable was made.
         """
         if virtual:
-            self.build(dictionary={"CFLAGS_EXTRAS": "-DVIRTUAL=''"})
-        else:
             self.build(dictionary={"CFLAGS_EXTRAS": "-DVIRTUAL='virtual'"})
+        else:
+            self.build(dictionary={"CFLAGS_EXTRAS": "-DVIRTUAL=''"})
 
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(
             self, "Set a breakpoint here", self.main_source_file

@@ -2473,6 +2473,11 @@ static Instruction *foldICmpUSubSatWithAndForMostSignificantBitCmp(
                     m_Zero())))
     return nullptr;
 
+  // The new instructions have the type of the usub.sat operands, so they can
+  // only replace a select of the same type.
+  if (SI.getType() != A->getType())
+    return nullptr;
+
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
   if (!((Pred == ICmpInst::ICMP_EQ && match(TrueVal, m_Zero()) &&
@@ -3913,10 +3918,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_One(), m_Value(B)))) &&
         impliesPoisonOrCond(FalseVal, B, /*Expected=*/false, SQ)) {
       // (A || B) || C --> A || (B | C)
-      Value *LOr = Builder.CreateLogicalOr(A, Builder.CreateOr(B, FalseVal));
-      if (auto *I = dyn_cast<Instruction>(LOr)) {
-        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
-      }
+      // CondVal is select A, true, B, so its weights describe A.
+      Value *LOr = Builder.CreateLogicalOr(
+          A, Builder.CreateOr(B, FalseVal), "",
+          ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
       return replaceInstUsesWith(SI, LOr);
     }
 
@@ -3959,10 +3964,10 @@ Instruction *InstCombinerImpl::foldSelectOfBools(SelectInst &SI) {
     if (match(CondVal, m_OneUse(m_Select(m_Value(A), m_Value(B), m_Zero()))) &&
         impliesPoisonOrCond(TrueVal, B, /*Expected=*/true, SQ)) {
       // (A && B) && C --> A && (B & C)
-      Value *LAnd = Builder.CreateLogicalAnd(A, Builder.CreateAnd(B, TrueVal));
-      if (auto *I = dyn_cast<Instruction>(LAnd)) {
-        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE);
-      }
+      // CondVal is select A, B, false, so its weights describe A.
+      Value *LAnd = Builder.CreateLogicalAnd(
+          A, Builder.CreateAnd(B, TrueVal), "",
+          ProfcheckDisableMetadataFixes ? nullptr : cast<Instruction>(CondVal));
       return replaceInstUsesWith(SI, LAnd);
     }
 
