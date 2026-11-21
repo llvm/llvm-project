@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
+_OutputIterator __pad_and_output(
     _OutputIterator __s, const _CharT* __ob, const _CharT* __op, const _CharT* __oe, ios_base& __iob, _CharT __fl) {
   streamsize __sz = __oe - __ob;
   streamsize __ns = __iob.width();
@@ -45,7 +45,7 @@ _LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
+ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
     ostreambuf_iterator<_CharT, _Traits> __s,
     const _CharT* __ob,
     const _CharT* __op,

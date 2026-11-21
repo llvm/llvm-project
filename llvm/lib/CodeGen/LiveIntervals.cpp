@@ -166,7 +166,6 @@ void LiveIntervals::analyze(MachineFunction &fn) {
   MF = &fn;
   MRI = &MF->getRegInfo();
   TRI = MF->getSubtarget().getRegisterInfo();
-  TII = MF->getSubtarget().getInstrInfo();
 
   if (!LICalc)
     LICalc = std::make_unique<LiveIntervalCalc>();

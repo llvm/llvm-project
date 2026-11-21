@@ -24,7 +24,6 @@ class TestFrameVarDILMemberOf(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect_var_path("s.x", value="1")
         self.expect_var_path("s.r", type="int &")
         self.expect_var_path("sr.x", value="1")

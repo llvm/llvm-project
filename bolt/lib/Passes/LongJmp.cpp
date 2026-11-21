@@ -1085,7 +1085,9 @@ public:
   explicit ClusteredRelaxation(BinaryContext &BC)
       : BC(BC), OutputFunctions(BC.getOutputBinaryFunctions()) {}
 
-  void run();
+  /// Relax calls and direct unconditional branches, then install the output
+  /// function list. Returns true if any thunks were created.
+  Expected<bool> run();
 
 private:
   template <typename T>
@@ -1163,7 +1165,7 @@ private:
   static unsigned getClusterDistance(unsigned A, unsigned B);
   static uint64_t estimateFragmentSize(const BinaryFunction &BF,
                                        const FunctionFragment &FF);
-  void buildLayout();
+  Error buildLayout();
   void printStats() const;
   void collectOutOfRangeReferences();
   const MCSymbol *getOrCreateBranchThunkChain(const OutOfRangeRef &Ref,
@@ -1224,7 +1226,7 @@ uint64_t ClusteredRelaxation::estimateFragmentSize(const BinaryFunction &BF,
   return Size;
 }
 
-void ClusteredRelaxation::buildLayout() {
+Error ClusteredRelaxation::buildLayout() {
   struct OutputFragment {
     const FunctionFragment *FF;
     size_t FunctionIndex;
@@ -1256,8 +1258,16 @@ void ClusteredRelaxation::buildLayout() {
       if (FF.empty() && !BF->hasConstantIsland())
         continue;
 
-      addOrderedFragment({&FF, I, BF->getCodeSectionName(FF.getFragmentNum()),
-                          estimateFragmentSize(*BF, FF)});
+      const uint64_t Size = estimateFragmentSize(*BF, FF);
+      if (Size > opts::MaxClusterSize)
+        return createFatalBOLTError(
+            "fragment " + Twine(FF.getFragmentNum().get()) + " of " +
+            BF->getPrintName() + " is estimated to have " + Twine(Size) +
+            " bytes, exceeding --max-cluster-size=" +
+            Twine(opts::MaxClusterSize));
+
+      addOrderedFragment(
+          {&FF, I, BF->getCodeSectionName(FF.getFragmentNum()), Size});
     }
   }
 
@@ -1378,11 +1388,11 @@ void ClusteredRelaxation::buildLayout() {
       addFragmentToCluster(*OrderedFragments[I]);
   }
 
-  if (Clusters.empty())
-    return;
+  if (!Clusters.empty())
+    LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
+                      << '\n');
 
-  LLVM_DEBUG(dbgs() << "LongJmp: estimated code size : " << LayoutOffset
-                    << '\n');
+  return Error::success();
 }
 
 void ClusteredRelaxation::printStats() const {
@@ -1783,10 +1793,12 @@ void ClusteredRelaxation::applyBTIFixups() {
                                   *Thunk->front().getLastNonPseudoInstr());
 }
 
-void ClusteredRelaxation::run() {
-  buildLayout();
+Expected<bool> ClusteredRelaxation::run() {
+  if (Error E = buildLayout())
+    return std::move(E);
+
   if (Clusters.empty())
-    return;
+    return false;
 
   collectOutOfRangeReferences();
   relaxCalls();
@@ -1812,6 +1824,7 @@ void ClusteredRelaxation::run() {
 
   BC.updateOutputBinaryFunctions(std::move(OutputFunctions));
   applyBTIFixups();
+  return true;
 }
 
 Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
@@ -1873,8 +1886,7 @@ Error LongJmpPass::runOnFunctions(BinaryContext &BC) {
       return Error::success();
 
     BC.outs() << "BOLT-INFO: starting experimental relaxation pass\n";
-    ClusteredRelaxation(BC).run();
-    return Error::success();
+    return ClusteredRelaxation(BC).run().takeError();
   }
 
   BC.outs() << "BOLT-INFO: Starting stub-insertion pass\n";

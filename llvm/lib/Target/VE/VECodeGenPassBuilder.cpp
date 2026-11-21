@@ -37,6 +37,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void VECodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
 
@@ -64,8 +66,6 @@ void VECodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void VECodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(VEAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void VETargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "VEPassRegistry.def"

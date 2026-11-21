@@ -28,7 +28,6 @@ protected:
   const MCSubtargetInfo &STI;
   uint8_t OSABI;
   bool Is64Bit;
-  const MCTargetOptions &TargetOptions;
   // Temporary symbol used to check whether a PC-relative fixup is resolved.
   MCSymbol *PCRelTemp = nullptr;
 
@@ -75,8 +74,6 @@ public:
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
-
-  const MCTargetOptions &getTargetOptions() const { return TargetOptions; }
 };
 }
 
