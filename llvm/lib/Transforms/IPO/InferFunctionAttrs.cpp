@@ -52,7 +52,6 @@ PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<CFGAnalyses>();
-  PA.preserve<TargetLibraryAnalysis>();
   PA.preserve<LazyCallGraphAnalysis>();
   return PA;
 }
