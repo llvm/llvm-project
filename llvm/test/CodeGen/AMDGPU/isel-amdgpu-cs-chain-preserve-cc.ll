@@ -1388,9 +1388,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_cc_v16i16(<16 x i
 define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i32> inreg %a, <128 x i32> %b) {
   ; GISEL-GFX11-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; GISEL-GFX11: bb.1 (%ir-block.0):
-  ; GISEL-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr64, $vgpr65, $vgpr66, $vgpr67, $vgpr68, $vgpr69, $vgpr70, $vgpr71, $vgpr72, $vgpr73, $vgpr74, $vgpr75, $vgpr76, $vgpr77, $vgpr78, $vgpr79, $vgpr80, $vgpr81, $vgpr82, $vgpr83, $vgpr84, $vgpr85, $vgpr86, $vgpr87, $vgpr88, $vgpr89, $vgpr90, $vgpr91, $vgpr92, $vgpr93, $vgpr94, $vgpr95, $vgpr96, $vgpr97, $vgpr98, $vgpr99, $vgpr100, $vgpr101, $vgpr102, $vgpr103, $vgpr104, $vgpr105, $vgpr106, $vgpr107, $vgpr108, $vgpr109, $vgpr110, $vgpr111, $vgpr112, $vgpr113, $vgpr114, $vgpr115, $vgpr116, $vgpr117, $vgpr118, $vgpr119, $vgpr120, $vgpr121, $vgpr122, $vgpr123, $vgpr124, $vgpr125, $vgpr126, $vgpr127, $vgpr128, $vgpr129, $vgpr130, $vgpr131, $vgpr132, $vgpr133, $vgpr134, $vgpr135
+  ; GISEL-GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr64, $vgpr65, $vgpr66, $vgpr67, $vgpr68, $vgpr69, $vgpr70, $vgpr71, $vgpr72, $vgpr73, $vgpr74, $vgpr75, $vgpr76, $vgpr77, $vgpr78, $vgpr79, $vgpr80, $vgpr81, $vgpr82, $vgpr83, $vgpr84, $vgpr85, $vgpr86, $vgpr87, $vgpr88, $vgpr89, $vgpr90, $vgpr91, $vgpr92, $vgpr93, $vgpr94, $vgpr95, $vgpr96, $vgpr97, $vgpr98, $vgpr99, $vgpr100, $vgpr101, $vgpr102, $vgpr103, $vgpr104, $vgpr105, $vgpr106, $vgpr107, $vgpr108, $vgpr109, $vgpr110, $vgpr111, $vgpr112, $vgpr113, $vgpr114, $vgpr115, $vgpr116, $vgpr117, $vgpr118, $vgpr119, $vgpr120, $vgpr121, $vgpr122, $vgpr123, $vgpr124, $vgpr125, $vgpr126, $vgpr127, $vgpr128, $vgpr129, $vgpr130, $vgpr131, $vgpr132, $vgpr133, $vgpr134, $vgpr135
   ; GISEL-GFX11-NEXT: {{  $}}
-  ; GISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr35
+  ; GISEL-GFX11-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr38
   ; GISEL-GFX11-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; GISEL-GFX11-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; GISEL-GFX11-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -1404,9 +1404,9 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ;
   ; GISEL-GFX10-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; GISEL-GFX10: bb.1 (%ir-block.0):
-  ; GISEL-GFX10-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr32, $sgpr33, $sgpr34, $sgpr35, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr64, $vgpr65, $vgpr66, $vgpr67, $vgpr68, $vgpr69, $vgpr70, $vgpr71, $vgpr72, $vgpr73, $vgpr74, $vgpr75, $vgpr76, $vgpr77, $vgpr78, $vgpr79, $vgpr80, $vgpr81, $vgpr82, $vgpr83, $vgpr84, $vgpr85, $vgpr86, $vgpr87, $vgpr88, $vgpr89, $vgpr90, $vgpr91, $vgpr92, $vgpr93, $vgpr94, $vgpr95, $vgpr96, $vgpr97, $vgpr98, $vgpr99, $vgpr100, $vgpr101, $vgpr102, $vgpr103, $vgpr104, $vgpr105, $vgpr106, $vgpr107, $vgpr108, $vgpr109, $vgpr110, $vgpr111, $vgpr112, $vgpr113, $vgpr114, $vgpr115, $vgpr116, $vgpr117, $vgpr118, $vgpr119, $vgpr120, $vgpr121, $vgpr122, $vgpr123, $vgpr124, $vgpr125, $vgpr126, $vgpr127, $vgpr128, $vgpr129, $vgpr130, $vgpr131, $vgpr132, $vgpr133, $vgpr134, $vgpr135
+  ; GISEL-GFX10-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19, $sgpr20, $sgpr21, $sgpr22, $sgpr23, $sgpr24, $sgpr25, $sgpr26, $sgpr27, $sgpr28, $sgpr29, $sgpr30, $sgpr31, $sgpr35, $sgpr36, $sgpr37, $sgpr38, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33, $vgpr34, $vgpr35, $vgpr36, $vgpr37, $vgpr38, $vgpr39, $vgpr40, $vgpr41, $vgpr42, $vgpr43, $vgpr44, $vgpr45, $vgpr46, $vgpr47, $vgpr48, $vgpr49, $vgpr50, $vgpr51, $vgpr52, $vgpr53, $vgpr54, $vgpr55, $vgpr56, $vgpr57, $vgpr58, $vgpr59, $vgpr60, $vgpr61, $vgpr62, $vgpr63, $vgpr64, $vgpr65, $vgpr66, $vgpr67, $vgpr68, $vgpr69, $vgpr70, $vgpr71, $vgpr72, $vgpr73, $vgpr74, $vgpr75, $vgpr76, $vgpr77, $vgpr78, $vgpr79, $vgpr80, $vgpr81, $vgpr82, $vgpr83, $vgpr84, $vgpr85, $vgpr86, $vgpr87, $vgpr88, $vgpr89, $vgpr90, $vgpr91, $vgpr92, $vgpr93, $vgpr94, $vgpr95, $vgpr96, $vgpr97, $vgpr98, $vgpr99, $vgpr100, $vgpr101, $vgpr102, $vgpr103, $vgpr104, $vgpr105, $vgpr106, $vgpr107, $vgpr108, $vgpr109, $vgpr110, $vgpr111, $vgpr112, $vgpr113, $vgpr114, $vgpr115, $vgpr116, $vgpr117, $vgpr118, $vgpr119, $vgpr120, $vgpr121, $vgpr122, $vgpr123, $vgpr124, $vgpr125, $vgpr126, $vgpr127, $vgpr128, $vgpr129, $vgpr130, $vgpr131, $vgpr132, $vgpr133, $vgpr134, $vgpr135
   ; GISEL-GFX10-NEXT: {{  $}}
-  ; GISEL-GFX10-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr35
+  ; GISEL-GFX10-NEXT:   [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr38
   ; GISEL-GFX10-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
   ; GISEL-GFX10-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; GISEL-GFX10-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -1420,11 +1420,11 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ;
   ; DAGISEL-GFX11-WF32-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; DAGISEL-GFX11-WF32: bb.0 (%ir-block.0):
-  ; DAGISEL-GFX11-WF32-NEXT:   liveins: $sgpr35, $vgpr8, $vgpr135
+  ; DAGISEL-GFX11-WF32-NEXT:   liveins: $sgpr38, $vgpr8, $vgpr135
   ; DAGISEL-GFX11-WF32-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr35
+  ; DAGISEL-GFX11-WF32-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr38
   ; DAGISEL-GFX11-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF32-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
@@ -1437,11 +1437,11 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ;
   ; DAGISEL-GFX11-WF64-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; DAGISEL-GFX11-WF64: bb.0 (%ir-block.0):
-  ; DAGISEL-GFX11-WF64-NEXT:   liveins: $sgpr35, $vgpr8, $vgpr135
+  ; DAGISEL-GFX11-WF64-NEXT:   liveins: $sgpr38, $vgpr8, $vgpr135
   ; DAGISEL-GFX11-WF64-NEXT: {{  $}}
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr35
+  ; DAGISEL-GFX11-WF64-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr38
   ; DAGISEL-GFX11-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX11-WF64-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
@@ -1454,11 +1454,11 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ;
   ; DAGISEL-GFX10-WF32-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; DAGISEL-GFX10-WF32: bb.0 (%ir-block.0):
-  ; DAGISEL-GFX10-WF32-NEXT:   liveins: $sgpr35, $vgpr8, $vgpr135
+  ; DAGISEL-GFX10-WF32-NEXT:   liveins: $sgpr38, $vgpr8, $vgpr135
   ; DAGISEL-GFX10-WF32-NEXT: {{  $}}
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr35
+  ; DAGISEL-GFX10-WF32-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr38
   ; DAGISEL-GFX10-WF32-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF32-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]
@@ -1471,11 +1471,11 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_many_regs(<36 x i
   ;
   ; DAGISEL-GFX10-WF64-LABEL: name: amdgpu_cs_chain_preserve_many_regs
   ; DAGISEL-GFX10-WF64: bb.0 (%ir-block.0):
-  ; DAGISEL-GFX10-WF64-NEXT:   liveins: $sgpr35, $vgpr8, $vgpr135
+  ; DAGISEL-GFX10-WF64-NEXT:   liveins: $sgpr38, $vgpr8, $vgpr135
   ; DAGISEL-GFX10-WF64-NEXT: {{  $}}
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr135
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr8
-  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr35
+  ; DAGISEL-GFX10-WF64-NEXT:   [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr38
   ; DAGISEL-GFX10-WF64-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY3:%[0-9]+]]:vreg_64 = COPY [[DEF]]
   ; DAGISEL-GFX10-WF64-NEXT:   [[COPY4:%[0-9]+]]:vgpr_32 = COPY [[COPY2]]

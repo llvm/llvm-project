@@ -480,6 +480,10 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   SmallVector<ArgInfo, 32> SplitArgs;
   SmallVector<TypeSize> FieldOffsets;
   splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
+  assert(
+      none_of(SplitArgs,
+              [](const auto &A) { return A.Flags[0].isInConsecutiveRegs(); }) &&
+      "Some CCs do not support arguments in consecutive registers");
 
   unsigned Idx = 0;
   for (ArgInfo &SplitArg : SplitArgs) {
@@ -743,6 +747,11 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     setArgFlags(OrigArg, OrigArgIdx, DL, F);
 
     splitToValueTypes(OrigArg, SplitArgs, DL, CC);
+    assert(none_of(SplitArgs,
+                   [](const auto &A) {
+                     return A.Flags[0].isInConsecutiveRegs();
+                   }) &&
+           "Some CCs do not support arguments in consecutive registers");
     ++Idx;
   }
 
@@ -1572,6 +1581,10 @@ bool AMDGPUCallLowering::lowerChainCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> OutArgs;
   splitToValueTypes(SGPRArgs, OutArgs, DL, Info.CallConv);
   splitToValueTypes(VGPRArgs, OutArgs, DL, Info.CallConv);
+  assert(
+      none_of(OutArgs,
+              [](const auto &A) { return A.Flags[0].isInConsecutiveRegs(); }) &&
+      "Some CCs do not support arguments in consecutive registers");
 
   Info.IsMustTailCall = true;
   return lowerTailCall(MIRBuilder, Info, OutArgs);
@@ -1616,6 +1629,10 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> OutArgs;
   for (auto &OrigArg : Info.OrigArgs)
     splitToValueTypes(OrigArg, OutArgs, DL, Info.CallConv);
+  assert(
+      none_of(OutArgs,
+              [](const auto &A) { return A.Flags[0].isInConsecutiveRegs(); }) &&
+      "Some CCs do not support arguments in consecutive registers");
 
   SmallVector<ArgInfo, 8> InArgs;
   if (Info.CanLowerReturn && !Info.OrigRet.Ty->isVoidTy())

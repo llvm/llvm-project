@@ -152,7 +152,7 @@ define amdgpu_ps void @gds_size_shader(i32 %arg0, i32 inreg %arg1) #5 {
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
-; CHECK-NEXT: numWaveDispatchSGPRs: 16
+; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'
@@ -212,7 +212,7 @@ define void @function() {
 ; CHECK-NEXT: hasSpilledSGPRs: false
 ; CHECK-NEXT: hasSpilledVGPRs: false
 ; CHECK-NEXT: hasNoWWMPoolSGPRSpillFallback: false
-; CHECK-NEXT: numWaveDispatchSGPRs: 16
+; CHECK-NEXT: numWaveDispatchSGPRs: 0
 ; CHECK-NEXT: numWaveDispatchVGPRs: 0
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: frameOffsetReg: '$sgpr33'

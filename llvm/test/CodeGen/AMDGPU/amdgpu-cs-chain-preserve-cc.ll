@@ -734,6 +734,48 @@ define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_realign_stack(i32
   unreachable
 }
 
+; inreg arguments skip s[32:34], so %a occupies s0-s31 and s35-s38.
+define amdgpu_cs_chain_preserve void @amdgpu_cs_chain_preserve_inreg_past_sp(<36 x i32> inreg %a, ptr addrspace(1) %out) #0 {
+; GISEL-GFX11-LABEL: amdgpu_cs_chain_preserve_inreg_past_sp:
+; GISEL-GFX11:       ; %bb.0:
+; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX11-NEXT:    s_add_i32 s0, s35, s38
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX11-NEXT:    global_store_b32 v[8:9], v0, off
+; GISEL-GFX11-NEXT:    s_endpgm
+;
+; GISEL-GFX10-LABEL: amdgpu_cs_chain_preserve_inreg_past_sp:
+; GISEL-GFX10:       ; %bb.0:
+; GISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-GFX10-NEXT:    s_add_i32 s0, s35, s38
+; GISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-GFX10-NEXT:    global_store_dword v[8:9], v0, off
+; GISEL-GFX10-NEXT:    s_endpgm
+;
+; DAGISEL-GFX11-LABEL: amdgpu_cs_chain_preserve_inreg_past_sp:
+; DAGISEL-GFX11:       ; %bb.0:
+; DAGISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-GFX11-NEXT:    s_add_i32 s0, s35, s38
+; DAGISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAGISEL-GFX11-NEXT:    v_mov_b32_e32 v0, s0
+; DAGISEL-GFX11-NEXT:    global_store_b32 v[8:9], v0, off
+; DAGISEL-GFX11-NEXT:    s_endpgm
+;
+; DAGISEL-GFX10-LABEL: amdgpu_cs_chain_preserve_inreg_past_sp:
+; DAGISEL-GFX10:       ; %bb.0:
+; DAGISEL-GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; DAGISEL-GFX10-NEXT:    s_add_i32 s0, s35, s38
+; DAGISEL-GFX10-NEXT:    v_mov_b32_e32 v0, s0
+; DAGISEL-GFX10-NEXT:    global_store_dword v[8:9], v0, off
+; DAGISEL-GFX10-NEXT:    s_endpgm
+  %elt32 = extractelement <36 x i32> %a, i32 32
+  %elt35 = extractelement <36 x i32> %a, i32 35
+  %sum = add i32 %elt32, %elt35
+  store i32 %sum, ptr addrspace(1) %out
+  ret void
+}
+
 declare void @llvm.amdgcn.cs.chain.v3i32(ptr, i32, <3 x i32>, <3 x i32>, i32, ...)
 declare amdgpu_cs_chain_preserve void @chain_preserve_callee(<3 x i32> inreg, <3 x i32>)
 declare amdgpu_cs_chain void @chain_callee(<3 x i32> inreg, <3 x i32>)
