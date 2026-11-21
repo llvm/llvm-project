@@ -281,7 +281,9 @@ std::optional<int> AArch64StackTaggingPreRAImpl::findFirstSlotCandidate() {
             Opcode == AArch64::STZGi || Opcode == AArch64::STZ2Gi ||
             Opcode == AArch64::STGPi || Opcode == AArch64::STGloop ||
             Opcode == AArch64::STZGloop || Opcode == AArch64::STGloop_wback ||
-            Opcode == AArch64::STZGloop_wback)
+            Opcode == AArch64::STZGloop_wback ||
+            Opcode == AArch64::STGloop_var_wback ||
+            Opcode == AArch64::STZGloop_var_wback)
           continue;
         if (UseI.isCopy()) {
           Register DstReg = UseI.getOperand(0).getReg();
