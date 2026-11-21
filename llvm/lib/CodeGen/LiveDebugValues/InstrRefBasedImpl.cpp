@@ -3693,8 +3693,9 @@ bool InstrRefBasedLDV::emitTransfers() {
     // We have to insert DBG_VALUEs in a consistent order, otherwise they
     // appear in DWARF in different orders. Use the order that they appear
     // when walking through each block / each instruction, stored in
-    // DVMap.
-    llvm::sort(P.Insts, llvm::less_first());
+    // DVMap. Keep the recorded order of DBG_VALUEs for the same variable,
+    // as the last one wins.
+    llvm::stable_sort(P.Insts, llvm::less_first());
 
     // Insert either before or after the designated point...
     if (P.MBB) {
