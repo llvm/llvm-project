@@ -13,6 +13,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -23,6 +24,7 @@
 #include "llvm/IR/ReplaceConstant.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/Support/KnownBits.h"
 
 #define DEBUG_TYPE "amdgpu-memory-utils"
 
@@ -60,6 +62,34 @@ void copyMetadataForWidenedLoad(LoadInst &Dest, const LoadInst &Source) {
       break;
     }
   }
+}
+
+MachineMemOperand *getVGPRDwordMemOperand(MachineFunction &MF,
+                                          MachineMemOperand::Flags Flags) {
+  return MF.getMachineMemOperand(MachinePointerInfo(AMDGPUAS::VGPR), Flags,
+                                 LLT::scalar(32), Align(4));
+}
+
+unsigned getVGPRSplitPartSize(unsigned Bits, Align Alignment) {
+  if (Alignment >= Align(4) && Bits > 32)
+    return alignDown(Bits - 1, 32);
+  if (Alignment >= Align(2) && Bits > 16)
+    return 16;
+  return 8;
+}
+
+std::optional<unsigned>
+getVGPRDwordByteOffset(const MachineMemOperand &MMO,
+                       function_ref<KnownBits()> LowAddressBits) {
+  if (MMO.getBaseAlign() >= Align(4))
+    return MMO.getOffset() & 3;
+  KnownBits Known = LowAddressBits();
+  const unsigned AlignBits = std::min(Log2(MMO.getAlign()), 2u);
+  Known.Zero.setLowBits(AlignBits);
+  Known.One.clearLowBits(AlignBits);
+  if (!Known.isConstant())
+    return std::nullopt;
+  return Known.getConstant().getZExtValue();
 }
 
 // Returns the target extension type of a global variable,

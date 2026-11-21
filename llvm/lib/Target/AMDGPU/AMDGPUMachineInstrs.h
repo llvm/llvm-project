@@ -20,10 +20,11 @@
 namespace llvm {
 namespace AMDGPUMI {
 
-// Wrapper for the whole-dword VGPR "as memory" (address space 13) load/store
-// pseudos. The movrel form reads its index from M0, the GPR_IDX form from $idx:
+// Wrapper for the VGPR "as memory" (address space 13) load/store pseudos. The
+// movrel form reads its index from M0, the GPR_IDX form from $idx:
 //   movrel:   load (outs data), (ins offset)      store (ins data, offset)
 //   gpr_idx:  load (outs data), (ins idx, offset) store (ins data, idx, offset)
+// The sub-dword store also takes a $mask after $offset.
 class VLoadStoreIdxInst : public MachineInstr {
   const AMDGPU::VLdStIdxOpcodeInfo &getInfo() const {
     return *AMDGPU::getVLdStIdxOpcodeInfoByOpcode(getOpcode());
@@ -31,6 +32,9 @@ class VLoadStoreIdxInst : public MachineInstr {
 
 public:
   bool isGPRIdx() const { return getInfo().IsGPRIdx; }
+
+  // A store of part of a dword, which reads the dword and writes it back.
+  bool isSubDword() const { return getInfo().IsSubDword; }
 
   MachineOperand &getDataOp() { return getOperand(0); }
   MachineOperand &getIdxOp() {
@@ -47,6 +51,8 @@ public:
     return getOperand(isGPRIdx() ? 2 : 1);
   }
 
+  // The bits of the register file accessed, which for a sub-dword store is
+  // its whole dword.
   unsigned getBitWidth() const { return getInfo().BitWidth; }
 
   // The VGPRs an index can reach, which excludes the AGPRs that gfx90a+ counts
@@ -56,7 +62,6 @@ public:
   // Whether an access of this many bits is supported. Each supported width has
   // a load and a store pseudo of both forms.
   static bool isSupportedBitWidth(unsigned Bits);
-
   static bool classof(const MachineInstr *MI) {
     return SIInstrFlags::isVGPRAsMem(*MI);
   }
