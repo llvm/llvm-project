@@ -350,21 +350,33 @@ if your patch happens to touch these pieces, please update the comments.
 #### Fuzzer-generated missed optimization reports
 
 In particular, fixes for fuzzer-generated missed optimization reports will
-likely be rejected if there is no evidence of real-world usefulness.
+likely be rejected if there is no evidence of real-world usefulness. The same
+applies to missed optimizations found directly by other automated tools such as
+exhaustive search, superoptimization, or LLM-based review, not just fuzzers.
 
 The following conditions can be used as oracles for such reports. Any oracle
 not listed below requires prior approval from an InstCombine maintainer:
 
-1. The operation is commutative, but reordering its operands does not enable an
-   optimization.
-2. Adding a new poison-generating or UB-implying annotation does not enable an
-   optimization. There are two exceptions:
+First, optimizations are not symmetric. If a pattern is optimized, its
+symmetric counterpart is not optimized. For example, the operation is
+commutative, but reordering its operands does not enable an optimization. See
+the [Generalization](#generalization) section for guidance on conjugate
+patterns.
+
+Second, adding more information pessimizes optimizations. For example:
+
+1. Adding a new poison-generating or UB-implying annotation does not enable an
+   optimization, with two exceptions:
     * `nsz` widens the range of the result, so failing to optimize in this case
       is expected.
     * Adding a poison-generating flag may prevent optimizations that rely on
       `isGuaranteedNotToBePoison` queries. For example, inferring `nsw/nuw` for an
       `add` subexpression may result in a `logical-and` user failing to be canonicalized
       into a `bitwise-and`. In such cases, the maintainers should still be consulted.
+2. Inserting an `llvm.assume` pessimizes optimizations, apart from the known
+   ephemeral values issue. For example, an `llvm.assume` may increase the number
+   of users of an operand, causing a `one-use` constraint to no longer be
+   satisfied.
 
 ### Choosing the pattern to optimize
 
