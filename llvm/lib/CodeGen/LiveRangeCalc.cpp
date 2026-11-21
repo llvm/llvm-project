@@ -170,10 +170,8 @@ bool LiveRangeCalc::isDefOnEntry(LiveRange &LR, ArrayRef<SlotIndex> Undefs,
 
     // No segment overlaps with this block. If this block is not defined on
     // entry, or it undefines the range, do not process its predecessors.
-    if (UndefOnEntry[N] || LR.isUndefIn(Undefs, Begin, End)) {
-      UndefOnEntry[N] = true;
+    if (UndefOnEntry[N] || LR.isUndefIn(Undefs, Begin, End))
       continue;
-    }
     if (DefOnEntry[N])
       return MarkDefined(B);
 
