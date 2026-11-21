@@ -633,10 +633,10 @@ yield
 # CHECK-NEXT:  1      2     1.00                        pkhtb	r0, r1, r2, asr #1
 # CHECK-NEXT:  1      2     0.50    *             U     pop	{r0}
 # CHECK-NEXT:  1      2     0.50    *                   pop.w	{r0, r1}
-# CHECK-NEXT:  1      2     0.50    *                   ldr	r0, [sp], #4
+# CHECK-NEXT:  1      2     0.50    *                   pop.w	{r0}
 # CHECK-NEXT:  1      3     1.00           *      U     push	{r0}
 # CHECK-NEXT:  1      3     1.00           *            push.w	{r0, r1}
-# CHECK-NEXT:  1      3     1.00           *            str	r0, [sp, #-4]!
+# CHECK-NEXT:  1      3     1.00           *            push.w	{r0}
 # CHECK-NEXT:  1      2     1.00                        qadd	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        qadd16	r0, r1, r2
 # CHECK-NEXT:  1      2     1.00                        qadd8	r0, r1, r2
@@ -1073,10 +1073,10 @@ yield
 # CHECK-NEXT: 0.50   0.50    -      -      -      -     1.00   1.00    -      -      -      -      -     pkhtb	r0, r1, r2, asr #1
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     pop	{r0}
 # CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     pop.w	{r0, r1}
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     ldr	r0, [sp], #4
+# CHECK-NEXT:  -      -      -     0.50   0.50    -      -      -      -      -      -      -      -     pop.w	{r0}
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     push	{r0}
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     push.w	{r0, r1}
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     str	r0, [sp, #-4]!
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -     1.00    -      -      -     push.w	{r0}
 # CHECK-NEXT: 0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -     qadd	r0, r1, r2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -     qadd16	r0, r1, r2
 # CHECK-NEXT: 0.50   0.50    -      -      -      -     1.00    -      -      -      -      -      -     qadd8	r0, r1, r2

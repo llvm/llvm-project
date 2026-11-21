@@ -94,7 +94,7 @@ valid:
 	pop {sp, pc}
 @ CHECK-V7A: pop.w {sp, pc}
 	push.w {r0}
-@ CHECK: str r0, [sp, #-4]
+@ CHECK: push.w {r0}
 	pop.w {r0}
-@ CHECK: ldr r0, [sp], #4
+@ CHECK: pop.w {r0}
 

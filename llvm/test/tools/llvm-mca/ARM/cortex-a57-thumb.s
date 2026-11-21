@@ -1133,7 +1133,7 @@
 # CHECK-NEXT:  1      4     1.00    *                   ldr	lr, [sp, #-4]!
 # CHECK-NEXT:  1      4     1.00    *                   ldr	lr, [sp, #0]!
 # CHECK-NEXT:  1      4     1.00    *                   ldr	r2, [r4], #255
-# CHECK-NEXT:  1      4     1.00    *                   ldr	r8, [sp], #4
+# CHECK-NEXT:  1      4     1.00    *                   pop.w	{r8}
 # CHECK-NEXT:  1      4     1.00    *                   ldr	lr, [sp], #-4
 # CHECK-NEXT:  1      4     1.00    *                   ldrb	r5, [r5, #-4]
 # CHECK-NEXT:  1      4     1.00    *                   ldrb.w	r5, [r6, #32]
@@ -2056,7 +2056,7 @@
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	lr, [sp, #-4]!
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	lr, [sp, #0]!
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r2, [r4], #255
-# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	r8, [sp], #4
+# CHECK-NEXT:  -      -      -     1.00    -      -      -      -     pop.w	{r8}
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldr	lr, [sp], #-4
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrb	r5, [r5, #-4]
 # CHECK-NEXT:  -      -      -     1.00    -      -      -      -     ldrb.w	r5, [r6, #32]

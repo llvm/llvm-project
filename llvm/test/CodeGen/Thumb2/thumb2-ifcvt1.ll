@@ -246,10 +246,10 @@ define void @t3(i32 %a, i32 %b) nounwind {
 ; V01-NEXT:    it le
 ; V01-NEXT:    bxle lr
 ; V01-NEXT:  LBB4_1: @ %cond_true
-; V01-NEXT:    str lr, [sp, #-4]!
+; V01-NEXT:    push.w {lr}
 ; V01-NEXT:    mov r0, r1
 ; V01-NEXT:    bl _foo
-; V01-NEXT:    ldr lr, [sp], #4
+; V01-NEXT:    pop.w {lr}
 ; V01-NEXT:    bx lr
 ;
 ; V23-LABEL: t3:

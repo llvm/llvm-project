@@ -38,10 +38,10 @@ define i32 @test1() "sign-return-address"="non-leaf" {
 ; R7-ABI-NEXT:    mov r7, sp
 ; R7-ABI-NEXT:    .cfi_def_cfa_register r7
 ; R7-ABI-NEXT:    .save {ra_auth_code}
-; R7-ABI-NEXT:    str r12, [sp, #-4]!
+; R7-ABI-NEXT:    push.w {r12}
 ; R7-ABI-NEXT:    .cfi_offset ra_auth_code, -12
 ; R7-ABI-NEXT:    movs r0, #0
-; R7-ABI-NEXT:    ldr r12, [sp], #4
+; R7-ABI-NEXT:    pop.w {r12}
 ; R7-ABI-NEXT:    pop.w {r7, lr}
 ; R7-ABI-NEXT:    aut r12, lr, sp
 ; R7-ABI-NEXT:    bx lr
@@ -66,7 +66,7 @@ define i32 @test1() "sign-return-address"="non-leaf" {
 ; R11-ABI-NEXT:  @ %bb.0: @ %entry
 ; R11-ABI-NEXT:    pac r12, lr, sp
 ; R11-ABI-NEXT:    .save {ra_auth_code}
-; R11-ABI-NEXT:    str r12, [sp, #-4]!
+; R11-ABI-NEXT:    push.w {r12}
 ; R11-ABI-NEXT:    .cfi_def_cfa_offset 4
 ; R11-ABI-NEXT:    .cfi_offset ra_auth_code, -4
 ; R11-ABI-NEXT:    .save {r11, lr}
@@ -79,7 +79,7 @@ define i32 @test1() "sign-return-address"="non-leaf" {
 ; R11-ABI-NEXT:    .cfi_def_cfa_register r11
 ; R11-ABI-NEXT:    movs r0, #0
 ; R11-ABI-NEXT:    pop.w {r11, lr}
-; R11-ABI-NEXT:    ldr r12, [sp], #4
+; R11-ABI-NEXT:    pop.w {r12}
 ; R11-ABI-NEXT:    aut r12, lr, sp
 ; R11-ABI-NEXT:    bx lr
 entry:
@@ -135,7 +135,7 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; R7-RES-NEXT:    add r7, sp, #8
 ; R7-RES-NEXT:    .cfi_def_cfa r7, 8
 ; R7-RES-NEXT:    .save {ra_auth_code}
-; R7-RES-NEXT:    str r12, [sp, #-4]!
+; R7-RES-NEXT:    push.w {r12}
 ; R7-RES-NEXT:    .cfi_offset ra_auth_code, -20
 ; R7-RES-NEXT:    .pad #4
 ; R7-RES-NEXT:    sub sp, #4
@@ -147,7 +147,7 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; R7-RES-NEXT:    bl take_ptr
 ; R7-RES-NEXT:    sub.w r4, r7, #12
 ; R7-RES-NEXT:    mov sp, r4
-; R7-RES-NEXT:    ldr r12, [sp], #4
+; R7-RES-NEXT:    pop.w {r12}
 ; R7-RES-NEXT:    pop.w {r4, r6, r7, lr}
 ; R7-RES-NEXT:    aut r12, lr, sp
 ; R7-RES-NEXT:    bx lr
@@ -167,7 +167,7 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; R7-ABI-NEXT:    add r7, sp, #8
 ; R7-ABI-NEXT:    .cfi_def_cfa r7, 8
 ; R7-ABI-NEXT:    .save {ra_auth_code}
-; R7-ABI-NEXT:    str r12, [sp, #-4]!
+; R7-ABI-NEXT:    push.w {r12}
 ; R7-ABI-NEXT:    .cfi_offset ra_auth_code, -20
 ; R7-ABI-NEXT:    .pad #4
 ; R7-ABI-NEXT:    sub sp, #4
@@ -179,7 +179,7 @@ define dso_local void @test2(i32 noundef %n) "sign-return-address"="non-leaf" {
 ; R7-ABI-NEXT:    bl take_ptr
 ; R7-ABI-NEXT:    sub.w r4, r7, #12
 ; R7-ABI-NEXT:    mov sp, r4
-; R7-ABI-NEXT:    ldr r12, [sp], #4
+; R7-ABI-NEXT:    pop.w {r12}
 ; R7-ABI-NEXT:    pop.w {r4, r6, r7, lr}
 ; R7-ABI-NEXT:    aut r12, lr, sp
 ; R7-ABI-NEXT:    bx lr
