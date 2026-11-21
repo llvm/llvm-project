@@ -297,6 +297,16 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Used for Hexagon functions and call sites selected by Clang's
+    /// __attribute__((hlxcc)). If HLX is enabled, L12-L15 are callee-saved
+    /// even when the signature has no HLX vector types.
+    Hexagon_HLXCall = 128,
+
+    /// Used for Hexagon functions and call sites selected by Clang's
+    /// __attribute__((preserve_hlx)). If HLX is enabled, all HLX vector
+    /// registers (L0-L15) are callee-saved.
+    Hexagon_PreserveHLX = 129,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

@@ -1905,6 +1905,10 @@ static unsigned getDwarfCC(CallingConv CC, const llvm::Triple &T) {
     return llvm::dwarf::DW_CC_LLVM_M68kRTD;
   case CC_PreserveNone:
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
+  case CC_HexagonHLXCall:
+    return llvm::dwarf::DW_CC_LLVM_HexagonHLXCall;
+  case CC_HexagonPreserveHLX:
+    return llvm::dwarf::DW_CC_LLVM_HexagonPreserveHLX;
   case CC_RISCVVectorCall:
     return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
 #define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:

@@ -31,6 +31,10 @@ public:
   /// Returns true if \p T is an HLX vector or vector pair type, or an array
   /// of them, and HLX is enabled.
   bool isHLXVectorType(QualType T) const;
+
+  /// Returns true if the return type or a parameter type of \p FT is an HLX
+  /// vector type.
+  bool hasHLXVectorInSignature(const FunctionType *FT) const;
 };
 } // namespace clang
 
