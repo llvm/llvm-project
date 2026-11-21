@@ -517,25 +517,27 @@ define amdgpu_kernel void @lshr_i32_uniform(ptr addrspace(1) %out, i32 %a, i32 %
 ; SI-LABEL: lshr_i32_uniform:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; SI-NEXT:    s_lshr_b32 s4, s4, s5
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_lshr_b32 s0, s2, s3
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: lshr_i32_uniform:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_mov_b64 s[4:5], s[2:3]
-; VI-NEXT:    s_lshr_b32 s4, s4, s5
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    v_mov_b32_e32 v0, s4
-; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_lshr_b32 s0, s2, s3
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; EG-LABEL: lshr_i32_uniform:
@@ -556,29 +558,33 @@ define amdgpu_kernel void @lshr_i32_uniform(ptr addrspace(1) %out, i32 %a, i32 %
 define amdgpu_kernel void @lshr_v2i32_uniform(ptr addrspace(1) %out, <2 x i32> %a, <2 x i32> %b) {
 ; SI-LABEL: lshr_v2i32_uniform:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0xd
 ; SI-NEXT:    s_mov_b32 s7, 0xf000
 ; SI-NEXT:    s_mov_b32 s6, -1
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s1, s1, s3
-; SI-NEXT:    s_lshr_b32 s0, s0, s2
-; SI-NEXT:    v_mov_b32_e32 v0, s0
-; SI-NEXT:    v_mov_b32_e32 v1, s1
+; SI-NEXT:    s_mov_b32 s4, s0
+; SI-NEXT:    s_mov_b32 s5, s1
+; SI-NEXT:    s_lshr_b32 s0, s3, s9
+; SI-NEXT:    s_lshr_b32 s1, s2, s8
+; SI-NEXT:    v_mov_b32_e32 v0, s1
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: lshr_v2i32_uniform:
 ; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
 ; VI-NEXT:    s_mov_b32 s7, 0xf000
 ; VI-NEXT:    s_mov_b32 s6, -1
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b32 s1, s1, s3
-; VI-NEXT:    s_lshr_b32 s0, s0, s2
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_lshr_b32 s0, s3, s9
+; VI-NEXT:    s_lshr_b32 s1, s2, s8
+; VI-NEXT:    v_mov_b32_e32 v0, s1
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;

@@ -1566,17 +1566,15 @@ define amdgpu_kernel void @v_exclusive_scan_max_u32_poison(ptr addrspace(1) %out
 define amdgpu_kernel void @v_exclusive_scan_sum_u32_branch(ptr addrspace(1) %out, i32 %n) {
 ; GFX13-LABEL: v_exclusive_scan_sum_u32_branch:
 ; GFX13:       ; %bb.0: ; %entry
-; GFX13-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
+; GFX13-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24 nv
 ; GFX13-NEXT:    v_exclusive_scan_sum_u32 v0, 1, -1
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s0, v0
-; GFX13-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; GFX13-NEXT:    v_cmp_gt_u32_e32 vcc_lo, s2, v0
+; GFX13-NEXT:    s_and_saveexec_b32 s2, vcc_lo
 ; GFX13-NEXT:    s_cbranch_execz .LBB52_2
 ; GFX13-NEXT:  ; %bb.1: ; %then
-; GFX13-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24 nv
 ; GFX13-NEXT:    v_mov_b32_e32 v1, 0
-; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    global_store_b32 v1, v0, s[0:1]
 ; GFX13-NEXT:  .LBB52_2: ; %end
 ; GFX13-NEXT:    s_endpgm

@@ -12,16 +12,13 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GFX11-REAL16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
-  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset + 16, align 4, addrspace 4)
-  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-REAL16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-REAL16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
   ; GFX11-REAL16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-REAL16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GFX11-REAL16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
@@ -29,11 +26,11 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
   ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
   ; GFX11-REAL16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
-  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_16 = COPY [[GLOBAL_LOAD_DWORD_SADDR]].lo16
-  ; GFX11-REAL16-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
-  ; GFX11-REAL16-NEXT:   [[COPY10:%[0-9]+]]:vgpr_16 = COPY [[COPY9]].hi16
-  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE3:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY8]], %subreg.lo16, [[COPY10]], %subreg.hi16
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE3]], [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.3, addrspace 1)
+  ; GFX11-REAL16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_16 = COPY [[GLOBAL_LOAD_DWORD_SADDR]].lo16
+  ; GFX11-REAL16-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR1]]
+  ; GFX11-REAL16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_16 = COPY [[COPY7]].hi16
+  ; GFX11-REAL16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vgpr_32 = REG_SEQUENCE [[COPY6]], %subreg.lo16, [[COPY8]], %subreg.hi16
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[REG_SEQUENCE2]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: build_vector_bfi
@@ -43,16 +40,13 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-FAKE16-NEXT:   [[COPY:%[0-9]+]]:sgpr_64(p4) = COPY $sgpr4_sgpr5
   ; GFX11-FAKE16-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32(i32) = COPY $vgpr0
   ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX4_IMM:%[0-9]+]]:sgpr_128 = S_LOAD_DWORDX4_IMM [[COPY]](p4), 36, 0 :: (dereferenceable invariant load (s128) from %ir.a.kernarg.offset, align 4, addrspace 4)
-  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.a.kernarg.offset + 16, align 4, addrspace 4)
-  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX2_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[S_LOAD_DWORDX2_IMM:%[0-9]+]]:sreg_64_xexec_xnull = S_LOAD_DWORDX2_IMM [[COPY]](p4), 52, 0 :: (dereferenceable invariant load (s64) from %ir.out.kernarg.offset, align 4, addrspace 4)
+  ; GFX11-FAKE16-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
+  ; GFX11-FAKE16-NEXT:   [[COPY3:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
+  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[COPY4:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub3
   ; GFX11-FAKE16-NEXT:   [[COPY5:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub2
-  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub1
-  ; GFX11-FAKE16-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY [[S_LOAD_DWORDX4_IMM]].sub0
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
-  ; GFX11-FAKE16-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:sreg_64_xexec_xnull = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
   ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1023
   ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[COPY1]](i32), [[S_MOV_B32_]], implicit $exec
@@ -60,10 +54,10 @@ define amdgpu_kernel void @build_vector_bfi (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-FAKE16-NEXT:   [[V_LSHLREV_B32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_LSHLREV_B32_e64 [[S_MOV_B32_1]], [[V_AND_B32_e64_]], implicit $exec
   ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep1, addrspace 1)
   ; GFX11-FAKE16-NEXT:   [[GLOBAL_LOAD_DWORD_SADDR1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD_SADDR [[REG_SEQUENCE1]], [[V_LSHLREV_B32_e64_]], 0, 0, implicit $exec :: (load (s32) from %ir.in.gep2, addrspace 1)
-  ; GFX11-FAKE16-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
+  ; GFX11-FAKE16-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[GLOBAL_LOAD_DWORD_SADDR]]
   ; GFX11-FAKE16-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 65535
-  ; GFX11-FAKE16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_2]], [[COPY8]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_BFI_B32_e64_]], [[REG_SEQUENCE2]], 0, 0, implicit $exec :: (store (s32) into %ir.3, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   [[V_BFI_B32_e64_:%[0-9]+]]:vgpr_32 = V_BFI_B32_e64 [[S_MOV_B32_2]], [[COPY6]], [[GLOBAL_LOAD_DWORD_SADDR1]], implicit $exec
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_BFI_B32_e64_]], [[S_LOAD_DWORDX2_IMM]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -103,7 +97,7 @@ define amdgpu_kernel void @build_vector_and (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-REAL16-NEXT:   [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 1, 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[V_ADD_NC_U16_t16_e64_:%[0-9]+]]:vgpr_16 = V_ADD_NC_U16_t16_e64 0, [[GLOBAL_LOAD_SHORT_D16_SADDR_t16_]], 0, [[V_MOV_B16_t16_e64_]], 0, 0, implicit $exec
   ; GFX11-REAL16-NEXT:   [[V_CVT_U32_U16_t16_e64_:%[0-9]+]]:vgpr_32 = V_CVT_U32_U16_t16_e64 0, [[V_ADD_NC_U16_t16_e64_]], 0, implicit $exec
-  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_CVT_U32_U16_t16_e64_]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-REAL16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_CVT_U32_U16_t16_e64_]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load2, addrspace 1)
   ; GFX11-REAL16-NEXT:   S_ENDPGM 0
   ;
   ; GFX11-FAKE16-LABEL: name: build_vector_and
@@ -129,7 +123,7 @@ define amdgpu_kernel void @build_vector_and (ptr addrspace(1) %a, ptr addrspace(
   ; GFX11-FAKE16-NEXT:   [[V_ADD_NC_U16_fake16_e64_:%[0-9]+]]:vgpr_32 = V_ADD_NC_U16_fake16_e64 0, [[GLOBAL_LOAD_USHORT_SADDR]], 0, [[S_MOV_B32_2]], 0, 0, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 65535, implicit $exec
   ; GFX11-FAKE16-NEXT:   [[V_AND_B32_e64_1:%[0-9]+]]:vgpr_32 = V_AND_B32_e64 [[V_MOV_B32_e32_1]], [[V_ADD_NC_U16_fake16_e64_]], implicit $exec
-  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_AND_B32_e64_1]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.2, addrspace 1)
+  ; GFX11-FAKE16-NEXT:   GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[V_AND_B32_e64_1]], [[REG_SEQUENCE1]], 0, 0, implicit $exec :: (store (s32) into %ir.out.load2, addrspace 1)
   ; GFX11-FAKE16-NEXT:   S_ENDPGM 0
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

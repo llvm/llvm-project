@@ -4,19 +4,20 @@
 define amdgpu_kernel void @alignbit_shr_pat(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) {
 ; GCN-LABEL: alignbit_shr_pat:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0xd
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_and_b32 s2, s4, 31
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_and_b32 s0, s2, 31
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s5, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s2
-; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s0
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = load i64, ptr addrspace(3) %arg, align 8
@@ -63,19 +64,20 @@ bb:
 define amdgpu_kernel void @alignbit_shr_pat_wrong_and30(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) {
 ; GCN-LABEL: alignbit_shr_pat_wrong_and30:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0xd
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_and_b32 s2, s4, 30
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_and_b32 s0, s2, 30
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s5, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s2
-; GCN-NEXT:    s_mov_b32 s2, -1
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s0
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = load i64, ptr addrspace(3) %arg, align 8
@@ -90,18 +92,19 @@ bb:
 define amdgpu_kernel void @alignbit_shr_pat_wrong_and63(ptr addrspace(3) nocapture readonly %arg, ptr addrspace(1) nocapture %arg1, i32 %arg2) {
 ; GCN-LABEL: alignbit_shr_pat_wrong_and63:
 ; GCN:       ; %bb.0: ; %bb
-; GCN-NEXT:    s_load_dword s2, s[4:5], 0x9
-; GCN-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xb
-; GCN-NEXT:    s_load_dword s4, s[4:5], 0xd
+; GCN-NEXT:    s_load_dword s6, s[4:5], 0x9
+; GCN-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0xb
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_mov_b32 s3, 0xf000
+; GCN-NEXT:    s_mov_b32 s7, 0xf000
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
+; GCN-NEXT:    v_mov_b32_e32 v0, s6
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_mov_b32 s2, -1
+; GCN-NEXT:    s_mov_b32 s6, -1
+; GCN-NEXT:    s_mov_b32 s4, s0
+; GCN-NEXT:    s_mov_b32 s5, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s4
-; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
+; GCN-NEXT:    v_lshr_b64 v[0:1], v[0:1], s2
+; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 bb:
   %tmp = load i64, ptr addrspace(3) %arg, align 8

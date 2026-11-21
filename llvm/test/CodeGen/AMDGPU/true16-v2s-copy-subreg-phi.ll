@@ -13,12 +13,13 @@ define amdgpu_kernel void @cond_f16_load_phi(ptr addrspace(1) %p, half %h, i1 %c
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    s_clause 0x1
-; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x8 nv
+; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
-; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    ; kill: killed $sgpr4_sgpr5
 ; GFX1250-NEXT:    s_bitcmp1_b32 s2, 16
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    global_store_b32 v1, v1, s[0:1]
 ; GFX1250-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX1250-NEXT:  ; %bb.1:
@@ -37,28 +38,26 @@ define amdgpu_kernel void @cond_f16_load_phi(ptr addrspace(1) %p, half %h, i1 %c
 ; GFX11-LABEL: cond_f16_load_phi:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x10
+; GFX11-NEXT:    s_load_b128 s[0:3], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b64 s[4:5], s[4:5], 0x10
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_bitcmp1_b32 s2, 16
-; GFX11-NEXT:    global_store_b32 v1, v1, s[0:1]
+; GFX11-NEXT:    global_store_b32 v1, v1, s[4:5]
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB0_2
 ; GFX11-NEXT:  ; %bb.1:
 ; GFX11-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX11-NEXT:    s_branch .LBB0_3
 ; GFX11-NEXT:  .LBB0_2: ; %ld
-; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_d16_b16 v1, v1, s[2:3]
+; GFX11-NEXT:    global_load_d16_b16 v1, v1, s[0:1]
 ; GFX11-NEXT:  .LBB0_3: ; %join
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v2, 1, v0
-; GFX11-NEXT:    global_load_d16_b16 v0, v2, s[0:1]
+; GFX11-NEXT:    global_load_d16_b16 v0, v2, s[4:5]
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mul_f16_e32 v0.l, v1.l, v0.l
-; GFX11-NEXT:    global_store_b16 v2, v0, s[0:1]
+; GFX11-NEXT:    global_store_b16 v2, v0, s[4:5]
 ; GFX11-NEXT:    s_endpgm
 entry:
   store i32 0, ptr addrspace(1) %out

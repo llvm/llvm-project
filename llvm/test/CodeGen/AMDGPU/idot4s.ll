@@ -1811,17 +1811,17 @@ define amdgpu_kernel void @idot4_acc32_opt(ptr addrspace(1) %src1,
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v2, v[0:1]
+; GFX8-NEXT:    flat_load_dword v0, v[0:1]
+; GFX8-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v1, sext(v3), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v2, sext(v3), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v4, sext(v3), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v2
+; GFX8-NEXT:    v_mul_i32_i24_sdwa v0, sext(v3), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
+; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v1, v4
+; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v1, v0
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s5
-; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v4, sext(v3), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:BYTE_0
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v5, sext(v3), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v6, sext(v3), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v2, sext(v3), sext(v2) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v4, v5
-; GFX8-NEXT:    v_add_u32_e32 v3, vcc, v3, v6
-; GFX8-NEXT:    v_add_u32_e32 v2, vcc, v3, v2
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -3218,7 +3218,6 @@ define amdgpu_kernel void @idot4_nonstandard_signed(ptr addrspace(1) %src1,
 ; GFX8-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX8-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
 ; GFX8-NEXT:    v_lshlrev_b32_e32 v2, 2, v0
-; GFX8-NEXT:    v_mov_b32_e32 v4, 0xff
 ; GFX8-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s0, v2
@@ -3227,25 +3226,26 @@ define amdgpu_kernel void @idot4_nonstandard_signed(ptr addrspace(1) %src1,
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX8-NEXT:    v_add_u32_e32 v0, vcc, s2, v2
 ; GFX8-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; GFX8-NEXT:    flat_load_dword v2, v[0:1]
-; GFX8-NEXT:    v_mov_b32_e32 v0, s4
-; GFX8-NEXT:    v_mov_b32_e32 v1, s5
+; GFX8-NEXT:    flat_load_dword v0, v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v1, 0xff
 ; GFX8-NEXT:    s_waitcnt vmcnt(1)
-; GFX8-NEXT:    v_lshrrev_b32_e32 v8, 8, v3
-; GFX8-NEXT:    v_lshrrev_b32_e32 v5, 16, v3
-; GFX8-NEXT:    v_bfe_i32 v6, v3, 0, 8
+; GFX8-NEXT:    v_lshrrev_b32_e32 v6, 8, v3
+; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 16, v3
+; GFX8-NEXT:    v_bfe_i32 v4, v3, 0, 8
 ; GFX8-NEXT:    v_lshrrev_b32_e32 v3, 24, v3
-; GFX8-NEXT:    v_bfe_i32 v5, v5, 0, 8
+; GFX8-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX8-NEXT:    v_bfe_i32 v3, v3, 0, 8
 ; GFX8-NEXT:    s_waitcnt vmcnt(0)
-; GFX8-NEXT:    v_and_b32_e32 v7, 0xff, v2
-; GFX8-NEXT:    v_mul_lo_u16_sdwa v8, v2, sext(v8) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_0
-; GFX8-NEXT:    v_and_b32_sdwa v4, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GFX8-NEXT:    v_mad_u16 v6, v6, v7, v8
-; GFX8-NEXT:    v_mad_u16 v4, v4, v5, v6
-; GFX8-NEXT:    v_lshrrev_b32_e32 v2, 24, v2
-; GFX8-NEXT:    v_mad_u16 v2, v3, v2, v4
-; GFX8-NEXT:    v_bfe_i32 v2, v2, 0, 16
+; GFX8-NEXT:    v_and_b32_e32 v5, 0xff, v0
+; GFX8-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
+; GFX8-NEXT:    v_lshrrev_b32_e32 v7, 24, v0
+; GFX8-NEXT:    v_mul_lo_u16_sdwa v0, v0, sext(v6) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_0
+; GFX8-NEXT:    v_mad_u16 v0, v4, v5, v0
+; GFX8-NEXT:    v_mad_u16 v0, v1, v2, v0
+; GFX8-NEXT:    v_mad_u16 v0, v3, v7, v0
+; GFX8-NEXT:    v_bfe_i32 v2, v0, 0, 16
+; GFX8-NEXT:    v_mov_b32_e32 v0, s4
+; GFX8-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX8-NEXT:    flat_store_dword v[0:1], v2
 ; GFX8-NEXT:    s_endpgm
 ;
@@ -3451,98 +3451,5 @@ entry:
   ret void
 }
 
-define i32 @idot4_repeated_byte(i32 %a, i32 %b) {
-; GFX7-LABEL: idot4_repeated_byte:
-; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    v_bfe_i32 v2, v0, 8, 8
-; GFX7-NEXT:    v_bfe_i32 v3, v1, 8, 8
-; GFX7-NEXT:    v_mul_i32_i24_e32 v4, v2, v3
-; GFX7-NEXT:    v_bfe_i32 v5, v0, 16, 8
-; GFX7-NEXT:    v_bfe_i32 v6, v1, 16, 8
-; GFX7-NEXT:    v_mad_i32_i24 v2, v2, v3, v4
-; GFX7-NEXT:    v_ashrrev_i32_e32 v0, 24, v0
-; GFX7-NEXT:    v_ashrrev_i32_e32 v1, 24, v1
-; GFX7-NEXT:    v_mad_i32_i24 v2, v5, v6, v2
-; GFX7-NEXT:    v_mad_i32_i24 v0, v0, v1, v2
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: idot4_repeated_byte:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v2, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v3, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX8-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v2, v2
-; GFX8-NEXT:    v_add_u32_e32 v1, vcc, v3, v1
-; GFX8-NEXT:    v_add_u32_e32 v0, vcc, v1, v0
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-NODL-LABEL: idot4_repeated_byte:
-; GFX9-NODL:       ; %bb.0: ; %entry
-; GFX9-NODL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v2, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:BYTE_1
-; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v3, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_2 src1_sel:BYTE_2
-; GFX9-NODL-NEXT:    v_mul_i32_i24_sdwa v0, sext(v0), sext(v1) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_3 src1_sel:BYTE_3
-; GFX9-NODL-NEXT:    v_add_u32_e32 v1, v2, v2
-; GFX9-NODL-NEXT:    v_add3_u32 v0, v3, v1, v0
-; GFX9-NODL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-DL-LABEL: idot4_repeated_byte:
-; GFX9-DL:       ; %bb.0: ; %entry
-; GFX9-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-DL-NEXT:    s_mov_b32 s4, 0x3020101
-; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v1, s4
-; GFX9-DL-NEXT:    v_perm_b32 v0, v0, v0, s4
-; GFX9-DL-NEXT:    v_dot4_i32_i8 v0, v0, v1, 0
-; GFX9-DL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-DL-LABEL: idot4_repeated_byte:
-; GFX10-DL:       ; %bb.0: ; %entry
-; GFX10-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
-; GFX10-DL-NEXT:    v_perm_b32 v2, v0, v0, 0x3020101
-; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10-DL-NEXT:    v_dot4c_i32_i8 v0, v2, v1
-; GFX10-DL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-DL-LABEL: idot4_repeated_byte:
-; GFX11-DL:       ; %bb.0: ; %entry
-; GFX11-DL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DL-NEXT:    v_perm_b32 v1, v1, v1, 0x3020101
-; GFX11-DL-NEXT:    v_perm_b32 v0, v0, v0, 0x3020101
-; GFX11-DL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-DL-NEXT:    v_dot4_i32_iu8 v0, v0, v1, 0 neg_lo:[1,1,0]
-; GFX11-DL-NEXT:    s_setpc_b64 s[30:31]
-entry:
-  %as1 = lshr i32 %a, 8
-  %at1 = trunc i32 %as1 to i8
-  %a1 = sext i8 %at1 to i32
-  %bs1 = lshr i32 %b, 8
-  %bt1 = trunc i32 %bs1 to i8
-  %b1 = sext i8 %bt1 to i32
-  %m1 = mul i32 %a1, %b1
-
-  %as2 = lshr i32 %a, 16
-  %at2 = trunc i32 %as2 to i8
-  %a2 = sext i8 %at2 to i32
-  %bs2 = lshr i32 %b, 16
-  %bt2 = trunc i32 %bs2 to i8
-  %b2 = sext i8 %bt2 to i32
-  %m2 = mul i32 %a2, %b2
-
-  %as3 = lshr i32 %a, 24
-  %at3 = trunc i32 %as3 to i8
-  %a3 = sext i8 %at3 to i32
-  %bs3 = lshr i32 %b, 24
-  %bt3 = trunc i32 %bs3 to i8
-  %b3 = sext i8 %bt3 to i32
-  %m3 = mul i32 %a3, %b3
-
-  %s0 = add i32 %m1, %m2
-  %s1 = add i32 %s0, %m1
-  %s2 = add i32 %s1, %m3
-  ret i32 %s2
-}
 
 declare i32 @llvm.amdgcn.workitem.id.x()
