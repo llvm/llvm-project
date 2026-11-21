@@ -14,7 +14,13 @@
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <atomic>
+#include <chrono>
+#include <condition_variable>
 #include <deque>
+#include <map>
+#include <mutex>
+#include <thread>
 
 using ::testing::_;
 using ::testing::AllOf;
@@ -1016,6 +1022,64 @@ TEST(BackgroundQueueTest, Progress) {
   EXPECT_EQ(S.Enqueued, 2000u);
   EXPECT_EQ(S.Completed, 2000u);
   EXPECT_EQ(S.LastIdle, 2000u);
+}
+
+TEST(BackgroundQueueTest, WorkerIdle) {
+  // Each time the queue goes idle, OnIdle runs on one worker, and after it
+  // returns, OnWorkerIdle runs once on every worker.
+  constexpr unsigned Workers = 4, Rounds = 3;
+  BackgroundQueue Q;
+  std::mutex Mu;
+  std::condition_variable CV;
+  bool InOnIdle = false;
+  unsigned IdleCalls = 0, WorkerIdleCalls = 0;
+  std::map<std::thread::id, unsigned> WorkerIdleCallsByThread;
+  std::atomic<unsigned> Ran(0);
+  auto OnIdle = [&] {
+    std::unique_lock<std::mutex> Lock(Mu);
+    InOnIdle = true;
+    Lock.unlock();
+    // Wake the waiting workers, as a spurious wakeup would, and give them
+    // time to run OnWorkerIdle too early.
+    Q.append({});
+    Lock.lock();
+    unsigned Calls = WorkerIdleCalls;
+    CV.wait_for(Lock, std::chrono::milliseconds(100),
+                [&] { return WorkerIdleCalls != Calls; });
+    InOnIdle = false;
+    ++IdleCalls;
+  };
+  auto OnWorkerIdle = [&] {
+    std::lock_guard<std::mutex> Lock(Mu);
+    // OnIdle returned for this idle period, and the next round hasn't
+    // started.
+    EXPECT_FALSE(InOnIdle);
+    EXPECT_EQ(IdleCalls, WorkerIdleCalls / Workers + 1);
+    ++WorkerIdleCalls;
+    ++WorkerIdleCallsByThread[std::this_thread::get_id()];
+    CV.notify_all();
+  };
+  AsyncTaskRunner ThreadPool;
+  for (unsigned I = 0; I < Workers; ++I)
+    ThreadPool.runAsync("worker", [&] { Q.work(OnIdle, OnWorkerIdle); });
+
+  for (unsigned Round = 1; Round <= Rounds; ++Round) {
+    Q.append(std::vector<BackgroundQueue::Task>(
+        10, BackgroundQueue::Task([&] { ++Ran; })));
+    EXPECT_TRUE(Q.blockUntilIdleForTest(/*TimeoutSeconds=*/60));
+    std::unique_lock<std::mutex> Lock(Mu);
+    EXPECT_TRUE(CV.wait_for(Lock, std::chrono::seconds(60), [&] {
+      return WorkerIdleCalls >= Round * Workers;
+    }));
+  }
+  Q.stop();
+  ThreadPool.wait();
+  EXPECT_EQ(Ran.load(), 10 * Rounds);
+  EXPECT_EQ(IdleCalls, Rounds);
+  EXPECT_EQ(WorkerIdleCalls, Rounds * Workers);
+  EXPECT_EQ(WorkerIdleCallsByThread.size(), Workers);
+  for (const auto &Entry : WorkerIdleCallsByThread)
+    EXPECT_EQ(Entry.second, Rounds);
 }
 
 TEST(BackgroundIndex, Profile) {

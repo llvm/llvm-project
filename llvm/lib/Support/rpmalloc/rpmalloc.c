@@ -3532,7 +3532,112 @@ extern inline size_t rpmalloc_usable_size(void *ptr) {
   return (ptr ? _rpmalloc_usable_size(ptr) : 0);
 }
 
-extern inline void rpmalloc_thread_collect(void) {}
+//! Check if the span is a master span that still has mapped subspans.
+//  Unmapping such a span releases nothing, its pages stay committed until
+//  the last subspan is unmapped
+static int _rpmalloc_span_is_master_with_subspans(span_t *span) {
+  return (span->flags & SPAN_FLAG_MASTER) &&
+         (atomic_load32(&span->remaining_spans) > (int32_t)span->span_count);
+}
+
+void rpmalloc_thread_collect(void) {
+  heap_t *heap = get_thread_heap_raw();
+  if (!heap || heap->finalize)
+    return;
+  // Complete the frees other threads deferred to this heap. Without this,
+  // spans (including huge blocks) freed by other threads stay mapped until
+  // this thread allocates again
+  _rpmalloc_heap_cache_adopt_deferred(heap, 0);
+  // Spans kept for reuse by a size class go to the span cache below
+  for (size_t iclass = 0; iclass < SIZE_CLASS_COUNT; ++iclass) {
+    span_t *span = heap->size_class[iclass].cache;
+    if (!span)
+      continue;
+    heap->size_class[iclass].cache = 0;
+    _rpmalloc_heap_cache_insert(heap, span);
+  }
+  // Spans reserved for this heap go to the span cache too, as when a new
+  // mapping replaces them. The reserve can be a freed master span that still
+  // has mapped subspans, which the loops below keep. A reserve larger than the
+  // largest span cache class (possible with a span map count above 64) stays
+  // reserved
+  if (heap->spans_reserved && heap->spans_reserved <= LARGE_CLASS_COUNT)
+    _rpmalloc_heap_cache_insert(heap,
+                                _rpmalloc_span_map(heap, heap->spans_reserved));
+#if ENABLE_THREAD_CACHE
+  // Two passes, because a master span is kept while it has mapped subspans,
+  // and they can come after it in the caches
+  for (int pass = 0; pass < 2; ++pass) {
+    for (size_t iclass = 0; iclass < LARGE_CLASS_COUNT; ++iclass) {
+      span_cache_t *span_cache;
+      if (!iclass)
+        span_cache = &heap->span_cache;
+      else
+        span_cache = (span_cache_t *)(heap->span_large_cache + (iclass - 1));
+      size_t keep_count = 0;
+      for (size_t ispan = 0; ispan < span_cache->count; ++ispan) {
+        span_t *span = span_cache->span[ispan];
+        if (_rpmalloc_span_is_master_with_subspans(span))
+          span_cache->span[keep_count++] = span;
+        else
+          _rpmalloc_span_unmap(span);
+      }
+      span_cache->count = keep_count;
+    }
+  }
+#endif
+}
+
+#if ENABLE_GLOBAL_CACHE
+//! Unmap the free spans of a global cache, except masters with mapped subspans
+static void _rpmalloc_global_cache_collect(global_cache_t *cache) {
+  // The spans to unmap are taken out of the cache under its lock and unmapped
+  // after the lock is released
+  span_t *unmap = 0;
+  while (!atomic_cas32_acquire(&cache->lock, 1, 0))
+    _rpmalloc_spin();
+  size_t keep_count = 0;
+  for (size_t ispan = 0; ispan < cache->count; ++ispan) {
+    span_t *span = cache->span[ispan];
+    if (_rpmalloc_span_is_master_with_subspans(span)) {
+      cache->span[keep_count++] = span;
+    } else {
+      span->next = unmap;
+      unmap = span;
+    }
+  }
+  cache->count = (uint32_t)keep_count;
+  span_t **link = &cache->overflow;
+  while (*link) {
+    span_t *span = *link;
+    if (_rpmalloc_span_is_master_with_subspans(span)) {
+      link = &span->next;
+    } else {
+      *link = span->next;
+      span->next = unmap;
+      unmap = span;
+    }
+  }
+  atomic_store32_release(&cache->lock, 0);
+  while (unmap) {
+    // Read the link before unmapping, the span header may be decommitted
+    span_t *span = unmap;
+    unmap = span->next;
+    _rpmalloc_span_unmap(span);
+  }
+}
+#endif
+
+void rpmalloc_global_collect(void) {
+#if ENABLE_GLOBAL_CACHE
+  // Two passes, because a master span is kept while it has mapped subspans,
+  // and they can come after it in the caches
+  for (int pass = 0; pass < 2; ++pass) {
+    for (size_t iclass = 0; iclass < LARGE_CLASS_COUNT; ++iclass)
+      _rpmalloc_global_cache_collect(&_memory_span_cache[iclass]);
+  }
+#endif
+}
 
 void rpmalloc_thread_statistics(rpmalloc_thread_statistics_t *stats) {
   memset(stats, 0, sizeof(rpmalloc_thread_statistics_t));

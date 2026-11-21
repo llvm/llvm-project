@@ -121,6 +121,8 @@ size_t Process::GetMallocUsage() {
 #endif
 }
 
+void Process::releaseHeapCaches(bool IncludeShared) {}
+
 void Process::GetTimeUsage(TimePoint<> &elapsed,
                            std::chrono::nanoseconds &user_time,
                            std::chrono::nanoseconds &sys_time) {

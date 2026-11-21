@@ -75,6 +75,22 @@ public:
   /// allocated space.
   LLVM_ABI static size_t GetMallocUsage();
 
+  /// Release free memory that the heap allocator keeps cached, giving it back
+  /// to the operating system. This is best effort: the allocator may still
+  /// hold some free memory afterwards.
+  ///
+  /// This only has an effect when LLVM is built with LLVM_ENABLE_RPMALLOC.
+  /// rpmalloc caches freed memory per thread, and leaves a block freed by a
+  /// thread other than the one that allocated it for the allocating thread to
+  /// reclaim, e.g. when it allocates again. Only the calling thread's cache is
+  /// released, so a long-running program should call this on every thread
+  /// that goes idle after allocating a lot.
+  ///
+  /// \param IncludeShared Also release the cache shared by all threads.
+  /// Threads that are allocating at the same time may then have to get memory
+  /// from the operating system again.
+  LLVM_ABI static void releaseHeapCaches(bool IncludeShared);
+
   /// This static function will set \p user_time to the amount of CPU time
   /// spent in user (non-kernel) mode and \p sys_time to the amount of CPU
   /// time spent in system (kernel) mode.  If the operating system does not

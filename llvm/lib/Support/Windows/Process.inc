@@ -27,6 +27,10 @@
 #include <psapi.h>
 #include <shellapi.h>
 
+#ifdef LLVM_ENABLE_RPMALLOC
+#include "rpmalloc/rpmalloc.h"
+#endif
+
 #if !defined(__MINGW32__)
 #pragma comment(lib, "psapi.lib")
 #if !LLVM_WINDOWS_RESTRICTED_APIS
@@ -75,6 +79,14 @@ size_t Process::GetMallocUsage() {
     size += hinfo._size;
 
   return size;
+}
+
+void Process::releaseHeapCaches(bool IncludeShared) {
+#ifdef LLVM_ENABLE_RPMALLOC
+  rpmalloc_thread_collect();
+  if (IncludeShared)
+    rpmalloc_global_collect();
+#endif
 }
 
 void Process::GetTimeUsage(TimePoint<> &elapsed,
