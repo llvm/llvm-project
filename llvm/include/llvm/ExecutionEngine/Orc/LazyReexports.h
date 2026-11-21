@@ -234,7 +234,6 @@ public:
 
 private:
   class MU;
-  class Plugin;
 
   using ResolveSendResultFn =
       unique_function<void(Expected<ExecutorSymbolDef>)>;
