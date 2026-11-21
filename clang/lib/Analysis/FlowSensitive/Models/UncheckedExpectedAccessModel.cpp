@@ -13,6 +13,7 @@
 
 #include "clang/Analysis/FlowSensitive/Models/UncheckedExpectedAccessModel.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
 #include "clang/Analysis/FlowSensitive/Arena.h"
@@ -51,6 +52,18 @@ static bool isExpectedType(QualType Ty) {
   return RD != nullptr && isExpectedClass(*RD);
 }
 
+/// Returns true if `Ty` is a supported expected type whose value type is
+/// `void`, e.g. `std::expected<void, E>`.
+static bool isVoidExpectedType(QualType Ty) {
+  const auto *CTSD = dyn_cast_or_null<ClassTemplateSpecializationDecl>(
+      Ty->getAsCXXRecordDecl());
+  if (CTSD == nullptr || !isExpectedClass(*CTSD))
+    return false;
+  const TemplateArgument &ValueType = CTSD->getTemplateArgs()[0];
+  return ValueType.getKind() == TemplateArgument::Type &&
+         ValueType.getAsType()->isVoidType();
+}
+
 namespace {
 
 using namespace ::clang::ast_matchers;
@@ -67,6 +80,45 @@ auto expectedMemberCall(ast_matchers::internal::Matcher<NamedDecl> Name) {
 auto expectedOperatorCall(ArrayRef<StringRef> Names) {
   return cxxOperatorCallExpr(hasAnyOverloadedOperatorName(Names),
                              callee(cxxMethodDecl(ofClass(expectedClass()))));
+}
+
+auto hasExpectedType() {
+  return hasType(hasUnqualifiedDesugaredType(
+      recordType(hasDeclaration(cxxRecordDecl(expectedClass())))));
+}
+
+/// Matches `operator==` and `operator!=` calls between an expected and an
+/// operand that matches `Other`, in either order.
+auto expectedComparisonCall(
+    const ast_matchers::internal::Matcher<Expr> &Other) {
+  return cxxOperatorCallExpr(
+      hasAnyOverloadedOperatorName("==", "!="), argumentCountIs(2),
+      anyOf(allOf(hasArgument(0, hasExpectedType()), hasArgument(1, Other)),
+            allOf(hasArgument(0, Other), hasArgument(1, hasExpectedType()))));
+}
+
+auto expectedEqualityCall() {
+  return expectedComparisonCall(hasExpectedType());
+}
+
+/// Ensures that `E` is mapped to a `BoolValue` and returns its formula.
+const Formula &forceBoolValue(Environment &Env, const Expr &E) {
+  auto *Value = Env.get<BoolValue>(E);
+  if (Value != nullptr)
+    return Value->formula();
+
+  Value = &Env.makeAtomicBoolValue();
+  Env.setValue(E, *Value);
+  return Value->formula();
+}
+
+/// Returns the formula that is true if and only if the operands of the
+/// `operator==` or `operator!=` call `E` are equal.
+const Formula &equalityFormula(Environment &Env, const CXXOperatorCallExpr &E) {
+  const Formula &Result = forceBoolValue(Env, E);
+  if (E.getOperator() == OO_ExclaimEqual)
+    return Env.arena().makeNot(Result);
+  return Result;
 }
 
 StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
@@ -97,6 +149,32 @@ void transferHasValueCall(const CXXMemberCallExpr *E,
     State.Env.setValue(*E, *HasValueVal);
 }
 
+void transferExpectedEqualityCall(const CXXOperatorCallExpr *E,
+                                  const MatchFinder::MatchResult &,
+                                  LatticeTransferState &State) {
+  Environment &Env = State.Env;
+  BoolValue *LHasValueVal =
+      getHasValue(Env, Env.get<RecordStorageLocation>(*E->getArg(0)));
+  BoolValue *RHasValueVal =
+      getHasValue(Env, Env.get<RecordStorageLocation>(*E->getArg(1)));
+  if (LHasValueVal == nullptr || RHasValueVal == nullptr)
+    return;
+
+  Arena &A = Env.arena();
+  const Formula &EqVal = equalityFormula(Env, *E);
+  const Formula &LHasValue = LHasValueVal->formula();
+  const Formula &RHasValue = RHasValueVal->formula();
+
+  // Equal expecteds either both hold a value or both hold an error. Nothing
+  // more follows in general: the values (or errors) themselves may differ.
+  Env.assume(A.makeImplies(EqVal, A.makeEquals(LHasValue, RHasValue)));
+
+  // `expected<void, E>` objects that both hold a value are always equal.
+  if (isVoidExpectedType(E->getArg(0)->getType()) &&
+      isVoidExpectedType(E->getArg(1)->getType()))
+    Env.assume(A.makeImplies(A.makeAnd(LHasValue, RHasValue), EqVal));
+}
+
 // FIXME: Model the constructors, assignments, `emplace` and `swap`.
 auto buildTransferMatchSwitch() {
   return CFGMatchSwitchBuilder<LatticeTransferState>()
@@ -104,6 +182,9 @@ auto buildTransferMatchSwitch() {
       .CaseOfCFGStmt<CXXMemberCallExpr>(
           expectedMemberCall(hasAnyName("has_value", "operator bool")),
           transferHasValueCall)
+      // operator==, operator!= between two expecteds
+      .CaseOfCFGStmt<CXXOperatorCallExpr>(expectedEqualityCall(),
+                                          transferExpectedEqualityCall)
       .Build();
 }
 
