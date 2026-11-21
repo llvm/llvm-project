@@ -66,7 +66,7 @@ using ::testing::UnorderedElementsAre;
 // Simple ContextProvider to verify the provider is invoked & contexts are used.
 static Key<std::string> BoundPath;
 Context bindPath(PathRef F) {
-  return Context::current().derive(BoundPath, F.str());
+  return Context::current().derive(BoundPath, F.owned().raw());
 }
 llvm::StringRef boundPath() {
   const std::string *V = Context::current().get(BoundPath);
@@ -142,7 +142,7 @@ protected:
   void updateWithDiags(TUScheduler &S, PathRef File, ParseInputs Inputs,
                        WantDiagnostics WD,
                        llvm::unique_function<void(std::vector<Diag>)> CB) {
-    Path OrigFile = File.str();
+    Path OrigFile = File.owned();
     WithContextValue Ctx(DiagsCallbackKey,
                          [OrigFile, CB = std::move(CB)](
                              PathRef File, std::vector<Diag> Diags) mutable {
@@ -1556,7 +1556,7 @@ TEST_F(TUSchedulerTests, PreambleThrottle) {
       // Deliberately no synchronization.
       // The PreambleThrottler should serialize these calls, if not then tsan
       // will find a bug here.
-      Filenames.emplace_back(Path);
+      Filenames.emplace_back(Path.owned().raw());
     }
   };
 

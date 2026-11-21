@@ -783,7 +783,8 @@ renameObjCMethodWithinFile(ParsedAST &AST, const ObjCMethodDecl *MD,
   auto FilePath = AST.tuPath();
   auto RenameRanges = collectRenameIdentifierRanges(
       RenameSymbolName(MD->getDeclName()), Code, LangOpts);
-  auto RenameEdit = buildRenameEdit(FilePath, Code, RenameRanges, NewNames);
+  auto RenameEdit =
+      buildRenameEdit(FilePath.raw(), Code, RenameRanges, NewNames);
   if (!RenameEdit)
     return error("failed to rename in file {0}: {1}", FilePath,
                  RenameEdit.takeError());
@@ -890,7 +891,7 @@ findOccurrencesOutsideFile(const NamedDecl &RenameDecl,
     if ((R.Kind & RefKind::Spelled) == RefKind::Unknown)
       return;
     if (auto RefFilePath = filePath(R.Location, /*HintFilePath=*/MainFile)) {
-      if (!pathEqual(*RefFilePath, MainFile))
+      if (PathRef(*RefFilePath) != MainFile)
         AffectedFiles[*RefFilePath].push_back(toRange(R.Location));
     }
   });
