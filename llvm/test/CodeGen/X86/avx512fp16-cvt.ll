@@ -619,11 +619,19 @@ define half @s64_to_half(i64 %x) {
 define half @s128_to_half(i128 %x) {
 ; X64-LABEL: s128_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __floattihf@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    movabsq $9223372036854775807, %rcx # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    cmpq %rcx, %rdi
+; X64-NEXT:    movq %rsi, %rdx
+; X64-NEXT:    sbbq $0, %rdx
+; X64-NEXT:    cmovlq %rsi, %rax
+; X64-NEXT:    cmovlq %rdi, %rcx
+; X64-NEXT:    movabsq $-9223372036854775808, %rdx # imm = 0x8000000000000000
+; X64-NEXT:    cmpq %rcx, %rdx
+; X64-NEXT:    movq $-1, %rsi
+; X64-NEXT:    sbbq %rax, %rsi
+; X64-NEXT:    cmovgeq %rdx, %rcx
+; X64-NEXT:    vcvtsi2sh %rcx, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: s128_to_half:
@@ -633,12 +641,50 @@ define half @s128_to_half(i128 %x) {
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %ebx
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    vmovups 8(%ebp), %xmm0
-; X86-NEXT:    vmovups %xmm0, (%esp)
-; X86-NEXT:    calll __floattihf
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    .cfi_offset %esi, -20
+; X86-NEXT:    .cfi_offset %edi, -16
+; X86-NEXT:    .cfi_offset %ebx, -12
+; X86-NEXT:    movl 16(%ebp), %edx
+; X86-NEXT:    movl 8(%ebp), %ecx
+; X86-NEXT:    movl 12(%ebp), %ebx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    cmpl $-1, %ecx
+; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    sbbl $2147483647, %esi # imm = 0x7FFFFFFF
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    sbbl $0, %esi
+; X86-NEXT:    movl 20(%ebp), %esi
+; X86-NEXT:    movl %esi, %edi
+; X86-NEXT:    sbbl $0, %edi
+; X86-NEXT:    movl $2147483647, %edi # imm = 0x7FFFFFFF
+; X86-NEXT:    cmovll %ebx, %edi
+; X86-NEXT:    cmovgel %eax, %esi
+; X86-NEXT:    cmovgel %eax, %edx
+; X86-NEXT:    movl $-1, %ebx
+; X86-NEXT:    cmovgel %ebx, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:    negl %eax
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    sbbl %edi, %eax
+; X86-NEXT:    movl $-1, %eax
+; X86-NEXT:    sbbl %edx, %eax
+; X86-NEXT:    sbbl %esi, %ebx
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    cmovgel %eax, %edi
+; X86-NEXT:    movl $0, %eax
+; X86-NEXT:    cmovgel %eax, %ecx
+; X86-NEXT:    vmovd %ecx, %xmm0
+; X86-NEXT:    vpinsrd $1, %edi, %xmm0, %xmm0
+; X86-NEXT:    vcvtqq2ph %xmm0, %xmm0
+; X86-NEXT:    leal -12(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    popl %ebx
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
@@ -710,11 +756,12 @@ define half @u64_to_half(i64 %x) {
 define half @u128_to_half(i128 %x) {
 ; X64-LABEL: u128_to_half:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __floatuntihf@PLT
-; X64-NEXT:    popq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; X64-NEXT:    cmpq %rax, %rdi
+; X64-NEXT:    cmovaeq %rax, %rdi
+; X64-NEXT:    testq %rsi, %rsi
+; X64-NEXT:    cmovneq %rax, %rdi
+; X64-NEXT:    vcvtsi2sh %rdi, %xmm31, %xmm0
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: u128_to_half:
@@ -724,12 +771,28 @@ define half @u128_to_half(i128 %x) {
 ; X86-NEXT:    .cfi_offset %ebp, -8
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    .cfi_def_cfa_register %ebp
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    vmovups 8(%ebp), %xmm0
-; X86-NEXT:    vmovups %xmm0, (%esp)
-; X86-NEXT:    calll __floatuntihf
-; X86-NEXT:    movl %ebp, %esp
+; X86-NEXT:    .cfi_offset %esi, -16
+; X86-NEXT:    .cfi_offset %edi, -12
+; X86-NEXT:    movl 12(%ebp), %eax
+; X86-NEXT:    movl 16(%ebp), %ecx
+; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    movl $2147483647, %edx # imm = 0x7FFFFFFF
+; X86-NEXT:    cmovsl %edx, %eax
+; X86-NEXT:    movl $-1, %esi
+; X86-NEXT:    movl 8(%ebp), %edi
+; X86-NEXT:    cmovsl %esi, %edi
+; X86-NEXT:    orl 20(%ebp), %ecx
+; X86-NEXT:    cmovnel %edx, %eax
+; X86-NEXT:    cmovnel %esi, %edi
+; X86-NEXT:    vmovd %edi, %xmm0
+; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X86-NEXT:    vcvtqq2ph %xmm0, %xmm0
+; X86-NEXT:    leal -8(%ebp), %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4
 ; X86-NEXT:    retl
