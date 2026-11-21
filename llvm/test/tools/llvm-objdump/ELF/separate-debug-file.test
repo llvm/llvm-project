@@ -1,0 +1,417 @@
+## Separate debug files produced by objcopy --only-keep-debug keep symbols and
+## DWARF, but their code sections are SHT_NOBITS. We disassemble the original
+## bytes and take symbols (and source) from the debug file.
+# REQUIRES: x86-registered-target
+
+# RUN: rm -rf %t
+
+## End-to-end case: real DWARF line table plus a NOBITS .text.
+# RUN: mkdir -p %t/src/debug/.build-id/15
+# RUN: llvm-objcopy --strip-debug %p/../Inputs/embedded-source %t/src/stripped
+# RUN: llvm-strip %t/src/stripped -o %t/src/stripped-all
+# RUN: llvm-objcopy --only-keep-debug %p/../Inputs/embedded-source \
+# RUN:   %t/src/debug/.build-id/15/12f769114c011387393822af15dd660c080295.debug
+# RUN: llvm-objdump -d --source --no-debuginfod \
+# RUN:   --debug-file-directory %t/src/debug %t/src/stripped-all | \
+# RUN:   FileCheck %s --check-prefix=SRC
+
+# SRC:      <main>:
+# SRC-NEXT: ; int main(int argc, char *argv[]) {
+# SRC-NEXT: {{.*}}pushq %rbp
+
+## Symbols come from the debug file, bytes from the original. The original has
+## a section before .text, so the .text indexes differ and matching is by name.
+## STT_FILE, STT_SECTION, empty names and absolute symbols are not labels.
+# RUN: mkdir -p %t/basic/debug/.build-id/01
+# RUN: yaml2obj %s --docnum=1 -o %t/basic/stripped
+# RUN: yaml2obj %s --docnum=2 -o %t/basic/debug/.build-id/01/02030405.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/basic/debug \
+# RUN:   %t/basic/stripped | FileCheck %s --check-prefix=BASIC
+# RUN: llvm-objdump -d --show-all-symbols --no-debuginfod \
+# RUN:   --debug-file-directory %t/basic/debug %t/basic/stripped | \
+# RUN:   FileCheck %s --check-prefix=ALL
+
+# BASIC:      <main>:
+# BASIC-NEXT: {{.*}}nop
+# BASIC:      <mid>:
+# BASIC-NEXT: {{.*}}nop
+# BASIC-NOT:  <foo\.c>:
+# BASIC-NOT:  <abs_sym>:
+# BASIC-NOT:  <>:
+
+# ALL-NOT: <foo\.c>:
+# ALL-NOT: <\.text>:
+# ALL-NOT: <abs_sym>:
+# ALL-NOT: <>:
+# ALL:     <main>:
+# ALL:     <mid>:
+# ALL-NOT: <foo\.c>:
+# ALL-NOT: <\.text>:
+# ALL-NOT: <abs_sym>:
+# ALL-NOT: <>:
+
+## A fetched file with real code (SHT_PROGBITS) still replaces the original,
+## including when it also has an SHT_NOBITS non-executable section.
+# RUN: mkdir -p %t/full/debug/.build-id/02
+# RUN: yaml2obj %s --docnum=3 -o %t/full/stripped
+# RUN: yaml2obj %s --docnum=4 -o %t/full/debug/.build-id/02/03040506.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/full/debug \
+# RUN:   %t/full/stripped | FileCheck %s --check-prefix=FULL
+
+# FULL:     <main>:
+# FULL-NEXT: {{.*}}retq
+# FULL-NOT: nop
+
+## A symbol whose section is not in the original binary is dropped.
+# RUN: mkdir -p %t/name/debug/.build-id/01
+# RUN: cp %t/basic/stripped %t/name/stripped
+# RUN: yaml2obj %s --docnum=5 -o %t/name/debug/.build-id/01/02030405.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/name/debug \
+# RUN:   %t/name/stripped | FileCheck %s --check-prefix=NAME
+
+# NAME-NOT: <only_in_debug>:
+# NAME:     <main>:
+# NAME-NEXT: {{.*}}nop
+# NAME-NOT: <only_in_debug>:
+
+## A symbol whose value lies outside the original section is not a label.
+## The original bytes are still disassembled.
+# RUN: mkdir -p %t/addr/debug/.build-id/01
+# RUN: cp %t/basic/stripped %t/addr/stripped
+# RUN: yaml2obj %s --docnum=6 -o %t/addr/debug/.build-id/01/02030405.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/addr/debug \
+# RUN:   %t/addr/stripped | FileCheck %s --check-prefix=ADDR
+
+# ADDR-NOT: <main>:
+# ADDR:     {{.*}}nop
+# ADDR-NOT: <main>:
+
+## Sections are matched by name, address and size: a debug file describing a
+## different binary is rejected, with a warning.
+# RUN: mkdir -p %t/mismatch/debug/.build-id/01
+# RUN: cp %t/basic/stripped %t/mismatch/stripped
+# RUN: yaml2obj %s --docnum=7 -o %t/mismatch/debug/.build-id/01/02030405.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/mismatch/debug \
+# RUN:   %t/mismatch/stripped 2>&1 | FileCheck %s --check-prefix=MISMATCH
+
+# MISMATCH:      warning: '{{.*}}': section '.text' does not match the section of the same name in '{{.*}}stripped'
+# MISMATCH-NOT:  <main>:
+# MISMATCH:      {{.*}}nop
+
+## The debug file has no ordinary symbols, so fall back to .dynsym.
+# RUN: mkdir -p %t/dyn/debug/.build-id/03
+# RUN: yaml2obj %s --docnum=8 -o %t/dyn/stripped
+# RUN: yaml2obj %s --docnum=9 -o %t/dyn/debug/.build-id/03/04050607.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/dyn/debug \
+# RUN:   %t/dyn/stripped | FileCheck %s --check-prefix=DYN
+
+# DYN-NOT:  <foo\.c>:
+# DYN:      <dynfunc>:
+# DYN-NEXT: {{.*}}nop
+# DYN-NOT:  <foo\.c>:
+
+## Corrupt section and symbol names warn and are skipped. A valid symbol from
+## the same debug file is still applied, and disassembly does not abort.
+# RUN: mkdir -p %t/bad/debug/.build-id/04
+# RUN: yaml2obj %s --docnum=10 -o %t/bad/stripped
+# RUN: yaml2obj %s --docnum=11 -o %t/bad/debug/.build-id/04/05060708.debug
+# RUN: llvm-objdump -d --no-debuginfod --debug-file-directory %t/bad/debug \
+# RUN:   %t/bad/stripped 2>&1 | FileCheck %s --check-prefix=BAD
+
+## Don't match the whole path: llvm-objdump builds the debug file path with
+## native separators, so only the file names are portable.
+# BAD:      warning: '{{.*}}stripped': a section [index {{[0-9]+}}] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# BAD:      warning: '{{.*}}05060708.debug': st_name (0xffff) is past the end of the string table of size 0x{{[0-9a-f]+}}
+# BAD:      warning: '{{.*}}05060708.debug': a section [index {{[0-9]+}}] has an invalid sh_name (0xffff) offset which goes past the end of the section name string table
+# BAD-NOT:  <lost>:
+# BAD:      <good>:
+# BAD-NEXT: {{.*}}nop
+# BAD-NOT:  <lost>:
+
+--- !ELF
+# basic stripped binary. Build ID 0102030405.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 4
+    Notes:
+      - Name: GNU
+        Desc: '0102030405'
+        Type: NT_GNU_BUILD_ID
+  - Name:    .pad
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x100
+    Content: '00'
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: '90909090'
+
+--- !ELF
+# basic separate debug file. .text index differs from the stripped binary.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    4
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+  - Name:    mid
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1002
+## Placed in .text so a failure to skip them shows up as a label.
+  - Name:    foo.c
+    Type:    STT_FILE
+    Section: .text
+    Value:   0x1000
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+    Value:   0x1000
+  - StName:  0
+    Section: .text
+    Value:   0x1000
+  - Name:    abs_sym
+    Index:   SHN_ABS
+    Value:   0x1000
+
+--- !ELF
+# stripped binary replaced by a full SHT_PROGBITS image. Build ID 0203040506.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 4
+    Notes:
+      - Name: GNU
+        Desc: '0203040506'
+        Type: NT_GNU_BUILD_ID
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: '90'
+
+--- !ELF
+# full binary with real code, plus a non-executable SHT_NOBITS section.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: 'C3'
+  - Name:    .bss
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x2000
+    Size:    4
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+
+--- !ELF
+# debug file with a symbol in a section the original binary does not have.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    4
+  - Name:    .missing
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC ]
+    Address: 0x2000
+    Content: '00'
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+  - Name:    only_in_debug
+    Type:    STT_FUNC
+    Section: .missing
+    Value:   0x2000
+
+--- !ELF
+# symbol value is outside the original .text.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    4
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x2000
+
+--- !ELF
+# debug file whose .text has the same name but a different address.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x2000
+    Size:    4
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x2000
+
+--- !ELF
+# stripped binary with .dynsym only. Build ID 0304050607.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 4
+    Notes:
+      - Name: GNU
+        Desc: '0304050607'
+        Type: NT_GNU_BUILD_ID
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: '90'
+DynamicSymbols:
+  - Name:    dynfunc
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
+
+--- !ELF
+# separate debug file whose only symbol is STT_FILE.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    1
+Symbols:
+  - Name:  foo.c
+    Type:  STT_FILE
+    Index: SHN_ABS
+
+--- !ELF
+# stripped binary with one corrupt section name. Build ID 0405060708.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:         .note.gnu.build-id
+    Type:         SHT_NOTE
+    Flags:        [ SHF_ALLOC ]
+    AddressAlign: 4
+    Notes:
+      - Name: GNU
+        Desc: '0405060708'
+        Type: NT_GNU_BUILD_ID
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Content: '90'
+  - Name:   .bad
+    Type:   SHT_PROGBITS
+    ShName: 0xFFFF
+
+--- !ELF
+# debug file with a corrupt symbol name and a corrupt section name.
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .text
+    Type:    SHT_NOBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+    Size:    1
+  - Name:    .lost
+    Type:    SHT_PROGBITS
+    ShName:  0xFFFF
+    Address: 0x2000
+    Content: '00'
+Symbols:
+  - Name:    ignored
+    StName:  0xFFFF
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x1000
+  - Name:    lost
+    Type:    STT_FUNC
+    Section: .lost
+    Value:   0x2000
+  - Name:    good
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x1000
