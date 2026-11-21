@@ -1,6 +1,8 @@
-; NOTE: Do not autogenerate. Check the ordered VGPR bank switch and contiguous EXEC-preserving expansion.
+; NOTE: Do not autogenerate. Check the bank switch, contiguous EXEC-preserving expansion, and warning-free assembly round trip.
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa < %s | llvm-mc -triple=amdgpu12.50-amd-amdhsa -filetype=null --fatal-warnings
+; RUN: llc -mtriple=amdgpu12.51-amd-amdhsa < %s | llvm-mc -triple=amdgpu12.51-amd-amdhsa -filetype=null --fatal-warnings
 
 ; Keep a divergent LDS address live across clobbers of all low VGPRs. The
 ; occupancy attributes allow allocation of v256 without spilling the address.
