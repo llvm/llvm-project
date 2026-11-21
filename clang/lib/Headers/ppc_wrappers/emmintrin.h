@@ -1187,6 +1187,9 @@ extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_movemask_pd(__m128d __A) {
 #ifdef _ARCH_PWR10
+#ifdef __BIG_ENDIAN__
+  __A = vec_reve(__A);
+#endif
   return vec_extractm((__v2du)__A);
 #else
   __vector unsigned long long __result;
@@ -1961,6 +1964,9 @@ extern __inline int
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_movemask_epi8(__m128i __A) {
 #ifdef _ARCH_PWR10
+#ifdef __BIG_ENDIAN__
+  __A = (__m128i)vec_reve((__v16qu)__A);
+#endif
   return vec_extractm((__v16qu)__A);
 #else
   __vector unsigned long long __result;
