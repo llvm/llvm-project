@@ -8,7 +8,8 @@ assignees: ''
 ---
 
 > Replace each FILL-ME comment with your response. You do not need to identify
-> the cause or propose a fix to report a bug.
+> the cause or propose a fix to report a bug. LLM-generated text must be
+> clearly labelled, as per our AI policy: https://llvm.org/docs/AIToolPolicy.html.
 
 ## LLVM version and environment
 
@@ -36,6 +37,12 @@ assignees: ''
 > FILL-ME: Are you planning to fix this issue? Are you planning to submit more
 > issues like this?
 
+## Related issues
+
+> FILL-ME: Have you checked that this issue has not been reported already? If
+> similar (but not identical) issue have been found, include Links. If
+> submitting multiple issues, create a meta-issue first and link it here.
+
 ## AI Declaration
 
 > FILL-ME: Did you use AI when preparing this report?
@@ -43,7 +50,7 @@ assignees: ''
 > the cause, suggesting a fix or editing the description) and what
 > you checked yourself.
 
-## Analysis and possible fix
+## Analysis and possible fix (optional)
 
 <details>
 <summary> Click to expand ... </summary>
