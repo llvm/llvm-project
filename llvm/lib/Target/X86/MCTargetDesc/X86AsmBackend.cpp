@@ -558,7 +558,7 @@ void X86AsmBackend::emitInstructionBegin(MCObjectStreamer &OS,
 
   if (needAlign(Inst) || ((AlignBranchType & X86::AlignBranchFused) &&
                           isFirstMacroFusibleInst(Inst, *MCII))) {
-    // If we meet a unfused branch or the first instuction in a fusiable pair,
+    // If we meet a unfused branch or the first instruction in a fusiable pair,
     // insert a BoundaryAlign fragment.
     PendingBA =
         OS.newSpecialFragment<MCBoundaryAlignFragment>(AlignBoundary, STI);

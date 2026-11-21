@@ -20,10 +20,12 @@
 #include "orc-rt/bedrock/TaskGroup.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/LockedAccess.h"
-#include "orc-rt/support/SymbolLookupSet.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
+#include "orc-rt/support/SymbolLookupResult.h"
 #include "orc-rt/support/WrapperFunction.h"
 #include "orc-rt/support/move_only_function.h"
 
+#include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-c/config.h"
 #include "orc-rt-c/support/CoreTypes.h"
 #include "orc-rt-c/support/LogLevel.h"
@@ -217,7 +219,7 @@ public:
     /// without one needs none (a handler that enters Session-managed code must
     /// acquire its own keepalive and handle denial).
     virtual void callController(OnControllerCallReturn OnComplete,
-                                orc_rt_ControllerHandlerTag T,
+                                orc_rt_ControllerHandlerTag *T,
                                 WrapperFunctionBuffer ArgBytes) = 0;
 
     /// Send the result of the given wrapper function call to the controller.
@@ -430,7 +432,7 @@ public:
   /// weakly referenced symbol yields a null address, and a missing required
   /// symbol yields an empty optional.
   SymbolLookupResult
-  lookupInstanceSymbols(const SymbolLookupSet &LS) const noexcept;
+  lookupInstanceSymbols(const RemoteSymbolLookupSet &LS) const noexcept;
 
   /// Add a Service to the session.
   template <typename ServiceT>
@@ -627,7 +629,7 @@ public:
   /// called via WrapperFunction::call using a ControllerCaller object (returned
   /// by the controllerCaller method).
   void callController(OnControllerCallReturnFn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) {
     if (auto TmpCA = std::atomic_load(&CA))
       TmpCA->callController(std::move(OnComplete), T, std::move(ArgBytes));
@@ -642,7 +644,7 @@ public:
   /// Useable as a Caller implementation with WrapperFunction::call.
   class ControllerCaller {
   public:
-    ControllerCaller(Session &S, orc_rt_ControllerHandlerTag T) : S(S), T(T) {}
+    ControllerCaller(Session &S, orc_rt_ControllerHandlerTag *T) : S(S), T(T) {}
 
     void operator()(OnControllerCallReturnFn &&HandleResult,
                     WrapperFunctionBuffer ArgBytes) {
@@ -651,12 +653,12 @@ public:
 
   private:
     Session &S;
-    orc_rt_ControllerHandlerTag T;
+    orc_rt_ControllerHandlerTag *T;
   };
 
   /// Get a WrapperFunction::call-compatible Caller that will call the given
   /// handler in the controller via Session::callController.
-  ControllerCaller controllerCaller(orc_rt_ControllerHandlerTag T) noexcept {
+  ControllerCaller controllerCaller(orc_rt_ControllerHandlerTag *T) noexcept {
     return ControllerCaller(*this, T);
   }
 

@@ -21,7 +21,7 @@ define amdgpu_ps i64 @uniform_v_to_s_i64(double inreg %a, double inreg %b) {
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -79,7 +79,7 @@ define amdgpu_ps double @uniform_v_to_s_double(double inreg %a, double inreg %b)
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    v_max_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    ; return to shader part epilog
@@ -120,7 +120,7 @@ define amdgpu_ps <2 x double> @uniform_v_to_s_2_double(<2 x double> inreg %a, <2
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[4:5]
 ; GFX11-NEXT:    v_max_f64 v[2:3], s[2:3], s[6:7]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s1, s[2:3], s[6:7]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s1
@@ -149,7 +149,7 @@ define amdgpu_ps i16 @uniform_v_to_s_i16(half inreg %a, half inreg %b) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    v_max_f16_e64 v0.l, s0, s1
 ; GFX11-TRUE16-NEXT:    v_cmp_o_f16_e64 s0, s0, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s0
 ; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog

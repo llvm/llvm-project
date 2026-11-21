@@ -80,7 +80,7 @@ LogicalResult OperationFolder::tryToFold(Operation *op, bool *inPlaceUpdate,
     // inserted before this one.
     Block *opBlock = op->getBlock();
     if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
-      op->moveBefore(&opBlock->front());
+      rewriter.moveOpBefore(op, &opBlock->front());
       op->setLoc(erasedFoldedLocation);
     }
     return failure();
@@ -118,7 +118,7 @@ OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   // check to see if we should rehoist it.
   if (isFolderOwnedConstant(op)) {
     if (&opBlock->front() != op && !isFolderOwnedConstant(op->getPrevNode())) {
-      op->moveBefore(&opBlock->front());
+      rewriter.moveOpBefore(op, &opBlock->front());
       op->setLoc(erasedFoldedLocation);
       return ConstantInsertionResult::Hoisted;
     }
@@ -162,12 +162,12 @@ OperationFolder::insertKnownConstant(Operation *op, Attribute constValue) {
   ConstantInsertionResult result = ConstantInsertionResult::Unchanged;
   Block *insertBlock = &insertRegion->front();
   if (opBlock != insertBlock) {
-    op->moveBefore(&insertBlock->front());
+    rewriter.moveOpBefore(op, &insertBlock->front());
     op->setLoc(erasedFoldedLocation);
     result = ConstantInsertionResult::Hoisted;
   } else if (&insertBlock->front() != op &&
              !isFolderOwnedConstant(op->getPrevNode())) {
-    op->moveBefore(&insertBlock->front());
+    rewriter.moveOpBefore(op, &insertBlock->front());
     result = ConstantInsertionResult::Hoisted;
   }
 
@@ -288,7 +288,7 @@ OperationFolder::processFoldResults(Operation *op,
       // was inserted before the constant within the insertion block.
       Block *opBlock = op->getBlock();
       if (opBlock == constOp->getBlock() && &opBlock->front() != constOp)
-        constOp->moveBefore(&opBlock->front());
+        rewriter.moveOpBefore(constOp, &opBlock->front());
 
       results.push_back(constOp->getResult(0));
       continue;

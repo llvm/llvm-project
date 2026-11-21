@@ -259,7 +259,7 @@ class CursesEditLine(object):
         if not prompt:
             prompt = self.prompt
         (h, w) = self.win.getmaxyx()
-        if (len(prompt) + len(self.content)) / w + self.starty >= h - 1:
+        if (len(prompt) + len(self.content)) // w + self.starty >= h - 1:
             self.win.scroll(1)
             self.starty -= 1
             if self.starty < 0:
@@ -278,7 +278,7 @@ class CursesEditLine(object):
             remain = remain[w:]
 
         length = self.index + len(prompt)
-        self.win.move(self.starty + length / w, length % w)
+        self.win.move(self.starty + length // w, length % w)
 
     def showPrompt(self, y, x, prompt=None):
         self.content = ""
@@ -328,6 +328,6 @@ class CursesEditLine(object):
             self.content = self.history.previous(self.content)
             self.index = len(self.content)
         elif key == curses.KEY_DOWN or key == curses.ascii.SO:  # down or CTRL-N
-            self.content = self.history.next()
+            self.content = next(self.history)
             self.index = len(self.content)
         self.draw()

@@ -24,9 +24,12 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/LoopTraversal.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/ReachingDefAnalysis.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 
@@ -113,31 +116,11 @@ struct DomainValue {
   }
 };
 
-class LLVM_ABI ExecutionDomainFix : public MachineFunctionPass {
-  SpecificBumpPtrAllocator<DomainValue> Allocator;
-  SmallVector<DomainValue *, 16> Avail;
-
-  const TargetRegisterClass *const RC;
-  MachineFunction *MF = nullptr;
-  const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
-  std::vector<SmallVector<int, 1>> AliasMap;
-  const unsigned NumRegs;
-  /// Value currently in each register, or NULL when no value is being tracked.
-  /// This counts as a DomainValue reference.
-  using LiveRegsDVInfo = std::vector<DomainValue *>;
-  LiveRegsDVInfo LiveRegs;
-  /// Keeps domain information for all registers. Note that this
-  /// is different from the usual definition notion of liveness. The CPU
-  /// doesn't care whether or not we consider a register killed.
-  using OutRegsInfoMap = SmallVector<LiveRegsDVInfo, 4>;
-  OutRegsInfoMap MBBOutRegsInfos;
-
-  ReachingDefInfo *RDI = nullptr;
-
+class LLVM_ABI ExecutionDomainFixLegacy : public MachineFunctionPass {
 public:
-  ExecutionDomainFix(char &PassID, const TargetRegisterClass &RC)
-      : MachineFunctionPass(PassID), RC(&RC), NumRegs(RC.getNumRegs()) {}
+  static char ID; // Pass identification, replacement for typeid
+
+  ExecutionDomainFixLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -151,68 +134,17 @@ public:
     return MachineFunctionProperties().setNoVRegs();
   }
 
-private:
-  /// Translate TRI register number to a list of indices into our smaller tables
-  /// of interesting registers.
-  iterator_range<SmallVectorImpl<int>::const_iterator>
-  regIndices(MCRegister Reg) const;
+  StringRef getPassName() const override { return "Execution Domain Fix"; }
+};
 
-  /// DomainValue allocation.
-  DomainValue *alloc(int domain = -1);
-
-  /// Add reference to DV.
-  DomainValue *retain(DomainValue *DV) {
-    if (DV)
-      ++DV->Refs;
-    return DV;
+class ExecutionDomainFixPass
+    : public OptionalPassInfoMixin<ExecutionDomainFixPass> {
+public:
+  LLVM_ABI PreservedAnalyses run(MachineFunction &MF,
+                                 MachineFunctionAnalysisManager &MFAM);
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setNoVRegs();
   }
-
-  /// Release a reference to DV.  When the last reference is released,
-  /// collapse if needed.
-  void release(DomainValue *);
-
-  /// Follow the chain of dead DomainValues until a live DomainValue is reached.
-  /// Update the referenced pointer when necessary.
-  DomainValue *resolve(DomainValue *&);
-
-  /// Set LiveRegs[rx] = dv, updating reference counts.
-  void setLiveReg(int rx, DomainValue *DV);
-
-  /// Kill register rx, recycle or collapse any DomainValue.
-  void kill(int rx);
-
-  /// Force register rx into domain.
-  void force(int rx, unsigned domain);
-
-  /// Collapse open DomainValue into given domain. If there are multiple
-  /// registers using dv, they each get a unique collapsed DomainValue.
-  void collapse(DomainValue *dv, unsigned domain);
-
-  /// All instructions and registers in B are moved to A, and B is released.
-  bool merge(DomainValue *A, DomainValue *B);
-
-  /// Set up LiveRegs by merging predecessor live-out values.
-  void enterBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
-
-  /// Update live-out values.
-  void leaveBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
-
-  /// Process he given basic block.
-  void processBasicBlock(const LoopTraversal::TraversedMBBInfo &TraversedMBB);
-
-  /// Visit given insturcion.
-  bool visitInstr(MachineInstr *);
-
-  /// Update def-ages for registers defined by MI.
-  /// If Kill is set, also kill off DomainValues clobbered by the defs.
-  void processDefs(MachineInstr *, bool Kill);
-
-  /// A soft instruction can be changed to work in other domains given by mask.
-  void visitSoftInstr(MachineInstr *, unsigned mask);
-
-  /// A hard instruction only works in one domain. All input registers will be
-  /// forced into that domain.
-  void visitHardInstr(MachineInstr *, unsigned domain);
 };
 
 } // namespace llvm

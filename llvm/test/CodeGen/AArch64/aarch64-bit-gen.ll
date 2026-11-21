@@ -318,3 +318,47 @@ if.then:
 if.else:
   ret <8 x i8> %b
 }
+
+define <8 x i8> @test_bit_sink_not_after_splat_not_multiuse(<8 x i8> %m, <8 x i8> %b, i8 %s, i1 %c, ptr %p) {
+; CHECK-SD-LABEL: test_bit_sink_not_after_splat_not_multiuse:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    tbz w1, #0, .LBB13_2
+; CHECK-SD-NEXT:  // %bb.1: // %if.then
+; CHECK-SD-NEXT:    dup v2.8b, w0
+; CHECK-SD-NEXT:    mvn v2.8b, v2.8b
+; CHECK-SD-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    str d0, [x2]
+; CHECK-SD-NEXT:    ret
+; CHECK-SD-NEXT:  .LBB13_2:
+; CHECK-SD-NEXT:    mvn v0.8b, v0.8b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_bit_sink_not_after_splat_not_multiuse:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    tbz w1, #0, .LBB13_2
+; CHECK-GI-NEXT:  // %bb.1: // %if.then
+; CHECK-GI-NEXT:    mvn w8, w0
+; CHECK-GI-NEXT:    dup v2.8b, w8
+; CHECK-GI-NEXT:    bsl v0.8b, v1.8b, v2.8b
+; CHECK-GI-NEXT:    str d0, [x2]
+; CHECK-GI-NEXT:    ret
+; CHECK-GI-NEXT:  .LBB13_2:
+; CHECK-GI-NEXT:    mvn v0.8b, v0.8b
+; CHECK-GI-NEXT:    ret
+entry:
+  %n = xor <8 x i8> %m, splat (i8 -1)
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  %ns = xor i8 %s, -1
+  %ins = insertelement <8 x i8> poison, i8 %ns, i64 0
+  %spl = shufflevector <8 x i8> %ins, <8 x i8> poison, <8 x i32> zeroinitializer
+  %x = and <8 x i8> %m, %b
+  %y = and <8 x i8> %spl, %n
+  %r = or <8 x i8> %x, %y
+  store <8 x i8> %r, ptr %p
+  ret <8 x i8> %r
+
+if.else:
+  ret <8 x i8> %n
+}

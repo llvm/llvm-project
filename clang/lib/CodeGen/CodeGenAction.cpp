@@ -9,6 +9,7 @@
 #include "clang/CodeGen/CodeGenAction.h"
 #include "BackendConsumer.h"
 #include "CGCall.h"
+#include "CGDebugInfo.h"
 #include "CodeGenModule.h"
 #include "CoverageMappingGen.h"
 #include "MacroPPCallbacks.h"
@@ -172,6 +173,14 @@ void BackendConsumer::HandleInterestingDecl(DeclGroupRef D) {
 
 // Links each entry in LinkModules into our module. Returns true on error.
 bool BackendConsumer::LinkInModules(llvm::Module *M) {
+  // Builtin bitcode is internalized into the module that links it, so each
+  // PTU of an incremental session needs its own copy. Plain bitcode files are
+  // still linked once.
+  if (LangOpts.IncrementalExtensions && LinkModules.empty() &&
+      loadLinkModules(CI, M->getContext(), LinkModules,
+                      /*OnlyInternalized=*/true))
+    return true;
+
   return linkInModules(*M, LinkModules, CodeGenOpts, LangOpts, TargetOpts,
                        DiagConsumer);
 }
@@ -240,6 +249,8 @@ void BackendConsumer::HandleTranslationUnit(ASTContext &C) {
       DiagConsumer.addFunctionSourceLocation(F.getName(), Loc);
     }
   }
+  if (CodeGen::CGDebugInfo *DI = Gen->CGM().getModuleDebugInfo())
+    DiagConsumer.setDIFileSources(DI->getDIFileSources());
 
   if (CodeGenOpts.ClearASTBeforeBackend) {
     LLVM_DEBUG(llvm::dbgs() << "Clearing AST...\n");
@@ -372,7 +383,8 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
     return nullptr;
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   CoverageSourceInfo *CoverageInfo = nullptr;
@@ -450,7 +462,8 @@ CodeGenAction::loadModule(MemoryBufferRef MBRef) {
   }
 
   // Load bitcode modules to link with, if we need to.
-  if (clang::loadLinkModules(CI, *VMContext, LinkModules))
+  if (clang::loadLinkModules(CI, *VMContext, LinkModules,
+                             /*OnlyInternalized=*/false))
     return nullptr;
 
   // Handle textual IR and bitcode file with one single module.

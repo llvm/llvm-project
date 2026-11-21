@@ -1,9 +1,9 @@
 ! Test lowering of enumeration types to HLFIR.
 ! An enumeration type lowers to a record type with a single i32 component,
 ! __ordinal, holding the 1-based ordinal of the enumerator.
-! RUN: %flang_fc1 -fenumeration-type -emit-hlfir %s -o - | FileCheck %s
-! RUN: %flang_fc1 -fenumeration-type -emit-fir %s -o /dev/null
-! RUN: %flang_fc1 -fenumeration-type -emit-fir -mmlir -strict-fir-volatile-verifier %s -o /dev/null
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-fir %s -o /dev/null
+! RUN: %flang_fc1 -emit-fir -mmlir -strict-fir-volatile-verifier %s -o /dev/null
 
 module enum_mod
   enumeration type :: color
@@ -526,6 +526,45 @@ subroutine test_allocate_color()
   ! CHECK: fir.call @_FortranAAllocatableInitDerivedForAllocate(%{{.*}}, %[[TDARG]], %{{.*}}, %{{.*}})
   ! CHECK: fir.call @_FortranAAllocatableAllocate(
   allocate(color :: x)
+end subroutine
+
+! SAME_TYPE_AS and EXTENDS_TYPE_OF are processor dependent when neither dynamic
+! type is extensible.  An enumeration value passed to CLASS(*) carries its own
+! type descriptor, so the runtime sees (green, 7) as different types (F) and
+! (green, blue) as the same type (T).
+
+! CHECK-LABEL: func.func @_QPtest_same_type_as(
+subroutine test_same_type_as(a, b, same, extends)
+  class(*), intent(in) :: a, b
+  logical, intent(out) :: same, extends
+  ! CHECK: fir.call @_FortranASameTypeAs(
+  same = same_type_as(a, b)
+  ! CHECK: fir.call @_FortranAExtendsTypeOf(
+  extends = extends_type_of(a, b)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_same_type_as_args()
+subroutine test_same_type_as_args()
+  use enum_mod
+  interface
+    subroutine test_same_type_as(a, b, same, extends)
+      class(*), intent(in) :: a, b
+      logical, intent(out) :: same, extends
+    end subroutine
+  end interface
+  logical :: same, extends
+  ! CHECK: %[[G1:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[G1C:.*]] = fir.convert %[[G1]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: %[[I:.*]] = fir.embox %{{.*}} : (!fir.ref<i32>) -> !fir.box<i32>
+  ! CHECK: %[[IC:.*]] = fir.rebox %[[I]] : (!fir.box<i32>) -> !fir.class<none>
+  ! CHECK: fir.call @_QPtest_same_type_as(%[[G1C]], %[[IC]], %{{.*}}, %{{.*}})
+  call test_same_type_as(green, 7, same, extends)
+  ! CHECK: %[[G2:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[G2C:.*]] = fir.convert %[[G2]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: %[[B:.*]] = fir.embox %{{.*}} : (!fir.ref<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>
+  ! CHECK: %[[BC:.*]] = fir.convert %[[B]] : (!fir.box<!fir.type<_QMenum_modTcolor{__ordinal:i32}>>) -> !fir.class<none>
+  ! CHECK: fir.call @_QPtest_same_type_as(%[[G2C]], %[[BC]], %{{.*}}, %{{.*}})
+  call test_same_type_as(green, blue, same, extends)
 end subroutine
 
 ! -----------------------------------------------------------------------------

@@ -29,7 +29,7 @@ using namespace lldb_private;
 RegisterContextFreeBSDKernelCore_arm64::RegisterContextFreeBSDKernelCore_arm64(
     Thread &thread, std::unique_ptr<RegisterInfo_arm64> register_info_up,
     lldb::addr_t pcb_addr)
-    : RegisterContextPOSIX_arm64(thread, std::move(register_info_up)),
+    : RegisterContextCore_arm64(thread, std::move(register_info_up)),
       m_pcb_addr(pcb_addr) {}
 
 bool RegisterContextFreeBSDKernelCore_arm64::ReadGPR() { return true; }
@@ -193,7 +193,7 @@ std::optional<int> RegisterContextFreeBSDKernelCore_arm64::GetOsreldate() {
   Target &target = process_sp->GetTarget();
 
   SymbolContextList sc_list;
-  target.GetImages().FindSymbolsWithNameAndType(ConstString("osreldate"),
+  target.GetImages().FindSymbolsWithNameAndType("osreldate",
                                                 lldb::eSymbolTypeData, sc_list);
   if (sc_list.GetSize() == 0)
     return std::nullopt;

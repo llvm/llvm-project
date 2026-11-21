@@ -549,15 +549,11 @@ class ASTContext : public RefCountedBase<ASTContext> {
   llvm::DenseMap<const CXXConstructorDecl *, ArrayRef<CXXDefaultArgExpr *>>
       CtorClosureDefaultArgs;
 
-  /// Keeps track of all declaration attributes.
+  /// Storage for the AttrVecs pointed to by Decl::Attrs.
   ///
-  /// Since so few decls have attrs, we keep them in a hash map instead of
-  /// wasting space in the Decl class.
-  llvm::DenseMap<const Decl*, AttrVec*> DeclAttrs;
-
-  /// One-entry cache for getDeclAttrs().
-  const Decl *LastDeclAttrsDecl = nullptr;
-  AttrVec *LastDeclAttrs = nullptr;
+  /// A SpecificBumpPtrAllocator so that the vectors are destroyed when the
+  /// context dies without having to track them individually.
+  llvm::SpecificBumpPtrAllocator<AttrVec> DeclAttrAllocator;
 
   /// A mapping from non-redeclarable declarations in modules that were
   /// merged with other declarations to the canonical declaration that they were
@@ -845,6 +841,9 @@ private:
 
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
+  mutable llvm::DenseMap<std::pair<llvm::StringRef, unsigned>,
+                         std::unique_ptr<llvm::StringMap<bool>>>
+      FunctionFeatureMaps;
   clang::PrintingPolicy PrintingPolicy;
   mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
@@ -1196,11 +1195,8 @@ public:
     return CommentCommandTraits;
   }
 
-  /// Retrieve the attributes for the given declaration.
-  AttrVec& getDeclAttrs(const Decl *D);
-
-  /// Erase the attributes corresponding to the given declaration.
-  void eraseDeclAttrs(const Decl *D);
+  /// Allocate an empty attribute vector with the lifetime of this context.
+  AttrVec *allocateAttrVec();
 
   ArrayRef<CXXDefaultArgExpr *>
   getCtorClosureDefaultArgs(const CXXConstructorDecl *CD);
@@ -3758,6 +3754,10 @@ public:
   /// Parses the target attributes passed in, and returns only the ones that are
   /// valid feature names.
   ParsedTargetAttr filterFunctionTargetAttrs(const TargetAttr *TD) const;
+
+  const llvm::StringMap<bool> &
+  getFunctionFeatureMap(const FunctionDecl *FD) const;
+  const llvm::StringMap<bool> &getFunctionFeatureMap(GlobalDecl GD) const;
 
   void getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                              const FunctionDecl *) const;

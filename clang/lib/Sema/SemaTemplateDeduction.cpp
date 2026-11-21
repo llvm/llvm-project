@@ -261,7 +261,7 @@ QualType Sema::getTypeOfConstantTemplateParameter(const TemplateArgument &Arg) {
     if (NonTypeOrVarTemplateParmDecl NTTP =
             getNTTParameterFromExpr(Arg.getAsExpr(), std::nullopt))
       return NTTP.getType();
-  return QualType();
+  return Arg.getNonTypeTemplateArgumentType();
 }
 
 static const NonTypeOrVarTemplateParmDecl

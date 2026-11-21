@@ -1,5 +1,12 @@
-; RUN: llc -O0 -mtriple=x86_64-apple-darwin < %s | grep DW_OP_breg7
-; Use DW_OP_breg7 in variable's location expression if the variable is in a stack slot.
+; RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj < %s \
+; RUN:   | llvm-dwarfdump -debug-info - | FileCheck %s
+
+; The arguments are spilled to stack slots, which describe them for the whole
+; function.
+; CHECK:      DW_AT_location (DW_OP_fbreg -12)
+; CHECK-NEXT: DW_AT_name ("i")
+; CHECK:      DW_AT_location (DW_OP_fbreg -8)
+; CHECK-NEXT: DW_AT_name ("location")
 
 %struct.SVal = type { ptr, i32 }
 

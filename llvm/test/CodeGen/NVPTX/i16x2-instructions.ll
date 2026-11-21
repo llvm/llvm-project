@@ -412,15 +412,13 @@ define <2 x i16> @test_xor(<2 x i16> %a, <2 x i16> %b) #0 {
 define <2 x i16> @test_xor_computed(i16 %a) {
 ; COMMON-LABEL: test_xor_computed(
 ; COMMON:       {
-; COMMON-NEXT:    .reg .b16 %rs<4>;
+; COMMON-NEXT:    .reg .b16 %rs<2>;
 ; COMMON-NEXT:    .reg .b32 %r<4>;
 ; COMMON-EMPTY:
 ; COMMON-NEXT:  // %bb.0:
 ; COMMON-NEXT:    ld.param.b16 %rs1, [test_xor_computed_param_0];
-; COMMON-NEXT:    mov.b16 %rs2, 0;
-; COMMON-NEXT:    mov.b32 %r1, {%rs1, %rs2};
-; COMMON-NEXT:    mov.b16 %rs3, 5;
-; COMMON-NEXT:    mov.b32 %r2, {%rs1, %rs3};
+; COMMON-NEXT:    mov.b32 %r1, {%rs1, 0};
+; COMMON-NEXT:    mov.b32 %r2, {%rs1, 5};
 ; COMMON-NEXT:    xor.b32 %r3, %r2, %r1;
 ; COMMON-NEXT:    st.param.b32 [func_retval0], %r3;
 ; COMMON-NEXT:    ret;

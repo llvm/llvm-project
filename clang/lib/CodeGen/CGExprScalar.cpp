@@ -371,8 +371,11 @@ public:
   /// value l-value, this method emits the address of the l-value, then loads
   /// and returns the result.
   Value *EmitLoadOfLValue(const Expr *E) {
-    Value *V = EmitLoadOfLValue(EmitCheckedLValue(E, CodeGenFunction::TCK_Load),
-                                E->getExprLoc());
+    LValue LV = EmitCheckedLValue(E, CodeGenFunction::TCK_Load);
+    if (CGF.CurLoadedLValueCapture && CGF.CurLoadedLValueCapture->E == E)
+      CGF.CurLoadedLValueCapture->LV = LV;
+
+    Value *V = EmitLoadOfLValue(LV, E->getExprLoc());
 
     EmitLValueAlignmentAssumption(E, V);
     return V;
@@ -871,7 +874,8 @@ public:
       auto *RHSMatTy = dyn_cast<ConstantMatrixType>(
           BO->getRHS()->getType().getCanonicalType());
       CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, Ops.FPFeatures);
-      if (LHSMatTy && RHSMatTy)
+      // In HLSL, matrix * matrix is element-wise, so skip this block.
+      if (LHSMatTy && RHSMatTy && !CGF.getLangOpts().HLSL)
         return MB.CreateMatrixMultiply(Ops.LHS, Ops.RHS, LHSMatTy->getNumRows(),
                                        LHSMatTy->getNumColumns(),
                                        RHSMatTy->getNumColumns());
@@ -2510,7 +2514,7 @@ static bool isLValueKnownNonNull(CodeGenFunction &CGF, const Expr *E) {
 }
 
 bool CodeGenFunction::isPointerKnownNonNull(const Expr *E) {
-  assert(E->getType()->isSignableType(getContext()));
+  assert(E->getType().getAtomicUnqualifiedType()->isSignableType(getContext()));
 
   E = E->IgnoreParens();
 
@@ -4339,7 +4343,8 @@ Value *ScalarExprEmitter::EmitDiv(const BinOpInfo &Ops) {
     }
   }
 
-  if (Ops.Ty->isConstantMatrixType()) {
+  // In HLSL, matrix / matrix is element-wise, so skip this block.
+  if (Ops.Ty->isConstantMatrixType() && !Ops.RHS->getType()->isVectorTy()) {
     llvm::MatrixBuilder MB(Builder);
     // We need to check the types of the operands of the operator to get the
     // correct matrix dimensions.

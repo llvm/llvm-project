@@ -26,7 +26,7 @@ extern "C" void acc_loop(int *A, int *B, int *C, int N) {
   // CHECK-NEXT: cir.yield
   // CHECK-NEXT: } step {
   // CHECK: cir.yield
-  // CHECK-NEXT: } loop_hints < must_progress> loc
+  // CHECK-NEXT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress> loc
   // CHECK-NEXT: } loc
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } independent loc

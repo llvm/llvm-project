@@ -1,3 +1,5 @@
+; REQUIRES: default_triple
+
 ; A test that the hidden option -print-on-crash properly sets a signal handler
 ; which gets called when a pass crashes.  The trigger-crash-module pass asserts.
 
