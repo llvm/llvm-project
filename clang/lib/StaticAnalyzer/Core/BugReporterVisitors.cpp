@@ -1934,14 +1934,18 @@ namespace {
 /// trackExpressionValue().
 class TrackControlDependencyCondBRVisitor final
     : public TrackingBugReporterVisitor {
-  const ExplodedNode *Origin;
+  // The origin node itself may be reclaimed before the visitor runs.
+  const StackFrame *OriginFrame;
+  CFGBlock *OriginBlock;
   ControlDependencyCalculator ControlDeps;
   llvm::SmallPtrSet<const CFGBlock *, 32> VisitedBlocks;
 
 public:
   TrackControlDependencyCondBRVisitor(TrackerRef ParentTracker,
                                       const ExplodedNode *O)
-      : TrackingBugReporterVisitor(ParentTracker), Origin(O),
+      : TrackingBugReporterVisitor(ParentTracker),
+        OriginFrame(O->getStackFrame()),
+        OriginBlock(const_cast<CFGBlock *>(O->getCFGBlock())),
         ControlDeps(&O->getCFG()) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override {
@@ -2011,7 +2015,7 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
                                                BugReporterContext &BRC,
                                                PathSensitiveBugReport &BR) {
   // We can only reason about control dependencies within the same stack frame.
-  if (Origin->getStackFrame() != N->getStackFrame())
+  if (OriginFrame != N->getStackFrame())
     return nullptr;
 
   CFGBlock *NB = const_cast<CFGBlock *>(N->getCFGBlock());
@@ -2020,16 +2024,14 @@ TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
   if (!VisitedBlocks.insert(NB).second)
     return nullptr;
 
-  CFGBlock *OriginB = const_cast<CFGBlock *>(Origin->getCFGBlock());
-
   // TODO: Cache CFGBlocks for each ExplodedNode.
-  if (!OriginB || !NB)
+  if (!OriginBlock || !NB)
     return nullptr;
 
   if (isAssertlikeBlock(NB, BRC.getASTContext()))
     return nullptr;
 
-  if (ControlDeps.isControlDependent(OriginB, NB)) {
+  if (ControlDeps.isControlDependent(OriginBlock, NB)) {
     // We don't really want to explain for range loops. Evidence suggests that
     // the only thing that leads to is the addition of calls to operator!=.
     if (llvm::isa_and_nonnull<CXXForRangeStmt>(NB->getTerminatorStmt()))
