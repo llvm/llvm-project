@@ -545,14 +545,11 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(ptr %arg) {
 ; ptr p1.i16 = (ptr) p;
 ; (p1.i16[0] << 8) | ((i16) p[2])
 ;
-; This is essentialy a i16 load from p[1], but we don't fold the pattern now
-; because in the original DAG we don't have p[1] address available
+; This is essentially a i16 load from p[1]
 define i16 @load_i16_from_nonzero_offset(ptr %p) {
 ; CHECK-LABEL: load_i16_from_nonzero_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #2]
-; CHECK-NEXT:    orr w0, w9, w8, lsl #8
+; CHECK-NEXT:    ldurh w0, [x0, #1]
 ; CHECK-NEXT:    ret
   %p2.i8 = getelementptr i8, ptr %p, i64 2
   %v1 = load i16, ptr %p
@@ -561,4 +558,55 @@ define i16 @load_i16_from_nonzero_offset(ptr %p) {
   %v1.shl = shl i16 %v1, 8
   %res = or i16 %v1.shl, %v2
   ret i16 %res
+}
+
+; ptr p;
+; ptr p1.i16 = (ptr) p;
+; ptr p3.i16 = (ptr) &p[3];
+; (p1.i16[0] << 24) | ((i32) p[2] << 16) | p3.i16[0]
+;
+; This is an i32 load from p[1].
+define i32 @load_i32_from_nonzero_offset(ptr %p) {
+; CHECK-LABEL: load_i32_from_nonzero_offset:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldur w0, [x0, #1]
+; CHECK-NEXT:    ret
+  %p2.i8 = getelementptr i8, ptr %p, i64 2
+  %p3.i16 = getelementptr i8, ptr %p, i64 3
+  %v1 = load i16, ptr %p
+  %v2.i8 = load i8, ptr %p2.i8
+  %v3 = load i16, ptr %p3.i16, align 1
+  %v1.ext = zext i16 %v1 to i32
+  %v2 = zext i8 %v2.i8 to i32
+  %v3.ext = zext i16 %v3 to i32
+  %v1.shl = shl i32 %v1.ext, 24
+  %v2.shl = shl i32 %v2, 16
+  %tmp = or i32 %v1.shl, %v2.shl
+  %res = or i32 %tmp, %v3.ext
+  ret i32 %res
+}
+
+define void @load_i16_from_vector_elt1(ptr %in, ptr %out, ptr %p) {
+; CHECK-LABEL: load_i16_from_vector_elt1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldurh w8, [x0, #1]
+; CHECK-NEXT:    ldr w9, [x0]
+; CHECK-NEXT:    strh w8, [x1]
+; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    ret
+  %p2 = getelementptr inbounds i8, ptr %in, i64 2
+  %x2 = load i8, ptr %p2, align 1
+  %ld = load <4 x i8>, ptr %in, align 4
+
+  %e1 = extractelement <4 x i8> %ld, i32 1
+
+  %z0 = zext i8 %x2 to i16
+  %z1 = zext i8 %e1 to i16
+
+  %s1 = shl nuw i16 %z1, 8
+  %i = or i16 %s1, %z0
+
+  store i16 %i, ptr %out
+  store <4 x i8> %ld, ptr %p, align 4
+  ret void
 }
