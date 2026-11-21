@@ -34969,10 +34969,9 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
     return DAG.getNode(ISD::ADD, DL, VT, Acc, MAdd);
   }
 
-  // Pick the instruction, and whether the 512-bit EVEX and the VEX encodings
-  // exist for it.
+  // Pick the instruction, and whether the 512-bit EVEX encoding exists for it.
   unsigned Opc;
-  bool Has512, HasVEX;
+  bool Has512;
   switch (Op.getOpcode()) {
   default:
     llvm_unreachable("Unexpected partial reduction opcode");
@@ -34982,44 +34981,29 @@ static SDValue LowerPARTIAL_REDUCE_MLA(SDValue Op,
       std::swap(LHS, RHS);
       Opc = X86ISD::VPDPBUSD;
       Has512 = Subtarget.hasVNNI();
-      HasVEX = Subtarget.hasAVXVNNI();
     } else {
       Opc = X86ISD::VPDPWSUD;
       Has512 = Subtarget.hasAVX10_2();
-      HasVEX = Subtarget.hasAVXVNNIINT16();
     }
     break;
   case ISD::PARTIAL_REDUCE_SMLA:
     if (IsI8) {
       Opc = X86ISD::VPDPBSSD;
       Has512 = Subtarget.hasAVX10_2();
-      HasVEX = Subtarget.hasAVXVNNIINT8();
     } else {
       Opc = X86ISD::VPDPWSSD;
       Has512 = Subtarget.hasVNNI();
-      HasVEX = Subtarget.hasAVXVNNI();
     }
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
     Opc = IsI8 ? X86ISD::VPDPBUUD : X86ISD::VPDPWUUD;
     Has512 = Subtarget.hasAVX10_2();
-    HasVEX = IsI8 ? Subtarget.hasAVXVNNIINT8() : Subtarget.hasAVXVNNIINT16();
     break;
   }
 
   // Split into two 256-bit dot products if there is no 512-bit encoding.
   if (VT.is512BitVector() && !Has512)
     return splitVectorOp(Op, DAG, DL);
-
-  // Without VLX only the 512-bit EVEX form exists, so widen to that and extract
-  // unless the VEX encoding is available.
-  if (!VT.is512BitVector() && !Subtarget.hasVLX() && !HasVEX) {
-    Acc = widenSubVector(Acc, false, Subtarget, DAG, DL, 512);
-    LHS = widenSubVector(LHS, false, Subtarget, DAG, DL, 512);
-    RHS = widenSubVector(RHS, false, Subtarget, DAG, DL, 512);
-    SDValue Res = DAG.getNode(Opc, DL, MVT::v16i32, Acc, LHS, RHS);
-    return extractSubVector(Res, 0, DAG, DL, VT.getSizeInBits());
-  }
 
   return DAG.getNode(Opc, DL, VT, Acc, LHS, RHS);
 }

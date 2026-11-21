@@ -12738,6 +12738,70 @@ defm VPDPWSSD   : VNNI_common<0x52, "vpdpwssd", X86Vpdpwssd, SchedWriteVecIMul, 
 defm VPDPWSSDS  : VNNI_common<0x53, "vpdpwssds", X86Vpdpwssds, SchedWriteVecIMul, 1,
                               [HasVNNI, HasVLX], [HasVNNI]>, PD;
 
+// Use the 512-bit VPDPBUSD/VPDPBUSDS/VPDPWSSD/VPDPWSSDS forms to implement the
+// 128/256-bit ones in case NoVLX.
+let Predicates = [HasVNNI, NoVLX] in {
+  def : Pat<(v4i32 (X86Vpdpbusd VR128X:$acc, VR128X:$src1, VR128X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPBUSDZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$acc, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
+             sub_xmm)>;
+  def : Pat<(v8i32 (X86Vpdpbusd VR256X:$acc, VR256X:$src1, VR256X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPBUSDZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$acc, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+             sub_ymm)>;
+
+  def : Pat<(v4i32 (X86Vpdpbusds VR128X:$acc, VR128X:$src1, VR128X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPBUSDSZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$acc, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
+             sub_xmm)>;
+  def : Pat<(v8i32 (X86Vpdpbusds VR256X:$acc, VR256X:$src1, VR256X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPBUSDSZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$acc, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+             sub_ymm)>;
+
+  def : Pat<(v4i32 (X86Vpdpwssd VR128X:$acc, VR128X:$src1, VR128X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPWSSDZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$acc, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
+             sub_xmm)>;
+  def : Pat<(v8i32 (X86Vpdpwssd VR256X:$acc, VR256X:$src1, VR256X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPWSSDZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$acc, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+             sub_ymm)>;
+
+  def : Pat<(v4i32 (X86Vpdpwssds VR128X:$acc, VR128X:$src1, VR128X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPWSSDSZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$acc, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src1, sub_xmm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR128X:$src2, sub_xmm)),
+             sub_xmm)>;
+  def : Pat<(v8i32 (X86Vpdpwssds VR256X:$acc, VR256X:$src1, VR256X:$src2)),
+            (EXTRACT_SUBREG
+             (VPDPWSSDSZrr
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$acc, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src1, sub_ymm),
+              (INSERT_SUBREG (v16i32 (IMPLICIT_DEF)), VR256X:$src2, sub_ymm)),
+             sub_ymm)>;
+}
+
 // Patterns to match VPDPWSSD from existing instructions/intrinsics.
 let Predicates = [HasVNNI] in {
   def : Pat<(v16i32 (add VR512:$src1,
