@@ -346,6 +346,7 @@ public:
 
 class LLVM_ABI ReachingDefInfoWrapperPass : public MachineFunctionPass {
   ReachingDefInfo RDI;
+  MachineFunction *PendingMF = nullptr;
 
 public:
   static char ID;
@@ -355,10 +356,12 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   MachineFunctionProperties getRequiredProperties() const override;
   bool runOnMachineFunction(MachineFunction &F) override;
-  void releaseMemory() override { RDI.releaseMemory(); }
+  void releaseMemory() override {
+    RDI.releaseMemory();
+    PendingMF = nullptr;
+  }
 
-  ReachingDefInfo &getRDI() { return RDI; }
-  const ReachingDefInfo &getRDI() const { return RDI; }
+  ReachingDefInfo &getRDI();
 };
 
 } // namespace llvm
