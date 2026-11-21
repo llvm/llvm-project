@@ -61,6 +61,53 @@ static cl::opt<uint32_t> MisExpectTolerance(
     cl::desc("Prevents emitting diagnostics when profile counts are "
              "within N% of the threshold.."));
 
+// Command line option to enable/disable the Remarks when profile data suggests
+// that the llvm.expect intrinsic may be profitable
+static cl::opt<bool>
+    PGOMissingAnnotations("pgo-missing-annotations", cl::init(false),
+                          cl::Hidden,
+                          cl::desc("Use this option to turn on/off suggestions "
+                                   "of missing llvm.expect intrinsics."));
+
+namespace {
+struct ProfDataSummary {
+  uint64_t Likely;
+  uint64_t Unlikely;
+  uint64_t RealTotal;
+  uint64_t NumUnlikely;
+};
+
+enum class DiagKind {
+  MisExpect,     // Reports when llvm.expect usage is contradicted by PGO data
+  MissingExpect, // Reports when llvm.expect would be profitable
+};
+} // namespace
+
+static uint64_t getScaledThreshold(const ProfDataSummary &PDS) {
+  uint64_t TotalBranchWeight = PDS.Likely + (PDS.Unlikely * PDS.NumUnlikely);
+
+  LLVM_DEBUG(dbgs() << "Total Branch Weight = " << TotalBranchWeight << "\n"
+                    << "Likely Branch Weight = " << PDS.Likely << "\n");
+
+  // Failing this assert means that we have corrupted metadata.
+  assert((TotalBranchWeight >= PDS.Likely) && (TotalBranchWeight > 0) &&
+         "TotalBranchWeight is less than the Likely branch weight");
+
+  // To determine our threshold value we need to obtain the branch probability
+  // for the weights added by llvm.expect and use that proportion to calculate
+  // our threshold based on the collected profile data.
+  BranchProbability LikelyProbablilty =
+      BranchProbability::getBranchProbability(PDS.Likely, TotalBranchWeight);
+
+  return LikelyProbablilty.scale(PDS.RealTotal);
+}
+
+static bool isAnnotationDiagEnabled(LLVMContext &Ctx) {
+  LLVM_DEBUG(dbgs() << "PGOMissingAnnotations = " << PGOMissingAnnotations
+                    << "\n");
+  return PGOMissingAnnotations || Ctx.getAnnotationDiagsRequested();
+}
+
 static bool isMisExpectDiagEnabled(const LLVMContext &Ctx) {
   return PGOWarnMisExpect || Ctx.getMisExpectWarningRequested();
 }
@@ -103,8 +150,61 @@ static void emitMisexpectDiagnostic(const Instruction *I, LLVMContext &Ctx,
   const Instruction *Cond = getInstCondition(I);
   if (isMisExpectDiagEnabled(Ctx))
     Ctx.diagnose(DiagnosticInfoMisExpect(Cond, Twine(PerString)));
-  OptimizationRemarkEmitter ORE(I->getParent()->getParent());
+  OptimizationRemarkEmitter ORE(I->getFunction());
   ORE.emit(OptimizationRemark(DEBUG_TYPE, "misexpect", Cond) << RemStr.str());
+}
+
+static void emitMissingAnnotationDiag(const Instruction *I) {
+  const auto *RemStr =
+      "Extremely hot condition. Consider adding llvm.expect intrinsic";
+  const Instruction *Cond = getInstCondition(I);
+  OptimizationRemarkEmitter ORE(I->getParent()->getParent());
+  ORE.emit(
+      OptimizationRemark("missing-annotations", "missing-annotations", Cond)
+      << RemStr);
+}
+
+static uint64_t totalWeight(const ArrayRef<uint32_t> Weights) {
+  return std::accumulate(Weights.begin(), Weights.end(), (uint64_t)0,
+                         std::plus<uint64_t>());
+}
+
+static void scaleByTollerance(const Instruction &I, uint64_t &ScaledThreshold) {
+  // clamp tolerance range to [0, 100)
+  uint32_t Tolerance = getMisExpectTolerance(I.getContext());
+  Tolerance = std::clamp(Tolerance, 0u, 99u);
+
+  // Allow users to relax checking by N%  i.e., if they use a 5% tolerance,
+  // then we check against 0.95*ScaledThreshold
+  if (Tolerance > 0)
+    ScaledThreshold *= (1.0 - Tolerance / 100.0);
+
+  LLVM_DEBUG(dbgs() << "Scaled Threshold = " << ScaledThreshold << "\n");
+}
+
+static void reportDiagnostics(const Instruction &I, const ProfDataSummary &PDS,
+                              uint32_t ProfiledWeight, DiagKind Kind) {
+  uint64_t ScaledThreshold = getScaledThreshold(PDS);
+  scaleByTollerance(I, ScaledThreshold);
+
+  LLVM_DEBUG(dbgs() << "Total Branch Weight = " << PDS.RealTotal << "\n"
+                    << "Scaled Threshold = " << ScaledThreshold << "\n"
+                    << "Profiled Weight = " << ProfiledWeight << "\n"
+                    << "Likely Branch Weight = " << PDS.Likely << "\n");
+  // When the profile weight is outside the range, we emit the diagnostic
+  switch (Kind) {
+  case DiagKind::MisExpect:
+    if (ProfiledWeight < ScaledThreshold) {
+      emitMisexpectDiagnostic(&I, I.getContext(), ProfiledWeight,
+                              PDS.RealTotal);
+    }
+    return;
+  case DiagKind::MissingExpect:
+    if (ProfiledWeight > ScaledThreshold) {
+      emitMissingAnnotationDiag(&I);
+    }
+    return;
+  };
 }
 
 void misexpect::verifyMisExpect(const Instruction &I,
@@ -113,7 +213,7 @@ void misexpect::verifyMisExpect(const Instruction &I,
   // To determine if we emit a diagnostic, we need to compare the branch weights
   // from the profile to those added by the llvm.expect intrinsic.
   // So first, we extract the "likely" and "unlikely" weights from
-  // ExpectedWeights And determine the correct weight in the profile to compare
+  // ExpectedWeights and determine the correct weight in the profile to compare
   // against.
   uint64_t LikelyBranchWeight = 0,
            UnlikelyBranchWeight = std::numeric_limits<uint32_t>::max();
@@ -128,39 +228,10 @@ void misexpect::verifyMisExpect(const Instruction &I,
   }
 
   const uint64_t ProfiledWeight = RealWeights[MaxIndex];
-  const uint64_t RealWeightsTotal =
-      std::accumulate(RealWeights.begin(), RealWeights.end(), (uint64_t)0,
-                      std::plus<uint64_t>());
-  const uint64_t NumUnlikelyTargets = RealWeights.size() - 1;
-
-  uint64_t TotalBranchWeight =
-      LikelyBranchWeight + (UnlikelyBranchWeight * NumUnlikelyTargets);
-
-  // Failing this assert means that we have corrupted metadata.
-  assert((TotalBranchWeight >= LikelyBranchWeight) && (TotalBranchWeight > 0) &&
-         "TotalBranchWeight is less than the Likely branch weight");
-
-  // To determine our threshold value we need to obtain the branch probability
-  // for the weights added by llvm.expect and use that proportion to calculate
-  // our threshold based on the collected profile data.
-  auto LikelyProbablilty = BranchProbability::getBranchProbability(
-      LikelyBranchWeight, TotalBranchWeight);
-
-  uint64_t ScaledThreshold = LikelyProbablilty.scale(RealWeightsTotal);
-
-  // clamp tolerance range to [0, 100)
-  uint32_t Tolerance = getMisExpectTolerance(I.getContext());
-  Tolerance = std::clamp(Tolerance, 0u, 99u);
-
-  // Allow users to relax checking by N%  i.e., if they use a 5% tolerance,
-  // then we check against 0.95*ScaledThreshold
-  if (Tolerance > 0)
-    ScaledThreshold *= (1.0 - Tolerance / 100.0);
-
-  // When the profile weight is below the threshold, we emit the diagnostic
-  if (ProfiledWeight < ScaledThreshold)
-    emitMisexpectDiagnostic(&I, I.getContext(), ProfiledWeight,
-                            RealWeightsTotal);
+  const ProfDataSummary PDS = {LikelyBranchWeight, UnlikelyBranchWeight,
+                               totalWeight(RealWeights),
+                               RealWeights.size() - 1};
+  reportDiagnostics(I, PDS, ProfiledWeight, DiagKind::MisExpect);
 }
 
 void misexpect::checkBackendInstrumentation(const Instruction &I,
@@ -193,4 +264,39 @@ void misexpect::checkExpectAnnotations(const Instruction &I,
     checkFrontendInstrumentation(I, ExistingWeights);
   else
     checkBackendInstrumentation(I, ExistingWeights);
+}
+
+static void verifyMissingAnnotations(const Instruction &I,
+                                     ArrayRef<uint32_t> RealWeights) {
+  // To determine if we emit a diagnostic, we need to compare the branch weights
+  // from the profile to those that would be added by the llvm.expect intrinsic
+  // and compare it to the real profile to see if it would be profitable.
+  uint32_t ProfiledWeight =
+      *std::max_element(RealWeights.begin(), RealWeights.end());
+
+  const uint64_t LikelyBranchWeight = 2000;
+  const uint64_t UnlikelyBranchWeight = 1;
+  const ProfDataSummary PDS = {LikelyBranchWeight, UnlikelyBranchWeight,
+                               totalWeight(RealWeights),
+                               RealWeights.size() - 1};
+  reportDiagnostics(I, PDS, ProfiledWeight, DiagKind::MissingExpect);
+}
+
+void misexpect::checkMissingAnnotations(
+    const Instruction &I, const ArrayRef<uint32_t> ExistingWeights,
+    bool IsFrontendInstr) {
+
+  //  exit early if these diagnostics weren't requested
+  if (LLVM_LIKELY(!isAnnotationDiagEnabled(I.getContext())))
+    return;
+
+  if (IsFrontendInstr) {
+    // TODO: Frontend checking will have to be thought through, since we need
+    // to do the check on branches that don't have expect intrinsics
+  } else {
+    SmallVector<uint32_t> ExpectedWeights;
+    if (extractBranchWeights(I, ExpectedWeights))
+      return;
+    verifyMissingAnnotations(I, ExistingWeights);
+  }
 }
