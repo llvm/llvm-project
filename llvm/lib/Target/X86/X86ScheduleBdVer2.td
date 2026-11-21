@@ -1171,9 +1171,15 @@ def PdWriteVPPERMLd : SchedWriteRes<[PdFPU1, PdFPXBR, PdLoad]> {
 }
 def : InstRW<[PdWriteVPPERMLd], (instrs VPPERMrrm, VPPERMrmr)>;
 
-defm : PdWriteResXMMPair<WriteBlend,         [PdFPU23, PdFPMAL], 2>;
-defm : X86WriteResPairUnsupported<WriteBlendY>;
-defm : X86WriteResPairUnsupported<WriteBlendZ>;
+defm : PdWriteResXMMPair<WritePack,          [PdFPU1, PdFPXBR], 2>;
+defm : PdWriteResXMMPair<WritePackX,         [PdFPU1, PdFPXBR], 2>;
+defm : PdWriteResYMMPair<WritePackY,         [PdFPU1, PdFPXBR], 2, [2, 2]>;
+defm : X86WriteResPairUnsupported<WritePackZ>;
+
+defm : PdWriteResXMMPair<WritePBLENDWX,      [PdFPU23, PdFPMAL], 2>;
+defm : X86WriteResPairUnsupported<WritePBLENDWY>;
+defm : X86WriteResPairUnsupported<WritePBLENDDX>;
+defm : X86WriteResPairUnsupported<WritePBLENDDY>;
 
 defm : PdWriteResXMMPair<WriteVarBlend,      [PdFPU1, PdFPXBR], 2>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;

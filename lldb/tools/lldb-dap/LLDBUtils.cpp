@@ -152,6 +152,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread) {
     return false;
   }
   case lldb::eStopReasonThreadExiting:
+  case lldb::eStopReasonDynamicLoader:
   case lldb::eStopReasonInvalid:
   case lldb::eStopReasonNone:
     break;
@@ -195,8 +196,8 @@ llvm::Error ToError(const lldb::SBError &error, bool show_user) {
 
   return llvm::make_error<DAPError>(
       /*message=*/error.GetCString(),
-      /*EC=*/std::error_code(error.GetError(), std::generic_category()),
-      /*show_user=*/show_user);
+      /*show_user=*/show_user,
+      /*EC=*/std::error_code(error.GetError(), std::generic_category()));
 }
 
 std::string GetStringValue(const lldb::SBStructuredData &data) {

@@ -566,7 +566,7 @@ cc_library(
         # provides the configuration define unless lzma is enabled, in which
         # case it also links the system liblzma.
         "//third-party:lzma",
-        "//libc:shared_math_headers_for_apfloat",
+        "//libc/shared:math_headers_for_apfloat",
     ],
 )
 
@@ -2586,6 +2586,24 @@ gentbl_cc_library(
     deps = [":OptParserTdFiles"],
 )
 
+gentbl_cc_library(
+    name = "CodeGenToolOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen",
+    tbl_outs = {"lib/CodeGen/CodeGenToolOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/CodeGenToolOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SelectionDAGOptionsTableGen",
+    strip_include_prefix = "lib/CodeGen/SelectionDAG",
+    tbl_outs = {"lib/CodeGen/SelectionDAG/SelectionDAGOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-min-tblgen",
+    td_file = "lib/CodeGen/SelectionDAG/SelectionDAGOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
 copy_file(
     name = "generate_regalloc_model1_h",
     src = "lib/Analysis/models/regalloc-eviction-test-model.inc",
@@ -2657,6 +2675,7 @@ cc_library(
         ":CFGuard",
         ":CGData",
         ":CodeGenOptionsTableGen",
+        ":CodeGenToolOptionsTableGen",
         ":CodeGenTypes",
         ":Core",
         ":DebugInfoCodeView",
@@ -2673,6 +2692,7 @@ cc_library(
         ":ProfileData",
         ":Remarks",
         ":Scalar",
+        ":SelectionDAGOptionsTableGen",
         ":Support",
         ":Target",
         ":TargetParser",
@@ -2879,7 +2899,10 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/ARM/ARMGenFastISel.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/ARM/ARMGenGlobalISel.inc",
             ),
             (
@@ -2969,6 +2992,7 @@ llvm_target_lib_list = [lib for lib in [
             ),
         ],
         "tbl_deps": [
+            ":AMDGPUOptionsTableGen",
             ":amdgpu_isel_target_gen",
             ":r600_target_gen",
         ],
@@ -3653,13 +3677,17 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SPIRV/SPIRVGenMCCodeEmitter.inc",
             ),
             (
-                ["-gen-global-isel"],
+                [
+                    "-gen-global-isel",
+                    "-gisel-extended-llt",
+                ],
                 "lib/Target/SPIRV/SPIRVGenGlobalISel.inc",
             ),
             (
                 [
                     "-gen-global-isel-combiner",
                     "-combiners=SPIRVPreLegalizerCombiner",
+                    "-gisel-extended-llt",
                 ],
                 "lib/Target/SPIRV/SPIRVGenPreLegalizeGICombiner.inc",
             ),
@@ -4188,6 +4216,15 @@ gentbl_cc_library(
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
     ],
+)
+
+gentbl_cc_library(
+    name = "AMDGPUOptionsTableGen",
+    strip_include_prefix = "lib/Target/AMDGPU",
+    tbl_outs = {"lib/Target/AMDGPU/AMDGPUOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/AMDGPU/AMDGPUOptions.td",
+    deps = [":OptParserTdFiles"],
 )
 
 gentbl_cc_library(
@@ -4729,7 +4766,6 @@ cc_library(
         ":Core",
         ":LTO",
         ":Object",
-        ":Passes",
         ":Support",
     ],
 )
@@ -5415,6 +5451,7 @@ cc_library(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -5916,6 +5953,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",

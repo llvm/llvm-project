@@ -27,7 +27,6 @@
 name:            sdiv_v16i8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -56,7 +55,6 @@ body:             |
 name:            sdiv_v8i16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -85,7 +83,6 @@ body:             |
 name:            sdiv_v4i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -114,7 +111,6 @@ body:             |
 name:            sdiv_v2i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -143,7 +139,6 @@ body:             |
 name:            srem_v16i8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -172,7 +167,6 @@ body:             |
 name:            srem_v8i16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -201,7 +195,6 @@ body:             |
 name:            srem_v4i32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -230,7 +223,6 @@ body:             |
 name:            srem_v2i64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -259,7 +251,6 @@ body:             |
 name:            udiv_v16u8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -288,7 +279,6 @@ body:             |
 name:            udiv_v8u16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -317,7 +307,6 @@ body:             |
 name:            udiv_v4u32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -346,7 +335,6 @@ body:             |
 name:            udiv_v2u64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -375,7 +363,6 @@ body:             |
 name:            urem_v16u8
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -404,7 +391,6 @@ body:             |
 name:            urem_v8u16
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -433,7 +419,6 @@ body:             |
 name:            urem_v4u32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6
@@ -462,7 +447,6 @@ body:             |
 name:            urem_v2u64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6

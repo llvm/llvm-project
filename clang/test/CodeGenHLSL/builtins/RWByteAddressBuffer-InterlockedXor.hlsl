@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Test that the RWByteAddressBuffer::InterlockedXor and InterlockedXor64
 // member methods lower to `resource_getpointer -> atomicrmw or`, and that
 // the 3-argument overload stores the returned original value through the

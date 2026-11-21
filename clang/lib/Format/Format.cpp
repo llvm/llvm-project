@@ -2911,7 +2911,8 @@ private:
         if (BeforeRBrace->is(tok::comma)) {
           if (Style.EnumTrailingComma == FormatStyle::ETC_Remove)
             replaceToken(*BeforeRBrace, BeforeRBrace->Next, SourceMgr, Result);
-        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert) {
+        } else if (Style.EnumTrailingComma == FormatStyle::ETC_Insert &&
+                   BeforeRBrace->isNot(TT_TrailingCommaVaOptRParen)) {
           cantFail(Result.add(tooling::Replacement(
               SourceMgr, BeforeRBrace->Tok.getEndLoc(), 0, ",")));
         }
@@ -4679,7 +4680,9 @@ static FormatStyle::LanguageKind getLanguageByFileName(StringRef &FileName) {
   if (FileName.ends_with_insensitive(".js") ||
       FileName.ends_with_insensitive(".mjs") ||
       FileName.ends_with_insensitive(".cjs") ||
-      FileName.ends_with_insensitive(".ts")) {
+      FileName.ends_with_insensitive(".ts") ||
+      FileName.ends_with_insensitive(".mts") ||
+      FileName.ends_with_insensitive(".cts")) {
     return FormatStyle::LK_JavaScript; // (module) JavaScript or TypeScript.
   }
   if (FileName.ends_with(".m") || FileName.ends_with(".mm"))

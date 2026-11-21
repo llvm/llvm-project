@@ -59,7 +59,6 @@
 ...
 ---
 name:            backwards_branch
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: backwards_branch
   ; CHECK: bb.0:
@@ -117,7 +116,6 @@ body:             |
 ...
 ---
 name:            backwards_branch_entry_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: backwards_branch_entry_block
   ; CHECK: bb.0:
@@ -174,7 +172,6 @@ body:             |
 ...
 ---
 name:            backwards_branch_backwards_wls
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: backwards_branch_backwards_wls
   ; CHECK: bb.0:
@@ -263,7 +260,6 @@ body:             |
 ...
 ---
 name:            no_predecessor
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: no_predecessor
   ; CHECK: bb.0:
@@ -367,7 +363,6 @@ body:             |
 ...
 ---
 name:            nested_loops
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
   - { reg: '$r1' }
@@ -569,7 +564,6 @@ body:             |
 ...
 ---
 name:            backwards_branch_forwards_wls
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: backwards_branch_forwards_wls
   ; CHECK: bb.0:
@@ -652,7 +646,6 @@ body:             |
 ...
 ---
 name:            multiple_predecessors
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: multiple_predecessors
   ; CHECK: bb.0:
@@ -788,7 +781,6 @@ body:             |
 ...
 ---
 name:            jump_table
-tracksRegLiveness: true
 jumpTable:
   kind:            inline
   entries:

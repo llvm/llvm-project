@@ -24,12 +24,12 @@ struct S {
 // variants (C2/D2).
 S::S() : x(0) {}
 // CIR: cir.func {{.*}}dso_local unnamed_addr @_ZN1SC2Ev(
-// CIR: cir.func {{.*}}private dso_local unnamed_addr @_ZN1SC1Ev({{.*}}) alias(@_ZN1SC2Ev)
+// CIR: cir.func {{.*}}private unnamed_addr @_ZN1SC1Ev({{.*}}) alias(@_ZN1SC2Ev)
 // LLVM: define dso_local void @_ZN1SC2Ev({{.*}}) unnamed_addr
 
 S::~S() {}
 // CIR: cir.func {{.*}}dso_local unnamed_addr @_ZN1SD2Ev(
-// CIR: cir.func {{.*}}private dso_local unnamed_addr @_ZN1SD1Ev({{.*}}) alias(@_ZN1SD2Ev)
+// CIR: cir.func {{.*}}private unnamed_addr @_ZN1SD1Ev({{.*}}) alias(@_ZN1SD2Ev)
 // LLVM: define dso_local void @_ZN1SD2Ev({{.*}}) unnamed_addr
 
 // A virtual member function is unnamed_addr, a non-virtual one is not.
@@ -66,7 +66,7 @@ struct W {
 
 W::~W() {}
 // CIR: cir.func {{.*}}dso_local unnamed_addr @_ZN1WD2Ev(
-// CIR: cir.func {{.*}}private dso_local unnamed_addr @_ZN1WD1Ev({{.*}}) alias(@_ZN1WD2Ev)
+// CIR: cir.func {{.*}}private unnamed_addr @_ZN1WD1Ev({{.*}}) alias(@_ZN1WD2Ev)
 // CIR: cir.func {{.*}}dso_local unnamed_addr @_ZN1WD0Ev(
 // LLVM: define dso_local void @_ZN1WD2Ev({{.*}}) unnamed_addr
 // LLVM: define dso_local void @_ZN1WD0Ev({{.*}}) unnamed_addr

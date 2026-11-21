@@ -4,7 +4,6 @@
 name:            f64_faddp
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -36,7 +35,6 @@ body:             |
 name:            f64_faddp_commuted
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -68,7 +66,6 @@ body:             |
 name:            f32_faddp
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -100,7 +97,6 @@ body:             |
 name:            f32_faddp_commuted
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |
@@ -132,7 +128,6 @@ body:             |
 name:            wrong_extract_idx
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |
@@ -164,7 +159,6 @@ body:             |
 name:            wrong_shuffle_mask
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 liveins:
   - { reg: '$q0' }
 body:             |

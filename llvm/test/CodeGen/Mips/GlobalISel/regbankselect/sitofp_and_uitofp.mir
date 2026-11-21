@@ -12,7 +12,6 @@
 name:            i32tof32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -39,7 +38,6 @@ body:             |
 name:            i32tof64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -66,7 +64,6 @@ body:             |
 name:            u32tof64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4

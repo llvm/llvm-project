@@ -206,7 +206,7 @@ void AArch64Arm64ECCallLowering::getThunkArgTypes(
     Align ParamAlign = AttrList.getParamAlignment(I).valueOrOne();
 #else
     uint64_t ArgSizeBytes = 0;
-    Align ParamAlign = Align();
+    Align ParamAlign = M->getDataLayout().getABITypeAlign(FT->getParamType(I));
 #endif
     auto [Arm64Ty, X64Ty, ArgTranslation] =
         canonicalizeThunkType(FT->getParamType(I), ParamAlign,

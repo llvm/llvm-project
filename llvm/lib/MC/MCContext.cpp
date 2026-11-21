@@ -71,7 +71,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
       MAI(mai), MRI(&mri), MSTI(&msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset) {
+      ELFUniquingMap(Allocator), AutoReset(DoAutoReset) {
   const MCTargetOptions &TO = getTargetOptions();
   SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
@@ -162,6 +162,7 @@ void MCContext::reset() {
   SubtargetCopies.clear();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
+  ELFUniquingMap.clear();
   Allocator.Reset();
   Instances.clear();
   CompilationDir.clear();
@@ -174,14 +175,12 @@ void MCContext::reset() {
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
 
   MachOUniquingMap.clear();
-  ELFUniquingMap.clear();
   GOFFUniquingMap.clear();
   COFFUniquingMap.clear();
   WasmUniquingMap.clear();
   XCOFFUniquingMap.clear();
   DXCUniquingMap.clear();
 
-  RelSecNames.clear();
   MacroMap.clear();
   ELFEntrySizeMap.clear();
   ELFSeenGenericMergeableSections.clear();
@@ -592,12 +591,12 @@ MCSectionELF *
 MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
                                unsigned EntrySize, const MCSymbolELF *Group,
                                const MCSectionELF *RelInfoSection) {
-  StringMap<bool>::iterator I;
-  bool Inserted;
-  std::tie(I, Inserted) = RelSecNames.insert(std::make_pair(Name.str(), true));
-
+  // Create a symbol table entry, which will be reused by
+  // getOrCreateSectionSymbol in createELFSectionImpl.
+  SmallString<128> Buffer;
+  StringRef Key = getSymbolTableEntry(Name.toStringRef(Buffer)).getKey();
   return createELFSectionImpl(
-      I->getKey(), Type, Flags, EntrySize, Group, true, true,
+      Key, Type, Flags, EntrySize, Group, true, true,
       static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
