@@ -11,6 +11,10 @@
 
 #include "../ClangTidyCheck.h"
 
+namespace clang {
+class PPConditionalDirectiveRecord;
+} // namespace clang
+
 namespace clang::tidy::readability {
 
 /// Checks that bodies of `if` statements and loops (`for`, `range-for`,
@@ -42,6 +46,8 @@ class BracesAroundStatementsCheck : public ClangTidyCheck {
 public:
   BracesAroundStatementsCheck(StringRef Name, ClangTidyContext *Context);
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
@@ -58,6 +64,7 @@ private:
   }
 
   llvm::SmallPtrSet<const Stmt *, 0> ForceBracesStmts;
+  PPConditionalDirectiveRecord *ConditionalDirectiveRecord = nullptr;
   const unsigned ShortStatementLines;
 };
 
