@@ -1,7 +1,7 @@
 
 // RUN: llvm-profdata merge %S/Inputs/branch-showBranchPercentage.proftext -o %t.profdata
-// RUN: llvm-cov export --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
-// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov --skip-branches %S/Inputs/branch-showBranchPercentage.o32l -instr-profile %t.profdata | FileCheck %s --check-prefix=NOBRANCH
 
 // CHECK-DAG: BRDA:14,0,0,1
 // CHECK-DAG: BRDA:14,0,1,5
@@ -39,8 +39,8 @@
 
 // Check recursive macro-expansions.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov export --format=lcov --unify-instantiations=false %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
-// RUN: llvm-cov export --format=lcov --skip-branches %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov --unify-instantiations=false %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov --skip-branches %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=NOBRANCH
 
 // MACROS-COUNT-4: BRDA:17
 // MACROS-NOT: BRDA:17
@@ -80,7 +80,7 @@
 
 // Check recursive macro-expansions with unify mode.
 // RUN: llvm-profdata merge %S/Inputs/branch-macros.proftext -o %t.profdata
-// RUN: llvm-cov export --format=lcov --unify-instantiations=true %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS2
+// RUN: llvm-cov export --respect-coverage-exclusion-markers=false --format=lcov --unify-instantiations=true %S/Inputs/branch-macros.o32l -instr-profile %t.profdata | FileCheck %s -check-prefix=MACROS2
 
 // MACROS2-COUNT-4: BRDA:17
 // MACROS2-NOT: BRDA:17
