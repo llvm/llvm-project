@@ -56048,7 +56048,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;

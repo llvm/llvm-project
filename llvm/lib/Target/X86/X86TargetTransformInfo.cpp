@@ -155,7 +155,8 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
-  if (!ST->hasCF())
+  // Conditional faulting load/store requires prefer-cf-mem-operand.
+  if (!ST->hasCF() || !ST->preferCFMemOperand())
     return false;
   if (!Ty)
     return true;
