@@ -1678,12 +1678,18 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
     if (const auto *SC = dyn_cast<SCEVConstant>(SA->getOperand(0))) {
       const APInt &D = extractConstantWithoutWrapping(*this, SC, SA);
       if (D != 0) {
-        const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
         const SCEV *SResidual =
             getAddExpr(getConstant(-D), SA, SCEV::FlagNone, Depth);
-        const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
-        return getAddExpr(SZExtD, SZExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
-                          Depth + 1);
+        // Skip the fold if the residual add did not fold, e.g. because the
+        // depth limit was reached. Otherwise A + zext(-A + B) -> zext(B) in
+        // getAddExpr folds zext(D) + zext(-D + SA) back to zext(SA).
+        if (!match(SResidual,
+                   m_scev_Add(m_SCEVConstant(), m_scev_Specific(SA)))) {
+          const SCEV *SZExtD = getZeroExtendExpr(getConstant(D), Ty, Depth);
+          const SCEV *SZExtR = getZeroExtendExpr(SResidual, Ty, Depth + 1);
+          return getAddExpr(SZExtD, SZExtR, (SCEV::FlagNSW | SCEV::FlagNUW),
+                            Depth + 1);
+        }
       }
     }
   }
@@ -2588,7 +2594,13 @@ SCEVUse ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
           hasFlags(StrengthenNoWrapFlags(this, scAddExpr, {NarrowA, InnerAdd},
                                          SCEV::FlagNone),
                    SCEV::FlagNUW)) {
-        return getZeroExtendExpr(getAddExpr(NarrowA, InnerAdd), B->getType());
+        const SCEV *Sum = getAddExpr(NarrowA, InnerAdd);
+        // Skip the fold if trunc(A) + (-A + B) did not fold, e.g. because it
+        // was created past the depth limit. Otherwise getZeroExtendExpr may
+        // split zext(trunc(A) + (-A + B)) back into A + zext(-A + B).
+        if (!match(Sum, m_scev_Add(m_scev_Specific(NarrowA),
+                                   m_scev_Specific(InnerAdd))))
+          return getZeroExtendExpr(Sum, B->getType());
       }
     }
   }
