@@ -2529,7 +2529,7 @@ __kmp_invoke_microtask:
 	// The total number of bytes is then max(0, argc - 3)*8 + 8
 
 	lgr	%r10,%r5
-	aghi	%r10,-2
+	aghi	%r10,-3
 	jnm	0f
 	lghi	%r10,0
 0:
