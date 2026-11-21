@@ -8,3 +8,15 @@ func.func @slice_resultType_unranked(%arg0: tensor<?xf32>) -> (tensor<*xf32>) {
   %2 = tosa.slice %arg0, %start, %size : (tensor<?xf32>, !tosa.shape<1>, !tosa.shape<1>) -> tensor<*xf32>
   return %2 : tensor<*xf32>
 }
+
+// -----
+
+
+func.func @reshape_unsupported_shape_computation(%arg0: tensor<?x4xf32>) -> tensor<?xf32> {
+  %dim = tosa.dim %arg0 axis(0) : (tensor<?x4xf32>) -> !tosa.shape<1>
+  %four = tosa.const_shape values(dense<4> : tensor<1xindex>) : () -> !tosa.shape<1>
+  %shape = tosa.max_shape %dim, %four : (!tosa.shape<1>, !tosa.shape<1>) -> !tosa.shape<1>
+  // expected-error@+1 {{failed to legalize operation 'tosa.reshape'}}
+  %0 = tosa.reshape %arg0, %shape : (tensor<?x4xf32>, !tosa.shape<1>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
