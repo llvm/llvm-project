@@ -1,4 +1,4 @@
-// RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics
+// RUN: cir-opt %s --split-input-file --cir-to-llvm -verify-diagnostics | FileCheck %s
 
 !s32i = !cir.int<s, 32>
 
@@ -133,6 +133,29 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
   // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.array<!cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)> x 1>' for symbol @target}}
   // expected-error @below {{failed to legalize operation 'cir.global'}}
   cir.global external @view = #cir.vtable<{#cir.const_array<[#cir.global_view<@target, [0 : i32]> : !ptr]> : !ptrarray}, address_points = [#cir.address_point<index = 0, offset = 0>]> : !vtable
+
+  cir.global external @target = #cir.zero : !array
+}
+
+// -----
+
+!langptr = !cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)>
+!array = !cir.array<!langptr x 1>
+!ptr = !cir.ptr<!cir.void>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // Conversion failure rolls back the unresolved block address. Stop before
+  // attempting to resolve it against a label that has not been lowered.
+  // expected-error @below {{ClangIR lowering NYI: cannot convert '!cir.array<!cir.ptr<!cir.int<s, 32>, lang_address_space(offload_global)> x 1>' for symbol @target}}
+  // expected-error @below {{failed to legalize operation 'cir.global'}}
+  cir.global external @view = #cir.const_array<[#cir.block_addr_info<@f, "L"> : !ptr, #cir.global_view<@target, [0 : i32]> : !ptr]> : !cir.array<!ptr x 2>
+
+  cir.func @f() {
+    cir.br ^bb1
+  ^bb1:
+    cir.label "L"
+    cir.return
+  }
 
   cir.global external @target = #cir.zero : !array
 }
@@ -326,6 +349,19 @@ module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
     %0 = cir.const #cir.const_array<[#cir.const_record<{#cir.ptr<null> : !langptr}> : !rec_U]> : !array
     cir.return
   }
+}
+
+// -----
+
+!s64i = !cir.int<s, 64>
+!langptr = !cir.ptr<!cir.void, lang_address_space(offload_global)>
+!rec_U = !cir.union<"U" {data !s64i, data !langptr}>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  // An inactive member that cannot be converted does not prevent lowering the
+  // union's integer storage.
+  // CHECK: llvm.mlir.global external @union_inactive_member_language_address_space
+  cir.global external @union_inactive_member_language_address_space = #cir.const_record<{#cir.int<0> : !s64i}> : !rec_U
 }
 
 // -----
