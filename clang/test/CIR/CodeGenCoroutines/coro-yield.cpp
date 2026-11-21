@@ -34,8 +34,8 @@ Task test_yield_assign() {
   // CIR:   %[[READY:.*]] = cir.call @_ZN12YieldAwaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_YieldAwaiter>{{.*}}) -> (!cir.bool{{.*}})
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
-  // CIR:   cir.call @_ZN12YieldAwaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
-  // CIR:   cir.coro.suspend_point
+  // CIR:   cir.call @_ZN12YieldAwaiter13await_suspendESt16coroutine_handleIvE
+  // CIR-NEXT:   cir.coro.suspend_point
   // CIR: }, resume : {
   // CIR:   %[[RES:.*]] = cir.call @_ZN12YieldAwaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_YieldAwaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
@@ -65,8 +65,8 @@ Task test_yield_ref() {
   // CIR:   %[[READY:.*]] = cir.call @_ZN12YieldAwaiter11await_readyEv(%{{.*}}) : (!cir.ptr<!rec_YieldAwaiter>{{.*}}) -> (!cir.bool{{.*}})
   // CIR:   cir.condition(%[[READY]])
   // CIR: }, suspend : {
-  // CIR:   cir.call @_ZN12YieldAwaiter13await_suspendESt16coroutine_handleIvE(%{{.*}})
-  // CIR:   cir.coro.suspend_point
+  // CIR:   cir.call @_ZN12YieldAwaiter13await_suspendESt16coroutine_handleIvE
+  // CIR-NEXT:   cir.coro.suspend_point
   // CIR: }, resume : {
   // CIR:   %[[RES:.*]] = cir.call @_ZN12YieldAwaiter12await_resumeEv(%{{.*}}) : (!cir.ptr<!rec_YieldAwaiter>{{.*}}) -> (!cir.ptr<!s32i>{{.*}})
   // CIR:   cir.store %[[RES]], %[[TMP_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>

@@ -17,6 +17,8 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/Twine.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -26,6 +28,8 @@ struct clang::CIRGen::CGCoroData {
   // await/yield expressions were encountered so far.
   // These are used to generate pretty labels for await expressions in LLVM IR.
   cir::AwaitKind currentAwaitKind = cir::AwaitKind::Init;
+  unsigned awaitNum = 0;
+  unsigned yieldNum = 0;
   // Stores the __builtin_coro_id emitted in the function so that we can supply
   // it as the first argument to other builtins.
   cir::CoroIdOp coroId = nullptr;
@@ -61,6 +65,34 @@ CIRGenFunction::CGCoroInfo::CGCoroInfo() {}
 CIRGenFunction::CGCoroInfo::~CGCoroInfo() {}
 
 namespace {
+static llvm::SmallString<32> buildSuspendPointName(CGCoroData &coro,
+                                                   cir::AwaitKind kind) {
+  llvm::StringRef name;
+  unsigned number = 0;
+
+  switch (kind) {
+  case cir::AwaitKind::Init:
+    name = "init";
+    break;
+  case cir::AwaitKind::User:
+    name = "await";
+    number = ++coro.awaitNum;
+    break;
+  case cir::AwaitKind::Yield:
+    name = "yield";
+    number = ++coro.yieldNum;
+    break;
+  case cir::AwaitKind::Final:
+    name = "final";
+    break;
+  }
+
+  llvm::SmallString<32> result(name);
+  if (number > 1)
+    llvm::Twine(number).toVector(result);
+
+  return result;
+}
 // FIXME: both GetParamRef and ParamReferenceReplacerRAII are good template
 // candidates to be shared among LLVM / CIR codegen.
 
@@ -124,6 +156,7 @@ RValue CIRGenFunction::emitCoroutineFrame() {
   if (curCoro.data && curCoro.data->coroBegin) {
     return RValue::get(curCoro.data->coroBegin);
   }
+
   cgm.errorNYI("NYI");
   return RValue();
 }
@@ -768,6 +801,7 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
   CIRGenFunction::OpaqueValueMapping binder =
       CIRGenFunction::OpaqueValueMapping(cgf, s.getOpaqueValue());
   CIRGenBuilderTy &builder = cgf.getBuilder();
+  llvm::SmallString<32> suspendPointName = buildSuspendPointName(coro, kind);
 
   // Exception handling requires additional IR. We avoid generating it when
   // neither the await_resume() call nor the destruction of its result can
@@ -808,8 +842,19 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
     aggSlot.setExternallyDestructed();
   }
 
+  auto coroutineFunction = mlir::cast<cir::FuncOp>(cgf.curFn);
+  mlir::Value awaiterPointer =
+      cgf.getOrCreateOpaqueLValueMapping(s.getOpaqueValue()).getPointer();
+  assert(coro.coroBegin && "expected coroutine frame");
+
+  llvm::SmallString<128> suspendWrapperName(coroutineFunction.getSymName());
+  suspendWrapperName += ".__await_suspend_wrapper__";
+  suspendWrapperName += suspendPointName;
+  mlir::StringAttr suspendWrapper = builder.getStringAttr(suspendWrapperName);
+
   [[maybe_unused]] cir::AwaitOp awaitOp = cir::AwaitOp::create(
       builder, cgf.getLoc(s.getSourceRange()), kind,
+      mlir::ValueRange{awaiterPointer, coro.coroBegin}, suspendWrapper,
       /*readyBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         Expr *condExpr = s.getReadyExpr()->IgnoreParens();
@@ -821,22 +866,20 @@ emitSuspendExpression(CIRGenFunction &cgf, CGCoroData &coro,
         // and coro.suspend here, that should be done as part of lowering this
         // to LLVM dialect (or some other MLIR dialect)
 
+        mlir::Value suspendResult = cgf.emitScalarExpr(s.getSuspendExpr());
+
         switch (s.getSuspendReturnType()) {
-        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool: {
-          mlir::Value suspendRet = cgf.evaluateExprAsBool(s.getSuspendExpr());
-          // Veto suspension if requested by bool returning await_suspend.
-          cir::CoroSuspendPoint::create(builder, loc, suspendRet);
+        case CoroutineSuspendExpr::SuspendReturnType::SuspendBool:
+          assert(suspendResult && "expected bool await_suspend result");
+          cir::CoroSuspendPoint::create(builder, loc, suspendResult);
           break;
-        }
         case CoroutineSuspendExpr::SuspendReturnType::SuspendVoid:
-          cgf.emitScalarExpr(s.getSuspendExpr());
-          // Signals the parent that execution flows to next region.
+          assert(!suspendResult && "unexpected void await_suspend result");
           cir::CoroSuspendPoint::create(builder, loc);
           break;
         case CoroutineSuspendExpr::SuspendReturnType::SuspendHandle:
-          cgf.cgm.errorNYI(s.getSourceRange(),
-                           "await_suspend returning handle");
-          cir::CoroSuspendPoint::create(builder, loc);
+          assert(suspendResult && "expected handle await_suspend result");
+          cir::CoroSuspendPoint::create(builder, loc, suspendResult);
           break;
         }
       },
