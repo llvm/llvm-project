@@ -6320,8 +6320,9 @@ static Value *createWideInstruction(Instruction *NarrowInst,
 }
 
 static Value *widenDeinterleavedOperations(
-    ArrayRef<Value *> Members, ElementCount WideEC, IRBuilderBase &Builder,
-    DenseMap<ArrayRef<Value *>, Value *> &WideValueCache) {
+    const SmallVector<Value *, 8> &Members, ElementCount WideEC,
+    IRBuilderBase &Builder,
+    DenseMap<SmallVector<Value *, 8>, Value *> &WideValueCache) {
   if (Value *WideValue = WideValueCache.lookup(Members))
     return WideValue;
 
@@ -6427,7 +6428,7 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   // Mapping from `<Factor x Value *>` (original operand value on the same
   // operand index) to the new wide value. This avoids emitting redundant
   // instructions when a new operand value has more than one use.
-  DenseMap<ArrayRef<Value *>, Value *> WideValueCache;
+  DenseMap<SmallVector<Value *, 8>, Value *> WideValueCache;
   Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder,
                                                   WideValueCache);
   assert(WideValue->getType() == Interleave->getType());
