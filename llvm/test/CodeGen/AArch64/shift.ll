@@ -5,7 +5,6 @@
 define i1 @shl_i1(i1 %0, i1 %1){
 ; CHECK-SD-LABEL: shl_i1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and w0, w0, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: shl_i1:
@@ -103,7 +102,6 @@ define i128 @shl_i128(i128 %0, i128 %1){
 define i1 @ashr_i1(i1 %0, i1 %1){
 ; CHECK-SD-LABEL: ashr_i1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and w0, w0, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: ashr_i1:
@@ -209,7 +207,6 @@ define i128 @ashr_i128(i128 %0, i128 %1){
 define i1 @lshr_i1(i1 %0, i1 %1){
 ; CHECK-SD-LABEL: lshr_i1:
 ; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    and w0, w0, #0x1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: lshr_i1:

@@ -9800,6 +9800,43 @@ static bool checkZExtBool(SDValue Arg, const SelectionDAG &DAG) {
   return ZExtBool;
 }
 
+// Try to rebuild the i32 expression that an i1 value was truncated from. This
+// lets us return a bool without materializing a mask: the rebuilt expression is
+// only used where the least significant byte matters (AAPCS), and every value
+// it is built from is already known to have bits 7:1 clear.
+//
+// Returns an empty SDValue if the value cannot be widened.
+static SDValue widenZExtBool(SDValue V, SelectionDAG &DAG, const SDLoc &DL) {
+  switch (V.getOpcode()) {
+  default:
+    return SDValue();
+  case ISD::ANY_EXTEND:
+    // Look through the promotion inserted by CCPromoteToType.
+    return widenZExtBool(V.getOperand(0), DAG, DL);
+  case ISD::TRUNCATE: {
+    SDValue Src = V.getOperand(0);
+    if (Src.getValueType() == MVT::i32 && checkZExtBool(Src, DAG))
+      return Src;
+    return SDValue();
+  }
+  case ISD::AND:
+  case ISD::OR:
+  case ISD::XOR: {
+    SDValue LHS = widenZExtBool(V.getOperand(0), DAG, DL);
+    if (!LHS)
+      return SDValue();
+    SDValue RHS = widenZExtBool(V.getOperand(1), DAG, DL);
+    if (!RHS)
+      return SDValue();
+    return DAG.getNode(V.getOpcode(), DL, MVT::i32, LHS, RHS);
+  }
+  case ISD::Constant:
+    // i1 true is -1; as an i32 bool it is 1.
+    return DAG.getConstant(cast<ConstantSDNode>(V)->getZExtValue(), DL,
+                           MVT::i32);
+  }
+}
+
 void AArch64TargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                           SDNode *Node) const {
   // Live-in physreg copies that are glued to SMSTART are applied as
@@ -10670,11 +10707,23 @@ AArch64TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       llvm_unreachable("Unknown loc info!");
     case CCValAssign::Full:
       if (Outs[i].ArgVT == MVT::i1) {
-        // AAPCS requires i1 to be zero-extended to i8 by the producer of the
-        // value. This is strictly redundant on Darwin (which uses "zeroext
-        // i1"), but will be optimised out before ISel.
-        Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
-        Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
+        // AAPCS only requires the least significant byte of the result to be
+        // 0 or 1; the upper bits of the result register are unspecified.
+        // Extending all the way to VA.getLocVT() would force an unnecessary
+        // "and w0, w0, #0x1" on every bool return.
+        if (!checkZExtBool(Arg, DAG)) {
+          // If the value was built out of values that are already known to be
+          // zero-extended bools, rebuild the equivalent i32 expression and
+          // return it directly.
+          if (SDValue Wide = widenZExtBool(Arg, DAG, DL))
+            Arg = Wide;
+          else {
+            Arg = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, Arg);
+            Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i8, Arg);
+          }
+        }
+        if (Arg.getValueType() != VA.getLocVT())
+          Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       }
       break;
     case CCValAssign::BCvt:
