@@ -1,0 +1,173 @@
+# RUN: llc -mtriple=x86_64 -mcpu=skylake -run-pass=machine-scheduler -verify-misched -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=x86_64 -mcpu=skylake -enable-post-misched -run-pass=postmisched -verify-misched -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Check physical-register input latency for inline asm, including explicit
+# and fixed-register asm outputs, real implicit definitions, and trailing
+# register bookkeeping operands. Native uses keep their existing policy.
+
+---
+name: native_load_use
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: native_load_use:%bb.0
+  ; CHECK: SU(0): {{.*}}MOV64rm
+  ; CHECK: SU(1): Data Latency=5 Reg=$rax
+  bb.0:
+    liveins: $rdi
+    $rax = MOV64rm $rdi, 1, $noreg, 0, $noreg :: (load (s64))
+    $rcx = MOV64rr $rax
+    RET 0
+...
+
+---
+name: explicit_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: explicit_input:%bb.0
+  ; CHECK: SU(0): {{.*}}MOV64rm
+  ; CHECK: SU(1): Data Latency=5 Reg=$rax
+  bb.0:
+    liveins: $rdi
+    $rax = MOV64rm $rdi, 1, $noreg, 0, $noreg :: (load (s64))
+    INLINEASM &"# use $0", attdialect, reguse:GR64, $rax
+    RET 0
+...
+
+---
+name: tied_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: tied_input:%bb.0
+  ; CHECK: SU(0): {{.*}}MOV64rm
+  ; CHECK: SU(1): Data Latency=5 Reg=$rax
+  bb.0:
+    liveins: $rdi
+    $rax = MOV64rm $rdi, 1, $noreg, 0, $noreg :: (load (s64))
+    INLINEASM &"", attdialect, regdef:GR64, def $rax, reguse tiedto:$0, $rax(tied-def 3)
+    RET 0
+...
+
+---
+name: implicit_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: implicit_input:%bb.0
+  ; CHECK: SU(0): {{.*}}MOV64rm
+  ; CHECK: SU(1): Data Latency=0 Reg=$rax
+  bb.0:
+    liveins: $rdi
+    $rax = MOV64rm $rdi, 1, $noreg, 0, $noreg :: (load (s64))
+    INLINEASM &"", attdialect, implicit $rax
+    RET 0
+...
+
+---
+name: implicit_pseudo_def
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: implicit_pseudo_def:%bb.0
+  ; CHECK: SU(0): {{.*}}MOV32ri
+  ; CHECK: SU(1): Data Latency=0 Reg=$ecx
+  bb.0:
+    $eax = MOV32ri 1, implicit-def $ecx
+    INLINEASM &"# use $0", attdialect, reguse:GR32, $ecx
+    RET 0
+...
+
+---
+name: real_implicit_def
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: real_implicit_def:%bb.0
+  ; CHECK: SU(0): {{.*}}ADD32ri8
+  ; CHECK: SU(1): Data Latency=1 Reg=$eflags
+  bb.0:
+    liveins: $eax
+    $eax = ADD32ri8 $eax, 1, implicit-def $eflags
+    INLINEASM &"# use flags", attdialect, reguse:CCR, $eflags
+    RET 0
+...
+
+---
+name: asm_output_to_asm_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_output_to_asm_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=1 Reg=$rax
+  bb.0:
+    INLINEASM &"# def $0", attdialect, regdef:GR64, def $rax
+    INLINEASM &"# use $0", attdialect, reguse:GR64, $rax
+    RET 0
+...
+
+---
+name: asm_output_to_native_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_output_to_native_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=0 Reg=$rax
+  bb.0:
+    INLINEASM &"# def $0", attdialect, regdef:GR64, def $rax
+    $rcx = MOV64rr $rax
+    RET 0
+...
+
+# Fixed-register output constraints are emitted with implicit-def on the real
+# output operand, inside its regdef group. These dependencies have the same
+# latency as asm_output_to_asm_input above.
+---
+name: asm_fixed_output_to_asm_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_fixed_output_to_asm_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=1 Reg=$rax
+  bb.0:
+    ; Output constraint: "={rax}".
+    INLINEASM &"mov $$1, $0", sideeffect attdialect, regdef, implicit-def $rax
+    INLINEASM &"# use $0", sideeffect attdialect, reguse, $rax
+    RET 0
+...
+
+---
+name: asm_fixed_earlyclobber_output_to_asm_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_fixed_earlyclobber_output_to_asm_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=1 Reg=$rax
+  bb.0:
+    ; Output constraint: "=&{rax}".
+    INLINEASM &"mov $$1, $0", sideeffect attdialect, regdef-ec, implicit-def early-clobber $rax
+    INLINEASM &"# use $0", sideeffect attdialect, reguse, $rax
+    RET 0
+...
+
+---
+name: asm_implicit_pseudo_def
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_implicit_pseudo_def:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=0 Reg=$rax
+  bb.0:
+    INLINEASM &"", attdialect, implicit-def $rax
+    INLINEASM &"# use $0", attdialect, reguse:GR64, $rax
+    RET 0
+...
+
+---
+name: asm_output_to_implicit_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_output_to_implicit_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=0 Reg=$rax
+  bb.0:
+    INLINEASM &"# def $0", attdialect, regdef:GR64, def $rax
+    INLINEASM &"", attdialect, implicit $rax
+    RET 0
+...
