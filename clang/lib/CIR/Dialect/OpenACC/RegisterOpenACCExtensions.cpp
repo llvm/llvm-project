@@ -13,6 +13,7 @@
 #include "clang/CIR/Dialect/OpenACC/RegisterOpenACCExtensions.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
+#include "clang/CIR/Dialect/OpenACC/CIROpenACCOpsInterfaces.h"
 #include "clang/CIR/Dialect/OpenACC/CIROpenACCTypeInterfaces.h"
 
 namespace cir::acc {
@@ -21,6 +22,9 @@ void registerOpenACCExtensions(mlir::DialectRegistry &registry) {
   registry.addExtension(+[](mlir::MLIRContext *ctx, cir::CIRDialect *dialect) {
     cir::PointerType::attachInterface<
         OpenACCPointerLikeModel<cir::PointerType>>(*ctx);
+
+    cir::GetGlobalOp::attachInterface<AddressOfGlobalModel>(*ctx);
+    cir::GlobalOp::attachInterface<GlobalVariableModel>(*ctx);
   });
 }
 

@@ -1,0 +1,43 @@
+// RUN: cir-opt %s -test-acc-recipe-populate=recipe-type=firstprivate -verify-diagnostics
+
+// A recipe is created for a scalar or a constant array.
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!rec_incomplete = !cir.struct<"incomplete" incomplete>
+!rec_point = !cir.struct<"point" {data !s32i, data !s32i, data !s32i}>
+!rec_u = !cir.union<"u" {data !s32i, data !u8i}>
+
+cir.func @test_unsized() {
+  // expected-error @below {{Failed to create firstprivate recipe for voidp}}
+  %voidp = cir.alloca "voidp" align(1) : !cir.ptr<!cir.void> {test.var = "voidp"}
+  // expected-error @below {{Failed to create firstprivate recipe for funcp}}
+  %funcp = cir.alloca "funcp" align(8) : !cir.ptr<!cir.func<() -> !s32i>> {test.var = "funcp"}
+  // expected-error @below {{Failed to create firstprivate recipe for incomplete}}
+  %incomplete = cir.alloca "incomplete" align(1) : !cir.ptr<!rec_incomplete> {test.var = "incomplete"}
+  // expected-error @below {{Failed to create firstprivate recipe for record}}
+  %record = cir.alloca "record" align(4) : !cir.ptr<!rec_point> {test.var = "record"}
+  // expected-error @below {{Failed to create firstprivate recipe for union}}
+  %union = cir.alloca "union" align(4) : !cir.ptr<!rec_u> {test.var = "union"}
+  // expected-error @below {{Failed to create firstprivate recipe for vector}}
+  %vector = cir.alloca "vector" align(16) : !cir.ptr<!cir.vector<4 x !s32i>> {test.var = "vector"}
+  // expected-error @below {{Failed to create firstprivate recipe for scalable}}
+  %scalable = cir.alloca "scalable" align(16) : !cir.ptr<!cir.vector<[4] x !s32i>> {test.var = "scalable"}
+  cir.return
+}
+
+// A function argument and a loaded pointer have no alloca. A record is not
+// allocated from the pointer type either.
+cir.func @test_record_arg(%arg: !cir.ptr<!rec_point>) {
+  %zero = cir.const #cir.int<0> : !s32i
+  // expected-error @below {{Failed to create firstprivate recipe for record_arg}}
+  %p = cir.ptr_stride %arg, %zero : (!cir.ptr<!rec_point>, !s32i) -> !cir.ptr<!rec_point> {test.var = "record_arg"}
+  cir.return
+}
+
+cir.func @test_loaded_record() {
+  %slot = cir.alloca "slot" align(8) : !cir.ptr<!cir.ptr<!rec_point>>
+  // expected-error @below {{Failed to create firstprivate recipe for loaded_record}}
+  %p = cir.load %slot : !cir.ptr<!cir.ptr<!rec_point>>, !cir.ptr<!rec_point> {test.var = "loaded_record"}
+  cir.return
+}

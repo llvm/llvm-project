@@ -15,6 +15,7 @@
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 #include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Pass/PassOptions.h"
@@ -29,6 +30,10 @@
 namespace cir::test {
 void registerTestCIRAliasAnalysisPass();
 } // namespace cir::test
+
+namespace mlir::test {
+void registerTestOpenACC();
+} // namespace mlir::test
 #endif
 
 struct CIRToLLVMPipelineOptions
@@ -46,6 +51,7 @@ int main(int argc, char **argv) {
 
 #ifdef CLANG_INCLUDE_TESTS
   cir::test::registerTestCIRAliasAnalysisPass();
+  mlir::test::registerTestOpenACC();
 #endif
   registry.insert<mlir::memref::MemRefDialect, mlir::LLVM::LLVMDialect>();
 
@@ -105,6 +111,7 @@ int main(int argc, char **argv) {
     return mlir::createCallConvLoweringPass();
   });
 
+  mlir::acc::registerOpenACCPasses();
   mlir::omp::registerOpenMPPasses();
   mlir::registerTransformsPasses();
 
