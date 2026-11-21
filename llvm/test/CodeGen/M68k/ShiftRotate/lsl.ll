@@ -75,3 +75,28 @@ define i32 @lslil(i32 %a) nounwind {
   %1 = shl i32 %a, 7
   ret i32 %1
 }
+
+define i32 @lslil16(i32 %a) nounwind {
+; CHECK-LABEL: lslil16:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    move.l (4,%sp), %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    rts
+  %1 = shl i32 %a, 16
+  ret i32 %1
+}
+
+define i32 @lslil16_src_live(i32 %a) nounwind {
+; CHECK-LABEL: lslil16_src_live:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    move.l (4,%sp), %d1
+; CHECK-NEXT:    move.l %d1, %d0
+; CHECK-NEXT:    swap %d0
+; CHECK-NEXT:    clr.w %d0
+; CHECK-NEXT:    eor.l %d1, %d0
+; CHECK-NEXT:    rts
+  %1 = shl i32 %a, 16
+  %2 = xor i32 %1, %a
+  ret i32 %2
+}
