@@ -98,6 +98,7 @@
 ; CHECK-NEXT:   fusion-zextw                     - Enable SLLI+SRLI to be fused to zero extension of word.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
 ; CHECK-NEXT:   i                                - 'I' (Base Integer Instruction Set).
+; CHECK-NEXT:   late-select-expansion            - Expand selects to a branch over a move or ALU op after register allocation.
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.

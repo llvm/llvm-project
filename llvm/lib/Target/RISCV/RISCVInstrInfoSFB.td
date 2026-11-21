@@ -80,7 +80,7 @@ def CCtoZibiBCC : SDNodeXForm<cond, [{
 
 // For each of the short forward branch pseudos, corresponding code for
 // getting correct size of the pseduo is needed in getInstSizeInBytes.
-let Predicates = [HasShortForwardBranchIALU], isSelect = 1,
+let Predicates = [HasLateSelectExpansion], isSelect = 1,
     Constraints = "$dst = $falsev", isCommutable = 1 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
@@ -92,13 +92,13 @@ def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
                             ReadSFBJmp, ReadSFBJmp]>;
 }
 
-let Predicates = [HasShortForwardBranchIALU] in
+let Predicates = [HasLateSelectExpansion] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
            (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoRISCVBCC $cc), GPR:$lhs, GPR:$rhs)>;
 
 // This should always expand to a branch+c.mv so the size is 6 or 4 if the
 // branch is compressible.
-let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch],
+let Predicates = [HasConditionalMoveFusion, NoLateSelectExpansion],
     Constraints = "$dst = $falsev", isCommutable = 1 in {
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
@@ -110,7 +110,7 @@ def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
                          Sched<[]>;
 }
 
-let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch] in
+let Predicates = [HasConditionalMoveFusion, NoLateSelectExpansion] in
 def :Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc, (XLenVT GPRNoX0:$truev), GPRNoX0:$falsev),
          (PseudoCCMOVGPRNoX0 GPRNoX0:$falsev, GPRNoX0:$truev, (CCtoRISCVBCC $cc), GPR:$lhs, GPR:$rhs )>;
 
@@ -183,7 +183,7 @@ class SFBShiftW_ri
 // is true. Returns $falsev otherwise. Selected by optimizeSelect.
 // TODO: Can we use DefaultOperands on the regular binop to accomplish this more
 // like how ARM does predication?
-let Predicates = [HasShortForwardBranchIALU] in {
+let Predicates = [HasLateSelectExpansion] in {
 def PseudoCCADD : SFBALU_rr;
 def PseudoCCSUB : SFBALU_rr;
 def PseudoCCSLL : SFBALU_rr;
@@ -264,10 +264,11 @@ def PseudoCCLD : SFBLoad;
 // Zibi: select with immediate comparison folded into SFB.
 // imm5_zibi and ZibiCond are defined in RISCVInstrInfoZibi.td (included before
 // this file).
-let Predicates = [HasStdExtZibi, HasShortForwardBranchIALU] in
+let Predicates = [HasStdExtZibi, HasLateSelectExpansion] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;
 
-let Predicates = [HasStdExtZibi, HasConditionalMoveFusion, NoShortForwardBranch] in
+let Predicates = [HasStdExtZibi, HasConditionalMoveFusion,
+                  NoLateSelectExpansion] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), imm5_zibi:$cimm, ZibiCond:$cc, (XLenVT GPRNoX0:$truev), GPRNoX0:$falsev),
           (PseudoCCMOVGPRNoX0 GPRNoX0:$falsev, GPRNoX0:$truev, (CCtoZibiBCC $cc), GPR:$lhs, imm5_zibi:$cimm)>;

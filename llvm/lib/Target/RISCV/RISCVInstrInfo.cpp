@@ -2034,7 +2034,7 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                bool PreferFalse) const {
   assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
          "Unknown select instruction");
-  if (!STI.hasShortForwardBranchIALU())
+  if (!STI.hasLateSelectExpansion())
     return nullptr;
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();

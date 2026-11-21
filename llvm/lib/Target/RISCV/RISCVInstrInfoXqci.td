@@ -1293,7 +1293,7 @@ def PseudoQC_E_SH : PseudoStore<"qc.e.sh">;
 def PseudoQC_E_SW : PseudoStore<"qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, HasVendorXqcili, IsRV32]
 
-let Predicates = [HasShortForwardBranchIALU] in {
+let Predicates = [HasLateSelectExpansion] in {
 def PseudoCCQC_LI : SFBQC_LI;
 def PseudoCCQC_E_LI : SFBQC_E_LI;
 }

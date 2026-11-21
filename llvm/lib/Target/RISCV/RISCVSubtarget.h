@@ -226,6 +226,12 @@ public:
            hasShortForwardBranchIALU();
   }
 
+  // Keep selects as PseudoCCMOVGPR until after register allocation, either as
+  // part of the short forward branch optimization or on its own.
+  bool hasLateSelectExpansion() const {
+    return hasLateSelectExpansionTune() || hasShortForwardBranchIALU();
+  }
+
   bool hasShlAdd(int64_t ShAmt) const {
     if (ShAmt <= 0)
       return false;
