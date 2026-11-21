@@ -492,12 +492,22 @@ bool MachineCSEImpl::isProfitableToCSE(Register CSReg, Register Reg,
 
   // Heuristics #3: If the common subexpression is used by PHIs, do not reuse
   // it unless the defined value is already used in the BB of the new use.
+  // Reusing a value across a PHI extends its live range into the join, which
+  // can raise register pressure and cause spills; this conservative default is
+  // the 2010 "lack of live range splitting" workaround. A target may opt out
+  // for specific defs via isProfitableToCSEAcrossPHI() e.g. a cheap constant
+  // materialization (X86 MOV32r0 -> xorl) the allocator can rematerialize
+  // rather than spill. MI and the surviving def are identical expressions, so
+  // MI stands in for the surviving def here.
   bool HasPHI = false;
   for (MachineInstr &UseMI : MRI->use_nodbg_instructions(CSReg)) {
     HasPHI |= UseMI.isPHI();
     if (UseMI.getParent() == MI->getParent())
       return true;
   }
+
+  if (HasPHI && TII->isProfitableToCSEAcrossPHI(*MI))
+    return true;
 
   return !HasPHI;
 }

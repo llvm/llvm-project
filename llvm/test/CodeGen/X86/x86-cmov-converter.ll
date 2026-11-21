@@ -275,59 +275,63 @@ for.body:                                         ; preds = %for.body.preheader,
 define i32 @MaxIndex(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-LABEL: MaxIndex:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    xorl %r8d, %r8d
 ; CHECK-NEXT:    cmpl $2, %edi
-; CHECK-NEXT:    jl .LBB2_5
-; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    xorl %edi, %edi
-; CHECK-NEXT:    movl $1, %edx
-; CHECK-NEXT:  .LBB2_2: # %for.body
-; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%rsi,%rdx,4), %r8d
-; CHECK-NEXT:    movslq %edi, %r9
-; CHECK-NEXT:    movl %edx, %eax
-; CHECK-NEXT:    cmpl (%rsi,%r9,4), %r8d
-; CHECK-NEXT:    jg .LBB2_4
-; CHECK-NEXT:  # %bb.3: # %for.body
-; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:  .LBB2_4: # %for.body
-; CHECK-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-NEXT:    addq $1, %rdx
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    cmpq %rdx, %rcx
-; CHECK-NEXT:    jne .LBB2_2
-; CHECK-NEXT:  .LBB2_5: # %for.cond.cleanup
+; CHECK-NEXT:    jge .LBB2_3
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:  .LBB2_2: # %for.cond.cleanup
 ; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB2_3: # %for.body.preheader
+; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movl $1, %edx
+; CHECK-NEXT:  .LBB2_4: # %for.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    movl (%rsi,%rdx,4), %edi
+; CHECK-NEXT:    movslq %r8d, %r9
+; CHECK-NEXT:    movl %edx, %eax
+; CHECK-NEXT:    cmpl (%rsi,%r9,4), %edi
+; CHECK-NEXT:    jg .LBB2_6
+; CHECK-NEXT:  # %bb.5: # %for.body
+; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=1
+; CHECK-NEXT:    movl %r8d, %eax
+; CHECK-NEXT:  .LBB2_6: # %for.body
+; CHECK-NEXT:    # in Loop: Header=BB2_4 Depth=1
+; CHECK-NEXT:    addq $1, %rdx
+; CHECK-NEXT:    movl %eax, %r8d
+; CHECK-NEXT:    cmpq %rdx, %rcx
+; CHECK-NEXT:    je .LBB2_2
+; CHECK-NEXT:    jmp .LBB2_4
 ;
 ; CHECK-FORCEALL-LABEL: MaxIndex:
 ; CHECK-FORCEALL:       # %bb.0: # %entry
-; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
+; CHECK-FORCEALL-NEXT:    xorl %r8d, %r8d
 ; CHECK-FORCEALL-NEXT:    cmpl $2, %edi
-; CHECK-FORCEALL-NEXT:    jl .LBB2_5
-; CHECK-FORCEALL-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
-; CHECK-FORCEALL-NEXT:    xorl %edi, %edi
-; CHECK-FORCEALL-NEXT:    movl $1, %edx
-; CHECK-FORCEALL-NEXT:  .LBB2_2: # %for.body
-; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %r8d
-; CHECK-FORCEALL-NEXT:    movslq %edi, %r9
-; CHECK-FORCEALL-NEXT:    movl %edx, %eax
-; CHECK-FORCEALL-NEXT:    cmpl (%rsi,%r9,4), %r8d
-; CHECK-FORCEALL-NEXT:    jg .LBB2_4
-; CHECK-FORCEALL-NEXT:  # %bb.3: # %for.body
-; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-FORCEALL-NEXT:    movl %edi, %eax
-; CHECK-FORCEALL-NEXT:  .LBB2_4: # %for.body
-; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB2_2 Depth=1
-; CHECK-FORCEALL-NEXT:    addq $1, %rdx
-; CHECK-FORCEALL-NEXT:    movl %eax, %edi
-; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
-; CHECK-FORCEALL-NEXT:    jne .LBB2_2
-; CHECK-FORCEALL-NEXT:  .LBB2_5: # %for.cond.cleanup
+; CHECK-FORCEALL-NEXT:    jge .LBB2_3
+; CHECK-FORCEALL-NEXT:  # %bb.1:
+; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
+; CHECK-FORCEALL-NEXT:  .LBB2_2: # %for.cond.cleanup
 ; CHECK-FORCEALL-NEXT:    retq
+; CHECK-FORCEALL-NEXT:  .LBB2_3: # %for.body.preheader
+; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
+; CHECK-FORCEALL-NEXT:    movl $1, %edx
+; CHECK-FORCEALL-NEXT:  .LBB2_4: # %for.body
+; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-FORCEALL-NEXT:    movl (%rsi,%rdx,4), %edi
+; CHECK-FORCEALL-NEXT:    movslq %r8d, %r9
+; CHECK-FORCEALL-NEXT:    movl %edx, %eax
+; CHECK-FORCEALL-NEXT:    cmpl (%rsi,%r9,4), %edi
+; CHECK-FORCEALL-NEXT:    jg .LBB2_6
+; CHECK-FORCEALL-NEXT:  # %bb.5: # %for.body
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB2_4 Depth=1
+; CHECK-FORCEALL-NEXT:    movl %r8d, %eax
+; CHECK-FORCEALL-NEXT:  .LBB2_6: # %for.body
+; CHECK-FORCEALL-NEXT:    # in Loop: Header=BB2_4 Depth=1
+; CHECK-FORCEALL-NEXT:    addq $1, %rdx
+; CHECK-FORCEALL-NEXT:    movl %eax, %r8d
+; CHECK-FORCEALL-NEXT:    cmpq %rdx, %rcx
+; CHECK-FORCEALL-NEXT:    je .LBB2_2
+; CHECK-FORCEALL-NEXT:    jmp .LBB2_4
 entry:
   %cmp14 = icmp sgt i32 %n, 1
   br i1 %cmp14, label %for.body.preheader, label %for.cond.cleanup
@@ -365,7 +369,6 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-NEXT:    jl .LBB3_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    movl %edi, %ecx
-; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    movl $1, %edx
 ; CHECK-NEXT:  .LBB3_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -387,7 +390,6 @@ define i32 @MaxIndex_unpredictable(i32 %n, ptr nocapture readonly %a) #0 {
 ; CHECK-FORCEALL-NEXT:    jl .LBB3_3
 ; CHECK-FORCEALL-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-FORCEALL-NEXT:    movl %edi, %ecx
-; CHECK-FORCEALL-NEXT:    xorl %eax, %eax
 ; CHECK-FORCEALL-NEXT:    movl $1, %edx
 ; CHECK-FORCEALL-NEXT:  .LBB3_2: # %for.body
 ; CHECK-FORCEALL-NEXT:    # =>This Inner Loop Header: Depth=1
