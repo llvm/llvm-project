@@ -40,12 +40,6 @@ RWBuffer<float3> rwb_float3;
 // CHECK: %"class.hlsl::RWBuffer.14" = type { target("spirv.Image", float, 5, 2, 0, 0, 2, 1) }
 RWBuffer<float4> rwb_float4;
 
-// Other types that should get Unknown format
-// CHECK: %"class.hlsl::RWBuffer.15" = type { target("spirv.Image", half, 5, 2, 0, 0, 2, 0) }
-RWBuffer<half> rwb_half;
-// CHECK: %"class.hlsl::RWBuffer.16" = type { target("spirv.Image", double, 5, 2, 0, 0, 2, 0) }
-RWBuffer<double> rwb_double;
-
 // Non-UAV resource
 // CHECK: %"class.hlsl::Buffer" = type { target("spirv.SignedImage", i32, 5, 2, 0, 0, 1, 0) }
 Buffer<int> b_int;
@@ -68,7 +62,5 @@ void main(int GI : SV_GroupIndex) {
     rwb_float2[GI] = 0;
     rwb_float3[GI] = 0;
     rwb_float4[GI] = 0;
-    rwb_half[GI] = 0;
-    rwb_double[GI] = 0;
     int val = b_int[GI];
 }

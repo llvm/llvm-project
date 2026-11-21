@@ -17,7 +17,7 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-library -x hlsl -fsyntax-only \
 // RUN:   -finclude-default-header -fnative-half-type -fnative-int16-type \
 // RUN:   -DTEXTURE=Texture2D -DGRAD_TYPE=float2 -DCOORD_TYPE=float2 \
-// RUN:   -verify=expected %s
+// RUN:   -verify=vk,expected %s
 
 // Parameterized over the texture types in the RUN lines above; adding a texture
 // of another dimension only requires new RUN lines.
@@ -30,16 +30,19 @@
 //
 // Check prefixes:
 //   sm66               shader model 6.6 diagnostics
+//   vk                 Vulkan diagnostics
 //
 // Sampling textures with an integer element type was introduced in shader model
 // 6.7, so the `sm66` diagnostics are only expected in the shader model 6.6 runs.
 // The Vulkan target has no shader model and does not restrict integer sampling.
 // Comparison sampling requires a floating point element type at every shader
-// model, so those diagnostics use the `expected` prefix.
+// model, so those diagnostics use the `expected` prefix. Vulkan rejects
+// resources with 16-bit elements.
 
 TEXTURE<int4> TexVec;
 TEXTURE<uint> Tex;
 TEXTURE<int16_t> TexShort;
+// vk-error@-1 {{resource type 'Texture2D<int16_t>' (aka 'Texture2D<short>') with element type 'short' is not supported when targeting Vulkan; 'short' is 16 bits wide, but Vulkan requires a 32-bit type or a 64-bit integer type}}
 SamplerState Samp;
 SamplerComparisonState SampCmp;
 

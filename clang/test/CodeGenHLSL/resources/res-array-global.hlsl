@@ -21,7 +21,7 @@ RWBuffer<int> B[5]; // DXIL implicit binding in space0
 RWBuffer<int> C[3] : register(u2);
 
 // implicit binding for both DXIL and SPIR-V in space/set 0 
-RWBuffer<double> D[10];
+RWBuffer<float2> D[10];
 
 // implicit binding for both DXIL and SPIR-V with specified space/set 0 
 RWBuffer<uint> E[15] : register(space2);
@@ -67,12 +67,12 @@ void main() {
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 8 %[[Tmp2]],
   // SPV-SAME: i32 noundef 2, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @[[BufC]])
 
-  // Make sure D[7] is translated to a RWBuffer<double>::__createFromImplicitBinding call
+  // Make sure D[7] is translated to a RWBuffer<float2>::__createFromImplicitBinding call
   // for both DXIL and SPIR-V
-  // DXIL: call void @hlsl::RWBuffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // DXIL: call void @hlsl::RWBuffer<float vector[2]>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.1") align 4 %[[Tmp3]],
   // DXIL-SAME: i32 noundef 1, i32 noundef 0, i32 noundef 10, i32 noundef 7, ptr noundef @D.str)
-  // SPV: call spir_func void @hlsl::RWBuffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<float vector[2]>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.1") align 8 %[[Tmp3]],
   // SPV-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 10, i32 noundef 7, ptr noundef @[[BufD]])
 
@@ -84,5 +84,5 @@ void main() {
   // SPV: call spir_func void @hlsl::RWBuffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.2") align 8 %[[Tmp4]],
   // SPV-SAME: i32 noundef 1, i32 noundef 2, i32 noundef 15, i32 noundef 5, ptr noundef @[[BufE]])
-  Out[0] = A[2][0] + (float)B[3][0] + (float)C[1][0] + (float)D[7][0] + (float)E[5][0];
+  Out[0] = A[2][0] + (float)B[3][0] + (float)C[1][0] + D[7][0].x + (float)E[5][0];
 }

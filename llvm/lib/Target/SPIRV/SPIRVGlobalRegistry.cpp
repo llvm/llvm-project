@@ -1726,6 +1726,22 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateOpTypeImage(
                                    ImageFormat, AccessQual);
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;
+
+  // Vulkan restricts the Sampled Type of every image
+  // (VUID-StandaloneSpirv-OpTypeImage-04656).
+  const auto &ST = MIRBuilder.getMF().getSubtarget<SPIRVSubtarget>();
+  if (ST.getTargetTriple().isVulkanOS()) {
+    unsigned Opcode = SampledType->getOpcode();
+    uint64_t Width = Opcode == SPIRV::OpTypeInt || Opcode == SPIRV::OpTypeFloat
+                         ? SampledType->getOperand(1).getImm()
+                         : 0;
+    if (Width != 32 && !(Width == 64 && Opcode == SPIRV::OpTypeInt))
+      reportFatalUsageError(
+          "OpTypeImage Sampled Type must be a scalar 32-bit float, 32-bit "
+          "integer or 64-bit integer for Vulkan "
+          "(VUID-StandaloneSpirv-OpTypeImage-04656)");
+  }
+
   const MachineInstr *NewMI = createConstOrTypeAtFunctionEntry(
       MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
         auto MIB =
