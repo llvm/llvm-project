@@ -84,12 +84,10 @@ public:
 
   // Assemble the final compressed posting lists for the added symbols.
   llvm::DenseMap<Token, PostingList> build() && {
-    llvm::DenseMap<Token, PostingList> Result(/*InitialReserve=*/
-                                              TrigramDocs.size() +
-                                              RestrictedCCDocs.size() +
-                                              TypeDocs.size() +
-                                              ScopeDocs.size() +
-                                              ProximityDocs.size());
+    // RestrictedCCDocs is the posting list of a single token.
+    llvm::DenseMap<Token, PostingList> Result(
+        /*InitialReserve=*/TrigramDocs.size() + !RestrictedCCDocs.empty() +
+        TypeDocs.size() + ScopeDocs.size() + ProximityDocs.size());
     // Tear down intermediate structs as we go to reduce memory usage.
     // Since we're trying to get rid of underlying allocations, clearing the
     // containers is not enough.
