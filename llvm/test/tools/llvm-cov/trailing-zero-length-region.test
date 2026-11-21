@@ -1,0 +1,22 @@
+// A zero-length code region can be the last region in source order while
+// remaining inside a nonempty code region. In particular, Clang remaps
+// macros in system headers to zero-length regions at the macro invocation.
+// A trailing logging macro inside a catch block must retain line coverage,
+// even when the catch block has not been executed.
+
+// RUN: llvm-profdata merge %S/Inputs/trailing-zero-length-region-zero.proftext -o %t.zero.profdata
+// RUN: llvm-cov export --format=lcov %S/Inputs/trailing-zero-length-region.covmapping -instr-profile %t.zero.profdata | FileCheck %s --check-prefix=ZERO
+// RUN: llvm-profdata merge %S/Inputs/trailing-zero-length-region-nonzero.proftext -o %t.nonzero.profdata
+// RUN: llvm-cov export --format=lcov %S/Inputs/trailing-zero-length-region.covmapping -instr-profile %t.nonzero.profdata | FileCheck %s --check-prefix=NONZERO
+
+// ZERO: {{^}}DA:27,1
+// ZERO-NEXT: {{^}}DA:28,0
+// ZERO-NEXT: {{^}}DA:29,0
+// ZERO: {{^}}BRDA:28,0,0,-
+// ZERO-NEXT: {{^}}BRDA:28,0,1,-
+
+// NONZERO: {{^}}DA:27,1
+// NONZERO-NEXT: {{^}}DA:28,1
+// NONZERO-NEXT: {{^}}DA:29,1
+// NONZERO: {{^}}BRDA:28,0,0,1
+// NONZERO-NEXT: {{^}}BRDA:28,0,1,1

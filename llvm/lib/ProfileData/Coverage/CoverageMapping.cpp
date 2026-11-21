@@ -1273,10 +1273,12 @@ class SegmentBuilder {
 
       // Try to emit a segment for the current region.
       if (CurStartLoc == CR.value().endLoc()) {
-        // Avoid making zero-length regions active. If it's the last region,
-        // emit a skipped segment. Otherwise use its predecessor's count.
+        // Avoid making zero-length regions active. Use the enclosing region's
+        // count if one is still active, even for the last region in source
+        // order. Emit a skipped segment for a trailing empty region only if
+        // there is no enclosing region, or if the region is explicitly skipped.
         const bool Skipped =
-            (CR.index() + 1) == Regions.size() ||
+            ((CR.index() + 1) == Regions.size() && ActiveRegions.empty()) ||
             CR.value().Kind == CounterMappingRegion::SkippedRegion;
         startSegment(ActiveRegions.empty() ? CR.value() : *ActiveRegions.back(),
                      CurStartLoc, !GapRegion, Skipped);
