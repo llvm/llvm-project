@@ -4333,7 +4333,7 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     ++First;
     return make<NameType>("...");
 
-  // <builtin-type> ::= u <source-name>    # vendor extended type
+  // <type> ::= u <source-name> [<template-args>]    # vendor extended type
   case 'u': {
     ++First;
     std::string_view Res = parseBareSourceName();
@@ -4342,13 +4342,19 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     // Typically, <builtin-type>s are not considered substitution candidates,
     // but the exception to that exception is vendor extended types (Itanium C++
     // ABI 5.9.1).
-    if (consumeIf('I')) {
-      Node *BaseType = parseType();
-      if (BaseType == nullptr)
+    if (look() == 'I') {
+      // A single type argument is a builtin type transformation, which is
+      // printed like a function call. Anything else is a vendor type template
+      // specialization.
+      bool MayBeTransform = look(1) != 'L' && look(1) != 'X' && look(1) != 'J';
+      Node *TA = getDerived().parseTemplateArgs();
+      if (TA == nullptr)
         return nullptr;
-      if (!consumeIf('E'))
-        return nullptr;
-      Result = make<TransformedType>(Res, BaseType);
+      NodeArray Params = static_cast<TemplateArgs *>(TA)->getParams();
+      if (MayBeTransform && Params.size() == 1)
+        Result = make<TransformedType>(Res, Params[0]);
+      else
+        Result = make<NameWithTemplateArgs>(make<NameType>(Res), TA);
     } else
       Result = make<NameType>(Res);
     break;
