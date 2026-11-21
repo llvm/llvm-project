@@ -1596,6 +1596,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Floating Point Support in Clang
 
+- Added support for the `__builtin_iseqsig` builtin, which GCC also provides,
+  for implementing the C23 `iseqsig` macro. It compares its arguments for
+  equality like `==`, but is a signaling comparison: it raises the "invalid"
+  floating-point exception if either argument is a NaN. Like GCC's, it never
+  sets `errno`, so it implements the macro only when `errno` need not be set
+  for a domain error (`math_errhandling & MATH_ERRNO` is zero, as with
+  `-fno-math-errno`).
+
 ### Fixed Point Support in Clang
 
 ### AST Matchers
