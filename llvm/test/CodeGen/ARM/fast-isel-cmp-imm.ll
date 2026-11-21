@@ -84,7 +84,7 @@ entry:
 ; THUMB: t4
   %cmp = icmp eq i8 %a, -1
 ; ARM: cmn r{{[0-9]}}, #1
-; THUMB: cmn.w r{{[0-9]}}, #1
+; THUMB: adds r{{[0-9]}}, #1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -118,7 +118,7 @@ entry:
 ; THUMB: t6
   %cmp = icmp eq i16 %a, -1
 ; ARM: cmn r{{[0-9]}}, #1
-; THUMB: cmn.w r{{[0-9]}}, #1
+; THUMB: adds r{{[0-9]}}, #1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
@@ -152,7 +152,7 @@ entry:
 ; THUMB: t8
   %cmp = icmp eq i32 %a, -1
 ; ARM: cmn r{{[0-9]}}, #1
-; THUMB: cmn.w r{{[0-9]}}, #1
+; THUMB: adds r{{[0-9]}}, #1
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry

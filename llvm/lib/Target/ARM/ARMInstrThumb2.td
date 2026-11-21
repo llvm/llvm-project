@@ -3546,9 +3546,17 @@ def : t2InstAlias<"cmn${p} $Rn, $imm",
 def : t2InstAlias<"cmn${p} $Rn, $shift",
    (t2CMNrs GPRnopc:$Rn, t2_so_reg:$shift, pred:$p)>;
 
+// Use AddedComplexity to prefer CMN over CMP for an immediate of -1, which
+// can be reduced to a 16-bit wide encoding of ADDS in some cases.
+let AddedComplexity = 1 in
+def : T2Pat<(ARMcmp  GPR:$src, imm1_255_neg:$imm),
+            (t2CMNri GPR:$src, imm1_255_neg:$imm)>;
 def : T2Pat<(ARMcmp  GPR:$src, t2_so_imm_neg:$imm),
             (t2CMNri GPR:$src, t2_so_imm_neg:$imm)>;
 
+let AddedComplexity = 1 in
+def : T2Pat<(ARMcmpZ GPR:$src, imm1_255_neg:$imm),
+            (t2CMNri GPR:$src, imm1_255_neg:$imm)>;
 def : T2Pat<(ARMcmpZ GPRnopc:$src, t2_so_imm_neg:$imm),
             (t2CMNri GPRnopc:$src, t2_so_imm_neg:$imm)>;
 

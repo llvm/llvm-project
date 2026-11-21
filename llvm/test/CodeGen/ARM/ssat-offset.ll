@@ -68,7 +68,7 @@ define i32 @offset_clamp_non_pow2_width(i32 %x) {
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    mvn r1, #99
 ; CHECK-NEXT:    asrs r2, r0, #8
-; CHECK-NEXT:    cmn.w r2, #100
+; CHECK-NEXT:    adds r2, #100
 ; CHECK-NEXT:    it gt
 ; CHECK-NEXT:    asrgt r1, r0, #8
 ; CHECK-NEXT:    cmp r1, #50
