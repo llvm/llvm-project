@@ -177,7 +177,10 @@ bool Sema::ValidateBoundsAttrTypeShape(QualType Ty, SourceLocation AttrLoc,
     // Exception: void has an implicit size of 1 byte for pointer arithmetic
     // (following GNU convention). Therefore, counted_by on void* is allowed
     // and behaves equivalently to sized_by (treating the count as bytes).
-    if (PointeeTy->isVoidType()) {
+    //
+    // FIXME: -fbounds-safety doesn't support this yet, so it's rejected there.
+    // See https://github.com/swiftlang/llvm-project/issues/11807.
+    if (PointeeTy->isVoidType() && !getLangOpts().hasBoundsSafetyAttributes()) {
       // Emit a warning that this is a GNU extension.
       Diag(AttrLoc, diag::ext_gnu_counted_by_void_ptr) << Kind;
       Diag(AttrLoc, diag::note_gnu_counted_by_void_ptr_use_sized_by) << Kind;
