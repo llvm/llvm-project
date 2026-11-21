@@ -31,7 +31,7 @@ public:
   Lowerer(Module &M)
       : LowererBase(M), Builder(M),
         AnyResumeFnPtrTy(PointerType::getUnqual(Context)) {}
-  void lowerEarlyIntrinsics(Function &F);
+  bool lowerEarlyIntrinsics(Function &F, FunctionAnalysisManager &FAM);
 };
 } // namespace
 
@@ -101,11 +101,12 @@ static void setCannotDuplicate(CoroIdInst *CoroId) {
       CB->setCannotDuplicate();
 }
 
-void Lowerer::lowerEarlyIntrinsics(Function &F) {
+bool Lowerer::lowerEarlyIntrinsics(Function &F, FunctionAnalysisManager &FAM) {
   CoroIdInst *CoroId = nullptr;
   CoroBeginInst *CoroBegin = nullptr;
   SmallVector<CoroFreeInst *, 4> CoroFrees;
   bool HasCoroSuspend = false;
+  bool Changed = false;
   for (Instruction &I : llvm::make_early_inc_range(instructions(F))) {
     auto *CB = dyn_cast<CallBase>(&I);
     if (!CB)
@@ -127,16 +128,22 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
       case Intrinsic::coro_suspend:
         // Make sure that final suspend point is not duplicated as CoroSplit
         // pass expects that there is at most one final suspend point.
-        if (cast<CoroSuspendInst>(&I)->isFinal())
+        if (cast<CoroSuspendInst>(&I)->isFinal()) {
           CB->setCannotDuplicate();
+          Changed = true;
+        }
+
         HasCoroSuspend = true;
         break;
       case Intrinsic::coro_end_async:
       case Intrinsic::coro_end:
         // Make sure that fallthrough coro.end is not duplicated as CoroSplit
         // pass expects that there is at most one fallthrough coro.end.
-        if (cast<AnyCoroEndInst>(&I)->isFallthrough())
+        if (cast<AnyCoroEndInst>(&I)->isFallthrough()) {
           CB->setCannotDuplicate();
+          Changed = true;
+        }
+
         break;
       case Intrinsic::coro_id:
         if (auto *CII = cast<CoroIdInst>(&I)) {
@@ -147,25 +154,34 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
             setCannotDuplicate(CII);
             CII->setCoroutineSelf();
             CoroId = cast<CoroIdInst>(&I);
+            Changed = true;
           }
         }
         break;
       case Intrinsic::coro_id_retcon:
       case Intrinsic::coro_id_retcon_once:
       case Intrinsic::coro_id_async:
-        F.setPresplitCoroutine();
+        if (!F.isPresplitCoroutine()) {
+          F.setPresplitCoroutine();
+          Changed = true;
+        }
+
         break;
       case Intrinsic::coro_resume:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::ResumeIndex);
+        Changed = true;
         break;
       case Intrinsic::coro_destroy:
         lowerResumeOrDestroy(*CB, CoroSubFnInst::DestroyIndex);
+        Changed = true;
         break;
       case Intrinsic::coro_promise:
         lowerCoroPromise(cast<CoroPromiseInst>(&I));
+        Changed = true;
         break;
       case Intrinsic::coro_done:
         lowerCoroDone(cast<IntrinsicInst>(&I));
+        Changed = true;
         break;
     }
   }
@@ -174,17 +190,45 @@ void Lowerer::lowerEarlyIntrinsics(Function &F) {
     // Make sure that all CoroFree reference the coro.id intrinsic.
     // Token type is not exposed through coroutine C/C++ builtins to plain C, so
     // we allow specifying none and fixing it up here.
-    for (CoroFreeInst *CF : CoroFrees)
-      CF->setArgOperand(0, CoroId);
+    for (CoroFreeInst *CF : CoroFrees) {
+      if (CF->getArgOperand(0) != CoroId) {
+        CF->setArgOperand(0, CoroId);
+        Changed = true;
+      }
+    }
   }
 
   // Coroutine suspention could potentially lead to any argument modified
   // outside of the function, hence arguments should not have noalias
   // attributes.
-  if (HasCoroSuspend)
-    for (Argument &A : F.args())
-      if (A.hasNoAliasAttr())
+  bool RemovedNoAlias = false;
+  if (HasCoroSuspend) {
+    for (Argument &A : F.args()) {
+      if (A.hasNoAliasAttr()) {
         A.removeAttr(Attribute::NoAlias);
+        RemovedNoAlias = true;
+      }
+    }
+  }
+
+  if (!Changed && !RemovedNoAlias)
+    return false;
+
+  PreservedAnalyses FuncPA;
+  FuncPA.preserveSet<CFGAnalyses>();
+  FAM.invalidate(F, FuncPA);
+
+  // Removing noalias may affect the analyses of callers.
+  if (RemovedNoAlias) {
+    for (User *U : F.users()) {
+      if (auto *Call = dyn_cast<CallBase>(U)) {
+        if (Call->getCalledOperand() == &F)
+          FAM.invalidate(*Call->getFunction(), FuncPA);
+      }
+    }
+  }
+
+  return true;
 }
 
 static bool declaresCoroEarlyIntrinsics(const Module &M) {
@@ -197,15 +241,23 @@ static bool declaresCoroEarlyIntrinsics(const Module &M) {
           Intrinsic::coro_promise, Intrinsic::coro_resume});
 }
 
-PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &) {
+PreservedAnalyses CoroEarlyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   if (!declaresCoroEarlyIntrinsics(M))
     return PreservedAnalyses::all();
 
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  bool Changed = false;
   Lowerer L(M);
   for (auto &F : M)
-    L.lowerEarlyIntrinsics(F);
+    Changed |= L.lowerEarlyIntrinsics(F, FAM);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
