@@ -464,8 +464,8 @@ guidelines:
   `-passes`, `-stop-after`, `-stop-before`).
 - Use `-filetype=null` for `llc` tests that only check diagnostics, unless the
   error comes from the emitter (e.g., relocation errors). `-filetype=null`
-  skips the MC assembler and object writer entirely, so those tests need
-  `-filetype=obj`.
+  skips the MC assembler and object writer entirely, so tests for emitter
+  errors need `-filetype=obj`.
 - Tests that use options only available in builds with assertions enabled,
   such as `-debug-only` or `-stats`, need `REQUIRES: asserts`. Without it, the
   test fails in release builds.
