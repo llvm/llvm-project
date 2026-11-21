@@ -2,6 +2,8 @@
 ; Test kernel hwasan instrumentation for alloca.
 ;
 ; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -S | FileCheck %s
+; RUN: opt < %s -passes=hwasan -hwasan-kernel=1 -hwasan-tag-bits=7 -S | FileCheck %s --check-prefix=TAG7
+; RUN: opt < %s -mtriple=riscv64-unknown-linux -passes=hwasan -hwasan-kernel=1 -S | FileCheck %s --check-prefix=RISCV
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android"
@@ -20,26 +22,99 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
 ; CHECK-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
-; CHECK-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], -72057594037927936
-; CHECK-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56
-; CHECK-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], 72057594037927935
-; CHECK-NEXT:    [[TMP8:%.*]] = and i64 [[TMP5]], [[TMP7]]
-; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP8]] to ptr
-; CHECK-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP3]] to i8
-; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP10]], -72057594037927936
-; CHECK-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4
-; CHECK-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP13]], i8 [[TMP9]], i64 1, i1 false)
+; CHECK-NEXT:    [[TMP4:%.*]] = and i64 [[TMP3]], 254
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[TMP4]], 254
+; CHECK-NEXT:    [[TMP6:%.*]] = xor i64 [[TMP3]], 21
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP5]], i64 [[TMP6]], i64 [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP9:%.*]] = or i64 [[TMP8]], -72057594037927936
+; CHECK-NEXT:    [[TMP10:%.*]] = shl i64 [[TMP7]], 56
+; CHECK-NEXT:    [[TMP11:%.*]] = or i64 [[TMP10]], 72057594037927935
+; CHECK-NEXT:    [[TMP12:%.*]] = and i64 [[TMP9]], [[TMP11]]
+; CHECK-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP12]] to ptr
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc i64 [[TMP7]] to i8
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP15:%.*]] = or i64 [[TMP14]], -72057594037927936
+; CHECK-NEXT:    [[TMP16:%.*]] = lshr i64 [[TMP15]], 4
+; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP17]], i8 [[TMP13]], i64 1, i1 false)
 ; CHECK-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
-; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[X]] to i64
-; CHECK-NEXT:    [[TMP16:%.*]] = or i64 [[TMP15]], -72057594037927936
-; CHECK-NEXT:    [[TMP17:%.*]] = lshr i64 [[TMP16]], 4
-; CHECK-NEXT:    [[TMP18:%.*]] = inttoptr i64 [[TMP17]] to ptr
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP18]], i8 [[TMP14]], i64 1, i1 false)
+; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; CHECK-NEXT:    [[TMP19:%.*]] = ptrtoint ptr [[X]] to i64
+; CHECK-NEXT:    [[TMP20:%.*]] = or i64 [[TMP19]], -72057594037927936
+; CHECK-NEXT:    [[TMP21:%.*]] = lshr i64 [[TMP20]], 4
+; CHECK-NEXT:    [[TMP22:%.*]] = inttoptr i64 [[TMP21]] to ptr
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP22]], i8 [[TMP18]], i64 1, i1 false)
 ; CHECK-NEXT:    ret void
+;
+; TAG7-LABEL: define void @test_alloca
+; TAG7-SAME: () #[[ATTR0:[0-9]+]] {
+; TAG7-NEXT:  entry:
+; TAG7-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; TAG7-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; TAG7-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; TAG7-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
+; TAG7-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; TAG7-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = and i64 [[TMP3]], 127
+; TAG7-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP1]], 56
+; TAG7-NEXT:    [[HWASAN_UAR_TAG:%.*]] = and i64 [[TMP4]], 127
+; TAG7-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
+; TAG7-NEXT:    [[TMP5:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
+; TAG7-NEXT:    [[TMP6:%.*]] = ptrtoint ptr [[X]] to i64
+; TAG7-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], 9151314442816847872
+; TAG7-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP5]], 56
+; TAG7-NEXT:    [[TMP9:%.*]] = or i64 [[TMP8]], 72057594037927935
+; TAG7-NEXT:    [[TMP10:%.*]] = and i64 [[TMP7]], [[TMP9]]
+; TAG7-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP10]] to ptr
+; TAG7-NEXT:    [[TMP11:%.*]] = trunc i64 [[TMP5]] to i8
+; TAG7-NEXT:    [[TMP12:%.*]] = ptrtoint ptr [[X]] to i64
+; TAG7-NEXT:    [[TMP13:%.*]] = or i64 [[TMP12]], 9151314442816847872
+; TAG7-NEXT:    [[TMP14:%.*]] = lshr i64 [[TMP13]], 4
+; TAG7-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr
+; TAG7-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP15]], i8 [[TMP11]], i64 1, i1 false)
+; TAG7-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
+; TAG7-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; TAG7-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[X]] to i64
+; TAG7-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], 9151314442816847872
+; TAG7-NEXT:    [[TMP19:%.*]] = lshr i64 [[TMP18]], 4
+; TAG7-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr
+; TAG7-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP20]], i8 [[TMP16]], i64 1, i1 false)
+; TAG7-NEXT:    ret void
+;
+; RISCV-LABEL: define void @test_alloca
+; RISCV-SAME: () #[[ATTR0:[0-9]+]] {
+; RISCV-NEXT:  entry:
+; RISCV-NEXT:    [[DOTHWASAN_SHADOW:%.*]] = call ptr asm "", "=r,0"(ptr null)
+; RISCV-NEXT:    [[TMP0:%.*]] = call ptr @llvm.frameaddress.p0(i32 0)
+; RISCV-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[TMP0]] to i64
+; RISCV-NEXT:    [[TMP2:%.*]] = lshr i64 [[TMP1]], 20
+; RISCV-NEXT:    [[HWASAN_STACK_BASE_TAG:%.*]] = xor i64 [[TMP1]], [[TMP2]]
+; RISCV-NEXT:    [[HWASAN_UAR_TAG:%.*]] = lshr i64 [[TMP1]], 56
+; RISCV-NEXT:    [[X:%.*]] = alloca { i32, [12 x i8] }, align 16
+; RISCV-NEXT:    [[TMP3:%.*]] = xor i64 [[HWASAN_STACK_BASE_TAG]], 0
+; RISCV-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[X]] to i64
+; RISCV-NEXT:    [[TMP5:%.*]] = or i64 [[TMP4]], -72057594037927936
+; RISCV-NEXT:    [[TMP6:%.*]] = shl i64 [[TMP3]], 56
+; RISCV-NEXT:    [[TMP7:%.*]] = or i64 [[TMP6]], 72057594037927935
+; RISCV-NEXT:    [[TMP8:%.*]] = and i64 [[TMP5]], [[TMP7]]
+; RISCV-NEXT:    [[X_HWASAN:%.*]] = inttoptr i64 [[TMP8]] to ptr
+; RISCV-NEXT:    [[TMP9:%.*]] = trunc i64 [[TMP3]] to i8
+; RISCV-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[X]] to i64
+; RISCV-NEXT:    [[TMP11:%.*]] = or i64 [[TMP10]], -72057594037927936
+; RISCV-NEXT:    [[TMP12:%.*]] = lshr i64 [[TMP11]], 4
+; RISCV-NEXT:    [[TMP13:%.*]] = inttoptr i64 [[TMP12]] to ptr
+; RISCV-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP13]], i32 0
+; RISCV-NEXT:    store i8 4, ptr [[TMP14]], align 1
+; RISCV-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[X]], i32 15
+; RISCV-NEXT:    store i8 [[TMP9]], ptr [[TMP15]], align 1
+; RISCV-NEXT:    call void @use32(ptr nonnull [[X_HWASAN]])
+; RISCV-NEXT:    [[TMP16:%.*]] = trunc i64 [[HWASAN_UAR_TAG]] to i8
+; RISCV-NEXT:    [[TMP17:%.*]] = ptrtoint ptr [[X]] to i64
+; RISCV-NEXT:    [[TMP18:%.*]] = or i64 [[TMP17]], -72057594037927936
+; RISCV-NEXT:    [[TMP19:%.*]] = lshr i64 [[TMP18]], 4
+; RISCV-NEXT:    [[TMP20:%.*]] = inttoptr i64 [[TMP19]] to ptr
+; RISCV-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[TMP20]], i8 [[TMP16]], i64 1, i1 false)
+; RISCV-NEXT:    ret void
 ;
 
 
