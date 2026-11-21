@@ -301,7 +301,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_philox_engine`                              | *unimplemented* |
 | `__cpp_lib_polymorphic`                                | *unimplemented* |
 | `__cpp_lib_ranges_as_input`                            | *unimplemented* |
-| `__cpp_lib_ranges_cache_latest`                        | *unimplemented* |
+| `__cpp_lib_ranges_cache_latest`                        | `202411L`       |
 | `__cpp_lib_ranges_concat`                              | `202403L`       |
 | `__cpp_lib_ranges_indices`                             | `202506L`       |
 | `__cpp_lib_ranges_reserve_hint`                        | *unimplemented* |
