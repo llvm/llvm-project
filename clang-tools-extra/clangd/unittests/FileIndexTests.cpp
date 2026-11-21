@@ -717,7 +717,9 @@ TEST(FileIndexTest, Profile) {
   FileIndex FI(true);
 
   auto FileName = testPath("foo.cpp");
-  auto AST = TestTU::withHeaderCode("int a;").build();
+  TestTU TU = TestTU::withHeaderCode("int a;");
+  TU.Code = "int b;";
+  auto AST = TU.build();
   FI.updateMain(FileName, AST);
   FI.updatePreamble(FileName, "v1", AST.getASTContext(), AST.getPreprocessor(),
                     AST.getPragmaIncludes());
@@ -755,6 +757,29 @@ TEST(FileSymbolsTest, Profile) {
   EXPECT_THAT(MT.child("f2").total(), Gt(0U));
   EXPECT_THAT(MT.child("f3").children(), ElementsAre(Pair("relations", _)));
   EXPECT_THAT(MT.child("f3").total(), Gt(0U));
+}
+
+TEST(FileSymbolsTest, IndexEstimateExcludesSlabs) {
+  // profile() reports the slabs, so the estimate of an index built from them
+  // must not include them: it can't depend on how long the strings in the
+  // symbol and ref slabs are.
+  auto Estimate = [](IndexType Type, size_t StringSize) {
+    SymbolSlab::Builder Slab;
+    for (int I = 0; I < 100; ++I) {
+      std::string Name = std::to_string(I);
+      std::string Doc = std::string(StringSize, 'x') + Name;
+      Symbol Sym = symbol(Name);
+      Sym.Documentation = Doc;
+      Slab.insert(Sym);
+    }
+    std::string Path = std::string(100 * StringSize, 'x') + ".cc";
+    FileSymbols FS(IndexContents::All, true);
+    FS.update("f1", std::make_unique<SymbolSlab>(std::move(Slab).build()),
+              refSlab(SymbolID("1"), Path.c_str()), nullptr, false);
+    return FS.buildIndex(Type)->estimateMemoryUsage();
+  };
+  for (IndexType Type : {IndexType::Light, IndexType::Heavy})
+    EXPECT_EQ(Estimate(Type, 0), Estimate(Type, 1000));
 }
 
 TEST(FileIndexTest, MacrosFromMainFile) {
