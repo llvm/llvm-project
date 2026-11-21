@@ -134,6 +134,68 @@ define i64 @split_operand([2 x i64] %agg, i64 %b) !dbg !32 {
   ret i64 %b, !dbg !34
 }
 
+; Constant vector operands are packed into a single integer, element 0 in the
+; low bits.
+define <2 x i8> @reg_and_vector_splat(<2 x i8> %v) !dbg !35 {
+  ; CHECK-LABEL: name: reg_and_vector_splat
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x i8>) = G_TRUNC [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   DBG_VALUE_LIST !34, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), [[TRUNC]](<2 x i8>), 65535, debug-location !35
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[TRUNC]](<2 x i8>), debug-location !35
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>), debug-location !35
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0, debug-location !35
+    #dbg_value(!DIArgList(<2 x i8> %v, <2 x i8> splat (i8 -1)), !36, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), !37)
+  ret <2 x i8> %v, !dbg !37
+}
+
+define <2 x i8> @reg_and_vector_elts(<2 x i8> %v) !dbg !38 {
+  ; CHECK-LABEL: name: reg_and_vector_elts
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x i8>) = G_TRUNC [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   DBG_VALUE_LIST !37, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), [[TRUNC]](<2 x i8>), 513, debug-location !38
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[TRUNC]](<2 x i8>), debug-location !38
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>), debug-location !38
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0, debug-location !38
+    #dbg_value(!DIArgList(<2 x i8> %v, <2 x i8> <i8 1, i8 2>), !39, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), !40)
+  ret <2 x i8> %v, !dbg !40
+}
+
+; Wide constants are kept; DWARF emission decides whether they can be described.
+define <4 x i32> @reg_and_wide_vector(<4 x i32> %v) !dbg !41 {
+  ; CHECK-LABEL: name: reg_and_wide_vector
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $q0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+  ; CHECK-NEXT:   DBG_VALUE_LIST !40, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), [[COPY]](<4 x i32>), i128 36893488147419103233, debug-location !41
+  ; CHECK-NEXT:   $q0 = COPY [[COPY]](<4 x i32>), debug-location !41
+  ; CHECK-NEXT:   RET_ReallyLR implicit $q0, debug-location !41
+    #dbg_value(!DIArgList(<4 x i32> %v, <4 x i32> <i32 1, i32 0, i32 2, i32 0>), !42, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), !43)
+  ret <4 x i32> %v, !dbg !43
+}
+
+; A constant vector with a poison element cannot be described.
+define <2 x i8> @reg_and_vector_poison_elt(<2 x i8> %v) !dbg !44 {
+  ; CHECK-LABEL: name: reg_and_vector_poison_elt
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   liveins: $d0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(<2 x i8>) = G_TRUNC [[COPY]](<2 x i32>)
+  ; CHECK-NEXT:   DBG_VALUE $noreg, 0, !43, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), debug-location !44
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(<2 x i32>) = G_ANYEXT [[TRUNC]](<2 x i8>), debug-location !44
+  ; CHECK-NEXT:   $d0 = COPY [[ANYEXT]](<2 x i32>), debug-location !44
+  ; CHECK-NEXT:   RET_ReallyLR implicit $d0, debug-location !44
+    #dbg_value(!DIArgList(<2 x i8> %v, <2 x i8> <i8 1, i8 poison>), !45, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_xor, DW_OP_stack_value), !46)
+  ret <2 x i8> %v, !dbg !46
+}
+
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!2}
 
@@ -169,3 +231,15 @@ define i64 @split_operand([2 x i64] %agg, i64 %b) !dbg !32 {
 !32 = distinct !DISubprogram(name: "split_operand", scope: !1, file: !1, line: 9, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
 !33 = !DILocalVariable(name: "v9", scope: !32, file: !1, line: 9, type: !3)
 !34 = !DILocation(line: 9, scope: !32)
+!35 = distinct !DISubprogram(name: "reg_and_vector_splat", scope: !1, file: !1, line: 10, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!36 = !DILocalVariable(name: "v10", scope: !35, file: !1, line: 10, type: !3)
+!37 = !DILocation(line: 10, scope: !35)
+!38 = distinct !DISubprogram(name: "reg_and_vector_elts", scope: !1, file: !1, line: 11, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!39 = !DILocalVariable(name: "v11", scope: !38, file: !1, line: 11, type: !3)
+!40 = !DILocation(line: 11, scope: !38)
+!41 = distinct !DISubprogram(name: "reg_and_wide_vector", scope: !1, file: !1, line: 12, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!42 = !DILocalVariable(name: "v12", scope: !41, file: !1, line: 12, type: !3)
+!43 = !DILocation(line: 12, scope: !41)
+!44 = distinct !DISubprogram(name: "reg_and_vector_poison_elt", scope: !1, file: !1, line: 13, type: !4, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!45 = !DILocalVariable(name: "v13", scope: !44, file: !1, line: 13, type: !3)
+!46 = !DILocation(line: 13, scope: !44)
