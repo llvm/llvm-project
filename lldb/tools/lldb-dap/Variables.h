@@ -22,12 +22,6 @@
 namespace lldb_dap {
 struct VariableReferenceStorage;
 
-enum ScopeKind : unsigned {
-  eScopeKindLocals,
-  eScopeKindGlobals,
-  eScopeKindRegisters
-};
-
 /// An Interface to get or find specific variables by name.
 class VariableStore {
 public:
