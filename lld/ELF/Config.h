@@ -21,6 +21,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CachePruning.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -305,7 +306,7 @@ struct Config {
   std::optional<llvm::DenseSet<llvm::StringRef>> retainSymbols;
   llvm::SmallVector<llvm::StringRef, 0> auxiliaryList;
   llvm::SmallVector<llvm::StringRef, 0> filterList;
-  llvm::SmallVector<llvm::StringRef, 0> passPlugins;
+  llvm::SmallVector<llvm::PassPlugin, 0> passPlugins;
   llvm::SmallVector<llvm::StringRef, 0> searchPaths;
   llvm::SmallVector<llvm::StringRef, 0> symbolOrderingFile;
   llvm::SmallVector<llvm::StringRef, 0> thinLTOModulesToCompile;

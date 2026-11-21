@@ -201,10 +201,12 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #undef HANDLE_EXTENSION
 
 static ArrayRef<PassPlugin *> getPassPlugins(const Config &Conf) {
-  // lto::LTO::run() loaded plugins requested by file. Direct callers must pass
-  // them pre-loaded.
+  // lto::LTO::run() loads the deprecated PassPluginFilenames. Direct callers
+  // must pass plugins pre-loaded.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   assert(Conf.PassPluginFilenames.empty() &&
          "Pass-plugins must be loaded before running LTO backends");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   return Conf.LoadedPassPlugins;
 }
 

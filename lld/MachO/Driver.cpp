@@ -43,6 +43,7 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
@@ -2506,12 +2507,19 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
                        arg->getSpelling());
 
+    // Make pass plugin options available before -mllvm parsing.
+    for (StringRef path : args::getStrings(args, OPT_load_pass_plugins)) {
+      Expected<PassPlugin> plugin = PassPlugin::load(path);
+      if (!plugin)
+        error(toString(plugin.takeError()));
+      else
+        config->passPlugins.push_back(std::move(*plugin));
+    }
+
     for (const Arg *arg : args.filtered(OPT_mllvm)) {
       parseClangOption(arg->getValue(), arg->getSpelling());
       config->mllvmOpts.emplace_back(arg->getValue());
     }
-
-    config->passPlugins = args::getStrings(args, OPT_load_pass_plugins);
 
     createSyntheticSections();
     createSyntheticSymbols();
