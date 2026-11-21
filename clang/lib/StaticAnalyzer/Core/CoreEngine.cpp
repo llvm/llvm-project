@@ -560,8 +560,8 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
 }
 
 ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
-                                   ProgramStateRef State, ExplodedNode *Pred,
-                                   bool MarkAsSink) const {
+                                   const ProgramStateRef &State,
+                                   ExplodedNode *Pred, bool MarkAsSink) const {
   bool IsPO = State->isPosteriorlyOverconstrained();
 
   bool IsNew;

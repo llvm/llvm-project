@@ -323,6 +323,17 @@ inline StoreRef &StoreRef::operator=(StoreRef const &newStore) {
   return *this;
 }
 
+inline StoreRef &StoreRef::operator=(StoreRef &&newStore) {
+  assert(&newStore.mgr == &mgr);
+  if (this != &newStore) {
+    if (store)
+      mgr.decrementReferenceCount(store);
+    store = newStore.store;
+    newStore.store = nullptr;
+  }
+  return *this;
+}
+
 // FIXME: Do we need to pass ProgramStateManager anymore?
 std::unique_ptr<StoreManager>
 CreateRegionStoreManager(ProgramStateManager &StMgr);

@@ -33,7 +33,9 @@ class StoreRef {
 public:
   StoreRef(Store store, StoreManager &smgr);
   StoreRef(const StoreRef &sr);
+  StoreRef(StoreRef &&sr) : store(sr.store), mgr(sr.mgr) { sr.store = nullptr; }
   StoreRef &operator=(StoreRef const &newStore);
+  StoreRef &operator=(StoreRef &&newStore);
   ~StoreRef();
 
   bool operator==(const StoreRef &x) const {

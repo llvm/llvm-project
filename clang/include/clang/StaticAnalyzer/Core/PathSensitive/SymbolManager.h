@@ -636,7 +636,7 @@ public:
 
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
-  void setReapedStore(StoreRef st) { reapedStore = st; }
+  void setReapedStore(StoreRef st) { reapedStore = std::move(st); }
 
 private:
   bool isLazilyCopiedRegion(const MemRegion *region) const;
