@@ -484,6 +484,7 @@ MCSymbol *MCStreamer::emitLineTableLabel() {
 
   MCSymbol *LineStreamLabel = getContext().createTempSymbol();
   MCDwarfLineEntry LabelLineEntry(nullptr, DwarfLoc, LineStreamLabel);
+  LabelLineEntry.Subsection = getCurrentSection().second;
   getContext()
       .getMCDwarfLineTable(getContext().getDwarfCompileUnitID())
       .getMCLineSections()
@@ -1638,13 +1639,13 @@ void MCStreamer::switchSectionNoPrint(MCSection *Section) {
 }
 
 MCSymbol *MCStreamer::endSection(MCSection *Section) {
-  // TODO: keep track of the last subsection so that this symbol appears in the
-  // correct place.
   MCSymbol *Sym = Section->getEndSymbol(Context);
   if (Sym->isInSection())
     return Sym;
 
-  switchSection(Section);
+  // Subsections are laid out in increasing order of their numbers, so the end
+  // of the section is the end of the highest-numbered subsection.
+  switchSection(Section, Section->getLastSubsection());
   emitLabel(Sym);
   return Sym;
 }

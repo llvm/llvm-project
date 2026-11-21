@@ -23044,22 +23044,27 @@ static SDValue performConcatVectorsCombine(SDNode *N,
           if (V.isUndef())
             return true;
           LoadSDNode *LD = dyn_cast<LoadSDNode>(V);
-          return LD && V.hasOneUse() && LD->isSimple() && !LD->isIndexed() &&
+          return LD && V.hasOneUser() && LD->isSimple() && !LD->isIndexed() &&
                  LD->getExtensionType() == ISD::NON_EXTLOAD;
         })) {
       EVT FVT = SrcVT == MVT::v2i8 ? MVT::f16 : MVT::f32;
       EVT NVT = EVT::getVectorVT(*DAG.getContext(), FVT, N->getNumOperands());
       SmallVector<SDValue> Ops;
+      SmallDenseMap<SDValue, SDValue> NewLoads;
 
       for (unsigned i = 0; i < N->getNumOperands(); i++) {
         SDValue V = N->getOperand(i);
         if (V.isUndef())
           Ops.push_back(DAG.getUNDEF(FVT));
         else {
-          LoadSDNode *LD = cast<LoadSDNode>(V);
-          SDValue NewLoad = DAG.getLoad(FVT, DL, LD->getChain(),
-                                        LD->getBasePtr(), LD->getMemOperand());
-          DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          // The same load may feed several operands; only convert it once.
+          SDValue &NewLoad = NewLoads[V];
+          if (!NewLoad) {
+            LoadSDNode *LD = cast<LoadSDNode>(V);
+            NewLoad = DAG.getLoad(FVT, DL, LD->getChain(), LD->getBasePtr(),
+                                  LD->getMemOperand());
+            DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), NewLoad.getValue(1));
+          }
           Ops.push_back(NewLoad);
         }
       }

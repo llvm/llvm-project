@@ -123,12 +123,13 @@ define void @write_imm_into_exec() {
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    s_mov_b64 exec, 0
-; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_mov_b64 exec, -1
+; CHECK-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; CHECK-NEXT:    s_mov_b64 s[0:1], exec
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use s[0:1]

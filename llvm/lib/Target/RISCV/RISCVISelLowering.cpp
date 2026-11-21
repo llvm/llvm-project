@@ -21337,6 +21337,20 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
   return Result;
 }
 
+// Specially handle negative power of two cases as to avoid
+// overflow conditions.
+// X * (-2^N) -> sub (0, (shl X, C1))
+static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
+                                    uint64_t MulAmt) {
+  uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
+  SDValue X = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(Log2_64(MulAmtLowBit), VT, DL);
+  SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
+  return DAG.getNegative(Shift, DL, VT);
+}
+
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
 static SDValue expandMulToAddOrSubOfShl(SDNode *N, SelectionDAG &DAG,
                                         uint64_t MulAmt) {
@@ -21535,8 +21549,13 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
+  // Only attempt to call expandMulToAddOrSubOfShl() on non
+  // power-of-two cases to avoid overflow conditions.
+  if (CNode->getAPIntValue().isNegatedPowerOf2()) {
+    return expandMulByNegPowTwo(N, DAG, MulAmt);
+  } else if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt)) {
     return V;
+  }
 
   if (!Subtarget.hasStdExtZmmul())
     return expandMulToNAFSequence(N, DAG, MulAmt);
