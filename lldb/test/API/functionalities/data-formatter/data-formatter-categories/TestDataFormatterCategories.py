@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class CategoriesDataFormatterTestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -18,6 +16,9 @@ class CategoriesDataFormatterTestCase(TestBase):
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
     @expectedFlakeyNetBSD
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

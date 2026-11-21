@@ -216,10 +216,12 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
     if (XRayThreshold == std::numeric_limits<uint64_t>::max())
       return false;
 
-    // Count the number of MachineInstr`s in MachineFunction
+    // Count the number of non-debug MachineInstrs in MachineFunction.
     uint64_t MICount = 0;
     for (const auto &MBB : MF)
-      MICount += MBB.size();
+      MICount += llvm::count_if(MBB.instrs(), [](const MachineInstr &MI) {
+        return !MI.isDebugInstr();
+      });
 
     bool TooFewInstrs = MICount < XRayThreshold;
 
@@ -272,9 +274,15 @@ bool XRayInstrumentation::run(MachineFunction &MF) {
   }
 
   if (!F.hasFnAttribute("xray-skip-entry")) {
-    // First, insert an PATCHABLE_FUNCTION_ENTER as the first instruction of the
-    // MachineFunction.
-    BuildMI(FirstMBB, FirstMI, FirstMI.getDebugLoc(),
+    // The sled always goes in the entry block rather than in the first block
+    // holding code. Optimizations such as tail recursion elimination can make
+    // the latter a loop header, and a sled inside the loop would report an
+    // entry per iteration but only a single exit.
+    MachineBasicBlock &EntryMBB = MF.front();
+    assert(EntryMBB.pred_empty() &&
+           "Function entry block has predecessors, the sled would be "
+           "re-executed by a backedge");
+    BuildMI(EntryMBB, EntryMBB.begin(), FirstMI.getDebugLoc(),
             TII->get(TargetOpcode::PATCHABLE_FUNCTION_ENTER));
   }
 

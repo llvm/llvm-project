@@ -72,8 +72,8 @@ entry:
 ; CHECK:        .cfi_offset 7, -32
 
 ; check that stack adjustment and handler are put in $v1 and $v0.
-; CHECK:        move    $3, $4
 ; CHECK:        move    $2, $5
+; CHECK:        move    $3, $4
 
 ; check that $a0-$a3 are restored from stack.
 ; CHECK:        ld      $4, [[offset0]]($sp)

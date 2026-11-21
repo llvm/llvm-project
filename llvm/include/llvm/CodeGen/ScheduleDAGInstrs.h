@@ -34,6 +34,7 @@
 namespace llvm {
 
   class AAResults;
+  struct CodeGenOptions;
   class LiveIntervals;
   class MachineFrameInfo;
   class MachineFunction;
@@ -107,6 +108,9 @@ namespace llvm {
 
   /// A ScheduleDAG for scheduling lists of MachineInstr.
   class LLVM_ABI ScheduleDAGInstrs : public ScheduleDAG {
+  public:
+    const CodeGenOptions &Opts;
+
   protected:
     const MachineLoopInfo *MLI = nullptr;
     const MachineFrameInfo &MFI;
@@ -294,8 +298,10 @@ namespace llvm {
     void dumpNode(const SUnit &SU) const override;
     void dump() const override;
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
     /// Returns a label for a DAG node that points to an instruction.
     std::string getGraphNodeLabel(const SUnit *SU) const override;
+#endif
 
     /// Returns a label for the region of code covered by the DAG.
     std::string getDAGName() const override;

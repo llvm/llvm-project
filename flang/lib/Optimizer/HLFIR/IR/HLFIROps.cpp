@@ -22,6 +22,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
@@ -792,6 +793,59 @@ getCharacterLengthIfStatic(mlir::Type t) {
     if (charType.hasConstantLen())
       return charType.getLen();
   return std::nullopt;
+}
+
+namespace {
+/// Fuse single-use concatenations before allocating their buffers. The reads
+/// of the inner operands move to the outer concatenation, so do not cross any
+/// operation that may change or release their storage. Allocations, like the
+/// hlfir.declare of a literal operand, are fine to cross. Only the first
+/// operand is fused, so that the operands are still read in the same order,
+/// which matters for volatile operands. Lowering creates left-nested chains.
+struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
+  using OpRewritePattern::OpRewritePattern;
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ConcatOp concat,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value string = concat.getStrings().front();
+    auto inner = string.getDefiningOp<hlfir::ConcatOp>();
+    if (!inner || inner->getBlock() != concat->getBlock())
+      return mlir::failure();
+    unsigned uses = 0;
+    llvm::SmallVector<hlfir::DestroyOp> destroys;
+    for (mlir::OpOperand &use : string.getUses()) {
+      if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(use.getOwner()))
+        destroys.push_back(destroy);
+      else
+        ++uses;
+    }
+    if (uses != 1)
+      return mlir::failure();
+    for (mlir::Operation *op = inner->getNextNode(); op != concat;
+         op = op->getNextNode()) {
+      auto effects = mlir::getEffectsRecursively(op);
+      if (!effects || llvm::any_of(*effects, [](const auto &effect) {
+            return mlir::isa<mlir::MemoryEffects::Write,
+                             mlir::MemoryEffects::Free>(effect.getEffect());
+          }))
+        return mlir::failure();
+    }
+    llvm::SmallVector<mlir::Value> strings(inner.getStrings());
+    llvm::append_range(strings, concat.getStrings().drop_front());
+    rewriter.modifyOpInPlace(
+        concat, [&]() { concat.getStringsMutable().assign(strings); });
+    for (auto destroy : destroys)
+      rewriter.eraseOp(destroy);
+    rewriter.eraseOp(inner);
+    return mlir::success();
+  }
+};
+
+} // namespace
+
+void hlfir::ConcatOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<InlineConcat>(context);
 }
 
 llvm::LogicalResult hlfir::ConcatOp::verify() {
@@ -1683,66 +1737,6 @@ void hlfir::EOShiftOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
-// PackOp
-//===----------------------------------------------------------------------===//
-
-llvm::LogicalResult hlfir::PackOp::verify() {
-  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
-  mlir::Value array = getArray();
-  auto arrayType = mlir::cast<fir::SequenceType>(
-      hlfir::getFortranElementOrSequenceType(array.getType()));
-  if (auto match = areMatchingTypes(
-          *this, hlfir::getFortranElementType(resultType),
-          arrayType.getElementType(),
-          /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
-      match.failed())
-    return emitOpError("ARRAY and the result must have the same element type");
-  if (hlfir::isPolymorphicType(resultType) !=
-      hlfir::isPolymorphicType(array.getType()))
-    return emitOpError("ARRAY must be polymorphic iff result is polymorphic");
-  if (resultType.getRank() != 1)
-    return emitOpError("result must be of rank 1");
-  if (!hlfir::isMaskArgument(getMask().getType()))
-    return emitOpError("MASK must be of logical type");
-
-  mlir::Type maskSeqTy =
-      hlfir::getFortranElementOrSequenceType(getMask().getType());
-  if (auto maskArrayType = mlir::dyn_cast<fir::SequenceType>(maskSeqTy)) {
-    llvm::ArrayRef<int64_t> arrayShape = arrayType.getShape();
-    llvm::ArrayRef<int64_t> maskShape = maskArrayType.getShape();
-    if (maskShape.size() != arrayShape.size())
-      return emitOpError("MASK must be conformable to ARRAY");
-    if (useStrictIntrinsicVerifier) {
-      constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
-      for (std::size_t i = 0; i < arrayShape.size(); ++i) {
-        if (arrayShape[i] != maskShape[i] && arrayShape[i] != unknownExtent &&
-            maskShape[i] != unknownExtent)
-          return emitOpError("MASK must be conformable to ARRAY");
-      }
-    }
-  }
-  if (mlir::Value vector = getVector()) {
-    auto vectorType = mlir::cast<fir::SequenceType>(
-        hlfir::getFortranElementOrSequenceType(vector.getType()));
-    if (vectorType.getDimension() != 1)
-      return emitOpError("VECTOR must be an array of rank 1");
-    if (auto match = areMatchingTypes(
-            *this, vectorType.getElementType(), arrayType.getElementType(),
-            /*allowCharacterLenMismatch=*/!useStrictIntrinsicVerifier);
-        match.failed())
-      return emitOpError("ARRAY and VECTOR must have the same element type");
-  }
-  return mlir::success();
-}
-
-void hlfir::PackOp::getEffects(
-    llvm::SmallVectorImpl<
-        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
-        &effects) {
-  getIntrinsicEffects(getOperation(), effects);
-}
-
-//===----------------------------------------------------------------------===//
 // ReshapeOp
 //===----------------------------------------------------------------------===//
 
@@ -1952,6 +1946,10 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
+mlir::Region *hlfir::ElementalOp::getElementCleanup() {
+  return &mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getCleanup();
+}
+
 llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
@@ -2003,6 +2001,29 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
   return mlir::success();
 }
 
+/// Erase a character expression whose only uses are hlfir.destroy, together
+/// with these hlfir.destroy. Only the character operations creating their own
+/// result storage are considered, since other expression producers may reuse
+/// storage that the hlfir.destroy releases.
+llvm::LogicalResult
+hlfir::DestroyOp::canonicalize(DestroyOp destroy,
+                               mlir::PatternRewriter &rewriter) {
+  mlir::Value expr = destroy.getExpr();
+  mlir::Operation *producer = expr.getDefiningOp();
+  if (!mlir::isa_and_nonnull<hlfir::ConcatOp, hlfir::CharTrimOp,
+                             hlfir::SetLengthOp, hlfir::CharExtremumOp>(
+          producer) ||
+      !mlir::wouldOpBeTriviallyDead(producer) ||
+      !llvm::all_of(expr.getUsers(), [](mlir::Operation *user) {
+        return mlir::isa<hlfir::DestroyOp>(user);
+      }))
+    return mlir::failure();
+  for (mlir::Operation *user : llvm::make_early_inc_range(expr.getUsers()))
+    rewriter.eraseOp(user);
+  rewriter.eraseOp(producer);
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // CopyInOp
 //===----------------------------------------------------------------------===//
@@ -2012,7 +2033,15 @@ void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::Value temp_box, mlir::Value var_is_present) {
   return build(builder, odsState,
                {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
-               temp_box, var_is_present);
+               temp_box, var_is_present, /*alignment=*/mlir::IntegerAttr{});
+}
+
+llvm::LogicalResult hlfir::CopyInOp::verify() {
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -115,7 +115,7 @@ TEST_F(MemtagDeathTest, ScopedDisableMemoryTagChecks) {
   EXPECT_NE(P, Buffer);
 
   SCUDO_EXPECT_DEATH(*P = 20, "");
-  ScopedDisableMemoryTagChecks Disable;
+  ScopedTestOnlyDisableMemoryTagChecks Disable;
   *P = 10;
 }
 

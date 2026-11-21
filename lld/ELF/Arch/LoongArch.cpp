@@ -37,13 +37,13 @@ public:
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   bool usesOnlyLowPageBits(RelType type) const override;
-  template <class ELFT, class RelTy>
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.is64)
-      elf::scanSection1<LoongArch, ELF64LE>(*this, sec, shard);
+      elf::scanSection1<ELF64LE>(*this, sec, shard);
     else
-      elf::scanSection1<LoongArch, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE>(*this, sec, shard);
   }
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -457,6 +457,21 @@ RelExpr LoongArch::getRelExpr(const RelType type, const Symbol &s,
   case R_LARCH_TLS_DTPREL32:
   case R_LARCH_TLS_DTPREL64:
     return R_DTPREL;
+  // TLS IE relocations, reverted by the extreme code model fallback in
+  // relocateAlloc() .
+  case R_LARCH_TLS_IE_PC_HI20:
+    return RE_LOONGARCH_GOT_PAGE_PC;
+  case R_LARCH_TLS_IE_PC_LO12:
+    return RE_LOONGARCH_GOT;
+  // TLS DESC relocations, similarly reverted by the extreme code model
+  // fallback in relocateAlloc().
+  case R_LARCH_TLS_DESC_PC_HI20:
+    return RE_LOONGARCH_TLSDESC_PAGE_PC;
+  case R_LARCH_TLS_DESC_PC_LO12:
+  case R_LARCH_TLS_DESC_LD:
+    return R_TLSDESC;
+  case R_LARCH_TLS_DESC_PCREL20_S2:
+    return R_TLSDESC_PC;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -478,7 +493,7 @@ bool LoongArch::usesOnlyLowPageBits(RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                                 unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -486,12 +501,12 @@ void LoongArch::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIndex = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    Symbol &sym = sec.file->getSymbol(symIndex);
     uint64_t offset = it->r_offset;
     if (sym.isUndefined() && symIndex != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    int64_t addend = rs.getAddend(*it, type);
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling

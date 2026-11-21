@@ -2,7 +2,7 @@
 ; FIXME(ndesaulniers): get this test to pass with -verify-machineinstrs
 ; enabled. https://github.com/llvm/llvm-project/issues/60827
 ; RUN: llc -mtriple=i386-linux-gnu %s -o - -stop-after=finalize-isel \
-; RUN:   -verify-machineinstrs=0 -start-before=x86-isel | FileCheck %s
+; RUN:   -verify-machineinstrs=0 -disable-mir-output-verify -start-before=x86-isel | FileCheck %s
 
 define i8 @emulator_cmpxchg_emulated() {
   ; CHECK-LABEL: name: emulator_cmpxchg_emulated
@@ -22,7 +22,7 @@ define i8 @emulator_cmpxchg_emulated() {
   ; CHECK-NEXT:   $al = COPY [[SETCCr]]
   ; CHECK-NEXT:   RET 0, $al
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.efaultu64.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.efaultu64.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   $al = COPY [[SETCCr1]]
   ; CHECK-NEXT:   RET 0, $al
@@ -62,7 +62,7 @@ define i32 @emulator_cmpxchg_emulated2() {
   ; CHECK-NEXT:   $eax = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.efaultu64.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.efaultu64.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   $eax = COPY %3
   ; CHECK-NEXT:   RET 0, $eax
 entry:
@@ -87,7 +87,7 @@ define i64 @multireg() {
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef, implicit-def $eax, implicit-def $edx, imm, %bb.2
+  ; CHECK-NEXT:   INLINEASM_BR &"", attdialect, regdef ops:2, implicit-def $eax, implicit-def $edx, imm, %bb.2
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gr32 = COPY $eax
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gr32 = COPY $edx
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gr32 = COPY [[COPY1]]
@@ -99,7 +99,7 @@ define i64 @multireg() {
   ; CHECK-NEXT:   $edx = COPY [[COPY2]]
   ; CHECK-NEXT:   RET 0, $eax, $edx
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.2.split (inlineasm-br-indirect-target):
+  ; CHECK-NEXT: bb.2.split (label-must-be-emitted, inlineasm-br-indirect-target):
   ; CHECK-NEXT:   liveins: $eax, $edx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:gr32 = COPY $eax

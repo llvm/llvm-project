@@ -20,7 +20,7 @@ def TruePredicate : Predicate<"true">;
 //   All instructions in the EVEX space can access the EGPR in their
 //   register/memory operands.
 //
-// For the above intructions, the only difference in encoding is reflected in
+// For the above instructions, the only difference in encoding is reflected in
 // the REX2/EVEX prefix when EGPR is used, i.e. the opcode and opcode name are
 // unchanged. We don’t add new entries in TD, and instead we extend GPR with
 // R16-R31 and make them allocatable only when the feature EGPR is available.
@@ -198,21 +198,21 @@ def HasADX       : Predicate<"Subtarget->hasADX()">;
 
 def HasX86_64    : Predicate<"Subtarget->hasX86_64()">;
 def Not64BitMode : Predicate<"!Subtarget->is64Bit()">,
-                             AssemblerPredicate<(all_of (not Is64Bit)), "Not 64-bit mode">;
+                             AssemblerPredicate<(none_of Is64Bit), "Not 64-bit mode">;
 def In64BitMode  : Predicate<"Subtarget->is64Bit()">,
                              AssemblerPredicate<(all_of Is64Bit), "64-bit mode">;
 
 def IsX32Mode  : Predicate<"Subtarget->getTargetTriple().isX32()">,
                             AssemblerPredicate<(all_of IsX32), "x32 ABI">;
 def NotX32Mode  : Predicate<"!Subtarget->getTargetTriple().isX32()">,
-                            AssemblerPredicate<(all_of (not IsX32)), "not x32 ABI">;
+                            AssemblerPredicate<(none_of IsX32), "not x32 ABI">;
 
 def IsLP64  : Predicate<"Subtarget->isTarget64BitLP64()">;
 def NotLP64 : Predicate<"!Subtarget->isTarget64BitLP64()">;
 def In16BitMode  : Predicate<"Subtarget->is16Bit()">,
                              AssemblerPredicate<(all_of Is16Bit), "16-bit mode">;
 def Not16BitMode : Predicate<"!Subtarget->is16Bit()">,
-                             AssemblerPredicate<(all_of (not Is16Bit)), "Not 16-bit mode">;
+                             AssemblerPredicate<(none_of Is16Bit), "Not 16-bit mode">;
 def In32BitMode  : Predicate<"Subtarget->is32Bit()">,
                              AssemblerPredicate<(all_of Is32Bit), "32-bit mode">;
 def IsWin64      : Predicate<"Subtarget->isTargetWin64()">;

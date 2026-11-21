@@ -15,10 +15,11 @@ define void @replicating_load_used_as_store_addr(ptr noalias %A) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP12:%.*]] = add i64 [[INDEX]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP11]], 1
-; CHECK-NEXT:    [[TMP16:%.*]] = add i64 [[TMP12]], 1
+; CHECK-NEXT:    [[TMP15:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP15]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP17:%.*]] = add i32 [[TMP7]], 2
+; CHECK-NEXT:    [[TMP18:%.*]] = add i32 [[TMP7]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[A]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr ptr, ptr [[A]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr ptr, ptr [[A]], i64 [[TMP11]]
@@ -27,10 +28,6 @@ define void @replicating_load_used_as_store_addr(ptr noalias %A) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = load ptr, ptr [[TMP19]], align 8
 ; CHECK-NEXT:    [[TMP14:%.*]] = load ptr, ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP8:%.*]] = trunc i64 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP17:%.*]] = trunc i64 [[TMP15]] to i32
-; CHECK-NEXT:    [[TMP18:%.*]] = trunc i64 [[TMP16]] to i32
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    store i32 [[TMP8]], ptr [[TMP6]], align 4
 ; CHECK-NEXT:    store i32 [[TMP17]], ptr [[TMP13]], align 4
@@ -434,9 +431,9 @@ define void @test_prefer_vector_addressing(ptr %start, ptr %ms, ptr noalias %src
 ; CHECK-LABEL: define void @test_prefer_vector_addressing(
 ; CHECK-SAME: ptr [[START:%.*]], ptr [[MS:%.*]], ptr noalias [[SRC:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoaddr ptr [[MS]] to i64
 ; CHECK-NEXT:    [[START2:%.*]] = ptrtoaddr ptr [[START]] to i64
+; CHECK-NEXT:    [[GEP_START:%.*]] = getelementptr i8, ptr [[START]], i64 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[START2]], 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP10]], i64 [[TMP0]])
 ; CHECK-NEXT:    [[TMP25:%.*]] = add i64 [[TMP1]], -3
@@ -757,7 +754,7 @@ exit:
   ret i32 %reduction.next
 }
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
 
 !0 = !{!1, !2, i64 0}
 !1 = !{!"", !2, i64 0}

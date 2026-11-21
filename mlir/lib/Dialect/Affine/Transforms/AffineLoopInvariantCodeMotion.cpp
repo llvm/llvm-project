@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Transforms/LoopInvariantCodeMotionUtils.h"
 
 namespace mlir {
 namespace affine {
@@ -95,8 +96,8 @@ static bool isOpLoopInvariant(Operation &op, AffineForOp loop,
       // FIXME: This is missing checking aliases.
       if (&op == user)
         continue;
-      if (hasEffect<MemoryEffects::Write>(user, memref) ||
-          (hasEffect<MemoryEffects::Read>(user, memref) &&
+      if (mightHaveEffect<MemoryEffects::Write>(user, memref) ||
+          (mightHaveEffect<MemoryEffects::Read>(user, memref) &&
            isa<AffineWriteOpInterface>(op))) {
         userIVs.clear();
         getAffineForIVs(*user, &userIVs);
@@ -204,6 +205,9 @@ void LoopInvariantCodeMotion::runOnAffineForOp(AffineForOp forOp) {
   for (auto *op : opsToMove) {
     op->moveBefore(forOp);
   }
+
+  // Hoist invariant ops nested in control-flow ops that stay in the loop.
+  moveLoopInvariantCodeFromNestedRegions(forOp);
 }
 
 void LoopInvariantCodeMotion::runOnOperation() {

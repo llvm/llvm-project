@@ -154,6 +154,8 @@ public:
 
   std::unique_ptr<lldb_private::CallFrameInfo> CreateCallFrameInfo() override;
 
+  lldb::addr_t GetTlsIndexAddress();
+
 protected:
   bool NeedsEndianSwap() const;
 

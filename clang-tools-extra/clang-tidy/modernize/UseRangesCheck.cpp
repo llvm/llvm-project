@@ -22,7 +22,6 @@ static constexpr const char *SingleRangeNames[] = {
     "all_of",
     "any_of",
     "none_of",
-    "for_each",
     "find",
     "find_if",
     "find_if_not",
@@ -35,7 +34,6 @@ static constexpr const char *SingleRangeNames[] = {
     "partition_point",
     "lower_bound",
     "upper_bound",
-    "equal_range",
     "binary_search",
     "push_heap",
     "pop_heap",
@@ -47,7 +45,6 @@ static constexpr const char *SingleRangeNames[] = {
     "shift_left",
     "shift_right",
     "is_partitioned",
-    "partition_copy",
     "sort",
     "stable_sort",
     "is_sorted",
@@ -56,7 +53,6 @@ static constexpr const char *SingleRangeNames[] = {
     "is_heap_until",
     "max_element",
     "min_element",
-    "minmax_element",
     "uninitialized_fill",
     "uninitialized_default_construct",
     "uninitialized_value_construct",
@@ -72,8 +68,16 @@ static constexpr const char *SingleRangeOutResultNames[] = {
     "transform",     "unique_copy", "uninitialized_copy", "uninitialized_move",
 };
 
+static constexpr const char *SingleRangeFunctionResultNames[] = {"for_each"};
+
+static constexpr const char *SingleRangeStructuredBindingNames[] = {
+    "equal_range", "minmax_element"};
+
+static constexpr const char *SingleRangeDiagnosticOnlyNames[] = {
+    "partition_copy"};
+
 static constexpr const char *TwoRangeNames[] = {
-    "equal",    "mismatch", "includes",       "lexicographical_compare",
+    "equal",    "includes", "lexicographical_compare",
     "find_end", "search",   "is_permutation",
 };
 
@@ -85,6 +89,8 @@ static constexpr const char *TwoRangeOutResultNames[] = {
     "set_symmetric_difference",
     "set_union",
 };
+
+static constexpr const char *TwoRangeStructuredBindingNames[] = {"mismatch"};
 
 static constexpr const char *SinglePivotRangeNames[] = {"inplace_merge"};
 
@@ -159,6 +165,12 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
       PolicyKind::AppendAccessorForUsedResult, ".begin()"};
   const ResultPolicy OutResultPolicy = {PolicyKind::AppendAccessorForUsedResult,
                                         ".out"};
+  const ResultPolicy FunctionResultPolicy = {
+      PolicyKind::AppendAccessorForUsedResult, ".fun"};
+  const ResultPolicy StructuredBindingPolicy = {
+      PolicyKind::KeepFixItOnlyForStructuredBinding, {}};
+  const ResultPolicy DiagnosticOnlyPolicy = {
+      PolicyKind::SuppressFixItForUsedResult, {}};
 
   struct AlgorithmGroup {
     ArrayRef<Signature> Signatures;
@@ -169,8 +181,13 @@ utils::UseRangesCheck::ReplacerMap UseRangesCheck::getReplacerMap() const {
       {SingleRangeFunc, SingleRangeNames, DefaultPolicy},
       {SingleRangeFunc, SingleRangeBeginResultNames, BeginResultPolicy},
       {SingleRangeFunc, SingleRangeOutResultNames, OutResultPolicy},
+      {SingleRangeFunc, SingleRangeFunctionResultNames, FunctionResultPolicy},
+      {SingleRangeFunc, SingleRangeStructuredBindingNames,
+       StructuredBindingPolicy},
+      {SingleRangeFunc, SingleRangeDiagnosticOnlyNames, DiagnosticOnlyPolicy},
       {TwoRangeFunc, TwoRangeNames, DefaultPolicy},
       {TwoRangeFunc, TwoRangeOutResultNames, OutResultPolicy},
+      {TwoRangeFunc, TwoRangeStructuredBindingNames, StructuredBindingPolicy},
       {SinglePivotFunc, SinglePivotRangeNames, DefaultPolicy},
       {SinglePivotFunc, SinglePivotRangeBeginResultNames, BeginResultPolicy},
       {SinglePivotFunc, SinglePivotRangeOutResultNames, OutResultPolicy},

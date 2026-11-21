@@ -68,6 +68,22 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
            "elements as the result");
     break;
   }
+  case RISCVISD::PNCLIPP:
+  case RISCVISD::PNCLIPUP: {
+    EVT VT = N->getValueType(0);
+    EVT OpVT = N->getOperand(0).getValueType();
+    assert(VT.isVector() && "Expected vector result");
+    assert(VT.getSizeInBits() == OpVT.getSizeInBits() &&
+           "Expected result and operands to have the same size!");
+    assert(N->getOperand(1).getValueType() == OpVT &&
+           "Expected operands to have the same type");
+    assert(((!OpVT.isVector() && VT.getVectorNumElements() == 2) ||
+            (OpVT.isVector() &&
+             OpVT.getVectorNumElements() * 2 == VT.getVectorNumElements())) &&
+           "Expected operands to be scalar or a vector with half the number of "
+           "elements");
+    break;
+  }
   }
 #endif
 }
@@ -75,7 +91,8 @@ void RISCVSelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
 SDValue RISCVSelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
+  IsTailCall = false;
   const auto &Subtarget = DAG.getSubtarget<RISCVSubtarget>();
   // We currently do this only for Xqcilsm
   if (!Subtarget.hasVendorXqcilsm())

@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSVE/IR/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -95,7 +96,7 @@ static FailureOr<Value> getSVELegalizedMemref(Value illegalMemref) {
 /// explicitly adds a reasonable alignment to allocas of scalable types.
 struct RelaxScalableVectorAllocaAlignment
     : public OpRewritePattern<memref::AllocaOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::AllocaOp allocaOp,
                                 PatternRewriter &rewriter) const override {
@@ -178,7 +179,7 @@ struct LegalizeSVEMaskAllocation : public OpRewritePattern<AllocLikeOp> {
 /// ```
 struct LegalizeSVEMaskTypeCastConversion
     : public OpRewritePattern<vector::TypeCastOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TypeCastOp typeCastOp,
                                 PatternRewriter &rewriter) const override {
@@ -221,7 +222,7 @@ struct LegalizeSVEMaskTypeCastConversion
 /// ```
 struct LegalizeSVEMaskStoreConversion
     : public OpRewritePattern<memref::StoreOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::StoreOp storeOp,
                                 PatternRewriter &rewriter) const override {
@@ -268,7 +269,7 @@ struct LegalizeSVEMaskStoreConversion
 /// %reload = arm_sve.convert_from_svbool %reload : vector<[4]xi1>
 /// ```
 struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(memref::LoadOp loadOp,
                                 PatternRewriter &rewriter) const override {
@@ -313,13 +314,15 @@ struct LegalizeSVEMaskLoadConversion : public OpRewritePattern<memref::LoadOp> {
 /// ```
 /// %collapse_shape = memref.collapse_shape %M [[0], [1, 2, 3]]
 ///   : memref<?x?x2x8xi8> into memref<?x?xi8>
-/// %0 = vector.transfer_read  %collapse_shape[%i, %j], %c0_i8
+/// %c16 = arith.constant 16 : index
+/// %idx = arith.muli %j, %c16 : index
+/// %0 = vector.transfer_read  %collapse_shape[%i, %idx], %c0_i8
 ///   {in_bounds = [false, true]}
 ///   : memref<?x?xi8>, vector<2x[64]xi8>
 /// %1 = vector.shape_cast %0 : vector<2x[64]xi8> to vector<2x[4]x2x8xi8>
 /// ```
 struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
                                 PatternRewriter &rewriter) const override {
@@ -420,8 +423,17 @@ struct LegalizeTransferRead : public OpRewritePattern<vector::TransferReadOp> {
         VectorType::get(shape, origVT.getElementType(),
                         origScalableDims.drop_back(numCollapseDims - 1));
 
-    // Drop the extra (zero) indices.
-    auto indices = readOp.getIndices().drop_back(numCollapseDims - 1);
+    // Drop the extra (zero) indices. The index of the scalable dimension now
+    // indexes the collapsed dimension, so scale it by the size of the
+    // dimensions collapsed into it.
+    SmallVector<Value> indices(
+        readOp.getIndices().drop_back(numCollapseDims - 1));
+    Value scale = arith::ConstantIndexOp::create(
+        rewriter, readOp.getLoc(),
+        ShapedType::getNumElements(
+            origVT.getShape().take_back(numCollapseDims - 1)));
+    indices.back() = rewriter.createOrFold<arith::MulIOp>(
+        readOp.getLoc(), indices.back(), scale);
 
     // Create the new `transfer_read`.
     auto newReadOp = vector::TransferReadOp::create(

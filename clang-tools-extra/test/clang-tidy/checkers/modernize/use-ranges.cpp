@@ -186,6 +186,43 @@ void Positives() {
   // CHECK-FIXES: auto RotateCopyOutput =
   // CHECK-FIXES-NEXT: std::ranges::rotate_copy(I, I.begin() + 2, J.begin()).out;
 
+  auto ForEachResult =
+      std::for_each(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto ForEachResult =
+  // CHECK-FIXES-NEXT: std::ranges::for_each(I, [](int N) { return N == 0; }).fun;
+
+  std::for_each(I.begin(), I.end(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: std::ranges::for_each(I, [](int N) { return N == 0; });
+
+  auto [EqualRangeBegin, EqualRangeEnd] =
+      std::equal_range(I.begin(), I.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [EqualRangeBegin, EqualRangeEnd] =
+  // CHECK-FIXES-NEXT: std::ranges::equal_range(I, 0);
+
+  auto [MinElement, MaxElement] = std::minmax_element(I.begin(), I.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:35: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [MinElement, MaxElement] = std::ranges::minmax_element(I);
+
+  auto [MismatchBegin1, MismatchBegin2] =
+      std::mismatch(I.begin(), I.end(), J.begin(), J.end());
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use a ranges version of this algorithm
+  // CHECK-FIXES: auto [MismatchBegin1, MismatchBegin2] =
+  // CHECK-FIXES-NEXT: std::ranges::mismatch(I, J);
+
+  auto EqualRangeResult = std::equal_range(I.begin(), I.end(), 0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:27: warning: use a ranges version of this algorithm
+
+  auto PartitionCopyResult = std::partition_copy(
+      I.begin(), I.end(), J.begin(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-2]]:30: warning: use a ranges version of this algorithm
+
+  auto [PartitionCopyTrue, PartitionCopyFalse] = std::partition_copy(
+      I.begin(), I.end(), J.begin(), J.begin(), [](int N) { return N == 0; });
+  // CHECK-MESSAGES: :[[@LINE-2]]:50: warning: use a ranges version of this algorithm
+
   std::includes(I.begin(), I.end(), I.begin(), I.end());
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use a ranges version of this algorithm
   // CHECK-FIXES: std::ranges::includes(I, I);

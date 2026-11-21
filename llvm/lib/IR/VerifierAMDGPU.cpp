@@ -188,9 +188,8 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
       // AMDGPUUnifyDivergentExitNodes, which replaces the block's original
       // unreachable terminator by a call to amdgcn_unreachable + a return.
       const Instruction *Term = CBI->getIndirectDest(0)->getTerminator();
-      const CallInst *CI =
-          Term ? dyn_cast_if_present<CallInst>(Term->getPrevNode()) : nullptr;
-      Check(isa_and_nonnull<UnreachableInst>(Term) ||
+      const CallInst *CI = dyn_cast_if_present<CallInst>(Term->getPrevNode());
+      Check(isa<UnreachableInst>(Term) ||
                 (CI && CI->getIntrinsicID() == Intrinsic::amdgcn_unreachable),
             "callbr amdgcn_kill indirect dest needs to be unreachable");
     }
@@ -361,7 +360,7 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     Check(Src0Ty->getNumElements() >= GetFormatNumRegs(CBSZ),
           "invalid vector type for format", &Call, Src0, Call.getArgOperand(3));
     Check(Src1Ty->getNumElements() >= GetFormatNumRegs(BLGP),
-          "invalid vector type for format", &Call, Src1, Call.getArgOperand(5));
+          "invalid vector type for format", &Call, Src1, Call.getArgOperand(4));
     break;
   }
   case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
@@ -433,7 +432,15 @@ void llvm::verifyAMDGPUIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
           &Call, Op);
     break;
   }
+  case Intrinsic::amdgcn_av_load_b8:
+  case Intrinsic::amdgcn_av_load_b16:
+  case Intrinsic::amdgcn_av_load_b32:
+  case Intrinsic::amdgcn_av_load_b64:
   case Intrinsic::amdgcn_av_load_b128:
+  case Intrinsic::amdgcn_av_store_b8:
+  case Intrinsic::amdgcn_av_store_b16:
+  case Intrinsic::amdgcn_av_store_b32:
+  case Intrinsic::amdgcn_av_store_b64:
   case Intrinsic::amdgcn_av_store_b128: {
     MetadataAsValue *Op =
         cast<MetadataAsValue>(Call.getArgOperand(Call.arg_size() - 1));

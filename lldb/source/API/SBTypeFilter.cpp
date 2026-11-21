@@ -88,9 +88,9 @@ const char *SBTypeFilter::GetExpressionPathAtIndex(uint32_t i) {
   if (!IsValid())
     return nullptr;
 
-  const char *item = m_opaque_sp->GetExpressionPathAtIndex(i);
-  if (item && *item == '.')
-    item++;
+  llvm::StringRef item = m_opaque_sp->GetExpressionPathAtIndex(i);
+  if (item.starts_with('.'))
+    item = item.drop_front();
   return ConstString(item).GetCString();
 }
 
@@ -149,7 +149,7 @@ bool SBTypeFilter::operator!=(lldb::SBTypeFilter &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
 
   return m_opaque_sp != rhs.m_opaque_sp;
 }

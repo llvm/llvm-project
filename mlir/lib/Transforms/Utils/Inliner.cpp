@@ -437,10 +437,14 @@ public:
 
 private:
   /// Optimize the nodes within the given SCC with one of the held optimization
-  /// pass pipelines. Returns failure if an error occurred during the
-  /// optimization of the SCC, success otherwise.
+  /// pass pipelines. `inlinedIntoSCC` indicates whether a previous iteration
+  /// already inlined into this SCC; the caller only repeats after a
+  /// successful inline, so a first round always passes false. Returns failure
+  /// if an error occurred during the optimization of the SCC, success
+  /// otherwise.
   LogicalResult optimizeSCC(CallGraph &cg, CGUseList &useList,
-                            CallGraphSCC &currentSCC, MLIRContext *context);
+                            CallGraphSCC &currentSCC, MLIRContext *context,
+                            bool inlinedIntoSCC);
 
   /// Optimize the nodes within the given SCC in parallel. Returns failure if an
   /// error occurred during the optimization of the SCC, success otherwise.
@@ -480,7 +484,8 @@ LogicalResult Inliner::Impl::inlineSCC(InlinerInterfaceImpl &inlinerIface,
   // Conservatively retain proven recursive graph edges across iterations.
   BlockedEdges blockedEdges;
   do {
-    if (failed(optimizeSCC(inlinerIface.cg, useList, currentSCC, context)))
+    if (failed(optimizeSCC(inlinerIface.cg, useList, currentSCC, context,
+                           /*inlinedIntoSCC=*/iterationCount != 0)))
       return failure();
     if (failed(
             inlineCallsInSCC(inlinerIface, useList, currentSCC, blockedEdges)))
@@ -491,7 +496,17 @@ LogicalResult Inliner::Impl::inlineSCC(InlinerInterfaceImpl &inlinerIface,
 
 LogicalResult Inliner::Impl::optimizeSCC(CallGraph &cg, CGUseList &useList,
                                          CallGraphSCC &currentSCC,
-                                         MLIRContext *context) {
+                                         MLIRContext *context,
+                                         bool inlinedIntoSCC) {
+  // With no pipeline configured and no successful inlining in this SCC yet,
+  // every node simplified below is unchanged since the use list was built:
+  // inlining only modifies callers in the SCC being processed, and nodes
+  // with nested children are excluded from simplification. Skip the no-op
+  // round.
+  if (!inlinedIntoSCC && inliner.config.getOpPipelines().empty() &&
+      !inliner.config.getDefaultPipeline())
+    return success();
+
   // Collect the sets of nodes to simplify.
   SmallVector<CallGraphNode *, 4> nodesToVisit;
   for (auto *node : currentSCC) {

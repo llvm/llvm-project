@@ -43,6 +43,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
 
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -59,10 +60,16 @@ public:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void BPFCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
+  const BPFSubtarget *Subtarget = getTM().getSubtargetImpl();
+
   addFunctionPass(AtomicExpandPass(TM), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(BPFCheckAndAdjustIRPass(), PMW);
+  if (Subtarget->hasFuncTable())
+    addModulePass(BPFFuncTablePass(), PMW);
 
   Base::addIRPasses(PMW);
 }
@@ -124,8 +131,6 @@ void BPFCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void BPFCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(BPFAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 static Expected<bool> parseBPFPreserveStaticOffsetOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "allow-partial",

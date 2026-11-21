@@ -788,7 +788,7 @@ private:
 
   /// Set by findRoots.
   Pattern *MatchRoot = nullptr;
-  SmallDenseSet<InstructionPattern *, 2> ApplyRoots;
+  SmallSetVector<InstructionPattern *, 2> ApplyRoots;
 
   SmallVector<MatchDataDef, 2> MatchDatas;
   SmallVector<PatternAlternatives, 1> PermutationsToEmit;

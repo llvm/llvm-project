@@ -94,6 +94,14 @@ void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                          VT.getEVTString());
     break;
   }
+  case X86ISD::SETCC_CARRY: {
+    // SETCC_CARRY materializes CF as 0/-1, so the condition must be COND_B.
+    auto *CC = dyn_cast<ConstantSDNode>(N->getOperand(0));
+    if (!CC || CC->getZExtValue() != X86::COND_B)
+      report_fatal_error("invalid node: " + Twine(N->getOperationName(&DAG)) +
+                         " operand #0 must be X86::COND_B");
+    break;
+  }
   }
 }
 
@@ -268,7 +276,8 @@ static SDValue emitConstantSizeRepstos(SelectionDAG &DAG,
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemset(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Val,
     SDValue Size, Align Alignment, bool isVolatile, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo) const {
+    bool &IsTailCall, MachinePointerInfo DstPtrInfo) const {
+  IsTailCall = false;
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 
@@ -388,8 +397,9 @@ static SDValue emitConstantSizeRepmov(
 SDValue X86SelectionDAGInfo::EmitTargetCodeForMemcpy(
     SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
     SDValue Size, Align DstAlign, Align SrcAlign, bool isVolatile,
-    bool AlwaysInline, MachinePointerInfo DstPtrInfo,
+    bool AlwaysInline, bool &IsTailCall, MachinePointerInfo DstPtrInfo,
     MachinePointerInfo SrcPtrInfo) const {
+  IsTailCall = false;
   const X86Subtarget &Subtarget =
       DAG.getMachineFunction().getSubtarget<X86Subtarget>();
 

@@ -515,6 +515,10 @@ public:
   /// (files, functions) should or should not be instrumented.
   std::vector<std::string> ProfileListFiles;
 
+  /// Names of BPF enums whose enumerators are not relocated, from
+  /// -fbpf-no-enum-reloc=.
+  std::vector<std::string> BPFNoEnumRelocs;
+
   clang::ObjCRuntime ObjCRuntime;
 
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
@@ -716,6 +720,14 @@ public:
   bool assumeFunctionsAreConvergent() const {
     return ConvergentFunctions;
   }
+
+  /// Return true if using -fbounds-safety in full or attribute-only mode.
+  /// Attribute-only mode exists only downstream, where this predicate gates
+  /// behavior that diverges from upstream. It is kept here to minimize that
+  /// divergence.
+  // TODO: Remove this once upstream and downstream no longer diverge and
+  // attribute-only mode is deprecated downstream.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
 
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.

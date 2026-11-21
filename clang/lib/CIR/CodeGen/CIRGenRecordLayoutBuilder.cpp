@@ -22,8 +22,8 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "clang/CodeGenUtils/CodeGenUtils.h"
 #include "clang/CodeGenUtils/RecordLayoutUtils.h"
+#include "clang/CodeGenUtils/TargetUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <memory>
@@ -141,30 +141,16 @@ struct CIRRecordLowering final {
   void calculateZeroInit();
 
   CharUnits getSize(mlir::Type Ty) {
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeSize(Ty));
+    return CharUnits::fromQuantity(dataLayout.getTypeAllocSize(Ty));
   }
   CharUnits getSizeInBits(mlir::Type ty) {
     return CharUnits::fromQuantity(dataLayout.layout.getTypeSizeInBits(ty));
   }
 
-  CharUnits getMemberAlignment(mlir::Type Ty) {
-    // An access unit takes the alignment of its storage type. A zero-width
-    // bit-field has no storage and so imposes no alignment.
-    if (auto bitFieldTy = mlir::dyn_cast<cir::BitFieldType>(Ty)) {
-      if (mlir::Type storage = bitFieldTy.getStorageType())
-        return getMemberAlignment(storage);
-      return CharUnits::One();
-    }
-    // Recurse on Arrays, they have the member alignment of their element type.
-    if (auto arrayTy = mlir::dyn_cast<cir::ArrayType>(Ty))
-      return getMemberAlignment(arrayTy.getElementType());
-    // Int types (_BitInt in particular) share the alignment of their storage
-    // type.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(Ty))
-      return CharUnits::fromQuantity(
-          intTy.getStorageTypeAlignment(dataLayout.layout));
-
-    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(Ty));
+  /// The record is marked packed when a member's offset is not a multiple of
+  /// this alignment.
+  CharUnits getMemberAlignment(mlir::Type ty) {
+    return CharUnits::fromQuantity(dataLayout.layout.getTypeABIAlignment(ty));
   }
 
   bool isZeroInitializable(const FieldDecl *fd) {
@@ -249,7 +235,31 @@ struct CIRRecordLowering final {
       cirGenTypes.getCGModule().errorNYI(recordDecl->getSourceRange(),
                                          "getStorageType for bitfields");
     }
+    if (hasBoolVectorStorageAlignMismatch(type))
+      cirGenTypes.getCGModule().errorNYI(
+          fieldDecl->getSourceRange(),
+          "getStorageType for bool vector whose storage integer is aligned "
+          "differently from the vector");
     return type;
+  }
+
+  /// Whether \p type, or the innermost element type of an array \p type, is a
+  /// bool vector whose storage integer is aligned differently from the
+  /// vector.  A bool vector is stored as an integer with one bit per element,
+  /// at least a byte wide.  The vector is aligned to its own size, so an
+  /// integer with the same alignment also has the same allocation size.
+  /// Classic CodeGen lays a mismatched member out as that integer and fills
+  /// the difference with padding bytes, which this layout does not do yet.
+  bool hasBoolVectorStorageAlignMismatch(mlir::Type type) {
+    while (auto arrTy = mlir::dyn_cast<cir::ArrayType>(type))
+      type = arrTy.getElementType();
+    auto vecTy = mlir::dyn_cast<cir::VectorType>(type);
+    if (!vecTy || !mlir::isa<cir::BoolType>(vecTy.getElementType()))
+      return false;
+    auto storageTy =
+        mlir::IntegerType::get(type.getContext(), vecTy.getBoolStorageWidth());
+    return dataLayout.layout.getTypeABIAlignment(storageTy) !=
+           dataLayout.layout.getTypeABIAlignment(vecTy);
   }
 
   uint64_t getFieldBitOffset(const FieldDecl *fieldDecl) {
@@ -940,10 +950,29 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
       hasTrivialDestructor = cxxRD->hasTrivialDestructor();
     const auto &astLayout = astContext.getASTRecordLayout(rd);
     uint64_t recordAlignInBytes = astLayout.getAlignment().getQuantity();
+    uint64_t unadjustedAlignInBytes =
+        astLayout.getUnadjustedAlignment().getQuantity();
+    bool isTransparentUnion = rd->hasAttr<TransparentUnionAttr>();
+    bool hasFlexibleArrayMember = rd->hasFlexibleArrayMember();
 
-    cgm.addRecordLayout(ty->getName(), cir::RecordLayoutAttr::get(
-                                           mlirCtx, apk, hasTrivialDestructor,
-                                           recordAlignInBytes));
+    auto addLayout = [&](mlir::StringAttr name, uint64_t align,
+                         uint64_t unadjusted) {
+      cgm.addRecordLayout(name, cir::RecordLayoutAttr::get(
+                                    mlirCtx, apk, hasTrivialDestructor, align,
+                                    unadjusted, isTransparentUnion,
+                                    hasFlexibleArrayMember));
+    };
+    addLayout(ty->getName(), recordAlignInBytes, unadjustedAlignInBytes);
+
+    // The base subobject is a separate named type. Record the non-virtual
+    // alignment for it, and keep the unadjusted alignment within that
+    // alignment. The AST has no non-virtual unadjusted alignment, so use the
+    // record's unadjusted alignment, capped at the non-virtual alignment.
+    if (baseTy && baseTy != *ty) {
+      uint64_t baseAlign = astLayout.getNonVirtualAlignment().getQuantity();
+      uint64_t baseUnadjusted = std::min(unadjustedAlignInBytes, baseAlign);
+      addLayout(baseTy.getName(), baseAlign, baseUnadjusted);
+    }
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

@@ -12,7 +12,8 @@ declare i1 @cond()
 define void @test_monotonic_ptr_iv_inc_1_struct_type(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -32,7 +33,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -62,7 +64,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_0(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type_offset_0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 0
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 0
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -82,7 +85,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_0(ptr %start, i16 %l
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len, i32 0
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx, i32 0
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -112,7 +116,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_16(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type_offset_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -133,7 +138,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_16(ptr %start, i16 %
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len, i32 1
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx, i32 1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -163,7 +169,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_struct_type_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 0
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 0
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -186,7 +193,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type_with_early_exit(ptr %start,
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len, i32 0
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx, i32 0
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -220,7 +228,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_0_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type_offset_0_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 0
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 0
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -243,7 +252,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_0_with_early_exit(pt
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len, i32 0
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx, i32 0
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -277,7 +287,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_16_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_struct_type_offset_16_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, i8, i8 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -301,7 +312,8 @@ define void @test_monotonic_ptr_iv_inc_1_struct_type_offset_16_with_early_exit(p
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i16 %len, i32 1
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, i8, i8}, ptr %start, i64 %upper.idx, i32 1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -335,7 +347,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_struct_type_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_struct_type_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -358,7 +371,8 @@ define void @test_monotonic_ptr_iv_inc_2_struct_type_with_early_exit(ptr %start,
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -392,7 +406,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_struct_type_offset_0_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_struct_type_offset_0_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -415,7 +430,8 @@ define void @test_monotonic_ptr_iv_inc_2_struct_type_offset_0_with_early_exit(pt
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -449,7 +465,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_2_struct_type_offset_16_with_early_exit(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_2_struct_type_offset_16_with_early_exit(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i32, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -473,7 +490,8 @@ define void @test_monotonic_ptr_iv_inc_2_struct_type_offset_16_with_early_exit(p
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i32, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i32, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -507,7 +525,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -530,7 +549,8 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct(ptr %start, i16 %len) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -564,7 +584,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_64(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i32 1
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i32 1
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -588,7 +609,8 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_64(ptr %st
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i16 %len, i32 1, i32 1
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i64 %upper.idx, i32 1, i32 1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -622,7 +644,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_32(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i32 1
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i32 1
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -645,7 +668,8 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_32(ptr %st
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i16 %len, i32 1, i32 1
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i64 %upper.idx, i32 1, i32 1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -679,7 +703,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_16(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i32 1
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, { i16, i16 }, i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i32 1
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -702,7 +727,8 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_32_step_16(ptr %st
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i16 %len, i32 1, i32 1
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, {i16, i16}, i16}, ptr %start, i64 %upper.idx, i32 1, i32 1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -736,7 +762,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_16(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -759,7 +787,9 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -793,7 +823,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_16_2(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_16_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -816,7 +848,9 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -850,7 +884,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_32(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -873,7 +909,9 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -907,7 +945,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_32_2(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_32_2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -930,7 +970,9 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -964,7 +1006,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_64(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -988,7 +1032,9 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -1022,7 +1068,9 @@ exit:
 define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_var(ptr %start, i16 %len, i16 %step) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_step_var(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i16 [[LEN:%.*]], i32 1, i16 [[LEN]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER_IDX1:%.*]] = sext i16 [[LEN]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds { i16, [10 x i32], i16 }, ptr [[START:%.*]], i64 [[UPPER_IDX]], i32 1, i64 [[UPPER_IDX1]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -1041,13 +1089,16 @@ define void @test_monotonic_ptr_iv_inc_1_nested_struct_offset_16_plus_32_var_ste
 ; CHECK-NEXT:    br i1 [[AND]], label [[LOOP_LATCH]], label [[EXIT]]
 ; CHECK:       loop.latch:
 ; CHECK-NEXT:    call void @use(ptr [[PTR_IV]])
-; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i16, ptr [[PTR_IV]], i16 [[STEP:%.*]]
+; CHECK-NEXT:    [[PTR_IV_NEXT_IDX:%.*]] = sext i16 [[STEP:%.*]] to i64
+; CHECK-NEXT:    [[PTR_IV_NEXT]] = getelementptr inbounds i16, ptr [[PTR_IV]], i64 [[PTR_IV_NEXT_IDX]]
 ; CHECK-NEXT:    br label [[LOOP_HEADER]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i16 %len, i32 1, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper.idx1 = sext i16 %len to i64
+  %upper = getelementptr inbounds {i16, [10 x i32], i16}, ptr %start, i64 %upper.idx, i32 1, i64 %upper.idx1
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -1071,7 +1122,8 @@ loop.next:
 
 loop.latch:
   call void @use(ptr %ptr.iv)
-  %ptr.iv.next = getelementptr inbounds i16, ptr %ptr.iv, i16 %step
+  %ptr.iv.next.idx = sext i16 %step to i64
+  %ptr.iv.next = getelementptr inbounds i16, ptr %ptr.iv, i64 %ptr.iv.next.idx
   br label %loop.header
 
 exit:
@@ -1081,7 +1133,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_48(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_48(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -1105,7 +1158,8 @@ define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i64, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i64, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -1139,7 +1193,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_64(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_64(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -1162,7 +1217,8 @@ define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_6
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i64, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i64, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 
@@ -1196,7 +1252,8 @@ exit:
 define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_80(ptr %start, i16 %len) {
 ; CHECK-LABEL: @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_80(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i16 [[LEN:%.*]]
+; CHECK-NEXT:    [[UPPER_IDX:%.*]] = sext i16 [[LEN:%.*]] to i64
+; CHECK-NEXT:    [[UPPER:%.*]] = getelementptr inbounds i64, ptr [[START:%.*]], i64 [[UPPER_IDX]]
 ; CHECK-NEXT:    [[LEN_NEG:%.*]] = icmp slt i16 [[LEN]], 0
 ; CHECK-NEXT:    br i1 [[LEN_NEG]], label [[EXIT:%.*]], label [[LOOP_PH:%.*]]
 ; CHECK:       loop.ph:
@@ -1220,7 +1277,8 @@ define void @test_monotonic_ptr_iv_inc_with_struct_type_with_early_exit_offset_8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %upper = getelementptr inbounds i64, ptr %start, i16 %len
+  %upper.idx = sext i16 %len to i64
+  %upper = getelementptr inbounds i64, ptr %start, i64 %upper.idx
   %len.neg = icmp slt i16 %len, 0
   br i1 %len.neg, label %exit, label %loop.ph
 

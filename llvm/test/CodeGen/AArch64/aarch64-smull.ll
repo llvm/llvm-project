@@ -1759,11 +1759,10 @@ define <8 x i32> @umull_and_v8i32_dup(<8 x i16> %src1, i32 %src2) {
 ; CHECK-GI-LABEL: umull_and_v8i32_dup:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and w8, w0, #0xff
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.4s, w8
-; CHECK-GI-NEXT:    xtn v1.4h, v1.4s
-; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    umull v1.4s, v2.4h, v1.4h
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    dup v2.4h, w8
+; CHECK-GI-NEXT:    umull v0.4s, v0.4h, v2.4h
+; CHECK-GI-NEXT:    umull v1.4s, v1.4h, v2.4h
 ; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <8 x i16> %src1 to <8 x i32>
@@ -1865,11 +1864,10 @@ define <4 x i64> @umull_and_v4i64_dup(<4 x i32> %src1, i64 %src2) {
 ; CHECK-GI-LABEL: umull_and_v4i64_dup:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    and x8, x0, #0xff
-; CHECK-GI-NEXT:    mov d2, v0.d[1]
-; CHECK-GI-NEXT:    dup v1.2d, x8
-; CHECK-GI-NEXT:    xtn v1.2s, v1.2d
-; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    umull v1.2d, v2.2s, v1.2s
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    dup v2.2s, w8
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v2.2s
+; CHECK-GI-NEXT:    umull v1.2d, v1.2s, v2.2s
 ; CHECK-GI-NEXT:    ret
 entry:
   %in1 = zext <4 x i32> %src1 to <4 x i64>

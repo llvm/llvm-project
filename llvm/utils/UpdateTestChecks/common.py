@@ -507,13 +507,45 @@ def getSubstitutions(sourcepath):
     ]
 
 
+ELSE_RE = re.compile(r"\s*%else\s*%{")
+
+
+def _unwrap(line, nested):
+    """Return the unwrapped text up to the end of the scope (the end of the
+    line, or the closing '%}' if nested), and the rest of the line."""
+    result = ""
+    while line:
+        if nested and line.startswith("%}"):
+            break
+        if line.startswith("%if "):
+            line = line[line.index("%{") + 2 :]
+            branch_if, line = _unwrap(line, nested=True)
+            line = line[2:]  # Eat '%}'.
+            match = ELSE_RE.match(line)
+            if match:
+                _, line = _unwrap(line[match.end() :], nested=True)
+                line = line[2:]
+            result += branch_if
+        else:
+            # Copy text up to the next '%if ', or '%}' if nested.
+            match = re.search(r"%if |%}" if nested else r"%if ", line)
+            end = match.start() if match else len(line)
+            result += line[:end]
+            line = line[end:]
+    return result, line
+
+
+def unwrap_lit_if(run_line):
+    """Replace each `%if <condition> %{ <a> %} [%else %{ <b> %}]` in a RUN line
+    with <a>, without evaluating the condition."""
+    if ELSE_RE.search(run_line):
+        warn("Ignoring the %else branches of RUN line: " + run_line)
+    return _unwrap(run_line, nested=False)[0]
+
+
 def split_run_line(run_line):
     """Split a FileCheck RUN line into its tool, FileCheck, and pre-processing commands."""
-    if "%if" in run_line:
-        match = re.search(r"%{\s*(.*?)\s*%}", run_line)
-        if match:
-            run_line = match.group(1)
-
+    run_line = unwrap_lit_if(run_line)
     commands = [cmd.strip() for cmd in run_line.split("|")]
     assert len(commands) >= 2
     preprocess_cmd = " | ".join(commands[:-2]) or None
@@ -578,6 +610,7 @@ def invoke_tool(exe, cmd_args, ir, preprocess_cmd=None, verbose=False):
 
 ##### LLVM IR parser
 RUN_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*RUN:\s*(.*)$")
+DEFINE_LINE_RE = re.compile(r"^\s*(?://|[;#])\s*(?:RE)?DEFINE:\s*(.*)$")
 CHECK_PREFIX_RE = re.compile(r"--?check-prefix(?:es)?[= ](\S+)")
 PREFIX_RE = re.compile("^[a-zA-Z0-9_-]+$")
 CHECK_RE = re.compile(
@@ -672,12 +705,32 @@ def debug(*args, **kwargs):
 
 def find_run_lines(test, lines):
     debug("Scanning for RUN lines in test file:", test)
-    raw_lines = [m.group(1) for m in [RUN_LINE_RE.match(l) for l in lines] if m]
-    run_lines = [raw_lines[0]] if len(raw_lines) > 0 else []
-    for l in raw_lines[1:]:
-        if run_lines[-1].endswith("\\"):
-            run_lines[-1] = run_lines[-1].rstrip("\\") + " " + l
+    # Collect run and (re)define lines.
+    directives = []
+    for l in lines:
+        m = RUN_LINE_RE.match(l) or DEFINE_LINE_RE.match(l)
+        if not m:
+            continue
+        is_define = m.re is DEFINE_LINE_RE
+        if (
+            directives
+            and directives[-1][0] == is_define
+            and directives[-1][1].endswith("\\")
+        ):
+            directives[-1][1] = directives[-1][1].rstrip("\\") + " " + m.group(1)
         else:
+            directives.append([is_define, m.group(1)])
+
+    # Substitute into run lines.
+    substitutions = collections.OrderedDict()
+    run_lines = []
+    for is_define, l in directives:
+        if is_define:
+            name, value = l.split("=", 1)
+            substitutions[name.strip()] = value.strip()
+        else:
+            for name, value in reversed(substitutions.items()):
+                l = l.replace(name, value)
             run_lines.append(l)
     debug("Found {} RUN lines in {}:".format(len(run_lines), test))
     for l in run_lines:

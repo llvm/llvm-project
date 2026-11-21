@@ -104,17 +104,7 @@ protected:
 
   /// Helper function for create(). It sets the builder's insert position
   /// according to \p Pos.
-  static IRBuilder<> &setInsertPos(InsertPosition Pos) {
-    auto *WhereBB = Pos.getBasicBlock();
-    auto WhereIt = Pos.getIterator();
-    auto &Ctx = WhereBB->getContext();
-    auto &Builder = Ctx.getLLVMIRBuilder();
-    if (WhereIt != WhereBB->end())
-      Builder.SetInsertPoint((*Pos).getTopmostLLVMInstruction());
-    else
-      Builder.SetInsertPoint(cast<llvm::BasicBlock>(WhereBB->Val));
-    return Builder;
-  }
+  LLVM_ABI static IRBuilder<> &setInsertPos(InsertPosition Pos);
 
 public:
   static const char *getOpcodeName(Opcode Opc) {
@@ -1967,8 +1957,8 @@ public:
   public:
     CaseHandleImpl(Context &Ctx, LLVMCaseItT LLVMCaseIt)
         : Ctx(Ctx), LLVMCaseIt(LLVMCaseIt) {}
-    ConstT *getCaseValue() const;
-    BlockT *getCaseSuccessor() const;
+    LLVM_ABI ConstT *getCaseValue() const;
+    LLVM_ABI BlockT *getCaseSuccessor() const;
     unsigned getCaseIndex() const {
       const auto &LLVMCaseHandle = *LLVMCaseIt;
       return LLVMCaseHandle.getCaseIndex();
@@ -2082,11 +2072,6 @@ public:
     return From->getSubclassID() == ClassID::Switch;
   }
 };
-
-extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
-    llvm::SwitchInst::CaseIt, BasicBlock, ConstantInt>;
-extern template class LLVM_TEMPLATE_ABI SwitchInst::CaseHandleImpl<
-    llvm::SwitchInst::ConstCaseIt, const BasicBlock, const ConstantInt>;
 
 class UnaryOperator : public UnaryInstruction {
   static Opcode getUnaryOpcode(llvm::Instruction::UnaryOps UnOp) {

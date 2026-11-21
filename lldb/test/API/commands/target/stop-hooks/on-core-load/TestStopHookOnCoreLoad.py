@@ -13,10 +13,6 @@ from lldbsuite.test import lldbutil
 class TestStopOnCoreLoad(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    # This was originally marked as expected failure on Windows, but it has
-    # started timing out instead, so the expectedFailure attribute no longer
-    # correctly tracks it: llvm.org/pr37371
-    @skipIfWindows
     def test_hook_runs_no_threads(self):
         # Create core form YAML.
         core_path = self.getBuildArtifact("test.core")
@@ -40,7 +36,7 @@ class TestStopOnCoreLoad(TestBase):
         # load the stop hook module and add the stop hook:
         stop_hook_path = os.path.join(self.getSourceDir(), "stop_hook.py")
         self.runCmd(f"command script import {stop_hook_path}")
-        self.runCmd("target stop-hook add -P stop_hook.stop_handler")
+        self.runCmd("target stop-hook add -I true -P stop_hook.stop_handler")
 
         # Load core.
         process = target.LoadCore(core_path)

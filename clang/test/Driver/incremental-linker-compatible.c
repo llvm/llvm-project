@@ -27,3 +27,13 @@
 
 // RUN: %clang '-###' %s -c -o tmp.o -target x86_64-uefi -integrated-as -mno-incremental-linker-compatible 2>&1 | FileCheck %s --check-prefix=TEST9
 // TEST9: "-cc1" {{.*}} "-mno-incremental-linker-compatible"
+
+// RUN: %clang '-###' %s -c -o tmp.o -target x86_64-w64-windows-gnu -integrated-as 2>&1 | FileCheck %s --check-prefix=TEST10
+// TEST10-NOT: "-cc1" {{.*}} "-mincremental-linker-compatible"
+// TEST10-NOT: "-cc1" {{.*}} "-mno-incremental-linker-compatible"
+
+// RUN: %clang '-###' %s -c -o tmp.o -target x86_64-w64-windows-gnu -integrated-as -mincremental-linker-compatible 2>&1 | FileCheck %s --check-prefix=TEST11
+// TEST11: "-cc1" {{.*}} "-mincremental-linker-compatible"
+
+// RUN: %clang '-###' %s -c -o tmp.o -target x86_64-w64-windows-gnu -integrated-as -mno-incremental-linker-compatible 2>&1 | FileCheck %s --check-prefix=TEST12
+// TEST12: "-cc1" {{.*}} "-mno-incremental-linker-compatible"
