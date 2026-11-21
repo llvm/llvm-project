@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -52,5 +53,6 @@ PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<TargetLibraryAnalysis>();
+  PA.preserve<LazyCallGraphAnalysis>();
   return PA;
 }
