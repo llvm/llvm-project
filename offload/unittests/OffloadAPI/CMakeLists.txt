@@ -49,6 +49,9 @@ add_offload_unittest("platform"
     platform/olRegisterRPCCallback.cpp
     platform/olIteratePlatforms.cpp)
 
+add_offload_unittest("print"
+    print/OffloadPrint.cpp)
+
 add_offload_unittest("program"
     program/olCreateProgram.cpp
     program/olIsValidBinary.cpp
