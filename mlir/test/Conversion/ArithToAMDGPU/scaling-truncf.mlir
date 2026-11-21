@@ -184,9 +184,9 @@ func.func @conversion_scalar(%in: f32, %scale: f8E8M0FNU) -> f8E5M2 {
 // CHECK-COUNT-4: amdgpu.packed_scaled_trunc %{{.*}} into %{{.+}}[3]
 // CHECK-NOT: amdgpu.packed_scaled_trunc
 // CHECK: return
-func.func @long_fp4_broadcast(%in: vector<32xf32>, %scale: f32) -> vector<32xf4E2M1FN> {
-    %splat = vector.broadcast %scale : f32 to vector<32xf32>
-    %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf32> to vector<32xf4E2M1FN>
+func.func @long_fp4_broadcast(%in: vector<32xf32>, %scale: f8E8M0FNU) -> vector<32xf4E2M1FN> {
+    %splat = vector.broadcast %scale : f8E8M0FNU to vector<32xf8E8M0FNU>
+    %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf8E8M0FNU> to vector<32xf4E2M1FN>
     return %trunc : vector<32xf4E2M1FN>
 }
 
@@ -196,8 +196,47 @@ func.func @long_fp4_broadcast(%in: vector<32xf32>, %scale: f32) -> vector<32xf4E
 // CHECK-COUNT-8: amdgpu.packed_scaled_trunc %{{.*}} into %{{.+}}[1]
 // CHECK-NOT: amdgpu.packed_scaled_trunc
 // CHECK: return
-func.func @long_fp8_broadcast(%in: vector<32xf32>, %scale: f32) -> vector<32xf8E4M3FN> {
-    %splat = vector.broadcast %scale : f32 to vector<32xf32>
-    %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf32> to vector<32xf8E4M3FN>
+func.func @long_fp8_broadcast(%in: vector<32xf32>, %scale: f8E8M0FNU) -> vector<32xf8E4M3FN> {
+    %splat = vector.broadcast %scale : f8E8M0FNU to vector<32xf8E8M0FNU>
+    %trunc = arith.scaling_truncf %in, %splat : vector<32xf32>, vector<32xf8E8M0FNU> to vector<32xf8E4M3FN>
     return %trunc : vector<32xf8E4M3FN>
+}
+
+// -----
+
+// The instruction only reads the exponent of its scale, so a scale that is not
+// f8E8M0FNU is left for arith-expand.
+// CHECK-LABEL: @scale_f32_not_converted
+// CHECK-NOT: amdgpu.packed_scaled_trunc
+// CHECK: arith.scaling_truncf
+// CHECK-NOT: amdgpu.packed_scaled_trunc
+func.func @scale_f32_not_converted(%in: vector<4xf32>, %scale: vector<4xf32>) -> vector<4xf4E2M1FN> {
+    %trunc = arith.scaling_truncf %in, %scale : vector<4xf32>, vector<4xf32> to vector<4xf4E2M1FN>
+    return %trunc : vector<4xf4E2M1FN>
+}
+
+// -----
+
+// CHECK-LABEL: @scale_bf16_not_converted
+// CHECK-NOT: amdgpu.packed_scaled_trunc
+// CHECK: arith.scaling_truncf
+// CHECK-NOT: amdgpu.packed_scaled_trunc
+func.func @scale_bf16_not_converted(%in: f32, %scale: bf16) -> f8E5M2 {
+    %trunc = arith.scaling_truncf %in, %scale : f32, bf16 to f8E5M2
+    return %trunc : f8E5M2
+}
+
+// -----
+
+// Truncating an f32 to f8E8M0FNU toward zero keeps its exponent, which is what
+// the instruction reads, so the f32 is used directly.
+// CHECK-LABEL: @scale_truncf_toward_zero_folded
+// CHECK-NOT: arith.truncf
+// CHECK-NOT: arith.extf
+// CHECK:         %[[SPLAT_IN:.+]] = vector.broadcast %arg0 : f32 to vector<1xf32>
+// CHECK-NEXT:    amdgpu.packed_scaled_trunc %[[SPLAT_IN]] into undef[0], %arg1
+func.func @scale_truncf_toward_zero_folded(%in: f32, %scale: f32) -> f8E5M2 {
+    %scale_e8m0 = arith.truncf %scale toward_zero : f32 to f8E8M0FNU
+    %trunc = arith.scaling_truncf %in, %scale_e8m0 : f32, f8E8M0FNU to f8E5M2
+    return %trunc : f8E5M2
 }
