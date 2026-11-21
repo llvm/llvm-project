@@ -58,8 +58,11 @@ TEST(FieldListVisitor, StreamVisit) {
     bool SeenBase = false;
   };
 
-  std::vector<CVType> Records =
-      CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
+  std::vector<CVType> Records;
+  CRB.end([&](ArrayRef<uint8_t> Segment) {
+    Records.emplace_back(Segment);
+    return TypeIndex::fromArrayIndex(Records.size() - 1);
+  });
   ASSERT_EQ(Records.size(), size_t(1));
   Visitor Vis(D, B);
   Error EC = visitMemberRecordStream(Records.front().data(), Vis);
@@ -84,8 +87,11 @@ TEST(FieldListVisitor, VisitBadRecord) {
     }
   };
 
-  std::vector<CVType> Records =
-      CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
+  std::vector<CVType> Records;
+  CRB.end([&](ArrayRef<uint8_t> Segment) {
+    Records.emplace_back(Segment);
+    return TypeIndex::fromArrayIndex(Records.size() - 1);
+  });
   ASSERT_EQ(Records.size(), size_t(1));
   // Remove some data from the back to get the member deserializer to error out.
   Records.front().RecordData = Records.front().RecordData.drop_back(4);
@@ -129,8 +135,11 @@ TEST(FieldListVisitor, VisitEarlyExit) {
     bool SeenDataMember = false;
   };
 
-  std::vector<CVType> Records =
-      CRB.end(TypeIndex(TypeIndex::FirstNonSimpleIndex));
+  std::vector<CVType> Records;
+  CRB.end([&](ArrayRef<uint8_t> Segment) {
+    Records.emplace_back(Segment);
+    return TypeIndex::fromArrayIndex(Records.size() - 1);
+  });
   ASSERT_EQ(Records.size(), size_t(1));
   Visitor Vis(D);
   Error EC = visitMemberRecordStream(Records.front().data(), Vis);

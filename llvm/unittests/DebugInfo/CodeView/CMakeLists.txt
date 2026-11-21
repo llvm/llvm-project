@@ -9,6 +9,7 @@ add_llvm_unittest(DebugInfoCodeViewTests
   TypeHashingTest.cpp
   TypeIndexDiscoveryTest.cpp
   TypeRecordMappingTest.cpp
+  TypeTableBuilderTest.cpp
   )
 
 target_link_libraries(DebugInfoCodeViewTests PRIVATE LLVMTestingSupport)

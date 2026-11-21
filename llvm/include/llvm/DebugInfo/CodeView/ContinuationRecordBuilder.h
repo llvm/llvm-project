@@ -10,8 +10,10 @@
 #define LLVM_DEBUGINFO_CODEVIEW_CONTINUATIONRECORDBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryStreamWriter.h"
@@ -21,7 +23,6 @@
 
 namespace llvm {
 namespace codeview {
-class TypeIndex;
 enum class ContinuationRecordKind { FieldList, MethodOverloadList };
 
 class ContinuationRecordBuilder {
@@ -49,7 +50,16 @@ public:
   // file clutters an otherwise straightforward interface.
   template <typename RecordType> void writeMemberType(RecordType &Record);
 
-  LLVM_ABI std::vector<CVType> end(TypeIndex Index);
+  /// Finishes the record and passes each of its segments to \p InsertSegment,
+  /// in the order they must be committed to the type stream. \p InsertSegment
+  /// returns the type index the segment was assigned, and the continuation in
+  /// the following segment is set to refer to that index. This keeps the
+  /// chain of segments valid when a type table deduplicates a segment against
+  /// an existing record and returns that record's index instead of the next
+  /// one. Returns the type index of the last segment inserted, which is the
+  /// index of the complete record.
+  LLVM_ABI TypeIndex
+  end(function_ref<TypeIndex(ArrayRef<uint8_t>)> InsertSegment);
 };
 } // namespace codeview
 } // namespace llvm
