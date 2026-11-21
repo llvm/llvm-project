@@ -386,6 +386,22 @@ define <16 x i1> @int_overflow() {
   ret <16 x i1> %mask
 }
 
+define <8 x i1> @lanes_exceed_type() {
+; CHECK-LABEL: @lanes_exceed_type(
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false>
+;
+  %mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i2(i2 1, i2 -1)
+  ret <8 x i1> %mask
+}
+
+define <8 x i1> @lanes_exceed_type_zero_base() {
+; CHECK-LABEL: @lanes_exceed_type_zero_base(
+; CHECK-NEXT:    ret <8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 false>
+;
+  %mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i2(i2 0, i2 -1)
+  ret <8 x i1> %mask
+}
+
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
