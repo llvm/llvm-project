@@ -123,8 +123,8 @@ void foo() {
 // CIR-AFTER-FULL: %[[C_REAL:.*]] = cir.fsub %[[MUL_AR_BR]], %[[MUL_AI_BI]] : !cir.float
 // CIR-AFTER-FULL: %[[C_IMAG:.*]] = cir.fadd %[[MUL_AR_BI]], %[[MUL_AI_BR]] : !cir.float
 // CIR-AFTER-FULL: %[[COMPLEX:.*]] = cir.complex.create %[[C_REAL]], %[[C_IMAG]] : !cir.float -> !cir.complex<!cir.float>
-// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.cmp ne %[[C_REAL]], %[[C_REAL]] : !cir.float
-// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.cmp ne %[[C_IMAG]], %[[C_IMAG]] : !cir.float
+// CIR-AFTER-FULL: %[[IS_C_REAL_NAN:.*]] = cir.fcmp une %[[C_REAL]], %[[C_REAL]] : !cir.float
+// CIR-AFTER-FULL: %[[IS_C_IMAG_NAN:.*]] = cir.fcmp une %[[C_IMAG]], %[[C_IMAG]] : !cir.float
 // CIR-AFTER-FULL: %[[CONST_FALSE:.*]] = cir.const #false
 // CIR-AFTER-FULL: %[[SELECT_CONDITION:.*]] = cir.select if %[[IS_C_REAL_NAN]] then %[[IS_C_IMAG_NAN]] else %[[CONST_FALSE]] : (!cir.bool, !cir.bool, !cir.bool) -> !cir.bool
 // CIR-AFTER-FULL: %[[RESULT:.*]] = cir.ternary(%[[SELECT_CONDITION]], true {
