@@ -477,55 +477,40 @@ static DecodeStatus decodeSelect_256Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeOffset_16_16Operand(MCInst &Inst, uint64_t Imm,
                                               int64_t Address,
                                               const void *Decoder) {
-  assert(isInt<8>(Imm) && "Invalid immediate");
-  if ((Imm & 0xf) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 4));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<4>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(SignExtend64<8>(Imm << 4)));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus decodeOffset_256_8Operand(MCInst &Inst, uint64_t Imm,
                                               int64_t Address,
                                               const void *Decoder) {
-  assert(isInt<16>(Imm) && "Invalid immediate");
-  if ((Imm & 0x7) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 3));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(SignExtend64<11>(Imm << 3)));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus decodeOffset_256_16Operand(MCInst &Inst, uint64_t Imm,
                                                int64_t Address,
                                                const void *Decoder) {
-  assert(isInt<16>(Imm) && "Invalid immediate");
-  if ((Imm & 0xf) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 4));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(SignExtend64<12>(Imm << 4)));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus decodeOffset_256_4Operand(MCInst &Inst, uint64_t Imm,
                                               int64_t Address,
                                               const void *Decoder) {
-  assert(isInt<16>(Imm) && "Invalid immediate");
-  if ((Imm & 0x2) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 2));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<8>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm << 2)));
   return MCDisassembler::Success;
 }
 
 static DecodeStatus decodeOffset_128_2Operand(MCInst &Inst, uint64_t Imm,
                                               int64_t Address,
                                               const void *Decoder) {
-  assert(isUInt<8>(Imm) && "Invalid immediate");
-  if ((Imm & 0x1) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 1));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<7>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm << 1));
   return MCDisassembler::Success;
 }
 
@@ -540,11 +525,8 @@ static DecodeStatus decodeOffset_128_1Operand(MCInst &Inst, uint64_t Imm,
 static DecodeStatus decodeOffset_64_16Operand(MCInst &Inst, uint64_t Imm,
                                               int64_t Address,
                                               const void *Decoder) {
-  assert(isInt<16>(Imm) && "Invalid immediate");
-  if ((Imm & 0xf) != 0)
-    Inst.addOperand(MCOperand::createImm(Imm << 4));
-  else
-    Inst.addOperand(MCOperand::createImm(Imm));
+  assert(isUInt<6>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(SignExtend64<10>(Imm << 4)));
   return MCDisassembler::Success;
 }
 
