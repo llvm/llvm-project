@@ -12,6 +12,9 @@
 // RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -std=c++11 \
 // RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefixes=DEVICE,AMDGCN %s
 
+// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -std=c++11 \
+// RUN:     -fno-threadsafe-statics -emit-llvm -o - %s | FileCheck -check-prefix=DEVICE-NEG %s
+
 #ifdef __clang__
 #include "Inputs/cuda.h"
 #endif
@@ -162,6 +165,9 @@ __constant__ EC_I_EC c_ec_i_ec;
 // DEVICE: @_ZZ2dfvE11const_array = internal addrspace(4) constant [5 x i32] [i32 1, i32 2, i32 3, i32 4, i32 5]
 // DEVICE: @_ZZ2dfvE9const_int = internal addrspace(4) constant i32 123
 
+// DEVICE: @_ZZ15hd_local_staticvE2ec = internal addrspace(1) global %struct.HD_EC zeroinitializer
+// DEVICE: @_ZZ20df_local_static_dtorvE4s_ed = internal addrspace(1) global %struct.ED zeroinitializer
+
 // We should not emit global initializers for device-side variables.
 // DEVICE-NOT: @__cxx_global_var_init
 
@@ -305,3 +311,20 @@ __device__ void df() {
 
 // We should not emit global init function.
 // DEVICE-NOT: @_GLOBAL__sub_I
+
+// host/device, empty constructor -- allowed, but needs no guard on the device
+__host__ __device__ void hd_local_static() {
+  static HD_EC ec;
+  // HOST: @_ZGVZ15hd_local_staticvE2ec = internal global i8 0
+}
+
+// trivial constructor, empty destructor -- allowed, but the destructor must
+// not be registered
+__device__ void df_local_static_dtor() {
+  static ED s_ed;
+}
+
+// We should not emit guard variables or destructor registration for
+// device-side statics.
+// DEVICE-NEG-NOT: _ZGV
+// DEVICE-NEG-NOT: __cxa_atexit
