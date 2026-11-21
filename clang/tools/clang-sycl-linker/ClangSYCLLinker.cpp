@@ -746,7 +746,8 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 /// into the AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
-  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OA = StringToOffloadArch(Arch);
   if (OA.isIntelGPU() || OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())

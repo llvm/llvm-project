@@ -502,8 +502,8 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
   // input filename already has the device and architecture.
   std::string OutputFileBase =
       "." + Triple.getArchName().str() + "." + Arch.str();
-  // Images with the same architecture but different "code" are linked
-  // separately, so the real devices are part of the name.
+  // Add the real devices to the output name, so that device links for the
+  // same architecture don't overwrite each other's output file.
   std::vector<std::string> Devices = Args.getAllArgValues(OPT_code_EQ);
   for (const std::string &Device : Devices)
     OutputFileBase += "." + Device;
@@ -661,15 +661,22 @@ Error containerizeRawImage(std::unique_ptr<MemoryBuffer> &Img, OffloadKind Kind,
   return Error::success();
 }
 
+/// \return the real devices that \p Binary lists in "code".
+SmallVector<StringRef> getCodeDevices(const OffloadBinary &Binary) {
+  SmallVector<StringRef> Devices;
+  Binary.getString("code").split(Devices, ',', /*MaxSplit=*/-1,
+                                 /*KeepEmpty=*/false);
+  return Devices;
+}
+
 /// \return the name to extract \p Binary to.
 std::string getExtractedFileName(const OffloadBinary &Binary) {
   std::string Name =
       (sys::path::stem(Binary.getMemoryBufferRef().getBufferIdentifier()) +
        "-" + Binary.getTriple() + "-" + Binary.getArch())
           .str();
-  for (StringRef Device : llvm::split(Binary.getString("code"), ','))
-    if (!Device.empty())
-      Name += ("." + Device).str();
+  for (StringRef Device : getCodeDevices(Binary))
+    Name += ("." + Device).str();
   return Name;
 }
 
@@ -940,9 +947,8 @@ bundleSYCL(ArrayRef<OffloadingImage> Images) {
     return std::move(Buffers);
   }
 
-  // Images for different IGCA targets or with different "code" are linked
-  // separately, but the SYCL runtime registers one offload binary per wrapper,
-  // so merge their device images into one.
+  // The SYCL runtime registers one offload binary per wrapper, so merge the
+  // device images of all device links into one.
   SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
   SmallVector<OffloadingImage> Merged;
   for (const OffloadingImage &Image : Images) {
@@ -1086,11 +1092,9 @@ DerivedArgList getLinkerArgs(ArrayRef<OffloadFile> Input,
   DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_triple_EQ),
                    Args.MakeArgString(Binary.getTriple()));
 
-  // Get the real devices that an image lists in "code".
-  for (StringRef Device : llvm::split(Binary.getString("code"), ','))
-    if (!Device.empty())
-      DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
-                       Args.MakeArgString(Device));
+  for (StringRef Device : getCodeDevices(Binary))
+    DAL.AddJoinedArg(nullptr, Tbl.getOption(OPT_code_EQ),
+                     Args.MakeArgString(Device));
 
   // If every input file is bitcode we have whole program visibility as we
   // do only support static linking with bitcode.
@@ -1417,12 +1421,11 @@ Error emitExtractCommands(
         ImageArg += (",arch=" + Binary.getArch()).str();
       // Filter on "code", including an empty one, so that an image without
       // "code" does not also match one with it for the same architecture.
-      StringRef Code = Binary.getString("code");
-      if (Code.empty())
+      SmallVector<StringRef> Devices = getCodeDevices(Binary);
+      if (Devices.empty())
         ImageArg += ",code=";
-      for (StringRef Device : llvm::split(Code, ','))
-        if (!Device.empty())
-          ImageArg += (",code=" + Device).str();
+      for (StringRef Device : Devices)
+        ImageArg += (",code=" + Device).str();
       file_magic Magic;
       if (!identify_magic(Source, Magic) && Magic == file_magic::archive)
         ImageArg += (",member=" + sys::path::filename(Identifier)).str();
