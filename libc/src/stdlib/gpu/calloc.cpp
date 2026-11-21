@@ -11,13 +11,14 @@
 #include "src/__support/GPU/allocator.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memset.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(void *, calloc, (size_t num, size_t size)) {
-  size_t bytes = num * size;
-  if (bytes == 0)
+  size_t bytes;
+  if (mul_overflow(num, size, bytes) || bytes == 0)
     return nullptr;
 
   void *ptr = gpu::allocate(bytes);
