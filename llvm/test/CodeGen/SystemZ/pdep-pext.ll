@@ -21,8 +21,7 @@ define i64 @pdep_i64(i64 %a, i64 %mask) {
 ; CHECK-BASE-NEXT:    .cfi_offset %r13, -56
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lcgr %r0, %r3
-; CHECK-BASE-NEXT:    aghi %r0, -1
+; CHECK-BASE-NEXT:    nogrk %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllg %r1, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r4, %r1
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r0, 0, 61, 2
@@ -182,8 +181,7 @@ define i32 @pdep_i32(i32 %a, i32 %mask) {
 ; CHECK-BASE-NEXT:    .cfi_offset %r13, -56
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r1, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r4, %r1
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r0, 32, 61, 2
@@ -307,8 +305,7 @@ define i16 @pdep_i16(i16 %a, i16 %mask) {
 ; CHECK-BASE-NEXT:    .cfi_offset %r13, -56
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r1, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r4, %r1
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r0, 32, 61, 2
@@ -409,8 +406,7 @@ define i8 @pdep_i8(i8 %a, i8 %mask) {
 ; CHECK-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r1, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r4, %r1
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r0, 32, 61, 2
@@ -488,12 +484,11 @@ define i8 @pdep_i8_const_mask(i8 %a) {
 define i64 @pext_i64(i64 %a, i64 %mask) {
 ; CHECK-BASE-LABEL: pext_i64:
 ; CHECK-BASE:       # %bb.0:
-; CHECK-BASE-NEXT:    lcgr %r0, %r3
-; CHECK-BASE-NEXT:    aghi %r0, -1
+; CHECK-BASE-NEXT:    nogrk %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllg %r1, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r4, %r1
-; CHECK-BASE-NEXT:    ngr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r0, 0, 61, 2
+; CHECK-BASE-NEXT:    ngr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r4, 0, 61, 2
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r4, 0, 59, 4
 ; CHECK-BASE-NEXT:    rxsbg %r4, %r4, 0, 55, 8
@@ -633,12 +628,11 @@ define i32 @pext_i32(i32 %a, i32 %mask) {
 ; CHECK-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r4, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r5, %r4
-; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r0, 32, 61, 2
+; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 61, 2
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 59, 4
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 55, 8
@@ -756,12 +750,11 @@ define i16 @pext_i16(i16 %a, i16 %mask) {
 ; CHECK-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r4, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r5, %r4
-; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r0, 32, 61, 2
+; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 61, 2
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 59, 4
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 55, 8
@@ -859,12 +852,11 @@ define i8 @pext_i8(i8 %a, i8 %mask) {
 ; CHECK-BASE-NEXT:    stmg %r14, %r15, 112(%r15)
 ; CHECK-BASE-NEXT:    .cfi_offset %r14, -48
 ; CHECK-BASE-NEXT:    .cfi_offset %r15, -40
-; CHECK-BASE-NEXT:    lr %r0, %r3
-; CHECK-BASE-NEXT:    xilf %r0, 4294967295
+; CHECK-BASE-NEXT:    nork %r0, %r3, %r3
 ; CHECK-BASE-NEXT:    sllk %r4, %r0, 1
 ; CHECK-BASE-NEXT:    lgr %r5, %r4
-; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r0, 32, 61, 2
+; CHECK-BASE-NEXT:    nr %r2, %r3
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 61, 2
 ; CHECK-BASE-NEXT:    rxsbg %r5, %r5, 32, 59, 4
 ; CHECK-BASE-NEXT:    ncrk %r0, %r4, %r5
