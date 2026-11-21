@@ -552,8 +552,6 @@ u1:
 ; CHECK-LABEL: test8:
 ; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:  loop i32{{$}}
-; CHECK-NEXT:  i32.const $push{{[^,]+}}, 0{{$}}
-; CHECK-NEXT:  br_if    0, {{[^,]+}}{{$}}
 ; CHECK-NEXT:  br       0{{$}}
 ; CHECK-NEXT:  .LBB{{[0-9]+}}_2:
 ; CHECK-NEXT:  end_loop{{$}}
