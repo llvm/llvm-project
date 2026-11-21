@@ -1597,6 +1597,9 @@ std::optional<AdvSIMDModImm> getAdvSIMDModImm(const APInt &Bits) {
 bool matchVectorBitwiseImm(MachineInstr &MI, MachineRegisterInfo &MRI,
                            AdvSIMDModImm &MatchInfo) {
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  if (!Ty.isFixedVector() ||
+      (Ty.getSizeInBits() != 64 && Ty.getSizeInBits() != 128))
+    return false;
   // The BIC and ORR immediate forms overwrite their input. If the input has
   // other uses, it needs a copy, which costs as much as the constant.
   if (!MRI.hasOneNonDBGUse(MI.getOperand(1).getReg()))
