@@ -99,3 +99,13 @@ def CSR_XLEN_F64_V_Interrupt_RVE: CalleeSavedRegs<(sub CSR_XLEN_F64_V_Interrupt,
 def CSR_RT_MostRegs : CalleeSavedRegs<(sub CSR_Interrupt, X5, X6, X7, X28)>;
 def CSR_RT_MostRegs_RVE : CalleeSavedRegs<(sub CSR_RT_MostRegs,
                                                (sequence "X%u", 16, 31))>;
+
+// preserve_none: the callee only preserves the return address, the frame
+// pointer and the base pointer (plus the registers no convention may clobber:
+// sp, gp, tp). All other GPRs, and all FP and vector registers, are
+// caller-saved.
+// s1 (x9) has to stay callee-saved: a caller that realigns its stack and has
+// variable sized objects addresses its locals through it, and as a reserved
+// register in such a function nothing would save and restore it around a call
+// that clobbers it.
+def CSR_PreserveNone : CalleeSavedRegs<(add X1, X8, X9)>;

@@ -71,6 +71,8 @@ RISCVRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   auto &Subtarget = MF->getSubtarget<RISCVSubtarget>();
   if (MF->getFunction().getCallingConv() == CallingConv::GHC)
     return CSR_NoRegs_SaveList;
+  if (MF->getFunction().getCallingConv() == CallingConv::PreserveNone)
+    return CSR_PreserveNone_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::PreserveMost)
     return Subtarget.hasStdExtE() ? CSR_RT_MostRegs_RVE_SaveList
                                   : CSR_RT_MostRegs_SaveList;
@@ -867,8 +869,11 @@ bool RISCVRegisterInfo::isArgumentRegister(const MachineFunction &MF,
   auto const &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVRegisterInfo *TRI = STI.getRegisterInfo();
 
-  if (TRI->isGeneralPurposeRegister(MF, Reg))
-    return llvm::is_contained(RISCV::getArgGPRs(STI), Reg);
+  if (TRI->isGeneralPurposeRegister(MF, Reg)) {
+    const Function &F = MF.getFunction();
+    return llvm::is_contained(
+        RISCV::getArgGPRs(STI, F.getCallingConv(), F.isVarArg()), Reg);
+  }
 
   if (TRI->isFPRegister(Reg))
     return llvm::is_contained(RISCV::getArgFPRs(STI), Reg);
@@ -892,6 +897,8 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
 
   if (CC == CallingConv::GHC)
     return CSR_NoRegs_RegMask;
+  if (CC == CallingConv::PreserveNone)
+    return CSR_PreserveNone_RegMask;
   RISCVABI::ABI ABI = Subtarget.getTargetABI();
   assert(ABI != RISCVABI::ABI::Unknown && !RISCVABI::isPurecap(ABI) &&
          "Unrecognized ABI");

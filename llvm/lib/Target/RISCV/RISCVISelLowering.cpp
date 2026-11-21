@@ -29158,6 +29158,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   case CallingConv::C:
   case CallingConv::Fast:
   case CallingConv::PreserveMost:
+  case CallingConv::PreserveNone:
   case CallingConv::GRAAL:
   case CallingConv::RISCV_VectorCall:
 #define CC_VLS_CASE(ABI_VLEN) case CallingConv::RISCV_VLSCall_##ABI_VLEN:
@@ -29185,6 +29186,12 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
 
   const Function &Func = MF.getFunction();
   if (Func.hasFnAttribute("interrupt")) {
+    // An interrupt handler has to preserve every register it uses, which is
+    // the opposite of what preserve_none asks for.
+    if (CallConv == CallingConv::PreserveNone)
+      reportFatalUsageError("Functions with the interrupt attribute cannot "
+                            "use the preserve_none calling convention!");
+
     if (!Func.arg_empty())
       reportFatalUsageError(
           "Functions with the interrupt attribute cannot have arguments!");

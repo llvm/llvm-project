@@ -26,6 +26,10 @@ class RISCVSubtarget;
 namespace RISCV {
 
 ArrayRef<MCPhysReg> getArgGPRs(const RISCVSubtarget &STI);
+/// The GPRs used for passing the arguments of a function with calling
+/// convention \p CC, in allocation order.
+ArrayRef<MCPhysReg> getArgGPRs(const RISCVSubtarget &STI, CallingConv::ID CC,
+                               bool IsVarArg);
 ArrayRef<MCPhysReg> getArgFPRs(const RISCVSubtarget &STI);
 ArrayRef<MCPhysReg> getArgVRs(const RISCVSubtarget &STI);
 
