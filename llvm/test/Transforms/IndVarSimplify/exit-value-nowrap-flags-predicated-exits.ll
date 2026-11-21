@@ -10,11 +10,11 @@ define void @exit_count_udiv_by_umax_of_exit_value_nuw(i8 noundef %start, i8 nou
 ; CHECK-LABEL: define void @exit_count_udiv_by_umax_of_exit_value_nuw(
 ; CHECK-SAME: i8 noundef [[START:%.*]], i8 noundef [[N:%.*]], i8 noundef [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[START]], 9
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 [[X]], [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[START]], 9
+; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[TMP0]], i8 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 [[X]], [[UMAX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[TMP1]], i8 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze i8 [[TMP2]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP5]], i8 [[N]])
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[N]], i8 [[TMP2]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[N]], [[UMIN]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP2]], [[UMIN]]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
