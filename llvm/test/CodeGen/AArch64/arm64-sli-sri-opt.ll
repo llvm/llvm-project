@@ -181,9 +181,8 @@ define void @testLeftGood4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) nounw
 ;
 ; CHECK-GI-LABEL: testLeftGood4x16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni.4h v2, #192, lsl #8
+; CHECK-GI-NEXT:    bic.4h v0, #192, lsl #8
 ; CHECK-GI-NEXT:    shl.4h v1, v1, #14
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    orr.8b v0, v0, v1
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -230,9 +229,8 @@ define void @testRightGood4x16(<4 x i16> %src1, <4 x i16> %src2, ptr %dest) noun
 ;
 ; CHECK-GI-LABEL: testRightGood4x16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni.4h v2, #3
+; CHECK-GI-NEXT:    bic.4h v0, #3
 ; CHECK-GI-NEXT:    ushr.4h v1, v1, #14
-; CHECK-GI-NEXT:    and.8b v0, v0, v2
 ; CHECK-GI-NEXT:    orr.8b v0, v0, v1
 ; CHECK-GI-NEXT:    str d0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -278,9 +276,8 @@ define void @testLeftGood8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) nounw
 ;
 ; CHECK-GI-LABEL: testLeftGood8x16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni.8h v2, #192, lsl #8
+; CHECK-GI-NEXT:    bic.8h v0, #192, lsl #8
 ; CHECK-GI-NEXT:    shl.8h v1, v1, #14
-; CHECK-GI-NEXT:    and.16b v0, v0, v2
 ; CHECK-GI-NEXT:    orr.16b v0, v0, v1
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret
@@ -327,9 +324,8 @@ define void @testRightGood8x16(<8 x i16> %src1, <8 x i16> %src2, ptr %dest) noun
 ;
 ; CHECK-GI-LABEL: testRightGood8x16:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni.8h v2, #3
+; CHECK-GI-NEXT:    bic.8h v0, #3
 ; CHECK-GI-NEXT:    ushr.8h v1, v1, #14
-; CHECK-GI-NEXT:    and.16b v0, v0, v2
 ; CHECK-GI-NEXT:    orr.16b v0, v0, v1
 ; CHECK-GI-NEXT:    str q0, [x0]
 ; CHECK-GI-NEXT:    ret

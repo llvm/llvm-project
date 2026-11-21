@@ -154,8 +154,7 @@ define <3 x float> @copysign_v3f32(<3 x float> %a, <3 x float> %b) {
 ; CHECK-GI-LABEL: copysign_v3f32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v2.4s, #128, lsl #24
-; CHECK-GI-NEXT:    mvni v3.4s, #128, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    bic v0.4s, #128, lsl #24
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
@@ -197,8 +196,7 @@ define <7 x half> @copysign_v7f16(<7 x half> %a, <7 x half> %b) {
 ; CHECK-GI-LABEL: copysign_v7f16:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    movi v2.8h, #128, lsl #8
-; CHECK-GI-NEXT:    mvni v3.8h, #128, lsl #8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-GI-NEXT:    bic v0.8h, #128, lsl #8
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret

@@ -2193,10 +2193,9 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-LABEL: utofp_v3i8_v3f64:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
 ; CHECK-NOFP16-GI-NEXT:    fmov s0, w0
-; CHECK-NOFP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
-; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NOFP16-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NOFP16-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-NOFP16-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-NOFP16-GI-NEXT:    fmov d1, x8
@@ -2215,10 +2214,9 @@ define <3 x double> @utofp_v3i8_v3f64(<3 x i8> %a) {
 ; CHECK-FP16-GI-LABEL: utofp_v3i8_v3f64:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fmov s0, w0
-; CHECK-FP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-FP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-FP16-GI-NEXT:    mov v0.h[2], w2
-; CHECK-FP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-FP16-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-FP16-GI-NEXT:    umov w8, v0.h[0]
 ; CHECK-FP16-GI-NEXT:    umov w9, v0.h[1]
 ; CHECK-FP16-GI-NEXT:    fmov d1, x8
@@ -4657,10 +4655,9 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-LABEL: utofp_v3i8_v3f32:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
 ; CHECK-NOFP16-GI-NEXT:    fmov s0, w0
-; CHECK-NOFP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
-; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NOFP16-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
 ; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-NOFP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
@@ -4672,10 +4669,9 @@ define <3 x float> @utofp_v3i8_v3f32(<3 x i8> %a) {
 ; CHECK-FP16-GI-LABEL: utofp_v3i8_v3f32:
 ; CHECK-FP16-GI:       // %bb.0: // %entry
 ; CHECK-FP16-GI-NEXT:    fmov s0, w0
-; CHECK-FP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-FP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-FP16-GI-NEXT:    mov v0.h[2], w2
-; CHECK-FP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-FP16-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-FP16-GI-NEXT:    mov v1.h[0], v0.h[2]
 ; CHECK-FP16-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-FP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
@@ -6667,10 +6663,9 @@ define <3 x half> @utofp_v3i8_v3f16(<3 x i8> %a) {
 ; CHECK-NOFP16-GI-LABEL: utofp_v3i8_v3f16:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
 ; CHECK-NOFP16-GI-NEXT:    fmov s0, w0
-; CHECK-NOFP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[1], w1
 ; CHECK-NOFP16-GI-NEXT:    mov v0.h[2], w2
-; CHECK-NOFP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-NOFP16-GI-NEXT:    bic v0.4h, #255, lsl #8
 ; CHECK-NOFP16-GI-NEXT:    mov v1.h[0], v0.h[2]
 ; CHECK-NOFP16-GI-NEXT:    mov v1.h[1], v0.h[3]
 ; CHECK-NOFP16-GI-NEXT:    ushll v0.4s, v0.4h, #0
@@ -6732,11 +6727,11 @@ define <4 x half> @utofp_v4i8_v4f16(<4 x i8> %a) {
 ; CHECK-NOFP16-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NOFP16-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: utofp_v4i8_v4f16:
-; CHECK-FP16-SD:       // %bb.0: // %entry
-; CHECK-FP16-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-FP16-SD-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: utofp_v4i8_v4f16:
+; CHECK-FP16:       // %bb.0: // %entry
+; CHECK-FP16-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: utofp_v4i8_v4f16:
 ; CHECK-NOFP16-GI:       // %bb.0: // %entry
@@ -6746,13 +6741,6 @@ define <4 x half> @utofp_v4i8_v4f16(<4 x i8> %a) {
 ; CHECK-NOFP16-GI-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-NOFP16-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-NOFP16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: utofp_v4i8_v4f16:
-; CHECK-FP16-GI:       // %bb.0: // %entry
-; CHECK-FP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-FP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-FP16-GI-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ret
 entry:
   %c = uitofp <4 x i8> %a to <4 x half>
   ret <4 x half> %c

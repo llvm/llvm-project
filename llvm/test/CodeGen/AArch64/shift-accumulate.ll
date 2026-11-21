@@ -148,8 +148,7 @@ define <1 x i64> @ssra_v1i64(<2 x i32> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v1i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #64, lsl #24
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-GI-NEXT:    bic v0.2s, #64, lsl #24
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    asr x9, x8, #62
 ; CHECK-GI-NEXT:    orr x8, x9, x8, lsr #63
@@ -174,8 +173,7 @@ define <2 x i64> @ssra_v2i64(<4 x i32> %0) {
 ;
 ; CHECK-GI-LABEL: ssra_v2i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #64, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    bic v0.4s, #64, lsl #24
 ; CHECK-GI-NEXT:    ushr v1.2d, v0.2d, #63
 ; CHECK-GI-NEXT:    sshr v0.2d, v0.2d, #62
 ; CHECK-GI-NEXT:    orr v0.16b, v1.16b, v0.16b

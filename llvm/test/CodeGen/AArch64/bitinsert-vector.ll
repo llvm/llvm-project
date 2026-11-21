@@ -15,9 +15,8 @@ define <4 x b32> @test_bitinsert_v4i8_const(<4 x b32> %base, <4 x i8> %val) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-GI-NEXT:    movi v3.2d, #0xffff00ffffff00ff
+; CHECK-GI-NEXT:    bic v0.4s, #255, lsl #8
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #8
 ; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
