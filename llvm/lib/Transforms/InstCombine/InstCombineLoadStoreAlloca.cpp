@@ -1802,23 +1802,11 @@ bool InstCombinerImpl::mergeStoreIntoSuccessor(StoreInst &SI) {
   StoreInst *NewSI =
       new StoreInst(MergedVal, SI.getOperand(1), SI.getProperties());
   InsertNewInstBefore(NewSI, BBI);
+  // The new store stands for both stores: combine their metadata.
+  NewSI->copyMetadata(SI);
+  combineMetadataForCSE(NewSI, OtherStore, /*DoesKMove=*/true);
   NewSI->setDebugLoc(MergedLoc);
   NewSI->mergeDIAssignID({&SI, OtherStore});
-
-  // If the two stores had AA tags, merge them.
-  AAMDNodes AATags = SI.getAAMetadata();
-  if (AATags)
-    NewSI->setAAMetadata(AATags.merge(OtherStore->getAAMetadata()));
-
-  // If the two stores had access groups, intersect them.
-  NewSI->setMetadata(LLVMContext::MD_access_group,
-                     intersectAccessGroups(&SI, OtherStore));
-
-  // The merged store stands for both, so it requests the PC sections of either.
-  NewSI->setMetadata(LLVMContext::MD_pcsections,
-                     MDNode::getMergedPCSectionsMetadata(
-                         SI.getMetadata(LLVMContext::MD_pcsections),
-                         OtherStore->getMetadata(LLVMContext::MD_pcsections)));
 
   // Nuke the old stores.
   eraseInstFromFunction(SI);
