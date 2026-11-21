@@ -4064,6 +4064,9 @@ struct FormatStyle {
     NI_All
   };
 
+  /// The indentation used for anonymous namespaces.
+  bool IndentAnonymousNamespaces;
+
   /// The indentation used for namespaces.
   /// \version 3.7
   NamespaceIndentationKind NamespaceIndentation;
@@ -6307,6 +6310,7 @@ struct FormatStyle {
            MacrosSkippedByRemoveParentheses ==
                R.MacrosSkippedByRemoveParentheses &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
+           IndentAnonymousNamespaces == R.IndentAnonymousNamespaces &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
            NumericLiteralCase == R.NumericLiteralCase &&

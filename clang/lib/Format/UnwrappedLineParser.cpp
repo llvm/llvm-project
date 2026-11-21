@@ -3352,6 +3352,7 @@ void UnwrappedLineParser::parseNamespace() {
          "'namespace' expected");
 
   const FormatToken &InitialToken = *FormatTok;
+  bool IsAnonymousNamespace = InitialToken.is(tok::kw_namespace);
   nextToken();
   if (InitialToken.is(TT_NamespaceMacro)) {
     parseParens();
@@ -3359,12 +3360,15 @@ void UnwrappedLineParser::parseNamespace() {
     while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
                               tok::l_square, tok::period, tok::l_paren) ||
            (Style.isCSharp() && FormatTok->is(tok::kw_union))) {
-      if (FormatTok->is(tok::l_square))
+      if (FormatTok->is(tok::l_square)) {
         parseSquare();
-      else if (FormatTok->is(tok::l_paren))
+      } else if (FormatTok->is(tok::l_paren)) {
         parseParens();
-      else
+      } else {
+        if (FormatTok->is(tok::identifier))
+          IsAnonymousNamespace = false;
         nextToken();
+      }
     }
   }
   if (FormatTok->is(tok::l_brace)) {
@@ -3381,6 +3385,9 @@ void UnwrappedLineParser::parseNamespace() {
                  DeclarationScopeStack.size() > 1)
             ? 1u
             : 0u;
+
+    if (IsAnonymousNamespace && !Style.IndentAnonymousNamespaces)
+      AddLevels = 0;
     parseNamespaceOrExportBlock(AddLevels);
   }
   // FIXME: Add error handling.
