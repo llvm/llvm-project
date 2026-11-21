@@ -362,6 +362,17 @@ spirv.module Physical64 GLSL450 attributes {
     !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
 }
 
+// CHECK: requires #spirv.vce<v1.0, [Int8, FunctionPointersINTEL, Addresses, Kernel], [SPV_INTEL_function_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, Linkage, Int8, FunctionPointersINTEL], [SPV_INTEL_function_pointers]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @function_pointer_arg(%arg0: !spirv.ptr<(i8) -> i32, CodeSectionINTEL>) "None" {
+    spirv.Return
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Image type capabilities
 //===----------------------------------------------------------------------===//
