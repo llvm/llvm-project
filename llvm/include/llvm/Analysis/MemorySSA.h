@@ -44,7 +44,7 @@
 ///   store i32 5, i32* %2, align 4
 ///   ; 4 = MemoryDef(3)
 ///   store i32 7, i32* %4, align 4
-///   ; MemoryUse(3)
+///   ; MemoryUse(4)
 ///   %7 = load i32* %2, align 4
 ///   ; MemoryUse(4)
 ///   %8 = load i32* %4, align 4
@@ -57,11 +57,15 @@
 /// def until you hit the top of the function.
 ///
 /// Each def also has a list of users associated with it, so you can walk from
-/// both def to users, and users to defs. Note that we disambiguate MemoryUses,
-/// but not the RHS of MemoryDefs. You can see this above at %7, which would
-/// otherwise be a MemoryUse(4). Being disambiguated means that for a given
-/// store, all the MemoryUses on its use lists are may-aliases of that store
-/// (but the MemoryDefs on its use list may not be).
+/// both def to users, and users to defs. MemoryUses are not disambiguated when
+/// MemorySSA is built: the defining access of a MemoryUse is the nearest
+/// dominating MemoryDef or MemoryPhi, which is why %7 above is a MemoryUse(4)
+/// even though only 3 may alias it. The walker disambiguates a MemoryUse on
+/// demand: getClobberingMemoryAccess() on %7 returns 3 and makes it the
+/// defining access, so %7 becomes a MemoryUse(3). Being disambiguated means
+/// that for a given store, all the optimized MemoryUses on its use lists are
+/// may-aliases of that store (but other MemoryUses and the MemoryDefs on its
+/// use list may not be).
 ///
 /// MemoryDefs are not disambiguated because it would require multiple reaching
 /// definitions, which would require multiple phis, and multiple memoryaccesses
