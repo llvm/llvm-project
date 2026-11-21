@@ -38,6 +38,24 @@
 # RUN: llvm-readelf -S -s zcd | FileCheck /dev/null \
 # RUN:   --implicit-check-not=.riscv.jvt --implicit-check-not=__jvt_base$
 
+## Only the first code range uses the JVT. Preserve its M extension, the
+## incompatible Zcd range, the intervening data and the untouched M range.
+# RUN: llvm-mc -filetype=obj -triple=riscv64 -mattr=+c,+relax regions.s -o regions.o
+# RUN: ld.lld -e _start --riscv-relax-zcmt regions.o -o regions
+# RUN: llvm-readelf -sW regions | FileCheck %s --check-prefix=REGION-SYM
+# RUN: llvm-objdump -d --no-show-raw-insn -M no-aliases regions | FileCheck %s --check-prefix=REGION-DIS
+
+# REGION-SYM:      NOTYPE LOCAL DEFAULT {{[0-9]+}} $xrv64i2p1_m2p0_{{.*}}_zcmt1p0
+# REGION-SYM:      NOTYPE LOCAL DEFAULT {{[0-9]+}} $xrv64{{.*}}_zcd1p0{{$}}
+# REGION-SYM:      NOTYPE LOCAL DEFAULT {{[0-9]+}} $d{{$}}
+# REGION-SYM:      NOTYPE LOCAL DEFAULT {{[0-9]+}} $xrv64i2p1_m2p0_c2p0_zmmul1p0_zca1p0{{$}}
+# REGION-DIS-LABEL: <_start>:
+# REGION-DIS-COUNT-5: cm.jt
+# REGION-DIS-LABEL: <incompatible>:
+# REGION-DIS-NEXT: jal zero,
+# REGION-DIS-LABEL: <callee>:
+# REGION-DIS-NEXT: mul a0, a0, a1
+
 # JUMP: cm.jt
 # HAS-JVT: .riscv.jvt
 # HAS-JVT: __jvt_base$
@@ -115,4 +133,21 @@ _start:
   .endr
   .space 4096
 callee:
+  ret
+
+#--- regions.s
+.option arch, +m
+.globl _start
+_start:
+  .rept 5
+  tail callee
+  .endr
+.option push
+.option arch, +d
+incompatible:
+  tail callee
+.option pop
+  .space 4096
+callee:
+  mul a0, a0, a1
   ret

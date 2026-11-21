@@ -29,6 +29,7 @@ using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
 
+static Expected<std::string> getZcmtArch(unsigned xlen, StringRef arch);
 static void addZcmtOutputAttributes(Ctx &ctx);
 static bool discardZcmtOutputAttributes(Ctx &ctx);
 static bool shouldCreateZcmtSyntheticSections(Ctx &ctx);
@@ -70,6 +71,12 @@ public:
   SmallVector<ZcmtJvtEntry, 0> entries;
 };
 
+struct ZcmtSite {
+  InputSection *sec;
+  uint64_t offset;
+  Defined *mapping;
+};
+
 struct ZcmtCandidateGroup {
   Symbol *sym = nullptr;
   int64_t addend = 0;
@@ -77,7 +84,7 @@ struct ZcmtCandidateGroup {
   bool isJalt = false;
   uint64_t benefit = 0;
   uint64_t firstSeen = 0;
-  SmallVector<std::pair<InputSection *, uint64_t>, 0> sites;
+  SmallVector<ZcmtSite, 0> sites;
 };
 
 class RISCV final : public TargetInfo {
@@ -961,15 +968,45 @@ static uint64_t getZcmtBenefit(RelType origType, RelType relaxedType) {
   return 0;
 }
 
+// Relocations and symbol anchors both use original input-section offsets.
+static void advanceZcmtMapping(ArrayRef<SymbolAnchor> &anchors, uint64_t offset,
+                               Defined *&mapping) {
+  while (!anchors.empty() && anchors.front().offset <= offset) {
+    const SymbolAnchor &a = anchors.front();
+    anchors = anchors.drop_front();
+    if (a.end || !a.d->isLocal() || a.d->type != STT_NOTYPE || a.d->size)
+      continue;
+    StringRef name = a.d->getName().split('.').first;
+    if (name == "$x" || name == "$d" || name.starts_with("$xrv"))
+      mapping = a.d;
+  }
+}
+
+// Bare $x uses the file attributes. An explicit $x<ISA> must preserve the
+// region's other extensions and any dot-prefixed uniquifier.
+static StringRef getZcmtMappingName(Ctx &ctx, StringRef name) {
+  StringRef base = name.split('.').first;
+  if (base == "$x")
+    return name;
+  if (base == "$d")
+    return {};
+  auto arch = getZcmtArch(ctx.arg.is64 ? 64 : 32, base.drop_front(2));
+  if (!arch) {
+    consumeError(arch.takeError());
+    return {};
+  }
+  return ctx.saver.save("$x" + *arch + name.drop_front(base.size()));
+}
+
 static void addZcmtCandidate(SmallVectorImpl<ZcmtCandidateGroup> &groups,
-                             InputSection &sec, const Relocation &r,
+                             ZcmtSite site, const Relocation &r,
                              uint64_t benefit, bool isJalt, uint64_t ordinal) {
   const bool usePlt = r.expr == R_PLT_PC;
   for (ZcmtCandidateGroup &group : groups) {
     if (!sameZcmtGroup(group, r.sym, r.addend, usePlt, isJalt))
       continue;
     group.benefit += benefit;
-    group.sites.push_back({&sec, r.offset});
+    group.sites.push_back(site);
     return;
   }
 
@@ -980,7 +1017,7 @@ static void addZcmtCandidate(SmallVectorImpl<ZcmtCandidateGroup> &groups,
   group.isJalt = isJalt;
   group.benefit = benefit;
   group.firstSeen = ordinal;
-  group.sites.push_back({&sec, r.offset});
+  group.sites.push_back(site);
 }
 
 bool RISCV::selectZcmtCandidates() const {
@@ -992,6 +1029,9 @@ bool RISCV::selectZcmtCandidates() const {
   SmallVector<ZcmtCandidateGroup, 0> jtGroups;
   SmallVector<ZcmtCandidateGroup, 0> jaltGroups;
   SmallVector<InputSection *, 0> storage;
+  // Cache the augmented name by input name; an empty result denotes a region
+  // whose ISA cannot be combined with Zcmt.
+  DenseMap<StringRef, StringRef> mappingNames;
   uint64_t ordinal = 0;
 
   for (OutputSection *osec : ctx.outputSections) {
@@ -1003,6 +1043,8 @@ bool RISCV::selectZcmtCandidates() const {
 
       MutableArrayRef<Relocation> relocs = sec->relocs();
       RelaxAux &aux = *sec->relaxAux;
+      ArrayRef<SymbolAnchor> anchors(aux.anchors);
+      Defined *mapping = nullptr;
       for (auto [i, r] : llvm::enumerate(relocs)) {
         if (r.type != R_RISCV_CALL && r.type != R_RISCV_CALL_PLT &&
             r.type != R_RISCV_JAL)
@@ -1020,8 +1062,20 @@ bool RISCV::selectZcmtCandidates() const {
         if (benefit == 0)
           continue;
 
-        addZcmtCandidate(*kind ? jaltGroups : jtGroups, *sec, r, benefit, *kind,
-                         ordinal++);
+        advanceZcmtMapping(anchors, r.offset, mapping);
+        Defined *rename = nullptr;
+        if (mapping) {
+          StringRef name = mapping->getName();
+          auto [it, inserted] = mappingNames.try_emplace(name);
+          if (inserted)
+            it->second = getZcmtMappingName(ctx, name);
+          if (it->second.empty())
+            continue;
+          if (it->second != name)
+            rename = mapping;
+        }
+        addZcmtCandidate(*kind ? jaltGroups : jtGroups, {sec, r.offset, rename},
+                         r, benefit, *kind, ordinal++);
       }
     }
   }
@@ -1075,9 +1129,14 @@ bool RISCV::selectZcmtCandidates() const {
     return discardZcmtOutputAttributes(ctx);
   }
 
+  DenseMap<const Symbol *, StringRef> renamedMappings;
   auto addSelectedSites = [&](const ZcmtCandidateGroup &group, uint8_t index) {
-    for (auto [sec, offset] : group.sites)
+    for (auto [sec, offset, mapping] : group.sites) {
       zcmtSelectedSites[{sec, offset}] = index;
+      if (mapping)
+        renamedMappings.try_emplace(mapping,
+                                    mappingNames.lookup(mapping->getName()));
+    }
   };
   auto setEntry = [&](size_t index, const ZcmtCandidateGroup &group) {
     jvtSec->entries[index] = {group.sym, group.addend, group.usePlt};
@@ -1109,6 +1168,8 @@ bool RISCV::selectZcmtCandidates() const {
   if (ctx.in.symTab && !hadEarlyJvtSym)
     ctx.in.symTab->addSymbol(jvtSym);
 
+  if (ctx.in.symTab && !renamedMappings.empty())
+    ctx.in.symTab->renameLocalSymbols(renamedMappings);
   addZcmtOutputAttributes(ctx);
   zcmtSelected = true;
   return true;
@@ -2079,20 +2140,12 @@ mergeAttributesSection(Ctx &ctx,
   return &merged;
 }
 
-static void addZcmtOutputAttributes(Ctx &ctx) {
-  if (!ctx.in.riscvAttributes)
-    return;
-
-  auto &attrs = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
-  unsigned xlen = ctx.arg.is64 ? 64 : 32;
+static Expected<std::string> getZcmtArch(unsigned xlen, StringRef arch) {
   RISCVISAUtils::OrderedExtensionMap exts;
-  if (StringRef arch = attrs.strAttr.lookup(RISCVAttrs::ARCH); !arch.empty()) {
+  if (!arch.empty()) {
     auto maybeInfo = RISCVISAInfo::parseNormalizedArchString(arch);
-    if (!maybeInfo) {
-      Err(ctx) << ".riscv.attributes: " << arch << ": "
-               << maybeInfo.takeError();
-      return;
-    }
+    if (!maybeInfo)
+      return maybeInfo.takeError();
     RISCVISAInfo &info = **maybeInfo;
     xlen = info.getXLen();
     exts = info.getExtensions();
@@ -2108,11 +2161,22 @@ static void addZcmtOutputAttributes(Ctx &ctx) {
   addExt("zicsr", {2, 0});
   addExt("zcmt", {1, 0});
 
-  if (auto result = RISCVISAInfo::createFromExtMap(xlen, exts)) {
-    attrs.strAttr[RISCVAttrs::ARCH] = ctx.saver.save((*result)->toString());
+  auto result = RISCVISAInfo::createFromExtMap(xlen, exts);
+  if (!result)
+    return result.takeError();
+  return (*result)->toString();
+}
+
+static void addZcmtOutputAttributes(Ctx &ctx) {
+  if (!ctx.in.riscvAttributes)
+    return;
+  auto &attrs = static_cast<RISCVAttributesSection &>(*ctx.in.riscvAttributes);
+  StringRef arch = attrs.strAttr.lookup(RISCVAttrs::ARCH);
+  if (auto result = getZcmtArch(ctx.arg.is64 ? 64 : 32, arch)) {
+    attrs.strAttr[RISCVAttrs::ARCH] = ctx.saver.save(*result);
     attrs.updateSize();
   } else {
-    Err(ctx) << result.takeError();
+    Err(ctx) << ".riscv.attributes: " << arch << ": " << result.takeError();
   }
 }
 
