@@ -42,6 +42,7 @@ tool_patterns = [
     "llc",
     "llvm-as",
     "llvm-cgdata",
+    "llvm-cov",
     "llvm-mc",
     "llvm-nm",
     "llvm-objdump",
