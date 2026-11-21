@@ -294,8 +294,7 @@ public:
       CanQualType returnType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
       FunctionType::ExtInfo info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-      RequiredArgs args, const FunctionDecl *ABIInfoFD,
-      ArrayRef<unsigned> gridConstantArgs = {});
+      RequiredArgs args, const FunctionDecl *ABIInfoFD);
 
   /// Compute a new LLVM record layout object for the given record.
   std::unique_ptr<CGRecordLayout> ComputeRecordLayout(const RecordDecl *D,

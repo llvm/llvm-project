@@ -348,7 +348,7 @@ static CallingConv getCallingConventionForDecl(const ObjCMethodDecl *D,
 /// information. Host stubs retain their normal argument classification.
 static SmallVector<unsigned, 4> getGridConstantArgs(CodeGenModule &CGM,
                                                     const FunctionDecl *FD,
-                                                    unsigned PrefixArgs = 0) {
+                                                    unsigned PrefixArgs) {
   SmallVector<unsigned, 4> Args;
   if (!FD || !CGM.getLangOpts().CUDAIsDevice ||
       !CGM.getTarget().getTriple().isNVPTX() || !FD->hasAttr<CUDAGlobalAttr>())
@@ -385,10 +385,11 @@ CodeGenTypes::arrangeCXXMethodType(const CXXRecordDecl *RD,
   RequiredArgs required = RequiredArgs::forPrototypePlus(
       CanonicalFTP.getTypePtr(), argTypes.size());
   appendParameterTypes(*this, argTypes, paramInfos, CanonicalFTP);
+  FnInfoOpts opts = FnInfoOpts::IsInstanceMethod;
+  opts |= FnInfoOpts::IsFunctionDeclaration;
   return arrangeLLVMFunctionInfo(
-      CanonicalFTP->getReturnType().getUnqualifiedType(),
-      FnInfoOpts::IsInstanceMethod, argTypes, CanonicalFTP->getExtInfo(),
-      paramInfos, required, MD, getGridConstantArgs(CGM, MD, 1));
+      CanonicalFTP->getReturnType().getUnqualifiedType(), opts, argTypes,
+      CanonicalFTP->getExtInfo(), paramInfos, required, MD);
 }
 
 /// Set calling convention for CUDA/HIP kernel.
@@ -425,10 +426,10 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   ExtParameterInfoList paramInfos;
   appendParameterTypes(*this, argTypes, paramInfos, prototype);
   return arrangeLLVMFunctionInfo(
-      prototype->getReturnType().getUnqualifiedType(), FnInfoOpts::None,
-      argTypes, prototype->getExtInfo(), paramInfos,
-      RequiredArgs::forPrototypePlus(prototype.getTypePtr(), 0), MD,
-      getGridConstantArgs(CGM, MD));
+      prototype->getReturnType().getUnqualifiedType(),
+      FnInfoOpts::IsFunctionDeclaration, argTypes, prototype->getExtInfo(),
+      paramInfos, RequiredArgs::forPrototypePlus(prototype.getTypePtr(), 0),
+      MD);
 }
 
 bool CodeGenTypes::inheritingCtorHasParams(
@@ -586,19 +587,19 @@ CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
   // When declaring a function without a prototype, always use a
   // non-variadic type.
   if (CanQual<FunctionNoProtoType> noProto = FTy.getAs<FunctionNoProtoType>()) {
-    return arrangeLLVMFunctionInfo(noProto->getReturnType(), FnInfoOpts::None,
-                                   {}, noProto->getExtInfo(), {},
-                                   RequiredArgs::All, FD);
+    return arrangeLLVMFunctionInfo(
+        noProto->getReturnType(), FnInfoOpts::IsFunctionDeclaration, {},
+        noProto->getExtInfo(), {}, RequiredArgs::All, FD);
   }
 
   CanQual<FunctionProtoType> FTP = FTy.castAs<FunctionProtoType>();
   CanQualTypeList argTypes;
   ExtParameterInfoList paramInfos;
   appendParameterTypes(*this, argTypes, paramInfos, FTP);
-  return arrangeLLVMFunctionInfo(
-      FTP->getReturnType().getUnqualifiedType(), FnInfoOpts::None, argTypes,
-      FTP->getExtInfo(), paramInfos, RequiredArgs::forPrototypePlus(FTP, 0), FD,
-      getGridConstantArgs(CGM, FD));
+  return arrangeLLVMFunctionInfo(FTP->getReturnType().getUnqualifiedType(),
+                                 FnInfoOpts::IsFunctionDeclaration, argTypes,
+                                 FTP->getExtInfo(), paramInfos,
+                                 RequiredArgs::forPrototypePlus(FTP, 0), FD);
 }
 
 /// Arrange the argument and result information for the declaration or
@@ -1098,8 +1099,7 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
     CanQualType resultType, FnInfoOpts opts, ArrayRef<CanQualType> argTypes,
     FunctionType::ExtInfo info,
     ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
-    RequiredArgs required, const FunctionDecl *ABIInfoFD,
-    ArrayRef<unsigned> gridConstantArgs) {
+    RequiredArgs required, const FunctionDecl *ABIInfoFD) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType T) { return T.isCanonicalAsParam(); }));
 
@@ -1112,6 +1112,12 @@ const CGFunctionInfo &CodeGenTypes::arrangeLLVMFunctionInfo(
   bool isDelegateCall =
       (opts & FnInfoOpts::IsDelegateCall) == FnInfoOpts::IsDelegateCall;
   unsigned X86ABIAVXLevel = CGM.getABIInfo().getX86ABIAVXLevel(ABIInfoFD, info);
+  // ABIInfoFD can describe the caller when arranging calls. Only use its
+  // parameter attributes when arranging that declaration.
+  bool isFunctionDeclaration = (opts & FnInfoOpts::IsFunctionDeclaration) ==
+                               FnInfoOpts::IsFunctionDeclaration;
+  auto gridConstantArgs = getGridConstantArgs(
+      CGM, isFunctionDeclaration ? ABIInfoFD : nullptr, isInstanceMethod);
 
   const CGFunctionInfo *newFI = findOrInsertCGFunctionInfo(
       isInstanceMethod, isChainCall, isDelegateCall, X86ABIAVXLevel, info,
@@ -3592,7 +3598,8 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
           Fn->getArg(FirstIRArg), Ty, ArgI.getIndirectAlign(), false, nullptr,
           nullptr, KnownNonNull);
 
-      if (FI.isGridConstantArg(ArgNo)) {
+      if (ArgI.isIndirect() && ArgI.getIndirectByVal() &&
+          Arg->hasAttr<CUDAGridConstantAttr>()) {
         // Grid-constant parameters must retain their parameter-space address,
         // including scalars that would otherwise be loaded into a local copy.
         ArgVals.push_back(ParamValue::forIndirect(ParamAddr));

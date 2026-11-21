@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -O0 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR64
-// RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -O2 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR64
-// RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR32
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=HOST
+// RUN: %clang_cc1 -fexperimental-max-bitint-width=256 -triple nvptx64-nvidia-cuda -fcuda-is-device -O0 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR64
+// RUN: %clang_cc1 -fexperimental-max-bitint-width=256 -triple nvptx64-nvidia-cuda -fcuda-is-device -O2 -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR64
+// RUN: %clang_cc1 -fexperimental-max-bitint-width=256 -triple nvptx-nvidia-cuda -fcuda-is-device -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s --check-prefixes=DEVICE,PTR32
+// RUN: %clang_cc1 -fexperimental-max-bitint-width=256 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s | FileCheck %s --check-prefix=HOST
 
 #include "Inputs/cuda.h"
 
@@ -107,6 +107,52 @@ extern "C" __global__ void scalar_types(
   escape(&p);
   escape(&e);
   escape(&v);
+}
+
+// Pointer attributes apply to the pointer value, not to the byval parameter
+// object that contains it.
+// DEVICE-LABEL: define{{.*}} ptx_kernel void @restricted_pointer(
+// PTR64-SAME: ptr noundef byval(ptr) align 8 "nvvm.grid_constant" %p)
+// PTR32-SAME: ptr noundef byval(ptr) align 4 "nvvm.grid_constant" %p)
+// DEVICE-NOT: alloca
+// DEVICE: call void @escape(ptr noundef %p)
+// DEVICE-NEXT: [[POINTEE:%.*]] = load ptr, ptr %p, align
+// DEVICE-NEXT: call void @escape(ptr noundef [[POINTEE]])
+// DEVICE-NEXT: ret void
+// HOST-LABEL: define{{.*}} void @__device_stub__restricted_pointer(ptr noalias noundef %p)
+extern "C" __global__ void restricted_pointer(
+    const int *__restrict__ const __grid_constant__ p) {
+  escape((const void *)&p);
+  escape(p);
+}
+
+// Large _BitInt parameters are already indirect byval, but a grid-constant
+// parameter must still keep its incoming parameter address.
+// DEVICE-LABEL: define{{.*}} ptx_kernel void @large_bitint(ptr noundef byval(i256) align 8 "nvvm.grid_constant" %arg)
+// DEVICE-NOT: alloca
+// DEVICE: call void @escape(ptr noundef %arg)
+// DEVICE-NEXT: ret void
+// HOST-LABEL: define{{.*}} void @__device_stub__large_bitint(ptr noundef byval(i256) align 8 %arg)
+extern "C" __global__ void large_bitint(
+    const __grid_constant__ _BitInt(256) arg) {
+  escape(&arg);
+}
+
+struct DeviceObject {
+  int value;
+  __device__ DeviceObject(int);
+  __device__ void method(int);
+};
+
+// The caller's grid-constant attribute must not change device callee ABIs.
+// DEVICE-LABEL: define{{.*}} ptx_kernel void @member_calls(ptr noundef byval(i32) align 4 "nvvm.grid_constant" %arg)
+// DEVICE: [[CTOR_ARG:%.*]] = load i32, ptr %arg, align 4
+// DEVICE-NEXT: call void @_ZN12DeviceObjectC1Ei(ptr noundef nonnull align 4 dereferenceable(4) %object, i32 noundef [[CTOR_ARG]])
+// DEVICE-NEXT: [[METHOD_ARG:%.*]] = load i32, ptr %arg, align 4
+// DEVICE-NEXT: call void @_ZN12DeviceObject6methodEi(ptr noundef nonnull align 4 dereferenceable(4) %object, i32 noundef [[METHOD_ARG]])
+extern "C" __global__ void member_calls(const __grid_constant__ int arg) {
+  DeviceObject object(arg);
+  object.method(arg);
 }
 
 // Values are loaded from the parameter objects, while a source-level copy is
