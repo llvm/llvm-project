@@ -829,3 +829,36 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
     llvm_unreachable("No Feature Priority for non-CPUSupports Features");
   }
 }
+
+static llvm::X86::ProcessorFeatures getFeature(StringRef Name) {
+  return llvm::StringSwitch<llvm::X86::ProcessorFeatures>(Name)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
+  .Case(STR, llvm::X86::FEATURE_##ENUM)
+
+#include "llvm/TargetParser/X86TargetParser.def"
+      ;
+  // Note, this function should only be used after ensuring the value is
+  // correct, so it asserts if the value is out of range.
+}
+
+unsigned llvm::X86::getFMVPriority(ArrayRef<StringRef> Features) {
+  auto getPriority = [](StringRef Feature) -> unsigned {
+    // Valid CPUs have a 'key feature' that compares just better than its key
+    // feature.
+    using namespace llvm::X86;
+    CPUKind Kind = parseArchX86(Feature);
+    if (Kind != CK_None) {
+      ProcessorFeatures KeyFeature = getKeyFeature(Kind);
+      return (getFeaturePriority(KeyFeature) << 1) + 1;
+    }
+    // Now we know we have a feature, so get its priority and shift it a few so
+    // that we have sufficient room for the CPUs (above).
+    return getFeaturePriority(getFeature(Feature)) << 1;
+  };
+
+  unsigned Priority = 0;
+  for (StringRef Feature : Features)
+    if (!Feature.empty())
+      Priority = std::max(Priority, getPriority(Feature));
+  return Priority;
+}
