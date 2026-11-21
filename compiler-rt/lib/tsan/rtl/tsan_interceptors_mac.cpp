@@ -20,6 +20,7 @@
 #  include <os/lock.h>
 #  include <sys/ucontext.h>
 
+#  include "BlocksRuntime/Block.h"
 #  include "interception/interception.h"
 #  include "sanitizer_common/sanitizer_addrhashmap.h"
 #  include "tsan_interceptors.h"
@@ -385,29 +386,31 @@ TSAN_INTERCEPTOR(void, xpc_connection_set_event_handler,
                  xpc_connection_t connection, xpc_handler_t handler) {
   SCOPED_TSAN_INTERCEPTOR(xpc_connection_set_event_handler, connection,
                           handler);
-  Release(thr, pc, (uptr)connection);
-  xpc_handler_t new_handler = ^(xpc_object_t object) {
+  xpc_handler_t new_handler = Block_copy(^(xpc_object_t object) {
     {
       SCOPED_INTERCEPTOR_RAW(xpc_connection_set_event_handler);
       Acquire(thr, pc, (uptr)connection);
     }
     handler(object);
-  };
+  });
+  Release(thr, pc, (uptr)connection);
   REAL(xpc_connection_set_event_handler)(connection, new_handler);
+  Block_release(new_handler);
 }
 
 TSAN_INTERCEPTOR(void, xpc_connection_send_barrier, xpc_connection_t connection,
                  dispatch_block_t barrier) {
   SCOPED_TSAN_INTERCEPTOR(xpc_connection_send_barrier, connection, barrier);
-  Release(thr, pc, (uptr)connection);
-  dispatch_block_t new_barrier = ^() {
+  dispatch_block_t new_barrier = Block_copy(^() {
     {
       SCOPED_INTERCEPTOR_RAW(xpc_connection_send_barrier);
       Acquire(thr, pc, (uptr)connection);
     }
     barrier();
-  };
+  });
+  Release(thr, pc, (uptr)connection);
   REAL(xpc_connection_send_barrier)(connection, new_barrier);
+  Block_release(new_barrier);
 }
 
 TSAN_INTERCEPTOR(void, xpc_connection_send_message_with_reply,
@@ -415,16 +418,17 @@ TSAN_INTERCEPTOR(void, xpc_connection_send_message_with_reply,
                  dispatch_queue_t replyq, xpc_handler_t handler) {
   SCOPED_TSAN_INTERCEPTOR(xpc_connection_send_message_with_reply, connection,
                           message, replyq, handler);
-  Release(thr, pc, (uptr)connection);
-  xpc_handler_t new_handler = ^(xpc_object_t object) {
+  xpc_handler_t new_handler = Block_copy(^(xpc_object_t object) {
     {
       SCOPED_INTERCEPTOR_RAW(xpc_connection_send_message_with_reply);
       Acquire(thr, pc, (uptr)connection);
     }
     handler(object);
-  };
+  });
+  Release(thr, pc, (uptr)connection);
   REAL(xpc_connection_send_message_with_reply)
   (connection, message, replyq, new_handler);
+  Block_release(new_handler);
 }
 
 TSAN_INTERCEPTOR(void, xpc_connection_cancel, xpc_connection_t connection) {
