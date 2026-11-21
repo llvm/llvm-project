@@ -93,12 +93,12 @@ let Attributes = [Const, NoThrow, RequiredVectorWidth<128>] in {
   }
 }
 
-let Features = "mmx", Header = "mmintrin.h", Attributes = [NoThrow, Const] in {
+let Header = "mmintrin.h", Attributes = [NoThrow, Const] in {
   def _m_prefetch : X86LibBuiltin<"void(void *)">;
 }
 
 // PRFCHW
-let Features = "prfchw", Header = "intrin.h", Attributes = [NoThrow, Const] in {
+let Header = "intrin.h", Attributes = [NoThrow, Const] in {
   def _m_prefetchw : X86LibBuiltin<"void(void volatile const *)">;
 }
 
