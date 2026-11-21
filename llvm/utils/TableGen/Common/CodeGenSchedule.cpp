@@ -580,6 +580,8 @@ static void scanSchedRW(const Record *RWDef, ConstRecVec &RWDefs,
         scanSchedRW(SelDef, RWDefs, RWSet);
     }
   }
+  if (RWDef->isSubClassOf("SchedWriteFallback"))
+    scanSchedRW(RWDef->getValueAsDef("Fallback"), RWDefs, RWSet);
 }
 
 // Collect and sort all SchedReadWrites reachable via tablegen records.
@@ -682,6 +684,25 @@ void CodeGenSchedModels::collectSchedRW() {
       PrintFatalError(ADef->getLoc(), "Cannot Alias an Alias");
     RW.Aliases.push_back(ADef);
   }
+  for (const Record *WR : Records.getAllDerivedDefinitions("WriteRes"))
+    ModelWriteRes.insert(
+        {WR->getValueAsDef("SchedModel"), WR->getValueAsDef("WriteType")});
+  for (const CodeGenSchedRW &CGRW : SchedWrites) {
+    if (!CGRW.Fallback)
+      continue;
+    if (CGRW.TheDef->isSubClassOf("SchedWriteRes") || CGRW.HasVariants ||
+        CGRW.IsSequence)
+      PrintFatalError(CGRW.TheDef->getLoc(),
+                      "SchedWriteRes, SchedWriteVariant and WriteSequence "
+                      "cannot have a fallback");
+    const CodeGenSchedRW *RW = &CGRW;
+    for (unsigned Steps = 0; RW->Fallback; ++Steps) {
+      if (Steps == SchedWrites.size())
+        PrintFatalError(CGRW.TheDef->getLoc(),
+                        "Fallback cycle through " + CGRW.Name);
+      RW = &getSchedRW(RW->Fallback);
+    }
+  }
   LLVM_DEBUG(
       dbgs() << "\n+++ SCHED READS and WRITES (collectSchedRW) +++\n";
       for (unsigned WIdx = 0, WEnd = SchedWrites.size(); WIdx != WEnd; ++WIdx) {
@@ -768,6 +789,19 @@ void CodeGenSchedModels::expandRWSequence(unsigned RWIdx, IdxVec &RWSeq,
   }
 }
 
+const CodeGenSchedRW &
+CodeGenSchedModels::resolveFallback(const CodeGenSchedRW &RW,
+                                    const CodeGenProcModel &PM) const {
+  const CodeGenSchedRW *Cur = &RW;
+  while (Cur->Fallback && !ModelWriteRes.contains({PM.ModelDef, Cur->TheDef}) &&
+         none_of(Cur->Aliases, [&PM](const Record *A) {
+           return !A->getValueInit("SchedModel")->isComplete() ||
+                  A->getValueAsDef("SchedModel") == PM.ModelDef;
+         }))
+    Cur = &getSchedRW(Cur->Fallback);
+  return *Cur;
+}
+
 // Expand a SchedWrite as a sequence following any aliases that coincide with
 // the given processor model.
 void CodeGenSchedModels::expandRWSeqForProc(
@@ -789,6 +823,11 @@ void CodeGenSchedModels::expandRWSeqForProc(
                           ProcModel.ModelName +
                           " Ensure only one SchedAlias exists per RW.");
     AliasDef = AliasRW.TheDef;
+  }
+  if (!AliasDef) {
+    const CodeGenSchedRW &FallbackRW = resolveFallback(SchedWrite, ProcModel);
+    if (&FallbackRW != &SchedWrite)
+      AliasDef = FallbackRW.TheDef;
   }
   if (AliasDef) {
     expandRWSeqForProc(getSchedRWIdx(AliasDef, IsRead), RWSeq, IsRead,
@@ -1307,7 +1346,7 @@ public:
 private:
   bool mutuallyExclusive(const Record *PredDef, ArrayRef<const Record *> Preds,
                          ArrayRef<PredCheck> Term);
-  void getIntersectingVariants(const CodeGenSchedRW &SchedRW, unsigned TransIdx,
+  void getIntersectingVariants(const CodeGenSchedRW &OrigRW, unsigned TransIdx,
                                std::vector<TransVariant> &IntersectingVariants);
   void pushVariant(const TransVariant &VInfo, bool IsRead);
 };
@@ -1384,8 +1423,13 @@ getAllPredicates(ArrayRef<TransVariant> Variants, unsigned ProcId) {
 // given SchedRW whose processor indices and predicates are not mutually
 // exclusive with the given transition.
 void PredTransitions::getIntersectingVariants(
-    const CodeGenSchedRW &SchedRW, unsigned TransIdx,
+    const CodeGenSchedRW &OrigRW, unsigned TransIdx,
     std::vector<TransVariant> &IntersectingVariants) {
+  unsigned ProcIdx = TransVec[TransIdx].ProcIndex;
+  const CodeGenSchedRW &SchedRW =
+      ProcIdx ? SchedModels.resolveFallback(OrigRW,
+                                            SchedModels.procModels()[ProcIdx])
+              : OrigRW;
 
   bool GenericRW = false;
 
@@ -1855,6 +1899,8 @@ void CodeGenSchedModels::collectProcResources() {
     addWriteRes(WR, getProcModel(ModelDef));
   }
   for (const Record *SWR : Records.getAllDerivedDefinitions("SchedWriteRes")) {
+    if (!SWR->getValueInit("SchedModel")->isComplete())
+      continue;
     const Record *ModelDef = SWR->getValueAsDef("SchedModel");
     addWriteRes(SWR, getProcModel(ModelDef));
   }
