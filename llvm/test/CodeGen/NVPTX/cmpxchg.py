@@ -6,7 +6,7 @@ from itertools import product
 
 cmpxchg_func = Template(
     """define i$size @${success}_${failure}_i${size}_${addrspace}_${ptx_scope}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
-    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new syncscope(\"${llvm_scope}\") $success $failure
+    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new syncscope(\"${llvm_scope}\") $success $failure$metadata
     ret i$size %new
 }
 """
@@ -14,7 +14,7 @@ cmpxchg_func = Template(
 
 cmpxchg_func_no_scope = Template(
     """define i$size @${success}_${failure}_i${size}_${addrspace}(ptr${addrspace_cast} %addr, i$size %cmp, i$size %new) {
-    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure
+    %pairold = cmpxchg ptr${addrspace_cast} %addr, i$size %cmp, i$size %new $success $failure$metadata
     ret i$size %new
 }
 """
@@ -33,6 +33,12 @@ def get_addrspace_cast(addrspace):
         return ""
     else:
         return " addrspace({})".format(str(addrspace))
+
+
+def get_metadata(addrspace):
+    # These tests cover native atomics. Dynamic local-memory legalization is
+    # covered in cmpxchg-generic-local.ll.
+    return ", !noalias.addrspace !0" if addrspace == 0 else ""
 
 
 TESTS = [(60, 50), (70, 63), (90, 87)]
@@ -73,6 +79,7 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=get_addrspace_cast(addrspace),
+                        metadata=get_metadata(addrspace),
                         llvm_scope=llvm_scope,
                         ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
@@ -90,6 +97,7 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=get_addrspace_cast(addrspace),
+                        metadata=get_metadata(addrspace),
                     ),
                     file=fp,
                 )
@@ -107,6 +115,7 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=get_addrspace_cast(addrspace),
+                        metadata=get_metadata(addrspace),
                         llvm_scope=llvm_scope,
                         ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
@@ -127,8 +136,11 @@ if __name__ == "__main__":
                         size=size,
                         addrspace=ADDRSPACE_NUM_TO_ADDRSPACE[addrspace],
                         addrspace_cast=get_addrspace_cast(addrspace),
+                        metadata=get_metadata(addrspace),
                         llvm_scope=llvm_scope,
                         ptx_scope=SCOPE_LLVM_TO_PTX[llvm_scope],
                     ),
                     file=fp,
                 )
+
+            print("\n; Native atomic instruction tests exclude thread-private local memory.\n!0 = !{i32 5, i32 6}", file=fp)
