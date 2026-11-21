@@ -155,9 +155,10 @@ RT_API_ATTRS OwningPtr<Descriptor> Descriptor::Create(
 
 RT_API_ATTRS std::size_t Descriptor::SizeInBytes() const {
   const DescriptorAddendum *addendum{Addendum()};
-  std::size_t bytes{ sizeof *this - sizeof(Dimension) + raw_.rank * sizeof(Dimension) +
-      (addendum ? addendum->SizeInBytes() : 0)};
-  assert (bytes <= MaxDescriptorSizeInBytes(raw_.rank,addendum) && "Descriptor must fit compiler-allocated space");
+  std::size_t bytes{sizeof *this - sizeof(Dimension) +
+      raw_.rank * sizeof(Dimension) + (addendum ? addendum->SizeInBytes() : 0)};
+  assert(bytes <= MaxDescriptorSizeInBytes(raw_.rank, addendum) &&
+      "Descriptor must fit compiler-allocated space");
   return bytes;
 }
 
@@ -172,7 +173,20 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
     // to a negative value, the length of character entities declared is zero."
     elementBytes = raw_.elem_len = 0;
   }
-  std::size_t byteSize{Elements() * elementBytes};
+
+  std::size_t byteSize;
+  // To guard against the (remote) possibility of 64-bit multiplication
+  // overflow when computing the product of extents in all ranks, use:
+  //    InlineElementsScaled(elementBytes)
+  // and not:
+  //    elementBytes * InlineElements()
+  std::optional<std::size_t> elementsScaled{InlineElementsScaled(elementBytes)};
+  if (elementsScaled) {
+    byteSize = *elementsScaled;
+  } else {
+    return CFI_ERROR_MEM_ALLOCATION;
+  }
+
   // For arrays, use the default array alignment
   std::size_t alignment{rank() > 0 ? kDefaultArrayAlignment : 0};
   // Zero size allocation is possible in Fortran and the resulting
@@ -467,7 +481,7 @@ void Descriptor::Dump(FILE *f, bool dumpRawType) const {
     std::fprintf(f, "         sm          %jd\n",
         static_cast<std::intmax_t>(raw_.dim[j].sm));
   }
-  if (const DescriptorAddendum * addendum{Addendum()}) {
+  if (const DescriptorAddendum *addendum{Addendum()}) {
     addendum->Dump(f);
   }
 }
