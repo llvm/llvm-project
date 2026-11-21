@@ -2837,6 +2837,33 @@ allocateRequiresInitOrFinalization(const semantics::Symbol &ultimate) {
          semantics::MayRequireFinalization(*derivedTypeSpec);
 }
 
+static fir::GlobalOp
+getGlobalForStaticAllocateItem(lower::AbstractConverter &converter,
+                               const semantics::Symbol &sym) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  if (fir::GlobalOp global = builder.getNamedGlobal(converter.mangleName(sym)))
+    return global;
+  if (mlir::Value addr = converter.getSymbolAddress(sym))
+    if (auto addrOf =
+            mlir::dyn_cast_if_present<fir::AddrOfOp>(addr.getDefiningOp()))
+      return builder.getNamedGlobal(addrOf.getSymbol().getLeafReference());
+  return {};
+}
+
+static void applyStaticAllocateAlignment(lower::AbstractConverter &converter,
+                                         const semantics::Symbol &ultimate,
+                                         std::optional<uint64_t> alignValue) {
+  if (!alignValue)
+    return;
+  fir::GlobalOp global = getGlobalForStaticAllocateItem(converter, ultimate);
+  if (!global)
+    return;
+  uint64_t newAlign = *alignValue;
+  if (std::optional<uint64_t> existing = global.getAlignment())
+    newAlign = std::max(newAlign, *existing);
+  global.setAlignment(newAlign);
+}
+
 static void genAllocateDirOp(lower::AbstractConverter &converter,
                              semantics::SemanticsContext &semaCtx,
                              lower::StatementContext &stmtCtx,
@@ -2844,6 +2871,14 @@ static void genAllocateDirOp(lower::AbstractConverter &converter,
                              const ObjectList &objects,
                              const ConstructQueue &queue,
                              ConstructQueue::const_iterator item) {
+  // Pull align early so SAVE/COMMON items can apply it to fir.global without
+  // going through the allocate_dir path.
+  mlir::omp::AllocateDirOperands alignOnlyOps;
+  ClauseProcessor(converter, semaCtx, item->clauses).processAlign(alignOnlyOps);
+  std::optional<uint64_t> alignValue;
+  if (alignOnlyOps.align)
+    alignValue = alignOnlyOps.align.getInt();
+
   ObjectList supportedObjects;
   supportedObjects.reserve(objects.size());
   for (const Object &object : objects) {
@@ -2852,11 +2887,7 @@ static void genAllocateDirOp(lower::AbstractConverter &converter,
     const semantics::Symbol &ultimate = sym->GetUltimate();
     if (semantics::omp::IsCommonBlock(ultimate) ||
         semantics::IsSaved(ultimate)) {
-      mlir::emitWarning(
-          loc, "TODO : OpenMP declarative ALLOCATE on SAVE variables or "
-               "COMMON blocks is not yet supported, ignoring the ALLOCATE "
-               "directive for '" +
-                   sym->name().ToString() + "'");
+      applyStaticAllocateAlignment(converter, ultimate, alignValue);
       continue;
     }
     if (allocateRequiresInitOrFinalization(ultimate)) {
