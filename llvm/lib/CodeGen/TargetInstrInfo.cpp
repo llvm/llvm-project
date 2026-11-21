@@ -788,6 +788,21 @@ static MachineInstr *foldInlineAsmMemOperand(MachineInstr &MI,
     Flags |= MachineMemOperand::MOStore;
   }
 
+  // The memoperands of an instruction describe all of its memory accesses. An
+  // asm without any may still access memory, e.g. through an "m" operand or a
+  // "memory" clobber, so give it one for any memory as well as the slot's.
+  if (MI.memoperands_empty() && (MI.mayLoad() || MI.mayStore())) {
+    MachineMemOperand::Flags OtherFlags = MachineMemOperand::MONone;
+    if (MI.mayLoad())
+      OtherFlags |= MachineMemOperand::MOLoad;
+    if (MI.mayStore())
+      OtherFlags |= MachineMemOperand::MOStore;
+    NewMI.addMemOperand(
+        MF, MF.getMachineMemOperand(MachinePointerInfo(), OtherFlags,
+                                    LocationSize::beforeOrAfterPointer(),
+                                    Align(1)));
+  }
+
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineMemOperand *MMO =
       MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI), Flags,
