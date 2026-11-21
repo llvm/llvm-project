@@ -1987,20 +1987,20 @@ static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
 
   // 1. De-interleave twice to group the i8 elements by their position within
   // the destination byte.
-  // in      = [0,1,2,3,4,5,6,7],...
-  // evenOdd = [0,2,4,6],... [1,3,5,7],...
-  // vec02   = [0,4],... [2,6],...
-  // vec13   = [1,5],... [3,7],...
+  // in          = [0,1,2,3,4,5,6,7]
+  // evenOdd     = [0,2,4,6], [1,3,5,7]
+  // evenEvenOdd = [0,4], [2,6]
+  // oddEvenOdd  = [1,5], [3,7]
   auto evenOdd = vector::DeinterleaveOp::create(rewriter, loc, srcValue);
-  auto vec02 =
+  auto evenEvenOdd =
       vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultEven());
-  auto vec13 =
+  auto oddEvenOdd =
       vector::DeinterleaveOp::create(rewriter, loc, evenOdd.getResultOdd());
 
   // 2. Zero out the upper side of each i8 element, then move the low i2 to
   // its position in the byte. Position 3 needs no mask, the upper bits are
   // shifted out.
-  VectorType deinterI8VecType = vec02.getResultVectorType();
+  VectorType deinterI8VecType = evenEvenOdd.getResultVectorType();
   constexpr int8_t i8LowBitMask = 0x03;
   Value zeroOutMask = arith::ConstantOp::create(
       rewriter, loc, DenseElementsAttr::get(deinterI8VecType, i8LowBitMask));
@@ -2009,15 +2009,17 @@ static Value rewriteI8ToI2Trunc(PatternRewriter &rewriter, Location loc,
         rewriter, loc, DenseElementsAttr::get(deinterI8VecType, bitsToShift));
     return arith::ShLIOp::create(rewriter, loc, value, shiftValues);
   };
-  Value elem0 =
-      arith::AndIOp::create(rewriter, loc, vec02.getResultEven(), zeroOutMask);
-  Value elem1 = shiftLeft(
-      arith::AndIOp::create(rewriter, loc, vec13.getResultEven(), zeroOutMask),
-      2);
-  Value elem2 = shiftLeft(
-      arith::AndIOp::create(rewriter, loc, vec02.getResultOdd(), zeroOutMask),
-      4);
-  Value elem3 = shiftLeft(vec13.getResultOdd(), 6);
+  Value elem0 = arith::AndIOp::create(rewriter, loc,
+                                      evenEvenOdd.getResultEven(), zeroOutMask);
+  Value elem1 =
+      shiftLeft(arith::AndIOp::create(rewriter, loc, oddEvenOdd.getResultEven(),
+                                      zeroOutMask),
+                2);
+  Value elem2 =
+      shiftLeft(arith::AndIOp::create(rewriter, loc, evenEvenOdd.getResultOdd(),
+                                      zeroOutMask),
+                4);
+  Value elem3 = shiftLeft(oddEvenOdd.getResultOdd(), 6);
 
   // 3. Merge the four i2 values.
   Value merged = arith::OrIOp::create(rewriter, loc, elem0, elem1);
@@ -2237,34 +2239,36 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
 ///
 ///   %cst = arith.constant dense<15> : vector<4xi8>
 ///   %cst_0 = arith.constant dense<4> : vector<4xi8>
-///   %0, %1 = vector.deinterleave %in : vector<8xi8> -> vector<4xi8>
-///   %2 = arith.andi %0, %cst : vector<4xi8>
-///   %3 = arith.shli %1, %cst_0 : vector<4xi8>
-///   %4 = arith.ori %2, %3 : vector<4xi8>
-///   %5 = vector.bitcast %4 : vector<4xi8> to vector<8xi4>
+///   %0 = arith.trunci %in : vector<8xi32> to vector<8xi8>
+///   %1, %2 = vector.deinterleave %0 : vector<8xi8> -> vector<4xi8>
+///   %3 = arith.andi %1, %cst : vector<4xi8>
+///   %4 = arith.shli %2, %cst_0 : vector<4xi8>
+///   %5 = arith.ori %3, %4 : vector<4xi8>
+///   %6 = vector.bitcast %5 : vector<4xi8> to vector<8xi4>
 ///
 /// and, with four elements per byte,
-///    arith.trunci %in : vector<8xi32> to vector<8xi2>
+///    arith.trunci %in : vector<4xi32> to vector<4xi2>
 ///
 /// is rewritten as:
 ///
-///   %cst = arith.constant dense<3> : vector<2xi8>
-///   %cst_0 = arith.constant dense<2> : vector<2xi8>
-///   %cst_1 = arith.constant dense<4> : vector<2xi8>
-///   %cst_2 = arith.constant dense<6> : vector<2xi8>
-///   %0, %1 = vector.deinterleave %in : vector<8xi8> -> vector<4xi8>
-///   %2, %3 = vector.deinterleave %0 : vector<4xi8> -> vector<2xi8>
-///   %4, %5 = vector.deinterleave %1 : vector<4xi8> -> vector<2xi8>
-///   %6 = arith.andi %2, %cst : vector<2xi8>
-///   %7 = arith.andi %4, %cst : vector<2xi8>
-///   %8 = arith.shli %7, %cst_0 : vector<2xi8>
-///   %9 = arith.andi %3, %cst : vector<2xi8>
-///   %10 = arith.shli %9, %cst_1 : vector<2xi8>
-///   %11 = arith.shli %5, %cst_2 : vector<2xi8>
-///   %12 = arith.ori %6, %8 : vector<2xi8>
-///   %13 = arith.ori %12, %10 : vector<2xi8>
-///   %14 = arith.ori %13, %11 : vector<2xi8>
-///   %15 = vector.bitcast %14 : vector<2xi8> to vector<8xi2>
+///   %cst = arith.constant dense<3> : vector<1xi8>
+///   %cst_0 = arith.constant dense<2> : vector<1xi8>
+///   %cst_1 = arith.constant dense<4> : vector<1xi8>
+///   %cst_2 = arith.constant dense<6> : vector<1xi8>
+///   %0 = arith.trunci %in : vector<4xi32> to vector<4xi8>
+///   %1, %2 = vector.deinterleave %0 : vector<4xi8> -> vector<2xi8>
+///   %3, %4 = vector.deinterleave %1 : vector<2xi8> -> vector<1xi8>
+///   %5, %6 = vector.deinterleave %2 : vector<2xi8> -> vector<1xi8>
+///   %7 = arith.andi %3, %cst : vector<1xi8>
+///   %8 = arith.andi %5, %cst : vector<1xi8>
+///   %9 = arith.shli %8, %cst_0 : vector<1xi8>
+///   %10 = arith.andi %4, %cst : vector<1xi8>
+///   %11 = arith.shli %10, %cst_1 : vector<1xi8>
+///   %12 = arith.shli %6, %cst_2 : vector<1xi8>
+///   %13 = arith.ori %7, %9 : vector<1xi8>
+///   %14 = arith.ori %13, %11 : vector<1xi8>
+///   %15 = arith.ori %14, %12 : vector<1xi8>
+///   %16 = vector.bitcast %15 : vector<1xi8> to vector<4xi2>
 ///
 struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
   using Base::Base;
