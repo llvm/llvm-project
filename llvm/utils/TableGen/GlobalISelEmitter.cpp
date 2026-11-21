@@ -502,6 +502,20 @@ private:
   inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                       unsigned ResIdx) const;
 
+  /// Return the class to use for the result of extracting sub-register \p
+  /// SubIdx from a register of class \p SuperRC, also accounting for the
+  /// result's value type \p Ty.
+  const CodeGenRegisterClass *
+  inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                          const CodeGenSubRegIndex &SubIdx,
+                          const TypeSetByHwMode &Ty) const;
+
+  /// Return \p SubRegRC if it can hold \p Ty, otherwise an allocatable class
+  /// covering the same registers that can.
+  const CodeGenRegisterClass *
+  pickSubRegClassForType(const CodeGenRegisterClass &SubRegRC,
+                         const TypeSetByHwMode &Ty) const;
+
   Error constrainOperands(action_iterator InsertPt, RuleMatcher &M,
                           unsigned InsnID, const TreePatternNode &Dst) const;
 
@@ -1955,8 +1969,10 @@ Error GlobalISelEmitter::constrainOperands(action_iterator InsertPt,
     }
 
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
+    const CodeGenRegisterClass *SubRegRC =
+        pickSubRegClassForType(*SrcRCDstRCPair->second, Dst.getExtType(0));
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 0,
-                                                     *SrcRCDstRCPair->second);
+                                                     *SubRegRC);
     M.insertAction<ConstrainOperandToRegClassAction>(InsertPt, InsnID, 1,
                                                      *SrcRCDstRCPair->first);
   } else if (DstIName == "INSERT_SUBREG") {
@@ -2082,6 +2098,61 @@ GlobalISelEmitter::inferRegClassFromRegisterClassLike(
 }
 
 const CodeGenRegisterClass *
+GlobalISelEmitter::inferSubRegClassForType(const CodeGenRegisterClass &SuperRC,
+                                           const CodeGenSubRegIndex &SubIdx,
+                                           const TypeSetByHwMode &Ty) const {
+  const auto SubRCAndSubRegRC =
+      SuperRC.getMatchingSubClassWithSubRegs(CGRegs, &SubIdx);
+  if (!SubRCAndSubRegRC)
+    return nullptr;
+  return pickSubRegClassForType(*SubRCAndSubRegRC->second, Ty);
+}
+
+const CodeGenRegisterClass *
+GlobalISelEmitter::pickSubRegClassForType(const CodeGenRegisterClass &SubRegRC,
+                                          const TypeSetByHwMode &Ty) const {
+  if (!Ty.isValueTypeByHwMode(false))
+    return &SubRegRC;
+
+  const ValueTypeByHwMode &VT = Ty.getValueTypeByHwMode();
+  if (VT.empty())
+    return &SubRegRC;
+
+  // hasType() only looks at the types of each HW mode for a simple VT, so
+  // check every mode of VT explicitly. A class's default type applies to all
+  // modes.
+  auto HasType = [&VT](const CodeGenRegisterClass &RC) {
+    for (const auto &[Mode, T] : VT) {
+      bool Found = llvm::any_of(
+          RC.getValueTypes(), [Mode = Mode, T = T](const ValueTypeByHwMode &V) {
+            return (V.hasMode(Mode) || V.hasDefault()) && V.getType(Mode) == T;
+          });
+      if (!Found)
+        return false;
+    }
+    return true;
+  };
+
+  // getMatchingSubClassWithSubRegs() breaks ties between classes covering the
+  // same registers by class order, which is sorted by register size, then by
+  // number of members, then by name. That can select a class which happens to
+  // cover the right registers but cannot hold the extracted value: on X86,
+  // extracting sub_xmm from VR512 for a v4i32 result picks FR16X (an f16 class
+  // that is only 32 bits wide) instead of VR128X.
+  //
+  // Only prefer an allocatable class: if there is none, returning SubRegRC
+  // keeps the behavior this function had before the type check was added. A
+  // different non-allocatable class would be just as unallocatable, so swapping
+  // it in would only move the failure elsewhere.
+  for (const CodeGenRegisterClass &RC : CGRegs.getRegClasses()) {
+    if (RC.Allocatable && RC.getMembers() == SubRegRC.getMembers() &&
+        HasType(RC))
+      return &RC;
+  }
+  return &SubRegRC;
+}
+
+const CodeGenRegisterClass *
 GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
                                                        unsigned ResIdx) const {
   const CodeGenInstruction &Inst = Target.getInstruction(N.getOperator());
@@ -2133,12 +2204,7 @@ GlobalISelEmitter::inferRegClassFromInstructionPattern(const TreePatternNode &N,
     if (!SubIdx)
       return nullptr;
 
-    const auto SubRCAndSubRegRC =
-        SuperRC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
-    if (!SubRCAndSubRegRC)
-      return nullptr;
-
-    return SubRCAndSubRegRC->second;
+    return inferSubRegClassForType(*SuperRC, *SubIdx, N.getExtType(0));
   }
 
   if (InstName == "SUBREG_TO_REG") {
