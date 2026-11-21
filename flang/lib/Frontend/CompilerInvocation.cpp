@@ -1719,6 +1719,9 @@ static bool parseLinkerOptionsArgs(CompilerInvocation &invoc,
       opts.PrepareForThinLTO = true;
   }
 
+  opts.ThinLinkBitcodeFile =
+      args.getLastArgValue(clang::options::OPT_fthin_link_bitcode_EQ).str();
+
   // -fsplit-lto-unit option
   if (args.hasArg(clang::options::OPT_fsplit_lto_unit))
     opts.EnableSplitLTOUnit = true;

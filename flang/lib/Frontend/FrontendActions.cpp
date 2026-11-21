@@ -1058,8 +1058,8 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Register the target library analysis directly and give it a customized
   // preset TLI depending on -fveclib
   llvm::Triple triple(llvmModule->getTargetTriple());
-  llvm::TargetLibraryInfoImpl *tlii =
-      llvm::driver::createTLII(triple, opts.getVecLib());
+  std::unique_ptr<llvm::TargetLibraryInfoImpl> tlii(
+      llvm::driver::createTLII(triple, opts.getVecLib()));
   fam.registerPass([&] { return llvm::TargetLibraryAnalysis(*tlii); });
   mam.registerPass([&] {
     return llvm::RuntimeLibraryAnalysis(
@@ -1074,6 +1074,9 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   pb.registerFunctionAnalyses(fam);
   pb.registerLoopAnalyses(lam);
   pb.crossRegisterProxies(lam, fam, cgam, mam);
+
+  // Keep the companion stream alive until after the writer pass is destroyed.
+  std::unique_ptr<llvm::ToolOutputFile> thinLinkOS;
 
   // Create the pass manager.
   llvm::ModulePassManager mpm;
@@ -1108,7 +1111,19 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
 
     if (action == BackendActionTy::Backend_EmitBC) {
       if (opts.PrepareForThinLTO) {
-        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(os, nullptr));
+        if (!opts.ThinLinkBitcodeFile.empty()) {
+          std::error_code ec;
+          thinLinkOS = std::make_unique<llvm::ToolOutputFile>(
+              opts.ThinLinkBitcodeFile, ec, llvm::sys::fs::OF_None);
+          if (ec) {
+            ci.getDiagnostics().Report(
+                clang::diag::err_fe_unable_to_open_output)
+                << opts.ThinLinkBitcodeFile << ec.message();
+            return;
+          }
+        }
+        mpm.addPass(llvm::ThinLTOBitcodeWriterPass(
+            os, thinLinkOS ? &thinLinkOS->os() : nullptr));
       } else {
         mpm.addPass(llvm::BitcodeWriterPass(
             os, /*ShouldPreserveUseListOrder=*/false, emitSummary));
@@ -1137,12 +1152,12 @@ void CodeGenAction::runOptimizationPipeline(llvm::raw_pwrite_stream &os) {
   // Run the passes.
   mpm.run(*llvmModule, mam);
 
+  if (thinLinkOS && !ci.getDiagnostics().hasErrorOccurred())
+    thinLinkOS->keep();
+
   // Print the timers to the associated output stream and reset them.
   if (ci.isTimingEnabled())
     si.getTimePasses().print();
-
-  // Cleanup
-  delete tlii;
 }
 
 // This class handles optimization remark messages requested if

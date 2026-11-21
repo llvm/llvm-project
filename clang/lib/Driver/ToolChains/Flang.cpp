@@ -455,6 +455,8 @@ void Flang::addLTOOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
 
   Args.addAllArgs(CmdArgs, {options::OPT_ffat_lto_objects,
                             options::OPT_fno_fat_lto_objects});
+  if (Args.getLastArg(options::OPT_fthin_link_bitcode_EQ))
+    Args.AddLastArg(CmdArgs, options::OPT_fthin_link_bitcode_EQ);
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

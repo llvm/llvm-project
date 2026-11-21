@@ -89,6 +89,11 @@ public:
   /// The format used for serializing remarks (default: YAML)
   std::string OptRecordFormat;
 
+  /// Name of a file that can optionally be written with minimized bitcode
+  /// to be used as input for the ThinLTO thin link step, which only needs
+  /// the summary and module symbol table (and not, e.g. any debug metadata).
+  std::string ThinLinkBitcodeFile;
+
   /// Options to add to the linker for the object file
   std::vector<std::string> DependentLibs;
 
