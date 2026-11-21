@@ -47,7 +47,7 @@ entry:
 
 define dso_local i32 @ashr_to_lshr(i32 noundef %x, i32 noundef %y) #0 !dbg !40 {
 ; CHECK:      [[SHR:%.*]] = lshr i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT: #dbg_value(!DIArgList(i32 [[X]], i32 [[Y]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_shra, DW_OP_stack_value), [[META11:![0-9]+]])
+; CHECK-NEXT: #dbg_value(!DIArgList(i32 [[X]], i32 [[Y]]), [[META10:![0-9]+]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_LLVM_arg, 1, DW_OP_shra, DW_OP_stack_value), [[META11:![0-9]+]])
 ;
 entry:
   %shr = ashr i32 %x, %y

@@ -2253,11 +2253,13 @@ uint64_t getDwarfOpForBinOp(Instruction::BinaryOps Opcode) {
 static void handleSSAValueOperands(uint64_t CurrentLocOps,
                                    SmallVectorImpl<uint64_t> &Opcodes,
                                    SmallVectorImpl<Value *> &AdditionalValues,
-                                   Instruction *I) {
+                                   Instruction *I,
+                                   ArrayRef<uint64_t> Op0Ops = {}) {
   if (!CurrentLocOps) {
     Opcodes.append({dwarf::DW_OP_LLVM_arg, 0});
     CurrentLocOps = 1;
   }
+  Opcodes.append(Op0Ops.begin(), Op0Ops.end());
   Opcodes.append({dwarf::DW_OP_LLVM_arg, CurrentLocOps});
   AdditionalValues.push_back(I->getOperand(1));
 }
@@ -2272,6 +2274,21 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
     return nullptr;
 
   Instruction::BinaryOps BinOpcode = BI->getOpcode();
+  // DW_OP_shra works on the address-sized DWARF stack, so sign-extend the
+  // shifted operand to that width first.
+  SmallVector<uint64_t, 6> Op0Ops;
+  if (BinOpcode == Instruction::AShr) {
+    if (!BI->getType()->isIntegerTy())
+      return nullptr;
+    unsigned Width = BI->getType()->getIntegerBitWidth();
+    unsigned StackWidth = BI->getDataLayout().getPointerSizeInBits();
+    if (Width > StackWidth)
+      return nullptr;
+    if (Width < StackWidth)
+      llvm::append_range(Op0Ops,
+                         DIExpression::getExtOps(Width, StackWidth, true));
+  }
+
   // Push any Constant Int operand onto the expression stack.
   if (ConstInt) {
     uint64_t Val = ConstInt->getSExtValue();
@@ -2282,9 +2299,11 @@ Value *getSalvageOpsForBinOp(BinaryOperator *BI, uint64_t CurrentLocOps,
       DIExpression::appendOffset(Opcodes, Offset);
       return BI->getOperand(0);
     }
+    Opcodes.append(Op0Ops.begin(), Op0Ops.end());
     Opcodes.append({dwarf::DW_OP_constu, Val});
   } else {
-    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, BI);
+    handleSSAValueOperands(CurrentLocOps, Opcodes, AdditionalValues, BI,
+                           Op0Ops);
   }
 
   // Add salvaged binary operator to expression stack, if it has a valid
