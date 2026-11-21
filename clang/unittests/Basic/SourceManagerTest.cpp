@@ -225,7 +225,8 @@ TEST_F(SourceManagerTest, isBeforeInTranslationUnitWithTokenSplit) {
   SourceLocation RightShift = toks[RightShiftIndex].getLocation();
   EXPECT_EQ(">>", Lexer::getSpelling(SourceMgr.getSpellingLoc(RightShift),
                                      Scratch, SourceMgr, LangOpts));
-  SourceLocation Greater1 = PP.SplitToken(RightShift, /*Length=*/1);
+  SourceLocation Greater1 =
+      PP.SplitToken(RightShift, /*Length=*/1, tok::greater);
   SourceLocation Greater2 = RightShift.getLocWithOffset(1);
   EXPECT_TRUE(Greater1.isMacroID());
   EXPECT_EQ(">", Lexer::getSpelling(SourceMgr.getSpellingLoc(Greater1), Scratch,
