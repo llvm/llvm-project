@@ -604,6 +604,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
            "expected leading dimensions to be unit");
   int64_t rowIdx = sourceRank - 2;
   int64_t columnIdx = sourceRank - 1;
+  assert((reductionDim == rowIdx || reductionDim == columnIdx) &&
+         "expected the reduction dim to be one of the last two dims");
   int64_t sourceH = sourceType.getShape()[rowIdx];
   int64_t sourceW = sourceType.getShape()[columnIdx];
   int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;

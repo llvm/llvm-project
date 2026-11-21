@@ -607,6 +607,9 @@ Makes programs 10x faster by doing Special New Thing.
 * MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
   rather than by LLDB's own liblzma binding, and is enabled with
   `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
+* The pre-DIL implementation of `frame variable` has been removed, together with
+  the `target.experimental.use-DIL` setting that selected it. Path expressions
+  are now always evaluated by the Data Inspection Language (DIL).
 
 #### SBAPI
 

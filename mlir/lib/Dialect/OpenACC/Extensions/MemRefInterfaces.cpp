@@ -311,10 +311,6 @@ struct MemrefGlobalVariableModel
   }
 
   bool isCompilerGenerated(Operation *op) const { return false; }
-
-  // memref.global has no linkage. External models must implement every
-  // interface method; the tablegen default is only used by the native model.
-  bool isInternalLinkage(Operation *op) const { return false; }
 };
 } // namespace
 

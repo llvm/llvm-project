@@ -1033,11 +1033,11 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsAndLLDBServer(func):
+def skipIfWindowsAndLLDBServer(bugnumber=None, archs=None):
     """Skip tests on Windows when driving lldb-server."""
     if not _usingLLDBServerOnWindows():
-        return func
-    return skipIfPlatform(["windows"])(func)
+        return lambda func: func
+    return skipIf(oslist=["windows"], bugnumber=bugnumber, archs=archs)
 
 
 def skipIfWindowsAndNoLLDBServer(func):
