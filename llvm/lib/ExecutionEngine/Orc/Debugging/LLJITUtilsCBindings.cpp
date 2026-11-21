@@ -10,6 +10,7 @@
 #include "llvm-c/LLJITUtils.h"
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/PerfSupport.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 using namespace llvm;
@@ -19,4 +20,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(LLJIT, LLVMOrcLLJITRef)
 
 LLVMErrorRef LLVMOrcLLJITEnableDebugSupport(LLVMOrcLLJITRef J) {
   return wrap(llvm::orc::enableDebuggerSupport(*unwrap(J)));
+}
+
+LLVMErrorRef LLVMOrcLLJITEnablePerfSupport(LLVMOrcLLJITRef J) {
+  return wrap(llvm::orc::enablePerfSupport(*unwrap(J)));
 }
