@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -std=c++17 -fsyntax-only -fdeclspec -Wno-ignored-attributes -verify %s
 // RUN: %clang_cc1 -fsyntax-only -fms-extensions -Wno-ignored-attributes -verify %s
 
 struct [[]] __attribute__((lockable)) __declspec(dllexport) A {}; // ok
@@ -13,9 +14,9 @@ struct [[]] __attribute__((lockable)) [[]] __declspec(dllexport) H {}; // ok
 [[noreturn]] __declspec(dllexport) __attribute__((cdecl)) void b(); // ok
 [[]] [[noreturn]] __attribute__((cdecl)) __declspec(dllexport) void c(); // ok
 
-__declspec(dllexport) [[noreturn]] __attribute__((cdecl)) void d(); // expected-error {{an attribute list cannot appear here}}
-__declspec(dllexport) __attribute__((cdecl)) [[noreturn]] void e(); // expected-error {{an attribute list cannot appear here}}
-__attribute__((cdecl)) __declspec(dllexport) [[noreturn]] void f(); // expected-error {{an attribute list cannot appear here}}
+__declspec(dllexport) [[noreturn]] __attribute__((cdecl)) void d(); // ok
+__declspec(dllexport) __attribute__((cdecl)) [[noreturn]] void e(); // ok
+__attribute__((cdecl)) __declspec(dllexport) [[noreturn]] void f(); // ok
 
 __attribute__((cdecl)) [[noreturn]] __declspec(dllexport) void g(); // ok
 
@@ -60,3 +61,25 @@ __attribute__((warn_unused_result)) [[maybe_unused]] int f();
 [[maybe_unused]] __attribute__((warn_unused_result)) [[]]
 __attribute__((nothrow)) [[nodiscard]] int h();
 }
+
+// Mixed leading attributes also work in namespace scope.
+namespace Mixed {
+__attribute__(()) __declspec() [[]] int mixed;
+}
+
+// All three kinds of attributes must be preserved.
+__declspec(align(32)) [[maybe_unused]] __attribute__((aligned(16)))
+__declspec() [[]] int preservedDeclspec;
+static_assert(__alignof__(preservedDeclspec) == 32, "declspec must be preserved");
+__declspec() [[maybe_unused]] __attribute__((aligned(64))) int preservedGNU;
+static_assert(__alignof__(preservedGNU) == 64, "GNU attribute must be preserved");
+__declspec() [[nodiscard]] __attribute__(()) int preservedStandard();
+void checkStandard() {
+  preservedStandard(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+}
+
+// Mixed leading attributes also work in linkage specifications.
+extern "C" {
+__declspec() __attribute__(()) [[maybe_unused]] int linkageBlock;
+}
+extern "C" __attribute__(()) __declspec() [[maybe_unused]] int linkageSingle;

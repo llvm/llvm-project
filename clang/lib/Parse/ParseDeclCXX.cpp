@@ -229,7 +229,8 @@ void Parser::ParseInnerNamespace(const InnerNamespaceInfoList &InnerNSs,
       ParsedAttributes DeclAttrs(AttrFactory);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       while (MaybeParseCXX11Attributes(DeclAttrs) ||
-             MaybeParseGNUAttributes(DeclSpecAttrs))
+             MaybeParseGNUAttributes(DeclSpecAttrs) ||
+             MaybeParseMicrosoftDeclSpecs(DeclSpecAttrs))
         ;
       ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
     }
@@ -326,7 +327,8 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
   ParsedAttributes DeclSpecAttrs(AttrFactory);
 
   while (MaybeParseCXX11Attributes(DeclAttrs) ||
-         MaybeParseGNUAttributes(DeclSpecAttrs))
+         MaybeParseGNUAttributes(DeclSpecAttrs) ||
+         MaybeParseMicrosoftDeclSpecs(DeclSpecAttrs))
     ;
 
   if (Tok.isNot(tok::l_brace)) {
@@ -379,7 +381,8 @@ Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
       ParsedAttributes DeclAttrs(AttrFactory);
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       while (MaybeParseCXX11Attributes(DeclAttrs) ||
-             MaybeParseGNUAttributes(DeclSpecAttrs))
+             MaybeParseGNUAttributes(DeclSpecAttrs) ||
+             MaybeParseMicrosoftDeclSpecs(DeclSpecAttrs))
         ;
       ParseExternalDeclaration(DeclAttrs, DeclSpecAttrs);
       continue;
