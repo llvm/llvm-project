@@ -673,6 +673,8 @@ void AMDGPUTargetAsmStreamer::emitAMDGPUInfo(
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK;
       if (Info->UsesHalfSIMDMode)
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HALF_SIMD_MODE;
+      if (Info->UsesAlternateWaveSize)
+        Flags |= AMDGPU::FuncInfoFlags::FUNC_ALTERNATE_WAVESIZE;
       OS << "\t\t.amdgpu_flags " << llvm::to_underlying(Flags) << '\n';
       OS << "\t\t.amdgpu_num_sgpr " << Info->NumSGPR << '\n';
       OS << "\t\t.amdgpu_num_vgpr " << Info->NumArchVGPR << '\n';
@@ -1156,6 +1158,8 @@ void AMDGPUTargetELFStreamer::emitAMDGPUInfo(
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HAS_DYN_STACK;
       if (Info->UsesHalfSIMDMode)
         Flags |= AMDGPU::FuncInfoFlags::FUNC_HALF_SIMD_MODE;
+      if (Info->UsesAlternateWaveSize)
+        Flags |= AMDGPU::FuncInfoFlags::FUNC_ALTERNATE_WAVESIZE;
       EmitU32Entry(AMDGPU::InfoKind::INFO_FLAGS, llvm::to_underlying(Flags));
       EmitU32Entry(AMDGPU::InfoKind::INFO_NUM_SGPR, Info->NumSGPR);
       EmitU32Entry(AMDGPU::InfoKind::INFO_NUM_VGPR, Info->NumArchVGPR);

@@ -1,9 +1,9 @@
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking < %s | FileCheck -check-prefixes=ASM %s --implicit-check-not=.amdgpu_num_agpr
 ; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=obj < %s | llvm-readobj -r --syms --sections - | FileCheck -check-prefixes=ELF %s
 ; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL-WAVE64 %s
 ; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=HALF %s
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=HALF %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa -mattr=+cumode,+wavefrontsize64 -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=HALF-WAVE64 %s
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
 ; RUN: llc -mtriple=amdgpu12.50-amd-amdhsa -mattr=+cumode -amdgpu-enable-object-linking -filetype=asm < %s | FileCheck -check-prefixes=FULL %s
 
@@ -47,8 +47,10 @@
 ; COM: FUNC_HALF_SIMD_MODE (0x8): set when the function uses half SIMD mode
 ; COM: (two of the four SIMD32s). gfx11 default is full SIMD; +cumode selects
 ; COM: half SIMD and sets the flag. gfx1250 is always full SIMD, even with
-; COM: +cumode. Checked for both +wavefrontsize32 (default) and
-; COM: +wavefrontsize64 on gfx11.
+; COM: +cumode.
+; COM: FUNC_ALTERNATE_WAVESIZE (0x10): set when the function does not use the
+; COM: default wave size of the target. The default is wave32 on gfx11 and
+; COM: gfx1250, so only +wavefrontsize64 on gfx11 sets the flag.
 ; FULL:      .amdgpu_info device_func
 ; FULL-NEXT:   .amdgpu_flags 0
 ; FULL:      .amdgpu_info test_kernel
@@ -58,6 +60,18 @@
 ; HALF-NEXT:   .amdgpu_flags 8
 ; HALF:      .amdgpu_info test_kernel
 ; HALF-NEXT:   .amdgpu_flags 8
+
+; COM: ALTERNATE_WAVESIZE only = 0x10 = 16.
+; FULL-WAVE64:      .amdgpu_info device_func
+; FULL-WAVE64-NEXT:   .amdgpu_flags 16
+; FULL-WAVE64:      .amdgpu_info test_kernel
+; FULL-WAVE64-NEXT:   .amdgpu_flags 16
+
+; COM: HALF_SIMD_MODE | ALTERNATE_WAVESIZE = 0x8 | 0x10 = 24.
+; HALF-WAVE64:      .amdgpu_info device_func
+; HALF-WAVE64-NEXT:   .amdgpu_flags 24
+; HALF-WAVE64:      .amdgpu_info test_kernel
+; HALF-WAVE64-NEXT:   .amdgpu_flags 24
 
 ; SHN_AMDGPU_LDS directives.
 ; ASM-DAG: .amdgpu_lds lds_large, 256, 16

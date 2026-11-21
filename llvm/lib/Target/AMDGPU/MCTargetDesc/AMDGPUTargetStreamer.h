@@ -37,6 +37,7 @@ struct FuncInfo {
   uint32_t PrivateSegmentSize = 0;
   uint32_t Occupancy = 0;
   bool UsesHalfSIMDMode = false;
+  bool UsesAlternateWaveSize = false;
   bool UsesVCC = false;
   bool UsesFlatScratch = false;
   bool HasDynStack = false;
