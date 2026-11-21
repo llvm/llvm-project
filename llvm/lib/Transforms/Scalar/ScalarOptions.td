@@ -36,6 +36,8 @@ defm : BoolField<"consthoist-with-block-frequency", "true",
 // ConstraintElimination.cpp
 defm : BoolField<"constraint-elimination-dump-reproducers", "false",
   "Dump IR to reproduce successful transformations">;
+defm : ValueField<"constraint-elimination-max-inductive-bound-checks", "unsigned", "128",
+  "Maximum number of constraint systems to build per function to check if bounds of loop header phis are inductive">;
 defm : ValueField<"constraint-elimination-max-rows", "unsigned", "500",
   "Maximum number of rows to keep in constraint system">;
 
