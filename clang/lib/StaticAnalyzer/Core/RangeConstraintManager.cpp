@@ -911,7 +911,7 @@ namespace {
 ///     to produce non-trivial classes.
 ///     If, at some point, we can assume that two symbols from two distinct
 ///     classes are equal, we can merge these classes.
-class EquivalenceClass : public llvm::FoldingSetNode {
+class EquivalenceClass {
 public:
   /// Find equivalence class for the given symbol in the given state.
   [[nodiscard]] static inline EquivalenceClass find(ProgramStateRef State,
