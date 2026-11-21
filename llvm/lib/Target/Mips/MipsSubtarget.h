@@ -91,9 +91,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Used to avoid printing ginv warnings multiple times.
   static bool GINVWarningPrinted;
 
-  // Used to avoid printing Mips1 warnings multiple times.
-  static bool MIPS1WarningPrinted;
-
   // Used to avoid printing virt warnings multiple times.
   static bool VirtWarningPrinted;
 

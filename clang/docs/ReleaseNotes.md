@@ -1624,6 +1624,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
 
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
@@ -1674,9 +1679,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
-- `-fsanitize=alloc-token` now also infers the allocated type from a placement
-  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
-  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 

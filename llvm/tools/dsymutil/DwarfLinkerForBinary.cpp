@@ -214,7 +214,14 @@ Error DwarfLinkerForBinary::emitRelocations(
   for (auto &Obj : ObjectsForLinking) {
     if (!Obj.OutRelocs->isInitialized())
       continue;
-    Obj.OutRelocs->addValidRelocs(RM);
+    size_t NumSaved = Obj.OutRelocs->addValidRelocs(RM);
+    // A valid relocation is against a symbol of the binary, whose DIE is kept
+    // along with the relocation, so saving none means they were lost.
+    if (NumSaved == 0 && Obj.OutRelocs->getNumInputRelocs() != 0)
+      reportWarning("none of the " + Twine(Obj.OutRelocs->getNumInputRelocs()) +
+                        " valid relocations was saved to the relocation map, "
+                        "so merging the library would drop this debug info",
+                    Obj.Object->FileName);
   }
 
   std::error_code EC;
@@ -1404,7 +1411,7 @@ void DwarfLinkerForBinaryRelocationMap::init(DWARFContext &Context) {
     Units.try_emplace(CU->getOffset());
 }
 
-void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
+size_t DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
   std::vector<ValidReloc> DebugInfoRelocs;
   std::vector<ValidReloc> DebugAddrRelocs;
   for (const auto &[UnitOffset, Relocs] : Units) {
@@ -1427,6 +1434,7 @@ void DwarfLinkerForBinaryRelocationMap::addValidRelocs(RelocationMap &RM) {
     RM.addDebugInfoRelocationMapEntry(R);
   for (const ValidReloc &R : DebugAddrRelocs)
     RM.addDebugAddrRelocationMapEntry(R);
+  return DebugInfoRelocs.size() + DebugAddrRelocs.size();
 }
 
 void DwarfLinkerForBinaryRelocationMap::setUnitOffsets(

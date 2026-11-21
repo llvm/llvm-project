@@ -4658,7 +4658,10 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       if (isa<FixedVectorType>(Ty)) {
         // Fast case - sign splat can be simply split across the small elements.
         // This works for both vector and scalar sources
-        Tmp = ComputeNumSignBits(Src, Q, Depth + 1);
+        unsigned Scale = SrcBits / TyBits;
+        APInt SrcDemandedElts = APIntOps::ScaleBitMask(
+            DemandedElts, DemandedElts.getBitWidth() / Scale);
+        Tmp = ComputeNumSignBits(Src, SrcDemandedElts, Q, Depth + 1);
         if (Tmp == SrcBits)
           return TyBits;
       }

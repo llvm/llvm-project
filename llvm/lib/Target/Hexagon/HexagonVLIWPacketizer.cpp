@@ -102,7 +102,6 @@ namespace {
 
   private:
     const HexagonInstrInfo *HII = nullptr;
-    const HexagonRegisterInfo *HRI = nullptr;
     const bool Minimal = false;
   };
 
@@ -199,7 +198,6 @@ bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
-  HRI = HST.getRegisterInfo();
   auto &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   auto *MBPI =

@@ -24033,7 +24033,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
     if (!GatherShuffles.empty()) {
       unsigned SliceSize = getPartNumElems(VF, NumParts);
-      if (Mask.size() == E->Scalars.size())
+      // Single shuffle of the same entry covers the whole vector.
+      if (GatherShuffles.size() == 1)
+        SliceSize = Mask.size();
+      else if (Mask.size() == E->Scalars.size())
         SliceSize = getPartNumElems(
             E->Scalars.size(),
             getNumberOfParts(VecTy, ScalarTy, E->Scalars.size()));

@@ -43,6 +43,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
@@ -73,8 +75,6 @@ void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(LanaiAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "LanaiPassRegistry.def"
