@@ -9577,7 +9577,8 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
       UndefMask.setBit(i);
       continue;
     }
-    if (ISD::isFreezeUndef(Elt)) {
+    // A freeze(undef) with other users must keep its value.
+    if (ISD::isFreezeUndef(Elt) && Op->isOnlyUserOf(Elt.getNode())) {
       OneUseFrozenUndefs = OneUseFrozenUndefs && Elt->hasOneUse();
       FrozenUndefMask.setBit(i);
       continue;
@@ -9640,7 +9641,9 @@ X86TargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const {
   if ((VT.is256BitVector() || VT.is512BitVector()) &&
       !isFoldableUseOfShuffle(BV)) {
     unsigned UpperElems = NumElems / 2;
-    APInt UndefOrZeroMask = FrozenUndefMask | UndefMask | ZeroMask;
+    APInt UndefOrZeroMask = UndefMask | ZeroMask;
+    if (OneUseFrozenUndefs)
+      UndefOrZeroMask |= FrozenUndefMask;
     unsigned NumUpperUndefsOrZeros = UndefOrZeroMask.countl_one();
     if (NumUpperUndefsOrZeros >= UpperElems) {
       if (VT.is512BitVector() &&

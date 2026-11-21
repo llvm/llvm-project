@@ -389,20 +389,17 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl (%esi), %esi
-; X86-NEXT:    andl $15, %esi
 ; X86-NEXT:    movl (%edx), %edx
-; X86-NEXT:    andl $15, %edx
-; X86-NEXT:    vmovd %esi, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
-; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3],xmm1[4,5,6,7]
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vpinsrd $1, (%esi), %xmm0, %xmm1
+; X86-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X86-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
 ; X86-NEXT:    vbroadcastss {{.*#+}} xmm2 = [7,7,7,7]
-; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; X86-NEXT:    vmovdqa %xmm0, (%ecx)
-; X86-NEXT:    vmovd %edx, %xmm0
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
-; X86-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3],xmm0[4,5],xmm1[6,7]
+; X86-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X86-NEXT:    vmovdqa %xmm1, (%ecx)
+; X86-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X86-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X86-NEXT:    vmovdqa %xmm0, (%eax)
 ; X86-NEXT:    popl %esi
@@ -411,16 +408,16 @@ define void @freeze_two_frozen_buildvectors(ptr %origin0, ptr %origin1, ptr %dst
 ; X64-LABEL: freeze_two_frozen_buildvectors:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl (%rsi), %eax
-; X64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
-; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
-; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
-; X64-NEXT:    vmovdqa %xmm0, (%rdx)
 ; X64-NEXT:    vmovd %eax, %xmm0
-; X64-NEXT:    vpbroadcastd %xmm0, %xmm0
-; X64-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3]
+; X64-NEXT:    vpinsrd $1, (%rdi), %xmm0, %xmm1
+; X64-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
+; X64-NEXT:    vpinsrd $3, %eax, %xmm1, %xmm1
+; X64-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [7,7,7,7]
+; X64-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; X64-NEXT:    vmovdqa %xmm1, (%rdx)
+; X64-NEXT:    vpinsrd $1, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
 ; X64-NEXT:    vpand %xmm2, %xmm0, %xmm0
 ; X64-NEXT:    vmovdqa %xmm0, (%rcx)
 ; X64-NEXT:    retq
@@ -1118,6 +1115,87 @@ define void @freeze_dynamic_insertelement_chain_wide_vector(ptr %vp, i32 %x, i32
   %ins1 = insertelement <32 x i32> %ins0, i32 7, i32 %idx1
   store <32 x i32> %ins1, ptr %dst
   ret void
+}
+
+; The stored value must be returned in element 1.
+define <4 x i32> @freeze_poison_multi_use_with_zeros(ptr %p) nounwind {
+; X86-LABEL: freeze_poison_multi_use_with_zeros:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%eax)
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_poison_multi_use_with_zeros:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
+; X64-NEXT:    retq
+  %f = freeze i32 poison
+  store i32 %f, ptr %p
+  %v = insertelement <4 x i32> zeroinitializer, i32 %f, i32 1
+  ret <4 x i32> %v
+}
+
+; The stored value must be returned in elements 0, 2 and 3.
+define <4 x i32> @freeze_poison_multi_use_splat(ptr %p, i32 %x) nounwind {
+; X86-LABEL: freeze_poison_multi_use_splat:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%eax)
+; X86-NEXT:    vmovd %eax, %xmm0
+; X86-NEXT:    vpinsrd $1, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X86-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_poison_multi_use_splat:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    vmovd %eax, %xmm0
+; X64-NEXT:    vpinsrd $1, %esi, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $2, %eax, %xmm0, %xmm0
+; X64-NEXT:    vpinsrd $3, %eax, %xmm0, %xmm0
+; X64-NEXT:    retq
+  %f = freeze i32 poison
+  store i32 %f, ptr %p
+  %v0 = insertelement <4 x i32> poison, i32 %f, i32 0
+  %v1 = insertelement <4 x i32> %v0, i32 %x, i32 1
+  %v2 = insertelement <4 x i32> %v1, i32 %f, i32 2
+  %v3 = insertelement <4 x i32> %v2, i32 %f, i32 3
+  ret <4 x i32> %v3
+}
+
+; The stored value must be returned in the upper elements.
+define <8 x i32> @freeze_poison_multi_use_upper(ptr %p, i32 %x) nounwind {
+; X86-LABEL: freeze_poison_multi_use_upper:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%eax)
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    vmovd %eax, %xmm1
+; X86-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; X86-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; X86-NEXT:    retl
+;
+; X64-LABEL: freeze_poison_multi_use_upper:
+; X64:       # %bb.0:
+; X64-NEXT:    movl %eax, (%rdi)
+; X64-NEXT:    vmovd %esi, %xmm0
+; X64-NEXT:    vmovd %eax, %xmm1
+; X64-NEXT:    vpbroadcastd %xmm1, %xmm1
+; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %f = freeze i32 poison
+  store i32 %f, ptr %p
+  %v0 = insertelement <8 x i32> poison, i32 %x, i32 0
+  %v1 = insertelement <8 x i32> %v0, i32 %f, i32 4
+  %v2 = insertelement <8 x i32> %v1, i32 %f, i32 5
+  %v3 = insertelement <8 x i32> %v2, i32 %f, i32 6
+  %v4 = insertelement <8 x i32> %v3, i32 %f, i32 7
+  ret <8 x i32> %v4
 }
 
 declare i32 @llvm.ctlz.i32(i32, i1)
