@@ -35,6 +35,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/LTO/LTOBackend.h"
+#include "llvm/LTO/LTOConfigBitcode.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/IRObjectFile.h"
@@ -2291,6 +2292,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   auto &ModuleMap =
       ThinLTO.ModulesToCompile ? *ThinLTO.ModulesToCompile : ThinLTO.ModuleMap;
+
+  if (Conf.Dtlto)
+    ThinLTO.CombinedIndex.setLTOConfigJSON(serializeLTOConfig(Conf));
 
   auto RunBackends = [&](ThinBackendProc *BackendProcess) -> Error {
     auto ProcessOneModule = [&](int I) -> Error {

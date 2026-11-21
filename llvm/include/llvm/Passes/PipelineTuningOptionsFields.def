@@ -1,0 +1,72 @@
+//===- PipelineTuningOptionsFields.def - Pipeline tuning fields -*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Define these macros before including this file.
+//   LLVM_PTO_FIELD(Type, Name, Initializer)
+//   LLVM_PTO_FIRST_FIELD(Type, Name, Initializer)
+//
+//===----------------------------------------------------------------------===//
+
+/// Tuning option to set loop interleaving on/off, set based on opt level.
+LLVM_PTO_FIRST_FIELD(bool, LoopInterleaving, = true)
+
+/// Tuning option to enable/disable loop vectorization, set based on opt
+/// level.
+LLVM_PTO_FIELD(bool, LoopVectorization, = true)
+
+/// Tuning option to enable/disable slp loop vectorization, set based on opt
+/// level.
+LLVM_PTO_FIELD(bool, SLPVectorization, = false)
+
+/// Tuning option to enable/disable loop unrolling.
+LLVM_PTO_FIELD(bool, LoopUnrolling, = true)
+
+/// Tuning option to enable/disable loop interchange.
+LLVM_PTO_FIELD(bool, LoopInterchange, = true)
+
+/// Tuning option to enable/disable loop fusion.
+LLVM_PTO_FIELD(bool, LoopFusion, = false)
+
+/// Tuning option to forget all SCEV loops in LoopUnroll.
+LLVM_PTO_FIELD(std::optional<bool>, ForgetAllSCEVInLoopUnroll, )
+
+/// Tuning option to cap the number of calls to retrive clobbering accesses in
+/// MemorySSA, in LICM.
+LLVM_PTO_FIELD(std::optional<unsigned>, LicmMssaOptCap, )
+
+/// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
+/// the number of access is too large.
+LLVM_PTO_FIELD(std::optional<unsigned>, LicmMssaNoAccForPromotionCap, )
+
+/// Tuning option to enable/disable call graph profile.
+LLVM_PTO_FIELD(bool, CallGraphProfile, = true)
+
+// Add LTO pipeline tuning option to enable the unified LTO pipeline.
+LLVM_PTO_FIELD(bool, UnifiedLTO, = false)
+
+/// Tuning option to enable/disable function merging.
+LLVM_PTO_FIELD(std::optional<bool>, MergeFunctions, )
+
+/// Tuning option to override the default inliner threshold.
+LLVM_PTO_FIELD(int, InlinerThreshold, = -1)
+
+/// Tuning option to cap how many times the inliner pipeline reruns on an SCC
+/// after devirtualizing a call.
+LLVM_PTO_FIELD(std::optional<unsigned>, MaxDevirtIterations, )
+
+// Experimental option to eagerly invalidate more analyses. This has the
+// potential to decrease max memory usage in exchange for more compile time.
+// This may affect codegen due to either passes using analyses only when
+// cached, or invalidating and recalculating an analysis that was
+// stale/imprecise but still valid. Currently this invalidates all function
+// analyses after various module->function or cgscc->function adaptors in the
+// default pipelines.
+LLVM_PTO_FIELD(std::optional<bool>, EagerlyInvalidateAnalyses, )
+
+// Tuning option to enable/disable speculative devirtualization.
+LLVM_PTO_FIELD(std::optional<bool>, DevirtualizeSpeculatively, )

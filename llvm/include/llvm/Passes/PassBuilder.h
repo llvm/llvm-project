@@ -51,64 +51,11 @@ public:
   [[nodiscard]] LLVM_ABI PipelineTuningOptions
   resolve(const cl::LibraryOptionsContext &LibraryOptions) const;
 
-  /// Tuning option to set loop interleaving on/off, set based on opt level.
-  bool LoopInterleaving = true;
-
-  /// Tuning option to enable/disable loop vectorization, set based on opt
-  /// level.
-  bool LoopVectorization = true;
-
-  /// Tuning option to enable/disable slp loop vectorization, set based on opt
-  /// level.
-  bool SLPVectorization = false;
-
-  /// Tuning option to enable/disable loop unrolling.
-  bool LoopUnrolling = true;
-
-  /// Tuning option to enable/disable loop interchange.
-  bool LoopInterchange = true;
-
-  /// Tuning option to enable/disable loop fusion.
-  bool LoopFusion = false;
-
-  /// Tuning option to forget all SCEV loops in LoopUnroll.
-  std::optional<bool> ForgetAllSCEVInLoopUnroll;
-
-  /// Tuning option to cap the number of calls to retrive clobbering accesses in
-  /// MemorySSA, in LICM.
-  std::optional<unsigned> LicmMssaOptCap;
-
-  /// Tuning option to disable promotion to scalars in LICM with MemorySSA, if
-  /// the number of access is too large.
-  std::optional<unsigned> LicmMssaNoAccForPromotionCap;
-
-  /// Tuning option to enable/disable call graph profile.
-  bool CallGraphProfile = true;
-
-  // Add LTO pipeline tuning option to enable the unified LTO pipeline.
-  bool UnifiedLTO = false;
-
-  /// Tuning option to enable/disable function merging.
-  std::optional<bool> MergeFunctions;
-
-  /// Tuning option to override the default inliner threshold.
-  int InlinerThreshold = -1;
-
-  /// Tuning option to cap how many times the inliner pipeline reruns on an SCC
-  /// after devirtualizing a call.
-  std::optional<unsigned> MaxDevirtIterations;
-
-  // Experimental option to eagerly invalidate more analyses. This has the
-  // potential to decrease max memory usage in exchange for more compile time.
-  // This may affect codegen due to either passes using analyses only when
-  // cached, or invalidating and recalculating an analysis that was
-  // stale/imprecise but still valid. Currently this invalidates all function
-  // analyses after various module->function or cgscc->function adaptors in the
-  // default pipelines.
-  std::optional<bool> EagerlyInvalidateAnalyses;
-
-  // Tuning option to enable/disable speculative devirtualization.
-  std::optional<bool> DevirtualizeSpeculatively;
+#define LLVM_PTO_FIELD(Type, Name, Initializer) Type Name Initializer;
+#define LLVM_PTO_FIRST_FIELD LLVM_PTO_FIELD
+#include "llvm/Passes/PipelineTuningOptionsFields.def"
+#undef LLVM_PTO_FIRST_FIELD
+#undef LLVM_PTO_FIELD
 };
 
 enum class PrintPipelinePassesFormat {

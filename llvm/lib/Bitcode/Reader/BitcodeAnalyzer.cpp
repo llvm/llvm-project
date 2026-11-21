@@ -334,6 +334,7 @@ GetCodeName(unsigned CodeID, unsigned BlockID,
       STRINGIFY_CODE(FS, ALLOC_CONTEXT_IDS)
       STRINGIFY_CODE(FS, CONTEXT_RADIX_TREE_ARRAY)
       STRINGIFY_CODE(FS, COMBINED_ALLOC_INFO_NO_CONTEXT)
+      STRINGIFY_CODE(FS, LTO_CONFIG)
     }
   case bitc::METADATA_ATTACHMENT_ID:
     switch (CodeID) {
@@ -1005,4 +1006,3 @@ Error BitcodeAnalyzer::parseBlock(unsigned BlockID, unsigned IndentLevel,
       return Skipped.takeError();
   }
 }
-
