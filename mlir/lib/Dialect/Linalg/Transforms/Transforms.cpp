@@ -516,15 +516,74 @@ PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
   return res;
 }
 
+/// Split the packed dimensions of `operand` into [outer, inner] with a
+/// `tensor.expand_shape`. `map` is rewritten in place so that each inner result
+/// follows its outer one. Fail if a tile is not a positive constant or a static
+/// dimension is not a multiple of its tile.
+static FailureOr<tensor::ExpandShapeOp>
+expandPackedDims(RewriterBase &rewriter, Location loc, Value operand,
+                 ArrayRef<int64_t> innerPos,
+                 ArrayRef<OpFoldResult> innerPackSizes, AffineMap &map) {
+  auto operandType = cast<RankedTensorType>(operand.getType());
+  int64_t rank = operandType.getRank();
+  SmallVector<int64_t> tileOfDim(rank, 0);
+  for (auto [dim, size] : llvm::zip_equal(innerPos, innerPackSizes)) {
+    std::optional<int64_t> tile = getConstantIntValue(size);
+    int64_t dimSize = operandType.getDimSize(dim);
+    if (!tile || *tile <= 0 ||
+        (ShapedType::isStatic(dimSize) && dimSize % *tile != 0))
+      return failure();
+    tileOfDim[dim] = *tile;
+  }
+
+  SmallVector<OpFoldResult> sizes =
+      tensor::getMixedSizes(rewriter, loc, operand);
+  AffineExpr d0 = getAffineDimExpr(0, rewriter.getContext());
+  SmallVector<OpFoldResult> outputShape;
+  SmallVector<ReassociationIndices> reassociation;
+  SmallVector<AffineExpr> exprs;
+  for (int64_t dim = 0; dim < rank; ++dim) {
+    int64_t index = outputShape.size();
+    exprs.push_back(map.getResult(dim));
+    if (tileOfDim[dim] == 0) {
+      outputShape.push_back(sizes[dim]);
+      reassociation.push_back({index});
+      continue;
+    }
+    outputShape.push_back(affine::makeComposedFoldedAffineApply(
+        rewriter, loc, d0.floorDiv(tileOfDim[dim]), {sizes[dim]}));
+    outputShape.push_back(rewriter.getIndexAttr(tileOfDim[dim]));
+    reassociation.push_back({index, index + 1});
+    exprs.push_back(
+        map.getResult(rank + llvm::find(innerPos, dim) - innerPos.begin()));
+  }
+  map = AffineMap::get(map.getNumDims(), map.getNumSymbols(), exprs,
+                       rewriter.getContext());
+
+  auto expandedType = RankedTensorType::get(
+      decomposeMixedValues(outputShape).first, operandType.getElementType(),
+      operandType.getEncoding());
+  return tensor::ExpandShapeOp::create(rewriter, loc, expandedType, operand,
+                                       reassociation, outputShape);
+}
+
 /// Implement packing of a single LinalgOp by performing packing by
 /// `packedSizes`. There must be one packedSizes entry per `linalgOp` iterator.
 /// Return the packed Linalg op on success, failure otherwise.
-FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
-                                   linalg::LinalgOp linalgOp,
-                                   ArrayRef<OpFoldResult> packedSizes) {
+FailureOr<PackResult>
+linalg::pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
+             ArrayRef<OpFoldResult> packedSizes,
+             std::optional<ArrayRef<int64_t>> operandsToPack) {
   if (packedSizes.size() != linalgOp.getNumLoops()) {
     return rewriter.notifyMatchFailure(linalgOp,
                                        "incorrect number of pack sizes");
+  }
+  if (operandsToPack &&
+      llvm::any_of(*operandsToPack, [&](int64_t operandNumber) {
+        return operandNumber < 0 || operandNumber >= linalgOp->getNumOperands();
+      })) {
+    return rewriter.notifyMatchFailure(
+        linalgOp, "operandsToPack has an operand number out of range");
   }
   if (!linalgOp.hasPureTensorSemantics()) {
     return rewriter.notifyMatchFailure(
@@ -571,6 +630,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
 
   // Step 2. Propagate packing to all LinalgOp operands.
   SmallVector<Value> inputsAndInits, results;
+  SmallVector<tensor::ExpandShapeOp> expandOps;
   SmallVector<OpOperand *> initOperands =
       llvm::to_vector(llvm::make_pointer_range(linalgOp.getDpsInitsMutable()));
   SmallVector<OpOperand *> inputOperands = linalgOp.getDpsInputOperands();
@@ -587,6 +647,18 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
       LDBG() << "innerPackSizes: " << llvm::interleaved(innerPackSizes);
       if (innerPackSizes.empty()) {
         inputsAndInits.push_back(operand);
+        continue;
+      }
+      if (operandsToPack && !llvm::is_contained(*operandsToPack, pos)) {
+        FailureOr<tensor::ExpandShapeOp> expandOp =
+            expandPackedDims(rewriter, loc, operand, innerPos, innerPackSizes,
+                             indexingMaps[pos]);
+        if (failed(expandOp)) {
+          return rewriter.notifyMatchFailure(
+              linalgOp, "cannot split operand not in operandsToPack");
+        }
+        expandOps.push_back(*expandOp);
+        inputsAndInits.push_back(expandOp->getResult());
         continue;
       }
       Value dest = linalg::PackOp::createDestinationTensor(
@@ -632,6 +704,13 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
   // Step 4. Propagate packing to all the op results.
   for (OpResult result : packedLinalgOp->getResults()) {
     int64_t resultNum = result.getResultNumber();
+    auto expandOp = inits[resultNum].getDefiningOp<tensor::ExpandShapeOp>();
+    if (expandOp && llvm::is_contained(expandOps, expandOp)) {
+      results.push_back(tensor::CollapseShapeOp::create(
+          rewriter, packedLinalgOp->getLoc(), result,
+          expandOp.getReassociationIndices()));
+      continue;
+    }
     linalg::PackOp maybePackedInit =
         inits[resultNum].getDefiningOp<linalg::PackOp>();
     if (!maybePackedInit) {
