@@ -48,8 +48,6 @@ struct DXILOperationDesc {
   SmallVector<const Record *> StageRecs;
   SmallVector<const Record *> AttrRecs;
   SmallVector<DXILIntrinsicSelect> IntrinsicSelects;
-  SmallVector<StringRef, 4>
-      ShaderStages; // shader stages to which this applies, empty for all.
   int OverloadParamIndex;             // Index of parameter with overload type.
                                       //   -1 : no overload types
   SmallVector<StringRef, 4> Counters; // counters for this inst.
