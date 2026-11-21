@@ -567,6 +567,15 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     addRegisterClass(MVT::f64, Subtarget.hasAVX512() ? &X86::FR64XRegClass
                                                      : &X86::FR64RegClass);
 
+    if (Subtarget.hasDQI()) {
+      // AVX512DQ for 512-bit
+      for (auto VT : {MVT::v8f64, MVT::v16f32})
+        setOperationAction(ISD::FMODF, VT, Custom);
+      // AVX512DQ+AVX512VL for 128/256-bit
+      if (Subtarget.hasVLX())
+        for (auto VT : {MVT::v2f64, MVT::v4f64, MVT::v4f32, MVT::v8f32})
+          setOperationAction(ISD::FMODF, VT, Custom);
+    }
     // Disable f32->f64 extload as we can only generate this in one instruction
     // under optsize. So its easier to pattern match (fpext (load)) for that
     // case instead of needing to emit 2 instructions for extload in the
@@ -25559,7 +25568,25 @@ getX86XALUOOp(X86::CondCode &Cond, SDValue Op, SelectionDAG &DAG) {
 
   return std::make_pair(Value, Overflow);
 }
+// Lower ISD::FMODF to AVX512 vround/vreduce sequence
+// modf(x) -> {copysign(vreduce(x,11),x),ftrunc(x)}
+// Immediate 11=Round to Zero (3) | Suppress Exceptions (8).
+static SDValue LowerFMODF(SDValue Op, SelectionDAG &DAG) {
+  SDLoc DL(Op);
+  SDValue Num = Op.getOperand(0);
+  MVT VT = Num.getSimpleValueType();
+  // Integer Part:FTRUNC (round towards 0)
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, DL, VT, Num);
 
+  // Fractional Part: VREDUCE
+  SDValue Imm = DAG.getTargetConstant(11, DL, MVT::i32);
+  SDValue FracPart = DAG.getNode(X86ISD::VREDUCE, DL, VT, Num, Imm);
+
+  // Sign Restoration
+  SDValue ResultFrac = DAG.getNode(ISD::FCOPYSIGN, DL, VT, FracPart, Num);
+
+  return DAG.getMergeValues({ResultFrac, IntPart}, DL);
+}
 static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   // Lower the "add/sub/mul with overflow" instruction into a regular ins plus
   // a "setcc" instruction that checks the overflow flag. The "brcond" lowering
@@ -35169,6 +35196,7 @@ SDValue X86TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
                                 return LowerPARTIAL_REDUCE_MLA(Op, Subtarget, DAG);
   case ISD::PARTIAL_REDUCE_FMLA:
                                 return LowerPARTIAL_REDUCE_FMLA(Op, Subtarget, DAG);
+  case ISD::FMODF:                       return LowerFMODF(Op, DAG);
     // clang-format on
   }
 }
