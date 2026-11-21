@@ -2071,7 +2071,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4d8_UPD:
     case ARM::VLD4d16_UPD:
     case ARM::VLD4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+1)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 1, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VLD3q8:
@@ -2086,7 +2086,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4q8_UPD:
     case ARM::VLD4q16_UPD:
     case ARM::VLD4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2107,7 +2107,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4d8_UPD:
     case ARM::VLD4d16_UPD:
     case ARM::VLD4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VLD3q8:
@@ -2122,7 +2122,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4q8_UPD:
     case ARM::VLD4q16_UPD:
     case ARM::VLD4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+4)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 4, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2137,7 +2137,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4d8_UPD:
     case ARM::VLD4d16_UPD:
     case ARM::VLD4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 3, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VLD4q8:
@@ -2146,7 +2146,7 @@ static DecodeStatus DecodeVLDInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VLD4q8_UPD:
     case ARM::VLD4q16_UPD:
     case ARM::VLD4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+6)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 6, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2478,7 +2478,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4d8_UPD:
     case ARM::VST4d16_UPD:
     case ARM::VST4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+1)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 1, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VST3q8:
@@ -2493,7 +2493,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4q8_UPD:
     case ARM::VST4q16_UPD:
     case ARM::VST4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2514,7 +2514,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4d8_UPD:
     case ARM::VST4d16_UPD:
     case ARM::VST4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VST3q8:
@@ -2529,7 +2529,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4q8_UPD:
     case ARM::VST4q16_UPD:
     case ARM::VST4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+4)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 4, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2544,7 +2544,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4d8_UPD:
     case ARM::VST4d16_UPD:
     case ARM::VST4d32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 3, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     case ARM::VST4q8:
@@ -2553,7 +2553,7 @@ static DecodeStatus DecodeVSTInstruction(MCInst &Inst, unsigned Insn,
     case ARM::VST4q8_UPD:
     case ARM::VST4q16_UPD:
     case ARM::VST4q32_UPD:
-      if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+6)%32, Address, Decoder)))
+      if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 6, Address, Decoder)))
         return MCDisassembler::Fail;
       break;
     default:
@@ -2573,6 +2573,13 @@ static DecodeStatus DecodeVLDST1Instruction(MCInst &Inst, unsigned Insn,
   if (type == 7 && (align & 2)) return MCDisassembler::Fail;
   if (type == 10 && align == 3) return MCDisassembler::Fail;
 
+  // Three-register (type 6) and four-register (type 2) lists are expanded by
+  // the instruction printer.
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4) |
+                (fieldFromInstruction(Insn, 22, 1) << 4);
+  if ((type == 6 && Rd + 2 > 31) || (type == 2 && Rd + 3 > 31))
+    return MCDisassembler::Fail;
+
   unsigned load = fieldFromInstruction(Insn, 21, 1);
   return load ? DecodeVLDInstruction(Inst, Insn, Address, Decoder)
               : DecodeVSTInstruction(Inst, Insn, Address, Decoder);
@@ -2588,6 +2595,12 @@ static DecodeStatus DecodeVLDST2Instruction(MCInst &Inst, unsigned Insn,
   unsigned align = fieldFromInstruction(Insn, 4, 2);
   if (type == 8 && align == 3) return MCDisassembler::Fail;
   if (type == 9 && align == 3) return MCDisassembler::Fail;
+
+  // The four-register list (type 3) is expanded by the instruction printer.
+  unsigned Rd = fieldFromInstruction(Insn, 12, 4) |
+                (fieldFromInstruction(Insn, 22, 1) << 4);
+  if (type == 3 && Rd + 3 > 31)
+    return MCDisassembler::Fail;
 
   unsigned load = fieldFromInstruction(Insn, 21, 1);
   return load ? DecodeVLDInstruction(Inst, Insn, Address, Decoder)
@@ -2731,9 +2744,9 @@ static DecodeStatus DecodeVLD3DupInstruction(MCInst &Inst, unsigned Insn,
 
   if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+inc)%32, Address, Decoder)))
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + inc, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2*inc)%32, Address, Decoder)))
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2 * inc, Address, Decoder)))
     return MCDisassembler::Fail;
   if (Rm != 0xF) {
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))
@@ -2783,11 +2796,11 @@ static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Insn,
 
   if (!Check(S, DecodeDPRRegisterClass(Inst, Rd, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+inc)%32, Address, Decoder)))
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + inc, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+2*inc)%32, Address, Decoder)))
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 2 * inc, Address, Decoder)))
     return MCDisassembler::Fail;
-  if (!Check(S, DecodeDPRRegisterClass(Inst, (Rd+3*inc)%32, Address, Decoder)))
+  if (!Check(S, DecodeDPRRegisterClass(Inst, Rd + 3 * inc, Address, Decoder)))
     return MCDisassembler::Fail;
   if (Rm != 0xF) {
     if (!Check(S, DecodeGPRRegisterClass(Inst, Rn, Address, Decoder)))

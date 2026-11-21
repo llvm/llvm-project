@@ -430,3 +430,95 @@
 # CHECK-V7-NEXT: warning: potentially undefined instruction encoding
 # CHECK-V7-NEXT: [0x0f,0xf2,0x00,0x4d]
 # CHECK-V7-NEXT: ^
+
+
+# NEON load/store register lists must not extend past d31.
+# vld1.8 {d30, d31, d32} extends past d31.
+[0x60 0xf9 0x0f 0xe6]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xe6]
+
+# vld1.8 {d29, d30, d31, d32} extends past d31.
+[0x60 0xf9 0x0f 0xd2]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xd2]
+
+# vld2.8 {d29, d30, d31, d32} extends past d31.
+[0x60 0xf9 0x0f 0xd3]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xd3]
+
+# vld3.8 {d30, d31, d32} extends past d31.
+[0x60 0xf9 0x0f 0xe4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xe4]
+
+# vld3.8 {d28, d30, d32} extends past d31.
+[0x60 0xf9 0x0f 0xc5]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xc5]
+
+# vld4.8 {d29, d30, d31, d32} extends past d31.
+[0x60 0xf9 0x0f 0xd0]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xd0]
+
+# vld4.8 {d26, d28, d30, d32} extends past d31.
+[0x60 0xf9 0x0f 0xa1]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x60 0xf9 0x0f 0xa1]
+
+# vst1.8 {d30, d31, d32} extends past d31.
+[0x40 0xf9 0x0f 0xe6]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xe6]
+
+# vst1.8 {d29, d30, d31, d32} extends past d31.
+[0x40 0xf9 0x0f 0xd2]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xd2]
+
+# vst2.8 {d29, d30, d31, d32} extends past d31.
+[0x40 0xf9 0x0f 0xd3]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xd3]
+
+# vst3.8 {d30, d31, d32} extends past d31.
+[0x40 0xf9 0x0f 0xe4]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xe4]
+
+# vst3.8 {d28, d30, d32} extends past d31.
+[0x40 0xf9 0x0f 0xc5]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xc5]
+
+# vst4.8 {d29, d30, d31, d32} extends past d31.
+[0x40 0xf9 0x0f 0xd0]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xd0]
+
+# vst4.8 {d26, d28, d30, d32} extends past d31.
+[0x40 0xf9 0x0f 0xa1]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0x40 0xf9 0x0f 0xa1]
+
+# vld3.8 {d30[], d31[], d32[]} extends past d31.
+[0xe0 0xf9 0x0f 0xee]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0xf9 0x0f 0xee]
+
+# vld3.8 {d28[], d30[], d32[]} extends past d31.
+[0xe0 0xf9 0x2f 0xce]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0xf9 0x2f 0xce]
+
+# vld4.8 {d29[], d30[], d31[], d32[]} extends past d31.
+[0xe0 0xf9 0x0f 0xdf]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0xf9 0x0f 0xdf]
+
+# vld4.8 {d26[], d28[], d30[], d32[]} extends past d31.
+[0xe0 0xf9 0x2f 0xaf]
+# CHECK: warning: invalid instruction encoding
+# CHECK-NEXT: [0xe0 0xf9 0x2f 0xaf]
