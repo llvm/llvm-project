@@ -63,3 +63,7 @@ static int b0;
 
 static int a0[] = { 4 };
 static int b0 = 5;
+
+// GH242842
+int d[];
+extern int d[3];

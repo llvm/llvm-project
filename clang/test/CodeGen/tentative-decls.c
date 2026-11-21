@@ -36,3 +36,7 @@ static int c5[];
 static int func(void) { return c5[0]; }
 int callfunc(void) { return func(); }
 
+// GH242842
+// CHECK-DAG: @d = {{(dso_local )?}}global [3 x {{.*}}] zeroinitializer
+int d[];
+extern int d[3];
