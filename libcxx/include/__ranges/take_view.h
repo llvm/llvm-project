@@ -271,8 +271,10 @@ struct __fn {
           // Note: deliberately not forwarding `__rng` to guard against double moves.
           ranges::begin(__rng),
           ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)))) {
+    auto __count = static_cast<_Dist>(std::forward<_Np>(__n));
+    _LIBCPP_ASSERT_VALID_INPUT_RANGE(__count >= 0, "views::take(range, count) called with a negative count");
     return __passthrough_type_t<_RawRange>(
-        ranges::begin(__rng), ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), std::forward<_Np>(__n)));
+        ranges::begin(__rng), ranges::begin(__rng) + std::min<_Dist>(ranges::distance(__rng), __count));
   }
 
   // [range.take.overview]: the `iota_view` case.
