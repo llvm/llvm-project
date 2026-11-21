@@ -28,6 +28,14 @@
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_aligned_accessor
 #    error "__cpp_lib_aligned_accessor should not be defined before c++26"
 #  endif
@@ -230,6 +238,10 @@
 
 #  ifdef __cpp_lib_constexpr_flat_set
 #    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -460,6 +472,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should not be defined before c++14"
 #  endif
@@ -652,6 +668,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_is_sufficiently_aligned
 #    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 #  endif
@@ -828,6 +848,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -846,6 +870,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -1020,6 +1048,14 @@
 #    error "__cpp_lib_stacktrace should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should not be defined before c++20"
 #  endif
@@ -1164,6 +1200,14 @@
 
 #  ifdef __cpp_lib_addressof_constexpr
 #    error "__cpp_lib_addressof_constexpr should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -1374,6 +1418,10 @@
 
 #  ifdef __cpp_lib_constexpr_flat_set
 #    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -1607,6 +1655,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++14"
 #  endif
@@ -1817,6 +1869,10 @@
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_is_sufficiently_aligned
 #    error "__cpp_lib_is_sufficiently_aligned should not be defined before c++26"
 #  endif
@@ -2011,6 +2067,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -2029,6 +2089,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -2218,6 +2282,14 @@
 #    error "__cpp_lib_stacktrace should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should not be defined before c++20"
 #  endif
@@ -2383,6 +2455,14 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -2626,6 +2706,10 @@
 
 #  ifdef __cpp_lib_constexpr_flat_set
 #    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_constexpr_forward_list
@@ -2883,6 +2967,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++17"
 #  endif
@@ -3112,6 +3200,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_is_sufficiently_aligned
@@ -3362,6 +3454,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -3380,6 +3476,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -3599,6 +3699,14 @@
 #    error "__cpp_lib_stacktrace should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should not be defined before c++20"
 #  endif
@@ -3791,6 +3899,14 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_iterator_requirements
+#    error "__cpp_lib_algorithm_iterator_requirements should not be defined before c++23"
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -4114,6 +4230,10 @@
 #    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_forward_list
 #    error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 #  endif
@@ -4426,6 +4546,10 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_generator
+#    error "__cpp_lib_generator should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++20"
 #  endif
@@ -4691,6 +4815,10 @@
 
 #  ifdef __cpp_lib_is_scoped_enum
 #    error "__cpp_lib_is_scoped_enum should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_is_sufficiently_aligned
@@ -4980,6 +5108,10 @@
 #    error "__cpp_lib_ranges_cache_latest should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_ranges_cartesian_product
+#    error "__cpp_lib_ranges_cartesian_product should not be defined before c++23"
+#  endif
+
 #  ifdef __cpp_lib_ranges_chunk
 #    error "__cpp_lib_ranges_chunk should not be defined before c++23"
 #  endif
@@ -4998,6 +5130,10 @@
 
 #  ifdef __cpp_lib_ranges_enumerate
 #    error "__cpp_lib_ranges_enumerate should not be defined before c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_ranges_find_last
@@ -5244,6 +5380,14 @@
 #    error "__cpp_lib_stacktrace should not be defined before c++23"
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  ifdef __cpp_lib_start_lifetime_as
+#    error "__cpp_lib_start_lifetime_as should not be defined before c++23"
+#  endif
+
 #  ifndef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should be defined in c++20"
 #  endif
@@ -5466,6 +5610,23 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_algorithm_default_value_type
+#    error "__cpp_lib_algorithm_default_value_type should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++23"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifdef __cpp_lib_aligned_accessor
@@ -5822,6 +5983,10 @@
 #    error "__cpp_lib_constexpr_flat_set should not be defined before c++26"
 #  endif
 
+#  ifdef __cpp_lib_constexpr_format
+#    error "__cpp_lib_constexpr_format should not be defined before c++26"
+#  endif
+
 #  ifdef __cpp_lib_constexpr_forward_list
 #    error "__cpp_lib_constexpr_forward_list should not be defined before c++26"
 #  endif
@@ -6164,6 +6329,19 @@
 #    error "__cpp_lib_generate_random should not be defined before c++26"
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++23"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++23"
 #  endif
@@ -6447,6 +6625,10 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_is_structural
+#    error "__cpp_lib_is_structural should not be defined before c++26"
 #  endif
 
 #  ifdef __cpp_lib_is_sufficiently_aligned
@@ -6776,6 +6958,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++23"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++23"
 #    endif
@@ -6811,6 +7006,10 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_ranges_filter
+#    error "__cpp_lib_ranges_filter should not be defined before c++26"
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last
@@ -7120,6 +7319,23 @@
 #    endif
 #  endif
 
+#  ifdef __cpp_lib_start_lifetime
+#    error "__cpp_lib_start_lifetime should not be defined before c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++23"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++23"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should be defined in c++23"
 #  endif
@@ -7366,6 +7582,32 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++26"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_aligned_accessor
@@ -7783,6 +8025,19 @@
 #  endif
 #  if __cpp_lib_constexpr_flat_set != 202502L
 #    error "__cpp_lib_constexpr_flat_set should have the value 202502L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_format != 202511L
+#      error "__cpp_lib_constexpr_format should have the value 202511L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_forward_list
@@ -8352,6 +8607,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++26"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++26"
 #  endif
@@ -8691,8 +8959,8 @@
 #    ifndef __cpp_lib_inplace_vector
 #      error "__cpp_lib_inplace_vector should be defined in c++26"
 #    endif
-#    if __cpp_lib_inplace_vector != 202406L
-#      error "__cpp_lib_inplace_vector should have the value 202406L in c++26"
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++26"
 #    endif
 #  else
 #    ifdef __cpp_lib_inplace_vector
@@ -8842,6 +9110,19 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should be defined in c++26"
+#    endif
+#    if __cpp_lib_is_structural != 202603L
+#      error "__cpp_lib_is_structural should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_is_sufficiently_aligned
@@ -9264,6 +9545,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++26"
 #    endif
@@ -9302,6 +9596,19 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++26"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should be defined in c++26"
+#    endif
+#    if __cpp_lib_ranges_filter != 202603L
+#      error "__cpp_lib_ranges_filter should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last
@@ -9677,6 +9984,32 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should be defined in c++26"
+#    endif
+#    if __cpp_lib_start_lifetime != 202603L
+#      error "__cpp_lib_start_lifetime should have the value 202603L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++26"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_starts_ends_with
 #    error "__cpp_lib_starts_ends_with should be defined in c++26"
 #  endif
@@ -9965,6 +10298,32 @@
 #  endif
 #  if __cpp_lib_addressof_constexpr != 201603L
 #    error "__cpp_lib_addressof_constexpr should have the value 201603L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_default_value_type != 202603L
+#      error "__cpp_lib_algorithm_default_value_type should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_default_value_type
+#      error "__cpp_lib_algorithm_default_value_type should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should be defined in c++29"
+#    endif
+#    if __cpp_lib_algorithm_iterator_requirements != 202207L
+#      error "__cpp_lib_algorithm_iterator_requirements should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_algorithm_iterator_requirements
+#      error "__cpp_lib_algorithm_iterator_requirements should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_aligned_accessor
@@ -10382,6 +10741,19 @@
 #  endif
 #  if __cpp_lib_constexpr_flat_set != 202502L
 #    error "__cpp_lib_constexpr_flat_set should have the value 202502L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_format != 202511L
+#      error "__cpp_lib_constexpr_format should have the value 202511L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_format
+#      error "__cpp_lib_constexpr_format should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_constexpr_forward_list
@@ -10951,6 +11323,19 @@
 #    endif
 #  endif
 
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_generator
+#      error "__cpp_lib_generator should be defined in c++29"
+#    endif
+#    if __cpp_lib_generator != 202207L
+#      error "__cpp_lib_generator should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_generator
+#      error "__cpp_lib_generator should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
 #  ifndef __cpp_lib_generic_associative_lookup
 #    error "__cpp_lib_generic_associative_lookup should be defined in c++29"
 #  endif
@@ -11290,8 +11675,8 @@
 #    ifndef __cpp_lib_inplace_vector
 #      error "__cpp_lib_inplace_vector should be defined in c++29"
 #    endif
-#    if __cpp_lib_inplace_vector != 202406L
-#      error "__cpp_lib_inplace_vector should have the value 202406L in c++29"
+#    if __cpp_lib_inplace_vector != 202603L
+#      error "__cpp_lib_inplace_vector should have the value 202603L in c++29"
 #    endif
 #  else
 #    ifdef __cpp_lib_inplace_vector
@@ -11441,6 +11826,19 @@
 #  endif
 #  if __cpp_lib_is_scoped_enum != 202011L
 #    error "__cpp_lib_is_scoped_enum should have the value 202011L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should be defined in c++29"
+#    endif
+#    if __cpp_lib_is_structural != 202603L
+#      error "__cpp_lib_is_structural should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_is_structural
+#      error "__cpp_lib_is_structural should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_is_sufficiently_aligned
@@ -11890,6 +12288,19 @@
 #  endif
 
 #  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_cartesian_product != 202207L
+#      error "__cpp_lib_ranges_cartesian_product should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_cartesian_product
+#      error "__cpp_lib_ranges_cartesian_product should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
 #    ifndef __cpp_lib_ranges_chunk
 #      error "__cpp_lib_ranges_chunk should be defined in c++29"
 #    endif
@@ -11928,6 +12339,19 @@
 #  endif
 #  if __cpp_lib_ranges_enumerate != 202302L
 #    error "__cpp_lib_ranges_enumerate should have the value 202302L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should be defined in c++29"
+#    endif
+#    if __cpp_lib_ranges_filter != 202603L
+#      error "__cpp_lib_ranges_filter should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_ranges_filter
+#      error "__cpp_lib_ranges_filter should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_ranges_find_last
@@ -12318,6 +12742,32 @@
 #  else
 #    ifdef __cpp_lib_stacktrace
 #      error "__cpp_lib_stacktrace should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should be defined in c++29"
+#    endif
+#    if __cpp_lib_start_lifetime != 202603L
+#      error "__cpp_lib_start_lifetime should have the value 202603L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime
+#      error "__cpp_lib_start_lifetime should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should be defined in c++29"
+#    endif
+#    if __cpp_lib_start_lifetime_as != 202207L
+#      error "__cpp_lib_start_lifetime_as should have the value 202207L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_start_lifetime_as
+#      error "__cpp_lib_start_lifetime_as should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 
