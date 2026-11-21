@@ -757,6 +757,35 @@ private:
       }
     }
 
+    // A state definition also conflicts with a different state that is live
+    // through its block. The latter may still determine the switch condition
+    // on another continuation, so entering this block does not determine the
+    // state on all paths. Find these conflicts independently of path
+    // enumeration limits, including uses of definitions excluded by the check
+    // above.
+    for (Value *V : SeenValues) {
+      auto *Phi = cast<PHINode>(V);
+      SmallVector<BasicBlock *, 8> Worklist;
+      SmallPtrSet<BasicBlock *, 16> Visited;
+      Visited.insert(Phi->getParent());
+      for (Use &U : Phi->uses()) {
+        auto *UserPhi = dyn_cast<PHINode>(U.getUser());
+        if (UserPhi && SeenValues.contains(UserPhi))
+          Worklist.push_back(UserPhi->getIncomingBlock(U));
+      }
+      if (Phi == FirstDef)
+        Worklist.push_back(SwitchBlock);
+
+      while (!Worklist.empty()) {
+        BasicBlock *BB = Worklist.pop_back_val();
+        if (!Visited.insert(BB).second)
+          continue;
+        if (Res.contains(BB))
+          MultipleDefBBs.insert(BB);
+        llvm::append_range(Worklist, predecessors(BB));
+      }
+    }
+
     // NOTE: If multiple phi definitions exist in a block, we cannot
     // thread the paths with such block by simple cloning. For example:
     // < then, det, lbl_entry, switch_bb > [ 0, det ]
