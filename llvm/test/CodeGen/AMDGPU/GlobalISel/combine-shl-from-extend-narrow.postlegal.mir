@@ -293,9 +293,10 @@ body:             |
     ; GFX6-NEXT: %narrow:_(i16) = G_TRUNC %argument(i32)
     ; GFX6-NEXT: %masklow14:_(i16) = G_CONSTANT i16 16383
     ; GFX6-NEXT: %masked:_(i16) = G_AND %narrow, %masklow14
-    ; GFX6-NEXT: %extend:_(i64) = G_ZEXT %masked(i16)
     ; GFX6-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 2
-    ; GFX6-NEXT: %shl:_(i64) = G_SHL %extend, %shiftamt(i32)
+    ; GFX6-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT %masked(i16)
+    ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT]], %shiftamt(i32)
+    ; GFX6-NEXT: %shl:_(i64) = G_ZEXT [[SHL]](i32)
     ; GFX6-NEXT: $vgpr0_vgpr1 = COPY %shl(i64)
     ;
     ; GFX9-LABEL: name: narrow_shl_s64_by_2_from_zext_s16
