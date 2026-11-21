@@ -1278,8 +1278,8 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
 
 /// Clone the loop of plain CFG \p Plan into an oracle plan: a scalar loop with
 /// trip count VF replaying the exit conditions, returning safe lanes *
-/// \p AccessSize bytes. Returns the oracle and the values to pass to it.
-static std::pair<VPSpeculativeLoadOracleRecipe *, SmallVector<VPValue *>>
+/// \p AccessSize bytes. Returns the oracle plan and the values to pass to it.
+static std::pair<std::unique_ptr<VPlan>, SmallVector<VPValue *>>
 buildOraclePlan(VPlan &Plan, uint64_t AccessSize) {
   Type *IVTy = Plan.getIndexType();
   auto OraclePlan =
@@ -1309,7 +1309,7 @@ buildOraclePlan(VPlan &Plan, uint64_t AccessSize) {
   VPBuilder EntryBuilder(NewEntry);
   DenseMap<VPValue *, VPValue *> OracleArgToValue;
   auto CreateArg = [&](VPValue *V, const Twine &Name = "") -> VPValue * {
-    VPValue *Arg = EntryBuilder.createLiveIn(V->getScalarType(), Name);
+    VPValue *Arg = EntryBuilder.createArgument(V->getScalarType(), Name);
     OracleArgToValue[Arg] = V;
     return Arg;
   };
@@ -1378,13 +1378,12 @@ buildOraclePlan(VPlan &Plan, uint64_t AccessSize) {
   ExitBuilder.createNaryOp(Instruction::Ret, ByteCount);
 
   VPlanTransforms::convertToConcreteRecipes(*OraclePlan);
-  VPlanTransforms::combineRecipes(*OraclePlan);
   VPlanTransforms::removeDeadRecipes(*OraclePlan);
 
   auto OracleArgs = map_to_vector(*NewEntry, [&](VPRecipeBase &R) {
     return OracleArgToValue.lookup(R.getVPSingleValue());
   });
-  return {new VPSpeculativeLoadOracleRecipe(std::move(OraclePlan)), OracleArgs};
+  return {std::move(OraclePlan), std::move(OracleArgs)};
 }
 
 bool VPlanTransforms::replaceUnsafeLoadsWithSpeculative(
@@ -1497,7 +1496,8 @@ bool VPlanTransforms::replaceUnsafeLoadsWithSpeculative(
               [&](VPBasicBlock *VPBB) { return all_of(*VPBB, CanReplay); }))
     return Bail("loop body cannot be replayed by a speculative-load oracle");
 
-  auto [Oracle, Args] = buildOraclePlan(Plan, AccessSize);
+  auto [OraclePlan, Args] = buildOraclePlan(Plan, AccessSize);
+  auto *Oracle = new VPSpeculativeLoadOracleRecipe(std::move(OraclePlan));
   cast<VPBasicBlock>(HeaderVPBB->getPredecessors()[0])->appendRecipe(Oracle);
 
   for (VPInstruction *VPI : UnsafeLoads) {

@@ -22,15 +22,16 @@ define i64 @find_first_eq_const(ptr %A, i64 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp eq ir<%ld.A>, ir<42>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -38,13 +39,14 @@ define i64 @find_first_eq_const(ptr %A, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
@@ -135,16 +137,17 @@ define i64 @find_first_eq_live_in(ptr %A, i64 %n, i8 %val) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%val> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%val> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp eq ir<%ld.A>, vp<%val>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -152,13 +155,14 @@ define i64 @find_first_eq_live_in(ptr %A, i64 %n, i8 %val) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
@@ -249,18 +253,19 @@ define i32 @i32_induction(ptr %A, ptr %B, i32 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%B> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%B> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
-; CHECK-NEXT:        CLONE ir<%gep.B> = getelementptr inbounds vp<%B>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.B> = getelementptr inbounds vp<%B>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.B> = load ir<%gep.B>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp ne ir<%ld.A>, ir<%ld.B>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -268,24 +273,25 @@ define i32 @i32_induction(ptr %A, ptr %B, i32 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT-SCALAR vp<[[VP4:%[0-9]+]]> = zext vp<%lanes> to i64
-; CHECK-NEXT:        EMIT ret vp<[[VP4]]>
+; CHECK-NEXT:        EMIT-SCALAR vp<[[VP5:%[0-9]+]]> = zext vp<%lanes> to i64
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<[[VP5]]>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP4]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP5]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%gep.A> = getelementptr inbounds ir<%A>, vp<[[VP5]]>
 ; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP6:%[0-9]+]]> = call llvm.speculative.load(ir<%gep.A>, ir<false>, vp<[[VP3]]>, ir<%A>, ir<%B>, vp<[[VP5]]>, vp<[[VP0]]>)
 ; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = freeze vp<[[VP6]]>
@@ -480,18 +486,19 @@ define i64 @derived_induction_start(ptr %A, ptr %B, i64 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%B> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%B> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
-; CHECK-NEXT:        CLONE ir<%gep.B> = getelementptr inbounds vp<%B>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.B> = getelementptr inbounds vp<%B>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.B> = load ir<%gep.B>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp ne ir<%ld.A>, ir<%ld.B>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -499,13 +506,14 @@ define i64 @derived_induction_start(ptr %A, ptr %B, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
@@ -610,40 +618,42 @@ define i64 @derived_induction_step(ptr %A, i64 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start>.1 = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start>.1 = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = shl vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP3]]> = add vp<%iv.start>.1, vp<[[VP2]]>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = mul vp<%index>, ir<2>
+; CHECK-NEXT:        EMIT vp<[[VP4]]> = add vp<%iv.start>.1, vp<[[VP3]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
-; CHECK-NEXT:        EMIT-SCALAR ir<%trunc> = trunc vp<[[VP3]]> to i8
+; CHECK-NEXT:        EMIT-SCALAR ir<%trunc> = trunc vp<[[VP4]]> to i8
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp ne ir<%ld.A>, ir<%trunc>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP4]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP4]]>
+; CHECK-NEXT:        EMIT vp<[[VP5:%[0-9]+]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP5]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP5:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP5]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv.2> = WIDEN-INDUCTION ir<0>, ir<2>, vp<[[VP0]]> (truncated to i8)
@@ -737,15 +747,16 @@ define i64 @dead_recipes_in_loop(ptr %A, i64 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep.A> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld.A> = load ir<%gep.A>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp eq ir<%ld.A>, ir<42>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -753,13 +764,14 @@ define i64 @dead_recipes_in_loop(ptr %A, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
@@ -855,15 +867,16 @@ define i64 @global_base(i64 %n) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%G> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%G> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep> = getelementptr inbounds vp<%G>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep> = getelementptr inbounds vp<%G>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%l> = load ir<%gep>
 ; CHECK-NEXT:        EMIT ir<%c> = icmp eq ir<%l>, ir<42>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%c> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -871,13 +884,14 @@ define i64 @global_base(i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:
@@ -1094,15 +1108,16 @@ define i8 @liveout_only(ptr %A, i64 %n, i8 %scale) {
 ; CHECK:      VPlan 'Speculative-load oracle for VF={1},UF>=1' {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.entry:
-; CHECK-NEXT:        EMIT-SCALAR vp<%A> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = live-in
-; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = live-in
+; CHECK-NEXT:        EMIT-SCALAR vp<%A> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%iv.start> = argument
+; CHECK-NEXT:        EMIT-SCALAR vp<%vf> = argument
 ; CHECK-NEXT:      Successor(s): loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.header:
 ; CHECK-NEXT:        EMIT-SCALAR vp<%index> = phi [ ir<0>, oracle.entry ], [ vp<%index.next>, loop.latch ]
-; CHECK-NEXT:        EMIT vp<[[VP1]]> = add vp<%iv.start>, vp<%index>
-; CHECK-NEXT:        CLONE ir<%gep> = getelementptr inbounds vp<%A>, vp<[[VP1]]>
+; CHECK-NEXT:        EMIT vp<[[VP1]]> = mul vp<%index>, ir<1>
+; CHECK-NEXT:        EMIT vp<[[VP2]]> = add vp<%iv.start>, vp<[[VP1]]>
+; CHECK-NEXT:        CLONE ir<%gep> = getelementptr inbounds vp<%A>, vp<[[VP2]]>
 ; CHECK-NEXT:        CLONE ir<%ld> = load ir<%gep>
 ; CHECK-NEXT:        EMIT ir<%cmp> = icmp eq ir<%ld>, ir<42>
 ; CHECK-NEXT:        EMIT branch-on-cond ir<%cmp> (!vplan.prof.estimated estimated {67108864, 2080374784})
@@ -1110,13 +1125,14 @@ define i8 @liveout_only(ptr %A, i64 %n, i8 %scale) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      loop.latch:
 ; CHECK-NEXT:        EMIT vp<%index.next> = add nuw vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT vp<[[VP2]]> = icmp eq vp<%index.next>, vp<%vf>
-; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP2]]>
+; CHECK-NEXT:        EMIT vp<[[VP3]]> = icmp eq vp<%index.next>, vp<%vf>
+; CHECK-NEXT:        EMIT branch-on-cond vp<[[VP3]]>
 ; CHECK-NEXT:      Successor(s): oracle.exit, loop.header
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      oracle.exit:
 ; CHECK-NEXT:        EMIT vp<%lanes> = add vp<%index>, ir<1>
-; CHECK-NEXT:        EMIT ret vp<%lanes>
+; CHECK-NEXT:        EMIT vp<%bytes> = mul vp<%lanes>, ir<1>
+; CHECK-NEXT:        EMIT ret vp<%bytes>
 ; CHECK-NEXT:      No successors
 ; CHECK-NEXT:      }
 ; CHECK-EMPTY:

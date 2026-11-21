@@ -60,24 +60,24 @@ TEST_F(VPVerifierTest, ReturnTerminator) {
   CheckInvalidReturn();
 }
 
-TEST_F(VPVerifierTest, LiveIn) {
+TEST_F(VPVerifierTest, Argument) {
   VPlan &Plan = getPlan();
   VPBasicBlock *Entry = Plan.getEntry();
   Type *I64Ty = Type::getInt64Ty(C);
   VPBuilder Builder(Entry);
-  VPInstruction *LiveIn = Builder.createLiveIn(I64Ty);
+  VPInstruction *Arg = Builder.createArgument(I64Ty);
   EXPECT_TRUE(verifyVPlanIsValid(Plan));
 
-  // Live-ins must be in the plan's entry block.
+  // Arguments must be in the plan's entry block.
   VPBasicBlock *VPBB = Plan.createVPBasicBlock("bb");
   VPBlockUtils::connectBlocks(Entry, VPBB);
-  LiveIn->moveBefore(VPBB->end());
+  Arg->moveBefore(VPBB->end());
 #if GTEST_HAS_STREAM_REDIRECTION
   ::testing::internal::CaptureStderr();
 #endif
   EXPECT_FALSE(verifyVPlanIsValid(Plan));
 #if GTEST_HAS_STREAM_REDIRECTION
-  EXPECT_STREQ("Live-in must be in the plan's entry block!\n",
+  EXPECT_STREQ("Argument must be in the plan's entry block!\n",
                ::testing::internal::GetCapturedStderr().c_str());
 #endif
 }

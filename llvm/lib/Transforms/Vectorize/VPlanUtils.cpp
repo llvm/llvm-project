@@ -685,10 +685,13 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
 }
 
 VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
-  for (VPRecipeBase &R : *Plan.getVectorPreheader())
-    if (auto *Oracle = dyn_cast<VPSpeculativeLoadOracleRecipe>(&R))
-      return Oracle;
-  return nullptr;
+  VPBasicBlock &Preheader = *Plan.getVectorPreheader();
+  assert(count_if(Preheader, IsaPred<VPSpeculativeLoadOracleRecipe>) <= 1 &&
+         "expected at most one oracle");
+  return find_singleton<VPSpeculativeLoadOracleRecipe>(
+      Preheader, [](VPRecipeBase &R, bool) {
+        return dyn_cast<VPSpeculativeLoadOracleRecipe>(&R);
+      });
 }
 
 SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>

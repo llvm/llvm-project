@@ -574,12 +574,13 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
@@ -587,7 +588,8 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @speculativeLoadOracle.1(
@@ -596,12 +598,13 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP10]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP5]], [[TMP8]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
@@ -609,7 +612,8 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @speculativeLoadOracle.2(
@@ -618,9 +622,10 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 42
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -629,7 +634,8 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @speculativeLoadOracle.3(
@@ -638,9 +644,10 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP7]], align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
@@ -649,7 +656,8 @@ exit:
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @speculativeLoadOracle.4(
@@ -658,9 +666,10 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = add i32 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP8]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP9]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i32 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 [[TMP4]], 0
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
@@ -671,7 +680,8 @@ exit:
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i32 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[LANES]] to i64
-; CHECK-NEXT:    ret i64 [[TMP7]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[TMP7]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;
 ; CHECK-LABEL: define internal i64 @speculativeLoadOracle.5(
@@ -680,20 +690,22 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = load i8, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP8:%.*]] = load i8, ptr [[TMP7]], align 1
-; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne i8 [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i8 [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[VF]]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[VF]]
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

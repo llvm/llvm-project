@@ -680,7 +680,7 @@ unsigned VPInstruction::getNumOperandsForOpcode() const {
   switch (Opcode) {
   case VPInstruction::StepVector:
   case VPInstruction::IncomingAliasMask:
-  case VPInstruction::LiveIn:
+  case VPInstruction::Argument:
     return 0;
   case Instruction::Alloca:
   case Instruction::Ret:
@@ -948,7 +948,10 @@ Value *VPInstruction::generate(VPTransformState &State,
   case Instruction::Ret: {
     auto *Ret = Builder.CreateRet(State.get(getOperand(0), /*IsScalar=*/true));
     // Remove the temporary unreachable terminator.
-    Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
+    Instruction *Term = Builder.GetInsertBlock()->getTerminator();
+    assert(isa<UnreachableInst>(Term) && Term == Ret->getNextNode() &&
+           "expected the return to be followed by a temporary unreachable");
+    Term->eraseFromParent();
     return Ret;
   }
   case VPInstruction::BranchOnCond: {
@@ -1717,7 +1720,7 @@ bool VPInstruction::isSingleScalar() const {
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::Intrinsic:
-  case VPInstruction::LiveIn:
+  case VPInstruction::Argument:
     return true;
   default:
     return Instruction::isCast(getOpcode());
@@ -1822,7 +1825,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::WideActiveLaneMask:
   case VPInstruction::IncomingAliasMask:
-  case VPInstruction::LiveIn:
+  case VPInstruction::Argument:
   case VPInstruction::ExitingIVValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::FirstActiveLane:
@@ -1928,8 +1931,8 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   case VPInstruction::WideActiveLaneMask:
     O << "wide active lane mask";
     break;
-  case VPInstruction::LiveIn:
-    O << "live-in";
+  case VPInstruction::Argument:
+    O << "argument";
     break;
   case VPInstruction::WideVectorLoad:
     O << "wide vector load";

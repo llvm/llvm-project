@@ -88,18 +88,20 @@ exit:
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ORACLE_ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[IV_START]], [[INDEX]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], 42
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[IV_START]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[TMP2]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i8 [[TMP3]], 42
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[ORACLE_EXIT:.*]], label %[[LOOP_LATCH]]
 ; CHECK:       [[LOOP_LATCH]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[VF]]
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[VF]]
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[ORACLE_EXIT]], label %[[LOOP_HEADER]]
 ; CHECK:       [[ORACLE_EXIT]]:
 ; CHECK-NEXT:    [[LANES:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    ret i64 [[LANES]]
+; CHECK-NEXT:    [[BYTES:%.*]] = mul i64 [[LANES]], 1
+; CHECK-NEXT:    ret i64 [[BYTES]]
 ;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { vscale_range(1,16) "target-features"="+sve" }
