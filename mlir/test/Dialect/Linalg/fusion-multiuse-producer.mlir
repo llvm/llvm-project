@@ -103,3 +103,73 @@ func.func @multi_use_producer_2(%arg0: tensor<1x32x32x8xf32>) -> tensor<1x32x32x
 // CHECK: linalg.yield %[[C0:.+]], %[[C_SUB]] : f32, i64
 // CHECK: } -> (tensor<1x32x32x8xf32>, tensor<1x32x32x8xi64>)
 // CHECK: return %[[R0]]#0 : tensor<1x32x32x8xf32>
+
+// -----
+
+// Fusion would lose parallelism for the returned producer result.
+
+#identity = affine_map<(i, j) -> (i, j)>
+#row = affine_map<(i, j) -> (i)>
+
+// CHECK-LABEL: func.func @no_fusion_returned_producer_reduction(
+//       CHECK:   %[[PRODUCER:.+]] = linalg.generic
+//       CHECK:   %[[CONSUMER:.+]] = linalg.generic
+//  CHECK-SAME:     ins(%[[PRODUCER]] : tensor<2x3xf32>)
+//       CHECK:   return %[[PRODUCER]], %[[CONSUMER]]
+func.func @no_fusion_returned_producer_reduction(
+    %a: tensor<2x3xf32>, %b: tensor<2x3xf32>, %c: tensor<2xf32>)
+    -> (tensor<2x3xf32>, tensor<2xf32>) {
+  %t = linalg.generic {
+      indexing_maps = [#identity, #identity],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%a : tensor<2x3xf32>)
+      outs(%b : tensor<2x3xf32>) {
+  ^bb0(%x: f32, %y: f32):
+    %sum = arith.addf %x, %y : f32
+    linalg.yield %sum : f32
+  } -> tensor<2x3xf32>
+  %r = linalg.generic {
+      indexing_maps = [#identity, #row],
+      iterator_types = ["parallel", "reduction"]}
+      ins(%t : tensor<2x3xf32>)
+      outs(%c : tensor<2xf32>) {
+  ^bb0(%x: f32, %acc: f32):
+    %sum = arith.addf %x, %acc : f32
+    linalg.yield %sum : f32
+  } -> tensor<2xf32>
+  return %t, %r : tensor<2x3xf32>, tensor<2xf32>
+}
+
+// -----
+
+// Fusion would make parallel iterations read and update the same element.
+
+#row = affine_map<(i, j) -> (i)>
+#identity = affine_map<(i, j) -> (i, j)>
+
+// CHECK-LABEL: func.func @no_fusion_returned_producer_broadcast(
+//       CHECK:   %[[PRODUCER:.+]] = linalg.generic
+//       CHECK:   %[[CONSUMER:.+]] = linalg.generic
+//  CHECK-SAME:     ins(%[[PRODUCER]] : tensor<2xi32>)
+//       CHECK:   return %[[PRODUCER]], %[[CONSUMER]]
+func.func @no_fusion_returned_producer_broadcast(
+    %init: tensor<2xi32>, %out: tensor<2x3xi32>)
+    -> (tensor<2xi32>, tensor<2x3xi32>) {
+  %one = arith.constant 1 : i32
+  %t = linalg.generic {
+      indexing_maps = [affine_map<(i) -> (i)>], iterator_types = ["parallel"]}
+      outs(%init : tensor<2xi32>) {
+  ^bb0(%x: i32):
+    %next = arith.addi %x, %one : i32
+    linalg.yield %next : i32
+  } -> tensor<2xi32>
+  %r = linalg.generic {
+      indexing_maps = [#row, #identity],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%t : tensor<2xi32>)
+      outs(%out : tensor<2x3xi32>) {
+  ^bb0(%x: i32, %unused: i32):
+    linalg.yield %x : i32
+  } -> tensor<2x3xi32>
+  return %t, %r : tensor<2xi32>, tensor<2x3xi32>
+}
