@@ -1457,6 +1457,15 @@ class TemplateDiff {
   static bool hasSameBaseTemplate(ASTContext &Context,
                                   const TemplateSpecializationType *FromTST,
                                   const TemplateSpecializationType *ToTST) {
+    // hasSameTemplate walks alias templates explicitly, so compare them by
+    // declaration rather than by canonical template name.
+    TemplateDecl *FromTD =
+        FromTST->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
+    TemplateDecl *ToTD =
+        ToTST->getTemplateName().getAsTemplateDecl(/*IgnoreDeduced=*/true);
+    if (isa_and_nonnull<TypeAliasTemplateDecl>(FromTD) ||
+        isa_and_nonnull<TypeAliasTemplateDecl>(ToTD))
+      return declaresSameEntity(FromTD, ToTD);
     return Context.getCanonicalTemplateName(FromTST->getTemplateName(),
                                             /*IgnoreDeduced=*/true) ==
            Context.getCanonicalTemplateName(ToTST->getTemplateName(),

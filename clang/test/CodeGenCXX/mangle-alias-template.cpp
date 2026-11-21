@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s
 // RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -o - %s | FileCheck %s %}
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-apple-darwin10 -emit-llvm -fclang-abi-compat=23 -o - %s | FileCheck %s --check-prefix=CLANG23
 
 template<typename T> struct alloc {};
 template<typename T> using Alloc = alloc<T>;
@@ -30,7 +31,8 @@ void z() {
   // CHECK: call void @_Z1hI5allocEvT_IiE(
 
   h<Alloc>(AC);
-  // CHECK: call void @_Z1hI5AllocEvT_IiE(
+  // CHECK: call void @_Z1hI5allocEvT_IiE(
+  // CLANG23: call void @_Z1hI5AllocEvT_IiE(
 
   Vec<char> VC;
   g<Vec<char>>(VC);
