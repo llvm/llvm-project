@@ -741,33 +741,27 @@ define <1 x i64> @shuffle_v1i64_v1i1(<1 x i64> %v, <1 x i1> %mask) nounwind {
 define i32 @shuffle_v4i32_demanded_mask(<4 x i32> %v, i32 %mask0, i32 %mask1, i32 %mask2, i32 %mask3) nounwind {
 ; LE-LABEL: shuffle_v4i32_demanded_mask:
 ; LE:       // %bb.0:
-; LE-NEXT:    fmov s2, w0
 ; LE-NEXT:    mov w8, #256 // =0x100
 ; LE-NEXT:    movi v1.16b, #4
+; LE-NEXT:    fmov s3, w0
 ; LE-NEXT:    movk w8, #770, lsl #16
-; LE-NEXT:    dup v3.4s, w8
-; LE-NEXT:    mov v2.s[1], w1
-; LE-NEXT:    mov v2.s[2], w2
-; LE-NEXT:    mov v2.s[3], w3
-; LE-NEXT:    mla v3.4s, v2.4s, v1.4s
-; LE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; LE-NEXT:    dup v2.4s, w8
+; LE-NEXT:    mla v2.4s, v3.4s, v1.4s
+; LE-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
 ; LE-NEXT:    fmov w0, s0
 ; LE-NEXT:    ret
 ;
 ; BE-LABEL: shuffle_v4i32_demanded_mask:
 ; BE:       // %bb.0:
-; BE-NEXT:    fmov s2, w0
 ; BE-NEXT:    mov w8, #256 // =0x100
 ; BE-NEXT:    movi v1.16b, #4
 ; BE-NEXT:    rev64 v0.4s, v0.4s
 ; BE-NEXT:    movk w8, #770, lsl #16
-; BE-NEXT:    dup v3.4s, w8
-; BE-NEXT:    mov v2.s[1], w1
+; BE-NEXT:    fmov s3, w0
+; BE-NEXT:    dup v2.4s, w8
 ; BE-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
-; BE-NEXT:    mov v2.s[2], w2
-; BE-NEXT:    mov v2.s[3], w3
-; BE-NEXT:    mla v3.4s, v2.4s, v1.4s
-; BE-NEXT:    tbl v0.16b, { v0.16b }, v3.16b
+; BE-NEXT:    mla v2.4s, v3.4s, v1.4s
+; BE-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
 ; BE-NEXT:    fmov w0, s0
 ; BE-NEXT:    ret
   %a = insertelement <4 x i32> poison, i32 %mask0, i64 0

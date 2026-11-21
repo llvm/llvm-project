@@ -520,21 +520,13 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE2-NEXT:    pextrw $1, %xmm2, %r8d
 ; SSE2-NEXT:    pextrw $2, %xmm2, %r9d
 ; SSE2-NEXT:    pextrw $3, %xmm2, %r10d
-; SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE2-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, (%rsp)
-; SSE2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    andl $3, %r10d
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -572,21 +564,13 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSSE3-NEXT:    pextrw $1, %xmm2, %r8d
 ; SSSE3-NEXT:    pextrw $2, %xmm2, %r9d
 ; SSSE3-NEXT:    pextrw $3, %xmm2, %r10d
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSSE3-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, (%rsp)
-; SSSE3-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    andl $3, %r10d
 ; SSSE3-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -624,21 +608,13 @@ define <8 x i32> @shuffle_v8i32_i2_mask(<8 x i32> %v, <8 x i2> %mask) nounwind {
 ; SSE41-NEXT:    pextrw $2, %xmm2, %r8d
 ; SSE41-NEXT:    movd %xmm2, %r9d
 ; SSE41-NEXT:    pextrw $1, %xmm2, %r10d
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, (%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
-; SSE41-NEXT:    movaps %xmm1, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    movaps %xmm0, {{[0-9]+}}(%rsp)
 ; SSE41-NEXT:    andl $3, %r10d
 ; SSE41-NEXT:    andl $3, %r9d
@@ -795,40 +771,32 @@ define <4 x i32> @shuffle_v4i32_const() nounwind {
 define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2, i32 %v3, <4 x i32> %mask) nounwind {
 ; SSE2-LABEL: shuffle_v4i32_demanded_src_hi_unused:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movd %ecx, %xmm1
-; SSE2-NEXT:    movd %edx, %xmm2
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    movd %esi, %xmm1
-; SSE2-NEXT:    movd %edi, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
+; SSE2-NEXT:    movd %edi, %xmm2
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    movd %xmm0, %eax
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %ecx
+; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    movd %xmm0, %ecx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE2-NEXT:    movd %xmm1, %edx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %esi
-; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1]
-; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE2-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v4i32_demanded_src_hi_unused:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movd %ecx, %xmm1
-; SSSE3-NEXT:    movd %edx, %xmm2
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSSE3-NEXT:    movd %esi, %xmm3
+; SSSE3-NEXT:    movd %esi, %xmm2
 ; SSSE3-NEXT:    movd %edi, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [67372036,67372036,67372036,67372036]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
@@ -846,8 +814,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; SSE41:       # %bb.0:
 ; SSE41-NEXT:    movd %edi, %xmm1
 ; SSE41-NEXT:    pinsrd $1, %esi, %xmm1
-; SSE41-NEXT:    pinsrd $2, %edx, %xmm1
-; SSE41-NEXT:    pinsrd $3, %ecx, %xmm1
 ; SSE41-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE41-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [67372036,67372036,67372036,67372036]
 ; SSE41-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [50462976,50462976,50462976,50462976]
@@ -859,8 +825,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vmovd %edi, %xmm1
 ; AVX1-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
@@ -869,8 +833,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovd %edi, %xmm1
 ; XOP-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; XOP-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; XOP-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; XOP-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
@@ -879,8 +841,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vmovd %edi, %xmm1
 ; AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX2-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
@@ -890,8 +850,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    vmovd %edi, %xmm1
 ; AVX512F-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1,1,1,1]
 ; AVX512F-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
@@ -901,8 +859,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vmovd %edi, %xmm1
 ; AVX512BW-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX512BW-NEXT:    retq
@@ -911,8 +867,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_hi_unused(i32 %v0, i32 %v1, i32 %v2
 ; AVX512VBMI:       # %bb.0:
 ; AVX512VBMI-NEXT:    vmovd %edi, %xmm1
 ; AVX512VBMI-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512VBMI-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
-; AVX512VBMI-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX512VBMI-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX512VBMI-NEXT:    retq
@@ -932,19 +886,16 @@ define <4 x i32> @shuffle_v4i32_demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2
 ; SSE2-NEXT:    movd %ecx, %xmm1
 ; SSE2-NEXT:    movd %edx, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSE2-NEXT:    movd %esi, %xmm1
-; SSE2-NEXT:    movd %edi, %xmm3
-; SSE2-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm3 = xmm3[0],xmm2[0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,1,0,1]
 ; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
-; SSE2-NEXT:    movd %xmm1, %eax
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; SSE2-NEXT:    movd %xmm2, %eax
 ; SSE2-NEXT:    movd %xmm0, %ecx
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
-; SSE2-NEXT:    movd %xmm1, %edx
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[2,3,2,3]
+; SSE2-NEXT:    movd %xmm2, %edx
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    movd %xmm0, %esi
-; SSE2-NEXT:    movdqa %xmm3, -{{[0-9]+}}(%rsp)
+; SSE2-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    andl $3, %esi
 ; SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    andl $3, %edx
@@ -963,10 +914,7 @@ define <4 x i32> @shuffle_v4i32_demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2
 ; SSSE3-NEXT:    movd %ecx, %xmm1
 ; SSSE3-NEXT:    movd %edx, %xmm2
 ; SSSE3-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; SSSE3-NEXT:    movd %esi, %xmm3
-; SSSE3-NEXT:    movd %edi, %xmm1
-; SSSE3-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm3[0],xmm1[1],xmm3[1]
-; SSSE3-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,1,0,1]
 ; SSSE3-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [67372036,67372036,67372036,67372036]
 ; SSSE3-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
@@ -982,8 +930,6 @@ define <4 x i32> @shuffle_v4i32_demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2
 ;
 ; SSE41-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; SSE41:       # %bb.0:
-; SSE41-NEXT:    movd %edi, %xmm1
-; SSE41-NEXT:    pinsrd $1, %esi, %xmm1
 ; SSE41-NEXT:    pinsrd $2, %edx, %xmm1
 ; SSE41-NEXT:    pinsrd $3, %ecx, %xmm1
 ; SSE41-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
@@ -995,51 +941,41 @@ define <4 x i32> @shuffle_v4i32_demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2
 ;
 ; AVX1-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovd %edi, %xmm1
-; AVX1-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX1-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX1-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; AVX1-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX1-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX1-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; XOP-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vmovd %edi, %xmm1
-; XOP-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; XOP-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; XOP-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; XOP-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; XOP-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; XOP-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; XOP-NEXT:    retq
 ;
 ; AVX2-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovd %edi, %xmm1
-; AVX2-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX2-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX2-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; AVX2-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2]
-; AVX2-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2,2,2,2]
+; AVX2-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512F-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovd %edi, %xmm1
-; AVX512F-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX512F-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; AVX512F-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
-; AVX512F-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2,2,2,2]
-; AVX512F-NEXT:    vorps %xmm2, %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [2,2,2,2]
+; AVX512F-NEXT:    vpor %xmm2, %xmm0, %xmm0
 ; AVX512F-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512BW-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; AVX512BW:       # %bb.0:
-; AVX512BW-NEXT:    vmovd %edi, %xmm1
-; AVX512BW-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512BW-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX512BW-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; AVX512BW-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX512BW-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
@@ -1047,9 +983,7 @@ define <4 x i32> @shuffle_v4i32_demanded_src_lo_unused(i32 %v0, i32 %v1, i32 %v2
 ;
 ; AVX512VBMI-LABEL: shuffle_v4i32_demanded_src_lo_unused:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vmovd %edi, %xmm1
-; AVX512VBMI-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
-; AVX512VBMI-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
+; AVX512VBMI-NEXT:    vpinsrd $2, %edx, %xmm0, %xmm1
 ; AVX512VBMI-NEXT:    vpinsrd $3, %ecx, %xmm1, %xmm1
 ; AVX512VBMI-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; AVX512VBMI-NEXT:    vpermilps %xmm0, %xmm1, %xmm0
