@@ -77,10 +77,6 @@
 ---
 name: mov
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, target-flags(x86-gottpoff) @i, $noreg :: (load (s64))
@@ -95,10 +91,6 @@ body: |
 ---
 name: test
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr8 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -117,12 +109,6 @@ body: |
 ---
 name: adc
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -139,11 +125,6 @@ body: |
 ---
 name: add
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -158,11 +139,6 @@ body: |
 ---
 name: and
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -178,11 +154,6 @@ body: |
 ---
 name: or
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -198,12 +169,6 @@ body: |
 ---
 name: sbb
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -222,11 +187,6 @@ body: |
 ---
 name: sub
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -242,11 +202,6 @@ body: |
 ---
 name: xor
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -262,11 +217,6 @@ body: |
 ---
 name: add64rm_nd_gotpcrel
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -283,11 +233,6 @@ body: |
 ---
 name: add64rm_nd_gottpoff
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))
@@ -304,11 +249,6 @@ body: |
 ---
 name: add64mr_nd
 alignment: 16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr64 }
-  - { id: 2, class: gr32 }
 body: |
   bb.0.entry:
     %0:gr64 = MOV64rm $rip, 1, $noreg, @x, $noreg :: (load (s64))

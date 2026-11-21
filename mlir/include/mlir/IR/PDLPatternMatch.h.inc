@@ -946,6 +946,42 @@ private:
 };
 } // namespace mlir
 
+namespace llvm {
+/// A PDLValue is present if it holds a non-null value.
+template <>
+struct ValueIsPresent<mlir::PDLValue> {
+  using UnwrappedType = mlir::PDLValue;
+  static inline bool isPresent(const mlir::PDLValue &value) {
+    return static_cast<bool>(value);
+  }
+  static inline decltype(auto) unwrapValue(mlir::PDLValue &value) {
+    return value;
+  }
+};
+
+/// Add support for llvm style casts from PDLValue to the types it can hold.
+template <typename To>
+struct CastInfo<To, mlir::PDLValue> {
+  using CastResultType = std::conditional_t<std::is_constructible_v<bool, To>,
+                                            To, std::optional<To>>;
+
+  static inline bool isPossible(const mlir::PDLValue &value) {
+    return value.isa<To>();
+  }
+  static inline To doCast(const mlir::PDLValue &value) {
+    return value.cast<To>();
+  }
+  static inline CastResultType castFailed() { return CastResultType(); }
+  static inline CastResultType doCastIfPossible(const mlir::PDLValue &value) {
+    return value.dyn_cast<To>();
+  }
+};
+template <typename To>
+struct CastInfo<To, const mlir::PDLValue>
+    : ConstStrippingForwardingCast<To, const mlir::PDLValue,
+                                   CastInfo<To, mlir::PDLValue>> {};
+} // namespace llvm
+
 #else
 
 namespace mlir {

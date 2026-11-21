@@ -23,6 +23,8 @@
 // RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-library -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=trunc %s 2>&1 | FileCheck %s -DFUNC=trunc
 // RUN: %clang_cc1 -finclude-default-header -triple dxilv1.0-unknown-shadermodel6.0-library -std=hlsl202x -emit-llvm-only -disable-llvm-passes -DFUNC=radians %s 2>&1 | FileCheck %s -DFUNC=radians
 
+using namespace hlsl;
+
 // unary double overloads
 float test_unary_double(double p0) {
   // CHECK: warning: '[[FUNC]]' is deprecated: In 202x 64 bit API lowering for [[FUNC]] is deprecated. Explicitly cast parameters to 32 or 16 bit types.

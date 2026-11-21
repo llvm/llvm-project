@@ -11,7 +11,6 @@
 
 #include "TestAttributes.h"
 #include "TestTypes.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
 
 namespace test {
 class TestReturnOp;

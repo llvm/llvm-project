@@ -23,10 +23,6 @@ name:            test_mul_i16
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -39,9 +35,9 @@ body:             |
     ; ALL-NEXT: [[IMUL16rr:%[0-9]+]]:gr16 = IMUL16rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $ax = COPY [[IMUL16rr]]
     ; ALL-NEXT: RET 0, implicit $ax
-    %0(s16) = COPY $di
-    %1(s16) = COPY $si
-    %2(s16) = G_MUL %0, %1
+    %0:gpr(s16) = COPY $di
+    %1:gpr(s16) = COPY $si
+    %2:gpr(s16) = G_MUL %0, %1
     $ax = COPY %2(s16)
     RET 0, implicit $ax
 
@@ -51,10 +47,6 @@ name:            test_mul_i32
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -67,9 +59,9 @@ body:             |
     ; ALL-NEXT: [[IMUL32rr:%[0-9]+]]:gr32 = IMUL32rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $eax = COPY [[IMUL32rr]]
     ; ALL-NEXT: RET 0, implicit $eax
-    %0(s32) = COPY $edi
-    %1(s32) = COPY $esi
-    %2(s32) = G_MUL %0, %1
+    %0:gpr(s32) = COPY $edi
+    %1:gpr(s32) = COPY $esi
+    %2:gpr(s32) = G_MUL %0, %1
     $eax = COPY %2(s32)
     RET 0, implicit $eax
 
@@ -79,10 +71,6 @@ name:            test_mul_i64
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi
@@ -95,9 +83,9 @@ body:             |
     ; ALL-NEXT: [[IMUL64rr:%[0-9]+]]:gr64 = IMUL64rr [[COPY]], [[COPY1]], implicit-def dead $eflags
     ; ALL-NEXT: $rax = COPY [[IMUL64rr]]
     ; ALL-NEXT: RET 0, implicit $rax
-    %0(s64) = COPY $rdi
-    %1(s64) = COPY $rsi
-    %2(s64) = G_MUL %0, %1
+    %0:gpr(s64) = COPY $rdi
+    %1:gpr(s64) = COPY $rsi
+    %2:gpr(s64) = G_MUL %0, %1
     $rax = COPY %2(s64)
     RET 0, implicit $rax
 
