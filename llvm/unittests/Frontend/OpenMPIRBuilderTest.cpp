@@ -4313,6 +4313,37 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
 
+TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareScope) {
+  // The flush after a seq_cst atomic compare uses the given scope.
+  M->setTargetTriple(Triple("nvptx64-nvidia-cuda"));
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.Config.IsTargetDevice = true;
+  OMPBuilder.Config.setIsGPU(true);
+  OMPBuilder.initialize();
+  IRBuilder<> Builder(BB);
+
+  LLVMContext &Ctx = M->getContext();
+  IntegerType *Int32 = Type::getInt32Ty(Ctx);
+  AllocaInst *XVal = Builder.CreateAlloca(Int32);
+  OpenMPIRBuilder::AtomicOpValue X = {XVal, Int32, true, false};
+  OpenMPIRBuilder::AtomicOpValue V = {nullptr, nullptr, false, false};
+  OpenMPIRBuilder::AtomicOpValue R = {nullptr, nullptr, false, false};
+  ConstantInt *Expr = ConstantInt::get(Int32, 1U);
+  ConstantInt *D = ConstantInt::get(Int32, 2U);
+
+  Builder.restoreIP(OMPBuilder.createAtomicCompare(
+      Builder, X, V, R, Expr, D, AtomicOrdering::SequentiallyConsistent,
+      OMPAtomicCompareOp::EQ, true, false, false, /*IsWeak=*/false,
+      AtomicScope::Workgroup));
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  auto *Fence = dyn_cast<FenceInst>(BB->getTerminator()->getPrevNode());
+  ASSERT_NE(Fence, nullptr);
+  EXPECT_EQ(Fence->getOrdering(), AtomicOrdering::SequentiallyConsistent);
+  EXPECT_EQ(Fence->getSyncScopeID(), Ctx.getOrInsertSyncScopeID("block"));
+}
+
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
   OpenMPIRBuilder OMPBuilder(*M);
   OMPBuilder.Config.IsTargetDevice = false;

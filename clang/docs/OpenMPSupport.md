@@ -321,7 +321,7 @@ For Fortran, see [Flang OpenMP 6.0 support](https://flang.llvm.org/docs/OpenMPSu
 | loop fuse transformation                                 | {good}`done`        |                                                                                     |
 | depth clause on loop fuse                                | {none}`unclaimed`   |                                                                                     |
 | task_iteration                                           | {none}`unclaimed`   |                                                                                     |
-| memscope clause for atomic and flush                     | {none}`unclaimed`   |                                                                                     |
+| memscope clause for atomic and flush                     | {part}`partial`     | Clang: flush and atomic's implied flushes (the atomic op itself stays system-scope) |
 | transparent clause (hull tasks)                          | {part}`partial`     | Clang parsing/sema [PR174646][PR174646]                                             |
 | rule-based compound directives                           | {part}`in progress` | kparzysz                                                                            |
 | C23, C++23                                               | {none}`unclaimed`   |                                                                                     |
