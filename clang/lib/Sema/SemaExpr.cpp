@@ -19188,10 +19188,18 @@ void Sema::PopExpressionEvaluationContext() {
   // temporaries that we may have created as part of the evaluation of
   // the expression in that context: they aren't relevant because they
   // will never be constructed.
-  if (Rec.isUnevaluated() || Rec.isConstantEvaluated()) {
+  if (Rec.isUnevaluated() ||
+      (Rec.isConstantEvaluated() &&
+       !Rec.InConditionallyConstantEvaluateContext)) {
     ExprCleanupObjects.erase(ExprCleanupObjects.begin() + Rec.NumCleanupObjects,
                              ExprCleanupObjects.end());
     Cleanup = Rec.ParentCleanup;
+    CleanupVarDeclMarking();
+    std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
+  } else if (Rec.isConstantEvaluated()) {
+    // Array bounds may turn out to be VLAs evaluated at runtime; preserve
+    // cleanups so enclosing expressions are wrapped in ExprWithCleanups.
+    Cleanup.mergeFrom(Rec.ParentCleanup);
     CleanupVarDeclMarking();
     std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
   // Otherwise, merge the contexts together.

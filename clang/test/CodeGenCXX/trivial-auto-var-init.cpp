@@ -735,6 +735,56 @@ jump:
   used(oops);
 }
 
+// A computed goto inside a lambda body must not mark the enclosing function as
+// always-bypassed: `y` should be initialized in `if.then`, not in `entry`.
+// UNINIT-LABEL:  test_lambda_computed_goto(
+// UNINIT-NOT:    !annotation
+// ZERO-LABEL:    test_lambda_computed_goto(
+// ZERO:          entry:
+// ZERO-NOT:      store i32 0, ptr %y
+// ZERO:          if.then:
+// ZERO:          store i32 0, ptr %y, align 4, !annotation [[AUTO_INIT]]
+// PATTERN-LABEL: test_lambda_computed_goto(
+// PATTERN:       entry:
+// PATTERN-NOT:   store i32 -1431655766, ptr %y
+// PATTERN:       if.then:
+// PATTERN:       store i32 -1431655766, ptr %y, align 4, !annotation [[AUTO_INIT]]
+void test_lambda_computed_goto(int c) {
+  auto lam = [](int x) {
+    static void *targets[] = {&&A, &&B};
+    goto *targets[x];
+  A:
+    return 1;
+  B:
+    return 2;
+  };
+  if (c) {
+    int y;
+    used(y);
+  }
+  lam(c);
+}
+
+// A goto inside a lambda capture initializer is evaluated in the enclosing
+// function and must still be detected as bypassing `y`.
+// UNINIT-LABEL:  test_lambda_capture_init_goto(
+// UNINIT-NOT:    !annotation
+// ZERO-LABEL:    test_lambda_capture_init_goto(
+// ZERO:          if.then:
+// ZERO:          store i32 0, ptr %y, align 4, !annotation [[AUTO_INIT]]
+// ZERO-NEXT:     br label %skip
+// PATTERN-LABEL: test_lambda_capture_init_goto(
+// PATTERN:       if.then:
+// PATTERN:       store i32 -1431655766, ptr %y, align 4, !annotation [[AUTO_INIT]]
+// PATTERN-NEXT:  br label %skip
+void test_lambda_capture_init_goto(int c) {
+  auto lam = [a = ({ if (c) goto skip; 1; })]() { return a; };
+  int y;
+skip:
+  used(y);
+  lam();
+}
+
 } // extern "C"
 
 // CHECK: [[AUTO_INIT]] = !{ !"auto-init" }
