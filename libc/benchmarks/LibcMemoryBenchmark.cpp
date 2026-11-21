@@ -156,8 +156,10 @@ SetSetup::SetSetup()
 
 SearchSetup::SearchSetup()
     : ParameterBatch(1), src_buffer(ParameterBatch::buffer_size) {
-  // Fill with a non-matching byte so memchr scans all size_bytes.
-  memset(src_buffer.begin(), 0xF, buffer_size);
+  // Fill with a non-matching byte so memchr scans all size_bytes, and place a
+  // null terminator at the end for strlen.
+  memset(src_buffer.begin(), 0xF, buffer_size - 1);
+  src_buffer[buffer_size - 1] = '\0';
 }
 
 } // namespace libc_benchmarks
