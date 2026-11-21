@@ -84,6 +84,15 @@ inline bool MustIgnoreInterceptor(ThreadState *thr) {
   if (MustIgnoreInterceptor(thr))            \
     return REAL(func)(__VA_ARGS__);
 
+// Mark an interceptor as unsupported during simulation. If simulation is
+// active, reports an error but continues with normal TSAN instrumentation.
+// The simulation will return an error at the end of the current iteration.
+#define SIMULATE_CHECK_UNSUPPORTED(func) \
+  if (UNLIKELY(SimulateIsActive())) {    \
+    SimulateReportUnsupported(#func);    \
+    return {};                           \
+  }
+
 #define SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START() \
     si.DisableIgnores();
 
