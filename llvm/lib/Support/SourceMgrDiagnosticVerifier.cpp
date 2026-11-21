@@ -101,7 +101,7 @@ static Regex buildExpectedRegex(ArrayRef<StringRef> prefixes) {
       [&] { pattern += '|'; });
   pattern += ")-(error|note|remark|warning)(-re)?"
              "( *@([+-][0-9]+|above|below|unknown))?(:([0-9]+))?"
-             " *{{(.*)}}$";
+             "( +([0-9]+))? *{{(.*)}}$";
   return Regex(pattern);
 }
 
@@ -128,7 +128,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
   SmallVector<StringRef, 100> lines;
   buf->getBuffer().split(lines, '\n');
   for (unsigned lineNo = 0, e = lines.size(); lineNo < e; ++lineNo) {
-    SmallVector<StringRef, 10> matches;
+    SmallVector<StringRef, 12> matches;
     if (!expected.match(lines[lineNo].rtrim(), &matches)) {
       // Check for designators that apply to this line.
       if (!designatorsForNextLine.empty()) {
@@ -154,7 +154,7 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
       assert(matches[3] == "note");
       kind = SourceMgr::DK_Note;
     }
-    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[9]);
+    ExpectedDiag record(kind, lineNo + 1, expectedStart, matches[11]);
 
     // Check to see if this is a regex match, i.e. it includes the `-re`.
     if (!matches[4].empty() && !record.computeRegex(os, mgr)) {
@@ -165,6 +165,14 @@ SourceMgrDiagnosticVerifier::computeExpectedDiags(raw_ostream &os,
     if (!matches[8].empty() &&
         (matches[8].getAsInteger(10, record.colNo) || record.colNo == 0)) {
       record.emitError(os, mgr, "invalid column '" + matches[7] + "'");
+      ok = false;
+      continue;
+    }
+
+    if (!matches[10].empty() &&
+        (matches[10].getAsInteger(10, record.numExpected) ||
+         record.numExpected == 0)) {
+      record.emitError(os, mgr, "invalid count '" + matches[10] + "'");
       ok = false;
       continue;
     }
@@ -240,23 +248,21 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
   // If we find something that is close then emit a more specific error.
   ExpectedDiag *nearMiss = nullptr;
 
-  // If this was an expected error, remember that we saw it and return.
   for (auto &e : diags) {
     // File line must match (unless it's an unknown location).
     if (hasLoc && e.lineNo != lineNo)
       continue;
     if (hasLoc && e.colNo != 0 && e.colNo != colNo)
       continue;
-    if (e.match(message)) {
-      if (e.kind == kind) {
-        e.matched = true;
-        return MatchResult::Matched;
-      }
-
-      // If this only differs based on the diagnostic kind, then consider it
-      // to be a near miss.
-      nearMiss = &e;
+    if (e.numSeen == e.numExpected || !e.match(message))
+      continue;
+    if (e.kind == kind) {
+      ++e.numSeen;
+      return MatchResult::Matched;
     }
+    // If this only differs based on the diagnostic kind, then consider it
+    // to be a near miss.
+    nearMiss = &e;
   }
 
   if (!reportUnexpected)
@@ -278,12 +284,18 @@ SourceMgrDiagnosticVerifier::MatchResult SourceMgrDiagnosticVerifier::process(
 bool SourceMgrDiagnosticVerifier::verify(raw_ostream &os, SourceMgr &mgr) {
   // Verify that all expected errors were seen.
   auto checkExpectedDiags = [&](ExpectedDiag &diag) {
-    if (!diag.matched) {
+    if (diag.numSeen == diag.numExpected)
+      return;
+    std::string expectedMsg = ("expected " + getDiagKindStr(diag.kind) + " \"" +
+                               diag.substring + "\"")
+                                  .str();
+    if (diag.numExpected == 1)
+      diag.emitError(os, mgr, expectedMsg + " was not produced");
+    else
       diag.emitError(os, mgr,
-                     "expected " + getDiagKindStr(diag.kind) + " \"" +
-                         diag.substring + "\" was not produced");
-      ok = false;
-    }
+                     expectedMsg + " was produced " + Twine(diag.numSeen) +
+                         " of " + Twine(diag.numExpected) + " times");
+    ok = false;
   };
   for (auto &expectedDiagsPair : expectedDiagsPerFile)
     for (auto &diag : expectedDiagsPair.second)

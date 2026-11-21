@@ -45,9 +45,9 @@ func.func @verify_nested_isolated_above() {
   "test.verifiers"(%0) ({
     // expected-remark@-1 {{success run of region verifier}}
     %1 = arith.constant 2 : i32
-    // expected-remark@+1 {{success run of verifier}}
+    // expected-remark@+1 2 {{success run of verifier}}
     "test.verifiers"(%1) ({
-      // expected-remark@-1 {{success run of region verifier}}
+      // expected-remark@-1 2 {{success run of region verifier}}
       %2 = arith.constant 3 : index
     }) : (i32) -> ()
   }) : (i32) -> ()

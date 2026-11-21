@@ -5,7 +5,7 @@ func.func @_QPloop_order() {
     %c10 = arith.constant 10 : i32
     %c1 = arith.constant 1 : i32
 
-    // expected-error@below {{not yet implemented: Unhandled clause order in omp.loop operation}}
+    // expected-error@below 2 {{not yet implemented: Unhandled clause order in omp.loop operation}}
     omp.loop order(reproducible:concurrent) {
       omp.loop_nest (%arg3) : i32 = (%c0) to (%c10) inclusive step (%c1) {
         omp.yield

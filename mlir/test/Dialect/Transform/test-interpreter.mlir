@@ -105,7 +105,7 @@ func.func @foo() {
   return
 }
 
-// expected-remark @below {{parent function}}
+// expected-remark @below 2 {{parent function}}
 func.func @bar() {
   %0 = arith.constant 0 : i32
   %1 = arith.constant 1 : i32
@@ -818,7 +818,7 @@ module attributes {transform.with_named_sequence} {
         transform.foreach %f : !transform.any_op {
         ^bb2(%arg2: !transform.any_op):
           %p = transform.num_associations %arg2 : (!transform.any_op) -> !transform.param<i64>
-          // expected-remark @below {{1}}
+          // expected-remark @below 2 {{1}}
           transform.debug.emit_param_as_remark  %p : !transform.param<i64>
           transform.debug.emit_remark_at %arg2, "transform applied" : !transform.any_op
         }
@@ -930,7 +930,7 @@ module attributes {transform.with_named_sequence} {
     %f = transform.structured.match ops{["arith.constant"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     transform.foreach %f : !transform.any_op {
     ^bb2(%arg2: !transform.any_op):
-      // expected-remark @below {{erasing}}
+      // expected-remark @below 4 {{erasing}}
       transform.test_emit_remark_and_erase_operand %arg2, "erasing" : !transform.any_op
     }
     transform.yield
@@ -2349,9 +2349,9 @@ module attributes {transform.with_named_sequence} {
 // -----
 
 func.func @get_parent_op() {
-  // expected-remark @below{{found test.foo parent}}
+  // expected-remark @below 2 {{found test.foo parent}}
   "test.foo"() ({
-    // expected-remark @below{{direct parent}}
+    // expected-remark @below 2 {{direct parent}}
     "test.bar"() ({
       "test.qux"() : () -> ()
       "test.qux"() : () -> ()
