@@ -962,21 +962,8 @@ Value *LowerTypeTestsModule::createBitSetTest(IRBuilder<> &B,
 
 static bool isKnownTypeIdMember(Metadata *TypeId, const DataLayout &DL,
                                 Value *V, uint64_t COffset) {
-  if (auto GV = dyn_cast<GlobalObject>(V)) {
-    SmallVector<MDNode *, 2> Types;
-    GV->getMetadata(LLVMContext::MD_type, Types);
-    for (MDNode *Type : Types) {
-      if (Type->getOperand(1) != TypeId)
-        continue;
-      uint64_t Offset =
-          cast<ConstantInt>(
-              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
-              ->getZExtValue();
-      if (COffset == Offset)
-        return true;
-    }
-    return false;
-  }
+  if (auto GV = dyn_cast<GlobalObject>(V))
+    return isTypeIdMemberAtOffset(*GV, COffset, TypeId);
 
   if (auto GEP = dyn_cast<GEPOperator>(V)) {
     APInt APOffset(DL.getIndexSizeInBits(0), 0);
