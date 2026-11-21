@@ -104,6 +104,10 @@ public:
     return alignTo(getTypeStoreSize(), getAlignment().value());
   }
 
+  /// Unlike getSizeInBits this includes trailing padding, matching Clang
+  /// ASTContext::getTypeSize.
+  TypeSize getTypeAllocSizeInBits() const { return getTypeAllocSize() * 8; }
+
   bool isVoid() const { return Kind == TypeKind::Void; }
   bool isAtomic() const { return Kind == TypeKind::Atomic; }
   bool isInteger() const { return Kind == TypeKind::Integer; }
@@ -238,10 +242,7 @@ public:
               bool HasAddressSpaceQualifier = false)
       : PointerLikeType(TypeKind::Pointer, TypeSize::getFixed(Size), ABIAlign,
                         AddressSpace),
-        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {
-    assert((HasAddressSpaceQualifier || AddressSpace == 0) &&
-           "an unqualified pointer is in address space 0");
-  }
+        HasAddressSpaceQualifier(HasAddressSpaceQualifier) {}
 
   bool hasAddressSpaceQualifier() const { return HasAddressSpaceQualifier; }
 
