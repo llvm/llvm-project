@@ -125,9 +125,13 @@ std::pair<mlir::Value, mlir::Type> CIRGenFunction::emitAsmInputLValue(
     if (hasScalarEvaluationKind(inputType))
       return {emitLoadOfLValue(inputValue, loc).getValue(), mlir::Type()};
 
+    // Load a 128-bit value only when it has to be in registers, or when it's
+    // tied to an output. Otherwise, the asm can use the object itself rather
+    // than a copy of it.
     mlir::Type ty = convertType(inputType);
     uint64_t size = cgm.getDataLayout().getTypeSizeInBits(ty);
     if ((size <= 64 && llvm::isPowerOf2_64(size)) ||
+        (size == 128 && (!info.allowsMemory() || info.hasTiedOperand())) ||
         getTargetHooks().isScalarizableAsmOperand(*this, ty)) {
       ty = cir::IntType::get(&getMLIRContext(), size, false);
 
@@ -342,9 +346,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
     // If this is a register output, then make the inline a sm return it
     // by-value.  If this is a memory result, return the value by-reference.
     QualType qty = outExpr->getType();
-    const bool isScalarOrAggregate =
-        hasScalarEvaluationKind(qty) || hasAggregateEvaluationKind(qty);
-    if (!info.allowsMemory() && isScalarOrAggregate) {
+    if (!info.allowsMemory()) {
       constraints += "=" + outputConstraint;
       resultRegQualTys.push_back(qty);
       resultRegDests.push_back(dest);
@@ -356,7 +358,7 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
       const bool requiresCast =
           info.allowsRegister() &&
           (cgm.getTargetCIRGenInfo().isScalarizableAsmOperand(*this, ty) ||
-           isa<cir::RecordType, cir::ArrayType>(ty));
+           isa<cir::RecordType, cir::ArrayType, cir::ComplexType>(ty));
 
       resultTruncRegTypes.push_back(ty);
       resultTypeRequiresCast.push_back(requiresCast);
@@ -491,7 +493,14 @@ mlir::LogicalResult CIRGenFunction::emitAsmStmt(const AsmStmt &s) {
         // Use ptrtoint as appropriate so that we can do our extension.
         if (isa<cir::PointerType>(argValue.getType()))
           argValue = builder.createPtrToInt(argValue, uIntPtrTy);
+        // A struct or _Complex output is returned as an integer of its size,
+        // so that's the type to extend the input to.
         mlir::Type outputTy = convertType(outputType);
+        if (isa<cir::RecordType, cir::ArrayType, cir::ComplexType>(outputTy))
+          outputTy = cir::IntType::get(&getMLIRContext(),
+                                       getContext().getTypeSize(outputType),
+                                       /*isSigned=*/false);
+
         if (isa<cir::IntType>(outputTy))
           argValue = builder.createIntCast(argValue, outputTy);
         else if (isa<cir::PointerType>(outputTy))
