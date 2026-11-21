@@ -38,6 +38,8 @@ defm : BoolField<"amdgpu-codegenprepare-expand-div64", "false",
 // Disabled to better test the backend implementations of fdiv.
 defm : BoolField<"amdgpu-codegenprepare-fdiv-expansion", "true",
   "Expand floating point division in AMDGPUCodeGenPrepare">;
+defm : BoolField<"amdgpu-codegenprepare-fold-shared-ranges", "true",
+  "Fold signed range checks with shared uniform bounds">;
 defm : BoolField<"amdgpu-codegenprepare-force-break-large-phis", "false",
   "For testing purposes, always break large PHIs even if it isn't profitable">;
 // Disabled to leave all integer division operations as they are. This
