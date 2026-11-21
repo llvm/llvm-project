@@ -1006,3 +1006,20 @@ gpu.func @transpose_1x1024x24x64(
 // CHECK:     arith.muli %{{.+}}, %[[C64]] : index
 // CHECK:     xegpu.store {{.*}}
 }
+
+// -----
+gpu.module @xevm_module {
+gpu.func @no_load_in_vector_mask(%source : memref<4xf32>,
+    %offset : index, %mask : vector<4xi1>) -> vector<4xf32> {
+  %c0 = arith.constant 0.0 : f32
+  %0 = vector.mask %mask {
+    vector.transfer_read %source[%offset], %c0 {in_bounds = [true]}
+      : memref<4xf32>, vector<4xf32>
+  } : vector<4xi1> -> vector<4xf32>
+  gpu.return %0 : vector<4xf32>
+}
+
+// CHECK-LABEL:  @no_load_in_vector_mask(
+// CHECK:        vector.mask
+// CHECK:          vector.transfer_read
+}
