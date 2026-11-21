@@ -154,8 +154,8 @@ alias(
 )
 
 alias(
-    name = "shared_math_headers_for_apfloat",
-    actual = "//libc/shared:math_headers_for_apfloat",
+    name = "shared_math_headers",
+    actual = "//libc/shared:math_headers",
 )
 
 ############################### errno ########################################
