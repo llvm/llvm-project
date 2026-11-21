@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <numeric>
+#include <optional>
 
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
@@ -384,15 +385,13 @@ static Value restoreLeadingUnitDimViaShapeCastOrBcast(RewriterBase &rewriter,
 }
 
 FailureOr<Value>
-mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
-                                               MaskingOpInterface maskingOp,
-                                               RewriterBase &rewriter) {
+mlir::vector::castAwayContractionUnitDim(vector::ContractionOp contractOp,
+                                         MaskingOpInterface maskingOp,
+                                         RewriterBase &rewriter) {
   VectorType oldAccType = dyn_cast<VectorType>(contractOp.getAccType());
   if (oldAccType == nullptr)
     return failure();
   if (oldAccType.getRank() < 1)
-    return failure();
-  if (oldAccType.getShape()[0] != 1 || oldAccType.getScalableDims()[0])
     return failure();
 
   auto oldIndexingMaps = contractOp.getIndexingMapsArray();
@@ -401,12 +400,21 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
   auto oldIteratorTypes = contractOp.getIteratorTypes();
   SmallVector<Attribute> newIteratorTypes;
 
-  // 0-th dim from the accumulator
-  int64_t dimToDrop = oldIndexingMaps[2].getDimPosition(0);
-
-  if (!isParallelIterator(oldIteratorTypes[dimToDrop]))
+  // Dim to drop: the first unit, non-scalable, parallel dim of the accumulator.
+  std::optional<int64_t> dimToDropOpt;
+  for (int64_t i = 0, e = oldAccType.getRank(); i < e; ++i) {
+    if (oldAccType.getShape()[i] != 1 || oldAccType.getScalableDims()[i])
+      continue;
+    int64_t candidate = oldIndexingMaps[2].getDimPosition(i);
     // only parallel type iterators can be dropped.
+    if (!isParallelIterator(oldIteratorTypes[candidate]))
+      continue;
+    dimToDropOpt = candidate;
+    break;
+  }
+  if (!dimToDropOpt)
     return failure();
+  int64_t dimToDrop = *dimToDropOpt;
 
   for (const auto &it : llvm::enumerate(oldIteratorTypes)) {
     int64_t currDim = it.index();
@@ -519,10 +527,16 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
       contractOp.getFastmath());
 
   if (maskingOp) {
+    // The mask has the shape of the iteration space.
+    auto oldMaskType = cast<VectorType>(maskingOp.getMask().getType());
+    SmallVector<int64_t> newMaskShape(oldMaskType.getShape());
+    SmallVector<bool> newMaskScalableDims(oldMaskType.getScalableDims());
+    newMaskShape.erase(newMaskShape.begin() + dimToDrop);
+    newMaskScalableDims.erase(newMaskScalableDims.begin() + dimToDrop);
     auto newMask = rewriter.createOrFold<ShapeCastOp>(
         loc,
-        trimLeadingUnitDims(cast<VectorType>(maskingOp.getMask().getType()),
-                            /*trimOnlyOneDim=*/true, /*allowRank0=*/true),
+        VectorType::get(newMaskShape, oldMaskType.getElementType(),
+                        newMaskScalableDims),
         maskingOp.getMask());
 
     newOp = mlir::vector::maskOperation(rewriter, newOp, newMask);
@@ -533,17 +547,28 @@ mlir::vector::castAwayContractionLeadingOneDim(vector::ContractionOp contractOp,
 }
 
 namespace {
-
-/// Turns vector.contract on vector with leading 1 dimensions into
-/// vector.shape_cast followed by vector.contract on vector without leading
-/// 1 dimensions. Also performs transpose of lhs and rhs operands if required.
+/// Drops a unit parallel dim of the accumulator of a vector.contract with
+/// vector.shape_cast, transposing the operands if needed. The dim need not be
+/// leading, e.g., d0 below:
+///
+///   vector.contract {indexing_maps = [(d0, d1, d2, d3) -> (d1, d2),
+///                                     (d0, d1, d2, d3) -> (d0, d1, d3),
+///                                     (d0, d1, d2, d3) -> (d2, d0, d3)],
+///                    iterator_types = [par, red, par, par]}
+///     %lhs, %rhs, %acc : vector<1x12xf32>, vector<1x1x8xf32>
+///                        into vector<12x1x8xf32>
+/// becomes
+///   %r = vector.contract {... iterator_types = [red, par, par]}
+///     %lhs, shape_cast(%rhs), shape_cast(%acc)
+///       : vector<1x12xf32>, vector<1x8xf32> into vector<12x8xf32>
+///   shape_cast %r : vector<12x8xf32> to vector<12x1x8xf32>
 ///
 /// TODO: While the discussion on the validity of folding TransposeOp into
 /// ShapeCastOp continues, see e.g.
 ///  * https://github.com/llvm/llvm-project/pull/219611,
 /// keep the explicit TransposeOp here. Once the discussion settles, revisit and
 /// consider replacing TransposeOp with ShapeCastOp.
-struct CastAwayContractionLeadingOneDim
+struct CastAwayContractionUnitDim
     : public MaskableOpRewritePattern<vector::ContractionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
@@ -551,7 +576,7 @@ struct CastAwayContractionLeadingOneDim
   matchAndRewriteMaskableOp(vector::ContractionOp contractOp,
                             MaskingOpInterface maskingOp,
                             PatternRewriter &rewriter) const override {
-    return castAwayContractionLeadingOneDim(contractOp, maskingOp, rewriter);
+    return castAwayContractionUnitDim(contractOp, maskingOp, rewriter);
   }
 };
 
@@ -729,19 +754,18 @@ struct CastAwayConstantMaskLeadingOneDim
 
 void mlir::vector::populateCastAwayVectorLeadingOneDimPatterns(
     RewritePatternSet &patterns, PatternBenefit benefit) {
-  patterns
-      .add<CastAwayExtractStridedSliceLeadingOneDim,
-           CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
-           CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
-           CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
-           CastAwayContractionLeadingOneDim,
-           CastAwayLoadLikeLeadingOneDim<vector::LoadOp>,
-           CastAwayLoadLikeLeadingOneDim<vector::MaskedLoadOp>,
-           CastAwayLoadLikeLeadingOneDim<vector::ExpandLoadOp>,
-           CastAwayLoadLikeLeadingOneDim<vector::GatherOp>,
-           CastAwayStoreLikeLeadingOneDim<vector::StoreOp>,
-           CastAwayStoreLikeLeadingOneDim<vector::MaskedStoreOp>,
-           CastAwayStoreLikeLeadingOneDim<vector::CompressStoreOp>,
-           CastAwayStoreLikeLeadingOneDim<vector::ScatterOp>>(
-          patterns.getContext(), benefit);
+  patterns.add<
+      CastAwayExtractStridedSliceLeadingOneDim,
+      CastAwayInsertStridedSliceLeadingOneDim, CastAwayInsertLeadingOneDim,
+      CastAwayConstantMaskLeadingOneDim, CastAwayTransferReadLeadingOneDim,
+      CastAwayTransferWriteLeadingOneDim, CastAwayElementwiseLeadingOneDim,
+      CastAwayContractionUnitDim, CastAwayLoadLikeLeadingOneDim<vector::LoadOp>,
+      CastAwayLoadLikeLeadingOneDim<vector::MaskedLoadOp>,
+      CastAwayLoadLikeLeadingOneDim<vector::ExpandLoadOp>,
+      CastAwayLoadLikeLeadingOneDim<vector::GatherOp>,
+      CastAwayStoreLikeLeadingOneDim<vector::StoreOp>,
+      CastAwayStoreLikeLeadingOneDim<vector::MaskedStoreOp>,
+      CastAwayStoreLikeLeadingOneDim<vector::CompressStoreOp>,
+      CastAwayStoreLikeLeadingOneDim<vector::ScatterOp>>(patterns.getContext(),
+                                                         benefit);
 }
