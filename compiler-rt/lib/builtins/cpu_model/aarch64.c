@@ -46,6 +46,7 @@ _Bool __aarch64_have_lse_atomics
 #elif defined(__ANDROID__)
 #include <sys/auxv.h>
 #include "aarch64/hwcap.inc"
+#include "aarch64/android.inc"
 #include "aarch64/lse_atomics/android.inc"
 #elif defined(__linux__)
 #include <sys/auxv.h>
