@@ -841,6 +841,7 @@ ExprEngine::mayInlineCallKind(const CallEvent &Call, const ExplodedNode *Pred,
   case CE_Function:
   case CE_CXXStaticOperator:
   case CE_Block:
+  case CE_CleanupFunction:
     break;
   case CE_CXXMember:
   case CE_CXXMemberOperator:

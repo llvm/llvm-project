@@ -559,9 +559,17 @@ static PathDiagnosticLocation getLocationForCaller(const StackFrame *SF,
     return PathDiagnosticLocation::createEnd(Dtor.getBindTemporaryExpr(), SM,
                                              CallerSF);
   }
+  case CFGElement::CleanupFunction: {
+    const CFGCleanupFunction &Cleanup = Source.castAs<CFGCleanupFunction>();
+    // The implicit call is not written in the source; anchor it at the
+    // location of the `cleanup` attribute. (CleanupAttr::getLoc() returns
+    // the location of the `cleanup` keyword, not of the cleanup function
+    // name, which may sit on a different line.)
+    const CleanupAttr *A = Cleanup.getVarDecl()->getAttr<CleanupAttr>();
+    return PathDiagnosticLocation(A->getLoc(), SM);
+  }
   case CFGElement::ScopeBegin:
   case CFGElement::ScopeEnd:
-  case CFGElement::CleanupFunction:
     llvm_unreachable("not yet implemented!");
   case CFGElement::LifetimeEnds:
   case CFGElement::FullExprCleanup:
