@@ -54,9 +54,9 @@ s_monitor_sleep 1
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_monitor_sleep
 // GFX1250: s_monitor_sleep 1                       ; encoding: [0x01,0x00,0x84,0xbf]
 
-s_monitor_sleep 0x2000
+s_monitor_sleep 0x7f
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_monitor_sleep
-// GFX1250: s_monitor_sleep 0x2000                  ; encoding: [0x00,0x20,0x84,0xbf]
+// GFX1250: s_monitor_sleep 0x7f                    ; encoding: [0x7f,0x00,0x84,0xbf]
 
 s_monitor_sleep 0
 // GFX12-ERR: :[[@LINE-1]]:1: error: instruction not supported on this GPU (gfx1200): s_monitor_sleep

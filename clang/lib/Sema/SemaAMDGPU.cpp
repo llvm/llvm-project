@@ -166,6 +166,20 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(const TargetInfo &TI,
 
     return false;
   }
+  case AMDGPU::BI__builtin_amdgcn_s_monitor_sleep: {
+    bool NoSleepForever = Builtin::evaluateRequiredTargetFeatures(
+        "no-sleep-forever", CallerFeatureMap);
+    Expr *ArgExpr = TheCall->getArg(0);
+    if (ArgExpr->isInstantiationDependent())
+      return false;
+    llvm::APSInt Sleep;
+    if (SemaRef.BuiltinConstantArg(TheCall, 0, Sleep))
+      return true;
+    // Bit 15 reaches Sema as the sign bit of the builtin's short argument.
+    int Low = !NoSleepForever && Sleep.isNegative() ? INT16_MIN : 0;
+    int High = Low + 127;
+    return SemaRef.BuiltinConstantArgRange(TheCall, 0, Low, High);
+  }
   case AMDGPU::BI__builtin_amdgcn_flat_prefetch:
   case AMDGPU::BI__builtin_amdgcn_global_prefetch: {
     // Only th (bits 0-2, not 7), scope (bits 3-4) and nv (bit 5) may be set.
