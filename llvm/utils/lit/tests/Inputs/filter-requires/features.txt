@@ -1,0 +1,5 @@
+# REQUIRES: Half
+# UNSUPPORTED: Half
+# XFAIL: Half
+# RUN: %if host %{ echo host still present %} %else %{ false %}
+# RUN: %if Half %{ false %} %else %{ echo Half still absent %}
