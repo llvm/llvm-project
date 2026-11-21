@@ -9110,6 +9110,7 @@ cc_library(
         ":ConvertToEmitCInterface",
         ":EmitCCommon",
         ":EmitCDialect",
+        ":EmitCTransforms",
         ":IR",
         ":LoopLikeInterface",
         ":MemRefDialect",

@@ -15,11 +15,12 @@
 #include "mlir/Conversion/EmitCCommon/TypeConverter.h"
 #include "mlir/Conversion/MemRefToEmitC/MemRefToEmitC.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
+#include "mlir/Dialect/EmitC/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRefDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "llvm/ADT/SmallSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace mlir {
@@ -30,15 +31,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
-emitc::IncludeOp addStandardHeader(OpBuilder &builder, ModuleOp module,
-                                   StringRef headerName) {
-  StringAttr includeAttr = builder.getStringAttr(headerName);
-  return emitc::IncludeOp::create(
-      builder, module.getLoc(), includeAttr,
-      /*is_standard_include=*/builder.getUnitAttr());
-}
-
 struct ConvertMemRefToEmitCPass
     : public impl::ConvertMemRefToEmitCBase<ConvertMemRefToEmitCPass> {
   using Base::Base;
@@ -59,13 +51,7 @@ struct ConvertMemRefToEmitCPass
       return signalPassFailure();
 
     mlir::ModuleOp module = getOperation();
-    llvm::SmallSet<StringRef, 4> existingHeaders;
-    mlir::OpBuilder builder(module.getBody(), module.getBody()->begin());
-    module.walk([&](mlir::emitc::IncludeOp includeOp) {
-      if (includeOp.getIsStandardInclude())
-        existingHeaders.insert(includeOp.getInclude());
-    });
-
+    llvm::SmallSetVector<StringRef, 2> requiredHeaders;
     module.walk([&](mlir::emitc::CallOpaqueOp callOp) {
       StringRef expectedHeader;
       if (callOp.getCallee() == alignedAllocFunctionName ||
@@ -77,13 +63,10 @@ struct ConvertMemRefToEmitCPass
         expectedHeader =
             options.lowerToCpp ? cppStringLibraryHeader : cStringLibraryHeader;
       else
-        return mlir::WalkResult::advance();
-      if (!existingHeaders.contains(expectedHeader)) {
-        addStandardHeader(builder, module, expectedHeader);
-        existingHeaders.insert(expectedHeader);
-      }
-      return mlir::WalkResult::advance();
+        return;
+      requiredHeaders.insert(expectedHeader);
     });
+    emitc::addStandardIncludes(getOperation(), requiredHeaders.getArrayRef());
   }
 };
 } // namespace
