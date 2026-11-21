@@ -3,7 +3,8 @@
 ; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+sse2 2>&1 | FileCheck %s --check-prefixes=SSE2
 ; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+sse4.2 2>&1 | FileCheck %s --check-prefixes=SSE42
 ; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx 2>&1 | FileCheck %s --check-prefixes=AVX,AVX1
-; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2 2>&1 | FileCheck %s --check-prefixes=AVX,AVX2
+; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2 2>&1 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-DEFAULT
+; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx2,+fast-vector-fp256 2>&1 | FileCheck %s --check-prefixes=AVX,AVX2,AVX2-FAST-FP256
 ; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f 2>&1 | FileCheck %s --check-prefixes=AVX512,AVX512F
 ; RUN: opt < %s  -passes="print<cost-model>" -disable-output -cost-kind=all -mtriple=x86_64-- -mattr=+avx512f,+avx512dq 2>&1 | FileCheck %s --check-prefixes=AVX512,AVX512DQ
 ;
@@ -566,16 +567,27 @@ define i32 @fdiv(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:88 CodeSize:2 Lat:90 SizeLat:6 for: %V8F64 = fdiv <8 x double> undef, undef
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
-; AVX2-LABEL: 'fdiv'
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %F32 = fdiv float undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %V4F32 = fdiv <4 x float> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:3 for: %V8F32 = fdiv <8 x float> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:42 SizeLat:6 for: %V16F32 = fdiv <16 x float> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %F64 = fdiv double undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %V2F64 = fdiv <2 x double> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:35 SizeLat:3 for: %V4F64 = fdiv <4 x double> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:2 Lat:70 SizeLat:6 for: %V8F64 = fdiv <8 x double> undef, undef
-; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; AVX2-DEFAULT-LABEL: 'fdiv'
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %F32 = fdiv float undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %V4F32 = fdiv <4 x float> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:3 for: %V8F32 = fdiv <8 x float> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:42 SizeLat:6 for: %V16F32 = fdiv <16 x float> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %F64 = fdiv double undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %V2F64 = fdiv <2 x double> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:35 SizeLat:3 for: %V4F64 = fdiv <4 x double> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:2 Lat:70 SizeLat:6 for: %V8F64 = fdiv <8 x double> undef, undef
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; AVX2-FAST-FP256-LABEL: 'fdiv'
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %F32 = fdiv float undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %V4F32 = fdiv <4 x float> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:13 SizeLat:1 for: %V8F32 = fdiv <8 x float> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:2 Lat:26 SizeLat:2 for: %V16F32 = fdiv <16 x float> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %F64 = fdiv double undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %V2F64 = fdiv <2 x double> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:20 SizeLat:1 for: %V4F64 = fdiv <4 x double> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:40 SizeLat:2 for: %V8F64 = fdiv <8 x double> undef, undef
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512-LABEL: 'fdiv'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:11 SizeLat:1 for: %F32 = fdiv float undef, undef
@@ -759,16 +771,27 @@ define i32 @fsqrt(i32 %arg) {
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:2 Lat:108 SizeLat:6 for: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
-; AVX2-LABEL: 'fsqrt'
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:3 for: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:42 SizeLat:6 for: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %F64 = call double @llvm.sqrt.f64(double undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:35 SizeLat:3 for: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:2 Lat:70 SizeLat:6 for: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
-; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+; AVX2-DEFAULT-LABEL: 'fsqrt'
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:3 for: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:42 SizeLat:6 for: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %F64 = call double @llvm.sqrt.f64(double undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:1 Lat:35 SizeLat:3 for: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:2 Lat:70 SizeLat:6 for: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; AVX2-DEFAULT-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
+;
+; AVX2-FAST-FP256-LABEL: 'fsqrt'
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %V4F32 = call <4 x float> @llvm.sqrt.v4f32(<4 x float> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:15 SizeLat:1 for: %V8F32 = call <8 x float> @llvm.sqrt.v8f32(<8 x float> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:2 Lat:30 SizeLat:2 for: %V16F32 = call <16 x float> @llvm.sqrt.v16f32(<16 x float> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %F64 = call double @llvm.sqrt.f64(double undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %V2F64 = call <2 x double> @llvm.sqrt.v2f64(<2 x double> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:14 CodeSize:1 Lat:21 SizeLat:1 for: %V4F64 = call <4 x double> @llvm.sqrt.v4f64(<4 x double> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:2 Lat:42 SizeLat:2 for: %V8F64 = call <8 x double> @llvm.sqrt.v8f64(<8 x double> undef)
+; AVX2-FAST-FP256-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret i32 undef
 ;
 ; AVX512-LABEL: 'fsqrt'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:12 SizeLat:1 for: %F32 = call float @llvm.sqrt.f32(float undef)
