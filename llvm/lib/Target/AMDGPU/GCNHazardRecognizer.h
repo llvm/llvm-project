@@ -98,9 +98,6 @@ private:
   /// nullopt when not in a WMMA window.
   std::optional<unsigned> CurrentCoExecStage;
 
-  /// Cycle when the current WMMA window started.
-  unsigned CoExecWindowStartCycle = 0;
-
   /// Tracks cycles until TRANS can be issued again (back-to-back TRANS hazard).
   unsigned CyclesUntilTRANS = 0;
 

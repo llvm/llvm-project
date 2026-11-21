@@ -1872,8 +1872,8 @@ lldb::SBSymbolContextList SBTarget::FindFunctions(const char *name,
     function_options.include_inlines = true;
 
     FunctionNameType mask = static_cast<FunctionNameType>(name_type_mask);
-    target_sp->GetImages().FindFunctions(ConstString(name), mask,
-                                         function_options, *sb_sc_list);
+    target_sp->GetImages().FindFunctions(name, mask, function_options,
+                                         *sb_sc_list);
   }
   return sb_sc_list;
 }
@@ -1908,8 +1908,7 @@ lldb::SBSymbolContextList SBTarget::FindGlobalFunctions(const char *name,
                                              function_options, *sb_sc_list);
         break;
       default:
-        target_sp->GetImages().FindFunctions(ConstString(name),
-                                             eFunctionNameTypeAny,
+        target_sp->GetImages().FindFunctions(name, eFunctionNameTypeAny,
                                              function_options, *sb_sc_list);
         break;
       }
@@ -2096,7 +2095,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
 
   if (TargetSP target_sp = GetSP(); target_sp && name) {
     VariableList variable_list;
-    target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
+    target_sp->GetImages().FindGlobalVariables(name, max_matches,
                                                variable_list);
     if (!variable_list.Empty()) {
       ExecutionContextScope *exe_scope = target_sp->GetProcessSP().get();
@@ -2128,7 +2127,7 @@ SBValueList SBTarget::FindGlobalVariables(const char *name,
     std::string regexstr;
     switch (matchtype) {
     case eMatchTypeNormal:
-      target_sp->GetImages().FindGlobalVariables(ConstString(name), max_matches,
+      target_sp->GetImages().FindGlobalVariables(name, max_matches,
                                                  variable_list);
       break;
     case eMatchTypeRegex:
@@ -2462,8 +2461,8 @@ lldb::SBSymbolContextList SBTarget::FindSymbols(const char *name,
   SBSymbolContextList sb_sc_list;
   if (name && name[0]) {
     if (TargetSP target_sp = GetSP()) {
-      target_sp->GetImages().FindSymbolsWithNameAndType(
-          ConstString(name), symbol_type, *sb_sc_list);
+      target_sp->GetImages().FindSymbolsWithNameAndType(name, symbol_type,
+                                                        *sb_sc_list);
     }
   }
   return sb_sc_list;

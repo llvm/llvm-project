@@ -3,36 +3,277 @@
 ; RUN: llc < %s -mtriple armv8a-none-eabihf -mattr=+bf16 | FileCheck %s --check-prefixes=CHECK,CHECK-BF16,CHECK-NOFP16
 ; RUN: llc < %s -mtriple armv8a-none-eabihf -mattr=+bf16,+fullfp16,+fp64 | FileCheck %s --check-prefixes=CHECK,CHECK-BF16,CHECK-FP16
 
-;define bfloat @test_fadd(bfloat %a, bfloat %b) #0 {
-;  %r = fadd bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_fadd(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fadd:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fadd:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fadd:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = fadd bfloat %a, %b
+  ret bfloat %r
+}
 
-;define bfloat @test_fadd_fast(bfloat %a, bfloat %b) #0 {
-;  %r = fadd fast bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_fadd_fast(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fadd_fast:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fadd_fast:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fadd_fast:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = fadd fast bfloat %a, %b
+  ret bfloat %r
+}
 
-;define bfloat @test_fsub(bfloat %a, bfloat %b) #0 {
-;  %r = fsub bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_fsub(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fsub:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fsub:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fsub:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vsub.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = fsub bfloat %a, %b
+  ret bfloat %r
+}
 
-;define bfloat @test_fmul(bfloat %a, bfloat %b) #0 {
-;  %r = fmul bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_fmul(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fmul:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vmul.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fmul:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vmul.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fmul:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vmul.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = fmul bfloat %a, %b
+  ret bfloat %r
+}
 
-;define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) #0 {
-;  %mul = fmul fast bfloat %a, %b
-;  %r = fadd fast bfloat %mul, %c
-;  ret bfloat %r
-;}
+define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) #0 {
+; CHECK-CVT-LABEL: test_fmadd:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    vmov r1, s1
+; CHECK-CVT-NEXT:    vmov r2, s2
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    lsl r1, r1, #16
+; CHECK-CVT-NEXT:    vmov s4, r0
+; CHECK-CVT-NEXT:    lsl r0, r2, #16
+; CHECK-CVT-NEXT:    vmov s2, r1
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    vfma.f32 s0, s4, s2
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fmadd:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s4, r0
+; CHECK-NOFP16-NEXT:    vmov r1, s2
+; CHECK-NOFP16-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    lsl r1, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r1
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fmadd:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s4, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vmov r1, s2
+; CHECK-FP16-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %mul = fmul fast bfloat %a, %b
+  %r = fadd fast bfloat %mul, %c
+  ret bfloat %r
+}
 
-;define bfloat @test_fdiv(bfloat %a, bfloat %b) #0 {
-;  %r = fdiv bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_fdiv(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fdiv:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vdiv.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fdiv:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vdiv.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fdiv:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vdiv.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = fdiv bfloat %a, %b
+  ret bfloat %r
+}
 
 ;define bfloat @test_frem(bfloat %a, bfloat %b) #0 {
 ;  %r = frem bfloat %a, %b
@@ -314,7 +555,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r4, r0
 ; CHECK-CVT-NEXT:    ldrh r0, [r0]
 ; CHECK-CVT-NEXT:    vmov s18, r0
-; CHECK-CVT-NEXT:  .LBB5_1: @ %loop
+; CHECK-CVT-NEXT:  .LBB11_1: @ %loop
 ; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-CVT-NEXT:    ldrh r0, [r4]
 ; CHECK-CVT-NEXT:    vmov.f32 s16, s18
@@ -322,7 +563,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r0, r4
 ; CHECK-CVT-NEXT:    bl test_dummy
 ; CHECK-CVT-NEXT:    tst r0, #1
-; CHECK-CVT-NEXT:    bne .LBB5_1
+; CHECK-CVT-NEXT:    bne .LBB11_1
 ; CHECK-CVT-NEXT:  @ %bb.2: @ %return
 ; CHECK-CVT-NEXT:    vmov.f32 s0, s16
 ; CHECK-CVT-NEXT:    vpop {d8, d9}
@@ -337,7 +578,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r4, r0
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r0]
 ; CHECK-NOFP16-NEXT:    vmov s18, r0
-; CHECK-NOFP16-NEXT:  .LBB5_1: @ %loop
+; CHECK-NOFP16-NEXT:  .LBB11_1: @ %loop
 ; CHECK-NOFP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r4]
 ; CHECK-NOFP16-NEXT:    vmov.f32 s16, s18
@@ -345,7 +586,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r0, r4
 ; CHECK-NOFP16-NEXT:    bl test_dummy
 ; CHECK-NOFP16-NEXT:    tst r0, #1
-; CHECK-NOFP16-NEXT:    bne .LBB5_1
+; CHECK-NOFP16-NEXT:    bne .LBB11_1
 ; CHECK-NOFP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-NOFP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-NOFP16-NEXT:    vpop {d8, d9}
@@ -359,14 +600,14 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-FP16-NEXT:    vpush {d8, d9}
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r0]
 ; CHECK-FP16-NEXT:    mov r4, r0
-; CHECK-FP16-NEXT:  .LBB5_1: @ %loop
+; CHECK-FP16-NEXT:  .LBB11_1: @ %loop
 ; CHECK-FP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-FP16-NEXT:    mov r0, r4
 ; CHECK-FP16-NEXT:    vmov.f32 s16, s18
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r4]
 ; CHECK-FP16-NEXT:    bl test_dummy
 ; CHECK-FP16-NEXT:    tst r0, #1
-; CHECK-FP16-NEXT:    bne .LBB5_1
+; CHECK-FP16-NEXT:    bne .LBB11_1
 ; CHECK-FP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    vpop {d8, d9}
@@ -909,11 +1150,62 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
 
 ; away the (fpext (fp_round <result>)) here.
 
-;define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
-;  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
-;  %xr = fpext bfloat %r to float
-;  ret float %xr
-;}
+define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_copysign_extended:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    vmov r1, s1
+; CHECK-CVT-NEXT:    and r1, r1, #32768
+; CHECK-CVT-NEXT:    bfc r0, #15, #17
+; CHECK-CVT-NEXT:    orr r0, r0, r1
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_copysign_extended:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    .pad #8
+; CHECK-NOFP16-NEXT:    sub sp, sp, #8
+; CHECK-NOFP16-NEXT:    vmov r1, s1
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    uxth r1, r1
+; CHECK-NOFP16-NEXT:    strh r1, [sp, #4]
+; CHECK-NOFP16-NEXT:    uxth r0, r0
+; CHECK-NOFP16-NEXT:    ldrb r1, [sp, #5]
+; CHECK-NOFP16-NEXT:    strh r0, [sp]
+; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    and r1, r1, #128
+; CHECK-NOFP16-NEXT:    and r0, r0, #127
+; CHECK-NOFP16-NEXT:    orr r0, r0, r1
+; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    add sp, sp, #8
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_copysign_extended:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    .pad #8
+; CHECK-FP16-NEXT:    sub sp, sp, #8
+; CHECK-FP16-NEXT:    vstr.16 s1, [sp, #4]
+; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #5]
+; CHECK-FP16-NEXT:    ldrb r1, [sp, #1]
+; CHECK-FP16-NEXT:    and r0, r0, #128
+; CHECK-FP16-NEXT:    and r1, r1, #127
+; CHECK-FP16-NEXT:    orr r0, r1, r0
+; CHECK-FP16-NEXT:    strb r0, [sp, #1]
+; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    vmov s0, r0
+; CHECK-FP16-NEXT:    add sp, sp, #8
+; CHECK-FP16-NEXT:    bx lr
+  %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
+  %xr = fpext bfloat %r to float
+  ret float %xr
+}
 
 ;define bfloat @test_floor(bfloat %a) #0 {
 ;  %r = call bfloat @llvm.floor.bf16(bfloat %a)
@@ -950,9 +1242,74 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
 ;  ret bfloat %r
 ;}
 
-;define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) #0 {
-;  %r = call bfloat @llvm.fmuladd.bf16(bfloat %a, bfloat %b, bfloat %c)
-;  ret bfloat %r
-;}
+define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) #0 {
+; CHECK-CVT-LABEL: test_fmuladd:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    .vsave {d8}
+; CHECK-CVT-NEXT:    vpush {d8}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    vmov.f32 s16, s2
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vmul.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    vmov r0, s16
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    vpop {d8}
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-NOFP16-LABEL: test_fmuladd:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s4, r0
+; CHECK-NOFP16-NEXT:    vmov r1, s2
+; CHECK-NOFP16-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    lsl r1, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r1
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fmuladd:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s4, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    vmov r1, s2
+; CHECK-FP16-NEXT:    vmul.f32 s0, s4, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
+; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = call bfloat @llvm.fmuladd.bf16(bfloat %a, bfloat %b, bfloat %c)
+  ret bfloat %r
+}
 
 attributes #0 = { nounwind }
