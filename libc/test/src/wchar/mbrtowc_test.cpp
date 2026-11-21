@@ -76,6 +76,7 @@ TEST_F(LlvmLibcMBRToWCTest, ThreeByte) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcMBRToWCTest, FourByte) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -97,6 +98,20 @@ TEST_F(LlvmLibcMBRToWCTest, FourByte) {
   ASSERT_EQ(static_cast<int>(*dest), 129313);
   ASSERT_ERRNO_SUCCESS();
 }
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+// UTF-16 mbrtowc cannot process surrogate pair
+TEST_F(LlvmLibcMBRToWCTest, RejectFourByte) {
+  const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
+                      static_cast<char>(0xA4),
+                      static_cast<char>(0xA1)}; // 🤡 clown emoji
+  wchar_t dest[2];
+  mbstate_t mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  size_t n = LIBC_NAMESPACE::mbrtowc(dest, ch, 4, &mb);
+  ASSERT_EQ(static_cast<int>(n), -1);
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif
 
 TEST_F(LlvmLibcMBRToWCTest, InvalidByte) {
   const char ch[1] = {static_cast<char>(0x80)};
@@ -190,6 +205,7 @@ TEST_F(LlvmLibcMBRToWCTest, NullString) {
   ASSERT_ERRNO_SUCCESS();
 }
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST_F(LlvmLibcMBRToWCTest, NullDest) {
   const char ch[4] = {static_cast<char>(0xF0), static_cast<char>(0x9F),
                       static_cast<char>(0xA4),
@@ -201,6 +217,19 @@ TEST_F(LlvmLibcMBRToWCTest, NullDest) {
   ASSERT_EQ(static_cast<int>(n), 4);
   ASSERT_ERRNO_SUCCESS();
 }
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+// UTF-16 mbrtowc cannot process surrogate pair
+TEST_F(LlvmLibcMBRToWCTest, NullDest) {
+  const char ch[3] = {static_cast<char>(0xE2), static_cast<char>(0x88),
+                      static_cast<char>(0x91)}; // ∑ sigma symbol
+  mbstate_t mb;
+  LIBC_NAMESPACE::memset(&mb, 0, sizeof(mbstate_t));
+  // reading nullptr should return correct size
+  size_t n = LIBC_NAMESPACE::mbrtowc(nullptr, ch, 10, &mb);
+  ASSERT_EQ(static_cast<int>(n), 3);
+  ASSERT_ERRNO_SUCCESS();
+}
+#endif
 
 TEST_F(LlvmLibcMBRToWCTest, InvalidMBState) {
   const char ch[4] = {static_cast<char>(0xC2), static_cast<char>(0x8E),

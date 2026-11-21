@@ -15,6 +15,8 @@ using LlvmLibcWcstombs = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
 // these tests are fairly simple as this function just calls into the internal
 // wcsnrtombs which is more thoroughly tested
 
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
+
 TEST_F(LlvmLibcWcstombs, AllMultibyteLengths) {
   /// clown emoji, sigma symbol, y with diaeresis, letter A
   const wchar_t src[] = {static_cast<wchar_t>(0x1f921),
@@ -76,9 +78,80 @@ TEST_F(LlvmLibcWcstombs, ErrnoTest) {
                          static_cast<wchar_t>(0x0)};
   char mbs[11];
 
-  // n parameter ignored when dest is null
   ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 7), static_cast<size_t>(7));
   ASSERT_ERRNO_SUCCESS();
   ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 100), static_cast<size_t>(-1));
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+
+#elif defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+
+TEST_F(LlvmLibcWcstombs, AllMultibyteLengths) {
+  /// clown emoji, sigma symbol, y with diaeresis, letter A
+  const wchar_t src[] = {
+      static_cast<wchar_t>(0xd83e), static_cast<wchar_t>(0xdd21),
+      static_cast<wchar_t>(0x2211), static_cast<wchar_t>(0xff),
+      static_cast<wchar_t>(0x41),   static_cast<wchar_t>(0x0)};
+  char mbs[11];
+
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 11), static_cast<size_t>(10));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(mbs[0], '\xF0'); // clown begin
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\xE2'); // sigma begin
+  ASSERT_EQ(mbs[5], '\x88');
+  ASSERT_EQ(mbs[6], '\x91');
+  ASSERT_EQ(mbs[7], '\xC3'); // y diaeresis begin
+  ASSERT_EQ(mbs[8], '\xBF');
+  ASSERT_EQ(mbs[9], '\x41'); // A begin
+  ASSERT_EQ(mbs[10], '\0');  // null terminator
+}
+
+TEST_F(LlvmLibcWcstombs, DestLimit) {
+  /// clown emoji, sigma symbol, y with diaeresis, letter A
+  const wchar_t src[] = {
+      static_cast<wchar_t>(0xd83e), static_cast<wchar_t>(0xdd21),
+      static_cast<wchar_t>(0x2211), static_cast<wchar_t>(0xff),
+      static_cast<wchar_t>(0x41),   static_cast<wchar_t>(0x0)};
+  char mbs[11];
+  for (int i = 0; i < 11; ++i)
+    mbs[i] = '\x01'; // dummy initial values
+
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 4), static_cast<size_t>(4));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(mbs[0], '\xF0');
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\x01'); // didn't write more than 4 bytes
+
+  for (int i = 0; i < 11; ++i)
+    mbs[i] = '\x01'; // dummy initial values
+
+  // not enough bytes to convert the second character, so only converts one
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 6), static_cast<size_t>(4));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(mbs[0], '\xF0');
+  ASSERT_EQ(mbs[1], '\x9F');
+  ASSERT_EQ(mbs[2], '\xA4');
+  ASSERT_EQ(mbs[3], '\xA1');
+  ASSERT_EQ(mbs[4], '\x01');
+}
+
+TEST_F(LlvmLibcWcstombs, ErrnoTest) {
+  const wchar_t src[] = {static_cast<wchar_t>(0xd83e),
+                         static_cast<wchar_t>(0xdd21),
+                         static_cast<wchar_t>(0x2211),
+                         static_cast<wchar_t>(0xdc00), // invalid widechar
+                         static_cast<wchar_t>(0x0)};
+  char mbs[11];
+
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 7), static_cast<size_t>(7));
+  ASSERT_ERRNO_SUCCESS();
+  ASSERT_EQ(LIBC_NAMESPACE::wcstombs(mbs, src, 100), static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+
+#endif

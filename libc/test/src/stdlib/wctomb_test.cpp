@@ -43,6 +43,8 @@ TEST(LlvmLibcWCToMBTest, ThreeByte) {
   ASSERT_EQ(mb[2], static_cast<char>(0x95));
 }
 
+// UTF-16 wctomb cannot process this
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST(LlvmLibcWCToMBTest, FourByte) {
   // testing utf32: 0x1f921 -> utf8: 0xf0 0x9f 0xa4 0xa1
   wchar_t wc = 0x1f921;
@@ -54,6 +56,7 @@ TEST(LlvmLibcWCToMBTest, FourByte) {
   ASSERT_EQ(mb[2], static_cast<char>(0xa4));
   ASSERT_EQ(mb[3], static_cast<char>(0xa1));
 }
+#endif
 
 TEST(LlvmLibcWCToMBTest, NullString) {
   wchar_t wc = L'A';
@@ -64,6 +67,8 @@ TEST(LlvmLibcWCToMBTest, NullString) {
   ASSERT_EQ(cnt, 0);
 }
 
+// UTF-16 wcrtomb cannot process this
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF32)
 TEST(LlvmLibcWCToMBTest, InvalidWchar) {
   wchar_t wc = 0x12ffff;
   char mb[4];
@@ -71,3 +76,25 @@ TEST(LlvmLibcWCToMBTest, InvalidWchar) {
   ASSERT_EQ(cnt, -1);
   ASSERT_ERRNO_EQ(EILSEQ);
 }
+#endif
+
+// Tests unique to UTF-16 wcrtomb
+#if defined(LIBC_TYPES_WCHAR_T_IS_UTF16)
+TEST_F(LlvmLibcWCToMBTest, InvalidWchar) {
+  wchar_t wc = 0xdc00;
+  char mb[4];
+  size_t cnt = LIBC_NAMESPACE::wctomb(mb, wc);
+  ASSERT_EQ(cnt, static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+
+// We fail with EILSEQ on high surrogate, since we have no way to consume a
+// surrogate pair across 2 consecutive calls, unlike with c16rtomb
+TEST_F(LlvmLibcWCToMBTest, HighSurrogate) {
+  wchar_t wc = 0xd800;
+  char mb[4];
+  size_t cnt = LIBC_NAMESPACE::wctomb(mb, wc);
+  ASSERT_EQ(cnt, static_cast<size_t>(-1));
+  ASSERT_ERRNO_EQ(EILSEQ);
+}
+#endif

@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_WCHAR_MBSNRTOWCS_H
 
 #include "hdr/errno_macros.h"
+#include "hdr/types/char8_t.h"
 #include "hdr/types/size_t.h"
 #include "hdr/types/wchar_t.h"
 #include "src/__support/common.h"
@@ -34,7 +35,7 @@ mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
   StringConverter<char8_t> str_conv(reinterpret_cast<const char8_t *>(*src), ps,
                                     max_dst_chars, max_src_bytes);
   size_t dst_idx = 0;
-  ErrorOr<char32_t> converted = str_conv.pop<char32_t>();
+  ErrorOr<wchar_t> converted = str_conv.pop<wchar_t>();
   while (converted.has_value()) {
     if (dst != nullptr)
       dst[dst_idx] = converted.value();
@@ -45,7 +46,7 @@ mbsnrtowcs(wchar_t *__restrict dst, const char **__restrict src,
       return dst_idx;
     }
     dst_idx++;
-    converted = str_conv.pop<char32_t>();
+    converted = str_conv.pop<wchar_t>();
   }
 
   if (converted.error() == -1) { // if we hit conversion limit
