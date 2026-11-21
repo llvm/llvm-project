@@ -157,4 +157,25 @@ contains
   subroutine test_score_ranking
     call base_score()
   end subroutine test_score_ranking
+
+  subroutine base_simd
+    !$omp declare variant (vsub_simd) match(construct={simd})
+  end subroutine
+  subroutine vsub_simd
+  end subroutine
+
+  ! A SIMD selector without properties matches only inside SIMD.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_construct_simd(
+  ! CHECK: fir.call @_QMmPbase_simd()
+  ! CHECK: omp.simd
+  ! CHECK: fir.call @_QMmPvsub_simd()
+  subroutine test_construct_simd(n)
+    integer :: n, i
+    call base_simd()
+    !$omp simd
+    do i = 1, n
+      call base_simd()
+    end do
+  end subroutine test_construct_simd
 end module m
