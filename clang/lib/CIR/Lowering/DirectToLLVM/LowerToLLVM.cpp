@@ -4585,6 +4585,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
+    // Sema and the CIR type verifier allow vectors of _BitInt where
+    // the width of the _BitInt is any power of two, but there is an
+    // ongoing problem with the handling of sub-byte _BitInts
+    // (see https://github.com/llvm/llvm-project/issues/244489).
+    // While that is being resolved, we skip the conversion here.
+    // This will result in an NYI diagnostic.
+    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
+        intTy && intTy.isBitInt() && (intTy.getWidth() < 8))
+      return {};
     const mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
       return {};

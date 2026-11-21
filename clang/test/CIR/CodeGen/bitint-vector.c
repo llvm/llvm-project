@@ -5,10 +5,6 @@
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=LLVM,OGCG --input-file=%t.ll %s
 
-// Vectors of _BitInt(N) hit an unimplemented case during calling convention
-// lowering. This test should be updated to remove -fno-clangir-call-conv-lowering
-// after that is fixed.
-
 // A vector of _BitInt(N) lowers to a vector of iN in both its value and its
 // memory form.
 
