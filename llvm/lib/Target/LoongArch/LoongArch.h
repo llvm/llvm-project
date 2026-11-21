@@ -15,6 +15,8 @@
 #define LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H
 
 #include "MCTargetDesc/LoongArchBaseInfo.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 namespace llvm {
@@ -35,8 +37,15 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
 
 FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
-FunctionPass *createLoongArchISelDag(LoongArchTargetMachine &TM,
-                                     CodeGenOptLevel OptLevel);
+
+class LoongArchISelDAGToDAGPass : public SelectionDAGISelPass {
+public:
+  LoongArchISelDAGToDAGPass(LoongArchTargetMachine &TM,
+                            CodeGenOptLevel OptLevel);
+};
+
+FunctionPass *createLoongArchISelDagLegacyPass(LoongArchTargetMachine &TM,
+                                               CodeGenOptLevel OptLevel);
 FunctionPass *createLoongArchMemoryBarrierOptPass();
 FunctionPass *createLoongArchMergeBaseOffsetOptPass();
 FunctionPass *createLoongArchOptWInstrsPass();
