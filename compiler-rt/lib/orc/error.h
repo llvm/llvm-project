@@ -14,6 +14,8 @@
 #include "stl_extras.h"
 
 #include <cassert>
+#include <cstdio>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <type_traits>
