@@ -342,6 +342,13 @@ public:
     return getOrCreateSPIRVType(Type, MIRBuilder, AQ, false, EmitIR);
   }
 
+  // Get the data type used to address memory in SC, including any required
+  // explicit layout. Untyped access chains carry this type separately from
+  // their pointer type.
+  SPIRVTypeInst getOrCreateSPIRVTypeForStorageClass(
+      const Type *Type, MachineIRBuilder &MIRBuilder,
+      SPIRV::StorageClass::StorageClass SC, bool EmitIR);
+
   const Type *getTypeForSPIRVType(SPIRVTypeInst Ty) const {
     auto Res = SPIRVToLLVMType.find(Ty);
     assert(Res != SPIRVToLLVMType.end());
@@ -426,8 +433,8 @@ public:
 
   // True if a pointer to this element type should be emitted as
   // OpTypeUntypedPointerKHR rather than OpTypePointer.
-  bool shouldUseUntypedPointer(SPIRVTypeInst ElemType,
-                               const SPIRVSubtarget &ST) const;
+  bool shouldUseUntypedPointer(SPIRVTypeInst ElemType, const SPIRVSubtarget &ST,
+                               SPIRV::StorageClass::StorageClass SC) const;
 
   // Byte size of a pointer value's IR-deduced element type, or 0 if unknown.
   // Array indexing and copy strides work in terms of the alloc size, so this

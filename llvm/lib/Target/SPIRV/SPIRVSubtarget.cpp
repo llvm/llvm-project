@@ -128,6 +128,15 @@ bool SPIRVSubtarget::canUseExtension(SPIRV::Extension::Extension E) const {
   return AvailableExtensions.contains(E);
 }
 
+bool SPIRVSubtarget::canUseUntypedPointers(
+    SPIRV::StorageClass::StorageClass SC) const {
+  if (!canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
+    return false;
+  return !isShader() || SC == SPIRV::StorageClass::StorageBuffer ||
+         SC == SPIRV::StorageClass::Uniform ||
+         SC == SPIRV::StorageClass::PhysicalStorageBufferEXT;
+}
+
 bool SPIRVSubtarget::canUseExtInstSet(
     SPIRV::InstructionSet::InstructionSet E) const {
   return AvailableExtInstSets.contains(E);
