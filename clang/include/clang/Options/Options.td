@@ -4562,6 +4562,11 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">, Flags<[NoArgumentUnused]>,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
+def fpass_plugin_arg_EQ : Joined<["-"], "fpass-plugin-arg=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<plugin>,<arg>">, Flags<[NoArgumentUnused]>,
+  HelpText<"Pass <arg> to the pass plugin named <plugin>">,
+  MarshallingInfoStringVector<CodeGenOpts<"PassPluginArgs">>;
 defm tocdata : BoolOption<"m","tocdata",
   CodeGenOpts<"AllTocData">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
