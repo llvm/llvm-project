@@ -16,6 +16,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LockFileManager.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 #include <chrono>
@@ -160,53 +161,81 @@ void clang::maybePruneImpl(StringRef Path, time_t PruneInterval,
   }
 }
 
-std::error_code clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer,
-                                 off_t &Size, time_t &ModTime) {
+llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+clang::writeImpl(StringRef Path, llvm::MemoryBufferRef Buffer, off_t &Size,
+                 time_t &ModTime, bool ReadBack) {
   StringRef Extension = llvm::sys::path::extension(Path);
   SmallString<128> ModelPath = StringRef(Path).drop_back(Extension.size());
   ModelPath += "-%%%%%%%%";
   ModelPath += Extension;
   ModelPath += ".tmp";
 
-  std::error_code EC;
-  int FD;
-  SmallString<128> TmpPath;
-  if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath))) {
-    if (EC != std::errc::no_such_file_or_directory)
-      return EC;
+  // The temporary file is removed on discard() and also when crashing, so that
+  // failing to produce the PCM doesn't leave it behind.
+  llvm::ErrorOr<llvm::sys::fs::TempFile> Temp =
+      llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+  if (!Temp) {
+    if (Temp.getError() != std::errc::no_such_file_or_directory)
+      return Temp.getError();
 
     StringRef Dir = llvm::sys::path::parent_path(Path);
     if (std::error_code InnerEC = llvm::sys::fs::create_directories(Dir))
       return InnerEC;
 
-    if ((EC = llvm::sys::fs::createUniqueFile(ModelPath, FD, TmpPath)))
-      return EC;
+    Temp = llvm::sys::fs::TempFile::createWithErrorCode(ModelPath);
+    if (!Temp)
+      return Temp.getError();
   }
 
   llvm::sys::fs::file_status Status;
-  {
-    llvm::raw_fd_ostream OS(FD, /*shouldClose=*/true);
+  std::unique_ptr<llvm::MemoryBuffer> Written;
+  auto WriteContentsAndReadBack = [&]() -> std::error_code {
+    // The file descriptor is owned (and closed) by the temporary file.
+    llvm::raw_fd_ostream OS(Temp->FD, /*shouldClose=*/false);
     OS << Buffer.getBuffer();
     // Make sure all contents reach the file before querying its status.
     OS.flush();
-    // Using the status from an open file descriptor ensures this is not racy.
-    if ((EC = llvm::sys::fs::status(FD, Status)))
+    if (std::error_code EC = OS.error()) {
+      // Prevent the destructor from reporting a fatal error.
+      OS.clear_error();
       return EC;
+    }
+    // Using the status from an open file descriptor ensures this is not racy.
+    if (std::error_code EC = llvm::sys::fs::status(Temp->FD, Status))
+      return EC;
+    if (ReadBack) {
+      llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buf =
+          llvm::MemoryBuffer::getOpenFile(
+              llvm::sys::fs::convertFDToNativeFile(Temp->FD), Path,
+              Status.getSize(), /*RequiresNullTerminator=*/false);
+      if (!Buf)
+        return Buf.getError();
+      Written = std::move(*Buf);
+    }
+    return {};
+  };
+
+  if (std::error_code EC = WriteContentsAndReadBack()) {
+    llvm::consumeError(Temp->discard());
+    return EC;
   }
+
+  // Rename to the final path and close. This preserves both size and
+  // modification time. On failure, the temporary file is removed.
+  if (std::error_code EC = Temp->keepWithErrorCode(Path))
+    return EC;
 
   Size = Status.getSize();
   ModTime = llvm::sys::toTimeT(Status.getLastModificationTime());
 
-  // This preserves both size and modification time.
-  if ((EC = llvm::sys::fs::rename(TmpPath, Path)))
-    return EC;
-
-  return {};
+  return std::move(Written);
 }
 
+#ifndef _WIN32
 /// The access time of a module file is only refreshed explicitly when it is
 /// older than this interval so we avoid frequent yet unnecessary updates.
 static constexpr std::chrono::seconds AccessTimeRefreshInterval(60);
+#endif
 
 /// Record that the module file open as \p FD has just been used by setting its
 /// access time to now, if it is older than AccessTimeRefreshInterval. Module
@@ -307,12 +336,13 @@ public:
     return InMemory;
   }
 
-  std::error_code write(StringRef Path, llvm::MemoryBufferRef Buffer,
-                        off_t &Size, time_t &ModTime) override {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  write(StringRef Path, std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t &Size,
+        time_t &ModTime) override {
     // This is a compiler-internal input/output, let's bypass the sandbox.
     auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
 
-    return writeImpl(Path, Buffer, Size, ModTime);
+    return writeImpl(Path, *Buffer, Size, ModTime, /*ReadBack=*/true);
   }
 
   Expected<std::unique_ptr<llvm::MemoryBuffer>>

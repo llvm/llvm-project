@@ -14,6 +14,7 @@
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -241,20 +242,16 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fsyntax-only");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp,
-                               options::OPT_mno_hexagon_hvx_ieee_fp)) {
-    if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
-      CmdArgs.push_back("-mhvx-ieee-fp");
-  }
-
-  if (Args.hasFlag(options::OPT_mhexagon_hmx, options::OPT_mno_hexagon_hmx,
-                   false)) {
-    CmdArgs.push_back("-mhmx");
-  }
-
-  if (Args.hasFlag(options::OPT_mhexagon_hlx, options::OPT_mno_hexagon_hlx,
-                   false))
-    CmdArgs.push_back("-mhlx");
+  // Forward the target features (e.g. HVX, HVX length, HVX qfloat/ieee-fp) to
+  // the external assembler so that its behavior matches the integrated
+  // assembler. getHexagonTargetFeatures() computes the same feature list that
+  // the compiler and integrated assembler use, and llvm-mc consumes it via
+  // -mattr=.
+  std::vector<StringRef> Features;
+  hexagon::getHexagonTargetFeatures(D, HTC.getTriple(), Args, Features);
+  if (!Features.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-mattr=" + llvm::join(Features, ",")));
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
@@ -937,6 +934,20 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");
+  }
+
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_fhlx_vector_stack_limit_EQ)) {
+    unsigned Limit;
+    if (!DriverArgs.hasFlag(options::OPT_mhexagon_hlx,
+                            options::OPT_mno_hexagon_hlx, false)) {
+      getDriver().Diag(diag::err_drv_needs_hlx) << A->getSpelling();
+    } else if (StringRef(A->getValue()).getAsInteger(10, Limit)) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+    } else {
+      CC1Args.push_back(
+          DriverArgs.MakeArgString("-fhlx-vector-stack-limit=" + Twine(Limit)));
+    }
   }
 }
 

@@ -18,6 +18,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/OpenMPOpt.h"
+#include "IPOOptions.h"
 
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EnumeratedArray.h"
@@ -55,7 +56,6 @@
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TargetParser/AtomicScope.h"
 #include "llvm/TargetParser/Triple.h"
@@ -72,94 +72,6 @@ using namespace llvm;
 using namespace omp;
 
 #define DEBUG_TYPE "openmp-opt"
-
-static cl::opt<bool> DisableOpenMPOptimizations(
-    "openmp-opt-disable", cl::desc("Disable OpenMP specific optimizations."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> EnableParallelRegionMerging(
-    "openmp-opt-enable-merging",
-    cl::desc("Enable the OpenMP region merging optimization."), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool>
-    DisableInternalization("openmp-opt-disable-internalization",
-                           cl::desc("Disable function internalization."),
-                           cl::Hidden, cl::init(false));
-
-static cl::opt<bool> DeduceICVValues("openmp-deduce-icv-values",
-                                     cl::init(false), cl::Hidden);
-static cl::opt<bool> PrintICVValues("openmp-print-icv-values", cl::init(false),
-                                    cl::Hidden);
-static cl::opt<bool> PrintOpenMPKernels("openmp-print-gpu-kernels",
-                                        cl::init(false), cl::Hidden);
-
-static cl::opt<bool> HideMemoryTransferLatency(
-    "openmp-hide-memory-transfer-latency",
-    cl::desc("[WIP] Tries to hide the latency of host to device memory"
-             " transfers"),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> DisableOpenMPOptDeglobalization(
-    "openmp-opt-disable-deglobalization",
-    cl::desc("Disable OpenMP optimizations involving deglobalization."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> DisableOpenMPOptSPMDization(
-    "openmp-opt-disable-spmdization",
-    cl::desc("Disable OpenMP optimizations involving SPMD-ization."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> DisableOpenMPOptFolding(
-    "openmp-opt-disable-folding",
-    cl::desc("Disable OpenMP optimizations involving folding."), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool> DisableOpenMPOptStateMachineRewrite(
-    "openmp-opt-disable-state-machine-rewrite",
-    cl::desc("Disable OpenMP optimizations that replace the state machine."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> DisableOpenMPOptBarrierElimination(
-    "openmp-opt-disable-barrier-elimination",
-    cl::desc("Disable OpenMP optimizations that eliminate barriers."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> PrintModuleAfterOptimizations(
-    "openmp-opt-print-module-after",
-    cl::desc("Print the current module after OpenMP optimizations."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> PrintModuleBeforeOptimizations(
-    "openmp-opt-print-module-before",
-    cl::desc("Print the current module before OpenMP optimizations."),
-    cl::Hidden, cl::init(false));
-
-static cl::opt<bool> AlwaysInlineDeviceFunctions(
-    "openmp-opt-inline-device",
-    cl::desc("Inline all applicable functions on the device."), cl::Hidden,
-    cl::init(false));
-
-static cl::opt<bool>
-    EnableVerboseRemarks("openmp-opt-verbose-remarks",
-                         cl::desc("Enables more verbose remarks."), cl::Hidden,
-                         cl::init(false));
-
-static cl::opt<unsigned>
-    SetFixpointIterations("openmp-opt-max-iterations", cl::Hidden,
-                          cl::desc("Maximal number of attributor iterations."),
-                          cl::init(256));
-
-static cl::opt<unsigned>
-    SharedMemoryLimit("openmp-opt-shared-limit", cl::Hidden,
-                      cl::desc("Maximum amount of shared memory to use."),
-                      cl::init(std::numeric_limits<unsigned>::max()));
-
-static cl::opt<unsigned> MaxCalleesForSpecialization(
-    "openmp-opt-max-callees-for-specialization", cl::Hidden,
-    cl::desc("Number of possible callees above which an indirect call site is "
-             "left alone rather than specialized into an if-cascade."),
-    cl::init(3));
 
 STATISTIC(NumOpenMPRuntimeCallsDeduplicated,
           "Number of OpenMP runtime calls deduplicated");
@@ -1070,9 +982,9 @@ struct OpenMPOpt {
       if (remarksEnabled())
         analysisGlobalization();
     } else {
-      if (PrintICVValues)
+      if (A.Opts.openmp_print_icv_values)
         printICVs();
-      if (PrintOpenMPKernels)
+      if (A.Opts.openmp_print_gpu_kernels)
         printKernels();
 
       Changed |= runAttributor(IsModulePass);
@@ -1082,10 +994,10 @@ struct OpenMPOpt {
 
       Changed |= deleteParallelRegions();
 
-      if (HideMemoryTransferLatency)
+      if (A.Opts.openmp_hide_memory_transfer_latency)
         Changed |= hideMemTransfersLatency();
       Changed |= deduplicateRuntimeCalls();
-      if (EnableParallelRegionMerging) {
+      if (A.Opts.openmp_opt_enable_merging) {
         if (mergeParallelRegions()) {
           deduplicateRuntimeCalls();
           Changed = true;
@@ -2270,7 +2182,7 @@ bool OpenMPOpt::rewriteDeviceCodeStateMachine() {
     return Changed;
 
   // If we have disabled state machine changes, exit
-  if (DisableOpenMPOptStateMachineRewrite)
+  if (!A.Opts.openmp_opt_state_machine_rewrite)
     return Changed;
 
   for (Function *F : SCC) {
@@ -2887,7 +2799,7 @@ struct AAExecutionDomainFunction : public AAExecutionDomain {
 
     ChangeStatus Changed = ChangeStatus::UNCHANGED;
 
-    if (DisableOpenMPOptBarrierElimination)
+    if (!A.Opts.openmp_opt_barrier_elimination)
       return Changed;
 
     SmallPtrSet<CallBase *, 16> DeletedBarriers;
@@ -3592,7 +3504,7 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
   }
 
   void initialize(Attributor &A) override {
-    if (DisableOpenMPOptDeglobalization) {
+    if (!A.Opts.openmp_opt_deglobalization) {
       indicatePessimisticFixpoint();
       return;
     }
@@ -3659,11 +3571,12 @@ struct AAHeapToSharedFunction : public AAHeapToShared {
 
       auto *AllocSize = cast<ConstantInt>(CB->getArgOperand(0));
 
-      if (AllocSize->getZExtValue() + SharedMemoryUsed > SharedMemoryLimit) {
+      if (AllocSize->getZExtValue() + SharedMemoryUsed >
+          A.Opts.openmp_opt_shared_limit) {
         LLVM_DEBUG(dbgs() << TAG << "Cannot replace call " << *CB
                           << " with shared memory."
                           << " Shared memory usage is limited to "
-                          << SharedMemoryLimit << " bytes\n");
+                          << A.Opts.openmp_opt_shared_limit << " bytes\n");
         continue;
       }
 
@@ -3957,7 +3870,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ExecModeC->getSExtValue() | OMP_TGT_EXEC_MODE_GENERIC_SPMD);
     if (ExecModeC->getSExtValue() & OMP_TGT_EXEC_MODE_SPMD)
       SPMDCompatibilityTracker.indicateOptimisticFixpoint();
-    else if (DisableOpenMPOptSPMDization || !CanChangeToSPMD)
+    else if (!A.Opts.openmp_opt_spmdization || !CanChangeToSPMD)
       // This is a generic region but SPMDization is disabled so stop
       // tracking.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
@@ -3986,7 +3899,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
     setMayUseNestedParallelismOfKernelEnvironment(
         AssumedMayUseNestedParallelismC);
 
-    if (!DisableOpenMPOptStateMachineRewrite) {
+    if (A.Opts.openmp_opt_state_machine_rewrite) {
       ConstantInt *UseGenericStateMachineC =
           KernelInfo::getUseGenericStateMachineFromKernelEnvironment(
               KernelEnvC);
@@ -4499,7 +4412,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
   bool buildCustomStateMachine(Attributor &A, ChangeStatus &Changed) {
     // If we have disabled state machine rewrites, don't make a custom one
-    if (DisableOpenMPOptStateMachineRewrite)
+    if (!A.Opts.openmp_opt_state_machine_rewrite)
       return false;
 
     // Don't rewrite the state machine if we are not in a valid state.
@@ -5463,7 +5376,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
   }
 
   void initialize(Attributor &A) override {
-    if (DisableOpenMPOptFolding)
+    if (!A.Opts.openmp_opt_folding)
       indicatePessimisticFixpoint();
 
     Function *Callee = getAssociatedFunction();
@@ -5532,7 +5445,7 @@ struct AAFoldRuntimeCallCallSiteReturned : AAFoldRuntimeCall {
                   << CB->getCalledFunction()->getName() << ".";
       };
 
-      if (CB && EnableVerboseRemarks)
+      if (CB && A.Opts.openmp_opt_verbose_remarks)
         A.emitRemark<OptimizationRemark>(CB, "OMP180", Remark);
 
       LLVM_DEBUG(dbgs() << TAG << "Replacing runtime call: " << I << " with "
@@ -5759,7 +5672,7 @@ void OpenMPOpt::registerAAs(bool IsModulePass) {
   }
 
   // Create CallSite AA for all Getters.
-  if (DeduceICVValues) {
+  if (A.Opts.openmp_deduce_icv_values) {
     for (int Idx = 0; Idx < OMPInfoCache.ICVs.size() - 1; ++Idx) {
       auto ICVInfo = OMPInfoCache.ICVs[static_cast<InternalControlVar>(Idx)];
 
@@ -5814,7 +5727,7 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
     A.getOrCreateAAFor<AANonConvergent>(FPos);
 
   bool FunctionUsesSharedAlloc = false;
-  if (!DisableOpenMPOptDeglobalization) {
+  if (A.Opts.openmp_opt_deglobalization) {
     const OMPInformationCache::RuntimeFunctionInfo::UseVector *SharedAllocUses =
         OMPInfoCache.RFIs[OMPRTL___kmpc_alloc_shared].getUseVector(
             const_cast<Function &>(F));
@@ -5833,7 +5746,7 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
       continue;
     }
     if (auto *CI = dyn_cast<CallBase>(&I)) {
-      if (!DisableOpenMPOptDeglobalization && !HasHeapToStackCandidate) {
+      if (A.Opts.openmp_opt_deglobalization && !HasHeapToStackCandidate) {
         if (!TLI)
           TLI = A.getInfoCache().getTargetLibraryInfoForFunction(F);
         HasHeapToStackCandidate =
@@ -5994,24 +5907,25 @@ AAFoldRuntimeCall &AAFoldRuntimeCall::createForPosition(const IRPosition &IRP,
 /// get specialized: the Attributor asks about each callee with the same total,
 /// so a site above the threshold keeps its indirect call instead of getting
 /// this many direct ones plus a fallback.
-static bool shouldSpecializeIndirectCallee(Attributor &,
+static bool shouldSpecializeIndirectCallee(Attributor &A,
                                            const AbstractAttribute &,
                                            CallBase &, Function &,
                                            unsigned NumAssumedCallees) {
-  return NumAssumedCallees <= MaxCalleesForSpecialization;
+  return NumAssumedCallees <= A.Opts.openmp_opt_max_callees_for_specialization;
 }
 
 PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!containsOpenMP(M))
     return PreservedAnalyses::all();
-  if (DisableOpenMPOptimizations)
+  const IPOOptions &Opts = getIPOOptions(M);
+  if (!Opts.openmp_opt)
     return PreservedAnalyses::all();
 
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   KernelSet Kernels = getDeviceKernels(M);
 
-  if (PrintModuleBeforeOptimizations)
+  if (Opts.openmp_opt_print_module_before)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt Module Pass:\n" << M);
 
   auto IsCalled = [&](Function &F) {
@@ -6038,7 +5952,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
     SmallPtrSet<Function *, 16> InternalizeFns;
     for (Function &F : M)
       if (!F.isDeclaration() && !Kernels.contains(&F) && IsCalled(F) &&
-          !DisableInternalization) {
+          Opts.openmp_opt_internalization) {
         if (Attributor::isInternalizable(F)) {
           InternalizeFns.insert(&F);
         } else if (!F.hasLocalLinkage() && !F.hasFnAttribute(Attribute::Cold)) {
@@ -6077,7 +5991,7 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   OMPInformationCache InfoCache(M, AG, Allocator, /*CGSCC*/ nullptr, PostLink);
 
   unsigned MaxFixpointIterations =
-      (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
+      (isOpenMPDevice(M)) ? Opts.openmp_opt_max_iterations : 32;
 
   AttributorConfig AC(CGUpdater);
   AC.DefaultInitializeLiveInternals = false;
@@ -6098,12 +6012,12 @@ PreservedAnalyses OpenMPOptPass::run(Module &M, ModuleAnalysisManager &AM) {
   Changed |= OMPOpt.run(true);
 
   // Optionally inline device functions for potentially better performance.
-  if (AlwaysInlineDeviceFunctions && isOpenMPDevice(M))
+  if (Opts.openmp_opt_inline_device && isOpenMPDevice(M))
     for (Function &F : M)
       if (!F.isDeclaration() && !Kernels.contains(&F) && !F.isNoInline())
         F.addFnAttr(Attribute::AlwaysInline);
 
-  if (PrintModuleAfterOptimizations)
+  if (Opts.openmp_opt_print_module_after)
     LLVM_DEBUG(dbgs() << TAG << "Module after OpenMPOpt Module Pass:\n" << M);
 
   if (Changed)
@@ -6118,7 +6032,8 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
                                           CGSCCUpdateResult &UR) {
   if (!containsOpenMP(*C.begin()->getFunction().getParent()))
     return PreservedAnalyses::all();
-  if (DisableOpenMPOptimizations)
+  const IPOOptions &Opts = getIPOOptions(C.begin()->getFunction());
+  if (!Opts.openmp_opt)
     return PreservedAnalyses::all();
 
   SmallVector<Function *, 16> SCC;
@@ -6133,7 +6048,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
 
   Module &M = *C.begin()->getFunction().getParent();
 
-  if (PrintModuleBeforeOptimizations)
+  if (Opts.openmp_opt_print_module_before)
     LLVM_DEBUG(dbgs() << TAG << "Module before OpenMPOpt CGSCC Pass:\n" << M);
 
   FunctionAnalysisManager &FAM =
@@ -6157,7 +6072,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
                                 /*CGSCC*/ &Functions, PostLink);
 
   unsigned MaxFixpointIterations =
-      (isOpenMPDevice(M)) ? SetFixpointIterations : 32;
+      (isOpenMPDevice(M)) ? Opts.openmp_opt_max_iterations : 32;
 
   AttributorConfig AC(CGUpdater);
   AC.DefaultInitializeLiveInternals = false;
@@ -6174,7 +6089,7 @@ PreservedAnalyses OpenMPOptCGSCCPass::run(LazyCallGraph::SCC &C,
   OpenMPOpt OMPOpt(SCC, CGUpdater, OREGetter, InfoCache, A);
   bool Changed = OMPOpt.run(false);
 
-  if (PrintModuleAfterOptimizations)
+  if (Opts.openmp_opt_print_module_after)
     LLVM_DEBUG(dbgs() << TAG << "Module after OpenMPOpt CGSCC Pass:\n" << M);
 
   if (Changed)

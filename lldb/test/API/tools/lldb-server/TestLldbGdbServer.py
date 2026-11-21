@@ -724,7 +724,7 @@ class LldbGdbServerTestCase(
     def test_software_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
+            self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()
@@ -735,7 +735,7 @@ class LldbGdbServerTestCase(
     def test_hardware_breakpoint_set_and_remove_work(self):
         if self.getArchitecture() == "arm":
             # TODO: Handle case when setting breakpoint in thumb code
-            self.build(dictionary={"CFLAGS_EXTRAS": "-marm"})
+            self.build(dictionary={"TEST_CFLAGS_EXTRAS": "-marm"})
         else:
             self.build()
         self.set_inferior_startup_launch()

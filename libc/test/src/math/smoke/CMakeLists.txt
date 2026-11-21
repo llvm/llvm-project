@@ -771,6 +771,7 @@ add_fp_unittest(
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.math.dsubf128
+    libc.src.__support.FPUtil.float128
     libc.src.__support.macros.properties.os
 )
 
@@ -1486,11 +1487,15 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.expf
     libc.src.__support.math.expf_double_eval
     libc.src.__support.math.expf_float_eval
     libc.src.__support.math.expf_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_fp_unittest(
@@ -1545,11 +1550,14 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.exp2f
     libc.src.__support.math.exp2f_double_eval
     libc.src.__support.math.exp2f_float_eval
     libc.src.__support.math.exp2f_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
 )
 
 add_fp_unittest(
@@ -1626,10 +1634,14 @@ add_fp_unittest(
   DEPENDS
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
+    libc.hdr.math_macros
+    libc.hdr.stdint_proxy
     libc.src.math.exp10f
     libc.src.__support.math.exp10f_double_eval
     libc.src.__support.math.exp10f_float_eval
+    libc.src.__support.math.exp10f_integer_eval
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.rounding_mode
 )
 
 add_fp_unittest(
@@ -5034,6 +5046,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  coshbf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    coshbf16_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.math.coshbf16
+)
+
+add_fp_unittest(
   coshf16_test
   SUITE
     libc-math-smoke-tests
@@ -6693,6 +6719,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  dmulf128_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    dmulf128_test.cpp
+  HDRS
+    MulTest.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.float128
+    libc.src.math.dmulf128
+)
+
+add_fp_unittest(
   f16mul_test
   SUITE
     libc-math-smoke-tests
@@ -6795,17 +6837,21 @@ add_fp_unittest(
     libc.src.math.ddivl
 )
 
-add_fp_unittest(
-  ddivf128_test
-  SUITE
-    libc-math-smoke-tests
-  SRCS
-    ddivf128_test.cpp
-  HDRS
-    DivTest.h
-  DEPENDS
-    libc.src.math.ddivf128
-)
+# TODO: Re-enable the test for GPU.
+if(NOT LIBC_TARGET_OS_IS_GPU)
+  add_fp_unittest(
+    ddivf128_test
+    SUITE
+      libc-math-smoke-tests
+    SRCS
+      ddivf128_test.cpp
+    HDRS
+      DivTest.h
+    DEPENDS
+      libc.src.math.ddivf128
+      libc.src.__support.FPUtil.float128
+  )
+endif()
 
 add_fp_unittest(
   bfloat16_add_test

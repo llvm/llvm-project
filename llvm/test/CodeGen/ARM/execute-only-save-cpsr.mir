@@ -95,7 +95,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:
@@ -180,7 +179,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:
@@ -271,7 +269,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:
@@ -362,7 +359,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
 frameInfo:

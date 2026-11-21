@@ -19,16 +19,6 @@
 ---
 name:            f1
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr32bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: addr64bit }
-  - { id: 5, class: vr64bit }
-  - { id: 6, class: vr64bit }
-  - { id: 7, class: vr64bit }
-  - { id: 8, class: grx32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
   - { reg: '$r3l', virtual-reg: '%1' }
@@ -64,16 +54,6 @@ body:             |
 ---
 name:            f2
 alignment:       16
-registers:
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: gr32bit }
-  - { id: 2, class: gr32bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: addr64bit }
-  - { id: 5, class: vr64bit }
-  - { id: 6, class: vr64bit }
-  - { id: 7, class: vr64bit }
-  - { id: 8, class: grx32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%0' }
   - { reg: '$r3l', virtual-reg: '%1' }

@@ -21,6 +21,7 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h" // IWYU pragma: keep
 #include "llvm/Support/Process.h"
@@ -307,6 +308,14 @@ static cl::opt<std::string> ExportFixes("export-fixes", desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
 code with clang-apply-replacements.
+)"),
+                                        cl::value_desc("filename"),
+                                        cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> SarifExport("experimental-sarif-export", desc(R"(
+File in which to store diagnostics in SARIF format.
+Use '-' to write to stdout instead of the
+usual diagnostic output.
 )"),
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
@@ -634,6 +643,15 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  if (!SarifExport.empty() && SarifExport == ExportFixes &&
+      !llvm::sys::fs::equivalent(SarifExport, ExportFixes)) {
+    llvm::errs() << "Error: --experimental-sarif-export and --export-fixes "
+                    "cannot write to "
+                    "the same output '"
+                 << SarifExport << "'.\n";
+    return 1;
+  }
+
   const llvm::IntrusiveRefCntPtr<vfs::OverlayFileSystem> BaseFS =
       createBaseFS();
   if (!BaseFS)
@@ -730,6 +748,19 @@ int clangTidyMain(int argc, const char **argv) {
     return 1;
   }
 
+  // Checked after the informational modes so they never truncate the file.
+  if (!SarifExport.empty() && SarifExport != "-") {
+    std::error_code EC;
+    {
+      const llvm::raw_fd_ostream OS(SarifExport, EC, llvm::sys::fs::OF_Text);
+    }
+    if (EC) {
+      llvm::errs() << "Error opening SARIF export file '" << SarifExport
+                   << "': " << EC.message() << '\n';
+      return 1;
+    }
+  }
+
   llvm::InitializeAllTargetInfos();
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllAsmParsers();
@@ -754,7 +785,7 @@ int clangTidyMain(int argc, const char **argv) {
   unsigned WErrorCount = 0;
 
   handleErrors(Errors, Context, DisableFixes ? FB_NoFix : Behaviour,
-               WErrorCount, BaseFS);
+               WErrorCount, BaseFS, SarifExport);
 
   if (!ExportFixes.empty() && !Errors.empty()) {
     std::error_code EC;

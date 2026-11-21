@@ -19,6 +19,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/SourceMgr.h"
 
 using namespace mlir;
@@ -64,6 +65,7 @@ void registerFromLLVMIRTranslation() {
          MLIRContext *context) -> OwningOpRef<Operation *> {
         llvm::SMDiagnostic err;
         llvm::LLVMContext llvmContext;
+        llvmContext.getLibraryOptions().assign(getTranslationLibraryOptions());
         std::unique_ptr<llvm::Module> llvmModule =
             llvm::parseIR(*sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID()),
                           err, llvmContext);

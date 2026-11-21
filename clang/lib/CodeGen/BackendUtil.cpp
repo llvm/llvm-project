@@ -1274,16 +1274,19 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
   if (!CodeGenOpts.SplitDwarfOutput.empty()) {
     DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
     if (!DwoOS)
+      return;
+  }
+
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+            !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, CI.getVirtualFileSystemPtr()))
       return;
   }
 
@@ -1624,11 +1627,12 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   // module's ABI. This respects the target-abi module flag rather than assuming
   // the DataLayout is a fixed property of the target options.
   if (AsmHelper.TM) {
-    std::string DLDesc = M->getDataLayout().getStringRepresentation();
     std::string TDesc = M->getTargetTriple().computeDataLayout(
         AsmHelper.TM->getTargetABIName(*M));
-    if (DLDesc != TDesc)
-      Diags.Report(diag::err_data_layout_mismatch) << DLDesc << TDesc;
+    if (M->getDataLayout() != DataLayout(TDesc)) {
+      Diags.Report(diag::err_data_layout_mismatch)
+          << M->getDataLayout().getStringRepresentation() << TDesc;
+    }
   }
 }
 

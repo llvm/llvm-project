@@ -58,6 +58,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -83,6 +84,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -346,8 +349,6 @@ void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(X86AsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "X86PassRegistry.def"

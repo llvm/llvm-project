@@ -138,6 +138,7 @@ tools = [
 ]
 
 if config.clang_enable_cir:
+    tools.append("cir-offload-merge")
     tools.append("cir-opt")
 
 if config.clang_examples:
@@ -291,6 +292,19 @@ config.substitutions.append(
         % (
             config.python_executable,
             os.path.join(config.clang_src_dir, "utils", "hmaptool", "hmaptool"),
+        ),
+    )
+)
+
+config.substitutions.append(
+    (
+        "%clang_format_diff",
+        '"%s" %s'
+        % (
+            config.python_executable,
+            os.path.join(
+                config.clang_src_dir, "tools", "clang-format", "clang-format-diff.py"
+            ),
         ),
     )
 )

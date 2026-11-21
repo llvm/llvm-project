@@ -346,10 +346,6 @@ public:
   explicit InlineAdvisorAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
-                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
-                                 CGSCCUpdateResult &UR);
 };
 
 LLVM_ABI std::unique_ptr<InlineAdvisor>

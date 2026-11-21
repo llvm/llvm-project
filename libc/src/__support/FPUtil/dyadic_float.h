@@ -756,6 +756,20 @@ multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
   return quick_add(c, quick_mul(a, b));
 }
 
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+multiply_sub(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
+             const DyadicFloat<Bits> &c) {
+  return quick_sub(quick_mul(a, b), c);
+}
+
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+sub_multiply(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
+             const DyadicFloat<Bits> &c) {
+  return quick_sub(a, quick_mul(b, c));
+}
+
 // Simple exponentiation implementation for printf. Only handles positive
 // exponents, since division isn't implemented.
 template <size_t Bits>
