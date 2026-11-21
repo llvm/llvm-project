@@ -39,8 +39,10 @@ define void @interleave_groups_separated_by_offset(ptr %A, i64 %offset) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 32
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[NEXT_GEP11:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    store <32 x i8> zeroinitializer, ptr [[NEXT_GEP]], align 1
-; CHECK-NEXT:    store <32 x i8> zeroinitializer, ptr [[NEXT_GEP11]], align 1
+; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+; CHECK-NEXT:    store <32 x i8> [[INTERLEAVED_VEC]], ptr [[NEXT_GEP]], align 1
+; CHECK-NEXT:    [[INTERLEAVED_VEC12:%.*]] = call <32 x i8> @llvm.vector.interleave2.v32i8(<16 x i8> zeroinitializer, <16 x i8> zeroinitializer)
+; CHECK-NEXT:    store <32 x i8> [[INTERLEAVED_VEC12]], ptr [[NEXT_GEP11]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 992
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -57,7 +59,8 @@ define void @interleave_groups_separated_by_offset(ptr %A, i64 %offset) {
 ; CHECK-NEXT:    [[INDEX12:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT14:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = shl i64 [[INDEX12]], 1
 ; CHECK-NEXT:    [[NEXT_GEP13:%.*]] = getelementptr i8, ptr [[A]], i64 [[OFFSET_IDX]]
-; CHECK-NEXT:    store <16 x i8> zeroinitializer, ptr [[NEXT_GEP13]], align 1
+; CHECK-NEXT:    [[INTERLEAVED_VEC17:%.*]] = call <16 x i8> @llvm.vector.interleave2.v16i8(<8 x i8> zeroinitializer, <8 x i8> zeroinitializer)
+; CHECK-NEXT:    store <16 x i8> [[INTERLEAVED_VEC17]], ptr [[NEXT_GEP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT14]] = add nuw i64 [[INDEX12]], 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT14]], 992
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

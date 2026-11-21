@@ -1093,20 +1093,19 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP19]]
 ; CHECK-TF-DEFAULT-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP20]], align 4
-; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-TF-DEFAULT-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC7]])
+; CHECK-TF-DEFAULT-NEXT:    [[TMP23:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 0
+; CHECK-TF-DEFAULT-NEXT:    [[TMP24:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 1
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP21:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP21]]
-; CHECK-TF-DEFAULT-NEXT:    [[TMP23:%.*]] = shufflevector <4 x float> [[STRIDED_VEC8]], <4 x float> [[STRIDED_VEC9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-TF-DEFAULT-NEXT:    [[TMP24:%.*]] = shufflevector <8 x float> [[TMP23]], <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC10:%.*]] = shufflevector <16 x float> [[TMP24]], <16 x float> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-TF-DEFAULT-NEXT:    [[INTERLEAVED_VEC10:%.*]] = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> [[TMP23]], <4 x float> [[TMP24]], <4 x float> splat (float 3.000000e+00), <4 x float> splat (float 4.000000e+00))
 ; CHECK-TF-DEFAULT-NEXT:    store <16 x float> [[INTERLEAVED_VEC10]], ptr [[TMP22]], align 4
 ; CHECK-TF-DEFAULT-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX6]], 4
 ; CHECK-TF-DEFAULT-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
 ; CHECK-TF-DEFAULT-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-TF-DEFAULT-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
-; CHECK-TF-DEFAULT-NEXT:    br i1 [[CMP_N12]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-TF-DEFAULT-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
+; CHECK-TF-DEFAULT-NEXT:    br i1 [[CMP_N11]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-TF-DEFAULT:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 ; CHECK-TF-NORED-LABEL: define void @interleave(
@@ -1343,20 +1342,19 @@ define void @interleave(ptr noalias %dst, ptr noalias %src, i64 %n) #0 {
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP19:%.*]] = shl nuw nsw i64 [[INDEX6]], 1
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP20:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[TMP19]]
 ; CHECK-NEOVERSE-V1-NEXT:    [[WIDE_VEC7:%.*]] = load <8 x float>, ptr [[TMP20]], align 4
-; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC8:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC9:%.*]] = shufflevector <8 x float> [[WIDE_VEC7]], <8 x float> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEOVERSE-V1-NEXT:    [[STRIDED_VEC8:%.*]] = call { <4 x float>, <4 x float> } @llvm.vector.deinterleave2.v8f32(<8 x float> [[WIDE_VEC7]])
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP23:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 0
+; CHECK-NEOVERSE-V1-NEXT:    [[TMP24:%.*]] = extractvalue { <4 x float>, <4 x float> } [[STRIDED_VEC8]], 1
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP21:%.*]] = shl nuw nsw i64 [[INDEX6]], 2
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[DST]], i64 [[TMP21]]
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP23:%.*]] = shufflevector <4 x float> [[STRIDED_VEC8]], <4 x float> [[STRIDED_VEC9]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEOVERSE-V1-NEXT:    [[TMP24:%.*]] = shufflevector <8 x float> [[TMP23]], <8 x float> <float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 3.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00, float 4.000000e+00>, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC10:%.*]] = shufflevector <16 x float> [[TMP24]], <16 x float> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 2, i32 6, i32 10, i32 14, i32 3, i32 7, i32 11, i32 15>
+; CHECK-NEOVERSE-V1-NEXT:    [[INTERLEAVED_VEC10:%.*]] = call <16 x float> @llvm.vector.interleave4.v16f32(<4 x float> [[TMP23]], <4 x float> [[TMP24]], <4 x float> splat (float 3.000000e+00), <4 x float> splat (float 4.000000e+00))
 ; CHECK-NEOVERSE-V1-NEXT:    store <16 x float> [[INTERLEAVED_VEC10]], ptr [[TMP22]], align 4
 ; CHECK-NEOVERSE-V1-NEXT:    [[INDEX_NEXT11]] = add nuw i64 [[INDEX6]], 4
 ; CHECK-NEOVERSE-V1-NEXT:    [[TMP25:%.*]] = icmp eq i64 [[INDEX_NEXT11]], [[N_VEC5]]
 ; CHECK-NEOVERSE-V1-NEXT:    br i1 [[TMP25]], label %[[VEC_EPILOG_MIDDLE_BLOCK:.*]], label %[[VEC_EPILOG_VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_MIDDLE_BLOCK]]:
-; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N12:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
-; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N12]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
+; CHECK-NEOVERSE-V1-NEXT:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC5]]
+; CHECK-NEOVERSE-V1-NEXT:    br i1 [[CMP_N11]], [[FOR_END]], label %[[VEC_EPILOG_SCALAR_PH]]
 ; CHECK-NEOVERSE-V1:       [[VEC_EPILOG_SCALAR_PH]]:
 ;
 entry:
