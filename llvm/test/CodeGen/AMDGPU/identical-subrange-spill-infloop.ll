@@ -84,6 +84,30 @@ define void @main(i1 %arg) #0 {
 ; CHECK-NEXT:    v_writelane_b32 v7, s67, 31
 ; CHECK-NEXT:    image_sample_lz v1, v[1:2], s[60:67], s[68:71] dmask:0x1
 ; CHECK-NEXT:    v_readlane_b32 s52, v7, 0
+; CHECK-NEXT:    v_readlane_b32 s60, v7, 8
+; CHECK-NEXT:    v_readlane_b32 s53, v7, 1
+; CHECK-NEXT:    v_readlane_b32 s54, v7, 2
+; CHECK-NEXT:    v_readlane_b32 s55, v7, 3
+; CHECK-NEXT:    v_readlane_b32 s56, v7, 4
+; CHECK-NEXT:    v_readlane_b32 s57, v7, 5
+; CHECK-NEXT:    v_readlane_b32 s58, v7, 6
+; CHECK-NEXT:    v_readlane_b32 s59, v7, 7
+; CHECK-NEXT:    v_readlane_b32 s61, v7, 9
+; CHECK-NEXT:    v_readlane_b32 s62, v7, 10
+; CHECK-NEXT:    v_readlane_b32 s63, v7, 11
+; CHECK-NEXT:    v_readlane_b32 s64, v7, 12
+; CHECK-NEXT:    v_readlane_b32 s65, v7, 13
+; CHECK-NEXT:    v_readlane_b32 s66, v7, 14
+; CHECK-NEXT:    v_readlane_b32 s67, v7, 15
+; CHECK-NEXT:    v_writelane_b32 v7, s60, 8
+; CHECK-NEXT:    v_writelane_b32 v7, s61, 9
+; CHECK-NEXT:    v_writelane_b32 v7, s62, 10
+; CHECK-NEXT:    v_writelane_b32 v7, s63, 11
+; CHECK-NEXT:    v_writelane_b32 v7, s64, 12
+; CHECK-NEXT:    v_writelane_b32 v7, s65, 13
+; CHECK-NEXT:    v_writelane_b32 v7, s66, 14
+; CHECK-NEXT:    v_writelane_b32 v7, s67, 15
+; CHECK-NEXT:    v_readlane_b32 s52, v7, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, v2
 ; CHECK-NEXT:    v_readlane_b32 s53, v7, 1
 ; CHECK-NEXT:    v_readlane_b32 s54, v7, 2

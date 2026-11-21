@@ -161,12 +161,10 @@ void Thumb2InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
       .add(predOps(ARMCC::AL));
 }
 
-void Thumb2InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator I,
-                                          Register SrcReg, bool isKill, int FI,
-                                          const TargetRegisterClass *RC,
-                                          Register VReg,
-                                          MachineInstr::MIFlag Flags) const {
+void Thumb2InstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register SrcReg,
+    bool isKill, int FI, const TargetRegisterClass *RC, Register VReg,
+    MachineInstr::MIFlag Flags, LaneBitmask Lanes) const {
   DebugLoc DL;
   if (I != MBB.end()) DL = I->getDebugLoc();
 
