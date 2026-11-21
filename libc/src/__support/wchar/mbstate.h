@@ -16,6 +16,8 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
+enum class MBConversionState : uint8_t { EMPTY = 0, PUSHING, FULL, POPPING };
+
 struct mbstate {
   // store a partial codepoint (in UTF-32)
   char32_t partial = 0;
@@ -29,6 +31,8 @@ struct mbstate {
 
   // Total number of bytes that will be needed to represent this character
   uint8_t total_bytes = 0;
+
+  MBConversionState conversion_state = MBConversionState::EMPTY;
 };
 
 } // namespace internal
