@@ -94,9 +94,9 @@ long collate<_CharT>::do_hash(const char_type* __lo, const char_type* __hi) cons
   return static_cast<long>(__h);
 }
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<char>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI collate<char>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS collate<wchar_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI collate<wchar_t>;
 #  endif
 
 // template <class CharT> class collate_byname;

@@ -553,19 +553,19 @@ template <class _InternT, class _ExternT, class _StateT>
 codecvt_byname<_InternT, _ExternT, _StateT>::~codecvt_byname() {}
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char, char, mbstate_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char, char, mbstate_t>;
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
-extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<wchar_t, char, mbstate_t>;
+extern template class _LIBCPP_EXPORTED_FROM_ABI codecvt_byname<wchar_t, char, mbstate_t>;
 #  endif
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
+_LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char16_t, char, mbstate_t>; // deprecated in C++20
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
+_LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char32_t, char, mbstate_t>; // deprecated in C++20
 #  if _LIBCPP_HAS_CHAR8_T
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
+_LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char16_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
 extern template class _LIBCPP_DEPRECATED_IN_CXX20
-_LIBCPP_EXTERN_TEMPLATE_TYPE_VIS codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
+_LIBCPP_EXPORTED_FROM_ABI codecvt_byname<char32_t, char8_t, mbstate_t>; // C++20, deprecated in C++20
 #  endif
 
 _LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS

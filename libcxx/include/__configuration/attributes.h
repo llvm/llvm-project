@@ -56,23 +56,12 @@
 #  endif
 
 #  if defined(_LIBCPP_DISABLE_VISIBILITY_ANNOTATIONS) || (defined(__MINGW32__) && !defined(_LIBCPP_BUILDING_LIBRARY))
-#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #    define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #    define _LIBCPP_EXPORTED_FROM_ABI
 #  elif defined(_LIBCPP_BUILDING_LIBRARY)
-#    if defined(__MINGW32__)
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllexport)
-#      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
-#    else
-#      define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS
-#      define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS __declspec(dllexport)
-#    endif
 #    define _LIBCPP_OVERRIDABLE_FUNC_VIS __declspec(dllexport)
 #    define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllexport)
 #  else
-#    define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS __declspec(dllimport)
-#    define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 #    define _LIBCPP_OVERRIDABLE_FUNC_VIS
 #    define _LIBCPP_EXPORTED_FROM_ABI __declspec(dllimport)
 #  endif
@@ -92,8 +81,6 @@
 #  define _LIBCPP_HIDDEN _LIBCPP_VISIBILITY("hidden")
 #  define _LIBCPP_TEMPLATE_DATA_VIS _LIBCPP_VISIBILITY("default")
 #  define _LIBCPP_EXPORTED_FROM_ABI _LIBCPP_VISIBILITY("default")
-#  define _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS _LIBCPP_VISIBILITY("default")
-#  define _LIBCPP_CLASS_TEMPLATE_INSTANTIATION_VIS
 
 // TODO: Make this a proper customization point or remove the option to override it.
 #  ifndef _LIBCPP_OVERRIDABLE_FUNC_VIS
