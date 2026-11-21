@@ -2326,9 +2326,9 @@ Expected<bool> FunctionImporter::importFunctions(
                << " from " << SrcModule->getSourceFileName() << "\n";
     }
 
-    if (Error Err = Mover.move(std::move(SrcModule),
-                               GlobalsToImport.getArrayRef(), nullptr,
-                               /*IsPerformingImport=*/true))
+    if (Error Err =
+            Mover.move(std::move(SrcModule), GlobalsToImport.getArrayRef(),
+                       nullptr, IRMover::MoveKind::ThinLTOImport))
       return createStringError(errc::invalid_argument,
                                Twine("Function Import: link error: ") +
                                    toString(std::move(Err)));

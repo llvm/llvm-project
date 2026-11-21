@@ -7,6 +7,8 @@
 
 ; Don't import enums, macros, retainedTypes, globals or imports lists.
 ; RUN: llvm-lto -thinlto-action=import %t2.bc -thinlto-index=%t.index.bc -o - | llvm-dis -o - | FileCheck %s
+; CHECK: @version = external global i32{{$}}
+; CHECK: define available_externally void @foo()
 ; CHECK-NOT: DICompileUnit{{.*}} enums:
 ; CHECK-NOT: DICompileUnit{{.*}} macros:
 ; CHECK-NOT: DICompileUnit{{.*}} retainedTypes:
@@ -17,6 +19,8 @@
 source_filename = "debuginfo-cu-import.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
+
+@version = global i32 2, !dbg !9
 
 define void @foo() !dbg !28 {
 entry:

@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/Constants.h"
@@ -310,6 +311,10 @@ class IRLinker {
   /// This remapping is performed after metadata linking.
   DenseSet<GlobalObject *> UnmappedMetadata;
 
+  /// Source globals whose debug attachments still need to be merged.
+  /// The materializer cannot re-enter ValueMapper to map them.
+  SmallVector<const GlobalVariable *, 0> PendingGlobalDebugInfo;
+
   void maybeAdd(GlobalValue *GV) {
     if (ValuesToLink.insert(GV).second)
       Worklist.push_back(GV);
@@ -321,6 +326,7 @@ class IRLinker {
   /// source module. This currently causes us to not link retained types in
   /// debug info metadata and module inline asm.
   bool IsPerformingImport;
+  bool IsFullLink;
 
   /// Set to true when all global value body linking is complete (including
   /// lazy linking). Used to prevent metadata linking from creating new
@@ -394,6 +400,8 @@ class IRLinker {
   Error linkModuleFlagsMetadata();
 
   void linkGlobalVariable(GlobalVariable &Dst, GlobalVariable &Src);
+  void linkGlobalVariableDebugInfo(GlobalVariable &Dst,
+                                   const GlobalVariable &Src, bool Remap);
   Error linkFunctionBody(Function &Dst, Function &Src);
   void linkAliasAliasee(GlobalAlias &Dst, GlobalAlias &Src);
   void linkIFuncResolver(GlobalIFunc &Dst, GlobalIFunc &Src);
@@ -430,12 +438,13 @@ public:
   IRLinker(Module &DstM, MDMapT &SharedMDs,
            IRMover::IdentifiedStructTypeSet &Set, std::unique_ptr<Module> SrcM,
            ArrayRef<GlobalValue *> ValuesToLink,
-           IRMover::LazyCallback AddLazyFor, bool IsPerformingImport,
+           IRMover::LazyCallback AddLazyFor, IRMover::MoveKind Kind,
            IRMover::NamedMDNodesT &NamedMDNodes)
       : DstM(DstM), SrcM(std::move(SrcM)), NamedMDNodes(NamedMDNodes),
         AddLazyFor(std::move(AddLazyFor)), TypeMap(Set),
         GValMaterializer(*this), LValMaterializer(*this), SharedMDs(SharedMDs),
-        IsPerformingImport(IsPerformingImport),
+        IsPerformingImport(Kind == IRMover::MoveKind::ThinLTOImport),
+        IsFullLink(Kind == IRMover::MoveKind::FullLink),
         Mapper(ValueMap,
                RF_ReuseAndMutateDistinctMDs | RF_IgnoreMissingLocals |
                    (IsPerformingImport ? RF_Importing : RF_None),
@@ -936,6 +945,11 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
   if (DGV && !ShouldLink) {
     NewGV = DGV;
 
+    if (auto *GV = dyn_cast<GlobalVariable>(SGV);
+        GV && IsFullLink && !DGV->isDeclarationForLinker() &&
+        GV->hasMetadata(LLVMContext::MD_dbg))
+      PendingGlobalDebugInfo.push_back(GV);
+
     // If the source is an exact definition, optimizations may have modified
     // its attributes, e.g. by dropping noundef attributes when replacing
     // arguments with poison. In this case, it is important for correctness
@@ -1070,11 +1084,34 @@ Error IRLinker::linkGlobalValueBody(GlobalValue &Dst, GlobalValue &Src) {
   return Error::success();
 }
 
+void IRLinker::linkGlobalVariableDebugInfo(GlobalVariable &Dst,
+                                           const GlobalVariable &Src,
+                                           bool Remap) {
+  SmallVector<DIGlobalVariableExpression *, 1> SrcExprs, DstExprs;
+  Src.getDebugInfo(SrcExprs);
+  if (SrcExprs.empty())
+    return;
+
+  Dst.getDebugInfo(DstExprs);
+  SmallPtrSet<Metadata *, 4> Seen(DstExprs.begin(), DstExprs.end());
+  for (DIGlobalVariableExpression *Expr : SrcExprs) {
+    if (Remap)
+      Expr = cast<DIGlobalVariableExpression>(Mapper.mapMDNode(*Expr));
+    if (Seen.insert(Expr).second)
+      Dst.addDebugInfo(Expr);
+  }
+}
+
 void IRLinker::flushRAUWWorklist() {
   for (const auto &Elem : RAUWWorklist) {
     GlobalValue *Old;
     Value *New;
     std::tie(Old, New) = Elem;
+
+    // Preserve the debug descriptions of the replaced definition.
+    if (auto *OldGV = dyn_cast<GlobalVariable>(Old); OldGV && IsFullLink)
+      if (auto *NewGV = dyn_cast<GlobalVariable>(New->stripPointerCasts()))
+        linkGlobalVariableDebugInfo(*NewGV, *OldGV, /*Remap=*/false);
 
     Old->replaceAllUsesWith(New);
     Old->eraseFromParent();
@@ -1589,6 +1626,15 @@ Error IRLinker::run() {
     }
   }
 
+  // Reordering may have queued globals with no uses in the source module.
+  for (const GlobalVariable *Src : PendingGlobalDebugInfo) {
+    Value *Mapped = ValueMap.lookup(Src);
+    if (auto *Dst = dyn_cast<GlobalVariable>(Mapped->stripPointerCasts()))
+      linkGlobalVariableDebugInfo(*Dst, *Src, /*Remap=*/true);
+  }
+  if (FoundError)
+    return std::move(*FoundError);
+
   // Merge the module flags into the DstM module.
   return linkModuleFlagsMetadata();
 }
@@ -1682,9 +1728,9 @@ IRMover::IRMover(Module &M) : Composite(M) {
 
 Error IRMover::move(std::unique_ptr<Module> Src,
                     ArrayRef<GlobalValue *> ValuesToLink,
-                    LazyCallback AddLazyFor, bool IsPerformingImport) {
+                    LazyCallback AddLazyFor, MoveKind Kind) {
   IRLinker TheIRLinker(Composite, SharedMDs, IdentifiedStructTypes,
                        std::move(Src), ValuesToLink, std::move(AddLazyFor),
-                       IsPerformingImport, NamedMDNodes);
+                       Kind, NamedMDNodes);
   return TheIRLinker.run();
 }
