@@ -174,6 +174,25 @@ ExprResult SemaSYCL::ActOnUniqueStableNameExpr(SourceLocation OpLoc,
   return BuildUniqueStableNameExpr(OpLoc, LParen, RParen, TSI);
 }
 
+bool SemaSYCL::checkBuiltinDynamicLocalMemory(CallExpr *TheCall) {
+  if (!getLangOpts().isSYCL()) {
+    Diag(TheCall->getBeginLoc(), diag::err_builtin_requires_language)
+        << "__builtin_sycl_dynamic_local_memory" << "SYCL";
+    return true;
+  }
+
+  if (SemaRef.checkArgCount(TheCall, 0))
+    return true;
+
+  // The builtin returns a pointer to the start of the dynamic work-group local
+  // memory block.
+  ASTContext &Ctx = getASTContext();
+  // Return type is 'unsigned char [[clang::sycl_local]] *'.
+  TheCall->setType(Ctx.getPointerType(
+      Ctx.getAddrSpaceQualType(Ctx.UnsignedCharTy, LangAS::sycl_local)));
+  return false;
+}
+
 void SemaSYCL::handleKernelAttr(Decl *D, const ParsedAttr &AL) {
   // The 'sycl_kernel' attribute applies only to function templates.
   const auto *FD = cast<FunctionDecl>(D);
