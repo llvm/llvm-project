@@ -105,7 +105,7 @@ DATA_ARRAY_TEMPLATE = r"""
 /// - Unassigned.
 ///
 /// The data is generated from
-/// - https://www.unicode.org/Public/UCD/latest/ucd/extracted/DerivedGeneralCategory.txt
+/// - https://www.unicode.org/Public/18.0.0/ucd/extracted/DerivedGeneralCategory.txt
 ///
 /// The table is similar to the table
 ///  __extended_grapheme_custer_property_boundary::__entries
@@ -322,7 +322,7 @@ def generate_data_tables() -> str:
 
     # The output table has two large entries at the end, with a small "gap"
     #   E0100..E01EF  ; Grapheme_Extend # Mn [240] VARIATION SELECTOR-17..VARIATION SELECTOR-256
-    # Based on Unicode 15.1.0:
+    # Based on Unicode 18.0.0:
     # - Encoding all these entries in the table requires 1173 entries.
     # - Manually handling these last two blocks reduces the size to 729 entries.
     # This not only reduces the binary size, but also improves the performance
@@ -330,10 +330,10 @@ def generate_data_tables() -> str:
     # The exact entries may differ between Unicode versions. When these numbers
     # change the test needs to be updated too.
     #   libcxx/test/libcxx/utilities/format/format.string/format.string.std/escaped_output.pass.cpp
-    assert (data[-2].lower) == 0x323B0
-    assert (data[-2].upper) == 0xE00FF
-    assert (data[-1].lower) == 0xE01F0
-    assert (data[-1].upper) == 0x10FFFF
+    assert (data[-2].lower) == 0x3FC40, hex(data[-2].lower)
+    assert (data[-2].upper) == 0xE00FF, hex(data[-2].upper)
+    assert (data[-1].lower) == 0xE01F0, hex(data[-1].lower)
+    assert (data[-1].upper) == 0x10FFFF, hex(data[-1].upper)
 
     return "\n".join(
         [
