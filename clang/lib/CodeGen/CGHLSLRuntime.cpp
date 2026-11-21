@@ -40,6 +40,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Frontend/HLSL/HLSLResource.h"
+#include "llvm/Frontend/HLSL/HLSLUtils.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
 #include "llvm/Frontend/HLSL/SemanticSignaturePacking.h"
 #include "llvm/IR/Constants.h"
@@ -1007,18 +1008,6 @@ void CGHLSLRuntime::addHLSLBufferLayoutType(const RecordType *StructType,
   LayoutTypes[StructType] = LayoutTy;
 }
 
-static std::array<uint32_t, 3> parseNumThreads(StringRef NumThreads) {
-  SmallVector<StringRef, 3> Dimensions;
-  NumThreads.split(Dimensions, ',');
-  assert(Dimensions.size() == 3 && "expected three numthreads dimensions");
-  std::array<uint32_t, 3> Threads;
-  for (auto [Dimension, Thread] : llvm::zip(Dimensions, Threads)) {
-    [[maybe_unused]] bool Invalid = Dimension.getAsInteger(10, Thread);
-    assert(!Invalid && "expected an integer numthreads dimension");
-  }
-  return Threads;
-}
-
 static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
   llvm::Module &M = CGM.getModule();
   Function *QuadAll =
@@ -1036,8 +1025,9 @@ static void addSPIRVQuadAllExecutionModes(CodeGenModule &CGM) {
 
     Attribute NumThreadsAttr = F->getFnAttribute("hlsl.numthreads");
     if (NumThreadsAttr.isValid()) {
-      std::array<uint32_t, 3> Threads =
-          parseNumThreads(NumThreadsAttr.getValueAsString());
+      std::array<uint32_t, 3> Threads;
+      llvm::hlsl::parseThreadCounts(NumThreadsAttr.getValueAsString(),
+                                    Threads[0], Threads[1], Threads[2]);
       bool IsLinear = Threads[1] == 1 && Threads[2] == 1;
       // QuadAll needs derivative groups for SPIR-V compute entry points.
       // Linear groups need complete sets of four threads. Quad groups need
