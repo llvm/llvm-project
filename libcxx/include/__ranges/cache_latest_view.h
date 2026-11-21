@@ -49,13 +49,13 @@ namespace ranges {
 template <input_range _View>
   requires view<_View>
 class cache_latest_view : public view_interface<cache_latest_view<_View>> {
-  _View __base_ = _View();
+  _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
   using __cache_t _LIBCPP_NODEBUG =
       conditional_t<is_reference_v<range_reference_t<_View>>,
                     add_pointer_t<range_reference_t<_View>>,
                     range_reference_t<_View>>;
 
-  __non_propagating_cache<__cache_t> __cache_;
+  _LIBCPP_NO_UNIQUE_ADDRESS __non_propagating_cache<__cache_t> __cache_;
 
   // [range.cache.latest.iterator], class cache_latest_view::iterator
   class __iterator;
