@@ -26,6 +26,7 @@ target_link_libraries(cir-opt
   MLIRIR
   MLIRLLVMDialect
   MLIRMemRefDialect
+  MLIROpenACCTransforms
   MLIROpenMPTransforms
   MLIROptLib
   MLIRParser

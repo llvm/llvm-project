@@ -1,0 +1,223 @@
+// RUN: cir-opt %s --pass-pipeline="builtin.module(acc-implicit-declare)" -split-input-file 2>&1 | FileCheck %s
+
+// -----
+
+// A non-constant global in a compute region is hoisted so implicit mapping
+// can handle it. It is not marked with acc declare.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external @gscalar = #cir.int<0> : !s32i
+
+cir.func @test_scalar_in_serial() {
+  acc.serial {
+    %addr = cir.get_global @gscalar : !cir.ptr<!s32i>
+    %val = cir.load %addr : !cir.ptr<!s32i>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external @gscalar =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_scalar_in_serial
+// CHECK: %[[ADDR:.*]] = cir.get_global @gscalar
+// CHECK: acc.serial
+// CHECK: cir.load %[[ADDR]]
+
+// -----
+
+// An initialized constant stays in the device region and is declared copyin.
+
+!s32i = !cir.int<s, 32>
+
+cir.global constant external @gscalarconst = #cir.int<1> : !s32i
+
+cir.func @test_constant_in_serial() {
+  acc.serial {
+    %addr = cir.get_global @gscalarconst : !cir.ptr<!s32i>
+    %val = cir.load %addr : !cir.ptr<!s32i>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global constant external @gscalarconst {{.*}} {acc.declare = #acc.declare<dataClause = acc_copyin>}
+// CHECK-LABEL: cir.func @test_constant_in_serial
+// CHECK: acc.serial
+// CHECK: cir.get_global @gscalarconst
+
+// -----
+
+// An external constant has no initializer in this translation unit, so its
+// address is hoisted for implicit mapping instead of being declared.
+// A declaration cannot have public visibility.
+
+!s32i = !cir.int<s, 32>
+
+cir.global "private" constant external @gexternalconstant : !s32i
+
+cir.func @test_external_constant_in_serial() {
+  acc.serial {
+    %addr = cir.get_global @gexternalconstant : !cir.ptr<!s32i>
+    %val = cir.load %addr : !cir.ptr<!s32i>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global "private" constant external @gexternalconstant : !s32i
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_external_constant_in_serial
+// CHECK: cir.get_global @gexternalconstant
+// CHECK: acc.serial
+
+// -----
+
+// A global used from an acc routine cannot be mapped, so it is declared.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external @gscalar_routine = #cir.int<0> : !s32i
+
+acc.routine @acc_routine_0 func(@test_scalar_in_accroutine)
+cir.func @test_scalar_in_accroutine() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_0]>} {
+  %addr = cir.get_global @gscalar_routine : !cir.ptr<!s32i>
+  %val = cir.load %addr : !cir.ptr<!s32i>, !s32i
+  cir.return
+}
+
+// CHECK: cir.global external @gscalar_routine {{.*}} {acc.declare = #acc.declare<dataClause = acc_copyin>}
+
+// -----
+
+// A constant used from an acc routine is declared and stays in the function.
+
+!s32i = !cir.int<s, 32>
+
+cir.global constant external @gscalarconst_routine = #cir.int<1> : !s32i
+
+acc.routine @acc_routine_1 func(@test_constant_in_accroutine)
+cir.func @test_constant_in_accroutine() attributes {acc.routine_info = #acc.routine_info<[@acc_routine_1]>} {
+  %addr = cir.get_global @gscalarconst_routine : !cir.ptr<!s32i>
+  %val = cir.load %addr : !cir.ptr<!s32i>, !s32i
+  cir.return
+}
+
+// CHECK: cir.global constant external @gscalarconst_routine {{.*}} {acc.declare = #acc.declare<dataClause = acc_copyin>}
+// CHECK-LABEL: cir.func @test_constant_in_accroutine
+// CHECK: cir.get_global @gscalarconst_routine
+
+// -----
+
+// Device-resident storage is already valid on device, so it is neither
+// hoisted nor declared.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external lang_address_space(offload_global) @gdevice = #cir.int<0> : !s32i
+
+cir.func @test_device_global() {
+  acc.serial {
+    %addr = cir.get_global @gdevice : !cir.ptr<!s32i, lang_address_space(offload_global)>
+    %val = cir.load %addr : !cir.ptr<!s32i, lang_address_space(offload_global)>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external lang_address_space(offload_global) @gdevice =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_device_global
+// CHECK: acc.serial
+// CHECK: cir.get_global @gdevice
+
+// -----
+
+// Storage with offload_local resides on the device, so the reference
+// stays in the compute region.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external lang_address_space(offload_local) @gshared = #cir.int<0> : !s32i
+
+cir.func @test_shared_global() {
+  acc.serial {
+    %addr = cir.get_global @gshared : !cir.ptr<!s32i, lang_address_space(offload_local)>
+    %val = cir.load %addr : !cir.ptr<!s32i, lang_address_space(offload_local)>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external lang_address_space(offload_local) @gshared =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_shared_global
+// CHECK: acc.serial
+// CHECK: cir.get_global @gshared
+
+// -----
+
+// Host storage that the device may access directly (offload_global_host) is
+// device-accessible, so implicit declare leaves the reference in place.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external lang_address_space(offload_global_host) @ghost = #cir.int<0> : !s32i
+
+cir.func @test_host_visible_global() {
+  acc.serial {
+    %addr = cir.get_global @ghost : !cir.ptr<!s32i, lang_address_space(offload_global_host)>
+    %val = cir.load %addr : !cir.ptr<!s32i, lang_address_space(offload_global_host)>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external lang_address_space(offload_global_host) @ghost =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_host_visible_global
+// CHECK: acc.serial
+// CHECK: cir.get_global @ghost
+
+// -----
+
+// Generic storage may name device memory, so it is device-accessible and the
+// reference stays in place.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external lang_address_space(offload_generic) @ggeneric = #cir.int<0> : !s32i
+
+cir.func @test_generic_global() {
+  acc.serial {
+    %addr = cir.get_global @ggeneric : !cir.ptr<!s32i, lang_address_space(offload_generic)>
+    %val = cir.load %addr : !cir.ptr<!s32i, lang_address_space(offload_generic)>, !s32i
+    acc.yield
+  }
+  cir.return
+}
+
+// CHECK: cir.global external lang_address_space(offload_generic) @ggeneric =
+// CHECK-NOT: acc.declare
+// CHECK-LABEL: cir.func @test_generic_global
+// CHECK: acc.serial
+// CHECK: cir.get_global @ggeneric
+
+// -----
+
+// The constructor region of a global that is already declared is an
+// initialization region. Globals referenced from it are declared too.
+
+!s32i = !cir.int<s, 32>
+
+cir.global external @g_from_ctor = #cir.int<1> : !s32i
+
+cir.global external @g_declared = #cir.int<0> : !s32i ctor {
+  %0 = cir.get_global @g_from_ctor : !cir.ptr<!s32i>
+} {acc.declare = #acc.declare<dataClause = acc_copyin>}
+
+// CHECK: cir.global external @g_from_ctor {{.*}} {acc.declare = #acc.declare<dataClause = acc_copyin>}
+// CHECK: cir.global external @g_declared {{.*}} ctor
+// CHECK: cir.get_global @g_from_ctor
+// CHECK: {acc.declare = #acc.declare<dataClause = acc_copyin>}
