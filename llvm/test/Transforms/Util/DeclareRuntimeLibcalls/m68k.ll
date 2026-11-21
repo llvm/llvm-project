@@ -71,7 +71,7 @@
 ; M68K-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; M68K-NEXT: declare void @__clear_cache(ptr, ptr)
+; M68K-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; M68K-NEXT: declare i32 @__clzti2(i128) [[NOMEM_ATTRS]]
