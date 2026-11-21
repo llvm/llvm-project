@@ -204,12 +204,14 @@ let Attributes = [NoThrow, Const] in {
 	def dmb : ARMBuiltin<"void (unsigned int)">;
 	def dsb : ARMBuiltin<"void (unsigned int)">;
 	def isb : ARMBuiltin<"void (unsigned int)">;
+	def sb : ARMBuiltin<"void ()">;
 }
 
 let Attributes = [NoThrow, Const, RequireDeclaration], Header = "arm_acle.h", Languages = "ALL_LANGUAGES" in {
 	def __dmb : ARMNoPrefixTargetLibBuiltin<"void (unsigned int)">;
 	def __dsb : ARMNoPrefixTargetLibBuiltin<"void (unsigned int)">;
 	def __isb : ARMNoPrefixTargetLibBuiltin<"void (unsigned int)">;
+	def __sb : ARMNoPrefixTargetLibBuiltin<"void ()">;
 }
 
 // Prefetch
