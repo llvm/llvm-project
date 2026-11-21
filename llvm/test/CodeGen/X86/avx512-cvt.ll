@@ -749,10 +749,9 @@ define <4 x float> @f64to4f32_mask(<4 x double> %b, <4 x i1> %mask) {
 ; DQNOVL-LABEL: f64to4f32_mask:
 ; DQNOVL:       # %bb.0:
 ; DQNOVL-NEXT:    vpslld $31, %xmm1, %xmm1
-; DQNOVL-NEXT:    vpmovd2m %zmm1, %k1
 ; DQNOVL-NEXT:    vcvtpd2ps %ymm0, %xmm0
-; DQNOVL-NEXT:    vmovaps %zmm0, %zmm0 {%k1} {z}
-; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; DQNOVL-NEXT:    vxorps %xmm2, %xmm2, %xmm2
+; DQNOVL-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
 ; DQNOVL-NEXT:    vzeroupper
 ; DQNOVL-NEXT:    retq
   %a = fptrunc <4 x double> %b to <4 x float>
@@ -2595,16 +2594,12 @@ define <2 x double> @test_sito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtdq2pd (%rdi), %xmm0
 ; AVX-NEXT:    retq
-; NOVLDQ-LABEL: test_sito2f64_mask_load:
-; NOVLDQ:       # %bb.0:
-; NOVLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVLDQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
-; NOVLDQ-NEXT:    vcvtdq2pd (%rdi), %xmm0
-; NOVLDQ-NEXT:    vmovapd %zmm0, %zmm0 {%k1} {z}
-; NOVLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVLDQ-NEXT:    vzeroupper
-; NOVLDQ-NEXT:    retq
+; NOVL-LABEL: test_sito2f64_mask_load:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vcvtdq2pd (%rdi), %xmm1
+; NOVL-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; NOVL-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; NOVL-NEXT:    retq
 ;
 ; VLDQ-LABEL: test_sito2f64_mask_load:
 ; VLDQ:       # %bb.0:
@@ -2618,16 +2613,6 @@ define <2 x double> @test_sito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; VLNODQ-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
 ; VLNODQ-NEXT:    vcvtdq2pd (%rdi), %xmm0 {%k1} {z}
 ; VLNODQ-NEXT:    retq
-;
-; DQNOVL-LABEL: test_sito2f64_mask_load:
-; DQNOVL:       # %bb.0:
-; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; DQNOVL-NEXT:    vpmovq2m %zmm0, %k1
-; DQNOVL-NEXT:    vcvtdq2pd (%rdi), %xmm0
-; DQNOVL-NEXT:    vmovapd %zmm0, %zmm0 {%k1} {z}
-; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; DQNOVL-NEXT:    vzeroupper
-; DQNOVL-NEXT:    retq
   %mask = icmp slt <2 x i64> %c, zeroinitializer
   %ld = load <2 x i32>, ptr%a
   %cvt = sitofp <2 x i32> %ld to <2 x double>
@@ -2645,17 +2630,14 @@ define <2 x double> @test_uito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvtdq2pd (%rdi), %xmm0
 ; AVX-NEXT:    retq
-; NOVLDQ-LABEL: test_uito2f64_mask_load:
-; NOVLDQ:       # %bb.0:
-; NOVLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; NOVLDQ-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; NOVLDQ-NEXT:    vpcmpgtq %zmm0, %zmm1, %k1
-; NOVLDQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; NOVLDQ-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; NOVLDQ-NEXT:    vmovapd %zmm0, %zmm0 {%k1} {z}
-; NOVLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; NOVLDQ-NEXT:    vzeroupper
-; NOVLDQ-NEXT:    retq
+; NOVL-LABEL: test_uito2f64_mask_load:
+; NOVL:       # %bb.0:
+; NOVL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; NOVL-NEXT:    vcvtudq2pd %ymm1, %zmm1
+; NOVL-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
+; NOVL-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; NOVL-NEXT:    vzeroupper
+; NOVL-NEXT:    retq
 ;
 ; VLDQ-LABEL: test_uito2f64_mask_load:
 ; VLDQ:       # %bb.0:
@@ -2669,17 +2651,6 @@ define <2 x double> @test_uito2f64_mask_load(ptr%a, <2 x i64> %c) {
 ; VLNODQ-NEXT:    vpcmpgtq %xmm0, %xmm1, %k1
 ; VLNODQ-NEXT:    vcvtudq2pd (%rdi), %xmm0 {%k1} {z}
 ; VLNODQ-NEXT:    retq
-;
-; DQNOVL-LABEL: test_uito2f64_mask_load:
-; DQNOVL:       # %bb.0:
-; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; DQNOVL-NEXT:    vpmovq2m %zmm0, %k1
-; DQNOVL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; DQNOVL-NEXT:    vcvtudq2pd %ymm0, %zmm0
-; DQNOVL-NEXT:    vmovapd %zmm0, %zmm0 {%k1} {z}
-; DQNOVL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
-; DQNOVL-NEXT:    vzeroupper
-; DQNOVL-NEXT:    retq
   %mask = icmp slt <2 x i64> %c, zeroinitializer
   %ld = load <2 x i32>, ptr%a
   %cvt = uitofp <2 x i32> %ld to <2 x double>

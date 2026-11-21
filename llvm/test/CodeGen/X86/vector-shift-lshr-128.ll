@@ -1701,12 +1701,10 @@ define <4 x i32> @vector_variable_shift_right(<4 x i1> %cond, <4 x i32> %x, <4 x
 ; AVX512DQ-LABEL: vector_variable_shift_right:
 ; AVX512DQ:       # %bb.0:
 ; AVX512DQ-NEXT:    vpslld $31, %xmm0, %xmm0
-; AVX512DQ-NEXT:    vpmovd2m %zmm0, %k1
-; AVX512DQ-NEXT:    vpbroadcastd %xmm1, %xmm0
-; AVX512DQ-NEXT:    vpbroadcastd %xmm2, %xmm1
-; AVX512DQ-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1}
-; AVX512DQ-NEXT:    vpsrlvd %xmm1, %xmm3, %xmm0
-; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    vbroadcastss %xmm1, %xmm1
+; AVX512DQ-NEXT:    vbroadcastss %xmm2, %xmm2
+; AVX512DQ-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
+; AVX512DQ-NEXT:    vpsrlvd %xmm0, %xmm3, %xmm0
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512BW-LABEL: vector_variable_shift_right:
