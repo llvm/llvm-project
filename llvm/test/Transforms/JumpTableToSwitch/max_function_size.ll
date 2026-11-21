@@ -19,15 +19,15 @@ define i32 @large_func() {
   ret i32 %x
 }
 
-define i32 @function_with_jump_table_with_large_func(i32 %index) {
+define i32 @function_with_jump_table_with_large_func(i64 %index) {
 ; CHECK-LABEL: define i32 @function_with_jump_table_with_large_func(
-; CHECK-SAME: i32 [[INDEX:%.*]]) {
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array0, i32 0, i32 [[INDEX]]
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds [2 x ptr], ptr @func_array0, i64 0, i64 [[INDEX]]
 ; CHECK-NEXT:    [[FUNC_PTR:%.*]] = load ptr, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[RESULT:%.*]] = call i32 [[FUNC_PTR]]()
 ; CHECK-NEXT:    ret i32 [[RESULT]]
 ;
-  %gep = getelementptr inbounds [2 x ptr], ptr @func_array0, i32 0, i32 %index
+  %gep = getelementptr inbounds [2 x ptr], ptr @func_array0, i64 0, i64 %index
   %func_ptr = load ptr, ptr %gep, align 8
   %result = call i32 %func_ptr()
   ret i32 %result
