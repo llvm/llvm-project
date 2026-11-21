@@ -30,6 +30,35 @@ impure elemental subroutine barearg(a)
   real :: a
 end subroutine
 
+elemental subroutine procsub(p)
+  interface
+    !ERROR: An ELEMENTAL subprogram may not have a dummy procedure
+    pure subroutine p()
+    end subroutine
+  end interface
+end subroutine
+
+elemental integer function procfun(p)
+  interface
+    !ERROR: An ELEMENTAL subprogram may not have a dummy procedure
+    pure integer function p()
+    end function
+  end interface
+  procfun = 0
+end function
+
+elemental subroutine nestedproc(a)
+  real, intent(in) :: a
+  interface
+    pure subroutine q(p) ! ok, p is a dummy argument of q
+      interface
+        pure subroutine p()
+        end subroutine
+      end interface
+    end subroutine
+  end interface
+end subroutine
+
 elemental function arrf(n)
   integer, value :: n
   !ERROR: The result of an ELEMENTAL function must be scalar
