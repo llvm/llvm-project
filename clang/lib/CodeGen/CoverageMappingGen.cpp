@@ -648,6 +648,12 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
     SmallVector<unsigned, 16> FileIDMapping;
     gatherFileIDs(FileIDMapping);
     emitSourceRegions(SourceRegionFilter());
+    // As for used functions, mark comments, empty lines and code excluded by
+    // the preprocessor as skipped. Otherwise, the lines they are on would be
+    // reported as uncovered code when the mapping of an unused function is
+    // used without a mapping of the same function from another TU, e.g. to
+    // generate baseline coverage with llvm-cov's -empty-profile.
+    gatherSkippedRegions();
 
     if (MappingRegions.empty())
       return;

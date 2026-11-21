@@ -923,13 +923,18 @@ Error CoverageMapping::loadFunctionRecord(
 
   assert(!Record.MappingRegions.empty() && "Function has no regions");
 
-  // This coverage record is a zero region for a function that's unused in
-  // some TU, but used in a different TU. Ignore it. The coverage maps from the
-  // the other TU will either be loaded (providing full region counts) or they
-  // won't (in which case we don't unintuitively report functions as uncovered
-  // when they have non-zero counts in the profile).
-  if (Record.MappingRegions.size() == 1 &&
-      Record.MappingRegions[0].Count.isZero() && Counts[0] > 0)
+  // This coverage record is a zero region (possibly accompanied by skipped
+  // regions) for a function that's unused in some TU, but used in a different
+  // TU. Ignore it. The coverage maps from the the other TU will either be
+  // loaded (providing full region counts) or they won't (in which case we don't
+  // unintuitively report functions as uncovered when they have non-zero counts
+  // in the profile).
+  auto NonSkippedRegions = llvm::make_filter_range(
+      Record.MappingRegions, [](const CounterMappingRegion &Region) {
+        return Region.Kind != CounterMappingRegion::SkippedRegion;
+      });
+  if (llvm::hasSingleElement(NonSkippedRegions) &&
+      NonSkippedRegions.begin()->Count.isZero() && Counts[0] > 0)
     return Error::success();
 
   FunctionRecord Function(OrigFuncName, Record.Filenames);
