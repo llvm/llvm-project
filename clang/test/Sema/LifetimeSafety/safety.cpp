@@ -2041,6 +2041,59 @@ Obj *tmpl_rvalue_borrows_pointee() {
 
 } // namespace RefToPointerParams
 
+namespace InferRefToPointerParams {
+// A reference-to-pointer parameter's placeholder loan is issued at the pointee
+// (pointer-value) origin, so reads through the reference.
+// With TU-wide inference this lets an *unannotated* exchange-shaped function
+// be inferred lifetimebound and propagate the borrow to its caller.
+
+struct Obj {};
+Obj g;
+
+Obj *exchange_ptr(Obj *&slot, Obj *newVal) {
+  Obj *old = slot;
+  slot = newVal;
+  return old;
+}
+
+Obj *dangle() {
+  Obj *saved;
+  {
+    Obj local;
+    Obj *p = &local; // tu-warning {{stack memory associated with local variable 'local' is returned}}
+    saved = exchange_ptr(p, nullptr); // tu-note {{result of call to 'exchange_ptr' aliases the storage of local variable 'local'}}
+  }
+  return saved; // tu-note {{returned here}}
+}
+
+Obj *no_false_positive() {
+  Obj *p = &g;
+  return exchange_ptr(p, nullptr); // ok
+}
+
+template <class T, class U>
+T exchange_tmpl(T &slot, U &&newVal) {
+  T old = slot;
+  slot = static_cast<U &&>(newVal);
+  return old;
+}
+
+Obj *tmpl_dangle() {
+  Obj *saved;
+  {
+    Obj local;
+    Obj *p = &local; // tu-warning {{stack memory associated with local variable 'local' is returned}}
+    saved = exchange_tmpl(p, nullptr); // tu-note {{result of call to 'exchange_tmpl<InferRefToPointerParams::Obj *, std::nullptr_t>' aliases the storage of local variable 'local'}}
+  }
+  return saved; // tu-note {{returned here}}
+}
+
+Obj *tmpl_no_false_positive() {
+  Obj *p = &g;
+  return exchange_tmpl(p, nullptr); // ok
+}
+} // namespace InferRefToPointerParams
+
 namespace CppCoverage {
 
 int getInt();
