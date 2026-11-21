@@ -104,6 +104,12 @@ UBSAN_OFFLOAD_HANDLER_NORETURN(builtin_unreachable, builtin_unreachable,
 UBSAN_OFFLOAD_HANDLER_NORETURN(missing_return, missing_return, "missing return",
                                sizeof(UnreachableData), 0, 1, 0, KL_None,
                                (UnreachableData * D), D)
+UBSAN_OFFLOAD_HANDLER(pointer_subtraction, pointer_subtraction,
+                      "pointer subtraction", sizeof(PointerSubtractionData), 0,
+                      1, 0, KL_None,
+                      (PointerSubtractionData * D, ValueHandle Diff,
+                       ValueHandle EltSize),
+                      D, Diff, EltSize)
 
 #undef UBSAN_OFFLOAD_HANDLER
 #undef UBSAN_OFFLOAD_HANDLER_NORETURN

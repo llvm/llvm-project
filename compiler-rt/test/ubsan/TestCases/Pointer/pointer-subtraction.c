@@ -1,16 +1,17 @@
-// Check that -fsanitize=unaligned-pointer-subtraction reports, at runtime, a
+// Check that -fsanitize=pointer-subtraction reports, at runtime, a
 // subtraction of two pointers whose byte distance is not an exact multiple of
 // the element size (i.e. the operands do not point into the same array).
 //
-// RUN: %clang -fsanitize=unaligned-pointer-subtraction %s -o %t
+// RUN: %clang -fsanitize=pointer-subtraction %s -o %t
 // RUN: %run %t a 2>&1 | FileCheck %s --check-prefix=CONST
 // RUN: %run %t n 2>&1 | FileCheck %s --check-prefix=NEG
 // RUN: %run %t v 2>&1 | FileCheck %s --check-prefix=VLA
+// RUN: %run %t c 2>&1 | FileCheck %s --check-prefix=COMPOUND
 // RUN: %run %t o 2>&1 | FileCheck %s --check-prefix=SAFE --implicit-check-not="runtime error:"
 //
 // Fatal (non-recoverable) mode aborts after the first report.
-// RUN: %clang -fsanitize=unaligned-pointer-subtraction \
-// RUN:     -fno-sanitize-recover=unaligned-pointer-subtraction %s -o %t.abort
+// RUN: %clang -fsanitize=pointer-subtraction \
+// RUN:     -fno-sanitize-recover=pointer-subtraction %s -o %t.abort
 // RUN: not %run %t.abort a 2>&1 | FileCheck %s --check-prefix=ABORT
 
 #include <stdio.h>
@@ -31,9 +32,20 @@ __attribute__((noinline)) long sub_negative(int *p) {
 
 // VLA element type: the element size (sizeof(int) * n) is a runtime value.
 __attribute__((noinline)) long sub_vla(int n, int (*p)[n]) {
-  int(*q)[n] = (int(*)[n])((char *)p + 4);
+  int (*q)[n] = (int (*)[n])((char *)p + 4);
   return q - p;
 }
+
+// Compound assignment of a pointer difference (only a -Wint-conversion error in
+// C): the expression has pointer type, but the distance is still reported.
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wint-conversion"
+__attribute__((noinline)) long sub_compound(int *p) {
+  A *q = (A *)(p + 1);
+  q -= (A *)p;
+  return (long)q;
+}
+#pragma clang diagnostic pop
 
 // Valid subtraction: byte distance 8 is a multiple of 8, so no report.
 __attribute__((noinline)) long sub_ok(int *p) { return (A *)(p + 2) - (A *)p; }
@@ -41,6 +53,7 @@ __attribute__((noinline)) long sub_ok(int *p) { return (A *)(p + 2) - (A *)p; }
 // CONST: runtime error: pointer subtraction with byte distance 4 that is not a multiple of the element size 8
 // NEG: runtime error: pointer subtraction with byte distance -4 that is not a multiple of the element size 8
 // VLA: runtime error: pointer subtraction with byte distance 4 that is not a multiple of the element size 12
+// COMPOUND: runtime error: pointer subtraction with byte distance 4 that is not a multiple of the element size 8
 // ABORT: runtime error: pointer subtraction with byte distance 4 that is not a multiple of the element size 8
 // SAFE: r=1
 int main(int argc, char **argv) {
@@ -55,7 +68,10 @@ int main(int argc, char **argv) {
     r = sub_negative(a);
     break;
   case 'v':
-    r = sub_vla(3, (int(*)[3])a);
+    r = sub_vla(3, (int (*)[3])a);
+    break;
+  case 'c':
+    r = sub_compound(a);
     break;
   case 'o':
     r = sub_ok(a);

@@ -5063,26 +5063,29 @@ Value *ScalarExprEmitter::EmitSub(const BinOpInfo &op) {
     divisor = CGF.CGM.getSize(elementSize);
   }
 
-  // If the unaligned-pointer-subtraction sanitizer is on, verify at runtime
-  // that the byte distance is an exact multiple of the element size.
-  if (CGF.SanOpts.has(SanitizerKind::UnalignedPointerSubtraction)) {
-    auto checkOrdinal = SanitizerKind::SO_UnalignedPointerSubtraction;
-    auto CheckHandler = SanitizerHandler::UnalignedPointerSubtraction;
-    SanitizerDebugLocation SanScope(&CGF, {checkOrdinal}, CheckHandler);
+  // If the pointer-subtraction sanitizer is on, verify at runtime that the
+  // byte distance is an exact multiple of the element size. Zero-sized element
+  // types (a GNU extension) have no meaningful multiple, so don't emit a
+  // remainder by zero for them.
+  bool CheckSubtraction = CGF.SanOpts.has(SanitizerKind::PointerSubtraction);
+  auto *ConstDivisor = dyn_cast<llvm::ConstantInt>(divisor);
+  if (CheckSubtraction && !(ConstDivisor && ConstDivisor->isZero())) {
+    auto CheckOrdinal = SanitizerKind::SO_PointerSubtraction;
+    auto CheckHandler = SanitizerHandler::PointerSubtraction;
+    SanitizerDebugLocation SanScope(&CGF, {CheckOrdinal}, CheckHandler);
 
     llvm::Value *Zero = llvm::ConstantInt::get(CGF.PtrDiffTy, 0);
     llvm::Value *Rem = Builder.CreateSRem(diffInChars, divisor, "sub.ptr.rem");
     llvm::Value *IsExact = Builder.CreateICmpEQ(Rem, Zero, "sub.ptr.exact");
 
     llvm::Constant *StaticArgs[] = {
-        CGF.EmitCheckSourceLocation(op.E->getExprLoc()),
-        CGF.EmitCheckTypeDescriptor(op.E->getType())};
+        CGF.EmitCheckSourceLocation(op.E->getExprLoc())};
     llvm::Value *DynamicArgs[] = {diffInChars, divisor};
-    CGF.EmitCheck({{IsExact, checkOrdinal}}, CheckHandler, StaticArgs,
+    CGF.EmitCheck({{IsExact, CheckOrdinal}}, CheckHandler, StaticArgs,
                   DynamicArgs);
   }
 
-  if (CGF.getLangOpts().StablePointerSubtraction)
+  if (CGF.getLangOpts().StablePointerSubtraction || CheckSubtraction)
     return Builder.CreateSDiv(diffInChars, divisor, "sub.ptr.div");
   // Otherwise, do a full sdiv. This uses the "exact" form of sdiv, since
   // pointer difference in C is only defined in the case where both operands

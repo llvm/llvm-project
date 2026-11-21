@@ -221,13 +221,13 @@ struct PointerOverflowData {
 RECOVERABLE(pointer_overflow, PointerOverflowData *Data, ValueHandle Base,
             ValueHandle Result)
 
-struct UnalignedPointerSubtractionData {
+struct PointerSubtractionData {
   SourceLocation Loc;
-  const TypeDescriptor &Type;
 };
 
-RECOVERABLE(unaligned_pointer_subtraction,
-            UnalignedPointerSubtractionData *Data, ValueHandle Diff,
+/// \brief Handle a pointer subtraction whose byte distance \p Diff is not a
+/// multiple of the element size \p EltSize.
+RECOVERABLE(pointer_subtraction, PointerSubtractionData *Data, ValueHandle Diff,
             ValueHandle EltSize)
 
 /// \brief Known CFI check kinds.

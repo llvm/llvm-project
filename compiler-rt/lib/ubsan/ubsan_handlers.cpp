@@ -901,36 +901,38 @@ void __ubsan::__ubsan_handle_pointer_overflow_abort(PointerOverflowData *Data,
   Die();
 }
 
-static void
-handleUnalignedPointerSubtractionImpl(UnalignedPointerSubtractionData *Data,
-                                      ValueHandle Diff, ValueHandle EltSize,
-                                      ReportOptions Opts) {
+void __ubsan::handlePointerSubtractionImpl(PointerSubtractionData *Data,
+                                           ValueHandle Diff,
+                                           ValueHandle EltSize,
+                                           ReportOptions Opts) {
   SourceLocation Loc = Data->Loc.acquire();
-  ErrorType ET = ErrorType::UnalignedPointerSubtraction;
+  ErrorType ET = ErrorType::PointerSubtraction;
 
   if (ignoreReport(Loc, Opts, ET))
     return;
 
   ScopedReport R(Opts, Loc, ET);
 
+  bool Negative = static_cast<sptr>(Diff) < 0;
+  uptr Magnitude = Negative ? -static_cast<uptr>(Diff) : Diff;
   Diag(Loc, DL_Error, ET,
-       "pointer subtraction with byte distance %0 that is not a multiple of "
-       "the element size %1")
-      << Value(Data->Type, Diff) << (unsigned long long)EltSize;
+       "pointer subtraction with byte distance %0%1 that is not a multiple of "
+       "the element size %2")
+      << (Negative ? "-" : "") << (unsigned long long)Magnitude
+      << (unsigned long long)EltSize;
 }
 
-void __ubsan::__ubsan_handle_unaligned_pointer_subtraction(
-    UnalignedPointerSubtractionData *Data, ValueHandle Diff,
-    ValueHandle EltSize) {
+void __ubsan::__ubsan_handle_pointer_subtraction(PointerSubtractionData *Data,
+                                                 ValueHandle Diff,
+                                                 ValueHandle EltSize) {
   GET_REPORT_OPTIONS(false);
-  handleUnalignedPointerSubtractionImpl(Data, Diff, EltSize, Opts);
+  handlePointerSubtractionImpl(Data, Diff, EltSize, Opts);
 }
 
-void __ubsan::__ubsan_handle_unaligned_pointer_subtraction_abort(
-    UnalignedPointerSubtractionData *Data, ValueHandle Diff,
-    ValueHandle EltSize) {
+void __ubsan::__ubsan_handle_pointer_subtraction_abort(
+    PointerSubtractionData *Data, ValueHandle Diff, ValueHandle EltSize) {
   GET_REPORT_OPTIONS(true);
-  handleUnalignedPointerSubtractionImpl(Data, Diff, EltSize, Opts);
+  handlePointerSubtractionImpl(Data, Diff, EltSize, Opts);
   Die();
 }
 

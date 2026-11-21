@@ -107,13 +107,13 @@ SANITIZER_GROUP("nullability", Nullability,
                 NullabilityArg | NullabilityAssign | NullabilityReturn)
 SANITIZER("object-size", ObjectSize)
 SANITIZER("pointer-overflow", PointerOverflow)
+SANITIZER("pointer-subtraction", PointerSubtraction)
 SANITIZER("return", Return)
 SANITIZER("returns-nonnull-attribute", ReturnsNonnullAttribute)
 SANITIZER("shift-base", ShiftBase)
 SANITIZER("shift-exponent", ShiftExponent)
 SANITIZER_GROUP("shift", Shift, ShiftBase | ShiftExponent)
 SANITIZER("signed-integer-overflow", SignedIntegerOverflow)
-SANITIZER("unaligned-pointer-subtraction", UnalignedPointerSubtraction)
 SANITIZER("unreachable", Unreachable)
 SANITIZER("vla-bound", VLABound)
 SANITIZER("vptr", Vptr)
@@ -152,9 +152,9 @@ SANITIZER_GROUP("undefined", Undefined,
                 Alignment | Bool | Builtin | ArrayBounds | Enum |
                     FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
-                    PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
-                    SignedIntegerOverflow | Unreachable | VLABound | Function |
-                    UnalignedPointerSubtraction)
+                    PointerOverflow | PointerSubtraction | Return |
+                    ReturnsNonnullAttribute | Shift | SignedIntegerOverflow |
+                    Unreachable | VLABound | Function)
 
 // -fsanitize=undefined-trap is an alias for -fsanitize=undefined.
 SANITIZER_GROUP("undefined-trap", UndefinedTrap, Undefined)
