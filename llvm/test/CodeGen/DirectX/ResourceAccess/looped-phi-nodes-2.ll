@@ -6,10 +6,10 @@
 ; Ensure that a cyclic loop of resource ptrs reports a fatal error and exits
 ; compilation, rather than hanging or crashing later on the illegal access.
 
+; CHECK: error: Resource access is not guaranteed to map to a unique global resource
 ; CHECK: note: At resource access:  %count = call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_i32_1_0t(target("dx.RawBuffer", i32, 1, 0) %src, i8 1)
 ; CHECK-DAG: note: Uses resource handle:  %handle0 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
 ; CHECK-DAG: note: Uses resource handle:  %handle1 = tail call target("dx.RawBuffer", i32, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i32_1_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.2)
-; CHECK: LLVM ERROR: Resource access is not guaranteed to map to a unique global resource
 
 define i32 @updatecounter_loop(i32 %n) {
 entry:

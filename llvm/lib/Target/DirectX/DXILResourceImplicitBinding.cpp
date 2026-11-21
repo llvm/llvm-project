@@ -90,6 +90,10 @@ static bool assignBindings(Module &M, DXILResourceBindingInfo &DRBI,
           cast<ConstantInt>(IB.Call->getArgOperand(1))->getZExtValue();
       int32_t Size =
           cast<ConstantInt>(IB.Call->getArgOperand(2))->getZExtValue();
+      // A range size of 0 denotes an unbounded array, which
+      // findAvailableBinding expects as -1.
+      if (Size == 0)
+        Size = -1;
 
       std::optional<uint32_t> RegSlot =
           DRBI.findAvailableBinding(RTI.getResourceClass(), Space, Size);
