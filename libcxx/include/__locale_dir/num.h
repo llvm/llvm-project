@@ -192,16 +192,12 @@ struct __num_get : protected __num_get_base {
     // TODO: Remove the manual vectorization once https://llvm.org/PR168551 is resolved
 #  if _LIBCPP_HAS_ALGORITHM_VECTOR_UTILS
     if constexpr (is_same<_CharT, char>::value) {
-      // TODO(LLVM 24): This can be removed, since -Wpsabi doesn't warn on [[gnu::always_inline]] functions anymore.
-      _LIBCPP_DIAGNOSTIC_PUSH
-      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wpsabi")
       using __vec   = __simd_vector<char, 32>;
       __vec __cmp   = std::__partial_load<__vec, __int_chr_cnt>(__atoms);
       auto __res    = __vec(__val) == __cmp;
       if (std::__none_of(__res))
         return __int_chr_cnt;
       return std::min(__int_chr_cnt, std::__find_first_set(__res));
-      _LIBCPP_DIAGNOSTIC_POP
     }
 #  endif
     return std::find(__atoms, __atoms + __int_chr_cnt, __val) - __atoms;
