@@ -28,8 +28,12 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> prlimit(pid_t pid, int resource,
                                  const struct rlimit *new_limit,
                                  struct rlimit *old_limit) {
-  return syscall_checked<int>(SYS_prlimit64, pid, resource, new_limit,
-                              old_limit);
+  LIBC_SANITIZER_SYSCALL_PRE(prlimit64, pid, resource, new_limit, old_limit);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_prlimit64, pid, resource, new_limit, old_limit);
+  LIBC_SANITIZER_SYSCALL_POST(prlimit64, syscall_result_to_long(syscall_ret),
+                              pid, resource, new_limit, old_limit);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

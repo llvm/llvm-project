@@ -37,7 +37,11 @@ LIBC_INLINE ErrorOr<int> timerfd_gettime(int fd,
       sizeof(timespec::tv_nsec) == sizeof(long),
       "SYS_timerfd_gettime requires struct timespec::tv_nsec to match long; "
       "use SYS_timerfd_gettime64 on 32-bit platforms with 64-bit time_t.");
-  return syscall_checked<int>(SYS_timerfd_gettime, fd, curr_value);
+  LIBC_SANITIZER_SYSCALL_PRE(timerfd_gettime, fd, curr_value);
+  auto syscall_ret = syscall_checked<int>(SYS_timerfd_gettime, fd, curr_value);
+  LIBC_SANITIZER_SYSCALL_POST(
+      timerfd_gettime, syscall_result_to_long(syscall_ret), fd, curr_value);
+  return syscall_ret;
 #else
 #error "SYS_timerfd_gettime and SYS_timerfd_gettime64 syscalls not available."
 #endif

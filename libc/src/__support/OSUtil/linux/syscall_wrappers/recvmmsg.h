@@ -35,8 +35,12 @@ LIBC_INLINE ErrorOr<int> recvmmsg(int sockfd, struct mmsghdr *msgvec,
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_recvmmsg, sockfd, msgvec, vlen, flags,
-                              timeout);
+  LIBC_SANITIZER_SYSCALL_PRE(recvmmsg, sockfd, msgvec, vlen, flags, timeout);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_recvmmsg, sockfd, msgvec, vlen, flags, timeout);
+  LIBC_SANITIZER_SYSCALL_POST(recvmmsg, syscall_result_to_long(syscall_ret),
+                              sockfd, msgvec, vlen, flags, timeout);
+  return syscall_ret;
 #endif
 }
 

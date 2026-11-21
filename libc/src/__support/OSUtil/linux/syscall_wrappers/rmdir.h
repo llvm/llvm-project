@@ -26,9 +26,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rmdir(const char *path) {
 #ifdef SYS_unlinkat
-  return syscall_checked<int>(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
+  LIBC_SANITIZER_SYSCALL_PRE(unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_unlinkat, AT_FDCWD, path, AT_REMOVEDIR);
+  LIBC_SANITIZER_SYSCALL_POST(unlinkat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, AT_REMOVEDIR);
+  return syscall_ret;
 #elif defined(SYS_rmdir)
-  return syscall_checked<int>(SYS_rmdir, path);
+  LIBC_SANITIZER_SYSCALL_PRE(rmdir, path);
+  auto syscall_ret = syscall_checked<int>(SYS_rmdir, path);
+  LIBC_SANITIZER_SYSCALL_POST(rmdir, syscall_result_to_long(syscall_ret), path);
+  return syscall_ret;
 #else
 #error "rmdir and unlinkat syscalls not available."
 #endif

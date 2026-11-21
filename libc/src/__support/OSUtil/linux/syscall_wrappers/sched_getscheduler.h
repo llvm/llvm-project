@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_getscheduler(pid_t tid) {
-  return syscall_checked<int>(SYS_sched_getscheduler, tid);
+  LIBC_SANITIZER_SYSCALL_PRE(sched_getscheduler, tid);
+  auto syscall_ret = syscall_checked<int>(SYS_sched_getscheduler, tid);
+  LIBC_SANITIZER_SYSCALL_POST(sched_getscheduler,
+                              syscall_result_to_long(syscall_ret), tid);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

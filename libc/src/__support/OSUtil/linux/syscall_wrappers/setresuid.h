@@ -26,9 +26,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> setresuid(uid_t ruid, uid_t euid, uid_t suid) {
 #if defined(SYS_setresuid32)
-  return syscall_checked<int>(SYS_setresuid32, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_PRE(setresuid32, ruid, euid, suid);
+  auto syscall_ret = syscall_checked<int>(SYS_setresuid32, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_POST(setresuid32, syscall_result_to_long(syscall_ret),
+                              ruid, euid, suid);
+  return syscall_ret;
 #elif defined(SYS_setresuid)
-  return syscall_checked<int>(SYS_setresuid, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_PRE(setresuid, ruid, euid, suid);
+  auto syscall_ret = syscall_checked<int>(SYS_setresuid, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_POST(setresuid, syscall_result_to_long(syscall_ret),
+                              ruid, euid, suid);
+  return syscall_ret;
 #else
 #error "SYS_setresuid and SYS_setresuid32 syscalls not available."
 #endif

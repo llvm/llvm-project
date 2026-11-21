@@ -28,9 +28,17 @@ LIBC_INLINE ErrorOr<int> getgroups(int size, gid_t *list) {
   // Confusingly, 32-bit is the newer syscall, replacing the 16-bit legacy
   // version.
 #if defined(SYS_getgroups32)
-  return syscall_checked<int>(SYS_getgroups32, size, list);
+  LIBC_SANITIZER_SYSCALL_PRE(getgroups32, size, list);
+  auto syscall_ret = syscall_checked<int>(SYS_getgroups32, size, list);
+  LIBC_SANITIZER_SYSCALL_POST(getgroups32, syscall_result_to_long(syscall_ret),
+                              size, list);
+  return syscall_ret;
 #elif defined(SYS_getgroups)
-  return syscall_checked<int>(SYS_getgroups, size, list);
+  LIBC_SANITIZER_SYSCALL_PRE(getgroups, size, list);
+  auto syscall_ret = syscall_checked<int>(SYS_getgroups, size, list);
+  LIBC_SANITIZER_SYSCALL_POST(getgroups, syscall_result_to_long(syscall_ret),
+                              size, list);
+  return syscall_ret;
 #else
 #error "SYS_getgroups and SYS_getgroups32 syscalls not available."
 #endif

@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> swapon(const char *path, int swapflags) {
-  return syscall_checked<int>(SYS_swapon, path, swapflags);
+  LIBC_SANITIZER_SYSCALL_PRE(swapon, path, swapflags);
+  auto syscall_ret = syscall_checked<int>(SYS_swapon, path, swapflags);
+  LIBC_SANITIZER_SYSCALL_POST(swapon, syscall_result_to_long(syscall_ret), path,
+                              swapflags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

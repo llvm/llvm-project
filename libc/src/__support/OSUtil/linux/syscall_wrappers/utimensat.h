@@ -34,7 +34,12 @@ LIBC_INLINE ErrorOr<int> utimensat(int dirfd, const char *path,
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_utimensat, dirfd, path, times, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(utimensat, dirfd, path, times, flags);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_utimensat, dirfd, path, times, flags);
+  LIBC_SANITIZER_SYSCALL_POST(utimensat, syscall_result_to_long(syscall_ret),
+                              dirfd, path, times, flags);
+  return syscall_ret;
 #else
 #error "utimensat or utimensat_time64 syscalls not available."
 #endif

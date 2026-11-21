@@ -28,12 +28,26 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> lchown(const char *path, uid_t owner, gid_t group) {
 #if defined(SYS_fchownat)
-  return syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner, group,
+  LIBC_SANITIZER_SYSCALL_PRE(fchownat, AT_FDCWD, path, owner, group,
+                             AT_SYMLINK_NOFOLLOW);
+  auto syscall_ret = syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner,
+                                          group, AT_SYMLINK_NOFOLLOW);
+  LIBC_SANITIZER_SYSCALL_POST(fchownat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, owner, group,
                               AT_SYMLINK_NOFOLLOW);
+  return syscall_ret;
 #elif defined(SYS_lchown32)
-  return syscall_checked<int>(SYS_lchown32, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_PRE(lchown32, path, owner, group);
+  auto syscall_ret = syscall_checked<int>(SYS_lchown32, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_POST(lchown32, syscall_result_to_long(syscall_ret),
+                              path, owner, group);
+  return syscall_ret;
 #elif defined(SYS_lchown)
-  return syscall_checked<int>(SYS_lchown, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_PRE(lchown, path, owner, group);
+  auto syscall_ret = syscall_checked<int>(SYS_lchown, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_POST(lchown, syscall_result_to_long(syscall_ret), path,
+                              owner, group);
+  return syscall_ret;
 #else
 #error "fchownat, lchown32, and lchown syscalls not available."
 #endif

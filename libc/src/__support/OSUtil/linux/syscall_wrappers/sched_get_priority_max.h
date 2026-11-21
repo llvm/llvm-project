@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_get_priority_max(int policy) {
-  return syscall_checked<int>(SYS_sched_get_priority_max, policy);
+  LIBC_SANITIZER_SYSCALL_PRE(sched_get_priority_max, policy);
+  auto syscall_ret = syscall_checked<int>(SYS_sched_get_priority_max, policy);
+  LIBC_SANITIZER_SYSCALL_POST(sched_get_priority_max,
+                              syscall_result_to_long(syscall_ret), policy);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

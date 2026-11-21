@@ -29,10 +29,21 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> epoll_wait(int epfd, struct epoll_event *events,
                                     int maxevents, int timeout) {
 #ifdef SYS_epoll_wait
-  return syscall_checked<int>(SYS_epoll_wait, epfd, events, maxevents, timeout);
+  LIBC_SANITIZER_SYSCALL_PRE(epoll_wait, epfd, events, maxevents, timeout);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_epoll_wait, epfd, events, maxevents, timeout);
+  LIBC_SANITIZER_SYSCALL_POST(epoll_wait, syscall_result_to_long(syscall_ret),
+                              epfd, events, maxevents, timeout);
+  return syscall_ret;
 #elif defined(SYS_epoll_pwait)
-  return syscall_checked<int>(SYS_epoll_pwait, epfd, events, maxevents, timeout,
-                              nullptr, NSIG / 8);
+  LIBC_SANITIZER_SYSCALL_PRE(epoll_pwait, epfd, events, maxevents, timeout,
+                             nullptr, NSIG / 8);
+  auto syscall_ret = syscall_checked<int>(
+      SYS_epoll_pwait, epfd, events, maxevents, timeout, nullptr, NSIG / 8);
+  LIBC_SANITIZER_SYSCALL_POST(epoll_pwait, syscall_result_to_long(syscall_ret),
+                              epfd, events, maxevents, timeout, nullptr,
+                              NSIG / 8);
+  return syscall_ret;
 #else
 #error "epoll_wait and epoll_pwait are unavailable. Unable to build epoll_wait."
 #endif

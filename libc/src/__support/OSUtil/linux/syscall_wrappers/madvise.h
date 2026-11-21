@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> madvise(void *addr, size_t size, int advice) {
-  return syscall_checked<int>(SYS_madvise, addr, size, advice);
+  LIBC_SANITIZER_SYSCALL_PRE(madvise, addr, size, advice);
+  auto syscall_ret = syscall_checked<int>(SYS_madvise, addr, size, advice);
+  LIBC_SANITIZER_SYSCALL_POST(madvise, syscall_result_to_long(syscall_ret),
+                              addr, size, advice);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

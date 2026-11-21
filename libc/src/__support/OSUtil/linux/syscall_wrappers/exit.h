@@ -23,7 +23,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 [[noreturn]] LIBC_INLINE void exit(int status) {
-  syscall_impl<long>(SYS_exit, status);
+  LIBC_SANITIZER_SYSCALL_PRE(exit, status);
+  [[maybe_unused]] auto syscall_ret = syscall_impl<long>(SYS_exit, status);
+  LIBC_SANITIZER_SYSCALL_POST(exit, static_cast<long>(syscall_ret), status);
   __builtin_trap();
 }
 

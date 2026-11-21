@@ -25,7 +25,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> pipe2(int pipefd[2], int flags) {
+  LIBC_SANITIZER_SYSCALL_PRE(pipe2, pipefd, flags);
   ErrorOr<int> result = syscall_checked<int>(SYS_pipe2, pipefd, flags);
+  LIBC_SANITIZER_SYSCALL_POST(pipe2, syscall_result_to_long(result), pipefd,
+                              flags);
   if (result.has_value()) {
     LIBC_MSAN_UNPOISON(pipefd, sizeof(int) * 2);
   }

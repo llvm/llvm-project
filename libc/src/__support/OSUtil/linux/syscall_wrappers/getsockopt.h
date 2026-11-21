@@ -26,8 +26,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getsockopt(int sockfd, int level, int optname,
                                     void *optval, socklen_t *optlen) {
-  return syscall_checked<int>(SYS_getsockopt, sockfd, level, optname, optval,
-                              optlen);
+  LIBC_SANITIZER_SYSCALL_PRE(getsockopt, sockfd, level, optname, optval,
+                             optlen);
+  auto syscall_ret = syscall_checked<int>(SYS_getsockopt, sockfd, level,
+                                          optname, optval, optlen);
+  LIBC_SANITIZER_SYSCALL_POST(getsockopt, syscall_result_to_long(syscall_ret),
+                              sockfd, level, optname, optval, optlen);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> tgkill(pid_t tgid, pid_t tid, int sig) {
-  return syscall_checked<int>(SYS_tgkill, tgid, tid, sig);
+  LIBC_SANITIZER_SYSCALL_PRE(tgkill, tgid, tid, sig);
+  auto syscall_ret = syscall_checked<int>(SYS_tgkill, tgid, tid, sig);
+  LIBC_SANITIZER_SYSCALL_POST(tgkill, syscall_result_to_long(syscall_ret), tgid,
+                              tid, sig);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

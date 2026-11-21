@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> writev(int fd, const struct iovec *iov,
                                     int iovcnt) {
-  return syscall_checked<ssize_t>(SYS_writev, fd, iov, iovcnt);
+  LIBC_SANITIZER_SYSCALL_PRE(writev, fd, iov, iovcnt);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_writev, fd, iov, iovcnt);
+  LIBC_SANITIZER_SYSCALL_POST(writev, syscall_result_to_long(syscall_ret), fd,
+                              iov, iovcnt);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

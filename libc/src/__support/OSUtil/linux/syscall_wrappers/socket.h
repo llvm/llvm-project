@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> socket(int domain, int type, int protocol) {
-  return syscall_checked<int>(SYS_socket, domain, type, protocol);
+  LIBC_SANITIZER_SYSCALL_PRE(socket, domain, type, protocol);
+  auto syscall_ret = syscall_checked<int>(SYS_socket, domain, type, protocol);
+  LIBC_SANITIZER_SYSCALL_POST(socket, syscall_result_to_long(syscall_ret),
+                              domain, type, protocol);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

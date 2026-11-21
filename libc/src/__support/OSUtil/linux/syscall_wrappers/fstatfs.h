@@ -28,12 +28,20 @@ LIBC_INLINE ErrorOr<int> fstatfs(int fd, struct statfs *buf) {
 #ifdef SYS_fstatfs64
   static_assert(sizeof(statfs::f_blocks) == 8,
                 "Can only be used with 64-bit version of the struct");
-  return syscall_checked<int>(SYS_fstatfs64, fd, sizeof(*buf), buf);
+  LIBC_SANITIZER_SYSCALL_PRE(fstatfs64, fd, sizeof(*buf), buf);
+  auto syscall_ret = syscall_checked<int>(SYS_fstatfs64, fd, sizeof(*buf), buf);
+  LIBC_SANITIZER_SYSCALL_POST(fstatfs64, syscall_result_to_long(syscall_ret),
+                              fd, sizeof(*buf), buf);
+  return syscall_ret;
 #else
   static_assert(
       sizeof(statfs::f_blocks) == sizeof(long),
       "The fallback is unsafe on 32-bit platforms with 64-bit f_blocks.");
-  return syscall_checked<int>(SYS_fstatfs, fd, buf);
+  LIBC_SANITIZER_SYSCALL_PRE(fstatfs, fd, buf);
+  auto syscall_ret = syscall_checked<int>(SYS_fstatfs, fd, buf);
+  LIBC_SANITIZER_SYSCALL_POST(fstatfs, syscall_result_to_long(syscall_ret), fd,
+                              buf);
+  return syscall_ret;
 #endif
 }
 

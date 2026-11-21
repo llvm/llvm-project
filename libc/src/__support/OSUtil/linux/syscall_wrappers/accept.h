@@ -28,9 +28,18 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> accept(int sockfd, struct sockaddr *addr,
                                 socklen_t *addrlen) {
 #if defined(SYS_accept)
-  return syscall_checked<int>(SYS_accept, sockfd, addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_PRE(accept, sockfd, addr, addrlen);
+  auto syscall_ret = syscall_checked<int>(SYS_accept, sockfd, addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_POST(accept, syscall_result_to_long(syscall_ret),
+                              sockfd, addr, addrlen);
+  return syscall_ret;
 #elif defined(SYS_accept4)
-  return syscall_checked<int>(SYS_accept4, sockfd, addr, addrlen, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(accept4, sockfd, addr, addrlen, 0);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_accept4, sockfd, addr, addrlen, 0);
+  LIBC_SANITIZER_SYSCALL_POST(accept4, syscall_result_to_long(syscall_ret),
+                              sockfd, addr, addrlen, 0);
+  return syscall_ret;
 #else
 #error "accept and accept4 syscalls unavailable for this platform."
 #endif

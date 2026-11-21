@@ -37,7 +37,11 @@ LIBC_INLINE ErrorOr<int> timer_gettime(timer_t timerid, itimerspec *val) {
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_timer_gettime, timerid, val);
+  LIBC_SANITIZER_SYSCALL_PRE(timer_gettime, timerid, val);
+  auto syscall_ret = syscall_checked<int>(SYS_timer_gettime, timerid, val);
+  LIBC_SANITIZER_SYSCALL_POST(
+      timer_gettime, syscall_result_to_long(syscall_ret), timerid, val);
+  return syscall_ret;
 #else
 #error "SYS_timer_gettime and SYS_timer_gettime64 syscalls not available."
 #endif

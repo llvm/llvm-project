@@ -31,7 +31,11 @@ namespace linux_syscalls {
 // callers creating FIFOs and sockets pass 0.
 LIBC_INLINE ErrorOr<int> mknodat(int dfd, const char *path, mode_t mode,
                                  dev_t dev) {
-  return syscall_checked<int>(SYS_mknodat, dfd, path, mode, dev);
+  LIBC_SANITIZER_SYSCALL_PRE(mknodat, dfd, path, mode, dev);
+  auto syscall_ret = syscall_checked<int>(SYS_mknodat, dfd, path, mode, dev);
+  LIBC_SANITIZER_SYSCALL_POST(mknodat, syscall_result_to_long(syscall_ret), dfd,
+                              path, mode, dev);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

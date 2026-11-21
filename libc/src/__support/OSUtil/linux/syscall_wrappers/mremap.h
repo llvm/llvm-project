@@ -28,8 +28,14 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<void *> mremap(void *old_address, size_t old_size,
                                    size_t new_size, int flags,
                                    void *new_address) {
-  return syscall_checked<void *>(SYS_mremap, old_address, old_size, new_size,
-                                 flags, new_address);
+  LIBC_SANITIZER_SYSCALL_PRE(mremap, old_address, old_size, new_size, flags,
+                             new_address);
+  auto syscall_ret = syscall_checked<void *>(SYS_mremap, old_address, old_size,
+                                             new_size, flags, new_address);
+  LIBC_SANITIZER_SYSCALL_POST(mremap, syscall_result_to_long(syscall_ret),
+                              old_address, old_size, new_size, flags,
+                              new_address);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

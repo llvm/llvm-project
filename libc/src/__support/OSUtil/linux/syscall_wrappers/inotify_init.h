@@ -25,9 +25,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> inotify_init(void) {
 #ifdef SYS_inotify_init
-  return syscall_checked<int>(SYS_inotify_init);
+  LIBC_SANITIZER_SYSCALL_PRE_0(inotify_init);
+  auto syscall_ret = syscall_checked<int>(SYS_inotify_init);
+  LIBC_SANITIZER_SYSCALL_POST(inotify_init,
+                              syscall_result_to_long(syscall_ret));
+  return syscall_ret;
 #elif defined(SYS_inotify_init1)
-  return syscall_checked<int>(SYS_inotify_init1, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(inotify_init1, 0);
+  auto syscall_ret = syscall_checked<int>(SYS_inotify_init1, 0);
+  LIBC_SANITIZER_SYSCALL_POST(inotify_init1,
+                              syscall_result_to_long(syscall_ret), 0);
+  return syscall_ret;
 #else
 #error                                                                         \
     "inotify_init and inotify_init1 are unavailable. Unable to build inotify_init."

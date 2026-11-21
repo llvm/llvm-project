@@ -25,9 +25,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> pipe(int pipefd[2]) {
 #ifdef SYS_pipe
-  return syscall_checked<int>(SYS_pipe, pipefd);
+  LIBC_SANITIZER_SYSCALL_PRE(pipe, pipefd);
+  auto syscall_ret = syscall_checked<int>(SYS_pipe, pipefd);
+  LIBC_SANITIZER_SYSCALL_POST(pipe, syscall_result_to_long(syscall_ret),
+                              pipefd);
+  return syscall_ret;
 #elif defined(SYS_pipe2)
-  return syscall_checked<int>(SYS_pipe2, pipefd, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(pipe2, pipefd, 0);
+  auto syscall_ret = syscall_checked<int>(SYS_pipe2, pipefd, 0);
+  LIBC_SANITIZER_SYSCALL_POST(pipe2, syscall_result_to_long(syscall_ret),
+                              pipefd, 0);
+  return syscall_ret;
 #else
 #error "pipe and pipe2 syscalls are not available."
 #endif

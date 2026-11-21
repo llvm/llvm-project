@@ -41,7 +41,11 @@ LIBC_INLINE ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_clock_gettime, clockid, ts);
+  LIBC_SANITIZER_SYSCALL_PRE(clock_gettime, clockid, ts);
+  auto syscall_ret = syscall_checked<int>(SYS_clock_gettime, clockid, ts);
+  LIBC_SANITIZER_SYSCALL_POST(clock_gettime,
+                              syscall_result_to_long(syscall_ret), clockid, ts);
+  return syscall_ret;
 }
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."

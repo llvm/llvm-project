@@ -26,12 +26,21 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> ftruncate(int fd, off_t len) {
 #ifdef SYS_ftruncate
-  return syscall_checked<int>(SYS_ftruncate, fd, len);
+  LIBC_SANITIZER_SYSCALL_PRE(ftruncate, fd, len);
+  auto syscall_ret = syscall_checked<int>(SYS_ftruncate, fd, len);
+  LIBC_SANITIZER_SYSCALL_POST(ftruncate, syscall_result_to_long(syscall_ret),
+                              fd, len);
+  return syscall_ret;
 #elif defined(SYS_ftruncate64)
   // Same as ftruncate but can handle large offsets on 32-bit systems.
   static_assert(sizeof(off_t) == 8);
-  return syscall_checked<int>(SYS_ftruncate64, fd, (long)len,
-                              (long)(((uint64_t)(len)) >> 32));
+  LIBC_SANITIZER_SYSCALL_PRE(ftruncate64, fd, (long)len,
+                             (long)(((uint64_t)(len)) >> 32));
+  auto syscall_ret = syscall_checked<int>(SYS_ftruncate64, fd, (long)len,
+                                          (long)(((uint64_t)(len)) >> 32));
+  LIBC_SANITIZER_SYSCALL_POST(ftruncate64, syscall_result_to_long(syscall_ret),
+                              fd, (long)len, (long)(((uint64_t)(len)) >> 32));
+  return syscall_ret;
 #else
 #error "ftruncate and ftruncate64 syscalls not available."
 #endif

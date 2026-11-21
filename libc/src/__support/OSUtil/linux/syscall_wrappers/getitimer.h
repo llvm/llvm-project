@@ -26,15 +26,22 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getitimer(int which, struct itimerval *curr_val) {
   if constexpr (sizeof(time_t) == sizeof(long)) {
-    return syscall_checked<int>(SYS_getitimer, which, curr_val);
+    LIBC_SANITIZER_SYSCALL_PRE(getitimer, which, curr_val);
+    auto syscall_ret = syscall_checked<int>(SYS_getitimer, which, curr_val);
+    LIBC_SANITIZER_SYSCALL_POST(getitimer, syscall_result_to_long(syscall_ret),
+                                which, curr_val);
+    return syscall_ret;
   } else {
     // There is no SYS_getitimer_time64 call, so we can't use time_t directly,
     // and need to convert from long first.
     long curr_val32[4];
     long *curr_val32_ptr = curr_val ? curr_val32 : nullptr;
 
+    LIBC_SANITIZER_SYSCALL_PRE(getitimer, which, curr_val32_ptr);
     ErrorOr<int> ret =
         syscall_checked<int>(SYS_getitimer, which, curr_val32_ptr);
+    LIBC_SANITIZER_SYSCALL_POST(getitimer, syscall_result_to_long(ret), which,
+                                curr_val32_ptr);
 
     if (!ret)
       return ret;

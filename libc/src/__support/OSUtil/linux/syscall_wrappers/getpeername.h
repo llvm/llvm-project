@@ -27,7 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getpeername(int sockfd, struct sockaddr *addr,
                                      socklen_t *addrlen) {
-  return syscall_checked<int>(SYS_getpeername, sockfd, addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_PRE(getpeername, sockfd, addr, addrlen);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_getpeername, sockfd, addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_POST(getpeername, syscall_result_to_long(syscall_ret),
+                              sockfd, addr, addrlen);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

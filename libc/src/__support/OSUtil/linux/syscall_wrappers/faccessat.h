@@ -28,7 +28,11 @@ LIBC_INLINE ErrorOr<int> faccessat(int dfd, const char *path, int mode,
 #ifdef SYS_faccessat2
   return syscall_checked<int>(SYS_faccessat2, dfd, path, mode, flags);
 #elif defined(SYS_faccessat)
-  return syscall_checked<int>(SYS_faccessat, dfd, path, mode, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(faccessat, dfd, path, mode);
+  auto ret = syscall_checked<int>(SYS_faccessat, dfd, path, mode, flags);
+  LIBC_SANITIZER_SYSCALL_POST(faccessat, syscall_result_to_long(ret), dfd, path,
+                              mode);
+  return ret;
 #else
 #error "faccessat2 and faccessat syscalls not available."
 #endif

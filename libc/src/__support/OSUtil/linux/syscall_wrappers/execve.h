@@ -27,7 +27,11 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> execve(const char *path, char *const argv[],
                                 char *const envp[]) {
 #if defined(SYS_execve)
-  return syscall_checked<int>(SYS_execve, path, argv, envp);
+  LIBC_SANITIZER_SYSCALL_PRE(execve, path, argv, envp);
+  auto syscall_ret = syscall_checked<int>(SYS_execve, path, argv, envp);
+  LIBC_SANITIZER_SYSCALL_POST(execve, syscall_result_to_long(syscall_ret), path,
+                              argv, envp);
+  return syscall_ret;
 #elif defined(SYS_execveat)
   return syscall_checked<int>(SYS_execveat, AT_FDCWD, path, argv, envp, 0);
 #else

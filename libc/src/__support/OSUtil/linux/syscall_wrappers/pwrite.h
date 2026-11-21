@@ -38,10 +38,28 @@ LIBC_INLINE ErrorOr<ssize_t> pwrite(int fd, const void *buf, size_t count,
     const uint32_t hi = bits >> 32;
     const long offset_low = cpp::bit_cast<long>(static_cast<long>(lo));
     const long offset_high = cpp::bit_cast<long>(static_cast<long>(hi));
-    return syscall_checked<ssize_t>(SYS_pwrite64, fd, buf, count, offset_low,
-                                    offset_high);
+#ifndef _LP64
+    LIBC_SANITIZER_SYSCALL_PRE(pwrite64, fd, buf, count, offset_low,
+                               offset_high);
+#endif
+    auto syscall_ret = syscall_checked<ssize_t>(SYS_pwrite64, fd, buf, count,
+                                                offset_low, offset_high);
+#ifndef _LP64
+    LIBC_SANITIZER_SYSCALL_POST(pwrite64, syscall_result_to_long(syscall_ret),
+                                fd, buf, count, offset_low, offset_high);
+#endif
+    return syscall_ret;
   } else {
-    return syscall_checked<ssize_t>(SYS_pwrite64, fd, buf, count, offset);
+#ifdef _LP64
+    LIBC_SANITIZER_SYSCALL_PRE(pwrite64, fd, buf, count, offset);
+#endif
+    auto syscall_ret =
+        syscall_checked<ssize_t>(SYS_pwrite64, fd, buf, count, offset);
+#ifdef _LP64
+    LIBC_SANITIZER_SYSCALL_POST(pwrite64, syscall_result_to_long(syscall_ret),
+                                fd, buf, count, offset);
+#endif
+    return syscall_ret;
   }
 }
 

@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> shmget(key_t key, size_t size, int shmflg) {
-  return syscall_checked<int>(SYS_shmget, key, size, shmflg);
+  LIBC_SANITIZER_SYSCALL_PRE(shmget, key, size, shmflg);
+  auto syscall_ret = syscall_checked<int>(SYS_shmget, key, size, shmflg);
+  LIBC_SANITIZER_SYSCALL_POST(shmget, syscall_result_to_long(syscall_ret), key,
+                              size, shmflg);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

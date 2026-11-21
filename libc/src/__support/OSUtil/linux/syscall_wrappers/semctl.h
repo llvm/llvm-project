@@ -26,7 +26,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> semctl(int semid, int semnum, int cmd,
                                 unsigned long arg) {
-  return syscall_checked<int>(SYS_semctl, semid, semnum, cmd, arg);
+  LIBC_SANITIZER_SYSCALL_PRE(semctl, semid, semnum, cmd, arg);
+  auto syscall_ret = syscall_checked<int>(SYS_semctl, semid, semnum, cmd, arg);
+  LIBC_SANITIZER_SYSCALL_POST(semctl, syscall_result_to_long(syscall_ret),
+                              semid, semnum, cmd, arg);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -27,7 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> openat(int dfd, const char *path, int flags,
                                 mode_t mode_flags) {
-  return syscall_checked<int>(SYS_openat, dfd, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_PRE(openat, dfd, path, flags, mode_flags);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_openat, dfd, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_POST(openat, syscall_result_to_long(syscall_ret), dfd,
+                              path, flags, mode_flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

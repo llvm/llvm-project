@@ -28,9 +28,18 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<ssize_t> readlink(const char *path, char *buf,
                                       size_t bufsiz) {
 #ifdef SYS_readlinkat
-  return syscall_checked<ssize_t>(SYS_readlinkat, AT_FDCWD, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_PRE(readlinkat, AT_FDCWD, path, buf, bufsiz);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_readlinkat, AT_FDCWD, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_POST(readlinkat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, buf, bufsiz);
+  return syscall_ret;
 #elif defined(SYS_readlink)
-  return syscall_checked<ssize_t>(SYS_readlink, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_PRE(readlink, path, buf, bufsiz);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_readlink, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_POST(readlink, syscall_result_to_long(syscall_ret),
+                              path, buf, bufsiz);
+  return syscall_ret;
 #else
 #error "readlink and readlinkat syscalls not available."
 #endif

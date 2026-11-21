@@ -23,7 +23,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE gid_t getgid() { return syscall_impl<gid_t>(SYS_getgid); }
+LIBC_INLINE gid_t getgid() {
+  LIBC_SANITIZER_SYSCALL_PRE_0(getgid);
+  auto syscall_ret = syscall_impl<gid_t>(SYS_getgid);
+  LIBC_SANITIZER_SYSCALL_POST(getgid, static_cast<long>(syscall_ret));
+  return syscall_ret;
+}
 
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL

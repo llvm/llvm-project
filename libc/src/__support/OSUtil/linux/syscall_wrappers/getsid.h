@@ -25,7 +25,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<pid_t> getsid(pid_t pid) {
-  return syscall_checked<pid_t>(SYS_getsid, pid);
+  LIBC_SANITIZER_SYSCALL_PRE(getsid, pid);
+  auto syscall_ret = syscall_checked<pid_t>(SYS_getsid, pid);
+  LIBC_SANITIZER_SYSCALL_POST(getsid, syscall_result_to_long(syscall_ret), pid);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

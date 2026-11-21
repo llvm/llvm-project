@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<pid_t> getpgid(pid_t pid) {
-  return syscall_checked<pid_t>(SYS_getpgid, pid);
+  LIBC_SANITIZER_SYSCALL_PRE(getpgid, pid);
+  auto syscall_ret = syscall_checked<pid_t>(SYS_getpgid, pid);
+  LIBC_SANITIZER_SYSCALL_POST(getpgid, syscall_result_to_long(syscall_ret),
+                              pid);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -106,6 +106,7 @@ libc_test(
     name = "read_write_test",
     srcs = ["read_write_test.cpp"],
     deps = [
+        "//libc/src/__support/macros:sanitizer",
         "//libc/src/unistd:close",
         "//libc/src/unistd:pipe",
         "//libc/src/unistd:read",

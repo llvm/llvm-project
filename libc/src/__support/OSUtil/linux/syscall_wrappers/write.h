@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> write(int fd, const void *buf, size_t count) {
-  return syscall_checked<ssize_t>(SYS_write, fd, buf, count);
+  LIBC_SANITIZER_SYSCALL_PRE(write, fd, buf, count);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_write, fd, buf, count);
+  LIBC_SANITIZER_SYSCALL_POST(write, syscall_result_to_long(syscall_ret), fd,
+                              buf, count);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

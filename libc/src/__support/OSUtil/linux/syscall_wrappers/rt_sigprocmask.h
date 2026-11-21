@@ -26,8 +26,14 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rt_sigprocmask(int how, const sigset_t *set,
                                         sigset_t *oldset) {
-  return syscall_checked<int>(SYS_rt_sigprocmask, how, set, oldset,
-                              sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_PRE(rt_sigprocmask, how, set, oldset,
+                             sizeof(sigset_t));
+  auto syscall_ret = syscall_checked<int>(SYS_rt_sigprocmask, how, set, oldset,
+                                          sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_POST(rt_sigprocmask,
+                              syscall_result_to_long(syscall_ret), how, set,
+                              oldset, sizeof(sigset_t));
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

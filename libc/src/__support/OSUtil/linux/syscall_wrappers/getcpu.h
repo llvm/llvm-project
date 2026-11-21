@@ -29,7 +29,11 @@ namespace linux_syscalls {
 // as NULL when invoking the system call directly.
 // https://man7.org/linux/man-pages/man2/getcpu.2.html
 LIBC_INLINE ErrorOr<int> getcpu(unsigned int *cpu, unsigned int *node) {
-  return syscall_checked<int>(SYS_getcpu, cpu, node, nullptr);
+  LIBC_SANITIZER_SYSCALL_PRE(getcpu, cpu, node, nullptr);
+  auto syscall_ret = syscall_checked<int>(SYS_getcpu, cpu, node, nullptr);
+  LIBC_SANITIZER_SYSCALL_POST(getcpu, syscall_result_to_long(syscall_ret), cpu,
+                              node, nullptr);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

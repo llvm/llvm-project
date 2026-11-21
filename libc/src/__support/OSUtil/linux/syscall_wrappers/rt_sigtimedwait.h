@@ -41,8 +41,14 @@ LIBC_INLINE ErrorOr<int> rt_sigtimedwait(const sigset_t *set, siginfo_t *info,
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_rt_sigtimedwait, set, info, timeout,
-                              sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_PRE(rt_sigtimedwait, set, info, timeout,
+                             sizeof(sigset_t));
+  auto syscall_ret = syscall_checked<int>(SYS_rt_sigtimedwait, set, info,
+                                          timeout, sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_POST(rt_sigtimedwait,
+                              syscall_result_to_long(syscall_ret), set, info,
+                              timeout, sizeof(sigset_t));
+  return syscall_ret;
 #else
 #error "rt_sigtimedwait and rt_sigtimedwait_time64 syscalls not available."
 #endif

@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> dup2(int oldfd, int newfd) {
 #ifdef SYS_dup2
-  return syscall_checked<int>(SYS_dup2, oldfd, newfd);
+  LIBC_SANITIZER_SYSCALL_PRE(dup2, oldfd, newfd);
+  auto syscall_ret = syscall_checked<int>(SYS_dup2, oldfd, newfd);
+  LIBC_SANITIZER_SYSCALL_POST(dup2, syscall_result_to_long(syscall_ret), oldfd,
+                              newfd);
+  return syscall_ret;
 #elif defined(SYS_dup3)
   if (oldfd == newfd) {
     auto ret = fcntl(oldfd, F_GETFD);
@@ -35,7 +39,11 @@ LIBC_INLINE ErrorOr<int> dup2(int oldfd, int newfd) {
       return Error(ret.error());
     return oldfd;
   }
-  return syscall_checked<int>(SYS_dup3, oldfd, newfd, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(dup3, oldfd, newfd, 0);
+  auto syscall_ret = syscall_checked<int>(SYS_dup3, oldfd, newfd, 0);
+  LIBC_SANITIZER_SYSCALL_POST(dup3, syscall_result_to_long(syscall_ret), oldfd,
+                              newfd, 0);
+  return syscall_ret;
 #else
 #error "dup2 and dup3 syscalls not available."
 #endif

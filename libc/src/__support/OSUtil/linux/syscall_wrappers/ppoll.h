@@ -51,7 +51,12 @@ LIBC_INLINE ErrorOr<int> ppoll(struct pollfd *fds, nfds_t nfds,
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
+  LIBC_SANITIZER_SYSCALL_PRE(ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_ppoll, fds, nfds, tmo_p, sigmask, SIGSETSIZE);
+  LIBC_SANITIZER_SYSCALL_POST(ppoll, syscall_result_to_long(syscall_ret), fds,
+                              nfds, tmo_p, sigmask, SIGSETSIZE);
+  return syscall_ret;
 #else
 #error "ppoll and ppoll_time64 syscalls not available."
 #endif

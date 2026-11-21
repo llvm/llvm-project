@@ -26,7 +26,12 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<long> prctl(int option, unsigned long arg2,
                                 unsigned long arg3, unsigned long arg4,
                                 unsigned long arg5) {
-  return syscall_checked<long>(SYS_prctl, option, arg2, arg3, arg4, arg5);
+  LIBC_SANITIZER_SYSCALL_PRE(prctl, option, arg2, arg3, arg4, arg5);
+  auto syscall_ret =
+      syscall_checked<long>(SYS_prctl, option, arg2, arg3, arg4, arg5);
+  LIBC_SANITIZER_SYSCALL_POST(prctl, syscall_result_to_long(syscall_ret),
+                              option, arg2, arg3, arg4, arg5);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

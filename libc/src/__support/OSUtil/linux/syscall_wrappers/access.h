@@ -26,9 +26,16 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> access(const char *path, int mode) {
 #ifdef SYS_faccessat
-  return syscall_checked<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(faccessat, AT_FDCWD, path, mode);
+  auto ret = syscall_checked<int>(SYS_faccessat, AT_FDCWD, path, mode, 0);
+  LIBC_SANITIZER_SYSCALL_POST(faccessat, syscall_result_to_long(ret), AT_FDCWD,
+                              path, mode);
+  return ret;
 #elif defined(SYS_access)
-  return syscall_checked<int>(SYS_access, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(access, path, mode);
+  auto ret = syscall_checked<int>(SYS_access, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(access, syscall_result_to_long(ret), path, mode);
+  return ret;
 #else
 #error "access and faccessat syscalls not available."
 #endif

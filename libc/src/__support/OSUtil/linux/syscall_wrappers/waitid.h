@@ -29,7 +29,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> waitid(idtype_t idtype, id_t id, siginfo_t *infop,
                                 int options, struct rusage *rusage = nullptr) {
-  return syscall_checked<int>(SYS_waitid, idtype, id, infop, options, rusage);
+  LIBC_SANITIZER_SYSCALL_PRE(waitid, idtype, id, infop, options, rusage);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_waitid, idtype, id, infop, options, rusage);
+  LIBC_SANITIZER_SYSCALL_POST(waitid, syscall_result_to_long(syscall_ret),
+                              idtype, id, infop, options, rusage);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

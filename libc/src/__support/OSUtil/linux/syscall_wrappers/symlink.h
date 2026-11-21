@@ -26,9 +26,18 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> symlink(const char *path1, const char *path2) {
 #ifdef SYS_symlink
-  return syscall_checked<int>(SYS_symlink, path1, path2);
+  LIBC_SANITIZER_SYSCALL_PRE(symlink, path1, path2);
+  auto syscall_ret = syscall_checked<int>(SYS_symlink, path1, path2);
+  LIBC_SANITIZER_SYSCALL_POST(symlink, syscall_result_to_long(syscall_ret),
+                              path1, path2);
+  return syscall_ret;
 #elif defined(SYS_symlinkat)
-  return syscall_checked<int>(SYS_symlinkat, path1, AT_FDCWD, path2);
+  LIBC_SANITIZER_SYSCALL_PRE(symlinkat, path1, AT_FDCWD, path2);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_symlinkat, path1, AT_FDCWD, path2);
+  LIBC_SANITIZER_SYSCALL_POST(symlinkat, syscall_result_to_long(syscall_ret),
+                              path1, AT_FDCWD, path2);
+  return syscall_ret;
 #else
 #error "symlink or symlinkat syscalls not available."
 #endif

@@ -23,8 +23,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_getaffinity(pid_t tid,
                                            cpp::span<unsigned char> mask) {
-  return syscall_checked<int>(SYS_sched_getaffinity, tid, mask.size(),
-                              mask.data());
+  LIBC_SANITIZER_SYSCALL_PRE(sched_getaffinity, tid, mask.size(), mask.data());
+  auto syscall_ret = syscall_checked<int>(SYS_sched_getaffinity, tid,
+                                          mask.size(), mask.data());
+  LIBC_SANITIZER_SYSCALL_POST(sched_getaffinity,
+                              syscall_result_to_long(syscall_ret), tid,
+                              mask.size(), mask.data());
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -58,8 +58,14 @@ LIBC_INLINE ErrorOr<int> pselect6(int nfds, fd_set *__restrict readfds,
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_pselect6, nfds, readfds, writefds, exceptfds,
-                              timeout, &pss);
+  LIBC_SANITIZER_SYSCALL_PRE(pselect6, nfds, readfds, writefds, exceptfds,
+                             timeout, &pss);
+  auto syscall_ret = syscall_checked<int>(SYS_pselect6, nfds, readfds, writefds,
+                                          exceptfds, timeout, &pss);
+  LIBC_SANITIZER_SYSCALL_POST(pselect6, syscall_result_to_long(syscall_ret),
+                              nfds, readfds, writefds, exceptfds, timeout,
+                              &pss);
+  return syscall_ret;
 #else
 #error "pselect6 and pselect6_time64 syscalls not available."
 #endif

@@ -28,7 +28,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> capset(cap_user_header_t hdrp,
                                 const cap_user_data_t datap) {
-  return syscall_checked<int>(SYS_capset, hdrp, datap);
+  LIBC_SANITIZER_SYSCALL_PRE(capset, hdrp, datap);
+  auto syscall_ret = syscall_checked<int>(SYS_capset, hdrp, datap);
+  LIBC_SANITIZER_SYSCALL_POST(capset, syscall_result_to_long(syscall_ret), hdrp,
+                              datap);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

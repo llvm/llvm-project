@@ -26,9 +26,15 @@ namespace linux_syscalls {
 LIBC_INLINE gid_t getegid() {
   // getegid is expected to always succeed, thus no error checking here.
 #if defined(SYS_getegid32)
-  return syscall_impl<gid_t>(SYS_getegid32);
+  LIBC_SANITIZER_SYSCALL_PRE_0(getegid32);
+  auto syscall_ret = syscall_impl<gid_t>(SYS_getegid32);
+  LIBC_SANITIZER_SYSCALL_POST(getegid32, static_cast<long>(syscall_ret));
+  return syscall_ret;
 #elif defined(SYS_getegid)
-  return syscall_impl<gid_t>(SYS_getegid);
+  LIBC_SANITIZER_SYSCALL_PRE_0(getegid);
+  auto syscall_ret = syscall_impl<gid_t>(SYS_getegid);
+  LIBC_SANITIZER_SYSCALL_POST(getegid, static_cast<long>(syscall_ret));
+  return syscall_ret;
 #else
 #error "SYS_getegid and SYS_getegid32 syscalls not available."
 #endif

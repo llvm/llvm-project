@@ -26,8 +26,13 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> mount(const char *source, const char *target,
                                const char *filesystemtype,
                                unsigned long mountflags, const void *data) {
-  return syscall_checked<int>(SYS_mount, source, target, filesystemtype,
-                              mountflags, data);
+  LIBC_SANITIZER_SYSCALL_PRE(mount, source, target, filesystemtype, mountflags,
+                             data);
+  auto syscall_ret = syscall_checked<int>(SYS_mount, source, target,
+                                          filesystemtype, mountflags, data);
+  LIBC_SANITIZER_SYSCALL_POST(mount, syscall_result_to_long(syscall_ret),
+                              source, target, filesystemtype, mountflags, data);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

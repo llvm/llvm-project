@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> llistxattr(const char *path, char *list,
                                         size_t size) {
-  return syscall_checked<ssize_t>(SYS_llistxattr, path, list, size);
+  LIBC_SANITIZER_SYSCALL_PRE(llistxattr, path, list, size);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_llistxattr, path, list, size);
+  LIBC_SANITIZER_SYSCALL_POST(llistxattr, syscall_result_to_long(syscall_ret),
+                              path, list, size);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

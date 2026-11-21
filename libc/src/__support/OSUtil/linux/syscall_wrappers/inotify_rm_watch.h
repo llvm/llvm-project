@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> inotify_rm_watch(int fd, int wd) {
-  return syscall_checked<int>(SYS_inotify_rm_watch, fd, wd);
+  LIBC_SANITIZER_SYSCALL_PRE(inotify_rm_watch, fd, wd);
+  auto syscall_ret = syscall_checked<int>(SYS_inotify_rm_watch, fd, wd);
+  LIBC_SANITIZER_SYSCALL_POST(inotify_rm_watch,
+                              syscall_result_to_long(syscall_ret), fd, wd);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls
