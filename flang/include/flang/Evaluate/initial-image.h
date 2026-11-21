@@ -14,26 +14,65 @@
 // initializer for a symbol.
 
 #include "expression.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
+#include <cstring>
 #include <map>
 #include <optional>
 #include <vector>
 
 namespace Fortran::evaluate {
 
-template <typename SCALAR>
-inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
-    size_t elementSize, bool *changed = nullptr) {
-  for (auto [i, v] : llvm::enumerate(values)) {
-    v.StoreRawBytes(dst + i * elementSize, elementSize, changed);
+/// Reverses the bytes of each \p unit sized piece of \p p[0..bytes).
+inline void ReverseByteUnits(char *p, std::size_t bytes, std::size_t unit) {
+  if (unit > 1) {
+    for (std::size_t j{0}; j + unit <= bytes; j += unit) {
+      std::reverse(p + j, p + j + unit);
+    }
   }
 }
 
+/// Serializes \p values to \p dst. If \p swapUnit is greater than one, the
+/// bytes of each \p swapUnit sized piece are reversed (host to target byte
+/// order).
+template <typename SCALAR>
+inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
+    size_t elementSize, bool *changed = nullptr, size_t swapUnit = 0) {
+  for (auto [i, v] : llvm::enumerate(values)) {
+    char *to{dst + i * elementSize};
+    if (swapUnit > 1) {
+      llvm::SmallVector<char, 32> buffer(elementSize);
+      v.StoreRawBytes(buffer.data(), elementSize);
+      ReverseByteUnits(buffer.data(), elementSize, swapUnit);
+      if (changed) {
+        if (std::memcmp(to, buffer.data(), elementSize) == 0) {
+          continue;
+        }
+        *changed = true;
+      }
+      std::memcpy(to, buffer.data(), elementSize);
+    } else {
+      v.StoreRawBytes(to, elementSize, changed);
+    }
+  }
+}
+
+/// De-serializes \p values from \p src; \p swapUnit as for
+/// StoreSerialValues (target to host byte order).
 template <typename SCALAR>
 inline void LoadSerialValues(int kind, const char *src,
-    llvm::MutableArrayRef<SCALAR> values, size_t stride) {
+    llvm::MutableArrayRef<SCALAR> values, size_t stride, size_t swapUnit = 0) {
   for (auto it : llvm::enumerate(values)) {
-    it.value() = SCALAR::FromRawBytes(
-        kind, src + stride * it.index(), SCALAR::bytesStored(kind));
+    const char *from{src + stride * it.index()};
+    if (swapUnit > 1) {
+      llvm::SmallVector<char, 32> buffer(
+          from, from + SCALAR::bytesStored(kind));
+      ReverseByteUnits(buffer.data(), buffer.size(), swapUnit);
+      it.value() =
+          SCALAR::FromRawBytes(kind, buffer.data(), SCALAR::bytesStored(kind));
+    } else {
+      it.value() = SCALAR::FromRawBytes(kind, from, SCALAR::bytesStored(kind));
+    }
   }
 }
 
@@ -54,6 +93,22 @@ public:
 
   std::size_t size() const { return data_.size(); }
 
+  /// The image holds the bytes of the values in the byte order of the target.
+  /// Returns the size of the pieces whose bytes have to be reversed when the
+  /// byte orders of the target and the host differ, or 0.
+  static std::size_t ByteSwapUnit(const FoldingContext &context,
+      TypeCategory category, int kind, std::size_t elementBytes) {
+    if (context.targetCharacteristics().isBigEndian() != isHostLittleEndian) {
+      return 0; // same byte order
+    } else if (category == TypeCategory::Character) {
+      return kind;
+    } else if (category == TypeCategory::Complex) {
+      return elementBytes / 2; // real and imaginary parts
+    } else {
+      return elementBytes;
+    }
+  }
+
   template <typename A>
   Result Add(ConstantSubscript, std::size_t, const A &, FoldingContext &) {
     return NotAConstant;
@@ -72,10 +127,10 @@ public:
       } else if (bytes == 0) {
         return OkNoChange;
       } else {
-        // TODO endianness
         bool changed{false};
         StoreSerialValues<Scalar<T>>(&data_.at(offset),
-            llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed);
+            llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed,
+            ByteSwapUnit(context, T::category, 0, *elementBytes));
         return changed ? Ok : OkNoChange;
       }
     }
