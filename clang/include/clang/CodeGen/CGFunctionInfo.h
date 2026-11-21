@@ -19,6 +19,7 @@
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/FoldingSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
@@ -625,7 +626,8 @@ struct CGFunctionInfoArgInfo {
 class CGFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CGFunctionInfo, CGFunctionInfoArgInfo,
-                                    FunctionProtoType::ExtParameterInfo> {
+                                    FunctionProtoType::ExtParameterInfo,
+                                    unsigned> {
   typedef CGFunctionInfoArgInfo ArgInfo;
   typedef FunctionProtoType::ExtParameterInfo ExtParameterInfo;
 
@@ -697,6 +699,10 @@ class CGFunctionInfo final
 
   unsigned NumArgs;
 
+  /// Indices of CUDA grid-constant arguments. These affect ABI classification
+  /// but are not part of the source function type.
+  size_t NumGridConstantArgs;
+
   ArgInfo *getArgsBuffer() {
     return getTrailingObjects<ArgInfo>();
   }
@@ -719,7 +725,8 @@ public:
          bool delegateCall, unsigned X86ABIAVXLevel,
          const FunctionType::ExtInfo &extInfo,
          ArrayRef<ExtParameterInfo> paramInfos, CanQualType resultType,
-         ArrayRef<CanQualType> argTypes, RequiredArgs required);
+         ArrayRef<CanQualType> argTypes, RequiredArgs required,
+         ArrayRef<unsigned> gridConstantArgs = {});
   void operator delete(void *p) { ::operator delete(p); }
 
   // Friending class TrailingObjects is apparently not good enough for MSVC,
@@ -819,6 +826,14 @@ public:
     return getExtParameterInfos()[argIndex];
   }
 
+  ArrayRef<unsigned> getGridConstantArgs() const {
+    return {getTrailingObjects<unsigned>(), NumGridConstantArgs};
+  }
+
+  bool isGridConstantArg(unsigned argIndex) const {
+    return llvm::is_contained(getGridConstantArgs(), argIndex);
+  }
+
   /// Return true if this function uses inalloca arguments.
   bool usesInAlloca() const { return ArgStruct; }
 
@@ -864,6 +879,9 @@ public:
       for (auto paramInfo : getExtParameterInfos())
         ID.AddInteger(paramInfo.getOpaqueValue());
     }
+    ID.AddInteger(NumGridConstantArgs);
+    for (unsigned argIndex : getGridConstantArgs())
+      ID.AddInteger(argIndex);
     getReturnType().Profile(ID);
     for (const auto &I : arguments())
       I.type.Profile(ID);
@@ -874,7 +892,8 @@ public:
                       const FunctionType::ExtInfo &info,
                       ArrayRef<ExtParameterInfo> paramInfos,
                       RequiredArgs required, CanQualType resultType,
-                      ArrayRef<CanQualType> argTypes) {
+                      ArrayRef<CanQualType> argTypes,
+                      ArrayRef<unsigned> gridConstantArgs = {}) {
     ID.AddInteger(info.getCC());
     ID.AddBoolean(InstanceMethod);
     ID.AddBoolean(ChainCall);
@@ -893,6 +912,9 @@ public:
       for (auto paramInfo : paramInfos)
         ID.AddInteger(paramInfo.getOpaqueValue());
     }
+    ID.AddInteger(gridConstantArgs.size());
+    for (unsigned argIndex : gridConstantArgs)
+      ID.AddInteger(argIndex);
     resultType.Profile(ID);
     for (const CanQualType &argType : argTypes)
       argType.Profile(ID);

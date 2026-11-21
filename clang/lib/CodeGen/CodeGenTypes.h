@@ -100,7 +100,7 @@ class CodeGenTypes {
       unsigned X86ABIAVXLevel, const FunctionType::ExtInfo &info,
       ArrayRef<FunctionProtoType::ExtParameterInfo> paramInfos,
       RequiredArgs required, CanQualType resultType,
-      ArrayRef<CanQualType> argTypes);
+      ArrayRef<CanQualType> argTypes, ArrayRef<unsigned> gridConstantArgs = {});
 
 public:
   CodeGenTypes(CodeGenModule &cgm);
