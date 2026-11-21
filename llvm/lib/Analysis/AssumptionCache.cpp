@@ -52,6 +52,31 @@ AssumptionCache::getOrInsertAffectedValues(Value *V) {
   return AffectedValues[AffectedValueCallbackVH(V, this)];
 }
 
+bool AssumptionCache::assumeBundlesFor(
+    const Value *V,
+    function_ref<bool(BundleAttr, OperandBundleUse, AssumeInst *)> Func) {
+  for (auto Assume : assumptionsFor(V)) {
+    if (Assume.Index == ExprResultIdx || !Assume)
+      continue;
+    auto *AI = cast<AssumeInst>(Assume.Assume);
+    auto OBU = AI->getOperandBundleAt(Assume.Index);
+    if (Func(getBundleAttrFromOBU(OBU), OBU, AI))
+      return true;
+  }
+  return false;
+}
+
+bool AssumptionCache::assumeBundlesOfKind(
+    BundleAttr Bundle, const Value *V,
+    function_ref<bool(OperandBundleUse, AssumeInst *)> Func) {
+  return assumeBundlesFor(
+      V, [&](BundleAttr BA, OperandBundleUse OBU, AssumeInst *AI) {
+        if (Bundle != BA)
+          return false;
+        return Func(OBU, AI);
+      });
+}
+
 void AssumptionCache::findValuesAffectedByOperandBundle(
     OperandBundleUse Bundle, function_ref<void(Value *)> InsertAffected) {
   auto AddAffectedVal = [&](Value *V) {
