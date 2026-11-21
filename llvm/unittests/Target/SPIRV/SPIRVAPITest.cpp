@@ -26,18 +26,18 @@ namespace llvm {
 
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
 SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
-               const std::vector<std::string> &AllowExtNames,
+               const std::vector<std::string> &ExtNames,
                llvm::CodeGenOptLevel OLevel, Triple TargetTriple);
 
-extern "C" bool
-SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
-                     const std::vector<std::string> &AllowExtNames,
-                     const std::vector<std::string> &Opts);
+extern "C" bool SPIRVTranslateModule(Module *M, std::string &SpirvObj,
+                                     std::string &ErrMsg,
+                                     const std::vector<std::string> &ExtNames,
+                                     const std::vector<std::string> &Opts);
 
 class SPIRVAPITest : public testing::Test {
 protected:
   bool toSpirv(StringRef Assembly, std::string &Result, std::string &ErrMsg,
-               const std::vector<std::string> &AllowExtNames,
+               const std::vector<std::string> &ExtNames,
                llvm::CodeGenOptLevel OLevel, Triple TargetTriple) {
     SMDiagnostic ParseError;
     LLVMContext Context;
@@ -47,8 +47,8 @@ protected:
       ParseError.print("IR parsing failed: ", errs());
       report_fatal_error("Can't parse input assembly.");
     }
-    bool Status = SPIRVTranslate(M.get(), Result, ErrMsg, AllowExtNames, OLevel,
-                                 TargetTriple);
+    bool Status =
+        SPIRVTranslate(M.get(), Result, ErrMsg, ExtNames, OLevel, TargetTriple);
     if (!Status)
       errs() << ErrMsg;
     return Status;
@@ -57,7 +57,7 @@ protected:
   // switch into a newer implementation of SPIRVTranslate().
   bool toSpirvLegacy(StringRef Assembly, std::string &Result,
                      std::string &ErrMsg,
-                     const std::vector<std::string> &AllowExtNames,
+                     const std::vector<std::string> &ExtNames,
                      const std::vector<std::string> &Opts) {
     SMDiagnostic ParseError;
     LLVMContext Context;
@@ -67,8 +67,7 @@ protected:
       ParseError.print("IR parsing failed: ", errs());
       report_fatal_error("Can't parse input assembly.");
     }
-    bool Status =
-        SPIRVTranslateModule(M.get(), Result, ErrMsg, AllowExtNames, Opts);
+    bool Status = SPIRVTranslateModule(M.get(), Result, ErrMsg, ExtNames, Opts);
     if (!Status)
       errs() << ErrMsg;
     return Status;
@@ -129,7 +128,7 @@ TEST_F(SPIRVAPITest, checkTranslateNewPM) {
 
 TEST_F(SPIRVAPITest, checkTranslateSupportExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_uniform_group_instructions"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_uniform_group_instructions"};
   bool Status =
       toSpirv(ExtensionAssembly, Result, Error, ExtNames,
               CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
@@ -139,9 +138,9 @@ TEST_F(SPIRVAPITest, checkTranslateSupportExtensionByArg) {
 
 TEST_F(SPIRVAPITest, checkTranslateSupportExtensionByArgList) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate",
-                                    "SPV_KHR_uniform_group_instructions",
-                                    "SPV_KHR_subgroup_rotate"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate",
+                                    "+SPV_KHR_uniform_group_instructions",
+                                    "+SPV_KHR_subgroup_rotate"};
   bool Status =
       toSpirv(ExtensionAssembly, Result, Error, ExtNames,
               CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
@@ -161,13 +160,47 @@ TEST_F(SPIRVAPITest, checkTranslateAllExtensions) {
 
 TEST_F(SPIRVAPITest, checkTranslateUnknownExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_XYZ_my_unknown_extension"};
+  std::vector<std::string> ExtNames{"+SPV_XYZ_my_unknown_extension"};
   bool Status =
       toSpirv(ExtensionAssembly, Result, Error, ExtNames,
               CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
   EXPECT_FALSE(Status);
   EXPECT_TRUE(Result.empty());
-  EXPECT_EQ(Error, "Unknown SPIR-V extension: SPV_XYZ_my_unknown_extension");
+  EXPECT_EQ(Error, "Unknown SPIR-V extension: +SPV_XYZ_my_unknown_extension");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateExcludeExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"all", "-SPV_KHR_subgroup_rotate"};
+  bool Status =
+      toSpirv(ExtensionAssembly, Result, Error, ExtNames,
+              CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
+  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+}
+
+TEST_F(SPIRVAPITest, checkTranslateEnableDisableExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate",
+                                    "-SPV_KHR_subgroup_rotate"};
+  bool Status =
+      toSpirv(ExtensionAssembly, Result, Error, ExtNames,
+              CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
+  EXPECT_FALSE(Status);
+  EXPECT_TRUE(Result.empty());
+  EXPECT_EQ(Error, "Extension cannot be allowed and disallowed at the same "
+                   "time: SPV_KHR_subgroup_rotate");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateInvalidExtensionFormat) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate"};
+  bool Status =
+      toSpirv(ExtensionAssembly, Result, Error, ExtNames,
+              CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
+  EXPECT_FALSE(Status);
+  EXPECT_TRUE(Result.empty());
+  EXPECT_EQ(Error, "Invalid extension list format: SPV_KHR_subgroup_rotate");
 }
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
@@ -184,7 +217,20 @@ TEST_F(SPIRVAPITest, checkTranslateExtensionError) {
 
 TEST_F(SPIRVAPITest, checkTranslateWrongExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate"};
+  EXPECT_DEATH_IF_SUPPORTED(
+      {
+        toSpirv(ExtensionAssembly, Result, Error, ExtNames,
+                CodeGenOptLevel::Aggressive, Triple("spirv64-unknown-unknown"));
+      },
+      "LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the "
+      "following SPIR-V extension: SPV_KHR_uniform_group_instructions");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateMissingExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"all",
+                                    "-SPV_KHR_uniform_group_instructions"};
   EXPECT_DEATH_IF_SUPPORTED(
       {
         toSpirv(ExtensionAssembly, Result, Error, ExtNames,
@@ -238,7 +284,7 @@ TEST_F(SPIRVAPITest, checkTranslateStringOptsErrorOk) {
 
 TEST_F(SPIRVAPITest, checkTranslateStringOptsSupportExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_uniform_group_instructions"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_uniform_group_instructions"};
   bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
   EXPECT_TRUE(Status && Error.empty() && !Result.empty());
   EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
@@ -246,9 +292,9 @@ TEST_F(SPIRVAPITest, checkTranslateStringOptsSupportExtensionByArg) {
 
 TEST_F(SPIRVAPITest, checkTranslateStringOptsSupportExtensionByArgList) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate",
-                                    "SPV_KHR_uniform_group_instructions",
-                                    "SPV_KHR_subgroup_rotate"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate",
+                                    "+SPV_KHR_uniform_group_instructions",
+                                    "+SPV_KHR_subgroup_rotate"};
   bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
   EXPECT_TRUE(Status && Error.empty() && !Result.empty());
   EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
@@ -264,11 +310,39 @@ TEST_F(SPIRVAPITest, checkTranslateStringOptsAllExtensions) {
 
 TEST_F(SPIRVAPITest, checkTranslateStringOptsUnknownExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_XYZ_my_unknown_extension"};
+  std::vector<std::string> ExtNames{"+SPV_XYZ_my_unknown_extension"};
   bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
   EXPECT_FALSE(Status);
   EXPECT_TRUE(Result.empty());
-  EXPECT_EQ(Error, "Unknown SPIR-V extension: SPV_XYZ_my_unknown_extension");
+  EXPECT_EQ(Error, "Unknown SPIR-V extension: +SPV_XYZ_my_unknown_extension");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateStringOptsExcludeExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"all", "-SPV_KHR_subgroup_rotate"};
+  bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
+  EXPECT_TRUE(Status && Error.empty() && !Result.empty());
+  EXPECT_EQ(identify_magic(Result), file_magic::spirv_object);
+}
+
+TEST_F(SPIRVAPITest, checkTranslateStringOptsEnableDisableExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate",
+                                    "-SPV_KHR_subgroup_rotate"};
+  bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
+  EXPECT_FALSE(Status);
+  EXPECT_TRUE(Result.empty());
+  EXPECT_EQ(Error, "Extension cannot be allowed and disallowed at the same "
+                   "time: SPV_KHR_subgroup_rotate");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateStringOptsInvalidExtensionFormat) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate"};
+  bool Status = toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {});
+  EXPECT_FALSE(Status);
+  EXPECT_TRUE(Result.empty());
+  EXPECT_EQ(Error, "Invalid extension list format: SPV_KHR_subgroup_rotate");
 }
 
 #if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
@@ -282,7 +356,17 @@ TEST_F(SPIRVAPITest, checkTranslateStringOptsExtensionError) {
 
 TEST_F(SPIRVAPITest, checkTranslateStringOptsWrongExtensionByArg) {
   std::string Result, Error;
-  std::vector<std::string> ExtNames{"SPV_KHR_subgroup_rotate"};
+  std::vector<std::string> ExtNames{"+SPV_KHR_subgroup_rotate"};
+  EXPECT_DEATH_IF_SUPPORTED(
+      { toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {}); },
+      "LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the "
+      "following SPIR-V extension: SPV_KHR_uniform_group_instructions");
+}
+
+TEST_F(SPIRVAPITest, checkTranslateStringOptsMissingExtension) {
+  std::string Result, Error;
+  std::vector<std::string> ExtNames{"all",
+                                    "-SPV_KHR_uniform_group_instructions"};
   EXPECT_DEATH_IF_SUPPORTED(
       { toSpirvLegacy(ExtensionAssembly, Result, Error, ExtNames, {}); },
       "LLVM ERROR: __spirv_GroupBitwiseAndKHR: the builtin requires the "

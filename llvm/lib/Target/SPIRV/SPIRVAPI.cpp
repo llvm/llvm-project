@@ -49,17 +49,16 @@ namespace llvm {
 // providing diagnostics on fail and means of configuring translation.
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
 SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
-               const std::vector<std::string> &AllowExtNames,
+               const std::vector<std::string> &ExtNames,
                llvm::CodeGenOptLevel OLevel, Triple TargetTriple) {
   // Fallbacks for option values.
   static const std::string DefaultTriple = "spirv64-unknown-unknown";
   static const std::string DefaultMArch = "";
 
   ExtensionSet AllowedExtIds;
-  StringRef UnknownExt =
-      SPIRVExtensionsParser::checkExtensions(AllowExtNames, AllowedExtIds);
-  if (!UnknownExt.empty()) {
-    ErrMsg = "Unknown SPIR-V extension: " + UnknownExt.str();
+  if (Error Err =
+          SPIRVExtensionsParser::checkExtensions(ExtNames, AllowedExtIds)) {
+    ErrMsg = toString(std::move(Err));
     return false;
   }
 
@@ -122,7 +121,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 // implementation of SPIRVTranslate().
 extern "C" LLVM_EXTERNAL_VISIBILITY bool
 SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
-                     const std::vector<std::string> &AllowExtNames,
+                     const std::vector<std::string> &ExtNames,
                      const std::vector<std::string> &Opts) {
   // optional: Opts[0] is a string representation of Triple,
   // take Module triple otherwise
@@ -140,7 +139,7 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
       return false;
     }
   }
-  return SPIRVTranslate(M, SpirvObj, ErrMsg, AllowExtNames, OLevel,
+  return SPIRVTranslate(M, SpirvObj, ErrMsg, ExtNames, OLevel,
                         std::move(TargetTriple));
 }
 

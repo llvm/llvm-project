@@ -30,16 +30,19 @@ struct SPIRVExtensionsParser {
                      ExtensionSet &Disabled);
 
   /// Validates and converts extension names into internal enum values.
-  ///
-  /// \return Returns a reference to the unknown SPIR-V extension name from the
-  /// list if present, or an empty StringRef on success.
-  static StringRef checkExtensions(ArrayRef<std::string> ExtNames,
-                                   ExtensionSet &AllowedExtensions);
+  /// Each extension specified in \p ExtNames is prefixed by +/-
+  /// (except 'all' and 'khr').
+  static Error checkExtensions(ArrayRef<std::string> ExtNames,
+                               ExtensionSet &AllowedExtensions);
 
   /// Returns the list of extensions that are valid for a particular
   /// target environment (i.e., OpenCL or Vulkan), excluding \p Disabled.
   static ExtensionSet getValidExtensions(const Triple &TT,
                                          const ExtensionSet &Disabled);
+
+private:
+  static Error parseExtensions(SmallVectorImpl<StringRef> &Tokens,
+                               ExtensionSet &Enabled, ExtensionSet &Disabled);
 };
 
 } // namespace llvm
