@@ -1151,12 +1151,18 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
         // sub-interval invariant holds: the original must be live wherever
         // any of its children are live.  Without this, reMaterializeFor()
         // can query OrigLI at an early-clobber slot that falls inside
-        // [CopyIdx, FoldIdx) and get a null VNI, triggering an assertion.
+        // [CopyIdx, FoldIdx.getRegSlot()) and get a null VNI, triggering an
+        // assertion. Use a new value number: CopyDstReg holds the COPY's
+        // source there, not FoldMI's result, and HoistSpillHelper merges
+        // spills that share a value number.
         assert(LIS.hasInterval(OrigReg) && "OrigReg should have live interval");
         LiveInterval &OrigLI = LIS.getInterval(OrigReg);
-        if (VNInfo *OrigVNI = OrigLI.getVNInfoAt(FoldIdx.getRegSlot()))
-          OrigLI.addSegment(
-              LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), OrigVNI));
+        assert(OrigLI.liveAt(FoldIdx.getRegSlot()) &&
+               "OrigLI should be live at FoldMI's def");
+        VNInfo *CopyVNI =
+            OrigLI.getNextValue(CopyIdx, LIS.getVNInfoAllocator());
+        OrigLI.addSegment(
+            LiveRange::Segment(CopyIdx, FoldIdx.getRegSlot(), CopyVNI));
       }
     }
   }
