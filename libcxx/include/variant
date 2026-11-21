@@ -311,6 +311,14 @@ _LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+#    if _LIBCPP_STD_VER >= 23 && _LIBCPP_STD_VER < 26
+#      define _LIBCPP_VARIANT_VISIT_CHECK_RETURN(_RET_T, _VIS_T, _PAR_TYPES)                                           \
+        static_assert(!__is_invocable_r_from_temporary<_RET_T, _VIS_T, _PAR_TYPES>,                                    \
+                      "returning reference to local temporary object")
+#    else
+#      define _LIBCPP_VARIANT_VISIT_CHECK_RETURN(_RET_T, _VIS_T, _PAR_TYPES) static_assert(true)
+#    endif
+
 // Light N-dimensional array of function pointers. Used in place of std::array to avoid
 // adding a dependency.
 template <class _Tp, size_t _Size>
@@ -648,6 +656,7 @@ private:
       if constexpr (is_void_v<_Rp>) {
         std::__invoke(std::forward<_Visitor>(__visitor), std::forward<_Alts>(__alts).__value...);
       } else {
+        _LIBCPP_VARIANT_VISIT_CHECK_RETURN(_Rp, _Visitor, decltype((std::forward<_Alts>(__alts).__value))...);
         return std::__invoke(std::forward<_Visitor>(__visitor), std::forward<_Alts>(__alts).__value...);
       }
     }
@@ -1660,6 +1669,8 @@ _LIBCPP_HIDE_FROM_ABI constexpr _Rp visit(_Visitor&& __visitor, _Vs&&... __vs) {
             return (void)std::__invoke(                                                                                \
                 std::forward<_Visitor>(__visitor), __variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);      \
           } else {                                                                                                     \
+            _LIBCPP_VARIANT_VISIT_CHECK_RETURN(                                                                        \
+                _Rp, _Visitor, decltype(__variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value));                \
             return std::__invoke(                                                                                      \
                 std::forward<_Visitor>(__visitor), __variant::__get_alt<_I>(std::forward<_Vs>(__vs)...).__value);      \
           }                                                                                                            \
@@ -1742,6 +1753,8 @@ template <class _Tp, class... _Types>
 _LIBCPP_HIDE_FROM_ABI constexpr auto&& __unchecked_get(variant<_Types...>& __v) noexcept {
   return std::__unchecked_get<__find_exactly_one_t<_Tp, _Types...>::value>(__v);
 }
+
+#    undef _LIBCPP_VARIANT_VISIT_CHECK_RETURN
 
 _LIBCPP_END_NAMESPACE_STD
 
