@@ -529,5 +529,14 @@ DEFAULT_PARAMETERS = [
             AddSubstitution("%{cmake_generator}", generator),
         ],
     ),
+    Parameter(
+        name="generate_coverage",
+        type=bool,
+        default=False,
+        help="Whether to generate coverage information when running the tests.",
+        actions=lambda enabled: [] if not enabled else [
+            AddCompileFlag("-fprofile-instr-generate -fcoverage-mapping -mllvm -runtime-counter-relocation -fcoverage-mcdc")
+        ],
+    )
 ]
 # fmt: on
