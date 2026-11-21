@@ -1477,19 +1477,20 @@ void SymbolFilePDB::GetMangledNamesForFunction(
     const std::string &scope_qualified_name,
     std::vector<lldb_private::ConstString> &mangled_names) {}
 
-void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
+bool SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
+  const size_t num_symbols = symtab.GetNumSymbols();
   std::set<lldb::addr_t> sym_addresses;
   for (size_t i = 0; i < symtab.GetNumSymbols(); i++)
     sym_addresses.insert(symtab.SymbolAtIndex(i)->GetFileAddress());
 
   auto results = m_global_scope_up->findAllChildren<PDBSymbolPublicSymbol>();
   if (!results)
-    return;
+    return false;
 
   auto section_list =
       m_objfile_sp->GetModule()->GetObjectFile()->GetSectionList();
   if (!section_list)
-    return;
+    return false;
 
   while (auto pub_symbol = results->getNext()) {
     auto section_id = pub_symbol->getAddressSection();
@@ -1524,6 +1525,7 @@ void SymbolFilePDB::AddSymbols(lldb_private::Symtab &symtab) {
   }
 
   symtab.Finalize();
+  return symtab.GetNumSymbols() > num_symbols;
 }
 
 void SymbolFilePDB::DumpClangAST(Stream &s, llvm::StringRef filter,

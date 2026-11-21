@@ -982,9 +982,10 @@ SymbolFileCTF::ParseVariablesForContext(const lldb_private::SymbolContext &sc) {
   return ParseObjects(*m_comp_unit_sp);
 }
 
-void SymbolFileCTF::AddSymbols(Symtab &symtab) {
+bool SymbolFileCTF::AddSymbols(Symtab &symtab) {
   // CTF does not encode symbols.
   // We rely on the existing symbol table to map symbols to type.
+  return false;
 }
 
 lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {

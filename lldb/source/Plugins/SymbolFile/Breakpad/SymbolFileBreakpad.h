@@ -130,7 +130,7 @@ public:
     return CompilerDeclContext();
   }
 
-  void AddSymbols(Symtab &symtab) override;
+  bool AddSymbols(Symtab &symtab) override;
 
   llvm::Expected<lldb::addr_t>
   GetParameterStackSize(const Symbol &symbol) override;
