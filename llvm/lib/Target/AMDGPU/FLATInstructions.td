@@ -1256,7 +1256,8 @@ defm GLOBAL_LOAD_ASYNC_TO_LDS_B64      :  FLAT_Global_Load_LDS_Pseudo<"global_lo
 defm GLOBAL_LOAD_ASYNC_TO_LDS_B128     :  FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b128",  1>;
 } // End SubtargetPredicate = HasAsyncLoadToLDSInsts, WaveSizePredicate = isWave32
 
-// Expand in MC emission into an EXEC save, EXEC-zero load, and EXEC restore.
+// Distinguish the workaround's dummy from ordinary loads in the same function.
+// MC emission wraps only this load in an EXEC save, clear, and restore.
 // Keep the load's flags and named operands for wait counts and VGPR encoding.
 def GLOBAL_LOAD_ASYNC_TO_LDS_B8_replay :
     FLAT_Global_Load_LDS_Pseudo<"global_load_async_to_lds_b8", 0, 1> {
