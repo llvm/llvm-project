@@ -2515,13 +2515,26 @@ ExplodedNode *ExprEngine::processCFGBlockEntrance(const BlockEntrance &BE,
   return nullptr;
 }
 
+namespace {
+class PrettyStackTraceBlockEntrance : public llvm::PrettyStackTraceEntry {
+  const BlockEntrance &Entrance;
+
+public:
+  PrettyStackTraceBlockEntrance(const BlockEntrance &Entrance)
+      : Entrance(Entrance) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << "Processing block entrance B"
+       << Entrance.getPreviousBlock()->getBlockID() << " -> B"
+       << Entrance.getBlock()->getBlockID() << "\n";
+  }
+};
+} // namespace
+
 void ExprEngine::runCheckersForBlockEntrance(const BlockEntrance &Entrance,
                                              ExplodedNode *Pred,
                                              ExplodedNodeSet &Dst) {
-  llvm::PrettyStackTraceFormat CrashInfo(
-      "Processing block entrance B%d -> B%d",
-      Entrance.getPreviousBlock()->getBlockID(),
-      Entrance.getBlock()->getBlockID());
+  PrettyStackTraceBlockEntrance CrashInfo(Entrance);
   getCheckerManager().runCheckersForBlockEntrance(Dst, Pred, Entrance, *this);
 }
 
