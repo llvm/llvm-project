@@ -15,6 +15,7 @@
 # RUN:   -o "breakpoint list" \
 # RUN:   -o exit 2>&1 | FileCheck %s
 
+# REQUIRES: python
 # CHECK: Breakpoint 1: where = {{.*}}`helper + 3{{.*}}, address = 0x{{0*}}8
 
 #--- resolver.py
