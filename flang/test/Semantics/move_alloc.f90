@@ -65,7 +65,7 @@ program main
   call move_alloc(t1, t2)
   call move_alloc(t2, t1) ! ok
 
-  !ERROR: Actual argument for 'to=' has bad type or kind 'CHARACTER(KIND=1,LEN=3_8)'
+  !ERROR: Actual argument for 'to=' has type 'CHARACTER(KIND=1,LEN=3_8)', but 'from=' has type 'CHARACTER(KIND=1,LEN=2_8)'
   call move_alloc(ca, cb)
 
   !ERROR: Argument #1 to MOVE_ALLOC must be allocatable

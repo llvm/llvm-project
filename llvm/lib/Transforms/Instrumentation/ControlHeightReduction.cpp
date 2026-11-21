@@ -48,11 +48,9 @@ using namespace llvm;
 
 #define CHR_DEBUG(X) LLVM_DEBUG(X)
 
-static StringSet<> CHRModules;
-static StringSet<> CHRFunctions;
-
-static void parseCHRFilterFiles() {
-  const InstrumentationOptions &Opts = InstrumentationOptions::Global;
+static void parseCHRFilterFiles(const InstrumentationOptions &Opts,
+                                StringSet<> &CHRModules,
+                                StringSet<> &CHRFunctions) {
   if (!Opts.chr_module_list.empty()) {
     auto FileOrErr = MemoryBuffer::getFile(Opts.chr_module_list);
     if (!FileOrErr) {
@@ -262,11 +260,12 @@ class CHRScope {
 
 class CHR {
 public:
-  CHR(const InstrumentationOptions &Opts, Function &Fin,
-      BlockFrequencyInfo &BFIin, DominatorTree &DTin, ProfileSummaryInfo &PSIin,
-      RegionInfo &RIin, OptimizationRemarkEmitter &OREin)
-      : Opts(Opts), F(Fin), BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin),
-        ORE(OREin) {}
+  CHR(const InstrumentationOptions &Opts, const StringSet<> &CHRModules,
+      const StringSet<> &CHRFunctions, Function &Fin, BlockFrequencyInfo &BFIin,
+      DominatorTree &DTin, ProfileSummaryInfo &PSIin, RegionInfo &RIin,
+      OptimizationRemarkEmitter &OREin)
+      : Opts(Opts), CHRModules(CHRModules), CHRFunctions(CHRFunctions), F(Fin),
+        BFI(BFIin), DT(DTin), PSI(PSIin), RI(RIin), ORE(OREin) {}
 
   ~CHR() {
     for (CHRScope *Scope : Scopes) {
@@ -347,6 +346,8 @@ public:
   }
 
   const InstrumentationOptions &Opts;
+  const StringSet<> &CHRModules;
+  const StringSet<> &CHRFunctions;
   Function &F;
   BlockFrequencyInfo &BFI;
   DominatorTree &DT;
@@ -387,7 +388,9 @@ raw_ostream &operator<<(raw_ostream &OS, const CHRScope &Scope) {
   return OS;
 }
 
-static bool shouldApply(const InstrumentationOptions &Opts, Function &F,
+static bool shouldApply(const InstrumentationOptions &Opts,
+                        const StringSet<> &CHRModules,
+                        const StringSet<> &CHRFunctions, Function &F,
                         ProfileSummaryInfo &PSI) {
   if (Opts.disable_chr)
     return false;
@@ -800,8 +803,13 @@ CHRScope * CHR::findScope(Region *R) {
       // later.
       for (Instruction &I : *BB) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
-          Selects.push_back(SI);
-          ++Stats.NumBranches;
+          // The fixupBranchesAndSelects function tries to merge
+          // the condition of select instruction with 'i1 true', which
+          // fails for non-integer condition type.
+          if (SI->getCondition()->getType()->isIntegerTy()) {
+            Selects.push_back(SI);
+            ++Stats.NumBranches;
+          }
         }
       }
     }
@@ -1674,6 +1682,16 @@ void CHR::transformScopes(CHRScope *Scope, DenseSet<PHINode *> &TrivialPHIs) {
 
   assert(Scope->RegInfos.size() >= 1 && "Should have at least one Region");
 
+  // An outer scope may have hoisted one of our selects out of this scope.
+  // It can no longer be specialized under this scope's merged branch, and
+  // may also be the cached branch insertion point.
+  // TODO: Add inner selects to Unhoistables to avoid hoisting them out of
+  // their scopes and allow those scopes to be transformed.
+  for (const RegInfo &RI : Scope->CHRRegions)
+    for (SelectInst *SI : RI.Selects)
+      if (!Scope->contains(SI))
+        return;
+
   for (RegInfo &RI : Scope->RegInfos) {
     const Region *R = RI.R;
     unsigned Duplication = getRegionDuplicationCount(R);
@@ -2006,7 +2024,7 @@ void CHR::transformScopes(SmallVectorImpl<CHRScope *> &CHRScopes) {
 }
 
 bool CHR::run() {
-  if (!shouldApply(Opts, F, PSI))
+  if (!shouldApply(Opts, CHRModules, CHRFunctions, F, PSI))
     return false;
 
   CHR_DEBUG(dumpIR(F, "before", nullptr));
@@ -2082,10 +2100,6 @@ bool CHR::run() {
   return Changed;
 }
 
-ControlHeightReductionPass::ControlHeightReductionPass() {
-  parseCHRFilterFiles();
-}
-
 PreservedAnalyses ControlHeightReductionPass::run(
     Function &F,
     FunctionAnalysisManager &FAM) {
@@ -2099,8 +2113,16 @@ PreservedAnalyses ControlHeightReductionPass::run(
   auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
   auto &RI = FAM.getResult<RegionInfoAnalysis>(F);
   auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
+  const InstrumentationOptions &Opts = getInstrumentationOptions(F);
+  if (&Opts != ParsedOpts &&
+      (!Opts.chr_module_list.empty() || !Opts.chr_function_list.empty())) {
+    CHRModules.clear();
+    CHRFunctions.clear();
+    parseCHRFilterFiles(Opts, CHRModules, CHRFunctions);
+    ParsedOpts = &Opts;
+  }
   bool Changed =
-      CHR(InstrumentationOptions::Global, F, BFI, DT, PSI, RI, ORE).run();
+      CHR(Opts, CHRModules, CHRFunctions, F, BFI, DT, PSI, RI, ORE).run();
   if (!Changed)
     return PreservedAnalyses::all();
   return PreservedAnalyses::none();

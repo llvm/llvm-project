@@ -31,8 +31,10 @@ struct Keyword;
 namespace Fortran::evaluate { // avoid including all of Evaluate/tools.h
 template <typename T>
 std::optional<bool> AreEquivalentInInterface(const Expr<T> &, const Expr<T> &);
-extern template std::optional<bool> AreEquivalentInInterface<SomeInteger>(
-    const Expr<SomeInteger> &, const Expr<SomeInteger> &);
+extern template std::optional<bool>
+AreEquivalentInInterface<Type<TypeCategory::Integer>>(
+    const Expr<Type<TypeCategory::Integer>> &,
+    const Expr<Type<TypeCategory::Integer>> &);
 } // namespace Fortran::evaluate
 
 namespace Fortran::semantics {
@@ -47,11 +49,14 @@ using SourceName = parser::CharBlock;
 using TypeCategory = common::TypeCategory;
 using SomeExpr = evaluate::Expr<evaluate::SomeType>;
 using MaybeExpr = std::optional<SomeExpr>;
-using SomeIntExpr = evaluate::Expr<evaluate::SomeInteger>;
+using SomeIntExpr =
+    evaluate::Expr<evaluate::Type<common::TypeCategory::Integer>>;
 using MaybeIntExpr = std::optional<SomeIntExpr>;
 using SubscriptIntExpr = evaluate::Expr<evaluate::SubscriptInteger>;
 using MaybeSubscriptIntExpr = std::optional<SubscriptIntExpr>;
 using KindExpr = SubscriptIntExpr;
+
+KindExpr MakeKindExpr(int v);
 
 // An array spec bound: an explicit integer expression, assumed size
 // or implied shape(*), or assumed or deferred shape(:).  In the absence
@@ -64,7 +69,9 @@ class Bound {
 public:
   static Bound Star() { return Bound(Category::Star); }
   static Bound Colon() { return Bound(Category::Colon); }
-  explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {}
+  explicit Bound(MaybeSubscriptIntExpr &&expr) : expr_{std::move(expr)} {
+    CHECK(evaluate::IsSubscriptIntegerKind(expr_));
+  }
   explicit Bound(common::ConstantSubscript bound);
   Bound(const Bound &) = default;
   Bound(Bound &&) = default;
@@ -77,6 +84,7 @@ public:
   const MaybeSubscriptIntExpr &GetExplicit() const { return expr_; }
   void SetExplicit(MaybeSubscriptIntExpr &&expr) {
     CHECK(isExplicit());
+    CHECK(evaluate::IsSubscriptIntegerKind(expr));
     expr_ = std::move(expr);
   }
 
@@ -249,8 +257,28 @@ struct ArraySpec : public std::vector<ShapeSpec> {
   inline bool CanBeImpliedShape() const;
   inline bool CanBeAssumedSize() const;
   inline bool IsAssumedRank() const;
+  // Which bounds of this shape were declared with a rank-1 integer array
+  // (F2023 R818 explicit-shape-bounds-spec)?  A constant bounds array is
+  // folded into ordinary per-dimension bounds, so the spec itself no longer
+  // shows it; the module file writer uses this to write the declared
+  // whole-array form back out.
+  bool isFromRankOneBounds() const {
+    return lboundIsRankOne_ || uboundIsRankOne_;
+  }
+  bool lboundIsRankOne() const { return lboundIsRankOne_; }
+  bool uboundIsRankOne() const { return uboundIsRankOne_; }
+  void set_rankOneBounds(bool lower, bool upper) {
+    lboundIsRankOne_ = lower;
+    uboundIsRankOne_ = upper;
+  }
+  void clear() {
+    std::vector<ShapeSpec>::clear();
+    lboundIsRankOne_ = uboundIsRankOne_ = false;
+  }
 
 private:
+  bool lboundIsRankOne_{false};
+  bool uboundIsRankOne_{false};
   // Check non-empty and predicate is true for each element.
   template <typename P> bool CheckAll(P predicate) const {
     return !empty() && std::all_of(begin(), end(), predicate);

@@ -1,11 +1,26 @@
 // RUN: cir-translate %s -cir-to-llvmir --target spirv64-unknown-unknown -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
+// RUN: cir-translate %s -cir-to-llvmir --target spirv64-amd-amdhsa -o %t.amd.ll
+// RUN: FileCheck --input-file=%t.amd.ll %s -check-prefix=AMD
 
 !s32i = !cir.int<s, 32>
 
 module {
   cir.global external target_address_space(7) @addrspace3 = #cir.int<3> : !s32i
   // LLVM: @addrspace3 = addrspace(7) global i32
+
+  // Views of an llvm.func (fn_first) and a cir.func (fn_last). Keep before
+  // other global views, which would cache fn_first as a cir.func.
+  cir.func @fn_first() {
+    cir.return
+  }
+  cir.global external @fn_view_after = #cir.global_view<@fn_first> : !cir.ptr<!cir.void>
+  // AMD: @fn_view_after = global ptr addrspacecast (ptr addrspace(4) @fn_first to ptr)
+  cir.global external @fn_view_before = #cir.global_view<@fn_last> : !cir.ptr<!cir.void>
+  // AMD: @fn_view_before = global ptr addrspacecast (ptr addrspace(4) @fn_last to ptr)
+  cir.func @fn_last() {
+    cir.return
+  }
 
   // Test GlobalViewAttr with address space cast.
   cir.global external target_address_space(1) @global_in_as1 = #cir.int<42> : !s32i

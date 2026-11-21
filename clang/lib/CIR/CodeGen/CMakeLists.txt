@@ -17,6 +17,7 @@ add_clang_library(clangCIR
   CIRGenBuiltinNVPTX.cpp
   CIRGenAMDGPU.cpp
   CIRGenBuiltinRISCV.cpp
+  CIRGenBuiltinSPIRV.cpp
   CIRGenBuiltinX86.cpp
   CIRGenCall.cpp
   CIRGenClass.cpp
@@ -60,6 +61,7 @@ add_clang_library(clangCIR
   Targets/AMDGPU.cpp
   Targets/NVPTX.cpp
   Targets/SPIRV.cpp
+  Targets/SystemZ.cpp
 
   DISABLE_PCH_REUSE # PCH contains private headers
   PRECOMPILE_HEADERS
@@ -67,7 +69,7 @@ add_clang_library(clangCIR
 
   DEPENDS
   MLIRCIR
-  MLIRCIROpInterfacesIncGen
+  mlir-headers
 
   LINK_LIBS
   clangAST
@@ -88,3 +90,11 @@ add_clang_library(clangCIR
   MLIRPtrMemorySpaceInterfaces
   MLIRTargetLLVMIRImport
 )
+
+# MSVC treats the anonymous namespace forward declaration of ScalarExprEmitter
+# in CIRGenFunction.h (compiled into the PCH) as distinct from the one in
+# CIRGenExprScalar.cpp, causing error C2872 ('ScalarExprEmitter': ambiguous
+# symbol).
+if (MSVC)
+  set_source_files_properties(CIRGenExprScalar.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+endif()

@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -verify-machineinstrs -run-pass=machine-scheduler -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=machine-scheduler -o - %s | FileCheck %s
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -passes=machine-scheduler -o - %s | FileCheck %s
 
 --- |

@@ -1146,12 +1146,18 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
         bool IsOr = CombineType == "any_of";
         bool IsNone = CombineType == "none_of";
         // Change (any_of FeatureAll, (any_of ...)) to (any_of FeatureAll, ...).
+        // Also allow (any_of FeatureAll, (all_of FeatureX)) if the all_of has
+        // a single feature.
         if (IsOr && D->getNumArgs() == 2 && isa<DagInit>(D->getArg(1))) {
           const DagInit *RHS = cast<DagInit>(D->getArg(1));
-          SmallVector<std::pair<const Init *, const StringInit *>> Args{
-              *D->getArgAndNames().begin()};
-          llvm::append_range(Args, RHS->getArgAndNames());
-          D = DagInit::get(D->getOperator(), Args);
+          if (RHS->getOperator()->getAsString() == "any_of" ||
+              (RHS->getOperator()->getAsString() == "all_of" &&
+               RHS->getNumArgs() == 1)) {
+            SmallVector<std::pair<const Init *, const StringInit *>> Args{
+                *D->getArgAndNames().begin()};
+            llvm::append_range(Args, RHS->getArgAndNames());
+            D = DagInit::get(D->getOperator(), Args);
+          }
         }
 
         for (auto *Arg : D->getArgs()) {

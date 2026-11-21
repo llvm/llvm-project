@@ -11,7 +11,7 @@ stack:
 body: |
   bb.0:
     BLR8 implicit $lr8, implicit $rm
-
+...
 ---
 name:            overredzone
 tracksRegLiveness: true

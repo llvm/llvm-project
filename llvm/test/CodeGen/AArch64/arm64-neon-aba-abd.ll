@@ -480,18 +480,17 @@ define <4 x i32> @test_sabd_knownbits_vec4i32(<4 x i32> %lhs, <4 x i32> %rhs) {
 ;
 ; CHECK-GI-LABEL: test_sabd_knownbits_vec4i32:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_2
-; CHECK-GI-NEXT:    adrp x9, .LCPI43_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI43_2]
-; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI43_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI43_0
+; CHECK-GI-NEXT:    adrp x8, .LCPI43_1
+; CHECK-GI-NEXT:    adrp x9, .LCPI43_0
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI43_1]
+; CHECK-GI-NEXT:    ldr q3, [x9, :lo12:.LCPI43_0]
 ; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
-; CHECK-GI-NEXT:    movi v2.2d, #0x0000ff000000ff
 ; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI43_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
+; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
   %and1 = and <4 x i32> %lhs, <i32 255, i32 -1, i32 -1, i32 255>
   %and2 = and <4 x i32> %rhs, <i32 255, i32 255, i32 -1, i32 -1>
@@ -576,8 +575,14 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-GI-LABEL: knownbits_sabd_and_shl_mask:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    adrp x8, .LCPI47_0
-; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI47_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v0.16b
+; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI47_0]
+; CHECK-GI-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-GI-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    shl v0.4s, v0.4s, #17
+; CHECK-GI-NEXT:    shl v1.4s, v1.4s, #17
+; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-GI-NEXT:    mov v0.s[1], v0.s[0]
+; CHECK-GI-NEXT:    trn2 v0.4s, v0.4s, v0.4s
 ; CHECK-GI-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = shl <4 x i32> %1, <i32 17, i32 17, i32 17, i32 17>
@@ -589,32 +594,18 @@ define <4 x i32> @knownbits_sabd_and_shl_mask(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <4 x i32> @knownbits_sabd_and_mul_mask(<4 x i32> %a0, <4 x i32> %a1) {
-; CHECK-SD-LABEL: knownbits_sabd_and_mul_mask:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    adrp x8, .LCPI48_0
-; CHECK-SD-NEXT:    ldr q2, [x8, :lo12:.LCPI48_0]
-; CHECK-SD-NEXT:    and v3.16b, v0.16b, v2.16b
-; CHECK-SD-NEXT:    and v2.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    mul v0.4s, v0.4s, v3.4s
-; CHECK-SD-NEXT:    mul v1.4s, v1.4s, v2.4s
-; CHECK-SD-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-SD-NEXT:    mov v0.s[1], v0.s[0]
-; CHECK-SD-NEXT:    trn2 v0.4s, v0.4s, v0.4s
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: knownbits_sabd_and_mul_mask:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    adrp x8, .LCPI48_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI48_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI48_0
-; CHECK-GI-NEXT:    and v3.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    and v2.16b, v1.16b, v2.16b
-; CHECK-GI-NEXT:    mul v0.4s, v0.4s, v3.4s
-; CHECK-GI-NEXT:    mul v1.4s, v1.4s, v2.4s
-; CHECK-GI-NEXT:    sabd v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI48_0]
-; CHECK-GI-NEXT:    tbl v0.16b, { v0.16b }, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: knownbits_sabd_and_mul_mask:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI48_0
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI48_0]
+; CHECK-NEXT:    and v3.16b, v0.16b, v2.16b
+; CHECK-NEXT:    and v2.16b, v1.16b, v2.16b
+; CHECK-NEXT:    mul v0.4s, v0.4s, v3.4s
+; CHECK-NEXT:    mul v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    sabd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mov v0.s[1], v0.s[0]
+; CHECK-NEXT:    trn2 v0.4s, v0.4s, v0.4s
+; CHECK-NEXT:    ret
   %1 = and <4 x i32> %a0, <i32 -65536, i32 -7, i32 -7, i32 -65536>
   %2 = mul <4 x i32> %a0, %1
   %3 = and <4 x i32> %a1, <i32 -65536, i32 -7, i32 -7, i32 -65536>

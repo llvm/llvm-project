@@ -243,14 +243,17 @@ struct DC : KW {
   // CHECK-FIXES: ~DC() override = default;
 };
 
-// Delegating constructor with multiple initializers.
-struct DCM : KW, N {
-  DCM() : KW(), N() {}
+// Delegating constructor with multiple bases.
+// user-provided default ctor -> no zero-init required
+struct Base {
+  Base();
+};
+
+struct DCM : KW, Base {
+  DCM() : KW(), Base() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCM() = default;
 };
-
-struct dummy {};
 
 // Delegating constructor with field initializer.
 struct DCF : KW {
@@ -259,7 +262,28 @@ struct DCF : KW {
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCF() = default;
 
-  dummy d;
+  Base d{};
+};
+
+// trivial, non-empty -> value-init zeroes it
+struct non_empty {
+  int a,b;
+};
+
+// Delegating constructor with zero-init
+struct DCN : non_empty {
+
+  DCN() : non_empty() {}
+  // defaulting would remove the zero-init of non_empty.
+};
+
+// Delegating constructor with zero-init
+struct DCNF {
+
+  DCNF() : n() {}
+  // defaulting would remove the zero-init of n
+
+  non_empty n;
 };
 
 // Delegating constructor with noexcept.
@@ -267,6 +291,43 @@ struct DCNE : KW {
   DCNE() noexcept : KW() {}
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
   // CHECK-FIXES: DCNE() noexcept = default;
+};
+
+// Delegating constructor with zero-init of an array of class type.
+struct DCNA {
+  DCNA() : entries() {}
+  // defaulting would remove the zero-init of entries.
+  non_empty entries[32];
+};
+
+// Zero-init of an array of scalars.
+struct DCNS {
+  DCNS() : buf() {}
+  // defaulting would remove the zero-init of buf.
+  unsigned buf[8];
+};
+
+// Same for a plain scalar member.
+struct DCNSM {
+  DCNSM() : x() {}
+  // defaulting would remove the zero-init of x.
+  int x;
+};
+
+// Same for a plain scalar member with default init.
+struct DCNSMI {
+  DCNSMI() : x() {}
+  // Defaulting would remove the default-init of x.
+  // Note that assigning 0 would not change the linter behavior.
+  int x = 1;
+};
+
+// user-provided default ctor -> no zero-init required
+struct DCAU {
+  Base entries[4];
+  DCAU() : entries() {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use '= default'
+  // CHECK-FIXES: DCAU() = default;
 };
 
 struct OverrideWithSemiColon : KW {

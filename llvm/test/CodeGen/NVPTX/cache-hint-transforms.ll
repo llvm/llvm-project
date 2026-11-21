@@ -136,19 +136,12 @@ define <16 x i32> @test_legalize_split_load_v16i32(ptr addrspace(1) %p) {
 }
 
 define void @test_legalize_split_store_v16i32(ptr addrspace(1) %p, <16 x i32> %v) {
-; O2-LABEL: test_legalize_split_store_v16i32(
-; O2:    mov.b64 %rd2, 12345;
-; O2:    st.global.L2::cache_hint.v4.b32 [%rd1+48], {%r1, %r2, %r3, %r4}, %rd2;
-; O2:    st.global.L2::cache_hint.v4.b32 [%rd1+32], {%r5, %r6, %r7, %r8}, %rd2;
-; O2:    st.global.L2::cache_hint.v4.b32 [%rd1+16], {%r9, %r10, %r11, %r12}, %rd2;
-; O2:    st.global.L2::cache_hint.v4.b32 [%rd1], {%r13, %r14, %r15, %r16}, %rd2;
-;
-; O0-LABEL: test_legalize_split_store_v16i32(
-; O0:    mov.b64 %rd2, 12345;
-; O0:    st.global.L2::cache_hint.v4.b32 [%rd1+48], {%r13, %r14, %r15, %r16}, %rd2;
-; O0:    st.global.L2::cache_hint.v4.b32 [%rd1+32], {%r9, %r10, %r11, %r12}, %rd2;
-; O0:    st.global.L2::cache_hint.v4.b32 [%rd1+16], {%r5, %r6, %r7, %r8}, %rd2;
-; O0:    st.global.L2::cache_hint.v4.b32 [%rd1], {%r1, %r2, %r3, %r4}, %rd2;
+; CHECK-LABEL: test_legalize_split_store_v16i32(
+; CHECK:    mov.b64 %rd2, 12345;
+; CHECK:    st.global.L2::cache_hint.v4.b32 [%rd1+48], {%r1, %r2, %r3, %r4}, %rd2;
+; CHECK:    st.global.L2::cache_hint.v4.b32 [%rd1+32], {%r5, %r6, %r7, %r8}, %rd2;
+; CHECK:    st.global.L2::cache_hint.v4.b32 [%rd1+16], {%r9, %r10, %r11, %r12}, %rd2;
+; CHECK:    st.global.L2::cache_hint.v4.b32 [%rd1], {%r13, %r14, %r15, %r16}, %rd2;
   store <16 x i32> %v, ptr addrspace(1) %p, align 16, !mem.cache_hint !12
   ret void
 }
@@ -163,15 +156,10 @@ define <3 x i64> @test_legalize_scalarize_load_v3i64(ptr addrspace(1) %p) {
 }
 
 define void @test_legalize_scalarize_store_v3i64(ptr addrspace(1) %p, <3 x i64> %v) {
-; O2-LABEL: test_legalize_scalarize_store_v3i64(
-; O2:    st.global.L1::evict_first.b64 [%rd1+16], %rd2;
-; O2:    st.global.L1::evict_first.b64 [%rd1+8], %rd4;
-; O2:    st.global.L1::evict_first.b64 [%rd1], %rd3;
-;
-; O0-LABEL: test_legalize_scalarize_store_v3i64(
-; O0:    st.global.L1::evict_first.b64 [%rd1+16], %rd4;
-; O0:    st.global.L1::evict_first.b64 [%rd1+8], %rd3;
-; O0:    st.global.L1::evict_first.b64 [%rd1], %rd2;
+; CHECK-LABEL: test_legalize_scalarize_store_v3i64(
+; CHECK:    st.global.L1::evict_first.b64 [%rd1+16], %rd2;
+; CHECK:    st.global.L1::evict_first.b64 [%rd1+8], %rd4;
+; CHECK:    st.global.L1::evict_first.b64 [%rd1], %rd3;
   store <3 x i64> %v, ptr addrspace(1) %p, align 8, !mem.cache_hint !14
   ret void
 }
@@ -228,21 +216,21 @@ define void @legalize_unaligned_v3i64_store(ptr addrspace(1) %p, <3 x i64> %v) {
 ; O2:    st.global.L1::evict_first.b8 [%rd1+1], %rd25;
 ;
 ; O0-LABEL: legalize_unaligned_v3i64_store(
-; O0:    st.global.L1::evict_first.b8 [%rd1+23], %rd5;
-; O0:    st.global.L1::evict_first.b8 [%rd1+22], %rd6;
-; O0:    st.global.L1::evict_first.b8 [%rd1+21], %rd7;
-; O0:    st.global.L1::evict_first.b8 [%rd1+20], %rd8;
-; O0:    st.global.L1::evict_first.b8 [%rd1+19], %rd9;
-; O0:    st.global.L1::evict_first.b8 [%rd1+18], %rd10;
-; O0:    st.global.L1::evict_first.b8 [%rd1+16], %rd4;
-; O0:    st.global.L1::evict_first.b8 [%rd1+17], %rd11;
+; O0:    st.global.L1::evict_first.b8 [%rd1+23], %rd3;
+; O0:    st.global.L1::evict_first.b8 [%rd1+22], %rd4;
+; O0:    st.global.L1::evict_first.b8 [%rd1+21], %rd5;
+; O0:    st.global.L1::evict_first.b8 [%rd1+20], %rd6;
+; O0:    st.global.L1::evict_first.b8 [%rd1+19], %rd7;
+; O0:    st.global.L1::evict_first.b8 [%rd1+18], %rd8;
+; O0:    st.global.L1::evict_first.b8 [%rd1+16], %rd2;
+; O0:    st.global.L1::evict_first.b8 [%rd1+17], %rd9;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+15], %rd12;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+14], %rd13;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+13], %rd14;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+12], %rd15;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+11], %rd16;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+10], %rd17;
-; O0:    st.global.L1::evict_first.b8 [%rd1+8], %rd3;
+; O0:    st.global.L1::evict_first.b8 [%rd1+8], %rd11;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+9], %rd18;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+7], %rd19;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+6], %rd20;
@@ -250,7 +238,7 @@ define void @legalize_unaligned_v3i64_store(ptr addrspace(1) %p, <3 x i64> %v) {
 ; O0:    st.global.L1::evict_first.b8 [%rd1+4], %rd22;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+3], %rd23;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+2], %rd24;
-; O0:    st.global.L1::evict_first.b8 [%rd1], %rd2;
+; O0:    st.global.L1::evict_first.b8 [%rd1], %rd10;
 ; O0:    st.global.L1::evict_first.b8 [%rd1+1], %rd25;
   store <3 x i64> %v, ptr addrspace(1) %p, align 1, !mem.cache_hint !14
   ret void
@@ -343,11 +331,8 @@ define <3 x i1> @legalize_scalarize_load_v3i1(ptr addrspace(1) %p) {
 }
 
 define void @legalize_scalarize_store_v3i1(ptr addrspace(1) %p, <3 x i1> %v) {
-; O2-LABEL: legalize_scalarize_store_v3i1(
-; O2:    st.global.L1::evict_first.b8 [%rd1], %rs10;
-;
-; O0-LABEL: legalize_scalarize_store_v3i1(
-; O0:    st.global.L1::evict_first.b8 [%rd1], %rs11;
+; CHECK-LABEL: legalize_scalarize_store_v3i1(
+; CHECK:    st.global.L1::evict_first.b8 [%rd1], %rs10;
   store <3 x i1> %v, ptr addrspace(1) %p, align 1, !mem.cache_hint !14
   ret void
 }
@@ -369,10 +354,9 @@ define void @legalize_widen_truncstore_v3i8(ptr addrspace(1) %p, <3 x i32> %v) {
 ; O2:    st.global.L1::evict_first.b8 [%rd1+1], %rs3;
 ;
 ; O0-LABEL: legalize_widen_truncstore_v3i8(
-; O0:    ld.param.b32 %r3, [legalize_widen_truncstore_v3i8_param_1+8];
-; O0:    st.global.L1::evict_first.b8 [%rd1], %rs1;
-; O0:    st.global.L1::evict_first.b8 [%rd1+1], %rs2;
-; O0:    st.global.L1::evict_first.b8 [%rd1+2], %r3;
+; O0:    st.global.L1::evict_first.b8 [%rd1], %rs2;
+; O0:    st.global.L1::evict_first.b8 [%rd1+1], %rs3;
+; O0:    st.global.L1::evict_first.b8 [%rd1+2], %rs1;
   %trunc = trunc <3 x i32> %v to <3 x i8>
   store <3 x i8> %trunc, ptr addrspace(1) %p, align 1, !mem.cache_hint !14
   ret void
@@ -383,7 +367,7 @@ define i32 @scalarize_extracted_vector_load(ptr addrspace(1) %p, i64 %idx) {
 ; O2:    ld.global.L1::evict_last.b32 %r1, [%rd5];
 ;
 ; O0-LABEL: scalarize_extracted_vector_load(
-; O0:    mov.b64 %rd2, %rd3;
+; O0:    mov.b64 %rd3, %rd2;
 ; O0:    ld.global.L1::evict_last.b32 %r1, [%rd6];
   %v = load <4 x i32>, ptr addrspace(1) %p, align 16, !mem.cache_hint !13
   %elt = extractelement <4 x i32> %v, i64 %idx

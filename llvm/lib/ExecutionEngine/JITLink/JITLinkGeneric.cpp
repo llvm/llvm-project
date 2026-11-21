@@ -45,7 +45,7 @@ void JITLinkerBase::linkPhase1(std::unique_ptr<JITLinkerBase> Self) {
 
   // Skip straight to phase 2 if the graph is empty with no associated actions.
   if (G->allocActions().empty() && llvm::all_of(G->sections(), [](Section &S) {
-        return S.getMemLifetime() == orc::MemLifetime::NoAlloc;
+        return S.empty() || S.getMemLifetime() == orc::MemLifetime::NoAlloc;
       })) {
     linkPhase2(std::move(Self), nullptr);
     return;
@@ -119,7 +119,7 @@ void JITLinkerBase::linkPhase3(std::unique_ptr<JITLinkerBase> Self,
     return abandonAllocAndBailOut(std::move(Self), LR.takeError());
 
   // Assign addresses to external addressables.
-  applyLookupResult(*LR);
+  applyLookupResult(std::move(*LR));
 
   LLVM_DEBUG({
     dbgs() << "Link graph before pre-fixup passes:\n";
@@ -241,7 +241,11 @@ void JITLinkerBase::applyLookupResult(AsyncLookupResult Result) {
 void JITLinkerBase::abandonAllocAndBailOut(std::unique_ptr<JITLinkerBase> Self,
                                            Error Err) {
   assert(Err && "Should not be bailing out on success value");
-  assert(Alloc && "can not call abandonAllocAndBailOut before allocation");
+
+  // Empty graphs skip allocation, so there may be nothing to abandon.
+  if (!Alloc)
+    return Ctx->notifyFailed(std::move(Err));
+
   Alloc->abandon([S = std::move(Self), E1 = std::move(Err)](Error E2) mutable {
     S->Ctx->notifyFailed(joinErrors(std::move(E1), std::move(E2)));
   });

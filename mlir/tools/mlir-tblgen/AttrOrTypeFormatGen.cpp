@@ -125,8 +125,9 @@ static bool isUndelimitedCommaBitEnumParam(const ParameterElement *el) {
   if (!enumAttr)
     return false;
   EnumInfo enumInfo(enumAttr->getValueAsDef("enum"));
-  return enumInfo.isBitEnum() && !enumInfo.printBitEnumQuoted() &&
-         enumInfo.getDef().getValueAsString("separator").trim() == ",";
+  return enumInfo.isNewStyleBitEnum() &&
+         enumInfo.getBitEnumSeparatorKind() ==
+             EnumInfo::BitEnumSeparatorKind::Comma;
 }
 
 /// Returns true if a non-final struct parameter needs brackets to separate its

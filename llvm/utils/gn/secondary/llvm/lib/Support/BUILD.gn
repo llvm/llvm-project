@@ -153,6 +153,7 @@ static_library("Support") {
     "SmallPtrSet.cpp",
     "SmallVector.cpp",
     "SourceMgr.cpp",
+    "SourceMgrDiagnosticVerifier.cpp",
     "SpecialCaseList.cpp",
     "Statistic.cpp",
     "StringExtras.cpp",

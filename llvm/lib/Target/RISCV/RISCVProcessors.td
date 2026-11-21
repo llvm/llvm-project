@@ -95,6 +95,8 @@ class RISCVTuneProcessorModel<string n, SchedMachineModel m,
 }
 
 defvar GenericTuneFeatures = [TuneOptimizedNF2SegmentLoadStore,
+                              TuneOptimizedNF3SegmentLoadStore,
+                              TuneOptimizedNF4SegmentLoadStore,
                               TuneEnableSelectOptimize];
 
 // `generic-rv32`, and `generic-rv64` are expected to target
@@ -612,7 +614,8 @@ def SIFIVE_P870_D : RISCVProcessorModel<"sifive-p870-d", SiFiveP800Model,
                                         FeatureStdExtZvksg,
                                         FeatureStdExtZvl128b,
                                         FeatureUnalignedScalarMem,
-                                        FeatureUnalignedVectorMem]),
+                                        FeatureUnalignedVectorMem,
+                                        FeatureFixSiFiveMAL9174]),
                                        [TuneNoDefaultUnroll,
                                         TuneConditionalCompressedMoveFusion,
                                         TuneLUIADDIFusion,
@@ -778,6 +781,31 @@ def TENSTORRENT_ASCALON_XG : RISCVProcessorModel<"tt-ascalon-xg",
                                                  TTAscalonXGFeatures,
                                                  TTAscalonTuneFeatures>;
 
+// VeeR EH1 raises the minimum jump-table size: a jump-table dispatch costs
+// 4 to 10 cycles more than a predicted branch tree, and branch trees stay
+// ahead up to about 10 cases even when the switch value is random.
+class VeeREH1TuneInfo : RISCVTuneInfo {
+  let MinimumJumpTableEntries = 10;
+}
+
+// VeeR EH1 has no data cache and a single load/store unit, so clustering
+// loads gains no locality and only adds register pressure. Store clustering
+// stays on: disabling it measured neutral. Misaligned loads and stores to
+// idempotent memory are split by the core without a trap.
+def CHIPSALLIANCE_VEER_EH1 : RISCVProcessorModel<"chipsalliance-veer-eh1",
+                                                 VeeREH1Model,
+                                                 [Feature32Bit,
+                                                  FeatureStdExtI,
+                                                  FeatureStdExtZicsr,
+                                                  FeatureStdExtZifencei,
+                                                  FeatureStdExtM,
+                                                  FeatureStdExtC,
+                                                  FeatureUnalignedScalarMem],
+                                                 [TuneNoDefaultUnroll,
+                                                  TuneDisableMISchedLoadClustering,
+                                                  TunePostRAScheduler]>,
+                             VeeREH1TuneInfo;
+
 def XIANGSHAN_NANHU : RISCVProcessorModel<"xiangshan-nanhu",
                                           XiangShanNanHuModel,
                                           [Feature64Bit,
@@ -858,7 +886,8 @@ def SPACEMIT_A100 : RISCVProcessorModel<"spacemit-a100",
                                          TuneOptimizedNF2SegmentLoadStore,
                                          TuneOptimizedNF3SegmentLoadStore,
                                          TuneOptimizedNF4SegmentLoadStore,
-                                         TuneVXRMPipelineFlush]> {
+                                         TuneVXRMPipelineFlush,
+                                         TunePreferAscendingLoadStore]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000041000002;
   let MImpID =  0x10000000d5686200;

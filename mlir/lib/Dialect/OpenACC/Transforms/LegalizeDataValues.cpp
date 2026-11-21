@@ -6,11 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/Dominance.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -25,7 +27,6 @@ namespace acc {
 using namespace mlir;
 
 namespace {
-
 static bool insideAccComputeRegion(mlir::Operation *op) {
   return op->getParentOfType<ACC_COMPUTE_CONSTRUCT_OPS>();
 }
@@ -152,8 +153,14 @@ public:
   using LegalizeDataValuesInRegionBase<
       LegalizeDataValuesInRegion>::LegalizeDataValuesInRegionBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    LegalizeDataValuesInRegionBase<
+        LegalizeDataValuesInRegion>::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
+    FunctionOpInterface funcOp = getOperation();
     bool replaceHostVsDevice = this->hostToDevice.getValue();
 
     // Initialize dominance info
@@ -196,5 +203,4 @@ public:
     });
   }
 };
-
 } // end anonymous namespace

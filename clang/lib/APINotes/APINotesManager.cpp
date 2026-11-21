@@ -429,7 +429,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
         }
 
         // Grab the result.
-        if (auto Reader = Readers[*Dir].dyn_cast<APINotesReader *>())
+        if (auto Reader = dyn_cast_if_present<APINotesReader *>(Readers[*Dir]))
           Results.push_back(Reader);
         break;
       }

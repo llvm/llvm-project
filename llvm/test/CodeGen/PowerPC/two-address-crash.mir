@@ -27,19 +27,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gprc, preferred-register: '' }
-  - { id: 1, class: gprc, preferred-register: '' }
-  - { id: 2, class: gprc, preferred-register: '' }
-  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: crbitrc, preferred-register: '' }
-  - { id: 7, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 8, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 9, class: gprc, preferred-register: '' }
-  - { id: 10, class: gprc, preferred-register: '' }
-  - { id: 11, class: gprc, preferred-register: '' }
 liveins:
   - { reg: '$r3', virtual-reg: '%0' }
   - { reg: '$r4', virtual-reg: '%1' }
@@ -77,15 +64,15 @@ body:             |
     %2:gprc = COPY killed $r5
     %1:gprc = COPY killed $r4
     %0:gprc = COPY killed $r3
-    %4:gprc = RLWINM killed %1, 1, 0, 30
-    %5:crrc = CMPW killed %4, killed %2
-    %6:crbitrc = COPY killed %5.sub_lt
+    %4:gprc = RLWINM %1, 1, 0, 30
+    %5:crrc = CMPW %4, %2
+    %6:crbitrc = COPY %5.sub_lt
     %7:gprc_and_gprc_nor0 = LI 0
     %8:gprc_and_gprc_nor0 = LI 1
-    %9:gprc = ISEL killed %8, killed %7, killed %6
-    %10:gprc = RLWIMI killed %9, killed %0, 1, 0, 30
-    %11:gprc = XORI killed %10, 1
-    STH killed %11, 0, killed %3 :: (store (s16) into %ir.P)
+    %9:gprc = ISEL %8, %7, %6
+    %10:gprc = RLWIMI %9, %0, 1, 0, 30
+    %11:gprc = XORI %10, 1
+    STH %11, 0, %3 :: (store (s16) into %ir.P)
     BLR implicit $lr, implicit $rm
 
 ...

@@ -17,6 +17,7 @@
 #include "gtest/gtest.h"
 #include <list>
 #include <stdarg.h>
+#include <string>
 
 using namespace llvm;
 
@@ -183,6 +184,73 @@ struct MoveConstructOnly {
 static_assert(std::is_move_constructible_v<MoveConstructOnly>);
 static_assert(!std::is_move_assignable_v<MoveConstructOnly>);
 
+template <typename T> class SmallVectorMoveTest : public testing::Test {};
+using SmallVectorMoveTestTypes = testing::Types<int, char, Constructable>;
+TYPED_TEST_SUITE(SmallVectorMoveTest, SmallVectorMoveTestTypes, );
+
+TYPED_TEST(SmallVectorMoveTest, MoveConstructRestoresInlineCapacity) {
+  SmallVector<TypeParam, 4> From;
+  const auto *InlineData = From.data();
+  From.resize(5);
+  const auto *HeapData = From.data();
+
+  SmallVector<TypeParam, 4> To(std::move(From));
+
+  EXPECT_EQ(HeapData, To.data());
+  EXPECT_EQ(5u, To.size());
+  EXPECT_TRUE(From.empty());
+  EXPECT_EQ(4u, From.capacity());
+  From.reserve(4);
+  From.resize(4);
+  EXPECT_EQ(InlineData, From.data());
+}
+
+TYPED_TEST(SmallVectorMoveTest, MoveAssignRestoresInlineCapacity) {
+  for (bool Empty : {false, true}) {
+    SmallVector<TypeParam, 4> From;
+    const auto *InlineData = From.data();
+    From.resize(5);
+    const auto *HeapData = From.data();
+    if (Empty)
+      From.clear();
+    SmallVector<TypeParam, 4> To(6);
+
+    To = std::move(From);
+
+    EXPECT_EQ(HeapData, To.data());
+    EXPECT_EQ(Empty ? 0u : 5u, To.size());
+    EXPECT_TRUE(From.empty());
+    EXPECT_EQ(4u, From.capacity());
+    From.emplace_back();
+    EXPECT_EQ(InlineData, From.data());
+  }
+}
+
+TYPED_TEST(SmallVectorMoveTest, SelfMovePreservesCapacity) {
+  for (unsigned Size : {0u, 4u, 5u}) {
+    SmallVector<TypeParam, 4> V(Size);
+    auto *Data = V.data();
+    auto Capacity = V.capacity();
+    auto &Alias = V;
+
+    V = std::move(Alias);
+
+    EXPECT_EQ(Data, V.data());
+    EXPECT_EQ(Capacity, V.capacity());
+    EXPECT_EQ(Size, V.size());
+  }
+}
+
+TYPED_TEST(SmallVectorMoveTest, MoveWithoutInlineCapacity) {
+  SmallVector<TypeParam, 0> From(1);
+  SmallVector<TypeParam, 0> To(std::move(From));
+  EXPECT_TRUE(From.empty());
+  EXPECT_EQ(0u, From.capacity());
+  From = std::move(To);
+  EXPECT_TRUE(To.empty());
+  EXPECT_EQ(0u, To.capacity());
+}
+
 LLVM_ATTRIBUTE_USED void CompileTest() {
   SmallVector<NonCopyable, 0> V;
   V.resize(42);
@@ -210,6 +278,7 @@ TEST(SmallVectorTest, MoveConstructNonMoveAssignableInlineElements) {
 
 TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
   SmallVector<MoveConstructOnly, 1> From;
+  const auto *InlineData = From.data();
   From.emplace_back(1);
   From.emplace_back(2);
   const MoveConstructOnly *FromData = From.data();
@@ -221,6 +290,9 @@ TEST(SmallVectorTest, MoveConstructNonMoveAssignableAllocatedElements) {
   EXPECT_EQ(FromData, To.data());
   EXPECT_EQ(1, To[0].Value);
   EXPECT_EQ(2, To[1].Value);
+  EXPECT_EQ(1u, From.capacity());
+  From.emplace_back(3);
+  EXPECT_EQ(InlineData, From.data());
 }
 
 TEST(SmallVectorTest, MoveConstructNonMoveAssignableFromSmallVectorImpl) {
@@ -505,6 +577,28 @@ TEST(SmallVectorTest, ResizeForOverwrite) {
     V.pop_back();
     V.resize(V.size() + 1);
     EXPECT_EQ(0U, V.back());
+  }
+}
+
+TEST(SmallVectorTest, ConstructForOverwrite) {
+  {
+    // Heap allocated storage.
+    SmallVector<unsigned, 0> V(3, for_overwrite);
+    EXPECT_EQ(3U, V.size());
+    EXPECT_GE(V.capacity(), 3U);
+  }
+  {
+    // Inline storage.
+    SmallVector<unsigned, 4> V(3, for_overwrite);
+    EXPECT_EQ(3U, V.size());
+    EXPECT_EQ(4U, V.capacity());
+  }
+  {
+    // Class types are default-constructed.
+    SmallVector<std::string, 0> V(2, for_overwrite);
+    EXPECT_EQ(2U, V.size());
+    EXPECT_TRUE(V[0].empty());
+    EXPECT_TRUE(V[1].empty());
   }
 }
 
@@ -1720,6 +1814,71 @@ TYPED_TEST(SmallVectorInternalReferenceInvalidationTest, EmplaceBack) {
   V.emplace_back(V.back().first, V.back().second);
   EXPECT_EQ(int(V.size()) - 1, V.back().first);
   EXPECT_EQ(int(V.size()) - 1, V.back().second);
+}
+
+struct PolymorphicBase {
+  int Value = 0;
+  PolymorphicBase() = default;
+  explicit PolymorphicBase(int V) : Value(V) {}
+  PolymorphicBase(const PolymorphicBase &) = default;
+  PolymorphicBase(PolymorphicBase &&) noexcept = default;
+  PolymorphicBase &operator=(const PolymorphicBase &) = default;
+  PolymorphicBase &operator=(PolymorphicBase &&) noexcept = default;
+  virtual ~PolymorphicBase() = default;
+  virtual int get() const { return Value; }
+  bool operator==(const PolymorphicBase &RHS) const {
+    return Value == RHS.Value;
+  }
+};
+
+struct PolymorphicDerived : PolymorphicBase {
+  using PolymorphicBase::PolymorphicBase;
+  int get() const override { return Value * 2; }
+};
+
+TEST(SmallVectorTest, PolymorphicTypes) {
+  // Exercise inline storage, growth to heap storage, insertion, erasure,
+  // copy/move, and virtual dispatch with a polymorphic value type.
+  alignas(SmallVector<PolymorphicBase, 2>) unsigned char
+      Storage[sizeof(SmallVector<PolymorphicBase, 2>)];
+  std::memset(Storage, 0x5A, sizeof(Storage));
+  auto *V = ::new (Storage) SmallVector<PolymorphicBase, 2>();
+  EXPECT_TRUE(V->empty());
+  EXPECT_EQ(V->begin(), V->end());
+
+  V->push_back(PolymorphicBase(1));
+  V->emplace_back(2);
+  V->emplace_back(3);
+  V->insert(V->begin(), PolymorphicBase(0));
+  ASSERT_EQ(4u, V->size());
+  for (int I = 0; I < 4; ++I)
+    EXPECT_EQ(I, (*V)[I].get());
+
+  V->resize(6, PolymorphicBase(5));
+  EXPECT_EQ(5, V->back().get());
+  V->erase(V->begin());
+  EXPECT_EQ(1, V->front().get());
+
+  SmallVector<PolymorphicBase, 2> Copy(*V);
+  EXPECT_EQ(*V, Copy);
+  SmallVector<PolymorphicBase, 2> Moved(std::move(Copy));
+  EXPECT_EQ(*V, Moved);
+  V->~SmallVector<PolymorphicBase, 2>();
+
+  SmallVector<PolymorphicBase, 0> V0;
+  V0.emplace_back(10);
+  V0.emplace_back(20);
+  EXPECT_EQ(10, V0[0].get());
+  EXPECT_EQ(20, V0[1].get());
+
+  PolymorphicBase B(3);
+  PolymorphicDerived D(4);
+  SmallVector<PolymorphicBase *, 1> PtrV;
+  PtrV.push_back(&B);
+  PtrV.push_back(&D);
+  ASSERT_EQ(2u, PtrV.size());
+  EXPECT_EQ(3, PtrV[0]->get());
+  EXPECT_EQ(8, PtrV[1]->get());
 }
 
 } // end namespace
