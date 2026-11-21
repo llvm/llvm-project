@@ -772,18 +772,10 @@ define void @short_vector_elt1_to_i16_bswap_strict_align(ptr %in, ptr %out, ptr 
 }
 
 ; x1 = x0
-; FIXME: Should be a single 32-bit load.
 define void @short_vector_nested_shl_to_i32(ptr %in, ptr %out, ptr %p) {
 ; CHECK-LABEL: short_vector_nested_shl_to_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldrh w10, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    orr w8, w8, w9, lsl #24
-; CHECK-NEXT:    orr w8, w8, w10
+; CHECK-NEXT:    ldr w8, [x0]
 ; CHECK-NEXT:    str w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, ptr %in, align 4
@@ -808,15 +800,10 @@ define void @short_vector_nested_shl_to_i32(ptr %in, ptr %out, ptr %p) {
 }
 
 ; x1 = x0[2:3]
-; FIXME: Should be a 16-bit load from x0 + 2.
 define void @short_vector_high_half_to_i16(ptr %in, ptr %out, ptr %p) {
 ; CHECK-LABEL: short_vector_high_half_to_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    umov w8, v0.h[2]
-; CHECK-NEXT:    umov w9, v0.h[3]
-; CHECK-NEXT:    orr w8, w8, w9, lsl #8
+; CHECK-NEXT:    ldrh w8, [x0, #2]
 ; CHECK-NEXT:    strh w8, [x1]
 ; CHECK-NEXT:    ret
   %ld = load <4 x i8>, ptr %in, align 4
