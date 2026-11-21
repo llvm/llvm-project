@@ -301,29 +301,47 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   std::vector<Symbol> SymsStorage;
   switch (DuplicateHandle) {
   case DuplicateHandling::Merge: {
+    // Most symbols are in one slab only and have no references to count:
+    // these are used as they are in their slab. Only the others are copied.
+    llvm::DenseMap<SymbolID, const Symbol *> Unmerged;
     llvm::DenseMap<SymbolID, Symbol> Merged;
     for (const auto &Slab : SymbolSlabs) {
       for (const auto &Sym : *Slab) {
         assert(Sym.References == 0 &&
                "Symbol with non-zero references sent to FileSymbols");
-        auto I = Merged.try_emplace(Sym.ID, Sym);
-        if (!I.second)
-          I.first->second = mergeSymbol(I.first->second, Sym);
+        auto MergedIt = Merged.find(Sym.ID);
+        if (MergedIt != Merged.end()) {
+          MergedIt->second = mergeSymbol(MergedIt->second, Sym);
+          continue;
+        }
+        auto I = Unmerged.try_emplace(Sym.ID, &Sym);
+        if (!I.second) {
+          Merged.try_emplace(Sym.ID, mergeSymbol(*I.first->second, Sym));
+          Unmerged.erase(I.first);
+        }
       }
     }
     for (const RefSlab *Refs : MainFileRefs)
       for (const auto &Sym : *Refs) {
         auto It = Merged.find(Sym.first);
-        // This might happen while background-index is still running.
-        if (It == Merged.end())
-          continue;
+        if (It == Merged.end()) {
+          auto UnmergedIt = Unmerged.find(Sym.first);
+          // This might happen while background-index is still running.
+          if (UnmergedIt == Unmerged.end())
+            continue;
+          It = Merged.try_emplace(Sym.first, *UnmergedIt->second).first;
+          Unmerged.erase(UnmergedIt);
+        }
         It->getSecond().References += Sym.second.size();
       }
     SymsStorage.reserve(Merged.size());
+    AllSymbols.reserve(Merged.size() + Unmerged.size());
     for (auto &Sym : Merged) {
       SymsStorage.push_back(std::move(Sym.second));
       AllSymbols.push_back(&SymsStorage.back());
     }
+    for (const auto &Sym : Unmerged)
+      AllSymbols.push_back(Sym.second);
     break;
   }
   case DuplicateHandling::PickOne: {
@@ -342,15 +360,28 @@ FileSymbols::buildIndex(IndexType Type, DuplicateHandling DuplicateHandle,
   std::vector<Ref> RefsStorage; // Contiguous ranges for each SymbolID.
   llvm::DenseMap<SymbolID, llvm::ArrayRef<Ref>> AllRefs;
   {
+    // The refs of a symbol that only one slab has are used as they are in
+    // that slab, which sorted them. Only the refs of the others are copied.
     llvm::DenseMap<SymbolID, llvm::SmallVector<Ref, 4>> MergedRefs;
     size_t Count = 0;
     for (const auto &RefSlab : RefSlabs)
       for (const auto &Sym : *RefSlab) {
-        MergedRefs[Sym.first].append(Sym.second.begin(), Sym.second.end());
+        auto MergedIt = MergedRefs.find(Sym.first);
+        if (MergedIt == MergedRefs.end()) {
+          auto I = AllRefs.try_emplace(Sym.first, Sym.second);
+          if (I.second)
+            continue;
+          MergedIt = MergedRefs.try_emplace(Sym.first).first;
+          MergedIt->second.append(I.first->second.begin(),
+                                  I.first->second.end());
+          Count += I.first->second.size();
+          AllRefs.erase(I.first);
+        }
+        MergedIt->second.append(Sym.second.begin(), Sym.second.end());
         Count += Sym.second.size();
       }
     RefsStorage.reserve(Count);
-    AllRefs.reserve(MergedRefs.size());
+    AllRefs.reserve(AllRefs.size() + MergedRefs.size());
     for (auto &Sym : MergedRefs) {
       auto &SymRefs = Sym.second;
       // Sorting isn't required, but yields more stable results over rebuilds.
