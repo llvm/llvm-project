@@ -1680,7 +1680,8 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   llvm::Type *SrcTy = Src->getType();
 
   // Handle conversions to bool first, they are special: comparisons against 0.
-  if (DstType->isBooleanType())
+  // An enumeration whose underlying type is bool converts the same way.
+  if (DstType->isBooleanType() || DstType->isBooleanEnumerationType())
     return EmitConversionToBool(Src, SrcType);
 
   llvm::Type *DstTy = ConvertType(DstType);
@@ -3354,7 +3355,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
 
   if (const AtomicType *atomicTy = type->getAs<AtomicType>()) {
     type = atomicTy->getValueType();
-    if (isInc && type->isBooleanType()) {
+    if (isInc && (type->isBooleanType() || type->isBooleanEnumerationType())) {
       llvm::Value *True = CGF.EmitToMemory(Builder.getTrue(), type);
       if (isPre) {
         Builder.CreateStore(True, LV.getAddress(), LV.isVolatileQualified())
@@ -3426,7 +3427,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   //          -> bool = ((int)bool + 1 != 0)
   // An interesting aspect of this is that increment is always true.
   // Decrement does not have this property.
-  if (isInc && type->isBooleanType()) {
+  if (isInc && (type->isBooleanType() || type->isBooleanEnumerationType())) {
     value = Builder.getTrue();
 
   // Most common case by far: integer increment.
