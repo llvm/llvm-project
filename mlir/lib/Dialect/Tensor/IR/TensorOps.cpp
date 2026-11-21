@@ -1413,6 +1413,20 @@ LogicalResult ExtractOp::verify() {
   return success();
 }
 
+Speculation::Speculatability ExtractOp::getSpeculatability() {
+  // An out-of-bounds index is undefined behavior, so the op is speculatable
+  // only if all indices are known to be in bounds.
+  auto tensorType = llvm::cast<RankedTensorType>(getTensor().getType());
+  for (auto [index, dimSize] :
+       llvm::zip_equal(getIndices(), tensorType.getShape())) {
+    std::optional<int64_t> constantIndex = getConstantIntValue(index);
+    if (!constantIndex || ShapedType::isDynamic(dimSize) ||
+        *constantIndex < 0 || *constantIndex >= dimSize)
+      return Speculation::NotSpeculatable;
+  }
+  return Speculation::Speculatable;
+}
+
 /// If we have an ExtractOp consuming an InsertOp with the same
 /// indices, we can return the InsertOp's scalar directly.
 // TODO: This only checks the immediate producer; extend to go up the
