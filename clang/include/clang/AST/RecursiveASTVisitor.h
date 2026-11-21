@@ -2941,6 +2941,7 @@ DEF_TRAVERSE_STMT(CXXMemberCallExpr, {})
 // These exprs (most of them), do not need any action except iterating
 // over the children.
 DEF_TRAVERSE_STMT(AddrLabelExpr, {})
+DEF_TRAVERSE_STMT(OverflowGotoExpr, {})
 DEF_TRAVERSE_STMT(ArraySubscriptExpr, {})
 DEF_TRAVERSE_STMT(MatrixSingleSubscriptExpr, {})
 DEF_TRAVERSE_STMT(MatrixSubscriptExpr, {})

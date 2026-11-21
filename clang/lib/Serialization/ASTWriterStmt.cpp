@@ -1406,6 +1406,16 @@ void ASTStmtWriter::VisitAddrLabelExpr(AddrLabelExpr *E) {
   Code = serialization::EXPR_ADDR_LABEL;
 }
 
+void ASTStmtWriter::VisitOverflowGotoExpr(OverflowGotoExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getSubExpr());
+  Record.AddDeclRef(E->getLabel());
+  Record.AddSourceLocation(E->getBuiltinLoc());
+  Record.AddSourceLocation(E->getLabelLoc());
+  Record.AddSourceLocation(E->getRParenLoc());
+  Code = serialization::EXPR_OVERFLOW_GOTO;
+}
+
 void ASTStmtWriter::VisitStmtExpr(StmtExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getSubStmt());

@@ -1817,6 +1817,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
             return true;
           } else if (IsBuiltinTrait(Tok)) {
             return true;
+          } else if (II->getTokenID() == tok::kw___builtin_overflow_goto) {
+            return getLangOpts().OverflowBehaviorTypes;
           } else if (II->getTokenID() != tok::identifier &&
                      II->getName().starts_with("__builtin_")) {
             return true;

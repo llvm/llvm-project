@@ -59,3 +59,13 @@ __overflow:
 int no_handler(int __ob_trap a) {
   return a + 1;
 }
+
+// __builtin_overflow_goto branches to its own label.
+int builtin_handler(int __ob_trap a) {
+  a = __builtin_overflow_goto(a + 1, l);
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  return a;
+l:
+  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  return -1;
+}
