@@ -122,6 +122,7 @@ add_object_library(
     libc.src.__support.OSUtil.linux.auxv
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
     libc.src.__support.OSUtil.osutil
+    libc.src.__support.threads.stack_size
     libc.src.__support.threads.tcb
     libc.src.__support.threads.thread
     libc.src.__support.threads.linux.futex_utils

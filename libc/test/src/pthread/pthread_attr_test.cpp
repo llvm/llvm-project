@@ -52,6 +52,11 @@ TEST(LlvmLibcPThreadAttrTest, InitAndDestroy) {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getguardsize(&attr, &guardsize), 0);
   ASSERT_EQ(guardsize, size_t(EXEC_PAGESIZE));
 
+  size_t stacksize;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_getstacksize(&attr, &stacksize), 0);
+  ASSERT_GE(stacksize, size_t(PTHREAD_STACK_MIN));
+  ASSERT_EQ(stacksize % size_t(EXEC_PAGESIZE), size_t(0));
+
   ASSERT_EQ(LIBC_NAMESPACE::pthread_attr_destroy(&attr), 0);
 }
 

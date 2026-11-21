@@ -63,9 +63,6 @@ bool set_tss_value(unsigned int key, void *value);
 void *get_tss_value(unsigned int key);
 
 struct Thread {
-  // NB: Default stacksize of 64kb is exceedingly small compared to the 2mb norm
-  // and will break many programs expecting the full 2mb.
-  static constexpr size_t DEFAULT_STACKSIZE = 1 << 16;
   static constexpr size_t DEFAULT_GUARDSIZE = EXEC_PAGESIZE;
   static constexpr bool DEFAULT_DETACHED = false;
 
@@ -74,9 +71,10 @@ struct Thread {
   constexpr Thread() : attrib(nullptr) {}
   constexpr Thread(ThreadAttributes *attr) : attrib(attr) {}
 
+  // When stack is nullptr and stacksize is 0, the platform default stack size
+  // is used.
   int run(ThreadRunnerPosix *func, void *arg, void *stack = nullptr,
-          size_t stacksize = DEFAULT_STACKSIZE,
-          size_t guardsize = DEFAULT_GUARDSIZE,
+          size_t stacksize = 0, size_t guardsize = DEFAULT_GUARDSIZE,
           bool detached = DEFAULT_DETACHED,
           cpp::optional<SchedParameters> sched_params = cpp::nullopt) {
     ThreadRunner runner;
@@ -86,8 +84,7 @@ struct Thread {
   }
 
   int run(ThreadRunnerStdc *func, void *arg, void *stack = nullptr,
-          size_t stacksize = DEFAULT_STACKSIZE,
-          size_t guardsize = DEFAULT_GUARDSIZE,
+          size_t stacksize = 0, size_t guardsize = DEFAULT_GUARDSIZE,
           bool detached = DEFAULT_DETACHED) {
     ThreadRunner runner;
     runner.stdc_runner = func;

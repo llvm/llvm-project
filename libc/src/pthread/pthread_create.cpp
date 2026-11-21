@@ -32,8 +32,11 @@ LLVM_LIBC_FUNCTION(int, pthread_create,
                    (pthread_t *__restrict th,
                     const pthread_attr_t *__restrict attr,
                     __pthread_start_t func, void *arg)) {
-  if (attr == nullptr)
-    attr = &DEFAULT_PTHREAD_ATTR;
+  pthread_attr_t default_attr;
+  if (attr == nullptr) {
+    default_attr = default_pthread_attr();
+    attr = &default_attr;
+  }
 
   void *stack = attr->__stack;
   size_t stacksize = attr->__stacksize;

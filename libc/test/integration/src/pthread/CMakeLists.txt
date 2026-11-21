@@ -376,6 +376,40 @@ add_integration_test(
 )
 
 add_integration_test(
+  pthread_default_stacksize_test
+  SUITE
+    libc-pthread-integration-tests
+  SRCS
+    pthread_default_stacksize_test.cpp
+  DEPENDS
+    libc.hdr.sys_resource_macros
+    libc.hdr.sys_wait_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.pthread_attr_t
+    libc.hdr.types.pthread_t
+    libc.hdr.types.struct_rlimit
+    libc.include.threads
+    libc.src.__support.CPP.string_view
+    libc.src.__support.threads.stack_size
+    libc.src.pthread.pthread_attr_destroy
+    libc.src.pthread.pthread_attr_getstacksize
+    libc.src.pthread.pthread_attr_init
+    libc.src.pthread.pthread_create
+    libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getstack_np
+    libc.src.pthread.pthread_join
+    libc.src.pthread.pthread_self
+    libc.src.stdlib._Exit
+    libc.src.sys.resource.getrlimit
+    libc.src.sys.resource.setrlimit
+    libc.src.sys.wait.waitpid
+    libc.src.threads.thrd_create
+    libc.src.threads.thrd_join
+    libc.src.unistd.execve
+    libc.src.unistd.fork
+)
+
+add_integration_test(
   pthread_setschedparam_test
   SUITE
     libc-pthread-integration-tests

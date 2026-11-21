@@ -38,6 +38,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/threads/linux/futex_utils.h" // For FutexWordType
 #include "src/__support/threads/linux/futex_word.h"
+#include "src/__support/threads/linux/stack_size.h"
 #include "src/__support/threads/thread_attributes.h"
 #include "src/__support/time/linux/cpu_clock.h"
 
@@ -191,10 +192,8 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
                 cpp::optional<SchedParameters> sched_params) {
   bool owned_stack = false;
   if (stack == nullptr) {
-    // TODO: Should we return EINVAL here? Should we have a generic concept of a
-    //       minimum stacksize (like 16384 for pthread).
     if (stacksize == 0)
-      stacksize = DEFAULT_STACKSIZE;
+      stacksize = default_stacksize();
     // Roundup stacksize/guardsize to page size.
     // TODO: Should be also add sizeof(ThreadAttribute) and other internal
     //       meta data?
