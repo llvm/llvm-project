@@ -54,8 +54,10 @@ void InstructionOrdering::initialize(const MachineFunction &MF) {
   clear();
   InstNumberMap.reserve(MF.getInstructionCount());
   unsigned Position = 0;
+  // Number the instructions inside bundles too: a scope range can start or
+  // end at an instruction in a delay slot.
   for (const MachineBasicBlock &MBB : MF)
-    for (const MachineInstr &MI : MBB)
+    for (const MachineInstr &MI : MBB.instrs())
       InstNumberMap[&MI] = MI.isMetaInstruction() ? Position : ++Position;
 }
 

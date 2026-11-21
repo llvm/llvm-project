@@ -206,6 +206,9 @@ void LanaiAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
   do {
+    if (&*I != MI)
+      beginBundledInstruction(&*I);
+
     if (I->isCall()) {
       emitCallInstruction(&*I);
       continue;

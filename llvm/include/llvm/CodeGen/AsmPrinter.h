@@ -672,6 +672,13 @@ public:
     llvm_unreachable("EmitInstruction not implemented");
   }
 
+  /// Targets that emit the instructions of a bundle themselves, such as the
+  /// instructions in a delay slot, call this before emitting each instruction
+  /// of the bundle after the first. It ends the instruction emitted before
+  /// \p MI and begins \p MI for the debug and EH handlers, so that the line
+  /// table entry and labels for \p MI are emitted at its own address.
+  void beginBundledInstruction(const MachineInstr *MI);
+
   /// Return the symbol for the specified constant pool entry.
   virtual MCSymbol *GetCPISymbol(unsigned CPID) const;
 
