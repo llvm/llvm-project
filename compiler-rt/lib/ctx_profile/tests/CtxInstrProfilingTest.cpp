@@ -311,3 +311,209 @@ TEST_F(ContextTest, MustNotBeRoot) {
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
   EXPECT_TRUE(isScratch(Subctx));
 }
+
+TEST_F(ContextTest, FlatProfileAfterContendedRootExit) {
+  __llvm_ctx_profile_start_collection();
+  __sanitizer::Semaphore RootLocked;
+  __sanitizer::Semaphore ReleaseHolder;
+
+  std::thread Holder([&]() {
+    auto *Ctx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+    EXPECT_FALSE(isScratch(Ctx));
+    RootLocked.Post();
+    ReleaseHolder.Wait();
+    __llvm_ctx_profile_release_context(&Root);
+  });
+
+  RootLocked.Wait();
+  auto *ContendedCtx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  EXPECT_TRUE(isScratch(ContendedCtx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+
+  int CalleeAddr1 = 0;
+  FunctionData UnderRootCallee;
+  auto *CalleeCtx =
+      __llvm_ctx_profile_get_context(&UnderRootCallee, &CalleeAddr1, 2, 3, 0);
+  EXPECT_TRUE(isScratch(CalleeCtx));
+  EXPECT_EQ(UnderRootCallee.FlatCtx, nullptr);
+
+  // Releasing a non-root or musttail function must not clear under-context
+  // state.
+  __llvm_ctx_profile_release_context(&UnderRootCallee);
+  FunctionData MusttailFunc;
+  MusttailFunc.CtxRoot = reinterpret_cast<ContextRoot *>(1U);
+  __llvm_ctx_profile_release_context(&MusttailFunc);
+
+  int CalleeAddr2 = 0;
+  FunctionData StillUnderRootCallee;
+  auto *StillUnderCtx = __llvm_ctx_profile_get_context(&StillUnderRootCallee,
+                                                       &CalleeAddr2, 3, 3, 0);
+  EXPECT_TRUE(isScratch(StillUnderCtx));
+  EXPECT_EQ(StillUnderRootCallee.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+
+  int CalleeAddr3 = 0;
+  FunctionData PostRootFunc;
+  auto *PostRootCtx =
+      __llvm_ctx_profile_get_context(&PostRootFunc, &CalleeAddr3, 4, 3, 0);
+  EXPECT_TRUE(isScratch(PostRootCtx));
+  ASSERT_NE(PostRootFunc.FlatCtx, nullptr);
+  EXPECT_EQ(PostRootFunc.FlatCtx->entrycount(), 1U);
+
+  // Also verify contended autodetected root entry via get_context.
+  int RootAddr = 0;
+  auto *AutoContendedCtx =
+      __llvm_ctx_profile_get_context(&Root, &RootAddr, 1, 10, 4);
+  EXPECT_TRUE(isScratch(AutoContendedCtx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+
+  int CalleeAddr4 = 0;
+  FunctionData UnderAutoRootCallee;
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_get_context(&UnderAutoRootCallee,
+                                                       &CalleeAddr4, 5, 3, 0)));
+  EXPECT_EQ(UnderAutoRootCallee.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+
+  int CalleeAddr5 = 0;
+  FunctionData PostAutoRootFunc;
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_get_context(&PostAutoRootFunc,
+                                                       &CalleeAddr5, 6, 3, 0)));
+  ASSERT_NE(PostAutoRootFunc.FlatCtx, nullptr);
+  EXPECT_EQ(PostAutoRootFunc.FlatCtx->entrycount(), 1U);
+
+  ReleaseHolder.Post();
+  Holder.join();
+}
+
+TEST_F(ContextTest, FlatProfileUnderRecursiveAndNestedContendedRoots) {
+  __llvm_ctx_profile_start_collection();
+
+  // An unmatched root release (e.g. a function promoted while already on the
+  // stack) must not underflow the depth counter.
+  __llvm_ctx_profile_release_context(&Root);
+  FunctionData DepthZeroFunc;
+  int DepthZeroAddr = 0;
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_get_context(
+      &DepthZeroFunc, &DepthZeroAddr, 10, 2, 0)));
+  ASSERT_NE(DepthZeroFunc.FlatCtx, nullptr);
+  EXPECT_EQ(DepthZeroFunc.FlatCtx->entrycount(), 1U);
+
+  FunctionData Root2;
+  Root2.getOrAllocateContextRoot();
+  __sanitizer::Semaphore RootsLocked;
+  __sanitizer::Semaphore ReleaseHolders;
+
+  std::thread Holder1([&]() {
+    EXPECT_FALSE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+    RootsLocked.Post();
+    ReleaseHolders.Wait();
+    __llvm_ctx_profile_release_context(&Root);
+  });
+  std::thread Holder2([&]() {
+    EXPECT_FALSE(isScratch(__llvm_ctx_profile_start_context(&Root2, 2, 10, 4)));
+    RootsLocked.Post();
+    ReleaseHolders.Wait();
+    __llvm_ctx_profile_release_context(&Root2);
+  });
+  RootsLocked.Wait();
+  RootsLocked.Wait();
+
+  // Recursive contended root: flat profiling stays suppressed until the
+  // outermost exit.
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  __llvm_ctx_profile_release_context(&Root);
+
+  FunctionData BetweenRecursiveExits;
+  int Addr1 = 0;
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_get_context(&BetweenRecursiveExits,
+                                                       &Addr1, 11, 2, 0)));
+  EXPECT_EQ(BetweenRecursiveExits.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+  FunctionData AfterRecursiveExit;
+  int Addr2 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&AfterRecursiveExit, &Addr2, 12, 2, 0)));
+  ASSERT_NE(AfterRecursiveExit.FlatCtx, nullptr);
+  EXPECT_EQ(AfterRecursiveExit.FlatCtx->entrycount(), 1U);
+
+  // Nested contended roots: exiting the inner root keeps flat profiling
+  // suppressed under the outer contended root.
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root2, 2, 10, 4)));
+  __llvm_ctx_profile_release_context(&Root2);
+
+  FunctionData BetweenNestedExits;
+  int Addr3 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&BetweenNestedExits, &Addr3, 13, 2, 0)));
+  EXPECT_EQ(BetweenNestedExits.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+  FunctionData AfterNestedExit;
+  int Addr4 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&AfterNestedExit, &Addr4, 14, 2, 0)));
+  ASSERT_NE(AfterNestedExit.FlatCtx, nullptr);
+  EXPECT_EQ(AfterNestedExit.FlatCtx->entrycount(), 1U);
+
+  // Nested uncontended inner root under a contended outer root: exiting the
+  // inner root still keeps flat profiling suppressed until the outer root
+  // exits.
+  FunctionData Root3;
+  Root3.getOrAllocateContextRoot();
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  EXPECT_FALSE(isScratch(__llvm_ctx_profile_start_context(&Root3, 3, 10, 4)));
+  __llvm_ctx_profile_release_context(&Root3);
+
+  FunctionData UnderOuterAfterInnerUnlock;
+  int Addr5 = 0;
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_get_context(
+      &UnderOuterAfterInnerUnlock, &Addr5, 15, 2, 0)));
+  EXPECT_EQ(UnderOuterAfterInnerUnlock.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+  FunctionData AfterOuterExit;
+  int Addr6 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&AfterOuterExit, &Addr6, 16, 2, 0)));
+  ASSERT_NE(AfterOuterExit.FlatCtx, nullptr);
+  EXPECT_EQ(AfterOuterExit.FlatCtx->entrycount(), 1U);
+
+  // Nested autodetected inner root entered via get_context under a held outer
+  // root must balance UnderContextDepth so flat profiling stays suppressed even
+  // if a subsequent contended root clears CurrentRoot.
+  FunctionData HeldOuter;
+  HeldOuter.getOrAllocateContextRoot();
+  FunctionData AutoInner;
+  AutoInner.getOrAllocateContextRoot();
+  int AutoInnerAddr = 0;
+  EXPECT_FALSE(
+      isScratch(__llvm_ctx_profile_start_context(&HeldOuter, 4, 10, 4)));
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&AutoInner, &AutoInnerAddr, 5, 4, 0)));
+  __llvm_ctx_profile_release_context(&AutoInner);
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  __llvm_ctx_profile_release_context(&Root);
+
+  FunctionData UnderHeldOuter;
+  int Addr7 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&UnderHeldOuter, &Addr7, 17, 2, 0)));
+  EXPECT_EQ(UnderHeldOuter.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&HeldOuter);
+  FunctionData AfterHeldOuterExit;
+  int Addr8 = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&AfterHeldOuterExit, &Addr8, 18, 2, 0)));
+  ASSERT_NE(AfterHeldOuterExit.FlatCtx, nullptr);
+  EXPECT_EQ(AfterHeldOuterExit.FlatCtx->entrycount(), 1U);
+
+  ReleaseHolders.Post(2);
+  Holder1.join();
+  Holder2.join();
+}
