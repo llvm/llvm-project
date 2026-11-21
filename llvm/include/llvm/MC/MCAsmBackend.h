@@ -162,6 +162,10 @@ public:
   // Return false to use default handling. Otherwise, set `Size` to the number
   // of padding bytes.
   virtual bool relaxAlign(MCFragment &F, unsigned &Size) { return false; }
+  // Handle preferred code alignment after its alignment has been computed.
+  // Return false to use default handling. Otherwise, set Size to the padding
+  // size and emit any required fixups.
+  virtual bool relaxPrefAlign(MCFragment &F, unsigned &Size) { return false; }
   virtual bool relaxDwarfLineAddr(MCFragment &) const { return false; }
   virtual bool relaxDwarfCFA(MCFragment &) const { return false; }
   virtual bool relaxSFrameCFA(MCFragment &) const { return false; }

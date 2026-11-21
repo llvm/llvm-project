@@ -856,6 +856,13 @@ void MCAssembler::relaxPrefAlign(MCFragment &F) {
   NewAlign = std::max(NewAlign, F.getPrefAlignComputed());
   F.setPrefAlignComputed(NewAlign);
   uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
+  // Earlier linker relaxation can change the padding needed here. Let the
+  // backend reserve padding and emit fixups to preserve the computed alignment.
+  if (F.getPrefAlignEmitNops()) {
+    unsigned RelaxedSize = 0;
+    if (getBackend().relaxPrefAlign(F, RelaxedSize))
+      NewPadSize = RelaxedSize;
+  }
   F.VarContentStart = F.getFixedSize();
   F.VarContentEnd = F.VarContentStart + NewPadSize;
   if (F.VarContentEnd > F.getParent()->ContentStorage.size())
