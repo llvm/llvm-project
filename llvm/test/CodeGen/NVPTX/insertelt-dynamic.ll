@@ -355,6 +355,7 @@ define <8 x i1> @dynamic_i1(i32 %idx) {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot9[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
+; CHECK-NEXT:    .reg .b16 %rs<23>;
 ; CHECK-NEXT:    .reg .b32 %r<9>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -367,20 +368,35 @@ define <8 x i1> @dynamic_i1(i32 %idx) {
 ; CHECK-NEXT:    or.b64 %rd4, %rd3, %rd2;
 ; CHECK-NEXT:    st.v2.b32 [%SP], {%r1, %r2};
 ; CHECK-NEXT:    st.b8 [%rd4], 1;
-; CHECK-NEXT:    ld.b32 %r3, [%SP];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
 ; CHECK-NEXT:    prmt.b32 %r4, %r3, 0, 0x7773U;
-; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
-; CHECK-NEXT:    prmt.b32 %r6, %r5, 0, 0x7771U;
-; CHECK-NEXT:    prmt.b32 %r7, %r5, 0, 0x7772U;
-; CHECK-NEXT:    prmt.b32 %r8, %r5, 0, 0x7773U;
-; CHECK-NEXT:    st.param.b8 [func_retval0+4], %r5;
-; CHECK-NEXT:    st.param.b8 [func_retval0], %r3;
-; CHECK-NEXT:    st.param.b8 [func_retval0+7], %r8;
-; CHECK-NEXT:    st.param.b8 [func_retval0+6], %r7;
-; CHECK-NEXT:    st.param.b8 [func_retval0+5], %r6;
-; CHECK-NEXT:    st.param.b8 [func_retval0+3], %r4;
-; CHECK-NEXT:    st.param.b8 [func_retval0+2], 1;
-; CHECK-NEXT:    st.param.b8 [func_retval0+1], 0;
+; CHECK-NEXT:    cvt.u16.u32 %rs1, %r4;
+; CHECK-NEXT:    prmt.b32 %r5, %r3, 0, 0x7772U;
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r5;
+; CHECK-NEXT:    prmt.b32 %r6, %r3, 0, 0x7771U;
+; CHECK-NEXT:    cvt.u16.u32 %rs3, %r6;
+; CHECK-NEXT:    cvt.u16.u32 %rs4, %r3;
+; CHECK-NEXT:    ld.b32 %r7, [%SP];
+; CHECK-NEXT:    prmt.b32 %r8, %r7, 0, 0x7773U;
+; CHECK-NEXT:    cvt.u16.u32 %rs5, %r8;
+; CHECK-NEXT:    cvt.u16.u32 %rs6, %r7;
+; CHECK-NEXT:    and.b16 %rs7, %rs6, 1;
+; CHECK-NEXT:    and.b16 %rs8, %rs5, 1;
+; CHECK-NEXT:    shl.b16 %rs9, %rs8, 3;
+; CHECK-NEXT:    or.b16 %rs10, %rs7, %rs9;
+; CHECK-NEXT:    and.b16 %rs11, %rs4, 1;
+; CHECK-NEXT:    shl.b16 %rs12, %rs11, 4;
+; CHECK-NEXT:    or.b16 %rs13, %rs10, %rs12;
+; CHECK-NEXT:    and.b16 %rs14, %rs3, 1;
+; CHECK-NEXT:    shl.b16 %rs15, %rs14, 5;
+; CHECK-NEXT:    or.b16 %rs16, %rs13, %rs15;
+; CHECK-NEXT:    and.b16 %rs17, %rs2, 1;
+; CHECK-NEXT:    shl.b16 %rs18, %rs17, 6;
+; CHECK-NEXT:    or.b16 %rs19, %rs16, %rs18;
+; CHECK-NEXT:    shl.b16 %rs20, %rs1, 7;
+; CHECK-NEXT:    or.b16 %rs21, %rs19, %rs20;
+; CHECK-NEXT:    or.b16 %rs22, %rs21, 4;
+; CHECK-NEXT:    st.param.b8 [func_retval0], %rs22;
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i1> poison, i1 1, i32 %idx
   %v1 = insertelement <8 x i1> %v0, i1 0, i32 1
