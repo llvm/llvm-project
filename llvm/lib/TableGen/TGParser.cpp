@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
@@ -96,8 +97,13 @@ static bool checkBitsConcrete(Record &R, const RecordVal &RV) {
   return true;
 }
 
-static void checkConcrete(Record &R) {
-  for (const RecordVal &RV : R.getValues()) {
+/// Reports the values of `R` that are not concrete after the final resolve.
+/// `UnresolvedValues` are the values of `R` before the final resolve, which
+/// replaced references to unset fields by `?`. The message shows the value
+/// with these references, so that unset field names are shown rather than `?`.
+static void checkConcrete(Record &R, ArrayRef<const Init *> UnresolvedValues) {
+  for (auto [RV, UnresolvedValue] :
+       zip_equal(R.getValues(), UnresolvedValues)) {
     // HACK: Disable this check for variables declared with 'field'. This is
     // done merely because existing targets have legitimate cases of
     // non-concrete variables in helper defs. Ideally, we'd introduce a
@@ -108,10 +114,13 @@ static void checkConcrete(Record &R) {
     const Init *V = RV.getValue();
     bool Ok = isa<BitsInit>(V) ? checkBitsConcrete(R, RV) : V->isConcrete();
     if (!Ok) {
-      PrintError(R.getLoc(),
-                 Twine("Initializer of '") + RV.getNameInitAsString() +
-                     "' in '" + R.getNameInitAsString() +
-                     "' could not be fully resolved: " + V->getAsString());
+      // Before the final resolve, references to unset fields are kept.
+      RecordResolver Resolver(R);
+      PrintError(
+          R.getLoc(),
+          Twine("Initializer of '") + RV.getNameInitAsString() + "' in '" +
+              R.getNameInitAsString() + "' could not be fully resolved: " +
+              UnresolvedValue->resolveReferences(Resolver)->getAsString());
     }
   }
 }
@@ -589,8 +598,10 @@ bool TGParser::addDefOne(std::unique_ptr<Record> Rec) {
     NewName = Records.getNewAnonymousName();
   }
 
+  SmallVector<const Init *> UnresolvedValues = map_to_vector(
+      Rec->getValues(), [](const RecordVal &RV) { return RV.getValue(); });
   Rec->resolveReferences(NewName);
-  checkConcrete(*Rec);
+  checkConcrete(*Rec, UnresolvedValues);
 
   if (!isa<StringInit>(Rec->getNameInit())) {
     PrintError(Rec->getLoc(), Twine("record name '") +

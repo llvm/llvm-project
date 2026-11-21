@@ -92,12 +92,13 @@ def VarObj : Variables {
     // CHECK: data['VarObj']['d']['args'] == [[22, None], ["hello", "foo"]]
     // CHECK: data['VarObj']['d']['printable'] == '(ExampleDagOp 22, "hello":$foo)'
 
+    // A reference to an unset variable is unset once the record is complete.
     int undef_int;
     field int ref_int = undef_int;
-    // CHECK: data['VarObj']['ref_int']['kind'] == 'var'
-    // CHECK: data['VarObj']['ref_int']['var'] == 'undef_int'
-    // CHECK: data['VarObj']['ref_int']['printable'] == 'undef_int'
+    // CHECK: data['VarObj']['ref_int'] is None
 
+    // References to uninitialized bits are kept, as they describe the operand
+    // fields of instruction encodings.
     bits<2> undef_bits;
     bits<4> ref_bits;
     let ref_bits{3...2} = 0b10;
@@ -115,7 +116,7 @@ def VarObj : Variables {
 
     field int complex_ref_int = !add(undef_int, 2);
     // CHECK: data['VarObj']['complex_ref_int']['kind'] == 'complex'
-    // CHECK: data['VarObj']['complex_ref_int']['printable'] == '!add(undef_int, 2)'
+    // CHECK: data['VarObj']['complex_ref_int']['printable'] == '!add(?, 2)'
 }
 
 // Test the !anonymous member. This is tricky because when a def is
