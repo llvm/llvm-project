@@ -5197,8 +5197,7 @@ SDValue SystemZTargetLowering::lowerPDEP(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue SystemZTargetLowering::lowerPEXT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
-  assert(VT == MVT::i64 && "Expected i64 PEXT");
+  assert(Op.getValueType() == MVT::i64 && "Expected i64 PEXT");
   SDValue Val = Op.getOperand(0);
   SDValue Mask = Op.getOperand(1);
 
