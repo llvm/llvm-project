@@ -56,7 +56,6 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
-      TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
