@@ -163,6 +163,21 @@ define i32 @sdiv_neg_neg_unknown(i32 %x, i32 %y) {
 define i32 @sdiv_neg_neg_x_not_signmask(i32 %a, i32 %y) {
 ; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask(
 ; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[Y:%.*]] = sub nsw i32 0, [[Y1:%.*]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sub nsw i32 0, [[SDIV]]
+; CHECK-NEXT:    ret i32 [[SDIV1]]
+;
+  %x = and i32 %a, 2147483647
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+define i32 @sdiv_neg_neg_x_not_signmask_noundef(i32 noundef %a, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_noundef(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
 ; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i32 [[SDIV]]
 ;

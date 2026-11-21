@@ -1978,12 +1978,14 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   }
 
   Value *Y;
-  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1.
+  // -X / -Y --> X / Y, unless X == INT_MIN and Y == -1. Known bits only rule
+  // out INT_MIN when X is not poison.
   if (Value *NegOp0 = dyn_castNegVal(Op0))
     if (Value *NegOp1 = dyn_castNegVal(Op1))
-      if (!computeKnownBits(NegOp0, &I)
-               .getSignedMinValue()
-               .isMinSignedValue() ||
+      if ((!computeKnownBits(NegOp0, &I)
+                .getSignedMinValue()
+                .isMinSignedValue() &&
+           isGuaranteedNotToBePoison(NegOp0, SQ.AC, &I, SQ.DT)) ||
           (match(Op0, m_NSWNeg(m_Value())) &&
            !computeKnownBits(NegOp1, &I).Zero.isZero())) {
         auto *BO = BinaryOperator::CreateSDiv(NegOp0, NegOp1);
