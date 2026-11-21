@@ -7128,17 +7128,17 @@ static void handleCountedByAttrField(Sema &S, Decl *D, const ParsedAttr &AL) {
   // the parameter list, before the function's type is built from the
   // parameters' types.
   if (auto *PVD = dyn_cast<ParmVarDecl>(D)) {
-    // An array or function parameter has decayed to a pointer by now; check
-    // it as written.
-    QualType Ty = PVD->getType();
-    if (!PVD->getOriginalType()->isPointerType())
-      Ty = PVD->getOriginalType();
+    // An array parameter has decayed by now to the pointer the count
+    // describes, so check that pointer, and whether the array may have a size
+    // as written. A function parameter is checked as written.
+    QualType Written = PVD->getOriginalType();
+    QualType Ty = Written->isFunctionType() ? Written : PVD->getType();
     if (!S.ValidateBoundsAttrTypeShape(Ty, AL.getLoc(), AL.getRange(), Flags,
                                        /*AttrSpelling=*/{},
                                        /*AllowRedecl=*/false,
                                        /*AttrArg=*/nullptr,
                                        /*UpdateFlags=*/false) ||
-        S.CheckCountedByAttrOnParam(Ty, CountExpr, Flags.CountInBytes,
+        S.CheckCountedByAttrOnParam(Written, CountExpr, Flags.CountInBytes,
                                     Flags.OrNull))
       return;
     QualType CAT = S.BuildCountAttributedArrayOrPointerType(

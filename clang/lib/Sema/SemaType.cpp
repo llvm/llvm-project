@@ -9147,11 +9147,14 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
   unsigned chunkIndex = State.getCurrentChunkIndex();
 
+  bool IsParameter = D.getContext() == DeclaratorContext::Prototype ||
+                     D.getContext() == DeclaratorContext::ObjCParameter;
+
   Sema::BoundsAttrFlags Flags;
   if (!S.ValidateBoundsAttrTypeForTypePosition(
           CurType, Attr.getKind(), Attr.getLoc(), Attr.getRange(),
           getPointerNestLevel(D, chunkIndex),
-          isOnFunctionReturnType(D, chunkIndex), Flags)) {
+          isOnFunctionReturnType(D, chunkIndex), Flags, IsParameter)) {
     Attr.setInvalid();
     return;
   }
@@ -9171,8 +9174,7 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
 
   // A parameter's count is checked before the type is built, and dropped if
   // invalid.
-  if ((D.getContext() == DeclaratorContext::Prototype ||
-       D.getContext() == DeclaratorContext::ObjCParameter) &&
+  if (IsParameter &&
       S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
                                   Flags.OrNull)) {
     Attr.setInvalid();
@@ -10264,9 +10266,10 @@ QualType Sema::BuildCountAttributedArrayOrPointerType(QualType WrappedTy,
                                                       Expr *CountExpr,
                                                       bool CountInBytes,
                                                       bool OrNull) {
-  // Accept any array or pointer type here. The caller has checked the field
-  // and its count (see CheckCountedByAttrInRecord), so the count is a
-  // DeclRefExpr and an array is a flexible array member.
+  // Accept any array or pointer type here. The caller has checked the
+  // declaration and its count (see CheckCountedByAttrInRecord and
+  // CheckCountedByAttrOnParam), so the count is a DeclRefExpr, and an array is
+  // a flexible array member or a parameter.
   assert(WrappedTy->isArrayType() || WrappedTy->isPointerType());
   assert(isa<DeclRefExpr>(CountExpr) && "count must be checked by the caller");
 
