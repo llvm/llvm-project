@@ -390,6 +390,9 @@ private:
 /// parameters.
 using BumpPtrAllocator = BumpPtrAllocatorImpl<>;
 
+/// A bump allocator with 16 KiB initial slabs for large, long-lived arenas.
+using LargeBumpPtrAllocator = BumpPtrAllocatorImpl<MallocAllocator, 16384>;
+
 /// A BumpPtrAllocator that allows only elements of a specific type to be
 /// allocated.
 ///

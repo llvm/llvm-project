@@ -1693,7 +1693,7 @@ public:
   UniquingSet<AttributeListImpl> AttrsLists;
   UniquingSet<AttributeSetNode> AttrsSetNodes;
 
-  StringMap<MDString, BumpPtrAllocator> MDStringCache;
+  StringMap<MDString, LargeBumpPtrAllocator> MDStringCache;
   DenseMap<Value *, ValueAsMetadata *> ValuesAsMetadata;
   DenseMap<Metadata *, MetadataAsValue *> MetadataAsValues;
   DenseSet<DIArgList *, DIArgListInfo> DIArgLists;
