@@ -99,7 +99,7 @@ spirv.func @vector_shuffle_different_size(%vector1: vector<3xf32>, %vector2: vec
 }
 
 //===----------------------------------------------------------------------===//
-// spirv.EntryPoint and spirv.ExecutionMode
+// spirv.EntryPoint, spirv.ExecutionMode and spirv.ExecutionModeId
 //===----------------------------------------------------------------------===//
 
 //      CHECK: module {
@@ -146,6 +146,24 @@ spirv.module Logical OpenCL {
   spirv.EntryPoint "Kernel" @bar
   spirv.ExecutionMode @bar "ContractionOff"
   spirv.ExecutionMode @bar "LocalSizeHint", 32, 1, 1
+}
+
+// CHECK: module {
+// CHECK:   llvm.mlir.global external constant @__spv__baz_execution_mode_info_6028_f64() {addr_space = 0 : i32} : !llvm.struct<(i32, array<1 x i32>)> {
+// CHECK:     llvm.mlir.constant(6028 : i32) : i32
+// CHECK:     %[[MASK:.*]] = llvm.mlir.constant(458752 : i32) : i32
+// CHECK:     llvm.insertvalue %[[MASK]], %{{.*}}[1, 0] : !llvm.struct<(i32, array<1 x i32>)>
+// CHECK:   llvm.mlir.global external constant @__spv__baz_execution_mode_info_6028_f32() {addr_space = 0 : i32} : !llvm.struct<(i32, array<1 x i32>)> {
+// CHECK:     llvm.mlir.constant(6028 : i32) : i32
+// CHECK:     %[[MASK:.*]] = llvm.mlir.constant(0 : i32) : i32
+// CHECK:     llvm.insertvalue %[[MASK]], %{{.*}}[1, 0] : !llvm.struct<(i32, array<1 x i32>)>
+spirv.module Logical OpenCL {
+  spirv.func @baz() "None" {
+    spirv.Return
+  }
+  spirv.EntryPoint "Kernel" @baz
+  spirv.ExecutionModeId @baz "FPFastMathDefault" f32, 0 : i32
+  spirv.ExecutionModeId @baz "FPFastMathDefault" f64, 458752 : i32
 }
 
 //===----------------------------------------------------------------------===//
