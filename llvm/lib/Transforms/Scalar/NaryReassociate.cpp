@@ -449,10 +449,12 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(BinaryOperator *I) {
 
 Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
                                                          BinaryOperator *I) {
+  // To be conservative, we reassociate I only when it is the only user of LHS.
+  if (!LHS->hasOneUse())
+    return nullptr;
+
   Value *A = nullptr, *B = nullptr;
-  // To be conservative, we reassociate I only when it is the only user of (A op
-  // B).
-  if (LHS->hasOneUse() && matchTernaryOp(I, LHS, A, B)) {
+  if (matchTernaryOp(I, LHS, A, B)) {
     // I = (A op B) op RHS
     //   = (A op RHS) op B or (B op RHS) op A
     SCEVUse AExpr = SE->getSCEV(A), BExpr = SE->getSCEV(B);
@@ -468,7 +470,28 @@ Instruction *NaryReassociatePass::tryReassociateBinaryOp(Value *LHS, Value *RHS,
         return NewI;
     }
   }
-  return nullptr;
+  return tryDistributeMul(LHS, RHS, I);
+}
+
+Instruction *NaryReassociatePass::tryDistributeMul(Value *LHS, Value *RHS,
+                                                   BinaryOperator *I) {
+  Value *A = nullptr, *B = nullptr;
+  if (I->getOpcode() != Instruction::Mul ||
+      !match(LHS, m_Add(m_Value(A), m_Value(B))))
+    return nullptr;
+  SCEVUse RHSExpr = SE->getSCEV(RHS);
+  auto *AMul =
+      findClosestMatchingDominator(SE->getMulExpr(SE->getSCEV(A), RHSExpr), I);
+  if (!AMul)
+    return nullptr;
+  auto *BMul =
+      findClosestMatchingDominator(SE->getMulExpr(SE->getSCEV(B), RHSExpr), I);
+  if (!BMul)
+    return nullptr;
+  auto *NewI = BinaryOperator::CreateAdd(AMul, BMul, "", I->getIterator());
+  NewI->setDebugLoc(I->getDebugLoc());
+  NewI->takeName(I);
+  return NewI;
 }
 
 Instruction *NaryReassociatePass::tryReassociatedBinaryOp(SCEVUse LHSExpr,
