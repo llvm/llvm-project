@@ -4621,6 +4621,13 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       PragmaMSStructState = Record[0];
       break;
 
+    case ZOS_CSECT_PRAGMA_OPTIONS: {
+      unsigned Idx = 0;
+      PragmaCsectCode = ReadString(Record, Idx);
+      PragmaCsectStatic = ReadString(Record, Idx);
+      break;
+    }
+
     case POINTERS_TO_MEMBERS_PRAGMA_OPTIONS:
       if (Record.size() != 2)
         return llvm::createStringError(
@@ -9444,6 +9451,14 @@ void ASTReader::UpdateSema() {
             PragmaMSPointersToMembersState,
         PointersToMembersPragmaLocation);
   }
+  // Apply the '#pragma csect' names from the PCH once, then clear them.
+  if (!PragmaCsectCode.empty())
+    SemaObj->ActOnPragmaCsect("code", SourceLocation(), PragmaCsectCode);
+  if (!PragmaCsectStatic.empty())
+    SemaObj->ActOnPragmaCsect("static", SourceLocation(), PragmaCsectStatic);
+  PragmaCsectCode.clear();
+  PragmaCsectStatic.clear();
+
   SemaObj->CUDA().ForceHostDeviceDepth = ForceHostDeviceDepth;
   if (!RISCVVecIntrinsicPragma.empty()) {
     assert(RISCVVecIntrinsicPragma.size() == 3 &&

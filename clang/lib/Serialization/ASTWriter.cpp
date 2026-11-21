@@ -987,6 +987,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
   RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
+  RECORD(ZOS_CSECT_PRAGMA_OPTIONS);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -5281,6 +5282,17 @@ void ASTWriter::WriteMSStructPragmaOptions(Sema &SemaRef) {
   Stream.EmitRecord(MSSTRUCT_PRAGMA_OPTIONS, Record);
 }
 
+/// Write the names set by 'pragma csect' at the end of the module.
+void ASTWriter::WriteZOSCsectPragmaOptions(Sema &SemaRef) {
+  const ASTContext &Ctx = SemaRef.Context;
+  if (Ctx.PragmaCsectCode.empty() && Ctx.PragmaCsectStatic.empty())
+    return;
+  RecordData Record;
+  AddString(Ctx.PragmaCsectCode, Record);
+  AddString(Ctx.PragmaCsectStatic, Record);
+  Stream.EmitRecord(ZOS_CSECT_PRAGMA_OPTIONS, Record);
+}
+
 /// Write the state of 'pragma pointers_to_members' at the end of the
 //module.
 void ASTWriter::WriteMSPointersToMembersPragmaOptions(Sema &SemaRef) {
@@ -6418,6 +6430,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
       WriteOptimizePragmaOptions(*SemaPtr);
       WriteMSStructPragmaOptions(*SemaPtr);
       WriteMSPointersToMembersPragmaOptions(*SemaPtr);
+      WriteZOSCsectPragmaOptions(*SemaPtr);
     }
     WritePackPragmaOptions(*SemaPtr);
     WriteFloatControlPragmaOptions(*SemaPtr);

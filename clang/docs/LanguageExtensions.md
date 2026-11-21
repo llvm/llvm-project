@@ -5707,6 +5707,34 @@ ASM strings. See
 [String literal encoding in ASM statements](#string-literal-encoding-in-asm-statements)
 for details.
 
+#### z/OS CSECT pragma
+
+Clang supports the `#pragma csect` directive to control CSECT (control 
+section) names in the output object module on z/OS.
+
+The `#pragma csect` directive, which must appear at file scope, sets the CSECT
+name for the code or static section:
+   
+```c
+#pragma csect(code, "name")
+#pragma csect(static, "name")
+```
+
+The name specified on `#pragma csect` overrides the generated name that
+`-mcsect` would have created for the section. When `-mno-csect` is used, the
+name specified on `#pragma csect` is still used for that section.
+
+There can be at most one `#pragma csect` directive for each section type
+(code or static) per translation unit; duplicates are warned and ignored.
+
+The code and static section names set by `#pragma csect` must be different;
+using the same name for both results in an error.
+
+`#pragma csect(test, "name")` is accepted and ignored. This is done to avoid
+messages when porting XL code.
+
+The names must follow the CSECT name rules described in the "CSECT Options"
+section of the User's Manual.
 
 ## Extensions for Static Analysis
 
