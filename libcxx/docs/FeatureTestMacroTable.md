@@ -119,7 +119,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_constexpr_iterator`                         | `201811L`       |
 | `__cpp_lib_constexpr_memory`                           | `201811L`       |
 | `__cpp_lib_constexpr_numeric`                          | `201911L`       |
-| `__cpp_lib_constexpr_string`                           | `201907L`       |
+| `__cpp_lib_constexpr_string`                           | `202511L`       |
 | `__cpp_lib_constexpr_string_view`                      | `201811L`       |
 | `__cpp_lib_constexpr_tuple`                            | `201811L`       |
 | `__cpp_lib_constexpr_utility`                          | `201811L`       |
