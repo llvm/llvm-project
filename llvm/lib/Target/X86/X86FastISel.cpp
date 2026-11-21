@@ -933,6 +933,13 @@ bool X86FastISel::handleConstantAddresses(const Value *V, X86AddressMode &AM) {
   return false;
 }
 
+/// Returns true if values of this type are held in general purpose registers,
+/// which is a precondition for using them as the base or index register of an
+/// address. Floating point and vector types live in XMM/MMX registers instead.
+static bool isGPRegType(Type *Ty) {
+  return Ty->isIntegerTy() || Ty->isPointerTy();
+}
+
 /// X86SelectAddress - Attempt to fill in an address from the given value.
 ///
 bool X86FastISel::X86SelectAddress(const Value *V, X86AddressMode &AM) {
@@ -963,8 +970,13 @@ redo_gep:
   switch (Opcode) {
   default: break;
   case Instruction::BitCast:
-    // Look past bitcasts.
-    return X86SelectAddress(U->getOperand(0), AM);
+    // Look past bitcasts, unless the bitcast changes the register class of
+    // its operand. Looking through e.g. "bitcast double %x to i64" would use
+    // the XMM register holding %x as an address register. Matching the
+    // bitcast itself instead falls back to its general purpose register.
+    if (isGPRegType(U->getOperand(0)->getType()))
+      return X86SelectAddress(U->getOperand(0), AM);
+    break;
 
   case Instruction::IntToPtr:
     // Look past no-op inttoptrs.
@@ -1137,8 +1149,11 @@ bool X86FastISel::X86SelectCallAddress(const Value *V, X86AddressMode &AM) {
   switch (Opcode) {
   default: break;
   case Instruction::BitCast:
-    // Look past bitcasts if its operand is in the same BB.
-    if (InMBB)
+    // Look past bitcasts if its operand is in the same BB, unless the bitcast
+    // changes the register class of its operand: an indirect call target must
+    // live in a general purpose register, like the one holding a
+    // "bitcast double %x to i64" itself but not the one holding %x.
+    if (InMBB && isGPRegType(U->getOperand(0)->getType()))
       return X86SelectCallAddress(U->getOperand(0), AM);
     break;
 
