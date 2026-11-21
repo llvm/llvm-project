@@ -3879,6 +3879,8 @@ defm isspace_shared : ISSPACEP<"shared", int_nvvm_isspacep_shared>;
 defm isspace_shared_cluster : ISSPACEP<"shared::cluster",
                                        int_nvvm_isspacep_shared_cluster,
                                        [SM90]>;
+defm isspace_grid_const : ISSPACEP<"param", int_nvvm_isspacep_grid_const,
+                                   [PTX77, SM70]>;
 
 // Special register reads
 let isAsCheapAsAMove = true in

@@ -1059,6 +1059,7 @@ declare i1 @llvm.nvvm.isspacep.const(ptr %p)
 declare i1 @llvm.nvvm.isspacep.global(ptr %p)
 declare i1 @llvm.nvvm.isspacep.local(ptr %p)
 declare i1 @llvm.nvvm.isspacep.shared(ptr %p)
+declare i1 @llvm.nvvm.isspacep.grid_const(ptr %p)
 declare i1 @llvm.nvvm.isspacep.shared.cluster(ptr %p)
 ```
 
@@ -1072,6 +1073,11 @@ pointer references memory which falls within a particular address space.
 If the given pointer in the generic address space refers to memory which falls
 within the state space of the intrinsic (and therefore could be safely address
 space casted to this space), 1 is returned, otherwise 0 is returned.
+
+The `llvm.nvvm.isspacep.grid_const` intrinsic queries whether the pointer was
+derived from the address of a kernel parameter that has the
+`"nvvm.grid_constant"` property. It corresponds to the `isspacep.param` PTX
+instruction.
 
 #### '`llvm.nvvm.mapa.*`' Intrinsics
 

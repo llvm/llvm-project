@@ -2616,6 +2616,14 @@ foreach space = ["const", "global", "local", "shared", "shared_cluster"] in
   def int_nvvm_isspacep_ # space : NVVMBuiltin,
     NVVMPureIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [NoCapture<ArgIndex<0>>]>;
 
+// This intrinsic intentionally has no NoCapture. With NoCapture, a plain byval
+// parameter can be inferred captures(none) and readonly, so NVPTXLowerArgs may
+// keep it in the param address space and this query would return true for a
+// parameter that is not grid_constant.
+def int_nvvm_isspacep_grid_const : NVVMBuiltin,
+  NVVMPureIntrinsic<[llvm_i1_ty], [llvm_ptr_ty], [],
+                    "llvm.nvvm.isspacep.grid_const">;
+
 //
 // Texture Fetch
 //
