@@ -45,6 +45,7 @@ class AArch64TargetMachine;
 enum class CodeGenOptLevel;
 class FunctionPass;
 class InstructionSelector;
+class IntrinsicInst;
 class ModulePass;
 
 FunctionPass *createAArch64DeadRegisterDefinitions();
@@ -57,6 +58,11 @@ FunctionPass *createAArch64AdvSIMDScalar();
 FunctionPass *createAArch64ISelDag(AArch64TargetMachine &TM,
                                    CodeGenOptLevel OptLevel);
 FunctionPass *createAArch64StorePairSuppressPass();
+FunctionPass *createAArch64IntrinsicsVerifierPass();
+/// Return false if the intrinsic has no generated guards or fails a guard in
+/// any mode the subtarget may use.
+bool isAArch64IntrinsicAvailable(const IntrinsicInst &II,
+                                 const AArch64Subtarget &ST);
 FunctionPass *createAArch64ExpandPseudoLegacyPass();
 FunctionPass *createAArch64SLSHardeningLegacyPass();
 FunctionPass *createAArch64SpeculationHardeningPass();
@@ -181,6 +187,7 @@ void initializeAArch64ConditionalComparesLegacyPass(PassRegistry &);
 void initializeAArch64DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeAArch64DeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeAArch64ExpandPseudoLegacyPass(PassRegistry &);
+void initializeAArch64IntrinsicsVerifierPass(PassRegistry &);
 void initializeAArch64LoadStoreOptLegacyPass(PassRegistry &);
 void initializeAArch64LowerHomogeneousPrologEpilogLegacyPass(PassRegistry &);
 void initializeAArch64CodeLayoutOptPass(PassRegistry &);

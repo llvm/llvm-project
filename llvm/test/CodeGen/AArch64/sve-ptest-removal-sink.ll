@@ -3,6 +3,8 @@
 
 ;
 ; Ensure that the %ptrue from the preheader is sunk into the loop such that the ptest is removed.
+; PTEST_FIRST tests the first lane, so the all-active byte predicate is equivalent
+; to the all-active word predicate for the converted WHILELT result.
 ;
 
 define void @test_sink_ptrue_into_ptest(i32 %n) {
@@ -23,16 +25,18 @@ define void @test_sink_ptrue_into_ptest(i32 %n) {
 entry:
   %vscale = tail call i32 @llvm.vscale.i32()
   %step = shl nuw nsw i32 %vscale, 2
-  %ptrue.ph = tail call <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 31)
+  %ptrue.ph = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
   %while.ph = tail call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 0, i32 %n)
-  %ptest.ph = tail call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> %ptrue.ph, <vscale x 4 x i1> %while.ph)
+  %while.ph.svbool = tail call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %while.ph)
+  %ptest.ph = tail call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %ptrue.ph, <vscale x 16 x i1> %while.ph.svbool)
   br i1 %ptest.ph, label %for.body, label %exit
 
 for.body:
   %i = phi i32 [ 0, %entry ], [ %i.next, %for.body ]
   %i.next = add i32 %i, %step
   %while = call <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32 %i, i32 %n)
-  %ptest = call i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1> %ptrue.ph, <vscale x 4 x i1> %while)
+  %while.svbool = call <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1> %while)
+  %ptest = call i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1> %ptrue.ph, <vscale x 16 x i1> %while.svbool)
   br i1 %ptest, label %for.body, label %exit
 
 exit:
@@ -40,6 +44,7 @@ exit:
 }
 
 declare i32 @llvm.vscale.i32()
-declare <vscale x 4 x i1> @llvm.aarch64.sve.ptrue.nxv4i1(i32 immarg)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 immarg)
 declare <vscale x 4 x i1> @llvm.aarch64.sve.whilelt.nxv4i1.i32(i32, i32)
-declare i1 @llvm.aarch64.sve.ptest.first.nxv4i1(<vscale x 4 x i1>, <vscale x 4 x i1>)
+declare <vscale x 16 x i1> @llvm.aarch64.sve.convert.to.svbool.nxv4i1(<vscale x 4 x i1>)
+declare i1 @llvm.aarch64.sve.ptest.first.nxv16i1(<vscale x 16 x i1>, <vscale x 16 x i1>)

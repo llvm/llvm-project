@@ -19,7 +19,7 @@
 // by calling a __builtin_-prefixed function which will be handled by clang's
 // CodeGen library.
 //
-// See also the documentation in include/clang/Basic/arm_sve.td.
+// See also the documentation in clang/include/clang/Basic/arm_sve.td.
 //
 //===----------------------------------------------------------------------===//
 
@@ -30,10 +30,14 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/AArch64ImmCheck.h"
 #include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/FeatureGuardParser.h"
+#include "llvm/TableGen/GuardedIntrinsic.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringToOffsetTable.h"
+#include "llvm/TargetParser/AArch64TargetParser.h"
 #include <array>
 #include <cctype>
+#include <map>
 #include <set>
 #include <string>
 #include <tuple>
@@ -449,6 +453,13 @@ public:
   /// Create intrinsic and add it to \p Out
   void createIntrinsic(const Record *R,
                        SmallVectorImpl<std::unique_ptr<Intrinsic>> &Out);
+
+private:
+  SmallVector<GuardedIntrinsicVariant>
+  collectIntrinsicVariantsForBuiltin(const Record *IRIntrinsicRecord,
+                                     const Intrinsic &Def) const;
+  void verifyLLVMIntrinsicGuards(
+      const SmallVectorImpl<std::unique_ptr<Intrinsic>> &Defs) const;
 };
 
 const std::array<SVEEmitter::ReinterpretTypeInfo, 13> SVEEmitter::Reinterprets =
@@ -1680,11 +1691,228 @@ void SVEEmitter::createBuiltinsJSON(raw_ostream &OS) {
   OS << "\n]\n";
 }
 
+static bool
+intrinsicClauseIsAvailable(const RequiredFeatureSet &IntrinsicClause,
+                           const RequiredFeatureSet &BuiltinClause,
+                           const AArch64::ExtensionSet &Enabled) {
+  for (StringRef Feature : IntrinsicClause) {
+    if (BuiltinClause.count(Feature.str()))
+      continue;
+    auto Extension = AArch64::targetFeatureToExtension(("+" + Feature).str());
+    if (!Extension || !Enabled.Enabled.test(Extension->ID))
+      return false;
+  }
+  return true;
+}
+
+AArch64::ExtensionSet expandImpliedTargetFeatures(const RequiredFeatureSet &C) {
+  AArch64::ExtensionSet Enabled;
+  for (StringRef Feature : C) {
+    if (auto Extension =
+            AArch64::targetFeatureToExtension(("+" + Feature).str()))
+      Enabled.enable(Extension->ID);
+  }
+  return Enabled;
+}
+static bool builtinGuardImpliesIntrinsicGuard(
+    const FeatureGuardAlternatives &BuiltinGuards,
+    const FeatureGuardAlternatives &IntrinsicGuards, bool StreamingMode) {
+  // Every configuration admitted by the builtin must satisfy at least one
+  // intrinsic clause. Account for AArch64 feature dependencies, e.g. sve2p2
+  // implies sve2 and sve, and for SME being available in streaming mode.
+  for (const RequiredFeatureSet &BuiltinClause : BuiltinGuards) {
+    AArch64::ExtensionSet Enabled = expandImpliedTargetFeatures(BuiltinClause);
+    if (StreamingMode)
+      Enabled.enable(AArch64::AEK_SME);
+
+    if (!any_of(IntrinsicGuards, [&](const RequiredFeatureSet &C) {
+          return intrinsicClauseIsAvailable(C, BuiltinClause, Enabled);
+        }))
+      return false;
+  }
+  return true;
+}
+
+static std::string baseVectorVT(const SVEType &T) {
+  if (!T.isScalableVector() || T.getNumVectors() != 1 || T.isInvalid())
+    return {};
+  std::string Element;
+  if (T.isBFloat())
+    Element = "bf16";
+  else if (T.isFloat())
+    Element = "f" + std::to_string(T.getElementSizeInBits());
+  else
+    Element =
+        "i" + std::to_string(T.isPredicate() ? 1 : T.getElementSizeInBits());
+  return "nxv" + std::to_string(T.getNumElements()) + Element;
+}
+
+// Return the variants of the LLVM IR intrinsic that are relevant to the types
+// used for the current builtin \p Def. Reports an error if no intrinsic
+// variants match the types of the builtin.
+SmallVector<GuardedIntrinsicVariant>
+SVEEmitter::collectIntrinsicVariantsForBuiltin(const Record *IRIntrinsicRecord,
+                                               const Intrinsic &Def) const {
+  auto Variants = collectGuardedIntrinsicVariants(IRIntrinsicRecord);
+  if (Variants.empty() ||
+      llvm::any_of(Variants, [](const GuardedIntrinsicVariant &V) {
+        return !V.OverloadTypes;
+      }))
+    PrintFatalError(IRIntrinsicRecord,
+                    "intrinsic has no target guard variants");
+
+  for (const GuardedIntrinsicVariant &V : Variants)
+    if (V.Guard->getValueAsListOfStrings("Guards").size() != 2)
+      PrintFatalError(V.Guard,
+                      "AArch64 intrinsic variant must have two guards, one "
+                      "for non-streaming mode and one for streaming mode.");
+
+  std::string BaseVT = baseVectorVT(Def.getBaseType());
+  bool BuiltinIsOverloadNone =
+      Def.isFlagSet(getEnumValueForFlag("IsOverloadNone"));
+  SmallVector<GuardedIntrinsicVariant> Candidates;
+  for (const GuardedIntrinsicVariant &V : Variants) {
+    auto OverloadTypes = getGuardedOverloadTypes(V.OverloadTypes);
+    // A nonoverloaded intrinsic has one empty overload type list.
+    if ((BuiltinIsOverloadNone && OverloadTypes.empty()) ||
+        llvm::any_of(OverloadTypes, [&](const Record *T) {
+          return T->getValueAsDef("VT")->getName() == BaseVT;
+        }))
+      Candidates.push_back(V);
+  }
+
+  // Predicate overloads have i1 elements, while the ACLE base (overload) type
+  // can be based on the element type which the predicate applies to for
+  // creating e.g. _b8/_b16/.. forms. We need to add those forms separately, but
+  // only use this fallback when the builtin itself has a predicate result or
+  // operand.
+  if (Candidates.empty() && Def.getBaseType().isScalableVector() &&
+      llvm::any_of(Def.getTypes(), [](const SVEType &T) {
+        return T.isPredicate() && T.isScalableVector();
+      })) {
+    unsigned Elements = Def.getBaseType().getNumElements();
+    const Record *I1 = Records.getDef("i1");
+
+    for (const GuardedIntrinsicVariant &V : Variants)
+      if (llvm::any_of(getGuardedOverloadTypes(V.OverloadTypes),
+                       [&](const Record *T) {
+                         const Record *VT = T->getValueAsDef("VT");
+                         return VT->getValueAsBit("isVector") &&
+                                VT->getValueAsBit("isScalable") &&
+                                VT->getValueAsDef("ElementType") == I1 &&
+                                VT->getValueAsInt("nElem") == Elements;
+                       }))
+        Candidates.push_back(V);
+  }
+
+  if (Candidates.empty())
+    PrintFatalError(IRIntrinsicRecord,
+                    "cannot identify target guard variant for builtin " +
+                        Def.getMangledName() + " (base type " +
+                        Def.getBaseType().str() + ", VT " + BaseVT + ")");
+  return Candidates;
+}
+
+// Return true when the builtin's target guards match the LLVM IR intrinsic
+// variant in both non-streaming and streaming modes.
+static bool matchBuiltinToVariants(const Record *IRIntrinsicRecord,
+                                   StringRef SVEGuard, StringRef SMEGuard,
+                                   ArrayRef<GuardedIntrinsicVariant> Variants) {
+  return llvm::any_of(Variants, [&](const GuardedIntrinsicVariant &V) {
+    auto IRGuards = V.Guard->getValueAsListOfStrings("Guards");
+    auto ReportGuardError = [&](const Twine &Message) {
+      PrintFatalError(IRIntrinsicRecord, Message);
+    };
+    // AArch64 guard 0 is non-streaming; guard 1 is streaming.
+    auto MatchesMode = [&](unsigned Mode) {
+      FeatureGuardAlternatives ClangGuard =
+          FeatureGuardParser(Mode ? SMEGuard : SVEGuard, ReportGuardError)
+              .parse();
+      FeatureGuardAlternatives LLVMGuard =
+          FeatureGuardParser(IRGuards[Mode], ReportGuardError).parse();
+      return builtinGuardImpliesIntrinsicGuard(ClangGuard, LLVMGuard,
+                                               Mode == 1);
+    };
+    return MatchesMode(0) && MatchesMode(1);
+  });
+}
+
+void SVEEmitter::verifyLLVMIntrinsicGuards(
+    const SmallVectorImpl<std::unique_ptr<Intrinsic>> &Defs) const {
+  std::vector<std::string> Mismatches;
+  for (const auto &Def : Defs) {
+    // Only consider the full builtin (not the short-form)
+    if (Def->getClassKind() == ClassG)
+      continue;
+
+    std::string LLVMName = Def->getMangledLLVMName();
+    if (LLVMName.empty())
+      continue;
+
+    // We can only verify builtins that specify a Guarded LLVM intrinsic.
+    const Record *IRIntrinsicRecord = Records.getDef("int_" + LLVMName);
+    if (!IRIntrinsicRecord)
+      PrintFatalError("missing LLVM intrinsic for builtin " +
+                      Def->getMangledName() + ": " + LLVMName);
+    if (!IRIntrinsicRecord->isSubClassOf("GuardedIntrinsic") ||
+        IRIntrinsicRecord->getValueAsListOfDefs("TargetGuards").empty()) {
+      if (StringRef(LLVMName).starts_with("aarch64_") &&
+          IRIntrinsicRecord->getValueAsDef("TypeInfo")
+              ->getValueAsBit("isOverloaded"))
+        PrintFatalError(IRIntrinsicRecord,
+                        "overloaded LLVM intrinsic mapped by builtin " +
+                            Def->getMangledName() + " has no target guards");
+      continue;
+    }
+
+    // Test whether there is a matching LLVM IR intrinsic variant for the
+    // current builtin.
+    auto Variants = collectIntrinsicVariantsForBuiltin(IRIntrinsicRecord, *Def);
+    StringRef SVEGuard = Def->getSVEGuard();
+    StringRef SMEGuard = Def->getSMEGuard();
+    if (Def->isFlagSet(getEnumValueForFlag("IsStreamingCompatible"))) {
+      SVEGuard = SVEGuard.empty() ? SMEGuard : SVEGuard;
+      SMEGuard = SMEGuard.empty() ? SVEGuard : SMEGuard;
+    }
+    if (matchBuiltinToVariants(IRIntrinsicRecord, SVEGuard, SMEGuard, Variants))
+      continue;
+
+    // If no matching intrinsic variant exists, collect an error diagnostic
+    // to emit later.
+    std::string LLVMGuards;
+    std::set<std::string> SeenLLVMGuards;
+    for (const GuardedIntrinsicVariant &V : Variants) {
+      auto IRGuards = V.Guard->getValueAsListOfStrings("Guards");
+      std::string GuardPair =
+          ("['" + IRGuards[0] + "', '" + IRGuards[1] + "']").str();
+      if (SeenLLVMGuards.insert(GuardPair).second) {
+        if (!LLVMGuards.empty())
+          LLVMGuards += " or ";
+        LLVMGuards += GuardPair;
+      }
+    }
+    Mismatches.push_back("builtin " + Def->getMangledName() + " targeting " +
+                         LLVMName + " has guards ['" + SVEGuard.str() + "', '" +
+                         SMEGuard.str() + "']; intrinsic variants have " +
+                         LLVMGuards);
+  }
+  // Print all error messages (but only fatal error once).
+  if (!Mismatches.empty()) {
+    std::string Message = std::to_string(Mismatches.size()) +
+                          " SVE/SME builtin target guard mismatches:\n";
+    for (StringRef Mismatch : llvm::ArrayRef(Mismatches).take_front(20))
+      Message += "  " + Mismatch.str() + "\n";
+    PrintFatalError(Message);
+  }
+}
+
 void SVEEmitter::createCodeGenMap(raw_ostream &OS) {
   std::vector<const Record *> RV = Records.getAllDerivedDefinitions("Inst");
   SmallVector<std::unique_ptr<Intrinsic>, 128> Defs;
   for (auto *R : RV)
     createIntrinsic(R, Defs);
+
+  verifyLLVMIntrinsicGuards(Defs);
 
   // The mappings must be sorted based on BuiltinID.
   sort(Defs, [](const std::unique_ptr<Intrinsic> &A,
