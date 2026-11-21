@@ -51917,10 +51917,13 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   // which DAG folds to: srl(vecreduce_umax(x),bw-1).
   // This attempts to reconstruct the signbit reduction.
   if (sd_match(N1, m_SpecificInt(EltSizeInBits - 1))) {
-    SDValue X = N0;
+    SDValue X;
     ISD::CondCode CC = ISD::SETNE;
+    // A failed match can still have bound X to an xor operand.
     if (sd_match(N0, m_Not(m_Value(X))))
       CC = ISD::SETEQ;
+    else
+      X = N0;
     if (X.getOpcode() == ISD::VECREDUCE_UMAX) {
       SDValue V = X.getOperand(0);
       EVT VecVT = V.getValueType();
