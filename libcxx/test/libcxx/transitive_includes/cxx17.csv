@@ -42,6 +42,7 @@ barrier ratio
 barrier version
 bit version
 bitset cctype
+bitset cerrno
 bitset climits
 bitset compare
 bitset cstdint
@@ -103,6 +104,7 @@ cinttypes cstdint
 cmath limits
 cmath version
 codecvt cctype
+codecvt cerrno
 codecvt climits
 codecvt clocale
 codecvt compare
@@ -645,6 +647,7 @@ queue tuple
 queue vector
 queue version
 random cctype
+random cerrno
 random climits
 random cmath
 random compare
@@ -682,6 +685,7 @@ ratio climits
 ratio cstdint
 ratio version
 regex cctype
+regex cerrno
 regex climits
 regex clocale
 regex compare
@@ -804,6 +808,7 @@ streambuf tuple
 streambuf typeinfo
 streambuf version
 string cctype
+string cerrno
 string climits
 string compare
 string cstdint
