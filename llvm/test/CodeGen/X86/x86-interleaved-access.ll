@@ -735,34 +735,34 @@ define <32 x i8> @interleaved_load_vf32_i8_stride3(ptr %ptr){
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm6 = [0,3,6,9,12,15,2,5,8,11,14,1,4,7,10,13]
 ; AVX1-NEXT:    vpshufb %xmm6, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm6, %xmm3, %xmm3
-; AVX1-NEXT:    vpshufb %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm6, %xmm4, %xmm4
+; AVX1-NEXT:    vpshufb %xmm6, %xmm1, %xmm1
 ; AVX1-NEXT:    vpshufb %xmm6, %xmm2, %xmm2
 ; AVX1-NEXT:    vpshufb %xmm6, %xmm5, %xmm5
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm6 = xmm5[11,12,13,14,15],xmm3[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm7 = xmm2[11,12,13,14,15],xmm0[0,1,2,3,4,5,6,7,8,9,10]
-; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[11,12,13,14,15],xmm4[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
+; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[11,12,13,14,15],xmm4[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm8
-; AVX1-NEXT:    vpalignr {{.*#+}} xmm4 = xmm4[11,12,13,14,15],xmm5[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm1 = xmm1[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
-; AVX1-NEXT:    vinsertf128 $1, %xmm4, %ymm1, %ymm2
+; AVX1-NEXT:    vpalignr {{.*#+}} xmm2 = xmm4[11,12,13,14,15],xmm5[0,1,2,3,4,5,6,7,8,9,10]
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm4
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm1 = xmm7[11,12,13,14,15],xmm1[0,1,2,3,4,5,6,7,8,9,10]
-; AVX1-NEXT:    vpalignr {{.*#+}} xmm4 = xmm6[11,12,13,14,15],xmm4[0,1,2,3,4,5,6,7,8,9,10]
+; AVX1-NEXT:    vpalignr {{.*#+}} xmm2 = xmm6[11,12,13,14,15],xmm2[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm5 = [255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0,255,255,255,255,255,255,255,255,255,255,255,0,0,0,0,0]
 ; AVX1-NEXT:    # ymm5 = mem[0,1,0,1]
-; AVX1-NEXT:    vandnps %ymm2, %ymm5, %ymm2
+; AVX1-NEXT:    vandnps %ymm4, %ymm5, %ymm4
 ; AVX1-NEXT:    vandps %ymm5, %ymm8, %ymm5
-; AVX1-NEXT:    vorps %ymm2, %ymm5, %ymm2
+; AVX1-NEXT:    vorps %ymm4, %ymm5, %ymm4
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[11,12,13,14,15],xmm6[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm3 = xmm3[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
-; AVX1-NEXT:    vpaddb %xmm3, %xmm4, %xmm3
+; AVX1-NEXT:    vpaddb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[11,12,13,14,15],xmm7[0,1,2,3,4,5,6,7,8,9,10]
 ; AVX1-NEXT:    vpalignr {{.*#+}} xmm0 = xmm0[10,11,12,13,14,15,0,1,2,3,4,5,6,7,8,9]
 ; AVX1-NEXT:    vpaddb %xmm0, %xmm1, %xmm0
-; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
-; AVX1-NEXT:    vpaddb %xmm1, %xmm3, %xmm1
-; AVX1-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm1
+; AVX1-NEXT:    vpaddb %xmm1, %xmm2, %xmm1
+; AVX1-NEXT:    vpaddb %xmm4, %xmm0, %xmm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

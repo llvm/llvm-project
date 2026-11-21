@@ -41,8 +41,8 @@ define <8 x i16> @t1(ptr %A, ptr %B) nounwind {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movaps {{.*#+}} xmm0 = [0,65535,65535,65535,65535,65535,65535,65535]
 ; X86-NEXT:    movaps %xmm0, %xmm1
-; X86-NEXT:    andnps (%ecx), %xmm1
-; X86-NEXT:    andps (%eax), %xmm0
+; X86-NEXT:    andnps (%eax), %xmm1
+; X86-NEXT:    andps (%ecx), %xmm0
 ; X86-NEXT:    orps %xmm1, %xmm0
 ; X86-NEXT:    retl
 ;
