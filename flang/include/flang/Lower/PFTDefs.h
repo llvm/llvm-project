@@ -41,9 +41,13 @@ class Reference;
 }
 
 namespace lower {
+namespace pft {
+struct Program;
+}
 
 bool definedInCommonBlock(const semantics::Symbol &sym);
-bool symbolIsGlobal(const semantics::Symbol &sym);
+/// Classify storage using semantic properties and this PFT's storage selection.
+bool symbolIsGlobal(const semantics::Symbol &sym, const pft::Program &program);
 bool defaultRecursiveFunctionSetting();
 
 namespace pft {

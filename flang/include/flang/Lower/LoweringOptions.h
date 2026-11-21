@@ -59,6 +59,25 @@ public:
 
   LoweringOptions();
 
+  bool getDeviceDoConcurrent() const { return DeviceDoConcurrent; }
+  LoweringOptions &setDeviceDoConcurrent(bool value) {
+    DeviceDoConcurrent = value;
+    return *this;
+  }
+
+  /// Whether eligible implicit-SAVE MAIN scalars may use static storage in
+  /// OpenMP.
+  bool shouldPromoteOpenMPMainProgramScalars() const {
+    if (!getOpenMPMainProgramGlobals())
+      return false;
+    // Device DO CONCURRENT creates target regions after PFT analysis, so the
+    // analysis cannot apply its TARGET fallback. Device compilation disables
+    // promotion; host compilation must match its capture types.
+    // FIXME: Test promotion with device DO CONCURRENT and support matching
+    // host/device captures before removing this restriction.
+    return !getDeviceDoConcurrent();
+  }
+
   const Fortran::common::MathOptionsBase &getMathOptions() const {
     return MathOptions;
   }
@@ -76,6 +95,9 @@ private:
   /// Byte pattern for -finit-local=0x<hex>. Only meaningful when
   /// getInitLocalMode() == InitLocalKind::Hex.
   uint8_t InitLocalPattern = 0;
+
+  /// Whether DO CONCURRENT loops are mapped to OpenMP device regions.
+  bool DeviceDoConcurrent = false;
 
   /// Options for handling/optimizing mathematical computations.
   Fortran::common::MathOptionsBase MathOptions;

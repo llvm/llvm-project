@@ -10,6 +10,8 @@
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/FrontendTool/Utils.h"
+#include "flang/Lower/LoweringOptions.h"
+#include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parsing.h"
@@ -353,6 +355,39 @@ TEST_F(FrontendActionTest, ModuleFileRecoveryIsRejected) {
   // Module files defer messages. A recovered tree must not be mistaken for
   // a successful parse merely because it has no diagnostic messages.
   EXPECT_FALSE(parsing.parseTree().has_value());
+}
+
+// Building several PFTs must not change semantic symbols or another PFT.
+TEST_F(FrontendActionTest, MainProgramGlobalsBelongToPFT) {
+  *(inputFileOs) << "integer :: x,image,co[*]\n!$omp parallel\n"
+                 << "print *,x,co[image]\n!$omp end parallel\nend\n";
+  inputFileOs.reset();
+  compInst.getFrontendOpts().features.Enable(
+      Fortran::common::LanguageFeature::OpenMP);
+  compInst.getFrontendOpts().programAction = ParseSyntaxOnly;
+  ASSERT_TRUE(executeCompilerInvocation(&compInst));
+  auto &semantics = compInst.getSemanticsContext();
+  const auto &scope = semantics.globalScope().children().back();
+  const auto *x = scope.FindSymbol(Fortran::parser::CharBlock{"x"});
+  ASSERT_NE(x, nullptr);
+  const auto flags = x->flags();
+  const auto attrs = x->attrs();
+  auto build = [&](bool enabled) {
+    Fortran::lower::LoweringOptions options;
+    options.setOpenMPMainProgramGlobals(enabled);
+    return Fortran::lower::createPFT(
+        *compInst.getParsing().parseTree(), semantics, options);
+  };
+  auto on = build(true), off = build(false), again = build(true);
+  EXPECT_TRUE(x->flags() == flags && x->attrs() == attrs);
+  EXPECT_TRUE(on->isMainGlobal(*x));
+  EXPECT_FALSE(off->isMainGlobal(*x));
+  EXPECT_TRUE(again->isMainGlobal(*x));
+  EXPECT_FALSE(
+      on->isMainGlobal(*scope.FindSymbol(Fortran::parser::CharBlock{"image"})));
+  using Fortran::lower::pft::getDependentVariableList;
+  EXPECT_TRUE(getDependentVariableList(*x, *on).back().isGlobal());
+  EXPECT_FALSE(getDependentVariableList(*x, *off).back().isGlobal());
 }
 
 TEST_F(FrontendActionTest, EmitLLVM) {

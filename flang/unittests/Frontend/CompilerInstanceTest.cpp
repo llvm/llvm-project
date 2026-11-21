@@ -118,4 +118,45 @@ TEST(CompilerInstance,
               clang::options::OPT_fno_openacc_default_none_scalars_strict)
           .str());
 }
+
+TEST(CompilerInvocation, MainProgramGlobalsRespectLateDeviceMapping) {
+  CompilerInstance compInst;
+  compInst.createDiagnostics();
+  auto &invocation = compInst.getInvocation();
+  const char *args[] = {"-fopenmp"};
+  ASSERT_TRUE(CompilerInvocation::createFromArgs(
+      invocation, args, compInst.getDiagnostics()));
+
+  using Mapping = CodeGenOptions::DoConcurrentMappingKind;
+  invocation.getCodeGenOpts().setDoConcurrentMapping(Mapping::DCMK_Host);
+  invocation.setLoweringOptions();
+  EXPECT_TRUE(invocation.getLoweringOpts().getOpenMPMainProgramGlobals());
+
+  const auto &options = invocation.getLoweringOpts();
+  invocation.getCodeGenOpts().setDoConcurrentMapping(Mapping::DCMK_Device);
+  invocation.setLoweringOptions();
+  EXPECT_FALSE(options.shouldPromoteOpenMPMainProgramScalars());
+  EXPECT_TRUE(options.getOpenMPMainProgramGlobals());
+  for (auto mapping :
+      {Mapping::DCMK_None, Mapping::DCMK_Device, Mapping::DCMK_Host}) {
+    invocation.getCodeGenOpts().setDoConcurrentMapping(mapping);
+    invocation.setLoweringOptions();
+    EXPECT_EQ(options.shouldPromoteOpenMPMainProgramScalars(),
+        mapping != Mapping::DCMK_Device);
+  }
+}
+
+TEST(CompilerInvocation, MainProgramGlobalsPreserveExplicitDisable) {
+  CompilerInstance compInst;
+  compInst.createDiagnostics();
+  auto &invocation = compInst.getInvocation();
+  const char *args[] = {"-fopenmp", "-fno-openmp-main-program-globals"};
+  ASSERT_TRUE(CompilerInvocation::createFromArgs(
+      invocation, args, compInst.getDiagnostics()));
+
+  invocation.getCodeGenOpts().setDoConcurrentMapping(
+      CodeGenOptions::DoConcurrentMappingKind::DCMK_Host);
+  invocation.setLoweringOptions();
+  EXPECT_FALSE(invocation.getLoweringOpts().getOpenMPMainProgramGlobals());
+}
 } // namespace

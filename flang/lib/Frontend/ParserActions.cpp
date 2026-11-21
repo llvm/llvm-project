@@ -48,8 +48,9 @@ void dumpProvenance(CompilerInstance &ci) {
 void dumpPreFIRTree(CompilerInstance &ci) {
   auto &parseTree{*ci.getParsing().parseTree()};
 
-  // Use default lowering options for PFT dump
+  // PFT dumps show control flow and do not use variable storage choices.
   lower::LoweringOptions loweringOptions{};
+  loweringOptions.setOpenMPMainProgramGlobals(false);
   if (auto ast{lower::createPFT(parseTree, ci.getSemanticsContext(),
                                 loweringOptions)}) {
     lower::dumpPFT(llvm::outs(), *ast);

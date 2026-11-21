@@ -292,7 +292,8 @@ mlir::Value Fortran::lower::genInitialDataTarget(
     auto var = Fortran::lower::pft::Variable(sym, /*global=*/true);
     if (couldBeInEquivalence) {
       auto dependentVariableList =
-          Fortran::lower::pft::getDependentVariableList(sym);
+          Fortran::lower::pft::getDependentVariableList(sym,
+                                                        converter.getPft());
       for (Fortran::lower::pft::Variable var : dependentVariableList) {
         if (!var.isAggregateStore())
           break;
@@ -3623,7 +3624,8 @@ mapCallInterfaceSymbol(const Fortran::semantics::Symbol &interfaceSymbol,
                        Fortran::lower::SymMap &symMap) {
   Fortran::lower::AggregateStoreMap storeMap;
   for (Fortran::lower::pft::Variable var :
-       Fortran::lower::pft::getDependentVariableList(interfaceSymbol)) {
+       Fortran::lower::pft::getDependentVariableList(interfaceSymbol,
+                                                     converter.getPft())) {
     if (var.isAggregateStore()) {
       instantiateVariable(converter, var, symMap, storeMap);
       continue;
