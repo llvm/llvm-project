@@ -13,13 +13,17 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -640,7 +644,7 @@ bool InstructionsState::isCopyableElement(Value *V) const {
                 GEP->getSourceElementType() !=
                     cast<GetElementPtrInst>(MainOp)->getSourceElementType()))
       return true;
-  if (I->getParent() != MainOp->getParent() &&
+  if (!IsRegion && I->getParent() != MainOp->getParent() &&
       (!isVectorLikeInstWithConstOps(I) ||
        !isVectorLikeInstWithConstOps(MainOp)))
     return true;
@@ -736,8 +740,8 @@ bool InstructionsState::isNonSchedulable(Value *V) const {
     return !I || isa<PHINode>(I) || isVectorLikeInstWithConstOps(I) ||
            doesNotNeedToBeScheduled(V);
   // MainOp for copyables always schedulable to correctly identify
-  // non-schedulable copyables.
-  if (getMainOp() == V)
+  // non-schedulable copyables. The region nodes are not scheduled.
+  if (!IsRegion && getMainOp() == V)
     return false;
   if (isCopyableElement(V)) {
     auto IsNonSchedulableCopyableElement = [this](Value *V) {
@@ -1052,6 +1056,98 @@ InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                 }) &&
          "Invalid InstructionsState.");
   return S;
+}
+
+bool areRegionScalars(ArrayRef<Value *> VL, const DominatorTree &DT,
+                      const LoopInfo &LI) {
+  auto Insts = make_isa_range<Instruction>(VL);
+  if (Insts.empty() || all_of(VL, isVectorLikeInstWithConstOps))
+    return false;
+  const Loop *L = LI.getLoopFor((*Insts.begin())->getParent());
+  SmallPtrSet<const BasicBlock *, 4> Blocks;
+  for (Instruction *I : Insts) {
+    const BasicBlock *BB = I->getParent();
+    if (Blocks.insert(BB).second &&
+        (!DT.isReachableFromEntry(BB) || LI.getLoopFor(BB) != L))
+      return false;
+  }
+  return Blocks.size() > 1;
+}
+
+/// Checks if \p BB, dominated by \p Entry, is executed as often as \p Entry:
+/// every path from \p Entry passes \p BB before it leaves the blocks, dominated
+/// by \p Entry, or returns to \p Entry. The paths, ending with unreachable or
+/// in the cycles without exits, never return and do not matter.
+static bool isControlEquivalentToEntry(const BasicBlock *Entry,
+                                       const BasicBlock *BB,
+                                       const DominatorTree &DT) {
+  // shortcut: the regions of more than 64 blocks are rejected, the walk is not
+  // cached; upgrade to the post-dominator tree, if it becomes available.
+  constexpr unsigned MaxBlocks = 64;
+  SmallVector<const BasicBlock *> Worklist(successors(Entry));
+  SmallPtrSet<const BasicBlock *, 8> Visited;
+  while (!Worklist.empty()) {
+    const BasicBlock *Succ = Worklist.pop_back_val();
+    if (Succ == BB || !Visited.insert(Succ).second)
+      continue;
+    if (Succ == Entry || Visited.size() > MaxBlocks ||
+        !DT.dominates(Entry, Succ))
+      return false;
+    if (succ_empty(Succ) && !isa<UnreachableInst>(Succ->getTerminator()))
+      return false;
+    append_range(Worklist, successors(Succ));
+  }
+  return true;
+}
+
+BasicBlock *getSESERegionEntry(ArrayRef<Value *> VL, const InstructionsState &S,
+                               const DominatorTree &DT) {
+  if (!S || S.isAltShuffle())
+    return nullptr;
+  // The non-schedulable instructions are safe to speculate, they can be moved
+  // to any point dominated by their operands and dominating their users. The
+  // copyable elements are kept as is, only the values and the PHIs of the
+  // entry block are allowed.
+  auto Insts = make_isa_range<Instruction>(VL);
+  Instruction *InsertPt = nullptr;
+  SmallPtrSet<const BasicBlock *, 4> Blocks;
+  for (Instruction *I : Insts) {
+    if (S.isCopyableElement(I)) {
+      if (!isa<PHINode>(I))
+        return nullptr;
+      continue;
+    }
+    if (!doesNotNeedToBeScheduled(I))
+      return nullptr;
+    Blocks.insert(I->getParent());
+    InsertPt = InsertPt ? DT.findNearestCommonDominator(InsertPt, I) : I;
+  }
+  // The vector code is emitted before the first scalar in the entry block, so
+  // the entry must have such a scalar and the operands must be defined outside
+  // of this block (or be its PHIs), the instructions of the block can be
+  // reordered by the scheduler. The EH pads are not vectorized.
+  BasicBlock *Entry = InsertPt->getParent();
+  if (InsertPt->isTerminator() || Entry->isEHPad())
+    return nullptr;
+  if (!all_of(Insts, [&](Instruction *I) {
+        if (S.isCopyableElement(I))
+          return I->getParent() == Entry;
+        // The operands dominate the scalars, so they dominate the entry if
+        // their blocks do.
+        auto Ops = make_isa_range<Instruction>(I->operands());
+        return all_of(Ops, [&](Instruction *OpI) {
+          return OpI->getParent() == Entry
+                     ? isa<PHINode>(OpI)
+                     : DT.dominates(OpI->getParent(), Entry);
+        });
+      }))
+    return nullptr;
+  // The scalars are executed as often as the vector code in the entry.
+  if (any_of(Blocks, [&](const BasicBlock *BB) {
+        return BB != Entry && !isControlEquivalentToEntry(Entry, BB, DT);
+      }))
+    return nullptr;
+  return Entry;
 }
 
 std::pair<Instruction *, SmallVector<Value *>>
