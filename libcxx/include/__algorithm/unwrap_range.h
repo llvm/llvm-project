@@ -10,8 +10,11 @@
 #define _LIBCPP___ALGORITHM_UNWRAP_RANGE_H
 
 #include <__algorithm/unwrap_iter.h>
+#include <__assert>
 #include <__config>
 #include <__iterator/concepts.h>
+#include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
@@ -33,28 +36,43 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 template <class _Iter, class _Sent>
 constexpr auto __unwrap_range(_Iter __first, _Sent __last) {
-  if constexpr (is_same_v<_Iter, _Sent>)
-    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last))};
-  else if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
-    auto __iter_last = __first + (__last - __first);
-    return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__iter_last))};
-  } else
+  if constexpr (is_same_v<_Iter, _Sent> || (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>)) {
+    if constexpr (is_same_v<_Iter, _Sent> && !__unwrap_iter_may_strip_checks<_Iter>::value) {
+      return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last))};
+    } else {
+      auto __n = __last - __first;
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE(__n >= 0, "__unwrap_range: [first, last) must be a valid range");
+      auto __iter_last = __first + __n;
+      return pair{std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__iter_last))};
+    }
+  } else {
     return pair{std::move(__first), std::move(__last)};
+  }
 }
 
-template < class _Sent, class _Iter, class _Unwrapped>
+template <class _Sent, class _Iter, class _Unwrapped>
 constexpr _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
-  if constexpr (is_same_v<_Iter, _Sent>)
-    return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
-  else if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>)
+  if constexpr (is_same_v<_Iter, _Sent> || (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>))
     return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
   else
     return __iter;
 }
 #else  // _LIBCPP_STD_VER >= 20
-template <class _Iter, class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>()))>
+template <class _Iter,
+          class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>())),
+          __enable_if_t<!__unwrap_iter_may_strip_checks<_Iter>::value, int> = 0>
 _LIBCPP_CONSTEXPR pair<_Unwrapped, _Unwrapped> __unwrap_range(_Iter __first, _Iter __last) {
   return std::make_pair(std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__last)));
+}
+
+template <class _Iter,
+          class _Unwrapped = decltype(std::__unwrap_iter(std::declval<_Iter>())),
+          __enable_if_t<__unwrap_iter_may_strip_checks<_Iter>::value, int> = 0>
+_LIBCPP_CONSTEXPR_SINCE_CXX14 pair<_Unwrapped, _Unwrapped> __unwrap_range(_Iter __first, _Iter __last) {
+  typename iterator_traits<_Iter>::difference_type __n = __last - __first;
+  _LIBCPP_ASSERT_VALID_INPUT_RANGE(__n >= 0, "__unwrap_range: [first, last) must be a valid range");
+  _Iter __iter_last = __first + __n;
+  return std::make_pair(std::__unwrap_iter(std::move(__first)), std::__unwrap_iter(std::move(__iter_last)));
 }
 
 template <class _Iter, class _Unwrapped>

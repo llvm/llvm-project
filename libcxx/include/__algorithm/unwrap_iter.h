@@ -14,6 +14,7 @@
 #include <__memory/pointer_traits.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constructible.h>
+#include <__type_traits/is_same.h>
 #include <__utility/declval.h>
 #include <__utility/move.h>
 
@@ -40,8 +41,9 @@ struct __unwrap_iter_impl {
   static _LIBCPP_CONSTEXPR _Iter __unwrap(_Iter __i) _NOEXCEPT { return __i; }
 };
 
-// TODO(hardening): make sure that the following unwrapping doesn't unexpectedly turn hardened iterators into raw
-// pointers.
+// Note: single-iterator __unwrap_iter turns contiguous iterators into raw pointers without knowing the accessed range
+// length. Range-based callers (__unwrap_range and __copy_move_unwrap_iters) must validate bounded or user-defined
+// contiguous iterators up front before calling __unwrap_iter.
 
 // It's a contiguous iterator, so we can use a raw pointer instead
 template <class _Iter>
@@ -73,6 +75,16 @@ template <class _OrigIter, class _Iter, class _Impl = __unwrap_iter_impl<_OrigIt
 _LIBCPP_CONSTEXPR _OrigIter __rewrap_iter(_OrigIter __orig_iter, _Iter __iter) _NOEXCEPT {
   return _Impl::__rewrap(std::move(__orig_iter), std::move(__iter));
 }
+
+// True when __unwrap_iter(_Iter) converts _Iter to a raw pointer from an iterator wrapper that may enforce bounds
+// checks of its own (such as __bounded_iter, __static_bounded_iter, or a user-defined contiguous_iterator), so callers
+// must validate the accessed range before unwrapping. False when __unwrap_iter is a no-op or only strips unchecked
+// libc++ wrappers (__wrap_iter and even-depth reverse_iterator chains around them).
+template <class _Iter>
+struct __unwrap_iter_may_strip_checks : _IsNotSame<_Iter, decltype(std::__unwrap_iter(std::declval<_Iter>()))> {};
+
+template <class _Iter>
+struct __unwrap_iter_may_strip_checks<__wrap_iter<_Iter> > : __unwrap_iter_may_strip_checks<_Iter> {};
 
 _LIBCPP_END_NAMESPACE_STD
 
