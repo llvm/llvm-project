@@ -384,12 +384,13 @@ def SparseTensor_ToValuesOp : SparseTensor_Op<"values",
 }
 
 def SparseTensor_NumberOfEntriesOp : SparseTensor_Op<"number_of_entries", [Pure]> {
-  let summary = "Returns the number of entries that are stored in the tensor.";
+  let summary = "Returns the used extent of the values storage.";
   let description = [{
-    Returns the number of entries that are stored in the given sparse tensor.
-    Note that this is typically the number of nonzero elements in the tensor,
-    but since explicit zeros may appear in the storage formats, the more
-    accurate nomenclature is used.
+    Returns the used extent of the values storage for the given sparse tensor.
+    This count includes explicit zeros and may include storage-only slots, such
+    as holes in a loose-compressed level. Therefore, it need not equal either
+    the number of entries produced by sparse iteration or the number of
+    mathematically nonzero elements.
 
     Example:
 
