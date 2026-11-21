@@ -9454,17 +9454,18 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
           attr.isGNUAttribute())
         break;
       // The attribute only applies to fields for now. If it's not on a field,
-      // diagnose the [[]] spelling on a declarator chunk here. The GNU
-      // spelling, and the [[]] spelling at the start of the declaration or
-      // after the name, are diagnosed by the subject check in declaration
-      // attribute processing.
-      //
-      // FIXME: [[]] after the type specifiers isn't diagnosed.
+      // diagnose the [[]] spelling here when it's on a type: after the type
+      // specifiers or on a declarator chunk. The GNU spelling, and the [[]]
+      // spelling at the start of the declaration or after the name, are
+      // diagnosed by the subject check in declaration attribute processing.
       if (state.getDeclarator().getContext() != DeclaratorContext::Member) {
-        if (!attr.isGNUAttribute() && TAL == TAL_DeclChunk) {
+        if (!attr.isGNUAttribute() && TAL != TAL_DeclName) {
           state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
               << attr << attr.isRegularKeywordAttribute();
+          // Invalidate it so the DeclSpec attribute, which every declarator
+          // shares, is diagnosed once.
           attr.setUsedAsTypeAttr();
+          attr.setInvalid();
         }
         break;
       }

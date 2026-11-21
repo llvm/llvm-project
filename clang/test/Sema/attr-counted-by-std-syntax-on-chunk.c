@@ -13,6 +13,18 @@ void f(int n, int *[[clang::counted_by(n)]] p); // expected-error{{'clang::count
 int gn;
 int *[[clang::sized_by(gn)]] gp; // expected-error{{'clang::sized_by' attribute cannot be applied to types}}
 
+// After the type specifiers, it applies to the type specifiers' type, and is
+// rejected the same way outside of a field. It's diagnosed once even though
+// every declarator shares it.
+void g(int n, int [[clang::counted_by(n)]] *p); // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+int [[clang::counted_by(gn)]] *ga, *gb; // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+int [[clang::counted_by(gn)]] gi; // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+typedef int [[clang::counted_by(gn)]] *T; // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+void h(void) {
+  int [[clang::counted_by(gn)]] *l; // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+  (void)sizeof(int [[clang::counted_by(gn)]] *); // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+}
+
 struct S {
   int n;
   // CHECK: FieldDecl {{.*}} p 'int * __counted_by_or_null(n)':'int *'
