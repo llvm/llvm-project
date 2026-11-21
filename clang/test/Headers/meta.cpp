@@ -131,3 +131,11 @@ consteval bool test_with_wrong_type() {
   // std-note@*:* {{passing argument to parameter '__r' here}}
   // builtin-error@-3 {{cannot initialize a parameter of type 'std::meta::info' with an rvalue of type 'int'}}
 }
+
+consteval void test_associated_namespace_std_meta() {
+  const std::meta::info &ref = r;
+
+  static_assert(is_type(r));
+  static_assert(is_type(ref));
+  static_assert(is_type(^^int));
+}
