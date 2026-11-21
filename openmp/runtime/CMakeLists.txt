@@ -147,19 +147,39 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 else()
   set(LIBOMP_LIBFLAGS "" CACHE STRING
     "Appended user specified linked libs flags. (e.g., -lm)")
-endif()
 
-if("${LIBOMP_ARCH}" STREQUAL "mips" OR "${LIBOMP_ARCH}" STREQUAL "mips64")
-  set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
-endif()
+  if(NOT MSVC)
+    include(CheckCSourceCompiles)
+    include(CMakePushCheckState)
 
-if("${LIBOMP_ARCH}" STREQUAL "ppc" AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
-  # PPC (32-bit) has no 64-bit atomic instructions, so __atomic_load_8, etc.
-  # come from libatomic where the toolchain provides one.
-  include(CheckLibraryExists)
-  check_library_exists(atomic __atomic_load_8 "" LIBOMP_HAVE_LIBATOMIC_8)
-  if(LIBOMP_HAVE_LIBATOMIC_8)
-    set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+    set(_libomp_atomic_test "
+      int main(void) {
+        volatile int i = 0;
+        volatile long long ll = 0;
+        long long expected = 0;
+
+        __atomic_fetch_add(&i, 1, __ATOMIC_SEQ_CST);
+        __atomic_compare_exchange_n(&ll, &expected, 1, 0,
+                                    __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+        return (int)__atomic_fetch_add(&ll, 1, __ATOMIC_SEQ_CST);
+      }")
+
+    cmake_push_check_state(RESET)
+    check_c_source_compiles("${_libomp_atomic_test}"
+      LIBOMP_HAVE_ATOMICS_WITHOUT_LIB)
+    cmake_pop_check_state()
+
+    if(NOT LIBOMP_HAVE_ATOMICS_WITHOUT_LIB)
+      cmake_push_check_state(RESET)
+      list(APPEND CMAKE_REQUIRED_LIBRARIES atomic)
+      check_c_source_compiles("${_libomp_atomic_test}"
+        LIBOMP_HAVE_ATOMICS_WITH_LIBATOMIC)
+      cmake_pop_check_state()
+
+      if(LIBOMP_HAVE_ATOMICS_WITH_LIBATOMIC)
+        set(LIBOMP_LIBFLAGS "${LIBOMP_LIBFLAGS} -latomic")
+      endif()
+    endif()
   endif()
 endif()
 
