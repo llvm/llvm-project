@@ -833,8 +833,11 @@ static bool parseFrontendArgs(FrontendOptions &opts, llvm::opt::ArgList &args,
   opts.dependencyTargets = args.getAllArgValues(clang::options::OPT_MT);
   opts.showHelp = args.hasArg(clang::options::OPT_help);
   opts.showVersion = args.hasArg(clang::options::OPT_version);
+  // -mtune=help is an alias of --print-supported-tune-cpus.
+  // FIXME: Flang does not distinguish between the CPU and tuning CPU lists.
   opts.printSupportedCPUs =
-      args.hasArg(clang::options::OPT_print_supported_cpus);
+      args.hasArg(clang::options::OPT_print_supported_cpus) ||
+      args.hasArg(clang::options::OPT_print_supported_tune_cpus);
 
   // Get the input kind (from the value passed via `-x`)
   InputKind dashX(Language::Unknown);
