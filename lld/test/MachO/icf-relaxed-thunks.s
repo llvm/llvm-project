@@ -46,19 +46,19 @@
 # DISASM-LABEL: _call_b:
 # DISASM: {{.*}} bl _leaf_a
 # DISASM-LABEL: _call_c:
-# DISASM: {{.*}} bl _leaf_d
+# DISASM: {{.*}} bl _leaf_c
 
 # DISASM-LABEL: _call_only_b:
-# DISASM: {{.*}} bl _leaf_b
+# DISASM: {{.*}} bl _leaf_a
 
 # DISASM-LABEL: _address_a:
 # DISASM: add x0, x0, #0x[[#%x,LEAF_A]]
 # DISASM-LABEL: _address_b:
 # DISASM: add x0, x0, #0x[[#%x,LEAF_B:]]
-## Direct and indirect calls to a thunk preserve the same entrypoint.
+## A saved function pointer reaches the unique thunk; a direct call bypasses it.
 # DISASM-LABEL: _call_direct_and_indirect_b:
 # DISASM: add x8, x8, #0x[[#%x,LEAF_B]]
-# DISASM: {{.*}} bl _leaf_b
+# DISASM: {{.*}} bl _leaf_a
 # DISASM: blr x8
 
 ## Runtime-bound direct calls still resolve the original symbol.
