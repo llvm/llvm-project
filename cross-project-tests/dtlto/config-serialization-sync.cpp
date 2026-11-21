@@ -9,8 +9,8 @@
 // Inject an extra field at the final Config field declaration. Undefine the
 // macro before including the implementation so its structured binding still
 // contains the production field list.
-#define GetCacheKeyOutputString                                               \
-  GetCacheKeyOutputString;                                                    \
+#define GetCacheKeyOutputString                                                \
+  GetCacheKeyOutputString;                                                     \
   bool SerializationTestExtraField
 #include "llvm/LTO/LTOConfigBitcode.h"
 #undef GetCacheKeyOutputString

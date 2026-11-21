@@ -9,8 +9,8 @@
 // Inject an extra field at the final TargetOptions field declaration. Undefine
 // the macro before including the implementation so its structured binding
 // still contains the production field list.
-#define ObjectFilenameForDebug                                                \
-  ObjectFilenameForDebug;                                                     \
+#define ObjectFilenameForDebug                                                 \
+  ObjectFilenameForDebug;                                                      \
   bool SerializationTestExtraField
 #include "llvm/Target/TargetOptions.h"
 #undef ObjectFilenameForDebug
