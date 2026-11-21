@@ -39,6 +39,15 @@ void loop_continue(int *a) {
     a[i] = i;
   }
 
+  // Diagnosed before the SPMD omp.target is created, so no target is left
+  // behind without its omp.loop_nest.
+  int s = 0;
+#pragma omp target parallel for map(tofrom: s)
+  for (int i = 0; i < 10; ++i) {
+    // expected-error@+1{{ClangIR code gen Not Yet Implemented: continue in an OpenMP loop body}}
+    if (i == 3) continue;
+  }
+
   // A continue that targets a loop nested in the body is supported.
 #pragma omp for
   for (int i = 0; i < 10; ++i) {
