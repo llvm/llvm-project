@@ -19,6 +19,10 @@ class LetDummies {
   bit isAsCheapAsAMove;
   bit FPDPRounding;
   bit IsDPMACCInstruction;
+  bits<2> CoexecYounger;
+  bits<2> CoexecOlder;
+  bits<2> CoexecYounger64BitAndMul32;
+  bits<2> CoexecOlder64BitAndMul32;
   Predicate SubtargetPredicate;
   string Constraints;
   string DisableEncoding;
@@ -63,6 +67,10 @@ class VOPAnyCommon <dag outs, dag ins, string asm, list<dag> pattern> :
   let Uses = !if(ReadsModeReg, [MODE, EXEC], [EXEC]);
 }
 
+defvar CoexecA = 0;
+defvar CoexecB = 1;
+defvar CoexecC = 2;
+
 class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
                   string asm, list<dag> pattern> :
   InstSI <outs, ins, asm, pattern>,
@@ -76,6 +84,18 @@ class VOP_Pseudo <string opName, string suffix, VOPProfile P, dag outs, dag ins,
   Instruction Opcode = !cast<Instruction>(NAME);
   bit IsTrue16 = P.IsTrue16;
   bit IsDPMACCInstruction = 0;
+  // How well the VALU can be co-issued with a VALU of another wave on the same
+  // SIMD, as the younger and as the older wave, without and with
+  // FeatureCrossWaveVALUCoexec64BitAndMul32: class CoexecA (best), CoexecB or
+  // CoexecC (never). See SIPreEmitPeephole.cpp.
+  bits<2> CoexecYounger = CoexecB;
+  bits<2> CoexecOlder = CoexecB;
+  bits<2> CoexecYounger64BitAndMul32 = CoexecYounger;
+  bits<2> CoexecOlder64BitAndMul32 = CoexecOlder;
+  bit HasCoexecClass = !or(!ne(CoexecYounger, CoexecB),
+                           !ne(CoexecOlder, CoexecB),
+                           !ne(CoexecYounger64BitAndMul32, CoexecB),
+                           !ne(CoexecOlder64BitAndMul32, CoexecB));
   VOPProfile Pfl = P;
 
   string AsmOperands;
@@ -2501,6 +2521,17 @@ def DPMACCInstructionTable : GenericTable {
 
   let PrimaryKey = ["Opcode"];
   let PrimaryKeyName = "isDPMACCInstructionHelper";
+}
+
+def VOPCoexecClassTable : GenericTable {
+  let FilterClass = "VOP_Pseudo";
+  let FilterClassField = "HasCoexecClass";
+  let CppTypeName = "VOPCoexecClassInfo";
+  let Fields = ["Opcode", "CoexecYounger", "CoexecOlder",
+                "CoexecYounger64BitAndMul32", "CoexecOlder64BitAndMul32"];
+
+  let PrimaryKey = ["Opcode"];
+  let PrimaryKeyName = "getVOPCoexecClassInfo";
 }
 
 def VOP3PHasNoOpSelHiTable : GenericTable {
