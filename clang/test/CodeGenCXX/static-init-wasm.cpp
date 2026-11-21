@@ -43,14 +43,14 @@ struct A {
 
 A theA;
 
-// WEBASSEMBLY32: define internal void @__cxx_global_var_init() #3 {
+// WEBASSEMBLY32: define internal void @__cxx_global_var_init() #[[INIT_ATTR:[0-9]+]] {
 // WEBASSEMBLY32: call noundef ptr @_ZN1AC1Ev(ptr {{[^,]*}} @theA)
-// WEBASSEMBLY32: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
+// WEBASSEMBLY32: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #[[INIT_ATTR]] {
 // WEBASSEMBLY32: call void @__cxx_global_var_init()
 //
-// WEBASSEMBLY64: define internal void @__cxx_global_var_init() #3 {
+// WEBASSEMBLY64: define internal void @__cxx_global_var_init() #[[INIT_ATTR:[0-9]+]] {
 // WEBASSEMBLY64: call noundef ptr @_ZN1AC1Ev(ptr {{[^,]*}} @theA)
-// WEBASSEMBLY64: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #3 {
+// WEBASSEMBLY64: define internal void @_GLOBAL__sub_I_static_init_wasm.cpp() #[[INIT_ATTR]] {
 // WEBASSEMBLY64: call void @__cxx_global_var_init()
 
 // RUN: %clang_cc1 -emit-llvm -triple=wasm32-unknown-unknown -o - %s \

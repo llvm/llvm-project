@@ -53,32 +53,32 @@
 // CHECK: call i32 @llvm.spv.subgroup.id()
 // CHECK: call i32 @llvm.spv.subgroup.local.invocation.id()
   
-// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 0) #2
-// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 1) #2
-// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 2) #2
-// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 0) #2
-// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 1) #2
-// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 2) #2
-// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 0) #2
-// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 1) #2
-// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 2) #2
-// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 0) #2
-// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 1) #2
-// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 2) #2
-// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 0) #2
-// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 1) #2
-// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 2) #2
-// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 0) #2
-// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 1) #2
-// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 2) #2
-// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 0) #2
-// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 1) #2
-// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 2) #2
-// NV: call noundef i32 @_Z27__spirv_BuiltInSubgroupSizev() #2
-// NV: call noundef i32 @_Z30__spirv_BuiltInSubgroupMaxSizev() #2
-// NV: call noundef i32 @_Z27__spirv_BuiltInNumSubgroupsv() #2
-// NV: call noundef i32 @_Z25__spirv_BuiltInSubgroupIdv() #2
-// NV: call noundef i32 @_Z40__spirv_BuiltInSubgroupLocalInvocationIdv() #2
+// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 0) #1
+// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 1) #1
+// NV: call noundef i64 @_Z28__spirv_BuiltInNumWorkgroupsi(i32 noundef 2) #1
+// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 0) #1
+// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 1) #1
+// NV: call noundef i64 @_Z28__spirv_BuiltInWorkgroupSizei(i32 noundef 2) #1
+// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 0) #1
+// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 1) #1
+// NV: call noundef i64 @_Z26__spirv_BuiltInWorkgroupIdi(i32 noundef 2) #1
+// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 0) #1
+// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 1) #1
+// NV: call noundef i64 @_Z32__spirv_BuiltInLocalInvocationIdi(i32 noundef 2) #1
+// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 0) #1
+// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 1) #1
+// NV: call noundef i64 @_Z33__spirv_BuiltInGlobalInvocationIdi(i32 noundef 2) #1
+// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 0) #1
+// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 1) #1
+// NV: call noundef i64 @_Z25__spirv_BuiltInGlobalSizei(i32 noundef 2) #1
+// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 0) #1
+// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 1) #1
+// NV: call noundef i64 @_Z27__spirv_BuiltInGlobalOffseti(i32 noundef 2) #1
+// NV: call noundef i32 @_Z27__spirv_BuiltInSubgroupSizev() #1
+// NV: call noundef i32 @_Z30__spirv_BuiltInSubgroupMaxSizev() #1
+// NV: call noundef i32 @_Z27__spirv_BuiltInNumSubgroupsv() #1
+// NV: call noundef i32 @_Z25__spirv_BuiltInSubgroupIdv() #1
+// NV: call noundef i32 @_Z40__spirv_BuiltInSubgroupLocalInvocationIdv() #1
 
 [[clang::sycl_external]] void test_id_and_range() {
   __spirv_BuiltInNumWorkgroups(0);

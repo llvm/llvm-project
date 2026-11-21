@@ -272,6 +272,7 @@ llvm::Function *CodeGenModule::codegenCXXStructor(GlobalDecl GD) {
                            /*DontDefer=*/true, ForDefinition));
 
   setFunctionLinkage(GD, Fn);
+  addDefinitionFunctionAttributes(GD, *Fn);
 
   if (!tryEmitCUDADeviceInvalidFunctionBody(GD, Fn))
     CodeGenFunction(*this).GenerateCode(GD, Fn, FnInfo);

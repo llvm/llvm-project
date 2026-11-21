@@ -60,20 +60,20 @@ extern "C" {
     // LLVM: call void{{.*}}@normal() #[[NORM_CALL_ATTR:.*]]
     skip();
     // CIR: cir.call{{.*}}@skip()
-    // CIR-SAME: zero_call_used_regs = "skip"
+    // CIR-NOT: zero_call_used_regs
     // LLVM: call void{{.*}}@skip() #[[SKIP_CALL_ATTR:.*]]
     all();
     // CIR: cir.call{{.*}}@all()
-    // CIR-SAME: zero_call_used_regs = "all"
-    // LLVM: call void{{.*}}@all() #[[ALL_CALL_ATTR:.*]]
+    // CIR-NOT: zero_call_used_regs
+    // LLVM: call void{{.*}}@all(){{$}}
     used();
     // CIR: cir.call{{.*}}@used()
-    // CIR-SAME: zero_call_used_regs = "used"
-    // LLVM: call void{{.*}}@used() #[[USED_CALL_ATTR:.*]]
+    // CIR-NOT: zero_call_used_regs
+    // LLVM: call void{{.*}}@used(){{$}}
     used_gpr_arg();
     // CIR: cir.call{{.*}}@used_gpr_arg()
-    // CIR-SAME: zero_call_used_regs = "used-gpr-arg"
-    // LLVM: call void{{.*}}@used_gpr_arg() #[[USED_GPR_CALL_ATTR:.*]]
+    // CIR-NOT: zero_call_used_regs
+    // LLVM: call void{{.*}}@used_gpr_arg(){{$}}
   }
 }
 
@@ -93,10 +93,4 @@ extern "C" {
 // LLVM: attributes #[[NORM_CALL_ATTR]]
 // LLVM-NOT: zero-call-used-regs
 // LLVM: attributes #[[SKIP_CALL_ATTR]]
-// LLVM-SAME: "zero-call-used-regs"="skip"
-// LLVM: attributes #[[ALL_CALL_ATTR]]
-// LLVM-SAME: "zero-call-used-regs"="all"
-// LLVM: attributes #[[USED_CALL_ATTR]]
-// LLVM-SAME: "zero-call-used-regs"="used"
-// LLVM: attributes #[[USED_GPR_CALL_ATTR]]
-// LLVM-SAME: "zero-call-used-regs"="used-gpr-arg"
+// LLVM-NOT: zero-call-used-regs

@@ -19,6 +19,5 @@ void foo(void) {
 // CHECK:   call void %[[ptr]]() #[[call_attr]]
 // CHECK:   ret void
 
-// CHECK: declare void @test() #[[func_attr:[0-9]+]]
-// CHECK: attributes #[[func_attr]] = { {{.*}}"bpf_fastcall"{{.*}} }
+// CHECK: declare void @test() #[[call_attr]]
 // CHECK: attributes #[[call_attr]] = { "bpf_fastcall" }

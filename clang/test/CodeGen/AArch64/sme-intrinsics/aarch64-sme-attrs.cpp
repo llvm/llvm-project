@@ -301,15 +301,15 @@ int test_variadic_template() __arm_inout("za") {
 }
 
 // CHECK: attributes #[[SM_ENABLED]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
-// CHECK: attributes #[[NORMAL_DECL]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
-// CHECK: attributes #[[SM_ENABLED_DECL]] = { "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
+// CHECK: attributes #[[NORMAL_DECL]] = { "target-features"="+sme" }
+// CHECK: attributes #[[SM_ENABLED_DECL]] = { "aarch64_pstate_sm_enabled" "target-features"="+sme" }
 // CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
-// CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
+// CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "target-features"="+sme" }
 // CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
 // CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
-// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
+// CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "target-features"="+sme" }
 // CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
-// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
+// CHECK: attributes #[[ZA_PRESERVED_DECL]] = { "aarch64_preserves_za" "target-features"="+sme" }
 // CHECK: attributes #[[ZA_NEW]] = { mustprogress noinline nounwind "aarch64_new_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
 // CHECK: attributes #[[ZA_AGNOSTIC]] = { mustprogress noinline nounwind "aarch64_za_state_agnostic" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }
 // CHECK: attributes #[[NORMAL_DEF]] = { mustprogress noinline nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+sme" }

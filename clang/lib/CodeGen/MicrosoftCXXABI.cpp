@@ -2167,6 +2167,7 @@ MicrosoftCXXABI::EmitVirtualMemPtrThunk(const CXXMethodDecl *MD,
 
   CGM.SetLLVMFunctionAttributes(MD, FnInfo, ThunkFn, /*IsThunk=*/false);
   CGM.SetLLVMFunctionAttributesForDefinition(MD, ThunkFn);
+  CGM.addDefinitionFunctionAttributes(MD, *ThunkFn);
 
   // Add the "thunk" attribute so that LLVM knows that the return type is
   // meaningless. These thunks can be used to call functions with differing

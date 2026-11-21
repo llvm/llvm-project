@@ -3161,6 +3161,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::lowerFuncAttributes(
   for (mlir::NamedAttribute attr : func->getDiscardableAttrs()) {
     if (isHandledDiscardableFuncAttr(attr))
       continue;
+    if (func.isDeclaration() &&
+        attr.getName() == CIRDialect::getZeroCallUsedRegsAttrName())
+      continue;
     if (metadataLowering.lower(attr, includeFunctionOnlyAttrs))
       continue;
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
@@ -3319,8 +3322,8 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
 
-  if (std::optional<cir::FramePointerKind> framePointerKind =
-          op.getFramePointer())
+  std::optional<cir::FramePointerKind> framePointerKind = op.getFramePointer();
+  if (framePointerKind && !op.isDeclaration())
     fn.setFramePointerAttr(mlir::LLVM::FramePointerKindAttr::get(
         fn.getContext(), convertFramePointerKind(*framePointerKind)));
 
@@ -3348,9 +3351,10 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       passthrough.push_back(rewriter.getArrayAttr(
           {rewriter.getStringAttr(dontCallAttr), diagnostic}));
 
-  // Every function but a runtime function gets the TU-wide default function
-  // attributes.
-  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName())) {
+  // Every function definition but a runtime function gets the TU-wide default
+  // function attributes.
+  if (!op->hasAttr(CIRDialect::getRuntimeFuncAttrName()) &&
+      !op.isDeclaration()) {
     if (auto langOpts = op->getParentOfType<mlir::ModuleOp>()
                             ->getAttrOfType<cir::LoweringOptionsAttr>(
                                 CIRDialect::getLoweringOptionsAttrName())) {
