@@ -51592,11 +51592,72 @@ static SDValue combineIntDivRem(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
+// Move alternating per-word shifts before a lane-local interleave. The
+// low and high interleaves of the same inputs can share the shifted vectors.
+static SDValue combineAlternatingShiftOfUnpack(SDNode *N, SelectionDAG &DAG,
+                                               const X86Subtarget &Subtarget) {
+  if (N->getValueType(0) != MVT::v16i16 || !Subtarget.hasAVX2() ||
+      supportedVectorVarShift(MVT::v16i16, Subtarget, ISD::SHL))
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+  SDValue Counts = N->getOperand(1);
+  if (Src.getOpcode() != ISD::VECTOR_SHUFFLE || !Src.hasOneUse() ||
+      Counts.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  unsigned Shift[2];
+  for (unsigned I = 0; I != 16; ++I) {
+    auto *C = dyn_cast<ConstantSDNode>(Counts.getOperand(I));
+    if (!C)
+      return SDValue();
+    const APInt &Value = C->getAPIntValue();
+    unsigned Amount;
+    if (N->getOpcode() == ISD::MUL) {
+      if (!Value.isPowerOf2())
+        return SDValue();
+      Amount = Value.logBase2();
+    } else {
+      if (Value.uge(16))
+        return SDValue();
+      Amount = Value.getZExtValue();
+    }
+    if (I < 2)
+      Shift[I] = Amount;
+    else if (Shift[I % 2] != Amount)
+      return SDValue();
+  }
+  if (Shift[0] == Shift[1])
+    return SDValue();
+
+  auto *Shuffle = cast<ShuffleVectorSDNode>(Src);
+  ArrayRef<int> Mask = Shuffle->getMask();
+  SmallVector<int, 16> UnpackMask;
+  if (Mask[0] == 0)
+    DecodeUNPCKLMask(16, 16, UnpackMask);
+  else if (Mask[0] == 4)
+    DecodeUNPCKHMask(16, 16, UnpackMask);
+  if (Mask != ArrayRef<int>(UnpackMask))
+    return SDValue();
+
+  SDLoc DL(N);
+  auto ShiftInput = [&](unsigned I) {
+    SDValue Input = Src.getOperand(I);
+    return DAG.getNode(ISD::SHL, DL, MVT::v16i16, Input,
+                       DAG.getConstant(Shift[I], DL, MVT::v16i16));
+  };
+  return DAG.getVectorShuffle(MVT::v16i16, DL, ShiftInput(0), ShiftInput(1),
+                              Mask);
+}
+
 static SDValue combineMul(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
+
+  if (SDValue V = combineAlternatingShiftOfUnpack(N, DAG, Subtarget))
+    return V;
 
   if (SDValue V = combineMulToPMADDWD(N, DL, DAG, Subtarget))
     return V;
@@ -51836,6 +51897,9 @@ static SDValue combineShiftLeft(SDNode *N, SelectionDAG &DAG,
   EVT VT = N0.getValueType();
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   SDLoc DL(N);
+
+  if (SDValue V = combineAlternatingShiftOfUnpack(N, DAG, Subtarget))
+    return V;
 
   // Exploits AVX2 VSHLV/VSRLV instructions for efficient unsigned vector shifts
   // with out-of-bounds clamping.
