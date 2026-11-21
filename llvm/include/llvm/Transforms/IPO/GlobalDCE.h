@@ -30,6 +30,7 @@ class Comdat;
 class Constant;
 class Function;
 class GlobalVariable;
+class Instruction;
 class Metadata;
 class Module;
 class Value;
@@ -38,7 +39,8 @@ class ModulePass;
 /// Pass to remove unused function declarations.
 class GlobalDCEPass : public OptionalPassInfoMixin<GlobalDCEPass> {
 public:
-  GlobalDCEPass(bool InLTOPostLink = false) : InLTOPostLink(InLTOPostLink) {}
+  GlobalDCEPass(bool InLTOPostLink = false, bool DropAssumes = false)
+      : InLTOPostLink(InLTOPostLink), DropAssumes(DropAssumes) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
@@ -49,7 +51,15 @@ public:
 private:
   bool InLTOPostLink = false;
 
+  /// Do not keep globals alive for uses that only feed llvm.assume, and drop
+  /// those uses from the assumptions.
+  bool DropAssumes = false;
+
   SmallPtrSet<GlobalValue*, 32> AliveGlobals;
+
+  /// Instructions that are only used, directly or transitively, by
+  /// llvm.assume, including the assumptions themselves.
+  SmallPtrSet<Instruction *, 32> EphemeralValues;
 
   /// Global -> Global that uses this global.
   DenseMap<GlobalValue *, SmallPtrSet<GlobalValue *, 4>> GVDependencies;
@@ -92,6 +102,10 @@ private:
   void ScanVTableLoad(Function *Caller, Metadata *TypeId, uint64_t CallOffset);
 
   void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
+
+  // Assumptions on dead globals.
+  void collectEphemeralValues(Module &M);
+  bool dropAssumesOnDeadGlobals(Module &M, FunctionAnalysisManager *FAM);
 };
 
 LLVM_ABI ModulePass *createGlobalDCEPass();

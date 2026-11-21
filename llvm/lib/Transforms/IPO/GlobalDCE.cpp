@@ -28,6 +28,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/Transforms/Utils/GlobalStatus.h"
+#include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
 
@@ -60,6 +61,7 @@ INITIALIZE_PASS(GlobalDCELegacyPass, "globaldce", "Dead Global Elimination",
 // Public interface to the GlobalDCEPass.
 ModulePass *llvm::createGlobalDCEPass() { return new GlobalDCELegacyPass(); }
 
+STATISTIC(NumAssumeUses, "Number of assumption uses of dead globals dropped");
 STATISTIC(NumAliases  , "Number of global aliases removed");
 STATISTIC(NumFunctions, "Number of functions removed");
 STATISTIC(NumIFuncs,    "Number of indirect functions removed");
@@ -82,11 +84,118 @@ static bool isEmptyFunction(Function *F) {
   return false;
 }
 
+/// Returns true if I can be erased once all of its users are erased.
+static bool canBeEphemeral(const Instruction *I) {
+  if (I->mayHaveSideEffects() || I->isTerminator() || I->isEHPad())
+    return false;
+  // Type tests have special semantics, keep them.
+  if (auto *II = dyn_cast<IntrinsicInst>(I))
+    return II->getIntrinsicID() != Intrinsic::type_test &&
+           II->getIntrinsicID() != Intrinsic::public_type_test;
+  return true;
+}
+
+/// Collect the assumptions and the instructions whose uses are all, directly
+/// or transitively, in assumptions.
+void GlobalDCEPass::collectEphemeralValues(Module &M) {
+  Function *AssumeFn = Intrinsic::getDeclarationIfExists(&M, Intrinsic::assume);
+  if (!AssumeFn)
+    return;
+
+  SmallVector<Instruction *, 16> Worklist;
+  for (User *U : AssumeFn->users())
+    if (auto *Assume = dyn_cast<AssumeInst>(U))
+      Worklist.push_back(Assume);
+
+  // An instruction becomes ephemeral when its last non-ephemeral use is found
+  // to be ephemeral. Uses in a cycle are never all ephemeral.
+  DenseMap<Instruction *, unsigned> NumOtherUses;
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.pop_back_val();
+    if (!EphemeralValues.insert(I).second)
+      continue;
+    for (Value *Op : I->operands()) {
+      auto *OpI = dyn_cast<Instruction>(Op);
+      if (!OpI || !canBeEphemeral(OpI))
+        continue;
+      auto It = NumOtherUses.try_emplace(OpI, OpI->getNumUses()).first;
+      if (--It->second == 0)
+        Worklist.push_back(OpI);
+    }
+  }
+}
+
+/// Drop the uses of dead globals from the assumptions in live functions, and
+/// erase the instructions that only computed them.
+bool GlobalDCEPass::dropAssumesOnDeadGlobals(Module &M,
+                                             FunctionAnalysisManager *FAM) {
+  SmallVector<Use *, 8> AssumeUses;
+  SmallSetVector<Instruction *, 8> DeadInsts;
+  SmallPtrSet<Constant *, 8> VisitedConstants;
+  SmallVector<Value *, 16> Worklist;
+  for (GlobalValue &GV : M.global_values())
+    if (!AliveGlobals.contains(&GV))
+      Worklist.push_back(&GV);
+
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    for (Use &U : V->uses()) {
+      User *Usr = U.getUser();
+      if (auto *I = dyn_cast<Instruction>(Usr)) {
+        if (!AliveGlobals.contains(I->getFunction()))
+          continue;
+        assert(EphemeralValues.contains(I) && "dead global used by live code");
+        if (isa<AssumeInst>(I))
+          AssumeUses.push_back(&U);
+        else if (DeadInsts.insert(I))
+          Worklist.push_back(I);
+      } else if (auto *C = dyn_cast<Constant>(Usr)) {
+        if (!isa<GlobalValue>(C) && VisitedConstants.insert(C).second)
+          Worklist.push_back(C);
+      }
+    }
+  }
+  if (AssumeUses.empty())
+    return false;
+
+  SmallSetVector<Function *, 4> ChangedFunctions;
+  SmallVector<WeakTrackingVH, 16> MaybeDead;
+  for (Use *U : AssumeUses) {
+    auto *Assume = cast<AssumeInst>(U->getUser());
+    Value::dropDroppableUse(*U);
+    ChangedFunctions.insert(Assume->getFunction());
+    MaybeDead.push_back(Assume);
+  }
+  NumAssumeUses += AssumeUses.size();
+
+  for (Instruction *I : DeadInsts)
+    for (Value *Op : I->operands())
+      if (auto *OpI = dyn_cast<Instruction>(Op);
+          OpI && !DeadInsts.contains(OpI))
+        MaybeDead.push_back(OpI);
+  for (Instruction *I : DeadInsts)
+    I->dropAllReferences();
+  for (Instruction *I : DeadInsts)
+    I->eraseFromParent();
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDead);
+
+  if (FAM) {
+    PreservedAnalyses PA;
+    PA.preserveSet<CFGAnalyses>();
+    for (Function *F : ChangedFunctions)
+      FAM->invalidate(*F, PA);
+  }
+  return true;
+}
+
 /// Compute the set of GlobalValue that depends from V.
 /// The recursion stops as soon as a GlobalValue is met.
 void GlobalDCEPass::ComputeDependencies(Value *V,
                                         SmallPtrSetImpl<GlobalValue *> &Deps) {
   if (auto *I = dyn_cast<Instruction>(V)) {
+    // A use that only feeds assumptions does not keep a global alive.
+    if (EphemeralValues.contains(I))
+      return;
     Function *Parent = I->getParent()->getParent();
     Deps.insert(Parent);
   } else if (auto *GV = dyn_cast<GlobalValue>(V)) {
@@ -109,8 +218,13 @@ void GlobalDCEPass::ComputeDependencies(Value *V,
 
 void GlobalDCEPass::UpdateGVDependencies(GlobalValue &GV) {
   SmallPtrSet<GlobalValue *, 8> Deps;
-  for (User *User : GV.users())
-    ComputeDependencies(User, Deps);
+  for (Use &U : GV.uses()) {
+    // A called function is needed even if the call only feeds assumptions.
+    if (auto *CB = dyn_cast<CallBase>(U.getUser()); CB && CB->isCallee(&U))
+      Deps.insert(CB->getFunction());
+    else
+      ComputeDependencies(U.getUser(), Deps);
+  }
   Deps.erase(&GV); // Remove self-reference.
   for (GlobalValue *GVU : Deps) {
     // If this is a dep from a vtable to a virtual function, and we have
@@ -322,6 +436,10 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // might call, if we have that information.
   AddVirtualFunctionDependencies(M);
 
+  // Uses that only feed assumptions do not keep globals alive.
+  if (DropAssumes)
+    collectEphemeralValues(M);
+
   // Loop over the module, adding globals which are obviously necessary.
   for (GlobalObject &GO : M.global_objects()) {
     GO.removeDeadConstantUsers();
@@ -391,6 +509,10 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // Now that all globals which are needed are in the AliveGlobals set, we loop
   // through the program, deleting those which are not alive.
   //
+
+  // Live functions can still refer to dead globals in their assumptions.
+  if (DropAssumes)
+    Changed |= dropAssumesOnDeadGlobals(M, FAM);
 
   // The first pass is to drop initializers of global variables which are dead.
   std::vector<GlobalVariable *> DeadGlobalVars; // Keep track of dead globals
@@ -484,6 +606,7 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &MAM) {
   ComdatMembers.clear();
   TypeIdMap.clear();
   VFESafeVTables.clear();
+  EphemeralValues.clear();
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -498,6 +621,10 @@ void GlobalDCEPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<GlobalDCEPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  if (InLTOPostLink)
+  if (InLTOPostLink && DropAssumes)
+    OS << "<vfe-linkage-unit-visibility;drop-assumes>";
+  else if (InLTOPostLink)
     OS << "<vfe-linkage-unit-visibility>";
+  else if (DropAssumes)
+    OS << "<drop-assumes>";
 }

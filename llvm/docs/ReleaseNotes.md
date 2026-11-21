@@ -310,6 +310,10 @@ Makes programs 10x faster by doing Special New Thing.
 - The IR Outliner has been removed, due to lack of a maintainer and the presence
   of correctness issues.
 
+- GlobalDCE has a new `drop-assumes` option, enabled late in the optimization
+  pipeline. With it, globals whose only uses feed `llvm.assume` are removed
+  together with those uses, so they are no longer emitted into the object file.
+
 ### Changes to Vectorizers
 
 ### Changes to the AArch64 Backend

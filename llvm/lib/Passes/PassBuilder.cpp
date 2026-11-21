@@ -935,9 +935,27 @@ Expected<LoopUnrollOptions> parseLoopUnrollOptions(StringRef Params) {
   return UnrollOpts;
 }
 
-Expected<bool> parseGlobalDCEPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(
-      Params, "vfe-linkage-unit-visibility", "GlobalDCE");
+struct GlobalDCEPassOptions {
+  bool InLTOPostLink = false;
+  bool DropAssumes = false;
+};
+
+Expected<GlobalDCEPassOptions> parseGlobalDCEPassOptions(StringRef Params) {
+  GlobalDCEPassOptions Result;
+  while (!Params.empty()) {
+    StringRef ParamName;
+    std::tie(ParamName, Params) = Params.split(';');
+
+    if (ParamName == "vfe-linkage-unit-visibility")
+      Result.InLTOPostLink = true;
+    else if (ParamName == "drop-assumes")
+      Result.DropAssumes = true;
+    else
+      return make_error<StringError>(
+          formatv("invalid GlobalDCE pass parameter '{}'", ParamName).str(),
+          inconvertibleErrorCode());
+  }
+  return Result;
 }
 
 Expected<bool> parseCGProfilePassOptions(StringRef Params) {

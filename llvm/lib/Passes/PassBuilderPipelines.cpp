@@ -1612,7 +1612,10 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // FIXME: It would seem like these should come first in the optimization
   // pipeline and maybe be the bottom of the canonicalization pipeline? Weird
   // ordering here.
-  MPM.addPass(GlobalDCEPass());
+  // Globals that only assumptions refer to are dropped with those assumptions,
+  // except before an LTO link, which can still make use of them.
+  MPM.addPass(GlobalDCEPass(/*InLTOPostLink=*/false,
+                            /*DropAssumes=*/!isLTOPreLink(LTOPhase)));
   MPM.addPass(ConstantMergePass());
 
   // Merge functions if requested. It has a better chance to merge functions
@@ -2291,8 +2294,9 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Drop bodies of available eternally objects to improve GlobalDCE.
   MPM.addPass(EliminateAvailableExternallyPass());
 
-  // Now that we have optimized the program, discard unreachable functions.
-  MPM.addPass(GlobalDCEPass(/*InLTOPostLink=*/true));
+  // Now that we have optimized the program, discard unreachable functions, and
+  // the globals that only assumptions refer to.
+  MPM.addPass(GlobalDCEPass(/*InLTOPostLink=*/true, /*DropAssumes=*/true));
 
   if (*PTO.MergeFunctions)
     MPM.addPass(MergeFunctionsPass());
