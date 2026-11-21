@@ -928,13 +928,18 @@ def SDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
                                 "s.d\t$fd, ${offset}(${base})">,
               FGR_32, ISA_MIPS1, HARDFLOAT;
 
+def LDC1_M1 : MipsAsmPseudoInst<(outs AFGR64Opnd:$fd),
+                                (ins MemBase:$base, mem_simm16:$offset),
+                                "l.d\t$fd, ${offset}(${base})">,
+              FGR_32, ISA_MIPS1, HARDFLOAT;
+
 //===----------------------------------------------------------------------===//
 // InstAliases.
 //===----------------------------------------------------------------------===//
 def : MipsInstAlias
         <"s.s $fd, ${offset}(${base})",
          (SWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
-      ISA_MIPS2, HARDFLOAT;
+      ISA_MIPS1, HARDFLOAT;
 def : MipsInstAlias
         <"s.d $fd, ${offset}(${base})",
          (SDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
@@ -947,11 +952,15 @@ def : MipsInstAlias
         <"s.d $fd, ${offset}(${base})",
          (SDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_32, ISA_MIPS1, HARDFLOAT;
+def : MipsInstAlias
+        <"sdc1 $fd, ${offset}(${base})",
+         (SDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
+      FGR_32, ISA_MIPS1, HARDFLOAT;
 
 def : MipsInstAlias
         <"l.s $fd, ${offset}(${base})",
          (LWC1 FGR32Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
-      ISA_MIPS2, HARDFLOAT;
+      ISA_MIPS1, HARDFLOAT;
 def : MipsInstAlias
         <"l.d $fd, ${offset}(${base})",
          (LDC1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
@@ -960,6 +969,14 @@ def : MipsInstAlias
         <"l.d $fd, ${offset}(${base})",
          (LDC164 FGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
       FGR_64, ISA_MIPS2, HARDFLOAT;
+def : MipsInstAlias
+        <"l.d $fd, ${offset}(${base})",
+         (LDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
+      FGR_32, ISA_MIPS1, HARDFLOAT;
+def : MipsInstAlias
+        <"ldc1 $fd, ${offset}(${base})",
+         (LDC1_M1 AFGR64Opnd:$fd, MemBase:$base, mem_simm16:$offset), 0>,
+      FGR_32, ISA_MIPS1, HARDFLOAT;
 
 multiclass C_COND_ALIASES<string TypeStr, RegisterOperand RC> {
   def : MipsInstAlias<!strconcat("c.f.", TypeStr, " $fs, $ft"),
