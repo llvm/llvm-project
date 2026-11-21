@@ -724,11 +724,11 @@ void DeclPrinter::VisitFunctionDecl(FunctionDecl *D) {
   SubPolicy.SuppressSpecifiers = false;
   std::string Proto;
 
-  if (Policy.FullyQualifiedName) {
+  if (Policy.FullyQualifiedName && !Policy.SuppressFunctionNameScope) {
     Proto += D->getQualifiedNameAsString();
   } else {
     llvm::raw_string_ostream OS(Proto);
-    if (!Policy.SuppressScope)
+    if (!Policy.SuppressScope && !Policy.SuppressFunctionNameScope)
       D->getQualifier().print(OS, Policy);
     D->getNameInfo().printName(OS, Policy);
   }
