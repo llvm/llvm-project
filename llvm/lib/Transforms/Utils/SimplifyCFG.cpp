@@ -1247,7 +1247,12 @@ static void cloneInstructionsIntoPredecessorBlockAndUpdateSSAUses(
     auto &DL = BB->getTerminator()->getDebugLoc();
     if (!PredDL->getAtomGroup() && DL && DL->getAtomGroup() &&
         PredDL.isSameSourceLocation(DL)) {
-      PTI->setDebugLoc(DL);
+      // Copy DL for its atom, keeping PTI's own irlayers. The atom group is
+      // remapped below if a cloned bonus instruction shares it.
+      PTI->setDebugLoc(DILocation::get(
+          PTI->getContext(), DL.getLine(), DL.getCol(), DL.getScope(),
+          DL.getInlinedAt(), DL.isImplicitCode(), DL->getAtomGroup(),
+          DL->getAtomRank(), PredDL.getRawIRLayers()));
       RemapSourceAtom(PTI, VMap);
     }
   }
