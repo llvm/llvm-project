@@ -390,7 +390,7 @@ public:
     DenseI64ArrayAttr strideTosaAttr = op.getStrideAttr();
     DenseI64ArrayAttr dilationTosaAttr = op.getDilationAttr();
 
-    Type accETy = op.getAccType();
+    Type accETy = getAccumulationType(op.getAccType());
     Type accTy = RankedTensorType::get(resultTy.getShape(), accETy);
 
     // Get and verify zero points.
@@ -581,7 +581,7 @@ public:
     auto strideTosaAttr = op.getStrideAttr();
     auto dilationTosaAttr = op.getDilationAttr();
 
-    Type accETy = op.getAccType();
+    Type accETy = getAccumulationType(op.getAccType());
 
     if (!weightTy.hasStaticShape() || !biasTy.hasStaticShape())
       return rewriter.notifyMatchFailure(
@@ -816,6 +816,9 @@ public:
     if (!aType || !bType || !outputType)
       return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
 
+    auto accType =
+        outputType.clone(getAccumulationType(outputType.getElementType()));
+
     FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
     FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
     if (failed(maybeAZp))
@@ -839,7 +842,7 @@ public:
     const int64_t outputRank = outputType.getRank();
     auto [a, b, zeroTensor] =
         prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
-                              outputType, /*transposeB=*/false);
+                              accType, /*transposeB=*/false);
 
     Value aZp, bZp;
     const bool hasNonzeroZeroPoint = aZpVal != 0 || bZpVal != 0;
@@ -850,65 +853,69 @@ public:
                                       rewriter.getI32IntegerAttr(bZpVal));
     }
 
+    Value result;
     if (outputRank == 2) {
       if (!hasNonzeroZeroPoint) {
-        rewriter.replaceOpWithNewOp<linalg::MatmulOp>(op, TypeRange{outputType},
-                                                      ValueRange{a, b},
-                                                      ValueRange{zeroTensor});
+        result =
+            linalg::MatmulOp::create(rewriter, loc, TypeRange{accType},
+                                     ValueRange{a, b}, ValueRange{zeroTensor})
+                .getResult(0);
       } else {
-        rewriter.replaceOpWithNewOp<linalg::QuantizedMatmulOp>(
-            op, TypeRange{outputType}, ValueRange{a, b, aZp, bZp},
-            ValueRange{zeroTensor});
+        result = linalg::QuantizedMatmulOp::create(
+                     rewriter, loc, TypeRange{accType},
+                     ValueRange{a, b, aZp, bZp}, ValueRange{zeroTensor})
+                     .getResult(0);
       }
-      return success();
-    }
-
-    if (outputRank == 3) {
+    } else if (outputRank == 3) {
       if (!hasNonzeroZeroPoint) {
-        rewriter.replaceOpWithNewOp<linalg::BatchMatmulOp>(
-            op, TypeRange{outputType}, ValueRange{a, b},
-            ValueRange{zeroTensor});
+        result = linalg::BatchMatmulOp::create(
+                     rewriter, loc, TypeRange{accType}, ValueRange{a, b},
+                     ValueRange{zeroTensor})
+                     .getResult(0);
       } else {
-        rewriter.replaceOpWithNewOp<linalg::QuantizedBatchMatmulOp>(
-            op, TypeRange{outputType}, ValueRange{a, b, aZp, bZp},
-            ValueRange{zeroTensor});
+        result = linalg::QuantizedBatchMatmulOp::create(
+                     rewriter, loc, TypeRange{accType},
+                     ValueRange{a, b, aZp, bZp}, ValueRange{zeroTensor})
+                     .getResult(0);
       }
-      return success();
-    }
-
-    SmallVector<ReassociationIndices> reassociation =
-        getMatMulBatchCollapseReassociation(outputRank);
-    auto collapse = [&](Value value) {
-      auto type = cast<RankedTensorType>(value.getType());
-      auto collapsedType =
-          tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
-      return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
-                                             value, reassociation);
-    };
-
-    Value collapsedA = collapse(a);
-    Value collapsedB = collapse(b);
-    Value collapsedInit = collapse(zeroTensor);
-    auto collapsedOutputType = cast<RankedTensorType>(collapsedInit.getType());
-    Value collapsedResult;
-
-    if (!hasNonzeroZeroPoint) {
-      collapsedResult =
-          linalg::BatchMatmulOp::create(
-              rewriter, loc, TypeRange{collapsedOutputType},
-              ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
-              .getResult(0);
     } else {
-      collapsedResult = linalg::QuantizedBatchMatmulOp::create(
-                            rewriter, loc, TypeRange{collapsedOutputType},
-                            ValueRange{collapsedA, collapsedB, aZp, bZp},
-                            ValueRange{collapsedInit})
-                            .getResult(0);
+      SmallVector<ReassociationIndices> reassociation =
+          getMatMulBatchCollapseReassociation(outputRank);
+      auto collapse = [&](Value value) {
+        auto type = cast<RankedTensorType>(value.getType());
+        auto collapsedType =
+            tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
+        return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
+                                               value, reassociation);
+      };
+
+      Value collapsedA = collapse(a);
+      Value collapsedB = collapse(b);
+      Value collapsedInit = collapse(zeroTensor);
+      auto collapsedOutputType =
+          cast<RankedTensorType>(collapsedInit.getType());
+      Value collapsedResult;
+
+      if (!hasNonzeroZeroPoint) {
+        collapsedResult =
+            linalg::BatchMatmulOp::create(
+                rewriter, loc, TypeRange{collapsedOutputType},
+                ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
+                .getResult(0);
+      } else {
+        collapsedResult = linalg::QuantizedBatchMatmulOp::create(
+                              rewriter, loc, TypeRange{collapsedOutputType},
+                              ValueRange{collapsedA, collapsedB, aZp, bZp},
+                              ValueRange{collapsedInit})
+                              .getResult(0);
+      }
+
+      result = tensor::ExpandShapeOp::create(
+          rewriter, loc, accType, collapsedResult, reassociation,
+          tensor::getMixedSizes(rewriter, loc, zeroTensor));
     }
 
-    Value result = tensor::ExpandShapeOp::create(
-        rewriter, loc, outputType, collapsedResult, reassociation,
-        tensor::getMixedSizes(rewriter, loc, zeroTensor));
+    result = convertTensorElementType(rewriter, loc, result, outputType);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -926,6 +933,9 @@ public:
     auto outputType = dyn_cast<RankedTensorType>(op.getType());
     if (!aType || !bType || !outputType)
       return rewriter.notifyMatchFailure(op, "only supports ranked tensors");
+
+    auto accType =
+        outputType.clone(getAccumulationType(outputType.getElementType()));
 
     FailureOr<int64_t> maybeAZp = op.getAZeroPoint();
     FailureOr<int64_t> maybeBZp = op.getBZeroPoint();
@@ -946,41 +956,48 @@ public:
     const int64_t outputRank = outputType.getRank();
     auto [a, b, zeroTensor] =
         prepareMatMulOperands(rewriter, loc, adaptor.getA(), adaptor.getB(),
-                              outputType, /*transposeB=*/true);
+                              accType, /*transposeB=*/true);
 
+    Value result;
     if (outputRank == 2) {
-      rewriter.replaceOpWithNewOp<linalg::MatmulTransposeBOp>(
-          op, TypeRange{outputType}, ValueRange{a, b}, ValueRange{zeroTensor});
-      return success();
+      result = linalg::MatmulTransposeBOp::create(
+                   rewriter, loc, TypeRange{accType}, ValueRange{a, b},
+                   ValueRange{zeroTensor})
+                   .getResult(0);
+    } else if (outputRank == 3) {
+      result = linalg::BatchMatmulTransposeBOp::create(
+                   rewriter, loc, TypeRange{accType}, ValueRange{a, b},
+                   ValueRange{zeroTensor})
+                   .getResult(0);
+    } else {
+      SmallVector<ReassociationIndices> reassociation =
+          getMatMulBatchCollapseReassociation(outputRank);
+      auto collapse = [&](Value value) {
+        auto type = cast<RankedTensorType>(value.getType());
+        auto collapsedType =
+            tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
+        return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
+                                               value, reassociation);
+      };
+
+      Value collapsedA = collapse(a);
+      Value collapsedB = collapse(b);
+      Value collapsedInit = collapse(zeroTensor);
+      auto collapsedOutputType =
+          cast<RankedTensorType>(collapsedInit.getType());
+
+      Value collapsedResult =
+          linalg::BatchMatmulTransposeBOp::create(
+              rewriter, loc, TypeRange{collapsedOutputType},
+              ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
+              .getResult(0);
+
+      result = tensor::ExpandShapeOp::create(
+          rewriter, loc, accType, collapsedResult, reassociation,
+          tensor::getMixedSizes(rewriter, loc, zeroTensor));
     }
 
-    if (outputRank == 3) {
-      rewriter.replaceOpWithNewOp<linalg::BatchMatmulTransposeBOp>(
-          op, TypeRange{outputType}, ValueRange{a, b}, ValueRange{zeroTensor});
-      return success();
-    }
-
-    SmallVector<ReassociationIndices> reassociation =
-        getMatMulBatchCollapseReassociation(outputRank);
-    auto collapse = [&](Value value) {
-      auto type = cast<RankedTensorType>(value.getType());
-      auto collapsedType =
-          tensor::CollapseShapeOp::inferCollapsedType(type, reassociation);
-      return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType,
-                                             value, reassociation);
-    };
-    Value collapsedA = collapse(a);
-    Value collapsedB = collapse(b);
-    Value collapsedInit = collapse(zeroTensor);
-    auto collapsedOutputType = cast<RankedTensorType>(collapsedInit.getType());
-    Value collapsedResult =
-        linalg::BatchMatmulTransposeBOp::create(
-            rewriter, loc, TypeRange{collapsedOutputType},
-            ValueRange{collapsedA, collapsedB}, ValueRange{collapsedInit})
-            .getResult(0);
-    Value result = tensor::ExpandShapeOp::create(
-        rewriter, loc, outputType, collapsedResult, reassociation,
-        tensor::getMixedSizes(rewriter, loc, zeroTensor));
+    result = convertTensorElementType(rewriter, loc, result, outputType);
     rewriter.replaceOp(op, result);
     return success();
   }
