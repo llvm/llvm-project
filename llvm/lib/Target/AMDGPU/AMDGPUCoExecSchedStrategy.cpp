@@ -48,26 +48,15 @@ static SUnit *pickOnlyChoice(SchedBoundary &Zone) {
   return OnlyChoice;
 }
 
-/// Apply \p ExtraBits to every slot in \p Info starting with \p StartIndex
-/// Used by MFMA co-exec rules, because MFMA co-exec slots are incremental, i.e.
-/// for every slot N it supports all instructions which were supported by the
-/// previous slot N-1 and may support something extra.
-static void allowCoExec(llvm::AMDGPU::CoExecInfo &Info,
-                        llvm::AMDGPU::CoExecMaskT ExtraBits,
-                        unsigned StartIndex) {
-  for (unsigned Index = StartIndex; Index < Info.TotalWindow; ++Index)
-    Info.Slots[Index].Mask |= ExtraBits;
-}
-
-/// Get co-execution info for a gfx950 MFMA instruction.
-/// The occupancy (cycles until the next MFMA may issue) is expressed as the
-/// first stage carrying the WMMA bit.
-llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
-  using namespace llvm;
-  using namespace llvm::AMDGPU;
+/// Build MFMA co-exec rules from the first stage at which SALU, memory (DS and
+/// VMEM), VALU and the next MFMA may issue. MFMA slots are cumulative: each
+/// slot allows what the previous one did and possibly more.
+static CoExecInfo buildMFMACoExecInfo(unsigned SALU, unsigned Mem,
+                                      unsigned VALU, unsigned MFMA,
+                                      unsigned Window) {
+  assert(Window <= MaxCoExecStages && "Co-execution window is too long");
   CoExecInfo Res;
-  for (unsigned I = 0; I < MaxCoExecStages; ++I)
-    Res.Slots[I].Mask = CoExecMask::None;
+  Res.TotalWindow = Window;
 
   // TODO: Implement proper patterns support (for debugging purposes).
   // Existing pattern letters are WMMA-specific and will probably be confusing
@@ -76,299 +65,59 @@ llvm::AMDGPU::CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
   // needed by printing specific slots in full instead of a key for them.
   Res.Pattern = "undefinedundefinedundefinedundefined";
 
-  switch (Opcode) {
-  // 4-cycle occupancy, 8-cycle window.
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
-  case V_MFMA_F32_16X16X32_BF16_e64:
-  case V_MFMA_F32_16X16X32_BF16_vgprcd_e64:
-  case V_MFMA_F32_16X16X32_BF16_gfx940_acd:
-  case V_MFMA_F32_16X16X32_BF16_gfx940_vcd:
-  case V_MFMA_I32_16X16X64_I8_e64:
-  case V_MFMA_I32_16X16X64_I8_vgprcd_e64:
-  case V_MFMA_I32_16X16X64_I8_gfx940_acd:
-  case V_MFMA_I32_16X16X64_I8_gfx940_vcd:
-  case V_MFMA_F32_16X16X32_F16_e64:
-  case V_MFMA_F32_16X16X32_F16_vgprcd_e64:
-  case V_MFMA_F32_16X16X32_F16_gfx940_acd:
-  case V_MFMA_F32_16X16X32_F16_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f6_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f6_gfx940_vcd:
-    // GFX9 Shader Programming Guide lists those SMFMAC separately, but for
-    // intended purposes here all those instructions are the same. This comment
-    // is to simplify reverse mapping to the SPG.
-  case V_SMFMAC_F32_16X16X64_BF16_e64:
-  case V_SMFMAC_F32_16X16X64_BF16_gfx940:
-  case V_SMFMAC_I32_16X16X128_I8_e64:
-  case V_SMFMAC_I32_16X16X128_I8_gfx940:
-  case V_SMFMAC_F32_16X16X128_BF8_BF8_e64:
-  case V_SMFMAC_F32_16X16X128_BF8_BF8_gfx940:
-  case V_SMFMAC_F32_16X16X128_BF8_FP8_e64:
-  case V_SMFMAC_F32_16X16X128_BF8_FP8_gfx940:
-  case V_SMFMAC_F32_16X16X128_FP8_BF8_e64:
-  case V_SMFMAC_F32_16X16X128_FP8_BF8_gfx940:
-  case V_SMFMAC_F32_16X16X128_FP8_FP8_e64:
-  case V_SMFMAC_F32_16X16X128_FP8_FP8_gfx940:
-  case V_SMFMAC_F32_16X16X64_F16_e64:
-  case V_SMFMAC_F32_16X16X64_F16_gfx940:
-    Res.TotalWindow = 8;
-    allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
-    allowCoExec(Res, CoExecMask::WMMA, 4);
-    return Res;
+  for (unsigned I = 0; I < Window; ++I) {
+    CoExecMaskT Mask = CoExecMask::None;
+    if (I >= SALU)
+      Mask |= CoExecMask::SALU;
+    if (I >= Mem)
+      Mask |= CoExecMask::DS | CoExecMask::VMEM;
+    if (I >= VALU)
+      Mask |= CoExecMask::VALU;
+    if (I >= MFMA)
+      Mask |= CoExecMask::WMMA;
+    Res.Slots[I].Mask = Mask;
+  }
+  return Res;
+}
 
-  // 8-cycle occupancy, 12-cycle window.
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
-  case V_MFMA_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f6_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f6_gfx940_vcd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_gfx940_vcd:
-    Res.TotalWindow = 12;
-    allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
-    allowCoExec(Res, CoExecMask::VALU, 3);
-    allowCoExec(Res, CoExecMask::WMMA, 8);
-    return Res;
+/// Get co-execution info for an MFMA instruction.
+CoExecInfo llvm::AMDGPU::getMFMACoExecInfo(unsigned Opcode) {
+  const MAIInstInfo *Info = getMAIInstInfoHelper(Opcode);
+  MFMAVariant Variant = Info ? Info->Variant : MFMAVariant::Unknown;
 
-  // 4-cycle occupancy, 8-cycle window.
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f4_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f6_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
-  case V_MFMA_F32_32X32X16_BF16_e64:
-  case V_MFMA_F32_32X32X16_BF16_mac_e64:
-  case V_MFMA_F32_32X32X16_BF16_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X16_BF16_vgprcd_e64:
-  case V_MFMA_F32_32X32X16_BF16_gfx940_acd:
-  case V_MFMA_F32_32X32X16_BF16_gfx940_vcd:
-  case V_MFMA_I32_32X32X32_I8_e64:
-  case V_MFMA_I32_32X32X32_I8_mac_e64:
-  case V_MFMA_I32_32X32X32_I8_mac_vgprcd_e64:
-  case V_MFMA_I32_32X32X32_I8_vgprcd_e64:
-  case V_MFMA_I32_32X32X32_I8_gfx940_acd:
-  case V_MFMA_I32_32X32X32_I8_gfx940_vcd:
-  case V_MFMA_F32_32X32X16_F16_e64:
-  case V_MFMA_F32_32X32X16_F16_mac_e64:
-  case V_MFMA_F32_32X32X16_F16_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X16_F16_vgprcd_e64:
-  case V_MFMA_F32_32X32X16_F16_gfx940_acd:
-  case V_MFMA_F32_32X32X16_F16_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f6_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f4_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f6_mac_vgprcd_e64:
-    Res.TotalWindow = 8;
-    allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 2);
-    allowCoExec(Res, CoExecMask::WMMA, 4);
-    return Res;
-
-  // 16-cycle occupancy, 20-cycle window.
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f6_f8_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f4_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f6_gfx940_vcd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_acd:
-  case V_MFMA_F32_32X32X64_F8F6F4_f8_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_mac_vgprcd_e64:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f6_f8_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f4_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f6_gfx940_vcd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_gfx940_acd:
-  case V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_gfx940_vcd:
-    Res.TotalWindow = 20;
-    allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VMEM, 2);
-    allowCoExec(Res, CoExecMask::VALU, 3);
-    allowCoExec(Res, CoExecMask::WMMA, 16);
-    return Res;
-
-  // 9-cycle occupancy, 12-cycle window.
-  case V_SMFMAC_F32_32X32X32_BF16_e64:
-  case V_SMFMAC_F32_32X32X32_BF16_gfx940:
-  case V_SMFMAC_I32_32X32X64_I8_e64:
-  case V_SMFMAC_I32_32X32X64_I8_gfx940:
-  case V_SMFMAC_F32_32X32X64_BF8_BF8_e64:
-  case V_SMFMAC_F32_32X32X64_BF8_BF8_gfx940:
-  case V_SMFMAC_F32_32X32X64_BF8_FP8_e64:
-  case V_SMFMAC_F32_32X32X64_BF8_FP8_gfx940:
-  case V_SMFMAC_F32_32X32X64_FP8_BF8_e64:
-  case V_SMFMAC_F32_32X32X64_FP8_BF8_gfx940:
-  case V_SMFMAC_F32_32X32X64_FP8_FP8_e64:
-  case V_SMFMAC_F32_32X32X64_FP8_FP8_gfx940:
-  case V_SMFMAC_F32_32X32X32_F16_e64:
-  case V_SMFMAC_F32_32X32X32_F16_gfx940:
-    Res.TotalWindow = 12;
-    allowCoExec(Res, CoExecMask::SALU, 1);
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::VALU | CoExecMask::VMEM, 4);
-    allowCoExec(Res, CoExecMask::WMMA, 9);
-    return Res;
-
-  // 18-cycle occupancy, 19-cycle window.
-  case V_MFMA_F64_16X16X4F64_e64:
-  case V_MFMA_F64_16X16X4F64_mac_e64:
-  case V_MFMA_F64_16X16X4F64_mac_vgprcd_e64:
-  case V_MFMA_F64_16X16X4F64_vgprcd_e64:
-    Res.TotalWindow = 19;
-    allowCoExec(Res, CoExecMask::DS | CoExecMask::SALU | CoExecMask::VMEM, 0);
-    allowCoExec(Res, CoExecMask::WMMA | CoExecMask::VALU, 18);
-    return Res;
-
-  default:
-    // Default fallback: permissive 8-cycle pattern
+  switch (Variant) {
+  case MFMAVariant::XDL2x_4Pass:
+  case MFMAVariant::SMFMAC2x_4Pass:
+  case MFMAVariant::XDL2x_8Pass:
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/2, /*MFMA=*/4,
+                               /*Window=*/8);
+  case MFMAVariant::XDL2x_F8_8Pass:
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/8,
+                               /*Window=*/12);
+  case MFMAVariant::XDL2x_F8_16Pass:
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/2, /*VALU=*/3, /*MFMA=*/16,
+                               /*Window=*/20);
+  case MFMAVariant::SMFMAC2x_8Pass:
+    return buildMFMACoExecInfo(/*SALU=*/1, /*Mem=*/4, /*VALU=*/4, /*MFMA=*/9,
+                               /*Window=*/12);
+  case MFMAVariant::DGEMM_16x16x4:
+    return buildMFMACoExecInfo(/*SALU=*/0, /*Mem=*/0, /*VALU=*/18, /*MFMA=*/18,
+                               /*Window=*/19);
+  case MFMAVariant::Unknown:
+  case MFMAVariant::XDL_2Pass:
+  case MFMAVariant::XDL_4Pass:
+  case MFMAVariant::XDL_8Pass:
+  case MFMAVariant::XDL_16Pass:
+  case MFMAVariant::SMFMAC_4Pass:
+  case MFMAVariant::SMFMAC_8Pass:
+  case MFMAVariant::SGEMM_2Pass:
+  case MFMAVariant::SGEMM_8Pass:
+  case MFMAVariant::SGEMM_16Pass:
+  case MFMAVariant::DGEMM_4Pass:
+    // No co-execution model yet: permissive 9-cycle window.
     return CoExecInfo::build(0, 9, "AAAAAAAAA");
   }
+  llvm_unreachable("unknown MFMA variant");
 }
 
 InstructionFlavor llvm::AMDGPU::classifyFlavor(const MachineInstr &MI,
