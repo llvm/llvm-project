@@ -17,7 +17,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
@@ -59,13 +58,44 @@ void AssumptionCache::findValuesAffectedByOperandBundle(
       InsertAffected(V);
   };
 
-  auto Attr = getBundleAttrFromOBU(Bundle);
-  if (Attr == BundleAttr::SeparateStorage) {
-    assert(Bundle.Inputs.size() == 2 && "separate_storage must have two args");
-    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[0]));
-    AddAffectedVal(getUnderlyingObject(Bundle.Inputs[1]));
-  } else if (Bundle.Inputs.size() > ABA_WasOn && Attr != BundleAttr::Ignore)
-    AddAffectedVal(Bundle.Inputs[ABA_WasOn]);
+  switch (getBundleAttrFromOBU(Bundle)) {
+  case BundleAttr::None:
+    llvm_unreachable("Unexpected Attribute");
+
+  case BundleAttr::Align:
+    AddAffectedVal(getAssumeAlignInfo(Bundle).Ptr);
+    break;
+
+  case BundleAttr::Dereferenceable:
+    AddAffectedVal(getAssumeDereferenceableInfo(Bundle).Ptr);
+    break;
+
+  case BundleAttr::DereferenceableOrNull:
+    break;
+
+  // These assumes don't have any affected values
+  case BundleAttr::Ignore:
+  case BundleAttr::Cold:
+    break;
+
+  case BundleAttr::NonNull:
+    AddAffectedVal(getAssumeNonNullInfo(Bundle).Ptr);
+    break;
+
+  case BundleAttr::NoUndef:
+    AddAffectedVal(getAssumeNoUndefInfo(Bundle).Val);
+    break;
+
+  case BundleAttr::Range:
+    AddAffectedVal(getAssumeRangeInfo(Bundle).Val);
+    break;
+
+  case BundleAttr::SeparateStorage: {
+    auto [A, B] = getAssumeSeparateStorageInfo(Bundle);
+    AddAffectedVal(getUnderlyingObject(A));
+    AddAffectedVal(getUnderlyingObject(B));
+  } break;
+  }
 }
 
 static void
