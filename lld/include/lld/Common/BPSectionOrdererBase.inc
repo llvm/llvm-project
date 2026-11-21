@@ -68,7 +68,9 @@ template <class D> struct BPOrderer {
                     bool compressionSortStartupFunctions, bool verbose,
                     llvm::ArrayRef<Section *> sections,
                     const DenseMap<CachedHashStringRef, std::set<unsigned>>
-                        &rootSymbolToSectionIdxs)
+                        &rootSymbolToSectionIdxs,
+                    llvm::ArrayRef<unsigned> initialStartupSectionIdxs,
+                    llvm::ArrayRef<unsigned> prefixStartupSectionIdxs)
       -> llvm::DenseMap<const Section *, int>;
 
   std::optional<StringRef> static getResolvedLinkageName(StringRef name) {
@@ -164,7 +166,10 @@ auto BPOrderer<D>::computeOrder(
     bool compressionSortStartupFunctions, bool verbose,
     ArrayRef<Section *> sections,
     const DenseMap<CachedHashStringRef, std::set<unsigned>>
-        &rootSymbolToSectionIdxs) -> DenseMap<const Section *, int> {
+        &rootSymbolToSectionIdxs,
+    ArrayRef<unsigned> initialStartupSectionIdxs,
+    ArrayRef<unsigned> prefixStartupSectionIdxs)
+    -> DenseMap<const Section *, int> {
   TimeTraceScope timeScope("Setup Balanced Partitioning");
   DenseMap<const void *, uint64_t> sectionToIdx;
   for (auto [i, isec] : llvm::enumerate(sections))
@@ -197,6 +202,10 @@ auto BPOrderer<D>::computeOrder(
     for (size_t traceIdx = 0; traceIdx < traces.size(); traceIdx++) {
       uint64_t currentSize = 0, cutoffSize = 1;
       size_t cutoffTimestamp = 1;
+      for (unsigned sectionIdx : initialStartupSectionIdxs) {
+        sectionIdxToTimestamp.try_emplace(sectionIdx, 0);
+        sectionIdxToFirstUN.try_emplace(sectionIdx, maxUN);
+      }
       auto &trace = traces[traceIdx].FunctionNameRefs;
       for (size_t timestamp = 0; timestamp < trace.size(); timestamp++) {
         auto [_, parsedFuncName] = getParsedIRPGOName(
@@ -378,6 +387,13 @@ auto BPOrderer<D>::computeOrder(
   unsigned numCompressionSections = 0, compressionSize = 0;
   unsigned numDuplicateCompressionSections = 0, duplicateCompressionSize = 0;
   SetVector<const Section *> orderedSections;
+  for (unsigned sectionIdx : prefixStartupSectionIdxs) {
+    const auto *isec = sections[sectionIdx];
+    if (orderedSections.insert(isec)) {
+      startupSize += D::getSize(*isec);
+      ++numStartupSections;
+    }
+  }
   // Order startup functions,
   for (auto &node : nodesForStartup) {
     const auto *isec = sections[node.Id];

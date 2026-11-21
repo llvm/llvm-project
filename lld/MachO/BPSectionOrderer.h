@@ -31,7 +31,8 @@ llvm::DenseMap<const InputSection *, int> runBalancedPartitioning(
     llvm::StringRef profilePath,
     llvm::ArrayRef<BPCompressionSortSpec> compressionSortSpecs,
     bool forFunctionCompression, bool forDataCompression,
-    bool compressionSortStartupFunctions, bool verbose);
+    bool compressionSortStartupFunctions, bool sortInitializers,
+    bool sortObjCLoadMethods, bool verbose);
 
 } // namespace lld::macho
 
