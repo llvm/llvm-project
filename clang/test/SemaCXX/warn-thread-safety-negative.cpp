@@ -121,6 +121,47 @@ public:
   }
 };
 
+class TryLockTest {
+  Mutex mu;
+  int a GUARDED_BY(mu);
+
+public:
+  // The analysis of a TryLock expects to have !mu declared at the boundaries,
+  // even though inside a function this recursion pattern is permitted without
+  // a warning.
+  void tryLockNegativeWarn() {
+    if (mu.TryLock()) { // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+      a = 0;
+      mu.Unlock();
+    }
+  }
+
+  // Inside a REQUIRES(!mu) region the declared negative fact satisfies the
+  // attempt; the success edge consumes it (no duplicate '!mu' facts, no
+  // spurious diagnostics), and the failure path retains it.
+  void tryLockNegativeSatisfied() EXCLUSIVE_LOCKS_REQUIRED(!mu) {
+    if (mu.TryLock()) {
+      a = 0;
+      mu.Unlock();
+    } else {
+      needsNegative();
+    }
+  }
+
+  // Releasing an unchecked try-acquire is diagnosed at the release, and the
+  // thread provably does not hold the capability afterwards: the release
+  // establishes the negative fact, so re-acquiring does not also warn.
+  void tryLockUncheckedReleaseThenLock() {
+    mu.TryLock(); // expected-warning{{acquiring mutex 'mu' requires negative capability '!mu'}}
+    mu.Unlock();  // expected-warning{{releasing mutex 'mu' that may not be held}}
+    mu.Lock();    // no '!mu' warning: the release above proves it
+    a = 0;
+    mu.Unlock();
+  }
+
+  void needsNegative() EXCLUSIVE_LOCKS_REQUIRED(!mu);
+};
+
 }  // end namespace SimpleTest
 
 Mutex globalMutex;
