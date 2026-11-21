@@ -38,7 +38,8 @@ public:
   /// passed around during sparsification for bookkeeping
   /// together with some consistency asserts.
   CodegenEnv(linalg::GenericOp linop, SparsificationOptions opts,
-             unsigned numTensors, unsigned numLoops, unsigned maxRank);
+             unsigned numTensors, unsigned numLoops, unsigned maxRank,
+             bool enableStructureReuse);
 
   //
   // General methods.
@@ -131,6 +132,7 @@ public:
 
   bool hasSparseOutput() const { return sparseOut != nullptr; }
   bool isSparseOutput(OpOperand *o) const { return sparseOut == o; }
+  OpOperand *getStructureSource() const { return structureSource; }
 
   Value getInsertionChain() const { return insChain; }
   void updateInsertionChain(Value chain);
@@ -183,6 +185,10 @@ private:
   // insertion in lexicographic index order or through access pattern
   // expansion in the innermost loop nest (`expValues` through `expCount`).
   OpOperand *sparseOut;
+  // An input tensor whose stored coordinates can be reused when materializing
+  // an uninitialized sparse output.
+  OpOperand *structureSource;
+  bool enableStructureReuse;
   // The count of outer non-filter loops, as defined by `isAdmissibleTopoOrder`.
   LoopId outerParNest;
   Value insChain;
