@@ -18,6 +18,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  timespec_getres
+  SRCS
+    timespec_getres.cpp
+  HDRS
+    ../timespec_getres.h
+  DEPENDS
+    libc.hdr.time_macros
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_getres
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   clock
   SRCS
     clock.cpp
