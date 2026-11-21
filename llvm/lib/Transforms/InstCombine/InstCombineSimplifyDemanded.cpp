@@ -159,6 +159,25 @@ bool InstCombinerImpl::SimplifyDemandedBits(Instruction *I, unsigned OpNo,
                                             unsigned Depth) {
   Use &U = I->getOperandUse(OpNo);
   Value *V = U.get();
+
+  // Peek through a one-use bitcast from an integer type with the same scalar
+  // bitwidth (e.g. i32 -> float, <2 x i64> -> <2 x double>) and simplify the
+  // bitcast's source instead.
+  Value *X;
+  if (Depth < MaxAnalysisRecursionDepth &&
+      match(V, m_OneUse(m_BitCast(m_Value(X)))) &&
+      X->getType()->isIntOrIntVectorTy() &&
+      X->getType()->getScalarSizeInBits() == DemandedMask.getBitWidth())
+    return SimplifyDemandedBits(cast<Instruction>(V), 0, DemandedMask, Known, Q,
+                                Depth + 1);
+
+  // Otherwise, we can only reason about the bits of integer/pointer values.
+  Type *VTy = V->getType();
+  if (!VTy->isIntOrIntVectorTy() && !VTy->isPtrOrPtrVectorTy()) {
+    Known.resetAll();
+    return false;
+  }
+
   if (isa<Constant>(V)) {
     llvm::computeKnownBits(V, Known, Q, Depth);
     return false;
