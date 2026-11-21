@@ -300,7 +300,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_parallel_scheduler`                         | *unimplemented* |
 | `__cpp_lib_philox_engine`                              | *unimplemented* |
 | `__cpp_lib_polymorphic`                                | *unimplemented* |
-| `__cpp_lib_ranges_as_input`                            | *unimplemented* |
+| `__cpp_lib_ranges_as_input`                            | `202502L`       |
 | `__cpp_lib_ranges_cache_latest`                        | *unimplemented* |
 | `__cpp_lib_ranges_concat`                              | `202403L`       |
 | `__cpp_lib_ranges_indices`                             | `202506L`       |
