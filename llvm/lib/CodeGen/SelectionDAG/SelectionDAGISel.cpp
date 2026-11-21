@@ -872,19 +872,24 @@ static void preserveFakeUses(BasicBlock::iterator Begin,
 
 void SelectionDAGISel::SelectBasicBlock(BasicBlock::const_iterator Begin,
                                         BasicBlock::const_iterator End,
-                                        bool &HadTailCall) {
+                                        bool &HadTailCall,
+                                        const Instruction *SPCheckCall) {
   // Allow creating illegal types during DAG building for the basic block.
   CurDAG->NewNodesMustHaveLegalTypes = false;
 
   // Lower the instructions. If a call is emitted as a tail call, cease emitting
   // nodes for this block. If an instruction is elided, don't emit it, but do
-  // handle any debug-info attached to it.
+  // handle any debug-info attached to it. The debug-info attached to the call
+  // the stack protector is checked before, selected in a DAG of its own, goes
+  // in the DAG before it, with the values it describes.
   for (BasicBlock::const_iterator I = Begin; I != End && !SDB->HasTailCall; ++I) {
+    if (&*I != SPCheckCall)
+      SDB->visitDbgInfo(*I);
     if (!ElidedArgCopyInstrs.count(&*I))
       SDB->visit(*I);
-    else
-      SDB->visitDbgInfo(*I);
   }
+  if (SPCheckCall && End == SPCheckCall->getIterator())
+    SDB->visitDbgInfo(*SPCheckCall);
 
   // Make sure the root of the DAG is up-to-date.
   CurDAG->setRoot(SDB->getControlRoot());
@@ -1772,6 +1777,9 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       }
     }
 
+    // The call the stack protector is checked right before, if any.
+    const CallBase *SPCheckCall = SP->getSDCheckCall(*LLVMBB);
+
     // Before doing SelectionDAG ISel, see if FastISel has been requested.
     if (FastIS) {
       if (LLVMBB != &Fn.getEntryBlock())
@@ -1785,6 +1793,11 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       // Do FastISel on as many instructions as possible.
       for (; BI != Begin; --BI) {
         const Instruction *Inst = &*std::prev(BI);
+
+        // Leave that call, and what comes before it, to SelectionDAG below
+        // (this is not a FastISel failure).
+        if (Inst == SPCheckCall)
+          break;
 
         // If we no longer require this instruction, skip it.
         if (isFoldedOrDeadInstruction(Inst, *FuncInfo) ||
@@ -1933,7 +1946,35 @@ void SelectionDAGISel::SelectAllBasicBlocks(const Function &Fn) {
       // not handled by FastISel. If FastISel is not run, this is the entire
       // block.
       bool HadTailCall;
-      SelectBasicBlock(Begin, BI, HadTailCall);
+      if (SPCheckCall) {
+        // Select the call the stack protector is checked before in a DAG of
+        // its own, after the rest of the block, and check right before its
+        // code. What the call uses from the rest of the block goes through
+        // virtual registers: instructions copy to them as they are selected,
+        // the entry block's arguments here.
+        for (const Value *Op : SPCheckCall->operands()) {
+          if (isa<Argument>(Op)) {
+            SDB->ExportFromCurrentBlock(Op);
+          } else if (const auto *I = dyn_cast<Instruction>(Op)) {
+            const auto *AI = dyn_cast<AllocaInst>(I);
+            if (I->getParent() == LLVMBB && !FuncInfo->isExportedInst(I) &&
+                !(AI && FuncInfo->StaticAllocaMap.contains(AI)))
+              FuncInfo->InitializeRegForValue(I);
+          }
+        }
+        BasicBlock::const_iterator CallIt = SPCheckCall->getIterator();
+        SelectBasicBlock(Begin, CallIt, HadTailCall, SPCheckCall);
+        MachineBasicBlock &MBB = *FuncInfo->MBB;
+        MachineInstr *PrevMI = FuncInfo->InsertPt == MBB.begin()
+                                   ? nullptr
+                                   : &*std::prev(FuncInfo->InsertPt);
+        SelectBasicBlock(CallIt, BI, HadTailCall, SPCheckCall);
+        SDB->SPDescriptor.setSplitPoint(
+            PrevMI ? std::next(MachineBasicBlock::iterator(PrevMI))
+                   : MBB.begin());
+      } else {
+        SelectBasicBlock(Begin, BI, HadTailCall);
+      }
 
       // But if FastISel was run, we already selected some of the block.
       // If we emitted a tail-call, we need to delete any previously emitted
@@ -1991,7 +2032,7 @@ SelectionDAGISel::FinishBasicBlock() {
 
     // Add load and check to the basicblock.
     FuncInfo->MBB = ParentMBB;
-    FuncInfo->InsertPt = findSplitPointForStackProtector(ParentMBB, *TII);
+    FuncInfo->InsertPt = SDB->SPDescriptor.getSplitPoint(*TII);
     SDB->visitSPDescriptorParent(SDB->SPDescriptor, ParentMBB);
     CurDAG->setRoot(SDB->getRoot());
     SDB->clear();
@@ -2001,7 +2042,6 @@ SelectionDAGISel::FinishBasicBlock() {
     SDB->SPDescriptor.resetPerBBState();
   } else if (SDB->SPDescriptor.shouldEmitStackProtector()) {
     MachineBasicBlock *ParentMBB = SDB->SPDescriptor.getParentMBB();
-    MachineBasicBlock *SuccessMBB = SDB->SPDescriptor.getSuccessMBB();
 
     // Find the split point to split the parent mbb. At the same time copy all
     // physical registers used in the tail of parent mbb into virtual registers
@@ -2010,11 +2050,10 @@ SelectionDAGISel::FinishBasicBlock() {
     // register allocation issues caused by us splitting the parent mbb. The
     // register allocator will clean up said virtual copies later on.
     MachineBasicBlock::iterator SplitPoint =
-        findSplitPointForStackProtector(ParentMBB, *TII);
+        SDB->SPDescriptor.getSplitPoint(*TII);
 
-    // Splice the terminator of ParentMBB into SuccessMBB.
-    SuccessMBB->splice(SuccessMBB->end(), ParentMBB, SplitPoint,
-                       ParentMBB->end());
+    // Splice the end of ParentMBB into SuccessMBB.
+    SDB->SPDescriptor.splitParentMBB(SplitPoint);
 
     // Add compare/jump on neq/jump to the parent BB.
     FuncInfo->MBB = ParentMBB;
