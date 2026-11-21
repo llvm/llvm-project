@@ -1,0 +1,120 @@
+## llvm-objcopy must keep the memory declaration of unmapped segments
+## (vmsize == 0) and replace them at the current offset.
+
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-objcopy %t %t2
+## llvm-objcopy must be able to re-read its own output.
+# RUN: llvm-objcopy %t2 %t3
+# RUN: llvm-readobj --macho-segment %t3 | FileCheck %s
+# RUN: llvm-readobj --sections %t3 | FileCheck --check-prefix=SECTIONS %s
+
+## The content that follows __DWARF starts at the next page boundary.
+# CHECK:      Name: __LINKEDIT
+# CHECK:        fileoff: 8192
+
+## __DWARF is re-placed at the current offset and keeps its declared vmsize;
+## its file extent derives from the sections.
+# CHECK:      Name: __DWARF
+# CHECK:        vmaddr: 0x0
+# CHECK:        vmsize: 0x0
+# CHECK:        fileoff: 4096
+# CHECK:        filesize: 4096
+
+## The sections move with the segment, keeping their spacing; their
+## addresses are declarations and must not be touched.
+# SECTIONS: Name: __zdebug_abbrev
+# SECTIONS:   Address: 0x112340000
+# SECTIONS:   Offset: 4096
+# SECTIONS: Name: __zdebug_info
+# SECTIONS:   Address: 0x112340800
+# SECTIONS:   Offset: 6144
+
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x01000007
+  cpusubtype:      0x00000003
+  filetype:        0x00000002
+  ncmds:           4
+  sizeofcmds:      480
+  flags:           0x00000000
+  reserved:        0x00000000
+LoadCommands:
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         152
+    nsects:          1
+    segname:         __TEXT
+    vmaddr:          0
+    vmsize:          4096
+    fileoff:         0
+    filesize:        4096
+    maxprot:         7
+    initprot:        5
+    flags:           0
+    Sections:
+      - sectname:        __text
+        segname:         __TEXT
+        addr:            512
+        size:            4
+        offset:          512
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0
+        reserved1:       0
+        reserved2:       0
+        content:         'AABBCCDD'
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         72
+    nsects:          0
+    segname:         __LINKEDIT
+    vmaddr:          8192
+    vmsize:          4096
+    fileoff:         4096
+    filesize:        256
+    maxprot:         3
+    initprot:        3
+    flags:           0
+  - cmd:             LC_SEGMENT_64
+    cmdsize:         232
+    nsects:          2
+    segname:         __DWARF
+    vmaddr:          0
+    vmsize:          0
+    fileoff:         4608
+    filesize:        4096
+    maxprot:         7
+    initprot:        0
+    flags:           0
+    Sections:
+      - sectname:        __zdebug_abbrev
+        segname:         __DWARF
+        addr:            0x112340000
+        size:            2048
+        offset:          4608
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0
+        reserved1:       0
+        reserved2:       0
+        content:         'AABBCCDD'
+      - sectname:        __zdebug_info
+        segname:         __DWARF
+        addr:            0x112340800
+        size:            2048
+        offset:          6656
+        align:           0
+        reloff:          0
+        nreloc:          0
+        flags:           0
+        reserved1:       0
+        reserved2:       0
+        content:         'EEFF0011'
+  - cmd:             LC_SYMTAB
+    cmdsize:         24
+    symoff:          4096
+    nsyms:           0
+    stroff:          4128
+    strsize:         16

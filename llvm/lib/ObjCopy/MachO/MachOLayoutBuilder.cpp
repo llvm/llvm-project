@@ -120,6 +120,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     StringRef Segname;
     uint64_t SegmentVmAddr;
     uint64_t SegmentVmSize;
+    uint64_t SegmentFileOffset;
     switch (MLC.load_command_data.cmd) {
     case MachO::LC_SEGMENT:
       SegmentVmAddr = MLC.segment_command_data.vmaddr;
@@ -127,6 +128,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
       Segname = StringRef(MLC.segment_command_data.segname,
                           strnlen(MLC.segment_command_data.segname,
                                   sizeof(MLC.segment_command_data.segname)));
+      SegmentFileOffset = MLC.segment_command_data.fileoff;
       break;
     case MachO::LC_SEGMENT_64:
       SegmentVmAddr = MLC.segment_command_64_data.vmaddr;
@@ -134,6 +136,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
       Segname = StringRef(MLC.segment_command_64_data.segname,
                           strnlen(MLC.segment_command_64_data.segname,
                                   sizeof(MLC.segment_command_64_data.segname)));
+      SegmentFileOffset = MLC.segment_command_64_data.fileoff;
       break;
     default:
       continue;
@@ -151,9 +154,20 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     uint64_t SegFileSize = 0;
     uint64_t VMSize = 0;
     for (std::unique_ptr<Section> &Sec : LC.Sections) {
-      assert(SegmentVmAddr <= Sec->Addr &&
-             "Section's address cannot be smaller than Segment's one");
-      uint32_t SectOffset = Sec->Addr - SegmentVmAddr;
+      uint32_t SectOffset;
+      if (SegmentVmSize == 0 && !IsObjectFile &&
+          Sec->OriginalOffset.value_or(0) > 0) {
+        // For segments with vmsize == 0, addresses might not be a reliable
+        // source to compute offsets from; prefer relying on parsed file
+        // offsets instead.
+        assert(SegmentFileOffset <= *Sec->OriginalOffset &&
+               "Section's offset cannot precede its segment");
+        SectOffset = *Sec->OriginalOffset - SegmentFileOffset;
+      } else {
+        assert(SegmentVmAddr <= Sec->Addr &&
+               "Section's address cannot be smaller than Segment's one");
+        SectOffset = Sec->Addr - SegmentVmAddr;
+      }
       if (IsObjectFile) {
         if (!Sec->hasValidOffset()) {
           Sec->Offset = 0;
@@ -181,9 +195,11 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
     } else {
       Offset = alignToPowerOf2(Offset + SegFileSize, PageSize);
       SegFileSize = alignToPowerOf2(SegFileSize, PageSize);
-      // Use the original vmsize if the segment is __PAGEZERO.
-      VMSize = Segname == "__PAGEZERO" ? SegmentVmSize
-                                       : alignToPowerOf2(VMSize, PageSize);
+      // Use the original vmsize if the segment is __PAGEZERO or the segment has
+      // vmsize == 0.
+      VMSize = (Segname == "__PAGEZERO" || SegmentVmSize == 0)
+                   ? SegmentVmSize
+                   : alignToPowerOf2(VMSize, PageSize);
     }
 
     switch (MLC.load_command_data.cmd) {
