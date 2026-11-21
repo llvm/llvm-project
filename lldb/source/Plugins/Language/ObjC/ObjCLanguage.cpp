@@ -970,6 +970,15 @@ ObjCLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
   return {};
 }
 
+bool ObjCLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeObjC)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeObjC;
+}
+
 std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
   class ObjCScavengerResult : public Language::TypeScavenger::Result {
   public:

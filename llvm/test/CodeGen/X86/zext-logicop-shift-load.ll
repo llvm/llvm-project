@@ -177,3 +177,50 @@ entry:
   ret i64 %1
 }
 
+; The widened shift needs a count type that can represent 511.
+define void @zext_bitfield_to_i512(ptr %out, ptr %data) {
+; X86-LABEL: zext_bitfield_to_i512:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movzwl (%ecx), %ecx
+; X86-NEXT:    shrl $8, %ecx
+; X86-NEXT:    andl $1, %ecx
+; X86-NEXT:    movl %ecx, (%eax)
+; X86-NEXT:    movl $0, 60(%eax)
+; X86-NEXT:    movl $0, 56(%eax)
+; X86-NEXT:    movl $0, 52(%eax)
+; X86-NEXT:    movl $0, 48(%eax)
+; X86-NEXT:    movl $0, 44(%eax)
+; X86-NEXT:    movl $0, 40(%eax)
+; X86-NEXT:    movl $0, 36(%eax)
+; X86-NEXT:    movl $0, 32(%eax)
+; X86-NEXT:    movl $0, 28(%eax)
+; X86-NEXT:    movl $0, 24(%eax)
+; X86-NEXT:    movl $0, 20(%eax)
+; X86-NEXT:    movl $0, 16(%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
+; X86-NEXT:    movl $0, 4(%eax)
+; X86-NEXT:    retl
+;
+; X64-LABEL: zext_bitfield_to_i512:
+; X64:       # %bb.0:
+; X64-NEXT:    movzbl 1(%rsi), %eax
+; X64-NEXT:    andl $1, %eax
+; X64-NEXT:    movq %rax, (%rdi)
+; X64-NEXT:    movq $0, 56(%rdi)
+; X64-NEXT:    movq $0, 48(%rdi)
+; X64-NEXT:    movq $0, 40(%rdi)
+; X64-NEXT:    movq $0, 32(%rdi)
+; X64-NEXT:    movq $0, 24(%rdi)
+; X64-NEXT:    movq $0, 16(%rdi)
+; X64-NEXT:    movq $0, 8(%rdi)
+; X64-NEXT:    retq
+  %val = load i16, ptr %data, align 4
+  %shifted = lshr i16 %val, 8
+  %bit = and i16 %shifted, 1
+  %wide = zext i16 %bit to i512
+  store i512 %wide, ptr %out, align 8
+  ret void
+}
