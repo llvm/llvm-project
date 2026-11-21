@@ -223,6 +223,7 @@ add_llvm_component_library(LLVMSupport
   FileUtilities.cpp
   FileOutputBuffer.cpp
   FloatingPointMode.cpp
+  FPFold.cpp
   FoldingSet.cpp
   FormattedStream.cpp
   FormatVariadic.cpp

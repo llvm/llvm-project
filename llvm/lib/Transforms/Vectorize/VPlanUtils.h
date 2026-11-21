@@ -462,11 +462,7 @@ public:
   /// BlockTy. Unlike blocksOnly, all blocks in \p Range must be of type
   /// \p BlockTy.
   template <typename BlockTy, typename T> static auto blocksAs(T &&Range) {
-    // Create BaseTy with correct const-ness based on BlockTy.
-    using BaseTy = std::conditional_t<std::is_const<BlockTy>::value,
-                                      const VPBlockBase, VPBlockBase>;
-    return map_range(
-        Range, [](BaseTy *Block) -> BlockTy * { return cast<BlockTy>(Block); });
+    return map_range(Range, CastTo<BlockTy>);
   }
 
   /// Returns the blocks between \p FirstBB and \p LastBB, where FirstBB

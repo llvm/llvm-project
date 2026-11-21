@@ -30,16 +30,18 @@ function(clang_tablegen)
   endif()
 endfunction(clang_tablegen)
 
-macro(set_clang_windows_version_resource_properties name)
-  if(DEFINED windows_resource_file)
-    set_windows_version_resource_properties(${name} ${windows_resource_file}
+function(set_clang_windows_version_resource_properties name)
+  get_target_property(resource_file ${name} LLVM_WINDOWS_VERSION_RESOURCE_FILE)
+  if(resource_file)
+    set_windows_version_resource_properties(${name} ${resource_file}
       VERSION_MAJOR ${CLANG_VERSION_MAJOR}
       VERSION_MINOR ${CLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${CLANG_VERSION_PATCHLEVEL}
       VERSION_STRING "${CLANG_VERSION}"
-      PRODUCT_NAME "clang")
+      PRODUCT_NAME "clang"
+      ${ARGN})
   endif()
-endmacro()
+endfunction()
 
 macro(add_clang_subdirectory name)
   add_llvm_subdirectory(CLANG TOOL ${name})
@@ -48,7 +50,7 @@ endmacro()
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
     "SHARED;STATIC;INSTALL_WITH_TOOLCHAIN"
-    ""
+    "FILE_DESCRIPTION"
     "ADDITIONAL_HEADERS"
     ${ARGN})
   set(srcs)
@@ -153,7 +155,8 @@ macro(add_clang_library name)
     endif()
   endforeach()
 
-  set_clang_windows_version_resource_properties(${name})
+  set_clang_windows_version_resource_properties(${name}
+    FILE_DESCRIPTION "${ARG_FILE_DESCRIPTION}")
 endmacro(add_clang_library)
 
 macro(add_clang_executable name)
