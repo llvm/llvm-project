@@ -29,9 +29,9 @@ class SymtabStateTestCase(TestBase):
         # only test in this file.
         self.cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
         self.runCmd(
-            'settings set symbols.lldb-index-cache-path "%s"' % (self.cache_dir)
+            'settings set symbols.lldb-index-cache.path "%s"' % (self.cache_dir)
         )
-        self.runCmd("settings set symbols.enable-lldb-index-cache true")
+        self.runCmd("settings set symbols.lldb-index-cache.type.symtab true")
         self.build()
 
         target = self.createTestTarget(load_dependent_modules=False)

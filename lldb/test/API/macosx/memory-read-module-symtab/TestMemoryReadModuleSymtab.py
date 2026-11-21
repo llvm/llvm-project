@@ -92,10 +92,10 @@ class MemoryReadModuleSymtabTestCase(TestBase):
         )
 
         cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
-        self.runCmd('settings set -g symbols.lldb-index-cache-path "%s"' % (cache_dir))
-        self.runCmd("settings set -g symbols.enable-lldb-index-cache false")
+        self.runCmd('settings set -g symbols.lldb-index-cache.path "%s"' % (cache_dir))
+        self.runCmd("settings set -g symbols.lldb-index-cache.type.symtab false")
         self.runCmd(
-            "settings set -g symbols.enable-lldb-index-cache-memory-modules true"
+            "settings set -g symbols.lldb-index-cache.type.memory-module-symtab true"
         )
 
         # Launch the process, so it can remove the binary before

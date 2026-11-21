@@ -26,7 +26,7 @@ class DataFileCacheReexportSymbolsTest(TestBase):
         #
         # First launch:  No DataFileCache in use.
         #
-        self.runCmd("settings set -g symbols.enable-lldb-index-cache false")
+        self.runCmd("settings set -g symbols.lldb-index-cache.type.symtab false")
         target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
             self, "break here", source_file
         )
@@ -45,8 +45,8 @@ class DataFileCacheReexportSymbolsTest(TestBase):
         # Set the lldb-index-cache settings in the global settings
         # that new Targets will inherit.
         cache_dir = os.path.join(self.getBuildDir(), "lldb-module-cache")
-        self.runCmd('settings set -g symbols.lldb-index-cache-path "%s"' % (cache_dir))
-        self.runCmd("settings set -g symbols.enable-lldb-index-cache true")
+        self.runCmd('settings set -g symbols.lldb-index-cache.path "%s"' % (cache_dir))
+        self.runCmd("settings set -g symbols.lldb-index-cache.type.symtab true")
 
         #
         # Second launch: Create DataFileCaches as we load the binaries.
