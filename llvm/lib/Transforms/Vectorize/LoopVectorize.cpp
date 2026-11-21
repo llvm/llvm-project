@@ -7185,11 +7185,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  for (VPRecipeBase &R :
-       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
-    ResumePhi->eraseFromParent();
+  for (VPPhi &ResumePhi : make_early_inc_range(
+           map_range(MainPlan.getScalarPreheader()->phis(), CastTo<VPPhi>))) {
+    ResumePhi.replaceAllUsesWith(ResumePhi.getOperand(1));
+    ResumePhi.eraseFromParent();
   }
   return {VectorTCMarker, std::move(ResumeValues)};
 }
