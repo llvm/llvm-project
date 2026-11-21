@@ -1293,7 +1293,20 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
   }
 
   // Don't clear registers that are live when leaving the function.
-  for (const MachineBasicBlock &MBB : MF)
+  for (const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+       MCPhysReg CSReg = *CSRegs; ++CSRegs)
+    for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
+      RegsToZero.reset(Reg.id());
+
+  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
+  for (MachineBasicBlock &MBB : MF) {
+    if (!MBB.isReturnBlock())
+      continue;
+
+    // Filter registers separately for each exit.
+    BitVector MBBRegsToZero = RegsToZero;
+
+    // Keep registers needed by this return.
     for (const MachineInstr &MI : MBB.terminators()) {
       if (!MI.isReturn())
         continue;
@@ -1309,19 +1322,15 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
         // This picks up sibling registers (e.q. %al -> %ah).
         // FIXME: Mixing physical registers and register units is likely a bug.
         for (MCRegUnit Unit : TRI.regunits(Reg))
-          RegsToZero.reset(static_cast<unsigned>(Unit));
+          MBBRegsToZero.reset(static_cast<unsigned>(Unit));
 
         for (MCPhysReg SReg : TRI.sub_and_superregs_inclusive(Reg))
-          RegsToZero.reset(SReg);
+          MBBRegsToZero.reset(SReg);
       }
     }
 
-  // Don't need to clear registers that are used/clobbered by terminating
-  // instructions.
-  for (const MachineBasicBlock &MBB : MF) {
-    if (!MBB.isReturnBlock())
-      continue;
-
+    // Don't need to clear registers that are used/clobbered by terminating
+    // instructions.
     MachineBasicBlock::const_iterator MBBI = MBB.getFirstTerminator();
     for (MachineBasicBlock::const_iterator I = MBBI, E = MBB.end(); I != E;
          ++I) {
@@ -1334,21 +1343,12 @@ void PEIImpl::insertZeroCallUsedRegs(MachineFunction &MF) {
           continue;
 
         for (const MCPhysReg Reg : TRI.sub_and_superregs_inclusive(Reg))
-          RegsToZero.reset(Reg);
+          MBBRegsToZero.reset(Reg);
       }
     }
+
+    TFI.emitZeroCallUsedRegs(MBBRegsToZero, MBB, RS);
   }
-
-  // Don't clear registers that must be preserved.
-  for (const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
-       MCPhysReg CSReg = *CSRegs; ++CSRegs)
-    for (MCRegister Reg : TRI.sub_and_superregs_inclusive(CSReg))
-      RegsToZero.reset(Reg.id());
-
-  const TargetFrameLowering &TFI = *MF.getSubtarget().getFrameLowering();
-  for (MachineBasicBlock &MBB : MF)
-    if (MBB.isReturnBlock())
-      TFI.emitZeroCallUsedRegs(RegsToZero, MBB, RS);
 }
 
 /// Replace all FrameIndex operands with physical register references and actual
