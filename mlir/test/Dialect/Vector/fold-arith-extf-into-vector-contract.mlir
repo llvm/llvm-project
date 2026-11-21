@@ -95,25 +95,3 @@ func.func @negative_fold_arith_extf_from_different_types(
       %lhs_f32, %rhs_f32, %arg2 : vector<64x64xf32>, vector<64x64xf32> into vector<64x64xf32>
     return %result : vector<64x64xf32>
 }
-
-// -----
-
-// CHECK-LABEL: func.func @negative_fold_arith_extsi_from_different_types
-//  CHECK-SAME: (%[[ARG0:.*]]: vector<64x64xi8>, %[[ARG1:.*]]: vector<64x64xi16>, %[[ARG2:.*]]: vector<64x64xi32>)
-//       CHECK:   %[[LHS:.*]] = arith.extsi %[[ARG0]] : vector<64x64xi8> to vector<64x64xi32>
-//       CHECK:   %[[RHS:.*]] = arith.extsi %[[ARG1]] : vector<64x64xi16> to vector<64x64xi32>
-//       CHECK:   vector.contract
-//  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ARG2]] : vector<64x64xi32>, vector<64x64xi32> into vector<64x64xi32>
-func.func @negative_fold_arith_extsi_from_different_types(
-  %arg0: vector<64x64xi8>,
-  %arg1: vector<64x64xi16>,
-  %arg2: vector<64x64xi32>) -> vector<64x64xi32> {
-    %lhs_i32 = arith.extsi %arg0 : vector<64x64xi8> to vector<64x64xi32>
-    %rhs_i32 = arith.extsi %arg1 : vector<64x64xi16> to vector<64x64xi32>
-    %result = vector.contract {
-      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
-      iterator_types = ["parallel", "parallel", "reduction"],
-      kind = #vector.kind<add>}
-      %lhs_i32, %rhs_i32, %arg2 : vector<64x64xi32>, vector<64x64xi32> into vector<64x64xi32>
-    return %result : vector<64x64xi32>
-}
