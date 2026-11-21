@@ -213,9 +213,6 @@ static void checkRoundedSignedDiv(unsigned width, int64_t lhsMin,
       int64_t quotient = lhs / rhs;
       int64_t remainder = lhs % rhs;
       int64_t ceilValue = quotient + (remainder != 0 && (lhs < 0) == (rhs < 0));
-      // Index folding and lowering negate INT_MIN before division.
-      if (lhs == -(int64_t{1} << (width - 1)) && rhs > 1)
-        ceilValue = -quotient;
       int64_t floorValue =
           quotient - (remainder != 0 && (lhs < 0) != (rhs < 0));
       ASSERT_TRUE(containsSigned(ceil, ceilValue))
@@ -247,19 +244,19 @@ TEST(IntRangeInference, SignedCeilDivMinDividend) {
     std::array singleton{ConstantIntRanges::constant(min),
                          ConstantIntRanges::constant(two)};
     EXPECT_EQ(intrange::inferCeilDivS(singleton),
-              ConstantIntRanges::constant(-min.sdiv(two)));
+              ConstantIntRanges::constant(min.sdiv(two)));
 
     for (int64_t lower : {0, 1}) {
       std::array divisors{ConstantIntRanges::constant(min),
                           signedRange(width, lower, 3)};
       EXPECT_EQ(intrange::inferCeilDivS(divisors),
-                ConstantIntRanges::fromSigned(min, -min.sdiv(two)));
+                ConstantIntRanges::fromSigned(min, min.sdiv(APInt(width, 3))));
     }
 
     std::array interval{ConstantIntRanges::fromSigned(min, min + 1),
                         ConstantIntRanges::constant(two)};
     EXPECT_EQ(
         intrange::inferCeilDivS(interval),
-        ConstantIntRanges::fromSigned((min + 1).sdiv(two), -min.sdiv(two)));
+        ConstantIntRanges::fromSigned(min.sdiv(two), (min + 1).sdiv(two)));
   }
 }
