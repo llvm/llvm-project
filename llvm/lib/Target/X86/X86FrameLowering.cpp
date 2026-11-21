@@ -4208,13 +4208,32 @@ MachineBasicBlock::iterator X86FrameLowering::eliminateCallFramePseudoInstr(
 bool X86FrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   assert(MBB.getParent() && "Block is not attached to a function!");
   const MachineFunction &MF = *MBB.getParent();
+  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
+  const X86TargetLowering &TLI = *STI.getTargetLowering();
+
+  // If stack probing is requested, the prologue may need a scratch register.
+  // emitStackProbeInlineGenericLoop uses FinalStackProbed without saving it,
+  // which will clobber any live register in the block.
+  if (TLI.hasInlineStackProbe(MF)) {
+    Register FinalStackProbed = Uses64BitFramePtr ? X86::R11
+                                : Is64Bit         ? X86::R11D
+                                                  : X86::EAX;
+    if (MBB.isLiveInOverlappedWith(FinalStackProbed, *TRI))
+      return false;
+  }
+
+  // In large code model, emitStackProbeCall calls through R11.
+  if (TLI.hasStackProbeSymbol(MF) && Is64Bit &&
+      MF.getTarget().getCodeModel() == CodeModel::Large) {
+    if (MBB.isLiveInOverlappedWith(X86::R11, *TRI))
+      return false;
+  }
+
   if (!MBB.isLiveIn(X86::EFLAGS))
     return true;
 
   // If stack probes have to loop inline or call, that will clobber EFLAGS.
   // FIXME: we could allow cases that will use emitStackProbeInlineGenericBlock.
-  const X86Subtarget &STI = MF.getSubtarget<X86Subtarget>();
-  const X86TargetLowering &TLI = *STI.getTargetLowering();
   if (TLI.hasInlineStackProbe(MF) || TLI.hasStackProbeSymbol(MF))
     return false;
 
