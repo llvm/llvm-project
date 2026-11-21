@@ -3,7 +3,7 @@
 static int foo(int i) { return 42 + i; }
 int bar(int a) { return foo(a); }
 
-// RUN: dsymutil -f -y %p/dummy-debug-map-arm64.map -oso-prepend-path %p/../Inputs/inlined-low_pc -o - | llvm-dwarfdump - | FileCheck %s
+// RUN: dsymutil --linker classic -f -y %p/dummy-debug-map-arm64.map -oso-prepend-path %p/../Inputs/inlined-low_pc -o - | llvm-dwarfdump - | FileCheck %s
 
 // RUN: dsymutil --linker parallel -f -y %p/dummy-debug-map-arm64.map \
 // RUN: -oso-prepend-path %p/../Inputs/inlined-low_pc -o - | \

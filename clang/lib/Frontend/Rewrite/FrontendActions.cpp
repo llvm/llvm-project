@@ -149,6 +149,8 @@ bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
     return false;
   CI.getDiagnosticClient().clear();
   CI.getDiagnostics().Reset();
+  ProcessWarningOptions(CI.getDiagnostics(), CI.getDiagnosticOpts(),
+                        CI.getVirtualFileSystem());
 
   PreprocessorOptions &PPOpts = CI.getPreprocessorOpts();
   PPOpts.RemappedFiles.insert(PPOpts.RemappedFiles.end(),
@@ -205,24 +207,21 @@ class RewriteIncludesAction::RewriteImportsListener : public ASTReaderListener {
   CompilerInstance &CI;
   std::weak_ptr<raw_ostream> Out;
 
-  llvm::DenseSet<const FileEntry*> Rewritten;
+  llvm::DenseSet<const serialization::ModuleFile *> Rewritten;
 
 public:
   RewriteImportsListener(CompilerInstance &CI, std::shared_ptr<raw_ostream> Out)
       : CI(CI), Out(Out) {}
 
-  void visitModuleFile(StringRef Filename,
-                       serialization::ModuleKind Kind) override {
-    auto File = CI.getFileManager().getOptionalFileRef(Filename);
-    assert(File && "missing file for loaded module?");
+  void visitModuleFile(ModuleFileName Filename, serialization::ModuleKind Kind,
+                       bool DirectlyImported) override {
+    serialization::ModuleFile *MF =
+        CI.getASTReader()->getModuleManager().lookupByFileName(Filename);
+    assert(MF && "missing module file for loaded module?");
 
     // Only rewrite each module file once.
-    if (!Rewritten.insert(*File).second)
+    if (!Rewritten.insert(MF).second)
       return;
-
-    serialization::ModuleFile *MF =
-        CI.getASTReader()->getModuleManager().lookup(*File);
-    assert(MF && "missing module file for loaded module?");
 
     // Not interested in PCH / preambles.
     if (!MF->isModule())

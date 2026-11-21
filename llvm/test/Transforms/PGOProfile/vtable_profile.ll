@@ -49,7 +49,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @llvm.compiler.used = appending global [1 x ptr] [ptr @_ZTV5Base1], section "llvm.metadata"
 
 ; GEN: __llvm_profile_raw_version = comdat any
-; GEN: __llvm_profile_raw_version = hidden constant i64 72057594037927946, comdat
+; GEN: __llvm_profile_raw_version = hidden constant i64 72057594037927947, comdat
 ; GEN: __profn__Z4funci = private constant [8 x i8] c"_Z4funci"
 
 ; LOWER: $__profvt__ZTV7Derived = comdat nodeduplicate

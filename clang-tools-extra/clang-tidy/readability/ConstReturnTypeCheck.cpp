@@ -139,7 +139,7 @@ void ConstReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
     for (auto &Hint : CR.Hints)
       Diagnostic << Hint;
   }
-  for (auto Loc : CR.DeclLocs)
+  for (const auto Loc : CR.DeclLocs)
     diag(Loc, "could not transform this declaration", DiagnosticIDs::Note);
 }
 

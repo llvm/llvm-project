@@ -37,6 +37,7 @@ public:
 
 private:
   utils::IncludeInserter IncludeInserter;
+  const bool HonorIntPromotion;
 };
 
 } // namespace clang::tidy::modernize

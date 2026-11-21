@@ -42,7 +42,8 @@ static std::string getThinLTOOutputFile(StringRef modulePath) {
 
 static lto::Config createConfig() {
   lto::Config c;
-  c.Options = initTargetOptionsFromCodeGenFlags();
+  c.LibraryOptions = &ctx.arg.libraryOptions;
+  c.Options = getTargetOptions(ctx.arg.libraryOptions);
 
   // Always emit a section per function/data with LTO.
   c.Options.FunctionSections = true;
@@ -51,13 +52,26 @@ static lto::Config createConfig() {
   c.DisableVerify = ctx.arg.disableVerify;
   c.DiagHandler = diagnosticHandler;
   c.OptLevel = ctx.arg.ltoo;
-  c.CPU = getCPUStr();
-  c.MAttrs = getMAttrs();
+  c.CPU = getCPUStr(ctx.arg.libraryOptions);
+  c.MAttrs = getMAttrs(ctx.arg.libraryOptions);
+
+  // If shared memory is enabled, ensure the TargetMachine backend is
+  // instantiated with atomics and bulk-memory features so that empty
+  // partitioned ThinLTO modules don't incorrectly strip TLS variables or fall
+  // back to defaults. This bypasses a bug where deleted functions take their
+  // target-features away. This is only necessary for atomics (and not other
+  // features) because Atomics and TLS are the only features we lower away
+  // during codegen.
+  if (ctx.arg.sharedMemory) {
+    c.MAttrs.push_back("+atomics");
+    c.MAttrs.push_back("+bulk-memory");
+  }
+
   c.CGOptLevel = ctx.arg.ltoCgo;
   c.DebugPassManager = ctx.arg.ltoDebugPassManager;
   c.AlwaysEmitRegularLTOObj = !ctx.arg.ltoObjPath.empty();
 
-  if (auto relocModel = getRelocModelFromCMModel())
+  if (auto relocModel = getRelocModelFromCMModel(ctx.arg.libraryOptions))
     c.RelocModel = *relocModel;
   else if (ctx.arg.relocatable)
     c.RelocModel = std::nullopt;
@@ -182,6 +196,10 @@ static void thinLTOCreateEmptyIndexFiles() {
   }
 }
 
+void BitcodeCompiler::setBitcodeLibFuncs(ArrayRef<StringRef> bitcodeLibFuncs) {
+  ltoObj->setBitcodeLibFuncs(bitcodeLibFuncs);
+}
+
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting objects.
 SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
@@ -233,7 +251,8 @@ SmallVector<InputFile *, 0> BitcodeCompiler::compile() {
   }
 
   if (!ctx.arg.thinLTOCacheDir.empty())
-    pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files);
+    check(
+        pruneCache(ctx.arg.thinLTOCacheDir, ctx.arg.thinLTOCachePolicy, files));
 
   SmallVector<InputFile *, 0> ret;
   for (unsigned i = 0; i != maxTasks; ++i) {

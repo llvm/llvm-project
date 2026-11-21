@@ -8,11 +8,6 @@
 
 # Flang C++ Style Guide
 
-```{contents}
----
-local:
----
-```
 
 This document captures the style guide rules that are followed in the Flang codebase.
 
@@ -97,6 +92,18 @@ when creating names.
 well as you do and avoid distracting her by calling out usage of new
 features in comments.
 
+### Referencing the Fortran Standard
+When referencing the Fortran Standard, always qualify the reference
+with the version. Use the format `F<version>` as a prefix. For
+sections and paragraphs, use e.g., `F2023 9.7.3.2 p7` (Fortran
+2023, section 9.7.3.2, paragraph 7). For rules and constraints,
+use e.g., `F2023 R1526` or `F2018 C919`.
+
+#### Notes
+1. If no version is mentioned, the default is assumed to be `F2018`.
+1. Existing code may use the `F'2023` style (with an apostrophe).
+   New code should omit the apostrophe for consistency.
+
 ### Layout
 Always run `clang-format` on your changes before committing code. LLVM
 has a `git-clang-format` script to facilitate running clang-format only
@@ -151,6 +158,9 @@ However:
    (This is why `#include <iostream>` is contraindicated.)
 1. Use `{braced initializers}` in all circumstances where they work, including
 default data member initialization.  They inhibit implicit truncation.
+A variable declared with `auto` may use `= expr` instead: its type is deduced
+from the initializer, so nothing is truncated. Never write `auto x = {expr};`,
+which deduces `std::initializer_list<>`.
 Don't use `= expr` initialization just to effect implicit truncation;
 prefer an explicit `static_cast<>`.
 With C++17, braced initializers work fine with `auto` too.

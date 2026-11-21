@@ -1,0 +1,29 @@
+# Commands run from a script while an outer command is executing must see the
+# target the outer command selected, even if no target was selected when the
+# outer command started. This is what happens when a dSYM's Python scripting
+# resource is auto-loaded during `target create` and changes target or process
+# settings.
+
+# RUN: split-file %s %t
+# RUN: %clang_host -g %t/main.c -o %t/a.out
+# RUN: %lldb -b -o "command script import %t/create_target.py" \
+# RUN:   -o "settings show target.max-string-summary-length target.process.optimization-warnings" \
+# RUN:   2>&1 | FileCheck %s
+
+# CHECK: target.max-string-summary-length (unsigned) = 42
+# CHECK: target.process.optimization-warnings (boolean) = false
+
+#--- main.c
+int main() { return 0; }
+
+#--- create_target.py
+import os
+import lldb
+
+
+def __lldb_init_module(debugger, internal_dict):
+    exe = os.path.join(os.path.dirname(__file__), "a.out")
+    target = debugger.CreateTarget(exe)
+    debugger.SetSelectedTarget(target)
+    debugger.HandleCommand("settings set target.max-string-summary-length 42")
+    debugger.HandleCommand("settings set target.process.optimization-warnings false")

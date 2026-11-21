@@ -117,8 +117,7 @@ void ObjCSuperDeallocChecker::checkPostObjCMessage(const ObjCMethodCall &M,
     return;
 
   ProgramStateRef State = C.getState();
-  const LocationContext *LC = C.getLocationContext();
-  SymbolRef SelfSymbol = State->getSelfSVal(LC).getAsSymbol();
+  SymbolRef SelfSymbol = State->getSelfSVal(C.getStackFrame()).getAsSymbol();
   assert(SelfSymbol && "No receiver symbol at call to [super dealloc]?");
 
   // We add this transition in checkPostObjCMessage to avoid warning when
@@ -180,7 +179,7 @@ void ObjCSuperDeallocChecker::reportUseAfterDealloc(SymbolRef Sym,
   // We have a use of self after free.
   // This likely causes a crash, so stop exploring the
   // path by generating a sink.
-  ExplodedNode *ErrNode = C.generateErrorNode();
+  ExplodedNode *ErrNode = C.addSink();
   // If we've already reached this node on another path, return.
   if (!ErrNode)
     return;
@@ -242,8 +241,6 @@ SuperDeallocBRVisitor::VisitNode(const ExplodedNode *Succ,
                                  PathSensitiveBugReport &) {
   if (Satisfied)
     return nullptr;
-
-  ProgramStateRef State = Succ->getState();
 
   bool CalledNow =
       Succ->getState()->contains<CalledSuperDealloc>(ReceiverSymbol);

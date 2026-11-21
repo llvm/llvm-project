@@ -10,6 +10,8 @@
 
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/BaseSubobject.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/TargetInfo.h"
@@ -21,6 +23,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Operator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Host.h"
@@ -42,8 +45,10 @@ static const bool DebugThisTest = false;
 
 // forward declarations
 struct MyASTConsumer;
-static void test_codegen_fns(MyASTConsumer *my);
-static bool test_codegen_fns_ran;
+static void test_generic_codegen_fns(MyASTConsumer *my);
+static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my);
+static bool test_generic_codegen_fns_ran;
+static bool test_x86_avx_abi_codegen_fns_ran;
 
 // This forwards the calls to the Clang CodeGenerator
 // so that we can test CodeGen functions while it is open.
@@ -52,13 +57,15 @@ static bool test_codegen_fns_ran;
 // before forwarding that function to the CodeGenerator.
 
 struct MyASTConsumer : public ASTConsumer {
+  using TestFn = void (*)(MyASTConsumer *);
+
   std::unique_ptr<CodeGenerator> Builder;
+  TestFn TestFunction;
   std::vector<Decl*> toplevel_decls;
 
-  MyASTConsumer(std::unique_ptr<CodeGenerator> Builder_in)
-    : ASTConsumer(), Builder(std::move(Builder_in))
-  {
-  }
+  MyASTConsumer(std::unique_ptr<CodeGenerator> Builder_in, TestFn TestFunction)
+      : ASTConsumer(), Builder(std::move(Builder_in)),
+        TestFunction(TestFunction) {}
 
   ~MyASTConsumer() { }
 
@@ -104,7 +111,7 @@ void MyASTConsumer::HandleInterestingDecl(DeclGroupRef D) {
 }
 
 void MyASTConsumer::HandleTranslationUnit(ASTContext &Context) {
-  test_codegen_fns(this);
+  TestFunction(this);
   // HandleTranslationUnit can close the module
   Builder->HandleTranslationUnit(Context);
 }
@@ -161,13 +168,36 @@ bool MyASTConsumer::shouldSkipFunctionBody(Decl *D) {
   return Builder->shouldSkipFunctionBody(D);
 }
 
-const char TestProgram[] =
+const char GenericTestProgram[] =
     "struct mytest_struct { char x; short y; char p; long z; };\n"
-    "int mytest_fn(int x) { return x; }\n";
+    "int mytest_fn(int x) { return x; }\n"
+    "struct mytest_dynamic_struct {\n"
+    "  mytest_dynamic_struct();\n"
+    "  virtual void f1();\n"
+    "};\n"
+    "mytest_dynamic_struct::mytest_dynamic_struct() { }\n";
 
-// This function has the real test code here
-static void test_codegen_fns(MyASTConsumer *my) {
+const char X86AVXABITestProgram[] =
+    "typedef float mytest_v8f __attribute__((vector_size(32)));\n"
+    "struct mytest_avx_method_holder {\n"
+    "  __attribute__((target(\"avx\"))) mytest_v8f method(mytest_v8f x) {\n"
+    "    return x;\n"
+    "  }\n"
+    "};\n"
+    "__attribute__((target(\"avx\"))) mytest_v8f mytest_avx_fn(mytest_v8f x) "
+    "{\n"
+    "  return x;\n"
+    "}\n"
+    "__attribute__((target(\"avx\"))) void caller() "
+    "{\n"
+    "  mytest_v8f hello = {1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0};\n"
+    "  mytest_avx_fn(hello);\n"
+    "  mytest_avx_method_holder holder = mytest_avx_method_holder();\n"
+    "  holder.method(hello);\n"
+    "}\n"
+    "__attribute__((target(\"avx\"))) void caller2() {}\n";
 
+static void test_generic_codegen_fns(MyASTConsumer *my) {
   bool mytest_fn_ok = false;
   bool mytest_struct_ok = false;
 
@@ -176,17 +206,19 @@ static void test_codegen_fns(MyASTConsumer *my) {
 
   for (auto decl : my->toplevel_decls ) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
-      if (fd->getName() == "mytest_fn") {
-        Constant *c = my->Builder->GetAddrOfGlobal(GlobalDecl(fd), false);
-        // Verify that we got a function.
-        ASSERT_TRUE(c != NULL);
-        if (DebugThisTest) {
-          c->print(dbgs(), true);
-          dbgs() << "\n";
+      if (fd->getDeclName().isIdentifier()) {
+        if (fd->getName() == "mytest_fn") {
+          Constant *c = my->Builder->GetAddrOfGlobal(GlobalDecl(fd), false);
+          // Verify that we got a function.
+          ASSERT_TRUE(c != NULL);
+          if (DebugThisTest) {
+            c->print(dbgs(), true);
+            dbgs() << "\n";
+          }
+          mytest_fn_ok = true;
         }
-        mytest_fn_ok = true;
       }
-    } else if(clang::RecordDecl *rd = dyn_cast<RecordDecl>(decl)) {
+    } else if (CXXRecordDecl *rd = dyn_cast<CXXRecordDecl>(decl)) {
       if (rd->getName() == "mytest_struct") {
         RecordDecl *def = rd->getDefinition();
         ASSERT_TRUE(def != NULL);
@@ -247,6 +279,24 @@ static void test_codegen_fns(MyASTConsumer *my) {
         ASSERT_GE(zTy->getPrimitiveSizeInBits(), 32u); // long is at least 32b
 
         mytest_struct_ok = true;
+      } else if (rd->getName() == "mytest_dynamic_struct") {
+        Constant *c = my->Builder->GetAddrOfVTable(
+            BaseSubobject(rd, CharUnits::fromQuantity(0)), rd);
+        ASSERT_NE(c, nullptr);
+        Value *vtableGlobal = c->getOperand(0);
+        ASSERT_NE(vtableGlobal, nullptr);
+        ASSERT_EQ(vtableGlobal->getName(), "_ZTV21mytest_dynamic_struct");
+        const DataLayout &dataLayout =
+            my->Builder->GetModule()->getDataLayout();
+        unsigned pointerSizeInBits =
+            dataLayout.getPointerTypeSizeInBits(c->getType());
+        APInt offset(pointerSizeInBits, 0);
+        GEPOperator *gepOperator = dyn_cast<GEPOperator>(c);
+        ASSERT_NE(gepOperator, nullptr);
+        gepOperator->accumulateConstantOffset(dataLayout, offset);
+        // Itanium ABI has a couple of pointers (offset to top, type info)
+        // before the array of function pointers.
+        ASSERT_EQ(offset, (pointerSizeInBits / 8) * 2);
       }
     }
   }
@@ -254,7 +304,81 @@ static void test_codegen_fns(MyASTConsumer *my) {
   ASSERT_TRUE(mytest_fn_ok);
   ASSERT_TRUE(mytest_struct_ok);
 
-  test_codegen_fns_ran = true;
+  test_generic_codegen_fns_ran = true;
+}
+
+static void test_x86_avx_abi_codegen_fns(MyASTConsumer *my) {
+  bool mytest_avx_fn_ok = false;
+  bool mytest_avx_method_ok = false;
+
+  CodeGen::CodeGenModule &CGM = my->Builder->CGM();
+  const ASTContext &Ctx = my->toplevel_decls.front()->getASTContext();
+
+  // First get the caller decls, which we need to determine call ABI.
+  FunctionDecl *callerDecl = nullptr;
+  FunctionDecl *caller2Decl = nullptr;
+  for (auto decl : my->toplevel_decls) {
+    if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
+      if (fd->getName() == "caller")
+        callerDecl = fd;
+      else if (fd->getName() == "caller2")
+        caller2Decl = fd;
+    }
+  }
+  ASSERT_TRUE(callerDecl);
+  ASSERT_TRUE(caller2Decl);
+  ASSERT_NE(callerDecl, caller2Decl);
+
+  for (auto decl : my->toplevel_decls) {
+    if (FunctionDecl *fd = dyn_cast<FunctionDecl>(decl)) {
+      if (fd->getName() != "mytest_avx_fn")
+        continue;
+
+      const auto *FPT = fd->getType()->castAs<FunctionProtoType>();
+      SmallVector<CanQualType, 4> ArgTypes;
+      for (const ParmVarDecl *Param : fd->parameters())
+        ArgTypes.push_back(Ctx.getCanonicalParamType(Param->getType()));
+
+      const CodeGen::CGFunctionInfo &FnInfo = CodeGen::arrangeFreeFunctionCall(
+          CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
+          FPT->getExtInfo(), {},
+          CodeGen::RequiredArgs::forPrototypePlus(FPT, 0), callerDecl);
+      const CodeGen::CGFunctionInfo &FnInfo2 = CodeGen::arrangeFreeFunctionCall(
+          CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
+          FPT->getExtInfo(), {},
+          CodeGen::RequiredArgs::forPrototypePlus(FPT, 0), caller2Decl);
+      ASSERT_EQ(&FnInfo, &FnInfo2);
+      ASSERT_EQ(FnInfo.getX86ABIAVXLevel(), 1u);
+      ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
+      ASSERT_TRUE(FnInfo.arg_begin()->info.isDirect());
+      mytest_avx_fn_ok = true;
+    } else if (RecordDecl *rd = dyn_cast<RecordDecl>(decl)) {
+      if (rd->getName() != "mytest_avx_method_holder")
+        continue;
+
+      const auto *MethodRD = cast<CXXRecordDecl>(rd->getDefinition());
+      const auto *MD = cast<CXXMethodDecl>(*MethodRD->method_begin());
+      const auto *FPT = MD->getType()->castAs<FunctionProtoType>();
+      SmallVector<CanQualType, 4> ArgTypes;
+      ArgTypes.push_back(Ctx.getCanonicalParamType(MD->getThisType()));
+      for (const ParmVarDecl *Param : MD->parameters())
+        ArgTypes.push_back(Ctx.getCanonicalParamType(Param->getType()));
+
+      const CodeGen::CGFunctionInfo &FnInfo = CodeGen::arrangeCXXMethodCall(
+          CGM, Ctx.getCanonicalType(FPT->getReturnType()), ArgTypes,
+          FPT->getExtInfo(), {},
+          CodeGen::RequiredArgs::forPrototypePlus(FPT, 1), callerDecl);
+      ASSERT_EQ(FnInfo.getX86ABIAVXLevel(), 1u);
+      ASSERT_TRUE(FnInfo.getReturnInfo().isDirect());
+      ASSERT_TRUE(FnInfo.arg_begin()[1].info.isDirect());
+      mytest_avx_method_ok = true;
+    }
+  }
+
+  ASSERT_TRUE(mytest_avx_fn_ok);
+  ASSERT_TRUE(mytest_avx_method_ok);
+
+  test_x86_avx_abi_codegen_fns_ran = true;
 }
 
 TEST(CodeGenExternalTest, CodeGenExternalTest) {
@@ -262,14 +386,30 @@ TEST(CodeGenExternalTest, CodeGenExternalTest) {
   LO.CPlusPlus = 1;
   LO.CPlusPlus11 = 1;
   TestCompiler Compiler(LO);
-  auto CustomASTConsumer
-    = std::make_unique<MyASTConsumer>(std::move(Compiler.CG));
+  auto CustomASTConsumer = std::make_unique<MyASTConsumer>(
+      std::move(Compiler.CG), test_generic_codegen_fns);
 
-  Compiler.init(TestProgram, std::move(CustomASTConsumer));
+  Compiler.init(GenericTestProgram, std::move(CustomASTConsumer));
 
   clang::ParseAST(Compiler.compiler.getSema(), false, false);
 
-  ASSERT_TRUE(test_codegen_fns_ran);
+  ASSERT_TRUE(test_generic_codegen_fns_ran);
+}
+
+TEST(CodeGenExternalTest, X86AVXABIQuery) {
+  clang::LangOptions LO;
+  LO.CPlusPlus = 1;
+  LO.CPlusPlus11 = 1;
+  TestCompiler Compiler(LO, clang::CodeGenOptions(),
+                        "x86_64-unknown-linux-gnu");
+  auto CustomASTConsumer = std::make_unique<MyASTConsumer>(
+      std::move(Compiler.CG), test_x86_avx_abi_codegen_fns);
+
+  Compiler.init(X86AVXABITestProgram, std::move(CustomASTConsumer));
+
+  clang::ParseAST(Compiler.compiler.getSema(), false, false);
+
+  ASSERT_TRUE(test_x86_avx_abi_codegen_fns_ran);
 }
 
 } // end anonymous namespace

@@ -173,7 +173,7 @@ public:
 protected:
   Socket(SocketProtocol protocol, bool should_close);
 
-  virtual size_t Send(const void *buf, const size_t num_bytes);
+  virtual ssize_t Send(const void *buf, const size_t num_bytes);
 
   static int CloseSocket(NativeSocket sockfd);
   static Status GetLastError();

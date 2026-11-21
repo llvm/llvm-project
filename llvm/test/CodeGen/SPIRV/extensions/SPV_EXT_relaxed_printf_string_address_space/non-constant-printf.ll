@@ -4,6 +4,7 @@
 ; RUN: not llc -O0 -mtriple=spirv32-intel-unknown --spirv-ext=-SPV_EXT_relaxed_printf_string_address_space %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; RUN: not llc -O0 -mtriple=spirv32-intel-unknown --spirv-ext=all,-SPV_EXT_relaxed_printf_string_address_space %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
 ; RUN: not llc -O0 -mtriple=spirv32-intel-unknown --spirv-ext=-SPV_EXT_relaxed_printf_string_address_space,all %s -o %t.spvt 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_EXT_relaxed_printf_string_address_space %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: OpExtension "SPV_EXT_relaxed_printf_string_address_space"
 ; CHECK: %[[#ExtInstSetId:]] = OpExtInstImport "OpenCL.std"

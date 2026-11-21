@@ -1,14 +1,20 @@
-//===-- Format string parser for scanf -------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Format string parser for scanf.
+///
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 #define LLVM_LIBC_SRC_STDIO_SCANF_CORE_PARSER_H
 
+#include "src/__support/CPP/algorithm.h"
 #include "src/__support/arg_list.h"
 #include "src/__support/ctype_utils.h"
 #include "src/__support/macros/config.h"
@@ -146,15 +152,14 @@ public:
             // Technically there is no requirement to correct the ordering of
             // the range, but since the range operator is entirely
             // implementation defined it seems like a good convenience.
-            char a = str[cur_pos - 1];
-            char b = str[cur_pos + 1];
-            char start = (a < b ? a : b);
-            char end = (a < b ? b : a);
-            scan_set.set_range(static_cast<size_t>(start),
-                               static_cast<size_t>(end));
+            uint8_t a = static_cast<uint8_t>(str[cur_pos - 1]);
+            uint8_t b = static_cast<uint8_t>(str[cur_pos + 1]);
+            uint8_t start = cpp::min(a, b);
+            uint8_t end = cpp::max(a, b);
+            scan_set.set_range(start, end);
             cur_pos += 2;
           } else {
-            scan_set.set(static_cast<size_t>(str[cur_pos]));
+            scan_set.set(static_cast<uint8_t>(str[cur_pos]));
             ++cur_pos;
           }
         }

@@ -33,8 +33,10 @@ irManglingOptionsFromTargetOptions(const TargetOptions &Opts) {
 
 /// Compile a Module to an ObjectFile.
 Expected<SimpleCompiler::CompileResult> SimpleCompiler::operator()(Module &M) {
-  if (M.getDataLayout().isDefault())
-    M.setDataLayout(TM.createDataLayout());
+  if (M.getDataLayout().isDefault()) {
+    M.setDataLayout(TM.getTargetTriple().computeDataLayout(
+        TM.Options.MCOptions.getABIName()));
+  }
 
   CompileResult CachedObject = tryToLoadFromObjectCache(M);
   if (CachedObject)

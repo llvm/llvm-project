@@ -27,10 +27,12 @@ add_flang_library(FIROpenACCSupport
   HLFIRDialect
 
   MLIR_DEPS
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
   MLIROpenACCUtils
 
   MLIR_LIBS
+  MLIROpenACCAllExtensions
   MLIROpenACCDialect
   MLIROpenACCUtils
 )

@@ -33,7 +33,7 @@ class UnsignedStatTesterChecker : public Checker<check::BeginFunction> {
 public:
   void checkBeginFunction(CheckerContext &C) const {
     StringRef Name;
-    if (const Decl *D = C.getLocationContext()->getDecl())
+    if (const Decl *D = C.getStackFrame()->getDecl())
       if (const FunctionDecl *F = D->getAsFunction())
         Name = F->getName();
 
@@ -43,8 +43,8 @@ public:
       DemoStat.set(1);
     else if (Name == "func_two")
       DemoStat.set(2);
-    else
-      ; // For any other function (e.g., "func_none") don't set the statistic
+
+    // For any other function (e.g., "func_none") don't set the statistic
   }
 };
 

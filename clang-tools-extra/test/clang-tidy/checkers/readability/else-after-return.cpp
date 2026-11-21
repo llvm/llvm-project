@@ -502,3 +502,23 @@ void testNoReturn() {
     f(0);
   }
 }
+
+void testFixitsPreserveComments() {
+  if (true) {
+    return;
+  } else {// aaaa
+    // bbbb
+  }// cccc
+  // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: do not use 'else' after 'return'
+  // CHECK-FIXES:      } // aaaa
+  // CHECK-FIXES-NEXT: // bbbb
+  // CHECK-FIXES-NEXT: // cccc
+
+  if (true)
+    return;
+  else// dddd
+    ;// eeee
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: do not use 'else' after 'return'
+  // CHECK-FIXES:      // dddd
+  // CHECK-FIXES-NEXT: ;// eeee
+}

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/SCCP.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
@@ -24,7 +25,6 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ModRef.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/IPO/FunctionSpecialization.h"
@@ -42,10 +42,6 @@ STATISTIC(NumGlobalConst, "Number of globals found to be constant");
 STATISTIC(NumDeadBlocks , "Number of basic blocks unreachable");
 STATISTIC(NumInstReplaced,
           "Number of instructions replaced with (simpler) instruction");
-
-static cl::opt<unsigned> FuncSpecMaxIters(
-    "funcspec-max-iters", cl::init(10), cl::Hidden, cl::desc(
-    "The maximum number of iterations function specialization is run"));
 
 static void findReturnsToZap(Function &F,
                              SmallVector<ReturnInst *, 8> &ReturnsToZap,
@@ -159,8 +155,9 @@ static bool runIPSCCP(
   Solver.solveWhileResolvedUndefsIn(M);
 
   if (IsFuncSpecEnabled) {
-    unsigned Iters = 0;
-    while (Iters++ < FuncSpecMaxIters && Specializer.run());
+    unsigned MaxIters = getIPOOptions(M).funcspec_max_iters;
+    for (unsigned Iters = 0; Iters < MaxIters && Specializer.run(); ++Iters)
+      ;
   }
 
   // Iterate over all of the instructions in the module, replacing them with
@@ -242,11 +239,11 @@ static bool runIPSCCP(
     // nodes in executable blocks we found values for. The function's entry
     // block is not part of BlocksToErase, so we have to handle it separately.
     for (BasicBlock *BB : BlocksToErase) {
-      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIOrDbg(),
+      NumInstRemoved += changeToUnreachable(&*BB->getFirstNonPHIIt(),
                                             /*PreserveLCSSA=*/false, &DTU);
     }
     if (!Solver.isBlockExecutable(&F.front()))
-      NumInstRemoved += changeToUnreachable(&*F.front().getFirstNonPHIOrDbg(),
+      NumInstRemoved += changeToUnreachable(&*F.front().getFirstNonPHIIt(),
                                             /*PreserveLCSSA=*/false, &DTU);
 
     BasicBlock *NewUnreachableBB = nullptr;
@@ -277,7 +274,8 @@ static bool runIPSCCP(
   for (const auto &[F, ReturnValue] : Solver.getTrackedRetVals()) {
     assert(!F->getReturnType()->isVoidTy() &&
            "should not track void functions");
-    if (SCCPSolver::isConstant(ReturnValue) || ReturnValue.isUnknownOrUndef())
+    if (SCCPSolver::isReplaceableConstant(ReturnValue) ||
+        ReturnValue.isUnknownOrUndef())
       findReturnsToZap(*F, ReturnsToZap, Solver);
   }
 
@@ -326,9 +324,10 @@ static bool runIPSCCP(
 
   // If we inferred constant or undef values for globals variables, we can
   // delete the global and any stores that remain to it.
-  for (const auto &I : make_early_inc_range(Solver.getTrackedGlobals())) {
-    GlobalVariable *GV = I.first;
-    if (SCCPSolver::isOverdefined(I.second))
+  for (const auto &[GV, LV] : Solver.getTrackedGlobals()) {
+    // We may have inferred a constant that is not replaceable (e.g., due to
+    // different pointer provenance), so skip deleting the global in this case.
+    if (!SCCPSolver::isReplaceableConstant(LV) && !LV.isUnknownOrUndef())
       continue;
     LLVM_DEBUG(dbgs() << "Found that GV '" << GV->getName()
                       << "' is constant!\n");

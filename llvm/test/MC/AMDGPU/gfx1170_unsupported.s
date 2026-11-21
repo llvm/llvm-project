@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1170 %s 2>&1 | FileCheck --implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu11.70 %s 2>&1 | FileCheck --implicit-check-not=error: %s
 
 //===----------------------------------------------------------------------===//
 // Unsupported instructions.

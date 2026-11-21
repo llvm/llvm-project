@@ -13,10 +13,10 @@
 #include "log_range_reduction.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"
@@ -27,7 +27,7 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 namespace log2_internal {
 // 128-bit precision dyadic floating point numbers.
-using Float128 = typename fputil::DyadicFloat<128>;
+using DFloat128 = typename fputil::DyadicFloat<128>;
 
 using LIBC_NAMESPACE::operator""_u128;
 
@@ -832,7 +832,7 @@ alignas(16) LIBC_INLINE_VAR constexpr LogRR LOG2_TABLE = {
 // > P;
 // > dirtyinfnorm(log2(1 + x)/x - P, [-0x1.0002143p-29 , 0x1p-29]);
 // 0x1.27ad5...p-121
-LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
+LIBC_INLINE_VAR constexpr DFloat128 BIG_COEFFS[4]{
     {Sign::NEG, -129, 0xb8aa3b29'5c2b21e3'3eccf694'0d66bbcc_u128},
     {Sign::POS, -129, 0xf6384ee1'd01febc9'ee39a6d6'49394bb1_u128},
     {Sign::NEG, -128, 0xb8aa3b29'5c17f0bb'be87fed0'67ea2ad5_u128},
@@ -843,18 +843,18 @@ LIBC_INLINE_VAR constexpr Float128 BIG_COEFFS[4]{
 // -2^-8 <= m_x < 2^-7
 LIBC_INLINE double log2_accurate(int e_x, int index, double m_x) {
 
-  Float128 sum(static_cast<float>(e_x));
+  DFloat128 sum(static_cast<float>(e_x));
   sum = fputil::quick_add(sum, LOG2_TABLE.step_1[index]);
 
-  Float128 v_f128 = log_range_reduction(m_x, LOG2_TABLE, sum);
+  DFloat128 v_f128 = log_range_reduction(m_x, LOG2_TABLE, sum);
 
   // Polynomial approximation
-  Float128 p = fputil::quick_mul(v_f128, BIG_COEFFS[0]);
+  DFloat128 p = fputil::quick_mul(v_f128, BIG_COEFFS[0]);
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[1]));
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[2]));
   p = fputil::quick_mul(v_f128, fputil::quick_add(p, BIG_COEFFS[3]));
 
-  Float128 r = fputil::quick_add(sum, p);
+  DFloat128 r = fputil::quick_add(sum, p);
 
   return static_cast<double>(r);
 }
@@ -921,7 +921,7 @@ LIBC_INLINE double log2(double x) {
 
   // Perform exact range reduction
 #ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
-  double u = fputil::multiply_add(r, m, -1.0); // exact
+  double u = fputil::multiply_sub(r, m, 1.0); // exact
 #else
   uint64_t c_m = x_m & 0x3FFF'E000'0000'0000ULL;
   double c = FPBits_t(c_m).get_val();

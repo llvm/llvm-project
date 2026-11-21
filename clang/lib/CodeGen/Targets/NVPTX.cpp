@@ -13,6 +13,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/Support/NVVMAttributes.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -49,6 +51,9 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
+  void setTargetAtomicMetadata(CodeGenFunction &CGF,
+                               llvm::Instruction &AtomicInst,
+                               const AtomicExpr *AE) const override;
   bool shouldEmitStaticExternCAliases() const override;
 
   StringRef getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
@@ -84,6 +89,11 @@ public:
 
   unsigned getDeviceKernelCallingConv() const override {
     return llvm::CallingConv::PTX_Kernel;
+  }
+
+  void setCUDAKernelCallingConvention(const FunctionType *&FT) const override {
+    FT = getABIInfo().getContext().adjustFunctionType(
+        FT, FT->getExtInfo().withCallingConv(CC_DeviceKernel));
   }
 
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
@@ -268,13 +278,11 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
       // And kernel functions are not subject to inlining
       F->addFnAttr(llvm::Attribute::NoInline);
       if (FD->hasAttr<CUDAGlobalAttr>()) {
-        F->setCallingConv(getDeviceKernelCallingConv());
-
         for (auto IV : llvm::enumerate(FD->parameters()))
           if (IV.value()->hasAttr<CUDAGridConstantAttr>())
-            F->addParamAttr(
-                IV.index(),
-                llvm::Attribute::get(F->getContext(), "nvvm.grid_constant"));
+            F->addParamAttr(IV.index(),
+                            llvm::Attribute::get(F->getContext(),
+                                                 llvm::NVVMAttr::GridConstant));
       }
       if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
         M.handleCUDALaunchBoundsAttr(F, Attr);
@@ -303,33 +311,19 @@ bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
 }
 
+void NVPTXTargetCodeGenInfo::setTargetAtomicMetadata(
+    CodeGenFunction &CGF, llvm::Instruction &AtomicInst,
+    const AtomicExpr *AE) const {
+  AtomicOptions AO = CGF.CGM.getAtomicOpts();
+  if (AO.getOption(clang::AtomicOptionKind::IgnoreDenormalMode))
+    addAtomicIgnoreDenormalModeMetadata(CGF, AtomicInst, /*AllowHalf=*/true);
+}
+
 StringRef NVPTXTargetCodeGenInfo::getLLVMSyncScopeStr(
     const LangOptions &LangOpts, SyncScope Scope,
     llvm::AtomicOrdering Ordering) const {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "block";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-    return "cluster";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  llvm_unreachable("Unknown SyncScope enum");
+  return *llvm::getAtomicScopeIRString(getABIInfo().getTarget().getTriple(),
+                                       getAtomicScope(Scope));
 }
 
 llvm::Constant *
@@ -358,7 +352,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
     if (MaxThreadsVal)
       *MaxThreadsVal = MaxThreads.getExtValue();
     if (F)
-      F->addFnAttr("nvvm.maxntid", llvm::utostr(MaxThreads.getExtValue()));
+      F->addFnAttr(llvm::NVVMAttr::MaxNTID,
+                   llvm::utostr(MaxThreads.getExtValue()));
   }
 
   // min and max blocks is an optional argument for CUDALaunchBoundsAttr. If it
@@ -371,7 +366,8 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
       if (MinBlocksVal)
         *MinBlocksVal = MinBlocks.getExtValue();
       if (F)
-        F->addFnAttr("nvvm.minctasm", llvm::utostr(MinBlocks.getExtValue()));
+        F->addFnAttr(llvm::NVVMAttr::MinCTASm,
+                     llvm::utostr(MinBlocks.getExtValue()));
     }
   }
   if (Attr->getMaxBlocks()) {
@@ -381,7 +377,7 @@ void CodeGenModule::handleCUDALaunchBoundsAttr(llvm::Function *F,
       if (MaxClusterRankVal)
         *MaxClusterRankVal = MaxBlocks.getExtValue();
       if (F)
-        F->addFnAttr("nvvm.maxclusterrank",
+        F->addFnAttr(llvm::NVVMAttr::MaxClusterRank,
                      llvm::utostr(MaxBlocks.getExtValue()));
     }
   }

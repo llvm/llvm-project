@@ -35,6 +35,7 @@ def ConvertToLLVMAttrInterface :
     patterns specific to a particular target.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
@@ -59,6 +60,7 @@ def ConvertToLLVMOpInterface : OpInterface<"ConvertToLLVMOpInterface"> {
     attributes.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
@@ -69,6 +71,44 @@ def ConvertToLLVMOpInterface : OpInterface<"ConvertToLLVMOpInterface"> {
       /*methodName=*/"getConvertToLLVMConversionAttrs",
       /*args=*/(ins
         "::llvm::SmallVectorImpl<::mlir::ConvertToLLVMAttrInterface>&":$attrs)
+    >
+  ];
+}
+
+//===----------------------------------------------------------------------===//
+// Dialect interface
+//===----------------------------------------------------------------------===//
+
+def ConvertToLLVMPatternInterface : DialectInterface<"ConvertToLLVMPatternInterface"> {
+  let description = [{
+    Base class for dialect interfaces providing translation to LLVM IR.
+    Dialects that can be translated should provide an implementation of this
+    interface for the supported operations. The interface may be implemented in
+    a separate library to avoid the "main" dialect library depending on LLVM IR.
+    The interface can be attached using the delayed registration mechanism
+    available in DialectRegistry.
+  }];
+  let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"];
+
+  let methods = [
+    InterfaceMethod<[{
+        Hook for derived dialect interface to load the dialects they
+        target. The LLVMDialect is implicitly already loaded, but this
+        method allows to load other intermediate dialects used in the
+        conversion, or target dialects like NVVM for example.
+      }],
+      "void", "loadDependentDialects",
+      (ins "::mlir::MLIRContext *":$context), [{}]
+    >,
+    PureVirtualInterfaceMethod<[{
+        Hook for derived dialect interface to provide conversion patterns
+        and mark dialect legal for the conversion target.
+      }],
+      "void", "populateConvertToLLVMConversionPatterns",
+      (ins "::mlir::ConversionTarget &":$target,
+           "::mlir::LLVMTypeConverter &":$typeConverter,
+           "::mlir::RewritePatternSet &":$patterns)
     >
   ];
 }

@@ -18,7 +18,10 @@
 #include "mlir/Conversion/SPIRVCommon/AttrToLLVMConverter.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -138,6 +141,8 @@ struct GPUBarrierConversion final : ConvertOpToLLVMPattern<gpu::BarrierOp> {
           memFenceFlag = memFenceFlag | localMemFenceFlag;
           break;
         case gpu::AddressSpace::Private:
+        case gpu::AddressSpace::Constant:
+          // Private is thread-local, constant is read-only; no fencing needed.
           break;
         }
       }

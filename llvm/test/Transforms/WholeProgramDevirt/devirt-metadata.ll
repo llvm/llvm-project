@@ -52,13 +52,14 @@ declare void @llvm.assume(i1)
 !2 = !{i32 2, !"Dwarf Version", i32 4}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !4 = !{!"clang version 4.0.0 (trunk 278098)"}
-!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!5 = distinct !DISubprogram(name: "call", linkageName: "_Z4callPv", scope: !1, file: !1, line: 29, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, type: !14)
 !6 = !DILocation(line: 30, column: 32, scope: !5)
-!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEb", scope: !1, file: !1, line: 13, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!7 = distinct !DISubprogram(name: "vf", linkageName: "_ZN3vt12vfEb", scope: !1, file: !1, line: 13, isLocal: false, isDefinition: true, scopeLine: 13, flags: DIFlagPrototyped, isOptimized: false, unit: !0, type: !14)
 !8 = !{i32 0, !"typeid"}
 
-!9 = distinct !DISubprogram(name: "call1", linkageName: "_Z5call1Pv", scope: !1, file: !1, line: 31, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!9 = distinct !DISubprogram(name: "call1", linkageName: "_Z5call1Pv", scope: !1, file: !1, line: 31, isLocal: false, isDefinition: true, scopeLine: 9, flags: DIFlagPrototyped, isOptimized: false, unit: !0, type: !14)
 !10 = !DILocation(line: 35, column: 32, scope: !9)
-!11 = distinct !DISubprogram(name: "vf2", linkageName: "_ZN3vt13vf2Eb", scope: !1, file: !1, line: 23, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: false, unit: !0)
+!11 = distinct !DISubprogram(name: "vf2", linkageName: "_ZN3vt13vf2Eb", scope: !1, file: !1, line: 23, isLocal: false, isDefinition: true, scopeLine: 23, flags: DIFlagPrototyped, isOptimized: false, unit: !0, type: !14)
 !12 = !{i32 0, !"typeid1"}
-
+!13 = !{null}
+!14 = !DISubroutineType(types: !13)

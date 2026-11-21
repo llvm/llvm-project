@@ -44,15 +44,14 @@ def SPECIAL3_OPCODE : Field6<0b011111>;
 def REGIMM_OPCODE : Field6<0b000001>;
 
 class DSPInst<string opstr = "">
-    : MipsInst<(outs), (ins), "", [], NoItinerary, FrmOther> {
+    : MipsInst<(outs), (ins), "", [], FrmOther> {
   let ASEPredicate = [HasDSP];
   string BaseOpcode = opstr;
   string Arch = "dsp";
 }
 
-class PseudoDSP<dag outs, dag ins, list<dag> pattern,
-                InstrItinClass itin = IIPseudo>
-    : MipsPseudo<outs, ins, pattern, itin> {
+class PseudoDSP<dag outs, dag ins, list<dag> pattern>
+    : MipsPseudo<outs, ins, pattern> {
   let ASEPredicate = [HasDSP];
 }
 

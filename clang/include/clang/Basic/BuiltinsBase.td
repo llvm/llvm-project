@@ -75,6 +75,10 @@ def ConstIgnoringExceptions : Attribute<"g">;
 // This function requires a specific header or an explicit declaration.
 def RequireDeclaration : Attribute<"h">;
 
+// This is a runtime library implemented function without the
+// '__builtin_' prefix. It will be implemented in compiler-rt or libgcc.
+def RuntimeLibraryFunction : Attribute<"i">;
+
 // FIXME: Why is this not simply the min_vector_width attribute?
 // Vector has to be at least N bits wide.
 class RequiredVectorWidth<int N> : IndexedAttribute<"V", N>;
@@ -95,6 +99,14 @@ def Consteval : Attribute<"EG">;
 // Callback behavior: the first index argument is called with the arguments
 // indicated by the remaining indices.
 class Callback<list<int> ArgIndices> : MultiIndexAttribute<"C", ArgIndices>;
+
+// The _Constant argument at index I must be in the half-open range [Lo, Hi),
+// matching the IR intrinsic range attribute.
+class ArgRange<int I, int Lo, int Hi> : Attribute<"R"> {
+  int Index = I;
+  int Lower = Lo;
+  int Upper = Hi;
+}
 
 // Prefixes
 // ========

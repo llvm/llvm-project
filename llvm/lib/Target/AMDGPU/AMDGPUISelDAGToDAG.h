@@ -17,7 +17,6 @@
 #include "AMDGPUSelectionDAGInfo.h"
 #include "GCNSubtarget.h"
 #include "SIMachineFunctionInfo.h"
-#include "SIModeRegisterDefaults.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -53,9 +52,6 @@ class AMDGPUDAGToDAGISel : public SelectionDAGISel {
   // make the right decision when generating code for different targets.
   const GCNSubtarget *Subtarget;
 
-  // Default FP mode for the current function.
-  SIModeRegisterDefaults Mode;
-
   // Instructions that will be lowered with a final instruction that zeros the
   // high result bits.
   bool fp16SrcZerosHighBits(unsigned Opc) const;
@@ -67,13 +63,18 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   bool matchLoadD16FromBuildVector(SDNode *N) const;
+  bool widenRegionLoad16(SDNode *N) const;
   void PreprocessISelDAG() override;
   void Select(SDNode *N) override;
   void PostprocessISelDAG() override;
+  bool SelectInlineAsmMemoryOperand(const SDValue &Op,
+                                    InlineAsm::ConstraintCode ConstraintID,
+                                    std::vector<SDValue> &OutOps) override;
 
 protected:
   void SelectBuildVector(SDNode *N, unsigned RegClassID);
   void SelectVectorShuffle(SDNode *N);
+  bool isSDWAOperand(const SDNode *N) const;
 
 private:
   std::pair<SDValue, SDValue> foldFrameIndex(SDValue N) const;
@@ -89,8 +90,19 @@ private:
   }
 
   bool isVGPRImm(const SDNode *N) const;
-  bool isUniformLoad(const SDNode *N) const;
   bool isUniformBr(const SDNode *N) const;
+  bool isVRegIdxFoldableAdd(const SDNode *N, unsigned NumDwords) const;
+
+  MachineSDNode *buildRegSequence16(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence32(SmallVectorImpl<SDValue> &Elts,
+                                    const SDLoc &DL) const;
+  MachineSDNode *buildRegSequence(SmallVectorImpl<SDValue> &Elts,
+                                  const SDLoc &DL, unsigned ElementSize) const;
+
+  void selectWMMAModsNegAbs(unsigned ModOpcode, unsigned &Mods,
+                            SmallVectorImpl<SDValue> &Elts, SDValue &Src,
+                            const SDLoc &DL, unsigned ElementSize) const;
 
   // Returns true if ISD::AND SDNode `N`'s masking of the shift amount operand's
   // `ShAmtBits` bits is unneeded.
@@ -143,7 +155,8 @@ private:
   bool SelectBUFSOffset(SDValue Addr, SDValue &SOffset) const;
 
   bool SelectFlatOffsetImpl(SDNode *N, SDValue Addr, SDValue &VAddr,
-                            SDValue &Offset, uint64_t FlatVariant) const;
+                            SDValue &Offset,
+                            AMDGPU::FlatAddrSpace FlatVariant) const;
   bool SelectFlatOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                         SDValue &Offset) const;
   bool SelectGlobalOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
@@ -193,7 +206,8 @@ private:
                   bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned) const;
+  bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned,
+                         bool IsSMEM = false) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
@@ -203,8 +217,6 @@ private:
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,
                                SDValue &Offset) const;
-  bool SelectSMRDPrefetchImm(SDValue Addr, SDValue &SBase,
-                             SDValue &Offset) const;
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
@@ -215,12 +227,11 @@ private:
                                        SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
+  bool SelectVOP3NoOpSelMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                        SDValue &Clamp, SDValue &Omod) const;
   bool SelectVOP3BMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
                         SDValue &Clamp, SDValue &Omod) const;
-  bool SelectVOP3NoMods0(SDValue In, SDValue &Src, SDValue &SrcMods,
-                         SDValue &Clamp, SDValue &Omod) const;
 
   bool SelectVINTERPModsImpl(SDValue In, SDValue &Src, SDValue &SrcMods,
                              bool OpSel) const;
@@ -231,8 +242,15 @@ private:
                        SDValue &Omod) const;
 
   bool SelectVOP3PMods(SDValue In, SDValue &Src, SDValue &SrcMods,
-                       bool IsDOT = false) const;
+                       bool IsDOT = false, bool NoOpSel0 = false) const;
+  bool SelectVOP3PModsPkFmaOpSel0(SDValue In, SDValue &Src,
+                                  SDValue &SrcMods) const;
+  bool SelectVOP3PModsPkAddMulOpSel0(SDValue In, SDValue &Src,
+                                     SDValue &SrcMods) const;
   bool SelectVOP3PModsDOT(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsDOT(SDValue In, SDValue &Src) const;
+  bool SelectVOP3PModsF32(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PNoModsF32(SDValue In, SDValue &Src) const;
 
   bool SelectWMMAOpSelVOP3PMods(SDValue In, SDValue &Src) const;
 
@@ -255,10 +273,18 @@ private:
   bool SelectVOP3PMadMixModsExt(SDValue In, SDValue &Src,
                                 SDValue &SrcMods) const;
   bool SelectVOP3PMadMixMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixModsExtNeg(SDValue In, SDValue &Src,
+                                   SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixModsNeg(SDValue In, SDValue &Src,
+                                SDValue &SrcMods) const;
   bool SelectVOP3PMadMixBF16ModsExt(SDValue In, SDValue &Src,
                                     SDValue &SrcMods) const;
   bool SelectVOP3PMadMixBF16Mods(SDValue In, SDValue &Src,
                                  SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16ModsExtNeg(SDValue In, SDValue &Src,
+                                       SDValue &SrcMods) const;
+  bool SelectVOP3PMadMixBF16ModsNeg(SDValue In, SDValue &Src,
+                                    SDValue &SrcMods) const;
 
   bool SelectBITOP3(SDValue In, SDValue &Src0, SDValue &Src1, SDValue &Src2,
                    SDValue &Tbl) const;
@@ -267,8 +293,8 @@ private:
 
   SDValue getMaterializedScalarImm32(int64_t Val, const SDLoc &DL) const;
 
-  void SelectADD_SUB_I64(SDNode *N);
   void SelectAddcSubb(SDNode *N);
+  void SelectAddcSubbI64(SDNode *N);
   void SelectUADDO_USUBO(SDNode *N);
   void SelectDIV_SCALE(SDNode *N);
   void SelectMAD_64_32(SDNode *N);
@@ -281,7 +307,6 @@ private:
   void SelectS_BFE(SDNode *N);
   bool isCBranchSCC(const SDNode *N) const;
   void SelectBRCOND(SDNode *N);
-  void SelectFMAD_FMA(SDNode *N);
   void SelectFP_EXTEND(SDNode *N);
   void SelectDSAppendConsume(SDNode *N, unsigned IntrID);
   void SelectDSBvhStackIntrinsic(SDNode *N, unsigned IntrID);
@@ -293,6 +318,7 @@ private:
   void SelectINTRINSIC_VOID(SDNode *N);
   void SelectWAVE_ADDRESS(SDNode *N);
   void SelectSTACKRESTORE(SDNode *N);
+  void SelectWRITE_REGISTER(SDNode *N);
 
 protected:
   // Include the pieces autogenerated from the target description.

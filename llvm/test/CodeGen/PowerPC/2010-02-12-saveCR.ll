@@ -21,8 +21,7 @@ entry:
 return:                                           ; preds = %entry
 ; CHECK: ori [[T2]], [[T2]], 34492
 ; CHECK: lwzx [[T1]], 1, [[T2]]
-; CHECK: mtcrf 32, [[T1]]
-; CHECK: mtcrf 16, [[T1]]
+; CHECK: mtcrf 48, [[T1]]
   ret void
 }
 

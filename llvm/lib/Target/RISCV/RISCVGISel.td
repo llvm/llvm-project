@@ -32,7 +32,7 @@ def simm12Minus1NonzeroNonNeg1 : ImmLeaf<XLenVT, [{
 // Return an immediate value plus 1.
 def ImmPlus1 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getSExtValue() + 1, SDLoc(N),
-                                   N->getValuePtrVTpe(0));}]>;
+                                   N->getValueType(0));}]>;
 def GIImmPlus1 :
   GICustomOperandRenderer<"renderImmPlus1">,
   GISDNodeXFormEquiv<ImmPlus1>;
@@ -99,6 +99,13 @@ let Predicates = [IsRV64] in {
 def : LdPat<load, LD, PtrVT>;
 def : StPat<store, SD, GPR, PtrVT>;
 }
+
+//===----------------------------------------------------------------------===//
+// Scalar Zbb intrinsic patterns not used by SelectionDAG
+//===----------------------------------------------------------------------===//
+
+let Predicates = [HasStdExtZbb] in
+def : PatGpr<int_riscv_orc_b, ORC_B>;
 
 //===----------------------------------------------------------------------===//
 // RV64 i32 patterns not used by SelectionDAG

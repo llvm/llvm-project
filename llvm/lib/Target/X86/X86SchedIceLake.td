@@ -396,9 +396,14 @@ defm : ICXWriteResPair<WriteVarShuffle,  [ICXPort0,ICXPort5],  1, [1,1], 2, 5>; 
 defm : ICXWriteResPair<WriteVarShuffleX, [ICXPort15], 1, [1], 1, 6>;
 defm : ICXWriteResPair<WriteVarShuffleY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarShuffleZ, [ICXPort5],  1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteBlend, [ICXPort15], 1, [1], 1, 6>; // Vector blends.
-defm : ICXWriteResPair<WriteBlendY,[ICXPort15], 1, [1], 1, 7>;
-defm : ICXWriteResPair<WriteBlendZ,[ICXPort15], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WritePack,  [ICXPort5], 4, [2], 2, 3>; // Vector packs.
+defm : ICXWriteResPair<WritePackX, [ICXPort5], 3, [1], 1, 7>;
+defm : ICXWriteResPair<WritePackY, [ICXPort5], 3, [1], 1, 8>;
+defm : ICXWriteResPair<WritePackZ, [ICXPort5], 3, [1], 1, 8>;
+defm : ICXWriteResPair<WritePBLENDDX, [ICXPort015], 1, [1], 1, 6>; // Vector blends.
+defm : ICXWriteResPair<WritePBLENDDY, [ICXPort015], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WritePBLENDWX, [ICXPort15], 1, [1], 1, 6>; // Vector blends.
+defm : ICXWriteResPair<WritePBLENDWY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarBlend, [ICXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : ICXWriteResPair<WriteVarBlendY,[ICXPort015], 2, [2], 2, 6>;
 defm : ICXWriteResPair<WriteVarBlendZ,[ICXPort05],  2, [1], 1, 6>;
@@ -709,7 +714,6 @@ def: InstRW<[ICXWriteResGroup9], (instregex "VBLENDMPD(Z128|Z256)rr",
                                             "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
                                             "(V?)MOV(SD|SS)(Z?)rr",
-                                            "VPBLENDD(Y?)rri",
                                             "VPBLENDMB(Z128|Z256)rr",
                                             "VPBLENDMD(Z128|Z256)rr",
                                             "VPBLENDMQ(Z128|Z256)rr",
@@ -837,7 +841,6 @@ def: InstRW<[ICXWriteResGroup32], (instregex "(ADD|SUB|SUBR)_(FPrST0|FST0r|FrST0
                                              "VALIGND(Z|Z128|Z256)rri",
                                              "VALIGNQ(Z|Z128|Z256)rri",
                                              "VPBROADCAST(B|W)rr",
-                                             "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z128|Z256)?rr",
                                              "VP(MAX|MIN)(S|U)Q(Z|Z128|Z256)rr")>;
 
 def ICXWriteResGroup33 : SchedWriteRes<[ICXPort5]> {
@@ -890,15 +893,6 @@ def ICXWriteResGroup38 : SchedWriteRes<[ICXPort15,ICXPort01]> {
   let ReleaseAtCycles = [2,1];
 }
 def: InstRW<[ICXWriteResGroup38], (instregex "(V?)PH(ADD|SUB)SW(Y?)rr")>;
-
-def ICXWriteResGroup41 : SchedWriteRes<[ICXPort5]> {
-  let Latency = 4;
-  let NumMicroOps = 2;
-  let ReleaseAtCycles = [2];
-}
-def: InstRW<[ICXWriteResGroup41], (instrs MMX_PACKSSDWrr,
-                                          MMX_PACKSSWBrr,
-                                          MMX_PACKUSWBrr)>;
 
 def ICXWriteResGroup42 : SchedWriteRes<[ICXPort6,ICXPort0156]> {
   let Latency = 3;
@@ -1346,7 +1340,6 @@ def ICXWriteResGroup95 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup95], (instrs VPBLENDDrmi)>;
 def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
                                   (instregex "VBLENDMPDZ128rm(b?)",
                                              "VBLENDMPSZ128rm(b?)",
@@ -1375,15 +1368,6 @@ def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
                                              "(V?)PSUB(B|D|Q|W)rm",
                                              "VPTERNLOGDZ128rm(b?)i",
                                              "VPTERNLOGQZ128rm(b?)i")>;
-
-def ICXWriteResGroup96 : SchedWriteRes<[ICXPort5,ICXPort23]> {
-  let Latency = 7;
-  let NumMicroOps = 3;
-  let ReleaseAtCycles = [2,1];
-}
-def: InstRW<[ICXWriteResGroup96], (instrs MMX_PACKSSDWrm,
-                                          MMX_PACKSSWBrm,
-                                          MMX_PACKUSWBrm)>;
 
 def ICXWriteResGroup97 : SchedWriteRes<[ICXPort5,ICXPort015]> {
   let Latency = 7;
@@ -1552,7 +1536,6 @@ def ICXWriteResGroup121 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let NumMicroOps = 2;
   let ReleaseAtCycles = [1,1];
 }
-def: InstRW<[ICXWriteResGroup121], (instrs VPBLENDDYrmi)>;
 def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                    (instregex "VBLENDMPD(Z|Z256)rm(b?)",
                                               "VBLENDMPS(Z|Z256)rm(b?)",
@@ -1720,7 +1703,6 @@ def: InstRW<[ICXWriteResGroup136_2], (instregex "VCMP(PD|PS)Z128rm(b?)i",
                                                 "VPCMPQZ128rm(b?)i",
                                                 "VPCMPU(B|D|Q|W)Z128rm(b?)i",
                                                 "VPCMPWZ128rm(b?)i",
-                                                "(V?)PACK(U|S)S(DW|WB)(Z128)?rm",
                                                 "VPTESTMBZ128rm(b?)",
                                                 "VPTESTMDZ128rm(b?)",
                                                 "VPTESTMQZ128rm(b?)",
@@ -1792,7 +1774,6 @@ def: InstRW<[ICXWriteResGroup148_2], (instregex "VCMPPD(Z|Z256)rm(b?)i",
                                                 "VPCMPU(B|D|Q|W)Z256rm(b?)i",
                                                 "VPCMPU(B|D|Q|W)Zrm(b?)i",
                                                 "VPCMPW(Z|Z256)rm(b?)i",
-                                                "(V?)PACK(U|S)S(DW|WB)(Y|Z|Z256)rm",
                                                 "VPTESTM(B|D|Q|W)Z256rm(b?)",
                                                 "VPTESTM(B|D|Q|W)Zrm(b?)",
                                                 "VPTESTNM(B|D|Q|W)Z256rm(b?)",

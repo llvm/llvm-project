@@ -7,6 +7,7 @@
 // XFAIL: tsan
 // XFAIL: android && asan
 // XFAIL: darwin-remote
+// UNSUPPORTED: rtsan
 
 // RUN: rm -rf %t_workdir
 // RUN: mkdir -p %t_workdir

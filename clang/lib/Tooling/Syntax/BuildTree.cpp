@@ -737,6 +737,14 @@ public:
     return true;
   }
 
+  // ExplicitInstantiationDecl is an auxiliary AST node that records source
+  // info. The syntax tree is already built by
+  // TraverseClassTemplateSpecializationDecl or by the parser for
+  // function/variable templates, so skip this node.
+  bool TraverseExplicitInstantiationDecl(ExplicitInstantiationDecl *) {
+    return true;
+  }
+
   bool WalkUpFromTemplateDecl(TemplateDecl *S) {
     foldTemplateDeclaration(
         Builder.getDeclarationRange(S),
@@ -748,7 +756,7 @@ public:
   bool WalkUpFromTagDecl(TagDecl *C) {
     // FIXME: build the ClassSpecifier node.
     if (!C->isFreeStanding()) {
-      assert(C->getNumTemplateParameterLists() == 0);
+      assert(C->getTemplateParameterLists().empty());
       return true;
     }
     handleFreeStandingTagDecl(C);
@@ -772,8 +780,8 @@ public:
     };
     if (auto *S = dyn_cast<ClassTemplatePartialSpecializationDecl>(C))
       ConsumeTemplateParameters(*S->getTemplateParameters());
-    for (unsigned I = C->getNumTemplateParameterLists(); 0 < I; --I)
-      ConsumeTemplateParameters(*C->getTemplateParameterList(I - 1));
+    for (TemplateParameterList *TPL : C->getTemplateParameterLists())
+      ConsumeTemplateParameters(*TPL);
     return Result;
   }
 

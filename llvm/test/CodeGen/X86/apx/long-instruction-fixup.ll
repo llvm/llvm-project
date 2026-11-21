@@ -169,8 +169,8 @@ define i32 @sbb32mi_GS(i32 %x, i32 %y) {
 ; CHECK-LABEL: sbb32mi_GS:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpl %edi, %esi
-; CHECK-NEXT:    sbbl $0, %gs:255, %eax
-; CHECK-NEXT:    addl $-123456, %eax # imm = 0xFFFE1DC0
+; CHECK-NEXT:    movl %gs:255, %eax
+; CHECK-NEXT:    sbbl $123456, %eax # imm = 0x1E240
 ; CHECK-NEXT:    retq
 entry:
   %a= inttoptr i32 255 to ptr addrspace(256)
@@ -186,8 +186,8 @@ define i64 @sbb64mi_FS(i64 %x, i64 %y) {
 ; CHECK-LABEL: sbb64mi_FS:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpq %rdi, %rsi
-; CHECK-NEXT:    sbbq $0, %fs:255, %rax
-; CHECK-NEXT:    addq $-123456, %rax # imm = 0xFFFE1DC0
+; CHECK-NEXT:    movq %fs:255, %rax
+; CHECK-NEXT:    sbbq $123456, %rax # imm = 0x1E240
 ; CHECK-NEXT:    retq
 entry:
   %a= inttoptr i64 255 to ptr addrspace(257)

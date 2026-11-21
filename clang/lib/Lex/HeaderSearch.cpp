@@ -91,8 +91,8 @@ void HeaderSearch::PrintStats() {
   llvm::errs() << "\n*** HeaderSearch Stats:\n"
                << FileInfo.size() << " files tracked.\n";
   unsigned NumOnceOnlyFiles = 0;
-  for (unsigned i = 0, e = FileInfo.size(); i != e; ++i)
-    NumOnceOnlyFiles += (FileInfo[i].isPragmaOnce || FileInfo[i].isImport);
+  for (const auto &[FE, HFI] : FileInfo)
+    NumOnceOnlyFiles += (HFI.isPragmaOnce || HFI.isImport);
   llvm::errs() << "  " << NumOnceOnlyFiles << " #import/#pragma once files.\n";
 
   llvm::errs() << "  " << NumIncluded << " #include/#include_next/#import.\n"
@@ -197,7 +197,7 @@ void HeaderSearch::getHeaderMapFileNames(
     Names.push_back(std::string(HM.first.getName()));
 }
 
-std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
+ModuleFileName HeaderSearch::getCachedModuleFileName(Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   // The ModuleMap maybe a nullptr, when we load a cached C++ module without
@@ -207,12 +207,12 @@ std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
   return getCachedModuleFileName(Module->Name, ModuleMap->getNameAsRequested());
 }
 
-std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
-                                                    bool FileMapOnly) {
+ModuleFileName HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
+                                                       bool FileMapOnly) {
   // First check the module name to pcm file map.
   auto i(HSOpts.PrebuiltModuleFiles.find(ModuleName));
   if (i != HSOpts.PrebuiltModuleFiles.end())
-    return i->second;
+    return ModuleFileName::makeExplicit(i->second);
 
   if (FileMapOnly || HSOpts.PrebuiltModulePaths.empty())
     return {};
@@ -232,67 +232,69 @@ std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
     else
       llvm::sys::path::append(Result, ModuleName + ".pcm");
     if (getFileMgr().getOptionalFileRef(Result))
-      return std::string(Result);
+      return ModuleFileName::makeExplicit(Result);
   }
 
   return {};
 }
 
-std::string HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
+ModuleFileName HeaderSearch::getPrebuiltImplicitModuleFileName(Module *Module) {
   OptionalFileEntryRef ModuleMap =
       getModuleMap().getModuleMapFileForUniquing(Module);
   StringRef ModuleName = Module->Name;
   StringRef ModuleMapPath = ModuleMap->getName();
-  StringRef ContextHash = HSOpts.DisableModuleHash ? "" : getContextHash();
   for (const std::string &Dir : HSOpts.PrebuiltModulePaths) {
     SmallString<256> CachePath(Dir);
     FileMgr.makeAbsolutePath(CachePath);
-    llvm::sys::path::append(CachePath, ContextHash);
-    std::string FileName =
+    ModuleFileName FileName =
         getCachedModuleFileNameImpl(ModuleName, ModuleMapPath, CachePath);
     if (!FileName.empty() && getFileMgr().getOptionalFileRef(FileName))
-      return FileName;
+      return ModuleFileName::makeExplicit(FileName);
   }
   return {};
 }
 
-std::string HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
-                                                  StringRef ModuleMapPath) {
+ModuleFileName HeaderSearch::getCachedModuleFileName(StringRef ModuleName,
+                                                     StringRef ModuleMapPath) {
   return getCachedModuleFileNameImpl(ModuleName, ModuleMapPath,
-                                     getSpecificModuleCachePath());
+                                     getNormalizedModuleCachePath());
 }
 
-std::string HeaderSearch::getCachedModuleFileNameImpl(StringRef ModuleName,
-                                                      StringRef ModuleMapPath,
-                                                      StringRef CachePath) {
+ModuleFileName HeaderSearch::getCachedModuleFileNameImpl(
+    StringRef ModuleName, StringRef ModuleMapPath, StringRef CachePath) {
   // If we don't have a module cache path or aren't supposed to use one, we
   // can't do anything.
   if (CachePath.empty())
     return {};
 
+  // Note: This re-implements part of createSpecificModuleCachePathImpl() in
+  // order to be able to correctly construct ModuleFileName.
+
   SmallString<256> Result(CachePath);
+  unsigned SuffixBegin = Result.size();
 
   if (HSOpts.DisableModuleHash) {
     llvm::sys::path::append(Result, ModuleName + ".pcm");
   } else {
+    llvm::sys::path::append(Result, ContextHash);
+
     // Construct the name <ModuleName>-<hash of ModuleMapPath>.pcm which should
     // ideally be globally unique to this particular module. Name collisions
     // in the hash are safe (because any translation unit can only import one
     // module with each name), but result in a loss of caching.
     //
-    // To avoid false-negatives, we form as canonical a path as we can, and map
-    // to lower-case in case we're on a case-insensitive file system.
+    // To avoid false-negatives, we form as canonical a path as we can.
     SmallString<128> CanonicalPath(ModuleMapPath);
     if (getModuleMap().canonicalizeModuleMapPath(CanonicalPath))
       return {};
 
-    auto Hash = llvm::xxh3_64bits(CanonicalPath.str().lower());
+    auto Hash = llvm::xxh3_64bits(CanonicalPath);
 
     SmallString<128> HashStr;
     llvm::APInt(64, Hash).toStringUnsigned(HashStr, /*Radix*/36);
     llvm::sys::path::append(Result, ModuleName + "-" + HashStr + ".pcm");
   }
-  return Result.str().str();
+  return ModuleFileName::makeImplicit(Result, Result.size() - SuffixBegin);
 }
 
 Module *HeaderSearch::lookupModule(StringRef ModuleName,
@@ -303,34 +305,68 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName,
   if (Module || !AllowSearch || !HSOpts.ImplicitModuleMaps)
     return Module;
 
+  if (!lookupModuleWithPrivateFallbacks(
+          ModuleName, ImportLoc, AllowExtraModuleMapSearch, /*Load=*/true))
+    return nullptr;
+  return ModMap.findOrLoadModule(ModuleName);
+}
+
+OptionalFileEntryRef
+HeaderSearch::lookupModuleMapFileForModule(StringRef ModuleName,
+                                           bool AllowExtraModuleMapSearch) {
+  assert(HSOpts.LazyLoadModuleMaps &&
+         "module map lookup requires lazy loading support");
+  if (!ModMap.isModuleKnown(ModuleName)) {
+    if (!HSOpts.ImplicitModuleMaps)
+      return std::nullopt;
+    // If the module map has not already been parsed, look it up.
+    if (!lookupModuleWithPrivateFallbacks(ModuleName, SourceLocation(),
+                                          AllowExtraModuleMapSearch,
+                                          /*Load=*/false))
+      return std::nullopt;
+  }
+  return ModMap.getModuleMapFileForName(ModuleName);
+}
+
+bool HeaderSearch::lookupModuleWithPrivateFallbacks(
+    StringRef ModuleName, SourceLocation ImportLoc,
+    bool AllowExtraModuleMapSearch, bool Load) {
   StringRef SearchName = ModuleName;
-  Module = lookupModule(ModuleName, SearchName, ImportLoc,
-                        AllowExtraModuleMapSearch);
+  if (lookupModuleImpl(ModuleName, SearchName, ImportLoc,
+                       AllowExtraModuleMapSearch, Load))
+    return true;
 
   // The facility for "private modules" -- adjacent, optional module maps named
-  // module.private.modulemap that are supposed to define private submodules --
-  // may have different flavors of names: FooPrivate, Foo_Private and Foo.Private.
+  // module.private.modulemap that are supposed to define modules for private
+  // headers -- may have different flavors of names: FooPrivate, Foo_Private and
+  // Foo.Private.
   //
   // Foo.Private is now deprecated in favor of Foo_Private. Users of FooPrivate
   // should also rename to Foo_Private. Representing private as submodules
   // could force building unwanted dependencies into the parent module and cause
   // dependency cycles.
-  if (!Module && SearchName.consume_back("_Private"))
-    Module = lookupModule(ModuleName, SearchName, ImportLoc,
-                          AllowExtraModuleMapSearch);
-  if (!Module && SearchName.consume_back("Private"))
-    Module = lookupModule(ModuleName, SearchName, ImportLoc,
-                          AllowExtraModuleMapSearch);
-  return Module;
+  if (SearchName.consume_back("_Private") &&
+      lookupModuleImpl(ModuleName, SearchName, ImportLoc,
+                       AllowExtraModuleMapSearch, Load))
+    return true;
+  if (SearchName.consume_back("Private") &&
+      lookupModuleImpl(ModuleName, SearchName, ImportLoc,
+                       AllowExtraModuleMapSearch, Load))
+    return true;
+  return false;
 }
 
-Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
-                                   SourceLocation ImportLoc,
-                                   bool AllowExtraModuleMapSearch) {
-  Module *Module = nullptr;
+bool HeaderSearch::lookupModuleImpl(StringRef ModuleName, StringRef SearchName,
+                                    SourceLocation ImportLoc,
+                                    bool AllowExtraModuleMapSearch, bool Load) {
+  auto FindModule = [&] {
+    return Load ? ModMap.findOrLoadModule(ModuleName) != nullptr
+                : ModMap.isModuleKnown(ModuleName);
+  };
 
-  // Look through the various header search paths to load any available module
-  // maps, searching for a module map that describes this module.
+  // Look through the various header search paths to parse, and load if
+  // requested, searching for a module map that describes
+  // this module.
   for (DirectoryLookup &Dir : search_dir_range()) {
     if (Dir.isFramework()) {
       // Search for or infer a module map for a framework. Here we use
@@ -342,10 +378,10 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
       if (auto FrameworkDir =
               FileMgr.getOptionalDirectoryRef(FrameworkDirName)) {
         bool IsSystem = Dir.getDirCharacteristic() != SrcMgr::C_User;
-        Module = loadFrameworkModule(ModuleName, *FrameworkDir, IsSystem,
-                                     /*ImplicitlyDiscovered=*/true);
-        if (Module)
-          break;
+        parseFrameworkModuleMap(*FrameworkDir, IsSystem,
+                                /*ImplicitlyDiscovered=*/true, Load);
+        if (FindModule())
+          return true;
       }
     }
 
@@ -363,10 +399,9 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
     if (parseModuleMapFile(NormalDir, IsSystem, /*ImplicitlyDiscovered=*/true,
                            /*IsFramework*/ false) == MMR_NewlyProcessed) {
       // We just parsed a module map file; check whether the module can be
-      // loaded now.
-      Module = ModMap.findOrLoadModule(ModuleName);
-      if (Module)
-        break;
+      // found now.
+      if (FindModule())
+        return true;
     }
 
     // Search for a module map in a subdirectory with the same name as the
@@ -378,30 +413,28 @@ Module *HeaderSearch::lookupModule(StringRef ModuleName, StringRef SearchName,
                            /*ImplicitlyDiscovered=*/true,
                            /*IsFramework*/ false) == MMR_NewlyProcessed) {
       // If we just parsed a module map file, look for the module again.
-      Module = ModMap.findOrLoadModule(ModuleName);
-      if (Module)
-        break;
+      if (FindModule())
+        return true;
     }
 
     if (HSOpts.AllowModuleMapSubdirectorySearch) {
       // If we've already performed the exhaustive search for module maps in
       // this search directory, don't do it again.
-      if (Dir.haveSearchedAllModuleMaps())
+      if (Dir.haveLoadedAllModuleMaps())
         continue;
 
-      // Load all module maps in the immediate subdirectories of this search
+      // Look up all module maps in the immediate subdirectories of this search
       // directory if ModuleName was from @import.
       if (AllowExtraModuleMapSearch)
-        loadSubdirectoryModuleMaps(Dir);
+        parseSubdirectoryModuleMaps(Dir, Load);
 
       // Look again for the module.
-      Module = ModMap.findOrLoadModule(ModuleName);
-      if (Module)
-        break;
+      if (FindModule())
+        return true;
     }
   }
 
-  return Module;
+  return false;
 }
 
 void HeaderSearch::indexInitialHeaderMaps() {
@@ -884,19 +917,22 @@ diagnoseFrameworkInclude(DiagnosticsEngine &Diags, SourceLocation IncludeLoc,
 }
 
 void HeaderSearch::diagnoseHeaderShadowing(
-    StringRef Filename, OptionalFileEntryRef FE, bool &DiagnosedShadowing,
-    SourceLocation IncludeLoc, ConstSearchDirIterator FromDir,
+    StringRef Filename, FileEntryRef FE, SourceLocation IncludeLoc,
+    ConstSearchDirIterator FromDir,
     ArrayRef<std::pair<OptionalFileEntryRef, DirectoryEntryRef>> Includers,
     bool isAngled, int IncluderLoopIndex, ConstSearchDirIterator MainLoopIt) {
 
-  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc) ||
-      DiagnosedShadowing)
+  if (Diags.isIgnored(diag::warn_header_shadowing, IncludeLoc))
     return;
   // Ignore diagnostics from system headers.
   if (MainLoopIt && MainLoopIt->isSystemHeaderDirectory())
     return;
 
-  DiagnosedShadowing = true;
+  // Only consider each file once per spelling it was found under. Note that
+  // this also suppresses the search below for files that turn out not to be
+  // shadowed at all.
+  if (!ShadowCheckedHeaders[Filename].insert(FE).second)
+    return;
 
   // Indicates that file is first found in the includer's directory
   if (!MainLoopIt) {
@@ -904,15 +940,13 @@ void HeaderSearch::diagnoseHeaderShadowing(
       const auto &IncluderAndDir = Includers[i];
       SmallString<1024> TmpDir = IncluderAndDir.second.getName();
       llvm::sys::path::append(TmpDir, Filename);
-      if (auto File = getFileMgr().getFileRef(TmpDir, false, false)) {
-        if (&File->getFileEntry() == *FE)
+      if (auto File = getFileMgr().getOptionalFileRef(TmpDir)) {
+        if (*File == FE)
           continue;
         Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-            << Filename << (*FE).getDir().getName()
+            << Filename << FE.getDir().getName()
             << IncluderAndDir.second.getName();
         return;
-      } else {
-        llvm::errorToErrorCode(File.takeError());
       }
     }
   }
@@ -931,14 +965,12 @@ void HeaderSearch::diagnoseHeaderShadowing(
       continue;
     SmallString<1024> TmpPath = It->getName();
     llvm::sys::path::append(TmpPath, Filename);
-    if (auto File = getFileMgr().getFileRef(TmpPath, false, false)) {
-      if (&File->getFileEntry() == *FE)
+    if (auto File = getFileMgr().getOptionalFileRef(TmpPath)) {
+      if (*File == FE)
         continue;
       Diags.Report(IncludeLoc, diag::warn_header_shadowing)
-          << Filename << (*FE).getDir().getName() << It->getName();
+          << Filename << FE.getDir().getName() << It->getName();
       return;
-    } else {
-      llvm::errorToErrorCode(File.takeError());
     }
   }
 }
@@ -992,7 +1024,6 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   // This is the header that MSVC's header search would have found.
   ModuleMap::KnownHeader MSSuggestedModule;
   OptionalFileEntryRef MSFE;
-  bool DiagnosedShadowing = false;
 
   // Check to see if the file is in the #includer's directory. This cannot be
   // based on CurDir, because each includer could be a #include of a
@@ -1026,9 +1057,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       if (OptionalFileEntryRef FE = getFileAndSuggestModule(
               TmpDir, IncludeLoc, IncluderAndDir.second, IncluderIsSystemHeader,
               RequestingModule, SuggestedModule)) {
-        diagnoseHeaderShadowing(Filename, FE, DiagnosedShadowing, IncludeLoc,
-                                FromDir, Includers, isAngled,
-                                &IncluderAndDir - Includers.begin(), nullptr);
+        diagnoseHeaderShadowing(Filename, *FE, IncludeLoc, FromDir, Includers,
+                                isAngled, &IncluderAndDir - Includers.begin(),
+                                nullptr);
         if (!Includer) {
           assert(First && "only first includer can have no file");
           return FE;
@@ -1163,8 +1194,13 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
     if (!File)
       continue;
 
-    diagnoseHeaderShadowing(Filename, File, DiagnosedShadowing, IncludeLoc,
-                            FromDir, Includers, isAngled, -1, It);
+    // In MSVC compatibility mode we may have already found the file in one of
+    // the includers' directories. That file is the one that ends up being used
+    // (see checkMSVCHeaderSearch() below), so reporting this one as the chosen
+    // candidate would be wrong.
+    if (!MSFE)
+      diagnoseHeaderShadowing(Filename, *File, IncludeLoc, FromDir, Includers,
+                              isAngled, -1, It);
 
     CurDir = It;
 
@@ -1377,10 +1413,7 @@ static void mergeHeaderFileInfo(HeaderFileInfo &HFI,
 }
 
 HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
-  if (FE.getUID() >= FileInfo.size())
-    FileInfo.resize(FE.getUID() + 1);
-
-  HeaderFileInfo *HFI = &FileInfo[FE.getUID()];
+  HeaderFileInfo *HFI = &FileInfo[FE];
   // FIXME: Use a generation count to check whether this is really up to date.
   if (ExternalSource && !HFI->Resolved) {
     auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1401,10 +1434,7 @@ HeaderFileInfo &HeaderSearch::getFileInfo(FileEntryRef FE) {
 const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   HeaderFileInfo *HFI;
   if (ExternalSource) {
-    if (FE.getUID() >= FileInfo.size())
-      FileInfo.resize(FE.getUID() + 1);
-
-    HFI = &FileInfo[FE.getUID()];
+    HFI = &FileInfo[FE];
     // FIXME: Use a generation count to check whether this is really up to date.
     if (!HFI->Resolved) {
       auto ExternalHFI = ExternalSource->GetHeaderFileInfo(FE);
@@ -1414,8 +1444,8 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
           mergeHeaderFileInfo(*HFI, ExternalHFI);
       }
     }
-  } else if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
+  } else if (auto It = FileInfo.find(FE); It != FileInfo.end()) {
+    HFI = &It->second;
   } else {
     HFI = nullptr;
   }
@@ -1423,16 +1453,11 @@ const HeaderFileInfo *HeaderSearch::getExistingFileInfo(FileEntryRef FE) const {
   return (HFI && HFI->IsValid) ? HFI : nullptr;
 }
 
-const HeaderFileInfo *
-HeaderSearch::getExistingLocalFileInfo(FileEntryRef FE) const {
-  HeaderFileInfo *HFI;
-  if (FE.getUID() < FileInfo.size()) {
-    HFI = &FileInfo[FE.getUID()];
-  } else {
-    HFI = nullptr;
-  }
-
-  return (HFI && HFI->IsValid && !HFI->External) ? HFI : nullptr;
+void HeaderSearch::forEachExistingLocalFileInfo(
+    llvm::function_ref<void(FileEntryRef, const HeaderFileInfo &)> Fn) const {
+  for (const auto &[FE, HFI] : FileInfo)
+    if (HFI.IsValid && !HFI.External)
+      Fn(FE, HFI);
 }
 
 bool HeaderSearch::isFileMultipleIncludeGuarded(FileEntryRef File) const {
@@ -1730,6 +1755,52 @@ void HeaderSearch::processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
   }
 }
 
+/// Compute relative path from DirPath to FileName by stripping the DirPath
+/// prefix. DirPath should be derived from FileName (e.g. via parent_path) to
+/// ensure consistent path separators. Returns empty if FileName doesn't start
+/// with DirPath.
+static StringRef computeRelativePath(StringRef FileName, StringRef DirPath) {
+  if (!FileName.starts_with(DirPath))
+    return {};
+  StringRef RelativePath = FileName.substr(DirPath.size());
+  while (!RelativePath.empty() &&
+         llvm::sys::path::is_separator(RelativePath.front()))
+    RelativePath = RelativePath.substr(1);
+  return RelativePath;
+}
+
+SmallVector<StringRef, 1> HeaderSearch::findMatchingModulesInIndex(
+    StringRef RelativePath, const ModuleMapDirectoryState &MMState) const {
+  SmallVector<StringRef, 1> Modules;
+
+  // Check for exact matches in cache.
+  auto CachedMods = MMState.HeaderToModules.find(RelativePath);
+  if (CachedMods != MMState.HeaderToModules.end())
+    Modules.append(CachedMods->second.begin(), CachedMods->second.end());
+
+  // Check umbrella directories.
+  for (const auto &UmbrellaDir : MMState.UmbrellaDirModules) {
+    if (RelativePath.starts_with(UmbrellaDir.first) || UmbrellaDir.first == ".")
+      Modules.push_back(UmbrellaDir.second);
+  }
+
+  // Add all modules corresponding to an umbrella header. We don't know which
+  // other headers these umbrella headers include, so it's possible any one of
+  // them includes the file. `ModuleMap::findModuleForHeader` will select the
+  // correct module, accounting for any already known headers from other module
+  // maps or loaded PCMs.
+  //
+  // TODO: Clang should strictly enforce that umbrella headers include the
+  //       other headers in their directory, or that they are referenced in
+  //       the module map. The current behavior can be order of include/import
+  //       dependent. This would allow treating umbrella headers the same as
+  //       umbrella directories here.
+  Modules.append(MMState.UmbrellaHeaderModules.begin(),
+                 MMState.UmbrellaHeaderModules.end());
+
+  return Modules;
+}
+
 bool HeaderSearch::hasModuleMap(StringRef FileName,
                                 const DirectoryEntry *Root,
                                 bool IsSystem) {
@@ -1761,7 +1832,9 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     if (DirState == DirectoryModuleMap.end() || !DirState->second.ModuleMapFile)
       continue;
 
-    if (!HSOpts.LazyLoadModuleMaps)
+    if (!HSOpts.LazyLoadModuleMaps &&
+        Diags.isIgnored(diag::warn_mmap_deprecated_symlink_to_modular_header,
+                        SourceLocation()))
       return true;
 
     auto &MMState = DirState->second;
@@ -1772,49 +1845,21 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
       buildModuleMapIndex(*Dir, MMState);
     }
 
+    // The header cache is needed for the symlink diagnostic.
+    if (!HSOpts.LazyLoadModuleMaps)
+      return true;
+
     // Compute relative path from directory to the file. Use DirName (which
     // we computed via parent_path) rather than Dir->getName() to ensure
     // consistent path separators.
-    StringRef RelativePath = FileName.substr(DirName.size());
-    // Strip leading separator
-    while (!RelativePath.empty() &&
-           llvm::sys::path::is_separator(RelativePath.front()))
-      RelativePath = RelativePath.substr(1);
+    StringRef RelativePath = computeRelativePath(FileName, DirName);
     SmallString<128> RelativePathNative(RelativePath);
     llvm::sys::path::native(RelativePathNative);
-    RelativePath = RelativePathNative;
 
-    // Check for exact matches in index
-    llvm::SmallVector<StringRef, 4> ModulesToLoad;
-    auto CachedMods = MMState.HeaderToModules.find(RelativePath);
-    if (CachedMods != MMState.HeaderToModules.end()) {
-      ModulesToLoad.append(CachedMods->second.begin(),
-                           CachedMods->second.end());
-    }
+    auto ModulesToLoad =
+        findMatchingModulesInIndex(RelativePathNative, MMState);
 
-    // Check umbrella directories
-    for (const auto &UmbrellaDir : MMState.UmbrellaDirModules) {
-      if (RelativePath.starts_with(UmbrellaDir.first) ||
-          UmbrellaDir.first == ".") {
-        ModulesToLoad.push_back(UmbrellaDir.second);
-      }
-    }
-
-    // Add all modules corresponding to an umbrella header. We don't know which
-    // other headers these umbrella headers include, so it's possible any one of
-    // them includes `FileName`. `ModuleMap::findModuleForHeader` will select
-    // the correct module, accounting for any already known headers from other
-    // module maps or loaded PCMs.
-    //
-    // TODO: Clang should strictly enforce that umbrella headers include the
-    //       other headers in their directory, or that they are referenced in
-    //       the module map. The current behavior can be order of include/import
-    //       dependent. This would allow treating umbrella headers the same as
-    //       umbrella directories here.
-    ModulesToLoad.append(MMState.UmbrellaHeaderModules.begin(),
-                         MMState.UmbrellaHeaderModules.end());
-
-    // Load all matching modules
+    // Load all matching modules.
     bool LoadedAny = false;
     for (StringRef ModName : ModulesToLoad) {
       if (ModMap.findOrLoadModule(ModName)) {
@@ -1893,6 +1938,77 @@ static bool suggestModule(HeaderSearch &HS, ModuleMap::KnownHeader Module,
   return true;
 }
 
+void HeaderSearch::diagnoseUncoveredSymlink(FileEntryRef File,
+                                            ModuleMap::KnownHeader &Module,
+                                            const DirectoryEntry *Root) {
+  if (!Module)
+    return;
+
+  if (!HSOpts.ImplicitModuleMaps || Module.getModule()->isPartOfFramework() ||
+      !Module.getModule()->isModuleMapModule())
+    return;
+
+  if (Diags.isIgnored(diag::warn_mmap_deprecated_symlink_to_modular_header,
+                      Module.getModule()->DefinitionLoc))
+    return;
+
+  if (File.isDeviceFile() || File.isNamedPipe())
+    return;
+
+  llvm::SmallString<128> AbsPath(File.getName());
+  FileMgr.makeAbsolutePath(AbsPath);
+  llvm::sys::path::remove_dots(AbsPath, /*remove_dot_dot=*/true);
+
+  // NOTE: This path may be redirected, LLVM's VFS does not model symlinks, so
+  //       it's possible this fails. The diagnostic is worded as such.
+  llvm::SmallString<128> LinkTarget;
+  if (llvm::sys::fs::readlink(AbsPath, LinkTarget))
+    return;
+
+  // We know this file is a symlink and resolved to a module. Check that there's
+  // a module map that would be discoverable that covers this header. This uses
+  // VFS paths as that's how module map search works.
+  StringRef FileName = File.getNameAsRequested();
+  StringRef DirName = FileName;
+  const DirectoryEntry *CurDir = nullptr;
+
+  // Walk up the directory tree looking for a module map that covers this path.
+  do {
+    DirName = llvm::sys::path::parent_path(DirName);
+    if (DirName.empty())
+      break;
+
+    auto Dir = FileMgr.getOptionalDirectoryRef(DirName);
+    if (!Dir)
+      break;
+    CurDir = *Dir;
+
+    auto DirState = DirectoryModuleMap.find(*Dir);
+    if (DirState == DirectoryModuleMap.end() || !DirState->second.ModuleMapFile)
+      continue;
+
+    // Use DirName (from parent_path) rather than Dir->getName() to ensure
+    // consistent path separators.
+    StringRef RelativePath = computeRelativePath(FileName, DirName);
+    if (RelativePath.empty())
+      continue;
+    SmallString<128> RelativePathNative(RelativePath);
+    llvm::sys::path::native(RelativePathNative);
+
+    auto MatchingModules =
+        findMatchingModulesInIndex(RelativePathNative, DirState->second);
+    if (!MatchingModules.empty())
+      return; // Symlink path is covered, no diagnostic needed.
+  } while (CurDir != Root);
+
+  // The symlink path is not covered by any module map.
+  Diags.Report(diag::warn_mmap_deprecated_symlink_to_modular_header)
+      << File.getName() << LinkTarget
+      << Module.getModule()->getFullModuleName();
+  Diags.Report(Module.getModule()->DefinitionLoc,
+               diag::note_mmap_module_defined_here);
+}
+
 bool HeaderSearch::findUsableModuleForHeader(
     FileEntryRef File, const DirectoryEntry *Root, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
@@ -1905,6 +2021,7 @@ bool HeaderSearch::findUsableModuleForHeader(
       hasModuleMap(File.getNameAsRequested(), Root, IsSystemHeaderDir);
       ModuleMap::KnownHeader Module =
           findModuleForHeader(File, /*AllowTextual=*/true);
+      diagnoseUncoveredSymlink(File, Module, Root);
       return suggestModule(*this, Module, File, RequestingModule,
                            SuggestedModule);
     }
@@ -1920,7 +2037,7 @@ bool HeaderSearch::findUsableModuleForHeader(
       // map data from PCMs.
       Module = ModMap.findModuleForHeader(File, /*AllowTextual=*/true);
     }
-
+    diagnoseUncoveredSymlink(File, Module, Root);
     return suggestModule(*this, Module, File, RequestingModule,
                          SuggestedModule);
   }
@@ -1980,10 +2097,9 @@ static OptionalFileEntryRef getPrivateModuleMap(FileEntryRef File,
   return PMMFile;
 }
 
-bool HeaderSearch::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
-                                             bool ImplicitlyDiscovered,
-                                             FileID ID, unsigned *Offset,
-                                             StringRef OriginalModuleMapFile) {
+OptionalDirectoryEntryRef
+HeaderSearch::getModuleMapHomeDir(FileEntryRef File,
+                                  StringRef OriginalModuleMapFile) {
   // Find the directory for the module. For frameworks, that may require going
   // up from the 'Modules' directory.
   OptionalDirectoryEntryRef Dir;
@@ -2015,11 +2131,23 @@ bool HeaderSearch::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
       assert(Dir && "parent must exist");
     }
   }
+  return Dir;
+}
 
+bool HeaderSearch::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
+                                             bool ImplicitlyDiscovered,
+                                             FileID ID, unsigned *Offset,
+                                             StringRef OriginalModuleMapFile) {
+  OptionalDirectoryEntryRef Dir =
+      getModuleMapHomeDir(File, OriginalModuleMapFile);
   assert(Dir && "module map home directory must exist");
-  switch (parseAndLoadModuleMapFileImpl(File, IsSystem, ImplicitlyDiscovered,
-                                        *Dir, ID, Offset,
-                                        /*DiagnosePrivMMap=*/true)) {
+  return hasModuleMapError(parseAndLoadModuleMapFileImpl(
+      File, IsSystem, ImplicitlyDiscovered, *Dir, ID, Offset,
+      /*DiagnosePrivMMap=*/true));
+}
+
+bool HeaderSearch::hasModuleMapError(ModuleMapResult Result) {
+  switch (Result) {
   case MMR_AlreadyProcessed:
   case MMR_NewlyProcessed:
     return false;
@@ -2027,7 +2155,18 @@ bool HeaderSearch::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
   case MMR_InvalidModuleMap:
     return true;
   }
-  llvm_unreachable("Unknown load module map result");
+  llvm_unreachable("Unknown module map result");
+}
+
+bool HeaderSearch::parseModuleMapFile(FileEntryRef File, bool IsSystem,
+                                      bool ImplicitlyDiscovered) {
+  assert(HSOpts.LazyLoadModuleMaps &&
+         "module map parsing requires lazy loading support");
+  OptionalDirectoryEntryRef Dir =
+      getModuleMapHomeDir(File, /*OriginalModuleMapFile=*/StringRef());
+  assert(Dir && "module map home directory must exist");
+  return hasModuleMapError(
+      parseModuleMapFileImpl(File, IsSystem, ImplicitlyDiscovered, *Dir));
 }
 
 HeaderSearch::ModuleMapResult HeaderSearch::parseAndLoadModuleMapFileImpl(
@@ -2128,8 +2267,17 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
 Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                                           bool IsSystem,
                                           bool ImplicitlyDiscovered) {
-  // Try to load a module map file.
-  switch (parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
+  parseFrameworkModuleMap(Dir, IsSystem, ImplicitlyDiscovered, /*Load=*/true);
+  return ModMap.findOrLoadModule(Name);
+}
+
+void HeaderSearch::parseFrameworkModuleMap(DirectoryEntryRef Dir, bool IsSystem,
+                                           bool ImplicitlyDiscovered,
+                                           bool Load) {
+  // Try to parse a module map file, and load it if Load is set.
+  switch (Load ? parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
+                                           /*IsFramework*/ true)
+               : parseModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
                                     /*IsFramework*/ true)) {
   case MMR_InvalidModuleMap:
     // Try to infer a module map from the framework directory.
@@ -2138,14 +2286,10 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
     break;
 
   case MMR_NoDirectory:
-    return nullptr;
-
   case MMR_AlreadyProcessed:
   case MMR_NewlyProcessed:
     break;
   }
-
-  return ModMap.findOrLoadModule(Name);
 }
 
 HeaderSearch::ModuleMapResult
@@ -2163,40 +2307,9 @@ HeaderSearch::ModuleMapResult
 HeaderSearch::parseAndLoadModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                         bool ImplicitlyDiscovered,
                                         bool IsFramework) {
-  auto InsertRes = DirectoryModuleMap.insert(std::pair{
-      Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
-  ModuleMapDirectoryState &MMState = InsertRes.first->second;
-  if (!InsertRes.second) {
-    switch (MMState.Status) {
-    case ModuleMapDirectoryState::Parsed:
-      break;
-    case ModuleMapDirectoryState::Loaded:
-      return MMR_AlreadyProcessed;
-    case ModuleMapDirectoryState::Invalid:
-      return MMR_InvalidModuleMap;
-    };
-  }
-
-  if (!MMState.ModuleMapFile) {
-    MMState.ModuleMapFile = lookupModuleMapFile(Dir, IsFramework);
-    if (MMState.ModuleMapFile)
-      MMState.PrivateModuleMapFile =
-          getPrivateModuleMap(*MMState.ModuleMapFile, FileMgr, Diags);
-  }
-
-  if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseAndLoadModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
-    // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
-    // E.g. Foo.framework/Modules/module.modulemap
-    //      ^Dir                  ^ModuleMapFile
-    if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Loaded;
-    else if (Result == MMR_InvalidModuleMap)
-      MMState.Status = ModuleMapDirectoryState::Invalid;
-    return Result;
-  }
-  return MMR_InvalidModuleMap;
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/true);
 }
 
 HeaderSearch::ModuleMapResult
@@ -2212,16 +2325,24 @@ HeaderSearch::parseModuleMapFile(StringRef DirName, bool IsSystem,
 HeaderSearch::ModuleMapResult
 HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                  bool ImplicitlyDiscovered, bool IsFramework) {
-  if (!HSOpts.LazyLoadModuleMaps)
-    return parseAndLoadModuleMapFile(Dir, IsSystem, ImplicitlyDiscovered,
-                                     IsFramework);
+  return parseModuleMapFileImpl(Dir, IsSystem, ImplicitlyDiscovered,
+                                IsFramework,
+                                /*Load=*/!HSOpts.LazyLoadModuleMaps);
+}
 
+HeaderSearch::ModuleMapResult
+HeaderSearch::parseModuleMapFileImpl(DirectoryEntryRef Dir, bool IsSystem,
+                                     bool ImplicitlyDiscovered,
+                                     bool IsFramework, bool Load) {
   auto InsertRes = DirectoryModuleMap.insert(std::pair{
       Dir, ModuleMapDirectoryState{{}, {}, ModuleMapDirectoryState::Invalid}});
   ModuleMapDirectoryState &MMState = InsertRes.first->second;
   if (!InsertRes.second) {
     switch (MMState.Status) {
     case ModuleMapDirectoryState::Parsed:
+      if (Load)
+        break;
+      [[fallthrough]];
     case ModuleMapDirectoryState::Loaded:
       return MMR_AlreadyProcessed;
     case ModuleMapDirectoryState::Invalid:
@@ -2237,13 +2358,17 @@ HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
   }
 
   if (MMState.ModuleMapFile) {
-    ModuleMapResult Result = parseModuleMapFileImpl(
-        *MMState.ModuleMapFile, IsSystem, ImplicitlyDiscovered, Dir);
+    ModuleMapResult Result =
+        Load ? parseAndLoadModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                             ImplicitlyDiscovered, Dir)
+             : parseModuleMapFileImpl(*MMState.ModuleMapFile, IsSystem,
+                                      ImplicitlyDiscovered, Dir);
     // Add Dir explicitly in case ModuleMapFile is in a subdirectory.
     // E.g. Foo.framework/Modules/module.modulemap
     //      ^Dir                  ^ModuleMapFile
     if (Result == MMR_NewlyProcessed)
-      MMState.Status = ModuleMapDirectoryState::Parsed;
+      MMState.Status = Load ? ModuleMapDirectoryState::Loaded
+                            : ModuleMapDirectoryState::Parsed;
     else if (Result == MMR_InvalidModuleMap)
       MMState.Status = ModuleMapDirectoryState::Invalid;
     return Result;
@@ -2293,7 +2418,7 @@ void HeaderSearch::collectAllModules(SmallVectorImpl<Module *> &Modules) {
 
       // Try to load module map files for immediate subdirectories of this
       // search directory.
-      loadSubdirectoryModuleMaps(DL);
+      parseSubdirectoryModuleMaps(DL, /*Load=*/true);
     }
   }
 
@@ -2317,11 +2442,12 @@ void HeaderSearch::loadTopLevelSystemModules() {
   }
 }
 
-void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
+void HeaderSearch::parseSubdirectoryModuleMaps(DirectoryLookup &SearchDir,
+                                               bool Load) {
   assert(HSOpts.ImplicitModuleMaps &&
          "Should not be loading subdirectory module maps");
 
-  if (SearchDir.haveSearchedAllModuleMaps())
+  if (SearchDir.haveLoadedAllModuleMaps())
     return;
 
   std::error_code EC;
@@ -2335,13 +2461,20 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
     if (Dir->type() == llvm::sys::fs::file_type::regular_file)
       continue;
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
-    if (IsFramework == SearchDir.isFramework())
+    if (IsFramework != SearchDir.isFramework())
+      continue;
+    if (Load)
       parseAndLoadModuleMapFile(
           Dir->path(), SearchDir.isSystemHeaderDirectory(),
           /*ImplicitlyDiscovered=*/true, SearchDir.isFramework());
+    else
+      parseModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),
+                         /*ImplicitlyDiscovered=*/true,
+                         SearchDir.isFramework());
   }
 
-  SearchDir.setSearchedAllModuleMaps(true);
+  if (Load)
+    SearchDir.setLoadedAllModuleMaps(true);
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(

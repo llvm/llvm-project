@@ -1,8 +1,7 @@
 ; Test that a conditional branch with a discoverably trivial condition
 ; does not result in an invalid conditional branch instruction.
 ;
-; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z13 \
-; RUN:   --stop-after=systemz-isel | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 --stop-after=systemz-isel | FileCheck %s
 
 @g_1 = dso_local local_unnamed_addr global i64 0, align 8
 @g_2 = dso_local local_unnamed_addr global i32 0, align 4

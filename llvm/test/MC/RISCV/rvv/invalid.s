@@ -2,73 +2,73 @@
 # RUN:        | FileCheck %s --check-prefix=CHECK-ERROR
 
 vsetivli a2, 5, (1 << 10)
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetivli a2, 5, 0x400
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetivli a2, 5, e31
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, (1 << 11)
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, 0x800
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e32,m3
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, m1,e32
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e32,m16
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e128,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e256,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e512,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e1024,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e2048,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e1,m8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,tx
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,ta,mx
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8x,m1,tu,mu
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1z,tu,mu
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,mf1,tu,mu
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,tu,mut
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,m1,tut,mu
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, e8,1,ta,ma
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0, ma,tu,m1,e8
-# CHECK-ERROR: operand must be e[8|16|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
+# CHECK-ERROR: operand must be e[8|8alt|16|16alt|32|64],m[1|2|4|8|f2|f4|f8],[ta|tu],[ma|mu]
 
 vsetvli a2, a0,
 # CHECK-ERROR: unknown operand
@@ -80,7 +80,7 @@ vadd.vv v1, v3, v2, v0
 # CHECK-ERROR: expected '.t' suffix
 
 vadd.vv v1, v3, a0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be a vector register
 
 vmslt.vi v1, v2, -16
 # CHECK-ERROR: immediate must be in the range [-15, 16]
@@ -557,7 +557,7 @@ vadd.vi v0, v2, 1, v0.t
 # CHECK-ERROR-LABEL: vadd.vi v0, v2, 1, v0.t
 
 vmsge.vx v0, v4, a0, v0.t
-# CHECK-ERROR: too few operands for instruction
+# CHECK-ERROR: the destination vector register cannot overlap the mask register unless a temporary register is provided
 # CHECK-ERROR-LABEL: vmsge.vx v0, v4, a0, v0.t
 
 vmerge.vim v0, v1, 1, v0
@@ -605,142 +605,142 @@ vfncvt.xu.f.w v0, v4, v0.t
 # CHECK-ERROR-LABEL: vfncvt.xu.f.w v0, v4, v0.t
 
 vl2re8.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M2 vector register group
 
 vl4re8.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vl4re8.v v2, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vl4re8.v v3, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vl8re8.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v2, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v3, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v4, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v5, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v6, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vl8re8.v v7, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs2r.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M2 vector register group
 
 vs4r.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vs4r.v v2, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vs4r.v v3, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vs8r.v v1, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v2, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v3, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v4, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v5, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v6, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vs8r.v v7, (a0)
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv2r.v v1, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M2 vector register group
 
 vmv2r.v v0, v1
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M2 vector register group
 
 vmv4r.v v1, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv4r.v v2, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv4r.v v3, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv4r.v v0, v1
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv4r.v v0, v2
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv4r.v v0, v3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M4 vector register group
 
 vmv8r.v v1, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v2, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v3, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v4, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v5, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v6, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v7, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v1
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v2
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v3
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v4
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v5
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v6
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmv8r.v v0, v7
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be the start of a valid M8 vector register group
 
 vmsge.vx v2, v4, a0, v0.t, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be a vector register
 
 vmsgeu.vx v2, v4, a0, v0.t, v0
-# CHECK-ERROR: invalid operand for instruction
+# CHECK-ERROR: operand must be a vector register
 
 vmsge.vx v2, v4, a0, v0.t, v2
 # CHECK-ERROR: the temporary vector register cannot be the same as the destination register

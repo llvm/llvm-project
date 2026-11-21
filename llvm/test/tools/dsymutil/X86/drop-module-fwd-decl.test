@@ -1,0 +1,26 @@
+# A forward declaration of `X` nested under DW_TAG_module M, plus a real
+# definition of `X` in another CU. The parallel linker routes both
+# through the type pool, so allocateTypeDie's def-wins resolution plus
+# getFinalDie emit only the canonical definition under the module.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: llc -O0 -mtriple=x86_64-apple-darwin -filetype=obj \
+RUN:     -o %t/1.o %p/../Inputs/drop-module-fwd-decl/input.ll
+RUN: dsymutil --linker parallel -f \
+RUN:     -y %p/../Inputs/drop-module-fwd-decl/debug-map.map \
+RUN:     -oso-prepend-path %t -o - 2>/dev/null \
+RUN:   | llvm-dwarfdump --debug-info - | FileCheck %s
+
+# The artificial type unit holds DW_TAG_module M with the full definition
+# of X nested inside (not a forward decl).
+CHECK:      DW_AT_name {{.*}}"__artificial_type_unit"
+CHECK:      DW_TAG_module
+CHECK-NEXT:   DW_AT_name {{.*}}"M"
+CHECK:      DW_TAG_structure_type
+CHECK-NEXT:   DW_AT_name {{.*}}"X"
+CHECK-NEXT:   DW_AT_byte_size
+
+# No DW_AT_declaration anywhere in the linked output. The only declaration
+# in the input was the forward decl; if the dedup regresses it will
+# reappear here as a DW_TAG_structure_type X with DW_AT_declaration.
+CHECK-NOT:  DW_AT_declaration

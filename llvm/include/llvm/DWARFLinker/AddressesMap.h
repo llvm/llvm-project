@@ -23,6 +23,9 @@ namespace dwarf_linker {
 /// linked address.
 using RangesTy = AddressRangesMap;
 
+/// The debug sections holding relocations which the linker can save.
+enum class RelocSectionKind : uint8_t { DebugInfo, DebugAddr };
+
 /// AddressesMap represents information about valid addresses used
 /// by debug information. Valid addresses are those which points to
 /// live code sections. i.e. relocations for these addresses point
@@ -44,6 +47,22 @@ public:
   virtual std::optional<int64_t> getExprOpAddressRelocAdjustment(
       DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
       uint64_t EndOffset, bool Verbose) = 0;
+
+  /// Returns the relocation adjustment value for the .debug_addr entry that the
+  /// DW_OP_addrx or DW_OP_constx operation \p Op refers to, or std::nullopt if
+  /// there is no corresponding live address. The entry may name a different
+  /// symbol than whatever owns the expression, such as a variable in a location
+  /// list covering a function's code, and that symbol may have moved by a
+  /// different amount.
+  std::optional<int64_t> getAddrIndexRelocAdjustment(
+      DWARFUnit &U, const DWARFExpression::Operation &Op, bool Verbose) {
+    std::optional<uint64_t> AddrOffset =
+        U.getIndexedAddressOffset(Op.getRawOperand(0));
+    if (!AddrOffset)
+      return std::nullopt;
+    return getExprOpAddressRelocAdjustment(
+        U, Op, *AddrOffset, *AddrOffset + U.getAddressByteSize(), Verbose);
+  }
 
   /// Checks that the specified subprogram \p DIE references the live code
   /// section and returns the relocation adjustment value (to get the linked
@@ -68,20 +87,66 @@ public:
   /// Check if the linker needs to gather and save relocation info.
   virtual bool needToSaveValidRelocs() = 0;
 
-  /// Update and save relocation values to be serialized
-  virtual void updateAndSaveValidRelocs(bool IsDWARF5,
+  /// Save the valid relocations in [\p StartOffset, \p EndOffset) of
+  /// \p InSection, moved by \p LinkedOffset into \p OutSection, for the unit at
+  /// \p OriginalUnitOffset in the input.
+  ///
+  /// \returns true if any relocation was saved.
+  virtual bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                        RelocSectionKind OutSection,
                                         uint64_t OriginalUnitOffset,
                                         int64_t LinkedOffset,
                                         uint64_t StartOffset,
                                         uint64_t EndOffset) = 0;
 
-  /// Update the valid relocations that used OriginalUnitOffset as the compile
-  /// unit offset, and update their values to reflect OutputUnitOffset.
-  virtual void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                               uint64_t OutputUnitOffset) = 0;
-
   /// Erases all data.
   virtual void clear() = 0;
+
+  /// The extent the linker gave a symbol, in source address space.
+  struct SymbolRange {
+    SymbolRange(uint64_t LowPC, uint64_t HighPC)
+        : LowPC(LowPC), HighPC(HighPC) {}
+    uint64_t LowPC;
+    uint64_t HighPC;
+  };
+
+  /// Returns the symbol range [LowPC, HighPC) containing \p Addr, if known.
+  virtual std::optional<SymbolRange> getSymbolRangeForAddress(uint64_t Addr) {
+    return std::nullopt;
+  }
+
+  /// Returns the linked address of the first symbol placed at or after
+  /// \p LinkedAddr, if one is known.
+  virtual std::optional<uint64_t>
+  getNextLinkedSymbolStart(uint64_t LinkedAddr) {
+    return std::nullopt;
+  }
+
+  /// Constrains the end of the code range starting at \p LowPC, whose addresses
+  /// shift by \p Adjustment in the output. \p HighPC is an address, not a
+  /// length.
+  ///
+  /// The linker places symbols independently, so a range overrunning the symbol
+  /// it starts in can cover a different one once linked. Only that overlap is
+  /// repaired.
+  uint64_t constrainCodeRangeHighPC(uint64_t LowPC, uint64_t HighPC,
+                                    int64_t Adjustment) {
+    std::optional<SymbolRange> Symbol = getSymbolRangeForAddress(LowPC);
+    if (!Symbol)
+      return HighPC;
+    assert(Symbol->LowPC <= LowPC && LowPC < Symbol->HighPC &&
+           "Symbol range must contain the address it was looked up for");
+    uint64_t LinkedSymbolHighPC = Symbol->HighPC + Adjustment;
+    assert(LinkedSymbolHighPC > Symbol->LowPC + Adjustment &&
+           "Adjusting a symbol range must preserve its order");
+    std::optional<uint64_t> NextStart =
+        getNextLinkedSymbolStart(LinkedSymbolHighPC);
+    if (!NextStart)
+      return HighPC;
+    assert(*NextStart >= LinkedSymbolHighPC &&
+           "A range must never be cut short of its own symbol");
+    return std::min(HighPC, *NextStart - Adjustment);
+  }
 
   /// This function checks whether variable has DWARF expression containing
   /// operation referencing live address(f.e. DW_OP_addr, DW_OP_addrx...).
@@ -122,8 +187,7 @@ public:
       return std::make_pair(false, std::nullopt);
 
     // Parse 'exprloc' expression.
-    DataExtractor Data(toStringRef(*Expr), U->getContext().isLittleEndian(),
-                       U->getAddressByteSize());
+    DataExtractor Data(*Expr, U->getContext().isLittleEndian());
     DWARFExpression Expression(Data, U->getAddressByteSize(),
                                U->getFormParams().Format);
 
@@ -142,7 +206,8 @@ public:
       case dwarf::DW_OP_const2s:
       case dwarf::DW_OP_const4s:
       case dwarf::DW_OP_const8s:
-        if (NextIt == Expression.end() || !isTlsAddressCode(NextIt->getCode()))
+        if (NextIt == Expression.end() ||
+            !dwarf::isTlsAddressOp(NextIt->getCode()))
           break;
         [[fallthrough]];
       case dwarf::DW_OP_addr: {
@@ -177,12 +242,6 @@ public:
     }
 
     return std::make_pair(HasLocationAddress, std::nullopt);
-  }
-
-protected:
-  inline bool isTlsAddressCode(uint8_t DW_OP_Code) {
-    return DW_OP_Code == dwarf::DW_OP_form_tls_address ||
-           DW_OP_Code == dwarf::DW_OP_GNU_push_tls_address;
   }
 };
 

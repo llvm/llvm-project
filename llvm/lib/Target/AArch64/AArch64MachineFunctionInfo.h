@@ -37,11 +37,6 @@ struct AArch64FunctionInfo;
 class AArch64Subtarget;
 class MachineInstr;
 
-struct TPIDR2Object {
-  int FrameIndex = std::numeric_limits<int>::max();
-  unsigned Uses = 0;
-};
-
 /// Condition of signing the return address in a function.
 ///
 /// Corresponds to possible values of "sign-return-address" function attribute.
@@ -195,6 +190,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// epilogue when using PC as a second salt (FEAT_PAuth_LR)
   MCSymbol *SignInstrLabel = nullptr;
 
+  /// SignReturnAddressHardening specifies the PAC-RET hardening scheme.
+  enum class SignReturnAddressHardeningKind { None, LoadReturnAddress };
+
+  SignReturnAddressHardeningKind SignReturnAddressHardening =
+      SignReturnAddressHardeningKind::None;
+
   /// BranchTargetEnforcement enables placing BTI instructions at potential
   /// indirect branch destinations.
   bool BranchTargetEnforcement = false;
@@ -209,6 +210,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// bit 60 of the in-memory FP will be 1 to enable other tools to detect the
   /// extended record.
   bool HasSwiftAsyncContext = false;
+
+  /// Whether this function makes a non-tail call, on Windows, to a function
+  /// that pops its own stack arguments. The unwinder gives the SP after that
+  /// pop, which isn't the SP our unwind info describes if we reserved the
+  /// argument area in the prologue, so we must be found via the frame pointer.
+  bool HasWinCallToCalleePopFunction = false;
 
   /// The stack slot where the Swift asynchronous context is stored.
   int SwiftAsyncContextFrameIdx = std::numeric_limits<int>::max();
@@ -232,7 +239,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds a register containing pstate.sm. This is set
   // on function entry to record the initial pstate of a function.
-  Register PStateSMReg = MCRegister::NoRegister;
+  Register PStateSMReg = Register();
 
   // Has the PNReg used to build PTRUE instruction.
   // The PTRUE is used for the LD/ST of ZReg pairs in save and restore.
@@ -243,20 +250,7 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   // Holds the TPIDR2 block if allocated early (for Windows/stack probes
   // support).
-  Register EarlyAllocSMESaveBuffer = AArch64::NoRegister;
-
-  // Holds the spill slot for ZT0.
-  int ZT0SpillSlotIndex = std::numeric_limits<int>::max();
-
-  // Note: The following properties are only used for the old SME ABI lowering:
-  /// The frame-index for the TPIDR2 object used for lazy saves.
-  TPIDR2Object TPIDR2;
-  // Holds a pointer to a buffer that is large enough to represent
-  // all SME ZA state and any additional state required by the
-  // __arm_sme_save/restore support routines.
-  Register SMESaveBufferAddr = MCRegister::NoRegister;
-  // true if SMESaveBufferAddr is used.
-  bool SMESaveBufferUsed = false;
+  Register EarlyAllocSMESaveBuffer = Register();
 
 public:
   AArch64FunctionInfo(const Function &F, const AArch64Subtarget *STI);
@@ -273,22 +267,6 @@ public:
   Register getEarlyAllocSMESaveBuffer() const {
     return EarlyAllocSMESaveBuffer;
   }
-
-  void setZT0SpillSlotIndex(int FI) { ZT0SpillSlotIndex = FI; }
-  int getZT0SpillSlotIndex() const {
-    assert(hasZT0SpillSlotIndex() && "ZT0 spill slot index not set!");
-    return ZT0SpillSlotIndex;
-  }
-  bool hasZT0SpillSlotIndex() const {
-    return ZT0SpillSlotIndex != std::numeric_limits<int>::max();
-  }
-
-  // Old SME ABI lowering state getters/setters:
-  Register getSMESaveBufferAddr() const { return SMESaveBufferAddr; };
-  void setSMESaveBufferAddr(Register Reg) { SMESaveBufferAddr = Reg; };
-  unsigned isSMESaveBufferUsed() const { return SMESaveBufferUsed; };
-  void setSMESaveBufferUsed(bool Used = true) { SMESaveBufferUsed = Used; };
-  TPIDR2Object &getTPIDR2Obj() { return TPIDR2; }
 
   void setPredicateRegForFillSpill(unsigned Reg) {
     PredicateRegForFillSpill = Reg;
@@ -615,6 +593,10 @@ public:
 
   bool isMTETagged() const { return IsMTETagged; }
 
+  bool shouldHardenSignReturnAddress() const {
+    return SignReturnAddressHardening != SignReturnAddressHardeningKind::None;
+  }
+
   bool branchTargetEnforcement() const { return BranchTargetEnforcement; }
 
   bool branchProtectionPAuthLR() const { return BranchProtectionPAuthLR; }
@@ -623,6 +605,13 @@ public:
     HasSwiftAsyncContext = HasContext;
   }
   bool hasSwiftAsyncContext() const { return HasSwiftAsyncContext; }
+
+  void setHasWinCallToCalleePopFunction(bool Has) {
+    HasWinCallToCalleePopFunction = Has;
+  }
+  bool hasWinCallToCalleePopFunction() const {
+    return HasWinCallToCalleePopFunction;
+  }
 
   void setSwiftAsyncContextFrameIdx(int FI) {
     SwiftAsyncContextFrameIdx = FI;

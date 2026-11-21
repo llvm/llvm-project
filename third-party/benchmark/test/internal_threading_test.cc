@@ -8,8 +8,9 @@
 #include "benchmark/benchmark.h"
 #include "output_test.h"
 
-static const std::chrono::duration<double, std::milli> time_frame(50);
-static const double time_frame_in_sec(
+namespace {
+const std::chrono::duration<double, std::milli> time_frame(50);
+const double time_frame_in_sec(
     std::chrono::duration_cast<std::chrono::duration<double, std::ratio<1, 1>>>(
         time_frame)
         .count());
@@ -22,8 +23,9 @@ void MyBusySpinwait() {
     const auto elapsed = now - start;
 
     if (std::chrono::duration<double, std::chrono::seconds::period>(elapsed) >=
-        time_frame)
+        time_frame) {
       return;
+    }
   }
 }
 
@@ -177,9 +179,14 @@ BENCHMARK(BM_MainThreadAndWorkerThread)
     ->Threads(2)
     ->MeasureProcessCPUTime()
     ->UseManualTime();
+}  // end namespace
 
 // ========================================================================= //
 // ---------------------------- TEST CASES END ----------------------------- //
 // ========================================================================= //
 
-int main(int argc, char* argv[]) { RunOutputTests(argc, argv); }
+int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+
+  RunOutputTests(argc, argv);
+}

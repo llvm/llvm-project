@@ -33,9 +33,6 @@ public:
   getLargestLegalSuperClass(const TargetRegisterClass *RC,
                             const MachineFunction &MF) const override;
 
-  const TargetRegisterClass *
-  getPointerRegClass(unsigned Kind = 0) const override;
-
   /// emitLoadConstPool - Emits a load from constpool to materialize the
   /// specified immediate.
   void

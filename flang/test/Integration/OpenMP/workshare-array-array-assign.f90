@@ -23,7 +23,7 @@ end subroutine
 ! HLFIR:         omp.terminator
 ! HLFIR:       }
 ! HLFIR:       omp.terminator
-! HLFIR:     }
+! HLFIR:     } {omp.combined}
 
 ! FIR:     omp.parallel {
 ! FIR:       omp.wsloop nowait {
@@ -32,3 +32,4 @@ end subroutine
 ! FIR:       omp.barrier
 ! FIR:       omp.terminator
 ! FIR:     }
+! FIR-NOT: omp.combined

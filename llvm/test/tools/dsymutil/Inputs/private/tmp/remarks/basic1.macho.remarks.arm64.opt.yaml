@@ -12,7 +12,7 @@ Args:
   - String:          ' because its definition is unavailable'
 ...
 --- !Analysis
-Pass:            prologepilog
+Pass:            prolog-epilog
 Name:            StackSize
 DebugLoc:        { File: basic1.c, Line: 37, Column: 0 }
 Function:        main

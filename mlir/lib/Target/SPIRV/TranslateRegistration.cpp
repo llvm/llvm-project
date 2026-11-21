@@ -83,7 +83,7 @@ static LogicalResult
 serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
                 const spirv::SerializationOptions &options) {
   SmallVector<uint32_t, 0> binary;
-  if (failed(spirv::serialize(moduleOp, binary)))
+  if (failed(spirv::serialize(moduleOp, binary, options)))
     return failure();
 
   size_t sizeInBytes = binary.size() * sizeof(uint32_t);
@@ -122,6 +122,11 @@ serializeModule(spirv::ModuleOp moduleOp, raw_ostream &output,
 
 namespace mlir {
 void registerToSPIRVTranslation() {
+  static llvm::cl::opt<bool> emitDebugInfo(
+      "spirv-emit-debug-info",
+      llvm::cl::desc("Emit SPIR-V debug information during serialization"),
+      llvm::cl::init(false));
+
   static llvm::cl::opt<std::string> validationFilesPrefix(
       "spirv-save-validation-files-with-prefix",
       llvm::cl::desc(
@@ -137,7 +142,8 @@ void registerToSPIRVTranslation() {
       "serialize-spirv", "serialize SPIR-V dialect",
       [](spirv::ModuleOp moduleOp, raw_ostream &output) {
         return serializeModule(moduleOp, output,
-                               {true, false, !validationFilesPrefix.empty(),
+                               {true, emitDebugInfo,
+                                !validationFilesPrefix.empty(),
                                 validationFilesPrefix});
       },
       [](DialectRegistry &registry) {

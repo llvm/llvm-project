@@ -1,0 +1,23 @@
+// RUN: %clang_cc1 -triple spir-unknown-unknown -cl-std=clc++2021 -x cl \
+// RUN:   -ast-dump %s | FileCheck %s
+
+union U {
+  int a;
+  float b;
+};
+
+__kernel void k(__global U *g, __global const U *s) {
+  *g = *s;
+}
+
+// Converting the typed union pointers preserves the address space, which a
+// compiler-written cast to plain void * would drop.
+
+// CHECK: CXXMethodDecl {{.*}} implicit {{.*}}operator= '__generic U &(const __generic U &)
+// CHECK:   CompoundStmt
+// CHECK:     CallExpr
+// CHECK:       DeclRefExpr {{.*}} '__builtin_memcpy'
+// CHECK:       ImplicitCastExpr {{.*}} '__generic void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} '__generic U *' prefix '&'
+// CHECK:       ImplicitCastExpr {{.*}} 'const __generic void *' <BitCast>
+// CHECK:         UnaryOperator {{.*}} 'const __generic U *' prefix '&'

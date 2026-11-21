@@ -9,6 +9,8 @@ from lldbsuite.test.lldbtest import *
 
 
 class UniqueTypesTestCase2(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def do_test(self, debug_flags):
         """Test that we only display the requested Foo instantiation, not all Foo instantiations."""
         self.build(dictionary=debug_flags)
@@ -145,10 +147,12 @@ class UniqueTypesTestCase2(TestBase):
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gsimple-template-names"))
 
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler_version=["<", "15.0"])
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_no_simple_template_names(self):
         self.do_test(dict(CFLAGS_EXTRAS="-gno-simple-template-names"))

@@ -15,7 +15,9 @@
 #define MLIR_INTERFACES_SIDEEFFECTINTERFACES_H
 
 #include "mlir/IR/OpDefinition.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Twine.h"
+#include <cstdint>
 
 namespace mlir {
 namespace SideEffects {
@@ -127,8 +129,8 @@ public:
   /// Return a string name of the resource.
   virtual StringRef getName() const = 0;
 
-  /// Return the parent resource in the hierarchy, or nullptr for a root.
-  virtual Resource *getParent() const { return nullptr; }
+  /// Return the parent resource in the hierarchy.
+  virtual Resource *getParent() const;
 
   /// Returns true if this resource is addressable (effects on it can alias
   /// pointer-based memory). Default is true.
@@ -175,16 +177,23 @@ private:
   TypeID id;
 };
 
-/// A conservative default resource kind.
+/// The default resource kind. It serves as the root of the resource hierarchy:
+/// all resources that do not override getParent() have DefaultResource as their
+/// parent.
 struct DefaultResource : public Resource::Base<DefaultResource> {
   DefaultResource() = default;
   StringRef getName() const override { return "<Default>"; }
+  Resource *getParent() const override { return nullptr; }
 
 protected:
   /// For use when this type is the parent of another resource; allows the
   /// derived resource to pass its TypeID so the hierarchy is correct.
   DefaultResource(TypeID id) : Base(id) {}
 };
+
+/// All resources that do not override getParent() have DefaultResource
+/// as their parent.
+inline Resource *Resource::getParent() const { return DefaultResource::get(); }
 
 /// An automatic allocation-scope resource that is valid in the context of a
 /// parent AutomaticAllocationScope trait.
@@ -538,6 +547,27 @@ bool isOpTriviallyDead(Operation *op);
 ///
 /// Note: Terminators and symbols are never considered to be trivially dead.
 bool wouldOpBeTriviallyDead(Operation *op);
+
+/// A cache for repeated deadness queries on nested operations. All changes to
+/// an operation or its nested IR must invalidate that operation. Moves must
+/// also invalidate the old parent. Invalidate operations before erasing them.
+class DeadnessCache {
+public:
+  enum class State : uint8_t { Alive, Dead };
+
+  /// Return true if the operation is unused and can be erased. Terminators and
+  /// symbols cannot be erased. Uses are checked on every query.
+  bool isOpTriviallyDead(Operation *op);
+
+  /// Invalidate the operation, its descendants, and its ancestors.
+  void invalidate(Operation *op);
+
+  /// Invalidate the operation and its ancestors, preserving descendant entries.
+  void invalidateAncestors(Operation *op);
+
+private:
+  DenseMap<Operation *, State> cache;
+};
 
 /// Returns true if the given operation is free of memory effects.
 ///

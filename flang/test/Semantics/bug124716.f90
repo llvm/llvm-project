@@ -21,7 +21,7 @@ END SUBMODULE
 !interface
 !module subroutine sub1(n,arr)
 !integer(4),intent(in)::n
-!integer(4)::arr(1_8:int(n,kind=8))
+!integer(4)::arr(1_8:__builtin_int(n,kind=8))
 !end
 !end interface
 !end
@@ -31,6 +31,6 @@ END SUBMODULE
 !contains
 !module subroutine sub1(n,arr)
 !integer(4),intent(in)::n
-!integer(4)::arr(1_8:int(n,kind=8))
+!integer(4)::arr(1_8:__builtin_int(n,kind=8))
 !end
 !end

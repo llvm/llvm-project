@@ -790,6 +790,12 @@ defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
 
+defm : VPatBinaryVL_VV_VX<riscv_clmul_vl,  "PseudoVCLMUL",  I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinaryVL_VV_VX<riscv_clmulh_vl, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+
+defm : VPatBinaryVL_VV_VX<riscv_clmul_vl,  "PseudoVCLMUL",  NonI64IntegerVectors, ExtraPreds=[HasStdExtZvbc32e]>;
+defm : VPatBinaryVL_VV_VX<riscv_clmulh_vl, "PseudoVCLMULH", NonI64IntegerVectors, ExtraPreds=[HasStdExtZvbc32e]>;
+
 defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 // Although there is no vrol.vi, an immediate rotate left can be achieved by
 // negating the immediate in vror.vi
@@ -1047,6 +1053,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
     defvar Pseudo = !cast<Instruction>(
         !if(isSEWAware, instruction#"_VI_"#vti.LMul.MX#"_E"#vti.SEW,
                         instruction#"_VI_"#vti.LMul.MX));
+    defvar InvRotImm = !cast<SDNodeXForm>("InvRot" # vti.SEW # "Imm");
     let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : Pat<(vti.Vector (Intr (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
@@ -1054,7 +1061,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag)),
                           (Pseudo (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           GPR:$vl, vti.Log2SEW, TU_MU)>;
 
     defvar IntrMask = !cast<Intrinsic>(intrinsic#"_mask");
@@ -1069,7 +1076,7 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
                           VLOpFrag, (XLenVT timm:$policy))),
                           (PseudoMask (vti.Vector vti.RegClass:$passthru),
                           (vti.Vector vti.RegClass:$rs2),
-                          (InvRot64Imm uimm6:$rs1),
+                          (InvRotImm uimm6:$rs1),
                           (vti.Mask VMV0:$vm),
                           GPR:$vl, vti.Log2SEW, (XLenVT timm:$policy))>;
     }

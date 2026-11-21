@@ -224,6 +224,13 @@ func.func @iadd_carry_vector(%arg: vector<3xi32>) -> !spirv.struct<(vector<3xi32
   return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 }
 
+// CHECK-LABEL: @iadd_carry_unsigned
+func.func @iadd_carry_unsigned(%arg: ui32) -> !spirv.struct<(ui32, ui32)> {
+  // CHECK: spirv.IAddCarry %{{.+}}, %{{.+}} : !spirv.struct<(ui32, ui32)>
+  %0 = spirv.IAddCarry %arg, %arg : !spirv.struct<(ui32, ui32)>
+  return %0 : !spirv.struct<(ui32, ui32)>
+}
+
 // -----
 
 func.func @iadd_carry(%arg: i32) -> !spirv.struct<(i32, i32, i32)> {
@@ -258,6 +265,22 @@ func.func @iadd_carry(%arg: i64) -> !spirv.struct<(i32, i32)> {
 
 // -----
 
+func.func @iadd_carry(%arg: si32) -> !spirv.struct<(si32, si32)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'si32'}}
+  %0 = spirv.IAddCarry %arg, %arg : !spirv.struct<(si32, si32)>
+  return %0 : !spirv.struct<(si32, si32)>
+}
+
+// -----
+
+func.func @iadd_carry(%arg: vector<3xsi32>) -> !spirv.struct<(vector<3xsi32>, vector<3xsi32>)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xsi32>'}}
+  %0 = spirv.IAddCarry %arg, %arg : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
+  return %0 : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
+}
+
+// -----
+
 //===----------------------------------------------------------------------===//
 // spirv.ISubBorrow
 //===----------------------------------------------------------------------===//
@@ -274,6 +297,13 @@ func.func @isub_borrow_vector(%arg: vector<3xi32>) -> !spirv.struct<(vector<3xi3
   // CHECK: spirv.ISubBorrow %{{.+}}, %{{.+}} : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
   %0 = spirv.ISubBorrow %arg, %arg : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
   return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
+}
+
+// CHECK-LABEL: @isub_borrow_unsigned
+func.func @isub_borrow_unsigned(%arg: ui32) -> !spirv.struct<(ui32, ui32)> {
+  // CHECK: spirv.ISubBorrow %{{.+}}, %{{.+}} : !spirv.struct<(ui32, ui32)>
+  %0 = spirv.ISubBorrow %arg, %arg : !spirv.struct<(ui32, ui32)>
+  return %0 : !spirv.struct<(ui32, ui32)>
 }
 
 // -----
@@ -306,6 +336,22 @@ func.func @isub_borrow(%arg: i64) -> !spirv.struct<(i32, i32)> {
   // expected-error @+1 {{expected all operand types and struct member types are the same}}
   %0 = "spirv.ISubBorrow"(%arg, %arg): (i64, i64) -> !spirv.struct<(i32, i32)>
   return %0 : !spirv.struct<(i32, i32)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: si32) -> !spirv.struct<(si32, si32)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'si32'}}
+  %0 = spirv.ISubBorrow %arg, %arg : !spirv.struct<(si32, si32)>
+  return %0 : !spirv.struct<(si32, si32)>
+}
+
+// -----
+
+func.func @isub_borrow(%arg: vector<3xsi32>) -> !spirv.struct<(vector<3xsi32>, vector<3xsi32>)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xsi32>'}}
+  %0 = spirv.ISubBorrow %arg, %arg : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
+  return %0 : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
 }
 
 // -----
@@ -348,9 +394,17 @@ func.func @dot(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f16 {
 // -----
 
 func.func @dot(%arg0: vector<4xi32>, %arg1: vector<4xi32>) -> i32 {
-  // expected-error @+1 {{'spirv.Dot' op operand #0 must be fixed-length vector of 16/32/64-bit float or BFloat16 or Float8E4M3 or Float8E5M2 values of length 2/3/4/8/16}}
+  // expected-error @+1 {{op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or fixed-length vector of BFloat16 values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xi32>'}}
   %0 = spirv.Dot %arg0, %arg1 : vector<4xi32> -> i32
   return %0 : i32
+}
+
+// -----
+
+func.func @dot(%arg0: vector<4xf8E4M3FN>, %arg1: vector<4xf8E4M3FN>) -> f8E4M3FN {
+  // expected-error @+1 {{op operand #0 must be vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1 or fixed-length vector of BFloat16 values of length 2/3/4/8/16 of ranks 1, but got 'vector<4xf8E4M3FN>'}}
+  %0 = spirv.Dot %arg0, %arg1 : vector<4xf8E4M3FN> -> f8E4M3FN
+  return %0 : f8E4M3FN
 }
 
 // -----
@@ -425,6 +479,13 @@ func.func @umul_extended_vector(%arg: vector<3xi32>) -> !spirv.struct<(vector<3x
   return %0 : !spirv.struct<(vector<3xi32>, vector<3xi32>)>
 }
 
+// CHECK-LABEL: @umul_extended_unsigned
+func.func @umul_extended_unsigned(%arg: ui32) -> !spirv.struct<(ui32, ui32)> {
+  // CHECK: spirv.UMulExtended %{{.+}}, %{{.+}} : !spirv.struct<(ui32, ui32)>
+  %0 = spirv.UMulExtended %arg, %arg : !spirv.struct<(ui32, ui32)>
+  return %0 : !spirv.struct<(ui32, ui32)>
+}
+
 // -----
 
 func.func @umul_extended(%arg: i32) -> !spirv.struct<(i32, i32, i32)> {
@@ -455,6 +516,22 @@ func.func @umul_extended(%arg: i64) -> !spirv.struct<(i32, i32)> {
   // expected-error @+1 {{expected all operand types and struct member types are the same}}
   %0 = "spirv.UMulExtended"(%arg, %arg): (i64, i64) -> !spirv.struct<(i32, i32)>
   return %0 : !spirv.struct<(i32, i32)>
+}
+
+// -----
+
+func.func @umul_extended(%arg: si32) -> !spirv.struct<(si32, si32)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'si32'}}
+  %0 = spirv.UMulExtended %arg, %arg : !spirv.struct<(si32, si32)>
+  return %0 : !spirv.struct<(si32, si32)>
+}
+
+// -----
+
+func.func @umul_extended(%arg: vector<3xsi32>) -> !spirv.struct<(vector<3xsi32>, vector<3xsi32>)> {
+  // expected-error @+1 {{op operand #0 must be 8/16/32/64-bit signless/unsigned integer or fixed-length vector of 8/16/32/64-bit signless/unsigned integer values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xsi32>'}}
+  %0 = spirv.UMulExtended %arg, %arg : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
+  return %0 : !spirv.struct<(vector<3xsi32>, vector<3xsi32>)>
 }
 
 // -----

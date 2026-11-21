@@ -140,6 +140,9 @@ public:
     eCore_arm_armv7k,
     eCore_arm_armv7m,
     eCore_arm_armv7em,
+    eCore_arm_armv8m_base,
+    eCore_arm_armv8m_main,
+    eCore_arm_armv8_1m_main,
     eCore_arm_xscale,
 
     eCore_thumb,
@@ -161,6 +164,8 @@ public:
     eCore_arm_arm64e,
     eCore_arm_arm64_32,
     eCore_arm_aarch64,
+
+    eCore_arm_arm64ex1,
 
     eCore_mips32,
     eCore_mips32r2,
@@ -236,6 +241,9 @@ public:
     eCore_avr,
 
     eCore_wasm32,
+
+    // AMDGPU models are represented by the triple subarchitecture.
+    eCore_amd_gpu,
 
     kNumCores,
 

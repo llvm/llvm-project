@@ -523,21 +523,32 @@ and Types with no parameters need not use either of these fields, in which case
 the syntax for the Attribute or Type is simply the mnemonic.
 
 For each dialect, two "dispatch" functions will be created: one for parsing and
-one for printing. These static functions placed alongside the class definitions
-and have the following function signatures:
+one for printing. These static functions are placed alongside the class
+definitions and have the following function signatures:
 
 ```c++
-static ParseResult generatedAttributeParser(DialectAsmParser& parser, StringRef *mnemonic, Type attrType, Attribute &result);
-static LogicalResult generatedAttributePrinter(Attribute attr, DialectAsmPrinter& printer);
+static OptionalParseResult generatedAttributeParser(
+    AsmParser &parser, StringRef *mnemonic, Type type, Attribute &value);
+static LogicalResult generatedAttributePrinter(Attribute def,
+                                               AsmPrinter &printer);
 
-static ParseResult generatedTypeParser(DialectAsmParser& parser, StringRef *mnemonic, Type &result);
-static LogicalResult generatedTypePrinter(Type type, DialectAsmPrinter& printer);
+static OptionalParseResult generatedTypeParser(
+    AsmParser &parser, StringRef *mnemonic, Type &value);
+static LogicalResult generatedTypePrinter(Type def, AsmPrinter &printer);
 ```
 
-The above functions should be added to the respective in your
-`Dialect::printType` and `Dialect::parseType` methods, or consider using the
-`useDefaultAttributePrinterParser` and `useDefaultTypePrinterParser` ODS Dialect
-options if all attributes or types define a mnemonic.
+If `*mnemonic` is empty, the parsers first parse the mnemonic. Otherwise, they
+use `*mnemonic` without parsing it. If an attribute or type has the mnemonic,
+they call its parser and return whether it succeeded. Otherwise, they set
+`*mnemonic` to the mnemonic and return `std::nullopt`, so that the dialect can
+try to parse it in other ways. The printers return `failure` if the attribute
+or type is not one of the generated ones with a mnemonic.
+
+The above functions should be called from your `Dialect::parseAttribute`,
+`Dialect::printAttribute`, `Dialect::parseType` and `Dialect::printType`
+methods, or consider using the `useDefaultAttributePrinterParser` and
+`useDefaultTypePrinterParser` ODS Dialect options if all attributes or types
+define a mnemonic.
 
 The mnemonic, hasCustomAssemblyFormat, and assemblyFormat fields are optional.
 If none are defined, the generated code will not include any parsing or printing
@@ -887,6 +898,12 @@ assembly format of `` `<` struct(params) `>` `` will result in:
 The order in which the parameters are printed is the order in which they are
 declared in the attribute's or type's `parameter` list.
 
+An `EnumAttrParameter`, `OptionalEnumAttrParameter`, or
+`DefaultValuedEnumAttrParameter` captured by `struct` uses the underlying enum
+syntax. This omits the enum attribute's mnemonic and assembly-format
+delimiters. For example, an enum attribute whose standalone syntax is
+`#my_dialect.enum<case>` is printed as `kind = case` in a `struct`.
+
 Passing `custom<Foo>($variable)` allows providing a custom printer and parser
 for the encapsulated variable. Check the
 [custom and ref directive](#custom-and-ref-directive) section for more
@@ -990,9 +1007,16 @@ wrapped by the `Attribute` and `Type` classes. Every Attribute or Type class has
 a corresponding storage class, that can be accessed via the protected
 `getImpl()` method.
 
+Note: While storage instances are generally immortal and live as long as the
+`MLIRContext`, the context also supports *transient scopes*
+(`MLIRContext::TransientScope` RAII guard, or `beginTransientScope`/`endTransientScope`).
+Storage instances allocated while in a transient scope are reclaimed when the
+scope ends, allowing temporary types and attributes to be discarded in $O(1)$
+without tearing down loaded dialects.
+
 In most cases the storage class is auto generated, but if necessary it can be
 manually defined by setting the `genStorageClass` field to 0. The name and
-namespace (defaults to `detail`) can additionally be controlled via the The
+namespace (defaults to `detail`) can additionally be controlled via the
 `storageClass` and `storageNamespace` fields.
 
 #### Defining a storage class

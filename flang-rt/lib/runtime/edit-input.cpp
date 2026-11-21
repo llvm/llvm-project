@@ -23,7 +23,7 @@ static inline RT_API_ATTRS bool IsCharValueSeparator(
     const DataEdit &edit, char32_t ch) {
   return ch == ' ' || ch == '\t' || ch == '/' ||
       ch == edit.modes.GetSeparatorChar() ||
-      (edit.IsNamelist() && (ch == '&' || ch == '$'));
+      (edit.IsNamelist() && (ch == '&' || ch == '$' || ch == '!'));
 }
 
 // Checks that a list-directed input value has been entirely consumed and
@@ -109,6 +109,7 @@ static RT_API_ATTRS bool EditBOZInput(
     return false;
   }
   // Reset to start of significant digits
+  auto fieldEnd{connection.positionInRecord - leftTabLimit};
   io.HandleAbsolutePosition(start);
   remaining.reset();
   // Make a second pass now that the digit count is known
@@ -151,6 +152,17 @@ static RT_API_ATTRS bool EditBOZInput(
     *data |= digit << shift;
     shift -= LOG2_BASE;
   }
+  // The second pass re-read characters already counted for SIZE=.  The
+  // distance it moved is exactly what it added, because the slow
+  // NextInField() path calls GotChar() once for each byte it moves past,
+  // while a padding blank at the end of the record neither moves nor counts.
+  // If the second pass is changed to read through a FastAsciiField, it should
+  // re-scan the digits without counting them instead of keeping this
+  // subtraction.
+  io.GotChar(
+      -static_cast<int>(connection.positionInRecord - leftTabLimit - start));
+  // Resume after the whole field, including any trailing blanks or separator.
+  io.HandleAbsolutePosition(fieldEnd);
   return CheckCompleteListDirectedField(io, edit);
 }
 
@@ -566,7 +578,7 @@ static RT_API_ATTRS void RaiseFPExceptions(
   terminator.Crash( \
       "not implemented yet: raising FP exception in device code: %s", #e);
 #else // !defined(RT_DEVICE_COMPILATION)
-#ifdef feraisexcept // a macro in some environments; omit std::
+#ifdef feraiseexcept // a macro in some environments; omit std::
 #define RAISE feraiseexcept
 #else
 #define RAISE std::feraiseexcept
@@ -924,7 +936,7 @@ RT_API_ATTRS bool EditRealInput(
   }
 }
 
-// 13.7.3 in Fortran 2018
+// F2018 13.7.3 (B descriptor is a non-standard extension)
 RT_API_ATTRS bool EditLogicalInput(
     IoStatementState &io, const DataEdit &edit, bool &x) {
   switch (edit.descriptor) {
@@ -935,6 +947,7 @@ RT_API_ATTRS bool EditLogicalInput(
     break;
   case 'L':
   case 'G':
+  case 'B':
     break;
   default:
     io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
@@ -944,26 +957,41 @@ RT_API_ATTRS bool EditLogicalInput(
   }
   common::optional<int> remaining{io.CueUpInput(edit)};
   common::optional<char32_t> next{io.NextInField(remaining, edit)};
-  if (next && *next == '.') { // skip optional period
+  if (next && *next == '.' && edit.descriptor != 'B') { // skip optional period
     next = io.NextInField(remaining, edit);
   }
   if (!next) {
     io.GetIoErrorHandler().SignalError("Empty LOGICAL input field");
     return false;
   }
-  switch (*next) {
-  case 'T':
-  case 't':
-    x = true;
-    break;
-  case 'F':
-  case 'f':
-    x = false;
-    break;
-  default:
-    io.GetIoErrorHandler().SignalError(
-        "Bad character '%lc' in LOGICAL input field", *next);
-    return false;
+  if (edit.descriptor == 'B') {
+    switch (*next) {
+    case '1':
+      x = true;
+      break;
+    case '0':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in BINARY input field", *next);
+      return false;
+    }
+  } else {
+    switch (*next) {
+    case 'T':
+    case 't':
+      x = true;
+      break;
+    case 'F':
+    case 'f':
+      x = false;
+      break;
+    default:
+      io.GetIoErrorHandler().SignalError(
+          "Bad character '%lc' in LOGICAL input field", *next);
+      return false;
+    }
   }
   if (remaining || edit.descriptor == DataEdit::ListDirected) {
     // Ignore the rest of the input field; stop after separator when
@@ -1055,6 +1083,12 @@ RT_API_ATTRS bool EditCharacterInput(IoStatementState &io, const DataEdit &edit,
   case DataEdit::ListDirected:
     return EditListDirectedCharacterInput(io, x, lengthChars, edit);
   case 'A':
+    if (edit.variation == 'T') {
+      io.GetIoErrorHandler().SignalError(IostatErrorInFormat,
+          "'AT' edit descriptor may not be used for input");
+      return false;
+    }
+    break;
   case 'G':
     break;
   case 'B':

@@ -10,6 +10,8 @@ from lldbsuite.test import lldbutil
 
 @skipIfMTE  # MTE security transition shims restrict socket operations.
 class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
+    SHARED_BUILD_TESTCASE = False
+
     def _set_up_inferior(self):
         self._exe_to_attach = "%s_%d" % (self.testMethodName, os.getpid())
         self.build(dictionary={"EXE": self._exe_to_attach, "CXX_SOURCES": "main.cpp"})
@@ -48,7 +50,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
             lldbgdbserverutils.gdbremote_hex_encode_string(self._exe_to_attach),
         )
 
-    @skipIfWindows  # This test is flaky on Windows
     def test_attach_with_vAttachWait(self):
         self._set_up_inferior()
 
@@ -97,7 +98,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, inferior_to_attach.pid)
 
-    @skipIfWindows  # This test is flaky on Windows
     def test_launch_before_attach_with_vAttachOrWait(self):
         self._set_up_inferior()
 
@@ -137,7 +137,6 @@ class TestGdbRemoteAttachWait(gdbremote_testcase.GdbRemoteTestCaseBase):
         reported_pid = int(pid_text, base=16)
         self.assertEqual(reported_pid, inferior.pid)
 
-    @skipIfWindows  # This test is flaky on Windows
     def test_launch_after_attach_with_vAttachOrWait(self):
         self._set_up_inferior()
 

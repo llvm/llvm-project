@@ -8,7 +8,7 @@
 
 ; CHECK: orr     x29, x29, #0x1000000000000000
 ; CHECK-NEXT: .seh_nop
-; CHECK:  str     x22, [sp, #16]
+; CHECK:  str     x22, [sp]
 ; CHECK-NEXT: .seh_nop
 ; CHECK: and     x29, x29, #0xefffffffffffffff
 ; CHECK-NEXT: .seh_nop

@@ -9,5 +9,5 @@
 #include "clc/math/clc_fabs.h"
 #include "clc/math/clc_fmax.h"
 
-#define __CLC_BODY <clc_maxmag.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_maxmag.inc"
+#include "clc/math/gentype.inc"

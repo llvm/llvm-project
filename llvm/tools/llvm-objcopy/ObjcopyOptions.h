@@ -51,6 +51,14 @@ parseBitcodeStripOptions(ArrayRef<const char *> ArgsArr,
 Expected<DriverConfig>
 parseStripOptions(ArrayRef<const char *> ArgsArr,
                   llvm::function_ref<Error(Error)> ErrorCallback);
+
+// ParseExtractBundleEntryOptions sets the input arguments. If a help flag is
+// set then ParseExtractBundleEntryOptions will print the help messege and exit.
+// All functionality of the llvm-extract-bundle-entry utility is performed in
+// runExtractBundleEntry.
+Error runExtractBundleEntry(const SmallVectorImpl<StringRef> &Args);
+Expected<SmallVector<StringRef>>
+parseExtractBundleEntryOptions(ArrayRef<const char *> ArgsArr);
 } // namespace objcopy
 } // namespace llvm
 

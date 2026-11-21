@@ -31,8 +31,11 @@ using namespace llvm;
 using namespace rdf;
 
 #ifndef NDEBUG
-static cl::opt<unsigned> CpLimit("rdf-cp-limit", cl::init(0), cl::Hidden);
-static unsigned CpCount = 0;
+cl::opt<unsigned> RDFCpLimit(
+    "rdf-cp-limit", cl::init(0), cl::Hidden,
+    cl::desc(
+        "Limit number of copy propagations in RDF-based copy propagation"));
+static unsigned RDFCpCount = 0;
 #endif
 
 bool CopyPropagation::interpretAsCopy(const MachineInstr *MI, EqualityMap &EM) {
@@ -151,7 +154,7 @@ bool CopyPropagation::run() {
 
   bool Changed = false;
 #ifndef NDEBUG
-  bool HasLimit = CpLimit.getNumOccurrences() > 0;
+  bool HasLimit = RDFCpLimit.getNumOccurrences() > 0;
 #endif
 
   auto MinPhysReg = [this](RegisterRef RR) -> MCRegister {
@@ -170,7 +173,7 @@ bool CopyPropagation::run() {
 
   for (NodeId C : Copies) {
 #ifndef NDEBUG
-    if (HasLimit && CpCount >= CpLimit)
+    if (HasLimit && RDFCpCount >= RDFCpLimit)
       break;
 #endif
     auto SA = DFG.addr<InstrNode*>(C);
@@ -226,11 +229,11 @@ bool CopyPropagation::run() {
         }
 
         Changed = true;
-  #ifndef NDEBUG
-        if (HasLimit && CpCount >= CpLimit)
+#ifndef NDEBUG
+        if (HasLimit && RDFCpCount >= RDFCpLimit)
           break;
-        CpCount++;
-  #endif
+        RDFCpCount++;
+#endif
 
         auto FC = CopyMap.find(IA.Id);
         if (FC != CopyMap.end()) {

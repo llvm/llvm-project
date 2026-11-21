@@ -137,7 +137,7 @@ int main(int, char**)
 
     // This should work in C++03 but we get errors when trying to do SFINAE with the delete operator.
     // GCC also complains about this.
-#if TEST_STD_VER >= 11 && !defined(TEST_COMPILER_GCC)
+#if TEST_STD_VER >= 11
     {
         // LWG2874: Make sure that when T (for std::shared_ptr<T>) is an array type,
         //          this constructor only participates in overload resolution when

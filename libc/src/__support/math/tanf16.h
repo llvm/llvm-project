@@ -68,6 +68,7 @@ LIBC_INLINE float16 tanf16(float16 x) {
       if (LIBC_UNLIKELY(x_abs == 0))
         return x;
 
+#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       int rounding = fputil::quick_get_round();
 
       // Exhaustive tests show that, when:
@@ -77,6 +78,7 @@ LIBC_INLINE float16 tanf16(float16 x) {
       if ((xbits.is_pos() && rounding == FE_UPWARD) ||
           (xbits.is_neg() && rounding == FE_DOWNWARD))
         return fputil::cast<float16>(fputil::multiply_add(xf, 0x1.0p-11f, xf));
+#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       return x;
     }
 
@@ -125,7 +127,7 @@ LIBC_INLINE float16 tanf16(float16 x) {
   using fputil::multiply_add;
   return fputil::cast<float16>(
       multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
+      fputil::sub_multiply(multiply_add(cosm1_y, cos_k, cos_k), sin_y, sin_k));
 }
 
 } // namespace math

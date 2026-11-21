@@ -11,7 +11,10 @@ __clc_nextdown(__CLC_GENTYPE x) {
   __CLC_S_GENTYPE increment =
       x > __CLC_FP_LIT(0.0) ? (__CLC_S_GENTYPE)-1 : (__CLC_S_GENTYPE)1;
   __CLC_S_GENTYPE ix = __CLC_AS_S_GENTYPE(x) + increment;
-  __CLC_GENTYPE y =
-      x == __CLC_FP_LIT(0.0) ? -__CLC_GENTYPE_TRUE_MIN : __CLC_AS_GENTYPE(ix);
+
+  __CLC_GENTYPE min_value = __CLC_GENTYPE_DENORMS_ARE_ZERO
+                                ? -__CLC_GENTYPE_MIN
+                                : -__CLC_GENTYPE_TRUE_MIN;
+  __CLC_GENTYPE y = x == __CLC_FP_LIT(0.0) ? min_value : __CLC_AS_GENTYPE(ix);
   return __clc_isnan(x) || x == -__CLC_GENTYPE_INF ? x : y;
 }

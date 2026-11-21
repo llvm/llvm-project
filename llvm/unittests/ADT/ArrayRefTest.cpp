@@ -72,6 +72,27 @@ TEST(ArrayRefTest, AllocatorCopy) {
   ArrayRef<NonAssignable> Array3Copy = ArrayRef(Array3Src).copy(Alloc);
   EXPECT_EQ(ArrayRef(Array3Src), Array3Copy);
   EXPECT_NE(ArrayRef(Array3Src).data(), Array3Copy.data());
+
+  // Check that copy works with polymorphic types over non-zero allocator
+  // storage (e.g. under -fsanitize=cfi-unrelated-cast).
+  struct Polymorphic {
+    int V;
+    explicit Polymorphic(int V) : V(V) {}
+    Polymorphic(const Polymorphic &) = default;
+    virtual ~Polymorphic() = default;
+    virtual int get() const { return V; }
+    bool operator==(const Polymorphic &RHS) const { return V == RHS.V; }
+  };
+  Alloc.Reset();
+  void *Dirty = Alloc.Allocate(64, 8);
+  std::memset(Dirty, 0x5A, 64);
+  Alloc.Reset();
+  Polymorphic PolySrc[] = {Polymorphic(10), Polymorphic(20)};
+  MutableArrayRef<Polymorphic> PolyCopy = ArrayRef(PolySrc).copy(Alloc);
+  ASSERT_EQ(2u, PolyCopy.size());
+  EXPECT_EQ(10, PolyCopy[0].get());
+  EXPECT_EQ(20, PolyCopy[1].get());
+  EXPECT_NE(ArrayRef(PolySrc).data(), PolyCopy.data());
 }
 
 // This test is pure UB given the ArrayRef<> implementation.
@@ -348,15 +369,27 @@ static_assert(!std::is_constructible_v<MutableArrayRef<TestBase *>,
               "cannot construct MutableArrayRef pointer of base type");
 
 static_assert(
-    !std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
-    "cannot construct ArrayRef with non-const elements from const iterator "
-    "range");
+    std::is_constructible_v<ArrayRef<int>, iterator_range<const int *>>,
+    "should be able to construct ArrayRef with non-const elements from const "
+    "iterator_range");
+static_assert(
+    std::is_constructible_v<ArrayRef<const int>, iterator_range<int *>>,
+    "should be able to construct ArrayRef with const elements from non-const "
+    "iterator_range");
+static_assert(
+    std::is_constructible_v<ArrayRef<const int>, iterator_range<const int *>>,
+    "should be able to construct ArrayRef with const elements from const "
+    "iterator_range");
 static_assert(
     std::is_constructible_v<ArrayRef<char *>, iterator_range<char **>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
 static_assert(
-    !std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
+    std::is_constructible_v<ArrayRef<char *>, iterator_range<char *const *>>,
     "should be able to construct ArrayRef from iterator_range over pointers");
+static_assert(
+    !std::is_constructible_v<ArrayRef<int *>, iterator_range<const int **>>,
+    "cannot strip const off the pointee when constructing ArrayRef over "
+    "pointers");
 
 TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
   int A1[] = {42, -5, 0, 1000000, -1000000, 0};
@@ -372,9 +405,18 @@ TEST(ArrayRefTest, ArrayRefFromIteratorRange) {
     EXPECT_EQ(A1[i], A3[i]);
 }
 
-TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
+TEST(ArrayRefTest, ArrayConstRefIteratorConstRange) {
   const int A1[] = {42, -5, 0, 1000000, -1000000, 0};
   ArrayRef<const int> A2 = make_range(&A1[0], &A1[5]);
+
+  EXPECT_EQ(5ull, A2.size());
+  for (std::size_t i = 0; i < A2.size(); ++i)
+    EXPECT_EQ(A1[i], A2[i]);
+}
+
+TEST(ArrayRefTest, ArrayRefFromIteratorConstRange) {
+  const int A1[] = {42, -5, 0, 1000000, -1000000, 0};
+  ArrayRef<int> A2 = make_range(&A1[0], &A1[5]);
 
   EXPECT_EQ(5ull, A2.size());
   for (std::size_t i = 0; i < A2.size(); ++i)

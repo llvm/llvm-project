@@ -8,6 +8,7 @@
 
 #include "LibCxxAtomic.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
+#include "llvm/Support/ErrorExtras.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -96,7 +97,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObject *m_real_child = nullptr;
@@ -126,17 +127,16 @@ lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
   if (idx == 0)
-    return m_real_child->GetSP()->Clone(ConstString("Value"));
+    return m_real_child->GetSP()->Clone("Value");
   return nullptr;
 }
 
 llvm::Expected<size_t>
 lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (name == "Value")
     return 0;
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 SyntheticChildrenFrontEnd *

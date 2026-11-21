@@ -1,0 +1,141 @@
+// Tests for EntityLinker error conditions.
+
+// RUN: rm -rf %t
+// RUN: mkdir -p %t
+
+// Linking the same TU namespace twice produces an error.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-empty.json %S/Inputs/tu-empty.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-NS-TU
+// DUP-NS-TU:      clang-ssaf-linker: error: Linking artifact '{{.*}}tu-empty.json'
+// DUP-NS-TU-NEXT: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, empty.cpp)
+
+// A static library member colliding with an already linked TU summary names the
+// member and the library it came from, on top of the input file context.
+// RUN: clang-ssaf-linker static-library create %S/Inputs/tu-1.json %S/Inputs/tu-2.json --namespace libtwo -o %t/libtwo.json
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %t/libtwo.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=DUP-MEMBER
+// DUP-MEMBER:      clang-ssaf-linker: error: Linking artifact '{{.*}}libtwo.json'
+// DUP-MEMBER-NEXT: failed to link member BuildNamespace(CompilationUnit, tu1.cpp) of static library BuildNamespace(StaticLibrary, libtwo)
+// DUP-MEMBER-NEXT: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, tu1.cpp)
+
+// Entity ID object in summary data blob with '@' key alongside extra keys is a fatal error.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-invalid-entity-id-multikey.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-MULTIKEY
+// INVALID-ID-MULTIKEY:      clang-ssaf-linker: error: Linking artifact '{{.*}}tu-invalid-entity-id-multikey.json'
+// INVALID-ID-MULTIKEY-NEXT: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
+
+// Entity ID object in summary data blob with a non-uint64 '@' value is a fatal error.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-invalid-entity-id-value.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-VALUE
+// INVALID-ID-VALUE:      clang-ssaf-linker: error: Linking artifact '{{.*}}tu-invalid-entity-id-value.json'
+// INVALID-ID-VALUE-NEXT: failed to read EntityId: expected JSON object with a single '@' key mapped to a number (unsigned 64-bit integer)
+
+// Entity ID reference in summary data blob pointing to an ID absent from the resolution table
+// RUN: not clang-ssaf-linker %S/Inputs/tu-invalid-entity-id-ref.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --match-full-lines --check-prefix=INVALID-ID-REF
+// INVALID-ID-REF:      clang-ssaf-linker: error: Linking artifact '{{.*}}tu-invalid-entity-id-ref.json'
+// INVALID-ID-REF-NEXT: failed to patch EntityId: 'EntityId(99)' not found in entity resolution table
+
+// ============================================================================
+// Target triple mismatches
+//
+// The link unit's triple comes from the first input (or --target-triple), and
+// every later input must agree with it. EntityLinker reports the disagreement
+// and the command line adds the input's path as context.
+// ============================================================================
+
+// A TU summary disagreeing with a triple inferred from a preceding TU summary,
+// with no --target-triple involved at all.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/tu-x86_64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE-INFERRED-TU
+// TRIPLE-INFERRED-TU: target triple 'x86_64-apple-macosx' of BuildNamespace(CompilationUnit, x86.cpp) does not match link unit target triple 'arm64-apple-macosx'
+
+// A static library disagreeing with a preceding input.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lib-x86_64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE-MISMATCH-LIB
+// TRIPLE-MISMATCH-LIB:      clang-ssaf-linker: error: Linking artifact '{{.*}}lib-x86_64.json'
+// TRIPLE-MISMATCH-LIB-NEXT: target triple 'x86_64-apple-macosx' of BuildNamespace(StaticLibrary, libmulti) does not match link unit target triple 'arm64-apple-macosx'
+
+// A TU summary disagreeing with a triple inferred from a preceding library,
+// rather than from a preceding TU summary or --target-triple.
+// RUN: not clang-ssaf-linker %S/Inputs/lib-x86_64.json %S/Inputs/tu-1.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=TRIPLE-FROM-LIB
+// TRIPLE-FROM-LIB: target triple 'arm64-apple-macosx' of BuildNamespace(CompilationUnit, tu1.cpp) does not match link unit target triple 'x86_64-apple-macosx'
+
+// A multi-arch static library carrying no member for the link unit's triple
+// reports the members it does carry.
+// RUN: not clang-ssaf-linker --target-triple arm64-apple-ios %S/Inputs/libtwo-2arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MEMBER-MISSING
+// MEMBER-MISSING:      clang-ssaf-linker: error: Linking artifact '{{.*}}libtwo-2arch.json'
+// MEMBER-MISSING-NEXT: multi-arch static library BuildNamespace(MultiArchStaticLibrary, libtwo) has no member for target triple 'arm64-apple-ios' (available: arm64-apple-macosx, x86_64-apple-macosx)
+
+// A bundle with no members at all still reports which triple was wanted.
+// RUN: not clang-ssaf-linker --target-triple arm64-apple-macosx %S/Inputs/libmulti-empty-wrapper.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=EMPTY-BUNDLE
+// EMPTY-BUNDLE: multi-arch static library BuildNamespace(MultiArchStaticLibrary, libmulti) has no member for target triple 'arm64-apple-macosx' (available: none)
+
+// ============================================================================
+// Target triple inference failures
+// ============================================================================
+
+// More than one member in the first input: the architecture has to be chosen.
+// RUN: not clang-ssaf-linker %S/Inputs/libtwo-2arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=AMBIGUOUS-MEMBERS
+// AMBIGUOUS-MEMBERS: cannot infer target triple from '{{.*}}libtwo-2arch.json': multi-arch static library has 2 members; pass --target-triple to select one
+
+// No members in the first input: there is nothing to infer from.
+// RUN: not clang-ssaf-linker %S/Inputs/libmulti-empty-wrapper.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=INFER-NO-MEMBERS
+// INFER-NO-MEMBERS: cannot infer target triple from '{{.*}}libmulti-empty-wrapper.json': multi-arch static library has no members; pass --target-triple
+
+// ============================================================================
+// Shared-library inputs are not linkable yet
+// ============================================================================
+
+// RUN: not clang-ssaf-linker %S/Inputs/lu-arm64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LU-FIRST
+// LU-FIRST: '{{.*}}lu-arm64.json' is a link unit summary: linking against shared libraries is not yet supported
+
+// RUN: not clang-ssaf-linker %S/Inputs/libfoo-2arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MULTI-ARCH-SHARED-FIRST
+// MULTI-ARCH-SHARED-FIRST: '{{.*}}libfoo-2arch.json' is a multi-arch shared library: linking against shared libraries is not yet supported
+
+// Rejected wherever they appear, not just in first position: a later input is
+// turned away by linkInput rather than by target triple resolution.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lu-arm64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=LU-SECOND
+// LU-SECOND: '{{.*}}lu-arm64.json' is a link unit summary: linking against shared libraries is not yet supported
+
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/libfoo-2arch.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MULTI-ARCH-SHARED-SECOND
+// MULTI-ARCH-SHARED-SECOND: '{{.*}}libfoo-2arch.json' is a multi-arch shared library: linking against shared libraries is not yet supported
+
+// ============================================================================
+// Malformed --target-triple
+//
+// Only the architecture is validated; a vendor or OS spelled oddly is accepted
+// and simply means "unspecified", so linking.test covers those as acceptances
+// rather than rejections.
+// ============================================================================
+
+// RUN: not clang-ssaf-linker --target-triple bogus %S/Inputs/tu-1.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=BAD-TRIPLE-ARCH
+// BAD-TRIPLE-ARCH: clang-ssaf-linker: error: invalid --target-triple 'bogus': unrecognized architecture
+
+// ============================================================================
+// Error ordering: inputs are folded in as they are read, so the first input
+// that cannot be accepted is the one reported. These two runs share the same
+// three inputs in different orders and must report different errors.
+// ============================================================================
+
+// The triple mismatch at input 2 is reported; input 3's duplicate namespace is
+// never reached.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/lib-x86_64.json %S/Inputs/tu-1.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ORDER-TRIPLE-FIRST --implicit-check-not="duplicate BuildNamespace"
+// ORDER-TRIPLE-FIRST: target triple 'x86_64-apple-macosx' of BuildNamespace(StaticLibrary, libmulti) does not match link unit target triple 'arm64-apple-macosx'
+
+// The duplicate namespace at input 2 is reported; input 3's triple mismatch is
+// never reached.
+// RUN: not clang-ssaf-linker %S/Inputs/tu-1.json %S/Inputs/tu-1.json %S/Inputs/lib-x86_64.json -o %t/lu.json 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=ORDER-DUP-FIRST --implicit-check-not="does not match link unit target triple"
+// ORDER-DUP-FIRST: failed to link TU summary: duplicate BuildNamespace(CompilationUnit, tu1.cpp)

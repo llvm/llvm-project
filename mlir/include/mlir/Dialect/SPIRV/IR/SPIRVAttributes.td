@@ -22,9 +22,12 @@
 #define MLIR_DIALECT_SPIRV_IR_TARGET_AND_ABI
 
 include "mlir/Dialect/SPIRV/IR/SPIRVBase.td"
+include "mlir/IR/BuiltinAttributeInterfaces.td"
 
-class SPIRV_Attr<string attrName, string attrMnemonic>
-    : AttrDef<SPIRV_Dialect, attrName> {
+class SPIRV_Attr<string attrName, string attrMnemonic,
+                 list<Trait> traits = []>
+    : AttrDef<SPIRV_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/SPIRV/IR/SPIRVAttributes.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -79,24 +82,6 @@ def SPIRV_CooperativeMatrixPropertiesKHRArrayAttr :
     TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesKHRAttr,
                        "CooperativeMatrixPropertiesKHR array attribute">;
 
-// Description of cooperative matrix operations supported on the
-// target. Represents `VkCooperativeMatrixPropertiesNV`. See
-// https://www.khronos.org/registry/vulkan/specs/1.2-extensions/man/html/VkCooperativeMatrixPropertiesNV.html
-def SPIRV_CooperativeMatrixPropertiesNVAttr :
-    SPIRV_Attr<"CooperativeMatrixPropertiesNV", "coop_matrix_props_nv"> {
-  let parameters = (ins
-    "int":$m_size,
-    "int":$n_size,
-    "int":$k_size,
-    "mlir::Type":$a_type,
-    "mlir::Type":$b_type,
-    "mlir::Type":$c_type,
-    "mlir::Type":$result_type,
-    "mlir::spirv::ScopeAttr":$scope
-  );
-  let assemblyFormat = "`<` struct(params) `>`";
-}
-
 def SPIRV_CacheControlLoadINTELAttr :
     SPIRV_Attr<"CacheControlLoadINTEL", "cache_control_load_intel"> {
   let parameters = (ins "unsigned":$cache_level,
@@ -111,9 +96,17 @@ def SPIRV_CacheControlStoreINTELAttr :
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
-def SPIRV_CooperativeMatrixPropertiesNVArrayAttr :
-    TypedArrayAttrBase<SPIRV_CooperativeMatrixPropertiesNVAttr,
-                       "CooperativeMatrixPropertiesNV array attribute">;
+// Value of an OpConstantNull of pointer or composite type in spirv.Constant.
+def SPIRV_NullAttr : SPIRV_Attr<"Null", "null", [
+    DeclareAttrInterfaceMethods<TypedAttrInterface>]> {
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "Type":$type), [{
+      return $_get(type.getContext(), type);
+    }]>
+  ];
+  let assemblyFormat = "";
+}
 
 // This attribute specifies the limits for various resources on the target
 // architecture.

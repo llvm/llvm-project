@@ -8,10 +8,12 @@
 
 #include "lldb/ValueObject/ValueObjectSynthetic.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Value.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -20,6 +22,8 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorExtras.h"
+#include <mutex>
 #include <optional>
 
 namespace lldb_private {
@@ -41,7 +45,8 @@ public:
     return m_backend.GetChildAtIndex(idx);
   }
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     return m_backend.GetIndexOfChildWithName(name);
   }
 
@@ -82,8 +87,9 @@ ConstString ValueObjectSynthetic::GetQualifiedTypeName() {
 }
 
 ConstString ValueObjectSynthetic::GetDisplayTypeName() {
-  if (ConstString synth_name = m_synth_filter_up->GetSyntheticTypeName())
-    return synth_name;
+  const std::string synth_name = m_synth_filter_up->GetSyntheticTypeName();
+  if (!synth_name.empty())
+    return ConstString(synth_name);
 
   return m_parent->GetDisplayTypeName();
 }
@@ -98,11 +104,10 @@ ValueObjectSynthetic::CalculateNumChildren(uint32_t max) {
 
   if (max < UINT32_MAX) {
     auto num_children = m_synth_filter_up->CalculateNumChildren(max);
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::CalculateNumChildren] for VO of name "
-              "%s and type %s, the filter returned %u child values",
-              GetName().AsCString(), GetTypeName().AsCString(),
-              num_children ? *num_children : 0);
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::CalculateNumChildren] for VO of name "
+             "{0} and type {1}, the filter returned {2} child values",
+             GetName(), GetTypeName(), num_children ? *num_children : 0);
     return num_children;
   } else {
     auto num_children_or_err = m_synth_filter_up->CalculateNumChildren(max);
@@ -111,10 +116,10 @@ ValueObjectSynthetic::CalculateNumChildren(uint32_t max) {
       return num_children_or_err;
     }
     auto num_children = (m_synthetic_children_count = *num_children_or_err);
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::CalculateNumChildren] for VO of name "
-              "%s and type %s, the filter returned %u child values",
-              GetName().AsCString(), GetTypeName().AsCString(), num_children);
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::CalculateNumChildren] for VO of name "
+             "{0} and type {1}, the filter returned {2} child values",
+             GetName(), GetTypeName(), num_children);
     return num_children;
   }
 }
@@ -177,21 +182,20 @@ bool ValueObjectSynthetic::UpdateValue() {
   // type of an object changes, so does their synthetic filter of choice.
   ConstString new_parent_type_name = m_parent->GetTypeName();
   if (new_parent_type_name != m_parent_type_name) {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::UpdateValue] name=%s, type changed "
-              "from %s to %s, recomputing synthetic filter",
-              GetName().AsCString(), m_parent_type_name.AsCString(),
-              new_parent_type_name.AsCString());
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::UpdateValue] name={0}, type changed "
+             "from {1} to {2}, recomputing synthetic filter",
+             GetName(), m_parent_type_name, new_parent_type_name);
     m_parent_type_name = new_parent_type_name;
     CreateSynthFilter();
   }
 
   // let our backend do its update
   if (m_synth_filter_up->Update() == lldb::ChildCacheState::eRefetch) {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
-              "filter said caches are stale - clearing",
-              GetName().AsCString());
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::UpdateValue] name={0}, synthetic "
+             "filter said caches are stale - clearing",
+             GetName());
     // filter said that cached values are stale
     {
       std::lock_guard<std::mutex> guard(m_child_mutex);
@@ -210,10 +214,10 @@ bool ValueObjectSynthetic::UpdateValue() {
     m_synthetic_children_count = UINT32_MAX;
     m_might_have_children = eLazyBoolCalculate;
   } else {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
-              "filter said caches are still valid",
-              GetName().AsCString());
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::UpdateValue] name={0}, synthetic "
+             "filter said caches are still valid",
+             GetName());
   }
 
   m_provides_value = eLazyBoolCalculate;
@@ -221,18 +225,18 @@ bool ValueObjectSynthetic::UpdateValue() {
   lldb::ValueObjectSP synth_val(m_synth_filter_up->GetSyntheticValue());
 
   if (synth_val && synth_val->CanProvideValue()) {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
-              "filter said it can provide a value",
-              GetName().AsCString());
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::UpdateValue] name={0}, synthetic "
+             "filter said it can provide a value",
+             GetName());
 
     m_provides_value = eLazyBoolYes;
     CopyValueData(synth_val.get());
   } else {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::UpdateValue] name=%s, synthetic "
-              "filter said it will not provide a value",
-              GetName().AsCString());
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::UpdateValue] name={0}, synthetic "
+             "filter said it will not provide a value",
+             GetName());
 
     m_provides_value = eLazyBoolNo;
     // Copying the data of an incomplete type won't work as it has no byte size.
@@ -244,14 +248,43 @@ bool ValueObjectSynthetic::UpdateValue() {
   return true;
 }
 
+/// Whether \p valobj, apart from any dynamic or synthetic wrappers, has no
+/// parent.
+static bool IsRootValue(ValueObject &valobj) {
+  ValueObject *base = valobj.FollowParentChain([](ValueObject *vo) {
+    return vo->GetParent() && (vo->IsSynthetic() || vo->IsDynamic());
+  });
+  return base && !base->GetParent();
+}
+
+void ValueObjectSynthetic::WarnAboutForeignChild(ValueObject &child,
+                                                 bool is_root) {
+  static std::once_flag g_foreign_root_warning;
+  static std::once_flag g_foreign_non_root_warning;
+  std::optional<lldb::user_id_t> debugger_id;
+  if (lldb::TargetSP target_sp = GetTargetSP())
+    debugger_id = target_sp->GetDebugger().GetID();
+  std::string message = llvm::formatv(
+      "the synthetic child provider for '{0}' returned '{1}', which {2}. "
+      "Create synthetic children with the CreateValueFrom* methods of the "
+      "SBValue being formatted instead",
+      GetTypeName(), child.GetName(),
+      is_root ? "is not owned by its parent"
+              : "is a child of another value. LLDB does not keep it alive, "
+                "so it may be freed while it is still in use");
+  Debugger::ReportWarning(std::move(message), debugger_id,
+                          is_root ? &g_foreign_root_warning
+                                  : &g_foreign_non_root_warning);
+}
+
 lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
                                                           bool can_create) {
   Log *log = GetLog(LLDBLog::DataFormatters);
 
-  LLDB_LOGF(log,
-            "[ValueObjectSynthetic::GetChildAtIndex] name=%s, retrieving "
-            "child at index %u",
-            GetName().AsCString(), idx);
+  LLDB_LOG(log,
+           "[ValueObjectSynthetic::GetChildAtIndex] name={0}, retrieving "
+           "child at index {1}",
+           GetName(), idx);
 
   UpdateValueIfNeeded();
 
@@ -267,19 +300,19 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
 
   if (!child_is_cached) {
     if (can_create && m_synth_filter_up != nullptr) {
-      LLDB_LOGF(log,
-                "[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at "
-                "index %u not cached and will be created",
-                GetName().AsCString(), idx);
+      LLDB_LOG(log,
+               "[ValueObjectSynthetic::GetChildAtIndex] name={0}, child at "
+               "index {1} not cached and will be created",
+               GetName(), idx);
 
       lldb::ValueObjectSP synth_guy = m_synth_filter_up->GetChildAtIndex(idx);
 
-      LLDB_LOGF(
+      LLDB_LOG(
           log,
-          "[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index "
-          "%u created as %p (is "
-          "synthetic: %s)",
-          GetName().AsCString(), idx, static_cast<void *>(synth_guy.get()),
+          "[ValueObjectSynthetic::GetChildAtIndex] name={0}, child at index "
+          "{1} created as {2} (is "
+          "synthetic: {3})",
+          GetName(), idx, static_cast<void *>(synth_guy.get()),
           synth_guy.get()
               ? (synth_guy->IsSyntheticChildrenGenerated() ? "yes" : "no")
               : "no");
@@ -287,31 +320,48 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetChildAtIndex(uint32_t idx,
       if (!synth_guy)
         return synth_guy;
 
+      if (synth_guy->IsSyntheticChildrenGenerated())
+        synth_guy->SetLogicalParent(this);
+
+      // m_children_byindex holds raw pointers, so a child that our
+      // ClusterManager does not own has to be kept alive here. Only do that
+      // for a root value, which the provider made for this child. A child of
+      // another value could hold a reference back to us.
+      const bool is_foreign = synth_guy->GetManager() != GetManager();
+      const bool is_foreign_root = is_foreign && IsRootValue(*synth_guy);
       {
         std::lock_guard<std::mutex> guard(m_child_mutex);
-        if (synth_guy->IsSyntheticChildrenGenerated())
+        if (synth_guy->IsSyntheticChildrenGenerated() || is_foreign_root)
           m_synthetic_children_cache.push_back(synth_guy);
         m_children_byindex[idx] = synth_guy.get();
       }
+      if (is_foreign)
+        WarnAboutForeignChild(*synth_guy, is_foreign_root);
       synth_guy->SetPreferredDisplayLanguageIfNeeded(
           GetPreferredDisplayLanguage());
+
+      if (lldb::ValueObjectSP check_sp =
+              CheckValueObjectOwnership(synth_guy.get()))
+        return check_sp;
       return synth_guy;
     } else {
-      LLDB_LOGF(log,
-                "[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at "
-                "index %u not cached and cannot "
-                "be created (can_create = %s, synth_filter = %p)",
-                GetName().AsCString(), idx, can_create ? "yes" : "no",
-                static_cast<void *>(m_synth_filter_up.get()));
+      LLDB_LOG(log,
+               "[ValueObjectSynthetic::GetChildAtIndex] name={0}, child at "
+               "index {1} not cached and cannot "
+               "be created (can_create = {2}, synth_filter = {3})",
+               GetName(), idx, can_create ? "yes" : "no",
+               static_cast<void *>(m_synth_filter_up.get()));
 
       return lldb::ValueObjectSP();
     }
   } else {
-    LLDB_LOGF(log,
-              "[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at "
-              "index %u cached as %p",
-              GetName().AsCString(), idx, static_cast<void *>(valobj));
-
+    LLDB_LOG(log,
+             "[ValueObjectSynthetic::GetChildAtIndex] name={0}, child at "
+             "index {1} cached as {2}",
+             GetName(), idx, static_cast<void *>(valobj));
+    lldb::ValueObjectSP check_sp = CheckValueObjectOwnership(valobj);
+    if (check_sp)
+      return check_sp;
     return valobj->GetSP();
   }
 }
@@ -324,7 +374,8 @@ ValueObjectSynthetic::GetChildMemberWithName(llvm::StringRef name,
   auto index_or_err = GetIndexOfChildWithName(name);
 
   if (!index_or_err) {
-    llvm::consumeError(index_or_err.takeError());
+    LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), index_or_err.takeError(),
+                   "{0}");
     return lldb::ValueObjectSP();
   }
 
@@ -337,47 +388,48 @@ ValueObjectSynthetic::GetIndexOfChildWithName(llvm::StringRef name_ref) {
 
   ConstString name(name_ref);
 
-  std::optional<uint32_t> found_index = std::nullopt;
   {
     std::lock_guard<std::mutex> guard(m_child_mutex);
     auto name_to_index = m_name_toindex.find(name.GetCString());
     if (name_to_index != m_name_toindex.end())
-      found_index = name_to_index->second;
+      return name_to_index->second;
   }
 
-  if (!found_index && m_synth_filter_up != nullptr) {
-    size_t index = SIZE_MAX;
-    if (auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name)) {
-      index = *index_or_err;
-    } else if (!m_synth_sp->CustomSubscripting()) {
-      // Provide automatic support for subscript child names ("[N]").
-      auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
-      if (!maybe_index)
-        // The child name was not of the form "[N]", return the original error.
-        return index_or_err.takeError();
+  if (!m_synth_filter_up)
+    return llvm::createStringErrorV("type has no child named '{0}'", name);
 
-      // Subscripting succeeded, ignore the original error.
-      llvm::consumeError(index_or_err.takeError());
-      index = *maybe_index;
+  size_t index;
+  auto index_or_err = m_synth_filter_up->GetIndexOfChildWithName(name);
+  if (index_or_err) {
+    index = *index_or_err;
+  } else {
+    // The front-end does its own subscripting, so its answer is final.
+    if (m_synth_sp->CustomSubscripting())
+      return index_or_err.takeError();
 
-      // Prevent unnecessary work by limiting max to one past the index.
-      uint32_t max = index + 1;
-      auto num_children = GetNumChildrenIgnoringErrors(max);
-      if (index >= num_children)
-        return llvm::createStringError("Subscript index out of range: %zu",
-                                       index);
-    }
-    std::lock_guard<std::mutex> guard(m_child_mutex);
-    m_name_toindex[name.GetCString()] = index;
-    return index;
-  } else if (!found_index && m_synth_filter_up == nullptr) {
-    return llvm::createStringError("Type has no child named '%s'",
-                                   name.AsCString());
-  } else if (found_index)
-    return *found_index;
+    // Provide automatic support for subscript child names ("[N]").
+    auto maybe_index = formatters::ExtractIndexFromString(name.GetCString());
+    if (!maybe_index)
+      // The child name was not of the form "[N]", return the original error.
+      return index_or_err.takeError();
 
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.AsCString());
+    // Subscripting succeeded, ignore the original error.
+    llvm::consumeError(index_or_err.takeError());
+    index = *maybe_index;
+
+    // Prevent unnecessary work by limiting max to one past the index.
+    uint32_t max = index + 1;
+    auto num_children = GetNumChildren(max);
+    if (!num_children)
+      return num_children.takeError();
+    if (index >= *num_children)
+      return llvm::createStringErrorV("subscript index out of range: {0}",
+                                      index);
+  }
+
+  std::lock_guard<std::mutex> guard(m_child_mutex);
+  m_name_toindex[name.GetCString()] = index;
+  return index;
 }
 
 bool ValueObjectSynthetic::IsInScope() { return m_parent->IsInScope(); }
@@ -477,4 +529,9 @@ void ValueObjectSynthetic::GetExpressionPath(Stream &stream,
       return raw_value->GetExpressionPath(stream, epformat);
   }
   return ValueObject::GetExpressionPath(stream, epformat);
+}
+
+SyntheticChildrenFrontEnd *
+ValueObjectSynthetic::GetSyntheticChildrenFrontEnd() {
+  return m_synth_filter_up.get();
 }

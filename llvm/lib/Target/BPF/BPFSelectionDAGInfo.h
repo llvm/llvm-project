@@ -26,12 +26,13 @@ public:
 
   SDValue EmitTargetCodeForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
-                                  SDValue Size, Align Alignment,
+                                  SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
 
-  unsigned getCommonMaxStoresPerMemFunc() const { return 128; }
+  unsigned getCommonMaxStoresPerMemFunc() const;
 };
 
 } // namespace llvm

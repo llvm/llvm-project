@@ -77,7 +77,6 @@ protected:
     ObjFile = cantFail(ObjectFile::createObjectFile(Source));
   }
   void initializeBolt() {
-    Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
         ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
         ObjFile->getFileName(), nullptr, true, DWARFContext::create(*ObjFile),
@@ -122,6 +121,9 @@ protected:
 };
 } // namespace
 
+GTEST_ALLOW_UNINSTANTIATED_PARAMETERIZED_TEST(PassTester);
+
+#ifdef AARCH64_AVAILABLE
 TEST_P(PassTester, ExampleTest) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
@@ -332,6 +334,7 @@ TEST_P(PassTester, fillUnknownStubsEmpty) {
   // BB2 should be set to BF.initialRAState (false).
   EXPECT_FALSE(*RAState);
 }
+#endif // AARCH64_AVAILABLE
 
 #ifdef AARCH64_AVAILABLE
 INSTANTIATE_TEST_SUITE_P(AArch64, PassTester,

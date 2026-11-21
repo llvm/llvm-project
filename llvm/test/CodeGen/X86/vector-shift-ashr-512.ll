@@ -348,7 +348,7 @@ define <32 x i16> @constant_shift_v32i16_pairs(<32 x i16> %a) nounwind {
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
 ; AVX512DQ-NEXT:    vpsubw %ymm1, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [8,8,8,8,4,4,4,4,2,2,2,2,1,1,1,1]
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
@@ -445,7 +445,7 @@ define <64 x i8> @constant_shift_v64i8_quads(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
 ; AVX512DQ-NEXT:    vpsubb %ymm1, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [8,8,8,8,16,16,16,16,16,16,16,16,2,2,2,2,64,64,64,64,4,4,4,4,32,32,32,32,128,128,128,128]
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
@@ -524,6 +524,27 @@ define <64 x i8> @splatconstant_shift_v64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    vpsubb %zmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq
   %shift = ashr <64 x i8> %a, <i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3, i8 3>
+  ret <64 x i8> %shift
+}
+
+define <64 x i8> @splatconstant_shift_v64i8_by_one(<64 x i8> %a) nounwind {
+; AVX512DQ-LABEL: splatconstant_shift_v64i8_by_one:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
+; AVX512DQ-NEXT:    vpcmpeqd %ymm2, %ymm2, %ymm2
+; AVX512DQ-NEXT:    vpavgb %ymm2, %ymm1, %ymm1
+; AVX512DQ-NEXT:    vpavgb %ymm2, %ymm0, %ymm2
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512DQ-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & ~zmm0)
+; AVX512DQ-NEXT:    retq
+;
+; AVX512BW-LABEL: splatconstant_shift_v64i8_by_one:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm1 = -1
+; AVX512BW-NEXT:    vpavgb %zmm1, %zmm0, %zmm1
+; AVX512BW-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (m32bcst & ~zmm0)
+; AVX512BW-NEXT:    retq
+  %shift = ashr <64 x i8> %a, splat (i8 1)
   ret <64 x i8> %shift
 }
 

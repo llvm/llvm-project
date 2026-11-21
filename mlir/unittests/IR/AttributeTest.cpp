@@ -13,7 +13,7 @@
 #include "gtest/gtest.h"
 #include <optional>
 
-#include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "TestDialect.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -191,28 +191,28 @@ TEST(DenseSplatTest, StringAttrSplat) {
 TEST(DenseComplexTest, ComplexFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<float> value(10.0, 15.0);
+  mlir::Complex<float> value(10.0, 15.0);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<int64_t> value(10, 15);
+  mlir::Complex<int64_t> value(10, 15);
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPFloatSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(Float32Type::get(&context));
-  std::complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
+  mlir::Complex<APFloat> value(APFloat(10.0f), APFloat(15.0f));
   testSplat(complexType, value);
 }
 
 TEST(DenseComplexTest, ComplexAPIntSplat) {
   MLIRContext context;
   ComplexType complexType = ComplexType::get(IntegerType::get(&context, 64));
-  std::complex<APInt> value(APInt(64, 10), APInt(64, 15));
+  mlir::Complex<APInt> value(APInt(64, 10), APInt(64, 15));
   testSplat(complexType, value);
 }
 
@@ -259,6 +259,17 @@ TEST(DenseSplatMapValuesTest, I32ToFalse) {
   EXPECT_EQ(attr.getNumElements(), 4);
   EXPECT_TRUE(attr.isSplat());
   EXPECT_FALSE(attr.getSplatValue<BoolAttr>().getValue());
+}
+} // namespace
+
+//===----------------------------------------------------------------------===//
+// AsmResourceBlob
+//===----------------------------------------------------------------------===//
+
+namespace {
+TEST(AsmResourceBlobTest, DefaultBlobIsImmutable) {
+  AsmResourceBlob blob;
+  EXPECT_FALSE(blob.isMutable());
 }
 } // namespace
 
@@ -396,10 +407,12 @@ TEST(SparseElementsAttrTest, GetZero) {
 
   IntegerType intTy = IntegerType::get(&context, 32);
   FloatType floatTy = Float32Type::get(&context);
+  Type mxi8Ty = MXI8Type::get(&context);
   Type stringTy = OpaqueType::get(StringAttr::get(&context, "test"), "string");
 
   ShapedType tensorI32 = RankedTensorType::get({2, 2}, intTy);
   ShapedType tensorF32 = RankedTensorType::get({2, 2}, floatTy);
+  ShapedType tensorMXI8 = RankedTensorType::get({2, 2}, mxi8Ty);
   ShapedType tensorString = RankedTensorType::get({2, 2}, stringTy);
 
   auto indicesType =
@@ -413,11 +426,18 @@ TEST(SparseElementsAttrTest, GetZero) {
   RankedTensorType floatValueTy = RankedTensorType::get({1}, floatTy);
   auto floatValue = DenseFPElementsAttr::get(floatValueTy, {1.0f});
 
+  RankedTensorType mxi8ValueTy = RankedTensorType::get({1}, mxi8Ty);
+  Attribute mxi8EncodedValue =
+      IntegerAttr::get(IntegerType::get(&context, 8), 64);
+  auto mxi8Value = DenseElementsAttr::get(
+      mxi8ValueTy, ArrayRef<Attribute>(mxi8EncodedValue));
+
   RankedTensorType stringValueTy = RankedTensorType::get({1}, stringTy);
   auto stringValue = DenseElementsAttr::get(stringValueTy, {StringRef("foo")});
 
   auto sparseInt = SparseElementsAttr::get(tensorI32, indices, intValue);
   auto sparseFloat = SparseElementsAttr::get(tensorF32, indices, floatValue);
+  auto sparseMXI8 = SparseElementsAttr::get(tensorMXI8, indices, mxi8Value);
   auto sparseString =
       SparseElementsAttr::get(tensorString, indices, stringValue);
 
@@ -432,6 +452,15 @@ TEST(SparseElementsAttrTest, GetZero) {
       cast<FloatAttr>(sparseFloat.getValues<Attribute>()[{1, 1}]);
   EXPECT_EQ(zeroFloatValue.getValueAsDouble(), 0.0f);
   EXPECT_TRUE(zeroFloatValue.getType() == floatTy);
+
+  auto zeroMXI8Value =
+      cast<IntegerAttr>(sparseMXI8.getValues<Attribute>()[{1, 1}]);
+  EXPECT_EQ(zeroMXI8Value.getInt(), 0);
+  EXPECT_TRUE(zeroMXI8Value.getType().isSignlessInteger(8));
+  auto storedMXI8Value =
+      cast<IntegerAttr>(sparseMXI8.getValues<Attribute>()[{0, 0}]);
+  EXPECT_EQ(storedMXI8Value.getInt(), 64);
+  EXPECT_TRUE(storedMXI8Value.getType().isSignlessInteger(8));
 
   auto zeroStringValue =
       cast<StringAttr>(sparseString.getValues<Attribute>()[{1, 1}]);
@@ -523,4 +552,80 @@ TEST(CopyCountAttr, PrintStripped) {
   EXPECT_EQ(str, "|#test.copy_count<hello>|[copy_count<hello>]");
 }
 
+//===----------------------------------------------------------------------===//
+// IntegerAttr
+//===----------------------------------------------------------------------===//
+
+TEST(IntegerAttrTest, CorrectBitWidths) {
+  MLIRContext context;
+
+  // Correct APInt width for i32.
+  IntegerType i32 = IntegerType::get(&context, 32);
+  IntegerAttr attr32 = IntegerAttr::get(i32, APInt(32, 42));
+  EXPECT_EQ(attr32.getType(), i32);
+  EXPECT_EQ(attr32.getValue().getBitWidth(), 32u);
+  EXPECT_EQ(attr32.getInt(), 42);
+
+  // Correct APInt width for index type.
+  IndexType indexTy = IndexType::get(&context);
+  IntegerAttr attrIdx =
+      IntegerAttr::get(indexTy, APInt(IndexType::kInternalStorageBitWidth, 5));
+  EXPECT_EQ(attrIdx.getType(), indexTy);
+  EXPECT_EQ(attrIdx.getValue().getBitWidth(),
+            (unsigned)IndexType::kInternalStorageBitWidth);
+}
+
+TEST(IntegerAttrTest, SignedOverflow) {
+  MLIRContext context;
+  Builder builder(&context);
+
+  IntegerAttr attr8Neg = builder.getI8IntegerAttr(-1);
+  EXPECT_EQ(attr8Neg.getInt(), -1);
+
+  IntegerAttr attr16Neg = builder.getI16IntegerAttr(-1);
+  EXPECT_EQ(attr16Neg.getInt(), -1);
+
+  IntegerAttr attr32Neg = builder.getI32IntegerAttr(-1);
+  EXPECT_EQ(attr32Neg.getInt(), -1);
+}
+
+#ifndef NDEBUG
+TEST(IntegerAttrDeathTest, WrongBitWidthForIntegerType) {
+  MLIRContext context;
+  IntegerType i32 = IntegerType::get(&context, 32);
+  // APInt(8, 1) has bit width 8, but i32 requires 32.
+  EXPECT_DEATH(IntegerAttr::get(i32, APInt(8, 1)),
+               "APInt bit width must match integer type width");
+}
+
+TEST(IntegerAttrDeathTest, WrongBitWidthForIndexType) {
+  MLIRContext context;
+  IndexType indexTy = IndexType::get(&context);
+  // APInt(1, 1) has bit width 1, but index type requires 64.
+  EXPECT_DEATH(
+      IntegerAttr::get(indexTy, APInt(1, 1)),
+      "APInt bit width must match IndexType internal storage bit width");
+}
+#endif // NDEBUG
+
+//===----------------------------------------------------------------------===//
+// Builder::getZeroAttr and Builder::getOneAttr
+//===----------------------------------------------------------------------===//
+
+TEST(GetZeroOneAttrTest, NestedShapedElementType) {
+  MLIRContext context;
+  Builder builder(&context);
+  IntegerType i8 = builder.getI8Type();
+
+  RankedTensorType tensorTy = RankedTensorType::get({2}, i8);
+  EXPECT_TRUE(builder.getZeroAttr(tensorTy));
+  EXPECT_TRUE(builder.getOneAttr(tensorTy));
+
+  // A vector element type does not implement DenseElementTypeInterface, so
+  // it has no DenseElementsAttr form; expect null.
+  VectorType vecTy = VectorType::get({4}, i8);
+  RankedTensorType nestedTy = RankedTensorType::get({2}, vecTy);
+  EXPECT_FALSE(builder.getZeroAttr(nestedTy));
+  EXPECT_FALSE(builder.getOneAttr(nestedTy));
+}
 } // namespace

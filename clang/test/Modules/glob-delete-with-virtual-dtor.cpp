@@ -30,8 +30,8 @@ void out_of_module_tests() {
 // CHECK-NEXT:   br i1 %[[CONDITION1]], label %[[CALL_CLASS_DELETE:[0-9a-z._]+]], label %[[CALL_GLOB_DELETE:[0-9a-z._]+]]
 //
 // CHECK:      [[CALL_GLOB_DELETE]]
-// CHECK32-NEXT:   call void @"??3@YAXPAXI@Z"
-// CHECK64-NEXT:   call void @"??3@YAXPEAX_K@Z"
+// CHECK32-NEXT:   call void @"?__global_delete@@YAXPAXI@Z"
+// CHECK64-NEXT:   call void @"?__global_delete@@YAXPEAX_K@Z"
 // CHECK-NEXT:   br label %[[CONTINUE_LABEL]]
 //
 // CHECK:      [[CALL_CLASS_DELETE]]

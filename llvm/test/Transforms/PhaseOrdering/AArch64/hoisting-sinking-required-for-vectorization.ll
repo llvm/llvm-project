@@ -43,8 +43,8 @@ define void @loop(ptr %X, ptr %Y) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X6:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
 ; CHECK-NEXT:    [[Y7:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X6]], [[Y7]]
-; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
+; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[Y7]], [[X6]]
+; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ugt i64 [[TMP0]], -32
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
@@ -160,8 +160,8 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x float>, ptr [[TMP5]], align 4, !alias.scope [[META7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD8]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[BROADCAST_SPLAT]], [[WIDE_LOAD9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr [4 x i8], ptr [[B]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 16
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw [4 x i8], ptr [[B]], i64 [[INDEX]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x float>, ptr [[TMP8]], align 4, !alias.scope [[META9:![0-9]+]], !noalias [[META11:![0-9]+]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x float>, ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = fadd <4 x float> [[TMP6]], [[WIDE_LOAD10]]

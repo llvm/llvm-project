@@ -104,7 +104,8 @@ public:
     if (isBoxAddressOrValue())
       return llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(getType()));
     const bool isVolatile = fir::isa_volatile_type(getType());
-    return fir::BoxType::get(getElementOrSequenceType(), isVolatile);
+    const int64_t corank = fir::getBoxCorank(getType());
+    return fir::BoxType::get(getElementOrSequenceType(), isVolatile, corank);
   }
 
   bool hasLengthParameters() const {
@@ -357,10 +358,13 @@ mlir::Type getVariableElementType(hlfir::Entity variable);
 /// type (that may be an hlfir.expr type).
 mlir::Type getEntityElementType(hlfir::Entity entity);
 
-using ElementalKernelGenerator = std::function<hlfir::Entity(
+using ElementalKernelResult =
+    std::pair<hlfir::Entity, std::optional<hlfir::CleanupFunction>>;
+using ElementalKernelGenerator = std::function<ElementalKernelResult(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
 /// Generate an hlfir.elementalOp given call back to generate the element
-/// value at for each iteration.
+/// value for each iteration and its explicit cleanup, if any. The cleanup
+/// callback is emitted in the yield_element cleanup region.
 /// If exprType is specified, this will be the return type of the elemental op.
 /// If exprType is not specified, the resulting expression type is computed
 /// from the given \p elementType and \p shape, and the type is polymorphic
@@ -431,7 +435,8 @@ llvm::SmallVector<mlir::Value> genLoopNestWithReductions(
 /// Inline the body of an hlfir.elemental at the current insertion point
 /// given a list of one based indices. This generates the computation
 /// of one element of the elemental expression. Return the YieldElementOp
-/// whose value argument is the element value.
+/// whose value argument is the element value. The caller must emit or transfer
+/// its cleanup region after consuming that value, then erase the yield.
 /// The original hlfir::ElementalOp is left untouched.
 hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         fir::FirOpBuilder &builder,
@@ -445,11 +450,16 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
 /// current context and uses values that have been cloned already. A callback is
 /// provided to indicate if an hlfir.apply inside the hlfir.elemental must be
 /// immediately replaced by the inlining of the applied hlfir.elemental.
+/// Collect callbacks for the cloned yield_element cleanup regions, preserving
+/// the mapping for each inlined instance. The caller must execute the callbacks
+/// in reverse order after consuming the result. An elemental_addr's own cleanup
+/// remains the caller's responsibility.
 mlir::Value inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
     hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
-    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
+    const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline,
+    llvm::SmallVectorImpl<hlfir::CleanupFunction> &cleanups);
 
 /// Generate an element-by-element assignment from \p rhs to \p lhs for arrays
 /// that are known not to alias. The assignment is performed using a loop nest
@@ -522,7 +532,7 @@ convertToAddress(mlir::Location loc, fir::FirOpBuilder &builder,
 
 std::pair<fir::ExtendedValue, std::optional<hlfir::CleanupFunction>>
 convertToBox(mlir::Location loc, fir::FirOpBuilder &builder,
-             hlfir::Entity entity, mlir::Type targetType);
+             hlfir::Entity entity, mlir::Type targetType, unsigned corank = 0);
 
 /// Clone an hlfir.elemental_addr into an hlfir.elemental value.
 hlfir::ElementalOp cloneToElementalOp(mlir::Location loc,
@@ -613,6 +623,10 @@ bool designatePreservesContinuity(hlfir::DesignateOp op);
 /// This function is an extension of hlfir::Entity::isSimplyContiguous(),
 /// and it can be used on pure FIR representation as well as on HLFIR.
 bool isSimplyContiguous(mlir::Value base, bool checkWhole = true);
+
+/// Return true if \p region belongs to a sub-expression of an hlfir.where
+/// that is subject to the WHERE mask control.
+bool isInsideHlfirWhereMaskedExpression(mlir::Region &region);
 
 } // namespace hlfir
 

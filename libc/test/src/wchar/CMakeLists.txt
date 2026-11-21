@@ -1,9 +1,9 @@
-add_custom_target(libc_wchar_unittests)
+add_libc_testsuite(libc-wchar-tests)
 
 add_libc_test(
   wcslen_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcslen_test.cpp
   DEPENDS
@@ -15,7 +15,7 @@ add_libc_test(
 add_libc_test(
   wcsnlen_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsnlen_test.cpp
   DEPENDS
@@ -27,7 +27,7 @@ add_libc_test(
 add_libc_test(
   wcsdup_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsdup_test.cpp
   DEPENDS
@@ -38,7 +38,7 @@ add_libc_test(
 add_libc_test(
   btowc_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     btowc_test.cpp
   DEPENDS
@@ -49,7 +49,7 @@ add_libc_test(
 add_libc_test(
   mbrtowc_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     mbrtowc_test.cpp
   DEPENDS
@@ -63,21 +63,9 @@ add_libc_test(
 )
 
 add_libc_test(
-  mblen_test
-  SUITE
-    libc_wchar_unittests
-  SRCS
-    mblen_test.cpp
-  DEPENDS
-    libc.hdr.errno_macros
-    libc.src.wchar.mblen
-    libc.test.UnitTest.ErrnoCheckingTest
-)
-
-add_libc_test(
   mbsrtowcs_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     mbsrtowcs_test.cpp
   DEPENDS
@@ -93,7 +81,7 @@ add_libc_test(
 add_libc_test(
   mbrlen_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     mbrlen_test.cpp
   DEPENDS
@@ -109,7 +97,7 @@ add_libc_test(
 add_libc_test(
   mbsnrtowcs_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     mbsnrtowcs_test.cpp
   DEPENDS
@@ -125,7 +113,7 @@ add_libc_test(
 add_libc_test(
   mbsinit_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     mbsinit_test.cpp
   DEPENDS
@@ -139,7 +127,7 @@ add_libc_test(
 add_libc_test(
   wctob_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wctob_test.cpp
   DEPENDS
@@ -149,7 +137,7 @@ add_libc_test(
 add_libc_test(
   wcrtomb_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcrtomb_test.cpp
   DEPENDS
@@ -165,7 +153,7 @@ add_libc_test(
 add_libc_test(
   wcsrtombs_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsrtombs_test.cpp
   DEPENDS
@@ -179,7 +167,7 @@ add_libc_test(
 add_libc_test(
   wcsnrtombs_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsnrtombs_test.cpp
   DEPENDS
@@ -191,9 +179,9 @@ add_libc_test(
 )
 
 add_libc_test(
-  wmemset_test 
+  wmemset_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmemset_test.cpp
   DEPENDS
@@ -205,7 +193,7 @@ add_libc_test(
 add_libc_test(
   wcschr_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcschr_test.cpp
   DEPENDS
@@ -215,7 +203,7 @@ add_libc_test(
 add_libc_test(
   wcstok_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstok_test.cpp
   DEPENDS
@@ -225,7 +213,7 @@ add_libc_test(
 add_libc_test(
   wcsncmp_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsncmp_test.cpp
   DEPENDS
@@ -233,9 +221,31 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcscasecmp_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    wcscasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcscasecmp
+)
+
+add_libc_test(
+  wcsncasecmp_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    wcsncasecmp_test.cpp
+  DEPENDS
+    libc.src.__support.wctype_utils
+    libc.src.wchar.wcsncasecmp
+)
+
+add_libc_test(
   wcscmp_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcscmp_test.cpp
   DEPENDS
@@ -243,9 +253,19 @@ add_libc_test(
 )
 
 add_libc_test(
+  wcscoll_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    wcscoll_test.cpp
+  DEPENDS
+    libc.src.wchar.wcscoll
+)
+
+add_libc_test(
   wcspbrk_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcspbrk_test.cpp
   DEPENDS
@@ -255,7 +275,7 @@ add_libc_test(
 add_libc_test(
   wcsrchr_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsrchr_test.cpp
   DEPENDS
@@ -265,7 +285,7 @@ add_libc_test(
 add_libc_test(
   wcsspn_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsspn_test.cpp
   DEPENDS
@@ -275,7 +295,7 @@ add_libc_test(
 add_libc_test(
   wcscspn_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcscspn_test.cpp
   DEPENDS
@@ -285,7 +305,7 @@ add_libc_test(
 add_libc_test(
   wmemchr_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmemchr_test.cpp
   DEPENDS
@@ -295,7 +315,7 @@ add_libc_test(
 add_libc_test(
   wmemcmp_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmemcmp_test.cpp
   DEPENDS
@@ -305,7 +325,7 @@ add_libc_test(
 add_libc_test(
   wmempcpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmempcpy_test.cpp
   DEPENDS
@@ -315,7 +335,7 @@ add_libc_test(
 add_libc_test(
   wmemcpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmemcpy_test.cpp
   DEPENDS
@@ -325,7 +345,7 @@ add_libc_test(
 add_libc_test(
   wmemmove_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wmemmove_test.cpp
   DEPENDS
@@ -335,7 +355,7 @@ add_libc_test(
 add_libc_test(
   wcsncpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsncpy_test.cpp
   DEPENDS
@@ -345,17 +365,17 @@ add_libc_test(
 add_libc_test(
   wcscat_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcscat_test.cpp
   DEPENDS
     libc.src.wchar.wcscat
 )
-  
+
 add_libc_test(
   wcsstr_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsstr_test.cpp
   DEPENDS
@@ -365,7 +385,7 @@ add_libc_test(
 add_libc_test(
   wcsncat_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcsncat_test.cpp
   DEPENDS
@@ -375,7 +395,7 @@ add_libc_test(
 add_libc_test(
   wcslcat_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcslcat_test.cpp
   DEPENDS
@@ -386,7 +406,7 @@ add_libc_test(
 add_libc_test(
   wcscpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcscpy_test.cpp
   DEPENDS
@@ -396,7 +416,7 @@ add_libc_test(
 add_libc_test(
   wcpcpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcpcpy_test.cpp
   DEPENDS
@@ -406,7 +426,7 @@ add_libc_test(
 add_libc_test(
   wcslcpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcslcpy_test.cpp
   DEPENDS
@@ -417,7 +437,7 @@ add_libc_test(
 add_libc_test(
   wcpncpy_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcpncpy_test.cpp
   DEPENDS
@@ -438,7 +458,7 @@ add_header_library(
 add_libc_test(
   wcstol_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstol_test.cpp
   DEPENDS
@@ -449,7 +469,7 @@ add_libc_test(
 add_libc_test(
   wcstoll_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstoll_test.cpp
   DEPENDS
@@ -460,7 +480,7 @@ add_libc_test(
 add_libc_test(
   wcstoul_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstoul_test.cpp
   DEPENDS
@@ -471,7 +491,7 @@ add_libc_test(
 add_libc_test(
   wcstoull_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstoull_test.cpp
   DEPENDS
@@ -482,38 +502,298 @@ add_libc_test(
 add_libc_test(
   wcstof_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstof_test.cpp
   DEPENDS
     libc.src.wchar.wcstof
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
   wcstod_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstod_test.cpp
   DEPENDS
     libc.src.wchar.wcstod
     libc.test.UnitTest.ErrnoCheckingTest
-  LINK_LIBRARIES
-    LibcFPTestHelpers
+    libc.test.UnitTest.FPTestHelpers
 )
 
 add_libc_test(
   wcstold_test
   SUITE
-    libc_wchar_unittests
+    libc-wchar-tests
   SRCS
     wcstold_test.cpp
   DEPENDS
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.uint128
     libc.src.wchar.wcstold
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  wcsxfrm_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    wcsxfrm_test.cpp
+  DEPENDS
+    libc.src.wchar.wcsxfrm
+)
+
+add_libc_test(
+  fwide_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    fwide_test.cpp
+  DEPENDS
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.fopen
+    libc.src.wchar.fwide
+)
+
+add_libc_test(
+  fputwc_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    fputwc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.include.stdio
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.fwrite
+    libc.src.wchar.fputwc
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  fgetwc_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    fgetwc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  fputws_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    fputws_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.wchar.fputws
+    libc.src.wchar.fwide
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  fgetws_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    fgetws_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.wint_t
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.wchar.fgetws
+    libc.src.wchar.fwide
+    libc.src.wchar.wcscmp
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  ungetwc_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    ungetwc_test.cpp
+  DEPENDS
+    libc.hdr.stdio_macros
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fseek
+    libc.src.stdio.fwrite
+    libc.src.wchar.fgetwc
+    libc.src.wchar.fwide
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  getwc_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    getwc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fwrite
+    libc.src.wchar.fwide
+    libc.src.wchar.getwc
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  getwchar_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    getwchar_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.feof
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.stdin
+    libc.src.stdio.fwrite
+    libc.src.wchar.fwide
+    libc.src.wchar.getwchar
+    libc.src.wchar.ungetwc
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  putwc_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    putwc_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.wchar.fwide
+    libc.src.wchar.putwc
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+add_libc_test(
+  putwchar_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    putwchar_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.wchar_macros
+    libc.src.stdio.fclose
+    libc.src.stdio.ferror
+    libc.src.stdio.fopen
+    libc.src.stdio.fread
+    libc.src.stdio.stdout
+    libc.src.wchar.fwide
+    libc.src.wchar.putwchar
+    libc.test.UnitTest.ErrnoCheckingTest
+)
+
+if(LIBC_CONF_PRINTF_DISABLE_FLOAT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FLOAT")
+endif()
+if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_DYADIC_FLOAT OR
+    LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_FLOAT_TO_STR_REDUCED_PRECISION")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_INDEX_MODE)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_INDEX_MODE")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_WRITE_INT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_WRITE_INT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_FIXED_POINT)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_FIXED_POINT")
+endif()
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  libc_add_definition(swprintf_test_copts "LIBC_COPT_PRINTF_DISABLE_STRERROR")
+endif()
+
+add_fp_unittest(
+  swprintf_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    swprintf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.types.wint_t
+    libc.hdr.wchar_macros
+    libc.include.inttypes
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.printf_core.printf_config
+    libc.src.wchar.swprintf
+    libc.test.UnitTest.ErrnoCheckingTest
+    libc.test.UnitTest.ErrnoSetterMatcher
+  COMPILE_OPTIONS
+    ${swprintf_test_copts}
+)
+
+add_libc_test(
+  vswprintf_test
+  SUITE
+    libc-wchar-tests
+  SRCS
+    vswprintf_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.hdr.wchar_macros
+    libc.src.__support.CPP.limits
+    libc.src.wchar.vswprintf
     libc.test.UnitTest.ErrnoCheckingTest
 )

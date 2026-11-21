@@ -7,6 +7,8 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <string>
+#include <vector>
 
 using namespace clang;
 using namespace ento;
@@ -19,8 +21,9 @@ class IsCLibraryFunctionTest : public testing::Test {
 public:
   const FunctionDecl *getFunctionDecl() const { return Result; }
 
-  testing::AssertionResult buildAST(StringRef Code) {
-    ASTUnitP = tooling::buildASTFromCode(Code);
+  testing::AssertionResult buildAST(StringRef Code,
+                                    const std::vector<std::string> &Args = {}) {
+    ASTUnitP = tooling::buildASTFromCodeWithArgs(Code, Args);
     if (!ASTUnitP)
       return testing::AssertionFailure() << "AST construction failed";
 
@@ -81,4 +84,34 @@ TEST_F(IsCLibraryFunctionTest, RejectsClassStatic) {
 TEST_F(IsCLibraryFunctionTest, RejectsClassMember) {
   ASSERT_TRUE(buildAST(R"cpp(class A { void fun(); };)cpp"));
   EXPECT_FALSE(CheckerContext::isCLibraryFunction(getFunctionDecl()));
+}
+
+TEST_F(IsCLibraryFunctionTest, ExactMatchForPredefinedLibBuiltins) {
+  ASSERT_TRUE(buildAST(R"cpp(
+    typedef __typeof(sizeof(int)) size_t;
+    extern "C" void explicit_bzero(void *, size_t);
+  )cpp",
+                       {"-std=gnu++17"}));
+  ASSERT_NE(getFunctionDecl()->getBuiltinID(), 0u);
+  EXPECT_TRUE(
+      CheckerContext::isCLibraryFunction(getFunctionDecl(), "explicit_bzero"));
+  EXPECT_FALSE(CheckerContext::isCLibraryFunction(getFunctionDecl(), "bzero"));
+
+  ASSERT_TRUE(buildAST(R"cpp(
+    typedef __typeof(sizeof(int)) size_t;
+    extern "C" void *memset_explicit(void *, int, size_t);
+  )cpp"));
+  ASSERT_NE(getFunctionDecl()->getBuiltinID(), 0u);
+  EXPECT_TRUE(
+      CheckerContext::isCLibraryFunction(getFunctionDecl(), "memset_explicit"));
+  EXPECT_FALSE(CheckerContext::isCLibraryFunction(getFunctionDecl(), "memset"));
+
+  ASSERT_TRUE(buildAST(R"cpp(
+    extern "C" id objc_read_weak(id *);
+  )cpp",
+                       {"-x", "objective-c++"}));
+  ASSERT_NE(getFunctionDecl()->getBuiltinID(), 0u);
+  EXPECT_TRUE(
+      CheckerContext::isCLibraryFunction(getFunctionDecl(), "objc_read_weak"));
+  EXPECT_FALSE(CheckerContext::isCLibraryFunction(getFunctionDecl(), "read"));
 }

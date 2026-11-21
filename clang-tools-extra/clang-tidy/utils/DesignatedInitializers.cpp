@@ -14,7 +14,6 @@
 #include "DesignatedInitializers.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
 
 namespace clang::tidy::utils {
@@ -129,9 +128,9 @@ private:
 // '.a:' is produced directly without recursing into the written sublist.
 // (The written sublist will have a separate collectDesignators() call later).
 // Recursion with Prefix='.b' and Sem = {3, ImplicitValue} produces '.b.x:'.
-static void collectDesignators(
-    const InitListExpr *Sem, llvm::DenseMap<SourceLocation, std::string> &Out,
-    const llvm::DenseSet<SourceLocation> &NestedBraces, std::string &Prefix) {
+static void collectDesignators(const InitListExpr *Sem,
+                               llvm::DenseMap<SourceLocation, std::string> &Out,
+                               std::string &Prefix) {
   if (!Sem || Sem->isTransparent())
     return;
   assert(Sem->isSemanticForm());
@@ -152,8 +151,7 @@ static void collectDesignators(
       continue;
 
     const auto *BraceElidedSubobject = dyn_cast<InitListExpr>(Init);
-    if (BraceElidedSubobject &&
-        NestedBraces.contains(BraceElidedSubobject->getLBraceLoc()))
+    if (BraceElidedSubobject && BraceElidedSubobject->isExplicit())
       BraceElidedSubobject = nullptr; // there were braces!
 
     if (!Fields.append(Prefix, BraceElidedSubobject != nullptr))
@@ -162,9 +160,7 @@ static void collectDesignators(
       // If the braces were elided, this aggregate subobject is initialized
       // inline in the same syntactic list.
       // Descend into the semantic list describing the subobject.
-      // (NestedBraces are still correct, they're from the same syntactic
-      // list).
-      collectDesignators(BraceElidedSubobject, Out, NestedBraces, Prefix);
+      collectDesignators(BraceElidedSubobject, Out, Prefix);
       continue;
     }
     Out.try_emplace(Init->getBeginLoc(), Prefix);
@@ -173,22 +169,12 @@ static void collectDesignators(
 
 llvm::DenseMap<SourceLocation, std::string>
 getUnwrittenDesignators(const InitListExpr *Syn) {
-  assert(Syn->isSyntacticForm());
-
-  // collectDesignators needs to know which InitListExprs in the semantic tree
-  // were actually written, but InitListExpr::isExplicit() lies.
-  // Instead, record where braces of sub-init-lists occur in the syntactic form.
-  llvm::DenseSet<SourceLocation> NestedBraces;
-  for (const Expr *Init : Syn->inits())
-    if (auto *Nested = dyn_cast<InitListExpr>(Init))
-      NestedBraces.insert(Nested->getLBraceLoc());
-
   // Traverse the semantic form to find the designators.
   // We use their SourceLocation to correlate with the syntactic form later.
   llvm::DenseMap<SourceLocation, std::string> Designators;
   std::string EmptyPrefix;
   collectDesignators(Syn->isSemanticForm() ? Syn : Syn->getSemanticForm(),
-                     Designators, NestedBraces, EmptyPrefix);
+                     Designators, EmptyPrefix);
   return Designators;
 }
 

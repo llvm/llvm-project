@@ -103,12 +103,19 @@ entry:
 define void @select_ule_ugt_mix_4xi32(ptr %ptr, i32 %x) {
 ; CHECK-LABEL: @select_ule_ugt_mix_4xi32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i32> [[TMP1]], splat (i32 16383)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ugt <4 x i32> [[TMP1]], splat (i32 16383)
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i1> [[TMP2]], <4 x i1> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = select <4 x i1> [[TMP4]], <4 x i32> [[TMP1]], <4 x i32> splat (i32 16383)
-; CHECK-NEXT:    store <4 x i32> [[TMP5]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 poison, i32 16383>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> <i32 16383, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <2 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> [[TMP3]], <2 x i32> [[TMP0]], <2 x i32> splat (i32 16383)
+; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[PTR]], align 4
+; CHECK-NEXT:    [[GEP_2:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = load <2 x i32>, ptr [[GEP_2]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> <i32 poison, i32 16383>, <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> <i32 16383, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ult <2 x i32> [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = select <2 x i1> [[TMP8]], <2 x i32> [[TMP5]], <2 x i32> splat (i32 16383)
+; CHECK-NEXT:    store <2 x i32> [[TMP9]], ptr [[GEP_2]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

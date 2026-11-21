@@ -405,7 +405,7 @@ void int_lflfui(void) {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @b, align 1
-// CHECK-NEXT:    [[TOBOOL:%.*]] = trunc i8 [[TMP1]] to i1
+// CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i8 [[TMP1]], 0
 // CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TOBOOL]] to i32
 // CHECK-NEXT:    [[RESIZE:%.*]] = sext i32 [[TMP0]] to i47
 // CHECK-NEXT:    [[RESIZE1:%.*]] = sext i32 [[CONV]] to i47

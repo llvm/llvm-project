@@ -39,6 +39,25 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
         CGM.getIntrinsic(Intrinsic::wasm_memory_grow, ResultType);
     return Builder.CreateCall(Callee, Args);
   }
+  case WebAssembly::BI__builtin_wasm_memory_copy: {
+    Value *DstMem = EmitScalarExpr(E->getArg(0));
+    Value *SrcMem = EmitScalarExpr(E->getArg(1));
+    Value *Dst = EmitScalarExpr(E->getArg(2));
+    Value *Src = EmitScalarExpr(E->getArg(3));
+    Value *Size = EmitScalarExpr(E->getArg(4));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_memory_copy, Size->getType());
+    return Builder.CreateCall(Callee, {DstMem, SrcMem, Dst, Src, Size});
+  }
+  case WebAssembly::BI__builtin_wasm_memory_fill: {
+    Value *Mem = EmitScalarExpr(E->getArg(0));
+    Value *Dst = EmitScalarExpr(E->getArg(1));
+    Value *Val = EmitScalarExpr(E->getArg(2));
+    Value *Size = EmitScalarExpr(E->getArg(3));
+    Function *Callee =
+        CGM.getIntrinsic(Intrinsic::wasm_memory_fill, Size->getType());
+    return Builder.CreateCall(Callee, {Mem, Dst, Val, Size});
+  }
   case WebAssembly::BI__builtin_wasm_tls_size: {
     llvm::Type *ResultType = ConvertType(E->getType());
     Function *Callee = CGM.getIntrinsic(Intrinsic::wasm_tls_size, ResultType);
@@ -372,8 +391,7 @@ Value *CodeGenFunction::EmitWebAssemblyBuiltinExpr(unsigned BuiltinID,
   case WebAssembly::BI__builtin_wasm_abs_f32x4:
   case WebAssembly::BI__builtin_wasm_abs_f64x2: {
     Value *Vec = EmitScalarExpr(E->getArg(0));
-    Function *Callee = CGM.getIntrinsic(Intrinsic::fabs, Vec->getType());
-    return Builder.CreateCall(Callee, {Vec});
+    return Builder.CreateFAbs(Vec);
   }
   case WebAssembly::BI__builtin_wasm_sqrt_f16x8:
   case WebAssembly::BI__builtin_wasm_sqrt_f32x4:

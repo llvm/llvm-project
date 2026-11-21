@@ -14,9 +14,6 @@ include "llvm/Target/Target.td"
 def ModeHardFloat :
   SubtargetFeature<"hard-float", "UseHardFloat",
                    "true", "Use hard floating point features">;
-def ModeHardFloatABI :
-  SubtargetFeature<"hard-float-abi", "UseHardFloatABI",
-                   "true", "Use hard floating point ABI to pass args">;
 
 def FeatureFPUV2_SF
     : SubtargetFeature<"fpuv2_sf", "HasFPUv2SingleFloat", "true",

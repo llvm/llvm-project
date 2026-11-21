@@ -53,31 +53,31 @@ struct AsanInterceptorContext {
 // that no extra frames are created, and stack trace contains
 // relevant information only.
 // We check all shadow bytes.
-#define ACCESS_MEMORY_RANGE(ctx, offset, size, isWrite)                   \
-  do {                                                                    \
-    uptr __offset = (uptr)(offset);                                       \
-    uptr __size = (uptr)(size);                                           \
-    uptr __bad = 0;                                                       \
-    if (UNLIKELY(__offset > __offset + __size)) {                         \
-      GET_STACK_TRACE_FATAL_HERE;                                         \
-      ReportStringFunctionSizeOverflow(__offset, __size, &stack);         \
-    }                                                                     \
-    if (UNLIKELY(!QuickCheckForUnpoisonedRegion(__offset, __size)) &&     \
-        (__bad = __asan_region_is_poisoned(__offset, __size))) {          \
-      AsanInterceptorContext *_ctx = (AsanInterceptorContext *)ctx;       \
-      bool suppressed = false;                                            \
-      if (_ctx) {                                                         \
-        suppressed = IsInterceptorSuppressed(_ctx->interceptor_name);     \
-        if (!suppressed && HaveStackTraceBasedSuppressions()) {           \
-          GET_STACK_TRACE_FATAL_HERE;                                     \
-          suppressed = IsStackTraceSuppressed(&stack);                    \
-        }                                                                 \
-      }                                                                   \
-      if (!suppressed) {                                                  \
-        GET_CURRENT_PC_BP_SP;                                             \
-        ReportGenericError(pc, bp, sp, __bad, isWrite, __size, 0, false); \
-      }                                                                   \
-    }                                                                     \
+#define ACCESS_MEMORY_RANGE(ctx, offset, size, isWrite)                    \
+  do {                                                                     \
+    uptr __offset = (uptr)(offset);                                        \
+    uptr __size = (uptr)(size);                                            \
+    uptr __bad = 0;                                                        \
+    if (UNLIKELY(__offset > __offset + __size)) {                          \
+      GET_STACK_TRACE_FATAL_HERE;                                          \
+      ReportStringFunctionSizeOverflow(__offset, __size, isWrite, &stack); \
+    }                                                                      \
+    if (UNLIKELY(!QuickCheckForUnpoisonedRegion(__offset, __size)) &&      \
+        (__bad = __asan_region_is_poisoned(__offset, __size))) {           \
+      AsanInterceptorContext* _ctx = (AsanInterceptorContext*)ctx;         \
+      bool suppressed = false;                                             \
+      if (_ctx) {                                                          \
+        suppressed = IsInterceptorSuppressed(_ctx->interceptor_name);      \
+        if (!suppressed && HaveStackTraceBasedSuppressions()) {            \
+          GET_STACK_TRACE_FATAL_HERE;                                      \
+          suppressed = IsStackTraceSuppressed(&stack);                     \
+        }                                                                  \
+      }                                                                    \
+      if (!suppressed) {                                                   \
+        GET_CURRENT_PC_BP_SP;                                              \
+        ReportGenericError(pc, bp, sp, __bad, isWrite, __size, 0, false);  \
+      }                                                                    \
+    }                                                                      \
   } while (0)
 
 #define ASAN_READ_RANGE(ctx, offset, size) \

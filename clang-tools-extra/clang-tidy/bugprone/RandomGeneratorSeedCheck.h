@@ -31,7 +31,7 @@ public:
 private:
   template <class T>
   void checkSeed(const ast_matchers::MatchFinder::MatchResult &Result,
-                 const T *Func);
+                 const T *Func, const FieldDecl *Field = nullptr);
 
   StringRef RawDisallowedSeedTypes;
   SmallVector<StringRef, 5> DisallowedSeedTypes;

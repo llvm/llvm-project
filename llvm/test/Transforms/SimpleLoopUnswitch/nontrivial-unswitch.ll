@@ -2116,11 +2116,11 @@ loop_latch:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
 ; CHECK-NEXT:    br i1 %[[V]], label %loop_b_inner_latch.us, label %loop_b_inner_exit.us
 ;
-; CHECK:       loop_b_inner_exit.us:
-; CHECK-NEXT:    br label %loop_latch.us
-;
 ; CHECK:       loop_b_inner_latch.us:
 ; CHECK-NEXT:    br label %loop_b_inner_header.us
+;
+; CHECK:       loop_b_inner_exit.us:
+; CHECK-NEXT:    br label %loop_latch.us
 ;
 ; CHECK:       loop_a.us:
 ; CHECK-NEXT:    %[[V:.*]] = load i1, ptr %ptr
@@ -4082,15 +4082,8 @@ inner.body1:
 ; CHECK:       [[OUTER_HEADER_US_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US_US:.*]]
 ;
-; CHECK:       [[OUTER_LATCH_US_US:.*]]:
-; CHECK-NEXT:    %[[OUTER_COND_US_US:.*]] = call i1 @cond()
-; CHECK-NEXT:    br i1 %[[OUTER_COND_US_US]], label %[[OUTER_HEADER_US_US]], label %[[EXIT_SPLIT_US_SPLIT_US:.*]]
-;
 ; CHECK:       [[OUTER_HEADER_SPLIT_US_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US_US_US:.*]]
-;
-; CHECK:       [[INNER_LOOPEXIT2_US_US:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_LATCH_US_US]]
 ;
 ; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US_US_US]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER_US_US_US:.*]]
@@ -4119,7 +4112,14 @@ inner.body1:
 ; CHECK-NEXT:    br i1 %[[INNER_COND_US_US_US]], label %[[INNER_HEADER_US_US_US]], label %[[INNER_LOOPEXIT2_SPLIT_US_US_US:.*]]
 ;
 ; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US_US_US]]:
-; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US_US]]
+; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US_US:.*]]
+;
+; CHECK:       [[INNER_LOOPEXIT2_US_US]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_US_US:.*]]
+;
+; CHECK:       [[OUTER_LATCH_US_US]]:
+; CHECK-NEXT:    %[[OUTER_COND_US_US:.*]] = call i1 @cond()
+; CHECK-NEXT:    br i1 %[[OUTER_COND_US_US]], label %[[OUTER_HEADER_US_US]], label %[[EXIT_SPLIT_US_SPLIT_US:.*]]
 ;
 ; CHECK:       [[EXIT_SPLIT_US_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[EXIT_SPLIT_US:.*]]
@@ -4136,7 +4136,13 @@ inner.body2:
 ; CHECK:       [[OUTER_HEADER_US]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_US:.*]]
 ;
-; CHECK:       [[INNER_HEADER_US:.*]]:
+; CHECK:       [[OUTER_HEADER_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US:.*]]
+;
+; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US]]:
+; CHECK-NEXT:    br label %[[INNER_HEADER_US:.*]]
+;
+; CHECK:       [[INNER_HEADER_US]]:
 ; CHECK-NEXT:    br label %[[INNER_BODY2_US:.*]]
 ;
 ; CHECK:       [[INNER_BODY2_US]]:
@@ -4161,18 +4167,12 @@ inner.body2:
 ; CHECK:       [[INNER_LOOPEXIT2_SPLIT_US]]:
 ; CHECK-NEXT:    br label %[[INNER_LOOPEXIT2_US:.*]]
 ;
-; CHECK:       [[OUTER_LATCH_US:.*]]:
+; CHECK:       [[INNER_LOOPEXIT2_US]]:
+; CHECK-NEXT:    br label %[[OUTER_LATCH_US:.*]]
+;
+; CHECK:       [[OUTER_LATCH_US]]:
 ; CHECK-NEXT:    %[[OUTER_COND_US:.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 %[[OUTER_COND_US]], label %[[OUTER_HEADER_US]], label %[[EXIT_SPLIT_US_SPLIT:.*]]
-;
-; CHECK:       [[OUTER_HEADER_SPLIT_US]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER_SPLIT_SPLIT_US:.*]]
-;
-; CHECK:       [[OUTER_HEADER_SPLIT_SPLIT_US]]:
-; CHECK-NEXT:    br label %[[INNER_HEADER_US]]
-;
-; CHECK:       [[INNER_LOOPEXIT2_US]]:
-; CHECK-NEXT:    br label %[[OUTER_LATCH_US]]
 ;
 ; CHECK:       [[EXIT_SPLIT_US]]:
 ; CHECK-NEXT:    br label %exit

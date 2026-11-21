@@ -18,7 +18,7 @@
 #include <cstdio>
 #include <string>
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define PATHSTR(x) (L##x)
 #  define PATH_CSTR_FMT "\"%ls\""
 #else
@@ -44,8 +44,11 @@ inline _LIBCPP_ATTRIBUTE_FORMAT(__printf__, 1, 0) string vformat_string(const ch
   } else {
     // we did not provide a long enough buffer on our first attempt. The
     // return value is the number of bytes (excluding the null byte) that are
-    // needed for formatting.
-    result.resize_and_overwrite(size, [&](char* res, size_t n) { return ::vsnprintf(res, n, msg, ap); });
+    // needed for formatting. std::string always has room for a null terminator
+    // past its size, so we pass n+1 to vsnprintf to let it write all 'size'
+    // characters plus the null terminator. ap is still valid here since only
+    // apcopy (not ap) was passed to vsnprintf above.
+    result.resize_and_overwrite(size, [&](char* res, size_t n) { return ::vsnprintf(res, n + 1, msg, ap); });
     _LIBCPP_ASSERT_INTERNAL(static_cast<size_t>(size) == result.size(),
                             "vsnprintf did not result in the same number of characters as the first attempt?");
   }

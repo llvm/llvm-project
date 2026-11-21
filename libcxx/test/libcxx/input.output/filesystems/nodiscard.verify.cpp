@@ -290,7 +290,6 @@ void test() {
 
   {
     std::filesystem::path p;
-    const std::string src;
 
     // expected-warning@+1 {{ignoring return value of function declared with 'nodiscard' attribute}}
     p.native();

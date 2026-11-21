@@ -163,7 +163,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void*)
     ({                                              \
       if (flags()->strict_init_order)               \
         StopInitOrderChecking();                    \
-      CheckNoDeepBind(filename, flag);              \
+      OnDlOpen(filename, flag);                     \
       REAL(dlopen)(filename, flag);                 \
     })
 #  define COMMON_INTERCEPTOR_ON_EXIT(ctx) OnExit()
@@ -178,6 +178,7 @@ DECLARE_REAL_AND_INTERCEPTOR(void, free, void*)
       *begin = *end = 0;                               \
     }
 
+#  if SANITIZER_INTERCEPT_MMAP
 template <class Mmap>
 static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
@@ -243,6 +244,7 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
   }
   return real_munmap(addr, length);
 }
+#  endif  // SANITIZER_INTERCEPT_MMAP
 
 #  define COMMON_INTERCEPTOR_MMAP_IMPL(ctx, mmap, addr, length, prot, flags, \
                                        fd, offset)                           \
@@ -615,7 +617,7 @@ INTERCEPTOR(char*, strncat, char* to, const char* from, usize size) {
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
     ASAN_WRITE_RANGE(ctx, to + to_length, from_length + 1);
     if (from_length > 0) {
-      CHECK_RANGES_OVERLAP("strncat", to, to_length + copy_length + 1, from,
+      CHECK_RANGES_OVERLAP("strncat", to, to_length + from_length + 1, from,
                            copy_length);
     }
   }

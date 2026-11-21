@@ -82,7 +82,7 @@ _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
 __clc_ep_fast_sub(__CLC_EP_PAIR a, __CLC_EP_PAIR b);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ldexp(__CLC_EP_PAIR a,
-                                                                int e);
+                                                                __CLC_INTN e);
 
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_mul(__CLC_EP_PAIR a,
                                                               __CLC_GENTYPE b);
@@ -134,5 +134,10 @@ _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_sqrt(__CLC_EP_PAIR a);
 
 #if __CLC_FPSIZE == 32 || __CLC_FPSIZE == 64
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_exp(__CLC_EP_PAIR a);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR
+__clc_ep_exp_extended(__CLC_EP_PAIR x);
+
 _CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_EP_PAIR __clc_ep_ln(__CLC_GENTYPE a);
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_GENTYPE __clc_ep_ln_hi(__CLC_EP_PAIR a,
+                                                                __CLC_INTN ea);
 #endif

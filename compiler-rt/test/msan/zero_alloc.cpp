@@ -4,6 +4,8 @@
 // RUN:     | FileCheck %s --check-prefixes=CHECK,DISCOUNT
 // RUN: %clang_msan -Wno-alloc-size -fsanitize-recover=memory -fsanitize-memory-track-origins=2 %s -o %t && not %run %t 2>&1 \
 // RUN:     | FileCheck %s --check-prefixes=CHECK,ORIGINS
+// Hangs.
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include <stdio.h>
 #include <stdlib.h>

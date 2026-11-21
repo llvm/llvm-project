@@ -9,7 +9,6 @@
 #include "llvm/Transforms/Utils/ProfileVerify.h"
 #include "llvm/ADT/DynamicAPInt.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
@@ -18,11 +17,13 @@
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -47,6 +48,13 @@ static cl::opt<uint32_t> SelectFalseWeight(
     "profcheck-default-select-false-weight", cl::init(3U),
     cl::desc("When annotating `select` instructions, this value will be used "
              "for the second ('false') case."));
+static cl::opt<bool> AnnotateIndirectCalls(
+    "profcheck-annotate-indirect-calls", cl::init(false),
+    cl::desc("Also inject (if missing) and verify MD_prof for indirect calls"));
+static cl::opt<bool> AnnotateMemoryOperations(
+    "profcheck-annotate-mem-ops", cl::init(false),
+    cl::desc(
+        "Also inject (if missing) and verify MD_prof for memory operations"));
 namespace {
 class ProfileInjector {
   Function &F;
@@ -77,7 +85,7 @@ bool isAsmOnly(const Function &F) {
   if (!F.hasFnAttribute(Attribute::AttrKind::Naked))
     return false;
   for (const auto &BB : F)
-    for (const auto &I : drop_end(BB.instructionsWithoutDebug())) {
+    for (const auto &I : drop_end(BB)) {
       const auto *CB = dyn_cast<CallBase>(&I);
       if (!CB || !CB->isInlineAsm())
         return false;
@@ -116,11 +124,11 @@ bool ProfileInjector::inject() {
   // as cold (we do want some explicit information in the spirit of what this
   // verifier wants to achieve - make dropping / corrupting MD_prof
   // unit-testable)
-  if (!F.getEntryCount(/*AllowSynthetic=*/true))
+  if (!F.getEntryCount())
     F.setEntryCount(DefaultFunctionEntryCount);
   // If there is an entry count that's 0, then don't bother injecting. We won't
   // verify these either.
-  if (F.getEntryCount(/*AllowSynthetic=*/true)->getCount() == 0)
+  if (*F.getEntryCount() == 0)
     return false;
   bool Changed = false;
   // Cycle through the weights list. If we didn't, tests with more than (say)
@@ -128,15 +136,34 @@ bool ProfileInjector::inject() {
   // and numerically that may make for a poor unit test.
   uint32_t WeightsForTestOffset = 0;
   for (auto &BB : F) {
-    if (AnnotateSelect) {
-      for (auto &I : BB) {
+    for (Instruction &I : BB) {
+      if (I.getMetadata(LLVMContext::MD_prof))
+        continue;
+      if (AnnotateSelect) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
           if (SI->getCondition()->getType()->isVectorTy())
             continue;
-          if (I.getMetadata(LLVMContext::MD_prof))
-            continue;
           setBranchWeights(I, {SelectTrueWeight, SelectFalseWeight},
                            /*IsExpected=*/false);
+          Changed = true;
+        }
+      }
+      if (AnnotateMemoryOperations) {
+        if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+          if (isa<ConstantInt>(MI->getLength()))
+            continue;
+          annotateValueSite(*F.getParent(), *MI, {{19797, 2}, {18770, 3}}, 10,
+                            InstrProfValueKind::IPVK_MemOPSize, 30);
+          Changed = true;
+        }
+      }
+      if (AnnotateIndirectCalls) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!CB->isIndirectCall())
+            continue;
+          annotateValueSite(*F.getParent(), *CB, {{19797, 2}, {18770, 3}}, 10,
+                            InstrProfValueKind::IPVK_IndirectCallTarget, 30);
+          Changed = true;
         }
       }
     }
@@ -206,14 +233,15 @@ PreservedAnalyses ProfileVerifierPass::run(Module &M,
                                            ModuleAnalysisManager &MAM) {
   auto PopulateIgnoreList = [&](StringRef GVName) {
     if (const auto *CT = M.getGlobalVariable(GVName))
-      if (const auto *CA =
-              dyn_cast_if_present<ConstantArray>(CT->getInitializer()))
-        for (const auto &Elt : CA->operands())
-          if (const auto *CS = dyn_cast<ConstantStruct>(Elt))
-            if (CS->getNumOperands() >= 2 && CS->getOperand(1))
-              if (const auto *F = dyn_cast<Function>(
-                      CS->getOperand(1)->stripPointerCasts()))
-                IgnoreList.insert(F);
+      if (CT->hasInitializer())
+        if (const auto *CA =
+                dyn_cast_if_present<ConstantArray>(CT->getInitializer()))
+          for (const auto &Elt : CA->operands())
+            if (const auto *CS = dyn_cast<ConstantStruct>(Elt))
+              if (CS->getNumOperands() >= 2 && CS->getOperand(1))
+                if (const auto *F = dyn_cast<Function>(
+                        CS->getOperand(1)->stripPointerCasts()))
+                  IgnoreList.insert(F);
   };
   PopulateIgnoreList("llvm.global_ctors");
   PopulateIgnoreList("llvm.global_dtors");
@@ -221,7 +249,7 @@ PreservedAnalyses ProfileVerifierPass::run(Module &M,
   // expose the function-level run as public through a wrapper, so we can use
   // pass manager mechanisms dealing with declarations and with composing the
   // returned PreservedAnalyses values.
-  struct Wrapper : PassInfoMixin<Wrapper> {
+  struct Wrapper : OptionalPassInfoMixin<Wrapper> {
     ProfileVerifierPass &PVP;
     PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
       return PVP.run(F, FAM);
@@ -240,26 +268,41 @@ PreservedAnalyses ProfileVerifierPass::run(Function &F,
   if (IgnoreList.contains(&F))
     return PreservedAnalyses::all();
 
-  const auto EntryCount = F.getEntryCount(/*AllowSynthetic=*/true);
+  const auto EntryCount = F.getEntryCount();
   if (!EntryCount) {
     auto *MD = F.getMetadata(LLVMContext::MD_prof);
     if (!MD || !isExplicitlyUnknownProfileMetadata(*MD)) {
       emitProfileError("function entry count missing (set to 0 if cold)", F);
       return PreservedAnalyses::all();
     }
-  } else if (EntryCount->getCount() == 0) {
+  } else if (*EntryCount == 0) {
     return PreservedAnalyses::all();
   }
   for (const auto &BB : F) {
-    if (AnnotateSelect) {
-      for (const auto &I : BB)
+    for (const auto &I : BB) {
+      if (I.getMetadata(LLVMContext::MD_prof))
+        continue;
+      if (AnnotateSelect) {
         if (auto *SI = dyn_cast<SelectInst>(&I)) {
           if (SI->getCondition()->getType()->isVectorTy())
             continue;
-          if (I.getMetadata(LLVMContext::MD_prof))
-            continue;
           emitProfileError("select annotation missing", F);
         }
+      }
+      if (AnnotateMemoryOperations) {
+        if (auto *MI = dyn_cast<MemIntrinsic>(&I)) {
+          if (isa<ConstantInt>(MI->getLength()))
+            continue;
+          emitProfileError("memory operation annotation missing", F);
+        }
+      }
+      if (AnnotateIndirectCalls) {
+        if (auto *CB = dyn_cast<CallBase>(&I)) {
+          if (!CB->isIndirectCall())
+            continue;
+          emitProfileError("indirect call annotation missing", F);
+        }
+      }
     }
     if (const auto *Term =
             ProfileInjector::getTerminatorBenefitingFromMDProf(BB))

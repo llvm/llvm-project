@@ -13,6 +13,8 @@
 
 #include "clang/Lex/Lexer.h"
 
+#include "Plugins/ObjectFile/PDB/ObjectFilePDB.h"
+#include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Mangled.h"
@@ -221,6 +223,8 @@ llvm::StringRef SymbolFilePDB::GetPluginDescriptionStatic() {
 
 lldb_private::SymbolFile *
 SymbolFilePDB::CreateInstance(ObjectFileSP objfile_sp) {
+  if (!llvm::isa_and_nonnull<ObjectFilePECOFF, ObjectFilePDB>(objfile_sp.get()))
+    return nullptr;
   if (UseNativePDB())
     return nullptr;
 
@@ -906,7 +910,7 @@ uint32_t SymbolFilePDB::ResolveSymbolContext(
         if (source_file.empty())
           continue;
         FileSpec this_spec(source_file, FileSpec::Style::windows);
-        bool need_full_match = !file_spec.GetDirectory().IsEmpty();
+        bool need_full_match = !file_spec.GetDirectory().empty();
         if (FileSpec::Compare(file_spec, this_spec, need_full_match) != 0)
           continue;
       }
@@ -1761,7 +1765,7 @@ SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to find namespace {1}: {0}", name.AsCString());
+                   "Unable to find namespace {1}: {0}", name);
     return CompilerDeclContext();
   }
   auto ts = *type_system_or_err;

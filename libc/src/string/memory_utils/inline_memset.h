@@ -15,7 +15,10 @@
 
 #include <stddef.h> // size_t
 
-#if defined(LIBC_TARGET_ARCH_IS_X86)
+#if defined(LIBC_COPT_USE_MEM_BUILTINS)
+#include "src/string/memory_utils/generic/builtin.h"
+#define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_builtin
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
 #include "src/string/memory_utils/x86_64/inline_memset.h"
 #define LIBC_SRC_STRING_MEMORY_UTILS_MEMSET inline_memset_x86
 #elif defined(LIBC_TARGET_ARCH_IS_ARM)
@@ -37,8 +40,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-[[gnu::flatten]] LIBC_INLINE void inline_memset(void *dst, uint8_t value,
-                                                size_t count) {
+LIBC_FLATTEN LIBC_INLINE void inline_memset(void *dst, uint8_t value,
+                                            size_t count) {
   LIBC_SRC_STRING_MEMORY_UTILS_MEMSET(reinterpret_cast<Ptr>(dst), value, count);
 }
 

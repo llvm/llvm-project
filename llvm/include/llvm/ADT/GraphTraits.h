@@ -32,8 +32,7 @@ namespace llvm {
 //
 // GraphTraits can be used to create a view over a graph interpreting it
 // differently without requiring a copy of the original graph. This could
-// be achieved by carrying more data in NodeRef. See LoopBodyTraits for one
-// example.
+// be achieved by carrying more data in NodeRef.
 template<class GraphType>
 struct GraphTraits {
   // Elements to provide:

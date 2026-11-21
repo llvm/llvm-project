@@ -1,7 +1,7 @@
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 ; RUN: not llc -verify-machineinstrs -O0 -mtriple=spirv32-unknown-unknown %s -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: LLVM ERROR: %{{.*}} = G_INTRINSIC intrinsic(@llvm.spv.ddy.coarse), %{{.*}} is only supported in shaders.
+; CHECK: error: {{.*}}: this instruction is only supported in shaders.
 
 define noundef float @ddy_coarse(float noundef %a) {
 entry:

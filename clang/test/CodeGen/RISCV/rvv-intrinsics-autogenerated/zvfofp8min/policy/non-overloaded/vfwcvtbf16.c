@@ -14,7 +14,7 @@
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tu(vbfloat16mf4_t vd,
-                                                      vuint8mf8_t vs2,
+                                                      vfloat8e4m3mf8_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tu(vd, vs2, vl);
 }
@@ -26,7 +26,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tu(vbfloat16mf4_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tu(vbfloat16mf2_t vd,
-                                                      vuint8mf4_t vs2,
+                                                      vfloat8e4m3mf4_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tu(vd, vs2, vl);
 }
@@ -38,7 +38,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tu(vbfloat16mf2_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tu(vbfloat16m1_t vd,
-                                                    vuint8mf2_t vs2,
+                                                    vfloat8e4m3mf2_t vs2,
                                                     size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tu(vd, vs2, vl);
 }
@@ -50,7 +50,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tu(vbfloat16m1_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tu(vbfloat16m2_t vd,
-                                                   vuint8m1_t vs2, size_t vl) {
+                                                   vfloat8e4m3m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tu(vd, vs2, vl);
 }
 
@@ -61,7 +61,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tu(vbfloat16m2_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tu(vbfloat16m4_t vd,
-                                                   vuint8m2_t vs2, size_t vl) {
+                                                   vfloat8e4m3m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tu(vd, vs2, vl);
 }
 
@@ -72,7 +72,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tu(vbfloat16m4_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tu(vbfloat16m8_t vd,
-                                                   vuint8m4_t vs2, size_t vl) {
+                                                   vfloat8e4m3m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tu(vd, vs2, vl);
 }
 
@@ -84,7 +84,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tu(vbfloat16m8_t vd,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tum(vbool64_t vm,
                                                        vbfloat16mf4_t vd,
-                                                       vuint8mf8_t vs2,
+                                                       vfloat8e4m3mf8_t vs2,
                                                        size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tum(vm, vd, vs2, vl);
 }
@@ -97,7 +97,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tum(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tum(vbool32_t vm,
                                                        vbfloat16mf2_t vd,
-                                                       vuint8mf4_t vs2,
+                                                       vfloat8e4m3mf4_t vs2,
                                                        size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tum(vm, vd, vs2, vl);
 }
@@ -110,7 +110,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tum(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tum(vbool16_t vm,
                                                      vbfloat16m1_t vd,
-                                                     vuint8mf2_t vs2,
+                                                     vfloat8e4m3mf2_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tum(vm, vd, vs2, vl);
 }
@@ -123,7 +123,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tum(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tum(vbool8_t vm,
                                                     vbfloat16m2_t vd,
-                                                    vuint8m1_t vs2, size_t vl) {
+                                                    vfloat8e4m3m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tum(vm, vd, vs2, vl);
 }
 
@@ -135,7 +135,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tum(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tum(vbool4_t vm,
                                                     vbfloat16m4_t vd,
-                                                    vuint8m2_t vs2, size_t vl) {
+                                                    vfloat8e4m3m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tum(vm, vd, vs2, vl);
 }
 
@@ -147,7 +147,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tum(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tum(vbool2_t vm,
                                                     vbfloat16m8_t vd,
-                                                    vuint8m4_t vs2, size_t vl) {
+                                                    vfloat8e4m3m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tum(vm, vd, vs2, vl);
 }
 
@@ -159,7 +159,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tum(vbool2_t vm,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tumu(vbool64_t vm,
                                                         vbfloat16mf4_t vd,
-                                                        vuint8mf8_t vs2,
+                                                        vfloat8e4m3mf8_t vs2,
                                                         size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tumu(vm, vd, vs2, vl);
 }
@@ -172,7 +172,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_tumu(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tumu(vbool32_t vm,
                                                         vbfloat16mf2_t vd,
-                                                        vuint8mf4_t vs2,
+                                                        vfloat8e4m3mf4_t vs2,
                                                         size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tumu(vm, vd, vs2, vl);
 }
@@ -185,7 +185,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_tumu(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tumu(vbool16_t vm,
                                                       vbfloat16m1_t vd,
-                                                      vuint8mf2_t vs2,
+                                                      vfloat8e4m3mf2_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tumu(vm, vd, vs2, vl);
 }
@@ -198,7 +198,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_tumu(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tumu(vbool8_t vm,
                                                      vbfloat16m2_t vd,
-                                                     vuint8m1_t vs2,
+                                                     vfloat8e4m3m1_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tumu(vm, vd, vs2, vl);
 }
@@ -211,7 +211,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_tumu(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tumu(vbool4_t vm,
                                                      vbfloat16m4_t vd,
-                                                     vuint8m2_t vs2,
+                                                     vfloat8e4m3m2_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tumu(vm, vd, vs2, vl);
 }
@@ -224,7 +224,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_tumu(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tumu(vbool2_t vm,
                                                      vbfloat16m8_t vd,
-                                                     vuint8m4_t vs2,
+                                                     vfloat8e4m3m4_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tumu(vm, vd, vs2, vl);
 }
@@ -237,7 +237,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_tumu(vbool2_t vm,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_mu(vbool64_t vm,
                                                       vbfloat16mf4_t vd,
-                                                      vuint8mf8_t vs2,
+                                                      vfloat8e4m3mf8_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_mu(vm, vd, vs2, vl);
 }
@@ -250,7 +250,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e4m3mf8_bf16mf4_mu(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_mu(vbool32_t vm,
                                                       vbfloat16mf2_t vd,
-                                                      vuint8mf4_t vs2,
+                                                      vfloat8e4m3mf4_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_mu(vm, vd, vs2, vl);
 }
@@ -263,7 +263,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e4m3mf4_bf16mf2_mu(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_mu(vbool16_t vm,
                                                     vbfloat16m1_t vd,
-                                                    vuint8mf2_t vs2,
+                                                    vfloat8e4m3mf2_t vs2,
                                                     size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_mu(vm, vd, vs2, vl);
 }
@@ -276,7 +276,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e4m3mf2_bf16m1_mu(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_mu(vbool8_t vm,
                                                    vbfloat16m2_t vd,
-                                                   vuint8m1_t vs2, size_t vl) {
+                                                   vfloat8e4m3m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m1_bf16m2_mu(vm, vd, vs2, vl);
 }
 
@@ -288,7 +288,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e4m3m1_bf16m2_mu(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_mu(vbool4_t vm,
                                                    vbfloat16m4_t vd,
-                                                   vuint8m2_t vs2, size_t vl) {
+                                                   vfloat8e4m3m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m2_bf16m4_mu(vm, vd, vs2, vl);
 }
 
@@ -300,7 +300,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e4m3m2_bf16m4_mu(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_mu(vbool2_t vm,
                                                    vbfloat16m8_t vd,
-                                                   vuint8m4_t vs2, size_t vl) {
+                                                   vfloat8e4m3m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e4m3m4_bf16m8_mu(vm, vd, vs2, vl);
 }
 
@@ -311,7 +311,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e4m3m4_bf16m8_mu(vbool2_t vm,
 // CHECK-RV64-NEXT:    ret <vscale x 1 x bfloat> [[TMP0]]
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tu(vbfloat16mf4_t vd,
-                                                      vuint8mf8_t vs2,
+                                                      vfloat8e5m2mf8_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tu(vd, vs2, vl);
 }
@@ -323,7 +323,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tu(vbfloat16mf4_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 2 x bfloat> [[TMP0]]
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tu(vbfloat16mf2_t vd,
-                                                      vuint8mf4_t vs2,
+                                                      vfloat8e5m2mf4_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tu(vd, vs2, vl);
 }
@@ -335,7 +335,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tu(vbfloat16mf2_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 4 x bfloat> [[TMP0]]
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tu(vbfloat16m1_t vd,
-                                                    vuint8mf2_t vs2,
+                                                    vfloat8e5m2mf2_t vs2,
                                                     size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tu(vd, vs2, vl);
 }
@@ -347,7 +347,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tu(vbfloat16m1_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 8 x bfloat> [[TMP0]]
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tu(vbfloat16m2_t vd,
-                                                   vuint8m1_t vs2, size_t vl) {
+                                                   vfloat8e5m2m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tu(vd, vs2, vl);
 }
 
@@ -358,7 +358,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tu(vbfloat16m2_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 16 x bfloat> [[TMP0]]
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tu(vbfloat16m4_t vd,
-                                                   vuint8m2_t vs2, size_t vl) {
+                                                   vfloat8e5m2m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tu(vd, vs2, vl);
 }
 
@@ -369,7 +369,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tu(vbfloat16m4_t vd,
 // CHECK-RV64-NEXT:    ret <vscale x 32 x bfloat> [[TMP0]]
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tu(vbfloat16m8_t vd,
-                                                   vuint8m4_t vs2, size_t vl) {
+                                                   vfloat8e5m2m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tu(vd, vs2, vl);
 }
 
@@ -381,7 +381,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tu(vbfloat16m8_t vd,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tum(vbool64_t vm,
                                                        vbfloat16mf4_t vd,
-                                                       vuint8mf8_t vs2,
+                                                       vfloat8e5m2mf8_t vs2,
                                                        size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tum(vm, vd, vs2, vl);
 }
@@ -394,7 +394,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tum(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tum(vbool32_t vm,
                                                        vbfloat16mf2_t vd,
-                                                       vuint8mf4_t vs2,
+                                                       vfloat8e5m2mf4_t vs2,
                                                        size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tum(vm, vd, vs2, vl);
 }
@@ -407,7 +407,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tum(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tum(vbool16_t vm,
                                                      vbfloat16m1_t vd,
-                                                     vuint8mf2_t vs2,
+                                                     vfloat8e5m2mf2_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tum(vm, vd, vs2, vl);
 }
@@ -420,7 +420,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tum(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tum(vbool8_t vm,
                                                     vbfloat16m2_t vd,
-                                                    vuint8m1_t vs2, size_t vl) {
+                                                    vfloat8e5m2m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tum(vm, vd, vs2, vl);
 }
 
@@ -432,7 +432,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tum(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tum(vbool4_t vm,
                                                     vbfloat16m4_t vd,
-                                                    vuint8m2_t vs2, size_t vl) {
+                                                    vfloat8e5m2m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tum(vm, vd, vs2, vl);
 }
 
@@ -444,7 +444,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tum(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tum(vbool2_t vm,
                                                     vbfloat16m8_t vd,
-                                                    vuint8m4_t vs2, size_t vl) {
+                                                    vfloat8e5m2m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tum(vm, vd, vs2, vl);
 }
 
@@ -456,7 +456,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tum(vbool2_t vm,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tumu(vbool64_t vm,
                                                         vbfloat16mf4_t vd,
-                                                        vuint8mf8_t vs2,
+                                                        vfloat8e5m2mf8_t vs2,
                                                         size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tumu(vm, vd, vs2, vl);
 }
@@ -469,7 +469,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_tumu(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tumu(vbool32_t vm,
                                                         vbfloat16mf2_t vd,
-                                                        vuint8mf4_t vs2,
+                                                        vfloat8e5m2mf4_t vs2,
                                                         size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tumu(vm, vd, vs2, vl);
 }
@@ -482,7 +482,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_tumu(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tumu(vbool16_t vm,
                                                       vbfloat16m1_t vd,
-                                                      vuint8mf2_t vs2,
+                                                      vfloat8e5m2mf2_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tumu(vm, vd, vs2, vl);
 }
@@ -495,7 +495,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_tumu(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tumu(vbool8_t vm,
                                                      vbfloat16m2_t vd,
-                                                     vuint8m1_t vs2,
+                                                     vfloat8e5m2m1_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tumu(vm, vd, vs2, vl);
 }
@@ -508,7 +508,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_tumu(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tumu(vbool4_t vm,
                                                      vbfloat16m4_t vd,
-                                                     vuint8m2_t vs2,
+                                                     vfloat8e5m2m2_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tumu(vm, vd, vs2, vl);
 }
@@ -521,7 +521,7 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_tumu(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tumu(vbool2_t vm,
                                                      vbfloat16m8_t vd,
-                                                     vuint8m4_t vs2,
+                                                     vfloat8e5m2m4_t vs2,
                                                      size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tumu(vm, vd, vs2, vl);
 }
@@ -534,7 +534,7 @@ vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_tumu(vbool2_t vm,
 //
 vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_mu(vbool64_t vm,
                                                       vbfloat16mf4_t vd,
-                                                      vuint8mf8_t vs2,
+                                                      vfloat8e5m2mf8_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_mu(vm, vd, vs2, vl);
 }
@@ -547,7 +547,7 @@ vbfloat16mf4_t test_vfwcvt_f_f_v_f8e5m2mf8_bf16mf4_mu(vbool64_t vm,
 //
 vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_mu(vbool32_t vm,
                                                       vbfloat16mf2_t vd,
-                                                      vuint8mf4_t vs2,
+                                                      vfloat8e5m2mf4_t vs2,
                                                       size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_mu(vm, vd, vs2, vl);
 }
@@ -560,7 +560,7 @@ vbfloat16mf2_t test_vfwcvt_f_f_v_f8e5m2mf4_bf16mf2_mu(vbool32_t vm,
 //
 vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_mu(vbool16_t vm,
                                                     vbfloat16m1_t vd,
-                                                    vuint8mf2_t vs2,
+                                                    vfloat8e5m2mf2_t vs2,
                                                     size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_mu(vm, vd, vs2, vl);
 }
@@ -573,7 +573,7 @@ vbfloat16m1_t test_vfwcvt_f_f_v_f8e5m2mf2_bf16m1_mu(vbool16_t vm,
 //
 vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_mu(vbool8_t vm,
                                                    vbfloat16m2_t vd,
-                                                   vuint8m1_t vs2, size_t vl) {
+                                                   vfloat8e5m2m1_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m1_bf16m2_mu(vm, vd, vs2, vl);
 }
 
@@ -585,7 +585,7 @@ vbfloat16m2_t test_vfwcvt_f_f_v_f8e5m2m1_bf16m2_mu(vbool8_t vm,
 //
 vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_mu(vbool4_t vm,
                                                    vbfloat16m4_t vd,
-                                                   vuint8m2_t vs2, size_t vl) {
+                                                   vfloat8e5m2m2_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m2_bf16m4_mu(vm, vd, vs2, vl);
 }
 
@@ -597,6 +597,6 @@ vbfloat16m4_t test_vfwcvt_f_f_v_f8e5m2m2_bf16m4_mu(vbool4_t vm,
 //
 vbfloat16m8_t test_vfwcvt_f_f_v_f8e5m2m4_bf16m8_mu(vbool2_t vm,
                                                    vbfloat16m8_t vd,
-                                                   vuint8m4_t vs2, size_t vl) {
+                                                   vfloat8e5m2m4_t vs2, size_t vl) {
   return __riscv_vfwcvt_f_f_v_f8e5m2m4_bf16m8_mu(vm, vd, vs2, vl);
 }

@@ -29,10 +29,10 @@ namespace fputil {
 namespace generic {
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z);
 
 // TODO(lntue): Implement fmaf that is correctly rounded to all rounding modes.
@@ -105,10 +105,10 @@ shift_mantissa(int shift_length, T &mant) {
 } // namespace internal
 
 template <typename OutType, typename InType>
-LIBC_INLINE cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
-                                 cpp::is_floating_point_v<InType> &&
-                                 sizeof(OutType) <= sizeof(InType),
-                             OutType>
+LIBC_INLINE constexpr cpp::enable_if_t<cpp::is_floating_point_v<OutType> &&
+                                           cpp::is_floating_point_v<InType> &&
+                                           sizeof(OutType) <= sizeof(InType),
+                                       OutType>
 fma(InType x, InType y, InType z) {
   using OutFPBits = FPBits<OutType>;
   using OutStorageType = typename OutFPBits::StorageType;
@@ -157,7 +157,7 @@ fma(InType x, InType y, InType z) {
     }
   }
 
-  if (LIBC_UNLIKELY(x == 0 || y == 0 || z == 0))
+  if (LIBC_UNLIKELY(x_bits.is_zero() || y_bits.is_zero() || z_bits.is_zero()))
     return cast<OutType>(x * y + z);
 
   int x_exp = 0;
@@ -168,7 +168,7 @@ fma(InType x, InType y, InType z) {
   constexpr InStorageType IMPLICIT_MASK =
       InFPBits::SIG_MASK - InFPBits::FRACTION_MASK;
 
-  constexpr InType DENORMAL_SCALING =
+  LIBC_BIT_CAST_CONSTEXPR_VAR InType DENORMAL_SCALING =
       InFPBits::create_value(
           Sign::POS, InFPBits::FRACTION_LEN + InFPBits::EXP_BIAS, IMPLICIT_MASK)
           .get_val();
@@ -275,10 +275,14 @@ fma(InType x, InType y, InType z) {
   if (prod_mant == 0) {
     // When there is exact cancellation, i.e., x*y == -z exactly, return -0.0 if
     // rounding downward and +0.0 for other rounding modes.
-    if (quick_get_round() == FE_DOWNWARD)
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    prod_sign = Sign::POS;
+#else
+    if (fputil::quick_get_round() == FE_DOWNWARD)
       prod_sign = Sign::NEG;
     else
       prod_sign = Sign::POS;
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
   }
 
   DyadicFloat result(prod_sign, prod_lsb_exp - InFPBits::EXP_BIAS, prod_mant);

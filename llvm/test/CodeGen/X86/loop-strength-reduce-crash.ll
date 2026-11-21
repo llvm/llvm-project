@@ -1,4 +1,4 @@
-; RUN: opt -loop-reduce < %s -o /dev/null
+; RUN: opt -loop-reduce < %s -disable-output
 
 ; LSR doesn't actually do anything on this input; just check that it doesn't
 ; crash while building the compatible type for the IV (by virtue of using

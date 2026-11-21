@@ -71,10 +71,8 @@ public:
     return (*this)(component.base());
   }
   // Prevent integer division by known zeroes in constant expressions.
-  template <int KIND>
-  bool operator()(
-      const Divide<Type<TypeCategory::Integer, KIND>> &division) const {
-    using T = Type<TypeCategory::Integer, KIND>;
+  bool operator()(const Divide<Type<TypeCategory::Integer>> &division) const {
+    using T = Type<TypeCategory::Integer>;
     if ((*this)(division.left()) && (*this)(division.right())) {
       const auto divisor{GetScalarConstantValue<T>(division.right())};
       return !divisor || !divisor->IsZero();
@@ -83,13 +81,18 @@ public:
     }
   }
 
-  bool operator()(const Constant<SomeDerived> &) const { return true; }
+  bool operator()(const Constant<Type<TypeCategory::Derived>> &) const {
+    return true;
+  }
   bool operator()(const DescriptorInquiry &x) const {
     const Symbol &sym{x.base().GetLastSymbol()};
     return INVARIANT && !IsAllocatable(sym) &&
         (!IsDummy(sym) ||
             (IsIntentIn(sym) && !IsOptional(sym) &&
                 !sym.attrs().test(semantics::Attr::VALUE)));
+  }
+  bool operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
   }
 
   bool operator()(const ImpliedDoIndex &ido) const {
@@ -110,6 +113,19 @@ public:
       acImpliedDos_.erase(ido.name());
     }
     return result;
+  }
+
+  template <typename T> bool operator()(const ConditionalExpr<T> &x) const {
+    // A conditional expression is a primary.  Therefore, only the selected
+    // branch must be constant. If the condition is a constant expression
+    // whose value cannot yet be determined, both branches must be constant.
+    if (!(*this)(x.condition())) {
+      return false;
+    } else if (auto condVal{ToLogical(x.condition())}) {
+      return *condVal ? (*this)(x.thenValue()) : (*this)(x.elseValue());
+    } else {
+      return (*this)(x.thenValue()) && (*this)(x.elseValue());
+    }
   }
 
 private:
@@ -204,7 +220,6 @@ template <typename A> bool IsConstantExpr(const A &x, const FoldingContext *c) {
   return IsConstantExprHelper<false>{c}(x);
 }
 template bool IsConstantExpr(const Expr<SomeType> &, const FoldingContext *);
-template bool IsConstantExpr(const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 template bool IsConstantExpr(
@@ -217,8 +232,6 @@ bool IsScopeInvariantExpr(const A &x, const FoldingContext *c) {
 }
 template bool IsScopeInvariantExpr(
     const Expr<SomeType> &, const FoldingContext *);
-template bool IsScopeInvariantExpr(
-    const Expr<SomeInteger> &, const FoldingContext *);
 template bool IsScopeInvariantExpr(
     const Expr<SubscriptInteger> &, const FoldingContext *);
 
@@ -263,7 +276,6 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 }
 
 template bool IsActuallyConstant(const Expr<SomeType> &);
-template bool IsActuallyConstant(const Expr<SomeInteger> &);
 template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
 template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
 
@@ -350,12 +362,19 @@ public:
         IsConstantExpr(x.upper(), context_) && (*this)(x.parent());
   }
   bool operator()(const DescriptorInquiry &) const { return false; }
+  bool operator()(const RankOneBoundElement &x) const {
+    return false;
+  } // unreachable
   template <typename T> bool operator()(const ArrayConstructor<T> &) const {
     return false;
   }
   bool operator()(const StructureConstructor &) const { return false; }
   template <typename D, typename R, typename... O>
   bool operator()(const Operation<D, R, O...> &) const {
+    return false;
+  }
+  template <typename T> bool operator()(const ConditionalExpr<T> &) const {
+    // A conditional expression cannot be an initial data target
     return false;
   }
   template <typename T> bool operator()(const Parentheses<T> &x) const {
@@ -458,9 +477,9 @@ public:
   SuspiciousRealLiteralFinder(int kind, FoldingContext &c)
       : Base{*this}, kind_{kind}, context_{c} {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in REAL(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -469,9 +488,9 @@ public:
       return false;
     }
   }
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Complex, KIND>> &x) const {
-    if (kind_ > KIND && x.result().isFromInexactLiteralConversion()) {
+  bool operator()(const Constant<Type<TypeCategory::Complex>> &x) const {
+    const int kind{x.kind()};
+    if (kind_ > kind && x.result().isFromInexactLiteralConversion()) {
       context_.Warn(common::UsageWarning::RealConstantWidening,
           "Default real literal in COMPLEX(%d) context might need a kind suffix, as its rounded value %s is inexact"_warn_en_US,
           kind_, x.AsFortran());
@@ -480,13 +499,14 @@ public:
       return false;
     }
   }
-  template <TypeCategory TOCAT, int TOKIND, TypeCategory FROMCAT>
-  bool operator()(const Convert<Type<TOCAT, TOKIND>, FROMCAT> &x) const {
+  template <TypeCategory TOCAT, TypeCategory FROMCAT>
+  bool operator()(const Convert<Type<TOCAT>, FROMCAT> &x) const {
+    const int toKind{x.kind()};
     if constexpr ((TOCAT == TypeCategory::Real ||
                       TOCAT == TypeCategory::Complex) &&
         (FROMCAT == TypeCategory::Real || FROMCAT == TypeCategory::Complex)) {
       auto fromType{x.left().GetType()};
-      if (!fromType || fromType->kind() < TOKIND) {
+      if (!fromType || fromType->kind() < toKind) {
         return false;
       }
     }
@@ -525,9 +545,8 @@ public:
   using Base = AnyTraverse<InexactLiteralConversionFlagClearer>;
   InexactLiteralConversionFlagClearer() : Base(*this) {}
   using Base::operator();
-  template <int KIND>
-  bool operator()(const Constant<Type<TypeCategory::Real, KIND>> &x) const {
-    auto &mut{const_cast<Type<TypeCategory::Real, KIND> &>(x.result())};
+  bool operator()(const Constant<Type<TypeCategory::Real>> &x) const {
+    auto &mut{const_cast<Type<TypeCategory::Real> &>(x.result())};
     mut.set_isFromInexactLiteralConversion(false);
     return false;
   }
@@ -557,6 +576,7 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
       }
     }
     if (converted) {
+      auto restorer{context.WithConstantContext()};
       auto folded{Fold(context, std::move(*converted))};
       if (IsActuallyConstant(folded)) {
         InexactLiteralConversionFlagClearer{}(folded);
@@ -781,6 +801,10 @@ public:
     }
   }
 
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
+  }
+
   Result operator()(const TypeParamInquiry &inq) const {
     if (scope_.IsDerivedType()) {
       if (!IsConstantExpr(inq, &context_) &&
@@ -985,16 +1009,10 @@ void CheckSpecificationExpr(const A &x, const semantics::Scope &scope,
 template void CheckSpecificationExpr(const Expr<SomeType> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const Expr<SomeInteger> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const Expr<SubscriptInteger> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(const std::optional<Expr<SomeType>> &,
-    const semantics::Scope &, FoldingContext &,
-    bool forElementalFunctionResult);
-template void CheckSpecificationExpr(const std::optional<Expr<SomeInteger>> &,
     const semantics::Scope &, FoldingContext &,
     bool forElementalFunctionResult);
 template void CheckSpecificationExpr(
@@ -1193,6 +1211,12 @@ public:
 
   Result operator()(const NullPointer &) const { return true; }
 
+  template <typename T> Result operator()(const ConditionalExpr<T> &x) {
+    // Conditional expressions are never variables; expression results are
+    // always contiguous.
+    return true;
+  }
+
 private:
   // Returns "true" for a provably empty or simply contiguous array section;
   // return "false" for a provably nonempty discontiguous section or for use
@@ -1349,18 +1373,38 @@ std::optional<bool> IsContiguous(const A &x, FoldingContext &context,
 std::optional<bool> IsContiguous(const ActualArgument &actual,
     FoldingContext &fc, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1) {
-  if (auto *expr{actual.UnwrapExpr()}) {
-    return IsContiguous(
+  std::optional<bool> result;
+  if (const auto *expr{actual.UnwrapExpr()}) {
+    result = IsContiguous(
         *expr, fc, namedConstantSectionsAreContiguous, firstDimensionStride1);
-  } else {
-    return std::nullopt;
+  } else if (const Symbol *assumedType{actual.GetAssumedTypeDummy()}) {
+    result = IsContiguous(*assumedType, fc, namedConstantSectionsAreContiguous,
+        firstDimensionStride1);
+  } else if (const auto *condArg{actual.GetConditionalArg()}) {
+    // Simply contiguous if and only if every consequent-arg is (F2023
+    // 15.5.2.3 p4). Any consequent-arg can be the one chosen at run time, so
+    // the argument is known to be discontiguous only if all of them are.
+    bool allContiguous{true};
+    bool allDiscontiguous{true};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) { // .NIL. designates no object
+            auto contiguous{IsContiguous(cons->value(), fc,
+                namedConstantSectionsAreContiguous, firstDimensionStride1)};
+            allContiguous &= contiguous.value_or(false);
+            allDiscontiguous &= !contiguous.value_or(true);
+          }
+        });
+    if (allContiguous) {
+      result = true;
+    } else if (allDiscontiguous) {
+      result = false;
+    }
   }
+  return result;
 }
 
 template std::optional<bool> IsContiguous(const Expr<SomeType> &,
-    FoldingContext &, bool namedConstantSectionsAreContiguous,
-    bool firstDimensionStride1);
-template std::optional<bool> IsContiguous(const ActualArgument &,
     FoldingContext &, bool namedConstantSectionsAreContiguous,
     bool firstDimensionStride1);
 template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &,
@@ -1551,7 +1595,10 @@ public:
     }
     if (auto actualType{
             characteristics::TypeAndShape::Characterize(actual_, fc_)}) {
-      bool actualIsPolymorphic{actualType->type().IsPolymorphic()};
+      // Characterize() sees only the first consequent-arg.
+      const auto *condArg{actual_.GetConditionalArg()};
+      bool actualIsPolymorphic{condArg ? condArg->IsPolymorphic()
+                                       : actualType->type().IsPolymorphic()};
       bool dummyIsPolymorphic{dummyObj_.type.type().IsPolymorphic()};
       if (actualIsPolymorphic && !dummyIsPolymorphic) {
         return true;
@@ -1571,7 +1618,17 @@ public:
   }
 
   bool HaveCoarrayDifferences() const {
-    return ExtractCoarrayRef(actual_) && dummyObj_.type.corank() == 0;
+    bool isCoindexed{false};
+    if (const auto *condArg{actual_.GetConditionalArg()}) {
+      // ExtractCoarrayRef() finds no data-ref in a conditional argument.
+      condArg->ForEachConsequent(
+          [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+            isCoindexed |= cons && ExtractCoarrayRef(cons->value());
+          });
+    } else {
+      isCoindexed = ExtractCoarrayRef(actual_).has_value();
+    }
+    return isCoindexed && dummyObj_.type.corank() == 0;
   }
 
   bool HasIntentOut() const { return dummyObj_.intent == common::Intent::Out; }
@@ -1609,6 +1666,40 @@ private:
 // perspective, meaning that for copy-in the caller need to do the copy
 // before calling the callee. Similarly, for copy-out the caller is expected
 // to do the copy after the callee returns.
+bool IsNamedConstantDesignator(const Expr<SomeType> &expr) {
+  if (auto dataRef{ExtractDataRef(
+          expr, /*intoSubstring=*/true, /*intoComplexPart=*/true)}) {
+    return semantics::IsNamedConstant(dataRef->GetFirstSymbol().GetUltimate());
+  }
+  return false;
+}
+
+bool AnyNamedConstantActualArguments(const ActualArguments &arguments) {
+  for (const auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+void FoldNamedConstantActualArguments(
+    FoldingContext &context, ActualArguments &arguments) {
+  for (auto &arg : arguments) {
+    if (arg && !arg->isAlternateReturn()) {
+      if (Expr<SomeType> * expr{arg->UnwrapExpr()}) {
+        if (IsNamedConstantDesignator(*expr)) {
+          *expr = Fold(context, std::move(*expr));
+        }
+      }
+    }
+  }
+}
+
 std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
     const characteristics::DummyArgument *dummy, FoldingContext &fc,
     bool forCopyOut) {
@@ -1622,11 +1713,69 @@ std::optional<bool> ActualArgNeedsCopy(const ActualArgument *actual,
           ? std::get_if<characteristics::DummyDataObject>(&dummy->u)
           : nullptr};
   const bool forCopyIn{!forCopyOut};
-  if (!evaluate::IsVariable(*actual)) {
-    // Expressions are copy-in, but not copy-out.
-    return forCopyIn;
+  if (const auto *condArg{actual->GetConditionalArg()}) {
+    // The actual argument is the consequent-arg chosen at run time (F2023
+    // 15.5.2.3 p2), so apply the rules for a plain actual argument to each
+    // one. IsVariable() of the whole argument would look at the condition.
+    // Keep the answer for the whole argument at least as conservative as the
+    // answer for each consequent-arg: CheckExplicitDataArg() asks about a
+    // consequent-arg only when the whole argument needs copy-out.
+    bool anyVariable{false};
+    bool anyOtherExpr{false};
+    condArg->ForEachConsequent(
+        [&](const ActualArgument::ConditionalArg::Consequent &cons) {
+          if (cons) {
+            const Expr<SomeType> &expr{cons->value()};
+            if (evaluate::IsVariable(expr)) {
+              anyVariable = true;
+            } else if (!IsNamedConstantDesignator(expr)) {
+              anyOtherExpr = true;
+            }
+          }
+        });
+    if (forCopyIn && anyOtherExpr) {
+      return true;
+    }
+    if (forCopyOut && !anyVariable) {
+      return false;
+    }
+  } else if (!evaluate::IsVariable(*actual)) {
+    // A designator whose base object is a named constant is not a variable,
+    // but it still designates an object with storage.  It never needs
+    // copy-out, since a named constant is not definable; whether it needs
+    // copy-in depends on its contiguity, like a variable, so fall through
+    // to the analysis below.  Other expressions are copy-in, but not
+    // copy-out.
+    const Expr<SomeType> *expr{actual->UnwrapExpr()};
+    if (!expr || !IsNamedConstantDesignator(*expr)) {
+      return forCopyIn;
+    }
+    if (forCopyOut) {
+      return false;
+    }
   }
-  auto maybeContigActual{IsContiguous(*actual, fc)};
+  if (forCopyOut) {
+    // F2023 8.5.10 C846/p2/p6: a nonpointer INTENT(IN) dummy and its
+    // subobjects may not be defined. Suppress copy-out when the actual
+    // argument is a subobject of a nonpointer INTENT(IN) dummy.
+    // Exception: a data-ref that goes through a pointer component defines the
+    // pointer's target, which is not a subobject of the dummy (F2023 9.4.2
+    // p5), so copy-out is still needed in that case.
+    // TODO: Check each consequent-arg of a conditional argument the same way.
+    // It affects only lowering, which can't handle conditional arguments yet.
+    if (const auto dataRef{ExtractDataRef(*actual)}) {
+      const Symbol &firstSym{dataRef->GetFirstSymbol()};
+      if (semantics::IsIntentIn(firstSym) && !IsPointer(firstSym) &&
+          !GetLastPointerSymbol(*dataRef)) {
+        return false;
+      }
+    }
+  }
+  // Copy decisions depend on the actual argument's physical contiguity,
+  // so do not let sections of named constants be presumed contiguous here
+  // (they are for IS_CONTIGUOUS(), but their storage is what it is).
+  auto maybeContigActual{
+      IsContiguous(*actual, fc, /*namedConstantSectionsAreContiguous=*/false)};
   if (dummyObj) { // Explict interface
     CopyInOutExplicitInterface check{fc, *actual, *dummyObj};
     if (forCopyOut && check.HasIntentIn()) {
@@ -1758,6 +1907,15 @@ public:
   }
   Result operator()(const DescriptorInquiry &) const {
     return {}; // doesn't count as a use
+  }
+  Result operator()(const RankOneBoundElement &x) const {
+    return (*this)(x.base());
+  }
+
+  template <typename T> Result operator()(const ConditionalExpr<T> &condExpr) {
+    auto restorer{common::ScopedSet(isDefinition_, false)};
+    return Combine((*this)(condExpr.condition()),
+        Combine((*this)(condExpr.thenValue()), (*this)(condExpr.elseValue())));
   }
 
 private:

@@ -1,7 +1,7 @@
 @LIT_SITE_CFG_IN_HEADER@
 
 config.cpp_compiler = "@LIBFUZZER_TEST_COMPILER@"
-config.target_flags = "@LIBFUZZER_TEST_FLAGS@"
+config.target_cflags = "@LIBFUZZER_TEST_FLAGS@"
 config.c_compiler = "@LIBFUZZER_TEST_COMPILER@"
 config.stdlib = "@LIBFUZZER_TEST_STDLIB@"
 config.apple_platform = "@LIBFUZZER_TEST_APPLE_PLATFORM@"

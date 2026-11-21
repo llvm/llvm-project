@@ -32,6 +32,11 @@ SCUDO_FLAG(bool, delete_size_mismatch, true,
            "Terminate on a size mismatch between a sized-delete and the actual "
            "size of a chunk (as provided to new/new[]).")
 
+SCUDO_FLAG(
+    bool, dealloc_align_mismatch, true,
+    "Terminate on an alignment mismatch in allocation-deallocation functions, "
+    "eg: memalign/free_aligned_sized, etc.")
+
 #if SCUDO_FUCHSIA
 SCUDO_FLAG(int, zero_on_dealloc_max_size, 0,
            "Only chunks smaller or equal to this threshold will be zeroed on "

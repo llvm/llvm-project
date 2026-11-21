@@ -2,8 +2,10 @@ set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   Analysis
   BinaryFormat
+  BitReader
   BitWriter
   Core
+  FrontendOffloading
   IRReader
   Linker
   MC
@@ -12,10 +14,11 @@ set(LLVM_LINK_COMPONENTS
   Support
   Target
   TargetParser
+  TransformUtils
   )
 
 set(LLVM_TARGET_DEFINITIONS SYCLLinkOpts.td)
-tablegen(LLVM SYCLLinkOpts.inc -gen-opt-parser-defs)
+llvm_tablegen(SYCLLinkOpts.inc -gen-opt-parser-defs)
 add_public_tablegen_target(SYCLLinkerOpts)
 
 if(NOT CLANG_BUILT_STANDALONE)

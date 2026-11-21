@@ -1,5 +1,5 @@
-// xUN: %clang_cc1 -fsyntax-only -triple amdgcn-- -target-cpu gfx1100 -verify=ALL,GFX11 %s
-// RUN: %clang_cc1 -fsyntax-only -triple amdgcn-- -target-cpu gfx1200 -verify=ALL,GFX12 %s
+// xUN: %clang_cc1 -fsyntax-only -triple amdgpu11.00-- -verify=ALL,GFX11 %s
+// RUN: %clang_cc1 -fsyntax-only -triple amdgpu12.00-- -verify=ALL,GFX12 %s
 
 void test(int x) {
   // ALL-error@+1 {{argument to '__builtin_amdgcn_s_wait_event' must be a constant integer}}

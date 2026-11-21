@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H
 
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
@@ -76,7 +80,7 @@ LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
 
     // Perform rounding correction.
     float sum_sq_lo = fputil::multiply_add(bf, bf, a_sq - sum_sq);
-    float err = sum_sq_lo - fputil::multiply_add(r_d, r_d, -sum_sq);
+    float err = sum_sq_lo - fputil::multiply_sub(r_d, r_d, sum_sq);
 
     if (err > 0) {
       r_u |= 1;
@@ -95,5 +99,7 @@ LIBC_INLINE float16 hypotf16(float16 x, float16 y) {
 } // namespace math
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTF16_H

@@ -320,12 +320,17 @@ def GPRwithZRnosp : RegisterClass<"ARM", [i32], 32, (sub GPRwithZR, SP)> {
 // instructions to not have SP an an explicit argument. That makes
 // frame index resolution a bit trickier, though.
 def GPRsp : RegisterClass<"ARM", [i32], 32, (add SP)> {
+  let isAllocatable = 0;
   let DiagnosticString = "operand must be a register sp";
 }
 
 // GPRlr - Only LR is legal. Used by ARMv8.1-M Low Overhead Loop instructions
 // where LR is the only legal loop counter register.
 def GPRlr : RegisterClass<"ARM", [i32], 32, (add LR)>;
+
+def GPRip : RegisterClass<"ARM", [i32], 32, (add R12)> {
+  let isAllocatable = 0;
+}
 
 // restricted GPR register class. Many Thumb2 instructions allow the full
 // register range for operands, but have undefined behaviours when PC
@@ -366,8 +371,9 @@ def hGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, tGPR)> {
   let DiagnosticString = "operand must be a register in range [r8, r15]";
 }
 
-// For tail calls, we can't use callee-saved registers, as they are restored
-// to the saved value before the tail call, which would clobber a call address.
+// For tail calls, we can't use callee-saved registers. When the frame
+// is destroyed before the tail call, callee-saved registers are restored
+// to the caller's values, clobbering any call address stored in them.
 // Note, getMinimalPhysRegClass(R0) returns tGPR because of the names of
 // this class and the preceding one(!)  This is what we want.
 def tcGPR : RegisterClass<"ARM", [i32], 32, (add R0, R1, R2, R3, R12)> {

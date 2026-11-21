@@ -1,5 +1,4 @@
-; RUN: llc -mcpu=gfx942 < %s | FileCheck %s
-target triple = "amdgcn-amd-amdhsa"
+; RUN: llc -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck %s
 
 define protected amdgpu_kernel void @test_valu(ptr addrspace(1) noalias noundef writeonly captures(none) %to.coerce, ptr addrspace(1) noalias noundef readonly captures(none) %from.coerce, i32 noundef %k, ptr addrspace(1) noundef writeonly captures(none) %ret.coerce, i32 noundef %length) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_valu
@@ -69,7 +68,7 @@ if.then:                                          ; preds = %entry
   %add7 = fadd contract float %a6, %a7
   %add8 = fadd contract float %a5, %add7
   store float %add8, ptr addrspace(1) %add.ptr, align 4
-  %mul9 = tail call noundef i32 asm "s_mul_i32, $0, $1, 3", "=s,s"(i32 %k) #3
+  %mul9 = tail call noundef i32 asm "s_mul_i32 $0, $1, 3", "=s,s"(i32 %k) #3
   store i32 %mul9, ptr addrspace(1) %ret.coerce, align 4
   tail call void @llvm.amdgcn.sched.group.barrier(i32 4, i32 1, i32 0)
   tail call void @llvm.amdgcn.sched.group.barrier(i32 2, i32 10, i32 0)
@@ -106,7 +105,8 @@ if.then:                                          ; preds = %entry
   %a22 = load <2 x float>, ptr addrspace(1) %a21, align 16
   %a3 = extractelement <2 x float> %a22, i64 1
   %a4 = extractelement <2 x float> %a2, i64 0
-  %a5 = tail call contract noundef float asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %a2, <2 x float> %a22) #3
+  %a5.v = tail call contract noundef <2 x float> asm "v_mfma_f64_4x4x4f64 $0, $1, $2, 0", "=a,v,v"(<2 x float> %a2, <2 x float> %a22) #3
+  %a5 = extractelement <2 x float> %a5.v, i64 0
   %a6 = extractelement <2 x float> %a2, i64 1
   %a7 = extractelement <2 x float> %a22, i64 0
   %add6 = fadd contract float %a6, %a7
@@ -172,7 +172,7 @@ declare noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x() #1
 
 declare void @llvm.amdgcn.sched.group.barrier(i32 immarg, i32 immarg, i32 immarg) #2
 
-attributes #0 = { convergent mustprogress norecurse nounwind "amdgpu-agpr-alloc"="1" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,8" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx942" "target-features"="+16-bit-insts,+atomic-buffer-global-pk-add-f16-insts,+atomic-ds-pk-add-16-insts,+atomic-fadd-rtn-insts,+atomic-flat-pk-add-16-insts,+atomic-fmin-fmax-global-f64,+atomic-global-pk-add-bf16-inst,+ci-insts,+dl-insts,+dot1-insts,+dot10-insts,+dot2-insts,+dot3-insts,+dot4-insts,+dot5-insts,+dot6-insts,+dot7-insts,+dpp,+fp8-conversion-insts,+fp8-insts,+gfx8-insts,+gfx9-insts,+gfx90a-insts,+gfx940-insts,+mai-insts,+s-memrealtime,+s-memtime-inst,+wavefrontsize64,+xf32-insts" "uniform-work-group-size" }
+attributes #0 = { convergent mustprogress norecurse nounwind "amdgpu-agpr-alloc"="1" "amdgpu-flat-work-group-size"="1,1024" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "amdgpu-waves-per-eu"="4,8" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size" }
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 attributes #2 = { convergent nocallback nofree nounwind willreturn }
 attributes #3 = { convergent nounwind memory(none) }

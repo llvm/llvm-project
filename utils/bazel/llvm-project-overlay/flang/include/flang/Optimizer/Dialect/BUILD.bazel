@@ -1,0 +1,200 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//mlir:tblgen.bzl", "gentbl_cc_library", "td_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+cc_library(
+    name = "DialectHeaders",
+    hdrs = glob(["*.h"]),
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":CUDAKernelOpInterfaceIncGen",
+        ":CanonicalizationPatternsIncGen",
+        ":FIRAttrIncGen",
+        ":FIRDialectIncGen",
+        ":FIROperationMoveOpInterfaceIncGen",
+        ":FIROpsIncGen",
+        ":FIRSafeTempArrayCopyAttrInterfaceIncGen",
+        ":FirAliasTagOpInterfaceIncGen",
+        ":FortranVariableInterfaceIncGen",
+        "//flang:CommonHeaders",
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsHeaders",
+        "//mlir:IR",
+        "//mlir:OpenACCDialect",
+        "//mlir:Support",
+    ],
+)
+
+cc_library(
+    name = "FIRDialectSupportHeaders",
+    hdrs = glob(["Support/*.h"]),
+    strip_include_prefix = "/flang/include",
+    deps = [
+        ":DialectHeaders",
+        "//flang:CommonHeaders",
+        "//mlir:IR",
+    ],
+)
+
+# Shared td_library bundling all FIR dialect .td files and their flang/mlir
+# include dependencies. Downstream gentbl_cc_library targets in this package
+# (and in sibling packages such as HLFIR and CUF) depend on this.
+td_library(
+    name = "FIRDialectTdFiles",
+    srcs = [
+        "CUDAKernelOpInterface.td",
+        "CanonicalizationPatterns.td",
+        "FIRAttr.td",
+        "FIRDialect.td",
+        "FIROperationMoveOpInterface.td",
+        "FIROps.td",
+        "FIRTypes.td",
+        "FirAliasTagOpInterface.td",
+        "FortranVariableInterface.td",
+        "SafeTempArrayCopyAttrInterface.td",
+    ],
+    includes = ["/flang/include"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect/CUF/Attributes:CUFAttrsTdFiles",
+        "//mlir:ArithOpsTdFiles",
+        "//mlir:BuiltinDialectTdFiles",
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:ControlFlowInterfacesTdFiles",
+        "//mlir:InferTypeOpInterfaceTdFiles",
+        "//mlir:LLVMOpsTdFiles",
+        "//mlir:LoopLikeInterfaceTdFiles",
+        "//mlir:MemorySlotInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:OpenAccOpsTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:ViewLikeInterfaceTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "FIRDialectIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FIRDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=fir",
+        ],
+        "FIRDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=fir",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FIRDialect.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FIRAttrIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FIRAttr.cpp.inc": ["-gen-attrdef-defs"],
+        "FIRAttr.h.inc": ["-gen-attrdef-decls"],
+        "FIREnumAttr.cpp.inc": ["-gen-enum-defs"],
+        "FIREnumAttr.h.inc": ["-gen-enum-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FIRAttr.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FIROpsIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FIROps.cpp.inc": ["-gen-op-defs"],
+        "FIROps.h.inc": ["-gen-op-decls"],
+        "FIROpsTypes.cpp.inc": ["-gen-typedef-defs"],
+        "FIROpsTypes.h.inc": ["-gen-typedef-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FIROps.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FortranVariableInterfaceIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FortranVariableInterface.cpp.inc": ["-gen-op-interface-defs"],
+        "FortranVariableInterface.h.inc": ["-gen-op-interface-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FortranVariableInterface.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FirAliasTagOpInterfaceIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FirAliasTagOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+        "FirAliasTagOpInterface.h.inc": ["-gen-op-interface-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FirAliasTagOpInterface.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FIRSafeTempArrayCopyAttrInterfaceIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "SafeTempArrayCopyAttrInterface.cpp.inc": ["-gen-attr-interface-defs"],
+        "SafeTempArrayCopyAttrInterface.h.inc": ["-gen-attr-interface-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "SafeTempArrayCopyAttrInterface.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FIROperationMoveOpInterfaceIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FIROperationMoveOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+        "FIROperationMoveOpInterface.h.inc": ["-gen-op-interface-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "FIROperationMoveOpInterface.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "CUDAKernelOpInterfaceIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "CUDAKernelOpInterface.cpp.inc": ["-gen-op-interface-defs"],
+        "CUDAKernelOpInterface.h.inc": ["-gen-op-interface-decls"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "CUDAKernelOpInterface.td",
+    deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "CanonicalizationPatternsIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "CanonicalizationPatterns.inc": ["-gen-rewriters"],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "CanonicalizationPatterns.td",
+    deps = [":FIRDialectTdFiles"],
+)

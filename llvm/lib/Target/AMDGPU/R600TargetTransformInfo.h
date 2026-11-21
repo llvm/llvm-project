@@ -57,7 +57,8 @@ public:
                                    unsigned AddrSpace) const override;
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const override;
-  unsigned getMaxInterleaveFactor(ElementCount VF) const override;
+  unsigned getMaxInterleaveFactor(ElementCount VF,
+                                  bool HasUnorderedReductions) const override;
   InstructionCost getCFInstrCost(unsigned Opcode, TTI::TargetCostKind CostKind,
                                  const Instruction *I = nullptr) const override;
   using BaseT::getVectorInstrCost;
@@ -66,6 +67,15 @@ public:
                      unsigned Index, const Value *Op0, const Value *Op1,
                      TTI::VectorInstrContext VIC =
                          TTI::VectorInstrContext::None) const override;
+
+  InstructionCost getPartialReductionCost(
+      unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
+      ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
+      TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
+      TTI::TargetCostKind CostKind,
+      std::optional<FastMathFlags> FMF) const override {
+    return InstructionCost::getInvalid();
+  }
 };
 
 } // end namespace llvm

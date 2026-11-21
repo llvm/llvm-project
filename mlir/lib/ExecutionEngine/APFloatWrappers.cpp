@@ -163,6 +163,17 @@ MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t _mlir_apfloat_abs(int32_t semantics,
   return abs(x).bitcastToAPInt().getZExtValue();
 }
 
+MLIR_APFLOAT_WRAPPERS_EXPORT uint64_t
+_mlir_apfloat_flush_denormals(int32_t semantics, uint64_t a) {
+  const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(
+      static_cast<llvm::APFloatBase::Semantics>(semantics));
+  unsigned bitWidth = llvm::APFloatBase::semanticsSizeInBits(sem);
+  llvm::APFloat x(sem, llvm::APInt(bitWidth, a));
+  if (x.isDenormal())
+    x = llvm::APFloat::getZero(sem, x.isNegative());
+  return x.bitcastToAPInt().getZExtValue();
+}
+
 MLIR_APFLOAT_WRAPPERS_EXPORT bool _mlir_apfloat_isfinite(int32_t semantics,
                                                          uint64_t a) {
   const llvm::fltSemantics &sem = llvm::APFloatBase::EnumToSemantics(

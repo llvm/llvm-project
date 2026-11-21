@@ -25,15 +25,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    EnableR600StructurizeCFG("r600-ir-structurize",
-                             cl::desc("Use StructurizeCFG IR pass"),
-                             cl::init(true));
-
-static cl::opt<bool> EnableR600IfConvert("r600-if-convert",
-                                         cl::desc("Use if conversion pass"),
-                                         cl::ReallyHidden, cl::init(true));
-
 static cl::opt<bool, true> EnableAMDGPUFunctionCallsOpt(
     "amdgpu-function-calls", cl::desc("Enable AMDGPU function call support"),
     cl::location(AMDGPUTargetMachine::EnableFunctionCalls), cl::init(true),
@@ -51,20 +42,17 @@ static MachineSchedRegistry R600SchedRegistry("r600",
 // R600 CodeGen Pass Builder interface.
 //===----------------------------------------------------------------------===//
 
-class R600CodeGenPassBuilder
-    : public CodeGenPassBuilder<R600CodeGenPassBuilder, R600TargetMachine> {
+class R600CodeGenPassBuilder : public CodeGenPassBuilder {
 public:
   R600CodeGenPassBuilder(R600TargetMachine &TM, const CGPassBuilderOption &Opts,
                          PassInstrumentationCallbacks *PIC);
 
-  void addPreISel(PassManagerWrapper &PMW) const;
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const;
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const;
-  Error addInstSelector(PassManagerWrapper &PMW) const;
+protected:
+  void addPreISel(PassManagerWrapper &PMW) override;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
+  void addAsmPrinter(PassManagerWrapper &PMW) override;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
+  Error addInstSelector(PassManagerWrapper &PMW) override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -88,21 +76,31 @@ R600TargetMachine::R600TargetMachine(const Target &T, const Triple &TT,
 
 const TargetSubtargetInfo *
 R600TargetMachine::getSubtargetImpl(const Function &F) const {
-  StringRef GPU = getGPUName(F);
-  StringRef FS = getFeatureString(F);
+  AttributeSet FnAttrs = F.getAttributes().getFnAttrs();
+  const Module *M = F.getParent();
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M))
+    return ST;
+
+  SubtargetAttrs Attrs;
+  Attrs.GPU = FnAttrs.getAttribute("target-cpu");
+  Attrs.FS = FnAttrs.getAttribute("target-features");
+
+  if (const R600Subtarget *ST = LastSubtarget.lookup(FnAttrs, M, Attrs))
+    return ST;
+
+  StringRef GPU =
+      Attrs.GPU.isValid() ? Attrs.GPU.getValueAsString() : getTargetCPU();
+  StringRef FS = Attrs.FS.isValid() ? Attrs.FS.getValueAsString()
+                                    : getTargetFeatureString();
 
   SmallString<128> SubtargetKey(GPU);
   SubtargetKey.append(FS);
 
   auto &I = SubtargetMap[SubtargetKey];
-  if (!I) {
-    // This needs to be done before we create a new subtarget since any
-    // creation will depend on the TM and the code generation flags on the
-    // function that reside in TargetOptions.
-    resetTargetOptions(F);
+  if (!I)
     I = std::make_unique<R600Subtarget>(TargetTriple, GPU, FS, *this);
-  }
 
+  LastSubtarget.set(FnAttrs, M, Attrs, I.get());
   return I.get();
 }
 
@@ -137,7 +135,7 @@ public:
 bool R600PassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
-  if (EnableR600StructurizeCFG)
+  if (CLOpts.r600_ir_structurize)
     addPass(createStructurizeCFGPass());
   return false;
 }
@@ -151,7 +149,7 @@ void R600PassConfig::addPreRegAlloc() { addPass(createR600VectorRegMerger()); }
 
 void R600PassConfig::addPreSched2() {
   addPass(createR600EmitClauseMarkers());
-  if (EnableR600IfConvert)
+  if (CLOpts.r600_if_convert)
     addPass(&IfConverterID);
   addPass(createR600ClauseMergePass());
 }
@@ -168,11 +166,12 @@ TargetPassConfig *R600TargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 Error R600TargetMachine::buildCodeGenPipeline(
-    ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts, MCContext &Ctx,
+    ModulePassManager &MPM, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
+    const CGPassBuilderOption &Opts, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   R600CodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
+  return CGPB.buildPipeline(MPM, MAM, Out, DwoOut, FileType, Ctx);
 }
 
 MachineFunctionInfo *R600TargetMachine::createMachineFunctionInfo(
@@ -193,26 +192,23 @@ R600CodeGenPassBuilder::R600CodeGenPassBuilder(
   Opt.RequiresCodeGenSCCOrder = true;
 }
 
-void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
+void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
   // TODO: Add passes pre instruction selection.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterBegin(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
   // TODO: Add AsmPrinterBegin
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
   // TODO: Add AsmPrinter.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinterEnd(
-    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   // TODO: Add AsmPrinterEnd
 }
 
-Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
+Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) {
   // TODO: Add instruction selector.
   return Error::success();
 }

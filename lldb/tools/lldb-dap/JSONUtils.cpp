@@ -9,6 +9,7 @@
 #include "JSONUtils.h"
 #include "DAP.h"
 #include "ExceptionBreakpoint.h"
+#include "LLDBUtils.h"
 #include "Protocol/ProtocolBase.h"
 #include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBAddress.h"
@@ -16,12 +17,14 @@
 #include "lldb/API/SBError.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBStatisticsOptions.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBType.h"
+#include "lldb/API/SBTypeSummary.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Host/PosixApi.h" // IWYU pragma: keep
 #include "lldb/lldb-defines.h"
@@ -244,7 +247,7 @@ llvm::json::Object CreateEventObject(const llvm::StringRef event_name) {
 
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &v) {
   const llvm::StringRef name = v.GetName();
-  return !name.empty() ? name : "<null>";
+  return !name.empty() ? name : "(anonymous)";
 }
 
 std::string CreateUniqueVariableNameForDisplay(lldb::SBValue &v,
@@ -274,7 +277,7 @@ VariableDescription::VariableDescription(
 
   type_obj = val.GetType();
   const llvm::StringRef type_name = type_obj.GetDisplayTypeName();
-  display_type_name = type_name.empty() ? NO_TYPENAME : type_name;
+  display_type_name = type_name;
 
   // Only format hex/default if there is no existing special format.
   if (const lldb::Format current_format = val.GetFormat();
@@ -298,22 +301,36 @@ VariableDescription::VariableDescription(
     llvm::StringRef display_summary = auto_summary ? *auto_summary : summary;
     const bool has_summary = !display_summary.empty();
 
-    if (!value.empty()) {
+    // Respect the type summary options.
+    const bool print_value = [&] {
+      if (value.empty())
+        return false;
+      if (summary.empty())
+        return true;
+
+      lldb::SBTypeSummary type_summary = val.GetTypeSummary();
+      return !type_summary.IsValid() || type_summary.DoesPrintValue(val);
+    }();
+
+    if (print_value) {
       os_display_value << value;
       if (has_summary)
         os_display_value << " " << display_summary;
     } else if (has_summary) {
       os_display_value << display_summary;
-
-    } else if (!type_name.empty()) {
-      // As last resort, we print its type if available.
-      os_display_value << type_name;
     }
   }
 
-  lldb::SBStream evaluateStream;
-  val.GetExpressionPath(evaluateStream);
-  evaluate_name = llvm::StringRef(evaluateStream.GetData()).str();
+  // Only include the evaluation name if the name is not empty. If the name is
+  // empty then 'GetExpressionPath' will return an empty string like 'foo.',
+  // which does not actually work in expression evaluation.
+  if (!llvm::StringRef{val.GetName()}.empty()) {
+    lldb::SBStream evaluateStream;
+    val.GetExpressionPath(evaluateStream);
+    evaluate_name =
+        llvm::StringRef{evaluateStream.GetData(), evaluateStream.GetSize()}
+            .str();
+  }
 }
 
 std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
@@ -338,22 +355,17 @@ std::string VariableDescription::GetResult(protocol::EvaluateContext context) {
 }
 
 bool ValuePointsToCode(lldb::SBValue v) {
-  if (!v.GetType().GetPointeeType().IsFunctionType())
+  lldb::SBType type = v.GetType();
+  if (!type.GetPointeeType().IsFunctionType())
     return false;
 
-  lldb::addr_t addr = v.GetValueAsAddress();
+  lldb::SBError error;
+  lldb::addr_t addr = v.GetData().GetAddress(error, 0);
+  addr = v.GetProcess().FixAddress(addr);
   lldb::SBLineEntry line_entry =
       v.GetTarget().ResolveLoadAddress(addr).GetLineEntry();
 
   return line_entry.IsValid();
-}
-
-int64_t PackLocation(int64_t var_ref, bool is_value_location) {
-  return var_ref << 1 | is_value_location;
-}
-
-std::pair<int64_t, bool> UnpackLocation(int64_t location_id) {
-  return std::pair{location_id >> 1, location_id & 1};
 }
 
 /// See
@@ -374,7 +386,8 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   }
   // The program path must be the first entry in the "args" field
   std::vector<std::string> req_args = {DAP::debug_adapter_path.str(),
-                                       "--comm-file", comm_file.str()};
+                                       "--launch-target", "--comm-file",
+                                       comm_file.str()};
   if (debugger_pid != LLDB_INVALID_PROCESS_ID) {
     req_args.push_back("--debugger-pid");
     req_args.push_back(std::to_string(debugger_pid));
@@ -386,22 +399,24 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
     std::stringstream ss;
     std::string_view delimiter;
     for (const std::optional<protocol::String> &file : stdio) {
+#ifdef _WIN32
+      ss << std::exchange(delimiter, ";");
+#else
       ss << std::exchange(delimiter, ":");
+#endif
       if (file)
         ss << file->str();
     }
     req_args.push_back(ss.str());
   }
 
-  // WARNING: Any argument added after `launch-target` is passed to to the
-  // target.
-  req_args.emplace_back("--launch-target");
+  // Place the target and its arguments after `--`.
+  req_args.emplace_back("--");
   req_args.push_back(program.str());
   req_args.insert(req_args.end(), args.begin(), args.end());
   run_in_terminal_args.try_emplace("args", req_args);
 
-  if (!cwd.empty())
-    run_in_terminal_args.try_emplace("cwd", cwd);
+  run_in_terminal_args.try_emplace("cwd", cwd);
 
   if (!env.empty()) {
     llvm::json::Object env_json;
@@ -416,24 +431,21 @@ llvm::json::Object CreateRunInTerminalReverseRequest(
   return run_in_terminal_args;
 }
 
-// Keep all the top level items from the statistics dump, except for the
-// "modules" array. It can be huge and cause delay
+// Copy a top level item from the statistics dump into `out`.
 // Array and dictionary value will return as <key, JSON string> pairs
-static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
+static void GetStatisticValueForKey(const lldb::SBStructuredData data,
                                     const char *key, llvm::json::Object &out) {
   lldb::SBStructuredData value = data.GetValueForKey(key);
   std::string key_utf8 = llvm::json::fixUTF8(key);
-  if (llvm::StringRef(key) == "modules")
-    return;
   switch (value.GetType()) {
   case lldb::eStructuredDataTypeFloat:
     out.try_emplace(key_utf8, value.GetFloatValue());
     break;
   case lldb::eStructuredDataTypeUnsignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((uint64_t)0));
+    out.try_emplace(key_utf8, value.GetUnsignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeSignedInteger:
-    out.try_emplace(key_utf8, value.GetIntegerValue((int64_t)0));
+    out.try_emplace(key_utf8, value.GetSignedIntegerValue());
     break;
   case lldb::eStructuredDataTypeArray: {
     lldb::SBStream contents;
@@ -443,13 +455,9 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
   case lldb::eStructuredDataTypeBoolean:
     out.try_emplace(key_utf8, value.GetBooleanValue());
     break;
-  case lldb::eStructuredDataTypeString: {
-    // Get the string size before reading
-    const size_t str_length = value.GetStringValue(nullptr, 0);
-    std::string str(str_length + 1, 0);
-    value.GetStringValue(&str[0], str_length);
-    out.try_emplace(key_utf8, llvm::json::fixUTF8(str));
-  } break;
+  case lldb::eStructuredDataTypeString:
+    out.try_emplace(key_utf8, llvm::json::fixUTF8(GetStringValue(value)));
+    break;
   case lldb::eStructuredDataTypeDictionary: {
     lldb::SBStream contents;
     value.GetAsJSON(contents);
@@ -463,7 +471,10 @@ static void FilterAndGetValueForKey(const lldb::SBStructuredData data,
 }
 
 static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
-  lldb::SBStructuredData statistics = target.GetStatistics();
+  // Skip the module statistics. They can be huge and cause delay.
+  lldb::SBStatisticsOptions options;
+  options.SetIncludeModules(false);
+  lldb::SBStructuredData statistics = target.GetStatistics(options);
   bool is_dictionary =
       statistics.GetType() == lldb::eStructuredDataTypeDictionary;
   if (!is_dictionary)
@@ -475,7 +486,7 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
     return;
   for (size_t i = 0; i < keys.GetSize(); i++) {
     const char *key = keys.GetStringAtIndex(i);
-    FilterAndGetValueForKey(statistics, key, stats_body);
+    GetStatisticValueForKey(statistics, key, stats_body);
   }
   llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
   event.try_emplace("body", std::move(body));

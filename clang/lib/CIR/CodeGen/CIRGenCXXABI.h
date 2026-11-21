@@ -31,6 +31,10 @@ protected:
 
   virtual bool requiresArrayCookie(const CXXNewExpr *e);
 
+  virtual bool constructorsAndDestructorsReturnThis() const {
+    return cgm.getCodeGenOpts().CtorDtorReturnThis;
+  }
+
 public:
   // TODO(cir): make this protected when target-specific CIRGenCXXABIs are
   // implemented.
@@ -133,10 +137,6 @@ public:
   virtual bool canSpeculativelyEmitVTable(const CXXRecordDecl *RD) const = 0;
 
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
-
-  virtual void emitBeginCatch(CIRGenFunction &cgf,
-                              const CXXCatchStmt *catchStmt,
-                              mlir::Value ehToken) = 0;
 
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;
@@ -293,6 +293,12 @@ public:
   getVTableAddressPoint(BaseSubobject base,
                         const CXXRecordDecl *vtableClass) = 0;
 
+  /// Get the address point of the vtable for the given base subobject as a
+  /// constant suitable for a global initializer.
+  virtual cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) = 0;
+
   /// Get the address point of the vtable for the given base subobject while
   /// building a constructor or a destructor.
   virtual mlir::Value getVTableAddressPointInStructor(
@@ -323,7 +329,13 @@ public:
   ///
   /// There currently is no way to indicate if a destructor returns 'this' when
   /// called virtually, and CIR generation does not support this case.
-  virtual bool hasThisReturn(clang::GlobalDecl gd) const { return false; }
+  virtual bool hasThisReturn(clang::GlobalDecl gd) const {
+    if (isa<CXXConstructorDecl>(gd.getDecl()) ||
+        (isa<CXXDestructorDecl>(gd.getDecl()) &&
+         gd.getDtorType() != Dtor_Deleting))
+      return constructorsAndDestructorsReturnThis();
+    return false;
+  }
 
   virtual bool hasMostDerivedReturn(clang::GlobalDecl gd) const {
     return false;
@@ -381,6 +393,10 @@ public:
                                         const CXXNewExpr *e,
                                         QualType elementType) = 0;
 
+  /// Return true if the given member pointer can be zero-initialized
+  /// (in the C++ sense).
+  virtual bool isZeroInitializable(const MemberPointerType *mpt) = 0;
+
 protected:
   /// Returns the extra size required in order to store the array
   /// cookie for the given type.  Assumes that an array cookie is
@@ -390,6 +406,9 @@ protected:
 
 /// Creates and Itanium-family ABI
 CIRGenCXXABI *CreateCIRGenItaniumCXXABI(CIRGenModule &cgm);
+
+/// Creates Microsoft ABI
+CIRGenCXXABI *CreateCIRGenMicrosoftCXXABI(CIRGenModule &cgm);
 
 } // namespace clang::CIRGen
 

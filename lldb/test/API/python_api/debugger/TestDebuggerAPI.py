@@ -4,6 +4,7 @@ Test Debugger APIs.
 
 import lldb
 
+from lldbsuite.test import lldbplatform
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -41,6 +42,25 @@ class DebuggerAPITestCase(TestBase):
         self.assertFalse(target.IsValid())
         self.dbg.DeleteTarget(target)
 
+    def test_terminal_dimensions(self):
+        """Test the SBDebugger terminal width/height accessors and the combined
+        SetTerminalDimensions() setter."""
+        # SetTerminalDimensions updates both axes at once.
+        self.dbg.SetTerminalDimensions(143, 47)
+        self.assertEqual(self.dbg.GetTerminalWidth(), 143)
+        # Regression test: GetTerminalHeight() used to return the width.
+        self.assertEqual(self.dbg.GetTerminalHeight(), 47)
+
+        # The single-axis setters change only their own dimension and leave the
+        # other one intact (they are implemented in terms of the combined call).
+        self.dbg.SetTerminalWidth(99)
+        self.assertEqual(self.dbg.GetTerminalWidth(), 99)
+        self.assertEqual(self.dbg.GetTerminalHeight(), 47)
+
+        self.dbg.SetTerminalHeight(31)
+        self.assertEqual(self.dbg.GetTerminalWidth(), 99)
+        self.assertEqual(self.dbg.GetTerminalHeight(), 31)
+
     def test_debugger_internal_variables(self):
         """Ensure that SBDebugger reachs the same instance of properties
         regardless CommandInterpreter's context initialization"""
@@ -75,7 +95,7 @@ class DebuggerAPITestCase(TestBase):
         launch_info = lldb.SBLaunchInfo(None)
         launch_info.SetLaunchFlags(lldb.eLaunchFlagStopAtEntry)
         process = target.Launch(launch_info, error)
-        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertSuccess(error)
 
         # This should change the value of a process's local property.
         new_cache_line_size = global_cache_line_size + 512
@@ -94,6 +114,7 @@ class DebuggerAPITestCase(TestBase):
         self.assertEqual(get_cache_line_size(), new_cache_line_size)
 
     @expectedFailureAll(
+        oslist=no_match(lldbplatform.translate(lldbplatform.darwin_all)),
         remote=True,
         bugnumber="github.com/llvm/llvm-project/issues/92419",
     )

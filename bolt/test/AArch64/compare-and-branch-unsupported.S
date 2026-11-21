@@ -5,16 +5,19 @@
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DRESERVE_SPACE=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions 2>&1 \
 # RUN:   | FileCheck %s
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DRESERVE_SPACE=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --keep-nops 2>&1 \
 # RUN:   | FileCheck %s
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DRESERVE_SPACE=1
 # RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: llvm-strip --strip-unneeded %t
 # RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions 2>&1 \
 # RUN:   | FileCheck %s
 

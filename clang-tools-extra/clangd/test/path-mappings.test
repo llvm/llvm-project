@@ -1,6 +1,6 @@
 # Copy over the server file into test workspace
 # RUN: rm -rf %t
-# RUN: cp -r %S/Inputs/path-mappings %t
+# RUN: cp -R %S/Inputs/path-mappings %t
 #
 # RUN: clangd --clang-tidy=false --path-mappings 'C:\client=%t/server' -lit-test < %s | FileCheck -strict-whitespace %s
 {"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"clangd","capabilities":{},"trace":"off"}}

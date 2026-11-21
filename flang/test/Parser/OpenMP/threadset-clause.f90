@@ -54,7 +54,7 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Threadset -> OmpThreadsetClause -> ThreadsetPolicy = Omp_Team
 
@@ -74,6 +74,6 @@ end
 !UNPARSE: !$OMP END TASK
 !UNPARSE: END SUBROUTINE
 
-!PARSE-TREE: OmpBeginLoopDirective
+!PARSE-TREE: OmpBeginDirective
 !PARSE-TREE: | OmpDirectiveName -> llvm::omp::Directive = taskloop
 !PARSE-TREE: | OmpClauseList -> OmpClause -> Threadset -> OmpThreadsetClause -> ThreadsetPolicy = Omp_Pool

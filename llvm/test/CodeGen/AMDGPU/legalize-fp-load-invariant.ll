@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn -mcpu=tahiti -enable-new-pm -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu6.00 -enable-new-pm -stop-after=amdgpu-isel -o - %s | FileCheck -check-prefix=GCN %s
 
 ; Type legalization for illegal FP type results was dropping invariant
 ; and dereferenceable flags.

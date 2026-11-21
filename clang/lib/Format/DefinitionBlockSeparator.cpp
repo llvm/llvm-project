@@ -55,7 +55,13 @@ void DefinitionBlockSeparator::separateBlocks(
                                   tok::kw_union) ||
             (Style.isJavaScript() &&
              CurrentToken->is(ExtraKeywords.kw_function))) {
-          return true;
+          if (!ExcludeEnum)
+            return true;
+          // The class/struct keyword in a scoped enum is not a record
+          // definition.
+          const auto *Previous = CurrentToken->getPreviousNonComment();
+          if (!Previous || Previous->isNot(tok::kw_enum))
+            return true;
         }
         if (!ExcludeEnum && CurrentToken->is(tok::kw_enum))
           return true;
@@ -66,6 +72,10 @@ void DefinitionBlockSeparator::separateBlocks(
   };
   unsigned NewlineCount =
       (Style.SeparateDefinitionBlocks == FormatStyle::SDS_Always ? 1 : 0) + 1;
+
+  Style.MaxEmptyLinesToKeep =
+      std::max(Style.MaxEmptyLinesToKeep, NewlineCount - 1);
+
   WhitespaceManager Whitespaces(
       Env.getSourceManager(), Style,
       Style.LineEnding > FormatStyle::LE_CRLF
@@ -75,7 +85,12 @@ void DefinitionBlockSeparator::separateBlocks(
           : Style.LineEnding == FormatStyle::LE_CRLF);
   for (unsigned I = 0; I < Lines.size(); ++I) {
     const auto &CurrentLine = Lines[I];
-    if (CurrentLine->InPPDirective)
+    // In the macro expansion pass, MatchingOpeningBlockLineIndex still refers
+    // to the unexpanded line sequence. Expanding a macro into multiple lines
+    // changes line positions, so a closing brace can be matched to the wrong
+    // opening line. Skip this pass and separate blocks in the subsequent pass
+    // over reconstructed macro calls, where the indices are valid.
+    if (CurrentLine->InPPDirective || CurrentLine->InMacroExpansion)
       continue;
     FormatToken *TargetToken = nullptr;
     AnnotatedLine *TargetLine;
@@ -88,6 +103,11 @@ void DefinitionBlockSeparator::separateBlocks(
       assert(TargetLine);
       assert(TargetToken);
 
+      // Lines should not be added in the disabled region.
+      if (TargetToken->is(tok::comment) &&
+          isClangFormatOn(TargetToken->TokenText)) {
+        return;
+      }
       // Do not handle EOF newlines.
       if (TargetToken->is(tok::eof))
         return;
@@ -146,21 +166,25 @@ void DefinitionBlockSeparator::separateBlocks(
       if (LikelyDefinition(OperateLine))
         return false;
 
+      const auto *NextLine =
+          OperateIndex + 1 < Lines.size() ? Lines[OperateIndex + 1] : nullptr;
+
       if (const auto *Tok = OperateLine->First;
           Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
-        return true;
+        const bool IsEndComment = Tok->NewlinesBefore == 1 && NextLine &&
+                                  NextLine->First->NewlinesBefore > 1;
+        if (!IsEndComment)
+          return true;
       }
 
       // A single line identifier that is not in the last line.
       if (OperateLine->First->is(tok::identifier) &&
-          OperateLine->First == OperateLine->Last &&
-          OperateIndex + 1 < Lines.size()) {
+          OperateLine->First == OperateLine->Last && NextLine) {
         // UnwrappedLineParser's recognition of free-standing macro like
         // Q_OBJECT may also recognize some uppercased type names that may be
         // used as return type as that kind of macros, which is a bit hard to
         // distinguish one from another purely from token patterns. Here, we
         // try not to add new lines below those identifiers.
-        AnnotatedLine *NextLine = Lines[OperateIndex + 1];
         if (NextLine->MightBeFunctionDecl &&
             NextLine->mightBeFunctionDefinition() &&
             NextLine->First->NewlinesBefore == 1 &&
@@ -197,6 +221,9 @@ void DefinitionBlockSeparator::separateBlocks(
           ++I;
     } else if (CurrentLine->First->closesScope()) {
       if (OpeningLineIndex > Lines.size())
+        continue;
+      // A function try block should be together.
+      if (CurrentLine->First->startsSequence(tok::r_brace, tok::kw_catch))
         continue;
       // Handling the case that opening brace has its own line, with checking
       // whether the last line already had an opening brace to guard against

@@ -24,8 +24,7 @@ RegisterContextFreeBSDKernelCore_x86_64::
     RegisterContextFreeBSDKernelCore_x86_64(
         Thread &thread, RegisterInfoInterface *register_info,
         lldb::addr_t pcb_addr)
-    : RegisterContextPOSIX_x86(thread, 0, register_info), m_pcb_addr(pcb_addr) {
-}
+    : RegisterContextCore_x86(thread, 0, register_info), m_pcb_addr(pcb_addr) {}
 
 bool RegisterContextFreeBSDKernelCore_x86_64::ReadGPR() { return true; }
 
@@ -57,6 +56,9 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     llvm::support::ulittle64_t rbx;
     llvm::support::ulittle64_t rip;
   } pcb;
+
+  constexpr unsigned short CODE_SEL = 4 << 3;
+  constexpr unsigned short DATA_SEL = 5 << 3;
 
 #if defined(__FreeBSD__) && defined(__amd64__)
   static_assert(offsetof(struct pcb, pcb_r15) == offsetof(decltype(pcb), r15));
@@ -90,9 +92,13 @@ bool RegisterContextFreeBSDKernelCore_x86_64::ReadRegister(
     REG(rsp);
     REG(rbx);
     REG(rip);
-
 #undef REG
-
+  case lldb_cs_x86_64:
+    value.SetUInt(CODE_SEL, reg_info->byte_size);
+    break;
+  case lldb_ss_x86_64:
+    value.SetUInt(DATA_SEL, reg_info->byte_size);
+    break;
   default:
     return false;
   }

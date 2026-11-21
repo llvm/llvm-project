@@ -8,6 +8,7 @@
 
 #include "lldb/API/SBLaunchInfo.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
@@ -17,6 +18,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Listener.h"
 #include "lldb/Utility/ScriptedMetadata.h"
 
@@ -148,8 +150,8 @@ uint32_t SBLaunchInfo::GetNumArguments() {
 const char *SBLaunchInfo::GetArgumentAtIndex(uint32_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
-  return ConstString(m_opaque_sp->GetArguments().GetArgumentAtIndex(idx))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetArguments().GetArgumentAtIndex(idx));
 }
 
 void SBLaunchInfo::SetArguments(const char **argv, bool append) {
@@ -177,7 +179,7 @@ const char *SBLaunchInfo::GetEnvironmentEntryAtIndex(uint32_t idx) {
 
   if (idx > GetNumEnvironmentEntries())
     return nullptr;
-  return ConstString(m_opaque_sp->GetEnvp()[idx]).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetEnvp()[idx]);
 }
 
 void SBLaunchInfo::SetEnvironmentEntries(const char **envp, bool append) {
@@ -210,7 +212,8 @@ void SBLaunchInfo::Clear() {
 const char *SBLaunchInfo::GetWorkingDirectory() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_sp->GetWorkingDirectory().GetPathAsConstString().AsCString();
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_sp->GetWorkingDirectory().GetPath());
 }
 
 void SBLaunchInfo::SetWorkingDirectory(const char *working_dir) {
@@ -234,7 +237,8 @@ void SBLaunchInfo::SetLaunchFlags(uint32_t flags) {
 const char *SBLaunchInfo::GetProcessPluginName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetProcessPluginName()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetProcessPluginName());
 }
 
 void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
@@ -248,8 +252,8 @@ const char *SBLaunchInfo::GetShell() {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString shell(m_opaque_sp->GetShell().GetPath().c_str());
-  return shell.AsCString();
+  ConstString shell(m_opaque_sp->GetShell().GetPath());
+  return shell.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
@@ -316,7 +320,7 @@ void SBLaunchInfo::SetLaunchEventData(const char *data) {
 const char *SBLaunchInfo::GetLaunchEventData() const {
   LLDB_INSTRUMENT_VA(this);
 
-  return ConstString(m_opaque_sp->GetLaunchEventData()).GetCString();
+  return StringPool::GetSystemPool().Intern(m_opaque_sp->GetLaunchEventData());
 }
 
 void SBLaunchInfo::SetDetachOnError(bool enable) {
@@ -341,8 +345,8 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
 
   // Constify this string so that it is saved in the string pool.  Otherwise it
   // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName().data());
-  return class_name.AsCString();
+  ConstString class_name(metadata_sp->GetClassName());
+  return class_name.AsCString(nullptr);
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {

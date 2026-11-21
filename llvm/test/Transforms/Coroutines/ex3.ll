@@ -1,4 +1,4 @@
-; Third example from Doc/Coroutines.rst (two suspend points)
+; Third example from Doc/Coroutines.md (two suspend points)
 ; RUN: opt < %s -aa-pipeline=basic-aa -passes='default<O2>' -S | FileCheck %s
 
 define ptr @f(i32 %n) presplitcoroutine {

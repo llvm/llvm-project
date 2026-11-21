@@ -40,8 +40,8 @@ static const SanitizerMask NotAllowedWithExecuteOnly =
     SanitizerKind::Function | SanitizerKind::KCFI;
 static const SanitizerMask NeedsUnwindTables =
     SanitizerKind::Address | SanitizerKind::HWAddress | SanitizerKind::Type |
-    SanitizerKind::Thread | SanitizerKind::Memory | SanitizerKind::DataFlow |
-    SanitizerKind::NumericalStability;
+    SanitizerKind::Thread | SanitizerKind::Concurrency | SanitizerKind::Memory |
+    SanitizerKind::DataFlow | SanitizerKind::NumericalStability;
 static const SanitizerMask SupportsCoverage =
     SanitizerKind::Address | SanitizerKind::HWAddress |
     SanitizerKind::KernelAddress | SanitizerKind::KernelHWAddress |
@@ -53,7 +53,8 @@ static const SanitizerMask SupportsCoverage =
     SanitizerKind::DataFlow | SanitizerKind::Fuzzer |
     SanitizerKind::FuzzerNoLink | SanitizerKind::FloatDivideByZero |
     SanitizerKind::SafeStack | SanitizerKind::ShadowCallStack |
-    SanitizerKind::Thread | SanitizerKind::ObjCCast | SanitizerKind::KCFI |
+    SanitizerKind::Thread | SanitizerKind::Concurrency |
+    SanitizerKind::ObjCCast | SanitizerKind::KCFI |
     SanitizerKind::NumericalStability | SanitizerKind::Vptr |
     SanitizerKind::CFI | SanitizerKind::AllocToken;
 static const SanitizerMask RecoverableByDefault =
@@ -162,6 +163,38 @@ static std::string describeSanitizeArg(const llvm::opt::Arg *A,
 /// Produce a string containing comma-separated names of sanitizers in \p
 /// Sanitizers set.
 static std::string toString(const clang::SanitizerSet &Sanitizers);
+
+/// Map a Hexagon callee-saved register number (16-27) to its -ffixed-rN
+/// option, used to check that the shadow call stack pointer is reserved.
+static options::ID getHexagonFixedRegOption(unsigned RegNo) {
+  switch (RegNo) {
+  case 16:
+    return options::OPT_ffixed_r16;
+  case 17:
+    return options::OPT_ffixed_r17;
+  case 18:
+    return options::OPT_ffixed_r18;
+  case 19:
+    return options::OPT_ffixed_r19;
+  case 20:
+    return options::OPT_ffixed_r20;
+  case 21:
+    return options::OPT_ffixed_r21;
+  case 22:
+    return options::OPT_ffixed_r22;
+  case 23:
+    return options::OPT_ffixed_r23;
+  case 24:
+    return options::OPT_ffixed_r24;
+  case 25:
+    return options::OPT_ffixed_r25;
+  case 26:
+    return options::OPT_ffixed_r26;
+  case 27:
+    return options::OPT_ffixed_r27;
+  }
+  llvm_unreachable("not a Hexagon callee-saved register");
+}
 
 /// Produce a string containing comma-separated names of sanitizers and
 /// sanitizer groups in \p Sanitizers set.
@@ -363,6 +396,10 @@ bool SanitizerArgs::needsUbsanRt() const {
       needsCfiCrossDsoDiagRt() || (needsScudoRt() && !requiresMinimalRuntime()))
     return false;
 
+  // CSan provides coverage and is incompatible with UBSan.
+  if (needsCsanRt())
+    return false;
+
   return (Sanitizers.Mask & NeedsUbsanRt & ~TrapSanitizers.Mask) ||
          CoverageFeatures;
 }
@@ -381,7 +418,7 @@ bool SanitizerArgs::needsCfiCrossDsoRt() const {
 }
 
 bool SanitizerArgs::needsCfiCrossDsoDiagRt() const {
-  // UBSsan handles CFI diagnostics without cross-DSO suppport.
+  // UBSsan handles CFI diagnostics without cross-DSO support.
   return (Sanitizers.Mask & SanitizerKind::CFI & ~TrapSanitizers.Mask) &&
          CfiCrossDso && !ImplicitCfiRuntime;
 }
@@ -398,7 +435,9 @@ bool SanitizerArgs::needsLTO() const {
 
 SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                              const llvm::opt::ArgList &Args,
-                             bool DiagnoseErrors) {
+                             bool DiagnoseErrors, bool DiagnoseBoundArchErrors,
+                             BoundArch BA,
+                             Action::OffloadKind DeviceOffloadKind) {
   SanitizerMask AllRemove;      // During the loop below, the accumulated set of
                                 // sanitizers disabled by the current sanitizer
                                 // argument or any argument after it.
@@ -412,7 +451,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
                                        // `-fsanitize-ignore-for-ubsan-feature`.
   SanitizerMask Kinds;
-  const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
+
+  // Figure out the base toolchain's sanitizer support so we can diagnose the
+  // diff for a specific BA.
+  const SanitizerMask ToolChainSupported =
+      setGroupBits(TC.getSupportedSanitizers({}, DeviceOffloadKind));
+
+  const SanitizerMask BoundArchSupported =
+      BA ? setGroupBits(TC.getSupportedSanitizers(BA, DeviceOffloadKind))
+         : ToolChainSupported;
 
   CfiCrossDso = Args.hasFlag(options::OPT_fsanitize_cfi_cross_dso,
                              options::OPT_fno_sanitize_cfi_cross_dso, false);
@@ -486,18 +533,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Add &= ~NotAllowedWithMinimalRuntime;
       }
 
-      if (llvm::opt::Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ)) {
-        StringRef CM = A->getValue();
-        if (CM != "small" &&
-            (Add & SanitizerKind::Function & ~DiagnosedKinds)) {
-          if (DiagnoseErrors)
-            D.Diag(diag::err_drv_argument_only_allowed_with)
-                << "-fsanitize=function"
-                << "-mcmodel=small";
-          Add &= ~SanitizerKind::Function;
-          DiagnosedKinds |= SanitizerKind::Function;
-        }
-      }
       // -fsanitize=function and -fsanitize=kcfi instrument indirect function
       // calls to load a type hash before the function label. Therefore, an
       // execute-only target doesn't support the function and kcfi sanitizers.
@@ -539,15 +574,79 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         DiagnosedKinds |= SanitizerKind::CFIMFCall;
       }
 
-      if (SanitizerMask KindsToDiagnose = Add & ~Supported & ~DiagnosedKinds) {
-        if (DiagnoseErrors) {
-          std::string Desc = describeSanitizeArg(Arg, KindsToDiagnose);
-          D.Diag(diag::err_drv_unsupported_opt_for_target)
-              << Desc << TC.getTriple().str();
+      // Check for sanitizers that are supported by the toolchain but not for
+      // this specific arch (e.g., AMDGPU requires specific subtarget features
+      // for address sanitizer.)
+      if (SanitizerMask ArchSpecificUnsupported =
+              Add & ToolChainSupported & ~BoundArchSupported & ~DiagnosedKinds;
+          ArchSpecificUnsupported && DiagnoseBoundArchErrors) {
+        // Upgrade the warning to an error if the unsupported sanitizer was
+        // explicitly specified for the bound arch.
+
+        // FIXME: There are additional options which explicitly bind to this
+        // device.
+        bool IsExplicitDevice =
+            Arg->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+
+        // Check if the toolchain provides a feature requirement hint for
+        // any of the unsupported sanitizers
+        StringRef Requirement =
+            TC.getSanitizerRequirement(ArchSpecificUnsupported, BA);
+        if (!Requirement.empty()) {
+          // Emit diagnostic with feature requirement
+          //
+          // TODO: Use variant of unsupported_option_part_for_target that
+          // includes offload_arch_req_feature
+          D.Diag(
+              IsExplicitDevice
+                  ? diag::
+                        err_drv_unsupported_option_for_offload_arch_req_feature
+                  : diag::
+                        warn_drv_unsupported_option_for_offload_arch_req_feature)
+              << Arg->getAsString(Args) << BA.ArchName << Requirement;
+        } else {
+          // Fall back to generic diagnostic if no requirement was provided
+          SanitizerSet UnsupportedSet;
+          UnsupportedSet.Mask = ArchSpecificUnsupported;
+          D.Diag(diag::warn_drv_unsupported_option_part_for_target)
+              << toString(UnsupportedSet) << Arg->getAsString(Args)
+              << Triple.str();
         }
+
+        DiagnosedKinds |= ArchSpecificUnsupported;
+      }
+
+      // Check for sanitizers that are not supported at all by the toolchain
+      if (SanitizerMask KindsToDiagnose =
+              Add & ~ToolChainSupported & ~DiagnosedKinds;
+          DiagnoseErrors && KindsToDiagnose) {
+        bool IsExplicitDevice =
+            Arg->getBaseArg().getOption().matches(options::OPT_Xarch_device);
+        // For device offload compilation, emit a warning since the sanitizer
+        // may still work on the host. For non-offload compilation or explicit
+        // device specification, emit an error.
+        if (DeviceOffloadKind != Action::OFK_None &&
+            DeviceOffloadKind != Action::OFK_Host) {
+          // For warnings, extract just the sanitizer names (e.g., "fuzzer")
+          // instead of the full argument (e.g., "-fsanitize=fuzzer")
+          SanitizerSet KindSet;
+          KindSet.Mask = KindsToDiagnose;
+          D.Diag(IsExplicitDevice
+                     ? diag::err_drv_unsupported_option_part_for_target
+                     : diag::warn_drv_unsupported_option_part_for_target)
+              << toString(KindSet) << Arg->getAsString(Args)
+              << TC.getTriple().str();
+        } else {
+          // For non-offload targets, use the shorter diagnostic format
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << describeSanitizeArg(Arg, KindsToDiagnose)
+              << TC.getTriple().str();
+        }
+
         DiagnosedKinds |= KindsToDiagnose;
       }
-      Add &= Supported;
+
+      Add &= BoundArchSupported;
 
       // Test for -fno-rtti + explicit -fsanitizer=vptr before expanding groups
       // so we don't error out if -fno-rtti and -fsanitize=undefined were
@@ -598,7 +697,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 options::OPT_fno_wrapv_pointer, S))
           Add &= ~SanitizerKind::PointerOverflow;
       }
-      Add &= Supported;
+      Add &= BoundArchSupported;
 
       if (Add & SanitizerKind::Fuzzer)
         Add |= SanitizerKind::FuzzerNoLink;
@@ -631,8 +730,16 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::Type,
                      SanitizerKind::Address | SanitizerKind::KernelAddress |
                          SanitizerKind::Memory | SanitizerKind::Leak |
-                         SanitizerKind::Thread | SanitizerKind::KernelAddress),
-      std::make_pair(SanitizerKind::Thread, SanitizerKind::Memory),
+                         SanitizerKind::Thread),
+      std::make_pair(SanitizerKind::Thread,
+                     SanitizerKind::Memory | SanitizerKind::Concurrency),
+      std::make_pair(
+          SanitizerKind::Concurrency,
+          SanitizerKind::Thread | SanitizerKind::Address |
+              SanitizerKind::Memory | SanitizerKind::Leak |
+              SanitizerKind::Undefined | SanitizerKind::Integer |
+              SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
+              SanitizerKind::LocalBounds | SanitizerKind::FloatDivideByZero),
       std::make_pair(SanitizerKind::Leak,
                      SanitizerKind::Thread | SanitizerKind::Memory),
       std::make_pair(SanitizerKind::KernelAddress,
@@ -668,7 +775,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       std::make_pair(SanitizerKind::KCFI, SanitizerKind::Function),
       std::make_pair(SanitizerKind::Realtime,
                      SanitizerKind::Address | SanitizerKind::Thread |
-                         SanitizerKind::Undefined | SanitizerKind::Memory),
+                         SanitizerKind::Undefined | SanitizerKind::Memory |
+                         SanitizerKind::Type),
       std::make_pair(SanitizerKind::AllocToken,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::KernelAddress |
@@ -695,7 +803,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   }
 
   // Check that LTO is enabled if we need it.
-  if ((Kinds & NeedsLTO) && !D.isUsingLTO() && DiagnoseErrors) {
+  if ((Kinds & NeedsLTO) && !TC.isUsingLTO(Args) && DiagnoseErrors) {
     D.Diag(diag::err_drv_argument_only_allowed_with)
         << lastArgumentForMask(D, Args, Kinds & NeedsLTO) << "-flto";
   }
@@ -708,11 +816,34 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         << "-ffixed-x18";
   }
 
+  if ((Kinds & SanitizerKind::ShadowCallStack) &&
+      TC.getTriple().getArch() == llvm::Triple::hexagon && DiagnoseErrors) {
+    // The register holding the shadow call stack pointer must be reserved, so
+    // that neither the register allocator uses it nor the prologue saves and
+    // restores it as an ordinary callee-saved register.  It defaults to r18
+    // and is selectable with -mscs-reg=.
+    unsigned RegNo = 18;
+    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_scs_reg)) {
+      StringRef Val(A->getValue());
+      unsigned Parsed = 0;
+      // An out-of-range or malformed value is diagnosed by the toolchain; fall
+      // back to the default here so we do not emit a second, confusing error.
+      if (Val.consume_front("r") && !Val.getAsInteger(10, Parsed) &&
+          Parsed >= 16 && Parsed <= 27)
+        RegNo = Parsed;
+    }
+    if (!Args.hasArg(getHexagonFixedRegOption(RegNo)))
+      D.Diag(diag::err_drv_argument_only_allowed_with)
+          << lastArgumentForMask(D, Args,
+                                 Kinds & SanitizerKind::ShadowCallStack)
+          << ("-ffixed-r" + Twine(RegNo)).str();
+  }
+
   // Report error if there are non-trapping sanitizers that require
   // c++abi-specific  parts of UBSan runtime, and they are not provided by the
   // toolchain. We don't have a good way to check the latter, so we just
   // check if the toolchan supports vptr.
-  if (~Supported & SanitizerKind::Vptr) {
+  if (~BoundArchSupported & SanitizerKind::Vptr) {
     SanitizerMask KindsToDiagnose = Kinds & ~TrappingKinds & NeedsUbsanCxxRt;
     // The runtime library supports the Microsoft C++ ABI, but only well enough
     // for CFI. FIXME: Remove this once we support vptr on Windows.
@@ -880,6 +1011,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
         Args.hasArg(options::OPT_fsanitize_cfi_icall_normalize_integers);
 
     KcfiArity = Args.hasArg(options::OPT_fsanitize_kcfi_arity);
+
+    if (const Arg *A = Args.getLastArg(options::OPT_fsanitize_kcfi_hash_EQ))
+      KcfiHash = A->getValue();
 
     if (AllAddedKinds & SanitizerKind::CFI && DiagnoseErrors)
       D.Diag(diag::err_drv_argument_not_allowed_with)
@@ -1176,7 +1310,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
           HwasanUseAliases);
   }
 
-  if (AllAddedKinds & SanitizerKind::SafeStack) {
+  if (Kinds & SanitizerKind::SafeStack) {
     // SafeStack runtime is built into the system on Android and Fuchsia.
     SafeStackRuntime =
         !TC.getTriple().isAndroid() && !TC.getTriple().isOSFuchsia();
@@ -1211,6 +1345,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   NeedsMemProfRt = Args.hasFlag(options::OPT_fmemory_profile,
                                 options::OPT_fmemory_profile_EQ,
                                 options::OPT_fno_memory_profile, false);
+
+  NeedsCopyProfRt =
+      Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
   Sanitizers.Mask |= Kinds;
@@ -1307,7 +1444,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     return;
   // AMDGPU sanitizer support is experimental and controlled by -fgpu-sanitize.
   bool GPUSanitize = false;
-  if (TC.getTriple().isAMDGPU()) {
+  if (TC.getTriple().isAMDGPU() ||
+      (TC.getTriple().isSPIRV() &&
+       TC.getTriple().getVendor() == llvm::Triple::VendorType::AMD)) {
     if (!Args.hasFlag(options::OPT_fgpu_sanitize, options::OPT_fno_gpu_sanitize,
                       true))
       return;
@@ -1489,6 +1628,9 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     }
     CmdArgs.push_back("-fsanitize-kcfi-arity");
   }
+
+  if (KcfiHash)
+    CmdArgs.push_back(Args.MakeArgString("-fsanitize-kcfi-hash=" + *KcfiHash));
 
   if (CfiCanonicalJumpTables)
     CmdArgs.push_back("-fsanitize-cfi-canonical-jump-tables");

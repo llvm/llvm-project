@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_MACROS_STDFIX_MACROS_H
 #define LLVM_LIBC_MACROS_STDFIX_MACROS_H
 
-#ifdef __FRACT_FBIT__
+#if defined(__FRACT_FBIT__) && defined(__clang__)
 // _Fract and _Accum types are available
 #define LIBC_COMPILER_HAS_FIXED_POINT
 #endif // __FRACT_FBIT__

@@ -60,13 +60,13 @@ public:
 } // End anonymous namespace
 
 void AMDGPUAnnotateUniformValues::visitCondBrInst(CondBrInst &I) {
-  if (UA->isUniform(&I))
+  if (UA->isUniformTerminator(&I))
     setUniformMetadata(&I);
 }
 
 void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   Value *Ptr = I.getPointerOperand();
-  if (!UA->isUniform(Ptr))
+  if (UA->isDivergentAtDef(Ptr))
     return;
   Instruction *PtrI = dyn_cast<Instruction>(Ptr);
   if (PtrI)
@@ -77,6 +77,13 @@ void AMDGPUAnnotateUniformValues::visitLoadInst(LoadInst &I) {
   // for memory operations that are live in to entry points only.
   if (!isEntryFunc)
     return;
+
+  // If I is atomic or volatile, it might see the effects of concurrent
+  // clobbering accesses, so local clobber analysis is not sufficient to ensure
+  // that it sees the initial value.
+  if (!I.isSimple())
+    return;
+
   bool GlobalLoad = I.getPointerAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
   if (GlobalLoad && !AMDGPU::isClobberedInFunction(&I, MSSA, AA))
     setNoClobberMetadata(&I);

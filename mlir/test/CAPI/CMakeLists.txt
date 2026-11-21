@@ -5,6 +5,8 @@ function(_add_capi_test_executable name)
     "LINK_LIBS"
     ${ARGN})
   set(LLVM_LINK_COMPONENTS
+    Core
+    Support
     )
   add_llvm_executable(${name}
     PARTIAL_SOURCES_INTENDED
@@ -15,7 +17,6 @@ function(_add_capi_test_executable name)
   llvm_update_compile_flags(${name})
   if(MLIR_BUILD_MLIR_C_DYLIB)
     target_link_libraries(${name} PRIVATE
-      LLVMCore
       MLIR-C)
   else()
     target_link_libraries(${name} PRIVATE
@@ -43,6 +44,7 @@ endif()
 _add_capi_test_executable(mlir-capi-ir-test
   ir.c
   LINK_LIBS PRIVATE
+    MLIRCAPIInterfaces
     MLIRCAPIIR
     MLIRCAPIFunc
     MLIRCAPIRegisterEverything
@@ -63,6 +65,20 @@ _add_capi_test_executable(mlir-capi-llvm-test
     MLIRCAPIRegisterEverything
 )
 
+_add_capi_test_executable(mlir-capi-openacc-test
+  openacc.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+    MLIRCAPIFunc
+    MLIRCAPIOpenACC
+)
+
+_add_capi_test_executable(mlir-capi-remarks-test
+  remarks.c
+  LINK_LIBS PRIVATE
+    MLIRCAPIIR
+)
+
 _add_capi_test_executable(mlir-capi-pass-test
   pass.c
   LINK_LIBS PRIVATE
@@ -78,6 +94,7 @@ _add_capi_test_executable(mlir-capi-pdl-test
     MLIRCAPIIR
     MLIRCAPIRegisterEverything
     MLIRCAPIPDL
+    MLIRCAPITransforms
 )
 
 _add_capi_test_executable(mlir-capi-sparse-tensor-test
@@ -99,8 +116,9 @@ _add_capi_test_executable(mlir-capi-quant-test
 _add_capi_test_executable(mlir-capi-rewrite-test
   rewrite.c
   LINK_LIBS PRIVATE
+    MLIRCAPIArith
+    MLIRCAPIFunc
     MLIRCAPIIR
-    MLIRCAPIRegisterEverything
     MLIRCAPITransforms
 )
 
@@ -109,6 +127,7 @@ _add_capi_test_executable(mlir-capi-transform-test
   transform.c
   LINK_LIBS PRIVATE
     MLIRCAPIIR
+    MLIRCAPIInterfaces
     MLIRCAPIRegisterEverything
     MLIRCAPITransformDialect
 )

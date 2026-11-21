@@ -484,13 +484,7 @@ define <4 x float> @PR34724(<4 x float> %a, <4 x float> %b) {
 define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @ext_ext_or_reduction_v4i32(
 ; CHECK-NEXT:    [[Z:%.*]] = and <4 x i32> [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = or <4 x i32> [[Z]], [[SHIFT]]
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = or <4 x i32> [[TMP1]], [[SHIFT1]]
-; CHECK-NEXT:    [[SHIFT2:%.*]] = shufflevector <4 x i32> [[Z]], <4 x i32> poison, <4 x i32> <i32 3, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP3:%.*]] = or <4 x i32> [[SHIFT2]], [[TMP2]]
-; CHECK-NEXT:    [[Z0123:%.*]] = extractelement <4 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[Z0123:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[Z]])
 ; CHECK-NEXT:    ret i32 [[Z0123]]
 ;
   %z = and <4 x i32> %x, %y
@@ -506,11 +500,8 @@ define i32 @ext_ext_or_reduction_v4i32(<4 x i32> %x, <4 x i32> %y) {
 
 define i32 @ext_ext_partial_add_reduction_v4i32(<4 x i32> %x) {
 ; CHECK-LABEL: @ext_ext_partial_add_reduction_v4i32(
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[SHIFT]], [[X]]
-; CHECK-NEXT:    [[SHIFT1:%.*]] = shufflevector <4 x i32> [[X]], <4 x i32> poison, <4 x i32> <i32 2, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[SHIFT1]], [[TMP1]]
-; CHECK-NEXT:    [[X210:%.*]] = extractelement <4 x i32> [[TMP2]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <3 x i32> <i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[X210:%.*]] = call i32 @llvm.vector.reduce.add.v3i32(<3 x i32> [[TMP1]])
 ; CHECK-NEXT:    ret i32 [[X210]]
 ;
   %x0 = extractelement <4 x i32> %x, i32 0
@@ -572,8 +563,6 @@ define float @constant_fold_crash_commute(<4 x float> %x) {
 define i64 @instsimplify_folder_crash(<4 x i64> %in) {
 ; CHECK-LABEL: @instsimplify_folder_crash(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE_1:%.*]] = shufflevector <4 x i64> [[IN:%.*]], <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i64> [[SHUFFLE_1]], <4 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:

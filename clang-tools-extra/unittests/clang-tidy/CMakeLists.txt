@@ -30,12 +30,12 @@ add_extra_unittest(ClangTidyTests
   LLVMModuleTest.cpp
   ModernizeModuleTest.cpp
   NamespaceAliaserTest.cpp
-  ObjCModuleTest.cpp
   OptionsProviderTest.cpp
   OverlappingReplacementsTest.cpp
   UsingInserterTest.cpp
   ReadabilityModuleTest.cpp
   TransformerClangTidyCheckTest.cpp
+  TypeTraitsTest.cpp
   )
 
 clang_target_link_libraries(ClangTidyTests

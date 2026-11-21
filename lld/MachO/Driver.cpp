@@ -16,6 +16,7 @@
 #include "OutputSection.h"
 #include "OutputSegment.h"
 #include "SectionPriorities.h"
+#include "StripSwiftForceLoad.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
@@ -29,8 +30,10 @@
 #include "lld/Common/LLVM.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -168,23 +171,10 @@ getSearchPaths(unsigned optionCode, InputArgList &args,
                const SmallVector<StringRef, 2> &systemPaths) {
   std::vector<StringRef> paths;
   StringRef optionLetter{optionCode == OPT_F ? "F" : "L"};
-  for (StringRef path : args::getStrings(args, optionCode)) {
-    // NOTE: only absolute paths are re-rooted to syslibroot(s)
-    bool found = false;
-    if (path::is_absolute(path, path::Style::posix)) {
-      for (StringRef root : roots) {
-        SmallString<261> buffer(root);
-        path::append(buffer, path);
-        // Do not warn about paths that are computed via the syslib roots
-        if (fs::is_directory(buffer)) {
-          paths.push_back(saver().save(buffer.str()));
-          found = true;
-        }
-      }
-    }
-    if (!found && warnIfNotDirectory(optionLetter, path))
-      paths.push_back(path);
-  }
+  for (StringRef path : args::getStrings(args, optionCode))
+    for (StringRef searchPath : getRerootedSearchPaths(path, roots))
+      if (searchPath != path || warnIfNotDirectory(optionLetter, searchPath))
+        paths.push_back(searchPath);
 
   // `-Z` suppresses the standard "system" search paths.
   if (args.hasArg(OPT_Z))
@@ -293,6 +283,12 @@ struct DeferredFile {
   StringRef path;
   bool isLazy;
   MemoryBufferRef buffer;
+  LoadType loadType = LoadType::CommandLine;
+  bool isNeeded = false;
+  bool isWeak = false;
+  bool isReexport = false;
+  bool isHidden = false;
+  bool isExplicit = true;
 };
 using DeferredFiles = std::vector<DeferredFile>;
 
@@ -461,15 +457,15 @@ static InputFile *processFile(std::optional<MemoryBufferRef> buffer,
         for (const object::Archive::Child &c : file->getArchive().children(e)) {
           StringRef reason;
           switch (loadType) {
-            case LoadType::LCLinkerOption:
-              reason = "LC_LINKER_OPTION";
-              break;
-            case LoadType::CommandLineForce:
-              reason = "-force_load";
-              break;
-            case LoadType::CommandLine:
-              reason = "-all_load";
-              break;
+          case LoadType::LCLinkerOption:
+            reason = "LC_LINKER_OPTION";
+            break;
+          case LoadType::CommandLineForce:
+            reason = "-force_load";
+            break;
+          case LoadType::CommandLine:
+            reason = "-all_load";
+            break;
           }
           if (Error e = file->fetch(c, reason)) {
             if (config->warnThinArchiveMissingMembers)
@@ -580,33 +576,57 @@ static InputFile *addFile(StringRef path, LoadType loadType,
                      isExplicit, isBundleLoader, isForceHidden);
 }
 
-static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred) {
+static DenseSet<StringRef> loadedObjectFrameworks;
+
+static void applyDylibMetadata(InputFile *file, bool isNeeded, bool isWeak,
+                               bool isReexport) {
+  if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
+    dylibFile->forceNeeded |= isNeeded;
+    dylibFile->forceWeakImport |= isWeak;
+    if (isReexport) {
+      config->hasReexports = true;
+      dylibFile->reexport = true;
+    }
+  }
+}
+
+static void checkAndCacheFramework(InputFile *file, StringRef path) {
+  if (isa_and_nonnull<ObjFile>(file) || isa_and_nonnull<BitcodeFile>(file)) {
+    if (path.contains(".framework"))
+      loadedObjectFrameworks.insert(path);
+  }
+}
+
+static void deferFile(StringRef path, bool isLazy, DeferredFiles &deferred,
+                      LoadType loadType = LoadType::CommandLine,
+                      bool isNeeded = false, bool isWeak = false,
+                      bool isReexport = false, bool isHidden = false,
+                      bool isExplicit = true) {
   std::optional<MemoryBufferRef> buffer = readFile(path);
   if (!buffer)
     return;
   if (config->readWorkers)
-    deferred.push_back({path, isLazy, *buffer});
-  else
-    processFile(buffer, nullptr, path, LoadType::CommandLine, isLazy);
+    deferred.push_back({path, isLazy, *buffer, loadType, isNeeded, isWeak,
+                        isReexport, isHidden, isExplicit});
+  else {
+    if (loadedObjectFrameworks.contains(path))
+      return;
+
+    InputFile *file =
+        processFile(buffer, nullptr, path, loadType, isLazy, isExplicit,
+                    /*isBundleLoader=*/false, isHidden);
+    applyDylibMetadata(file, isNeeded, isWeak, isReexport);
+    checkAndCacheFramework(file, path);
+  }
 }
 
 static std::vector<StringRef> missingAutolinkWarnings;
 static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
                        bool isReexport, bool isHidden, bool isExplicit,
-                       LoadType loadType) {
+                       LoadType loadType, DeferredFiles &deferred) {
   if (std::optional<StringRef> path = findLibrary(name)) {
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-            addFile(*path, loadType, /*isLazy=*/false, isExplicit,
-                    /*isBundleLoader=*/false, isHidden))) {
-      if (isNeeded)
-        dylibFile->forceNeeded = true;
-      if (isWeak)
-        dylibFile->forceWeakImport = true;
-      if (isReexport) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
-    }
+    deferFile(*path, /*isLazy=*/false, deferred, loadType, isNeeded, isWeak,
+              isReexport, isHidden, isExplicit);
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
@@ -617,33 +637,15 @@ static void addLibrary(StringRef name, bool isNeeded, bool isWeak,
   error("library not found for -l" + name);
 }
 
-static DenseSet<StringRef> loadedObjectFrameworks;
 static void addFramework(StringRef name, bool isNeeded, bool isWeak,
-                         bool isReexport, bool isExplicit, LoadType loadType) {
+                         bool isReexport, bool isExplicit, LoadType loadType,
+                         DeferredFiles &deferred) {
   if (std::optional<StringRef> path = findFramework(name)) {
     if (loadedObjectFrameworks.contains(*path))
       return;
 
-    InputFile *file =
-        addFile(*path, loadType, /*isLazy=*/false, isExplicit, false);
-    if (auto *dylibFile = dyn_cast_or_null<DylibFile>(file)) {
-      if (isNeeded)
-        dylibFile->forceNeeded = true;
-      if (isWeak)
-        dylibFile->forceWeakImport = true;
-      if (isReexport) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
-    } else if (isa_and_nonnull<ObjFile>(file) ||
-               isa_and_nonnull<BitcodeFile>(file)) {
-      // Cache frameworks containing object or bitcode files to avoid duplicate
-      // symbols. Frameworks containing static archives are cached separately
-      // in addFile() to share caching with libraries, and frameworks
-      // containing dylibs should allow overwriting of attributes such as
-      // forceNeeded by subsequent loads
-      loadedObjectFrameworks.insert(*path);
-    }
+    deferFile(*path, /*isLazy=*/false, deferred, loadType, isNeeded, isWeak,
+              isReexport, /*isHidden=*/false, isExplicit);
     return;
   }
   if (loadType == LoadType::LCLinkerOption) {
@@ -693,22 +695,54 @@ void macho::resolveLCLinkerOptions() {
     SmallVector<StringRef> LCLinkerOptions(unprocessedLCLinkerOptions);
     unprocessedLCLinkerOptions.clear();
 
+    DeferredFiles deferred;
+    SmallVector<StringRef> frameworks;
+    SmallVector<StringRef> libraries;
+
     for (unsigned i = 0; i < LCLinkerOptions.size(); ++i) {
       StringRef arg = LCLinkerOptions[i];
       if (arg.consume_front("-l")) {
         assert(!config->ignoreAutoLinkOptions.contains(arg));
-        addLibrary(arg, /*isNeeded=*/false, /*isWeak=*/false,
-                   /*isReexport=*/false, /*isHidden=*/false,
-                   /*isExplicit=*/false, LoadType::LCLinkerOption);
+        libraries.push_back(arg);
       } else if (arg == "-framework") {
         StringRef name = LCLinkerOptions[++i];
         assert(!config->ignoreAutoLinkOptions.contains(name));
-        addFramework(name, /*isNeeded=*/false, /*isWeak=*/false,
-                     /*isReexport=*/false, /*isExplicit=*/false,
-                     LoadType::LCLinkerOption);
+        frameworks.push_back(name);
       } else {
         error(arg + " is not allowed in LC_LINKER_OPTION");
       }
+    }
+
+    llvm::sort(frameworks);
+    llvm::sort(libraries);
+
+    frameworks.erase(std::unique(frameworks.begin(), frameworks.end()),
+                     frameworks.end());
+    libraries.erase(std::unique(libraries.begin(), libraries.end()),
+                    libraries.end());
+
+    for (const StringRef framework : frameworks) {
+      addFramework(framework, /*isNeeded=*/false, /*isWeak=*/false,
+                   /*isReexport=*/false, /*isExplicit=*/false,
+                   LoadType::LCLinkerOption, deferred);
+    }
+
+    for (const StringRef library : libraries) {
+      addLibrary(library, /*isNeeded=*/false, /*isWeak=*/false,
+                 /*isReexport=*/false, /*isHidden=*/false,
+                 /*isExplicit=*/false, LoadType::LCLinkerOption, deferred);
+    }
+
+    for (auto &file : deferred) {
+      if (loadedObjectFrameworks.contains(file.path))
+        continue;
+
+      auto inputFile = processFile(file.buffer, nullptr, file.path,
+                                   file.loadType, file.isLazy, file.isExplicit,
+                                   /*isBundleLoader=*/false, file.isHidden);
+      applyDylibMetadata(inputFile, file.isNeeded, file.isWeak,
+                         file.isReexport);
+      checkAndCacheFramework(inputFile, file.path);
     }
   }
 }
@@ -804,20 +838,29 @@ static void replaceCommonSymbols() {
 
 static void initializeSectionRenameMap() {
   if (config->dataConst) {
-    SmallVector<StringRef> v{section_names::got,
-                             section_names::authGot,
+    SmallVector<StringRef> v{section_names::authGot,
                              section_names::authPtr,
-                             section_names::nonLazySymbolPtr,
-                             section_names::const_,
                              section_names::cfString,
+                             section_names::const_,
+                             section_names::constCfObj2,
+                             section_names::got,
                              section_names::moduleInitFunc,
                              section_names::moduleTermFunc,
-                             section_names::objcClassList,
-                             section_names::objcNonLazyClassList,
+                             section_names::nonLazySymbolPtr,
+                             section_names::objcArrayData,
+                             section_names::objcArrayObj,
                              section_names::objcCatList,
+                             section_names::objcCatList2,
+                             section_names::objcClassList,
+                             section_names::objcDateObj,
+                             section_names::objcDictObj,
+                             section_names::objcDoubleObj,
+                             section_names::objcFloatObj,
+                             section_names::objCImageInfo,
+                             section_names::objcIntObj,
                              section_names::objcNonLazyCatList,
-                             section_names::objcProtoList,
-                             section_names::objCImageInfo};
+                             section_names::objcNonLazyClassList,
+                             section_names::objcProtoList};
     for (StringRef s : v)
       config->sectionRenameMap[{segment_names::data, s}] = {
           segment_names::dataConst, s};
@@ -951,6 +994,8 @@ static TargetInfo *createTargetInfo(InputArgList &args) {
   case CPU_TYPE_X86_64:
     return createX86_64TargetInfo();
   case CPU_TYPE_ARM64:
+    if (config->arch() == AK_arm64e)
+      return createARM64eTargetInfo();
     return createARM64TargetInfo();
   case CPU_TYPE_ARM64_32:
     return createARM64_32TargetInfo();
@@ -1091,7 +1136,8 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
   raw_string_ostream os(err);
 
   const char *argv[] = {"lld", opt.data()};
-  if (cl::ParseCommandLineOptions(2, argv, "", &os))
+  if (cl::parseCommandLineOptions(config->libraryOptions, getToolOptions(),
+                                  argv, "", &os))
     return;
   error(msg + ": " + StringRef(err).trim());
 }
@@ -1243,8 +1289,15 @@ static bool dataConstDefault(const InputArgList &args) {
 
 static bool shouldEmitChainedFixups(const InputArgList &args) {
   const Arg *arg = args.getLastArg(OPT_fixup_chains, OPT_no_fixup_chains);
-  if (arg && arg->getOption().matches(OPT_no_fixup_chains))
-    return false;
+  if (arg && arg->getOption().matches(OPT_no_fixup_chains)) {
+    if (config->arch() != AK_arm64e)
+      return false;
+    // Authenticated pointers can only be encoded as chained fixups.
+    warn("bind opcodes are no longer supported with arm64e, switching to "
+         "chained fixups");
+    config->noFixupChainsIgnored = true;
+    return true;
+  }
 
   bool requested = arg && arg->getOption().matches(OPT_fixup_chains);
   if (!config->isPic) {
@@ -1254,7 +1307,8 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64}, config->arch())) {
+  if (!is_contained({AK_x86_64, AK_x86_64h, AK_arm64, AK_arm64e},
+                    config->arch())) {
     if (requested)
       error("-fixup_chains is only supported on x86_64 and arm64 targets");
 
@@ -1268,7 +1322,7 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
     return false;
   }
 
-  if (requested)
+  if (requested || config->arch() == AK_arm64e)
     return true;
 
   static const MinVersions<9> minVersion = {{
@@ -1285,13 +1339,32 @@ static bool shouldEmitChainedFixups(const InputArgList &args) {
   return greaterEqMinVersion(minVersion, false);
 }
 
+static uint16_t getChainedFixupsPointerFormat() {
+  // FIXME: Use DYLD_CHAINED_PTR_64_OFFSET on newer OS versions.
+  if (config->arch() != AK_arm64e)
+    return DYLD_CHAINED_PTR_64;
+  // Like ld64, keep the original format if -no_fixup_chains was given.
+  if (config->noFixupChainsIgnored)
+    return DYLD_CHAINED_PTR_ARM64E;
+  // The releases from which arm64e uses DYLD_CHAINED_PTR_ARM64E_USERLAND24.
+  static const MinVersions<7> minVersion = {{
+      {PLATFORM_MACOS, VersionTuple(12, 0)},
+      {PLATFORM_IOS, VersionTuple(15, 0)},
+      {PLATFORM_MACCATALYST, VersionTuple(15, 0)},
+      {PLATFORM_TVOS, VersionTuple(15, 0)},
+      {PLATFORM_WATCHOS, VersionTuple(8, 0)},
+      {PLATFORM_XROS, VersionTuple(1, 0)},
+      {PLATFORM_DRIVERKIT, VersionTuple(21, 0)},
+  }};
+  return greaterEqMinVersion(minVersion, true)
+             ? DYLD_CHAINED_PTR_ARM64E_USERLAND24
+             : DYLD_CHAINED_PTR_ARM64E;
+}
+
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
-  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
-                                   OPT_no_objc_relative_method_lists);
-  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
-    return true;
-  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
-    return false;
+  if (const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                       OPT_no_objc_relative_method_lists))
+    return arg->getOption().matches(OPT_objc_relative_method_lists);
 
   // If no flag is specified, enable this on newer versions by default.
   // The min versions is taken from
@@ -1315,12 +1388,20 @@ void SymbolPatterns::clear() {
 }
 
 void SymbolPatterns::insert(StringRef symbolName) {
-  if (symbolName.find_first_of("*?[]") == StringRef::npos)
-    literals.insert(CachedHashStringRef(symbolName));
-  else if (Expected<GlobPattern> pattern = GlobPattern::create(symbolName))
-    globs.emplace_back(*pattern);
-  else
-    error("invalid symbol-name pattern: " + symbolName);
+  Expected<GlobPattern> pattern = GlobPattern::create(symbolName);
+  if (!pattern) {
+    error("invalid symbol-name pattern: " + symbolName + ": " +
+          toString(pattern.takeError()));
+    return;
+  }
+  // A pattern that denotes a single string is kept as a literal: literals are
+  // matched by hash lookup, and only literals seed the force-load of lazy
+  // archive members below.
+  if (std::optional<std::string> literal = pattern->asLiteral()) {
+    literals.insert(CachedHashStringRef(saver().save(*literal)));
+    return;
+  }
+  globs.emplace_back(std::move(*pattern));
 }
 
 bool SymbolPatterns::matchLiteral(StringRef symbolName) const {
@@ -1383,32 +1464,29 @@ static void createFiles(const InputArgList &args) {
       deferFile(rerootPath(arg->getValue()), isLazy, deferredFiles);
       break;
     case OPT_needed_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine)))
-        dylibFile->forceNeeded = true;
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/true);
       break;
     case OPT_reexport_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine))) {
-        config->hasReexports = true;
-        dylibFile->reexport = true;
-      }
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/false,
+                /*isReexport=*/true);
       break;
     case OPT_weak_library:
-      if (auto *dylibFile = dyn_cast_or_null<DylibFile>(
-              addFile(rerootPath(arg->getValue()), LoadType::CommandLine)))
-        dylibFile->forceWeakImport = true;
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/true);
       break;
     case OPT_filelist:
       addFileList(arg->getValue(), isLazy, deferredFiles);
       break;
     case OPT_force_load:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLineForce);
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLineForce);
       break;
     case OPT_load_hidden:
-      addFile(rerootPath(arg->getValue()), LoadType::CommandLine,
-              /*isLazy=*/false, /*isExplicit=*/true, /*isBundleLoader=*/false,
-              /*isForceHidden=*/true);
+      deferFile(rerootPath(arg->getValue()), /*isLazy=*/false, deferredFiles,
+                LoadType::CommandLine, /*isNeeded=*/false, /*isWeak=*/false,
+                /*isReexport=*/false, /*isHidden=*/true);
       break;
     case OPT_l:
     case OPT_needed_l:
@@ -1418,7 +1496,7 @@ static void createFiles(const InputArgList &args) {
       addLibrary(arg->getValue(), opt.getID() == OPT_needed_l,
                  opt.getID() == OPT_weak_l, opt.getID() == OPT_reexport_l,
                  opt.getID() == OPT_hidden_l,
-                 /*isExplicit=*/true, LoadType::CommandLine);
+                 /*isExplicit=*/true, LoadType::CommandLine, deferredFiles);
       break;
     case OPT_framework:
     case OPT_needed_framework:
@@ -1427,7 +1505,7 @@ static void createFiles(const InputArgList &args) {
       addFramework(arg->getValue(), opt.getID() == OPT_needed_framework,
                    opt.getID() == OPT_weak_framework,
                    opt.getID() == OPT_reexport_framework, /*isExplicit=*/true,
-                   LoadType::CommandLine);
+                   LoadType::CommandLine, deferredFiles);
       break;
     case OPT_start_lib:
       if (inLib)
@@ -1452,18 +1530,23 @@ static void createFiles(const InputArgList &args) {
     multiThreadedPageIn(deferredFiles);
 
     DeferredFiles archiveContents;
-    std::vector<ArchiveFile *> archives;
     for (auto &file : deferredFiles) {
+      if (loadedObjectFrameworks.contains(file.path))
+        continue;
+
       auto inputFile = processFile(file.buffer, &archiveContents, file.path,
-                                   LoadType::CommandLine, file.isLazy);
+                                   file.loadType, file.isLazy, file.isExplicit,
+                                   /*isBundleLoader=*/false, file.isHidden);
+      applyDylibMetadata(inputFile, file.isNeeded, file.isWeak,
+                         file.isReexport);
+      checkAndCacheFramework(inputFile, file.path);
+
       if (ArchiveFile *archive = dyn_cast<ArchiveFile>(inputFile))
-        archives.push_back(archive);
+        archive->addLazySymbols();
     }
 
     if (!archiveContents.empty())
       multiThreadedPageIn(archiveContents);
-    for (auto *archive : archives)
-      archive->addLazySymbols();
 
     pageInQueue.stopAllWork = true;
   }
@@ -1519,7 +1602,7 @@ static void codegenDataGenerate() {
     }
   }
 
-  globalMergeRecord.finalize();
+  globalMergeRecord.finalize(config->libraryOptions);
 
   CodeGenDataWriter Writer;
   if (!globalOutlineRecord.empty())
@@ -1548,13 +1631,41 @@ static void foldIdenticalLiterals() {
   in.wordLiteralSection->finalizeContents();
 }
 
-static void addSynthenticMethnames() {
+static void prepareObjCStubs() {
   std::string &data = *make<std::string>();
   llvm::raw_string_ostream os(data);
-  for (Symbol *sym : symtab->getSymbols())
-    if (isa<Undefined>(sym))
-      if (ObjCStubsSection::isObjCStubSymbol(sym))
-        os << ObjCStubsSection::getMethname(sym) << '\0';
+  // Iterate by index: resolving a class symbol may extract an archive member,
+  // which appends new symbols, including more stubs, to the symbol table.
+  for (size_t i = 0; i < symtab->getSymbols().size(); ++i) {
+    Symbol *sym = symtab->getSymbols()[i];
+    if (!isa<Undefined>(sym))
+      continue;
+    if (ObjCStubsSection::isObjCMsgSendStubSymbol(sym)) {
+      os << ObjCStubsSection::getMethname(sym) << '\0';
+      continue;
+    }
+    if (!ObjCStubsSection::isObjCClassStubSymbol(sym) ||
+        !target->supportsObjCClassStubs())
+      continue;
+    std::optional<ObjCStubsSection::ObjCClassStubNames> names =
+        ObjCStubsSection::parseObjCClassStubSymbol(sym);
+    if (!names)
+      continue;
+    os << names->selectorName << '\0';
+
+    Symbol *classSym = symtab->find(names->classSymbolName);
+    bool needsEarlyUndefinedClassRef =
+        !classSym || isa<LazyArchive>(classSym) || isa<LazyObject>(classSym);
+    // Missing symbols need a placeholder for diagnostics, and lazy symbols need
+    // extraction before markLive(). Do not call addUndefined() for DylibSymbol
+    // here: live stubs reference them later in ObjCStubsSection::addEntry(),
+    // and adding them here would mark real dylib symbols referenced before dead
+    // stripping.
+    if (needsEarlyUndefinedClassRef)
+      classSym = symtab->addUndefined(names->classSymbolName, /*file=*/nullptr,
+                                      /*isWeakRef=*/false);
+    in.objcStubs->recordClassSymbol(sym, classSym);
+  }
 
   if (data.empty())
     return;
@@ -1704,6 +1815,16 @@ static SmallVector<StringRef, 0> getAllowableClients(opt::InputArgList &args) {
       vals.push_back(val);
   }
   return vals;
+}
+
+static void computeColdness() {
+  TimeTraceScope timeScope("Compute coldness");
+  for (InputSection *isec : inputSections) {
+    if (!isCodeSection(isec))
+      continue;
+    isec->isCold =
+        llvm::any_of(isec->symbols, [](Defined *sym) { return sym->isCold(); });
+  }
 }
 
 namespace lld {
@@ -1975,8 +2096,10 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->emitDataInCodeInfo =
       args.hasFlag(OPT_data_in_code_info, OPT_no_data_in_code_info, true);
   config->emitChainedFixups = shouldEmitChainedFixups(args);
+  config->chainedFixupsPointerFormat = getChainedFixupsPointerFormat();
   config->emitInitOffsets =
-      config->emitChainedFixups || args.hasArg(OPT_init_offsets);
+      (config->emitChainedFixups && !config->noFixupChainsIgnored) ||
+      args.hasArg(OPT_init_offsets);
   config->emitRelativeMethodLists = shouldEmitRelativeMethodLists(args);
   config->icfLevel = getICFLevel(args);
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
@@ -1984,6 +2107,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
   config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
+  config->stripSwiftForceLoad =
+      args.hasFlag(OPT_strip_swift_force_load, OPT_no_strip_swift_force_load,
+                   /*Default=*/false);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);
   config->ignoreOptimizationHints = args.hasArg(OPT_ignore_optimization_hints);
@@ -2008,8 +2134,15 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->warnThinArchiveMissingMembers =
       args.hasFlag(OPT_warn_thin_archive_missing_members,
                    OPT_no_warn_thin_archive_missing_members, true);
+  config->warnMissingSubsectionsViaSymbols =
+      args.hasFlag(OPT_warn_missing_subsections_via_symbols,
+                   OPT_no_warn_missing_subsections_via_symbols, false);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+#ifdef NDEBUG
+  config->disableVerify = true;
+#else
   config->disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   config->separateCstringLiteralSections =
       args.hasFlag(OPT_separate_cstring_literal_sections,
                    OPT_no_separate_cstring_literal_sections, false);
@@ -2062,6 +2195,50 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (config->irpgoProfilePath.empty() && config->bpStartupFunctionSort)
     error("--bp-startup-sort=function must be used with "
           "--irpgo-profile");
+  auto addCompressionSortSpec = [&](StringRef value) {
+    SmallVector<StringRef, 3> parts;
+    value.split(parts, '=');
+
+    StringRef globString = parts[0];
+    unsigned layoutPriority = 0;
+    std::optional<unsigned> matchPriority;
+
+    if (parts.size() > 1 && !parts[1].empty()) {
+      if (!to_integer(parts[1], layoutPriority)) {
+        error("--bp-compression-sort-section: expected integer "
+              "for layout_priority, got '" +
+              parts[1] + "'");
+        return;
+      }
+    }
+    if (parts.size() > 2 && !parts[2].empty()) {
+      unsigned mp;
+      if (!to_integer(parts[2], mp)) {
+        error("--bp-compression-sort-section: expected integer "
+              "for match_priority, got '" +
+              parts[2] + "'");
+        return;
+      }
+      matchPriority = mp;
+    }
+    if (parts.size() > 3) {
+      error("--bp-compression-sort-section: too many '=' in '" + value + "'");
+      return;
+    }
+
+    auto spec = BPCompressionSortSpec::create(globString, layoutPriority,
+                                              matchPriority);
+    if (!spec) {
+      error("--bp-compression-sort-section: " + toString(spec.takeError()));
+      return;
+    }
+    config->bpCompressionSortSpecs.emplace_back(std::move(*spec));
+  };
+
+  for (const Arg *arg : args.filtered(OPT_bp_compression_sort_section))
+    addCompressionSortSpec(arg->getValue());
+  if (!config->bpCompressionSortSpecs.empty())
+    IncompatWithCGSort("--bp-compression-sort-section");
   if (const Arg *arg = args.getLastArg(OPT_bp_compression_sort)) {
     StringRef compressionSortStr = arg->getValue();
     if (compressionSortStr == "function") {
@@ -2324,8 +2501,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
         reexportHandler(arg, extensions);
     }
 
-    cl::ResetAllOptionOccurrences();
-
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))
       parseClangOption(saver().save("-mcpu=" + StringRef(arg->getValue())),
@@ -2340,7 +2515,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
 
     createSyntheticSections();
     createSyntheticSymbols();
-    addSynthenticMethnames();
 
     createAliases();
     // If we are in "explicit exports" mode, hide everything that isn't
@@ -2357,6 +2531,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // compileBitcodeFiles, so we are done if that's the case.
     if (config->thinLTOIndexOnly || config->emitLLVM)
       return errorCount() == 0;
+
+    prepareObjCStubs();
 
     // LTO may emit a non-hidden (extern) object file symbol even if the
     // corresponding bitcode symbol is hidden. In particular, this happens for
@@ -2390,6 +2566,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       inputFiles.insert(make<OpaqueFile>(MemoryBufferRef(), segName, sectName));
     }
 
+    parseDeferredRelocations();
+
     gatherInputSections();
 
     if (!config->codegenDataGeneratePath.empty())
@@ -2414,8 +2592,16 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     // Category merging uses "->live = false" to erase old category data, so
     // it has to run after dead-stripping (markLive).
     if (args.hasFlag(OPT_objc_category_merging, OPT_no_objc_category_merging,
-                     false))
-      objc::mergeCategories();
+                     false)) {
+      // FIXME: Merge arm64e categories too, as ld64 does by default. Merging
+      // doesn't preserve the signing schemas in arm64e category data yet.
+      if (config->arch() == AK_arm64e)
+        warn("-objc_category_merging is not supported on arm64e, ignoring");
+      else
+        objc::mergeCategories();
+    }
+
+    computeColdness();
 
     // ICF assumes that all literals have been folded already, so we must run
     // foldIdenticalLiterals before foldIdenticalSections.
@@ -2428,6 +2614,8 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
     } else if (config->dedupStrings) {
       foldIdenticalSections(/*onlyCfStrings=*/true);
     }
+
+    stripSwiftForceLoadFixups();
 
     // Write to an output file.
     if (target->wordSize == 8)

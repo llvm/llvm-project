@@ -21,38 +21,11 @@
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include <functional>
 
 using namespace llvm;
 
 namespace {
-
-struct RISCVOutgoingValueAssigner : public CallLowering::OutgoingValueAssigner {
-private:
-  // The function used internally to assign args - we ignore the AssignFn stored
-  // by OutgoingValueAssigner since RISC-V implements its CC using a custom
-  // function with a different signature.
-  RISCVCCAssignFn *RISCVAssignFn;
-
-  // Whether this is assigning args for a return.
-  bool IsRet;
-
-public:
-  RISCVOutgoingValueAssigner(RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
-      : CallLowering::OutgoingValueAssigner(nullptr),
-        RISCVAssignFn(RISCVAssignFn_), IsRet(IsRet) {}
-
-  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    if (RISCVAssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State, IsRet,
-                      Info.Ty))
-      return true;
-
-    StackSize = State.getStackSize();
-    return false;
-  }
-};
 
 struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
   RISCVOutgoingValueHandler(MachineIRBuilder &B, MachineRegisterInfo &MRI,
@@ -64,12 +37,12 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                            ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     LLT p0 = LLT::pointer(0, Subtarget.getXLen());
-    LLT sXLen = LLT::scalar(Subtarget.getXLen());
+    LLT iXLen = LLT::integer(Subtarget.getXLen());
 
     if (!SPReg)
       SPReg = MIRBuilder.buildCopy(p0, Register(RISCV::X2)).getReg(0);
 
-    auto OffsetReg = MIRBuilder.buildConstant(sXLen, Offset);
+    auto OffsetReg = MIRBuilder.buildConstant(iXLen, Offset);
 
     auto AddrReg = MIRBuilder.buildPtrAdd(p0, SPReg, OffsetReg);
 
@@ -104,22 +77,45 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
     const CCValAssign &VA = VAs[0];
-    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
-        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+    bool NarrowValWideLoc =
+        (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16);
+    bool FixedLenVecInScalableVec =
+        VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector();
+    if (NarrowValWideLoc || FixedLenVecInScalableVec) {
       Register PhysReg = VA.getLocReg();
 
-      auto assignFunc = [=]() {
-        auto Trunc = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Arg.Regs[0]);
-        MIRBuilder.buildCopy(PhysReg, Trunc);
-        MIB.addUse(PhysReg, RegState::Implicit);
-      };
+      std::function<void()> AssignFunc;
+      if (NarrowValWideLoc) {
+        AssignFunc = [=]() {
+          Register Src = Arg.Regs[0];
+          LLT SrcTy = MRI.getType(Src);
+          if (SrcTy.isFloat())
+            Src =
+                MIRBuilder.buildBitcast(SrcTy.changeToInteger(), Src).getReg(0);
+          auto Ext = MIRBuilder.buildAnyExt(LLT(VA.getLocVT()), Src);
+          MIRBuilder.buildCopy(PhysReg, Ext);
+          MIB.addUse(PhysReg, RegState::Implicit);
+        };
+      } else if (FixedLenVecInScalableVec) {
+        AssignFunc = [=]() {
+          auto SubVec = MIRBuilder.buildInsertSubvector(
+              LLT(VA.getLocVT()), MIRBuilder.buildUndef(LLT(VA.getLocVT())),
+              Arg.Regs[0], 0);
+          MIRBuilder.buildCopy(PhysReg, SubVec);
+          MIB.addUse(PhysReg, RegState::Implicit);
+        };
+      } else
+        llvm_unreachable(
+            "A narrower value must be passed in a wider register or a fixed "
+            "length vector in a scalable vector register.");
 
       if (Thunk) {
-        *Thunk = std::move(assignFunc);
+        *Thunk = std::move(AssignFunc);
         return 1;
       }
 
-      assignFunc();
+      AssignFunc();
       return 1;
     }
 
@@ -134,8 +130,8 @@ struct RISCVOutgoingValueHandler : public CallLowering::OutgoingValueHandler {
            VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::integer(32)),
+                          MRI.createGenericVirtualRegister(LLT::integer(32))};
     MIRBuilder.buildUnmerge(NewRegs, Arg.Regs[0]);
 
     if (VAHi.isMemLoc()) {
@@ -171,39 +167,6 @@ private:
   Register SPReg;
 
   const RISCVSubtarget &Subtarget;
-};
-
-struct RISCVIncomingValueAssigner : public CallLowering::IncomingValueAssigner {
-private:
-  // The function used internally to assign args - we ignore the AssignFn stored
-  // by IncomingValueAssigner since RISC-V implements its CC using a custom
-  // function with a different signature.
-  RISCVCCAssignFn *RISCVAssignFn;
-
-  // Whether this is assigning args from a return.
-  bool IsRet;
-
-public:
-  RISCVIncomingValueAssigner(RISCVCCAssignFn *RISCVAssignFn_, bool IsRet)
-      : CallLowering::IncomingValueAssigner(nullptr),
-        RISCVAssignFn(RISCVAssignFn_), IsRet(IsRet) {}
-
-  bool assignArg(unsigned ValNo, EVT OrigVT, MVT ValVT, MVT LocVT,
-                 CCValAssign::LocInfo LocInfo,
-                 const CallLowering::ArgInfo &Info, ISD::ArgFlagsTy Flags,
-                 CCState &State) override {
-    MachineFunction &MF = State.getMachineFunction();
-
-    if (LocVT.isScalableVector())
-      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
-
-    if (RISCVAssignFn(ValNo, ValVT, LocVT, LocInfo, Flags, State, IsRet,
-                      Info.Ty))
-      return true;
-
-    StackSize = State.getStackSize();
-    return false;
-  }
 };
 
 struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
@@ -242,8 +205,12 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
                              ArrayRef<CCValAssign> VAs,
                              std::function<void()> *Thunk) override {
     const CCValAssign &VA = VAs[0];
-    if ((VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
-        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16)) {
+    bool NarrowValWideLoc =
+        (VA.getLocVT() == MVT::i64 && VA.getValVT() == MVT::f32) ||
+        (VA.getLocVT().isInteger() && VA.getValVT() == MVT::f16);
+    bool FixedLenVecInScalableVec =
+        VA.getValVT().isFixedLengthVector() && VA.getLocVT().isScalableVector();
+    if (NarrowValWideLoc || FixedLenVecInScalableVec) {
       Register PhysReg = VA.getLocReg();
 
       markPhysRegUsed(PhysReg);
@@ -251,7 +218,21 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
       LLT LocTy(VA.getLocVT());
       auto Copy = MIRBuilder.buildCopy(LocTy, PhysReg);
 
-      MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
+      if (NarrowValWideLoc) {
+        LLT ValTy = MRI.getType(Arg.Regs[0]);
+        if (ValTy.isFloat()) {
+          auto Trunc =
+              MIRBuilder.buildTrunc(ValTy.changeToInteger(), Copy.getReg(0));
+          MIRBuilder.buildBitcast(Arg.Regs[0], Trunc);
+        } else {
+          MIRBuilder.buildTrunc(Arg.Regs[0], Copy.getReg(0));
+        }
+      } else if (FixedLenVecInScalableVec)
+        MIRBuilder.buildExtractSubvector(Arg.Regs[0], Copy.getReg(0), 0);
+      else
+        llvm_unreachable(
+            "A narrower value must be passed in a wider register or a fixed "
+            "length vector in a scalable vector register.");
       return 1;
     }
 
@@ -266,8 +247,8 @@ struct RISCVIncomingValueHandler : public CallLowering::IncomingValueHandler {
            VA.getValVT() == MVT::f64 && VAHi.getValVT() == MVT::f64 &&
            "unexpected custom value");
 
-    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
-                          MRI.createGenericVirtualRegister(LLT::scalar(32))};
+    Register NewRegs[] = {MRI.createGenericVirtualRegister(LLT::integer(32)),
+                          MRI.createGenericVirtualRegister(LLT::integer(32))};
 
     if (VAHi.isMemLoc()) {
       LLT MemTy(VAHi.getLocVT());
@@ -364,6 +345,9 @@ static bool isSupportedArgumentType(Type *T, const RISCVSubtarget &Subtarget,
       T->isScalableTy() &&
       isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
     return true;
+  if (T->isVectorTy() && !T->isScalableTy())
+    return true;
+
   return false;
 }
 
@@ -389,6 +373,8 @@ static bool isSupportedReturnType(Type *T, const RISCVSubtarget &Subtarget,
   if (IsLowerRetVal && T->isVectorTy() && Subtarget.hasVInstructions() &&
       T->isScalableTy() &&
       isLegalElementTypeForRVV(T->getScalarType(), Subtarget))
+    return true;
+  if (T->isVectorTy() && !T->isScalableTy())
     return true;
 
   return false;
@@ -420,13 +406,19 @@ bool RISCVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 4> SplitRetInfos;
     splitToValueTypes(OrigRetInfo, SplitRetInfos, DL, CC);
 
-    RISCVOutgoingValueAssigner Assigner(
-        CC == CallingConv::Fast ? CC_RISCV_FastCC : CC_RISCV,
-        /*IsRet=*/true);
+    OutgoingValueAssigner Assigner(RetCC_RISCV);
     RISCVOutgoingValueHandler Handler(MIRBuilder, MF.getRegInfo(), Ret);
-    if (!determineAndHandleAssignments(Handler, Assigner, SplitRetInfos,
-                                       MIRBuilder, CC, F.isVarArg()))
+
+    SmallVector<CCValAssign, 16> RetLocs;
+    CCState CCInfo(CC, F.isVarArg(), MF, RetLocs, F.getContext());
+    if (!determineAssignments(Assigner, SplitRetInfos, CCInfo) ||
+        !handleAssignments(Handler, SplitRetInfos, CCInfo, RetLocs, MIRBuilder))
       return false;
+
+    if (any_of(RetLocs, [](CCValAssign &VA) {
+          return VA.getLocVT().isScalableVector();
+        }))
+      MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
   }
 
   MIRBuilder.insertInstr(Ret);
@@ -437,17 +429,11 @@ bool RISCVCallLowering::canLowerReturn(MachineFunction &MF,
                                        CallingConv::ID CallConv,
                                        SmallVectorImpl<BaseArgInfo> &Outs,
                                        bool IsVarArg) const {
-  SmallVector<CCValAssign, 16> ArgLocs;
-  CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs,
+  SmallVector<CCValAssign, 16> RetLocs;
+  CCState CCInfo(CallConv, IsVarArg, MF, RetLocs,
                  MF.getFunction().getContext());
 
-  for (unsigned I = 0, E = Outs.size(); I < E; ++I) {
-    MVT VT = MVT::getVT(Outs[I].Ty);
-    if (CC_RISCV(I, VT, VT, CCValAssign::Full, Outs[I].Flags[0], CCInfo,
-                 /*isRet=*/true, nullptr))
-      return false;
-  }
-  return true;
+  return checkReturn(CCInfo, Outs, RetCC_RISCV);
 }
 
 /// If there are varargs that were passed in a0-a7, the data in those registers
@@ -458,7 +444,7 @@ void RISCVCallLowering::saveVarArgRegisters(
   MachineFunction &MF = MIRBuilder.getMF();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   unsigned XLenInBytes = Subtarget.getXLen() / 8;
-  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget.getTargetABI());
+  ArrayRef<MCPhysReg> ArgRegs = RISCV::getArgGPRs(Subtarget);
   MachineRegisterInfo &MRI = MF.getRegInfo();
   unsigned Idx = CCInfo.getFirstUnallocated(ArgRegs);
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -489,17 +475,17 @@ void RISCVCallLowering::saveVarArgRegisters(
 
     const LLT p0 = LLT::pointer(MF.getDataLayout().getAllocaAddrSpace(),
                                 Subtarget.getXLen());
-    const LLT sXLen = LLT::scalar(Subtarget.getXLen());
+    const LLT iXLen = LLT::integer(Subtarget.getXLen());
 
     auto FIN = MIRBuilder.buildFrameIndex(p0, FI);
     auto Offset = MIRBuilder.buildConstant(
-        MRI.createGenericVirtualRegister(sXLen), XLenInBytes);
+        MRI.createGenericVirtualRegister(iXLen), XLenInBytes);
 
     // Copy the integer registers that may have been used for passing varargs
     // to the vararg save area.
     const MVT XLenVT = Subtarget.getXLenVT();
     for (unsigned I = Idx; I < ArgRegs.size(); ++I) {
-      const Register VReg = MRI.createGenericVirtualRegister(sXLen);
+      const Register VReg = MRI.createGenericVirtualRegister(iXLen);
       Handler.assignValueToReg(
           VReg, ArgRegs[I],
           CCValAssign::getReg(I + MF.getFunction().getNumOperands(), XLenVT,
@@ -516,6 +502,37 @@ void RISCVCallLowering::saveVarArgRegisters(
   // necessary to G_VASTART.
   RVFI->setVarArgsFrameIndex(FI);
   RVFI->setVarArgsSaveSize(VarArgsSaveSize);
+}
+
+/// Note the registers holding incoming arguments that the ABI guarantees are
+/// sign extended from 32 bits for the RISCVOptWInstrs pass.
+static void markSExt32Registers(MachineFunction &MF,
+                                ArrayRef<CallLowering::ArgInfo> Args,
+                                ArrayRef<CCValAssign> ArgLocs) {
+  if (!MF.getSubtarget<RISCVSubtarget>().is64Bit())
+    return;
+
+  RISCVMachineFunctionInfo *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+  for (const CCValAssign &VA : ArgLocs) {
+    if (!VA.isRegLoc() || VA.getLocVT() != MVT::i64)
+      continue;
+
+    // handleAssignments leaves Regs holding the registers the incoming values
+    // were copied into from the physical registers.
+    const CallLowering::ArgInfo &Arg = Args[VA.getValNo()];
+    if (Arg.Regs.size() != 1)
+      continue;
+
+    auto *IntTy = dyn_cast<IntegerType>(Arg.Ty);
+    if (!IntTy)
+      continue;
+
+    unsigned BitWidth = IntTy->getBitWidth();
+    // An input zero extended from i31 can also be considered sign extended.
+    if ((BitWidth <= 32 && Arg.Flags[0].isSExt()) ||
+        (BitWidth < 32 && Arg.Flags[0].isZExt()))
+      RVFI->addSExt32Register(Arg.Regs[0]);
+  }
 }
 
 bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
@@ -556,9 +573,7 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     ++Index;
   }
 
-  RISCVIncomingValueAssigner Assigner(CC == CallingConv::Fast ? CC_RISCV_FastCC
-                                                              : CC_RISCV,
-                                      /*IsRet=*/false);
+  IncomingValueAssigner Assigner(CC_RISCV);
   RISCVFormalArgHandler Handler(MIRBuilder, MF.getRegInfo());
 
   SmallVector<CCValAssign, 16> ArgLocs;
@@ -566,6 +581,12 @@ bool RISCVCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
   if (!determineAssignments(Assigner, SplitArgInfos, CCInfo) ||
       !handleAssignments(Handler, SplitArgInfos, CCInfo, ArgLocs, MIRBuilder))
     return false;
+
+  if (any_of(ArgLocs,
+             [](CCValAssign &VA) { return VA.getLocVT().isScalableVector(); }))
+    MF.getInfo<RISCVMachineFunctionInfo>()->setIsVectorCall();
+
+  markSExt32Registers(MF, SplitArgInfos, ArgLocs);
 
   if (F.isVarArg())
     saveVarArgRegisters(MIRBuilder, Handler, Assigner, CCInfo);
@@ -615,12 +636,15 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
           .buildInstrNoInsert(Info.Callee.isReg() ? RISCV::PseudoCALLIndirect
                                                   : RISCV::PseudoCALL)
           .add(Info.Callee);
+  if (Info.NoMerge)
+    Call.setMIFlag(MachineInstr::MIFlag::NoMerge);
+  if (Info.CFIType)
+    Call->setCFIType(MF, Info.CFIType->getZExtValue());
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
-  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv));
+  Call.addRegMask(TRI->getCallPreservedMask(MF, Info.CallConv))
+      .setOperandDead(2); // $x1 (ra)
 
-  RISCVOutgoingValueAssigner ArgAssigner(
-      CC == CallingConv::Fast ? CC_RISCV_FastCC : CC_RISCV,
-      /*IsRet=*/false);
+  OutgoingValueAssigner ArgAssigner(CC_RISCV);
   RISCVOutgoingValueHandler ArgHandler(MIRBuilder, MF.getRegInfo(), Call);
   if (!determineAndHandleAssignments(ArgHandler, ArgAssigner, SplitArgInfos,
                                      MIRBuilder, CC, Info.IsVarArg))
@@ -646,9 +670,7 @@ bool RISCVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SmallVector<ArgInfo, 4> SplitRetInfos;
     splitToValueTypes(Info.OrigRet, SplitRetInfos, DL, CC);
 
-    RISCVIncomingValueAssigner RetAssigner(
-        CC == CallingConv::Fast ? CC_RISCV_FastCC : CC_RISCV,
-        /*IsRet=*/true);
+    IncomingValueAssigner RetAssigner(RetCC_RISCV);
     RISCVCallReturnHandler RetHandler(MIRBuilder, MF.getRegInfo(), Call);
     if (!determineAndHandleAssignments(RetHandler, RetAssigner, SplitRetInfos,
                                        MIRBuilder, CC, Info.IsVarArg))

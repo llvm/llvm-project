@@ -217,10 +217,6 @@ class MDNodeMapper {
   /// Worklist of distinct nodes whose operands need to be remapped.
   SmallVector<MDNode *, 16> DistinctWorklist;
 
-  // Storage for a UniquedGraph.
-  SmallDenseMap<const Metadata *, Data, 32> InfoStorage;
-  SmallVector<MDNode *, 16> POTStorage;
-
 public:
   MDNodeMapper(Mapper &M) : M(M) {}
 
@@ -539,7 +535,7 @@ Value *Mapper::mapValue(const Value *V) {
   if (isa<ConstantTargetNone>(C))
     return getVM()[V] = Constant::getNullValue(NewTy);
   assert(isa<ConstantPointerNull>(C));
-  return getVM()[V] = ConstantPointerNull::get(cast<PointerType>(NewTy));
+  return getVM()[V] = ConstantPointerNull::get(NewTy);
 }
 
 void Mapper::remapDbgRecord(DbgRecord &DR) {
@@ -993,6 +989,12 @@ void Mapper::remapInstruction(Instruction *I) {
   if (auto *CB = dyn_cast<CallBase>(I)) {
     if (CB->getMetadata(LLVMContext::MD_callee_type) && !CB->isIndirectCall())
       CB->setMetadata(LLVMContext::MD_callee_type, nullptr);
+    // !inline_history metadata can contain references to other functions that
+    // we don't want to map because ThinLTO doesn't track metadata references
+    // to functions.
+    if ((Flags & RF_Importing) &&
+        CB->getMetadata(LLVMContext::MD_inline_history))
+      CB->setMetadata(LLVMContext::MD_inline_history, nullptr);
   }
 
   // Remap phi nodes' incoming blocks.
@@ -1038,7 +1040,7 @@ void Mapper::remapInstruction(Instruction *I) {
     LLVMContext &C = CB->getContext();
     AttributeList Attrs = CB->getAttributes();
     for (unsigned i = 0; i < Attrs.getNumAttrSets(); ++i) {
-      for (int AttrIdx = Attribute::FirstTypeAttr;
+      for (unsigned AttrIdx = Attribute::FirstTypeAttr;
            AttrIdx <= Attribute::LastTypeAttr; AttrIdx++) {
         Attribute::AttrKind TypedAttr = (Attribute::AttrKind)AttrIdx;
         if (Type *Ty =

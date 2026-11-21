@@ -19,10 +19,12 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <string>
 
 namespace llvm {
 
+class LLVMContext;
 class Module;
 
 LLVM_ABI extern cl::opt<int> SampleHotCallSiteThreshold;
@@ -32,12 +34,9 @@ LLVM_ABI extern cl::opt<int> ProfileInlineLimitMin;
 LLVM_ABI extern cl::opt<int> ProfileInlineLimitMax;
 LLVM_ABI extern cl::opt<bool> SortProfiledSCC;
 
-namespace vfs {
-class FileSystem;
-} // namespace vfs
-
 /// The sample profiler data loader pass.
-class SampleProfileLoaderPass : public PassInfoMixin<SampleProfileLoaderPass> {
+class SampleProfileLoaderPass
+    : public OptionalPassInfoMixin<SampleProfileLoaderPass> {
 public:
   LLVM_ABI SampleProfileLoaderPass(
       std::string File = "", std::string RemappingFile = "",
@@ -47,6 +46,9 @@ public:
       bool UseFlattenedProfile = false);
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  /// Return -sample-profile-file.
+  LLVM_ABI static StringRef getSampleProfileFile(const LLVMContext &C);
 
 private:
   std::string ProfileFileName;

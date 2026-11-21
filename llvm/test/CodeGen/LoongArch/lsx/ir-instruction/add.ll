@@ -66,6 +66,42 @@ entry:
   ret void
 }
 
+define void @add_v1i128(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: add_v1i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a2, 0
+; CHECK-NEXT:    vadd.q $vr0, $vr0, $vr1
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    ret
+entry:
+  %v0 = load <1 x i128>, ptr %a0
+  %v1 = load <1 x i128>, ptr %a1
+  %v2 = add <1 x i128> %v0, %v1
+  store <1 x i128> %v2, ptr %res
+  ret void
+}
+
+define void @add_v2i128(ptr %res, ptr %a0, ptr %a1) nounwind {
+; CHECK-LABEL: add_v2i128:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vld $vr0, $a1, 0
+; CHECK-NEXT:    vld $vr1, $a1, 16
+; CHECK-NEXT:    vld $vr2, $a2, 16
+; CHECK-NEXT:    vld $vr3, $a2, 0
+; CHECK-NEXT:    vadd.q $vr1, $vr1, $vr2
+; CHECK-NEXT:    vadd.q $vr0, $vr0, $vr3
+; CHECK-NEXT:    vst $vr0, $a0, 0
+; CHECK-NEXT:    vst $vr1, $a0, 16
+; CHECK-NEXT:    ret
+entry:
+  %v0 = load <2 x i128>, ptr %a0
+  %v1 = load <2 x i128>, ptr %a1
+  %v2 = add <2 x i128> %v0, %v1
+  store <2 x i128> %v2, ptr %res
+  ret void
+}
+
 define void @add_v16i8_31(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: add_v16i8_31:
 ; CHECK:       # %bb.0: # %entry
@@ -120,4 +156,65 @@ entry:
   %v1 = add <2 x i64> %v0, <i64 31, i64 31>
   store <2 x i64> %v1, ptr %res
   ret void
+}
+
+define <16 x i8> @sub_v16i8_n1(<16 x i8> %a) nounwind {
+; CHECK-LABEL: sub_v16i8_n1:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vaddi.bu $vr0, $vr0, 1
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <16 x i8> %a, splat (i8 -1)
+  ret <16 x i8> %0
+}
+
+define <16 x i8> @sub_v16i8_n31(<16 x i8> %a) nounwind {
+; CHECK-LABEL: sub_v16i8_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vaddi.bu $vr0, $vr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <16 x i8> %a, splat (i8 -31)
+  ret <16 x i8> %0
+}
+
+define <16 x i8> @sub_v16i8_n32(<16 x i8> %a) nounwind {
+; CHECK-LABEL: sub_v16i8_n32:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vrepli.b $vr1, -32
+; CHECK-NEXT:    vsub.b $vr0, $vr0, $vr1
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <16 x i8> %a, splat (i8 -32)
+  ret <16 x i8> %0
+}
+
+define <8 x i16> @sub_v8i16_n31(<8 x i16> %a) nounwind {
+; CHECK-LABEL: sub_v8i16_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vaddi.hu $vr0, $vr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <8 x i16> %a, splat (i16 -31)
+  ret <8 x i16> %0
+}
+
+define <4 x i32> @sub_v4i32_n31(<4 x i32> %a) nounwind {
+; CHECK-LABEL: sub_v4i32_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vaddi.wu $vr0, $vr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <4 x i32> %a, splat (i32 -31)
+  ret <4 x i32> %0
+}
+
+define <2 x i64> @sub_v2i64_n31(<2 x i64> %a) nounwind {
+; CHECK-LABEL: sub_v2i64_n31:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vaddi.du $vr0, $vr0, 31
+; CHECK-NEXT:    ret
+entry:
+  %0 = sub <2 x i64> %a, splat (i64 -31)
+  ret <2 x i64> %0
 }

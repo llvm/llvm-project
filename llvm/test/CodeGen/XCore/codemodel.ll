@@ -123,11 +123,13 @@ entry:
 ; CHECK-NEXT: retsp 0
 ;
 ; LARGE: .section .cp.rodata,"ac",@progbits
-; LARGE: .LCPI{{[0-9_]*}}
+; LARGE: .type .LCPI[[CNST0:[0-9_]+]],@object
+; LARGE-NEXT: .LCPI[[CNST0:[0-9_]+]]:
 ; LARGE-NEXT: .long NoSize
+; LARGE-NEXT: .size .LCPI[[CNST0:[0-9_]+]], 4
 ; LARGE-NEXT: .text
 ; LARGE-LABEL: UnknownSize:
-; LARGE: ldw r0, cp[.LCPI{{[0-9_]*}}]
+; LARGE: ldw r0, cp[.LCPI[[CNST0:[0-9_]+]]]
 ; LARGE-NEXT: ldw r0, r0[0]
 ; LARGE-NEXT: retsp 0
 @NoSize = external dso_local global [0 x i32]
@@ -143,11 +145,13 @@ entry:
 ; CHECK-NEXT: retsp 0
 ;
 ; LARGE: .section .cp.rodata,"ac",@progbits
-; LARGE: .LCPI{{[0-9_]*}}
+; LARGE: .type .LCPI[[CNST1:[0-9_]+]],@object
+; LARGE-NEXT: .LCPI[[CNST1:[0-9_]+]]:
 ; LARGE-NEXT: .long Unknown
+; LARGE-NEXT: .size .LCPI[[CNST1:[0-9_]+]], 4
 ; LARGE-NEXT: .text
 ; LARGE-LABEL: UnknownStruct:
-; LARGE: ldw r0, cp[.LCPI{{[0-9_]*}}]
+; LARGE: ldw r0, cp[.LCPI[[CNST1:[0-9_]+]]]
 ; LARGE-NEXT: retsp 0
 %Struct = type opaque
 @Unknown = external dso_local global %Struct

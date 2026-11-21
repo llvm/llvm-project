@@ -337,11 +337,37 @@ entry:
   ret void
 }
 
+; Test that the coroutine is elided if marked by coro.dead
+; CHECK-LABEL: @callResume_implicit_destroy(
+define void @callResume_implicit_destroy() {
+entry:
+; CHECK: alloca [4 x i8], align 4
+; CHECK-NOT: coro.begin
+; CHECK-NOT: CustomAlloc
+; CHECK: call void @may_throw()
+  %hdl = call ptr @f()
+
+; Need to remove 'tail' from the first call to @bar
+; CHECK-NOT: tail call void @bar(
+; CHECK: call void @bar(
+  tail call void @bar(ptr %hdl)
+; CHECK: tail call void @bar(
+  tail call void @bar(ptr null)
+
+; CHECK-NEXT: call fastcc void @f.resume(ptr %0)
+  %0 = call ptr @llvm.coro.subfn.addr(ptr %hdl, i8 0)
+  call fastcc void %0(ptr %hdl)
+
+  call void @llvm.coro.dead(ptr %hdl)
+
+; CHECK-NEXT: ret void
+  ret void
+}
+
 declare token @llvm.coro.id(i32, ptr, ptr, ptr)
 declare i1 @llvm.coro.alloc(token)
 declare ptr @llvm.coro.free(token, ptr)
 declare ptr @llvm.coro.begin(token, ptr)
-declare ptr @llvm.coro.frame(token)
 declare ptr @llvm.coro.subfn.addr(ptr, i8)
 declare i8 @llvm.coro.suspend(token, i1)
 declare token @llvm.coro.save(ptr)

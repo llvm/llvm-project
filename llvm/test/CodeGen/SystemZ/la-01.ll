@@ -9,6 +9,7 @@
 @d2 = dso_local global i32 1, align 2
 @e1 = external dso_local global i32, align 1
 @d1 = dso_local global i32 1, align 1
+@s1 = dso_local global i32 1, align 1, section ".foo"
 
 declare dso_local void @ef()
 define dso_local void @df() {
@@ -57,12 +58,22 @@ define dso_local ptr@f5() {
   ret ptr@e1
 }
 
-; Test a load of an unaligned local variable, which must go via the GOT.
+; Test a load of an unaligned local variable for which the alignment can be
+; raised to 2, and which can thus use larl directly.
 define dso_local ptr@f6() {
 ; CHECK-LABEL: f6:
-; CHECK: lgrl %r2, d1@GOT
+; CHECK: larl %r2, d1
 ; CHECK-NEXT: br %r14
   ret ptr@d1
+}
+
+; Test a load of an unaligned local variable with an explicit section, which
+; prevents raising its alignment and which thus must go via the GOT.
+define dso_local ptr @explicit_section() {
+; CHECK-LABEL: explicit_section:
+; CHECK: lgrl %r2, s1@GOT
+; CHECK-NEXT: br %r14
+  ret ptr @s1
 }
 
 ; Test a load of an external function.

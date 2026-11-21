@@ -29,16 +29,16 @@ define void @main(i1 %cond, ptr %arr) {
 bb.0:
   br label %bb.1
 
-bb.1:                                             ; preds = %bb.3, %bb.0
+bb.1:
   %iv = phi i32 [ 0, %bb.0 ], [ %iv.next, %bb.3 ]
   br i1 %cond, label %bb.3, label %bb.2
 
-bb.2:                                             ; preds = %bb.1
+bb.2:
   %single.pred = phi i32 [ %iv, %bb.1 ]
   %mult = mul i32 %single.pred, 3
   br label %bb.3
 
-bb.3:                                             ; preds = %bb.2, %bb.1
+bb.3:
   %stored.value = phi i32 [ 7, %bb.1 ], [ %mult, %bb.2 ]
   %arrayidx = getelementptr inbounds i32, ptr %arr, i32 %iv
   store i32 %stored.value, ptr %arrayidx
@@ -46,6 +46,6 @@ bb.3:                                             ; preds = %bb.2, %bb.1
   %continue = icmp ult i32 %iv.next, 32
   br i1 %continue, label %bb.1, label %bb.4
 
-bb.4:                                             ; preds = %bb.3
+bb.4:
   ret void
 }

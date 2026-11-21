@@ -19,34 +19,12 @@ enum ID {
 #include "Opts.inc"
 #undef OPTION
 };
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_SUBCOMMAND_IDS_TABLE_CODE
-
-#define OPTTABLE_SUBCOMMANDS_CODE
-#include "Opts.inc"
-#undef OPTTABLE_SUBCOMMANDS_CODE
-
-static constexpr OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class HelloSubOptTable : public GenericOptTable {
+class HelloSubOptTable : public OptTable {
 public:
-  HelloSubOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable,
-                        /*IgnoreCase=*/false, OptionSubCommands,
-                        OptionSubCommandIDsTable) {};
+  HelloSubOptTable() : OptTable(optionTables()) {};
 };
 } // namespace
 

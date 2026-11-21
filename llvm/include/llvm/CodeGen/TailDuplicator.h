@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 template <typename T, unsigned int N> class SmallSetVector;
 template <typename Fn> class function_ref;
 class MBFIWrapper;
@@ -37,6 +38,7 @@ class TargetRegisterInfo;
 
 /// Utility class to perform tail duplication.
 class TailDuplicator {
+  const CodeGenOptions *Opts;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const MachineBranchProbabilityInfo *MBPI;
@@ -67,18 +69,18 @@ public:
   ///     decisions.
   /// @param TailDupSize - Maxmimum size of blocks to tail-duplicate. Zero
   ///     default implies using the command line value TailDupSize.
-  void initMF(MachineFunction &MF, bool PreRegAlloc,
-              const MachineBranchProbabilityInfo *MBPI,
-              MBFIWrapper *MBFI,
-              ProfileSummaryInfo *PSI,
-              bool LayoutMode, unsigned TailDupSize = 0);
+  LLVM_ABI void initMF(MachineFunction &MF, bool PreRegAlloc,
+                       const MachineBranchProbabilityInfo *MBPI,
+                       MBFIWrapper *MBFI, ProfileSummaryInfo *PSI,
+                       bool LayoutMode, unsigned TailDupSize = 0);
 
-  bool tailDuplicateBlocks();
-  static bool isSimpleBB(MachineBasicBlock *TailBB);
-  bool shouldTailDuplicate(bool IsSimple, MachineBasicBlock &TailBB);
+  LLVM_ABI bool tailDuplicateBlocks();
+  LLVM_ABI static bool isSimpleBB(MachineBasicBlock *TailBB);
+  LLVM_ABI bool shouldTailDuplicate(bool IsSimple, MachineBasicBlock &TailBB);
 
   /// Returns true if TailBB can successfully be duplicated into PredBB
-  bool canTailDuplicate(MachineBasicBlock *TailBB, MachineBasicBlock *PredBB);
+  LLVM_ABI bool canTailDuplicate(MachineBasicBlock *TailBB,
+                                 MachineBasicBlock *PredBB);
 
   /// Tail duplicate a single basic block into its predecessors, and then clean
   /// up.
@@ -87,10 +89,10 @@ public:
   /// If \p RemovalCallback is non-null. It will be called before MBB is
   /// deleted.
   /// If \p CandidatePtr is not null, duplicate into these blocks only.
-  bool tailDuplicateAndUpdate(
+  LLVM_ABI bool tailDuplicateAndUpdate(
       bool IsSimple, MachineBasicBlock *MBB,
       MachineBasicBlock *ForcedLayoutPred,
-      SmallVectorImpl<MachineBasicBlock*> *DuplicatedPreds = nullptr,
+      SmallVectorImpl<MachineBasicBlock *> *DuplicatedPreds = nullptr,
       function_ref<void(MachineBasicBlock *)> *RemovalCallback = nullptr,
       SmallVectorImpl<MachineBasicBlock *> *CandidatePtr = nullptr);
 

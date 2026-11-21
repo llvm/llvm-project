@@ -516,12 +516,17 @@ void DivisionRepr::print(raw_ostream &os) const {
   os << "\n";
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void DivisionRepr::dump() const { print(llvm::errs()); }
+#endif
 
 SmallVector<DynamicAPInt, 8>
 presburger::getDynamicAPIntVec(ArrayRef<int64_t> range) {
   SmallVector<DynamicAPInt, 8> result(range.size());
-  llvm::transform(range, result.begin(), dynamicAPIntFromInt64);
+  // Wrapping dynamicAPIntFromInt64 in a lambda, turning the indirect call into
+  // a direct call that the compiler can inline at the call site.
+  llvm::transform(range, result.begin(),
+                  [](int64_t x) { return dynamicAPIntFromInt64(x); });
   return result;
 }
 

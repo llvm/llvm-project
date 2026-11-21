@@ -116,9 +116,9 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 define i32 @combine_dec_i32(i32 %a0) {
 ; CHECK-LABEL: combine_dec_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cmpl $1, %edi
-; CHECK-NEXT:    adcl $-1, %eax
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    subl $1, %edi
+; CHECK-NEXT:    cmovael %edi, %eax
 ; CHECK-NEXT:    retq
   %1 = call i32 @llvm.usub.sat.i32(i32 %a0, i32 1)
   ret i32 %1
@@ -296,16 +296,14 @@ define <8 x i16> @combine_trunc_v8i32_v8i16(<8 x i16> %a0, <8 x i32> %a1) {
 ; SSE2-NEXT:    movdqa %xmm5, %xmm6
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm6
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
-; SSE2-NEXT:    pand %xmm6, %xmm2
 ; SSE2-NEXT:    pxor %xmm4, %xmm6
 ; SSE2-NEXT:    por %xmm2, %xmm6
 ; SSE2-NEXT:    pslld $16, %xmm6
 ; SSE2-NEXT:    psrad $16, %xmm6
 ; SSE2-NEXT:    pxor %xmm1, %xmm3
 ; SSE2-NEXT:    pcmpgtd %xmm3, %xmm5
-; SSE2-NEXT:    pxor %xmm5, %xmm4
-; SSE2-NEXT:    pand %xmm1, %xmm5
-; SSE2-NEXT:    por %xmm4, %xmm5
+; SSE2-NEXT:    pxor %xmm4, %xmm5
+; SSE2-NEXT:    por %xmm1, %xmm5
 ; SSE2-NEXT:    pslld $16, %xmm5
 ; SSE2-NEXT:    psrad $16, %xmm5
 ; SSE2-NEXT:    packssdw %xmm6, %xmm5

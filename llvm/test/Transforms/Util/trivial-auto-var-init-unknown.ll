@@ -1,4 +1,4 @@
-; RUN: opt -passes=annotation-remarks -o /dev/null -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
+; RUN: opt -passes=annotation-remarks -disable-output -S -pass-remarks-output=%t.opt.yaml %s -pass-remarks-missed=annotation-remarks 2>&1 | FileCheck %s
 ; RUN: cat %t.opt.yaml | FileCheck -check-prefix=YAML %s
 
 ; No remarks for this function, no instructions with metadata.
@@ -35,12 +35,14 @@ define void @unknown_intrinsic(ptr %dst) {
 
 declare ptr @llvm.returnaddress(i32) nounwind readnone
 
+!8 = !{null}
+!9 = !DISubroutineType(types: !8)
 !llvm.module.flags = !{!1}
 !0 = !{ !"auto-init" }
 !1 = !{i32 2, !"Debug Info Version", i32 3}
 !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3)
 !3 = !DIFile(filename: "file", directory: "")
-!4 = distinct !DISubprogram(name: "function", scope: !3, file: !3, unit: !2)
+!4 = distinct !DISubprogram(name: "function", scope: !3, file: !3, type: !9, unit: !2)
 !5 = !DIBasicType(name: "byte", size: 8)
 !6 = !DILocalVariable(name: "destination", scope: !4, file: !3, type: !5)
 !7 = !DILocalVariable(name: "destination2", scope: !4, file: !3, type: !5)

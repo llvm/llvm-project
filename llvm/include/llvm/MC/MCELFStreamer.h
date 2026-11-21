@@ -28,7 +28,7 @@ class MCCodeEmitter;
 class MCExpr;
 class MCInst;
 
-class MCELFStreamer : public MCObjectStreamer {
+class LLVM_ABI MCELFStreamer : public MCObjectStreamer {
 public:
   MCELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
                 std::unique_ptr<MCObjectWriter> OW,
@@ -47,7 +47,7 @@ public:
   /// \name MCStreamer Interface
   /// @{
 
-  void initSections(bool NoExecStack, const MCSubtargetInfo &STI) override;
+  void initSections(const MCSubtargetInfo &STI) override;
   void changeSection(MCSection *Section, uint32_t Subsection = 0) override;
   void emitLabel(MCSymbol *Symbol, SMLoc Loc = SMLoc()) override;
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCFragment &F,
@@ -69,6 +69,10 @@ public:
   void emitCGProfileEntry(const MCSymbolRefExpr *From,
                           const MCSymbolRefExpr *To, uint64_t Count) override;
 
+  void emitBundleAlignMode(Align Alignment) override;
+  void emitBundleLock(bool AlignToEnd, const MCSubtargetInfo &STI) override;
+  void emitBundleUnlock(const MCSubtargetInfo &STI) override;
+
   // This is final. Override MCTargetStreamer::finish instead for
   // target-specific code.
   void finishImpl() final;
@@ -85,9 +89,9 @@ public:
       NumericAndTextAttributes
     } Type;
     unsigned Tag;
-    unsigned IntValue;
+    uint64_t IntValue;
     std::string StringValue;
-    AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
+    AttributeItem(Types Ty, unsigned Tg, uint64_t IV, std::string SV)
         : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
   };
 
@@ -102,11 +106,11 @@ public:
 
   // Attributes that are added and managed entirely by target.
   SmallVector<AttributeItem, 64> Contents;
-  void setAttributeItem(unsigned Attribute, unsigned Value,
+  void setAttributeItem(unsigned Attribute, uint64_t Value,
                         bool OverwriteExisting);
   void setAttributeItem(unsigned Attribute, StringRef Value,
                         bool OverwriteExisting);
-  void setAttributeItems(unsigned Attribute, unsigned IntValue,
+  void setAttributeItems(unsigned Attribute, uint64_t IntValue,
                          StringRef StringValue, bool OverwriteExisting);
   void emitAttributesSection(StringRef Vendor, const Twine &Section,
                              unsigned Type, MCSection *&AttributeSection) {
@@ -132,6 +136,7 @@ private:
 
   // GNU attributes that will get emitted at the end of the asm file.
   SmallVector<AttributeItem, 64> GNUAttributes;
+  MCBoundaryAlignFragment *BundleBA = nullptr;
 
 public:
   void emitGNUAttribute(unsigned Tag, unsigned Value) override {
@@ -148,11 +153,11 @@ private:
   bool SeenIdent = false;
 };
 
-MCELFStreamer *createARMELFStreamer(MCContext &Context,
-                                    std::unique_ptr<MCAsmBackend> TAB,
-                                    std::unique_ptr<MCObjectWriter> OW,
-                                    std::unique_ptr<MCCodeEmitter> Emitter,
-                                    bool IsThumb, bool IsAndroid);
+LLVM_ABI MCELFStreamer *
+createARMELFStreamer(MCContext &Context, std::unique_ptr<MCAsmBackend> TAB,
+                     std::unique_ptr<MCObjectWriter> OW,
+                     std::unique_ptr<MCCodeEmitter> Emitter, bool IsThumb,
+                     bool IsAndroid);
 
 } // end namespace llvm
 

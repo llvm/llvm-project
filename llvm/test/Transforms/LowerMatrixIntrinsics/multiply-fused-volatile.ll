@@ -22,21 +22,21 @@ define void @multiply_all_volatile(ptr noalias %A, ptr noalias %B, ptr noalias %
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[RESULT_VEC_0]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[BLOCK5:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -74,9 +74,9 @@ define void @multiply_all_volatile(ptr noalias %A, ptr noalias %B, ptr noalias %
 ; CHECK-NEXT:    [[ROWS_COND:%.*]] = icmp ne i64 [[ROWS_STEP]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[C:%.*]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[TMP19]]
 ; CHECK-NEXT:    store volatile <2 x double> [[TMP11]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr double, ptr [[TMP20]], i64 2
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds double, ptr [[TMP20]], i64 2
 ; CHECK-NEXT:    store volatile <2 x double> [[TMP17]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND]], label [[ROWS_HEADER]], label [[COLS_LATCH]], !prof [[PROF0]]
 ; CHECK:       cols.latch:
@@ -115,21 +115,21 @@ define void @multiply_load0_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[RESULT_VEC_0]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[BLOCK5:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -167,9 +167,9 @@ define void @multiply_load0_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    [[ROWS_COND:%.*]] = icmp ne i64 [[ROWS_STEP]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[C:%.*]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[TMP19]]
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr double, ptr [[TMP20]], i64 2
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds double, ptr [[TMP20]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND]], label [[ROWS_HEADER]], label [[COLS_LATCH]], !prof [[PROF0]]
 ; CHECK:       cols.latch:
@@ -207,21 +207,21 @@ define void @multiply_load1_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[RESULT_VEC_0]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[BLOCK5:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -259,9 +259,9 @@ define void @multiply_load1_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    [[ROWS_COND:%.*]] = icmp ne i64 [[ROWS_STEP]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[C:%.*]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[TMP19]]
 ; CHECK-NEXT:    store <2 x double> [[TMP11]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr double, ptr [[TMP20]], i64 2
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds double, ptr [[TMP20]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP17]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND]], label [[ROWS_HEADER]], label [[COLS_LATCH]], !prof [[PROF0]]
 ; CHECK:       cols.latch:
@@ -299,21 +299,21 @@ define void @multiply_store_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP11:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[TMP0:%.*]] = mul i64 [[INNER_IV]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[A:%.*]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <2 x double>, ptr [[TMP2]], align 8
-; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr double, ptr [[TMP2]], i64 2
+; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[TMP2]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD1:%.*]] = load <2 x double>, ptr [[VEC_GEP]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], [[INNER_IV]]
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[B:%.*]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds double, ptr [[B:%.*]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[COL_LOAD2:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
-; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr double, ptr [[TMP5]], i64 2
+; CHECK-NEXT:    [[VEC_GEP3:%.*]] = getelementptr inbounds double, ptr [[TMP5]], i64 2
 ; CHECK-NEXT:    [[COL_LOAD4:%.*]] = load <2 x double>, ptr [[VEC_GEP3]], align 8
 ; CHECK-NEXT:    [[BLOCK:%.*]] = shufflevector <2 x double> [[RESULT_VEC_0]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[BLOCK5:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <2 x i32> <i32 0, i32 1>
@@ -351,9 +351,9 @@ define void @multiply_store_volatile(ptr noalias %A, ptr noalias %B, ptr noalias
 ; CHECK-NEXT:    [[ROWS_COND:%.*]] = icmp ne i64 [[ROWS_STEP]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = mul i64 [[COLS_IV]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[TMP18]], [[ROWS_IV]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr double, ptr [[C:%.*]], i64 [[TMP19]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[TMP19]]
 ; CHECK-NEXT:    store volatile <2 x double> [[TMP11]], ptr [[TMP20]], align 8
-; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr double, ptr [[TMP20]], i64 2
+; CHECK-NEXT:    [[VEC_GEP16:%.*]] = getelementptr inbounds double, ptr [[TMP20]], i64 2
 ; CHECK-NEXT:    store volatile <2 x double> [[TMP17]], ptr [[VEC_GEP16]], align 8
 ; CHECK-NEXT:    br i1 [[ROWS_COND]], label [[ROWS_HEADER]], label [[COLS_LATCH]], !prof [[PROF0]]
 ; CHECK:       cols.latch:

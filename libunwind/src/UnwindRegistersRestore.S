@@ -72,7 +72,10 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_jumpto)
   # skip fs
   # skip gs
 
-#elif defined(__x86_64__) && !defined(__arm64ec__)
+// Native FreeBSD restores selectors and bases together through sigreturn in
+// libunwind.cpp; its sysarch base setters also replace the segment selectors.
+#elif defined(__x86_64__) && !defined(__arm64ec__) && \
+    (!defined(__FreeBSD__) || defined(_LIBUNWIND_IS_BAREMETAL))
 .att_syntax
 
 DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
@@ -113,8 +116,11 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_x86_64_jumpto)
   movq   88(%rdi), %r11
   movq   96(%rdi), %r12
   movq  104(%rdi), %r13
+# Skip reloading r14/r15 under LFI; reserved by LFI ABI.
+#if !defined(__LFI__)
   movq  112(%rdi), %r14
   movq  120(%rdi), %r15
+#endif
   # skip rflags
   # skip cs
   # skip fs
@@ -678,9 +684,15 @@ DEFINE_LIBUNWIND_FUNCTION(__libunwind_Registers_arm64_jumpto)
   ldp    x18,x19, [x0, #0x090]
   ldp    x20,x21, [x0, #0x0A0]
   ldp    x22,x23, [x0, #0x0B0]
+#if defined(__LFI__)
+  ldr    x24,     [x0, #0x0C0]
+  // Skip reloading x25-x28; reserved by LFI ABI.
+  ldr    x29,     [x0, #0x0E8]
+#else
   ldp    x24,x25, [x0, #0x0C0]
   ldp    x26,x27, [x0, #0x0D0]
   ldp    x28,x29, [x0, #0x0E0]
+#endif
 
 #if defined(__ARM_FP) && __ARM_FP != 0
   ldp    d0, d1,  [x0, #0x110]
@@ -941,11 +953,22 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind14Registers_or1k6jumptoEv)
 
 #elif defined(__hexagon__)
 # On entry:
-#  thread_state pointer is in r2
+#  thread_state pointer is in r0
 DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind17Registers_hexagon6jumptoEv)
 #
 # void libunwind::Registers_hexagon::jumpto()
 #
+# The context layout is hexagon_thread_state_t: unsigned int __r[35]
+# __r[0..31] = r0..r31, __r[32] = predicates, __r[33] = PC.
+# Offsets: __r[n] is at byte offset n*4.  r0 is the context pointer, so
+# it is restored last; r31 is loaded with the saved PC as the jumpr target.
+  r2 = memw(r0+#8)
+  r3 = memw(r0+#12)
+  r4 = memw(r0+#16)
+  r5 = memw(r0+#20)
+  r6 = memw(r0+#24)
+  r7 = memw(r0+#28)
+
   r8 = memw(r0+#32)
   r9 = memw(r0+#36)
   r10 = memw(r0+#40)
@@ -995,7 +1018,41 @@ DEFINE_LIBUNWIND_FUNCTION(_ZN9libunwind18Registers_mips_o326jumptoEv)
   .set noreorder
   .set nomacro
 #ifdef __mips_hard_float
-#if __mips_fpr != 64
+#if defined(__mips_single_float)
+  // See the matching comment in UnwindRegistersSave.S.
+  lwc1  $f0, (4 * 36 + 8 * 0)($4)
+  lwc1  $f1, (4 * 36 + 8 * 1)($4)
+  lwc1  $f2, (4 * 36 + 8 * 2)($4)
+  lwc1  $f3, (4 * 36 + 8 * 3)($4)
+  lwc1  $f4, (4 * 36 + 8 * 4)($4)
+  lwc1  $f5, (4 * 36 + 8 * 5)($4)
+  lwc1  $f6, (4 * 36 + 8 * 6)($4)
+  lwc1  $f7, (4 * 36 + 8 * 7)($4)
+  lwc1  $f8, (4 * 36 + 8 * 8)($4)
+  lwc1  $f9, (4 * 36 + 8 * 9)($4)
+  lwc1  $f10, (4 * 36 + 8 * 10)($4)
+  lwc1  $f11, (4 * 36 + 8 * 11)($4)
+  lwc1  $f12, (4 * 36 + 8 * 12)($4)
+  lwc1  $f13, (4 * 36 + 8 * 13)($4)
+  lwc1  $f14, (4 * 36 + 8 * 14)($4)
+  lwc1  $f15, (4 * 36 + 8 * 15)($4)
+  lwc1  $f16, (4 * 36 + 8 * 16)($4)
+  lwc1  $f17, (4 * 36 + 8 * 17)($4)
+  lwc1  $f18, (4 * 36 + 8 * 18)($4)
+  lwc1  $f19, (4 * 36 + 8 * 19)($4)
+  lwc1  $f20, (4 * 36 + 8 * 20)($4)
+  lwc1  $f21, (4 * 36 + 8 * 21)($4)
+  lwc1  $f22, (4 * 36 + 8 * 22)($4)
+  lwc1  $f23, (4 * 36 + 8 * 23)($4)
+  lwc1  $f24, (4 * 36 + 8 * 24)($4)
+  lwc1  $f25, (4 * 36 + 8 * 25)($4)
+  lwc1  $f26, (4 * 36 + 8 * 26)($4)
+  lwc1  $f27, (4 * 36 + 8 * 27)($4)
+  lwc1  $f28, (4 * 36 + 8 * 28)($4)
+  lwc1  $f29, (4 * 36 + 8 * 29)($4)
+  lwc1  $f30, (4 * 36 + 8 * 30)($4)
+  lwc1  $f31, (4 * 36 + 8 * 31)($4)
+#elif __mips_fpr != 64
   ldc1  $f0, (4 * 36 + 8 * 0)($4)
   ldc1  $f2, (4 * 36 + 8 * 2)($4)
   ldc1  $f4, (4 * 36 + 8 * 4)($4)

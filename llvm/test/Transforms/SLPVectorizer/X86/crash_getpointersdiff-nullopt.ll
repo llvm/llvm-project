@@ -26,18 +26,18 @@ define void @test(i64 %arg0, i64 %arg1) {
 ; CHECK-NEXT:    [[IDX4_SCALED:%.*]] = shl i64 [[IDX4]], 3
 ; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr i8, ptr [[PTR]], i64 [[IDX4_SCALED]]
 ; CHECK-NEXT:    [[GEP4_OFF:%.*]] = getelementptr i8, ptr [[GEP4]], i64 -8
-; CHECK-NEXT:    [[LOAD4:%.*]] = load double, ptr [[GEP4_OFF]], align 8
-; CHECK-NEXT:    [[LOAD5:%.*]] = load double, ptr [[GEP4]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = load <2 x double>, ptr [[GEP4_OFF]], align 8
 ; CHECK-NEXT:    br label [[REDUCE]]
 ; CHECK:       dead:
 ; CHECK-NEXT:    br label [[REDUCE]]
 ; CHECK:       reduce:
-; CHECK-NEXT:    [[PHI4:%.*]] = phi double [ [[LOAD4]], [[LOOP]] ], [ 0.000000e+00, [[DEAD:%.*]] ]
-; CHECK-NEXT:    [[PHI5:%.*]] = phi double [ [[LOAD5]], [[LOOP]] ], [ 0.000000e+00, [[DEAD]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x double> [ [[TMP0]], [[LOOP]] ], [ poison, [[DEAD]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = phi <4 x double> [ [[TMP0]], [[LOOP]] ], [ poison, [[DEAD:%.*]] ]
+; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x double> [ [[TMP7]], [[LOOP]] ], [ poison, [[DEAD]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.minimum.f64(double [[TMP2]], double [[PHI4]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call double @llvm.minimum.f64(double [[PHI5]], double 0.000000e+00)
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> <double poison, double 0.000000e+00>, double [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = call <2 x double> @llvm.minimum.v2f64(<2 x double> [[TMP9]], <2 x double> [[TMP8]])
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP6]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = call double @llvm.minimum.f64(double [[TMP3]], double [[TMP4]])
 ; CHECK-NEXT:    [[MIN6:%.*]] = call double @llvm.minimum.f64(double [[TMP5]], double 0.000000e+00)
 ; CHECK-NEXT:    [[COUNTER_NEXT]] = add i64 [[COUNTER]], 1

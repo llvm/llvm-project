@@ -21,6 +21,8 @@
       ret void
   }
 
+  define void @setwmi_no_pair_move_insn_back() { ret void }
+
 ...
 ---
 name:            lwmi
@@ -70,8 +72,8 @@ body:             |
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x28 = LW $x10, 0 :: (load (s32))
-    ; CHECK-NEXT: $x30 = LW $x10, 4 :: (load (s32))
     ; CHECK-NEXT: $x29 = LW $x10, 8 :: (load (s32))
+    ; CHECK-NEXT: $x30 = LW $x10, 4 :: (load (s32))
     ; CHECK-NEXT: $x31 = LW $x10, 12 :: (load (s32))
     ; CHECK-NEXT: PseudoRET
     $x28 = LW $x10, 0 :: (load (s32), align 4)
@@ -101,9 +103,9 @@ body:             |
 name:            swmi
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-LABEL: name: swmi
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: QC_SWMI killed $x28, $x10, 4, 0, implicit killed $x29, implicit $x30, implicit killed $x31 :: (store (s32))
     ; CHECK-NEXT: PseudoRET
@@ -117,9 +119,9 @@ body:             |
 name:            swmi_x0
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: swmi_x0
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: QC_SWMI $x1, $x10, 3, 4, implicit $x2, implicit $x3 :: (store (s32))
@@ -134,9 +136,9 @@ body:             |
 name:            swmi_nonconsecutive
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-LABEL: name: swmi_nonconsecutive
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x10, $x28, $x29, $x30, $x31
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: QC_SWMI $x28, $x10, 2, 0, implicit killed $x29 :: (store (s32))
     ; CHECK-NEXT: $x11 = ADDI $x28, 1
@@ -155,9 +157,9 @@ body:             |
 name:            swmi_misaligned
 body:             |
   bb.0:
-    liveins: $x10
+    liveins: $x1, $x10
     ; CHECK-LABEL: name: swmi_misaligned
-    ; CHECK: liveins: $x10
+    ; CHECK: liveins: $x1, $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
     ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
@@ -184,5 +186,22 @@ body:             |
     SW $x0, $x10, 4 :: (store (s32) into %ir.b, align 4)
     SW $x0, $x10, 8 :: (store (s32) into %ir.c, align 4)
     SW $x0, $x10, 12 :: (store (s32) into %ir.d, align 4)
+    PseudoRET
+...
+---
+name:            setwmi_no_pair_move_insn_back
+body:             |
+  bb.0:
+    liveins: $x1, $x2
+    ; CHECK-LABEL: name: setwmi_no_pair_move_insn_back
+    ; CHECK: liveins: $x1, $x2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW killed $x1, $x2, 12 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x0, $x2, 3, 0 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW killed $x1, $x2, 12 :: (store (s32), align 4)
+    SW $x0, $x2, 0 :: (store (s32), align 4)
+    SW $x0, $x2, 4 :: (store (s32), align 4)
+    SW $x0, $x2, 8 :: (store (s32), align 4)
     PseudoRET
 ...

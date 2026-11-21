@@ -8,7 +8,7 @@
 
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/FileWriter.h"
-#include "llvm/Support/DataExtractor.h"
+#include "llvm/DebugInfo/GSYM/GsymDataExtractor.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -42,7 +42,7 @@ llvm::Error Header::checkForError() const {
   if (Magic != GSYM_MAGIC)
     return createStringError(std::errc::invalid_argument,
                              "invalid GSYM magic 0x%8.8x", Magic);
-  if (Version != GSYM_VERSION)
+  if (Version != Header::getVersion())
     return createStringError(std::errc::invalid_argument,
                              "unsupported GSYM version %u", Version);
   switch (AddrOffSize) {
@@ -61,7 +61,7 @@ llvm::Error Header::checkForError() const {
   return Error::success();
 }
 
-llvm::Expected<Header> Header::decode(DataExtractor &Data) {
+llvm::Expected<Header> Header::decode(GsymDataExtractor &Data) {
   uint64_t Offset = 0;
   // The header is stored as a single blob of data that has a fixed byte size.
   if (!Data.isValidOffsetForDataOfSize(Offset, sizeof(Header)))

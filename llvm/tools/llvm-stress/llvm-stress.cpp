@@ -709,7 +709,7 @@ static void IntroduceControlFlow(Function *F, Random &R) {
     BasicBlock *Next = Curr->splitBasicBlock(Loc, "CF");
     Instr->moveBefore(Curr->getTerminator()->getIterator());
     if (Curr != &F->getEntryBlock()) {
-      BranchInst::Create(Curr, Next, Instr,
+      CondBrInst::Create(Instr, Curr, Next,
                          Curr->getTerminator()->getIterator());
       Curr->getTerminator()->eraseFromParent();
     }
@@ -754,6 +754,7 @@ int main(int argc, char **argv) {
     report_fatal_error("Broken module found, compilation aborted!");
 
   // Output textual IR.
+  M->renumberMetadataForAssembly();
   M->print(Out->os(), nullptr);
 
   Out->keep();

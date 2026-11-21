@@ -30,13 +30,18 @@ public:
 
  MachineDominanceFrontier() = default;
 
- bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
-                 MachineFunctionAnalysisManager::Invalidator &);
+ LLVM_ABI bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                          MachineFunctionAnalysisManager::Invalidator &);
 };
 
-class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {
+class LLVM_ABI MachineDominanceFrontierWrapperPass
+    : public MachineFunctionPass {
 private:
   MachineDominanceFrontier MDF;
+
+  // TODO: This is to make the computation lazy and is unnecessary after the
+  // switch to new pass manager.
+  const MachineDominatorTree *PendingMDT = nullptr;
 
 public:
   MachineDominanceFrontierWrapperPass();
@@ -54,7 +59,7 @@ public:
 
   void releaseMemory() override;
 
-  MachineDominanceFrontier &getMDF() { return MDF; }
+  MachineDominanceFrontier &getMDF();
 };
 
 class MachineDominanceFrontierAnalysis
@@ -65,7 +70,8 @@ class MachineDominanceFrontierAnalysis
 public:
   using Result = MachineDominanceFrontier;
 
-  Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM);
 };
 
 } // end namespace llvm

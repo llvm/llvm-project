@@ -8,6 +8,7 @@
 
 
 #include <arm_acle.h>
+#include <stdbool.h>
 
 // REQUIRES: arm-registered-target,aarch64-registered-target
 
@@ -494,41 +495,11 @@ uint32_t test_rev16(uint32_t t) {
 //
 // AArch64-LABEL: @test_rev16l(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 32
-// AArch64-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SHR_I]] to i32
-// AArch64-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I]])
-// AArch64-NEXT:    [[REM_I_I10_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I11_I:%.*]] = icmp eq i32 [[REM_I_I10_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I11_I]], label [[IF_THEN_I_I17_I:%.*]], label [[IF_END_I_I12_I:%.*]]
-// AArch64:       if.then.i.i17.i:
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I:%.*]]
-// AArch64:       if.end.i.i12.i:
-// AArch64-NEXT:    [[SHR_I_I13_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SUB_I_I14_I:%.*]] = sub i32 32, [[REM_I_I10_I]]
-// AArch64-NEXT:    [[SHL_I_I15_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I]]
-// AArch64-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
-// AArch64-NEXT:    br label [[__REV16_EXIT18_I]]
-// AArch64:       __rev16.exit18.i:
-// AArch64-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// AArch64-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
-// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
-// AArch64-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
-// AArch64-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
-// AArch64-NEXT:    [[REM_I_I_I:%.*]] = urem i32 16, 32
-// AArch64-NEXT:    [[CMP_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I]], 0
-// AArch64-NEXT:    br i1 [[CMP_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[IF_END_I_I_I:%.*]]
-// AArch64:       if.then.i.i.i:
-// AArch64-NEXT:    br label [[__REV16LL_EXIT:%.*]]
-// AArch64:       if.end.i.i.i:
-// AArch64-NEXT:    [[SHR_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I]]
-// AArch64-NEXT:    [[SUB_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I]]
-// AArch64-NEXT:    [[SHL_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I]]
-// AArch64-NEXT:    [[OR_I_I_I:%.*]] = or i32 [[SHR_I_I_I]], [[SHL_I_I_I]]
-// AArch64-NEXT:    br label [[__REV16LL_EXIT]]
-// AArch64:       __rev16ll.exit:
-// AArch64-NEXT:    [[RETVAL_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I]] ], [ [[OR_I_I_I]], [[IF_END_I_I_I]] ]
-// AArch64-NEXT:    [[CONV4_I:%.*]] = zext i32 [[RETVAL_I_I_I_0]] to i64
-// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[SHL_I]], [[CONV4_I]]
+// AArch64-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 8
+// AArch64-NEXT:    [[AND_I:%.*]] = and i64 [[SHR_I]], 71777214294589695
+// AArch64-NEXT:    [[SHL_I:%.*]] = shl i64 [[T]], 8
+// AArch64-NEXT:    [[AND1_I:%.*]] = and i64 [[SHL_I]], -71777214294589696
+// AArch64-NEXT:    [[OR_I:%.*]] = or i64 [[AND_I]], [[AND1_I]]
 // AArch64-NEXT:    ret i64 [[OR_I]]
 //
 long test_rev16l(long t) {
@@ -537,41 +508,11 @@ long test_rev16l(long t) {
 
 // ARM-LABEL: @test_rev16ll(
 // ARM-NEXT:  entry:
-// ARM-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 32
-// ARM-NEXT:    [[CONV_I:%.*]] = trunc i64 [[SHR_I]] to i32
-// ARM-NEXT:    [[TMP0:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV_I]])
-// ARM-NEXT:    [[REM_I_I10_I:%.*]] = urem i32 16, 32
-// ARM-NEXT:    [[CMP_I_I11_I:%.*]] = icmp eq i32 [[REM_I_I10_I]], 0
-// ARM-NEXT:    br i1 [[CMP_I_I11_I]], label [[IF_THEN_I_I17_I:%.*]], label [[IF_END_I_I12_I:%.*]]
-// ARM:       if.then.i.i17.i:
-// ARM-NEXT:    br label [[__REV16_EXIT18_I:%.*]]
-// ARM:       if.end.i.i12.i:
-// ARM-NEXT:    [[SHR_I_I13_I:%.*]] = lshr i32 [[TMP0]], [[REM_I_I10_I]]
-// ARM-NEXT:    [[SUB_I_I14_I:%.*]] = sub i32 32, [[REM_I_I10_I]]
-// ARM-NEXT:    [[SHL_I_I15_I:%.*]] = shl i32 [[TMP0]], [[SUB_I_I14_I]]
-// ARM-NEXT:    [[OR_I_I16_I:%.*]] = or i32 [[SHR_I_I13_I]], [[SHL_I_I15_I]]
-// ARM-NEXT:    br label [[__REV16_EXIT18_I]]
-// ARM:       __rev16.exit18.i:
-// ARM-NEXT:    [[RETVAL_I_I6_I_0:%.*]] = phi i32 [ [[TMP0]], [[IF_THEN_I_I17_I]] ], [ [[OR_I_I16_I]], [[IF_END_I_I12_I]] ]
-// ARM-NEXT:    [[CONV1_I:%.*]] = zext i32 [[RETVAL_I_I6_I_0]] to i64
-// ARM-NEXT:    [[SHL_I:%.*]] = shl i64 [[CONV1_I]], 32
-// ARM-NEXT:    [[CONV2_I:%.*]] = trunc i64 [[T]] to i32
-// ARM-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[CONV2_I]])
-// ARM-NEXT:    [[REM_I_I_I:%.*]] = urem i32 16, 32
-// ARM-NEXT:    [[CMP_I_I_I:%.*]] = icmp eq i32 [[REM_I_I_I]], 0
-// ARM-NEXT:    br i1 [[CMP_I_I_I]], label [[IF_THEN_I_I_I:%.*]], label [[IF_END_I_I_I:%.*]]
-// ARM:       if.then.i.i.i:
-// ARM-NEXT:    br label [[__REV16LL_EXIT:%.*]]
-// ARM:       if.end.i.i.i:
-// ARM-NEXT:    [[SHR_I_I_I:%.*]] = lshr i32 [[TMP1]], [[REM_I_I_I]]
-// ARM-NEXT:    [[SUB_I_I_I:%.*]] = sub i32 32, [[REM_I_I_I]]
-// ARM-NEXT:    [[SHL_I_I_I:%.*]] = shl i32 [[TMP1]], [[SUB_I_I_I]]
-// ARM-NEXT:    [[OR_I_I_I:%.*]] = or i32 [[SHR_I_I_I]], [[SHL_I_I_I]]
-// ARM-NEXT:    br label [[__REV16LL_EXIT]]
-// ARM:       __rev16ll.exit:
-// ARM-NEXT:    [[RETVAL_I_I_I_0:%.*]] = phi i32 [ [[TMP1]], [[IF_THEN_I_I_I]] ], [ [[OR_I_I_I]], [[IF_END_I_I_I]] ]
-// ARM-NEXT:    [[CONV4_I:%.*]] = zext i32 [[RETVAL_I_I_I_0]] to i64
-// ARM-NEXT:    [[OR_I:%.*]] = or i64 [[SHL_I]], [[CONV4_I]]
+// ARM-NEXT:    [[SHR_I:%.*]] = lshr i64 [[T:%.*]], 8
+// ARM-NEXT:    [[AND_I:%.*]] = and i64 [[SHR_I]], 71777214294589695
+// ARM-NEXT:    [[SHL_I:%.*]] = shl i64 [[T]], 8
+// ARM-NEXT:    [[AND1_I:%.*]] = and i64 [[SHL_I]], -71777214294589696
+// ARM-NEXT:    [[OR_I:%.*]] = or i64 [[AND_I]], [[AND1_I]]
 // ARM-NEXT:    ret i64 [[OR_I]]
 //
 uint64_t test_rev16ll(uint64_t t) {
@@ -1823,12 +1764,345 @@ int test_rndrrs(uint64_t *__addr) {
 #endif
 
 #if defined(__ARM_64BIT_STATE)
-// AArch64-LABEL: @test_stshh_atomic_store(
+
+// AArch64-LABEL: @test_atomic_store_hint_char(
 // AArch64-NEXT:  entry:
-// AArch64:         call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 {{.*}}, i32 0, i32 0, i32 32)
+// AArch64-NEXT:    store atomic i8 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1:![0-9]+]]
 // AArch64-NEXT:    ret void
 //
-void test_stshh_atomic_store(int *p, int v) {
-  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+void test_atomic_store_hint_char(char *ptr, char data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, 0);
 }
+
+// AArch64-LABEL: @test_atomic_store_hint_uchar(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i8 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_uchar(unsigned char *ptr, unsigned char data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_schar(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i8 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_schar(signed char *ptr, signed char data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_bool(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STOREDV:%.*]] = zext i1 [[DATA:%.*]] to i8
+// AArch64-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[STOREDV]], 0
+// AArch64-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
+// AArch64-NEXT:    store atomic i8 [[STOREDV1]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_bool(bool *ptr, bool data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_mfloat(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic <1 x i8> [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 1, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_mfloat(__mfp8 *ptr, __mfp8 data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_bfloat(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic bfloat [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !mem.cache_hint [[HINT3:![0-9]+]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_bfloat(__bf16 *ptr, __bf16 data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, 1);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_half(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic half [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_half(__fp16 *ptr, __fp16 data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_STRM);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_short(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i16 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_short(short *ptr, short data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_ushort(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i16 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 2, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_ushort(unsigned short *ptr, unsigned short data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_int(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_int(int *ptr, int data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_unsigned(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_unsigned(unsigned *ptr, unsigned data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_u32(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_u32(uint32_t *ptr, uint32_t data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_s32(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_s32(int32_t *ptr, int32_t data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_float(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic float [[DATA:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_float(float *ptr, float data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_s64(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 8, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_s64(int64_t *ptr, int64_t data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_STRM);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_long(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 8, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_long(long *ptr, long data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_ulong(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 8, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_ulong(unsigned long *ptr, unsigned long data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_long_long_int(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 8, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_long_long_int(long long int *ptr, long long int data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_long_long_uint(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i64 [[DATA:%.*]], ptr [[PTR:%.*]] release, align 8, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_long_long_uint(unsigned long long int *ptr, unsigned long long int data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELEASE, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_double(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic double [[DATA:%.*]], ptr [[PTR:%.*]] monotonic, align 8, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_double(double *ptr, double data) {
+  __arm_atomic_store_with_hint(ptr, data, __ATOMIC_RELAXED, HINT_STSHH_STRM);
+}
+
+typedef int aliased_int;
+
+// AArch64-LABEL: @test_atomic_store_hint_typedef_ptr(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[VALUE:%.*]], ptr [[PTR:%.*]] monotonic, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_typedef_ptr(aliased_int *ptr, int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELAXED, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_typedef_val(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic i32 [[VALUE:%.*]], ptr [[PTR:%.*]] release, align 4, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_typedef_val(int *ptr, aliased_int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_RELEASE, HINT_STSHH_STRM);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_volatile(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    store atomic volatile i32 [[VALUE:%.*]], ptr [[PTR:%.*]] seq_cst, align 4, !mem.cache_hint [[HINT1]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_volatile(volatile int *ptr, int value) {
+  __builtin_arm_atomic_store_with_hint(ptr, value, __ATOMIC_SEQ_CST, HINT_STSHH_KEEP);
+}
+
+// AArch64-LABEL: @test_atomic_store_hint_array_arg(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STORAGE:%.*]] = alloca [1 x i32], align 4
+// AArch64-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x i32], ptr [[STORAGE]], i64 0, i64 0
+// AArch64-NEXT:    store atomic i32 0, ptr [[ARRAYDECAY]] monotonic, align 4, !mem.cache_hint [[HINT3]]
+// AArch64-NEXT:    ret void
+//
+void test_atomic_store_hint_array_arg() {
+  int storage[1];
+  __builtin_arm_atomic_store_with_hint(storage, 0, __ATOMIC_RELAXED, HINT_STSHH_STRM);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_char(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i8 [[DATA:%.*]] monotonic, align 1, !mem.cache_hint [[FETCH0:![0-9]+]]
+// AArch64-NEXT:    ret i8 [[OLD]]
+//
+char test_atomic_fetch_hint_char(char *ptr, char data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_uchar(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[PTR:%.*]], i8 [[DATA:%.*]] release, align 1, !mem.cache_hint [[FETCH1:![0-9]+]]
+// AArch64-NEXT:    ret i8 [[OLD]]
+//
+unsigned char test_atomic_fetch_hint_uchar(unsigned char *ptr, unsigned char data) {
+  return __arm_atomic_fetch_sub_with_hint(ptr, data, __ATOMIC_RELEASE, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_short(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw and ptr [[PTR:%.*]], i16 [[DATA:%.*]] acquire, align 2, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i16 [[OLD]]
+//
+short test_atomic_fetch_hint_short(short *ptr, short data) {
+  return __arm_atomic_fetch_and_with_hint(ptr, data, __ATOMIC_ACQUIRE, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_ushort(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw xor ptr [[PTR:%.*]], i16 [[DATA:%.*]] acq_rel, align 2, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i16 [[OLD]]
+//
+unsigned short test_atomic_fetch_hint_ushort(unsigned short *ptr, unsigned short data) {
+  return __arm_atomic_fetch_xor_with_hint(ptr, data, __ATOMIC_ACQ_REL, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_int(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw or ptr [[PTR:%.*]], i32 [[DATA:%.*]] seq_cst, align 4, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_int(int *ptr, int data) {
+  return __arm_atomic_fetch_or_with_hint(ptr, data, __ATOMIC_SEQ_CST, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_unsigned(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i32 [[DATA:%.*]] acquire, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+unsigned test_atomic_fetch_hint_unsigned(unsigned *ptr, unsigned data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_CONSUME, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_long(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[PTR:%.*]], i64 [[DATA:%.*]] monotonic, align 8, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i64 [[OLD]]
+//
+long test_atomic_fetch_hint_long(long *ptr, long data) {
+  return __arm_atomic_fetch_sub_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_bool(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STOREDV:%.*]] = zext i1 [[DATA:%.*]] to i8
+// AArch64-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[STOREDV]], 0
+// AArch64-NEXT:    [[STOREDV1:%.*]] = zext i1 [[LOADEDV]] to i8
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw xor ptr [[PTR:%.*]], i8 [[STOREDV1]] monotonic, align 1, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    [[LOADEDV1:%.*]] = icmp ne i8 [[OLD]], 0
+// AArch64-NEXT:    ret i1 [[LOADEDV1]]
+//
+bool test_atomic_fetch_hint_bool(bool *ptr, bool data) {
+  return __arm_atomic_fetch_xor_with_hint(ptr, data, __ATOMIC_RELAXED, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_volatile(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw volatile or ptr [[PTR:%.*]], i32 [[DATA:%.*]] acq_rel, align 4, !mem.cache_hint [[FETCH0]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_volatile(volatile int *ptr, int data) {
+  return __arm_atomic_fetch_or_with_hint(ptr, data, __ATOMIC_ACQ_REL, 3);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_typedef(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw add ptr [[PTR:%.*]], i32 [[DATA:%.*]] release, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+aliased_int test_atomic_fetch_hint_typedef(aliased_int *ptr, const int data) {
+  return __arm_atomic_fetch_add_with_hint(ptr, data, __ATOMIC_RELEASE, 4);
+}
+
+// AArch64-LABEL: @test_atomic_fetch_hint_array_arg(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    [[STORAGE:%.*]] = alloca [1 x i32], align 4
+// AArch64-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[STORAGE]], i8 0, i64 4, i1 false)
+// AArch64-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [1 x i32], ptr [[STORAGE]], i64 0, i64 0
+// AArch64-NEXT:    [[OLD:%.*]] = atomicrmw sub ptr [[ARRAYDECAY]], i32 1 monotonic, align 4, !mem.cache_hint [[FETCH1]]
+// AArch64-NEXT:    ret i32 [[OLD]]
+//
+int test_atomic_fetch_hint_array_arg(void) {
+  int storage[1] = {0};
+  return __arm_atomic_fetch_sub_with_hint(storage, 1, __ATOMIC_RELAXED, 4);
+}
+
+// AArch64: [[HINT1]] = !{i32 1, [[HINT2:![0-9]+]]}
+// AArch64-NEXT: [[HINT2]] = !{!"aarch64.mem_hint", i32 0}
+
+// AArch64-NEXT: [[HINT3]] = !{i32 1, [[HINT4:![0-9]+]]}
+// AArch64-NEXT: [[HINT4]] = !{!"aarch64.mem_hint", i32 1}
+// AArch64: [[FETCH0]] = !{i32 0, [[FETCH_HINT0:![0-9]+]]}
+// AArch64-NEXT: [[FETCH_HINT0]] = !{!"aarch64.mem_hint", i32 3}
+// AArch64-NEXT: [[FETCH1]] = !{i32 0, [[FETCH_HINT1:![0-9]+]]}
+// AArch64-NEXT: [[FETCH_HINT1]] = !{!"aarch64.mem_hint", i32 4}
 #endif

@@ -15,7 +15,7 @@
 // CHECK:               omp.terminator
 // CHECK:             } {omp.composite}
 // CHECK:             omp.terminator
-// CHECK:           }
+// CHECK:           } {omp.combined}
 // CHECK:           return
 // CHECK:         }
 func.func @x(%lb : index, %ub : index, %step : index, %b : i1, %addr : !fir.ref<index>) {

@@ -18,9 +18,6 @@ namespace lldb_private {
 class CommandInterpreter;
 }
 namespace lldb_private {
-class ConstString;
-}
-namespace lldb_private {
 class ExecutionContext;
 }
 namespace lldb_private {
@@ -55,16 +52,18 @@ void Properties::DumpAllPropertyValues(const ExecutionContext *exe_ctx,
                                        bool is_json) {
   if (is_json) {
     llvm::json::Value json = m_collection_sp->ToJSON(exe_ctx);
-    strm.Printf("%s", llvm::formatv("{0:2}", json).str().c_str());
+    strm << llvm::formatv("{0:2}", json);
   } else
     m_collection_sp->DumpValue(exe_ctx, strm, dump_mask);
 }
 
 void Properties::DumpAllDescriptions(CommandInterpreter &interpreter,
-                                     Stream &strm) const {
+                                     Stream &strm,
+                                     bool include_deprecated) const {
   strm.PutCString("Top level variables:\n\n");
 
-  return m_collection_sp->DumpAllDescriptions(interpreter, strm);
+  return m_collection_sp->DumpAllDescriptions(interpreter, strm,
+                                              include_deprecated);
 }
 
 Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
@@ -75,11 +74,31 @@ Status Properties::DumpPropertyValue(const ExecutionContext *exe_ctx,
                                             dump_mask, is_json);
 }
 
-size_t
-Properties::Apropos(llvm::StringRef keyword,
-                    std::vector<const Property *> &matching_properties) const {
-  m_collection_sp->Apropos(keyword, matching_properties);
-  return matching_properties.size();
+void Properties::Apropos(
+    llvm::StringRef keyword, std::vector<const Property *> &matching_properties,
+    std::vector<const Property *> &matching_property_paths) const {
+  m_collection_sp->Apropos(keyword, matching_properties,
+                           matching_property_paths);
+}
+
+std::optional<std::string>
+Properties::GetDeprecationWarning(llvm::StringRef property_path) const {
+  // Drop any element access, as in "target.env-vars[FOO]".
+  llvm::StringRef setting_name =
+      property_path.take_front(property_path.find_first_of("[{"));
+  const Property *property =
+      m_collection_sp->GetPropertyAtPath(nullptr, setting_name);
+  if (!property || !property->IsDeprecated())
+    return std::nullopt;
+  std::string warning =
+      llvm::formatv("setting '{0}' is deprecated and may be removed in a "
+                    "future release",
+                    setting_name)
+          .str();
+  llvm::StringRef message = property->GetDeprecationMessage();
+  if (!message.empty())
+    warning += ("; " + message).str();
+  return warning;
 }
 
 llvm::StringRef Properties::GetExperimentalSettingsName() {

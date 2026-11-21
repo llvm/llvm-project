@@ -1,4 +1,4 @@
-; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s
+; RUN: llc %s -disable-dxil-remove-unused-resources --filetype=obj -o - | obj2yaml | FileCheck %s
 
 ; Check that resources are emitted to the object in the order that matches what
 ; the DXIL validator expects: CBuffers, Samplers, SRVs, and then UAVs.

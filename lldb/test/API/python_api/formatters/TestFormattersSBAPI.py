@@ -7,6 +7,7 @@ from lldbsuite.test import lldbutil
 
 
 class SBFormattersAPITestCase(TestBase):
+    SHARED_BUILD_TESTCASE = False
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -102,6 +103,18 @@ class SBFormattersAPITestCase(TestBase):
         self.expect("frame variable foo.E", matching=False, substrs=["hello world"])
         self.expect("frame variable foo.B", matching=False, substrs=["hello world"])
         self.expect("frame variable foo.F", matching=False, substrs=["hello world"])
+
+        # Don't crash when doing bad things.
+        filter = lldb.SBTypeFilter(0)
+        self.assertEqual(
+            filter.GetExpressionPathAtIndex(5),
+            None,
+            "Should not get a valid expression path",
+        )
+        self.assertFalse(
+            filter.ReplaceExpressionPathAtIndex(5, "foo"),
+            "Should fail to replace expression path at invalid index",
+        )
 
         filter = lldb.SBTypeFilter(0)
         filter.AppendExpressionPath("A")
@@ -430,12 +443,17 @@ class SBFormattersAPITestCase(TestBase):
         self.expect(
             "frame variable foo_ptr", matching=True, substrs=["hello scripted world"]
         )
-        new_category.AddTypeSummary(
-            lldb.SBTypeNameSpecifier("JustAStruct"),
-            lldb.SBTypeSummary.CreateWithScriptCode(
-                "return 'hello scripted world';", lldb.eTypeOptionSkipPointers
-            ),
+        jas_summary_code = lldb.SBTypeSummary.CreateWithScriptCode(
+            "return 'hello scripted world';", lldb.eTypeOptionSkipPointers
         )
+        self.assertFalse(jas_summary_code.is_function_name)
+        self.assertTrue(jas_summary_code.is_function_code)
+        self.assertTrue(jas_summary_code.IsFunctionCode())
+
+        added_summary = new_category.AddTypeSummary(
+            lldb.SBTypeNameSpecifier("JustAStruct"), jas_summary_code
+        )
+        self.assertTrue(added_summary)
         self.expect(
             "frame variable foo", matching=True, substrs=["hello scripted world"]
         )

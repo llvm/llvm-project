@@ -6,7 +6,7 @@
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca { half, half }, align 2
 // CHECK-NEXT:    [[A:%.*]] = alloca half, align 2
-// CHECK-NEXT:    store half 0xH0000, ptr [[A]], align 2
+// CHECK-NEXT:    store half 0.000000e+00, ptr [[A]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load half, ptr [[A]], align 2
 // CHECK-NEXT:    [[TMP1:%.*]] = load half, ptr [[A]], align 2
 // CHECK-NEXT:    [[RETVAL_REALP:%.*]] = getelementptr inbounds nuw { half, half }, ptr [[RETVAL]], i32 0, i32 0

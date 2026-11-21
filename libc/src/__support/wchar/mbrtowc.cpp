@@ -19,17 +19,17 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict s,
-                        size_t n, mbstate *__restrict ps) {
+ErrorOr<size_t> mbrtowc(wchar_t *__restrict pwc, const char *__restrict src_ptr,
+                        size_t max_src_bytes, mbstate *__restrict ps) {
   CharacterConverter char_conv(ps);
   if (!char_conv.isValidState())
     return Error(EINVAL);
-  if (s == nullptr)
+  if (src_ptr == nullptr)
     return 0;
   size_t i = 0;
   // Reading in bytes until we have a complete wc or error
-  for (; i < n && !char_conv.isFull(); ++i) {
-    int err = char_conv.push(static_cast<char8_t>(s[i]));
+  for (; i < max_src_bytes && !char_conv.isFull(); ++i) {
+    int err = char_conv.push(static_cast<char8_t>(src_ptr[i]));
     // Encoding error
     if (err == EILSEQ)
       return Error(err);

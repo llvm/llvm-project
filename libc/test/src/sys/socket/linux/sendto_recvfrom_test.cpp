@@ -12,11 +12,11 @@
 
 #include "src/unistd/close.h"
 
+#include "hdr/sys_socket_macros.h" // For AF_UNIX and SOCK_DGRAM
+#include "src/__support/CPP/scope.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
-
-#include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Succeeds;
@@ -30,6 +30,10 @@ TEST_F(LlvmLibcSendToRecvFromTest, SucceedsWithSocketPair) {
 
   ASSERT_THAT(LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair),
               Succeeds(0));
+  LIBC_NAMESPACE::cpp::scope_exit close_sockpair([&] {
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
+    ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
+  });
 
   ASSERT_THAT(LIBC_NAMESPACE::sendto(sockpair[0], TEST_MESSAGE, MESSAGE_LEN, 0,
                                      nullptr, 0),
@@ -42,10 +46,6 @@ TEST_F(LlvmLibcSendToRecvFromTest, SucceedsWithSocketPair) {
               Succeeds(static_cast<ssize_t>(MESSAGE_LEN)));
 
   ASSERT_STREQ(buffer, TEST_MESSAGE);
-
-  // close both ends of the socket
-  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[0]), Succeeds(0));
-  ASSERT_THAT(LIBC_NAMESPACE::close(sockpair[1]), Succeeds(0));
 }
 
 TEST_F(LlvmLibcSendToRecvFromTest, SendToFails) {

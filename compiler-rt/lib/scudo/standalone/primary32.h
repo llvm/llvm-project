@@ -79,6 +79,8 @@ public:
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
+  void zeroFreeBlocks();
+
   void unmapTestOnly();
 
   // When all blocks are freed, it has to be the same size as `AllocatedUser`.
@@ -114,7 +116,7 @@ public:
                   CompactPtrT *Array, u32 Size);
 
   void disable() NO_THREAD_SAFETY_ANALYSIS;
-  void enable() NO_THREAD_SAFETY_ANALYSIS;
+  void enable(bool IsChild) NO_THREAD_SAFETY_ANALYSIS;
 
   template <typename F> void iterateOverBlocks(F Callback);
 
@@ -131,14 +133,8 @@ public:
   uptr tryReleaseToOS(uptr ClassId, ReleaseToOS ReleaseType);
   uptr releaseToOS(ReleaseToOS ReleaseType);
 
-  const char *getRegionInfoArrayAddress() const { return nullptr; }
-  static uptr getRegionInfoArraySize() { return 0; }
-
   // Not supported in SizeClassAllocator32.
-  static BlockInfo findNearestBlock(UNUSED const char *RegionInfoData,
-                                    UNUSED uptr Ptr) {
-    return {};
-  }
+  BlockInfo findNearestBlock(UNUSED uptr Ptr) { return {}; }
 
   AtomicOptions Options;
 
@@ -277,11 +273,13 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
   uptr MinRegionIndex = NumRegions, MaxRegionIndex = 0;
   for (uptr I = 0; I < NumClasses; I++) {
     SizeClassInfo *Sci = getSizeClassInfo(I);
-    ScopedLock L(Sci->Mutex);
-    if (Sci->MinRegionIndex < MinRegionIndex)
-      MinRegionIndex = Sci->MinRegionIndex;
-    if (Sci->MaxRegionIndex > MaxRegionIndex)
-      MaxRegionIndex = Sci->MaxRegionIndex;
+    {
+      ScopedLock L(Sci->Mutex);
+      if (Sci->MinRegionIndex < MinRegionIndex)
+        MinRegionIndex = Sci->MinRegionIndex;
+      if (Sci->MaxRegionIndex > MaxRegionIndex)
+        MaxRegionIndex = Sci->MaxRegionIndex;
+    }
     *Sci = {};
   }
 
@@ -290,6 +288,25 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
     if (PossibleRegions[I])
       unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
   PossibleRegions.unmapTestOnly();
+}
+
+template <typename Config> void SizeClassAllocator32<Config>::zeroFreeBlocks() {
+  for (uptr ClassId = 0; ClassId < NumClasses; ++ClassId) {
+    if (ClassId == SizeClassMap::BatchClassId)
+      continue;
+
+    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
+    ScopedLock L1(Sci->Mutex);
+    const uptr BlockSize = getSizeByClassId(ClassId);
+    for (BatchGroupT &BG : Sci->FreeListInfo.BlockList) {
+      for (const auto &It : BG.Batches) {
+        for (u16 I = 0; I < It.getCount(); ++I) {
+          void *BlockBegin = decompactPtr(ClassId, It.get(I));
+          memset(BlockBegin, 0, BlockSize);
+        }
+      }
+    }
+  }
 }
 
 template <typename Config>
@@ -409,7 +426,8 @@ void SizeClassAllocator32<Config>::disable() NO_THREAD_SAFETY_ANALYSIS {
 }
 
 template <typename Config>
-void SizeClassAllocator32<Config>::enable() NO_THREAD_SAFETY_ANALYSIS {
+void SizeClassAllocator32<Config>::enable(UNUSED bool IsChild)
+    NO_THREAD_SAFETY_ANALYSIS {
   ByteMapMutex.unlock();
   RegionsStashMutex.unlock();
   getSizeClassInfo(SizeClassMap::BatchClassId)->Mutex.unlock();
@@ -454,6 +472,8 @@ void SizeClassAllocator32<Config>::iterateOverBlocks(F Callback) {
 template <typename Config>
 void SizeClassAllocator32<Config>::getStats(ScopedString *Str) {
   // TODO(kostyak): get the RSS per region.
+  Str->append("\nConfig Stats Primary32: ");
+  Config::getConfigValues(Str);
   uptr TotalMapped = 0;
   uptr PoppedBlocks = 0;
   uptr PushedBlocks = 0;
@@ -1023,7 +1043,7 @@ void SizeClassAllocator32<Config>::getSizeClassFragmentationInfo(
   const uptr NumberOfRegions = Last - First + 1U;
   auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
     ScopedLock L(ByteMapMutex);
-    return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    return PossibleRegions[First + RegionIndex] != (ClassId + 1U);
   };
 
   FragmentationRecorder Recorder;
@@ -1121,7 +1141,7 @@ uptr SizeClassAllocator32<Config>::releaseToOSMaybe(SizeClassInfo *Sci,
   ReleaseRecorder Recorder(Base);
   auto SkipRegion = [this, First, ClassId](uptr RegionIndex) {
     ScopedLock L(ByteMapMutex);
-    return (PossibleRegions[First + RegionIndex] - 1U) != ClassId;
+    return PossibleRegions[First + RegionIndex] != (ClassId + 1U);
   };
   releaseFreeMemoryToOS(Context, Recorder, SkipRegion);
 

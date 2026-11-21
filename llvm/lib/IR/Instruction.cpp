@@ -42,9 +42,6 @@ cl::opt<bool> ProfcheckDisableMetadataFixes(
 
 } // end namespace llvm
 
-InsertPosition::InsertPosition(Instruction *InsertBefore)
-    : InsertAt(InsertBefore ? InsertBefore->getIterator()
-                            : InstListType::iterator()) {}
 InsertPosition::InsertPosition(BasicBlock *InsertAtEnd)
     : InsertAt(InsertAtEnd ? InsertAtEnd->end() : InstListType::iterator()) {}
 
@@ -74,9 +71,13 @@ Instruction::~Instruction() {
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, PoisonValue::get(getType()));
 
-  // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
-  // mapping in LLVMContext.
-  setMetadata(LLVMContext::MD_DIAssignID, nullptr);
+  // Remove associated metadata from context.
+  if (hasMetadata()) {
+    // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
+    // mapping in LLVMContext.
+    updateDIAssignIDMapping(nullptr);
+    clearMetadata();
+  }
 }
 
 const Module *Instruction::getModule() const {
@@ -108,10 +109,6 @@ void Instruction::handleMarkerRemoval() {
 BasicBlock::iterator Instruction::eraseFromParent() {
   handleMarkerRemoval();
   return getParent()->getInstList().erase(getIterator());
-}
-
-void Instruction::insertBefore(Instruction *InsertPos) {
-  insertBefore(InsertPos->getIterator());
 }
 
 /// Insert an unlinked instruction into a basic block immediately before the
@@ -181,16 +178,8 @@ void Instruction::insertBefore(BasicBlock &BB,
 
 /// Unlink this instruction from its current basic block and insert it into the
 /// basic block that MovePos lives in, right before MovePos.
-void Instruction::moveBefore(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
-}
-
 void Instruction::moveBefore(BasicBlock::iterator MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos, false);
-}
-
-void Instruction::moveBeforePreserving(Instruction *MovePos) {
-  moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
 }
 
 void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
@@ -474,6 +463,10 @@ void Instruction::dropPoisonGeneratingFlags() {
     cast<ICmpInst>(this)->setSameSign(false);
     break;
 
+  case Instruction::AddrSpaceCast:
+    cast<AddrSpaceCastInst>(this)->setNonNull(false);
+    break;
+
   case Instruction::Call: {
     if (auto *II = dyn_cast<IntrinsicInst>(this)) {
       switch (II->getIntrinsicID()) {
@@ -529,25 +522,29 @@ void Instruction::dropPoisonGeneratingMetadata() {
     eraseMetadata(ID);
 }
 
-bool Instruction::hasPoisonGeneratingReturnAttributes() const {
+bool Instruction::hasPoisonGeneratingAttributes() const {
   if (const auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeSet RetAttrs = CB->getAttributes().getRetAttrs();
-    return RetAttrs.hasAttribute(Attribute::Range) ||
-           RetAttrs.hasAttribute(Attribute::Alignment) ||
-           RetAttrs.hasAttribute(Attribute::NonNull);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
+    auto HasPoisonGeneratingAttributes = [&](AttributeSet Attrs) {
+      return any_of(Attrs, [&](Attribute A) { return AM.contains(A); });
+    };
+    if (HasPoisonGeneratingAttributes(CB->getRetAttributes()))
+      return true;
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      if (HasPoisonGeneratingAttributes(CB->getParamAttributes(ArgNo)))
+        return true;
   }
   return false;
 }
 
-void Instruction::dropPoisonGeneratingReturnAttributes() {
+void Instruction::dropPoisonGeneratingAttributes() {
   if (auto *CB = dyn_cast<CallBase>(this)) {
-    AttributeMask AM;
-    AM.addAttribute(Attribute::Range);
-    AM.addAttribute(Attribute::Alignment);
-    AM.addAttribute(Attribute::NonNull);
+    AttributeMask AM = AttributeFuncs::getPoisonGeneratingAttributes();
     CB->removeRetAttrs(AM);
+    for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
+      CB->removeParamAttrs(ArgNo, AM);
   }
-  assert(!hasPoisonGeneratingReturnAttributes() && "must be kept in sync");
+  assert(!hasPoisonGeneratingAttributes() && "must be kept in sync");
 }
 
 void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
@@ -571,18 +568,22 @@ void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
 
 void Instruction::dropUBImplyingAttrsAndMetadata(ArrayRef<unsigned> Keep) {
   // !annotation and !prof metadata does not impact semantics.
-  // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !range, !nonnull, !align and !nofpclass produce poison, so they are safe to
+  // speculate.
   // !fpmath specifies floating-point precision and does not imply UB.
+  // !mem.cache_hint is a performance hint and does not imply UB.
+  // !pcsections only requests PC sections and does not imply UB.
   // !noundef and various AA metadata must be dropped, as it generally produces
   // immediate undefined behavior.
   static const unsigned KnownIDs[] = {
-      LLVMContext::MD_annotation, LLVMContext::MD_range,
-      LLVMContext::MD_nonnull,    LLVMContext::MD_align,
-      LLVMContext::MD_fpmath,     LLVMContext::MD_prof};
+      LLVMContext::MD_annotation,     LLVMContext::MD_range,
+      LLVMContext::MD_nonnull,        LLVMContext::MD_align,
+      LLVMContext::MD_fpmath,         LLVMContext::MD_prof,
+      LLVMContext::MD_mem_cache_hint, LLVMContext::MD_nofpclass,
+      LLVMContext::MD_pcsections};
   SmallVector<unsigned> KeepIDs;
   KeepIDs.reserve(Keep.size() + std::size(KnownIDs));
-  append_range(KeepIDs, (!ProfcheckDisableMetadataFixes ? KnownIDs
-                                                        : drop_end(KnownIDs)));
+  append_range(KeepIDs, KnownIDs);
   append_range(KeepIDs, Keep);
   dropUBImplyingAttrsAndUnknownMetadata(KeepIDs);
 }
@@ -700,6 +701,12 @@ FastMathFlags Instruction::getFastMathFlags() const {
   return cast<FPMathOperator>(this)->getFastMathFlags();
 }
 
+FastMathFlags Instruction::getFastMathFlagsOrNone() const {
+  if (!isa<FPMathOperator>(this))
+    return {};
+  return cast<FPMathOperator>(this)->getFastMathFlags();
+}
+
 void Instruction::copyFastMathFlags(const Instruction *I) {
   copyFastMathFlags(I->getFastMathFlags());
 }
@@ -746,6 +753,14 @@ void Instruction::copyIRFlags(const Value *V, bool IncludeWrapFlags) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(SrcASC->hasNonNull());
+    }
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -791,9 +806,18 @@ void Instruction::andIRFlags(const Value *V) {
   if (auto *SrcICmp = dyn_cast<ICmpInst>(V))
     if (auto *DestICmp = dyn_cast<ICmpInst>(this))
       DestICmp->setSameSign(DestICmp->hasSameSign() && SrcICmp->hasSameSign());
+
+  if (auto *SrcASC = dyn_cast<AddrSpaceCastInst>(V))
+    if (auto *DestASC = dyn_cast<AddrSpaceCastInst>(this)) {
+      assert(DestASC->getSrcAddressSpace() == SrcASC->getSrcAddressSpace() &&
+             "nonull flag cannot be safely preserved with different source "
+             "address spaces");
+      DestASC->setNonNull(DestASC->hasNonNull() && SrcASC->hasNonNull());
+    }
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {
+  // clang-format off
   switch (OpCode) {
   // Terminators
   case Ret:    return "ret";
@@ -875,9 +899,12 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   case LandingPad:     return "landingpad";
   case CleanupPad:     return "cleanuppad";
   case Freeze:         return "freeze";
+  case BitInsert:      return "bitinsert";
+  case BitExtract:     return "bitextract";
 
   default: return "<Invalid operator> ";
   }
+  // clang-format on
 }
 
 /// This must be kept in sync with FunctionComparator::cmpOperations in
@@ -904,12 +931,14 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
             IgnoreAlignment);
   if (const LoadInst *LI = dyn_cast<LoadInst>(I1))
     return LI->isVolatile() == cast<LoadInst>(I2)->isVolatile() &&
+           LI->isElementwise() == cast<LoadInst>(I2)->isElementwise() &&
            (LI->getAlign() == cast<LoadInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            LI->getOrdering() == cast<LoadInst>(I2)->getOrdering() &&
            LI->getSyncScopeID() == cast<LoadInst>(I2)->getSyncScopeID();
   if (const StoreInst *SI = dyn_cast<StoreInst>(I1))
     return SI->isVolatile() == cast<StoreInst>(I2)->isVolatile() &&
+           SI->isElementwise() == cast<StoreInst>(I2)->isElementwise() &&
            (SI->getAlign() == cast<StoreInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
            SI->getOrdering() == cast<StoreInst>(I2)->getOrdering() &&
@@ -919,14 +948,17 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const CallInst *CI = dyn_cast<CallInst>(I1))
     return CI->isTailCall() == cast<CallInst>(I2)->isTailCall() &&
            CI->getCallingConv() == cast<CallInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallInst>(I2));
   if (const InvokeInst *CI = dyn_cast<InvokeInst>(I1))
     return CI->getCallingConv() == cast<InvokeInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<InvokeInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<InvokeInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<InvokeInst>(I2));
   if (const CallBrInst *CI = dyn_cast<CallBrInst>(I1))
     return CI->getCallingConv() == cast<CallBrInst>(I2)->getCallingConv() &&
+           CI->getFunctionType() == cast<CallBrInst>(I2)->getFunctionType() &&
            CheckAttrsSame(CI, cast<CallBrInst>(I2)) &&
            CI->hasIdenticalOperandBundleSchema(*cast<CallBrInst>(I2));
   if (const SwitchInst *SI = dyn_cast<SwitchInst>(I1)) {
@@ -955,6 +987,7 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
                cast<AtomicCmpXchgInst>(I2)->getSyncScopeID();
   if (const AtomicRMWInst *RMWI = dyn_cast<AtomicRMWInst>(I1))
     return RMWI->getOperation() == cast<AtomicRMWInst>(I2)->getOperation() &&
+           RMWI->isElementwise() == cast<AtomicRMWInst>(I2)->isElementwise() &&
            RMWI->isVolatile() == cast<AtomicRMWInst>(I2)->isVolatile() &&
            (RMWI->getAlign() == cast<AtomicRMWInst>(I2)->getAlign() ||
             IgnoreAlignment) &&
@@ -966,13 +999,21 @@ bool Instruction::hasSameSpecialState(const Instruction *I2,
   if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(I1))
     return GEP->getSourceElementType() ==
            cast<GetElementPtrInst>(I2)->getSourceElementType();
+  if (const LandingPadInst *LP = dyn_cast<LandingPadInst>(I1))
+    return LP->isCleanup() == cast<LandingPadInst>(I2)->isCleanup();
 
   return true;
 }
 
 bool Instruction::isIdenticalTo(const Instruction *I) const {
-  return isIdenticalToWhenDefined(I) &&
-         SubclassOptionalData == I->SubclassOptionalData;
+  if (!isIdenticalToWhenDefined(I) ||
+      SubclassOptionalData != I->SubclassOptionalData)
+    return false;
+
+  if (isa<FPMathOperator>(this))
+    return getFastMathFlags() == I->getFastMathFlags();
+
+  return true;
 }
 
 bool Instruction::isIdenticalToWhenDefined(const Instruction *I,
@@ -1008,6 +1049,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
   bool IgnoreAlignment = flags & CompareIgnoringAlignment;
   bool UseScalarTypes = flags & CompareUsingScalarTypes;
   bool IntersectAttrs = flags & CompareUsingIntersectedAttrs;
+  bool CheckCallTargets = flags & CompareCallTargets;
 
   if (getOpcode() != I->getOpcode() ||
       getNumOperands() != I->getNumOperands() ||
@@ -1024,6 +1066,11 @@ bool Instruction::isSameOperationAs(const Instruction *I,
           I->getOperand(i)->getType()->getScalarType() :
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
+
+  if (CheckCallTargets)
+    if (const auto *CB = dyn_cast<CallBase>(this))
+      if (CB->getCalledOperand() != cast<CallBase>(I)->getCalledOperand())
+        return false;
 
   return this->hasSameSpecialState(I, IgnoreAlignment, IntersectAttrs);
 }
@@ -1045,6 +1092,58 @@ bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
   }
   return false;
 }
+
+MemoryEffects Instruction::getMemoryEffects() const {
+  auto GetEffects = [](ModRefInfo BaseMR, AtomicOrdering Ordering,
+                       bool IsVolatile) {
+    if (isStrongerThanMonotonic(Ordering))
+      return MemoryEffects::unknown();
+
+    if (IsVolatile)
+      return MemoryEffects::inaccessibleOrArgMemOnly();
+
+    if (isStrongerThanUnordered(Ordering))
+      return MemoryEffects::argMemOnly();
+
+    return MemoryEffects::argMemOnly(BaseMR);
+  };
+  switch (getOpcode()) {
+  default:
+    return MemoryEffects::none();
+  case Instruction::VAArg:
+    return MemoryEffects::argMemOnly();
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Fence:
+    return MemoryEffects::unknown();
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return cast<CallBase>(this)->getMemoryEffects();
+  case Instruction::Load: {
+    auto *LI = cast<LoadInst>(this);
+    return GetEffects(ModRefInfo::Ref, LI->getOrdering(), LI->isVolatile());
+  }
+  case Instruction::Store: {
+    auto *SI = cast<StoreInst>(this);
+    return GetEffects(ModRefInfo::Mod, SI->getOrdering(), SI->isVolatile());
+  }
+  case Instruction::AtomicRMW: {
+    auto *RMW = cast<AtomicRMWInst>(this);
+    return GetEffects(ModRefInfo::ModRef, RMW->getOrdering(),
+                      RMW->isVolatile());
+  }
+  case Instruction::AtomicCmpXchg: {
+    auto *CX = cast<AtomicCmpXchgInst>(this);
+    return GetEffects(ModRefInfo::ModRef, CX->getMergedOrdering(),
+                      CX->isVolatile());
+  }
+  }
+}
+
+// This is duplicating the logic from getMemoryEffects() for performance
+// reasons. Computing the full MemoryEffects just to perform a Mod/Ref check
+// is expensive.
 
 bool Instruction::mayReadFromMemory() const {
   switch (getOpcode()) {
@@ -1086,6 +1185,27 @@ bool Instruction::mayWriteToMemory() const {
   }
 }
 
+bool Instruction::mayReadOrWriteMemory() const {
+  // Keep in sync with mayReadFromMemory and mayWriteToMemory.
+  switch (getOpcode()) {
+  default:
+    return false;
+  case Instruction::VAArg:
+  case Instruction::Load:
+  case Instruction::Store:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+    return true;
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->doesNotAccessMemory();
+  }
+}
+
 bool Instruction::isAtomic() const {
   switch (getOpcode()) {
   default:
@@ -1095,9 +1215,9 @@ bool Instruction::isAtomic() const {
   case Instruction::Fence:
     return true;
   case Instruction::Load:
-    return cast<LoadInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<LoadInst>(this)->isAtomic();
   case Instruction::Store:
-    return cast<StoreInst>(this)->getOrdering() != AtomicOrdering::NotAtomic;
+    return cast<StoreInst>(this)->isAtomic();
   }
 }
 
@@ -1139,19 +1259,35 @@ bool Instruction::isVolatile() const {
     return cast<AtomicCmpXchgInst>(this)->isVolatile();
   case Instruction::Call:
   case Instruction::Invoke:
-    // There are a very limited number of intrinsics with volatile flags.
-    if (auto *II = dyn_cast<IntrinsicInst>(this)) {
-      if (auto *MI = dyn_cast<MemIntrinsic>(II))
-        return MI->isVolatile();
-      switch (II->getIntrinsicID()) {
-      default: break;
-      case Intrinsic::matrix_column_major_load:
-        return cast<ConstantInt>(II->getArgOperand(2))->isOne();
-      case Intrinsic::matrix_column_major_store:
-        return cast<ConstantInt>(II->getArgOperand(3))->isOne();
-      }
-    }
+    return cast<CallBase>(this)->isVolatile();
+  }
+}
+
+bool Instruction::maySynchronize() const {
+  switch (getOpcode()) {
+  default:
+    assert(!isAtomic() && "Unhandled atomic instruction");
     return false;
+  case Instruction::Fence: {
+    // All legal orderings for fence are stronger than monotonic.
+    auto *FI = cast<FenceInst>(this);
+    return FI->getSyncScopeID() != SyncScope::SingleThread;
+  }
+  case Instruction::AtomicRMW:
+    return isStrongerThanMonotonic(cast<AtomicRMWInst>(this)->getOrdering());
+  case Instruction::AtomicCmpXchg: {
+    auto *ACXI = cast<AtomicCmpXchgInst>(this);
+    return isStrongerThanMonotonic(ACXI->getSuccessOrdering()) ||
+           isStrongerThanMonotonic(ACXI->getFailureOrdering());
+  }
+  case Instruction::Store:
+    return isStrongerThanMonotonic(cast<StoreInst>(this)->getOrdering());
+  case Instruction::Load:
+    return isStrongerThanMonotonic(cast<LoadInst>(this)->getOrdering());
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return !cast<CallBase>(this)->hasFnAttr(Attribute::NoSync);
   }
 }
 
@@ -1241,7 +1377,32 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
 }
 
 bool Instruction::mayHaveSideEffects() const {
-  return mayWriteToMemory() || mayThrow() || !willReturn();
+  switch (getOpcode()) {
+  case Instruction::Call:
+  case Instruction::Invoke:
+  case Instruction::CallBr:
+    return mayWriteToMemory() || mayThrow() || !willReturn();
+  case Instruction::Load:
+    // Ordered loads write to memory, and volatile loads may not return.
+    return !cast<LoadInst>(this)->isUnordered();
+  case Instruction::CleanupRet:
+    return cast<CleanupReturnInst>(this)->unwindsToCaller();
+  case Instruction::CatchSwitch:
+    return cast<CatchSwitchInst>(this)->unwindsToCaller();
+  case Instruction::Store:
+  case Instruction::VAArg:
+  case Instruction::Fence:
+  case Instruction::AtomicCmpXchg:
+  case Instruction::AtomicRMW:
+  case Instruction::CatchPad:
+  case Instruction::CatchRet:
+  case Instruction::Resume:
+    return true;
+  default:
+    assert(!mayWriteToMemory() && !mayThrow() && willReturn() &&
+           "missing instruction with side effects");
+    return false;
+  }
 }
 
 bool Instruction::isSafeToRemove() const {
@@ -1250,13 +1411,10 @@ bool Instruction::isSafeToRemove() const {
 }
 
 bool Instruction::willReturn() const {
-  // Volatile store isn't guaranteed to return; see LangRef.
-  if (auto *SI = dyn_cast<StoreInst>(this))
-    return !SI->isVolatile();
-
+  // Volatile operations are not guaranteed to return.
   if (const auto *CB = dyn_cast<CallBase>(this))
-    return CB->hasFnAttr(Attribute::WillReturn);
-  return true;
+    return CB->hasFnAttr(Attribute::WillReturn) && !isVolatile();
+  return !isVolatile();
 }
 
 bool Instruction::isLifetimeStartOrEnd() const {
@@ -1265,19 +1423,6 @@ bool Instruction::isLifetimeStartOrEnd() const {
     return false;
   Intrinsic::ID ID = II->getIntrinsicID();
   return ID == Intrinsic::lifetime_start || ID == Intrinsic::lifetime_end;
-}
-
-bool Instruction::isLaunderOrStripInvariantGroup() const {
-  auto *II = dyn_cast<IntrinsicInst>(this);
-  if (!II)
-    return false;
-  Intrinsic::ID ID = II->getIntrinsicID();
-  return ID == Intrinsic::launder_invariant_group ||
-         ID == Intrinsic::strip_invariant_group;
-}
-
-bool Instruction::isDebugOrPseudoInst() const {
-  return isa<DbgInfoIntrinsic>(this) || isa<PseudoProbeInst>(this);
 }
 
 const DebugLoc &Instruction::getStableDebugLoc() const {
@@ -1397,6 +1542,14 @@ void Instruction::swapProfMetadata() {
   Ops.push_back(ProfileData->getOperand(FirstIdx));
   setMetadata(LLVMContext::MD_prof,
               MDNode::get(ProfileData->getContext(), Ops));
+}
+
+void Instruction::copyProfileAndDebugMetadata(const Instruction &SrcInst) {
+  // TODO: Include additional metadata in the future if appropriate.
+  static const unsigned SafeIDs[] = {
+      LLVMContext::MD_dbg, LLVMContext::MD_prof, LLVMContext::MD_memprof,
+      LLVMContext::MD_callsite};
+  copyMetadata(SrcInst, SafeIDs);
 }
 
 void Instruction::copyMetadata(const Instruction &SrcInst,

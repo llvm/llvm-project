@@ -21,10 +21,10 @@
 namespace llvm {
 namespace exegesis {
 
-Expected<LLVMState> LLVMState::Create(std::string TripleName,
-                                      std::string CpuName,
-                                      const StringRef Features,
-                                      bool UseDummyPerfCounters) {
+Expected<LLVMState>
+LLVMState::create(const cl::LibraryOptionsContext &LibraryOptions,
+                  std::string TripleName, std::string CpuName,
+                  const StringRef Features, bool UseDummyPerfCounters) {
   if (TripleName.empty())
     TripleName = Triple::normalize(sys::getDefaultTargetTriple());
 
@@ -69,7 +69,8 @@ Expected<LLVMState> LLVMState::Create(std::string TripleName,
                                        .concat(TripleName),
                                    inconvertibleErrorCode());
   }
-  const TargetOptions Options;
+  TargetOptions Options;
+  Options.MCOptions.LibraryOptions = &LibraryOptions;
   std::unique_ptr<const TargetMachine> TM(TheTarget->createTargetMachine(
       TheTriple, CpuName, Features, Options, Reloc::Model::Static));
   if (!TM) {
@@ -101,7 +102,8 @@ LLVMState::LLVMState(std::unique_ptr<const TargetMachine> TM,
     ReservedRegs.set(Reg);
   RATC.reset(
       new RegisterAliasingTrackerCache(getRegInfo(), std::move(ReservedRegs)));
-  IC.reset(new InstructionsCache(getInstrInfo(), getRATC()));
+  IC.reset(
+      new InstructionsCache(getInstrInfo(), getRATC(), &getSubtargetInfo()));
 }
 
 std::unique_ptr<TargetMachine> LLVMState::createTargetMachine() const {
@@ -157,7 +159,7 @@ bool LLVMState::canAssemble(const MCInst &Inst) const {
   SmallVector<char, 16> Tmp;
   SmallVector<MCFixup, 4> Fixups;
   CodeEmitter->encodeInstruction(Inst, Tmp, Fixups,
-                                 *TheTargetMachine->getMCSubtargetInfo());
+                                 TheTargetMachine->getMCSubtargetInfo());
   return Tmp.size() > 0;
 }
 

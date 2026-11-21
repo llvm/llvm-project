@@ -363,9 +363,10 @@ public:
     if (!resultOperands)
       return failure();
 
-    // Build vector.load memref[expandedMap.results].
-    rewriter.replaceOpWithNewOp<memref::LoadOp>(op, op.getMemRef(),
-                                                *resultOperands);
+    // Build memref.load memref[expandedMap.results].
+    rewriter.replaceOpWithNewOp<memref::LoadOp>(
+        op, op.getMemRef(), *resultOperands,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -412,7 +413,8 @@ public:
 
     // Build memref.store valueToStore, memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<memref::StoreOp>(
-        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -499,7 +501,8 @@ public:
 
     // Build vector.load memref[expandedMap.results].
     rewriter.replaceOpWithNewOp<vector::LoadOp>(
-        op, op.getVectorType(), op.getMemRef(), *resultOperands);
+        op, op.getVectorType(), op.getMemRef(), *resultOperands,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };
@@ -521,7 +524,8 @@ public:
       return failure();
 
     rewriter.replaceOpWithNewOp<vector::StoreOp>(
-        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap);
+        op, op.getValueToStore(), op.getMemRef(), *maybeExpandedMap,
+        /*nontemporal=*/false, op.getMaybeAlign());
     return success();
   }
 };

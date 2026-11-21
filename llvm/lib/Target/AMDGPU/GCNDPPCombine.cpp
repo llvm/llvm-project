@@ -112,10 +112,6 @@ char GCNDPPCombineLegacy::ID = 0;
 
 char &llvm::GCNDPPCombineLegacyID = GCNDPPCombineLegacy::ID;
 
-FunctionPass *llvm::createGCNDPPCombinePass() {
-  return new GCNDPPCombineLegacy();
-}
-
 bool GCNDPPCombine::isShrinkable(MachineInstr &MI) const {
   unsigned Op = MI.getOpcode();
   if (!TII->isVOP3(Op)) {
@@ -215,6 +211,16 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     LLVM_DEBUG(dbgs() << "  failed: no DPP opcode\n");
     return nullptr;
   }
+
+  const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
+  const int MovDstIdx =
+      AMDGPU::getNamedOperandIdx(MovMI.getOpcode(), AMDGPU::OpName::vdst);
+  if (OldIdx != -1 &&
+      TII->getOpSize(DPPOp, OldIdx) != TII->getOpSize(MovMI, MovDstIdx)) {
+    LLVM_DEBUG(dbgs() << "  failed: old operand size differs from dst\n");
+    return nullptr;
+  }
+
   int OrigOpE32 = AMDGPU::getVOPe32(OrigOp);
   // Prior checks cover Mask with VOPC condition, but not on purpose
   auto *RowMaskOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::row_mask);
@@ -248,7 +254,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       // If we shrunk a 64bit vop3b to 32bits, just ignore the sdst
     }
 
-    const int OldIdx = AMDGPU::getNamedOperandIdx(DPPOp, AMDGPU::OpName::old);
     if (OldIdx != -1) {
       assert(OldIdx == NumOperands);
       assert(isOfRegClass(
@@ -286,7 +291,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     }
     auto *Src0 = TII->getNamedOperand(MovMI, AMDGPU::OpName::src0);
     assert(Src0);
-    [[maybe_unused]] int Src0Idx = NumOperands;
 
     DPPInst.add(*Src0);
     DPPInst->getOperand(NumOperands).setIsKill(false);
@@ -308,14 +312,6 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
     if (Src1) {
       assert(AMDGPU::hasNamedOperand(DPPOp, AMDGPU::OpName::src1) &&
              "dpp version of instruction missing src1");
-      // If subtarget does not support SGPRs for src1 operand then the
-      // requirements are the same as for src0. We check src0 instead because
-      // pseudos are shared between subtargets and allow SGPR for src1 on all.
-      if (!ST->hasDPPSrc1SGPR()) {
-        assert(TII->getOpSize(*DPPInst, Src0Idx) ==
-                   TII->getOpSize(*DPPInst, NumOperands) &&
-               "Src0 and Src1 operands should have the same size");
-      }
 
       DPPInst.add(*Src1);
       ++NumOperands;
@@ -489,6 +485,44 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
     if (OldOpnd->getImm() == 1)
       return true;
     break;
+  case AMDGPU::V_MIN_F32_e32:
+  case AMDGPU::V_MIN_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*+inf=*/0x7F800000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F32_e32:
+  case AMDGPU::V_MAX_F32_e64:
+    if (static_cast<uint32_t>(OldOpnd->getImm()) == /*-inf=*/0xFF800000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F64_e64:
+  case AMDGPU::V_MIN_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*+inf=*/0x7FF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F64_e64:
+  case AMDGPU::V_MAX_NUM_F64_e64:
+    if (static_cast<uint64_t>(OldOpnd->getImm()) == /*-inf=*/0xFFF0000000000000)
+      return true;
+    break;
+  case AMDGPU::V_MIN_F16_e32:
+  case AMDGPU::V_MIN_F16_e64:
+  case AMDGPU::V_MIN_F16_t16_e32:
+  case AMDGPU::V_MIN_F16_t16_e64:
+  case AMDGPU::V_MIN_F16_fake16_e32:
+  case AMDGPU::V_MIN_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*+inf=*/0x7C00)
+      return true;
+    break;
+  case AMDGPU::V_MAX_F16_e32:
+  case AMDGPU::V_MAX_F16_e64:
+  case AMDGPU::V_MAX_F16_t16_e32:
+  case AMDGPU::V_MAX_F16_t16_e64:
+  case AMDGPU::V_MAX_F16_fake16_e32:
+  case AMDGPU::V_MAX_F16_fake16_e64:
+    if (static_cast<uint16_t>(OldOpnd->getImm()) == /*-inf=*/0xFC00)
+      return true;
+    break;
   }
   return false;
 }
@@ -639,6 +673,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
 
   OrigMIs.push_back(&MovMI);
   bool Rollback = true;
+  const SIRegisterInfo *TRI = ST->getRegisterInfo();
   SmallVector<MachineOperand *, 16> Uses(
       llvm::make_pointer_range(MRI->use_nodbg_operands(DPPMovReg)));
 
@@ -653,8 +688,13 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
     assert((TII->get(OrigOp).getSize() != 4 || !AMDGPU::isTrue16Inst(OrigOp)) &&
            "There should not be e32 True16 instructions pre-RA");
     if (OrigOp == AMDGPU::REG_SEQUENCE) {
+      // A different reg is a forwarded lane of a nested REG_SEQUENCE.
+      if (Use->getReg() != DPPMovReg) {
+        LLVM_DEBUG(dbgs() << "  failed: nested REG_SEQUENCE\n");
+        break;
+      }
+
       Register FwdReg = OrigMI.getOperand(0).getReg();
-      unsigned FwdSubReg = 0;
 
       if (execMayBeModifiedBeforeAnyUse(*MRI, FwdReg, OrigMI)) {
         LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
@@ -662,21 +702,27 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
         break;
       }
 
-      unsigned OpNo, E = OrigMI.getNumOperands();
-      for (OpNo = 1; OpNo < E; OpNo += 2) {
-        if (OrigMI.getOperand(OpNo).getReg() == DPPMovReg) {
-          FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
-          break;
-        }
+      // The DPP mov reg can appear in several operands, each with its own
+      // subreg index: REG_SEQUENCE inputs never overlap.
+      unsigned OpNo = OrigMI.getOperandNo(Use);
+      unsigned FwdSubReg = OrigMI.getOperand(OpNo + 1).getImm();
+
+      // Marking the operand undef is unsound if another read consumes the lane.
+      LaneBitmask FwdLanes = TRI->getSubRegIndexLaneMask(FwdSubReg);
+      if (llvm::any_of(
+              MRI->use_nodbg_operands(FwdReg), [&](const MachineOperand &Op) {
+                return Op.getSubReg() != FwdSubReg &&
+                       (TRI->getSubRegIndexLaneMask(Op.getSubReg()) & FwdLanes)
+                           .any();
+              })) {
+        LLVM_DEBUG(dbgs() << "  failed: REG_SEQUENCE lane has other reads\n");
+        break;
       }
 
-      if (!FwdSubReg)
-        break;
-
-      for (auto &Op : MRI->use_nodbg_operands(FwdReg)) {
+      for (MachineOperand &Op : MRI->use_nodbg_operands(FwdReg))
         if (Op.getSubReg() == FwdSubReg)
           Uses.push_back(&Op);
-      }
+
       RegSeqWithOpNos[&OrigMI].push_back(OpNo);
       continue;
     }
@@ -715,18 +761,33 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
       break;
     }
 
-    if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP) &&
-        AMDGPU::isDPALU_DPP32BitOpc(OrigOp)) {
-      LLVM_DEBUG(dbgs() << "  " << OrigMI
-                        << "  failed: DPP ALU DPP is not supported\n");
+    // We have to be careful to prevent trying to fold into the first source
+    // operand of instructions that apply DPP to the second source operand.
+    // This could be directly, or when folding into an instruction that will
+    // get commuted into one.
+    int FoldedOp =
+        (Use == Src0) ? static_cast<int>(OrigOp) : TII->commuteOpcode(OrigOp);
+    if (FoldedOp < 0 || TII->isSrc1DPPRevOpcode(*ST, FoldedOp)) {
+      LLVM_DEBUG(
+          dbgs() << "  failed: Use operand cannot have DPP applied to it\n");
       break;
     }
 
-    if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal) &&
-        AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
-      LLVM_DEBUG(dbgs() << "  " << OrigMI
-                        << "  failed: not valid 64-bit DPP control value\n");
-      break;
+    // Without DPALU DPP there are no 64-bit DPP encodings. The 64-bit move is
+    // rejected above, but a 32-bit move folded into a source of a 64-bit
+    // instruction reaches here, so the operands have to be checked too.
+    if (AMDGPU::isDPALU_DPP(TII->get(OrigOp), *TII, *ST)) {
+      if (!ST->hasFeature(AMDGPU::FeatureDPALU_DPP)) {
+        LLVM_DEBUG(dbgs() << "  " << OrigMI
+                          << "  failed: DPP ALU DPP is not supported\n");
+        break;
+      }
+
+      if (!AMDGPU::isLegalDPALU_DPPControl(*ST, DppCtrlVal)) {
+        LLVM_DEBUG(dbgs() << "  " << OrigMI
+                          << "  failed: not valid 64-bit DPP control value\n");
+        break;
+      }
     }
 
     LLVM_DEBUG(dbgs() << "  combining: " << OrigMI);

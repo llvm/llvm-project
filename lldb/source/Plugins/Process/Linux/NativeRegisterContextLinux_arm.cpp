@@ -13,22 +13,22 @@
 #include "Plugins/Process/Linux/NativeProcessLinux.h"
 #include "Plugins/Process/Linux/Procfs.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
+#include "Register/Common/RegisterInfo_arm.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
-#include <elf.h>
-#include <sys/uio.h>
-
 #if defined(__arm64__) || defined(__aarch64__)
-#include "NativeRegisterContextLinux_arm64dbreg.h"
+#include "Plugins/Process/Linux/NativeRegisterContextLinux_arm64dbreg.h"
 #endif
 
-#include "lldb/Host/linux/Ptrace.h"
-#include <asm/ptrace.h>
+// System includes - They have to be included after framework includes because
+// they define some macros which collide with variable names in other modules.
+#include <elf.h>
+#include <sys/ptrace.h>
+#include <sys/uio.h>
 
 #define REG_CONTEXT_SIZE (GetGPRSize() + sizeof(m_fpr) + sizeof(m_tls))
 
@@ -45,6 +45,10 @@
 #endif
 #if !defined(PTRACE_TYPE_ARG4)
 #define PTRACE_TYPE_ARG4 void *
+#endif
+
+#ifndef PTRACE_GET_THREAD_AREA
+#define PTRACE_GET_THREAD_AREA 22
 #endif
 
 using namespace lldb;
@@ -71,15 +75,13 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
     : NativeRegisterContextRegisterInfo(
           native_thread,
-          new RegisterInfoPOSIX_arm(target_arch, /*has_tls_reg=*/true)),
+          new RegisterInfo_arm(target_arch, /*has_tls_reg=*/true)),
       NativeRegisterContextLinux(native_thread) {
   assert(target_arch.GetMachine() == llvm::Triple::arm);
 
   ::memset(&m_fpr, 0, sizeof(m_fpr));
   ::memset(&m_tls, 0, sizeof(m_tls));
   ::memset(&m_gpr_arm, 0, sizeof(m_gpr_arm));
-  ::memset(&m_hwp_regs, 0, sizeof(m_hwp_regs));
-  ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -87,8 +89,8 @@ NativeRegisterContextLinux_arm::NativeRegisterContextLinux_arm(
   m_refresh_hwdebug_info = true;
 }
 
-RegisterInfoPOSIX_arm &NativeRegisterContextLinux_arm::GetRegisterInfo() const {
-  return static_cast<RegisterInfoPOSIX_arm &>(*m_register_info_interface_up);
+RegisterInfo_arm &NativeRegisterContextLinux_arm::GetRegisterInfo() const {
+  return static_cast<RegisterInfo_arm &>(*m_register_info_interface_up);
 }
 
 uint32_t NativeRegisterContextLinux_arm::GetRegisterSetCount() const {
@@ -291,21 +293,21 @@ Status NativeRegisterContextLinux_arm::WriteAllRegisterValues(
 
 bool NativeRegisterContextLinux_arm::IsGPR(unsigned reg) const {
   if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::GPRegSet)
+      RegisterInfo_arm::GPRegSet)
     return true;
   return false;
 }
 
 bool NativeRegisterContextLinux_arm::IsFPR(unsigned reg) const {
   if (GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-      RegisterInfoPOSIX_arm::FPRegSet)
+      RegisterInfo_arm::FPRegSet)
     return true;
   return false;
 }
 
 bool NativeRegisterContextLinux_arm::IsTLS(unsigned reg) const {
   return GetRegisterInfo().GetRegisterSetFromRegisterIndex(reg) ==
-         RegisterInfoPOSIX_arm::TLSRegSet;
+         RegisterInfo_arm::TLSRegSet;
 }
 
 llvm::Error NativeRegisterContextLinux_arm::ReadHardwareDebugInfo() {

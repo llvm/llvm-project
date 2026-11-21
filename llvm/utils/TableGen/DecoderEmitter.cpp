@@ -13,7 +13,6 @@
 
 #include "Common/CodeGenHwModes.h"
 #include "Common/CodeGenInstruction.h"
-#include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
 #include "Common/InstructionEncoding.h"
@@ -25,7 +24,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
@@ -36,10 +34,8 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/KnownBits.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
@@ -165,8 +161,6 @@ class DecoderEmitter {
 
 public:
   explicit DecoderEmitter(const RecordKeeper &RK);
-
-  const CodeGenTarget &getTarget() const { return Target; }
 
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
@@ -707,16 +701,16 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     return;
   }
 
-  if (OpInfo.fields().empty()) {
+  if (OpInfo.Fields.empty()) {
     // Only a constant part. The old behavior is to not decode this operand.
     if (IgnoreFullyDefinedOperands)
       return;
     // Initialize `tmp` with the constant part.
     OS << Indent << "tmp = " << format_hex(*OpInfo.InitValue, 0) << ";\n";
-  } else if (OpInfo.fields().size() == 1 && !OpInfo.InitValue.value_or(0)) {
+  } else if (OpInfo.Fields.size() == 1 && !OpInfo.InitValue.value_or(0)) {
     // One variable part and no/zero constant part. Initialize `tmp` with the
     // variable part.
-    auto [Base, Width, Offset] = OpInfo.fields().front();
+    auto [Base, Width, Offset] = OpInfo.Fields.front();
     OS << Indent << "tmp = fieldFromInstruction(insn, " << Base << ", " << Width
        << ')';
     if (Offset)
@@ -727,7 +721,7 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
     // insert the variable parts into it.
     OS << Indent << "tmp = " << format_hex(OpInfo.InitValue.value_or(0), 0)
        << ";\n";
-    for (auto [Base, Width, Offset] : OpInfo.fields()) {
+    for (auto [Base, Width, Offset] : OpInfo.Fields) {
       OS << Indent << "tmp |= fieldFromInstruction(insn, " << Base << ", "
          << Width << ')';
       if (Offset)
@@ -1119,7 +1113,7 @@ static DecodeStatus decodeInstruction(const uint8_t DecodeTable[], MCInst &MI,
       while (true) {
         CaseValue = decodeULEB128AndIncUnsafe(Ptr);
         CaseSize = decodeULEB128AndIncUnsafe(Ptr);
-        if (FieldValue == CaseValue || !CaseSize)
+        if (FieldValue <= CaseValue || !CaseSize)
           break;
         Ptr += CaseSize;
       }
@@ -1444,7 +1438,7 @@ void DecoderEmitter::parseInstructionEncodings() {
           continue;
         }
         unsigned EncodingID = Encodings.size();
-        Encodings.emplace_back(EncodingDef, Inst);
+        Encodings.emplace_back(Target, EncodingDef, Inst);
         EncodingIDsByHwMode[HwModeID].push_back(EncodingID);
       }
       continue; // Ignore encoding specified by Instruction itself.
@@ -1456,7 +1450,7 @@ void DecoderEmitter::parseInstructionEncodings() {
     }
 
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(InstDef, Inst);
+    Encodings.emplace_back(Target, InstDef, Inst);
 
     // This instruction is encoded the same on all HwModes.
     // According to user needs, add it to all, some, or only the default HwMode.
@@ -1479,7 +1473,8 @@ void DecoderEmitter::parseInstructionEncodings() {
       continue;
     }
     unsigned EncodingID = Encodings.size();
-    Encodings.emplace_back(EncodingDef, &Target.getInstruction(InstDef));
+    Encodings.emplace_back(Target, EncodingDef,
+                           &Target.getInstruction(InstDef));
     EncodingIDsByHwMode[DefaultMode].push_back(EncodingID);
   }
 
@@ -1491,7 +1486,6 @@ void DecoderEmitter::parseInstructionEncodings() {
 
 DecoderEmitter::DecoderEmitter(const RecordKeeper &RK)
     : RK(RK), Target(RK), CGH(Target.getHwModes()) {
-  Target.reverseBitsForLittleEndianEncoding();
   parseInstructionEncodings();
 }
 
@@ -1563,7 +1557,7 @@ template <typename T> constexpr uint32_t InsnBitWidth = 0;
   // template specialization to kick in).
   if (IsVarLenInst && SpecializeDecodersPerBitwidth)
     PrintFatalError(
-        "Cannot specialize decoders for variable length instuctions");
+        "Cannot specialize decoders for variable length instructions");
 
   DecoderContext Ctx;
   DecoderTreeBuilder TreeBuilder(Ctx, Target, Encodings);

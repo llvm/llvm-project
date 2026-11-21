@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -44,6 +45,11 @@ namespace {
 
     StringRef getPassName() const override {
       return "ARM MLA / MLS expansion pass";
+    }
+
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+      MachineFunctionPass::getAnalysisUsage(AU);
     }
 
   private:
@@ -295,13 +301,10 @@ MLxExpansion::ExpandFPMLxInstruction(MachineBasicBlock &MBB, MachineInstr *MI,
   MIB = BuildMI(MBB, MI, MI->getDebugLoc(), MCID2)
     .addReg(DstReg, getDefRegState(true) | getDeadRegState(DstDead));
 
-  if (NegAcc) {
-    bool AccKill = MRI->hasOneNonDBGUse(AccReg);
-    MIB.addReg(TmpReg, getKillRegState(true))
-       .addReg(AccReg, getKillRegState(AccKill));
-  } else {
-    MIB.addReg(AccReg).addReg(TmpReg, getKillRegState(true));
-  }
+  if (NegAcc)
+    MIB.addReg(TmpReg).addReg(AccReg);
+  else
+    MIB.addReg(AccReg).addReg(TmpReg);
   MIB.addImm(Pred).addReg(PredReg);
 
   LLVM_DEBUG({
@@ -331,7 +334,8 @@ bool MLxExpansion::ExpandFPMLxInstructions(MachineBasicBlock &MBB) {
   while (MII != E) {
     MachineInstr *MI = &*MII++;
 
-    if (MI->isPosition() || MI->isImplicitDef() || MI->isCopy())
+    if (MI->isDebugInstr() || MI->isPosition() || MI->isImplicitDef() ||
+        MI->isCopy())
       continue;
 
     const MCInstrDesc &MCID = MI->getDesc();

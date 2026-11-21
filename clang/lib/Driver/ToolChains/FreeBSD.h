@@ -69,8 +69,6 @@ public:
     return ToolChain::CST_Libcxx;
   }
 
-  void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
-                             llvm::opt::ArgStringList &CC1Args) const override;
   void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
                            llvm::opt::ArgStringList &CmdArgs) const override;
   void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -86,11 +84,17 @@ public:
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPIEDefault(const llvm::opt::ArgList &Args) const override;
-  SanitizerMask getSupportedSanitizers() const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
   unsigned GetDefaultDwarfVersion() const override { return 4; }
   // Until dtrace (via CTF) and LLDB can deal with distributed debug info,
   // FreeBSD defaults to standalone/full debug info.
   bool GetDefaultStandaloneDebug() const override { return true; }
+  // On FreeBSD, `/usr/bin/ld` is `ld.lld`, but other things may be installed in
+  // the path named `ld`  or `{triple}-ld`, which may be picked by preference if
+  // we default to `ld` here.
+  const char *getDefaultLinker() const override { return "ld.lld"; }
 
 protected:
   Tool *buildAssembler() const override;

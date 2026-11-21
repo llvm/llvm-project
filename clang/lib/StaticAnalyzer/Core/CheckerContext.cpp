@@ -55,29 +55,34 @@ bool CheckerContext::isCLibraryFunction(const FunctionDecl *FD,
   if (BId != 0) {
     if (Name.empty())
       return true;
-    std::string BName = FD->getASTContext().BuiltinInfo.getName(BId);
-    size_t start = BName.find(Name);
-    if (start != StringRef::npos) {
-      // Accept exact match.
-      if (BName.size() == Name.size())
-        return true;
+    const Builtin::Context &BuiltinInfo = FD->getASTContext().BuiltinInfo;
+    std::string BName = BuiltinInfo.getName(BId);
+    // Accept exact match.
+    if (BName == Name)
+      return true;
+    // Only perform fuzzy name matching for non-library builtins (e.g.
+    // __builtin_memcpy, __builtin_memcpy_inline), not for distinct predefined
+    // library functions (e.g. objc_read_weak vs read, getlogin_r vs getlogin).
+    if (!BuiltinInfo.isPredefinedLibFunction(BId)) {
+      size_t start = BName.find(Name);
+      if (start != StringRef::npos) {
+        //    v-- match starts here
+        // ...xxxxx...
+        //   _xxxxx_
+        //   ^     ^ lookbehind and lookahead characters
 
-      //    v-- match starts here
-      // ...xxxxx...
-      //   _xxxxx_
-      //   ^     ^ lookbehind and lookahead characters
+        const auto MatchPredecessor = [&]() -> bool {
+          return start <= 0 || !llvm::isAlpha(BName[start - 1]);
+        };
+        const auto MatchSuccessor = [&]() -> bool {
+          std::size_t LookbehindPlace = start + Name.size();
+          return LookbehindPlace >= BName.size() ||
+                 !llvm::isAlpha(BName[LookbehindPlace]);
+        };
 
-      const auto MatchPredecessor = [&]() -> bool {
-        return start <= 0 || !llvm::isAlpha(BName[start - 1]);
-      };
-      const auto MatchSuccessor = [&]() -> bool {
-        std::size_t LookbehindPlace = start + Name.size();
-        return LookbehindPlace >= BName.size() ||
-               !llvm::isAlpha(BName[LookbehindPlace]);
-      };
-
-      if (MatchPredecessor() && MatchSuccessor())
-        return true;
+        if (MatchPredecessor() && MatchSuccessor())
+          return true;
+      }
     }
   }
 
@@ -128,12 +133,13 @@ bool CheckerContext::isHardenedVariantOf(const FunctionDecl *FD,
          CompletelyMatchesParts("__builtin_", "__", Name, "_chk");
 }
 
-StringRef CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
+std::string CheckerContext::getMacroNameOrSpelling(SourceLocation &Loc) {
+  const auto &SM = getSourceManager();
+  const auto &LO = getLangOpts();
   if (Loc.isMacroID())
-    return Lexer::getImmediateMacroName(Loc, getSourceManager(),
-                                             getLangOpts());
-  SmallString<16> buf;
-  return Lexer::getSpelling(Loc, buf, getSourceManager(), getLangOpts());
+    return Lexer::getImmediateMacroName(Loc, SM, LO).str();
+  llvm::SmallString<16> Buf;
+  return Lexer::getSpelling(Loc, Buf, SM, LO).str();
 }
 
 /// Evaluate comparison and return true if it's known that condition is true

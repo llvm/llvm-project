@@ -11,14 +11,17 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Mips.h"
 #include "MipsLegalizerInfo.h"
 #include "MipsTargetMachine.h"
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/TargetPassConfig.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 #define DEBUG_TYPE "mips-prelegalizer-combiner"
 
@@ -40,12 +43,11 @@ protected:
 
 public:
   MipsPreLegalizerCombinerImpl(MachineFunction &MF, CombinerInfo &CInfo,
-                               const TargetPassConfig *TPC,
                                GISelValueTracking &VT, GISelCSEInfo *CSEInfo,
                                const MipsSubtarget &STI,
                                MachineDominatorTree *MDT,
                                const LegalizerInfo *LI)
-      : Combiner(MF, CInfo, TPC, &VT, CSEInfo), STI(STI),
+      : Combiner(MF, CInfo, &VT, CSEInfo), STI(STI),
         Helper(Observer, B, /*IsPreLegalize*/ true, &VT, MDT, LI) {}
 
   static const char *getName() { return "MipsPreLegalizerCombiner"; }
@@ -59,7 +61,8 @@ public:
     default:
       return false;
     case TargetOpcode::G_MEMCPY_INLINE:
-      return Helper.tryEmitMemcpyInline(MI);
+    case TargetOpcode::G_MEMSET_INLINE:
+      return Helper.tryCombineMemCpyFamily(MI);
     case TargetOpcode::G_LOAD:
     case TargetOpcode::G_SEXTLOAD:
     case TargetOpcode::G_ZEXTLOAD: {
@@ -85,11 +88,11 @@ public:
 // Pass boilerplate
 // ================
 
-class MipsPreLegalizerCombiner : public MachineFunctionPass {
+class MipsPreLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  MipsPreLegalizerCombiner();
+  MipsPreLegalizerCombinerLegacy();
 
   StringRef getPassName() const override { return "MipsPreLegalizerCombiner"; }
 
@@ -99,8 +102,7 @@ public:
 };
 } // end anonymous namespace
 
-void MipsPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<TargetPassConfig>();
+void MipsPreLegalizerCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
   AU.setPreservesCFG();
@@ -108,36 +110,53 @@ void MipsPreLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-MipsPreLegalizerCombiner::MipsPreLegalizerCombiner()
+MipsPreLegalizerCombinerLegacy::MipsPreLegalizerCombinerLegacy()
     : MachineFunctionPass(ID) {}
 
-bool MipsPreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+static bool
+runPreLegalizerCombinerOnMF(MachineFunction &MF,
+                            function_ref<GISelValueTracking *()> GetVT) {
   if (MF.getProperties().hasFailedISel())
     return false;
 
-  auto *TPC = &getAnalysis<TargetPassConfig>();
   const MipsSubtarget &ST = MF.getSubtarget<MipsSubtarget>();
   const MipsLegalizerInfo *LI =
       static_cast<const MipsLegalizerInfo *>(ST.getLegalizerInfo());
 
-  GISelValueTracking *VT =
-      &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+  GISelValueTracking *VT = GetVT();
   MipsPreLegalizerCombinerInfo PCInfo;
-  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, TPC, *VT, /*CSEInfo*/ nullptr,
-                                    ST, /*MDT*/ nullptr, LI);
+  MipsPreLegalizerCombinerImpl Impl(MF, PCInfo, *VT, /*CSEInfo*/ nullptr, ST,
+                                    /*MDT*/ nullptr, LI);
   return Impl.combineMachineInstrs();
 }
 
-char MipsPreLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(MipsPreLegalizerCombiner, DEBUG_TYPE,
+char MipsPreLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(MipsPreLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine Mips machine instrs before legalization", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(MipsPreLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(MipsPreLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine Mips machine instrs before legalization", false,
                     false)
 
-FunctionPass *llvm::createMipsPreLegalizeCombiner() {
-  return new MipsPreLegalizerCombiner();
+FunctionPass *llvm::createMipsPreLegalizeCombinerLegacyPass() {
+  return new MipsPreLegalizerCombinerLegacy();
+}
+
+bool MipsPreLegalizerCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runPreLegalizerCombinerOnMF(MF, [&]() {
+    return &getAnalysis<GISelValueTrackingAnalysisLegacy>().get(MF);
+  });
+}
+
+PreservedAnalyses
+MipsPreLegalizerCombinerPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runPreLegalizerCombinerOnMF(
+      MF, [&]() { return &MFAM.getResult<GISelValueTrackingAnalysis>(MF); });
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses()
+      .preserveSet<CFGAnalyses>()
+      .preserve<GISelValueTrackingAnalysis>();
 }

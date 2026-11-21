@@ -89,6 +89,8 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
                     .Case("plucky", Distro::UbuntuPlucky)
                     .Case("questing", Distro::UbuntuQuesting)
                     .Case("resolute", Distro::UbuntuResolute)
+                    .Case("stonking", Distro::UbuntuStonking)
+                    .Case("tenacious", Distro::UbuntuTenacious)
                     .Default(Distro::UnknownDistro);
   return Version;
 }

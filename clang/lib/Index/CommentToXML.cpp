@@ -893,6 +893,10 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       RootEndTag = "</Enum>";
       Result << "<Enum";
       break;
+    case DeclInfo::ConceptKind:
+      RootEndTag = "</Concept>";
+      Result << "<Concept";
+      break;
     }
 
     {
@@ -1029,47 +1033,50 @@ void CommentASTToXMLConverter::visitFullComment(const FullComment *C) {
       }
 
       // 'availability' attribute.
-      Result << "<Availability";
-      StringRef Distribution;
-      if (AA->getPlatform()) {
-        Distribution = AvailabilityAttr::getPrettyPlatformName(
-                                        AA->getPlatform()->getName());
-        if (Distribution.empty())
-          Distribution = AA->getPlatform()->getName();
-      }
-      Result << " distribution=\"" << Distribution << "\">";
-      VersionTuple IntroducedInVersion = AA->getIntroduced();
-      if (!IntroducedInVersion.empty()) {
-        Result << "<IntroducedInVersion>"
-               << IntroducedInVersion.getAsString()
-               << "</IntroducedInVersion>";
-      }
-      VersionTuple DeprecatedInVersion = AA->getDeprecated();
-      if (!DeprecatedInVersion.empty()) {
-        Result << "<DeprecatedInVersion>"
-               << DeprecatedInVersion.getAsString()
-               << "</DeprecatedInVersion>";
-      }
-      VersionTuple RemovedAfterVersion = AA->getObsoleted();
-      if (!RemovedAfterVersion.empty()) {
-        Result << "<RemovedAfterVersion>"
-               << RemovedAfterVersion.getAsString()
-               << "</RemovedAfterVersion>";
-      }
-      StringRef DeprecationSummary = AA->getMessage();
-      if (!DeprecationSummary.empty()) {
-        Result << "<DeprecationSummary>";
-        appendToResultWithXMLEscaping(DeprecationSummary);
-        Result << "</DeprecationSummary>";
-      }
-      if (AA->getUnavailable())
-        Result << "<Unavailable/>";
+      auto EmitAvailability = [&](const AvailabilityAttr *AA) {
+        Result << "<Availability";
+        StringRef Distribution;
+        if (AA->getPlatform()) {
+          Distribution = AvailabilityAttr::getPrettyPlatformName(
+              AA->getPlatform()->getName());
+          if (Distribution.empty())
+            Distribution = AA->getPlatform()->getName();
+        }
+        Result << " distribution=\"" << Distribution << "\">";
+        VersionTuple IntroducedInVersion = AA->getIntroduced();
+        if (!IntroducedInVersion.empty()) {
+          Result << "<IntroducedInVersion>" << IntroducedInVersion.getAsString()
+                 << "</IntroducedInVersion>";
+        }
+        VersionTuple DeprecatedInVersion = AA->getDeprecated();
+        if (!DeprecatedInVersion.empty()) {
+          Result << "<DeprecatedInVersion>" << DeprecatedInVersion.getAsString()
+                 << "</DeprecatedInVersion>";
+        }
+        VersionTuple RemovedAfterVersion = AA->getObsoleted();
+        if (!RemovedAfterVersion.empty()) {
+          Result << "<RemovedAfterVersion>" << RemovedAfterVersion.getAsString()
+                 << "</RemovedAfterVersion>";
+        }
+        StringRef DeprecationSummary = AA->getMessage();
+        if (!DeprecationSummary.empty()) {
+          Result << "<DeprecationSummary>";
+          appendToResultWithXMLEscaping(DeprecationSummary);
+          Result << "</DeprecationSummary>";
+        }
+        if (AA->getUnavailable())
+          Result << "<Unavailable/>";
+        const IdentifierInfo *Environment = AA->getEnvironment();
+        if (Environment) {
+          Result << "<Environment>" << Environment->getName()
+                 << "</Environment>";
+        }
+        Result << "</Availability>";
+      };
 
-      const IdentifierInfo *Environment = AA->getEnvironment();
-      if (Environment) {
-        Result << "<Environment>" << Environment->getName() << "</Environment>";
-      }
-      Result << "</Availability>";
+      EmitAvailability(AA);
+      if (const AvailabilityAttr *Inf = AA->getInferredAttrAs())
+        EmitAvailability(Inf);
     }
   }
 

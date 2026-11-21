@@ -43,15 +43,10 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-    m_data_sp.reset();
-    m_data_mod_time = llvm::sys::TimePoint<>();
-  }
-
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
+
+  bool IsDefault() const override { return m_current_value == m_default_value; }
 
   // Subclass specific functions
 
@@ -75,6 +70,13 @@ public:
   void SetCompletionMask(uint32_t mask) { m_completion_mask = mask; }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+    m_data_sp.reset();
+    m_data_mod_time = llvm::sys::TimePoint<>();
+  }
+
   FileSpec m_current_value;
   FileSpec m_default_value;
   lldb::DataBufferSP m_data_sp;

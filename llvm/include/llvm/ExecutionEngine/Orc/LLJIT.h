@@ -17,11 +17,13 @@
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/CompileOnDemandLayer.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRPartitionLayer.h"
 #include "llvm/ExecutionEngine/Orc/IRTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
+#include "llvm/ExecutionEngine/Orc/MapperJITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/ThreadSafeModule.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -29,6 +31,7 @@
 #include <variant>
 
 namespace llvm {
+
 namespace orc {
 
 class LLJITBuilderState;
@@ -213,6 +216,18 @@ public:
     return PS->deinitialize(JD);
   }
 
+  /// Returns a reference to the DylibManager for the target process.
+  DylibManager &getDylibMgr() {
+    assert(DylibMgr && "No DylibMgr set");
+    return *DylibMgr;
+  }
+
+  /// Returns a reference to the JITLinkMemoryManager for this instance.
+  jitlink::JITLinkMemoryManager &getMemoryManager() {
+    assert(MemMgr && "No MemMgr set");
+    return *MemMgr;
+  }
+
   /// Returns a reference to the ObjLinkingLayer
   ObjectLayer &getObjLinkingLayer() { return *ObjLinkingLayer; }
 
@@ -234,8 +249,12 @@ public:
   }
 
 protected:
+  static Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>
+  createMemoryManager(LLJITBuilderState &S, ExecutionSession &ES);
+
   static Expected<std::unique_ptr<ObjectLayer>>
-  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES);
+  createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES,
+                           jitlink::JITLinkMemoryManager &MemMgr);
 
   static Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>
   createCompileFunction(LLJITBuilderState &S, JITTargetMachineBuilder JTMB);
@@ -243,10 +262,12 @@ protected:
   /// Create an LLJIT instance with a single compile thread.
   LLJIT(LLJITBuilderState &S, Error &Err);
 
-  Error applyDataLayout(Module &M);
+  Error applyTargetConfig(Module &M);
 
   std::unique_ptr<ExecutionSession> ES;
+  std::unique_ptr<jitlink::JITLinkMemoryManager> MemMgr;
   std::unique_ptr<PlatformSupport> PS;
+  std::unique_ptr<DylibManager> DylibMgr;
 
   JITDylib *ProcessSymbols = nullptr;
   JITDylib *Platform = nullptr;
@@ -266,7 +287,7 @@ protected:
 
 /// An extended version of LLJIT that supports lazy function-at-a-time
 /// compilation of LLVM IR.
-class LLLazyJIT : public LLJIT {
+class LLVM_ABI LLLazyJIT : public LLJIT {
   template <typename, typename, typename> friend class LLJITBuilderSetters;
 
 public:
@@ -276,11 +297,13 @@ public:
     IPLayer->setPartitionFunction(std::move(Partition));
   }
 
+  ~LLLazyJIT();
+
   /// Returns a reference to the on-demand layer.
   CompileOnDemandLayer &getCompileOnDemandLayer() { return *CODLayer; }
 
   /// Add a module to be lazily compiled to JITDylib JD.
-  LLVM_ABI Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
+  Error addLazyIRModule(JITDylib &JD, ThreadSafeModule M);
 
   /// Add a module to be lazily compiled to the main JITDylib.
   Error addLazyIRModule(ThreadSafeModule M) {
@@ -290,7 +313,7 @@ public:
 private:
 
   // Create a single-threaded LLLazyJIT instance.
-  LLVM_ABI LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
+  LLLazyJIT(LLLazyJITBuilderState &S, Error &Err);
 
   std::unique_ptr<LazyCallThroughManager> LCTMgr;
   std::unique_ptr<IRPartitionLayer> IPLayer;
@@ -299,8 +322,13 @@ private:
 
 class LLJITBuilderState {
 public:
+  using MemoryManagerCreator =
+      std::function<Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>>(
+          ExecutionSession &)>;
+
   using ObjectLinkingLayerCreator =
-      std::function<Expected<std::unique_ptr<ObjectLayer>>(ExecutionSession &)>;
+      std::function<Expected<std::unique_ptr<ObjectLayer>>(
+          ExecutionSession &, jitlink::JITLinkMemoryManager &)>;
 
   using CompileFunctionCreator =
       std::function<Expected<std::unique_ptr<IRCompileLayer::IRCompiler>>(
@@ -319,6 +347,7 @@ public:
   std::optional<DataLayout> DL;
   bool LinkProcessSymbolsByDefault = true;
   ProcessSymbolsJITDylibSetupFunction SetupProcessSymbolsJITDylib;
+  MemoryManagerCreator CreateMemoryManager;
   ObjectLinkingLayerCreator CreateObjectLinkingLayer;
   CompileFunctionCreator CreateCompileFunction;
   unique_function<Error(LLJIT &)> PrePlatformSetup;
@@ -386,6 +415,50 @@ public:
   /// in the default link order.
   SetterImpl &setLinkProcessSymbolsByDefault(bool LinkProcessSymbolsByDefault) {
     impl().LinkProcessSymbolsByDefault = LinkProcessSymbolsByDefault;
+    return impl();
+  }
+
+  /// Set a memory manager creation function. If not provided then the
+  /// ExecutorProcessControl's createDefaultMemoryManager method will be used.
+  SetterImpl &setMemoryManagerCreator(
+      LLJITBuilderState::MemoryManagerCreator CreateMemoryManager) {
+    impl().CreateMemoryManager = std::move(CreateMemoryManager);
+    return impl();
+  }
+
+  /// Use an in-process, per-JITDylib-colocating slab allocator as the JIT's
+  /// memory manager (see createColocatingInProcessMemoryManager). Keeping a
+  /// JITDylib's objects colocated lets them reference each other with direct
+  /// (e.g. 32-bit PC-relative) edges. If ReservationGranularity is not given,
+  /// MapperJITLinkMemoryManager::defaultSlabSize() is used. If Policy is not
+  /// given, each JITDylib is restricted to a single slab (see
+  /// MapperJITLinkMemoryManager::denySlabGrowth).
+  ///
+  /// Note: this only takes effect on the JITLink path. On targets that still
+  /// default to RuntimeDyld (e.g. COFF today) it has no effect unless JITLink
+  /// is also enabled (e.g. via setObjectLinkingLayerCreator).
+  SetterImpl &setColocatingSlabAllocator(
+      std::optional<size_t> ReservationGranularity = std::nullopt,
+      std::optional<MapperJITLinkMemoryManager::SlabGrowthPolicy> Policy =
+          std::nullopt) {
+    auto SharedPolicy =
+        Policy ? std::make_shared<MapperJITLinkMemoryManager::SlabGrowthPolicy>(
+                     std::move(*Policy))
+               : nullptr;
+    impl().CreateMemoryManager = [ReservationGranularity,
+                                  SharedPolicy](ExecutionSession &)
+        -> Expected<std::unique_ptr<jitlink::JITLinkMemoryManager>> {
+      auto MM = createColocatingInProcessMemoryManager(ReservationGranularity);
+      if (!MM)
+        return MM.takeError();
+      if (SharedPolicy)
+        (*MM)->setSlabPolicy(std::move(*SharedPolicy));
+      else
+        (*MM)->denySlabGrowth();
+      // Expected<unique_ptr<Derived>> does not implicitly convert to
+      // Expected<unique_ptr<Base>>, so up-cast the pointer explicitly.
+      return std::unique_ptr<jitlink::JITLinkMemoryManager>(std::move(*MM));
+    };
     return impl();
   }
 

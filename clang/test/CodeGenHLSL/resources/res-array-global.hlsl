@@ -43,7 +43,7 @@ void main() {
   // DXIL: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 4 %[[Tmp0]],
   // DXIL-SAME: i32 noundef 10, i32 noundef 1, i32 noundef 4, i32 noundef 2, ptr noundef @[[BufA]])
-  // SPV: call void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<float>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer") align 8 %[[Tmp0]],
   // SPV-SAME: i32 noundef 12, i32 noundef 2, i32 noundef 4, i32 noundef 2, ptr noundef @[[BufA]])
 
@@ -53,7 +53,7 @@ void main() {
   // DXIL: call void @hlsl::RWBuffer<int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 4 %[[Tmp1]],
   // DXIL-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 5, i32 noundef 3, ptr noundef @[[BufB]])
-  // SPV: call void @hlsl::RWBuffer<int>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<int>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 8 %[[Tmp1]],
   // SPV-SAME: i32 noundef 13, i32 noundef 0, i32 noundef 5, i32 noundef 3, ptr noundef @[[BufB]])
 
@@ -63,7 +63,7 @@ void main() {
   // DXIL: call void @hlsl::RWBuffer<int>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 4 %[[Tmp2]],
   // DXIL-SAME: i32 noundef 2, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @[[BufC]])
-  // SPV: call void @hlsl::RWBuffer<int>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<int>::__createFromBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.0") align 8 %[[Tmp2]],
   // SPV-SAME: i32 noundef 2, i32 noundef 0, i32 noundef 3, i32 noundef 1, ptr noundef @[[BufC]])
 
@@ -72,7 +72,7 @@ void main() {
   // DXIL: call void @hlsl::RWBuffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.1") align 4 %[[Tmp3]],
   // DXIL-SAME: i32 noundef 1, i32 noundef 0, i32 noundef 10, i32 noundef 7, ptr noundef @D.str)
-  // SPV: call void @hlsl::RWBuffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<double>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.1") align 8 %[[Tmp3]],
   // SPV-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 10, i32 noundef 7, ptr noundef @[[BufD]])
 
@@ -81,7 +81,7 @@ void main() {
   // DXIL: call void  @hlsl::RWBuffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // DXIL-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.2") align 4 %[[Tmp4]],
   // DXIL-SAME: i32 noundef 2, i32 noundef 2, i32 noundef 15, i32 noundef 5, ptr noundef @[[BufE]])
-  // SPV: call void @hlsl::RWBuffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
+  // SPV: call spir_func void @hlsl::RWBuffer<unsigned int>::__createFromImplicitBinding(unsigned int, unsigned int, int, unsigned int, char const*)
   // SPV-SAME: (ptr {{.*}} sret(%"class.hlsl::RWBuffer.2") align 8 %[[Tmp4]],
   // SPV-SAME: i32 noundef 1, i32 noundef 2, i32 noundef 15, i32 noundef 5, ptr noundef @[[BufE]])
   Out[0] = A[2][0] + (float)B[3][0] + (float)C[1][0] + (float)D[7][0] + (float)E[5][0];

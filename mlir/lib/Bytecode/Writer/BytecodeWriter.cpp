@@ -13,14 +13,17 @@
 #include "mlir/Bytecode/Encoding.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 
@@ -43,6 +46,9 @@ struct BytecodeWriterConfig::Impl {
   /// A flag specifying whether to elide emission of resources into the bytecode
   /// file.
   bool shouldElideResourceData = false;
+
+  /// A flag specifying whether to elide emission of locations.
+  bool shouldElideLocations = false;
 
   /// A map containing dialect version information for each dialect to emit.
   llvm::StringMap<std::unique_ptr<DialectVersion>> dialectVersionMap;
@@ -100,6 +106,14 @@ void BytecodeWriterConfig::attachResourcePrinter(
 void BytecodeWriterConfig::setElideResourceDataFlag(
     bool shouldElideResourceData) {
   impl->shouldElideResourceData = shouldElideResourceData;
+}
+
+void BytecodeWriterConfig::setElideLocations(bool shouldElideLocations) {
+  impl->shouldElideLocations = shouldElideLocations;
+}
+
+bool BytecodeWriterConfig::shouldElideLocations() const {
+  return impl->shouldElideLocations;
 }
 
 void BytecodeWriterConfig::setDesiredBytecodeVersion(int64_t bytecodeVersion) {
@@ -880,12 +894,17 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
       attrTypeEmitter.emitByte(0, "attr/type separator");
     };
     auto emitAttrOrTypeImpl = [&]() -> bool {
-      // TODO: We don't currently support custom encoded mutable types and
-      // attributes.
-      if (entryValue.template hasTrait<TypeTrait::IsMutable>() ||
-          entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
-        emitAttrOrTypeRawImpl();
-        return false;
+      // Mutable types use a custom encoding when the dialect provides one; a
+      // self-reference resolves through
+      // DialectBytecodeReader::tryStartCyclicRead instead of recursing.
+      // Mutable attributes still use the fallback. Note the kind test:
+      // AttributeTrait::IsMutable also matches mutable types.
+      if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>,
+                                   Attribute>) {
+        if (entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
+          emitAttrOrTypeRawImpl();
+          return false;
+        }
       }
 
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
@@ -990,6 +1009,41 @@ LogicalResult BytecodeWriter::writeBlock(EncodingEmitter &emitter,
   return success();
 }
 
+/// Check legacy property reconstruction using scratch storage. Only inherent
+/// attributes may restore properties; discardable attributes with native
+/// property names must remain discardable.
+static bool preservesLegacyProperties(Operation *op, DictionaryAttr attrs) {
+  OperationName name = op->getName();
+  // Operation property storage is aligned to eight bytes.
+  SmallVector<uint64_t, 8> storage(
+      llvm::divideCeil(op->getPropertiesStorageSize(), sizeof(uint64_t)));
+  PropertyRef reconstructed(name.getOpPropertiesTypeID(), storage.data());
+  name.initOpProperties(reconstructed, {});
+  auto cleanup =
+      llvm::scope_exit([&] { name.destroyOpProperties(reconstructed); });
+
+  // Unregistered operations cannot restore their property attribute from the
+  // legacy dictionary: their initialized property attribute is null.
+  if (name.isRegistered()) {
+    NamedAttrList legacyAttrs(attrs);
+    name.populateDefaultAttrs(legacyAttrs);
+    NamedAttrList inherentAttrs;
+    for (NamedAttribute attr : legacyAttrs)
+      if (name.getInherentAttr(op, attr.getName()))
+        inherentAttrs.append(attr);
+    if (!inherentAttrs.empty() &&
+        failed(name.setOpPropertiesFromAttribute(
+            name, reconstructed, inherentAttrs.getDictionary(op->getContext()),
+            [&] {
+              auto diag = mlir::emitError(op->getLoc());
+              diag.abandon();
+              return diag;
+            })))
+      return false;
+  }
+  return name.compareOpProperties(op->getPropertiesStorage(), reconstructed);
+}
+
 LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getName()), "op name ID");
 
@@ -1004,14 +1058,29 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   emitter.emitVarInt(numberingState.getNumber(op->getLoc()), "op location");
 
   // Emit the attributes of this operation.
-  DictionaryAttr attrs = op->getDiscardableAttrDictionary();
+  DictionaryAttr attrs = op->getRawDictionaryAttrs();
   // Allow deployment to version <kNativePropertiesEncoding by merging inherent
   // attribute with the discardable ones. We should fail if there are any
   // conflicts. When properties are not used by the op, also store everything as
   // attributes.
-  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding ||
-      !op->getPropertiesStorage()) {
-    attrs = op->getAttrDictionary();
+  if (config.bytecodeVersion < bytecode::kNativePropertiesEncoding &&
+      op->getPropertiesStorage()) {
+    NamedAttrList allAttrs;
+    op->getName().walkInherentAttrs(op, [&](StringRef name, Attribute &attr) {
+      allAttrs.append(name, attr);
+    });
+    allAttrs.append(op->getDiscardableAttrDictionary().getValue());
+    attrs = allAttrs.getDictionary(op->getContext());
+
+    // Versions before kNativePropertiesEncoding can only reconstruct properties
+    // from these attributes. Check that native properties would not silently
+    // revert to their defaults. Later versions encode properties directly and
+    // do not need this legacy reconstruction check.
+    if (!preservesLegacyProperties(op, attrs))
+      return op->emitOpError()
+             << "cannot emit bytecode before version "
+             << static_cast<int64_t>(bytecode::kNativePropertiesEncoding)
+             << " without losing operation properties";
   }
   if (!attrs.empty()) {
     opEncodingMask |= bytecode::OpEncodingMask::kHasAttrs;
@@ -1094,7 +1163,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
                                         uint8_t &opEncodingMask,
                                         ValueRange range) {
   // Loop over the results and store the use-list order per result index.
-  DenseMap<unsigned, llvm::SmallVector<unsigned>> map;
+  llvm::MapVector<unsigned, llvm::SmallVector<unsigned>> map;
   for (auto item : llvm::enumerate(range)) {
     auto value = item.value();
     // No need to store a custom use-list order if the result does not have
@@ -1147,10 +1216,7 @@ void BytecodeWriter::writeUseListOrders(EncodingEmitter &emitter,
     emitter.emitVarInt(map.size(), "custom use-list size");
   }
 
-  for (const auto &item : map) {
-    auto resultIdx = item.getFirst();
-    auto useListOrder = item.getSecond();
-
+  for (const auto &[resultIdx, useListOrder] : map) {
     // Compute the number of uses that are actually shuffled. If those are less
     // than half of the total uses, encoding the index pair `(src, dst)` is more
     // space efficient.
@@ -1360,6 +1426,16 @@ void BytecodeWriter::writePropertiesSection(EncodingEmitter &emitter) {
 
 LogicalResult mlir::writeBytecodeToFile(Operation *op, raw_ostream &os,
                                         const BytecodeWriterConfig &config) {
+  // Validate before numbering the IR, which may invoke dialect writers.
+  for (const auto &entry : config.getDialectVersionMap()) {
+    Dialect *dialect = op->getContext()->getLoadedDialect(entry.getKey());
+    if (!dialect)
+      continue;
+    auto *interface =
+        dialect->getRegisteredInterface<BytecodeDialectInterface>();
+    if (interface && failed(interface->verifyVersion(op, *entry.getValue())))
+      return failure();
+  }
   BytecodeWriter writer(op, config);
   return writer.write(op, os);
 }

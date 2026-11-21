@@ -54,6 +54,7 @@ static void emitDiagnostics(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
@@ -74,25 +75,83 @@ static void emitDiagnosticsUnrelated(const BoundNodes &Nodes, BugReporter &BR,
                                BR.getSourceManager());
   auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
   Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
   BR.emitReport(std::move(Report));
 }
 
-namespace clang {
-namespace ast_matchers {
-AST_MATCHER_P(StringLiteral, mentionsBoundType, std::string, BindingID) {
-  return Builder->removeBindings([this, &Node](const BoundNodesMap &Nodes) {
-    const auto &BN = Nodes.getNode(this->BindingID);
-    if (const auto *ND = BN.get<NamedDecl>()) {
-      return ND->getName() != Node.getString();
+static void emitDiagnosticsIdArg(const BoundNodes &Nodes, BugReporter &BR,
+                                 AnalysisDeclContext *ADC,
+                                 const MemoryUnsafeCastChecker *Checker,
+                                 const BugType &BT) {
+  const auto *CE = Nodes.getNodeAs<CastExpr>(WarnRecordDecl);
+  const NamedDecl *Derived = Nodes.getNodeAs<NamedDecl>(DerivedNode);
+  assert(CE && Derived);
+
+  std::string Diagnostics;
+  llvm::raw_string_ostream OS(Diagnostics);
+  OS << "Unsafe implicit cast from 'id' to specific type '"
+     << Derived->getNameAsString() << "'";
+  PathDiagnosticLocation BSLoc(CE->getSourceRange().getBegin(),
+                               BR.getSourceManager());
+  auto Report = std::make_unique<BasicBugReport>(BT, OS.str(), BSLoc);
+  Report->addRange(CE->getSourceRange());
+  Report->setDeclWithIssue(ADC->getDecl());
+  BR.emitReport(std::move(Report));
+}
+
+namespace {
+using BoundNodesMap = ::clang::ast_matchers::internal::BoundNodesMap;
+
+// Matches the plain `id` type.
+AST_MATCHER(QualType, isObjCIdType) { return Node->isObjCIdType(); }
+
+// Like equalsBoundNode, but compares canonical declarations so that different
+// redeclarations of the same class (e.g. a forward declaration and the
+// definition) are treated as the same declaration.
+AST_MATCHER_P(Decl, hasSameCanonicalDeclAsBoundNode, std::string, ID) {
+  return Builder->removeBindings([&](const BoundNodesMap &Nodes) {
+    const auto *Bound = Nodes.getNodeAs<Decl>(ID);
+    return !Bound || Bound->getCanonicalDecl() != Node.getCanonicalDecl();
+  });
+}
+
+// Matches a cast whose previously-bound BaseID node is a class template
+// specialization and whose previously-bound DerivedID node is one of that
+// specialization's type template arguments, i.e. the CRTP pattern
+// `class Derived : Base<Derived>`.
+AST_MATCHER_P2(Expr, isCRTPCast, std::string, BaseID, std::string, DerivedID) {
+  return Builder->removeBindings([this](const BoundNodesMap &Nodes) {
+    const auto *Base = Nodes.getNodeAs<CXXRecordDecl>(this->BaseID);
+    const auto *Derived = Nodes.getNodeAs<CXXRecordDecl>(this->DerivedID);
+    const auto *CTSD =
+        Base ? dyn_cast<ClassTemplateSpecializationDecl>(Base) : nullptr;
+    if (!CTSD || !Derived)
+      return true;
+    for (const TemplateArgument &Arg : CTSD->getTemplateArgs().asArray()) {
+      if (Arg.getKind() != TemplateArgument::Type)
+        continue;
+      QualType ArgType = Arg.getAsType();
+      if (ArgType.isNull())
+        continue;
+      const auto *ArgDecl = ArgType->getAsCXXRecordDecl();
+      if (ArgDecl && ArgDecl->getCanonicalDecl() == Derived->getCanonicalDecl())
+        return false;
     }
     return true;
   });
 }
-} // end namespace ast_matchers
-} // end namespace clang
+} // end anonymous namespace
 
 static decltype(auto) hasTypePointingTo(DeclarationMatcher DeclM) {
   return hasType(pointerType(pointee(hasDeclaration(DeclM))));
+}
+
+// Matches `this` or `*this`, but not member accesses like `this->m_field`.
+static decltype(auto) isThisOrDerefThis() {
+  return ignoringParenImpCasts(anyOf(
+      cxxThisExpr(),
+      unaryOperator(hasOperatorName("*"),
+                    hasUnaryOperand(ignoringParenImpCasts(cxxThisExpr())))));
 }
 
 void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
@@ -104,28 +163,48 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   // Match downcasts from base type to derived type and warn
   auto MatchExprPtr = allOf(
       hasSourceExpression(hasTypePointingTo(cxxRecordDecl().bind(BaseNode))),
-      hasTypePointingTo(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
-                            .bind(DerivedNode)),
-      unless(anyOf(hasSourceExpression(cxxThisExpr()),
-                   hasTypePointingTo(templateTypeParmDecl()))));
+      hasTypePointingTo(
+          cxxRecordDecl(
+              isDerivedFrom(hasSameCanonicalDeclAsBoundNode(BaseNode)))
+              .bind(DerivedNode)),
+      unless(anyOf(hasTypePointingTo(templateTypeParmDecl()),
+                   allOf(hasSourceExpression(cxxThisExpr()),
+                         isCRTPCast(BaseNode, DerivedNode)))));
   auto MatchExprPtrObjC = allOf(
       hasSourceExpression(ignoringImpCasts(hasType(objcObjectPointerType(
           pointee(hasDeclaration(objcInterfaceDecl().bind(BaseNode))))))),
       ignoringImpCasts(hasType(objcObjectPointerType(pointee(hasDeclaration(
-          objcInterfaceDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
+          objcInterfaceDecl(
+              isDerivedFrom(hasSameCanonicalDeclAsBoundNode(BaseNode)))
               .bind(DerivedNode)))))));
-  auto MatchExprRefTypeDef =
-      allOf(hasSourceExpression(hasType(hasUnqualifiedDesugaredType(recordType(
-                hasDeclaration(decl(cxxRecordDecl().bind(BaseNode))))))),
-            hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                decl(cxxRecordDecl(isDerivedFrom(equalsBoundNode(BaseNode)))
-                         .bind(DerivedNode)))))),
-            unless(anyOf(hasSourceExpression(hasDescendant(cxxThisExpr())),
-                         hasType(templateTypeParmDecl()))));
+  auto MatchExprRefTypeDef = allOf(
+      hasSourceExpression(hasType(hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(decl(cxxRecordDecl().bind(BaseNode))))))),
+      hasType(hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+          decl(cxxRecordDecl(
+                   isDerivedFrom(hasSameCanonicalDeclAsBoundNode(BaseNode)))
+                   .bind(DerivedNode)))))),
+      unless(anyOf(hasType(templateTypeParmDecl()),
+                   allOf(hasSourceExpression(isThisOrDerefThis()),
+                         isCRTPCast(BaseNode, DerivedNode)))));
+  auto MatchExprPtrVoidCast =
+      allOf(anyOf(hasSourceExpression(explicitCastExpr(
+                      hasType(pointerType(pointee(voidType()))),
+                      hasSourceExpression(ignoringImpCasts(
+                          hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))),
+                  hasSourceExpression(callExpr(
+                      hasType(pointerType(pointee(voidType()))),
+                      hasAnyArgument(ignoringImpCasts(hasTypePointingTo(
+                          cxxRecordDecl().bind(BaseNode))))))),
+            hasTypePointingTo(
+                cxxRecordDecl(
+                    isDerivedFrom(hasSameCanonicalDeclAsBoundNode(BaseNode)))
+                    .bind(DerivedNode)));
 
-  auto ExplicitCast = explicitCastExpr(anyOf(MatchExprPtr, MatchExprRefTypeDef,
-                                             MatchExprPtrObjC))
-                          .bind(WarnRecordDecl);
+  auto ExplicitCast =
+      explicitCastExpr(anyOf(MatchExprPtr, MatchExprRefTypeDef,
+                             MatchExprPtrObjC, MatchExprPtrVoidCast))
+          .bind(WarnRecordDecl);
   auto Cast = stmt(ExplicitCast);
 
   auto Matches =
@@ -133,27 +212,47 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
   for (BoundNodes Match : Matches)
     emitDiagnostics(Match, BR, ADC, this, BT);
 
+  // Match calls returning derived type where an argument is a void pointer.
+  auto VoidPtrCast =
+      castExpr(hasType(pointerType(pointee(voidType()))),
+               hasSourceExpression(ignoringImpCasts(
+                   hasTypePointingTo(cxxRecordDecl().bind(BaseNode)))))
+          .bind(WarnRecordDecl);
+  auto MatchCallPtrVoidArgCast = callExpr(
+      hasAnyArgument(anyOf(VoidPtrCast,
+                           explicitCastExpr(hasSourceExpression(VoidPtrCast)))),
+      hasTypePointingTo(
+          cxxRecordDecl(
+              isDerivedFrom(hasSameCanonicalDeclAsBoundNode(BaseNode)))
+              .bind(DerivedNode)));
+  auto CallArgCast = stmt(MatchCallPtrVoidArgCast);
+  auto MatchesCallArgCast = match(stmt(forEachDescendant(CallArgCast)),
+                                  *D->getBody(), AM.getASTContext());
+  for (BoundNodes Match : MatchesCallArgCast)
+    emitDiagnostics(Match, BR, ADC, this, BT);
+
   // Match casts between unrelated types and warn
   auto MatchExprPtrUnrelatedTypes = allOf(
       hasSourceExpression(
           hasTypePointingTo(cxxRecordDecl().bind(FromCastNode))),
       hasTypePointingTo(cxxRecordDecl().bind(ToCastNode)),
-      unless(anyOf(hasTypePointingTo(cxxRecordDecl(
-                       isSameOrDerivedFrom(equalsBoundNode(FromCastNode)))),
-                   hasSourceExpression(hasTypePointingTo(cxxRecordDecl(
-                       isSameOrDerivedFrom(equalsBoundNode(ToCastNode))))))));
+      unless(anyOf(hasTypePointingTo(cxxRecordDecl(isSameOrDerivedFrom(
+                       hasSameCanonicalDeclAsBoundNode(FromCastNode)))),
+                   hasSourceExpression(
+                       hasTypePointingTo(cxxRecordDecl(isSameOrDerivedFrom(
+                           hasSameCanonicalDeclAsBoundNode(ToCastNode))))))));
   auto MatchExprPtrObjCUnrelatedTypes = allOf(
       hasSourceExpression(ignoringImpCasts(hasType(objcObjectPointerType(
           pointee(hasDeclaration(objcInterfaceDecl().bind(FromCastNode))))))),
       ignoringImpCasts(hasType(objcObjectPointerType(
           pointee(hasDeclaration(objcInterfaceDecl().bind(ToCastNode)))))),
       unless(anyOf(
-          ignoringImpCasts(hasType(
-              objcObjectPointerType(pointee(hasDeclaration(objcInterfaceDecl(
-                  isSameOrDerivedFrom(equalsBoundNode(FromCastNode)))))))),
-          hasSourceExpression(ignoringImpCasts(hasType(
-              objcObjectPointerType(pointee(hasDeclaration(objcInterfaceDecl(
-                  isSameOrDerivedFrom(equalsBoundNode(ToCastNode))))))))))));
+          ignoringImpCasts(hasType(objcObjectPointerType(
+              pointee(hasDeclaration(objcInterfaceDecl(isSameOrDerivedFrom(
+                  hasSameCanonicalDeclAsBoundNode(FromCastNode)))))))),
+          hasSourceExpression(ignoringImpCasts(hasType(objcObjectPointerType(
+              pointee(hasDeclaration(objcInterfaceDecl(isSameOrDerivedFrom(
+                  hasSameCanonicalDeclAsBoundNode(ToCastNode))))))))))));
   auto MatchExprRefTypeDefUnrelated = allOf(
       hasSourceExpression(hasType(hasUnqualifiedDesugaredType(recordType(
           hasDeclaration(decl(cxxRecordDecl().bind(FromCastNode))))))),
@@ -161,11 +260,11 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
           recordType(hasDeclaration(decl(cxxRecordDecl().bind(ToCastNode)))))),
       unless(anyOf(
           hasType(hasUnqualifiedDesugaredType(
-              recordType(hasDeclaration(decl(cxxRecordDecl(
-                  isSameOrDerivedFrom(equalsBoundNode(FromCastNode)))))))),
+              recordType(hasDeclaration(decl(cxxRecordDecl(isSameOrDerivedFrom(
+                  hasSameCanonicalDeclAsBoundNode(FromCastNode)))))))),
           hasSourceExpression(hasType(hasUnqualifiedDesugaredType(
-              recordType(hasDeclaration(decl(cxxRecordDecl(
-                  isSameOrDerivedFrom(equalsBoundNode(ToCastNode))))))))))));
+              recordType(hasDeclaration(decl(cxxRecordDecl(isSameOrDerivedFrom(
+                  hasSameCanonicalDeclAsBoundNode(ToCastNode))))))))))));
 
   auto ExplicitCastUnrelated =
       explicitCastExpr(anyOf(MatchExprPtrUnrelatedTypes,
@@ -177,6 +276,29 @@ void MemoryUnsafeCastChecker::checkASTCodeBody(const Decl *D,
                                      *D->getBody(), AM.getASTContext());
   for (BoundNodes Match : MatchesUnrelatedTypes)
     emitDiagnosticsUnrelated(Match, BR, ADC, this, BT);
+
+  // Match an `id`-typed argument implicitly converted to a specific
+  // Objective-C type at a call, message send, or constructor call, e.g.
+  // passing an `id` where an `NSString *` parameter is expected. Such
+  // conversions compile without a visible cast but throw at runtime if the
+  // object is not actually of that type.
+  auto CastArgFromIdToSpecificType =
+      implicitCastExpr(
+          hasCastKind(CK_BitCast),
+          hasSourceExpression(
+              ignoringParenImpCasts(hasType(qualType(isObjCIdType())))),
+          hasType(qualType(hasCanonicalType(objcObjectPointerType(pointee(
+              hasDeclaration(objcInterfaceDecl().bind(DerivedNode))))))))
+          .bind(WarnRecordDecl);
+  auto MatchCallArgFromId =
+      anyOf(callExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
+            cxxConstructExpr(hasAnyArgument(CastArgFromIdToSpecificType)),
+            objcMessageExpr(hasAnyArgument(CastArgFromIdToSpecificType)));
+  auto MatchesCallArgFromId =
+      match(stmt(forEachDescendant(stmt(MatchCallArgFromId))), *D->getBody(),
+            AM.getASTContext());
+  for (BoundNodes Match : MatchesCallArgFromId)
+    emitDiagnosticsIdArg(Match, BR, ADC, this, BT);
 }
 
 void ento::registerMemoryUnsafeCastChecker(CheckerManager &Mgr) {

@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "DerivedMethodShadowingBaseMethodCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::bugprone {
 
@@ -77,9 +79,9 @@ AST_MATCHER(CXXMethodDecl, nameCollidesWithMethodInBase) {
   return false;
 }
 
-// Same as clang-tools-extra/clang-tidy/modernize/UseEqualsDefaultCheck.cpp,
-// similar matchers are used elsewhere in LLVM
-AST_MATCHER(CXXMethodDecl, isOutOfLine) { return Node.isOutOfLine(); }
+AST_MATCHER(CXXMethodDecl, isTemplate) {
+  return Node.getDescribedFunctionTemplate() != nullptr;
+}
 
 } // namespace
 
@@ -94,8 +96,8 @@ void DerivedMethodShadowingBaseMethodCheck::registerMatchers(
           unless(anyOf(isOutOfLine(), isStaticStorageClass(), isImplicit(),
                        cxxConstructorDecl(), isOverride(), isPrivate(),
                        // isFinal(), //included with isOverride,
-                       // Templates are not handled yet
-                       ast_matchers::isTemplateInstantiation(),
+                       // TODO: Templates are not handled yet
+                       isTemplate(), ast_matchers::isTemplateInstantiation(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           ofClass(cxxRecordDecl(isDerivedFrom(cxxRecordDecl()))
                       .bind("derived_class")),

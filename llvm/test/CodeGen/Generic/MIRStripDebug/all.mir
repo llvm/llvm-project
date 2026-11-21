@@ -1,5 +1,8 @@
 # RUN: llc -run-pass=mir-strip-debug -o - %s | FileCheck %s
 # RUN: llc -run-pass=mir-strip-debug,mir-debugify,mir-strip-debug -o - %s | FileCheck %s
+
+# RUN: llc -passes=mir-strip-debug -o - %s | FileCheck %s
+# RUN: llc -passes=mir-strip-debug,mir-debugify,mir-strip-debug -o - %s | FileCheck %s
 --- |
   ; ModuleID = 'loc-only.ll'
   source_filename = "loc-only.ll"

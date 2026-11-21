@@ -105,6 +105,10 @@ program openacc_atomic_validity
 
   !$acc end parallel
 
+  !ERROR: COPY clause is not allowed on the ATOMIC UPDATE COPY(I)
+  !$acc atomic update copy(i)
+  c(i) = c(i) + 1
+
 end program openacc_atomic_validity
 
 subroutine capture_with_convert_f64_to_i32()

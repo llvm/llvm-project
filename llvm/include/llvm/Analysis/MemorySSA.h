@@ -98,6 +98,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -108,6 +109,7 @@
 
 namespace llvm {
 
+struct AnalysisOptions;
 template <class GraphType> struct GraphTraits;
 class Function;
 class Loop;
@@ -316,10 +318,6 @@ public:
   MemoryUse(LLVMContext &C, MemoryAccess *DMA, Instruction *MI, BasicBlock *BB)
       : MemoryUseOrDef(C, DMA, MemoryUseVal, deleteMe, MI, BB, AllocMarker) {}
 
-  // allocate space for exactly one operand
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
-
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryUseVal;
   }
@@ -380,10 +378,6 @@ public:
             unsigned Ver)
       : MemoryUseOrDef(C, DMA, MemoryDefVal, deleteMe, MI, BB, AllocMarker),
         ID(Ver) {}
-
-  // allocate space for exactly two operands
-  void *operator new(size_t S) { return User::operator new(S, AllocMarker); }
-  void operator delete(void *Ptr) { User::operator delete(Ptr, AllocMarker); }
 
   static bool classof(const Value *MA) {
     return MA->getValueID() == MemoryDefVal;
@@ -618,13 +612,6 @@ public:
         [&](const MemoryAccess *, const BasicBlock *B) { return BB == B; });
   }
 
-  // After deleting incoming memory access MA, the incoming accesses order may
-  // be changed.
-  void unorderedDeleteIncomingValue(const MemoryAccess *MA) {
-    unorderedDeleteIncomingIf(
-        [&](const MemoryAccess *M, const BasicBlock *) { return MA == M; });
-  }
-
   static bool classof(const Value *V) {
     return V->getValueID() == MemoryPhiVal;
   }
@@ -756,15 +743,15 @@ public:
 
   /// Return the list of MemoryAccess's for a given basic block.
   AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Accesses.get() : nullptr;
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
   DefsList *getBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Defs.get() : nullptr;
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -848,8 +835,35 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+
+  /// Per-block state.
+  struct BlockInfo {
+    /// The list of all accesses in the block. Owns the accesses.
+    ListPtr<AccessList> Accesses;
+    /// The list of MemoryDefs and MemoryPhis in the block.
+    ListPtr<DefsList> Defs;
+  };
+
+  /// Return the index of \p BB in the per-block lists. Blocks must not be
+  /// renumbered or moved to a different function while MemorySSA is alive.
+  unsigned getBlockIndex(const BasicBlock *BB) const {
+    assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+           "Blocks were renumbered while MemorySSA was alive");
+    return BB->getNumber();
+  }
+
+  /// Return the per-block state of \p BB, or nullptr if there is none.
+  const BlockInfo *getBlockInfo(const BasicBlock *BB) const {
+    unsigned N = getBlockIndex(BB);
+    return N < PerBlock.size() ? &PerBlock[N] : nullptr;
+  }
+  BlockInfo &getOrCreateBlockInfo(const BasicBlock *BB);
+  template <typename ListT> ListT *getOrCreateList(ListPtr<ListT> &List);
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -863,25 +877,25 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited = false,
                            bool RenameAllUses = false);
-  AccessList *getOrCreateAccessList(const BasicBlock *);
-  DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
+  const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
   DominatorTree *DT;
   Function *F = nullptr;
   Loop *L = nullptr;
 
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
+  BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
+
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
 
-  // These two mappings contain the main block to access/def mappings for
-  // MemorySSA. The list contained in PerBlockAccesses really owns all the
-  // MemoryAccesses.
-  // Both maps maintain the invariant that if a block is found in them, the
-  // corresponding list is not empty, and if a block is not found in them, the
-  // corresponding list is empty.
-  AccessMap PerBlockAccesses;
-  DefsMap PerBlockDefs;
+  // The main block to access/def mappings for MemorySSA, indexed by block
+  // number. The Accesses lists really own all the MemoryAccesses. A block's
+  // Accesses and Defs are non-null iff the corresponding list is not empty.
+  SmallVector<BlockInfo, 0> PerBlock;
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
   std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
@@ -943,7 +957,8 @@ public:
 };
 
 /// Printer pass for \c MemorySSA.
-class MemorySSAPrinterPass : public PassInfoMixin<MemorySSAPrinterPass> {
+class MemorySSAPrinterPass
+    : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
   bool EnsureOptimizedUses;
 
@@ -952,27 +967,22 @@ public:
       : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Printer pass for \c MemorySSA via the walker.
 class MemorySSAWalkerPrinterPass
-    : public PassInfoMixin<MemorySSAWalkerPrinterPass> {
+    : public RequiredPassInfoMixin<MemorySSAWalkerPrinterPass> {
   raw_ostream &OS;
 
 public:
   explicit MemorySSAWalkerPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-
-  static bool isRequired() { return true; }
 };
 
 /// Verifier pass for \c MemorySSA.
-struct MemorySSAVerifierPass : PassInfoMixin<MemorySSAVerifierPass> {
+struct MemorySSAVerifierPass : RequiredPassInfoMixin<MemorySSAVerifierPass> {
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
-  static bool isRequired() { return true; }
 };
 
 /// Legacy analysis pass which computes \c MemorySSA.
@@ -1054,11 +1064,11 @@ public:
   ///
   /// This version of the function is mainly used to disambiguate phi translated
   /// pointers, where the value of a pointer may have changed from the initial
-  /// memory access. Note that this expects to be handed either a MemoryUse,
-  /// or an already potentially clobbering access. Unlike the above API, if
-  /// given a MemoryDef that clobbers the pointer as the starting access, it
-  /// will return that MemoryDef, whereas the above would return the clobber
-  /// starting from the use side of  the memory def.
+  /// memory access. Note that this expects to be handed a potentially
+  /// clobbering access (either a MemoryDef or a MemoryPhi). Unlike the above
+  /// API, if given a MemoryDef that clobbers the pointer as the starting
+  /// access, it will return that MemoryDef, whereas the above would return the
+  /// clobber starting from the use side of the memory def.
   virtual MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                                   const MemoryLocation &,
                                                   BatchAAResults &AA) = 0;
@@ -1106,9 +1116,6 @@ public:
                                           const MemoryLocation &,
                                           BatchAAResults &) override;
 };
-
-using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;
-using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
 
 /// Iterator base class used to implement const and non-const iterators
 /// over the defining accesses of a MemoryAccess.
@@ -1203,6 +1210,25 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
   static ChildIteratorType child_end(NodeRef N) { return N->user_end(); }
 };
 
+struct UpwardDefsElem {
+  MemoryAccess *MA;
+  MemoryLocation Loc;
+  bool MayBeCrossIteration;
+};
+
+template <> struct DenseMapInfo<UpwardDefsElem> {
+  static unsigned getHashValue(const UpwardDefsElem &Val) {
+    return hash_combine(DenseMapInfo<MemoryAccess *>::getHashValue(Val.MA),
+                        DenseMapInfo<MemoryLocation>::getHashValue(Val.Loc),
+                        Val.MayBeCrossIteration);
+  }
+
+  static bool isEqual(const UpwardDefsElem &LHS, const UpwardDefsElem &RHS) {
+    return LHS.MA == RHS.MA && LHS.Loc == RHS.Loc &&
+           LHS.MayBeCrossIteration == RHS.MayBeCrossIteration;
+  }
+};
+
 /// Provide an iterator that walks defs, giving both the memory access,
 /// and the current pointer location, updating the pointer location as it
 /// changes due to phi node translation.
@@ -1214,20 +1240,21 @@ template <> struct GraphTraits<Inverse<MemoryAccess *>> {
 class upward_defs_iterator
     : public iterator_facade_base<upward_defs_iterator,
                                   std::forward_iterator_tag,
-                                  const MemoryAccessPair> {
+                                  const UpwardDefsElem> {
   using BaseT = upward_defs_iterator::iterator_facade_base;
 
 public:
-  upward_defs_iterator(const MemoryAccessPair &Info, DominatorTree *DT)
-      : DefIterator(Info.first), Location(Info.second),
-        OriginalAccess(Info.first), DT(DT) {
-    CurrentPair.first = nullptr;
+  upward_defs_iterator(const UpwardDefsElem &Elem, DominatorTree *DT)
+      : DefIterator(Elem.MA), Location(Elem.Loc), OriginalAccess(Elem.MA),
+        DT(DT) {
+    CurrentElem.MA = nullptr;
+    CurrentElem.MayBeCrossIteration = Elem.MayBeCrossIteration;
 
-    WalkingPhi = Info.first && isa<MemoryPhi>(Info.first);
-    fillInCurrentPair();
+    WalkingPhi = Elem.MA && isa<MemoryPhi>(Elem.MA);
+    fillInCurrentElem();
   }
 
-  upward_defs_iterator() { CurrentPair.first = nullptr; }
+  upward_defs_iterator() { CurrentElem.MA = nullptr; }
 
   bool operator==(const upward_defs_iterator &Other) const {
     return DefIterator == Other.DefIterator;
@@ -1236,7 +1263,7 @@ public:
   std::iterator_traits<BaseT>::reference operator*() const {
     assert(DefIterator != OriginalAccess->defs_end() &&
            "Tried to access past the end of our iterator");
-    return CurrentPair;
+    return CurrentElem;
   }
 
   using BaseT::operator++;
@@ -1245,7 +1272,7 @@ public:
            "Tried to access past the end of the iterator");
     ++DefIterator;
     if (DefIterator != OriginalAccess->defs_end())
-      fillInCurrentPair();
+      fillInCurrentElem();
     return *this;
   }
 
@@ -1257,10 +1284,15 @@ private:
   /// MemoryLocation during execution of the containing function.
   LLVM_ABI bool IsGuaranteedLoopInvariant(const Value *Ptr) const;
 
-  void fillInCurrentPair() {
-    CurrentPair.first = *DefIterator;
-    CurrentPair.second = Location;
-    if (WalkingPhi && Location.Ptr) {
+  void fillInCurrentElem() {
+    CurrentElem.MA = *DefIterator;
+    CurrentElem.Loc = Location;
+    // No need for phi translation or handling of cross-iteration dependences
+    // if we're not walking past a phi.
+    if (!WalkingPhi)
+      return;
+
+    if (Location.Ptr) {
       PHITransAddr Translator(
           const_cast<Value *>(Location.Ptr),
           OriginalAccess->getBlock()->getDataLayout(), nullptr);
@@ -1268,21 +1300,27 @@ private:
       if (Value *Addr =
               Translator.translateValue(OriginalAccess->getBlock(),
                                         DefIterator.getPhiArgBlock(), DT, true))
-        if (Addr != CurrentPair.second.Ptr)
-          CurrentPair.second = CurrentPair.second.getWithNewPtr(Addr);
+        if (Addr != CurrentElem.Loc.Ptr)
+          CurrentElem.Loc = CurrentElem.Loc.getWithNewPtr(Addr);
 
       // Mark size as unknown, if the location is not guaranteed to be
       // loop-invariant for any possible loop in the function. Setting the size
       // to unknown guarantees that any memory accesses that access locations
       // after the pointer are considered as clobbers, which is important to
       // catch loop carried dependences.
-      if (!IsGuaranteedLoopInvariant(CurrentPair.second.Ptr))
-        CurrentPair.second = CurrentPair.second.getWithNewSize(
+      if (!IsGuaranteedLoopInvariant(CurrentElem.Loc.Ptr))
+        // TODO: We should be using MayBeCrossIteration here as well.
+        CurrentElem.Loc = CurrentElem.Loc.getWithNewSize(
             LocationSize::beforeOrAfterPointer());
+    } else {
+      // We can't easily analyze invariance for calls, so conservatively assume
+      // they may be introducing cross-iteration dependences for any phi
+      // translation.
+      CurrentElem.MayBeCrossIteration = true;
     }
   }
 
-  MemoryAccessPair CurrentPair;
+  UpwardDefsElem CurrentElem;
   memoryaccess_def_iterator DefIterator;
   MemoryLocation Location;
   MemoryAccess *OriginalAccess = nullptr;
@@ -1290,17 +1328,12 @@ private:
   bool WalkingPhi = false;
 };
 
-inline upward_defs_iterator
-upward_defs_begin(const MemoryAccessPair &Pair, DominatorTree &DT) {
+inline upward_defs_iterator upward_defs_begin(const UpwardDefsElem &Pair,
+                                              DominatorTree &DT) {
   return upward_defs_iterator(Pair, &DT);
 }
 
 inline upward_defs_iterator upward_defs_end() { return upward_defs_iterator(); }
-
-inline iterator_range<upward_defs_iterator>
-upward_defs(const MemoryAccessPair &Pair, DominatorTree &DT) {
-  return make_range(upward_defs_begin(Pair, DT), upward_defs_end());
-}
 
 /// Walks the defining accesses of MemoryDefs. Stops after we hit something that
 /// has no defining use (e.g. a MemoryPhi or liveOnEntry). Note that, when

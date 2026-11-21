@@ -13,7 +13,9 @@
 
 #include "AMDGPUMIRFormatter.h"
 #include "SIMachineFunctionInfo.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/Support/AMDGPUAsyncStages.h"
+#include "llvm/Support/Format.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 
@@ -30,7 +32,19 @@ StringLiteral SaSdstName = "SaSdst";
 
 StringLiteral AllOff = "AllOff";
 
-void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
+StringLiteral VmcntName = "Vmcnt";
+StringLiteral ExpcntName = "Expcnt";
+StringLiteral LgkmcntName = "Lgkmcnt";
+
+StringLiteral LoadcntName = "Loadcnt";
+StringLiteral DscntName = "Dscnt";
+
+const char AsyncStageImmPrefix = '.';
+constexpr StringLiteral AsyncStageDelim(".");
+constexpr StringLiteral ReservedStagePrefix("RES");
+constexpr StringLiteral AllStages("AllStages");
+
+void AMDGPUMIRFormatter::printSWaitAluImm(unsigned Imm, raw_ostream &OS) const {
   bool NonePrinted = true;
   ListSeparator Delim(SWaitAluDelim);
   auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
@@ -61,12 +75,96 @@ void AMDGPUMIRFormatter::printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const {
     OS << AllOff;
 }
 
+void AMDGPUMIRFormatter::printSWaitcntImm(unsigned Imm, raw_ostream &OS) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+  bool NonePrinted = true;
+  ListSeparator Delim(SWaitAluDelim);
+  auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
+    if (Num != Max) {
+      OS << Delim << Descr << SWaitAluDelim << Num;
+      NonePrinted = false;
+    }
+  };
+  OS << SWaitAluImmPrefix;
+  PrintFieldIfNotMax(VmcntName, AMDGPU::decodeVmcnt(Version, Imm),
+                     AMDGPU::getVmcntBitMask(Version));
+  PrintFieldIfNotMax(ExpcntName, AMDGPU::decodeExpcnt(Version, Imm),
+                     AMDGPU::getExpcntBitMask(Version));
+  PrintFieldIfNotMax(LgkmcntName, AMDGPU::decodeLgkmcnt(Version, Imm),
+                     AMDGPU::getLgkmcntBitMask(Version));
+  if (NonePrinted)
+    OS << AllOff;
+}
+
+void AMDGPUMIRFormatter::printSWaitLoadcntDscntImm(unsigned Imm,
+                                                   raw_ostream &OS) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+  bool NonePrinted = true;
+  ListSeparator Delim(SWaitAluDelim);
+  auto PrintFieldIfNotMax = [&](StringRef Descr, uint64_t Num, unsigned Max) {
+    if (Num != Max) {
+      OS << Delim << Descr << SWaitAluDelim << Num;
+      NonePrinted = false;
+    }
+  };
+  OS << SWaitAluImmPrefix;
+  PrintFieldIfNotMax(LoadcntName, AMDGPU::decodeLoadcnt(Version, Imm),
+                     AMDGPU::getLoadcntBitMask(Version));
+  PrintFieldIfNotMax(DscntName, AMDGPU::decodeDscnt(Version, Imm),
+                     AMDGPU::getDscntBitMask(Version));
+  if (NonePrinted)
+    OS << AllOff;
+}
+
+void AMDGPUMIRFormatter::printAsyncStageMaskImm(int64_t Imm,
+                                                raw_ostream &OS) const {
+  if (!AMDGPU::isValidAsyncStageMask(Imm)) {
+    OS << Imm;
+    return;
+  }
+
+  OS << AsyncStageImmPrefix;
+  auto Mask = static_cast<AMDGPU::AsyncStages>(Imm);
+  // The zero mask names every stage. Spell that out rather than printing an
+  // empty list. The saturated mask means the same thing but is a different
+  // immediate, so it keeps its spelled-out list to stay round-trippable.
+  if (Mask == AMDGPU::AsyncStages::NONE) {
+    OS << AllStages;
+    return;
+  }
+
+  // Reserved stages have no meaningful name, collect them into a single
+  // hex bitmask instead.
+  ListSeparator Delim(AsyncStageDelim);
+  for (AMDGPU::AsyncStages S :
+       AMDGPU::asyncStages(Mask & ~AMDGPU::AsyncStages::RESERVED))
+    OS << Delim << AMDGPU::getAsyncStageName(S);
+  AMDGPU::AsyncStages Reserved = Mask & AMDGPU::AsyncStages::RESERVED;
+  if (any(Reserved))
+    OS << Delim << ReservedStagePrefix
+       << format_hex_no_prefix(to_underlying(Reserved), 1);
+}
+
 void AMDGPUMIRFormatter::printImm(raw_ostream &OS, const MachineInstr &MI,
                       std::optional<unsigned int> OpIdx, int64_t Imm) const {
 
   switch (MI.getOpcode()) {
+  case AMDGPU::ASYNCMARK:
+  case AMDGPU::WAIT_ASYNCMARK:
+    if (OpIdx == MI.getNumExplicitOperands() - 1u)
+      printAsyncStageMaskImm(Imm, OS);
+    else
+      MIRFormatter::printImm(OS, MI, OpIdx, Imm);
+    break;
+  case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
+    printSWaitcntImm(static_cast<unsigned>(Imm), OS);
+    break;
+  case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    printSWaitLoadcntDscntImm(static_cast<unsigned>(Imm), OS);
+    break;
   case AMDGPU::S_WAITCNT_DEPCTR:
-    printSWaitAluImm(Imm, OS);
+    printSWaitAluImm(static_cast<unsigned>(Imm), OS);
     break;
   case AMDGPU::S_DELAY_ALU:
     assert(OpIdx == 0);
@@ -87,10 +185,23 @@ bool AMDGPUMIRFormatter::parseImmMnemonic(const unsigned OpCode,
 {
 
   switch (OpCode) {
+  case AMDGPU::S_WAITCNT:
+  case AMDGPU::S_WAITCNT_soft:
+    return parseSWaitcntImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+  case AMDGPU::S_WAIT_LOADCNT_DSCNT:
+    return parseSWaitLoadcntDscntImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_WAITCNT_DEPCTR:
     return parseSWaitAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
   case AMDGPU::S_DELAY_ALU:
     return parseSDelayAluImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+  case AMDGPU::ASYNCMARK:
+    if (OpIdx == 0)
+      return parseAsyncStageMaskImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+    break;
+  case AMDGPU::WAIT_ASYNCMARK:
+    if (OpIdx == 1)
+      return parseAsyncStageMaskImmMnemonic(OpIdx, Imm, Src, ErrorCallback);
+    break;
   default:
     break;
   }
@@ -140,6 +251,134 @@ void AMDGPUMIRFormatter::printSDelayAluImm(int64_t Imm,
   Outdep(Id1);
 }
 
+bool AMDGPUMIRFormatter::parseSWaitcntImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+
+  // Accept integer masks for compatibility with old MIR.
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  // Initialize with all counters at max (no wait).
+  unsigned Vmcnt = AMDGPU::getVmcntBitMask(Version);
+  unsigned Expcnt = AMDGPU::getExpcntBitMask(Version);
+  unsigned Lgkmcnt = AMDGPU::getLgkmcntBitMask(Version);
+
+  // The input is in the form: .Name1_Num1_Name2_Num2
+  // Drop the '.' prefix.
+  if (!Src.consume_front(SWaitAluImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+
+  // Special case for all off (all counters at max).
+  if (Src == AllOff) {
+    Imm = AMDGPU::encodeWaitcnt(Version, Vmcnt, Expcnt, Lgkmcnt);
+    return false;
+  }
+
+  // Parse counter name, number pairs.
+  while (!Src.empty()) {
+    size_t DelimIdx = Src.find(SWaitAluDelim);
+    if (DelimIdx == StringRef::npos)
+      return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+    StringRef Name = Src.substr(0, DelimIdx);
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(SWaitAluDelim);
+
+    int64_t Num;
+    StringRef::iterator NumPos = Src.begin();
+    if (Src.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(NumPos,
+                           "expected non-negative integer counter number");
+
+    unsigned Max;
+    if (Name == VmcntName) {
+      Max = AMDGPU::getVmcntBitMask(Version);
+      Vmcnt = Num;
+    } else if (Name == ExpcntName) {
+      Max = AMDGPU::getExpcntBitMask(Version);
+      Expcnt = Num;
+    } else if (Name == LgkmcntName) {
+      Max = AMDGPU::getLgkmcntBitMask(Version);
+      Lgkmcnt = Num;
+    } else {
+      return ErrorCallback(NamePos, "invalid counter name");
+    }
+    if (Num >= Max)
+      return ErrorCallback(NumPos, "counter value too large");
+
+    Src.consume_front(SWaitAluDelim);
+  }
+
+  Imm = AMDGPU::encodeWaitcnt(Version, Vmcnt, Expcnt, Lgkmcnt);
+  return false;
+}
+
+bool AMDGPUMIRFormatter::parseSWaitLoadcntDscntImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
+
+  // Accept integer masks for compatibility with old MIR.
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  // Initialize with all counters at max (no wait).
+  unsigned Loadcnt = AMDGPU::getLoadcntBitMask(Version);
+  unsigned Dscnt = AMDGPU::getDscntBitMask(Version);
+
+  // The input is in the form: .Name1_Num1_Name2_Num2
+  // Drop the '.' prefix.
+  if (!Src.consume_front(SWaitAluImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+
+  // Special case for all off (all counters at max).
+  if (Src == AllOff) {
+    Imm = AMDGPU::encodeLoadcntDscnt(Version, Loadcnt, Dscnt);
+    return false;
+  }
+
+  // Parse counter name, number pairs.
+  while (!Src.empty()) {
+    size_t DelimIdx = Src.find(SWaitAluDelim);
+    if (DelimIdx == StringRef::npos)
+      return ErrorCallback(Src.begin(), "expected <CounterName>_<CounterNum>");
+    StringRef Name = Src.substr(0, DelimIdx);
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(SWaitAluDelim);
+
+    int64_t Num;
+    StringRef::iterator NumPos = Src.begin();
+    if (Src.consumeInteger(10, Num) || Num < 0)
+      return ErrorCallback(NumPos,
+                           "expected non-negative integer counter number");
+
+    unsigned Max;
+    if (Name == LoadcntName) {
+      Max = AMDGPU::getLoadcntBitMask(Version);
+      Loadcnt = Num;
+    } else if (Name == DscntName) {
+      Max = AMDGPU::getDscntBitMask(Version);
+      Dscnt = Num;
+    } else {
+      return ErrorCallback(NamePos, "invalid counter name");
+    }
+    if (Num >= Max)
+      return ErrorCallback(NumPos, "counter value too large");
+
+    Src.consume_front(SWaitAluDelim);
+  }
+
+  Imm = AMDGPU::encodeLoadcntDscnt(Version, Loadcnt, Dscnt);
+  return false;
+}
+
 bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
     MIRFormatter::ErrorCallbackType &ErrorCallback) const {
@@ -148,7 +387,8 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     return false;
 
   // Initialize with all checks off.
-  Imm = AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI);
+  unsigned ImmEnc = AMDGPU::DepCtr::getDefaultDepCtrEncoding(STI);
+  Imm = ImmEnc;
   // The input is in the form: .Name1_Num1_Name2_Num2
   // Drop the '.' prefix.
   bool ConsumePrefix = Src.consume_front(SWaitAluImmPrefix);
@@ -191,29 +431,30 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     unsigned Max;
     if (Name == VaVdstName) {
       Max = AMDGPU::DepCtr::getVaVdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVdst(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaVdst(ImmEnc, Num);
     } else if (Name == VmVsrcName) {
       Max = AMDGPU::DepCtr::getVmVsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVmVsrc(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVmVsrc(ImmEnc, Num);
     } else if (Name == VaSdstName) {
       Max = AMDGPU::DepCtr::getVaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSdst(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaSdst(ImmEnc, Num);
     } else if (Name == VaSsrcName) {
       Max = AMDGPU::DepCtr::getVaSsrcBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaSsrc(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaSsrc(ImmEnc, Num);
     } else if (Name == HoldCntName) {
       const AMDGPU::IsaVersion &Version = AMDGPU::getIsaVersion(STI.getCPU());
       Max = AMDGPU::DepCtr::getHoldCntBitMask(Version);
-      Imm = AMDGPU::DepCtr::encodeFieldHoldCnt(Imm, Num, Version);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldHoldCnt(ImmEnc, Num, Version);
     } else if (Name == VaVccName) {
       Max = AMDGPU::DepCtr::getVaVccBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldVaVcc(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldVaVcc(ImmEnc, Num);
     } else if (Name == SaSdstName) {
       Max = AMDGPU::DepCtr::getSaSdstBitMask();
-      Imm = AMDGPU::DepCtr::encodeFieldSaSdst(Imm, Num);
+      ImmEnc = AMDGPU::DepCtr::encodeFieldSaSdst(ImmEnc, Num);
     } else {
       return ErrorCallback(NamePos, "invalid counter name");
     }
+    Imm = ImmEnc;
     // Don't allow the values to reach their maximum value.
     if (Num >= Max)
       return ErrorCallback(NumPos, "counter value too large");
@@ -297,6 +538,57 @@ bool AMDGPUMIRFormatter::parseSDelayAluImmMnemonic(
     return ErrorCallback(Src.begin(), "Could not decode delay1");
 
   Imm = Imm | (Skip << 4) | (Delay1 << 7);
+  return false;
+}
+
+// Parse the async stage mask of asyncmark/wait_asyncmark. The mnemonic names
+// the stages the mask names.
+bool AMDGPUMIRFormatter::parseAsyncStageMaskImmMnemonic(
+    const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+    MIRFormatter::ErrorCallbackType &ErrorCallback) const {
+  if (!Src.consumeInteger(10, Imm))
+    return false;
+
+  if (!Src.consume_front(AsyncStageImmPrefix))
+    return ErrorCallback(Src.begin(), "expected prefix");
+  if (Src.empty())
+    return ErrorCallback(Src.begin(), "expected <StageName>");
+
+  if (Src == AllStages) {
+    Imm = 0;
+    return false;
+  }
+
+  AMDGPU::AsyncStages StageMask = AMDGPU::AsyncStages::NONE;
+  while (!Src.empty()) {
+    StringRef Name = Src.substr(0, Src.find(AsyncStageDelim));
+    StringRef::iterator NamePos = Src.begin();
+    Src.consume_front(Name);
+    Src.consume_front(AsyncStageDelim);
+
+    // The reserved stages arrive together as one hex bitmask.
+    StringRef Bits = Name;
+    if (Bits.consume_front(ReservedStagePrefix)) {
+      uint32_t Mask;
+      if (Bits.getAsInteger(16, Mask) || Bits.empty() || !Mask)
+        return ErrorCallback(NamePos, "invalid async stage mask");
+      if (!AMDGPU::isValidAsyncStageMask(Mask))
+        return ErrorCallback(NamePos, "async stage mask out of range");
+      if (Mask & ~to_underlying(AMDGPU::AsyncStages::RESERVED))
+        return ErrorCallback(NamePos,
+                             "async stage mask names a non-reserved stage");
+      StageMask |= static_cast<AMDGPU::AsyncStages>(Mask);
+      continue;
+    }
+
+    const StringLiteral *It = find(AMDGPU::AsyncStageNames, Name);
+    if (It == std::end(AMDGPU::AsyncStageNames))
+      return ErrorCallback(NamePos, "invalid async stage name");
+    StageMask |= static_cast<AMDGPU::AsyncStages>(
+        1u << (It - std::begin(AMDGPU::AsyncStageNames)));
+  }
+
+  Imm = to_underlying(StageMask);
   return false;
 }
 

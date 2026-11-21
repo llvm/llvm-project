@@ -1,0 +1,108 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+# Tests for LLVM libc arpa/inet.h functions.
+
+load("//libc/test:libc_test_rules.bzl", "libc_test")
+
+package(default_visibility = ["//visibility:public"])
+
+licenses(["notice"])
+
+libc_test(
+    name = "htonl_test",
+    srcs = ["htonl_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/arpa/inet:htonl",
+        "//libc/src/arpa/inet:ntohl",
+    ],
+)
+
+libc_test(
+    name = "htons_test",
+    srcs = ["htons_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/arpa/inet:htons",
+        "//libc/src/arpa/inet:ntohs",
+    ],
+)
+
+libc_test(
+    name = "inet_addr_test",
+    srcs = ["inet_addr_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/net:byte_order",
+        "//libc/src/arpa/inet:inet_addr",
+    ],
+)
+
+libc_test(
+    name = "inet_aton_test",
+    srcs = ["inet_aton_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/net:byte_order",
+        "//libc/src/arpa/inet:inet_aton",
+    ],
+)
+
+libc_test(
+    name = "inet_ntoa_test",
+    srcs = ["inet_ntoa_test.cpp"],
+    deps = [
+        "//libc/hdr/types:struct_in_addr",
+        "//libc/src/__support/net:byte_order",
+        "//libc/src/arpa/inet:inet_ntoa",
+    ],
+)
+
+libc_test(
+    name = "inet_ntop_test",
+    srcs = ["inet_ntop_test.cpp"],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:sys_socket_macros",
+        "//libc/hdr/types:struct_in6_addr",
+        "//libc/hdr/types:struct_in_addr",
+        "//libc/src/__support/net:byte_order",
+        "//libc/src/arpa/inet:inet_ntop",
+    ],
+)
+
+libc_test(
+    name = "inet_pton_test",
+    srcs = ["inet_pton_test.cpp"],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:sys_socket_macros",
+        "//libc/hdr/types:struct_in6_addr",
+        "//libc/hdr/types:struct_in_addr",
+        "//libc/src/__support/net:byte_order",
+        "//libc/src/arpa/inet:inet_pton",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_test(
+    name = "ntohl_test",
+    srcs = ["ntohl_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/arpa/inet:htonl",
+        "//libc/src/arpa/inet:ntohl",
+    ],
+)
+
+libc_test(
+    name = "ntohs_test",
+    srcs = ["ntohs_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/arpa/inet:htons",
+        "//libc/src/arpa/inet:ntohs",
+    ],
+)

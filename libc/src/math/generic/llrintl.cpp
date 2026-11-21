@@ -7,15 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/llrintl.h"
-#include "src/__support/FPUtil/NearestIntegerOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/llrintl.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long long, llrintl, (long double x)) {
-  return fputil::round_to_signed_integer_using_current_rounding_mode<
-      long double, long long>(x);
+  return math::llrintl(x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

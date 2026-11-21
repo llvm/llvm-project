@@ -31,22 +31,22 @@ entry:
   %sext = sext i8 %v to i16
   br label %loop.header
 
-loop.header:                                      ; preds = %loop.latch, %entry
+loop.header:
   %iv = phi i8 [ %iv.next, %loop.latch ], [ 0, %entry ]
   br i1 %cond, label %loop.latch, label %cond.false
 
-cond.false:                                       ; preds = %loop.header
+cond.false:
   %sdiv = sdiv i16 %sext, %zext.true
   %sdiv.trunc = trunc i16 %sdiv to i8
   br label %loop.latch
 
-loop.latch:                                       ; preds = %cond.false, %loop.header
+loop.latch:
   %ret = phi i8 [ %sdiv.trunc, %cond.false ], [ 0, %loop.header ]
   store i8 %ret, ptr %p, align 1
   %iv.next = add i8 %iv, 1
   %exitcond = icmp eq i8 %iv.next, 0
   br i1 %exitcond, label %exit, label %loop.header
 
-exit:                                             ; preds = %loop.latch
+exit:
   ret void
 }

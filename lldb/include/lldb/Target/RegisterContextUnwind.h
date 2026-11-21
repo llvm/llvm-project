@@ -137,15 +137,12 @@ private:
   // user somehow.
   bool IsSkipFrame() const;
 
-  /// Determines if a SymbolContext is a trap handler or not
-  ///
-  /// Given a SymbolContext, determines if this is a trap handler function
-  /// aka asynchronous signal handler.
+  /// Identify a trap handler from signal-frame CFI at m_current_pc or its
+  /// symbol name provided by platform or user, in order.
   ///
   /// \return
   ///     Returns true if the SymbolContext is a trap handler.
-  bool IsTrapHandlerSymbol(lldb_private::Process *process,
-                           const lldb_private::SymbolContext &m_sym_ctx) const;
+  bool IsTrapHandler(lldb_private::Process *process) const;
 
   /// Check if the given unwind plan indicates a signal trap handler, and
   /// update frame type and symbol context if so.
@@ -204,11 +201,6 @@ private:
   std::shared_ptr<const UnwindPlan> GetFullUnwindPlanForFrame();
 
   lldb::UnwindPlanSP TryAdoptArchitectureUnwindPlan();
-
-  void UnwindLogMsg(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void UnwindLogMsgVerbose(const char *fmt, ...)
-      __attribute__((format(printf, 2, 3)));
 
   bool IsUnwindPlanValidForCurrentPC(
       std::shared_ptr<const UnwindPlan> unwind_plan_sp);

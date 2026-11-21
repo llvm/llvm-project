@@ -41,6 +41,13 @@ public:
 
   virtual ~PassInstrumentation() = 0;
 
+  /// Whether callbacks may run concurrently on different threads. By default,
+  /// the pass instrumentor serializes callbacks. Opting in requires all shared
+  /// state to support concurrent use.
+  /// Callbacks on a single thread still run in registration order before a
+  /// pipeline, pass, or analysis, and in reverse order afterwards.
+  virtual bool isThreadSafe() const { return false; }
+
   /// A callback to run before a pass pipeline is executed. This function takes
   /// the name of the operation type being operated on, or std::nullopt if the
   /// pipeline is op-agnostic, and information related to the parent that
@@ -135,14 +142,6 @@ struct DenseMapInfo<mlir::PassInstrumentation::PipelineParentInfo> {
   using T = mlir::PassInstrumentation::PipelineParentInfo;
   using PairInfo = DenseMapInfo<std::pair<uint64_t, void *>>;
 
-  static T getEmptyKey() {
-    auto pair = PairInfo::getEmptyKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
-  static T getTombstoneKey() {
-    auto pair = PairInfo::getTombstoneKey();
-    return {pair.first, reinterpret_cast<mlir::Pass *>(pair.second)};
-  }
   static unsigned getHashValue(T val) {
     return PairInfo::getHashValue({val.parentThreadID, val.parentPass});
   }

@@ -36,8 +36,9 @@ public:
     Type translated =
         llvm::TypeSwitch<llvm::Type *, Type>(type)
             .Case<llvm::ArrayType, llvm::FunctionType, llvm::IntegerType,
-                  llvm::PointerType, llvm::StructType, llvm::FixedVectorType,
-                  llvm::ScalableVectorType, llvm::TargetExtType>(
+                  llvm::ByteType, llvm::PointerType, llvm::StructType,
+                  llvm::FixedVectorType, llvm::ScalableVectorType,
+                  llvm::TargetExtType>(
                 [this](auto *type) { return this->translate(type); })
             .Default([this](llvm::Type *type) {
               return translatePrimitiveType(type);
@@ -73,7 +74,7 @@ private:
     if (type->isMetadataTy())
       return LLVM::LLVMMetadataType::get(&context);
     if (type->isTokenTy())
-      return LLVM::LLVMTokenType::get(&context);
+      return TokenType::get(&context);
     llvm_unreachable("not a primitive type");
   }
 
@@ -94,6 +95,11 @@ private:
   /// Translates the given integer type.
   Type translate(llvm::IntegerType *type) {
     return IntegerType::get(&context, type->getBitWidth());
+  }
+
+  /// Translates the given byte type.
+  Type translate(llvm::ByteType *type) {
+    return LLVM::LLVMByteType::get(&context, type->getBitWidth());
   }
 
   /// Translates the given pointer type.

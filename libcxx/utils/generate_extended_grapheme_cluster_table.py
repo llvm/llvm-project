@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # ===----------------------------------------------------------------------===##
 #
 # Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -118,7 +118,7 @@ _LIBCPP_HIDE_FROM_ABI inline constexpr uint32_t __entries[{size}] = {{
 // clang-format on
 
 /// Returns the extended grapheme cluster bondary property of a code point.
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr __property __get_property(const char32_t __code_point) noexcept {{
+[[nodiscard]] constexpr __property __get_property(const char32_t __code_point) noexcept {{
   // The algorithm searches for the upper bound of the range and, when found,
   // steps back one entry. This algorithm is used since the code point can be
   // anywhere in the range. After a lower bound is found the next step is to

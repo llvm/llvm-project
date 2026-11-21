@@ -40,7 +40,7 @@ struct GlobalMergeOptions {
 };
 
 // FIXME: This pass must run before AsmPrinterPass::doInitialization!
-class GlobalMergePass : public PassInfoMixin<GlobalMergePass> {
+class GlobalMergePass : public OptionalPassInfoMixin<GlobalMergePass> {
   const TargetMachine *TM;
   GlobalMergeOptions Options;
 
@@ -48,7 +48,7 @@ public:
   GlobalMergePass(const TargetMachine *TM, GlobalMergeOptions Options)
       : TM(TM), Options(Options) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 } // namespace llvm

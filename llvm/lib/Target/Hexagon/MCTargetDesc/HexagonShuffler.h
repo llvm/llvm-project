@@ -172,7 +172,6 @@ protected:
                              const bool DoShuffle);
   void restrictSlot1AOK(HexagonPacketSummary const &Summary);
   void restrictNoSlot1Store(HexagonPacketSummary const &Summary);
-  void restrictNoSlot1();
   bool restrictStoreLoadOrder(HexagonPacketSummary const &Summary);
   void restrictBranchOrder(HexagonPacketSummary const &Summary);
   void restrictPreferSlot3(HexagonPacketSummary const &Summary,

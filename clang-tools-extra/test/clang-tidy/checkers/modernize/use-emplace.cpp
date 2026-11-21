@@ -7,314 +7,20 @@
 // RUN:              modernize-use-emplace.TupleMakeFunctions: \
 // RUN:                '::std::make_pair; ::std::make_tuple; ::test::MakeSingle'}}"
 
+#include <tuple>
+#include <deque>
+#include <forward_list>
+#include <list>
+#include <map>
+#include <queue>
+#include <set>
+#include <stack>
+#include <tuple>
+#include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <memory>
-
-namespace std {
-template <typename E>
-class initializer_list {
-public:
-  const E *a, *b;
-  initializer_list() noexcept {}
-};
-
-template <typename T1, typename T2>
-class pair {
-public:
-  pair() = default;
-  pair(const pair &) = default;
-  pair(pair &&) = default;
-
-  pair(const T1 &, const T2 &) {}
-  pair(T1 &&, T2 &&) {}
-
-  template <typename U1, typename U2>
-  pair(const pair<U1, U2> &){};
-  template <typename U1, typename U2>
-  pair(pair<U1, U2> &&){};
-};
-
-template <typename T>
-class vector {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  vector() = default;
-  vector(initializer_list<T>) {}
-
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args);
-  ~vector();
-};
-
-template <typename T>
-class list {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  void push_front(const T &) {}
-  void push_front(T &&) {}
-
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args);
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  template <typename... Args>
-  void emplace_front(Args &&...args){};
-  ~list();
-};
-
-template <typename T>
-class deque {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  void push_back(const T &) {}
-  void push_back(T &&) {}
-
-  void push_front(const T &) {}
-  void push_front(T &&) {}
-
-  template <typename... Args>
-  iterator emplace(const_iterator pos, Args &&...args);
-  template <typename... Args>
-  void emplace_back(Args &&... args){};
-  template <typename... Args>
-  void emplace_front(Args &&...args){};
-  ~deque();
-};
-
-template <typename T>
-class forward_list {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  void push_front(const T &) {}
-  void push_front(T &&) {}
-
-  template <typename... Args>
-  void emplace_front(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_after(const_iterator pos, Args &&...args);
-};
-
-template <typename T>
-class set {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename Key, typename T>
-class map {
-public:
-  using value_type = std::pair<Key, T>;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename T>
-class multiset {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename Key, typename T>
-class multimap {
-public:
-  using value_type = std::pair<Key, T>;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename T>
-class unordered_set {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename Key, typename T>
-class unordered_map {
-public:
-  using value_type = std::pair<Key, T>;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename T>
-class unordered_multiset {
-public:
-  using value_type = T;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename Key, typename T>
-class unordered_multimap {
-public:
-  using value_type = std::pair<Key, T>;
-
-  class iterator {};
-  class const_iterator {};
-  const_iterator begin() { return const_iterator{}; }
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-  template <typename... Args>
-  iterator emplace_hint(const_iterator pos, Args &&...args);
-};
-
-template <typename T>
-class stack {
-public:
-  using value_type = T;
-
-  void push(const T &) {}
-  void push(T &&) {}
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-};
-
-template <typename T>
-class queue {
-public:
-  using value_type = T;
-
-  void push(const T &) {}
-  void push(T &&) {}
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-};
-
-template <typename T>
-class priority_queue {
-public:
-  using value_type = T;
-
-  void push(const T &) {}
-  void push(T &&) {}
-
-  template <typename... Args>
-  void emplace(Args &&...args){};
-};
-
-template <typename T1, typename T2>
-pair<typename remove_reference<T1>::type, typename remove_reference<T2>::type>
-make_pair(T1 &&, T2 &&) {
-  return {};
-};
-
-template <typename... Ts>
-class tuple {
-public:
-  tuple() = default;
-  tuple(const tuple &) = default;
-  tuple(tuple &&) = default;
-
-  tuple(const Ts &...) {}
-  tuple(Ts &&...) {}
-
-  template <typename... Us>
-  tuple(const tuple<Us...> &){};
-  template <typename... Us>
-  tuple(tuple<Us...> &&) {}
-
-  template <typename U1, typename U2>
-  tuple(const pair<U1, U2> &) {
-    static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
-  };
-  template <typename U1, typename U2>
-  tuple(pair<U1, U2> &&) {
-    static_assert(sizeof...(Ts) == 2, "Wrong tuple size");
-  };
-};
-
-template <typename... Ts>
-tuple<typename remove_reference<Ts>::type...> make_tuple(Ts &&...) {
-  return {};
-}
-
-} // namespace std
+#include <vector>
 
 namespace llvm {
 template <typename T>
@@ -488,6 +194,92 @@ void testDerived() {
 void testNewExpr() {
   std::vector<Derived> v;
   v.push_back(Derived(new int, Something{}));
+}
+
+struct WithMember {
+  int Member;
+  void method();
+};
+
+struct MemberPointer {
+  MemberPointer(int WithMember::*) {}
+};
+
+struct MemberFunctionPointer {
+  MemberFunctionPointer(void (WithMember::*)()) {}
+};
+
+struct FunctionPointer {
+  FunctionPointer(void (*)()) {}
+};
+
+using IntPointer = int *;
+
+struct PointerAlias {
+  PointerAlias(IntPointer) {}
+};
+
+struct PointerReference {
+  PointerReference(int *const &) {}
+};
+
+#define NULL_CONSTANT 0
+
+void testNullPointerConstants() {
+  std::vector<Base> v;
+  v.push_back(Base(42, 0));
+  v.push_back(Base(42, (0)));
+  v.push_back(Base(42, 0L));
+  v.push_back(Base(42, __null));
+  v.push_back(Base(42, NULL_CONSTANT));
+  v.emplace_back(Base(42, 0));
+
+  v.push_back(Base(42, nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, nullptr);
+
+  v.push_back(Base(0, nullptr, 0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(0, nullptr, 0);
+
+  v.push_back(Base(42, static_cast<int *>(0)));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, static_cast<int *>(0));
+
+  v.push_back(Base(42, (int *)0));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: v.emplace_back(42, (int *)0);
+
+  v.emplace_back(Base(42, nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: unnecessary temporary object created while calling emplace_back
+  // CHECK-FIXES: v.emplace_back(42, nullptr);
+
+  std::vector<MemberPointer> w;
+  w.push_back(MemberPointer(0));
+
+  w.push_back(MemberPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: w.emplace_back(nullptr);
+
+  std::vector<MemberFunctionPointer> x;
+  x.push_back(MemberFunctionPointer(0));
+
+  x.push_back(MemberFunctionPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: x.emplace_back(nullptr);
+
+  std::vector<FunctionPointer> y;
+  y.push_back(FunctionPointer(0));
+
+  y.push_back(FunctionPointer(nullptr));
+  // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use emplace_back
+  // CHECK-FIXES: y.emplace_back(nullptr);
+
+  std::vector<PointerAlias> z;
+  z.push_back(PointerAlias(0));
+
+  std::vector<PointerReference> r;
+  r.push_back(PointerReference(0));
 }
 
 void testSpaces() {

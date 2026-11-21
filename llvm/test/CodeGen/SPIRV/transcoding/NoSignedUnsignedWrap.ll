@@ -7,14 +7,19 @@
 ;;
 ;; Positive tests:
 ;;
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
+; RUN: llc -enable-new-pm -O0 -mtriple=spirv32v1.3-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV
+; RUN: llc -O0 -mtriple=spirv32v1.4-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV,CHECK-SPIRV-NOEXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.4-unknown-unknown %s -o - -filetype=obj | spirv-val --target-env spv1.4 %}
 ;;
 ;; Negative tests:
 ;;
-; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV-NEGATIVE
+; RUN: llc -O0 -mtriple=spirv32v1.3-unknown-unknown %s -o - | FileCheck %s --check-prefixes=CHECK-SPIRV-NEGATIVE
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32v1.3-unknown-unknown --spirv-ext=+SPV_KHR_no_integer_wrap_decoration %s -o - -filetype=obj | spirv-val --target-env spv1.3 %}
 ;; Check that backend is able to skip nsw/nuw attributes if extension is
 ;; disabled implicitly or explicitly and if max SPIR-V version is lower then 1.4
 
+; CHECK-SPIRV-NOEXT-NOT: OpExtension "SPV_KHR_no_integer_wrap_decoration"
 ; CHECK-SPIRV-DAG: OpDecorate %[[#]] NoSignedWrap
 ; CHECK-SPIRV-DAG: OpDecorate %[[#]] NoUnsignedWrap
 ;

@@ -6,49 +6,66 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implements dylib loading and searching by making calls to
-// ExecutorProcessControl::callWrapper.
+// Implements dylib loading and searching by calling executor-side wrapper
+// functions through Proxy objects.
 //
 // This simplifies the implementaton of new ExecutorProcessControl instances,
 // as this implementation will always work (at the cost of some performance
 // overhead for the calls).
+//
+// This header is protocol-agnostic. To build an instance that targets the ORC
+// runtime's SPS controller interface, see EPCGenericDylibManagerSPS.h.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 #define LLVM_EXECUTIONENGINE_ORC_EPCGENERICDYLIBMANAGER_H
 
+#include "llvm/ExecutionEngine/Orc/DylibManager.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
+#include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorSymbolDef.h"
-#include "llvm/ExecutionEngine/Orc/Shared/SimpleRemoteEPCUtils.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
+class JITDylib;
 class SymbolLookupSet;
 
-class EPCGenericDylibManager {
+class LLVM_ABI EPCGenericDylibManager : public DylibManager {
 public:
-  /// Function addresses for memory access.
-  struct SymbolAddrs {
+  /// Proxy for the executor-side dylib-open function. Given the manager
+  /// instance address, a path and mode flags it returns a handle to the opened
+  /// dylib.
+  using OpenProxy =
+      Proxy<Expected<tpctypes::DylibHandle>(ExecutorAddr, StringRef, uint64_t)>;
+
+  /// Proxy for the executor-side symbol-resolution function. Given the manager
+  /// instance address, a dylib handle and a lookup set it returns the resolved
+  /// addresses.
+  using ResolveProxy = Proxy<Expected<tpctypes::LookupResult>(
+      ExecutorAddr, ExecutorAddr, SymbolLookupSet)>;
+
+  /// The resolved controller-side handle to an executor-side dylib manager: the
+  /// address of the manager instance (passed as the first argument to each
+  /// call) plus the proxies for its functions. These are protocol-agnostic:
+  /// sps::createEPCGenericDylibManager populates them for the runtime's SPS
+  /// controller interface, but a client targeting a different protocol can
+  /// build its own Bindings and pass them to the constructor.
+  struct Bindings {
     ExecutorAddr Instance;
-    ExecutorAddr Open;
-    ExecutorAddr Resolve;
+    OpenProxy Open;
+    ResolveProxy Resolve;
   };
 
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
-  LLVM_ABI static Expected<EPCGenericDylibManager>
-  CreateWithDefaultBootstrapSymbols(ExecutorProcessControl &EPC);
-
-  /// Create an EPCGenericMemoryAccess instance from a given set of
-  /// function addrs.
-  EPCGenericDylibManager(ExecutorProcessControl &EPC, SymbolAddrs SAs)
-      : EPC(EPC), SAs(SAs) {}
+  /// Create an EPCGenericDylibManager instance from a given set of
+  /// dylib-manager bindings.
+  EPCGenericDylibManager(ExecutionSession &ES, Bindings B)
+      : ES(ES), B(std::move(B)) {}
 
   /// Loads the dylib with the given name.
-  LLVM_ABI Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
+  Expected<tpctypes::DylibHandle> open(StringRef Path, uint64_t Mode);
 
   /// Looks up symbols within the given dylib.
   Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
@@ -59,31 +76,26 @@ public:
     return RF.get();
   }
 
-  /// Looks up symbols within the given dylib.
-  Expected<tpctypes::LookupResult> lookup(tpctypes::DylibHandle H,
-                                          const RemoteSymbolLookupSet &Lookup) {
-    std::promise<MSVCPExpected<tpctypes::LookupResult>> RP;
-    auto RF = RP.get_future();
-    lookupAsync(H, Lookup, [&RP](auto R) { RP.set_value(std::move(R)); });
-    return RF.get();
-  }
-
   using SymbolLookupCompleteFn =
       unique_function<void(Expected<tpctypes::LookupResult>)>;
 
   /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
-                            const SymbolLookupSet &Lookup,
-                            SymbolLookupCompleteFn Complete);
+  void lookupAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Lookup,
+                   SymbolLookupCompleteFn Complete);
 
-  /// Looks up symbols within the given dylib.
-  LLVM_ABI void lookupAsync(tpctypes::DylibHandle H,
-                            const RemoteSymbolLookupSet &Lookup,
-                            SymbolLookupCompleteFn Complete);
+  /// Load the dynamic library at the given path and return a handle to it.
+  /// If DylibPath is null this function will return the global handle for
+  /// the target process.
+  Expected<tpctypes::DylibHandle> loadDylib(const char *DylibPath) override;
+
+  /// Search for symbols in the target process.
+  void
+  lookupSymbolsAsync(tpctypes::DylibHandle H, const SymbolLookupSet &Symbols,
+                     DylibManager::SymbolLookupCompleteFn Complete) override;
 
 private:
-  ExecutorProcessControl &EPC;
-  SymbolAddrs SAs;
+  ExecutionSession &ES;
+  Bindings B;
 };
 
 } // end namespace orc

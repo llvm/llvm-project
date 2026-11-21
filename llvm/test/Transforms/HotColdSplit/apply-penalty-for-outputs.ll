@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=hotcoldsplit -debug-only=hotcoldsplit -hotcoldsplit-threshold=2 -S < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -debug-only=hotcoldsplit -hotcoldsplit-threshold=2 -S < %s -disable-output 2>&1 | FileCheck %s
 
 declare void @sink() cold
 
@@ -11,9 +11,9 @@ entry:
 
 cold:
   ; CHECK: Applying penalty for splitting: 2
-  ; CHECK-NEXT: Applying penalty for: 1 params
-  ; CHECK-NEXT: Applying penalty for: 1 outputs/split phis
-  ; CHECK-NEXT: penalty = 7
+  ; CHECK-NEXT: Applying penalty for: 0 params
+  ; CHECK-NEXT: Applying penalty for: 0 outputs/split phis
+  ; CHECK-NEXT: penalty = 2
   %local = load i32, ptr @g
   call void @sink()
   br label %exit

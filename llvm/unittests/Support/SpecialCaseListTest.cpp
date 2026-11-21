@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/WithColor.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -319,38 +321,94 @@ TEST_F(SpecialCaseListTest, DotSlash) {
       makeSpecialCaseList(IgnoreList, /*Version=*/3);
   std::unique_ptr<SpecialCaseList> SCL4 = makeSpecialCaseList(IgnoreList,
                                                               /*Version=*/4);
+  std::unique_ptr<SpecialCaseList> SCL5 = makeSpecialCaseList(IgnoreList,
+                                                              /*Version=*/5);
 
   EXPECT_TRUE(SCL2->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL3->inSection("dot", "fun", "./foo"));
   EXPECT_TRUE(SCL4->inSection("dot", "fun", "./foo"));
+  EXPECT_TRUE(SCL5->inSection("dot", "fun", "./foo"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL3->inSection("dot", "fun", "foo"));
   EXPECT_FALSE(SCL4->inSection("dot", "fun", "foo"));
+  EXPECT_FALSE(SCL5->inSection("dot", "fun", "foo"));
 
   EXPECT_TRUE(SCL2->inSection("dot", "src", "./bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
-  EXPECT_FALSE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "./bar"));
 
   EXPECT_FALSE(SCL2->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL3->inSection("dot", "src", "bar"));
   EXPECT_FALSE(SCL4->inSection("dot", "src", "bar"));
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "bar"));
 
   EXPECT_FALSE(SCL2->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL3->inSection("not", "fun", "./foo"));
   EXPECT_FALSE(SCL4->inSection("not", "fun", "./foo"));
+  EXPECT_FALSE(SCL5->inSection("not", "fun", "./foo"));
 
   EXPECT_TRUE(SCL2->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL3->inSection("not", "fun", "foo"));
   EXPECT_TRUE(SCL4->inSection("not", "fun", "foo"));
+  EXPECT_TRUE(SCL5->inSection("not", "fun", "foo"));
 
   EXPECT_FALSE(SCL2->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "./bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "./bar"));
 
   EXPECT_TRUE(SCL2->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL3->inSection("not", "src", "bar"));
   EXPECT_TRUE(SCL4->inSection("not", "src", "bar"));
+  EXPECT_TRUE(SCL5->inSection("not", "src", "bar"));
+}
+
+TEST_F(SpecialCaseListTest, DotSlashWarning) {
+  StringRef IgnoreList = "[dot]\n"
+                         "src:./bar\n"
+                         "[not]\n"
+                         "src:bar\n";
+  std::unique_ptr<SpecialCaseList> SCL3 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/3);
+  std::unique_ptr<SpecialCaseList> SCL4 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/4);
+  std::unique_ptr<SpecialCaseList> SCL5 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/5);
+
+  // errs() caches has_colors() on first use, so an earlier test that warned
+  // to a terminal would make the captured warnings below contain escape
+  // codes. Disable colors for this test regardless.
+  WithColor::setAutoDetectFunction([](const raw_ostream &) { return false; });
+  llvm::scope_exit RestoreColors([] {
+    WithColor::setAutoDetectFunction(WithColor::defaultAutoDetectFunction());
+  });
+
+  // Version 3 should not warn (new behavior, no warn)
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL3->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+
+  // Version 4 should warn (transition)
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(SCL4->inSection("dot", "src", "./bar"));
+  std::string Warning = testing::internal::GetCapturedStderr();
+  EXPECT_THAT(
+      Warning,
+      HasSubstr(
+          "warning: Deprecated behaviour: pattern './bar' matches './bar'"));
+  EXPECT_THAT(Warning, HasSubstr("update it to match 'bar' instead"));
+
+  // Version 5 should not warn (new behavior, no warn)
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL5->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
+
+  // Version 4 should not warn here because it is a new match
+  testing::internal::CaptureStderr();
+  EXPECT_TRUE(SCL4->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
 }
 
 TEST_F(SpecialCaseListTest, LinesInSection) {
@@ -414,6 +472,75 @@ TEST_F(SpecialCaseListTest, FileIdx) {
   EXPECT_THAT(SCL->inSectionBlame("", "src", "defaaaaa"), Pair(1u, 3u));
   for (auto &Path : Files)
     sys::fs::remove(Path);
+}
+
+#ifdef _WIN32
+TEST_F(SpecialCaseListTest, SlashAgnosticPathsOnWindows) {
+  std::unique_ptr<SpecialCaseList> SCL =
+      makeSpecialCaseList("#!special-case-list-v4\n"
+                          "\n"
+                          "src:*foo/bar*\n"
+                          "src:*foo\\\\baz\n"
+                          "fun:hi\\\\bye=category\n");
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/bar"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\bar"));
+  // The baz pattern matches because paths are matched slash-agnostically
+  EXPECT_TRUE(SCL->inSection("", "src", "foo/baz"));
+  EXPECT_TRUE(SCL->inSection("", "src", "foo\\baz"));
+  // Slash-agnostic matching only applies to files
+  EXPECT_TRUE(SCL->inSection("", "fun", "hi\\bye", "category"));
+  EXPECT_FALSE(SCL->inSection("", "fun", "hi/bye", "category"));
+}
+
+#endif
+
+TEST_F(SpecialCaseListTest, Version6RequireExplicitSection) {
+  std::string Error;
+  EXPECT_EQ(nullptr, makeSpecialCaseList("src:foo\n", Error, /*Version=*/6));
+  EXPECT_EQ("entry without section header on line 2: 'src:foo'", Error);
+
+  EXPECT_EQ(nullptr,
+            makeSpecialCaseList("# comment\n\nsrc:foo\n[sect1]\nsrc:bar\n",
+                                Error, /*Version=*/6));
+  EXPECT_EQ("entry without section header on line 4: 'src:foo'", Error);
+
+  EXPECT_EQ(nullptr, makeSpecialCaseList("badline\n", Error, /*Version=*/6));
+  EXPECT_EQ("malformed line 2: 'badline'", Error);
+
+  // Version 5 still allows implicit default section.
+  std::unique_ptr<SpecialCaseList> SCL5 =
+      makeSpecialCaseList("src:foo\n", /*Version=*/5);
+  EXPECT_TRUE(SCL5->inSection("arbitrary", "src", "foo"));
+
+  // Empty or comments-only files are valid in version 6.
+  std::unique_ptr<SpecialCaseList> EmptySCL =
+      makeSpecialCaseList("# comment\n\n", /*Version=*/6);
+  EXPECT_FALSE(EmptySCL->inSection("arbitrary", "src", "foo"));
+
+  // Explicit [*] and named sections work in version 6.
+  std::unique_ptr<SpecialCaseList> ExplicitStar =
+      makeSpecialCaseList("[*]\nsrc:foo\n", /*Version=*/6);
+  EXPECT_TRUE(ExplicitStar->inSection("arbitrary", "src", "foo"));
+
+  std::unique_ptr<SpecialCaseList> Named =
+      makeSpecialCaseList("[sect1]\nsrc:foo\n", /*Version=*/6);
+  EXPECT_TRUE(Named->inSection("sect1", "src", "foo"));
+  EXPECT_FALSE(Named->inSection("sect2", "src", "foo"));
+}
+
+TEST_F(SpecialCaseListTest, Version6DotSlash) {
+  StringRef IgnoreList = "[dot]\n"
+                         "src:./bar\n"
+                         "[not]\n"
+                         "src:bar\n";
+  std::unique_ptr<SpecialCaseList> SCL6 =
+      makeSpecialCaseList(IgnoreList, /*Version=*/6);
+
+  testing::internal::CaptureStderr();
+  EXPECT_FALSE(SCL6->inSection("dot", "src", "./bar"));
+  EXPECT_TRUE(SCL6->inSection("not", "src", "./bar"));
+  EXPECT_TRUE(SCL6->inSection("not", "src", "bar"));
+  EXPECT_TRUE(testing::internal::GetCapturedStderr().empty());
 }
 
 } // namespace

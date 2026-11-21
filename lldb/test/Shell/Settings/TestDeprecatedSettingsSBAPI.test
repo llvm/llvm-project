@@ -1,0 +1,11 @@
+# REQUIRES: asserts, python
+#
+# Setting a deprecated setting through the SB API reports the deprecation
+# warning as a diagnostic event, because there's no command output to add it
+# to.
+#
+# RUN: %lldb -x -b \
+# RUN:   -o 'script listener = lldb.SBListener("test"); listener.StartListeningForEvents(lldb.debugger.GetBroadcaster(), lldb.SBDebugger.eBroadcastBitWarning); error = lldb.debugger.SetInternalVariable("testing.deprecated-setting", "true", lldb.debugger.GetInstanceName()); event = lldb.SBEvent(); print("success:", error.Success(), "event:", listener.WaitForEvent(5, event)); print("diagnostic:", lldb.SBDebugger.GetDiagnosticFromEvent(event).GetValueForKey("message").GetStringValue(200))' \
+# RUN:   2>&1 | FileCheck %s
+# CHECK: success: True event: True
+# CHECK: diagnostic: setting 'testing.deprecated-setting' is deprecated and may be removed in a future release; there is no replacement for this setting

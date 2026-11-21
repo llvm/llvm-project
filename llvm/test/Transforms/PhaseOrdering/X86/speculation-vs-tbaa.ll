@@ -10,7 +10,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O1-LABEL: define void @licm(
-; O1-SAME: ptr readonly align 8 captures(none) dereferenceable(8) [[_M_START_I:%.*]], i64 [[NUMELEM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O1-SAME: ptr nofree readonly align 8 captures(none) dereferenceable(8) [[_M_START_I:%.*]], i64 [[NUMELEM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O1-NEXT:  [[ENTRY:.*:]]
 ; O1-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUMELEM]], 0
 ; O1-NEXT:    br i1 [[CMP1_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_LR_PH:.*]]
@@ -28,7 +28,7 @@ define void @licm(ptr align 8 dereferenceable(8) %_M_start.i, i64 %numElem) {
 ; O1-NEXT:    ret void
 ;
 ; O23-LABEL: define void @licm(
-; O23-SAME: ptr readonly align 8 captures(none) dereferenceable(8) [[_M_START_I:%.*]], i64 [[NUMELEM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; O23-SAME: ptr nofree readonly align 8 captures(none) dereferenceable(8) [[_M_START_I:%.*]], i64 [[NUMELEM:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; O23-NEXT:  [[ENTRY:.*:]]
 ; O23-NEXT:    [[CMP1_NOT:%.*]] = icmp eq i64 [[NUMELEM]], 0
 ; O23-NEXT:    br i1 [[CMP1_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_LR_PH:.*]]

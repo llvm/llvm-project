@@ -17,11 +17,24 @@
 
 #include "clang/AST/CanonicalType.h"
 #include "clang/CIR/ABIArgInfo.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 
 namespace clang::CIRGen {
+
+/// Return the number of parameters with the pass_object_size attribute.
+inline unsigned
+getNumPassObjectSizeParams(const clang::FunctionProtoType *proto) {
+  if (!proto->hasExtParameterInfos())
+    return 0;
+  return llvm::count_if(
+      proto->getExtParameterInfos(),
+      [](const clang::FunctionProtoType::ExtParameterInfo &info) {
+        return info.hasPassObjectSize();
+      });
+}
 
 /// A class for recording the number of arguments that a function signature
 /// requires.
@@ -50,8 +63,7 @@ public:
     if (!prototype->isVariadic())
       return All;
 
-    if (prototype->hasExtParameterInfos())
-      llvm_unreachable("NYI");
+    additional += getNumPassObjectSizeParams(prototype);
 
     return RequiredArgs(prototype->getNumParams() + additional);
   }
@@ -73,6 +85,12 @@ public:
 class CIRGenFunctionInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<CIRGenFunctionInfo, CanQualType> {
+  /// The CIR-level calling convention to use for this function.
+  unsigned callingConvention : 8;
+
+  /// The AST-level calling convention this function was declared with.
+  unsigned astCallingConvention : 8;
+
   // Whether this function has noreturn.
   LLVM_PREFERRED_TYPE(bool)
   unsigned noReturn : 1;
@@ -96,13 +114,14 @@ class CIRGenFunctionInfo final
     // here instead of explicit false/0.
     return FunctionType::ExtInfo(
         isNoReturn(), /*getHasRegParm=*/false, /*getRegParm=*/false,
-        /*getASTCallingConvention=*/CallingConv(0), /*isReturnsRetained=*/false,
+        getASTCallingConvention(), /*isReturnsRetained=*/false,
         /*isNoCallerSavedRegs=*/false, /*isNoCfCheck=*/false,
         /*isCmseNSCall=*/false);
   }
 
 public:
-  static CIRGenFunctionInfo *create(FunctionType::ExtInfo info,
+  static CIRGenFunctionInfo *create(cir::CallingConv cirCC,
+                                    FunctionType::ExtInfo info,
                                     bool instanceMethod, CanQualType resultType,
                                     llvm::ArrayRef<CanQualType> argTypes,
                                     RequiredArgs required);
@@ -122,6 +141,7 @@ public:
                       FunctionType::ExtInfo info, RequiredArgs required,
                       CanQualType resultType,
                       llvm::ArrayRef<CanQualType> argTypes) {
+    id.AddInteger(info.getCC());
     id.AddBoolean(instanceMethod);
     id.AddBoolean(info.getNoReturn());
     id.AddInteger(required.getOpaqueData());
@@ -181,6 +201,14 @@ public:
 
   bool isNoReturn() const { return noReturn; }
   bool isInstanceMethod() const { return instanceMethod; }
+
+  cir::CallingConv getCallingConvention() const {
+    return static_cast<cir::CallingConv>(callingConvention);
+  }
+
+  CallingConv getASTCallingConvention() const {
+    return static_cast<CallingConv>(astCallingConvention);
+  }
 };
 
 } // namespace clang::CIRGen

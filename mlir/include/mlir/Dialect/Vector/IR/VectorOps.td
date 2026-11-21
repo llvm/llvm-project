@@ -52,14 +52,18 @@ def Vector_ContractionOp :
       PredOpTrait<"lhs and rhs have same element type", TCopVTEtIsSameAs<0, 1>>,
       PredOpTrait<"third operand acc and result have same element type",
                   TCresVTEtIsSameAsOpBase<0, 2>>,
+      DeclareOpInterfaceMethods<ArithFastMathInterface>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyVectorOfNonZeroRankNonI0Elem:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
                Vector_IteratorTypeArrayAttr:$iterator_types,
                DefaultValuedAttr<Vector_CombiningKindAttr,
-                                 "CombiningKind::ADD">:$kind)>,
+                                 "CombiningKind::ADD">:$kind,
+               DefaultValuedAttr<
+                 Arith_FastMathAttr,
+                 "::mlir::arith::FastMathFlags::none">:$fastmath)>,
     Results<(outs AnyType)> {
   let summary = "vector contraction operation";
   let description = [{
@@ -68,7 +72,8 @@ def Vector_ContractionOp :
     intermediate result to the accumulator argument of rank K, and returns a
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
     num_batch_dims (see dimension type descriptions below)). For K = 0 (no
-    free or batch dimensions), the accumulator and output are a scalar.
+    free or batch dimensions), the accumulator and output are either a scalar
+    or a 0-D vector, i.e. both variants are supported: `f32` and `vector<f32>`.
 
     If operands and the result have types of different bitwidths, operands are
     promoted to have the same bitwidth as the result before performing the
@@ -95,6 +100,20 @@ def Vector_ContractionOp :
         lhs or rhs (but not both). The lhs and rhs free dimensions
         are unrelated to each other and do not co-iterate, which
         should be expressed in their indexing maps.
+
+    Depending on its iterator type and on the operands it indexes, a dimension
+    is one of the following kinds:
+
+    | Iterator type | In output | In lhs and rhs | Kind                     |
+    | ------------- | --------- | -------------- | ------------------------ |
+    | "parallel"    | yes       | both           | batch                    |
+    | "parallel"    | yes       | lhs only       | free (M-like)            |
+    | "parallel"    | yes       | rhs only       | free (N-like)            |
+    | "reduction"   | no        | both           | contracting              |
+
+    The M-like and N-like terms follow
+    [`linalg.contract`](https://mlir.llvm.org/docs/Dialects/Linalg/#linalgcontract-linalgcontractop)
+    terminology.
 
     An indexing map attribute list must be specified with an entry for lhs, rhs
     and acc arguments. An indexing map attribute specifies a mapping from each
@@ -180,7 +199,9 @@ def Vector_ContractionOp :
       "ArrayRef<IteratorType>":$iteratorTypes)>,
     OpBuilder<(ins "Value":$lhs, "Value":$rhs, "Value":$acc,
       "ArrayAttr":$indexingMaps, "ArrayAttr":$iteratorTypes,
-      "CombiningKind":$kind)>
+      "CombiningKind":$kind,
+      CArg<"::mlir::arith::FastMathFlags",
+           "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
   let extraClassDeclaration = [{
     VectorType getLhsType() {
@@ -198,6 +219,8 @@ def Vector_ContractionOp :
       return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
     }
 
+    bool isAddKind() { return getKind() == vector::CombiningKind::ADD;}
+
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.
     void getIterationBounds(SmallVectorImpl<int64_t> &iterationBounds);
@@ -209,8 +232,18 @@ def Vector_ContractionOp :
     void getIterationIndexMap(
       std::vector<DenseMap<int64_t, int64_t>> &iterationIndexMap);
 
+    // Returns (lhs dim, rhs dim) pairs for the contracting dimensions:
+    // "reduction" iterators that index both lhs and rhs, and not the result.
     std::vector<std::pair<int64_t, int64_t>> getContractingDimMap();
+
+    // Returns (lhs dim, rhs dim) pairs for the batch dimensions: "parallel"
+    // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
+
+    // Returns (lhs dim, rhs dim) pairs for the free dimensions: "parallel"
+    // iterators that index exactly one of lhs and rhs. The dim of the operand
+    // that does not index the iterator is -1.
+    std::vector<std::pair<int64_t, int64_t>> getFreeDimMap();
 
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
@@ -243,11 +276,11 @@ def Vector_ReductionOp :
   Vector_Op<"reduction", [Pure,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     OptionalTypesMatchWith<"dest and acc have the same type",
-                            "dest", "acc", "::llvm::cast<Type>($_self)">,
+     OptionalTypesMatchWith<"result and acc have the same type",
+                            "result", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfNonI0Elem:$vector,
@@ -255,7 +288,7 @@ def Vector_ReductionOp :
                DefaultValuedAttr<
                  Arith_FastMathAttr,
                  "::mlir::arith::FastMathFlags::none">:$fastmath)>,
-    Results<(outs AnyType:$dest)> {
+    Results<(outs AnyType:$result)> {
   let summary = "reduction operation";
   let description = [{
     Reduces an 1-D vector "horizontally" into a scalar using the given
@@ -284,36 +317,40 @@ def Vector_ReductionOp :
     }
   }];
   let builders = [
-    // Builder that infers the type of `dest`.
+    // Builder that infers the type of `result`.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector, "Value":$acc,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>,
-    // Builder that infers the type of `dest` and has no accumulator.
+    // Builder that infers the type of `result` and has no accumulator.
     OpBuilder<(ins "CombiningKind":$kind, "Value":$vector,
                     CArg<"::mlir::arith::FastMathFlags",
                          "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
 
   let assemblyFormat = "$kind `,` $vector (`,` $acc^)? (`fastmath` `` $fastmath^)?"
-                       " attr-dict `:` type($vector) `into` type($dest)";
+                       " attr-dict `:` type($vector) `into` type($result)";
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 
 def Vector_MultiDimReductionOp :
   Vector_Op<"multi_reduction", [Pure,
-     AllTypesMatch<["dest", "acc"]>,
+     AllTypesMatch<["result", "acc"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
+     DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<InferTypeOpInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
      DeclareOpInterfaceMethods<VectorUnrollOpInterface,
-                               ["getShapeForUnroll"]>]>,
+                               ["getIterationShapeToUnroll"]>]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyType:$acc,
-                   DenseI64ArrayAttr:$reduction_dims)>,
-    Results<(outs AnyType:$dest)> {
+                   DenseI64ArrayAttr:$reduction_dims,
+                   DefaultValuedAttr<
+                     Arith_FastMathAttr,
+                     "::mlir::arith::FastMathFlags::none">:$fastmath)>,
+    Results<(outs AnyType:$result)> {
   let summary = "Multi-dimensional reduction operation";
   let description = [{
     Reduces an n-D vector into an (n-k)-D vector (or a scalar when k == n)
@@ -322,6 +359,14 @@ def Vector_MultiDimReductionOp :
     /`maximumf` for floats.
     Takes an initial accumulator operand.
 
+    The optional `fastmath` attribute holds `arith` fast-math flags, which have
+    the meaning given in the LLVM Language Reference ("Fast-Math Flags"). Every
+    combining operation of the reduction, including the one with the
+    accumulator, behaves like the matching `arith` op with these flags. For
+    example, with `nnan` on a `maximumf` reduction, the combining operations
+    assume that no operand or result is a NaN. The flags only affect the
+    floating-point kinds.
+
     Example:
 
     ```mlir
@@ -329,18 +374,22 @@ def Vector_MultiDimReductionOp :
       vector<4x8x16x32xf32> to vector<4x16xf32>
     %2 = vector.multi_reduction <add>, %1, %acc1 [0, 1] :
       vector<4x16xf32> to f32
+    %3 = vector.multi_reduction <maximumf>, %0, %acc0 fastmath<nnan,nsz> [1, 3] :
+      vector<4x8x16x32xf32> to vector<4x16xf32>
     ```
   }];
   let builders = [
     OpBuilder<(ins "Value":$source, "Value":$acc,
-                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind)>
+                   "ArrayRef<bool>":$reductionMask, "CombiningKind":$kind,
+                   CArg<"::mlir::arith::FastMathFlags",
+                        "::mlir::arith::FastMathFlags::none">:$fastMathFlags)>
   ];
   let extraClassDeclaration = [{
     VectorType getSourceVectorType() {
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     Type getDestType() {
-      return getDest().getType();
+      return getResult().getType();
     }
 
     bool isReducedDim(int64_t d) {
@@ -364,7 +413,8 @@ def Vector_MultiDimReductionOp :
     }
   }];
   let assemblyFormat =
-    "$kind `,` $source `,` $acc attr-dict $reduction_dims `:` type($source) `to` type($dest)";
+    "$kind `,` $source `,` $acc (`fastmath` `` $fastmath^)? attr-dict "
+    "$reduction_dims `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -372,27 +422,27 @@ def Vector_MultiDimReductionOp :
 
 def Vector_BroadcastOp :
   Vector_Op<"broadcast", [Pure,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]>,
     Arguments<(ins AnyType:$source)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "broadcast operation";
   let description = [{
-    Broadcasts the scalar or k-D vector value in the source operand
-    to a n-D result vector such that the broadcast makes sense, i.e.,
+    Broadcasts the scalar or K-D vector value in the source operand
+    to a N-D result vector such that the broadcast makes sense, i.e.,
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
-    * a k-D vector <s_1 x .. x s_k x type> can be broadcast to
-      a n-D vector <t_1 x .. x t_n x type> if
-       * k <= n, and
-       * the sizes in the trailing dimensions n-k < i <= n with j=i+k-n
+    * a K-D vector <s_1 x .. x s_K x type> can be broadcast to
+      a N-D vector <t_1 x .. x t_N x type> if
+       * K <= N, and
+       * the sizes in the trailing dimensions N-K < i <= N with j=i+K-N
           match exactly as s_j = t_i or s_j = 1:
        ```
-           t_1 x   ..  t_n-k x t_n-k+1 x .. x t_i x .. x t_n
-                               s_1     x .. x s_j x .. x s_k
+           t_1 x   ..  t_N-K x t_N-K+1 x .. x t_i x .. x t_N
+                               s_1     x .. x s_j x .. x s_K
                <duplication>         <potential stretch>
        ```
        * in addition, any scalable unit dimension, `[1]`, must match exactly.
@@ -400,8 +450,27 @@ def Vector_BroadcastOp :
     The source operand is duplicated over all the missing leading dimensions
     and stretched over the trailing dimensions where the source has a non-equal
     dimension of 1 (stretching a trailing dimension is also referred to as
-    "dim-1" broadcasting). These rules imply that any scalar broadcast (k=0) to
+    "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
+
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its zero-based, row-major linear
+    element offset `off` in the result vector as follows:
+
+    ```
+    source_coord[j](off) = floor(off / result_stride(N - K + j)) % source_dim(j)
+    ```
+
+    where `j = 1 .. K` indexes source dimensions from left to right, starting
+    at 1, and `result_stride(N - K + j)` is the row-major element stride of
+    the corresponding trailing result dimension. This stride is the product
+    of the sizes of all result dimensions to its right, or 1 for the last
+    dimension.
+
+    Dimension sizes and strides include any runtime `vscale` factors. In
+    particular, a scalable dimension `[1]` has size `vscale`. For a fixed
+    source dimension of size 1, `source_coord[j](off) == 0` for every valid
+    `off`.
 
     Example:
 
@@ -409,12 +478,25 @@ def Vector_BroadcastOp :
     %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
+
+    // Let %src = [[[a], [b], [c], [d]]].
+
+    // %3 = [[[a], [b], [c], [d]], [[a], [b], [c], [d]], ...]
+    // For off = 4, the result element is %src[0, 0, 0] = a.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %3 = vector.broadcast %src : vector<1x4x1xf32> to vector<4x4x1xf32>
+
+    // %4 = [[[a, a, a, a], [b, b, b, b],
+    //        [c, c, c, c], [d, d, d, d]]]
+    // For off = 4, the result element is %src[0, 1, 0] = b.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %4 = vector.broadcast %src : vector<1x4x1xf32> to vector<1x4x4xf32>
     ```
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
 
     /// Return the dimensions of the result vector that were formerly ones in the
@@ -438,7 +520,7 @@ def Vector_BroadcastOp :
       ArrayRef<int64_t> dstShape,
       const llvm::SetVector<int64_t> &broadcastedDims);
   }];
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($vector)";
+  let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
@@ -455,7 +537,7 @@ def Vector_ShuffleOp
            InferTypeOpAdaptor]>,
       Arguments<(ins AnyFixedVectorOfAnyRank:$v1, AnyFixedVectorOfAnyRank:$v2,
           DenseI64ArrayAttr:$mask)>,
-      Results<(outs AnyVectorOfNonZeroRank:$vector)> {
+      Results<(outs AnyVectorOfNonZeroRank:$result)> {
   let summary = "shuffle operation";
   let description = [{
     The shuffle operation constructs a permutation (or duplication) of elements
@@ -504,7 +586,7 @@ def Vector_ShuffleOp
       return ::llvm::cast<VectorType>(getV2().getType());
     }
     VectorType getResultVectorType() {
-      return ::llvm::cast<VectorType>(getVector().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
 
@@ -533,7 +615,8 @@ def ResultIsDoubleSourceVectorType : TypesMatchWith<
 
 def Vector_InterleaveOp :
   Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
-    ResultIsDoubleSourceVectorType]> {
+    ResultIsDoubleSourceVectorType,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -577,6 +660,8 @@ def Vector_InterleaveOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
+  let hasCanonicalizer = 1;
+  let hasFolder = 1;
 }
 
 class ResultIsHalfSourceVectorType<string result> : TypesMatchWith<
@@ -608,8 +693,9 @@ def SourceVectorEvenElementCount : PredOpTrait<
 def Vector_DeinterleaveOp :
   Vector_Op<"deinterleave", [Pure,
     SourceVectorEvenElementCount,
-    ResultIsHalfSourceVectorType<"res1">,
-    AllTypesMatch<["res1", "res2"]>
+    ResultIsHalfSourceVectorType<"resultEven">,
+    AllTypesMatch<["resultEven", "resultOdd"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
       let description = [{
@@ -643,10 +729,10 @@ def Vector_DeinterleaveOp :
       }];
 
       let arguments = (ins AnyVectorOfNonZeroRank:$source);
-      let results = (outs AnyVectorOfNonZeroRank:$res1, AnyVectorOfNonZeroRank:$res2);
+      let results = (outs AnyVectorOfNonZeroRank:$resultEven, AnyVectorOfNonZeroRank:$resultOdd);
 
       let assemblyFormat = [{
-        $source attr-dict `:` type($source) `->` type($res1)
+        $source attr-dict `:` type($source) `->` type($resultEven)
       }];
 
       let extraClassDeclaration = [{
@@ -654,7 +740,7 @@ def Vector_DeinterleaveOp :
           return ::llvm::cast<VectorType>(getSource().getType());
         }
         VectorType getResultVectorType() {
-          return ::llvm::cast<VectorType>(getRes1().getType());
+          return ::llvm::cast<VectorType>(getResultEven().getType());
         }
       }];
     }
@@ -664,7 +750,7 @@ def Vector_ExtractOp :
      DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
-     InferTypeOpAdaptorWithIsCompatible]> {
+     InferTypeOpAdaptor]> {
   let summary = "extract operation";
   let description = [{
     Extracts an (n − k)-D result sub-vector from an n-D source vector at a
@@ -738,7 +824,7 @@ def Vector_ExtractOp :
 def Vector_FMAOp :
   Op<Vector_Dialect, "fma", [
        Pure, AllTypesMatch<["lhs", "rhs", "acc", "result"]>,
-       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>
+       DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
      ] # ElementwiseMappable.traits>,
     Arguments<(ins VectorOfAnyRankOf<[AnyFloat]>:$lhs,
                    VectorOfAnyRankOf<[AnyFloat]>:$rhs,
@@ -818,7 +904,7 @@ def Vector_ToElementsOp : Vector_Op<"to_elements", [
 
 def Vector_FromElementsOp : Vector_Op<"from_elements", [
     Pure,
-    ShapedTypeMatchesElementCountAndTypes<"dest", "elements">]> {
+    ShapedTypeMatchesElementCountAndTypes<"result", "elements">]> {
   let summary = "operation that defines a vector from scalar elements";
   let description = [{
     This operation defines a vector from one or multiple scalar elements. The
@@ -849,8 +935,8 @@ def Vector_FromElementsOp : Vector_Op<"from_elements", [
   }];
 
   let arguments = (ins Variadic<AnyType>:$elements);
-  let results = (outs AnyFixedVectorOfAnyRank:$dest);
-  let assemblyFormat = "$elements attr-dict `:` type($dest)";
+  let results = (outs AnyFixedVectorOfAnyRank:$result);
+  let assemblyFormat = "$elements attr-dict `:` type($result)";
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -1065,13 +1151,15 @@ def Vector_InsertStridedSliceOp :
 
     ```mlir
     %2 = vector.insert_strided_slice %0, %1
-        {offsets = [0, 0, 2], strides = [1, 1]}:
+        offsets = [0, 0, 2], strides = [1, 1] :
       vector<2x4xf32> into vector<16x4x8xf32>
     ```
   }];
 
   let assemblyFormat = [{
-    $valueToStore `,` $dest attr-dict `:` type($valueToStore) `into` type($dest)
+    $valueToStore `,` $dest
+    `offsets` `=` $offsets `,` `strides` `=` $strides attr-dict
+    `:` type($valueToStore) `into` type($dest)
   }];
 
   let builders = [
@@ -1207,7 +1295,7 @@ def Vector_ExtractStridedSliceOp :
 
     ```mlir
     %1 = vector.extract_strided_slice %0
-        {offsets = [0, 2], sizes = [2, 4], strides = [1, 1]}:
+        offsets = [0, 2], sizes = [2, 4], strides = [1, 1] :
       vector<4x8x16xf32> to vector<2x4x16xf32>
 
     // TODO: Evolve to a range form syntax similar to:
@@ -1235,7 +1323,10 @@ def Vector_ExtractStridedSliceOp :
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$source attr-dict `:` type($source) `to` type(results)";
+  let assemblyFormat = [{
+    $source `offsets` `=` $offsets `,` `sizes` `=` $sizes `,`
+    `strides` `=` $strides attr-dict `:` type($source) `to` type(results)
+  }];
 }
 
 // TODO: Tighten semantics so that masks and inbounds can't be used
@@ -1243,7 +1334,7 @@ def Vector_ExtractStridedSliceOp :
 def Vector_TransferReadOp :
   Vector_Op<"transfer_read", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
@@ -1257,7 +1348,7 @@ def Vector_TransferReadOp :
                    AnyType:$padding,
                    Optional<VectorOfNonZeroRankOf<[I1]>>:$mask,
                    BoolArrayAttr:$in_bounds)>,
-    Results<(outs AnyVectorOfAnyRank:$vector)> {
+    Results<(outs AnyVectorOfAnyRank:$result)> {
 
   let summary = "Reads a supervector from memory into an SSA vector value.";
 
@@ -1293,6 +1384,12 @@ def Vector_TransferReadOp :
     matches how elements are read from the MemRef/Tensor, *before* any
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask take the value of the
+    pass-thru, if provided, and `padding` otherwise. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -1448,6 +1545,7 @@ def Vector_TransferReadOp :
   let builders = [
     /// 1. Builder that sets padding to `padding` or poison if not provided and
     /// an empty mask (variant with attrs).
+    /// If `padding` is null, a poison value is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1456,6 +1554,9 @@ def Vector_TransferReadOp :
                    "ArrayAttr":$inBoundsAttr)>,
     /// 2. Builder that sets padding to `padding` or poison if not provided and
     /// an empty mask (variant without attrs).
+    /// If `padding` is null, a poison value is used.
+    /// If `permutationMap` is null, a minor identity map is used.
+    /// If `inBounds` is null, an empty mask is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1464,6 +1565,8 @@ def Vector_TransferReadOp :
                    CArg<"std::optional<ArrayRef<bool>>", "::std::nullopt">:$inBounds)>,
     /// 3. Builder that sets padding to `padding` or poison if not provided and
     /// permutation map to 'getMinorIdentityMap'.
+    /// If `padding` is null, a poison value is used.
+    /// If `inBounds` is null, an empty mask is used.
     OpBuilder<(ins "VectorType":$vectorType,
                    "Value":$source,
                    "ValueRange":$indices,
@@ -1491,7 +1594,7 @@ def Vector_TransferReadOp :
 def Vector_TransferWriteOp :
   Vector_Op<"transfer_write", [
       DeclareOpInterfaceMethods<VectorTransferOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
       DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
       DeclareOpInterfaceMethods<ConditionallySpeculatable>,
@@ -1539,6 +1642,13 @@ def Vector_TransferWriteOp :
     matches how elements are written into the MemRef/Tensor, *after* applying
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask are not written: the
+    MemRef keeps its previous contents and the result Tensor takes the
+    corresponding elements of the destination Tensor. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -1622,7 +1732,8 @@ def Vector_TransferWriteOp :
                    "ValueRange":$indices,
                    "AffineMapAttr":$permutationMapAttr,
                    "ArrayAttr":$inBoundsAttr)>,
-    /// 3. Builder with type inference that sets an empty mask (variant without attrs).
+    /// 3. Builder with type inference that sets an empty mask (variant without
+    /// attrs). If `permutationMap` is null, a minor identity map is used.
     OpBuilder<(ins "Value":$vector,
                    "Value":$dest,
                    "ValueRange":$indices,
@@ -1650,8 +1761,9 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_LoadOp : Vector_Op<"load", [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
@@ -1699,6 +1811,9 @@ def Vector_LoadOp : Vector_Op<"load", [
     ```mlir
     %result = vector.load %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
+
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
 
     Representation-wise, the 'vector.load' operation permits out-of-bounds
     reads. Support and implementation of out-of-bounds vector loads is
@@ -1764,12 +1879,19 @@ def Vector_LoadOp : Vector_Op<"load", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat =
-      "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($result)
+  }];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_StoreOp : Vector_Op<"store", [
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]> {
@@ -1816,6 +1938,9 @@ def Vector_StoreOp : Vector_Op<"store", [
     ```mlir
     vector.store %valueToStore, %memref[%i, %j] : memref<200x100xvector<4x8xf32>>, vector<4x8xf32>
     ```
+
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
 
     Representation-wise, the 'vector.store' operation permits out-of-bounds
     writes. Support and implementation of out-of-bounds vector stores are
@@ -1871,10 +1996,17 @@ def Vector_StoreOp : Vector_Op<"store", [
   let hasFolder = 1;
   let hasVerifier = 1;
 
-  let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
-                       "`:` type($base) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $valueToStore `,` $base `[` $indices `]`
+    oilist(
+      `alignment` `=` $alignment |
+      `nontemporal` `=` custom<BoolAttr>($nontemporal)
+    )
+    attr-dict `:` type($base) `,` type($valueToStore)
+  }];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1921,6 +2053,9 @@ def Vector_MaskedLoadOp :
        : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -1940,8 +2075,12 @@ def Vector_MaskedLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -1970,6 +2109,7 @@ def Vector_MaskedLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2015,6 +2155,9 @@ def Vector_MaskedStoreOp :
       : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
     ```
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2031,9 +2174,11 @@ def Vector_MaskedStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore "
-      "attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
@@ -2053,9 +2198,8 @@ def Vector_MaskedStoreOp :
 
 def Vector_GatherOp :
   Vector_Op<"gather", [
-    DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
   ]>,
     Arguments<(ins Arg<TensorOrMemRef<[AnyType]>, "", [MemRead]>:$base,
@@ -2109,6 +2253,9 @@ def Vector_GatherOp :
     during progressively lowering to bring other memory operations closer to
     hardware ISA support for a gather.
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     gather operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2137,7 +2284,8 @@ def Vector_GatherOp :
 
   let assemblyFormat =
     "$base `[` $offsets `]` `[` $indices `]` `,` "
-    "$mask `,` $pass_thru attr-dict `:` type($base) `,` "
+    "$mask `,` $pass_thru (`alignment` `=` $alignment^)? "
+    "attr-dict `:` type($base) `,` "
     "type($indices)  `,` type($mask) `,` type($pass_thru) "
     "`into` type($result)";
   let hasCanonicalizer = 1;
@@ -2202,6 +2350,9 @@ def Vector_ScatterOp
     correspond to those of the `llvm.masked.scatter`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-scatter-intrinsics).
 
+    The memref must have non-negative strides. Negative strides are not supported
+    and will trigger a verification error.
+
     An optional `alignment` attribute allows to specify the byte alignment of the
     scatter operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
@@ -2225,10 +2376,12 @@ def Vector_ScatterOp
     VectorType getVectorType() { return getValueToStore().getType(); }
   }];
 
-  let assemblyFormat = "$base `[` $offsets `]` `[` $indices `]` `,` "
-                       "$mask `,` $valueToStore attr-dict `:` type($base) `,` "
-                       "type($indices)  `,` type($mask) `,` "
-                       "type($valueToStore) (`->` type($result)^)?";
+  let assemblyFormat = [{
+    $base `[` $offsets `]` `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($indices)  `,` type($mask) `,`
+    type($valueToStore) (`->` type($result)^)?
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2243,6 +2396,7 @@ def Vector_ScatterOp
     }]>];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_ExpandLoadOp :
   Vector_Op<"expandload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2250,7 +2404,7 @@ def Vector_ExpandLoadOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$pass_thru,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)>,
     Results<(outs AnyVectorOfNonZeroRank:$result)> {
@@ -2289,8 +2443,6 @@ def Vector_ExpandLoadOp :
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
 
-    Note, at the moment this Op is only available for fixed-width vectors.
-
     Examples:
 
     ```mlir
@@ -2315,8 +2467,12 @@ def Vector_ExpandLoadOp :
       return ::llvm::cast<VectorType>(getResult().getType());
     }
   }];
-  let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $pass_thru
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,`
+    type($pass_thru) `into` type($result)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
 
@@ -2334,6 +2490,7 @@ def Vector_ExpandLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_CompressStoreOp :
   Vector_Op<"compressstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2341,7 +2498,7 @@ def Vector_CompressStoreOp :
     ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
-               FixedVectorOfNonZeroRankOf<[I1]>:$mask,
+               VectorOfNonZeroRankOf<[I1]>:$mask,
                AnyVectorOfNonZeroRank:$valueToStore,
                OptionalAttr<IntValidAlignment<I64Attr>>: $alignment)> {
 
@@ -2379,8 +2536,6 @@ def Vector_CompressStoreOp :
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
 
-    Note, at the moment this Op is only available for fixed-width vectors.
-
     Examples:
 
     ```mlir
@@ -2402,9 +2557,11 @@ def Vector_CompressStoreOp :
       return ::llvm::cast<VectorType>(getValueToStore().getType());
     }
   }];
-  let assemblyFormat =
-      "$base `[` $indices `]` `,` $mask `,` $valueToStore attr-dict `:` "
-      "type($base) `,` type($mask) `,` type($valueToStore)";
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $mask `,` $valueToStore
+    (`alignment` `=` $alignment^)?
+    attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)
+  }];
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
   let builders = [
@@ -2422,7 +2579,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
@@ -2456,6 +2613,9 @@ def Vector_ShapeCastOp :
     VectorType getResultVectorType() {
       return ::llvm::cast<VectorType>(getResult().getType());
     }
+    // Return true if this Op is effectively a vector.broadcast (i.e. the input
+    // and output shapes satisfy the vector.broadcast constraints).
+    bool isBroadcastLike();
   }];
   let assemblyFormat = "$source attr-dict `:` type($source) `to` type($result)";
   let hasFolder = 1;
@@ -2464,7 +2624,8 @@ def Vector_ShapeCastOp :
 }
 
 def Vector_BitCastOp :
-  Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>]>,
+  Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]>,
     Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
     Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
@@ -2545,8 +2706,8 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure, 
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+  Vector_Op<"constant_mask", [Pure,
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
@@ -2605,10 +2766,10 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [Pure, 
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+  Vector_Op<"create_mask", [Pure,
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
-    Arguments<(ins Variadic<Index>:$operands)>,
+    Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
   let summary = "creates a vector mask";
   let description = [{
@@ -2654,7 +2815,7 @@ def Vector_CreateMaskOp :
 
   let hasCanonicalizer = 1;
   let hasVerifier = 1;
-  let assemblyFormat = "$operands attr-dict `:` type(results)";
+  let assemblyFormat = "$mask_dim_sizes attr-dict `:` type(results)";
 }
 
 def Vector_MaskOp : Vector_Op<"mask", [
@@ -2685,9 +2846,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise. At this point, 0-D
-    vectors are not supported by `vector.mask`. They may be supported in the
-    future.
+    argument, if provided, or as specified by the masked operation, otherwise.
+    At this point, 0-D vectors are not supported by `vector.mask`. They may be
+    supported in the future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
@@ -2758,7 +2919,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";
@@ -2929,7 +3090,7 @@ def VectorScaleOp : Vector_Op<"vscale",
     Right now we only support one contiguous set of scalable dimensions, all of
     them grouped and scaled with the value returned by 'vscale'.
   }];
-  let results = (outs Index:$res);
+  let results = (outs Index:$result);
   let assemblyFormat = "attr-dict";
 
   let extraClassDefinition = [{
@@ -2946,14 +3107,14 @@ def VectorScaleOp : Vector_Op<"vscale",
 
 def Vector_ScanOp :
   Vector_Op<"scan", [Pure,
-    AllTypesMatch<["source", "dest"]>,
+    AllTypesMatch<["source", "result"]>,
     AllTypesMatch<["initial_value", "accumulated_value"]> ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                    AnyVectorOfNonZeroRankNonI0Elem:$source,
                    AnyVectorOfNonI0Elem:$initial_value,
                    I64Attr:$reduction_dim,
                    BoolAttr:$inclusive)>,
-    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$dest,
+    Results<(outs AnyVectorOfNonZeroRankNonI0Elem:$result,
                   AnyVectorOfNonI0Elem:$accumulated_value)> {
   let summary = "Scan operation";
   let description = [{
@@ -2967,7 +3128,7 @@ def Vector_ScanOp :
     Example:
 
     ```mlir
-    %1:2 = vector.scan <add>, %0, %acc {inclusive = false, reduction_dim = 1 : i64} :
+    %1:2 = vector.scan <add>, %0, %acc reduction_dim = 1, inclusive = false :
       vector<4x8x16x32xf32>, vector<4x16x32xf32>
     ```
   }];
@@ -2977,7 +3138,7 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getSource().getType());
     }
     VectorType getDestType() {
-      return ::llvm::cast<VectorType>(getDest().getType());
+      return ::llvm::cast<VectorType>(getResult().getType());
     }
     VectorType getAccumulatorType() {
       return ::llvm::cast<VectorType>(getAccumulatedValue().getType());
@@ -2986,9 +3147,11 @@ def Vector_ScanOp :
       return ::llvm::cast<VectorType>(getInitialValue().getType());
     }
   }];
-  let assemblyFormat =
-    "$kind `,` $source `,` $initial_value attr-dict `:` "
-    "type($source) `,` type($initial_value) ";
+  let assemblyFormat = [{
+    $kind `,` $source `,` $initial_value
+    `reduction_dim` `=` $reduction_dim `,` `inclusive` `=` $inclusive
+    attr-dict `:` type($source) `,` type($initial_value)
+  }];
   let hasVerifier = 1;
 }
 
@@ -2996,27 +3159,36 @@ def Vector_ScanOp :
 // VectorStepOp
 //===----------------------------------------------------------------------===//
 
+def VectorStepElementType : Type<
+  CPred<"::llvm::isa<::mlir::IndexType>($_self) || ($_self.isSignlessInteger() && $_self.getIntOrFloatBitWidth() >= 8)">,
+  "index or signless integer of at least 8 bits">;
+
 def Vector_StepOp : Vector_Op<"step", [
     Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]> {
   let summary = "A linear sequence of values from 0 to N";
   let description = [{
-    A `step` operation produces an index vector, i.e. a 1-D vector of values of
-    index type that represents a linear sequence from 0 to N-1, where N is the
-    number of elements in the `result` vector.
+    A `step` operation produces a 1-D vector representing a linear sequence from
+    0 to N-1, where N is the number of elements in the `result` vector.
+
+    The result element type must be `index` or a signless integer of at least 8
+    bits. If the sequence value exceeds the allowed limit for the element type
+    then the result for that lane is truncated.
 
     Supports fixed-width and scalable vectors.
 
     Examples:
 
     ```mlir
-    %0 = vector.step : vector<4xindex> ; [0, 1, 2, 3]
-    %1 = vector.step : vector<[4]xindex> ; [0, 1, .., <vscale * 4 - 1>]
+    %0 = vector.step : vector<4xindex>   // [0, 1, 2, 3]
+    %1 = vector.step : vector<4xi32>     // [0, 1, 2, 3]
+    %2 = vector.step : vector<258xi8>    // [0, 1, .., 255, 0, 1]
+    %3 = vector.step : vector<[4]xindex> // [0, 1, .., <vscale * 4 - 1>]
     ```
   }];
-  let results = (outs VectorOfRankAndType<[1], [Index]>:$result);
+  let results = (outs VectorOfRankAndType<[1], [VectorStepElementType]>:$result);
   let assemblyFormat = "attr-dict `:` type($result)";
   let hasCanonicalizer = 1;
 }

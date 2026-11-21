@@ -89,7 +89,7 @@ struct MatchBuilder {
 
   auto matchMathCall(const StringRef FunctionName,
                      const Matcher<Expr> &ArgumentMatcher) const {
-    auto HasAnyPrecisionName = hasAnyName(
+    const auto HasAnyPrecisionName = hasAnyName(
         FunctionName, (FunctionName + "l").str(),
         (FunctionName + "f").str()); // Support long double(l) and float(f).
     return expr(ignoreParenAndFloatingCasting(

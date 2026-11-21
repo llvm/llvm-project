@@ -17,6 +17,7 @@
 #include "error.h"
 #include "executor_address.h"
 #include <algorithm>
+#include <iterator>
 #include <vector>
 
 namespace orc_rt {

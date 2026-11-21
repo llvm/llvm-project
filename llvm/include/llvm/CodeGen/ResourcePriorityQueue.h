@@ -23,6 +23,7 @@ namespace llvm {
   class InstrItineraryData;
   class ResourcePriorityQueue;
   class SelectionDAGISel;
+  struct SelectionDAGOptions;
   class TargetInstrInfo;
   class TargetRegisterInfo;
 
@@ -31,10 +32,10 @@ namespace llvm {
     ResourcePriorityQueue *PQ;
     explicit resource_sort(ResourcePriorityQueue *pq) : PQ(pq) {}
 
-    bool operator()(const SUnit* LHS, const SUnit* RHS) const;
+    LLVM_ABI bool operator()(const SUnit *LHS, const SUnit *RHS) const;
   };
 
-  class ResourcePriorityQueue : public SchedulingPriorityQueue {
+  class LLVM_ABI ResourcePriorityQueue : public SchedulingPriorityQueue {
     /// SUnits - The SUnits for the current graph.
     std::vector<SUnit> *SUnits;
 
@@ -59,6 +60,7 @@ namespace llvm {
     const TargetRegisterInfo *TRI;
     const TargetLowering *TLI;
     const TargetInstrInfo *TII;
+    const SelectionDAGOptions *Opts;
     const InstrItineraryData* InstrItins;
     /// ResourcesModel - Represents VLIW state.
     /// Not limited to VLIW targets per say, but assumes

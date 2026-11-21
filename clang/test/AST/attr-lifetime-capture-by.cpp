@@ -42,7 +42,7 @@ struct map {
 
 struct [[gsl::Pointer()]] View {};
 std::vector<View> views;
-// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition instantiated_from 0x{{.+}} implicit_instantiation
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (const View &)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'const View &'
@@ -59,7 +59,7 @@ std::vector<View> views;
 
 template <class T> struct [[gsl::Pointer()]] ViewTemplate {};
 std::vector<ViewTemplate<int>> templated_views;
-// CHECK:       ClassTemplateSpecializationDecl {{.*}} struct vector definition instantiated_from 0x{{.+}} implicit_instantiation
+// CHECK:       ClassTemplateSpecializationDecl {{.*}} struct vector definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (const ViewTemplate<int> &)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'const ViewTemplate<int> &'
@@ -76,7 +76,7 @@ std::vector<ViewTemplate<int>> templated_views;
 // CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
 
 std::vector<int*> pointers;
-// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition instantiated_from 0x{{.+}} implicit_instantiation
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (int *const &)'
 // CHECK-NEXT:           ParmVarDecl {{.*}} 'int *const &'
@@ -92,7 +92,7 @@ std::vector<int*> pointers;
 // CHECK-NOT:               LifetimeCaptureByAttr
 
 std::vector<int> ints;
-// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition instantiated_from 0x{{.+}} implicit_instantiation
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct vector definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 // CHECK:       TemplateArgument type 'int'
 
 // CHECK:       CXXMethodDecl {{.*}} push_back 'void (const int &)'
@@ -107,7 +107,7 @@ std::vector<int> ints;
 // CHECK-NOT:   LifetimeCaptureByAttr
 
 std::map<View, int> map;
-// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct map definition instantiated_from 0x{{.+}} implicit_instantiation
+// CHECK:   ClassTemplateSpecializationDecl {{.*}} struct map definition external-linkage instantiated_from 0x{{.+}} implicit_instantiation
 
 // CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(View &&)' implicit_instantiation
 // CHECK-NEXT:           ParmVarDecl {{.*}} p 'View &&'
@@ -115,3 +115,16 @@ std::map<View, int> map;
 // CHECK:       CXXMethodDecl {{.*}} operator[] 'int &(const View &)' implicit_instantiation
 // CHECK-NEXT:           ParmVarDecl {{.*}} p 'const View &'
 // CHECK-NEXT:               LifetimeCaptureByAttr {{.*}} Implicit
+
+// Verify that the attribute is inherited by a redeclaration, keeping the
+// resolved index even when the parameters are renamed.
+void captured(int &x [[clang::lifetime_capture_by(c)]], int &c);
+void captured(int &y, int &other);
+
+// CHECK:      FunctionDecl {{.*}} captured 'void (int &, int &)'
+// CHECK-NEXT:   ParmVarDecl {{.*}} x 'int &'
+// CHECK-NEXT:     LifetimeCaptureByAttr {{.*}} lifetime_capture_by 1
+// CHECK-NEXT:   ParmVarDecl {{.*}} c 'int &'
+// CHECK:      FunctionDecl {{.*}} prev {{.*}} captured 'void (int &, int &)'
+// CHECK-NEXT:   ParmVarDecl {{.*}} y 'int &'
+// CHECK-NEXT:     LifetimeCaptureByAttr {{.*}} Inherited lifetime_capture_by 1

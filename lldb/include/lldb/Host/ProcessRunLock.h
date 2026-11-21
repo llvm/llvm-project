@@ -9,26 +9,31 @@
 #ifndef LLDB_HOST_PROCESSRUNLOCK_H
 #define LLDB_HOST_PROCESSRUNLOCK_H
 
+#include <cassert>
 #include <cstdint>
 #include <ctime>
+#include <mutex>
+
+#include "llvm/ADT/DenseMap.h"
 
 #include "lldb/lldb-defines.h"
+#include "lldb/lldb-types.h"
 
 /// Enumerations for broadcasting.
 namespace lldb_private {
 
 /// \class ProcessRunLock ProcessRunLock.h "lldb/Host/ProcessRunLock.h"
-/// A class used to prevent the process from starting while other
-/// threads are accessing its data, and prevent access to its data while it is
-/// running.
+/// Read/write lock around the process running/stopped state.
+///
+/// POSIX rwlocks aren't reader-recursive: a thread holding the read
+/// lock can deadlock against a pending writer if it re-acquires
+/// directly. ProcessRunLocker tracks a per-thread recursion count so
+/// re-entry skips the rwlock; the raw primitives are private.
 
 class ProcessRunLock {
 public:
   ProcessRunLock();
   ~ProcessRunLock();
-
-  bool ReadTryLock();
-  bool ReadUnlock();
 
   /// Set the process to running. Returns true if the process was stopped.
   /// Return false if the process was running.
@@ -38,51 +43,32 @@ public:
   /// Returns false if the process was stopped.
   bool SetStopped();
 
+  /// RAII helper around the read-lock side of ProcessRunLock. Supports
+  /// same-thread recursion (see class doc).
+  ///
+  /// Move-assignment unlocks the destination first, then takes the
+  /// source's lock. Cross-thread move of a held locker is fatal — the
+  /// same thread that called rdlock must call unlock.
   class ProcessRunLocker {
   public:
     ProcessRunLocker() = default;
-    ProcessRunLocker(ProcessRunLocker &&other) : m_lock(other.m_lock) {
-      other.m_lock = nullptr;
-    }
-    ProcessRunLocker &operator=(ProcessRunLocker &&other) {
-      if (this != &other) {
-        Unlock();
-        m_lock = other.m_lock;
-        other.m_lock = nullptr;
-      }
-      return *this;
-    }
-
+    ProcessRunLocker(ProcessRunLocker &&other);
+    ProcessRunLocker &operator=(ProcessRunLocker &&other);
     ~ProcessRunLocker() { Unlock(); }
 
     bool IsLocked() const { return m_lock; }
 
-    // Try to lock the read lock, but only do so if there are no writers.
-    bool TryLock(ProcessRunLock *lock) {
-      if (m_lock) {
-        if (m_lock == lock)
-          return true; // We already have this lock locked
-        else
-          Unlock();
-      }
-      if (lock) {
-        if (lock->ReadTryLock()) {
-          m_lock = lock;
-          return true;
-        }
-      }
-      return false;
-    }
+    /// Try to acquire the read lock. If this thread already holds the
+    /// read lock on this ProcessRunLock, the underlying rwlock is bypassed
+    /// and the per-instance recursion count for this thread is bumped
+    /// instead.
+    bool TryLock(ProcessRunLock *lock);
 
   protected:
-    void Unlock() {
-      if (m_lock) {
-        m_lock->ReadUnlock();
-        m_lock = nullptr;
-      }
-    }
+    void Unlock();
 
     ProcessRunLock *m_lock = nullptr;
+    uint64_t m_thread = 0;
 
   private:
     ProcessRunLocker(const ProcessRunLocker &) = delete;
@@ -96,6 +82,13 @@ protected:
 private:
   ProcessRunLock(const ProcessRunLock &) = delete;
   const ProcessRunLock &operator=(const ProcessRunLock &) = delete;
+
+  bool ReadTryLock();
+  bool ReadUnlock();
+  friend class ProcessRunLocker;
+
+  std::mutex m_recursion_mutex;
+  llvm::DenseMap<uint64_t, uint32_t> m_recursion;
 };
 
 } // namespace lldb_private

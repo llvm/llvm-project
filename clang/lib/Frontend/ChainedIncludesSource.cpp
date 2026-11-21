@@ -22,6 +22,8 @@
 #include "clang/Sema/MultiplexExternalSemaSource.h"
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/ASTWriter.h"
+#include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace clang;
@@ -65,11 +67,13 @@ createASTReader(CompilerInstance &CI, StringRef pchFile,
       /*Extensions=*/ArrayRef<std::shared_ptr<ModuleFileExtension>>(),
       /*isysroot=*/"", DisableValidationForModuleKind::PCH);
   for (unsigned ti = 0; ti < bufNames.size(); ++ti) {
-    StringRef sr(bufNames[ti]);
-    Reader->addInMemoryBuffer(sr, std::move(MemBufs[ti]));
+    off_t MemBufSize = MemBufs[ti]->getBufferSize();
+    CI.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
+        bufNames[ti], std::move(MemBufs[ti]), MemBufSize, /*ModTime=*/0);
   }
   Reader->setDeserializationListener(deserialListener);
-  switch (Reader->ReadAST(pchFile, serialization::MK_PCH, SourceLocation(),
+  switch (Reader->ReadAST(ModuleFileName::makeInMemory(pchFile),
+                          serialization::MK_PCH, SourceLocation(),
                           ASTReader::ARR_None)) {
   case ASTReader::Success:
     // Set the predefines buffer as suggested by the PCH reader.
@@ -159,10 +163,13 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
       // allocating new ones.
       for (auto &SB : SerialBufs)
         Bufs.push_back(llvm::MemoryBuffer::getMemBuffer(SB->getBuffer()));
-      std::string pchName = includes[i-1];
-      llvm::raw_string_ostream os(pchName);
-      os << ".pch" << i-1;
-      serialBufNames.push_back(pchName);
+      // The PCH that imports this one records the import's file name as an
+      // absolute and canonical path (see ASTWriter::PreparePathForOutput()),
+      // so the buffer needs to be registered under that name.
+      SmallString<256> pchName(includes[i - 1]);
+      pchName += ".pch" + std::to_string(i - 1);
+      Clang->getFileManager().makeAbsolutePath(pchName, /*Canonicalize=*/true);
+      serialBufNames.emplace_back(pchName);
 
       IntrusiveRefCntPtr<ASTReader> Reader;
       Reader = createASTReader(

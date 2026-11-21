@@ -1,0 +1,12 @@
+RUN: not %dexter_regression_test_run --binary %s --skip-run -- %s 2>&1 | FileCheck %s
+
+Tests that we reject !expect/all nodes with expected values.
+
+CHECK: No valid Dexter script found in file
+
+CHECK: Script starting line [[# @LINE + 2]]:
+CHECK: !expect/all node ValueAll(Locals) should not have an expected value.
+---
+!where {function: foo}:
+    !value/all Locals: "a real value"
+...

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Symbol/CompilerType.h"
-
 #include "lldb/Core/Debugger.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -21,6 +20,7 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
+#include "llvm/Support/ErrorExtras.h"
 
 #include <iterator>
 #include <mutex>
@@ -177,6 +177,13 @@ bool CompilerType::IsMemberFunctionPointerType() const {
   return false;
 }
 
+bool CompilerType::IsMemberDataPointerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->IsMemberDataPointerType(m_type);
+  return false;
+}
+
 bool CompilerType::IsBlockPointerType(
     CompilerType *function_pointer_type_ptr) const {
   if (IsValid())
@@ -318,18 +325,11 @@ bool CompilerType::HasPointerAuthQualifier() const {
   return false;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
-}
-
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
 }
 
 bool CompilerType::IsBeingDefined() const {
@@ -688,6 +688,14 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -762,7 +770,7 @@ CompilerType::GetBitSize(ExecutionContextScope *exe_scope) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
       return type_system_sp->GetBitSize(m_type, exe_scope);
-  return llvm::createStringError("Invalid type: Cannot determine size");
+  return llvm::createStringError("invalid type: cannot determine size");
 }
 
 llvm::Expected<uint64_t>
@@ -771,6 +779,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   if (!bit_size_or_err)
     return bit_size_or_err.takeError();
   return (*bit_size_or_err + 7) / 8;
+}
+
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
 }
 
 std::optional<size_t>
@@ -1003,6 +1018,13 @@ CompilerType CompilerType::GetTypeForFormatters() const {
   return CompilerType();
 }
 
+CompilerType CompilerType::GetPromotedIntegerType() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetPromotedIntegerType(m_type);
+  return CompilerType();
+}
+
 LazyBool CompilerType::ShouldPrintAsOneLiner(ValueObject *valobj) const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -1029,8 +1051,7 @@ CompilerType::GetIndexOfChildWithName(llvm::StringRef name,
       return type_system_sp->GetIndexOfChildWithName(m_type, name,
                                                      omit_empty_base_classes);
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 // Dumping types

@@ -102,21 +102,23 @@ struct ReverseDominanceIterator {
   }
 
   static auto makeIterable(Region &region) {
-    Block *null = nullptr;
-    if (SkipGraphRegion && !mayHaveSSADominance(region)) {
-      // Skip graph regions.
-      return llvm::make_pointee_range(
-          llvm::make_range(llvm::po_end(null), llvm::po_end(null)));
-    }
+    struct Traversal : llvm::PostOrderTraversal<Region *> {
+      using BaseT = llvm::PostOrderTraversal<Region *>;
+      using BaseT::PostOrderTraversal; // Re-use constructors.
+
+      // Walk API expects Block references instead of pointers.
+      using iterator = llvm::pointee_iterator<typename BaseT::iterator>;
+      iterator begin() { return iterator(BaseT::begin()); }
+      iterator end() { return iterator(BaseT::end()); }
+    };
+
+    // Skip graph regions.
+    if ((SkipGraphRegion && !mayHaveSSADominance(region)) || region.empty())
+      return Traversal();
 
     // Create post-order iterator. Blocks are enumerated according to their
     // successor relationship.
-    auto it = region.empty()
-                  ? llvm::make_range(llvm::po_end(null), llvm::po_end(null))
-                  : llvm::post_order(&region.front());
-
-    // Walk API expects Block references instead of pointers.
-    return llvm::make_pointee_range(it);
+    return Traversal(&region);
   }
 };
 } // namespace mlir

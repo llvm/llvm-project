@@ -5,9 +5,23 @@ add_header(
 )
 
 add_header(
+  dirent_macros
+  HDR
+    dirent-macros.h
+)
+
+add_header(
+  sys_stat_macros
+  HDR
+    sys-stat-macros.h
+)
+
+add_header(
   fcntl_macros
   HDR
     fcntl-macros.h
+  DEPENDS
+    .sys_stat_macros
 )
 
 add_header(
@@ -29,9 +43,31 @@ add_header(
 )
 
 add_header(
+  sys_eventfd_macros
+  HDR
+    sys-eventfd-macros.h
+  DEPENDS
+    .fcntl_macros
+)
+
+add_header(
+  sys_file_macros
+  HDR
+    sys-file-macros.h
+)
+
+add_header(
   sys_ioctl_macros
   HDR
     sys-ioctl-macros.h
+)
+
+add_header(
+  sys_inotify_macros
+  HDR
+    sys-inotify-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(
@@ -41,9 +77,33 @@ add_header(
 )
 
 add_header(
+  sys_mount_macros
+  HDR
+    sys-mount-macros.h
+)
+
+add_header(
+  sys_personality_macros
+  HDR
+    sys-personality-macros.h
+)
+
+add_header(
   sys_random_macros
   HDR
     sys-random-macros.h
+)
+
+add_header(
+  sys_sem_macros
+  HDR
+    sys-sem-macros.h
+)
+
+add_header(
+  sys_shm_macros
+  HDR
+    sys-shm-macros.h
 )
 
 add_header(
@@ -53,9 +113,39 @@ add_header(
 )
 
 add_header(
+  net_if_macros
+  HDR
+    net-if-macros.h
+)
+
+add_header(
+  netinet_tcp_macros
+  HDR
+    netinet-tcp-macros.h
+)
+
+add_header(
+  netdb_macros
+  HDR
+    netdb-macros.h
+)
+
+add_header(
   sys_wait_macros
   HDR
     sys-wait-macros.h
+)
+
+add_header(
+  sys_xattr_macros
+  HDR
+    sys-xattr-macros.h
+)
+
+add_header(
+  sys_sysmacros_macros
+  HDR
+    sys-sysmacros-macros.h
 )
 
 add_header(
@@ -71,15 +161,29 @@ add_header(
 )
 
 add_header(
-  sys_stat_macros
+  sys_statfs_macros
   HDR
-    sys-stat-macros.h
+    sys-statfs-macros.h
+)
+
+add_header(
+  sys_swap_macros
+  HDR
+    sys-swap-macros.h
 )
 
 add_header(
   sys_time_macros
   HDR
     sys-time-macros.h
+)
+
+add_header(
+  sys_timerfd_macros
+  HDR
+    sys-timerfd-macros.h
+  DEPENDS
+    .fcntl_macros
 )
 
 add_header(

@@ -13,6 +13,7 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_ELFNIXPLATFORM_H
 #define LLVM_EXECUTIONENGINE_ORC_ELFNIXPLATFORM_H
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
@@ -22,7 +23,6 @@
 
 #include <future>
 #include <thread>
-#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -43,27 +43,10 @@ struct RuntimeFunction {
   ExecutorAddr Addr;
 };
 
-struct FunctionPairKeyHash {
-  std::size_t
-  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &key) const {
-    return std::hash<void *>()(key.first->Addr.toPtr<void *>()) ^
-           std::hash<void *>()(key.second->Addr.toPtr<void *>());
-  }
-};
-
-struct FunctionPairKeyEqual {
-  std::size_t
-  operator()(const std::pair<RuntimeFunction *, RuntimeFunction *> &lhs,
-             const std::pair<RuntimeFunction *, RuntimeFunction *> &rhs) const {
-    return lhs.first == rhs.first && lhs.second == rhs.second;
-  }
-};
-
-using DeferredRuntimeFnMap = std::unordered_map<
+using DeferredRuntimeFnMap = DenseMap<
     std::pair<RuntimeFunction *, RuntimeFunction *>,
     SmallVector<std::pair<shared::WrapperFunctionCall::ArgDataBufferType,
-                          shared::WrapperFunctionCall::ArgDataBufferType>>,
-    FunctionPairKeyHash, FunctionPairKeyEqual>;
+                          shared::WrapperFunctionCall::ArgDataBufferType>>>;
 
 /// Mediates between ELFNix initialization and ExecutionSession state.
 class LLVM_ABI ELFNixPlatform : public Platform {
@@ -210,7 +193,6 @@ private:
 
     Error fixTLVSectionsAndEdges(jitlink::LinkGraph &G, JITDylib &JD);
 
-    std::mutex PluginMutex;
     ELFNixPlatform &MP;
   };
 
@@ -277,7 +259,6 @@ private:
   // InitSeqs gets its own mutex to avoid locking the whole session when
   // aggregating data from the jitlink.
   std::mutex PlatformMutex;
-  std::vector<ELFPerObjectSectionsToRegister> BootstrapPOSRs;
 
   DenseMap<ExecutorAddr, JITDylib *> HandleAddrToJITDylib;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHandleAddr;

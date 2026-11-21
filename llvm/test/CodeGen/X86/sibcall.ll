@@ -1075,6 +1075,184 @@ define void @t25_sret_to_sret_different_val(ptr noalias sret(%struct.foo) align 
   ret void
 }
 
+; Test musttail with non-forwarded stack arguments (more than 6 args).
+declare void @f1_64(i64, i64, i64, i64, i64, i64, i64)
+
+define void @stack_arg_const_64(i64, i64, i64, i64, i64, i64, i64) {
+; X86-LABEL: stack_arg_const_64:
+; X86:       # %bb.0:
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,0,4,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [8,0,15,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [16,0,23,0]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; X86-NEXT:    jmp f1_64@PLT # TAILCALL
+;
+; X64-LABEL: stack_arg_const_64:
+; X64:       # %bb.0:
+; X64-NEXT:    movq $42, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movl $1, %edi
+; X64-NEXT:    movl $4, %esi
+; X64-NEXT:    movl $8, %edx
+; X64-NEXT:    movl $15, %ecx
+; X64-NEXT:    movl $16, %r8d
+; X64-NEXT:    movl $23, %r9d
+; X64-NEXT:    jmp f1_64@PLT # TAILCALL
+;
+; X32-LABEL: stack_arg_const_64:
+; X32:       # %bb.0:
+; X32-NEXT:    movq $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl $1, %edi
+; X32-NEXT:    movl $4, %esi
+; X32-NEXT:    movl $8, %edx
+; X32-NEXT:    movl $15, %ecx
+; X32-NEXT:    movl $16, %r8d
+; X32-NEXT:    movl $23, %r9d
+; X32-NEXT:    jmp f1_64@PLT # TAILCALL
+  musttail call void @f1_64(i64 1, i64 4, i64 8, i64 15, i64 16, i64 23, i64 42)
+  ret void
+}
+
+declare void @f1_32(i32, i32, i32, i32, i32, i32, i32)
+
+define void @stack_arg_const_32(i32, i32, i32, i32, i32, i32, i32) {
+; X86-LABEL: stack_arg_const_32:
+; X86:       # %bb.0:
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [1,4,8,15]
+; X86-NEXT:    movaps %xmm0, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $16, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $23, {{[0-9]+}}(%esp)
+; X86-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X86-NEXT:    jmp f1_32@PLT # TAILCALL
+;
+; X64-LABEL: stack_arg_const_32:
+; X64:       # %bb.0:
+; X64-NEXT:    movl $42, {{[0-9]+}}(%rsp)
+; X64-NEXT:    movl $1, %edi
+; X64-NEXT:    movl $4, %esi
+; X64-NEXT:    movl $8, %edx
+; X64-NEXT:    movl $15, %ecx
+; X64-NEXT:    movl $16, %r8d
+; X64-NEXT:    movl $23, %r9d
+; X64-NEXT:    jmp f1_32@PLT # TAILCALL
+;
+; X32-LABEL: stack_arg_const_32:
+; X32:       # %bb.0:
+; X32-NEXT:    movl $42, {{[0-9]+}}(%esp)
+; X32-NEXT:    movl $1, %edi
+; X32-NEXT:    movl $4, %esi
+; X32-NEXT:    movl $8, %edx
+; X32-NEXT:    movl $15, %ecx
+; X32-NEXT:    movl $16, %r8d
+; X32-NEXT:    movl $23, %r9d
+; X32-NEXT:    jmp f1_32@PLT # TAILCALL
+  musttail call void @f1_32(i32 1, i32 4, i32 8, i32 15, i32 16, i32 23, i32 42)
+  ret void
+}
+
+; The forwarded sret pointer must be recognized outside the entry block too.
+define fastcc void @t21_sret_to_sret_branch(ptr noalias sret(%struct.foo) %agg.result, i1 %c) nounwind {
+; X86-LABEL: t21_sret_to_sret_branch:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    testb $1, %dl
+; X86-NEXT:    je .LBB36_2
+; X86-NEXT:  # %bb.1: # %if.then
+; X86-NEXT:    jmp t21_f_sret # TAILCALL
+; X86-NEXT:  .LBB36_2: # %if.else
+; X86-NEXT:    movl %ecx, %edx
+; X86-NEXT:    jmp t21_f_sret2 # TAILCALL
+;
+; X64-LABEL: t21_sret_to_sret_branch:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    testb $1, %sil
+; X64-NEXT:    je .LBB36_2
+; X64-NEXT:  # %bb.1: # %if.then
+; X64-NEXT:    jmp t21_f_sret # TAILCALL
+; X64-NEXT:  .LBB36_2: # %if.else
+; X64-NEXT:    movq %rdi, %rsi
+; X64-NEXT:    jmp t21_f_sret2 # TAILCALL
+;
+; X32-LABEL: t21_sret_to_sret_branch:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    movl %edi, %edi
+; X32-NEXT:    testb $1, %sil
+; X32-NEXT:    je .LBB36_2
+; X32-NEXT:  # %bb.1: # %if.then
+; X32-NEXT:    jmp t21_f_sret # TAILCALL
+; X32-NEXT:  .LBB36_2: # %if.else
+; X32-NEXT:    movq %rdi, %rsi
+; X32-NEXT:    jmp t21_f_sret2 # TAILCALL
+entry:
+  br i1 %c, label %if.then, label %if.else
+
+if.then:
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %agg.result) nounwind
+  ret void
+
+if.else:
+  tail call fastcc void @t21_f_sret2(ptr noalias sret(%struct.foo) %agg.result, ptr noalias %agg.result) nounwind
+  ret void
+}
+
+; A different sret pointer must not be tail called, even in a non-entry block.
+define fastcc void @t21_sret_to_other_sret_branch(ptr noalias sret(%struct.foo) %agg.result, ptr noalias %other, i1 %c) nounwind {
+; X86-LABEL: t21_sret_to_other_sret_branch:
+; X86:       # %bb.0: # %entry
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    testb $1, {{[0-9]+}}(%esp)
+; X86-NEXT:    je .LBB37_2
+; X86-NEXT:  # %bb.1: # %if.then
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:  .LBB37_2: # %if.end
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_other_sret_branch:
+; X64:       # %bb.0: # %entry
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    testb $1, %dl
+; X64-NEXT:    je .LBB37_2
+; X64-NEXT:  # %bb.1: # %if.then
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:  .LBB37_2: # %if.end
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_other_sret_branch:
+; X32:       # %bb.0: # %entry
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movq %rdi, %rbx
+; X32-NEXT:    testb $1, %dl
+; X32-NEXT:    je .LBB37_2
+; X32-NEXT:  # %bb.1: # %if.then
+; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:  .LBB37_2: # %if.end
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+entry:
+  br i1 %c, label %if.then, label %if.end
+
+if.then:
+  tail call fastcc void @t21_f_sret(ptr noalias sret(%struct.foo) %other) nounwind
+  ret void
+
+if.end:
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)
 declare void @callee_1(ptr)
 declare void @callee_2(ptr noalias sret(%struct.foo))

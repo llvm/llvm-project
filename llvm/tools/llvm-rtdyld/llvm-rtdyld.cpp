@@ -257,7 +257,6 @@ public:
       report_fatal_error(Twine("Can't allocate enough memory: ") +
                          EC.message());
 
-    PreallocSlab = MB;
     UsePreallocation = true;
     SlabSize = Size;
   }
@@ -280,7 +279,6 @@ public:
 
 private:
   std::map<std::string, uint64_t> DummyExterns;
-  sys::MemoryBlock PreallocSlab;
   bool UsePreallocation = false;
   uintptr_t SlabSize = 0;
   uintptr_t CurrentSlabOffset = 0;
@@ -805,7 +803,7 @@ static int linkAndVerify() {
   if (!MAI)
     ErrorAndExit("Unable to create target asm info!");
 
-  MCContext Ctx(TheTriple, MAI.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *MAI, *MRI, *STI);
 
   std::unique_ptr<MCDisassembler> Disassembler(
     TheTarget->createMCDisassembler(*STI, Ctx));

@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,msvc %s -triple x86_64-pc-windows-msvc -fms-compatibility
 
 // GH#58229 - rejects-valid
 __attribute__((__visibility__("default"))) [[nodiscard]] int f();
@@ -41,6 +42,15 @@ void fn() {
   pi = &i[0];
 }
 
+namespace GH184954 {
+  struct S {
+    int a __attribute__((packed)) : 4;       // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
+    int b __attribute__((aligned(16))) : 4;  // msvc-error {{expected ';' at end of declaration list}} \
+                                             // msvc-error {{expected member name or ';' after declaration specifiers}}
+  };
+}
+
 [[deprecated([""])]] int WrongArgs; // expected-error {{expected string literal as argument of 'deprecated' attribute}}
 [[,,,,,]] int Commas1; // ok
 [[,, maybe_unused]] int Commas2; // ok
@@ -48,6 +58,6 @@ void fn() {
 [[,,maybe_unused,]] int Commas4; // ok
 [[foo bar]] int NoComma; // expected-error {{expected ','}} \
                          // expected-warning {{unknown attribute 'foo' ignored}}
-// expected-error@+2 2 {{expected ']'}}
+// expected-error@+2 {{expected ']'}}
 // expected-error@+1 {{expected external declaration}}
 [[foo

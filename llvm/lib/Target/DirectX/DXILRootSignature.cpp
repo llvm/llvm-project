@@ -12,18 +12,17 @@
 //===----------------------------------------------------------------------===//
 #include "DXILRootSignature.h"
 #include "DirectX.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
 #include "llvm/BinaryFormat/DXContainer.h"
 #include "llvm/Frontend/HLSL/RootSignatureMetadata.h"
+#include "llvm/Frontend/HLSL/RootSignatureValidations.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/MC/DXContainerRootSignature.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Error.h"
@@ -129,6 +128,11 @@ analyzeModule(Module &M) {
       continue;
     }
 
+    if (!hlsl::rootsig::verifyVersion(*V)) {
+      reportError(Ctx, "Invalid Root Signature Version: " + Twine(*V));
+      continue;
+    }
+
     llvm::hlsl::rootsig::MetadataParser MDParser(RootElementListNode);
     llvm::Expected<mcdxbc::RootSignatureDesc> RSDOrErr =
         MDParser.ParseRootSignature(V.value());
@@ -165,10 +169,12 @@ RootSignatureAnalysis::run(Module &M, ModuleAnalysisManager &AM) {
 
 //===----------------------------------------------------------------------===//
 
-PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
-                                                    ModuleAnalysisManager &AM) {
+PreservedAnalyses
+RootSignatureAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
 
   RootSignatureBindingInfo &RSDMap = AM.getResult<RootSignatureAnalysis>(M);
+  if (RSDMap.empty())
+    return PreservedAnalyses::all();
 
   OS << "Root Signature Definitions"
      << "\n";
@@ -187,10 +193,9 @@ PreservedAnalyses RootSignatureAnalysisPrinter::run(Module &M,
       const mcdxbc::RootParameterInfo &Info = RS.ParametersContainer.getInfo(I);
 
       OS << "- Parameter Type: "
-         << enumToStringRef(Info.Type, dxbc::getRootParameterTypes()) << "\n"
+         << dxbc::getRootParameterTypes().toString(Info.Type) << "\n"
          << "  Shader Visibility: "
-         << enumToStringRef(Info.Visibility, dxbc::getShaderVisibility())
-         << "\n";
+         << dxbc::getShaderVisibility().toString(Info.Visibility) << "\n";
       switch (Info.Type) {
       case dxbc::RootParameterType::Constants32Bit: {
         const mcdxbc::RootConstants &Constants =

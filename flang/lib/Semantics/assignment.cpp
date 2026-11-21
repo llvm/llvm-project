@@ -10,21 +10,19 @@
 #include "definable.h"
 #include "pointer-assignment.h"
 #include "flang/Common/idioms.h"
-#include "flang/Common/restorer.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
-#include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Parser/tools.h"
 #include "flang/Semantics/expression.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/tools.h"
+#include <list>
 #include <optional>
-#include <set>
 #include <string>
-#include <type_traits>
 
 using namespace Fortran::parser::literals;
 
@@ -41,6 +39,7 @@ public:
   void PopWhereContext();
   void Analyze(const parser::AssignmentStmt &);
   void Analyze(const parser::PointerAssignmentStmt &);
+  void Analyze(const parser::ImageSelectorSpec &);
   SemanticsContext &context() { return context_; }
 
 private:
@@ -58,17 +57,27 @@ private:
   int whereDepth_{0}; // number of WHEREs currently nested in
   // shape of masks in LHS of assignments in current WHERE:
   std::vector<std::optional<std::int64_t>> whereExtents_;
+  const parser::ImageSelector *notifySelector_{nullptr};
 };
 
 void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
-  if (const evaluate::Assignment * assignment{GetAssignment(stmt)}) {
+  const evaluate::Assignment *assignment{GetAssignment(stmt)};
+  bool isDefinedAssignment{assignment &&
+      std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
+  notifySelector_ = nullptr;
+  // Preserve the target's selector during operand-error recovery.
+  if (!isDefinedAssignment) {
+    if (const auto *coindexed{parser::GetCoindexedNamedObject(
+            std::get<parser::Variable>(stmt.t))}) {
+      notifySelector_ = &std::get<parser::ImageSelector>(coindexed->t);
+    }
+  }
+  if (assignment) {
     const SomeExpr &lhs{assignment->lhs};
     const SomeExpr &rhs{assignment->rhs};
     auto lhsLoc{std::get<parser::Variable>(stmt.t).GetSource()};
     const Scope &scope{context_.FindScope(lhsLoc)};
     DefinabilityFlags flags{DefinabilityFlag::VectorSubscriptIsOk};
-    bool isDefinedAssignment{
-        std::holds_alternative<evaluate::ProcedureRef>(assignment->u)};
     if (isDefinedAssignment) {
       flags.set(DefinabilityFlag::AllowEventLockOrNotifyType);
     } else if (const Symbol *
@@ -100,6 +109,22 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
     if (whereDepth_ > 0) {
       CheckShape(lhsLoc, &lhs);
     }
+  }
+}
+
+void AssignmentContext::Analyze(const parser::ImageSelectorSpec &spec) {
+  if (const auto *notify{
+          std::get_if<parser::ImageSelectorSpec::Notify>(&spec.u)}) {
+    if (notifySelector_) {
+      for (const auto &lhsSpec :
+          std::get<std::list<parser::ImageSelectorSpec>>(notifySelector_->t)) {
+        if (&lhsSpec == &spec) {
+          return;
+        }
+      }
+    }
+    Say(parser::FindSourceLocation(notify->v), // F2023 C933
+        "NOTIFY= may appear only in the image selector of the variable of an intrinsic assignment statement"_err_en_US);
   }
 }
 
@@ -215,14 +240,16 @@ SemanticsContext &AssignmentChecker::context() {
 AssignmentChecker::AssignmentChecker(SemanticsContext &context)
     : context_{new AssignmentContext{context}} {}
 
-void AssignmentChecker::Enter(
-    const parser::OpenMPDeclareReductionConstruct &x) {
+void AssignmentChecker::Enter(const parser::OmpDeclareReductionDirective &x) {
   context().set_location(x.source);
 }
 void AssignmentChecker::Enter(const parser::AssignmentStmt &x) {
   context_.value().Analyze(x);
 }
 void AssignmentChecker::Enter(const parser::PointerAssignmentStmt &x) {
+  context_.value().Analyze(x);
+}
+void AssignmentChecker::Enter(const parser::ImageSelectorSpec &x) {
   context_.value().Analyze(x);
 }
 void AssignmentChecker::Enter(const parser::WhereStmt &x) {

@@ -376,6 +376,10 @@ class DwarfDebug : public DebugHandlerBase {
   /// create DIEs.
   SmallSetVector<const DISubprogram *, 16> ProcessedSPNodes;
 
+  /// Whether all functions of the module have been processed, so that it is
+  /// known which subprograms have abstract DIEs.
+  bool AllFunctionsProcessed = false;
+
   /// Map function-local imported entities to their parent local scope
   /// (either DILexicalBlock or DISubprogram) for a processed function
   /// (including inlined subprograms).
@@ -505,9 +509,6 @@ private:
   /// True iff there are multiple CUs in this module.
   bool SingleCU;
   bool IsDarwin;
-
-  /// Map for tracking Fortran deferred CHARACTER lengths.
-  DenseMap<const DIStringType *, unsigned> StringTypeLocMap;
 
   AddressPool AddrPool;
 
@@ -728,11 +729,20 @@ protected:
   void setUseRangesSection(bool V) { UseRangesSection = V; }
   void setUseSectionsAsReferences(bool V) { UseSectionsAsReferences = V; }
 
+  /// Select \p DwarfVersion and (re)compute all state derived from it. Called
+  /// by the constructor; a target subclass may call it again to change the
+  /// version, which keeps the derived state consistent with the emitted one.
+  void applyDwarfVersion(unsigned DwarfVersion);
+
   /// Whether to attach ranges/low_pc to the compile unit DIE in endModule.
   virtual bool shouldAttachCompileUnitRanges() const { return true; }
 
   /// Target-specific source line recording.
   virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
+
+  /// Target-specific compile unit attribute finalization.
+  virtual void finishTargetUnitAttributes(const DICompileUnit &DIUnit,
+                                          DwarfCompileUnit &NewCU) {}
 
   const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
     return InfoHolder.getUnits();
@@ -810,6 +820,9 @@ public:
     SymSize[Sym] = Size;
   }
 
+  /// Whether to emit .debug_pubnames / .debug_pubtypes. Default true;
+  virtual bool shouldEmitDwarfPubSections() const { return true; }
+
   /// Returns whether we should emit all DW_AT_[MIPS_]linkage_name.
   /// If not, we still might emit certain cases.
   bool useAllLinkageNames() const { return UseAllLinkageNames; }
@@ -864,8 +877,7 @@ public:
     return HasAppleExtensionAttributes;
   }
 
-  /// Returns whether or not to change the current debug info for the
-  /// split dwarf proposal support.
+  /// Returns whether or not to change the current debug info for split DWARF.
   bool useSplitDwarf() const { return HasSplitDwarf; }
 
   /// Returns whether to generate a string offsets table with (possibly shared)
@@ -955,14 +967,13 @@ public:
   DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
                                                     DwarfCompileUnit &SrcCU);
 
-  unsigned getStringTypeLoc(const DIStringType *ST) const {
-    return StringTypeLocMap.lookup(ST);
-  }
+  /// Returns whether all functions of the module have been processed, so that
+  /// abstract subprogram DIEs are not created for inlined subprograms anymore.
+  bool allFunctionsProcessed() const { return AllFunctionsProcessed; }
 
-  void addStringTypeLoc(const DIStringType *ST, unsigned Loc) {
-    assert(ST);
-    if (Loc)
-      StringTypeLocMap[ST] = Loc;
+  /// Returns whether a DIE for the function of \p SP has been constructed.
+  bool isProcessedSubprogram(const DISubprogram *SP) const {
+    return ProcessedSPNodes.contains(SP);
   }
 
   /// \defgroup DebuggerTuning Predicates to tune DWARF for a given debugger.

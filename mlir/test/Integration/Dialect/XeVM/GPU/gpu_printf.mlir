@@ -1,7 +1,4 @@
-// RUN: mlir-opt %s \
-// RUN: | mlir-opt -pass-pipeline='builtin.module(cse,func.func(gpu-async-region),xevm-attach-target,gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=true},convert-xevm-to-llvm,cse))' \
-// RUN: | mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
-// RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts -cse -gpu-module-to-binary \
+// RUN: mlir-opt %s --gpu-lower-to-xevm-pipeline="xegpu-op-level=lane" \
 // RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_levelzero_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
@@ -9,11 +6,6 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
-// SPIR-V backend generates incorrect printf ops after
-// https://github.com/llvm/llvm-project/pull/178980 changed the way variadic arguments.
-// are handled. Test is expected to fail until the issue is resolved.
-
-// XFAIL: *
 module @test attributes {gpu.container_module} {
   gpu.module @test_module {
     gpu.func @test_printf(%arg0: i32, %arg1: f32) kernel {

@@ -6,6 +6,7 @@ add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
   ExpressionParser.cpp
   ExpressionTypeSystemHelper.cpp
   ExpressionVariable.cpp
+  ExternalSymbolResolver.cpp
   FunctionCaller.cpp
   IRExecutionUnit.cpp
   IRInterpreter.cpp
@@ -25,6 +26,7 @@ add_lldb_library(lldbExpression NO_PLUGIN_DEPENDENCIES
   LINK_COMPONENTS
     Core
     DebugInfoDWARF
+    DebugInfoDWARFLowLevel
     ExecutionEngine
     Support
   LINK_LIBS

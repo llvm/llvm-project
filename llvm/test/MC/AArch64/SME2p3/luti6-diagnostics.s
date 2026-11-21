@@ -117,6 +117,11 @@ luti6 { z0.b - z3.b }, zt0, { z1 - z1 }
 // CHECK-NEXT: luti6 { z0.b - z3.b }, zt0, { z1 - z1 }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
+luti6 { z0.b - z3.b }, zt0, { z8 - z10 }
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: Invalid vector list, expected list with 3 consecutive SVE vectors starting at z0-z7
+// CHECK-NEXT: luti6 { z0.b - z3.b }, zt0, { z8 - z10 }
+// CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
+
 luti6 { z0.b - z5.b }, zt0, { z7 - z11 }
 // CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid number of vectors
 // CHECK-NEXT: luti6 { z0.b - z5.b }, zt0, { z7 - z11 }

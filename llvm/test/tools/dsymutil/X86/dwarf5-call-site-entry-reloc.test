@@ -19,7 +19,7 @@
 ## DW_AT_high_pc of main). Without this change the value would get relocated
 ## twice.
 
-#RUN: dsymutil -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
+#RUN: dsymutil --linker classic -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM
 #RUN: llvm-dwarfdump %t.dSYM | FileCheck %s -implicit-check-not=DW_AT_call_return_pc
 
 #RUN: dsymutil --linker parallel -oso-prepend-path %p/../Inputs -y %s -o %t.dSYM

@@ -67,32 +67,30 @@ static constexpr char WarnOnUnfixableStr[] = "WarnOnUnfixable";
 static constexpr char WarnOnConditionVariablesStr[] =
     "WarnOnConditionVariables";
 
-static const DeclRefExpr *findUsage(const Stmt *Node, int64_t DeclIdentifier) {
+static const DeclRefExpr *findUsage(const Stmt *Node, const Decl *D) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (DeclRef->getDecl()->getID() == DeclIdentifier)
+    if (DeclRef->getDecl() == D)
       return DeclRef;
   } else {
     for (const Stmt *ChildNode : Node->children())
-      if (const DeclRefExpr *Result = findUsage(ChildNode, DeclIdentifier))
+      if (const DeclRefExpr *Result = findUsage(ChildNode, D))
         return Result;
   }
   return nullptr;
 }
 
-static const DeclRefExpr *
-findUsageRange(const Stmt *Node,
-               const llvm::ArrayRef<int64_t> &DeclIdentifiers) {
+static const DeclRefExpr *findUsageRange(const Stmt *Node,
+                                         DeclStmt::decl_const_range Decls) {
   if (!Node)
     return nullptr;
   if (const auto *DeclRef = dyn_cast<DeclRefExpr>(Node)) {
-    if (llvm::is_contained(DeclIdentifiers, DeclRef->getDecl()->getID()))
+    if (llvm::is_contained(Decls, DeclRef->getDecl()))
       return DeclRef;
   } else {
     for (const Stmt *ChildNode : Node->children())
-      if (const DeclRefExpr *Result =
-              findUsageRange(ChildNode, DeclIdentifiers))
+      if (const DeclRefExpr *Result = findUsageRange(ChildNode, Decls))
         return Result;
   }
   return nullptr;
@@ -105,19 +103,14 @@ static const DeclRefExpr *checkInitDeclUsageInElse(const IfStmt *If) {
   if (InitDeclStmt->isSingleDecl()) {
     const Decl *InitDecl = InitDeclStmt->getSingleDecl();
     assert(isa<VarDecl>(InitDecl) && "SingleDecl must be a VarDecl");
-    return findUsage(If->getElse(), InitDecl->getID());
+    return findUsage(If->getElse(), InitDecl);
   }
-  SmallVector<int64_t, 4> DeclIdentifiers;
-  for (const Decl *ChildDecl : InitDeclStmt->decls()) {
-    assert(isa<VarDecl>(ChildDecl) && "Init Decls must be a VarDecl");
-    DeclIdentifiers.push_back(ChildDecl->getID());
-  }
-  return findUsageRange(If->getElse(), DeclIdentifiers);
+  return findUsageRange(If->getElse(), InitDeclStmt->decls());
 }
 
 static const DeclRefExpr *checkConditionVarUsageInElse(const IfStmt *If) {
   if (const VarDecl *CondVar = If->getConditionVariable())
-    return findUsage(If->getElse(), CondVar->getID());
+    return findUsage(If->getElse(), CondVar);
   return nullptr;
 }
 
@@ -131,38 +124,19 @@ static bool containsDeclInScope(const Stmt *Node) {
   return false;
 }
 
-static void removeElseAndBrackets(DiagnosticBuilder &Diag, ASTContext &Context,
-                                  const Stmt *Else, SourceLocation ElseLoc) {
-  auto Remap = [&](SourceLocation Loc) {
+static void removeElseAndBrackets(const DiagnosticBuilder &Diag,
+                                  ASTContext &Context, const Stmt *Else,
+                                  SourceLocation ElseLoc) {
+  const auto Remap = [&](SourceLocation Loc) {
     return Context.getSourceManager().getExpansionLoc(Loc);
-  };
-  auto TokLen = [&](SourceLocation Loc) {
-    return Lexer::MeasureTokenLength(Loc, Context.getSourceManager(),
-                                     Context.getLangOpts());
   };
 
   if (const auto *CS = dyn_cast<CompoundStmt>(Else)) {
-    Diag << tooling::fixit::createRemoval(ElseLoc);
-    const SourceLocation LBrace = CS->getLBracLoc();
-    const SourceLocation RBrace = CS->getRBracLoc();
-    const SourceLocation RangeStart =
-        Remap(LBrace).getLocWithOffset(TokLen(LBrace) + 1);
-    const SourceLocation RangeEnd = Remap(RBrace).getLocWithOffset(-1);
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(RangeStart, RangeEnd),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(CS->getSourceRange(), Repl);
+    Diag << tooling::fixit::createRemoval(ElseLoc)
+         << tooling::fixit::createRemoval(Remap(CS->getLBracLoc()))
+         << tooling::fixit::createRemoval(Remap(CS->getRBracLoc()));
   } else {
-    const SourceLocation ElseExpandedLoc = Remap(ElseLoc);
-    const SourceLocation EndLoc = Remap(Else->getEndLoc());
-
-    const StringRef Repl = Lexer::getSourceText(
-        CharSourceRange::getTokenRange(
-            ElseExpandedLoc.getLocWithOffset(TokLen(ElseLoc) + 1), EndLoc),
-        Context.getSourceManager(), Context.getLangOpts());
-    Diag << tooling::fixit::createReplacement(
-        SourceRange(ElseExpandedLoc, EndLoc), Repl);
+    Diag << tooling::fixit::createRemoval(Remap(ElseLoc));
   }
 }
 
@@ -216,7 +190,7 @@ static bool hasPreprocessorBranchEndBetweenLocations(
 
   assert(ExpandedStartLoc < ExpandedEndLoc);
 
-  auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
+  const auto Iter = ConditionalBranchMap.find(SM.getFileID(ExpandedEndLoc));
 
   if (Iter == ConditionalBranchMap.end() || Iter->getSecond().empty())
     return false;
@@ -284,9 +258,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     if (IsLastInScope) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
-      DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterrupter
-                               << SourceRange(ElseLoc);
+      const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                     << ControlFlowInterrupter
+                                     << SourceRange(ElseLoc);
       if (checkInitDeclUsageInElse(If) != nullptr) {
         Diag << tooling::fixit::createReplacement(
                     SourceRange(If->getIfLoc()),
@@ -320,9 +294,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     if (IsLastInScope) {
       // If the if statement is the last statement of its enclosing statements
       // scope, we can pull the decl out of the if statement.
-      DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                               << ControlFlowInterrupter
-                               << SourceRange(ElseLoc);
+      const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                     << ControlFlowInterrupter
+                                     << SourceRange(ElseLoc);
       Diag << tooling::fixit::createReplacement(
                   SourceRange(If->getIfLoc()),
                   (tooling::fixit::getText(*If->getInit(), *Result.Context) +
@@ -338,8 +312,9 @@ void ElseAfterReturnCheck::check(const MatchFinder::MatchResult &Result) {
     return;
   }
 
-  DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
-                           << ControlFlowInterrupter << SourceRange(ElseLoc);
+  const DiagnosticBuilder Diag = diag(ElseLoc, WarningMessage)
+                                 << ControlFlowInterrupter
+                                 << SourceRange(ElseLoc);
   removeElseAndBrackets(Diag, *Result.Context, Else, ElseLoc);
 }
 

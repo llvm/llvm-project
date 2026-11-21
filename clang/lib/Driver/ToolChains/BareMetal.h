@@ -67,7 +67,7 @@ public:
                             llvm::opt::ArgStringList &CC1Args) const override;
   void
   addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
-                        llvm::opt::ArgStringList &CC1Args,
+                        llvm::opt::ArgStringList &CC1Args, BoundArch BA,
                         Action::OffloadKind DeviceOffloadKind) const override;
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
@@ -77,21 +77,14 @@ public:
                            llvm::opt::ArgStringList &CC1Args) const override;
   std::string computeSysRoot() const override;
   std::string getCompilerRTPath() const override;
-  SanitizerMask getSupportedSanitizers() const override;
-
-  SmallVector<std::string>
-  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const override;
+  SanitizerMask
+  getSupportedSanitizers(BoundArch BA,
+                         Action::OffloadKind DeviceOffloadKind) const override;
 
 private:
-  using OrderedMultilibs =
-      llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
-  OrderedMultilibs getOrderedMultilibs() const;
-
   std::string SysRoot;
 
   bool IsGCCInstallationValid;
-
-  SmallVector<std::string> MultilibMacroDefines;
 };
 
 } // namespace toolchains

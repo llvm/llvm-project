@@ -13,6 +13,7 @@
 #include "clang/Frontend/ASTConsumers.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -40,11 +41,17 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
+#include "clang/Driver/CreateInvocationFromArgs.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/ModuleMap.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Serialization/ObjectFilePCHContainerReader.h"
 
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -60,10 +67,15 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/UniqueCStringMap.h"
 #include "lldb/Expression/Expression.h"
+#include "lldb/Host/FileSystem.h"
 #include "lldb/Host/StreamFile.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandObject.h"
+#include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -114,9 +126,9 @@ TypeSystemClangSupportsLanguage(lldb::LanguageType language) {
          lldb_private::Language::LanguageIsCPlusPlus(language) ||
          lldb_private::Language::LanguageIsObjC(language) ||
          lldb_private::Language::LanguageIsPascal(language) ||
-         // Use Clang for Rust until there is a proper language plugin for it
+         // Use Clang for Rust until there is a Rust type system
          language == eLanguageTypeRust ||
-         // Use Clang for D until there is a proper language plugin for it
+         // Use Clang for D until there is a D type system
          language == eLanguageTypeD ||
          // Open Dylan compiler debug info is designed to be Clang-compatible
          language == eLanguageTypeDylan;
@@ -242,8 +254,13 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
     vbtable_ptr_addr += vbtable_ptr_offset;
 
-    Status err;
-    return process.ReadPointerFromMemory(vbtable_ptr_addr, err);
+    llvm::Expected<lldb::addr_t> vbtable_ptr_addr_or_err =
+        process.ReadPointerFromMemory(vbtable_ptr_addr);
+    if (!vbtable_ptr_addr_or_err) {
+      llvm::consumeError(vbtable_ptr_addr_or_err.takeError());
+      return LLDB_INVALID_ADDRESS;
+    }
+    return *vbtable_ptr_addr_or_err;
   }
 
   // We have an object already read from process memory,
@@ -312,6 +329,8 @@ static bool GetVBaseBitOffset(VTableContextBase &vtable_ctx,
   if (base_offset == INT64_MAX)
     return false;
 
+  if (vtable_ctx.isMicrosoft())
+    base_offset += record_layout.getVBPtrOffset().getQuantity();
   bit_offset = base_offset * 8;
 
   return true;
@@ -576,14 +595,85 @@ LanguageSet TypeSystemClang::GetSupportedLanguagesForExpressions() {
   return languages;
 }
 
+namespace {
+class CommandObjectTargetModulesDumpClangPCMInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetModulesDumpClangPCMInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target modules dump pcm-info",
+            "Dump information about the given clang module (pcm).") {
+    // Take a single file argument.
+    AddSimpleArgumentList(eArgTypeFilename);
+  }
+
+  ~CommandObjectTargetModulesDumpClangPCMInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    if (command.GetArgumentCount() != 1) {
+      result.AppendErrorWithFormat("'%s' takes exactly one pcm path argument",
+                                   m_cmd_name.c_str());
+      return;
+    }
+
+    const char *pcm_path = command.GetArgumentAtIndex(0);
+    const FileSpec pcm_file{pcm_path};
+
+    if (pcm_file.GetFileNameExtension() != ".pcm") {
+      result.AppendError("file must have a .pcm extension");
+      return;
+    }
+
+    if (!FileSystem::Instance().Exists(pcm_file)) {
+      result.AppendError("pcm file does not exist");
+      return;
+    }
+
+    const char *clang_args[] = {"clang", pcm_path};
+    clang::CompilerInstance compiler(clang::createInvocation(clang_args));
+    compiler.setVirtualFileSystem(
+        FileSystem::Instance().GetVirtualFileSystem());
+    compiler.createDiagnostics();
+
+    // Pass empty deleter to not attempt to free memory that was allocated
+    // outside of the current scope, possibly statically.
+    std::shared_ptr<llvm::raw_ostream> Out(
+        &result.GetOutputStream().AsRawOstream(), [](llvm::raw_ostream *) {});
+    clang::DumpModuleInfoAction dump_module_info(Out);
+    // DumpModuleInfoAction requires ObjectFilePCHContainerReader.
+    compiler.getPCHContainerOperations()->registerReader(
+        std::make_unique<clang::ObjectFilePCHContainerReader>());
+
+    if (compiler.ExecuteAction(dump_module_info))
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+} // namespace
+
 void TypeSystemClang::Initialize() {
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), "clang base AST context plug-in", CreateInstance,
-      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions());
+      GetSupportedLanguagesForTypes(), GetSupportedLanguagesForExpressions(),
+      DebuggerInitialize);
+
+  llvm::SmallString<128> path;
+  if (clang::driver::Driver::getDefaultModuleCachePath(path))
+    ModuleList::GetGlobalModuleListProperties().SetClangModulesCachePath(
+        FileSpec(path));
 }
 
 void TypeSystemClang::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
+}
+
+void TypeSystemClang::DebuggerInitialize(Debugger &debugger) {
+  CommandInterpreter &interpreter = debugger.GetCommandInterpreter();
+  llvm::StringRef parent = "target modules dump";
+  if (CommandObject *dump = interpreter.GetCommandObjectForCommand(parent))
+    dump->LoadSubCommand(
+        "pcm-info",
+        std::make_shared<CommandObjectTargetModulesDumpClangPCMInfo>(
+            interpreter));
 }
 
 void TypeSystemClang::Finalize() {
@@ -694,7 +784,7 @@ void TypeSystemClang::CreateASTContext() {
             m_target_triple)
             .str();
 
-    LLDB_LOG(GetLog(LLDBLog::Expressions), err.c_str());
+    LLDB_LOG(GetLog(LLDBLog::Expressions), "{0}", err);
 
     static std::once_flag s_uninitialized_target_warning;
     Debugger::ReportWarning(std::move(err), /*debugger_id=*/std::nullopt,
@@ -1449,7 +1539,7 @@ void TypeSystemClang::CreateFunctionTemplateSpecializationInfo(
       func_decl->getASTContext(), infos.GetArgs());
 
   func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
-                                               template_args_ptr, nullptr);
+                                               template_args_ptr, {});
 }
 
 /// Returns true if the given template parameter can represent the given value.
@@ -1631,6 +1721,8 @@ TypeSystemClang::CreateTemplateTemplateParmDecl(const char *template_name) {
   llvm::SmallVector<NamedDecl *, 8> template_param_decls;
 
   TypeSystemClang::TemplateParameterInfos template_param_infos;
+  template_param_infos.SetParameterPack(
+      std::make_unique<TemplateParameterInfos>());
   TemplateParameterList *template_param_list = CreateTemplateParameterList(
       ast, template_param_infos, template_param_decls);
 
@@ -1670,11 +1762,11 @@ TypeSystemClang::CreateClassTemplateSpecializationDecl(
   class_template_specialization_decl->setInstantiationOf(class_template_decl);
   class_template_specialization_decl->setTemplateArgs(
       TemplateArgumentList::CreateCopy(ast, args));
-  void *insert_pos = nullptr;
-  if (class_template_decl->findSpecialization(args, insert_pos))
+  llvm::FoldingSetInsertToken insert_token;
+  if (class_template_decl->findSpecialization(args, insert_token))
     return nullptr;
   class_template_decl->AddSpecialization(class_template_specialization_decl,
-                                         insert_pos);
+                                         insert_token);
   class_template_specialization_decl->setDeclName(
       class_template_decl->getDeclName());
 
@@ -2411,6 +2503,14 @@ CompilerType TypeSystemClang::GetPointerDiffType(bool is_signed) {
   return GetType(getASTContext().getUnsignedPointerDiffType());
 }
 
+CompilerType TypeSystemClang::GetSizeType() {
+  // Check if builtin types are initialized.
+  if (!getASTContext().VoidPtrTy)
+    return {};
+
+  return GetType(getASTContext().getSizeType());
+}
+
 void TypeSystemClang::DumpDeclContextHiearchy(clang::DeclContext *decl_ctx) {
   if (decl_ctx) {
     DumpDeclContextHiearchy(decl_ctx->getParent());
@@ -2605,7 +2705,7 @@ TypeSystemClang::GetDeclContextForType(clang::QualType type) {
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::RecordType *
-GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
+GetCompleteRecordType(const clang::ASTContext *ast, clang::QualType qual_type) {
   assert(qual_type->isRecordType());
 
   const auto *tag_type = llvm::cast<clang::RecordType>(qual_type.getTypePtr());
@@ -2646,7 +2746,7 @@ GetCompleteRecordType(clang::ASTContext *ast, clang::QualType qual_type) {
 /// function will try to complete the type if necessary (and allowed
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
-static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
+static const clang::EnumType *GetCompleteEnumType(const clang::ASTContext *ast,
                                                   clang::QualType qual_type) {
   assert(qual_type->isEnumeralType());
   assert(ast);
@@ -2679,7 +2779,7 @@ static const clang::EnumType *GetCompleteEnumType(clang::ASTContext *ast,
 /// by the specified \ref allow_completion). If we fail to return a *complete*
 /// type, returns nullptr.
 static const clang::ObjCObjectType *
-GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
+GetCompleteObjCObjectType(const clang::ASTContext *ast, QualType qual_type) {
   assert(qual_type->isObjCObjectType());
   assert(ast);
 
@@ -2710,7 +2810,7 @@ GetCompleteObjCObjectType(clang::ASTContext *ast, QualType qual_type) {
   return objc_class_type;
 }
 
-static bool GetCompleteQualType(clang::ASTContext *ast,
+static bool GetCompleteQualType(const clang::ASTContext *ast,
                                 clang::QualType qual_type) {
   qual_type = RemoveWrappingTypes(qual_type);
   const clang::Type::TypeClass type_class = qual_type->getTypeClass();
@@ -3167,6 +3267,15 @@ bool TypeSystemClang::IsMemberFunctionPointerType(
   };
 
   return IsTypeImpl(type, isMemberFunctionPointerType);
+}
+
+bool TypeSystemClang::IsMemberDataPointerType(
+    lldb::opaque_compiler_type_t type) {
+  auto isMemberDataPointerType = [](clang::QualType qual_type) {
+    return qual_type->isMemberDataPointerType();
+  };
+
+  return IsTypeImpl(type, isMemberDataPointerType);
 }
 
 bool TypeSystemClang::IsFunctionPointerType(lldb::opaque_compiler_type_t type) {
@@ -3641,6 +3750,16 @@ bool TypeSystemClang::HasPointerAuthQualifier(
   return GetCanonicalQualType(type).getPointerAuth().isPresent();
 }
 
+std::optional<uint32_t> TypeSystemClang::GetTargetAddressSpace(
+    lldb::opaque_compiler_type_t type) const {
+  if (!type)
+    return std::nullopt;
+  clang::LangAS as = GetCanonicalQualType(type).getAddressSpace();
+  if (!clang::isTargetAddressSpace(as))
+    return std::nullopt;
+  return clang::toTargetAddressSpace(as);
+}
+
 bool TypeSystemClang::CanPassInRegisters(const CompilerType &type) {
   if (auto *record_decl =
       TypeSystemClang::GetAsRecordDecl(type)) {
@@ -4087,6 +4206,9 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
   case clang::Type::FunctionNoProto:
@@ -4575,6 +4697,18 @@ TypeSystemClang::AddPtrAuthModifier(lldb::opaque_compiler_type_t type,
 }
 
 CompilerType
+TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
+                                         uint32_t address_space) {
+  assert(type);
+  assert(address_space <= clang::Qualifiers::MaxAddressSpace);
+  clang::QualType qual_type = GetQualType(type);
+  auto lang_as = static_cast<clang::LangAS>(address_space);
+  if (lang_as == clang::LangAS::Default || qual_type.hasAddressSpace())
+    return GetType(qual_type);
+  return GetType(getASTContext().getAddrSpaceQualType(qual_type, lang_as));
+}
+
+CompilerType
 TypeSystemClang::AddVolatileModifier(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType result(GetQualType(type));
@@ -4707,20 +4841,19 @@ TypeSystemClang::GetObjCBitSize(QualType qual_type,
         return *bit_size;
     }
   } else {
-    static bool g_printed = false;
-    if (!g_printed) {
+    static std::once_flag g_once_flag;
+    std::call_once(g_once_flag, [&] {
       StreamString s;
       DumpTypeDescription(qual_type.getAsOpaquePtr(), s);
-
-      llvm::outs() << "warning: trying to determine the size of type ";
-      llvm::outs() << s.GetString() << "\n";
-      llvm::outs() << "without a valid ExecutionContext. this is not "
-                      "reliable. please file a bug against LLDB.\n";
-      llvm::outs() << "backtrace:\n";
-      llvm::sys::PrintStackTrace(llvm::outs());
-      llvm::outs() << "\n";
-      g_printed = true;
-    }
+      std::string backtrace;
+      llvm::raw_string_ostream os(backtrace);
+      llvm::sys::PrintStackTrace(os);
+      Debugger::ReportInternalError(
+          llvm::formatv("determining the size of type {0} without a valid "
+                        "ExecutionContext is not reliable\n{1}",
+                        s.GetString(), llvm::StringRef(backtrace).rtrim())
+              .str());
+    });
   }
 
   return getASTContext().getTypeSize(qual_type) +
@@ -4765,6 +4898,13 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
       GetTypeName(type, base_name_only).AsCString(""));
 }
 
+std::optional<uint64_t>
+TypeSystemClang::GetByteStride(lldb::opaque_compiler_type_t type) {
+  // In C/C++/Objective-C, sizeof already includes any tail padding, so the
+  // stride is the same as the size.
+  return llvm::expectedToOptional(GetByteSize(type, nullptr));
+}
+
 std::optional<size_t>
 TypeSystemClang::GetTypeBitAlign(lldb::opaque_compiler_type_t type,
                                  ExecutionContextScope *exe_scope) {
@@ -4791,6 +4931,9 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
 
   case clang::Type::UnaryTransform:
     break;
@@ -4890,6 +5033,12 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::NullPtr:
+      return lldb::eEncodingUint;
+
+    case clang::BuiltinType::MetaInfo:
+      // HLSL -- Packed Types
+#define HLSL_PACKED_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/HLSLPackedTypes.def"
       return lldb::eEncodingUint;
 
     case clang::BuiltinType::Kind::ARCUnbridgedCast:
@@ -4992,6 +5141,11 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
   case clang::BuiltinType::Id:
 #include "clang/Basic/AMDGPUTypes.def"
       break;
+
+      // SPIR-V builtin types.
+#define SPIRV_TYPE(Name, Id, SingletonId) case clang::BuiltinType::Id:
+#include "clang/Basic/SPIRVTypes.def"
+      break;
     }
     break;
   // All pointer types are represented as unsigned integer encodings. We may
@@ -5093,6 +5247,9 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Using:
   case clang::Type::PredefinedSugar:
     llvm_unreachable("Handled in RemoveWrappingTypes!");
+  case clang::Type::LateParsedAttr:
+    llvm_unreachable("LateParsedAttrType is a transient parsing placeholder "
+                     "that is resolved before the AST is finalized.");
   case clang::Type::UnaryTransform:
     break;
 
@@ -5517,7 +5674,7 @@ void TypeSystemClang::ForEachEnumerator(
       for (enum_pos = enum_decl->enumerator_begin(),
           enum_end_pos = enum_decl->enumerator_end();
            enum_pos != enum_end_pos; ++enum_pos) {
-        ConstString name(enum_pos->getNameAsString().c_str());
+        ConstString name(enum_pos->getNameAsString());
         if (!callback(integer_type, name, enum_pos->getInitVal()))
           break;
       }
@@ -6345,8 +6502,8 @@ llvm::Expected<CompilerType> TypeSystemClang::GetChildCompilerTypeAtIndex(
       if (omit_empty_base_classes) {
         CompilerType base_class_clang_type = GetType(
             getASTContext().getObjCInterfaceType(superclass_interface_decl));
-        if (llvm::expectedToStdOptional(base_class_clang_type.GetNumChildren(
-                                            omit_empty_base_classes, exe_ctx))
+        if (llvm::expectedToOptional(base_class_clang_type.GetNumChildren(
+                                         omit_empty_base_classes, exe_ctx))
                 .value_or(0) > 0) {
           if (idx == 0) {
             clang::QualType ivar_qual_type(getASTContext().getObjCInterfaceType(
@@ -7011,8 +7168,7 @@ TypeSystemClang::GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
       break;
     }
   }
-  return llvm::createStringError("Type has no child named '%s'",
-                                 name.str().c_str());
+  return llvm::createStringErrorV("type has no child named '{0}'", name);
 }
 
 CompilerType
@@ -7258,98 +7414,16 @@ CompilerType TypeSystemClang::GetTypeForFormatters(void *type) {
 
 bool TypeSystemClang::IsPromotableIntegerType(
     lldb::opaque_compiler_type_t type) {
-  // Unscoped enums are always considered as promotable, even if their
-  // underlying type does not need to be promoted (e.g. "int").
-  bool is_signed = false;
-  bool isUnscopedEnumerationType =
-      IsEnumerationType(type, is_signed) && !IsScopedEnumerationType(type);
-  if (isUnscopedEnumerationType)
-    return true;
-
-  switch (GetBasicTypeEnumeration(type)) {
-  case lldb::eBasicTypeBool:
-  case lldb::eBasicTypeChar:
-  case lldb::eBasicTypeSignedChar:
-  case lldb::eBasicTypeUnsignedChar:
-  case lldb::eBasicTypeShort:
-  case lldb::eBasicTypeUnsignedShort:
-  case lldb::eBasicTypeWChar:
-  case lldb::eBasicTypeSignedWChar:
-  case lldb::eBasicTypeUnsignedWChar:
-  case lldb::eBasicTypeChar16:
-  case lldb::eBasicTypeChar32:
-    return true;
-
-  default:
-    return false;
-  }
-
-  llvm_unreachable("All cases handled above.");
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return getASTContext().isPromotableIntegerType(qual_type);
 }
 
-llvm::Expected<CompilerType>
-TypeSystemClang::DoIntegralPromotion(CompilerType from,
-                                     ExecutionContextScope *exe_scope) {
-  if (!from.IsInteger() && !from.IsUnscopedEnumerationType())
-    return from;
-
-  if (!from.IsPromotableIntegerType())
-    return from;
-
-  if (from.IsUnscopedEnumerationType()) {
-    EnumDecl *enum_decl = GetAsEnumDecl(from);
-    CompilerType promotion_type = GetType(enum_decl->getPromotionType());
-    return DoIntegralPromotion(promotion_type, exe_scope);
-  }
-
-  lldb::BasicType builtin_type =
-      from.GetCanonicalType().GetBasicTypeEnumeration();
-  uint64_t from_size = 0;
-  if (builtin_type == lldb::eBasicTypeWChar ||
-      builtin_type == lldb::eBasicTypeSignedWChar ||
-      builtin_type == lldb::eBasicTypeUnsignedWChar ||
-      builtin_type == lldb::eBasicTypeChar16 ||
-      builtin_type == lldb::eBasicTypeChar32) {
-    // Find the type that can hold the entire range of values for our type.
-    bool is_signed = from.IsSigned();
-    llvm::Expected<uint64_t> from_size = from.GetByteSize(exe_scope);
-    if (!from_size)
-      return from_size.takeError();
-    CompilerType promote_types[] = {
-        GetBasicTypeFromAST(lldb::eBasicTypeInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt),
-        GetBasicTypeFromAST(lldb::eBasicTypeLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeLongLong),
-        GetBasicTypeFromAST(lldb::eBasicTypeUnsignedLongLong),
-    };
-    for (CompilerType &type : promote_types) {
-      llvm::Expected<uint64_t> byte_size = type.GetByteSize(exe_scope);
-      if (!byte_size)
-        return byte_size.takeError();
-      if (*from_size < *byte_size ||
-          (*from_size == *byte_size && is_signed == type.IsSigned())) {
-        return type;
-      }
-    }
-    llvm_unreachable("char type should fit into long long");
-  }
-
-  // Here we can promote only to "int" or "unsigned int".
-  CompilerType int_type = GetBasicTypeFromAST(lldb::eBasicTypeInt);
-  llvm::Expected<uint64_t> int_byte_size = int_type.GetByteSize(exe_scope);
-  if (!int_byte_size)
-    return int_byte_size.takeError();
-
-  // Signed integer types can be safely promoted to "int".
-  if (from.IsSigned()) {
-    return int_type;
-  }
-  // Unsigned integer types are promoted to "unsigned int" if "int" cannot hold
-  // their entire value range.
-  return (from_size == *int_byte_size)
-             ? GetBasicTypeFromAST(lldb::eBasicTypeUnsignedInt)
-             : int_type;
+CompilerType
+TypeSystemClang::GetPromotedIntegerType(lldb::opaque_compiler_type_t type) {
+  if (!IsPromotableIntegerType(type))
+    return CompilerType();
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  return GetType(getASTContext().getPromotedIntegerType(qual_type));
 }
 
 clang::EnumDecl *TypeSystemClang::GetAsEnumDecl(const CompilerType &type) {
@@ -7414,9 +7488,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
   clang::Expr *bit_width = nullptr;
   if (bitfield_bit_size != 0) {
     if (clang_ast.IntTy.isNull()) {
-      LLDB_LOG(
-          GetLog(LLDBLog::Expressions),
-          "{0} failed: builtin ASTContext types have not been initialized");
+      LLDB_LOG(GetLog(LLDBLog::Expressions),
+               "builtin ASTContext types have not been initialized");
       return nullptr;
     }
 
@@ -8549,14 +8622,19 @@ TypeSystemClang::dump(lldb::opaque_compiler_type_t type) const {
 namespace {
 struct ScopedASTColor {
   ScopedASTColor(clang::ASTContext &ast, bool show_colors)
-      : ast(ast), old_show_colors(ast.getDiagnostics().getShowColors()) {
-    ast.getDiagnostics().setShowColors(show_colors);
+      : ast(ast),
+        old_show_colors(
+            ast.getDiagnostics().getDiagnosticOptions().getShowColors()) {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(
+        show_colors ? clang::ShowColorsKind::On : clang::ShowColorsKind::Off);
   }
 
-  ~ScopedASTColor() { ast.getDiagnostics().setShowColors(old_show_colors); }
+  ~ScopedASTColor() {
+    ast.getDiagnostics().getDiagnosticOptions().setShowColors(old_show_colors);
+  }
 
   clang::ASTContext &ast;
-  const bool old_show_colors;
+  const clang::ShowColorsKind old_show_colors;
 };
 } // namespace
 
@@ -8566,6 +8644,7 @@ void TypeSystemClang::Dump(llvm::raw_ostream &output, llvm::StringRef filter,
 
   auto consumer =
       clang::CreateASTDumper(output, filter,
+                             /*FilterPath=*/"",
                              /*DumpDecls=*/true,
                              /*Deserialize=*/false,
                              /*DumpLookups=*/false,
@@ -8593,7 +8672,7 @@ void TypeSystemClang::DumpFromSymbolFile(Stream &s,
       if (symbol_name != type->GetName().GetStringRef())
         continue;
 
-    s << type->GetName().AsCString() << "\n";
+    s << type->GetName() << "\n";
 
     CompilerType full_type = type->GetFullCompilerType();
     if (clang::TagDecl *tag_decl = GetAsTagDecl(full_type)) {
@@ -8777,7 +8856,7 @@ bool TypeSystemClang::DumpTypeValue(
         case eFormatBoolean:
         case eFormatBinary:
         case eFormatComplex:
-        case eFormatCString: // NULL terminated C strings
+        case eFormatCString: // null-terminated C strings
         case eFormatDecimal:
         case eFormatEnum:
         case eFormatHex:
@@ -8837,12 +8916,6 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level) {
   StreamFile s(stdout, false);
   DumpTypeDescription(type, s, level);
-
-  CompilerType ct(weak_from_this(), type);
-  const clang::Type *clang_type = ClangUtil::GetQualType(ct).getTypePtr();
-  if (std::optional<ClangASTMetadata> metadata = GetMetadata(clang_type)) {
-    metadata->Dump(&s);
-  }
 }
 
 void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
@@ -8931,7 +9004,25 @@ void TypeSystemClang::DumpTypeDescription(lldb::opaque_compiler_type_t type,
     if (buf.size() > 0) {
       s.Write(buf.data(), buf.size());
     }
-}
+
+    if (level == eDescriptionLevelVerbose) {
+      std::optional<ClangASTMetadata> metadata =
+          GetMetadata(qual_type.getTypePtr());
+      if (metadata) {
+        s << "type-metadata = ";
+        metadata->Dump(&s);
+      }
+
+      metadata.reset();
+      if (const clang::TagDecl *tag = qual_type->getAsTagDecl())
+        metadata = GetMetadata(tag);
+
+      if (metadata) {
+        s << "decl-metadata = ";
+        metadata->Dump(&s);
+      }
+    }
+  }
 }
 
 void TypeSystemClang::DumpTypeName(const CompilerType &type) {

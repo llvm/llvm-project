@@ -1,0 +1,36 @@
+// RUN: %clang_cc1 -triple amdgpu9.42-- -S -verify -o - %s
+// REQUIRES: amdgpu-registered-target
+
+typedef float float4 __attribute__((ext_vector_type(4)));
+typedef half half4 __attribute__((ext_vector_type(4)));
+
+void test_image_store(float f32, float4 v4f32, half4 v4f16, int i32, __amdgpu_texture_t tex) {
+  __builtin_amdgcn_image_store_2d_f32_i32(f32, 15, i32, i32, tex, 106, 103); //expected-error{{'__builtin_amdgcn_image_store_2d_f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_2d_v4f32_i32(v4f32, 15, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_2d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_2d_v4f16_i32(v4f16, 15, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_2d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_2darray_f32_i32(f32, 15, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_2darray_f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_2darray_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_2darray_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_2darray_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_2darray_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_1d_v4f32_i32(v4f32, 15, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_1d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_1d_v4f16_i32(v4f16, 15, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_1d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_1darray_v4f32_i32(v4f32, 15, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_1darray_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_1darray_v4f16_i32(v4f16, 15, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_1darray_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_3d_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_3d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_3d_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_3d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_cube_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 110); //expected-error{{'__builtin_amdgcn_image_store_cube_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_cube_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110); //expected-error{{'__builtin_amdgcn_image_store_cube_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_1d_v4f32_i32(v4f32, 15, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_1d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_1d_v4f16_i32(v4f16, 15, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_1d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_1darray_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_1darray_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_1darray_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_1darray_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2d_f32_i32(f32, 15, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_2d_f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2d_v4f32_i32(v4f32, 15, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_2d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2d_v4f16_i32(v4f16, 15, i32, i32, i32, tex, 120, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_2d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2darray_f32_i32(f32, 15, i32, i32, i32, i32, tex, 120, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_2darray_f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2darray_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_2darray_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_2darray_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_2darray_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_3d_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_3d_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_3d_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 0, 110); //expected-error{{'__builtin_amdgcn_image_store_mip_3d_v4f16_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_cube_v4f32_i32(v4f32, 15, i32, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_cube_v4f32_i32' needs target feature image-insts}}
+  __builtin_amdgcn_image_store_mip_cube_v4f16_i32(v4f16, 15, i32, i32, i32, i32, tex, 120, 0); //expected-error{{'__builtin_amdgcn_image_store_mip_cube_v4f16_i32' needs target feature image-insts}}
+}

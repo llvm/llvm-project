@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ConvertMemberFunctionsToStaticCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -15,18 +16,13 @@
 #include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::readability {
 
 namespace {
 
-AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
-
 AST_MATCHER(CXXMethodDecl, hasTrivialBody) { return Node.hasTrivialBody(); }
-
-AST_MATCHER(CXXMethodDecl, isOverloadedOperator) {
-  return Node.isOverloadedOperator();
-}
 
 AST_MATCHER(CXXRecordDecl, hasAnyDependentBases) {
   return Node.hasAnyDependentBases();
@@ -64,6 +60,14 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
       return false; // Stop traversal.
     }
 
+    bool VisitUnresolvedMemberExpr(const UnresolvedMemberExpr *E) {
+      if (E->isImplicitAccess()) {
+        Used = true;
+        return false;
+      }
+      return true; // Continue traversal.
+    }
+
     // If we enter a class declaration, don't traverse into it as any usages of
     // `this` will correspond to the nested class.
     bool TraverseCXXRecordDecl(CXXRecordDecl *RD) { return true; }
@@ -76,6 +80,31 @@ AST_MATCHER(CXXMethodDecl, usesThis) {
   return UsageOfThis.Used;
 }
 
+AST_MATCHER(CXXMethodDecl, hasNonConstOverload) {
+  const auto *Method = &Node;
+  const DeclContext::lookup_result LookupResult =
+      Method->getParent()->lookup(Method->getNameInfo().getName());
+  if (LookupResult.isSingleResult())
+    return false;
+
+  const auto HasSameParameterTypes = [](const CXXMethodDecl &MD1,
+                                        const CXXMethodDecl &MD2) {
+    if (MD1.getNumParams() != MD2.getNumParams())
+      return false;
+    for (unsigned I = 0, E = MD1.getNumParams(); I < E; ++I)
+      if (MD1.getParamDecl(I)->getType().getCanonicalType() !=
+          MD2.getParamDecl(I)->getType().getCanonicalType())
+        return false;
+    return true;
+  };
+
+  return llvm::any_of(
+      LookupResult, [Method, HasSameParameterTypes](const Decl *D) {
+        const auto *Overload = dyn_cast<CXXMethodDecl>(D);
+        return Overload && Overload != Method && !Overload->isConst() &&
+               HasSameParameterTypes(*Method, *Overload);
+      });
+}
 } // namespace
 
 void ConvertMemberFunctionsToStaticCheck::registerMatchers(
@@ -87,7 +116,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
               isVirtual(), isStatic(), hasTrivialBody(), isOverloadedOperator(),
               cxxConstructorDecl(), cxxDestructorDecl(), cxxConversionDecl(),
               isExplicitObjectMemberFunction(), isTemplate(),
-              isDependentContext(),
+              isDependentContext(), allOf(isConst(), hasNonConstOverload()),
               ofClass(anyOf(
                   isLambda(),
                   hasAnyDependentBases()) // Method might become virtual
@@ -100,7 +129,7 @@ void ConvertMemberFunctionsToStaticCheck::registerMatchers(
 }
 
 /// Obtain the original source code text from a SourceRange.
-static StringRef getStringFromRange(SourceManager &SourceMgr,
+static StringRef getStringFromRange(const SourceManager &SourceMgr,
                                     const LangOptions &LangOpts,
                                     SourceRange Range) {
   if (SourceMgr.getFileID(Range.getBegin()) !=
@@ -112,10 +141,10 @@ static StringRef getStringFromRange(SourceManager &SourceMgr,
 }
 
 static SourceRange getLocationOfConst(const TypeSourceInfo *TSI,
-                                      SourceManager &SourceMgr,
+                                      const SourceManager &SourceMgr,
                                       const LangOptions &LangOpts) {
   assert(TSI);
-  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().getAsAdjusted<FunctionTypeLoc>();
   assert(FTL);
 
   const SourceRange Range{FTL.getRParenLoc().getLocWithOffset(1),

@@ -142,12 +142,12 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
     // double for intermediate results as it is more efficient than using an
     // emulated version of FMA.
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-    *sinp = fputil::multiply_add(x, -0x1.0p-25f, x);
-    *cosp = fputil::multiply_add(FPBits(x_abs).get_val(), -0x1.0p-25f, 1.0f);
+    *sinp = fputil::sub_multiply(x, x, 0x1.0p-25f);
+    *cosp = fputil::sub_multiply(1.0f, FPBits(x_abs).get_val(), 0x1.0p-25f);
 #else
-    *sinp = static_cast<float>(fputil::multiply_add(xd, -0x1.0p-25, xd));
-    *cosp = static_cast<float>(fputil::multiply_add(
-        static_cast<double>(FPBits(x_abs).get_val()), -0x1.0p-25, 1.0));
+    *sinp = static_cast<float>(fputil::sub_multiply(xd, xd, 0x1.0p-25));
+    *cosp = static_cast<float>(fputil::sub_multiply(
+        1.0, static_cast<double>(FPBits(x_abs).get_val()), 0x1.0p-25));
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
     return;
   }
@@ -176,6 +176,10 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
       uint32_t s = EXCEPT_OUTPUTS_SIN[i][0]; // FE_TOWARDZERO
       uint32_t c = EXCEPT_OUTPUTS_COS[i][0]; // FE_TOWARDZERO
       bool x_sign = x < 0;
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      s += EXCEPT_OUTPUTS_SIN[i][3];
+      c += EXCEPT_OUTPUTS_COS[i][3];
+#else
       switch (fputil::quick_get_round()) {
       case FE_UPWARD:
         s += x_sign ? EXCEPT_OUTPUTS_SIN[i][2] : EXCEPT_OUTPUTS_SIN[i][1];
@@ -190,6 +194,7 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
         c += EXCEPT_OUTPUTS_COS[i][3];
         break;
       }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
       *sinp = x_sign ? -FPBits(s).get_val() : FPBits(s).get_val();
       *cosp = FPBits(c).get_val();
 
@@ -216,8 +221,8 @@ LIBC_INLINE void sincosf(float x, float *sinp, float *cosp) {
 
   *sinp = static_cast<float>(fputil::multiply_add(
       sin_y, cos_k, fputil::multiply_add(cosm1_y, sin_k, sin_k)));
-  *cosp = static_cast<float>(fputil::multiply_add(
-      sin_y, -sin_k, fputil::multiply_add(cosm1_y, cos_k, cos_k)));
+  *cosp = static_cast<float>(fputil::sub_multiply(
+      fputil::multiply_add(cosm1_y, cos_k, cos_k), sin_y, sin_k));
 }
 
 } // namespace math

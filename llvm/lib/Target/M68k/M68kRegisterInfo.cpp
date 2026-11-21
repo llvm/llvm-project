@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,10 +33,6 @@
 #define DEBUG_TYPE "m68k-reg-info"
 
 using namespace llvm;
-
-static cl::opt<bool> EnableBasePointer(
-    "m68k-use-base-pointer", cl::Hidden, cl::init(true),
-    cl::desc("Enable use of a base pointer for complex stack frames"));
 
 // Pin the vtable to this file.
 void M68kRegisterInfo::anchor() {}
@@ -89,14 +84,11 @@ M68kRegisterInfo::getMaximalPhysRegClass(unsigned reg, MVT VT) const {
   // Pick the most sub register class of the right type that contains
   // this physreg.
   const TargetRegisterClass *BestRC = nullptr;
-  for (regclass_iterator I = regclass_begin(), E = regclass_end(); I != E;
-       ++I) {
-    const TargetRegisterClass *RC = *I;
-    if ((VT == MVT::Other || isTypeLegalForClass(*RC, VT)) &&
-        RC->contains(reg) &&
+  for (const TargetRegisterClass &RC : regclasses()) {
+    if ((VT == MVT::Other || isTypeLegalForClass(RC, VT)) && RC.contains(reg) &&
         (!BestRC ||
-         (BestRC->hasSubClass(RC) && RC->getNumRegs() > BestRC->getNumRegs())))
-      BestRC = RC;
+         (BestRC->hasSubClass(&RC) && RC.getNumRegs() > BestRC->getNumRegs())))
+      BestRC = &RC;
   }
 
   assert(BestRC && "Couldn't find the register class");
@@ -228,7 +220,7 @@ static bool CantUseSP(const MachineFrameInfo &MFI) {
 bool M68kRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (!EnableBasePointer)
+  if (!Subtarget.getCLOpts().use_base_pointer)
     return false;
 
   // When we need stack realignment, we can't address the stack from the frame

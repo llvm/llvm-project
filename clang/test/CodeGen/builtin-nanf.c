@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin9 -emit-llvm -o %t %s
-// RUN: grep 'float 0x7FF8000000000000, float 0x7FF8000000000000, float 0x7FF8000020000000, float 0x7FF8000000000000, float 0x7FF80001E0000000, float 0x7FF8001E00000000, float 0x7FF801E000000000, float 0x7FF81E0000000000, float 0x7FF9E00000000000, float 0x7FFFFFFFE0000000' %t
+// RUN: grep 'float +qnan, float +qnan, float +nan(0x1), float +qnan, float +nan(0xF), float +nan(0xF0), float +nan(0xF00), float +nan(0xF000), float +nan(0xF0000), float +nan(0x3FFFFF)' %t
 
 float n[] = {
   __builtin_nanf("0"),

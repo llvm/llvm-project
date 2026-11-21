@@ -19,6 +19,10 @@ define i32 @z() {
   ret i32 %val
 }
 
+; An unnamed aliasee must be referenced by its mangled symbol name.
+define internal i32 @0() { ret i32 0 }
+@unnamed_aliasee = internal alias i32 (), ptr @0
+
 
 attributes #0 = { noreturn }
 
@@ -43,7 +47,8 @@ attributes #0 = { noreturn }
 
 ;      CHECK: .visible .func noreturn_alias
 ; CHECK-NEXT: ()
-; CHECK-NEXT: .noreturn;
+; CHECK-NEXT: .noreturn
+; CHECK-NEXT: ;
 
 ; CHECK: .visible .func  (.param .b32 func_retval0) a()
 
@@ -64,3 +69,4 @@ attributes #0 = { noreturn }
 ; CHECK: .alias d, a;
 ; CHECK: .alias bar, foo;
 ; CHECK: .alias noreturn_alias, noreturn;
+; CHECK: .alias unnamed_aliasee, __unnamed_1;

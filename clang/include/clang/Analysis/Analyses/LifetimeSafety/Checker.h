@@ -29,7 +29,8 @@ void runLifetimeChecker(const LoanPropagationAnalysis &LoanPropagation,
                         const MovedLoansAnalysis &MovedLoans,
                         const LiveOriginsAnalysis &LiveOrigins,
                         FactManager &FactMgr, AnalysisDeclContext &ADC,
-                        LifetimeSafetySemaHelper *SemaHelper);
+                        LifetimeSafetySemaHelper *SemaHelper,
+                        const LifetimeSafetyOpts &LSOpts);
 
 } // namespace clang::lifetimes::internal
 

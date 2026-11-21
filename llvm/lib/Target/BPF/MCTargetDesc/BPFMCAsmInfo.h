@@ -20,12 +20,12 @@ namespace llvm {
 
 class BPFMCAsmInfo : public MCAsmInfoELF {
 public:
-  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options) {
+  explicit BPFMCAsmInfo(const Triple &TT, const MCTargetOptions &Options)
+      : MCAsmInfoELF(Options) {
     if (TT.getArch() == Triple::bpfeb)
       IsLittleEndian = false;
 
     InternalSymbolPrefix = ".L";
-    PrivateLabelPrefix = ".L";
     WeakRefDirective = "\t.weak\t";
 
     UsesELFSectionDirectiveForBSS = true;
@@ -34,7 +34,6 @@ public:
     HasIdentDirective = false;
 
     SupportsDebugInformation = true;
-    ExceptionsType = ExceptionHandling::DwarfCFI;
     MinInstAlignment = 8;
 
     // the default is 4 and it only affects dwarf elf output

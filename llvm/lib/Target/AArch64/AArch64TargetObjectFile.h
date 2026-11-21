@@ -17,7 +17,8 @@ namespace llvm {
 
 /// This implementation is used for AArch64 ELF targets (Linux in particular).
 class AArch64_ELFTargetObjectFile : public TargetLoweringObjectFileELF {
-  void Initialize(MCContext &Ctx, const TargetMachine &TM) override;
+  void initialize(MCContext &Ctx, const TargetMachine &TM,
+                  const Module &M) override;
 
 public:
   const MCExpr *getIndirectSymViaGOTPCRel(const GlobalValue *GV,
@@ -40,6 +41,9 @@ public:
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
+
+  /// Describe a TLS variable address within debug info.
+  const MCExpr *getDebugThreadLocalSymbol(const MCSymbol *Sym) const override;
 };
 
 /// AArch64_MachoTargetObjectFile - This TLOF implementation is used for Darwin.

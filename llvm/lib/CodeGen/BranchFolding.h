@@ -19,6 +19,7 @@
 namespace llvm {
 
 class BasicBlock;
+struct CodeGenOptions;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
 class MachineLoopInfo;
@@ -45,6 +46,13 @@ class TargetRegisterInfo;
                           const TargetRegisterInfo *tri,
                           MachineLoopInfo *mli = nullptr,
                           bool AfterPlacement = false);
+
+    /// Enable or disable the basic-block reordering sub-phase of branch
+    /// optimization. Enabled by default; targets sensitive to block layout
+    /// (e.g. those with structured-CFG register allocation) can disable it.
+    void setBasicBlockReordering(bool Enable) {
+      EnableBasicBlockReordering = Enable;
+    }
 
   private:
     class MergePotentialsElt {
@@ -116,9 +124,11 @@ class TargetRegisterInfo;
     };
     std::vector<SameTailElt> SameTails;
 
+    const CodeGenOptions *Opts = nullptr;
     bool AfterBlockPlacement = false;
     bool EnableTailMerge = false;
     bool EnableHoistCommonCode = false;
+    bool EnableBasicBlockReordering = false;
     bool UpdateLiveIns = false;
     unsigned MinCommonTailLength;
     const TargetInstrInfo *TII = nullptr;

@@ -11,7 +11,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -29,15 +28,16 @@
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
+#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Driver.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -67,24 +67,12 @@ enum ID {
 #undef OPTION
 };
 
-#define OPTTABLE_STR_TABLE_CODE
+#define OPTTABLE_CODE
 #include "Opts.inc"
-#undef OPTTABLE_STR_TABLE_CODE
 
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "Opts.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
-#include "Opts.inc"
-#undef OPTION
-};
-
-class SancovOptTable : public opt::GenericOptTable {
+class SancovOptTable : public opt::OptTable {
 public:
-  SancovOptTable()
-      : GenericOptTable(OptionStrTable, OptionPrefixesTable, InfoTable) {}
+  SancovOptTable() : OptTable(optionTables()) {}
 };
 } // namespace
 
@@ -389,7 +377,7 @@ static void operator<<(json::OStream &W, const SymbolizedCoverage &C) {
 
 static std::string parseScalarString(yaml::Node *N) {
   SmallString<64> StringStorage;
-  yaml::ScalarNode *S = dyn_cast<yaml::ScalarNode>(N);
+  yaml::ScalarNode *S = dyn_cast_if_present<yaml::ScalarNode>(N);
   failIf(!S, "expected string");
   return std::string(S->getValue(StringStorage));
 }
@@ -418,7 +406,7 @@ SymbolizedCoverage::read(const std::string &InputFile) {
 
     if (Key == "covered-points") {
       yaml::SequenceNode *Points =
-          dyn_cast<yaml::SequenceNode>(KVNode.getValue());
+          dyn_cast_if_present<yaml::SequenceNode>(KVNode.getValue());
       failIf(!Points, "expected array: " + InputFile);
 
       for (auto I = Points->begin(), E = Points->end(); I != E; ++I) {
@@ -428,21 +416,21 @@ SymbolizedCoverage::read(const std::string &InputFile) {
       Coverage->BinaryHash = parseScalarString(KVNode.getValue());
     } else if (Key == "point-symbol-info") {
       yaml::MappingNode *PointSymbolInfo =
-          dyn_cast<yaml::MappingNode>(KVNode.getValue());
+          dyn_cast_if_present<yaml::MappingNode>(KVNode.getValue());
       failIf(!PointSymbolInfo, "expected mapping node: " + InputFile);
 
       for (auto &FileKVNode : *PointSymbolInfo) {
         auto Filename = parseScalarString(FileKVNode.getKey());
 
         yaml::MappingNode *FileInfo =
-            dyn_cast<yaml::MappingNode>(FileKVNode.getValue());
+            dyn_cast_if_present<yaml::MappingNode>(FileKVNode.getValue());
         failIf(!FileInfo, "expected mapping node: " + InputFile);
 
         for (auto &FunctionKVNode : *FileInfo) {
           auto FunctionName = parseScalarString(FunctionKVNode.getKey());
 
           yaml::MappingNode *FunctionInfo =
-              dyn_cast<yaml::MappingNode>(FunctionKVNode.getValue());
+              dyn_cast_if_present<yaml::MappingNode>(FunctionKVNode.getValue());
           failIf(!FunctionInfo, "expected mapping node: " + InputFile);
 
           for (auto &PointKVNode : *FunctionInfo) {
@@ -551,9 +539,9 @@ private:
 static std::vector<CoveragePoint>
 getCoveragePoints(const std::string &ObjectFile,
                   const std::set<uint64_t> &Addrs,
-                  const std::set<uint64_t> &CoveredAddrs) {
+                  const std::set<uint64_t> &CoveredAddrs,
+                  symbolize::LLVMSymbolizer &Symbolizer) {
   std::vector<CoveragePoint> Result;
-  auto Symbolizer(createSymbolizer());
   Ignorelists Ig;
 
   std::set<std::string> CoveredFiles;
@@ -565,11 +553,11 @@ getCoveragePoints(const std::string &ObjectFile,
       object::SectionedAddress ModuleAddress = {
           Addr, object::SectionedAddress::UndefSection};
 
-      auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, ModuleAddress);
+      auto LineInfo = Symbolizer.symbolizeCode(ObjectFile, ModuleAddress);
       failIfError(LineInfo);
       CoveredFiles.insert(LineInfo->FileName);
       auto InliningInfo =
-          Symbolizer->symbolizeInlinedCode(ObjectFile, ModuleAddress);
+          Symbolizer.symbolizeInlinedCode(ObjectFile, ModuleAddress);
       failIfError(InliningInfo);
       for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
         auto FrameInfo = InliningInfo->getFrame(I);
@@ -586,7 +574,7 @@ getCoveragePoints(const std::string &ObjectFile,
     object::SectionedAddress ModuleAddress = {
         Addr, object::SectionedAddress::UndefSection};
 
-    auto LineInfo = Symbolizer->symbolizeCode(ObjectFile, ModuleAddress);
+    auto LineInfo = Symbolizer.symbolizeCode(ObjectFile, ModuleAddress);
     failIfError(LineInfo);
     if (ClSkipDeadFiles &&
         CoveredFiles.find(LineInfo->FileName) == CoveredFiles.end())
@@ -601,7 +589,7 @@ getCoveragePoints(const std::string &ObjectFile,
     Point.Locs.push_back(*LineInfo);
 
     auto InliningInfo =
-        Symbolizer->symbolizeInlinedCode(ObjectFile, ModuleAddress);
+        Symbolizer.symbolizeInlinedCode(ObjectFile, ModuleAddress);
     failIfError(InliningInfo);
     for (uint32_t I = 0; I < InliningInfo->getNumberOfFrames(); ++I) {
       auto FrameInfo = InliningInfo->getFrame(I);
@@ -695,8 +683,13 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
     failIfError(FlagsOrErr);
     uint32_t Flags = FlagsOrErr.get();
 
+    // XCOFF uses "." prefix for function entry point symbols.
+    StringRef EffectiveName =
+        (isa<object::XCOFFObjectFile>(&O) && Name.starts_with("."))
+            ? Name.drop_front(1)
+            : Name;
     if (!(Flags & object::BasicSymbolRef::SF_Undefined) &&
-        isCoveragePointSymbol(Name)) {
+        isCoveragePointSymbol(EffectiveName)) {
       Result.insert(Address);
     }
   }
@@ -763,7 +756,7 @@ static void getObjectCoveragePoints(const object::ObjectFile &O,
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   failIfEmpty(AsmInfo, "no asm info for target " + TripleName);
 
-  MCContext Ctx(TheTriple, AsmInfo.get(), MRI.get(), STI.get());
+  MCContext Ctx(TheTriple, *AsmInfo, *MRI, *STI);
   std::unique_ptr<MCDisassembler> DisAsm(
       TheTarget->createMCDisassembler(*STI, Ctx));
   failIfEmpty(DisAsm, "no disassembler info for target " + TripleName);
@@ -912,19 +905,23 @@ static std::unique_ptr<SymbolizedCoverage>
 symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   auto Coverage = std::make_unique<SymbolizedCoverage>();
 
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(ObjectFile);
-  failIfError(BufOrErr);
-  SHA1 Hasher;
-  Hasher.update((*BufOrErr)->getBuffer());
-  Coverage->BinaryHash = toHex(Hasher.final());
+  // Release the mapped file before symbolizing.
+  {
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
+        MemoryBuffer::getFile(ObjectFile);
+    failIfError(BufOrErr);
+    SHA1 Hasher;
+    Hasher.update((*BufOrErr)->getBuffer());
+    Coverage->BinaryHash = toHex(Hasher.final());
+  }
 
   Ignorelists Ig;
   auto Symbolizer(createSymbolizer());
 
   for (uint64_t Addr : *Data.Addrs) {
     // TODO: it would be neccessary to set proper section index here.
-    // object::SectionedAddress::UndefSection works for only absolute addresses.
+    // object::SectionedAddress::UndefSection works for only absolute
+    // addresses.
     auto LineInfo = Symbolizer->symbolizeCode(
         ObjectFile, {Addr, object::SectionedAddress::UndefSection});
     failIfError(LineInfo);
@@ -938,7 +935,8 @@ symbolize(const RawCoverage &Data, const std::string ObjectFile) {
   if (!llvm::includes(AllAddrs, *Data.Addrs)) {
     fail("Coverage points in binary and .sancov file do not match.");
   }
-  Coverage->Points = getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs);
+  Coverage->Points =
+      getCoveragePoints(ObjectFile, AllAddrs, *Data.Addrs, *Symbolizer);
   return Coverage;
 }
 
@@ -981,7 +979,6 @@ computeNotCoveredFunctions(const SymbolizedCoverage &Coverage) {
 
 static std::set<FileFn>
 computeCoveredFunctions(const SymbolizedCoverage &Coverage) {
-  auto AllFns = computeFunctions(Coverage.Points);
   std::set<FileFn> Result;
 
   for (const auto &Point : Coverage.Points) {

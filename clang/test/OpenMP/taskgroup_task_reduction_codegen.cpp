@@ -133,7 +133,7 @@ int main(int argc, char **argv) {
 // CHECK-DAG:   [[TMP38]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 1
 // CHECK-DAG:   [[GEPVLA]] = getelementptr inbounds nuw [2 x [[T2]]], ptr [[RD_IN2]], i64 0, i64
 // CHECK-DAG:   [[TMP40:%.+]] = mul nuw i64 [[VLA_SIZE]], 2
-// CHECK-DAG:   [[TMP41:%.+]] = udiv exact i64 [[TMP40]], ptrtoint (ptr getelementptr (i16, ptr null, i32 1) to i64)
+// CHECK-DAG:   [[TMP41:%.+]] = udiv exact i64 [[TMP40]], 2
 // CHECK-DAG:   [[TMP42:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 2
 // CHECK-DAG:   store i64 [[TMP40]], ptr [[TMP42]],
 // CHECK-DAG:   [[TMP43:%.+]] = getelementptr inbounds nuw [[T2]], ptr [[GEPVLA]], i32 0, i32 3

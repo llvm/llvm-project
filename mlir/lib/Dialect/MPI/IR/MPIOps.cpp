@@ -9,8 +9,6 @@
 #include "mlir/Dialect/MPI/IR/MPI.h"
 #include "mlir/Dialect/MPI/IR/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinAttributes.h"
 
 using namespace mlir;
 using namespace mlir::mpi;
@@ -52,7 +50,7 @@ struct FoldCast final : public mlir::OpRewritePattern<OpT> {
     if (!src.getType().hasStaticShape()) {
       return mlir::failure();
     }
-    op.getRefMutable().assign(src);
+    b.modifyOpInPlace(op, [&]() { op.getRefMutable().assign(src); });
     return mlir::success();
   }
 };

@@ -133,6 +133,7 @@ private:
   friend class SBValue;
   friend class lldb_private::QueueImpl;
   friend class SBQueueItem;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   lldb::ThreadPlanSP GetSP() const { return m_opaque_wp.lock(); }
   lldb_private::ThreadPlan *get() const { return GetSP().get(); }

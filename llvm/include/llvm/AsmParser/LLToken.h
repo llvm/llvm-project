@@ -91,6 +91,7 @@ enum Kind {
   kw_unwind,
   kw_datalayout,
   kw_volatile,
+  kw_elementwise,
   kw_atomic,
   kw_unordered,
   kw_monotonic,
@@ -185,6 +186,7 @@ enum Kind {
   kw_amdgpu_gfx_whole_wave,
   kw_tailcc,
   kw_m68k_rtdcc,
+  kw_wasm_emscripten_invokecc,
   kw_graalcc,
   kw_riscv_vector_cc,
   kw_riscv_vls_cc,
@@ -207,6 +209,7 @@ enum Kind {
   kw_readwrite,
   kw_argmem,
   kw_inaccessiblemem,
+  kw_target_mem,
   kw_target_mem0,
   kw_target_mem1,
   kw_errnomem,
@@ -291,6 +294,8 @@ enum Kind {
   kw_fmin,
   kw_fmaximum,
   kw_fminimum,
+  kw_fmaximumnum,
+  kw_fminimumnum,
   kw_uinc_wrap,
   kw_udec_wrap,
   kw_usub_cond,
@@ -376,6 +381,8 @@ enum Kind {
   kw_dso_local_equivalent,
   kw_no_cfi,
   kw_ptrauth,
+  kw_bitinsert,
+  kw_bitextract,
 
   kw_freeze,
 
@@ -384,7 +391,6 @@ enum Kind {
 
   // Use-list order directives.
   kw_uselistorder,
-  kw_uselistorder_bb,
 
   // Summary index keywords
   kw_path,
@@ -395,6 +401,8 @@ enum Kind {
   kw_summaries,
   kw_flags,
   kw_blockcount,
+  kw_cfiFunctionDefs,
+  kw_cfiFunctionDecls,
   kw_linkage,
   kw_visibility,
   kw_notEligibleToImport,
@@ -426,6 +434,7 @@ enum Kind {
   kw_unknown,
   kw_critical,
   kw_relbf,
+  kw_indirect,
   kw_variable,
   kw_vTableFuncs,
   kw_virtFunc,
@@ -461,6 +470,7 @@ enum Kind {
   kw_indir,
   kw_singleImpl,
   kw_branchFunnel,
+  kw_speculative,
   kw_singleImplName,
   kw_resByArg,
   kw_byArg,
@@ -479,6 +489,7 @@ enum Kind {
   kw_versions,
   kw_memProf,
   kw_notcold,
+  kw_ambiguous,
 
   // GV's with __attribute__((no_sanitize("address"))), or things in
   // -fsanitize-ignorelist when built with ASan.
@@ -509,6 +520,7 @@ enum Kind {
   DwarfVirtuality,     // DW_VIRTUALITY_foo
   DwarfLang,           // DW_LANG_foo
   DwarfSourceLangName, // DW_LNAME_foo
+  DwarfLangDialect,    // DW_LLVM_LANG_DIALECT_foo
   DwarfCC,             // DW_CC_foo
   EmissionKind,        // lineTablesOnly
   NameTableKind,       // GNU
@@ -520,12 +532,14 @@ enum Kind {
   ChecksumKind,        // CSK_foo
   DbgRecordType,       // dbg_foo
   DwarfEnumKind,       // DW_APPLE_ENUM_KIND_foo
+  FloatLiteral,        // Unparsed float literal
 
   // Type valued tokens (TyVal).
   Type,
 
-  APFloat, // APFloatVal
-  APSInt   // APSInt
+  FloatHexLiteral, // f0x..., stored as APSInt
+  APFloat,         // APFloatVal
+  APSInt           // APSInt
 };
 } // end namespace lltok
 } // end namespace llvm

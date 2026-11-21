@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c23-or-later %s modernize-use-nullptr %t
 
-#define NULL 0
+#include <stddef.h>
 
 void test_assignment() {
   int *p1 = 0;

@@ -25,7 +25,7 @@ class ProcessGDBRemote;
 
 class GDBRemoteCommunicationServerCommon : public GDBRemoteCommunicationServer {
 public:
-  GDBRemoteCommunicationServerCommon();
+  explicit GDBRemoteCommunicationServerCommon(llvm::StringRef name);
 
   ~GDBRemoteCommunicationServerCommon() override;
 
@@ -98,6 +98,8 @@ protected:
   PacketResult Handle_QSetSTDOUT(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_QSetSTDERR(StringExtractorGDBRemote &packet);
+
+  PacketResult Handle_QSetSTDIOWindowSize(StringExtractorGDBRemote &packet);
 
   PacketResult Handle_qLaunchSuccess(StringExtractorGDBRemote &packet);
 

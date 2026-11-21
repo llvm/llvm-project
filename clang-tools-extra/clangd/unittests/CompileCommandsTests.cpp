@@ -273,6 +273,10 @@ TEST(ArgStripperTest, ArgStyles) {
   // Separate
   EXPECT_EQ(strip("-mllvm", "clang -mllvm X foo.cc"), "clang foo.cc");
   EXPECT_EQ(strip("-mllvm", "clang -mllvmX foo.cc"), "clang -mllvmX foo.cc");
+  EXPECT_EQ(strip("-mllvm", "clang -mllvm=X foo.cc"), "clang foo.cc");
+  EXPECT_EQ(strip("-o", "clang --output=x --output y foo.cc"), "clang foo.cc");
+  EXPECT_EQ(strip("-o", "clang --output-class-directory=x foo.cc"),
+            "clang --output-class-directory=x foo.cc");
   // RemainingArgsJoined
   EXPECT_EQ(strip("/link", "clang-cl /link b c d foo.cc"), "clang-cl");
   EXPECT_EQ(strip("/link", "clang-cl /linka b c d foo.cc"), "clang-cl");
@@ -524,6 +528,17 @@ TEST(CommandMangler, RespectsOriginalSysroot) {
     EXPECT_THAT(llvm::join(Cmd.CommandLine, " "),
                 Not(HasSubstr(testPath("fake/sysroot"))));
   }
+}
+TEST(CommandMangler, ClangUnknownArgs) {
+  // Check that clang++ will drop unknown flags
+  const auto Mangler = CommandMangler::forTests();
+  tooling::CompileCommand Cmd;
+  Cmd.CommandLine = {"clang++", "-std=c++23", "--unknown-flag",
+                     "--unknown-option=abcd"};
+  Mangler(Cmd, "foo.cc");
+  EXPECT_THAT(Cmd.CommandLine, Not(Contains("--unknown-flag")));
+  EXPECT_THAT(Cmd.CommandLine, Not(Contains("--unknown-option=abcd")));
+  EXPECT_THAT(Cmd.CommandLine, Contains("-std=c++23"));
 }
 
 TEST(CommandMangler, StdLatestFlag) {

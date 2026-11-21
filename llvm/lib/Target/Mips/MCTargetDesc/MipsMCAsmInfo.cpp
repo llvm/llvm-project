@@ -12,6 +12,8 @@
 
 #include "MipsMCAsmInfo.h"
 #include "MipsABIInfo.h"
+#include "MipsMCTargetDesc.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
@@ -21,7 +23,8 @@ using namespace llvm;
 void MipsELFMCAsmInfo::anchor() {}
 
 MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
-                                   const MCTargetOptions &Options) {
+                                   const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   IsLittleEndian = TheTriple.isLittleEndian();
 
   MipsABIInfo ABI =
@@ -34,7 +37,6 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
     InternalSymbolPrefix = "$";
   else if (ABI.IsN32() || ABI.IsN64())
     InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = InternalSymbolPrefix;
 
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
@@ -44,20 +46,17 @@ MipsELFMCAsmInfo::MipsELFMCAsmInfo(const Triple &TheTriple,
   ZeroDirective               = "\t.space\t";
   UseAssignmentForEHBegin = true;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::DwarfCFI;
   DwarfRegNumForCFI = true;
 }
 
 void MipsCOFFMCAsmInfo::anchor() {}
 
-MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo() {
+MipsCOFFMCAsmInfo::MipsCOFFMCAsmInfo(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   HasSingleParameterDotFile = true;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
 
-  ExceptionsType = ExceptionHandling::WinEH;
-
   InternalSymbolPrefix = ".L";
-  PrivateLabelPrefix = ".L";
   AllowAtInName = true;
 }
 
@@ -210,6 +209,11 @@ bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                  MCValue &Res,
                                                  const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
+}
+
+bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // microMIPS encoding uses compressed intruction byte-order
+  return STI.hasFeature(Mips::FeatureMicroMips);
 }
 
 void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

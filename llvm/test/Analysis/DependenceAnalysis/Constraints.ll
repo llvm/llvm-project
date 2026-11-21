@@ -47,7 +47,7 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
 ; CHECK-NEXT:  Src: store i32 0, ptr %13, align 4 --> Dst: store i32 %24, ptr %25, align 4
 ; CHECK-NEXT:    da analyze - output [S * *|<]!
 ; CHECK-NEXT:  Src: store i32 0, ptr %13, align 4 --> Dst: %27 = load i32, ptr %26, align 4
-; CHECK-NEXT:    da analyze - flow [S * *|<]!
+; CHECK-NEXT:    da analyze - flow [* * *|<]!
 ; CHECK-NEXT:  Src: store i32 0, ptr %13, align 4 --> Dst: %29 = load i32, ptr %28, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: store i32 0, ptr %13, align 4 --> Dst: store i32 %30, ptr %31, align 4
@@ -85,7 +85,7 @@ define void @dep_constraint_crash_test(i32 %M, i32 %N) {
 ; CHECK-NEXT:  Src: %20 = load i32, ptr %19, align 4 --> Dst: %29 = load i32, ptr %28, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %20 = load i32, ptr %19, align 4 --> Dst: store i32 %30, ptr %31, align 4
-; CHECK-NEXT:    da analyze - anti [S * *|<]!
+; CHECK-NEXT:    da analyze - anti [* * *|<]!
 ; CHECK-NEXT:  Src: %20 = load i32, ptr %19, align 4 --> Dst: %32 = load i32, ptr %6, align 4
 ; CHECK-NEXT:    da analyze - input [S|<]!
 ; CHECK-NEXT:  Src: %20 = load i32, ptr %19, align 4 --> Dst: store i32 %33, ptr @out_l, align 4

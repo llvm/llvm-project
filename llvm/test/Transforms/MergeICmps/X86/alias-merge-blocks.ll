@@ -119,7 +119,7 @@ exit:
 !5 = !{!"branch_weights", i32 11, i32 13}
 ;.
 ; X86: attributes #[[ATTR0:[0-9]+]] = { nofree nosync }
-; X86: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: read) }
+; X86: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
 ;.
 ; X86: [[META0:![0-9]+]] = !{!"function_entry_count", i32 100}
 ; X86: [[RNG1]] = !{i32 0, i32 2}

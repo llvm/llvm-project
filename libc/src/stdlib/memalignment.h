@@ -18,4 +18,4 @@ size_t memalignment(const void *p);
 
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC_STDLIB_LDIV_H
+#endif // LLVM_LIBC_SRC_STDLIB_MEM_ALIGNMENT_H

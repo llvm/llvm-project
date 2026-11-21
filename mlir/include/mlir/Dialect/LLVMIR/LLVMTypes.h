@@ -16,7 +16,6 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
-#include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include <optional>
 
 namespace llvm {
@@ -67,7 +66,6 @@ namespace LLVM {
   }
 
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMVoidType, "llvm.void");
-DEFINE_TRIVIAL_LLVM_TYPE(LLVMTokenType, "llvm.token");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMLabelType, "llvm.label");
 DEFINE_TRIVIAL_LLVM_TYPE(LLVMMetadataType, "llvm.metadata");
 

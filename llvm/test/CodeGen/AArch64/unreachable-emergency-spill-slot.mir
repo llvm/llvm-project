@@ -1,11 +1,10 @@
-#RUN: llc -mtriple=aarch64-- -run-pass prologepilog %s -o - | FileCheck %s
+#RUN: llc -mtriple=aarch64-- -run-pass prolog-epilog %s -o - | FileCheck %s
 # Check that we use the frame pointer to address the emergency spill slot.
 # Using the base pointer will result in an assert with "Emergency spill slot is
 # out of reach".
 ---
 name: hugeStack
 # CHECK-LABEL: name: hugeStack
-tracksRegLiveness: true
 frameInfo:
   localFrameSize:  256
 stack:
@@ -26,7 +25,6 @@ body: |
 ---
 name: fpDoesNotFit
 # CHECK-LABEL: name: fpDoesNotFit
-tracksRegLiveness: true
 frameInfo:
   hasStackMap: true
 # set to true to force hasFP to true.
@@ -39,3 +37,4 @@ body: |
     ; Pick SP here. Picking FP will require scavenging a register.
     ; CHECK: STRXui undef $x8, $sp, 4062
     RET_ReallyLR
+...

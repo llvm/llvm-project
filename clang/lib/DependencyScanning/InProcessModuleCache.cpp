@@ -8,14 +8,146 @@
 
 #include "clang/DependencyScanning/InProcessModuleCache.h"
 
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 using namespace dependencies;
 
+void ModuleCacheEntries::addInvalidatedPath(StringRef Path) {
+#ifndef NDEBUG
+  SmallString<256> Canonical(Path);
+  assert(llvm::sys::path::is_absolute(Path) &&
+         !llvm::sys::path::remove_dots(Canonical, /*remove_dot_dot=*/true) &&
+         "invalidated paths must be spelled like ModuleDeps::DirectoryDeps");
+#endif
+  {
+    std::lock_guard<std::mutex> Lock(InvalidatedPathsMutex);
+    InvalidatedPaths.insert(Path);
+  }
+  AnyInvalidatedPaths.store(true, std::memory_order_release);
+}
+
+std::optional<bool>
+ModuleCacheEntries::isDirectoryInvalidated(StringRef Directory) const {
+  if (!ValidateAgainstInvalidatedPaths)
+    return std::nullopt;
+  if (!AnyInvalidatedPaths.load(std::memory_order_acquire))
+    return false;
+  std::lock_guard<std::mutex> Lock(InvalidatedPathsMutex);
+  return InvalidatedPaths.contains(Directory);
+}
+
+ModuleCacheEntries::~ModuleCacheEntries() {
+  assert(!Flusher.joinable() && "Concurrent flushing was not stopped");
+}
+
+void ModuleCacheEntries::scheduleFlush(ModuleCacheMapEntry &MapEntry) {
+  // We're not flushing at all, nothing to schedule.
+  if (!Flusher.joinable())
+    return;
+
+  {
+    std::lock_guard<std::mutex> Lock(FlushMutex);
+    FlushEntries.push_back(&MapEntry);
+  }
+  FlushCondVar.notify_one();
+}
+
+void ModuleCacheEntries::startBackgroundFlushing(AtomicLineLogger &Logger) {
+  assert(!Flusher.joinable() && "Already started concurrent flushing");
+  Flusher = std::thread([this, &Logger] {
+    std::unique_lock<std::mutex> PendingLock(FlushMutex);
+    while (true) {
+      FlushCondVar.wait(PendingLock,
+                        [&] { return StopFlushing || !FlushEntries.empty(); });
+      // Leave the remaining entries to flushLeftovers().
+      if (StopFlushing)
+        return;
+      ModuleCacheMapEntry &MapEntry = *FlushEntries.front();
+      FlushEntries.pop_front();
+      PendingLock.unlock();
+      flushEntry(MapEntry.getKey(), *MapEntry.second, Logger,
+                 /*ReadBack=*/true);
+      PendingLock.lock();
+    }
+  });
+}
+
+void ModuleCacheEntries::stopBackgroundFlushing() {
+  assert(Flusher.joinable() && "Never started concurrent flushing");
+  {
+    std::lock_guard<std::mutex> Lock(FlushMutex);
+    StopFlushing = true;
+  }
+  FlushCondVar.notify_one();
+  Flusher.join();
+}
+
+void ModuleCacheEntries::flushLeftovers(AtomicLineLogger &Logger) {
+  assert(!Flusher.joinable() && "Flushing leftovers concurrently");
+  for (auto &[Name, Entry] : llvm::make_pointee_range(FlushEntries))
+    flushEntry(Name, *Entry, Logger, /*ReadBack=*/false);
+}
+
+void ModuleCacheEntries::flushEntry(StringRef Path, ModuleCacheEntry &Entry,
+                                    AtomicLineLogger &Logger, bool ReadBack) {
+  // This is a compiler-internal output, let's bypass the sandbox.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+
+  std::shared_ptr<const llvm::MemoryBuffer> InMemoryBuffer;
+  {
+    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    if (Entry.State != ModuleCacheEntry::S_Written)
+      return;
+    InMemoryBuffer = Entry.Buffer;
+  }
+
+  off_t Size;
+  time_t ModTime;
+  auto Written = writeImpl(Path, *InMemoryBuffer, Size, ModTime, ReadBack);
+  if (!Written) {
+    // Best-effort: keep the buffer in memory and let flush() try again.
+    Logger.log() << "pcm_flush_failed: " << Path;
+    return;
+  }
+  Logger.log() << "pcm_flush: " << Path;
+
+  std::lock_guard<std::mutex> Lock(Entry.Mutex);
+  // Note: We keep Entry.ModTime, since that's what readers have already seen.
+  Entry.Buffer = std::move(*Written);
+  Entry.State = ModuleCacheEntry::S_Flushed;
+}
+
 namespace {
+/// A buffer that keeps the contents of a \c ModuleCacheEntry alive.
+class SharedMemoryBuffer : public llvm::MemoryBuffer {
+  std::shared_ptr<const llvm::MemoryBuffer> Underlying;
+
+public:
+  SharedMemoryBuffer(std::shared_ptr<const llvm::MemoryBuffer> Underlying)
+      : Underlying(std::move(Underlying)) {
+    init(this->Underlying->getBufferStart(), this->Underlying->getBufferEnd(),
+         /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override {
+    return Underlying->getBufferIdentifier();
+  }
+
+  BufferKind getBufferKind() const override {
+    return Underlying->getBufferKind();
+  }
+};
+
 class ReaderWriterLock : public llvm::AdvisoryLock {
   ModuleCacheEntry &Entry;
   std::optional<unsigned> OwnedGeneration;
@@ -79,45 +211,44 @@ class InProcessModuleCache : public ModuleCache {
   // recreated for each translation unit.
   InMemoryModuleCache InMemory;
 
-public:
-  InProcessModuleCache(ModuleCacheEntries &Entries) : Entries(Entries) {}
+  ModuleCacheMapEntry &getOrCreateMapEntry(StringRef Filename) {
+    std::lock_guard<std::mutex> Lock(Entries.Mutex);
+    auto &MapEntry = *Entries.Map.try_emplace(Filename).first;
+    if (!MapEntry.second)
+      MapEntry.second = std::make_unique<ModuleCacheEntry>();
+    return MapEntry;
+  }
 
-  void prepareForGetLock(StringRef Filename) override {}
+  ModuleCacheEntry &getOrCreateEntry(StringRef Filename) {
+    return *getOrCreateMapEntry(Filename).second;
+  }
+
+public:
+  InProcessModuleCache(ModuleCacheEntries &Entries, AtomicLineLogger &Logger)
+      : ModuleCache(Logger), Entries(Entries), InMemory(Logger) {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &Entry = [&]() -> ModuleCacheEntry & {
-      std::lock_guard<std::mutex> Lock(Entries.Mutex);
-      auto &Entry = Entries.Map[Filename];
-      if (!Entry)
-        Entry = std::make_unique<ModuleCacheEntry>();
-      return *Entry;
-    }();
+    auto &Entry = getOrCreateEntry(Filename);
     return std::make_unique<ReaderWriterLock>(Entry);
   }
 
   std::time_t getModuleTimestamp(StringRef Filename) override {
-    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
-      std::lock_guard<std::mutex> Lock(Entries.Mutex);
-      auto &Entry = Entries.Map[Filename];
-      if (!Entry)
-        Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->Timestamp;
-    }();
+    auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_read: " << Filename;
     return Timestamp.load();
   }
 
   void updateModuleTimestamp(StringRef Filename) override {
     // Note: This essentially replaces FS contention with mutex contention.
-    auto &Timestamp = [&]() -> std::atomic<std::time_t> & {
-      std::lock_guard<std::mutex> Lock(Entries.Mutex);
-      auto &Entry = Entries.Map[Filename];
-      if (!Entry)
-        Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->Timestamp;
-    }();
+    auto &Timestamp = getOrCreateEntry(Filename).Timestamp;
 
+    Logger.log() << "timestamp_write: " << Filename;
     Timestamp.store(llvm::sys::toTimeT(std::chrono::system_clock::now()));
+  }
+
+  std::optional<bool> isDirectoryInvalidated(StringRef Directory) override {
+    return Entries.isDirectoryInvalidated(Directory);
   }
 
   void maybePrune(StringRef Path, time_t PruneInterval,
@@ -131,10 +262,59 @@ public:
   const InMemoryModuleCache &getInMemoryModuleCache() const override {
     return InMemory;
   }
+
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
+  write(StringRef Path, std::unique_ptr<llvm::MemoryBuffer> Buffer, off_t &Size,
+        time_t &ModTime) override {
+    ModuleCacheMapEntry &MapEntry = getOrCreateMapEntry(Path);
+    ModuleCacheEntry &Entry = *MapEntry.second;
+    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    Logger.log() << "pcm_write: " << Path;
+    if (Entry.State == ModuleCacheEntry::S_Written ||
+        Entry.State == ModuleCacheEntry::S_Flushed) {
+      assert(Entry.Buffer && "Wrote PCM with no contents");
+      assert(Entry.Buffer->getBuffer() == Buffer->getBuffer() &&
+             "Wrote the same PCM with different contents");
+      Size = Entry.Buffer->getBufferSize();
+      ModTime = Entry.ModTime;
+      return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
+    }
+    // Readers of the previous buffer (if any) keep it alive on their own.
+    Entry.Buffer = std::move(Buffer);
+    Entry.ModTime = llvm::sys::toTimeT(std::chrono::system_clock::now());
+    Entry.State = ModuleCacheEntry::S_Written;
+    Entries.scheduleFlush(MapEntry);
+    Size = Entry.Buffer->getBufferSize();
+    ModTime = Entry.ModTime;
+    return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
+  }
+
+  Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  read(StringRef FileName, off_t &Size, time_t &ModTime) override {
+    Logger.log() << "pcm_read_disk: " << FileName;
+    ModuleCacheEntry &Entry = getOrCreateEntry(FileName);
+    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    if (Entry.State == ModuleCacheEntry::S_Unknown) {
+      // This is a compiler-internal input/output, let's bypass the sandbox.
+      auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
+      off_t ReadSize;
+      time_t ReadModTime;
+      auto ReadBuffer = readImpl(FileName, ReadSize, ReadModTime);
+      if (!ReadBuffer)
+        return ReadBuffer.takeError();
+      Entry.Buffer = std::move(*ReadBuffer);
+      Entry.ModTime = ReadModTime;
+      Entry.State = ModuleCacheEntry::S_Read;
+    }
+    Size = Entry.Buffer->getBufferSize();
+    ModTime = Entry.ModTime;
+    return std::make_unique<SharedMemoryBuffer>(Entry.Buffer);
+  }
 };
 } // namespace
 
 std::shared_ptr<ModuleCache>
-dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries) {
-  return std::make_shared<InProcessModuleCache>(Entries);
+dependencies::makeInProcessModuleCache(ModuleCacheEntries &Entries,
+                                       AtomicLineLogger &Logger) {
+  return std::make_shared<InProcessModuleCache>(Entries, Logger);
 }

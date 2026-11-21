@@ -115,15 +115,15 @@ static bool paramReferredExactlyOnce(const CXXConstructorDecl *Ctor,
     ///
     /// Stops the AST traversal if more than one usage is found.
     bool VisitDeclRefExpr(DeclRefExpr *D) {
-      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl())) {
-        if (To == ParamDecl) {
-          ++Count;
-          if (Count > 1U) {
-            // No need to look further, used more than once.
-            return false;
-          }
+      if (const ParmVarDecl *To = dyn_cast<ParmVarDecl>(D->getDecl());
+          To && To == ParamDecl) {
+        ++Count;
+        if (Count > 1U) {
+          // No need to look further, used more than once.
+          return false;
         }
       }
+
       return true;
     }
 
@@ -293,7 +293,8 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
   if (hasRValueOverload(Ctor, ParamDecl))
     return;
 
-  auto Diag = diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
+  const auto Diag =
+      diag(ParamDecl->getBeginLoc(), "pass by value and use std::move");
 
   // If we received a `const&` type, we need to rewrite the function
   // declarations.
@@ -301,7 +302,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Check if we can succesfully rewrite all declarations of the constructor.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
       if (RefTL.isNull()) {
         // We cannot rewrite this instance. The type is probably hidden behind
         // some `typedef`. Do not offer a fix-it in this case.
@@ -311,7 +312,7 @@ void PassByValueCheck::check(const MatchFinder::MatchResult &Result) {
     // Rewrite all declarations.
     for (const ParmVarDecl *ParmDecl : collectParamDecls(Ctor, ParamDecl)) {
       const TypeLoc ParamTL = ParmDecl->getTypeSourceInfo()->getTypeLoc();
-      auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
+      const auto RefTL = ParamTL.getAs<ReferenceTypeLoc>();
 
       const TypeLoc ValueTL = RefTL.getPointeeLoc();
       const CharSourceRange TypeRange = CharSourceRange::getTokenRange(

@@ -12,14 +12,17 @@
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorDistribution.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/RegionUtils.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <utility>
@@ -192,12 +195,95 @@ static Operation *cloneOpWithOperandsAndTypes(RewriterBase &rewriter,
                                               ArrayRef<Value> operands,
                                               ArrayRef<Type> resultTypes) {
   OperationState res(loc, op->getName().getStringRef(), operands, resultTypes,
-                     op->getAttrs());
+                     op->getDiscardableAttrDictionary().getValue());
+  res.propertiesAttr = op->getPropertiesAsAttribute();
   return rewriter.create(res);
 }
 
-namespace {
+/// Reuse an args buffer from `buffers` to transit a value of `targetType`, or
+/// return null if none fits.
+static Value tryReuseArgBuffer(SmallVectorImpl<std::pair<Value, bool>> &buffers,
+                               Type targetType, Location loc,
+                               RewriterBase &rewriter) {
+  auto targetVecType = dyn_cast<VectorType>(targetType);
+  if (!targetVecType || !targetVecType.hasStaticShape())
+    return Value();
 
+  for (auto &entry : buffers) {
+    if (entry.second)
+      continue;
+    Value candidate = entry.first;
+    auto candidateMemref = dyn_cast<MemRefType>(candidate.getType());
+    if (!candidateMemref || !candidateMemref.hasStaticShape())
+      continue;
+    if (candidateMemref.getElementType() != targetVecType.getElementType())
+      continue;
+    // Skip rank mismatch up-front to avoid guessing a reshape.
+    if (candidateMemref.getRank() != targetVecType.getRank())
+      continue;
+    // The candidate must be at least as large as the target in every
+    // dimension, otherwise the leading subview below would run out of bounds.
+    // This also guarantees that the candidate has enough elements in total.
+    if (!llvm::all_of(llvm::seq<unsigned>(0, targetVecType.getRank()),
+                      [&](unsigned i) {
+                        return candidateMemref.getDimSize(i) >=
+                               targetVecType.getDimSize(i);
+                      }))
+      continue;
+
+    // All checks passed: claim the buffer.
+    entry.second = true;
+
+    // Same shape: reuse directly.
+    if (candidateMemref.getShape() == targetVecType.getShape())
+      return candidate;
+
+    // Larger candidate: take a leading subview of the target shape.
+    int64_t candidateRank = candidateMemref.getRank();
+    SmallVector<OpFoldResult> offsets(candidateRank, rewriter.getIndexAttr(0));
+    SmallVector<OpFoldResult> strides(candidateRank, rewriter.getIndexAttr(1));
+    SmallVector<OpFoldResult> sizes;
+    sizes.reserve(candidateRank);
+    for (int64_t dim : targetVecType.getShape())
+      sizes.push_back(rewriter.getIndexAttr(dim));
+
+    return memref::SubViewOp::create(rewriter, loc, candidate, offsets, sizes,
+                                     strides);
+  }
+  return Value();
+}
+
+/// Return true if `block` is part of a CFG cycle, which
+/// `LoopLikeOpInterface` does not cover.
+static bool isBlockInCFGLoop(Block *block) {
+  llvm::SmallSetVector<Block *, 4> visited;
+  SmallVector<Block *> worklist(block->getSuccessors().begin(),
+                                block->getSuccessors().end());
+  while (!worklist.empty()) {
+    Block *current = worklist.pop_back_val();
+    if (current == block)
+      return true;
+    if (!visited.insert(current))
+      continue;
+    for (Block *succ : current->getSuccessors())
+      worklist.push_back(succ);
+  }
+  return false;
+}
+
+/// Return true if `block` or any of its ancestor blocks is part of a CFG
+/// cycle, which `LoopLikeOpInterface` does not cover.
+static bool isInCFGLoop(Block *block) {
+  while (block) {
+    if (isBlockInCFGLoop(block))
+      return true;
+    Operation *parent = block->getParentOp();
+    block = parent ? parent->getBlock() : nullptr;
+  }
+  return false;
+}
+
+namespace {
 /// Rewrite a WarpExecuteOnLane0Op into a predicated scf.if op where the single
 /// thread `laneId` executes the entirety of the computation.
 ///
@@ -254,6 +340,16 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
     // Step 2: insert appropriate (alloc, write)-pairs before the scf.if and
     // reads within the scf.if to transit the values captured from above.
     SmallVector<Value> bbArgReplacements;
+    // Pool of args buffers paired with a "consumed" flag, so Step 5 can try
+    // to reuse them for yielded values' transit buffers. Skip reuse inside a
+    // loop (structured or CFG): thread convergence is only guaranteed within
+    // a barrier, so the next iteration's arg stores could race with this
+    // iteration's result loads.
+    SmallVector<std::pair<Value, /*consumed=*/bool>> reusableArgBuffers;
+    bool canReuseArgBuffers = !warpOp->getParentOfType<LoopLikeOpInterface>() &&
+                              !isInCFGLoop(warpOp->getBlock());
+    if (canReuseArgBuffers)
+      reusableArgBuffers.reserve(warpOp.getArgs().size());
     for (const auto &it : llvm::enumerate(warpOp.getArgs())) {
       Value sequentialVal = warpOpBody->getArgument(it.index());
       Value distributedVal = it.value();
@@ -264,6 +360,8 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       rewriter.setInsertionPoint(ifOp);
       Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
                                               sequentialVal.getType());
+      if (canReuseArgBuffers)
+        reusableArgBuffers.emplace_back(buffer, /*consumed=*/false);
       // Store distributed vector into buffer, before the ifOp.
       helper.buildStore(rewriter, loc, distributedVal, buffer);
       // Load sequential vector from buffer, inside the ifOp.
@@ -283,7 +381,7 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
 
     // Step 5. Insert appropriate writes within scf.if and reads after the
     // scf.if to transit the values returned by the op.
-    // TODO: at this point, we can reuse the shared memory from previous
+    // The args buffers from Step 2 are unused by now, try to reuse previous
     // buffers.
     SmallVector<Value> replacements;
     auto yieldOp = cast<gpu::YieldOp>(ifOp.thenBlock()->getTerminator());
@@ -294,10 +392,13 @@ struct WarpOpToScfIfPattern : public WarpDistributionPattern {
       DistributedLoadStoreHelper helper(sequentialVal, distributedVal,
                                         warpOp.getLaneid(), c0);
 
-      // Create buffer before the ifOp.
+      // Reuse an args buffer if possible, otherwise allocate.
       rewriter.setInsertionPoint(ifOp);
-      Value buffer = options.warpAllocationFn(loc, rewriter, warpOp,
-                                              sequentialVal.getType());
+      Value buffer = tryReuseArgBuffer(reusableArgBuffers,
+                                       sequentialVal.getType(), loc, rewriter);
+      if (!buffer)
+        buffer = options.warpAllocationFn(loc, rewriter, warpOp,
+                                          sequentialVal.getType());
 
       // Store yielded value into buffer, inside the ifOp, before the
       // terminator.
@@ -1978,11 +2079,20 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
           // Update any users of escaping values that were forwarded to the
           // inner `WarpOp`. These values are arguments of the inner `WarpOp`.
           innerWarp.walk([&](Operation *op) {
+            SmallVector<std::pair<unsigned, Value>> replacements;
             for (OpOperand &operand : op->getOpOperands()) {
               auto it = escapeValToBlockArgIndex.find(operand.get());
               if (it == escapeValToBlockArgIndex.end())
                 continue;
-              operand.set(innerWarp.getBodyRegion().getArgument(it->second));
+              replacements.emplace_back(
+                  operand.getOperandNumber(),
+                  innerWarp.getBodyRegion().getArgument(it->second));
+            }
+            if (!replacements.empty()) {
+              rewriter.modifyOpInPlace(op, [&]() {
+                for (auto [idx, newVal] : replacements)
+                  op->setOperand(idx, newVal);
+              });
             }
           });
           mlir::vector::moveScalarUniformCode(innerWarp);
@@ -2000,6 +2110,26 @@ struct WarpOpScfIfOp : public WarpDistributionPattern {
     for (auto [origIdx, newIdx] : ifResultMapping)
       rewriter.replaceAllUsesExcept(newWarpOp.getResult(origIdx),
                                     newIfOp.getResult(newIdx), newIfOp);
+
+    // The original `ifOp` was left inside `newWarpOp` with empty then/else
+    // regions (their blocks were moved into the inner WarpOps by takeBody).
+    // Clear remaining uses and erase it to restore IR validity. Directly
+    // update newWarpOp's yield operands instead of using replaceAllUsesWith,
+    // to avoid triggering notifyOperandReplaced on the now-invalid ifOp.
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(ifOp);
+      Operation *yield = newWarpOp.getTerminator();
+      rewriter.modifyOpInPlace(yield, [&]() {
+        for (auto [origIdx, ifResultIdx] : ifResultMapping) {
+          Value poison = ub::PoisonOp::create(
+              rewriter, ifOp.getLoc(), ifOp.getResult(ifResultIdx).getType());
+          yield->setOperand(origIdx, poison);
+        }
+      });
+      rewriter.eraseOp(ifOp);
+    }
+
     return success();
   }
 
@@ -2071,6 +2201,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     SmallVector<unsigned> nonForResultIndices;
     llvm::SmallDenseMap<unsigned, unsigned> forResultMapping;
     llvm::SmallDenseMap<unsigned, VectorType> forResultDistTypes;
+    llvm::SmallBitVector forResultsMapped(forOp.getNumResults());
     for (OpOperand &yieldOperand : warpOpYield->getOpOperands()) {
       // Yielded value is not a result of the forOp.
       if (yieldOperand.get().getDefiningOp() != forOp.getOperation()) {
@@ -2081,6 +2212,7 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
       OpResult forResult = cast<OpResult>(yieldOperand.get());
       unsigned int forResultNumber = forResult.getResultNumber();
       forResultMapping[yieldOperand.getOperandNumber()] = forResultNumber;
+      forResultsMapped.set(forResultNumber);
       // If this `ForOp` result is vector type and it is yielded by the
       // `WarpOp`, we keep track the distributed type for this result.
       if (!isa<VectorType>(forResult.getType()))
@@ -2194,8 +2326,14 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
 
     argMapping.resize(forOp.getBody()->getNumArguments());
     SmallVector<Value> yieldOperands;
-    for (Value operand : forOp.getBody()->getTerminator()->getOperands())
+    for (Value operand : forOp.getBody()->getTerminator()->getOperands()) {
+      if (BlockArgument blockArg = dyn_cast<BlockArgument>(operand);
+          blockArg && blockArg.getOwner() == forOp.getBody()) {
+        yieldOperands.push_back(argMapping[blockArg.getArgNumber()]);
+        continue;
+      }
       yieldOperands.push_back(operand);
+    }
 
     rewriter.eraseOp(forOp.getBody()->getTerminator());
     rewriter.mergeBlocks(forOp.getBody(), innerWarp.getBody(), argMapping);
@@ -2215,14 +2353,34 @@ struct WarpOpScfForOp : public WarpDistributionPattern {
     for (auto [origIdx, newIdx] : forResultMapping)
       rewriter.replaceAllUsesExcept(newWarpOp.getResult(origIdx),
                                     newForOp.getResult(newIdx), newForOp);
+
+    // The original `ForOp` was left inside `newWarpOp` with an empty body
+    // region (its body block was moved into `innerWarp` by `mergeBlocks`).
+    // Clear remaining uses and erase it to restore IR validity.
+    for (OpResult result : forOp.getResults()) {
+      if (forResultsMapped.test(result.getResultNumber()))
+        rewriter.replaceAllUsesWith(
+            result, forOp.getInitArgs()[result.getResultNumber()]);
+    }
+    rewriter.eraseOp(forOp);
+
     // Update any users of escaping values that were forwarded to the
     // inner `WarpOp`. These values are now arguments of the inner `WarpOp`.
     newForOp.walk([&](Operation *op) {
+      SmallVector<std::pair<unsigned, Value>> replacements;
       for (OpOperand &operand : op->getOpOperands()) {
         auto it = argIndexMapping.find(operand.get());
         if (it == argIndexMapping.end())
           continue;
-        operand.set(innerWarp.getBodyRegion().getArgument(it->second));
+        replacements.emplace_back(
+            operand.getOperandNumber(),
+            innerWarp.getBodyRegion().getArgument(it->second));
+      }
+      if (!replacements.empty()) {
+        rewriter.modifyOpInPlace(op, [&]() {
+          for (auto [idx, newVal] : replacements)
+            op->setOperand(idx, newVal);
+        });
       }
     });
 
@@ -2275,6 +2433,9 @@ struct WarpOpReduction : public WarpDistributionPattern {
     if (vectorType.getRank() != 1)
       return rewriter.notifyMatchFailure(
           warpOp, "Only rank 1 reductions can be distributed.");
+    if (vectorType.isScalable())
+      return rewriter.notifyMatchFailure(
+          warpOp, "Scalable reductions cannot be distributed.");
     // Only warp_size-sized vectors supported.
     if (vectorType.getShape()[0] % warpOp.getWarpSize() != 0)
       return rewriter.notifyMatchFailure(
@@ -2317,7 +2478,6 @@ struct WarpOpReduction : public WarpDistributionPattern {
 private:
   DistributedReductionFn distributedReductionFn;
 };
-
 } // namespace
 
 void mlir::vector::populateWarpExecuteOnLane0OpToScfForPattern(

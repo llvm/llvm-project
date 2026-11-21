@@ -11,8 +11,11 @@
 
 #include <__algorithm/copy.h>
 #include <__config>
-#include <__locale_dir/get_c_locale.h>
+#include <__locale_dir/ctype.h>
+#include <__locale_dir/ctype_base.h>
+#include <__locale_dir/locale.h>
 #include <__locale_dir/scan_keyword.h>
+#include <ctime>
 #include <ios>
 
 #if _LIBCPP_HAS_LOCALIZATION
@@ -22,6 +25,7 @@
 #  endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _CharT, class _InputIterator>
 _LIBCPP_HIDE_FROM_ABI int __get_up_to_n_digits(
@@ -379,7 +383,7 @@ _InputIterator time_get<_CharT, _InputIterator>::get(
     tm* __tm,
     const char_type* __fmtb,
     const char_type* __fmte) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __err                        = ios_base::goodbit;
   while (__fmtb != __fmte && __err == ios_base::goodbit) {
     if (__b == __e) {
@@ -441,7 +445,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_date(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_weekday(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_weekdayname(__tm->tm_wday, __b, __e, __err, __ct);
   return __b;
 }
@@ -449,7 +453,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_weekday(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_monthname(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_monthname(__tm->tm_mon, __b, __e, __err, __ct);
   return __b;
 }
@@ -457,7 +461,7 @@ _InputIterator time_get<_CharT, _InputIterator>::do_get_monthname(
 template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get_year(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm) const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   __get_year(__tm->tm_year, __b, __e, __err, __ct);
   return __b;
 }
@@ -466,7 +470,7 @@ template <class _CharT, class _InputIterator>
 _InputIterator time_get<_CharT, _InputIterator>::do_get(
     iter_type __b, iter_type __e, ios_base& __iob, ios_base::iostate& __err, tm* __tm, char __fmt, char) const {
   __err                        = ios_base::goodbit;
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   switch (__fmt) {
   case 'a':
   case 'A':
@@ -652,7 +656,7 @@ class _LIBCPP_EXPORTED_FROM_ABI __time_put {
   __locale::__locale_t __loc_;
 
 protected:
-  _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(_LIBCPP_GET_C_LOCALE) {}
+  _LIBCPP_HIDE_FROM_ABI __time_put() : __loc_(__locale::__get_c_locale()) {}
   __time_put(const char* __nm);
   __time_put(const string& __nm);
   ~__time_put();
@@ -697,7 +701,7 @@ template <class _CharT, class _OutputIterator>
 _OutputIterator time_put<_CharT, _OutputIterator>::put(
     iter_type __s, ios_base& __iob, char_type __fl, const tm* __tm, const char_type* __pb, const char_type* __pe)
     const {
-  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.getloc());
+  const ctype<char_type>& __ct = std::use_facet<ctype<char_type> >(__iob.__getloc());
   for (; __pb != __pe; ++__pb) {
     if (__ct.narrow(*__pb, 0) == '%') {
       if (++__pb == __pe) {
@@ -755,6 +759,7 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<char>;
 extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS time_put_byname<wchar_t>;
 #  endif
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_LOCALIZATION

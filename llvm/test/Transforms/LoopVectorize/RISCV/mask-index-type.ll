@@ -8,7 +8,7 @@ target triple = "riscv64"
 ; the data width.  This is correct, but sub-optimal as it causes a vsetvli
 ; toggle in the generated code for no reason.  We could have used a i32
 ; element type for the index here and matched the data width.
-define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
+define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) vscale_range(2, 1024) {
 ; VLENUNK-LABEL: @test(
 ; VLENUNK-NEXT:  entry:
 ; VLENUNK-NEXT:    br label [[VECTOR_PH:%.*]]
@@ -34,7 +34,7 @@ define void @test(ptr noalias nocapture %a, ptr noalias nocapture %b, i32 %v) {
 ; VLENUNK-NEXT:    call void @llvm.vp.store.nxv4i32.p0(<vscale x 4 x i32> [[TMP17]], ptr align 4 [[TMP18]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP7]])
 ; VLENUNK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP15]], [[INDEX]]
 ; VLENUNK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP15]]
-; VLENUNK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
+; VLENUNK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <vscale x 4 x i64> [[VEC_IND]], [[DOTSPLAT]]
 ; VLENUNK-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; VLENUNK-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VLENUNK:       middle.block:

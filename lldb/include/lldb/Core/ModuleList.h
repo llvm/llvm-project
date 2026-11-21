@@ -32,7 +32,6 @@
 #include <cstdint>
 
 namespace lldb_private {
-class ConstString;
 class FileSpecList;
 class Function;
 class Log;
@@ -107,12 +106,15 @@ public:
   lldb::SymbolSharedCacheUse GetSharedCacheBinaryLoading() const;
   bool GetEnableLLDBIndexCache() const;
   bool SetEnableLLDBIndexCache(bool new_value);
+  bool GetEnableLLDBIndexCacheMemoryModules() const;
+  bool SetEnableLLDBIndexCacheMemoryModules(bool new_value);
   uint64_t GetLLDBIndexCacheMaxByteSize();
   uint64_t GetLLDBIndexCacheMaxPercent();
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
   bool GetLoadSymbolOnDemand() const;
+  uint64_t GetDemangledNameInfoCacheSize() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
   PathMappingList GetSymlinkMappings() const;
 };
@@ -305,12 +307,13 @@ public:
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctions ()
-  void FindFunctions(ConstString name, lldb::FunctionNameType name_type_mask,
+  void FindFunctions(llvm::StringRef name,
+                     lldb::FunctionNameType name_type_mask,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctionSymbols ()
-  void FindFunctionSymbols(ConstString name,
+  void FindFunctionSymbols(llvm::StringRef name,
                            lldb::FunctionNameType name_type_mask,
                            SymbolContextList &sc_list);
 
@@ -331,7 +334,7 @@ public:
   ///
   /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
-  void FindGlobalVariables(ConstString name, size_t max_matches,
+  void FindGlobalVariables(llvm::StringRef name, size_t max_matches,
                            VariableList &variable_list) const;
 
   /// Find global and static variables by regular expression.
@@ -384,7 +387,7 @@ public:
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
-  void FindSymbolsWithNameAndType(ConstString name,
+  void FindSymbolsWithNameAndType(llvm::StringRef name,
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list) const;
 
@@ -497,7 +500,8 @@ public:
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool invoke_locate_callback = true);
+                  bool *did_create_ptr, bool invoke_locate_callback = true,
+                  bool invoke_symbol_locators = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 
@@ -558,6 +562,11 @@ protected:
 
   /// An orphaned module that lives only in the ModuleList has a count of 1.
   static constexpr long kUseCountModuleListOrphaned = 1;
+
+private:
+  static bool LoadScriptingResourceInTargetForModule(Module &module,
+                                                     Target &target,
+                                                     Status &error);
 
 public:
   typedef LockingAdaptedIterable<std::recursive_mutex, collection>

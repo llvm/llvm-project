@@ -23,6 +23,7 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -58,6 +59,7 @@ LLVMCreateDisasmCPUFeatures(const char *TT, const char *CPU,
     return nullptr;
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
   // Get the assembler info needed to setup the MCContext.
   std::unique_ptr<const MCAsmInfo> MAI(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
@@ -74,8 +76,7 @@ LLVMCreateDisasmCPUFeatures(const char *TT, const char *CPU,
     return nullptr;
 
   // Set up the MCContext for creating symbols and MCExpr's.
-  std::unique_ptr<MCContext> Ctx(
-      new MCContext(TheTriple, MAI.get(), MRI.get(), STI.get()));
+  std::unique_ptr<MCContext> Ctx(new MCContext(TheTriple, *MAI, *MRI, *STI));
   if (!Ctx)
     return nullptr;
 

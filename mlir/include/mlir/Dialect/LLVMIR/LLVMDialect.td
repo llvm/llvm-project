@@ -23,7 +23,9 @@ def LLVM_Dialect : Dialect {
 
   let discardableAttrs = (ins
     /// Attribute encoding size and type of GPU workgroup attributions.
-    "WorkgroupAttributionAttr":$workgroup_attribution
+    "WorkgroupAttributionAttr":$workgroup_attribution,
+    /// Loop metadata attached to operations that do not declare it inherently.
+    "LoopAnnotationAttr":$loop_annotation
   );
 
   let extraClassDeclaration = [{
@@ -37,6 +39,8 @@ def LLVM_Dialect : Dialect {
     static StringRef getModuleFlags() { return "llvm.module.flags"; }
     static StringRef getCommandlineAttrName() { return "llvm.commandline"; }
     static StringRef getMmraAttrName() { return "llvm.mmra"; }
+    static StringRef getMemProfAttrName() { return "llvm.memprof"; }
+    static StringRef getCallsiteAttrName() { return "llvm.callsite"; }
 
     /// Names of llvm parameter attributes.
     static StringRef getAlignAttrName() { return "llvm.align"; }
@@ -53,7 +57,9 @@ def LLVM_Dialect : Dialect {
     static StringRef getNestAttrName() { return "llvm.nest"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
     static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
+    static StringRef getNoExtAttrName() { return "llvm.noext"; }
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
+    static StringRef getNoFreeObjAttrName() { return "llvm.nofreeobj"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }
     static StringRef getPreallocatedAttrName() { return "llvm.preallocated"; }
     static StringRef getRangeAttrName() { return "llvm.range"; }
@@ -62,7 +68,11 @@ def LLVM_Dialect : Dialect {
     static StringRef getSExtAttrName() { return "llvm.signext"; }
     static StringRef getStackAlignmentAttrName() { return "llvm.alignstack"; }
     static StringRef getStructRetAttrName() { return "llvm.sret"; }
+    static StringRef getWritableAttrName() { return "llvm.writable"; }
     static StringRef getWriteOnlyAttrName() { return "llvm.writeonly"; }
+    static StringRef getDeadOnUnwindAttrName() { return "llvm.dead_on_unwind"; }
+    static StringRef getDeadOnReturnAttrName() { return "llvm.dead_on_return"; }
+    static StringRef getNoFPClassAttrName() { return "llvm.nofpclass"; }
     static StringRef getZExtAttrName() { return "llvm.zeroext"; }
     static StringRef getOpBundleSizesAttrName() { return "op_bundle_sizes"; }
     static StringRef getOpBundleTagsAttrName() { return "op_bundle_tags"; }

@@ -38,13 +38,23 @@ namespace {
   using llvm::sys::path::is_separator;
   using llvm::sys::path::Style;
 
+  inline bool prefer_forward_slash() {
+    static bool prefer = []() {
+      if (std::optional<std::string> Env =
+              sys::Process::GetEnv("LLVM_WINDOWS_PREFER_FORWARD_SLASH"))
+        return *Env == "1";
+      return static_cast<bool>(LLVM_WINDOWS_PREFER_FORWARD_SLASH);
+    }();
+    return prefer;
+  }
+
   inline Style real_style(Style style) {
     if (style != Style::native)
       return style;
     if (is_style_posix(style))
       return Style::posix;
-    return LLVM_WINDOWS_PREFER_FORWARD_SLASH ? Style::windows_slash
-                                             : Style::windows_backslash;
+    return prefer_forward_slash() ? Style::windows_slash
+                                  : Style::windows_backslash;
   }
 
   inline const char *separators(Style style) {
@@ -546,6 +556,12 @@ void native(const Twine &path, SmallVectorImpl<char> &result, Style style) {
   result.clear();
   path.toVector(result);
   native(result, style);
+}
+
+std::string native(const Twine &path, Style style) {
+  SmallString<128> Result;
+  native(path, Result, style);
+  return std::string(Result);
 }
 
 void native(SmallVectorImpl<char> &Path, Style style) {
@@ -1180,6 +1196,19 @@ ErrorOr<perms> getPermissions(const Twine &Path) {
   return Status.permissions();
 }
 
+std::error_code setLastAccessAndModificationTime(const Twine &Path,
+                                                 TimePoint<> AccessTime,
+                                                 TimePoint<> ModificationTime) {
+  int FD;
+  if (std::error_code EC = openFile(Path, FD, CD_OpenExisting, FA_Read,
+                                    OF_UpdateAttributes | OF_OpenDirectory))
+    return EC;
+  std::error_code EC =
+      setLastAccessAndModificationTime(FD, AccessTime, ModificationTime);
+  Process::SafelyCloseFileDescriptor(FD);
+  return EC;
+}
+
 size_t mapped_file_region::size() const {
   assert(Mapping && "Mapping failed but used anyway!");
   return Size;
@@ -1278,6 +1307,10 @@ Error TempFile::discard() {
 }
 
 Error TempFile::keep(const Twine &Name) {
+  return errorCodeToError(keepWithErrorCode(Name));
+}
+
+std::error_code TempFile::keepWithErrorCode(const Twine &Name) {
   assert(!Done);
   Done = true;
   // Always try to close and rename.
@@ -1311,9 +1344,9 @@ Error TempFile::keep(const Twine &Name) {
   if (RenameEC) {
     // If we can't rename, try to copy to work around cross-device link issues.
     RenameEC = sys::fs::copy_file(TmpName, Name);
-    // If we can't rename or copy, discard the temporary file.
-    if (RenameEC)
-      remove(TmpName);
+    // Whether the copy succeeded or not, the temporary file is no longer
+    // needed.
+    remove(TmpName);
   }
 #endif
   sys::DontRemoveFileOnSignal(TmpName);
@@ -1322,10 +1355,10 @@ Error TempFile::keep(const Twine &Name) {
     TmpName = "";
 
   if (close(FD) == -1)
-    return errorCodeToError(errnoAsErrorCode());
+    return errnoAsErrorCode();
   FD = -1;
 
-  return errorCodeToError(RenameEC);
+  return RenameEC;
 }
 
 Error TempFile::keep() {
@@ -1350,11 +1383,20 @@ Error TempFile::keep() {
 
 Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode,
                                     OpenFlags ExtraFlags) {
+  ErrorOr<TempFile> Ret = createWithErrorCode(Model, Mode, ExtraFlags);
+  if (!Ret)
+    return errorCodeToError(Ret.getError());
+  return std::move(*Ret);
+}
+
+ErrorOr<TempFile> TempFile::createWithErrorCode(const Twine &Model,
+                                                unsigned Mode,
+                                                OpenFlags ExtraFlags) {
   int FD;
   SmallString<128> ResultPath;
   if (std::error_code EC =
           createUniqueFile(Model, FD, ResultPath, OF_Delete | ExtraFlags, Mode))
-    return errorCodeToError(EC);
+    return EC;
 
   TempFile Ret(ResultPath, FD);
 #ifdef _WIN32
@@ -1370,8 +1412,7 @@ Expected<TempFile> TempFile::create(const Twine &Model, unsigned Mode,
   if (SetSignalHandler && sys::RemoveFileOnSignal(ResultPath)) {
     // Make sure we delete the file when RemoveFileOnSignal fails.
     consumeError(Ret.discard());
-    std::error_code EC(errc::operation_not_permitted);
-    return errorCodeToError(EC);
+    return make_error_code(errc::operation_not_permitted);
   }
   return std::move(Ret);
 }

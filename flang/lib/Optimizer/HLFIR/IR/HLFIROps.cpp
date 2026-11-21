@@ -22,10 +22,10 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/CommandLine.h"
-#include <iterator>
 #include <mlir/Interfaces/SideEffectInterfaces.h>
 #include <optional>
 #include <tuple>
@@ -795,6 +795,59 @@ getCharacterLengthIfStatic(mlir::Type t) {
   return std::nullopt;
 }
 
+namespace {
+/// Fuse single-use concatenations before allocating their buffers. The reads
+/// of the inner operands move to the outer concatenation, so do not cross any
+/// operation that may change or release their storage. Allocations, like the
+/// hlfir.declare of a literal operand, are fine to cross. Only the first
+/// operand is fused, so that the operands are still read in the same order,
+/// which matters for volatile operands. Lowering creates left-nested chains.
+struct InlineConcat : public mlir::OpRewritePattern<hlfir::ConcatOp> {
+  using OpRewritePattern::OpRewritePattern;
+  llvm::LogicalResult
+  matchAndRewrite(hlfir::ConcatOp concat,
+                  mlir::PatternRewriter &rewriter) const override {
+    mlir::Value string = concat.getStrings().front();
+    auto inner = string.getDefiningOp<hlfir::ConcatOp>();
+    if (!inner || inner->getBlock() != concat->getBlock())
+      return mlir::failure();
+    unsigned uses = 0;
+    llvm::SmallVector<hlfir::DestroyOp> destroys;
+    for (mlir::OpOperand &use : string.getUses()) {
+      if (auto destroy = mlir::dyn_cast<hlfir::DestroyOp>(use.getOwner()))
+        destroys.push_back(destroy);
+      else
+        ++uses;
+    }
+    if (uses != 1)
+      return mlir::failure();
+    for (mlir::Operation *op = inner->getNextNode(); op != concat;
+         op = op->getNextNode()) {
+      auto effects = mlir::getEffectsRecursively(op);
+      if (!effects || llvm::any_of(*effects, [](const auto &effect) {
+            return mlir::isa<mlir::MemoryEffects::Write,
+                             mlir::MemoryEffects::Free>(effect.getEffect());
+          }))
+        return mlir::failure();
+    }
+    llvm::SmallVector<mlir::Value> strings(inner.getStrings());
+    llvm::append_range(strings, concat.getStrings().drop_front());
+    rewriter.modifyOpInPlace(
+        concat, [&]() { concat.getStringsMutable().assign(strings); });
+    for (auto destroy : destroys)
+      rewriter.eraseOp(destroy);
+    rewriter.eraseOp(inner);
+    return mlir::success();
+  }
+};
+
+} // namespace
+
+void hlfir::ConcatOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<InlineConcat>(context);
+}
+
 llvm::LogicalResult hlfir::ConcatOp::verify() {
   if (getStrings().size() < 2)
     return emitOpError("must be provided at least two string operands");
@@ -1198,7 +1251,8 @@ void hlfir::SetLengthOp::build(mlir::OpBuilder &builder,
                                mlir::Value len) {
   fir::CharacterType::LenType resultTypeLen = fir::CharacterType::unknownLen();
   if (auto cstLen = fir::getIntIfConstant(len))
-    resultTypeLen = *cstLen;
+    if (std::optional<std::int64_t> cstLen64 = cstLen->trySExtValue())
+      resultTypeLen = *cstLen64;
   unsigned kind = getCharacterKind(string.getType());
   auto resultType = hlfir::ExprType::get(
       builder.getContext(), hlfir::ExprType::Shape{},
@@ -1569,8 +1623,15 @@ static llvm::LogicalResult verifyArrayShift(Op op) {
   int64_t dimVal = -1;
   if (!op.getDim())
     dimVal = 1;
-  else if (auto dim = fir::getIntIfConstant(op.getDim()))
-    dimVal = *dim;
+  else if (std::optional<llvm::APInt> dim =
+               fir::getIntIfConstant(op.getDim())) {
+    if (std::optional<std::int64_t> dim64 = dim->trySExtValue())
+      dimVal = *dim64;
+    else if (useStrictIntrinsicVerifier)
+      return op.emitOpError(dim->isNegative()
+                                ? "DIM must be >= 1"
+                                : "DIM must be <= input array's rank");
+  }
 
   // The DIM argument may be statically invalid (e.g. exceed the
   // input array rank) in dead code after constant propagation,
@@ -1885,6 +1946,10 @@ mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
+mlir::Region *hlfir::ElementalOp::getElementCleanup() {
+  return &mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getCleanup();
+}
+
 llvm::LogicalResult hlfir::ElementalOp::verify() {
   mlir::Value mold = getMold();
   hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
@@ -1936,15 +2001,47 @@ llvm::LogicalResult hlfir::DestroyOp::verify() {
   return mlir::success();
 }
 
+/// Erase a character expression whose only uses are hlfir.destroy, together
+/// with these hlfir.destroy. Only the character operations creating their own
+/// result storage are considered, since other expression producers may reuse
+/// storage that the hlfir.destroy releases.
+llvm::LogicalResult
+hlfir::DestroyOp::canonicalize(DestroyOp destroy,
+                               mlir::PatternRewriter &rewriter) {
+  mlir::Value expr = destroy.getExpr();
+  mlir::Operation *producer = expr.getDefiningOp();
+  if (!mlir::isa_and_nonnull<hlfir::ConcatOp, hlfir::CharTrimOp,
+                             hlfir::SetLengthOp, hlfir::CharExtremumOp>(
+          producer) ||
+      !mlir::wouldOpBeTriviallyDead(producer) ||
+      !llvm::all_of(expr.getUsers(), [](mlir::Operation *user) {
+        return mlir::isa<hlfir::DestroyOp>(user);
+      }))
+    return mlir::failure();
+  for (mlir::Operation *user : llvm::make_early_inc_range(expr.getUsers()))
+    rewriter.eraseOp(user);
+  rewriter.eraseOp(producer);
+  return mlir::success();
+}
+
 //===----------------------------------------------------------------------===//
 // CopyInOp
 //===----------------------------------------------------------------------===//
 
 void hlfir::CopyInOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &odsState, mlir::Value var,
-                            mlir::Value tempBox, mlir::Value var_is_present) {
-  return build(builder, odsState, {var.getType(), builder.getI1Type()}, var,
-               tempBox, var_is_present);
+                            mlir::Value temp_box, mlir::Value var_is_present) {
+  return build(builder, odsState,
+               {var.getType(), builder.getI1Type(), builder.getI1Type()}, var,
+               temp_box, var_is_present, /*alignment=*/mlir::IntegerAttr{});
+}
+
+llvm::LogicalResult hlfir::CopyInOp::verify() {
+  if (std::optional<std::int64_t> alignment = getAlignment()) {
+    if (*alignment <= 0 || (*alignment & (*alignment - 1)) != 0)
+      return emitOpError("alignment must be a positive power of two");
+  }
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2457,6 +2554,37 @@ llvm::LogicalResult hlfir::EvaluateInMemoryOp::verify() {
   mlir::Type elementType = exprType.getElementType();
   if (auto res = verifyTypeparams(*this, elementType, getTypeparams().size());
       failed(res))
+    return res;
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// ConditionalOp
+//===----------------------------------------------------------------------===//
+
+void hlfir::ConditionalOp::build(mlir::OpBuilder &builder,
+                                 mlir::OperationState &odsState,
+                                 mlir::Type resultType, mlir::Value condition) {
+  odsState.addTypes(resultType);
+  odsState.addOperands(condition);
+  // Create the then and else regions, each with one empty block.
+  odsState.addRegion()->emplaceBlock();
+  odsState.addRegion()->emplaceBlock();
+}
+
+llvm::LogicalResult hlfir::ConditionalOp::verify() {
+  if (!mlir::isa<hlfir::ExprType>(getResult().getType()))
+    return emitOpError("result must be an hlfir.expr type");
+  const auto checkRegion = [&](mlir::Region &region,
+                               llvm::StringRef name) -> llvm::LogicalResult {
+    if (!mlir::isa_and_nonnull<hlfir::YieldOp>(getTerminator(region)))
+      return emitOpError(name)
+             << " region must be terminated by an hlfir.yield";
+    return mlir::success();
+  };
+  if (const auto res = checkRegion(getThenRegion(), "then"); failed(res))
+    return res;
+  if (const auto res = checkRegion(getElseRegion(), "else"); failed(res))
     return res;
   return mlir::success();
 }

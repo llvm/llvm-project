@@ -20,15 +20,15 @@ end subroutine test3_forall_construct
 ! CHECK:         %[[VAL_4:.*]] = arith.constant 100 : index
 ! CHECK:         %[[VAL_5:.*]] = arith.constant 400 : index
 ! CHECK:         %[[VAL_6:.*]] = fir.shape %[[VAL_4]], %[[VAL_5]] : (index, index) -> !fir.shape<2>
-! CHECK:         %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %[[VAL_3]] arg 1 {uniq_name = "_QFtest3_forall_constructEa"} : (!fir.ref<!fir.array<100x400xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<100x400xf32>>, !fir.ref<!fir.array<100x400xf32>>)
+! CHECK:         %[[VAL_7:.*]]:2 = hlfir.declare %[[VAL_0]](%[[VAL_6]]) dummy_scope %[[VAL_3]] arg 1 uniq_name("_QFtest3_forall_constructEa") : (!fir.ref<!fir.array<100x400xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<100x400xf32>>, !fir.ref<!fir.array<100x400xf32>>)
 ! CHECK:         %[[VAL_8:.*]] = arith.constant 200 : index
 ! CHECK:         %[[VAL_9:.*]] = arith.constant 200 : index
 ! CHECK:         %[[VAL_10:.*]] = fir.shape %[[VAL_8]], %[[VAL_9]] : (index, index) -> !fir.shape<2>
-! CHECK:         %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_10]]) dummy_scope %[[VAL_3]] arg 2 {uniq_name = "_QFtest3_forall_constructEb"} : (!fir.ref<!fir.array<200x200xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<200x200xf32>>, !fir.ref<!fir.array<200x200xf32>>)
+! CHECK:         %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_1]](%[[VAL_10]]) dummy_scope %[[VAL_3]] arg 2 uniq_name("_QFtest3_forall_constructEb") : (!fir.ref<!fir.array<200x200xf32>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<200x200xf32>>, !fir.ref<!fir.array<200x200xf32>>)
 ! CHECK:         %[[VAL_12:.*]] = arith.constant 100 : index
 ! CHECK:         %[[VAL_13:.*]] = arith.constant 200 : index
 ! CHECK:         %[[VAL_14:.*]] = fir.shape %[[VAL_12]], %[[VAL_13]] : (index, index) -> !fir.shape<2>
-! CHECK:         %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_14]]) dummy_scope %[[VAL_3]] arg 3 {uniq_name = "_QFtest3_forall_constructEmask"} : (!fir.ref<!fir.array<100x200x!fir.logical<4>>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<100x200x!fir.logical<4>>>, !fir.ref<!fir.array<100x200x!fir.logical<4>>>)
+! CHECK:         %[[VAL_15:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_14]]) dummy_scope %[[VAL_3]] arg 3 uniq_name("_QFtest3_forall_constructEmask") : (!fir.ref<!fir.array<100x200x!fir.logical<4>>>, !fir.shape<2>, !fir.dscope) -> (!fir.ref<!fir.array<100x200x!fir.logical<4>>>, !fir.ref<!fir.array<100x200x!fir.logical<4>>>)
 ! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : i32
 ! CHECK:         %[[VAL_17:.*]] = arith.constant 100 : i32
 ! CHECK:         %[[VAL_18:.*]] = arith.constant 1 : i32

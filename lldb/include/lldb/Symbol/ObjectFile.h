@@ -174,17 +174,15 @@ public:
                                        lldb::addr_t header_addr,
                                        lldb::WritableDataBufferSP file_data_sp);
 
-  static size_t
+  static ModuleSpecList
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
-                          lldb::offset_t file_size, ModuleSpecList &specs,
+                          lldb::offset_t file_size,
                           lldb::DataExtractorSP = lldb::DataExtractorSP());
 
-  static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataExtractorSP &extractor_sp,
-                                        lldb::offset_t data_offset,
-                                        lldb::offset_t file_offset,
-                                        lldb::offset_t file_size,
-                                        lldb_private::ModuleSpecList &specs);
+  static ModuleSpecList
+  GetModuleSpecifications(const lldb_private::FileSpec &file,
+                          lldb::DataExtractorSP &extractor_sp,
+                          lldb::offset_t file_offset, lldb::offset_t file_size);
   static bool IsObjectFile(lldb_private::FileSpec file_spec);
   /// Split a path into a file path with object name.
   ///
@@ -209,9 +207,10 @@ public:
   ///     and \a archive_file and \a archive_object are modified,
   ///     \b false otherwise and \a archive_file and \a archive_object
   ///     are guaranteed to be remain unchanged.
-  static bool SplitArchivePathWithObject(
-      llvm::StringRef path_with_object, lldb_private::FileSpec &archive_file,
-      lldb_private::ConstString &archive_object, bool must_exist);
+  static bool SplitArchivePathWithObject(llvm::StringRef path_with_object,
+                                         lldb_private::FileSpec &archive_file,
+                                         llvm::StringRef &archive_object,
+                                         bool must_exist);
 
   // LLVM RTTI support
   static char ID;
@@ -261,6 +260,9 @@ public:
   /// \return
   ///     \b true if it is, \b false otherwise.
   virtual bool IsExecutable() const = 0;
+
+  /// Tells whether this object file is part of a shared cache.
+  virtual bool IsSharedCacheBinary() const { return false; }
 
   /// Returns the offset into a file at which this object resides.
   ///
@@ -373,6 +375,12 @@ public:
   ///     Returns filespeclist.
   virtual lldb_private::FileSpecList GetReExportedLibraries() {
     return FileSpecList();
+  }
+
+  /// Whether a symbol that this object file has not itself tagged as a
+  /// re-export can still be shadowed by one of GetReExportedLibraries().
+  virtual bool ReExportedLibrariesShadowLocalDefinitions() const {
+    return false;
   }
 
   /// Sets the load address for an entire module, assuming a rigid slide of
@@ -686,6 +694,17 @@ public:
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
+  /// Returns true if the symbol table for this in-memory object file should
+  /// not be loaded from the index cache or saved to the index cache, even
+  /// if caching of memory modules is enabled.
+  bool GetDisableMemorySymtabCaching() const {
+    return m_disable_memory_symtab_caching;
+  }
+
+  void SetDisableMemorySymtabCaching(bool disable) {
+    m_disable_memory_symtab_caching = disable;
+  }
+
   // Strip linker annotations (such as @@VERSION) from symbol names.
   virtual llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const {
@@ -742,12 +761,16 @@ public:
     return false;
   }
 
-  /// Get a hash that can be used for caching object file releated information.
+  /// Get a hash that can be used for caching object file related information.
   ///
   /// Data for object files can be cached between runs of debug sessions and
-  /// a module can end up using a main file and a symbol file, both of which
-  /// can be object files. So we need a unique hash that identifies an object
-  /// file when storing cached data.
+  /// a Module can end up using a ObjectFile and a SymbolFile, both of which
+  /// can be ObjectFiles in reality. We need a unique hash that identifies
+  /// an ObjectFile when storing cached data.
+  ///
+  /// The hash value returned does not change when the same binary is
+  /// rebuilt with changes; it does not incorporate a mod date or UUID
+  /// like DataFileCache's CacheSignature does.
   uint32_t GetCacheHash();
 
   static lldb::DataBufferSP MapFileData(const FileSpec &file, uint64_t Size,
@@ -773,7 +796,13 @@ protected:
   lldb::ProcessWP m_process_wp;
   /// Set if the object file only exists in memory.
   const lldb::addr_t m_memory_addr;
+  /// Set if the symbol table for an in-memory object file should not be
+  /// loaded from the index cache.
+  bool m_disable_memory_symtab_caching;
+
   std::unique_ptr<lldb_private::SectionList> m_sections_up;
+  std::recursive_mutex m_sections_mutex;
+
   std::unique_ptr<lldb_private::Symtab> m_symtab_up;
   /// We need a llvm::once_flag that we can use to avoid locking the module
   /// lock and deadlocking LLDB. See comments in ObjectFile::GetSymtab() for

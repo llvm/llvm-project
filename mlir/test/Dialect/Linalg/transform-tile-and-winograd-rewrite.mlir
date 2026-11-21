@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -transform-interpreter -canonicalize --split-input-file | FileCheck %s
 
+
 func.func @conv2d(%arg0: tensor<2x10x10x5xf32>, %arg1: tensor<2x3x3x5xf32>, %arg2: tensor<2x8x8x2xf32>) -> tensor<2x8x8x2xf32> {
   %0 = tensor.empty() : tensor<6x6x5x2xf32>
   %1 = linalg.winograd_filter_transform fmr(F_4_3) ins(%arg1 : tensor<2x3x3x5xf32>) outs(%0 : tensor<6x6x5x2xf32>) -> tensor<6x6x5x2xf32>

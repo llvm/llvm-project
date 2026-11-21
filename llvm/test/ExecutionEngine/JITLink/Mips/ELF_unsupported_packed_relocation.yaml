@@ -1,0 +1,35 @@
+# RUN: yaml2obj %s -o %t.o
+# RUN: not llvm-jitlink -noexec %t.o 2>&1 | FileCheck %s
+
+# CHECK: unsupported packed MIPS relocation
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_MIPS
+  Flags:   [ EF_MIPS_ARCH_64R2 ]
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign: 4
+    Size:         4
+  - Name:         .rela.text
+    Type:         SHT_RELA
+    Flags:        [ SHF_INFO_LINK ]
+    Info:         .text
+    AddressAlign: 8
+    Relocations:
+      - Offset: 0
+        Symbol: main
+        Type:   R_MIPS_GPREL16
+        Type2:  R_MIPS_LO16
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Binding: STB_GLOBAL
+    Section: .text
+    Size:    4
+...

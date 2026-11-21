@@ -16,9 +16,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Context>
 class basic_format_arg;
@@ -48,8 +48,8 @@ constexpr range_format format_kind = [] {
 
 #  endif // _LIBCPP_STD_VER >= 23
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___FWD_FORMAT_H

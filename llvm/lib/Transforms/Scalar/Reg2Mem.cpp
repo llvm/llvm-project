@@ -25,7 +25,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -135,11 +134,6 @@ public:
   }
 };
 } // namespace
-
-INITIALIZE_PASS_BEGIN(RegToMemWrapperPass, "reg2mem", "", true, true)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass);
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass);
-INITIALIZE_PASS_END(RegToMemWrapperPass, "reg2mem", "", true, true)
 
 char RegToMemWrapperPass::ID = 0;
 

@@ -39,7 +39,7 @@
 #include "llvm/Support/Program.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 #include <cstdlib>
 #include <optional>
@@ -96,7 +96,8 @@ SerializeGPUModuleBase::SerializeGPUModuleBase(
     Operation &module, ROCDLTargetAttr target,
     const gpu::TargetOptions &targetOptions)
     : ModuleToObject(module, target.getTriple(), target.getChip(),
-                     target.getFeatures(), target.getO()),
+                     target.getFeatures(), target.getO(), {}, {}, {}, {},
+                     targetOptions.getLibraryOptions()),
       target(target), toolkitPath(targetOptions.getToolkitPath()),
       librariesToLink(targetOptions.getLibrariesToLink()) {
 
@@ -303,8 +304,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
   std::unique_ptr<llvm::MCSubtargetInfo> sti(
       target->createMCSubtargetInfo(triple, chip, features));
 
-  llvm::MCContext ctx(triple, mai.get(), mri.get(), sti.get(), &srcMgr,
-                      &mcOptions);
+  llvm::MCContext ctx(triple, *mai, *mri, *sti, &srcMgr);
   std::unique_ptr<llvm::MCObjectFileInfo> mofi(target->createMCObjectFileInfo(
       ctx, /*PIC=*/false, /*LargeCodeModel=*/false));
   ctx.setObjectFileInfo(mofi.get());
@@ -326,7 +326,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
   std::unique_ptr<llvm::MCAsmParser> parser(
       createMCAsmParser(srcMgr, ctx, *mcStreamer, *mai));
   std::unique_ptr<llvm::MCTargetAsmParser> tap(
-      target->createMCAsmParser(*sti, *parser, *mcii, mcOptions));
+      target->createMCAsmParser(*sti, *parser, *mcii));
 
   if (!tap)
     return emitError() << "assembler initialization error";

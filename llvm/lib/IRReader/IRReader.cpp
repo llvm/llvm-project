@@ -13,19 +13,15 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
-#include <cstring>
 #include <optional>
 #include <system_error>
 
 using namespace llvm;
-
-namespace llvm {
-  extern bool TimePassesIsEnabled;
-}
 
 const char TimeIRParsingGroupName[] = "irparse";
 const char TimeIRParsingGroupDescription[] = "LLVM IR Parsing";

@@ -34,9 +34,10 @@ public:
   void addPltHeaderSymbols(InputSection &isd) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels);
-  void scanSection(InputSectionBase &sec) override;
+  template <class RelTy>
+  void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                       unsigned shard);
+  void scanSection(InputSectionBase &sec, unsigned shard) override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
   bool relaxOnce(int pass) const override;
@@ -104,7 +105,7 @@ RelExpr SystemZ::getRelExpr(RelType type, const Symbol &s,
 void SystemZ::writeGotHeader(uint8_t *buf) const {
   // _GLOBAL_OFFSET_TABLE_[0] holds the value of _DYNAMIC.
   // _GLOBAL_OFFSET_TABLE_[1] and [2] are reserved.
-  write64be(buf, ctx.mainPart->dynamic->getVA());
+  write64be(buf, ctx.in.dynamic->getVA());
 }
 
 void SystemZ::writeGotPlt(uint8_t *buf, const Symbol &s) const {
@@ -191,9 +192,10 @@ int64_t SystemZ::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
-void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+template <class RelTy>
+void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                              unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
 
   for (auto it = rels.begin(); it != rels.end(); ++it) {
@@ -211,12 +213,12 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     }
 
     uint32_t symIdx = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = it->r_offset;
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    int64_t addend = rs.getAddend(*it, type);
     RelExpr expr;
     // Relocation types that only need a RelExpr set `expr` and break out of
     // the switch to reach rs.process(). Types that need special handling
@@ -359,8 +361,8 @@ void SystemZ::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void SystemZ::scanSection(InputSectionBase &sec) {
-  elf::scanSection1<SystemZ, ELF64BE>(*this, sec);
+void SystemZ::scanSection(InputSectionBase &sec, unsigned shard) {
+  elf::scanSection1<ELF64BE>(*this, sec, shard);
 }
 
 RelType SystemZ::getDynRel(RelType type) const {

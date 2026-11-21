@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Missing some math functions.
+// XFAIL: LLVM-LIBC-FIXME
+
 // <math.h>
 
 // GCC warns about signbit comparing `bool_v < 0`, which we're testing
@@ -859,7 +862,7 @@ struct test_two_args {
     (void)::remainder(T(), U());
     int ip;
     ASSERT_SAME_TYPE(decltype(::remquo(T(), U(), &ip)), PromoteResult);
-    ::remquo(T(), U(), &ip);
+    (void)::remquo(T(), U(), &ip);
   }
 };
 

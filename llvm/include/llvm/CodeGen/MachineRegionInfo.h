@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include <cassert>
 
 namespace llvm {
@@ -44,7 +45,18 @@ template <> struct RegionTraits<MachineFunction> {
   static unsigned getNumSuccessors(MachineBasicBlock *BB) {
     return BB->succ_size();
   }
+
+  /// Update statistics about created regions.
+  LLVM_ABI static void updateStatistics(MachineRegion *R);
 };
+
+// The explicit instantiation declarations of the region base classes must come
+// before the classes deriving from them. Defining a derived class implicitly
+// instantiates its base. Declaring the explicit instantiation after the derived
+// class will cause clang-cl to silently drop the dllimport attribute, resulting
+// in incorrect linkage.
+extern template class LLVM_TEMPLATE_ABI
+    RegionNodeBase<RegionTraits<MachineFunction>>;
 
 class MachineRegionNode : public RegionNodeBase<RegionTraits<MachineFunction>> {
 public:
@@ -58,31 +70,74 @@ public:
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI
+    RegionBase<RegionTraits<MachineFunction>>;
+
 class MachineRegion : public RegionBase<RegionTraits<MachineFunction>> {
 public:
-  MachineRegion(MachineBasicBlock *Entry, MachineBasicBlock *Exit,
-                MachineRegionInfo *RI, MachineDominatorTree *DT,
-                MachineRegion *Parent = nullptr);
-  ~MachineRegion();
+  LLVM_ABI MachineRegion(MachineBasicBlock *Entry, MachineBasicBlock *Exit,
+                         MachineRegionInfo *RI, MachineDominatorTree *DT,
+                         MachineRegion *Parent = nullptr);
+  LLVM_ABI ~MachineRegion();
 
   bool operator==(const MachineRegionNode &RN) const {
     return &RN == reinterpret_cast<const MachineRegionNode *>(this);
   }
 };
 
+extern template class LLVM_TEMPLATE_ABI
+    RegionInfoBase<RegionTraits<MachineFunction>>;
+
 class MachineRegionInfo : public RegionInfoBase<RegionTraits<MachineFunction>> {
 public:
-  explicit MachineRegionInfo();
-  ~MachineRegionInfo() override;
+  using Base = RegionInfoBase<RegionTraits<MachineFunction>>;
 
-  // updateStatistics - Update statistic about created regions.
-  void updateStatistics(MachineRegion *R) final;
+  LLVM_ABI explicit MachineRegionInfo();
+  LLVM_ABI ~MachineRegionInfo();
 
-  void recalculate(MachineFunction &F, MachineDominatorTree *DT,
-                   MachinePostDominatorTree *PDT, MachineDominanceFrontier *DF);
+  MachineRegionInfo(MachineRegionInfo &&Arg)
+      : Base(std::move(static_cast<Base &>(Arg))) {
+    updateRegionTree(*this, TopLevelRegion);
+  }
+
+  MachineRegionInfo &operator=(MachineRegionInfo &&RHS) {
+    Base::operator=(std::move(static_cast<Base &>(RHS)));
+    updateRegionTree(*this, TopLevelRegion);
+    return *this;
+  }
+
+  /// Handle invalidation explicitly.
+  LLVM_ABI bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                           MachineFunctionAnalysisManager::Invalidator &);
+
+  LLVM_ABI void recalculate(MachineFunction &F, MachineDominatorTree *DT,
+                            MachinePostDominatorTree *PDT,
+                            MachineDominanceFrontier *DF);
 };
 
-class MachineRegionInfoPass : public MachineFunctionPass {
+class LLVM_ABI MachineRegionInfoAnalysis
+    : public AnalysisInfoMixin<MachineRegionInfoAnalysis> {
+  friend AnalysisInfoMixin<MachineRegionInfoAnalysis>;
+
+  static AnalysisKey Key;
+
+public:
+  using Result = MachineRegionInfo;
+
+  Result run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
+};
+
+class LLVM_ABI MachineRegionInfoPrinterPass
+    : public RequiredPassInfoMixin<MachineRegionInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MachineRegionInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class LLVM_ABI MachineRegionInfoPass : public MachineFunctionPass {
   MachineRegionInfo RI;
 
 public:
@@ -171,10 +226,6 @@ struct GraphTraits<MachineRegionInfoPass *>
     return GraphTraits<MachineRegionInfo *>::nodes_end(&RI->getRegionInfo());
   }
 };
-
-extern template class RegionBase<RegionTraits<MachineFunction>>;
-extern template class RegionNodeBase<RegionTraits<MachineFunction>>;
-extern template class RegionInfoBase<RegionTraits<MachineFunction>>;
 
 } // end namespace llvm
 

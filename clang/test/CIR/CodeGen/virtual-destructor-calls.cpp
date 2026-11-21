@@ -27,9 +27,8 @@ struct B : A {
 B::~B() { }
 
 // Aliases are inserted before the function definitions in LLVM IR
-// FIXME: These should have unnamed_addr set.
-// LLVM: @_ZN1BD1Ev = alias void (ptr), ptr @_ZN1BD2Ev
-// LLVM: @_ZN1CD1Ev = alias void (ptr), ptr @_ZN1CD2Ev
+// LLVM: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
+// LLVM: @_ZN1CD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1CD2Ev
 
 // OGCG: @_ZN1BD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1BD2Ev
 // OGCG: @_ZN1CD1Ev = unnamed_addr alias void (ptr), ptr @_ZN1CD2Ev
@@ -79,7 +78,7 @@ C::~C() { }
 // Base (D2) dtor for C: calls B's base dtor.
 
 // CIR: cir.func{{.*}} @_ZN1CD2Ev
-// CIR:   %[[B:.*]] = cir.base_class_addr %[[THIS:.*]] : !cir.ptr<!rec_C> nonnull [0] -> !cir.ptr<!rec_B>
+// CIR:   %[[B:.*]] = cir.base_class_addr nonnull %[[THIS:.*]] [0] : !cir.ptr<!rec_C> -> !cir.ptr<!rec_B>
 // CIR:   cir.call @_ZN1BD2Ev(%[[B]])
 
 // LLVM: define{{.*}} void @_ZN1CD2Ev
@@ -135,13 +134,13 @@ class D {
 D::~D() = default;
 
 // CIR: cir.func{{.*}} @_ZN1DD2Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: %[[THIS:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
 // CIR: cir.return
 
 // LLVM: define {{.*}} @_ZN1DD2Ev
-// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM: store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM: ret void
@@ -155,13 +154,13 @@ D::~D() = default;
 // CIR: cir.func {{.*}} @_ZN1DD1Ev(!cir.ptr<!rec_D>) alias(@_ZN1DD2Ev)
 
 // CIR: cir.func{{.*}} @_ZN1DD0Ev
-// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: %[[THIS:.*]] = cir.alloca "this" align(8) init : !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
 // CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
 // CIR: cir.trap
 
 // LLVM: define {{.*}} @_ZN1DD0Ev
-// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:  store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
 // LLVM:  %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:  call void @llvm.trap()

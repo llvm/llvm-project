@@ -44,6 +44,7 @@
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
 # RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=warning -z gcs=never 2>&1 | FileCheck --check-prefix=REPORT-WARN %s
+# RUN: ld.lld f1-s.o f2.o f3-s.o -z gcs-report=none -z gcs=always 2>&1 | count 0
 # RUN: not ld.lld f2-s.o f3.o --shared -z gcs-report=error 2>&1 | FileCheck --check-prefix=REPORT-ERROR %s
 # RUN: ld.lld f1-s.o f2-s.o f3-s.o -z gcs-report=warning -z gcs=always 2>&1 | count 0
 
@@ -67,10 +68,12 @@
 
 ## An invalid gcs option should give an error
 # RUN: not ld.lld f1-s.o -z gcs=x -z gcs-report=x -z gcs-report-dynamic=x 2>&1 | FileCheck --check-prefix=INVALID %s
+# RUN: ld.lld f1-s.o -z gcs=x --noinhibit-exec -o /dev/null 2>&1 | FileCheck --check-prefix=INVALID-WARN %s
 
-# INVALID: error: unknown -z gcs= value: x
-# INVALID: error: unknown -z gcs-report= value: x
-# INVALID: error: unknown -z gcs-report-dynamic= value: x
+# INVALID: error: unknown -z gcs= value 'x'
+# INVALID: error: unknown -z gcs-report= value 'x'
+# INVALID: error: unknown -z gcs-report-dynamic= value 'x'
+# INVALID-WARN: warning: unknown -z gcs= value 'x'
 
 #--- f1-s.s
 .section ".note.gnu.property", "a"

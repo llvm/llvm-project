@@ -16,6 +16,26 @@ define void @main() {
   %arr_freeze = freeze [2 x i32] [i32 10, i32 poison]
   %struct_freeze = freeze { i32, float } { i32 10, float poison }
   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 10.0, ptr poison } }
+
+  %alloca = alloca ptr
+  %byte_undef = load b8, ptr %alloca
+  store ptr %alloca, ptr %alloca
+  %byte_with_provenance = load b8, ptr %alloca
+  %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2
+  %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3
+  %bytes = bitcast <4 x b8> %vec_bytes2 to b32
+  %bytes_freeze = freeze b32 %bytes
+
+  ; Freezing a poison byte value makes all value bits concrete, so the
+  ; padding bits must be zero after the store.
+  %b12_freeze = freeze b12 poison
+  %b12_alloc = alloca i16
+  store b12 %b12_freeze, ptr %b12_alloc
+  %b12_freeze_bytes = load b16, ptr %b12_alloc
+  %b7_freeze = freeze b7 poison
+  %b7_alloc = alloca i8
+  store b7 %b7_freeze, ptr %b7_alloc
+  %b7_freeze_bytes = load b8, ptr %b7_alloc
   ret void
 }
 ; CHECK: Entering function: main
@@ -24,11 +44,27 @@ define void @main() {
 ; CHECK-NEXT:   %int_freeze_poison2 = freeze i32 poison => i32 1044445579
 ; CHECK-NEXT:   %float_freeze = freeze float 1.000000e+00 => float 1.000000e+00
 ; CHECK-NEXT:   %float_freeze_poison = freeze float poison => float 0xF032E8B9
-; CHECK-NEXT:   %ptr_freeze = freeze ptr null => ptr 0x0 [dangling]
-; CHECK-NEXT:   %ptr_freeze_poison = freeze ptr poison => ptr 0x98F56903CEE3FCEE [dangling]
+; CHECK-NEXT:   %ptr_freeze = freeze ptr null => ptr 0x0 [nullary]
+; CHECK-NEXT:   %ptr_freeze_poison = freeze ptr poison => ptr 0x98F56903CEE3FCEE [nullary]
 ; CHECK-NEXT:   %vec_freeze = freeze <2 x i32> <i32 10, i32 poison> => { i32 10, i32 990324140 }
 ; CHECK-NEXT:   %arr_freeze = freeze [2 x i32] [i32 10, i32 poison] => { i32 10, i32 -44045842 }
 ; CHECK-NEXT:   %struct_freeze = freeze { i32, float } { i32 10, float poison } => { i32 10, float 0x042AE12F }
-; CHECK-NEXT:   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 1.000000e+01, ptr poison } } => { i32 1166165736, { float 1.000000e+01, ptr 0xD79E62976F604366 [dangling] } }
+; CHECK-NEXT:   %struct_freeze_nested = freeze { i32, { float, ptr } } { i32 poison, { float, ptr } { float 1.000000e+01, ptr poison } } => { i32 1166165736, { float 1.000000e+01, ptr 0xD79E62976F604366 [nullary] } }
+; CHECK-NEXT:   %alloca = alloca ptr, align 8 => ptr 0x8 [alloca]
+; CHECK-NEXT:   %byte_undef = load b8, ptr %alloca, align 1 => b8 0x!! 
+; CHECK-NEXT:   store ptr %alloca, ptr %alloca, align 8
+; CHECK-NEXT:   %byte_with_provenance = load b8, ptr %alloca, align 1 => b8 00001000(00011001) 
+; CHECK-NEXT:   %vec_bytes1 = insertelement <4 x b8> <b8 0, b8 poison, b8 poison, b8 poison>, b8 %byte_undef, i32 2 => { b8 0x00 , b8 0x!! , b8 0x!! , b8 0x!!  }
+; CHECK-NEXT:   %vec_bytes2 = insertelement <4 x b8> %vec_bytes1, b8 %byte_with_provenance, i32 3 => { b8 0x00 , b8 0x!! , b8 0x!! , b8 00001000(00011001)  }
+; CHECK-NEXT:   %bytes = bitcast <4 x b8> %vec_bytes2 to b32 => b32 0x00 0x!! 0x!! 00001000(00011001) 
+; CHECK-NEXT:   %bytes_freeze = freeze b32 %bytes => b32 0x00 0x13 0xF8 00001000(00011001) 
+; CHECK-NEXT:   %b12_freeze = freeze b12 poison => b12 0x8E 0110 
+; CHECK-NEXT:   %b12_alloc = alloca i16, align 2 => ptr 0x12 [b12_alloc]
+; CHECK-NEXT:   store b12 %b12_freeze, ptr %b12_alloc, align 2
+; CHECK-NEXT:   %b12_freeze_bytes = load b16, ptr %b12_alloc, align 2 => b16 0x8E 0x06 
+; CHECK-NEXT:   %b7_freeze = freeze b7 poison => b7 0111000 
+; CHECK-NEXT:   %b7_alloc = alloca i8, align 1 => ptr 0x15 [b7_alloc]
+; CHECK-NEXT:   store b7 %b7_freeze, ptr %b7_alloc, align 1
+; CHECK-NEXT:   %b7_freeze_bytes = load b8, ptr %b7_alloc, align 1 => b8 0x38 
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

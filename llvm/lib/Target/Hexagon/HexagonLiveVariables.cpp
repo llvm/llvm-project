@@ -39,8 +39,6 @@ class HexagonLiveVariablesImpl {
   friend class llvm::HexagonLiveVariables;
   typedef MachineBasicBlock::const_instr_iterator MICInstIterType;
 
-  MachineFunction *MF;
-
   MachineRegisterInfo *MRI;
 
   const TargetRegisterInfo *TRI;
@@ -167,8 +165,6 @@ void HexagonLiveVariables::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesCFG();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
   AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-  AU.addPreserved<MachineDominatorTreeWrapperPass>();
-  AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
   AU.addPreserved("packets");
   MachineFunctionPass::getAnalysisUsage(AU);
 }
@@ -373,11 +369,7 @@ bool HexagonLiveVariablesImpl::runOnMachineFunction(
     MachinePostDominatorTree &MPDT) {
   LLVM_DEBUG(dbgs() << "\nHexagon Live Variables";);
   Fn.RenumberBlocks();
-  // Update the block numbers in the dominator tree since we preserve it.
-  MDT.updateBlockNumbers();
-  MPDT.updateBlockNumbers();
 
-  MF = &Fn;
   MRI = &Fn.getRegInfo();
   auto &ST = Fn.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();
@@ -442,7 +434,6 @@ void HexagonLiveVariablesImpl::constructUseDef(MachineBasicBlock *MBB) {
 
     SmallVector<MachineOperand *, 4> UseRegs;
     SmallVector<MachineOperand *, 4> DefRegs;
-    SmallVector<unsigned, 1> RegMasks;
     // Process all of the operands of the instruction...
     unsigned NumOperandsToProcess = MI->getNumOperands();
     for (unsigned i = 0; i != NumOperandsToProcess; ++i) {

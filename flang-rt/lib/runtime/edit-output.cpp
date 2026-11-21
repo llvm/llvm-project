@@ -420,7 +420,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditEorDOutput(
       return EmitRepeated(io_, '*', width);
     }
     if (totalLength < width && digitsBeforePoint == 0 &&
-        zeroesBeforePoint == 0) {
+        zeroesBeforePoint == 0 &&
+        !(edit.modes.editingFlags & leadingZeroSuppress)) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }
@@ -552,7 +553,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (digitsBeforePoint + zeroesBeforePoint + zeroesAfterPoint +
             digitsAfterPoint + trailingZeroes ==
         0) {
-      zeroesBeforePoint = 1; // "." -> "0."
+      zeroesBeforePoint = 1; // "." -> "0." (avoid bare decimal point)
     }
     int totalLength{signLength + digitsBeforePoint + zeroesBeforePoint +
         1 /*'.'*/ + zeroesAfterPoint + digitsAfterPoint + trailingZeroes +
@@ -561,7 +562,8 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
     if (totalLength > width) {
       return EmitRepeated(io_, '*', width);
     }
-    if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0) {
+    if (totalLength < width && digitsBeforePoint + zeroesBeforePoint == 0 &&
+        !(edit.modes.editingFlags & leadingZeroSuppress)) {
       zeroesBeforePoint = 1;
       ++totalLength;
     }
@@ -919,6 +921,14 @@ template <typename CHAR>
 RT_API_ATTRS bool EditCharacterOutput(IoStatementState &io,
     const DataEdit &edit, const CHAR *x, std::size_t length) {
   int len{static_cast<int>(length)};
+  if (edit.descriptor == 'A' && edit.variation == 'T') {
+    // AT edit descriptor: output character value with trailing blanks
+    // removed (F2023 13.7.5.3.1).
+    while (len > 0 && x[len - 1] == static_cast<CHAR>(' ')) {
+      --len;
+    }
+    return EmitEncoded(io, x, len);
+  }
   int width{edit.width.value_or(len)};
   switch (edit.descriptor) {
   case 'A':

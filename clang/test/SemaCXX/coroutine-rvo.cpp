@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only %s
+// RUN: %clang_cc1 -verify -std=c++20 -fsyntax-only -Wno-coroutines-unsupported-target %s
 
 namespace std {
 template <class Promise = void> struct coroutine_handle {

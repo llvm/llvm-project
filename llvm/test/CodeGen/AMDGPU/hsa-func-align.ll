@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri < %s | FileCheck -check-prefix=HSA %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj < %s | llvm-readobj --symbols -S --sd - | FileCheck -check-prefix=ELF %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=HSA %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa -filetype=obj < %s | llvm-readobj --symbols -S --sd - | FileCheck -check-prefix=ELF %s
 
 ; ELF: Section {
 ; ELF: Name: .text

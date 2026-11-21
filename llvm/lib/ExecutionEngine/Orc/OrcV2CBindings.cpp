@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/Orc/ObjectTransformLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -728,7 +729,7 @@ LLVMErrorRef LLVMOrcCreateStaticLibrarySearchGeneratorForPath(
 }
 
 LLVMOrcThreadSafeContextRef LLVMOrcCreateNewThreadSafeContext(void) {
-  return wrap(new ThreadSafeContext(std::make_unique<LLVMContext>()));
+  return LLVMOrcCreateNewThreadSafeContextFromLLVMContext(LLVMContextCreate());
 }
 
 LLVMOrcThreadSafeContextRef
@@ -759,11 +760,20 @@ void LLVMOrcDisposeThreadSafeModule(LLVMOrcThreadSafeModuleRef TSM) {
   delete unwrap(TSM);
 }
 
+// Like JITTargetMachineBuilder::detectHost, but the target machines read the
+// options that LLVMParseCommandLineOptions sets.
+static Expected<JITTargetMachineBuilder> detectHostForCAPI() {
+  auto JTMB = JITTargetMachineBuilder::detectHost();
+  if (JTMB)
+    JTMB->getOptions().MCOptions.LibraryOptions = &cl::getCAPILibraryOptions();
+  return JTMB;
+}
+
 LLVMErrorRef LLVMOrcJITTargetMachineBuilderDetectHost(
     LLVMOrcJITTargetMachineBuilderRef *Result) {
   assert(Result && "Result can not be null");
 
-  auto JTMB = JITTargetMachineBuilder::detectHost();
+  auto JTMB = detectHostForCAPI();
   if (!JTMB) {
     Result = nullptr;
     return wrap(JTMB.takeError());
@@ -913,11 +923,13 @@ void LLVMOrcLLJITBuilderSetJITTargetMachineBuilder(
 void LLVMOrcLLJITBuilderSetObjectLinkingLayerCreator(
     LLVMOrcLLJITBuilderRef Builder,
     LLVMOrcLLJITBuilderObjectLinkingLayerCreatorFunction F, void *Ctx) {
-  unwrap(Builder)->setObjectLinkingLayerCreator([=](ExecutionSession &ES) {
-    auto TTStr = ES.getTargetTriple().str();
-    return std::unique_ptr<ObjectLayer>(
-        unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
-  });
+  unwrap(Builder)->setObjectLinkingLayerCreator(
+      [=](ExecutionSession &ES,
+          jitlink::JITLinkMemoryManager &MemMgr /* <- Currently ignored */) {
+        auto TTStr = ES.getTargetTriple().str();
+        return std::unique_ptr<ObjectLayer>(
+            unwrap(F(Ctx, wrap(&ES), TTStr.c_str())));
+      });
 }
 
 LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
@@ -926,6 +938,17 @@ LLVMErrorRef LLVMOrcCreateLLJIT(LLVMOrcLLJITRef *Result,
 
   if (!Builder)
     Builder = LLVMOrcCreateLLJITBuilder();
+
+  // Detect the host here, as LLJITBuilder would without a
+  // JITTargetMachineBuilder.
+  if (!unwrap(Builder)->getJITTargetMachineBuilder()) {
+    auto JTMB = detectHostForCAPI();
+    if (!JTMB) {
+      LLVMOrcDisposeLLJITBuilder(Builder);
+      return wrap(JTMB.takeError());
+    }
+    unwrap(Builder)->setJITTargetMachineBuilder(std::move(*JTMB));
+  }
 
   auto J = unwrap(Builder)->create();
   LLVMOrcDisposeLLJITBuilder(Builder);

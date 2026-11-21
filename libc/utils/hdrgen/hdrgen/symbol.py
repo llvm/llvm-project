@@ -23,6 +23,7 @@ class Symbol:
     def __init__(self, name):
         assert name
         self.name = name
+        self.standards = []
 
     def __eq__(self, other):
         return self.name == other.name

@@ -1,4 +1,4 @@
-; RUN: not --crash llc < %s -wasm-enable-eh -exception-model=wasm -mattr=+exception-handling 2>&1 | FileCheck %s
+; RUN: not --crash llc < %s -exception-model=wasm -mattr=+exception-handling 2>&1 | FileCheck %s
 
 target triple = "wasm32-unknown-unknown"
 
@@ -6,7 +6,7 @@ target triple = "wasm32-unknown-unknown"
 ; not have a correct Wasm personality function.
 
 define void @test() personality ptr @invalid_personality {
-; CHECK: LLVM ERROR: Function 'test' does not have a correct Wasm personality function '__gxx_wasm_personality_v0'
+; CHECK: LLVM ERROR: Function 'test' does not have a supported Wasm personality function
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch

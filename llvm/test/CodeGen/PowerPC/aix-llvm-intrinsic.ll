@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK32 %s
 
-; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec < %s | \
+; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 -mattr=-altivec --code-model=small < %s | \
 ; RUN:   FileCheck --check-prefix=CHECK64 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr4 \
@@ -10,7 +10,7 @@
 ; RUN: llvm-objdump -r -d --symbol-description %t.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC32 %s
 
 ; RUN: llc -verify-machineinstrs -mtriple powerpc64-ibm-aix-xcoff -mcpu=pwr4 \
-; RUN:     -mattr=-altivec -filetype=obj -o %t64.o < %s
+; RUN:     -mattr=-altivec --code-model=small -filetype=obj -o %t64.o < %s
 ; RUN: llvm-readobj --symbols %t64.o | FileCheck --check-prefixes=CHECKSYM,CHECKSYM64 %s
 ; RUN: llvm-objdump -r -d --symbol-description %t64.o | FileCheck -D#NFA=2 --check-prefixes=CHECKRELOC,CHECKRELOC64 %s
 
@@ -78,12 +78,14 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKRELOC32-NEXT:        8: 80 62 00 00                      lwz 3, 0(2)
 ; CHECKRELOC32-NEXT:    0000000a:  R_TOC        (idx: [[#NFA+13]]) s[TC]
 ; CHECKRELOC32-NEXT:        c: 90 01 00 48                      stw 0, 72(1)
+; CHECKRELOC32-NEXT:       10: 80 83 00 04                      lwz 4, 4(3)
+; CHECKRELOC32-NEXT:       14: 7c 85 23 78                      mr 5, 4
 ; CHECKRELOC64-NEXT:        4: f8 21 ff 91                      stdu 1, -112(1)
 ; CHECKRELOC64-NEXT:        8: e8 62 00 00                      ld 3, 0(2)
 ; CHECKRELOC64-NEXT:    000000000000000a:  R_TOC	(idx: [[#NFA+13]]) s[TC]
 ; CHECKRELOC64-NEXT:        c: f8 01 00 80                      std 0, 128(1)
-; CHECKRELOC-NEXT:       10: 80 83 00 04                        lwz 4, 4(3)
-; CHECKRELOC-NEXT:       14: 7c 85 23 78                        mr 5, 4
+; CHECKRELOC64-NEXT:     10: e8 83 00 06                        lwa 4, 4(3)
+; CHECKRELOC64-NEXT:     14: 78 85 00 20                        clrldi 5, 4, 32
 ; CHECKRELOC-NEXT:       18: 4b ff ff e9                        bl 0x0
 ; CHECKRELOC32-NEXT:    00000018:  R_RBR        (idx: [[#NFA+1]]) .___memset[PR]
 ; CHECKRELOC64-NEXT:    0000000000000018:  R_RBR	(idx: [[#NFA+1]]) .___memset64[PR]

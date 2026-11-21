@@ -69,7 +69,9 @@ struct {
 
 // The formatter wants to re-order these includes, but doing so is incorrect:
 // clang-format off
-#if defined(__APPLE__)
+#if defined(TARGET_BAREMETAL_AARCH64)
+#include "aarch64/fmv/baremetal.inc"
+#elif defined(__APPLE__)
 #include "aarch64/fmv/apple.inc"
 #elif defined(__FreeBSD__) || defined(__OpenBSD__)
 #include "aarch64/fmv/hwcap.inc"
@@ -84,8 +86,6 @@ struct {
 #include "aarch64/fmv/getauxval.inc"
 #elif defined(_WIN32)
 #include "aarch64/fmv/windows.inc"
-#elif defined(ENABLE_BAREMETAL_AARCH64_FMV)
-#include "aarch64/fmv/baremetal.inc"
 #else
 #include "aarch64/fmv/unimplemented.inc"
 #endif

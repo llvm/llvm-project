@@ -20,7 +20,11 @@ add_header_library(
   HDRS
     optimization.h
   DEPENDS
+    .attributes
+    .config
+    libc.src.__support.macros.properties.architectures
     libc.src.__support.macros.properties.compiler
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
@@ -38,4 +42,25 @@ add_header_library(
   DEPENDS
     .config
     .optimization
+)
+
+add_header_library(
+  macro_utils
+  HDRS
+    macro-utils.h
+)
+
+add_header_library(
+  is_defined
+  HDRS
+    is_defined.h
+  DEPENDS
+    .macro_utils
+    libc.src.__support.CPP.string_view
+)
+
+add_header_library(
+  hardening
+  HDRS
+    hardening.h
 )

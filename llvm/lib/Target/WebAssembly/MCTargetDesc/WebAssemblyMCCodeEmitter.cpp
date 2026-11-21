@@ -84,13 +84,14 @@ void WebAssemblyMCCodeEmitter::encodeP2AlignAndMemOrder(
   uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
 
   // Atomic instructions always have an ordering, but if it's SEQ_CST then we
-  // don't use the relaxed-atomics encoding (even if relaxed-atomics is
-  // enabled) because the original encoding is smaller.
+  // don't use the acquire-release-atomics encoding (even if
+  // acquire-release-atomics is enabled) because the original encoding is
+  // smaller.
   if (P2AlignIdx > 0 && Desc.operands()[P2AlignIdx - 1].OperandType ==
                             WebAssembly::OPERAND_MEMORDER) {
     Order = MI.getOperand(P2AlignIdx - 1).getImm();
     if (Order != wasm::WASM_MEM_ORDER_SEQ_CST) {
-      assert(STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics] &&
+      assert(STI.getFeatureBits()[WebAssembly::FeatureAcquireReleaseAtomics] &&
              "Non-default atomic ordering but feature not enabled");
       P2Align |= wasm::WASM_MEMARG_HAS_MEM_ORDER;
     }
@@ -166,6 +167,23 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           support::endian::write<uint8_t>(OS, MO.getImm(),
                                           llvm::endianness::little);
           break;
+        case WebAssembly::OPERAND_VALTYPE_LIST: {
+          // A vec of valtypes: emit the ULEB count followed by that many
+          // single-byte value types. The count lives in this MCOperand;
+          // subsequent MCOperands hold the valtype bytes and are consumed here.
+          uint64_t Count = uint64_t(MO.getImm());
+          if (Count > uint64_t(E - I - 1))
+            report_fatal_error(
+                "select t* operand count exceeds MCInst operand count");
+          encodeULEB128(Count, OS);
+          for (uint64_t K = 0; K < Count; ++K) {
+            ++I;
+            int64_t Val = MI.getOperand(I).getImm();
+            assert(isUInt<8>(Val) && "select t* valtype out of byte range");
+            support::endian::write<uint8_t>(OS, Val, llvm::endianness::little);
+          }
+          break;
+        }
         case WebAssembly::OPERAND_MEMORDER: {
           // If there is a p2align operand (everything but fence) it is encoded
           // together with the mem ordering (in the next iteration).
@@ -174,7 +192,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                   WebAssembly::OPERAND_P2ALIGN)
             break;
           uint8_t Val = getEncodedMemOrder(MO.getImm(), Opcode);
-          if (STI.getFeatureBits()[WebAssembly::FeatureRelaxedAtomics]) {
+          if (STI.getFeatureBits()[WebAssembly::FeatureAcquireReleaseAtomics]) {
             support::endian::write<uint8_t>(OS, Val, llvm::endianness::little);
           } else {
             assert(Opcode == WebAssembly::ATOMIC_FENCE_S);

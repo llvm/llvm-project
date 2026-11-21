@@ -56,7 +56,7 @@ static const int16_t cSledLength = 64;
 #elif defined(__powerpc64__)
 static const int16_t cSledLength = 8;
 #elif defined(__hexagon__)
-static const int16_t cSledLength = 20;
+static const int16_t cSledLength = 28;
 #elif defined(__riscv) && (__riscv_xlen == 64)
 static const int16_t cSledLength = 68;
 #elif defined(__riscv) && (__riscv_xlen == 32)

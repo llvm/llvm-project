@@ -72,6 +72,33 @@ mlirApiObjectToCapsule(nanobind::handle apiObject) {
   return api;
 }
 
+/// Clears the Python error indicator if the given condition `val` is false and
+/// returns the condition. This is needed in `from_python` of the type casters
+/// below, where a failed conversion from a Python capsule sets the Python error
+/// indicator but the caller of the caster expects or may even need a clean
+/// error indicator.
+inline bool pyErrClearIfFalse(bool val) {
+  if (!val)
+    PyErr_Clear();
+  return val;
+}
+
+/// Invokes `f`, which creates the Python object for a `from_cpp` conversion
+/// below. `from_cpp` is `noexcept`, but creating the object calls into Python
+/// (e.g. `maybe_downcast` runs user-registered type/value casters), which may
+/// raise. Letting the resulting `nanobind::python_error` escape would call
+/// `std::terminate`. Instead, restore it as the Python error indicator and
+/// return an invalid handle, which nanobind propagates to the Python caller.
+template <typename F>
+static handle mlirFromCppNoThrow(F &&f) noexcept {
+  try {
+    return f();
+  } catch (python_error &e) {
+    e.restore();
+    return handle();
+  }
+}
+
 // Note: Currently all of the following support cast from nanobind::object to
 // the Mlir* C-API type, but only a few light-weight, context-bound ones
 // implicitly cast the other way because the use case has not yet emerged and
@@ -85,18 +112,20 @@ struct type_caster<MlirAffineMap> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAffineMap(capsule->ptr());
-      return !mlirAffineMapIsNull(value);
+      return pyErrClearIfFalse(!mlirAffineMapIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirAffineMap v, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonAffineMapToCapsule(v));
-    return mlir::python::irModule()
-        .attr("AffineMap")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonAffineMapToCapsule(v));
+      return mlir::python::irModule()
+          .attr("AffineMap")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   }
 };
 
@@ -108,19 +137,21 @@ struct type_caster<MlirAttribute> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToAttribute(capsule->ptr());
-      return !mlirAttributeIsNull(value);
+      return pyErrClearIfFalse(!mlirAttributeIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirAttribute v, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonAttributeToCapsule(v));
-    return mlir::python::irModule()
-        .attr("Attribute")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonAttributeToCapsule(v));
+      return mlir::python::irModule()
+          .attr("Attribute")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
+          .release();
+    });
   }
 };
 
@@ -131,7 +162,7 @@ struct type_caster<MlirBlock> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToBlock(capsule->ptr());
-      return !mlirBlockIsNull(value);
+      return pyErrClearIfFalse(!mlirBlockIsNull(value));
     }
     return false;
   }
@@ -159,7 +190,7 @@ struct type_caster<MlirContext> {
     }
     if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToContext(capsule->ptr());
-      return !mlirContextIsNull(value);
+      return pyErrClearIfFalse(!mlirContextIsNull(value));
     }
     return false;
   }
@@ -173,18 +204,20 @@ struct type_caster<MlirDialectRegistry> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToDialectRegistry(capsule->ptr());
-      return !mlirDialectRegistryIsNull(value);
+      return pyErrClearIfFalse(!mlirDialectRegistryIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirDialectRegistry v, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule = nanobind::steal<nanobind::object>(
-        mlirPythonDialectRegistryToCapsule(v));
-    return mlir::python::irModule()
-        .attr("DialectRegistry")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule = nanobind::steal<nanobind::object>(
+          mlirPythonDialectRegistryToCapsule(v));
+      return mlir::python::irModule()
+          .attr("DialectRegistry")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   }
 };
 
@@ -200,18 +233,20 @@ struct type_caster<MlirLocation> {
     }
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToLocation(capsule->ptr());
-      return !mlirLocationIsNull(value);
+      return pyErrClearIfFalse(!mlirLocationIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirLocation v, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonLocationToCapsule(v));
-    return mlir::python::irModule()
-        .attr("Location")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonLocationToCapsule(v));
+      return mlir::python::irModule()
+          .attr("Location")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   }
 };
 
@@ -222,18 +257,20 @@ struct type_caster<MlirModule> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToModule(capsule->ptr());
-      return !mlirModuleIsNull(value);
+      return pyErrClearIfFalse(!mlirModuleIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirModule v, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonModuleToCapsule(v));
-    return mlir::python::irModule()
-        .attr("Module")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonModuleToCapsule(v));
+      return mlir::python::irModule()
+          .attr("Module")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   };
 };
 
@@ -246,18 +283,20 @@ struct type_caster<MlirFrozenRewritePatternSet> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToFrozenRewritePatternSet(capsule->ptr());
-      return value.ptr != nullptr;
+      return pyErrClearIfFalse(value.ptr != nullptr);
     }
     return false;
   }
   static handle from_cpp(MlirFrozenRewritePatternSet v, rv_policy,
                          handle) noexcept {
-    nanobind::object capsule = nanobind::steal<nanobind::object>(
-        mlirPythonFrozenRewritePatternSetToCapsule(v));
-    return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("rewrite"))
-        .attr("FrozenRewritePatternSet")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule = nanobind::steal<nanobind::object>(
+          mlirPythonFrozenRewritePatternSetToCapsule(v));
+      return nanobind::module_::import_(MAKE_MLIR_PYTHON_QUALNAME("rewrite"))
+          .attr("FrozenRewritePatternSet")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   };
 };
 
@@ -269,7 +308,7 @@ struct type_caster<MlirOperation> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToOperation(capsule->ptr());
-      return !mlirOperationIsNull(value);
+      return pyErrClearIfFalse(!mlirOperationIsNull(value));
     }
     return false;
   }
@@ -277,12 +316,14 @@ struct type_caster<MlirOperation> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonOperationToCapsule(v));
-    return mlir::python::irModule()
-        .attr("Operation")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonOperationToCapsule(v));
+      return mlir::python::irModule()
+          .attr("Operation")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   };
 };
 
@@ -293,7 +334,7 @@ struct type_caster<MlirValue> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToValue(capsule->ptr());
-      return !mlirValueIsNull(value);
+      return pyErrClearIfFalse(!mlirValueIsNull(value));
     }
     return false;
   }
@@ -301,13 +342,15 @@ struct type_caster<MlirValue> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonValueToCapsule(v));
-    return mlir::python::irModule()
-        .attr("Value")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonValueToCapsule(v));
+      return mlir::python::irModule()
+          .attr("Value")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
+          .release();
+    });
   };
 };
 
@@ -319,7 +362,7 @@ struct type_caster<MlirPassManager> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToPassManager(capsule->ptr());
-      return !mlirPassManagerIsNull(value);
+      return pyErrClearIfFalse(!mlirPassManagerIsNull(value));
     }
     return false;
   }
@@ -332,7 +375,7 @@ struct type_caster<MlirTypeID> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToTypeID(capsule->ptr());
-      return !mlirTypeIDIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIDIsNull(value));
     }
     return false;
   }
@@ -340,12 +383,14 @@ struct type_caster<MlirTypeID> {
                          cleanup_list *cleanup) noexcept {
     if (v.ptr == nullptr)
       return nanobind::none();
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonTypeIDToCapsule(v));
-    return mlir::python::irModule()
-        .attr("TypeID")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonTypeIDToCapsule(v));
+      return mlir::python::irModule()
+          .attr("TypeID")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .release();
+    });
   };
 };
 
@@ -356,19 +401,21 @@ struct type_caster<MlirType> {
   bool from_python(handle src, uint8_t flags, cleanup_list *cleanup) noexcept {
     if (auto capsule = mlirApiObjectToCapsule(src)) {
       value = mlirPythonCapsuleToType(capsule->ptr());
-      return !mlirTypeIsNull(value);
+      return pyErrClearIfFalse(!mlirTypeIsNull(value));
     }
     return false;
   }
   static handle from_cpp(MlirType t, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    nanobind::object capsule =
-        nanobind::steal<nanobind::object>(mlirPythonTypeToCapsule(t));
-    return mlir::python::irModule()
-        .attr("Type")
-        .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
-        .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
-        .release();
+    return mlirFromCppNoThrow([&]() -> handle {
+      nanobind::object capsule =
+          nanobind::steal<nanobind::object>(mlirPythonTypeToCapsule(t));
+      return mlir::python::irModule()
+          .attr("Type")
+          .attr(MLIR_PYTHON_CAPI_FACTORY_ATTR)(capsule)
+          .attr(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR)()
+          .release();
+    });
   }
 };
 
@@ -378,7 +425,8 @@ struct type_caster<MlirStringRef> {
   NB_TYPE_CASTER(MlirStringRef, const_name("str"))
   static handle from_cpp(MlirStringRef s, rv_policy,
                          cleanup_list *cleanup) noexcept {
-    return nanobind::str(s.data, s.length).release();
+    return mlirFromCppNoThrow(
+        [&]() -> handle { return nanobind::str(s.data, s.length).release(); });
   }
 };
 

@@ -4,6 +4,9 @@ after rebuilding the a dynamic library flushes the scratch
 TypeSystems tied to that process.
 """
 
+import os
+import time
+
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
@@ -25,6 +28,7 @@ def isUbuntu18_04():
     return None
 
 
+@requireExpressionEvaluation
 class TestRerunExprDylib(TestBase):
     SHARED_BUILD_TESTCASE = False
 
@@ -60,6 +64,12 @@ class TestRerunExprDylib(TestBase):
             }
         )
 
+        # Age the library file to 10 seconds in the past so that it is rebuilt
+        # and reloaded even on filesystems with 1s resolution.
+        fpath = self.getBuildArtifact(FULL_DYLIB_NAME)
+        old_mtime = time.time() - 10
+        os.utime(fpath, (old_mtime, old_mtime))
+
         # Build a.out
         self.build(
             dictionary={
@@ -71,20 +81,16 @@ class TestRerunExprDylib(TestBase):
             }
         )
 
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        target.BreakpointCreateBySourceRegex("dlclose", lldb.SBFileSpec("main.cpp"))
+        target, process, _, dlclose_bkpt = lldbutil.run_to_source_breakpoint(
+            self, "dlclose", lldb.SBFileSpec("main.cpp")
+        )
         target.BreakpointCreateBySourceRegex("return", lldb.SBFileSpec("main.cpp"))
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
 
         self.expect_expr(
             "*foo",
             result_type="Foo",
             result_children=[ValueCheck(name="m_val", value="42")],
         )
-
-        # Delete the dylib to force make to rebuild it.
-        remove_file(self.getBuildArtifact(FULL_DYLIB_NAME))
 
         # Re-build libfoo.dylib
         self.build(
@@ -100,7 +106,7 @@ class TestRerunExprDylib(TestBase):
         # Rerun program within the same target
         process.Continue()
         process.Destroy()
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
+        _, process, _, _ = lldbutil.run_to_breakpoint_do_run(self, target, dlclose_bkpt)
 
         self.expect_expr(
             "*foo",

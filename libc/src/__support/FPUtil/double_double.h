@@ -12,6 +12,7 @@
 #include "multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/optimization.h" // LIBC_DO_NOT_OPTIMIZE
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 #include "src/__support/number_pair.h"
 
@@ -29,13 +30,29 @@ template <> struct DefaultSplit<double> {
 using DoubleDouble = NumberPair<double>;
 using FloatFloat = NumberPair<float>;
 
-// The output of Dekker's FastTwoSum algorithm is correct, i.e.:
-//   r.hi + r.lo = a + b exactly
-//   and |r.lo| < eps(r.lo)
-// Assumption: |a| >= |b|, or a = 0.
+// Dekker's FastTwoSum:
+//   r_hi + r_lo ~ a + b
+// In precision `p`, it's exact if `lsb(a) >= ulp(b)` and one of the following
+// conditions satisfies:
+//   (i)   rounding mode = RN
+//   (ii)  e_a - e_b <= p
+//   (iii) rounding mode = RD and b >= 0
+//   (iv)  rounding mode = RU and b <= 0
+//   (v)   rounding mode = RZ and ab >= 0
+// Otherwise, the errors err = (a + b) - (r_hi + r_lo) is bounded by:
+//   |err| <= 2^(-2p + 1) * ufp(a + b) <= 2^(-2p + 1) * ufp(r_hi)
+// when `lsb(a) >= ulp(b)`.
+// In particular,
+//   |err| <=  2^-47 * ufp(r_hi) for single precision,
+//         <= 2^-105 * ufp(r_hi) for double precision.
+// If the condition `lsb(a) >= ulp(b)` does NOT satisfy, then:
+//   |err| < 3 * 2^(-p) * |r_hi|.
+// Reference:
+//   Jeannerod, C.-P. and Zimmermann, P., "FastTwoSum revisited", ARITH 2025,
+//     <https://www.arith2025.org/proceedings/215900a141.pdf>.
 template <bool FAST2SUM = true, typename T = double>
 LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
   if constexpr (FAST2SUM) {
     r.hi = a + b;
     T t = r.hi - a;
@@ -51,20 +68,77 @@ LIBC_INLINE constexpr NumberPair<T> exact_add(T a, T b) {
   return r;
 }
 
-// Assumption: |a.hi| >= |b.hi|
-template <typename T>
-LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a,
-                                        const NumberPair<T> &b) {
-  NumberPair<T> r = exact_add(a.hi, b.hi);
-  T lo = a.lo + b.lo;
-  return exact_add(r.hi, r.lo + lo);
+template <bool FAST2SUM = true, typename T = double>
+LIBC_INLINE constexpr NumberPair<T> exact_sub(T a, T b) {
+  NumberPair<T> r;
+  if constexpr (FAST2SUM) {
+    r.hi = a - b;
+    T t = a - r.hi;
+    r.lo = t - b;
+  } else {
+    r.hi = a - b;
+    T t1 = r.hi - a;
+    T t2 = r.hi - t1;
+    T t3 = a - t2;
+    T t4 = b + t1;
+    r.lo = t3 - t4;
+  }
+  return r;
 }
 
-// Assumption: |a.hi| >= |b|
-template <typename T>
+// Following the above analysis of FastTwoSum,
+// If `lsb(a.hi) >= ulp(b.hi)`, then the errors:
+//   err = (a.hi + a.lo + b.hi + b.lo) - (r.hi - r.lo) is bounded by:
+//   |err| < 2^(-2p) * ufp(r.hi) + 2^(-p + 2) * ufp(a.lo + b.lo).
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a,
+                                        const NumberPair<T> &b) {
+  NumberPair<T> r = exact_add<FAST2SUM>(a.hi, b.hi);
+  T lo = a.lo + b.lo;
+  T r_lo = r.lo + lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a.hi| >= |b|
+template <bool FAST2SUM = true, typename T>
 LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
-  NumberPair<T> r = exact_add<false>(a.hi, b);
-  return exact_add(r.hi, r.lo + a.lo);
+  NumberPair<T> r = exact_add<FAST2SUM>(a.hi, b);
+  T r_lo = r.lo + a.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> add(T a, const NumberPair<T> &b) {
+  NumberPair<T> r = exact_add<FAST2SUM>(a, b.hi);
+  T r_lo = r.lo + b.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a.hi| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(const NumberPair<T> &a,
+                                        const NumberPair<T> &b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a.hi, b.hi);
+  T lo = a.lo - b.lo;
+  T r_lo = r.lo + lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a.hi| >= |b|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(const NumberPair<T> &a, T b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a.hi, b);
+  T r_lo = r.lo + a.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
+}
+
+// Assumption: when FAST2SUM = true, |a| >= |b.hi|.
+template <bool FAST2SUM = true, typename T>
+LIBC_INLINE constexpr NumberPair<T> sub(T a, const NumberPair<T> &b) {
+  NumberPair<T> r = exact_sub<FAST2SUM>(a, b.hi);
+  T r_lo = r.lo - b.lo;
+  return exact_add<FAST2SUM>(r.hi, r_lo);
 }
 
 // Veltkamp's Splitting for double precision.
@@ -74,7 +148,7 @@ LIBC_INLINE constexpr NumberPair<T> add(const NumberPair<T> &a, T b) {
 // Default splitting constant = 2^ceil(prec(double)/2) + 1 = 2^27 + 1.
 template <typename T = double, size_t N = DefaultSplit<T>::VALUE>
 LIBC_INLINE constexpr NumberPair<T> split(T a) {
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
   // CN = 2^N.
   constexpr T CN = static_cast<T>(1 << N);
   constexpr T C = CN + T(1);
@@ -87,9 +161,10 @@ LIBC_INLINE constexpr NumberPair<T> split(T a) {
 
 // Helper for non-fma exact mult where the first number is already split.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
-LIBC_INLINE NumberPair<T> exact_mult(const NumberPair<T> &as, T a, T b) {
+LIBC_INLINE constexpr NumberPair<T> exact_mult(const NumberPair<T> &as, T a,
+                                               T b) {
   NumberPair<T> bs = split<T, SPLIT_B>(b);
-  NumberPair<T> r{0.0, 0.0};
+  NumberPair<T> r;
 
   r.hi = a * b;
   T t1 = as.hi * bs.hi - r.hi;
@@ -128,12 +203,16 @@ template <> struct TargetHasFmaInstruction<double> {
 // the generated constants to precision <= 51, and splitting it by 2^28 + 1,
 // then a * b = r.hi + r.lo is exact for all rounding modes.
 template <typename T = double, size_t SPLIT_B = DefaultSplit<T>::VALUE>
-LIBC_INLINE NumberPair<T> exact_mult(T a, T b) {
-  NumberPair<T> r{0.0, 0.0};
+LIBC_INLINE LIBC_CONSTEXPR NumberPair<T> exact_mult(T a, T b) {
+  NumberPair<T> r;
 
   if constexpr (TargetHasFmaInstruction<T>::VALUE) {
     r.hi = a * b;
-    r.lo = fputil::multiply_add(a, b, -r.hi);
+    // Prevent `-r.hi` inside `multiply_sub` from being rewritten into
+    // `a * (-b)` when `a * b` is duplicated (e.g. by SLP vectorization), which
+    // breaks directed rounding modes (`RU(a * (-b)) != -RU(a * b)`).
+    LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
+    r.lo = fputil::multiply_sub(a, b, r.hi);
   } else {
     // Dekker's Product.
     NumberPair<T> as = split(a);
@@ -169,6 +248,22 @@ LIBC_INLINE DoubleDouble multiply_add<DoubleDouble>(const DoubleDouble &a,
   return add(c, quick_mult(a, b));
 }
 
+// Assuming |a * b| >= |c|.
+template <>
+LIBC_INLINE DoubleDouble multiply_sub<DoubleDouble>(const DoubleDouble &a,
+                                                    const DoubleDouble &b,
+                                                    const DoubleDouble &c) {
+  return sub(quick_mult(a, b), c);
+}
+
+// Assuming |a| >= |b * c|.
+template <>
+LIBC_INLINE DoubleDouble sub_multiply<DoubleDouble>(const DoubleDouble &a,
+                                                    const DoubleDouble &b,
+                                                    const DoubleDouble &c) {
+  return sub(a, quick_mult(b, c));
+}
+
 // Accurate double-double division, following Karp-Markstein's trick for
 // division, implemented in the CORE-MATH project at:
 // https://gitlab.inria.fr/core-math/core-math/-/blob/master/src/binary64/tan/tan.c#L1855
@@ -191,10 +286,11 @@ LIBC_INLINE NumberPair<T> div(const NumberPair<T> &a, const NumberPair<T> &b) {
   NumberPair<T> r;
   T q = T(1) / b.hi;
   r.hi = a.hi * q;
+  LIBC_DO_NOT_OPTIMIZE_ROUNDING(r.hi);
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-  T e_hi = fputil::multiply_add(b.hi, -r.hi, a.hi);
-  T e_lo = fputil::multiply_add(b.lo, -r.hi, a.lo);
+  T e_hi = fputil::sub_multiply(a.hi, b.hi, r.hi);
+  T e_lo = fputil::sub_multiply(a.lo, b.lo, r.hi);
 #else
   NumberPair<T> b_hi_r_hi = fputil::exact_mult(b.hi, -r.hi);
   NumberPair<T> b_lo_r_hi = fputil::exact_mult(b.lo, -r.hi);

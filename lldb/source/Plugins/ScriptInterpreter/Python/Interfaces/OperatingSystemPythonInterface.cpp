@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "../lldb-python.h"
+
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
-
-// clang-format off
-// LLDB Python header must be included first
-#include "../lldb-python.h"
-//clang-format on
 
 #include "../SWIGPythonBridge.h"
 #include "../ScriptInterpreterPythonImpl.h"
@@ -31,33 +29,29 @@ OperatingSystemPythonInterface::OperatingSystemPythonInterface(
 
 llvm::Expected<StructuredData::GenericSP>
 OperatingSystemPythonInterface::CreatePluginObject(
-    llvm::StringRef class_name, ExecutionContext &exe_ctx,
-    StructuredData::DictionarySP args_sp, StructuredData::Generic *script_obj) {
-  return ScriptedPythonInterface::CreatePluginObject(class_name, nullptr,
+    const ScriptedMetadata &scripted_metadata, ExecutionContext &exe_ctx,
+    StructuredData::Generic *script_obj) {
+  return ScriptedPythonInterface::CreatePluginObject(scripted_metadata, nullptr,
                                                      exe_ctx.GetProcessSP());
 }
 
 StructuredData::DictionarySP
 OperatingSystemPythonInterface::CreateThread(lldb::tid_t tid,
                                              lldb::addr_t context) {
-  Status error;
-  StructuredData::DictionarySP dict = Dispatch<StructuredData::DictionarySP>(
-      "create_thread", error, tid, context);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, dict,
-                                                    error))
+  StructuredData::DictionarySP dict = LogAndDefault(
+      Dispatch<StructuredData::DictionarySP>("create_thread", tid, context),
+      LLVM_PRETTY_FUNCTION);
+  if (!dict)
     return {};
 
   return dict;
 }
 
 StructuredData::ArraySP OperatingSystemPythonInterface::GetThreadInfo() {
-  Status error;
   StructuredData::ArraySP arr =
-      Dispatch<StructuredData::ArraySP>("get_thread_info", error);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, arr,
-                                                    error))
+      LogAndDefault(Dispatch<StructuredData::ArraySP>("get_thread_info"),
+                    LLVM_PRETTY_FUNCTION);
+  if (!arr)
     return {};
 
   return arr;
@@ -69,24 +63,21 @@ StructuredData::DictionarySP OperatingSystemPythonInterface::GetRegisterInfo() {
 
 std::optional<std::string>
 OperatingSystemPythonInterface::GetRegisterContextForTID(lldb::tid_t tid) {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("get_register_data", error, tid);
-
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj =
+      LogAndDefault(Dispatch("get_register_data", tid), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
-  return obj->GetAsString()->GetValue().str();
+  return obj->GetStringValue().str();
 }
 
 std::optional<bool> OperatingSystemPythonInterface::DoesPluginReportAllThreads() {
-  Status error;
-  StructuredData::ObjectSP obj = Dispatch("does_plugin_report_all_threads", error);
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error))
+  StructuredData::ObjectSP obj = LogAndDefault(
+      Dispatch("does_plugin_report_all_threads"), LLVM_PRETTY_FUNCTION);
+  if (!obj)
     return {};
 
-  return obj->GetAsBoolean()->GetValue();
+  return obj->GetBooleanValue();
 }
 
 void OperatingSystemPythonInterface::Initialize() {
@@ -96,7 +87,8 @@ void OperatingSystemPythonInterface::Initialize() {
   const std::vector<llvm::StringRef> api_usages = {};
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), llvm::StringRef("Mock thread state"),
-      CreateInstance, eScriptLanguagePython, {ci_usages, api_usages});
+      CreateInstance, eScriptedExtensionOperatingSystem, eScriptLanguagePython,
+      {ci_usages, api_usages});
 }
 
 void OperatingSystemPythonInterface::Terminate() {

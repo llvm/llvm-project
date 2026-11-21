@@ -6,6 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+typedef struct __CLC_XCONCAT(__clc_sincos_ret_, __CLC_GENTYPE) {
+  __CLC_GENTYPE sin, cos;
+} __CLC_XCONCAT(__clc_sincos_ret_, __CLC_GENTYPE);
+
+#define __CLC_SINCOS_RET_GENTYPE __CLC_XCONCAT(__clc_sincos_ret_, __CLC_GENTYPE)
+
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincos_reduced_eval(__CLC_FLOATN x);
+
+_CLC_DECL _CLC_OVERLOAD _CLC_CONST __CLC_SINCOS_RET_GENTYPE
+__clc_sincospi_reduced_eval(__CLC_FLOATN x);
+
 _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_sinf_piby4(__CLC_FLOATN x,
                                                       __CLC_FLOATN y);
 _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_cosf_piby4(__CLC_FLOATN x,
@@ -19,5 +31,4 @@ _CLC_DECL _CLC_OVERLOAD __CLC_FLOATN __clc_tanf_piby4(__CLC_FLOATN x,
                                                       __CLC_INTN regn);
 
 _CLC_DECL _CLC_OVERLOAD __CLC_INTN __clc_argReductionS(private __CLC_FLOATN *r,
-                                                       private __CLC_FLOATN *rr,
                                                        __CLC_FLOATN x);

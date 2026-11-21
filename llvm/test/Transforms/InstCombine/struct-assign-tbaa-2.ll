@@ -38,7 +38,7 @@ entry:
 !8 = !{!1, !4, i64 2, i64 2}
 
 ;.
-; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META4:![0-9]+]], i64 0, i64 2}
 ; CHECK: [[META1]] = !{[[META2:![0-9]+]], i64 4, !"_ZTS1T", [[META4]], i64 0, i64 2, [[META4]], i64 2, i64 2}

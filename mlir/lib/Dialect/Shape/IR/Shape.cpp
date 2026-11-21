@@ -16,7 +16,6 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -24,7 +23,6 @@
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 
@@ -269,7 +267,7 @@ void AssumingOp::print(OpAsmPrinter &p) {
   p.printRegion(getDoRegion(),
                 /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/yieldsResults);
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 namespace {
@@ -346,7 +344,7 @@ void AssumingOp::getSuccessorRegions(
   // parent, so return the correct RegionSuccessor purely based on the index
   // being None or 0.
   if (!point.isParent()) {
-    regions.push_back(RegionSuccessor::parent());
+    regions.push_back(RegionSuccessor(getOperation()));
     return;
   }
 
@@ -354,7 +352,7 @@ void AssumingOp::getSuccessorRegions(
 }
 
 ValueRange AssumingOp::getSuccessorInputs(RegionSuccessor successor) {
-  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
+  return successor.isOperation() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AssumingOp::inlineRegionIntoParent(AssumingOp &op,
@@ -593,8 +591,9 @@ struct RemoveDuplicateOperandsPattern : public OpRewritePattern<OpTy> {
 
     // Reduce op to equivalent with unique operands.
     if (unique.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(),
-                                        unique.takeVector(), op->getAttrs());
+      rewriter.replaceOpWithNewOp<OpTy>(
+          op, op->getResultTypes(), unique.takeVector(), op.getProperties(),
+          op->getDiscardableAttrDictionary().getValue());
       return success();
     }
 
@@ -716,8 +715,9 @@ struct RemoveEmptyShapeOperandsPattern : public OpRewritePattern<OpTy> {
 
     // Reduce op to equivalent without empty shape operands.
     if (newOperands.size() < op.getNumOperands()) {
-      rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands,
-                                        op->getAttrs());
+      rewriter.replaceOpWithNewOp<OpTy>(
+          op, op->getResultTypes(), newOperands, op.getProperties(),
+          op->getDiscardableAttrDictionary().getValue());
       return success();
     }
 
@@ -786,8 +786,9 @@ struct BroadcastFoldConstantOperandsPattern
     newShapeOperands.push_back(
         ConstShapeOp::create(rewriter, op.getLoc(), foldedConstantOperandsTy,
                              rewriter.getIndexTensorAttr(foldedConstantShape)));
-    rewriter.replaceOpWithNewOp<BroadcastOp>(op, op.getType(),
-                                             newShapeOperands);
+    rewriter.replaceOpWithNewOp<BroadcastOp>(
+        op, TypeRange{op.getType()}, newShapeOperands, op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -819,7 +820,9 @@ struct CanonicalizeCastExtentTensorOperandsPattern
     // Rewrite op if any change required.
     if (!anyChange)
       return failure();
-    rewriter.replaceOpWithNewOp<OpTy>(op, op->getResultTypes(), newOperands);
+    rewriter.replaceOpWithNewOp<OpTy>(
+        op, op->getResultTypes(), newOperands, op.getProperties(),
+        op->getDiscardableAttrDictionary().getValue());
     return success();
   }
 };
@@ -850,7 +853,7 @@ struct BroadcastConcretizeResultTypePattern
 
     auto newOp = BroadcastOp::create(rewriter, op.getLoc(),
                                      getExtentTensorType(getContext(), maxRank),
-                                     op.getShapes());
+                                     op.getShapes(), /*error=*/nullptr);
     rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
     return success();
   }
@@ -872,12 +875,16 @@ void BroadcastOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
-  if (!adaptor.getLhs() || !adaptor.getRhs())
+  // concat with a poison operand is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getLhs()) ||
+      isa_and_present<ub::PoisonAttr>(adaptor.getRhs()))
+    return ub::PoisonAttr::get(getContext());
+  auto lhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getLhs());
+  auto rhs = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getRhs());
+  if (!lhs || !rhs)
     return nullptr;
-  auto lhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getLhs()).getValues<int64_t>());
-  auto rhsShape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getRhs()).getValues<int64_t>());
+  auto lhsShape = llvm::to_vector<6>(lhs.getValues<int64_t>());
+  auto rhsShape = llvm::to_vector<6>(rhs.getValues<int64_t>());
   SmallVector<int64_t, 6> resultShape;
   resultShape.append(lhsShape.begin(), lhsShape.end());
   resultShape.append(rhsShape.begin(), rhsShape.end());
@@ -891,7 +898,7 @@ OpFoldResult ConcatOp::fold(FoldAdaptor adaptor) {
 
 void ConstShapeOp::print(OpAsmPrinter &p) {
   p << " ";
-  p.printOptionalAttrDict((*this)->getAttrs(), /*elidedAttrs=*/{"shape"});
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
   p << "[";
   interleaveComma(getShape().getValues<int64_t>(), p);
   p << "] : ";
@@ -978,7 +985,9 @@ void CstrBroadcastableOp::getCanonicalizationPatterns(
 static bool hasAtMostSingleNonScalar(ArrayRef<Attribute> attributes) {
   bool nonScalarSeen = false;
   for (Attribute a : attributes) {
-    if (!a || llvm::cast<DenseIntElementsAttr>(a).getNumElements() != 0) {
+    // Treat non-constant and poison operands as potentially non-scalar.
+    auto dense = llvm::dyn_cast_if_present<DenseIntElementsAttr>(a);
+    if (!dense || dense.getNumElements() != 0) {
       if (nonScalarSeen)
         return false;
       nonScalarSeen = true;
@@ -995,10 +1004,10 @@ OpFoldResult CstrBroadcastableOp::fold(FoldAdaptor adaptor) {
   if ([&] {
         SmallVector<SmallVector<int64_t, 6>, 6> extents;
         for (const auto &operand : adaptor.getShapes()) {
-          if (!operand)
+          auto dense = llvm::dyn_cast_if_present<DenseIntElementsAttr>(operand);
+          if (!dense)
             return false;
-          extents.push_back(llvm::to_vector<6>(
-              llvm::cast<DenseIntElementsAttr>(operand).getValues<int64_t>()));
+          extents.push_back(llvm::to_vector<6>(dense.getValues<int64_t>()));
         }
         return OpTrait::util::staticallyKnownBroadcastable(extents);
       }())
@@ -1220,8 +1229,8 @@ OpFoldResult FromExtentsOp::fold(FoldAdaptor adaptor) {
 
 void FunctionLibraryOp::build(OpBuilder &builder, OperationState &result,
                               StringRef name) {
-  result.attributes.push_back(builder.getNamedAttr(
-      ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  result.getOrAddProperties<Properties>().sym_name =
+      builder.getStringAttr(name);
 }
 
 FuncOp FunctionLibraryOp::getShapeFunction(Operation *op) {
@@ -1236,7 +1245,7 @@ ParseResult FunctionLibraryOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
   // Parse the op name.
   StringAttr nameAttr;
-  if (parser.parseSymbolName(nameAttr, ::mlir::SymbolTable::getSymbolAttrName(),
+  if (parser.parseSymbolName(nameAttr, getSymNameAttrName(result.name),
                              result.attributes))
     return failure();
 
@@ -1262,7 +1271,7 @@ void FunctionLibraryOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
   p.printOptionalAttrDictWithKeyword(
-      (*this)->getAttrs(), {mlir::SymbolTable::getSymbolAttrName(), "mapping"});
+      (*this)->getDiscardableAttrDictionary().getValue());
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
@@ -1343,13 +1352,16 @@ std::optional<int64_t> GetExtentOp::getConstantDim() {
 }
 
 OpFoldResult GetExtentOp::fold(FoldAdaptor adaptor) {
-  auto elements = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
+  auto elements =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!elements)
     return nullptr;
   std::optional<int64_t> dim = getConstantDim();
   if (!dim.has_value())
     return nullptr;
   if (dim.value() >= elements.getNumElements())
+    return nullptr;
+  if (dim.value() < 0)
     return nullptr;
   return elements.getValues<Attribute>()[(uint64_t)dim.value()];
 }
@@ -1485,7 +1497,8 @@ bool mlir::shape::MeetOp::isCompatibleReturnTypes(TypeRange l, TypeRange r) {
 //===----------------------------------------------------------------------===//
 
 OpFoldResult shape::RankOp::fold(FoldAdaptor adaptor) {
-  auto shape = llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
+  auto shape =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!shape)
     return {};
   int64_t rank = shape.getNumElements();
@@ -1562,14 +1575,18 @@ LogicalResult shape::RankOp::verify() { return verifySizeOrIndexOp(*this); }
 //===----------------------------------------------------------------------===//
 
 OpFoldResult NumElementsOp::fold(FoldAdaptor adaptor) {
+  // num_elements of poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getShape()))
+    return ub::PoisonAttr::get(getContext());
 
   // Fold only when argument constant.
-  Attribute shape = adaptor.getShape();
+  auto shape =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getShape());
   if (!shape)
     return {};
 
   APInt product(64, 1);
-  for (auto value : llvm::cast<DenseIntElementsAttr>(shape))
+  for (auto value : shape)
     product *= value;
   Builder builder(getContext());
   return builder.getIndexAttr(product.getLimitedValue());
@@ -1727,12 +1744,14 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
 
 // Canonicalize
 //
-// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) ->
+//     tensor<*xf32>
 // %1 = shape.shape_of %0 : tensor<*xf32> -> tensor<?xindex>
 //
 // to
 //
-// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) -> tensor<*xf32>
+// %0 = tensor.reshape %input(%shape) : (tensor<*xf32>, tensor<?xindex>) ->
+//     tensor<*xf32>
 // %1 = %shape
 //
 struct ShapeOfFromReshape : public OpRewritePattern<shape::ShapeOfOp> {
@@ -1904,12 +1923,23 @@ LogicalResult shape::YieldOp::verify() {
 
 LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
                               SmallVectorImpl<OpFoldResult> &results) {
-  if (!adaptor.getOperand() || !adaptor.getIndex())
+  // Splitting a poison shape, or at a poison index, gives two poison halves.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getOperand()) ||
+      isa_and_present<ub::PoisonAttr>(adaptor.getIndex())) {
+    auto poison = ub::PoisonAttr::get(getContext());
+    results.push_back(poison);
+    results.push_back(poison);
+    return success();
+  }
+
+  auto shapeAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getOperand());
+  auto indexAttr = llvm::dyn_cast_if_present<IntegerAttr>(adaptor.getIndex());
+  if (!shapeAttr || !indexAttr)
     return failure();
-  auto shapeVec = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getOperand()).getValues<int64_t>());
+  auto shapeVec = llvm::to_vector<6>(shapeAttr.getValues<int64_t>());
   auto shape = llvm::ArrayRef(shapeVec);
-  auto splitPoint = llvm::cast<IntegerAttr>(adaptor.getIndex()).getInt();
+  auto splitPoint = indexAttr.getInt();
   // Verify that the split point is in the correct range.
   // TODO: Constant fold to an "error".
   int64_t rank = shape.size();
@@ -1928,11 +1958,16 @@ LogicalResult SplitAtOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult ToExtentTensorOp::fold(FoldAdaptor adaptor) {
-  if (!adaptor.getInput())
+  // to_extent_tensor of a poison shape is poison.
+  if (isa_and_present<ub::PoisonAttr>(adaptor.getInput()))
+    return ub::PoisonAttr::get(getContext());
+
+  auto inputAttr =
+      llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput());
+  if (!inputAttr)
     return OpFoldResult();
   Builder builder(getContext());
-  auto shape = llvm::to_vector<6>(
-      llvm::cast<DenseIntElementsAttr>(adaptor.getInput()).getValues<int64_t>());
+  auto shape = llvm::to_vector<6>(inputAttr.getValues<int64_t>());
   auto type = RankedTensorType::get({static_cast<int64_t>(shape.size())},
                                     builder.getIndexType());
   return DenseIntElementsAttr::get(type, shape);
@@ -2055,7 +2090,7 @@ void ReduceOp::print(OpAsmPrinter &p) {
   p.printOptionalArrowTypeList(getResultTypes());
   p << ' ';
   p.printRegion(getRegion());
-  p.printOptionalAttrDict((*this)->getAttrs());
+  p.printOptionalAttrDict((*this)->getDiscardableAttrDictionary().getValue());
 }
 
 #define GET_OP_CLASSES

@@ -1,5 +1,7 @@
 import * as vscode from "vscode";
 
+import { attachToProcess } from "./commands/attach-to-process";
+import { pickProcess } from "./commands/pick-process";
 import { LLDBDapDescriptorFactory } from "./debug-adapter-factory";
 import { LLDBDapConfigurationProvider } from "./debug-configuration-provider";
 import { DebugSessionTracker } from "./debug-session-tracker";
@@ -10,7 +12,9 @@ import {
   ModuleProperty,
   ModulesDataProvider,
 } from "./ui/modules-data-provider";
+import { registerStackFramesTracker } from "./ui/stack-frames-tracker";
 import { SymbolsProvider } from "./ui/symbols-provider";
+import { VariablesTrackerFactory } from "./ui/variables-tracker";
 import { LaunchUriHandler } from "./uri-launch-handler";
 
 /**
@@ -53,15 +57,42 @@ export class LLDBDapExtension extends DisposableContext {
       vscode.window.registerUriHandler(new LaunchUriHandler()),
     );
 
+    // Register trackers
+    registerStackFramesTracker(context);
+
+    let showVariableTypes = getShowVariableTypes();
+    const settingsListener = vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration("debug.showVariableTypes")) {
+        showVariableTypes = getShowVariableTypes();
+      }
+    });
+    const variablesTracker = vscode.debug.registerDebugAdapterTrackerFactory(
+      "lldb-dap",
+      new VariablesTrackerFactory(() => showVariableTypes),
+    );
+    this.pushSubscription(settingsListener, variablesTracker);
+
     this.pushSubscription(
       vscode.commands.registerCommand(
         "lldb-dap.modules.copyProperty",
         (node: ModuleProperty) => vscode.env.clipboard.writeText(node.value),
       ),
+      vscode.commands.registerCommand("lldb-dap.pickProcess", async () => {
+        const pid = await pickProcess(logger, logFilePath);
+        return pid?.toString();
+      }),
+      vscode.commands.registerCommand("lldb-dap.attachToProcess", () =>
+        attachToProcess(logger, logFilePath),
+      ),
     );
 
     this.pushSubscription(new SymbolsProvider(sessionTracker, context));
   }
+}
+
+function getShowVariableTypes(): boolean {
+  let config = vscode.workspace.getConfiguration("debug");
+  return config.get<boolean>("showVariableTypes", false);
 }
 
 /**

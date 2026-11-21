@@ -8,6 +8,7 @@ from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
+@requireExpressionEvaluation
 class CppUnionStaticMembersTestCase(TestBase):
     def test_print_union(self):
         """Tests that frame variable and expr work
@@ -32,7 +33,6 @@ class CppUnionStaticMembersTestCase(TestBase):
             result_children=[ValueCheck(name="val", value="137")],
         )
 
-    @expectedFailureWindows
     def test_expr_union_static_members(self):
         """Tests that frame variable and expr work
         for union static data members"""
@@ -49,7 +49,9 @@ class CppUnionStaticMembersTestCase(TestBase):
             result_children=[ValueCheck(name="val", value="42")],
         )
 
-    @expectedFailureWindows
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr149498", oslist=["windows"], debug_info="pdb"
+    )
     def test_union_in_anon_namespace(self):
         """Tests that frame variable and expr work
         for union static data members in anonymous

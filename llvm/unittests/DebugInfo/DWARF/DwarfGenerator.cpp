@@ -24,7 +24,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
@@ -37,8 +36,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-
-mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace {} // end anonymous namespace
 
@@ -146,7 +143,7 @@ void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
   const MCExpr *Expr =
       MCSymbolRefExpr::create(DG.getStringOffsetsStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -164,7 +161,7 @@ void dwarfgen::DIE::addAddrBaseAttribute() {
 
   const MCExpr *Expr = MCSymbolRefExpr::create(DG.getAddrTableStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -460,7 +457,6 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  MCOptions = mc::InitMCTargetOptionsFromFlags();
   MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return make_error<StringError>("no asm info for target " + TripleName,
@@ -488,9 +484,10 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
     return make_error<StringError>("no target machine for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
+  MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI));
+  M = std::make_unique<Module>("dwarfgen", Context);
   TLOF = TM->getObjFileLowering();
-  TLOF->Initialize(*MC, *TM);
+  TLOF->initialize(*MC, *TM, *M);
   MC->setObjectFileInfo(TLOF);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MC);

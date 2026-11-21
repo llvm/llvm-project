@@ -229,6 +229,62 @@ def EnumAttrB : EnumAttr<Test_Dialect, TestEnumB, "EnumAttrB"> {
   let assemblyFormat = "$value";
 }
 
+def TestStructEnum : I32EnumAttr<"TestStructEnum", "TestStructEnumType", [
+  I32EnumAttrCase<"first", 0>,
+  I32EnumAttrCase<"second", 1>,
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def EnumAttrC : EnumAttr<Test_Dialect, TestStructEnum, "EnumAttrC">;
+
+// EnumAttr parameters in a struct use the underlying enum syntax rather than
+// the EnumAttr's assembly format.
+// ATTR-LABEL: AttrWithEnumAttrStructAttr::parse
+// ATTR: _result_required = [&]() -> ::mlir::FailureOr<::TestStructEnumAttr> {
+// ATTR-NEXT: auto odsEnumValue = ::mlir::FieldParser<::TestStructEnum>::parse(odsParser);
+// ATTR: return ::TestStructEnumAttr::get(odsParser.getContext(), *odsEnumValue);
+// ATTR-LABEL: AttrWithEnumAttrStructAttr::print
+// ATTR: odsPrinter << getRequired().getValue();
+// ATTR: odsPrinter << getOptional().getValue();
+def AttrWithEnumAttrStruct : TestAttr<"AttrWithEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<EnumAttrC>:$required,
+    OptionalEnumAttrParameter<EnumAttrC>:$optional
+  );
+  let mnemonic = "enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def TestStructBitEnum : I32BitEnum<"TestStructBitEnum", "", [
+  I32BitEnumCaseNone<"none">,
+  I32BitEnumCaseBit<"read", 0>,
+  I32BitEnumCaseBit<"write", 1>,
+]> {
+  let separator = ", ";
+}
+
+def EnumAttrD : EnumAttr<Test_Dialect, TestStructBitEnum, "EnumAttrD">;
+
+// A non-final comma-separated bit enum is bracketed so its commas are not
+// confused with the struct separator.
+// ATTR-LABEL: AttrWithBitEnumAttrStructAttr::parse
+// ATTR: if (odsParser.parseLSquare()) return {};
+// ATTR: FieldParser<::TestStructBitEnum>::parse(odsParser)
+// ATTR: if (odsParser.parseRSquare()) return {};
+// ATTR-LABEL: AttrWithBitEnumAttrStructAttr::print
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter << getFlags().getValue();
+// ATTR: odsPrinter << "]";
+def AttrWithBitEnumAttrStruct : TestAttr<"AttrWithBitEnumAttrStruct"> {
+  let parameters = (ins
+    EnumAttrParameter<EnumAttrD>:$flags,
+    "int64_t":$count
+  );
+  let mnemonic = "bit_enum_attr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 /// Test type parser and printer that mix variables and struct are generated
 /// correctly.
 
@@ -826,6 +882,74 @@ def AttrT : TestAttr<"TestT"> {
   let mnemonic = "attr_t";
   let assemblyFormat = "`{` struct($v0, custom<NestedCustom>($v1), $v2) `}`";
 }
+
+/// Test that an `ArrayRefParameter` in a non-last position inside a `struct`
+/// directive is wrapped in `[...]` brackets to avoid ambiguity with the
+/// struct-level comma separator (issue #156623).
+def AttrWithArrayRefInStruct : TestAttr<"AttrWithArrayRefInStruct"> {
+  let parameters = (ins
+    ArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR:   // Parse literal '['
+// ATTR:   if (odsParser.parseLSquare()) return {};
+// ATTR:   _result_elements = ::mlir::FieldParser<::llvm::SmallVector<int64_t>>::parse(odsParser);
+// ATTR:   // Parse literal ']'
+// ATTR:   if (odsParser.parseRSquare()) return {};
+// ATTR: } else if (!_seen_count && _paramKey == "count") {
+// ATTR: odsPrinter << "elements = ";
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter.printStrippedAttrOrType(getElements());
+// ATTR: odsPrinter << "]";
+// ATTR: odsPrinter << "count = ";
+
+/// Test that an `ArrayRefParameter` in the LAST struct position is NOT wrapped
+/// in brackets (no ambiguity with a following comma).
+def AttrWithArrayRefInStructLast : TestAttr<"AttrWithArrayRefInStructLast"> {
+  let parameters = (ins
+    "int64_t":$count,
+    ArrayRefParameter<"int64_t">:$elements
+  );
+  let mnemonic = "arr_struct_last";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_count && _paramKey == "count") {
+// ATTR-NOT: parseLSquare
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR-NOT: parseLSquare
+// ATTR: odsPrinter << "count = ";
+// ATTR-NOT: odsPrinter << "[";
+// ATTR: odsPrinter << "elements = ";
+// ATTR-NOT: odsPrinter << "[";
+
+/// Test that an `OptionalArrayRefParameter` in a non-last struct position is
+/// wrapped in `[...]` brackets (same rule as the non-optional variant).
+def AttrWithOptArrayRefInStruct : TestAttr<"AttrWithOptArrayRefInStruct"> {
+  let parameters = (ins
+    OptionalArrayRefParameter<"int64_t">:$elements,
+    "int64_t":$count
+  );
+  let mnemonic = "opt_arr_struct";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// ATTR: if (!_seen_elements && _paramKey == "elements") {
+// ATTR:   // Parse literal '['
+// ATTR:   if (odsParser.parseLSquare()) return {};
+// ATTR:   _result_elements = ::mlir::FieldParser<::llvm::SmallVector<int64_t>>::parse(odsParser);
+// ATTR:   // Parse literal ']'
+// ATTR:   if (odsParser.parseRSquare()) return {};
+// ATTR: } else if (!_seen_count && _paramKey == "count") {
+// ATTR: odsPrinter << "elements = ";
+// ATTR: odsPrinter << "[";
+// ATTR: odsPrinter << "]";
+// ATTR: odsPrinter << "count = ";
 
 // DEFAULT_TYPE_PARSER: TestDialect::parseType(::mlir::DialectAsmParser &parser)
 // DEFAULT_TYPE_PARSER: auto parseResult = parseOptionalDynamicType(mnemonic, parser, genType);

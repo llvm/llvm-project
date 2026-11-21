@@ -11,7 +11,8 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
@@ -124,7 +125,9 @@ void mlir::ub::populateUBToLLVMConversionPatterns(
 namespace {
 /// Implement the interface to convert UB to LLVM.
 struct UBToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
-  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  UBToLLVMDialectInterface(Dialect *dialect)
+      : ConvertToLLVMPatternInterface(dialect) {}
+
   void loadDependentDialects(MLIRContext *context) const final {
     context->loadDialect<LLVM::LLVMDialect>();
   }

@@ -7,5 +7,5 @@
 //===----------------------------------------------------------------------===//
 
 #include "clc/math/clc_div_cr.h"
-#define __CLC_BODY <clc_div_cr.inc>
-#include <clc/math/gentype.inc>
+#define __CLC_BODY "clc_div_cr.inc"
+#include "clc/math/gentype.inc"

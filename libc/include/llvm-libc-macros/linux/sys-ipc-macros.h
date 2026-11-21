@@ -20,5 +20,6 @@
 #define IPC_RMID 0
 #define IPC_SET 1
 #define IPC_STAT 2
+#define IPC_INFO 3
 
 #endif // LLVM_LIBC_MACROS_LINUX_SYS_IPC_MACROS_H

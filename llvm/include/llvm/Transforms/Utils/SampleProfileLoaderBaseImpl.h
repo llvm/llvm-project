@@ -40,6 +40,7 @@
 #include "llvm/ProfileData/SampleProfReader.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/GenericDomTree.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 #include "llvm/Transforms/Utils/SampleProfileLoaderBaseUtil.h"
@@ -47,11 +48,6 @@
 namespace llvm {
 using namespace sampleprof;
 using namespace sampleprofutil;
-using ProfileCount = Function::ProfileCount;
-
-namespace vfs {
-class FileSystem;
-} // namespace vfs
 
 #define DEBUG_TYPE "sample-profile-impl"
 
@@ -118,7 +114,8 @@ public:
   }
 
   const PseudoProbeDescriptor *getDesc(StringRef FProfileName) const {
-    return getDesc(Function::getGUIDAssumingExternalLinkage(FProfileName));
+    return getDesc(Function::getGUIDAssumingExternalLinkage(
+        FunctionSamples::getCanonicalFnName(FProfileName)));
   }
 
   const PseudoProbeDescriptor *getDesc(const Function &F) const {
@@ -162,9 +159,7 @@ public:
   }
 };
 
-
-
-extern cl::opt<bool> SampleProfileUseProfi;
+extern LLVM_ABI cl::opt<bool> SampleProfileUseProfi;
 
 static inline bool skipProfileForFunction(const Function &F) {
   return F.isDeclaration() || !F.hasFnAttribute("use-sample-profile");
@@ -1070,9 +1065,7 @@ void SampleProfileLoaderBaseImpl<BT>::initWeightPropagation(
   // Sets the GUIDs that are inlined in the profiled binary. This is used
   // for ThinLink to make correct liveness analysis, and also make the IR
   // match the profiled binary before annotation.
-  getFunction(F).setEntryCount(
-      ProfileCount(Samples->getHeadSamples() + 1, Function::PCT_Real),
-      &InlinedGUIDs);
+  getFunction(F).setEntryCount(Samples->getHeadSamples() + 1, &InlinedGUIDs);
 
   if (!SampleProfileUseProfi) {
     // Compute dominance and loop info needed for propagation.
@@ -1102,9 +1095,7 @@ void SampleProfileLoaderBaseImpl<BT>::finalizeWeightPropagation(
   if (SampleProfileUseProfi) {
     const BasicBlockT *EntryBB = getEntryBB(&F);
     if (BlockWeights[EntryBB] > 0) {
-      getFunction(F).setEntryCount(
-          ProfileCount(BlockWeights[EntryBB], Function::PCT_Real),
-          &InlinedGUIDs);
+      getFunction(F).setEntryCount(BlockWeights[EntryBB], &InlinedGUIDs);
     }
   }
 }

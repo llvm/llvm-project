@@ -17,6 +17,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -83,11 +84,26 @@ class DwarfCompileUnit final : public DwarfUnit {
   DenseMap<const DILocalScope *, DIE *> AbstractLocalScopeDIEs;
   SmallPtrSet<const DISubprogram *, 8> FinalizedAbstractSubprograms;
 
+  // Local scopes (either DISubprogram or DILexicalBlock) used as a context of
+  // DIEs before it was known whether their subprograms have abstract DIEs,
+  // mapped to the pending DIEs holding those DIEs until
+  // resolvePendingLocalScopeDIEs() moves them to the final scope DIEs.
+  MapVector<const DILocalScope *, DIE *> PendingLocalScopeDIEs;
+
+  // Parent of the pending DIEs. It is the first child of the unit DIE until
+  // resolvePendingLocalScopeDIEs() removes it.
+  DIE *PendingLocalScopesDIE = nullptr;
+
   // List of inlined lexical block scopes that belong to subprograms within this
   // CU.
   DenseMap<const DILocalScope *, SmallVector<DIE *, 2>> InlinedLocalScopeDIEs;
 
   DenseMap<const DINode *, std::unique_ptr<DbgEntity>> AbstractEntities;
+
+  /// Cache of artificial DIEs created for DW_OP_LLVM_implicit_pointer
+  /// lowering, keyed by (pointee type, constant value). Enables reuse when
+  /// multiple pointer variables reference the same constant.
+  DenseMap<std::pair<const DIType *, int64_t>, DIE *> ImplicitPointerDIEs;
 
   /// DWO ID for correlating skeleton and split units.
   uint64_t DWOId = 0;
@@ -124,6 +140,14 @@ class DwarfCompileUnit final : public DwarfUnit {
 
   ///@}
 
+  /// Lower DW_OP_LLVM_implicit_pointer by creating an artificial variable DIE
+  /// for the dereferenced value and emitting DW_OP_implicit_pointer (DWARF 5)
+  /// or DW_OP_GNU_implicit_pointer (DWARF 4) for the pointer's location.
+  ///
+  /// \returns true if the implicit pointer was handled successfully.
+  bool emitImplicitPointerLocation(const Loc::Single &Single,
+                                   const DbgVariable &DV, DIE &VariableDie);
+
   bool isDwoUnit() const override;
 
   DenseMap<const DILocalScope *, DIE *> &getAbstractScopeDIEs() {
@@ -159,6 +183,19 @@ class DwarfCompileUnit final : public DwarfUnit {
   /// Create new DIE for abstract subprogram.
   DIE &createAbstractSubprogramDIE(const DISubprogram *SP, DIE *ContextDIE,
                                    DwarfCompileUnit *ContextCU);
+
+  /// Get the DIE to be used as a parent of DIEs of entities local to \p Scope,
+  /// which must not be a DILexicalBlockFile.
+  ///
+  /// The DIE belongs to the abstract tree if the subprogram of \p Scope has an
+  /// abstract DIE, and to the concrete tree otherwise. Until all functions are
+  /// processed, this may be a pending DIE, see
+  /// resolvePendingLocalScopeDIEs(). If there is no DIE for \p Scope in the
+  /// tree, the DIE of the closest enclosing scope is returned.
+  DIE *getOrCreateLocalScopeDIE(const DILocalScope *Scope);
+
+  /// Get or create the pending DIE of \p Scope.
+  DIE &getOrCreatePendingLocalScopeDIE(const DILocalScope *Scope);
 
   /// Add a location exprloc to \p DIE with attribute \p Attribute at
   /// for \p Location modified by raw DIExpression \p Expr.
@@ -278,10 +315,11 @@ public:
   /// This instance of 'getOrCreateContextDIE()' can handle DILocalScope.
   DIE *getOrCreateContextDIE(const DIScope *Ty) override;
 
-  /// Get DW_TAG_lexical_block for the given DILexicalBlock if available,
-  /// or the most close parent DIE, if no correspoding DW_TAG_lexical_block
-  /// exists.
-  DIE *getLocalContextDIE(const DILexicalBlock *LB);
+  /// Move DIEs of function-local entities from pending DIEs to the DIEs of
+  /// their scopes in abstract or concrete trees. Must be called after all
+  /// functions are processed, when it is known which subprograms have
+  /// abstract DIEs.
+  void resolvePendingLocalScopeDIEs();
 
   DIE *getOrCreateSubprogramDIE(const DISubprogram *SP, const Function *F,
                                 bool Minimal = false) override;

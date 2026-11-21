@@ -82,7 +82,7 @@ static bool findUse(const Init *field, const Init *deprecatedInit,
 }
 
 // Returns if there is a use of `deprecatedInit` in `record`.
-static bool findUse(Record &record, const Init *deprecatedInit,
+static bool findUse(const Record &record, const Init *deprecatedInit,
                     llvm::DenseMap<const Init *, bool> &known) {
   return llvm::any_of(record.getValues(), [&](const RecordVal &val) {
     return findUse(val.getValue(), deprecatedInit, known);
@@ -94,21 +94,21 @@ static void warnOfDeprecatedUses(const RecordKeeper &records) {
   // finds all uses of deprecated def. Deprecated defs are not expected to be
   // either numerous or long lived.
   bool deprecatedDefsFounds = false;
-  for (auto &it : records.getDefs()) {
-    const RecordVal *r = it.second->getValue("odsDeprecated");
+  for (const Record *it : records.getDefs()) {
+    const RecordVal *r = it->getValue("odsDeprecated");
     if (!r || !r->getValue())
       continue;
 
     llvm::DenseMap<const Init *, bool> hasUse;
     if (auto *si = dyn_cast<StringInit>(r->getValue())) {
-      for (auto &jt : records.getDefs()) {
+      for (const Record *jt : records.getDefs()) {
         // Skip anonymous defs.
-        if (jt.second->isAnonymous())
+        if (jt->isAnonymous())
           continue;
 
-        if (findUse(*jt.second, it.second->getDefInit(), hasUse)) {
-          PrintWarning(jt.second->getLoc(),
-                       "Using deprecated def `" + it.first + "`");
+        if (findUse(*jt, it->getDefInit(), hasUse)) {
+          PrintWarning(jt->getLoc(),
+                       "Using deprecated def `" + it->getName() + "`");
           PrintNote(si->getAsUnquotedString());
           deprecatedDefsFounds = true;
         }

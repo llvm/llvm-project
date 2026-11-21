@@ -15,8 +15,8 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUMachineModuleInfo.h"
+#include "AMDGPUMemoryUtils.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -25,19 +25,15 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/Support/Debug.h"
+#include "llvm/TargetParser/AMDGPUTargetParser.h"
 
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
 #define DEBUG_TYPE "si-memory-legalizer"
 #define PASS_NAME "SI Memory Legalizer"
-
-static cl::opt<bool> AmdgcnSkipCacheInvalidations(
-    "amdgcn-skip-cache-invalidations", cl::init(false), cl::Hidden,
-    cl::desc("Use this to skip inserting cache invalidating instructions."));
 
 namespace {
 
@@ -69,27 +65,46 @@ enum class SIAtomicScope {
   SYSTEM
 };
 
-/// The distinct address spaces supported by the AMDGPU target for
-/// atomic memory operation. Can be ORed together.
-enum class SIAtomicAddrSpace {
-  NONE = 0u,
-  GLOBAL = 1u << 0,
-  LDS = 1u << 1,
-  SCRATCH = 1u << 2,
-  GDS = 1u << 3,
-  OTHER = 1u << 4,
+#ifndef NDEBUG
+static StringRef toString(SIAtomicScope S) {
+  switch (S) {
+  case SIAtomicScope::NONE:
+    return "none";
+  case SIAtomicScope::SINGLETHREAD:
+    return "singlethread";
+  case SIAtomicScope::WAVEFRONT:
+    return "wavefront";
+  case SIAtomicScope::WORKGROUP:
+    return "workgroup";
+  case SIAtomicScope::CLUSTER:
+    return "cluster";
+  case SIAtomicScope::AGENT:
+    return "agent";
+  case SIAtomicScope::SYSTEM:
+    return "system";
+  }
+  llvm_unreachable("unknown atomic scope");
+}
 
-  /// The address spaces that can be accessed by a FLAT instruction.
-  FLAT = GLOBAL | LDS | SCRATCH,
-
-  /// The address spaces that support atomic instructions.
-  ATOMIC = GLOBAL | LDS | SCRATCH | GDS,
-
-  /// All address spaces.
-  ALL = GLOBAL | LDS | SCRATCH | GDS | OTHER,
-
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestFlag = */ ALL)
-};
+static raw_ostream &operator<<(raw_ostream &OS, SIAtomicAddrSpace AS) {
+  if (!AS) {
+    OS << "none";
+    return OS;
+  }
+  ListSeparator LS("|");
+  if (any(AS & SIAtomicAddrSpace::GLOBAL))
+    OS << LS << "global";
+  if (any(AS & SIAtomicAddrSpace::LDS))
+    OS << LS << "lds";
+  if (any(AS & SIAtomicAddrSpace::SCRATCH))
+    OS << LS << "scratch";
+  if (any(AS & SIAtomicAddrSpace::GDS))
+    OS << LS << "gds";
+  if (any(AS & SIAtomicAddrSpace::OTHER))
+    OS << LS << "other";
+  return OS;
+}
+#endif
 
 class SIMemOpInfo final {
 private:
@@ -106,6 +121,8 @@ private:
   bool IsNonTemporal = false;
   bool IsLastUse = false;
   bool IsCooperative = false;
+  bool IsAVNone = false;
+  unsigned CFSBits = 0;
 
   // TODO: Should we assume Cooperative=true if no MMO is present?
   SIMemOpInfo(
@@ -117,27 +134,26 @@ private:
       bool IsCrossAddressSpaceOrdering = true,
       AtomicOrdering FailureOrdering = AtomicOrdering::SequentiallyConsistent,
       bool IsVolatile = false, bool IsNonTemporal = false,
-      bool IsLastUse = false, bool IsCooperative = false)
+      bool IsLastUse = false, bool IsCooperative = false, bool IsAVNone = false,
+      bool CanDemoteWorkgroupToWavefront = false, unsigned CFSBits = 0)
       : Ordering(Ordering), FailureOrdering(FailureOrdering), Scope(Scope),
         OrderingAddrSpace(OrderingAddrSpace), InstrAddrSpace(InstrAddrSpace),
         IsCrossAddressSpaceOrdering(IsCrossAddressSpaceOrdering),
         IsVolatile(IsVolatile), IsNonTemporal(IsNonTemporal),
-        IsLastUse(IsLastUse), IsCooperative(IsCooperative) {
+        IsLastUse(IsLastUse), IsCooperative(IsCooperative), IsAVNone(IsAVNone),
+        CFSBits(CFSBits) {
 
     if (Ordering == AtomicOrdering::NotAtomic) {
       assert(!IsCooperative && "Cannot be cooperative & non-atomic!");
-      assert(Scope == SIAtomicScope::NONE &&
-             OrderingAddrSpace == SIAtomicAddrSpace::NONE &&
+      assert(Scope == SIAtomicScope::NONE && !any(OrderingAddrSpace) &&
              !IsCrossAddressSpaceOrdering &&
              FailureOrdering == AtomicOrdering::NotAtomic);
       return;
     }
 
     assert(Scope != SIAtomicScope::NONE &&
-           (OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
-               SIAtomicAddrSpace::NONE &&
-           (InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
-               SIAtomicAddrSpace::NONE);
+           any(OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) &&
+           any(InstrAddrSpace & SIAtomicAddrSpace::ATOMIC));
 
     // There is also no cross address space ordering if the ordering
     // address space is the same as the instruction address space and
@@ -148,16 +164,14 @@ private:
 
     // Limit the scope to the maximum supported by the instruction's address
     // spaces.
-    if ((InstrAddrSpace & ~SIAtomicAddrSpace::SCRATCH) ==
-        SIAtomicAddrSpace::NONE) {
+    if (!(InstrAddrSpace & ~SIAtomicAddrSpace::SCRATCH)) {
       this->Scope = std::min(Scope, SIAtomicScope::SINGLETHREAD);
-    } else if ((InstrAddrSpace &
-                ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS)) ==
-               SIAtomicAddrSpace::NONE) {
+    } else if (!(InstrAddrSpace &
+                 ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS))) {
       this->Scope = std::min(Scope, SIAtomicScope::WORKGROUP);
-    } else if ((InstrAddrSpace &
-                ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS |
-                  SIAtomicAddrSpace::GDS)) == SIAtomicAddrSpace::NONE) {
+    } else if (!(InstrAddrSpace &
+                 ~(SIAtomicAddrSpace::SCRATCH | SIAtomicAddrSpace::LDS |
+                   SIAtomicAddrSpace::GDS))) {
       this->Scope = std::min(Scope, SIAtomicScope::AGENT);
     }
 
@@ -165,6 +179,10 @@ private:
     // AGENT scope as a conservatively correct alternative.
     if (this->Scope == SIAtomicScope::CLUSTER && !ST.hasClusters())
       this->Scope = SIAtomicScope::AGENT;
+
+    if (CanDemoteWorkgroupToWavefront &&
+        this->Scope == SIAtomicScope::WORKGROUP)
+      this->Scope = SIAtomicScope::WAVEFRONT;
   }
 
 public:
@@ -223,18 +241,24 @@ public:
   /// \returns True if this is a cooperative load or store atomic.
   bool isCooperative() const { return IsCooperative; }
 
+  /// \returns True if MakeAvailable/MakeVisible should be suppressed.
+  bool isAVNone() const { return IsAVNone; }
+
   /// \returns True if ordering constraint of the machine instruction used to
   /// create this SIMemOpInfo is unordered or higher, false otherwise.
   bool isAtomic() const {
     return Ordering != AtomicOrdering::NotAtomic;
   }
 
+  /// \returns cache fill size bits
+  unsigned getCFS() const { return CFSBits; }
 };
 
 class SIMemOpAccess final {
 private:
   const AMDGPUMachineModuleInfo *MMI = nullptr;
   const GCNSubtarget &ST;
+  const bool CanDemoteWorkgroupToWavefront;
 
   /// Reports unsupported message \p Msg for \p MI to LLVM context.
   void reportUnsupported(const MachineBasicBlock::iterator &MI,
@@ -247,9 +271,6 @@ private:
   std::optional<std::tuple<SIAtomicScope, SIAtomicAddrSpace, bool>>
   toSIAtomicScope(SyncScope::ID SSID, SIAtomicAddrSpace InstrAddrSpace) const;
 
-  /// \return Return a bit set of the address spaces accessed by \p AS.
-  SIAtomicAddrSpace toSIAtomicAddrSpace(unsigned AS) const;
-
   /// \returns Info constructed from \p MI, which has at least machine memory
   /// operand.
   std::optional<SIMemOpInfo>
@@ -257,8 +278,9 @@ private:
 
 public:
   /// Construct class to support accessing the machine memory operands
-  /// of instructions in the machine function \p MF.
-  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST);
+  /// of instructions.
+  SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI, const GCNSubtarget &ST,
+                const MachineFunction &MF);
 
   /// \returns Load info if \p MI is a load operation, "std::nullopt" otherwise.
   std::optional<SIMemOpInfo>
@@ -300,7 +322,10 @@ protected:
   /// Whether to insert cache invalidating instructions.
   bool InsertCacheInv;
 
-  SICacheControl(const GCNSubtarget &ST);
+  /// Cached value of whether tgsplit is enabled for this function.
+  bool TgSplitEnabled;
+
+  SICacheControl(const GCNSubtarget &ST, bool TgSplit);
 
   /// Sets CPol \p Bits to "true" if present in instruction \p MI.
   /// \returns Returns true if \p MI is modified, false otherwise.
@@ -315,7 +340,8 @@ public:
   using CPol = AMDGPU::CPol::CPol;
 
   /// Create a cache control for the subtarget \p ST.
-  static std::unique_ptr<SICacheControl> create(const GCNSubtarget &ST);
+  static std::unique_ptr<SICacheControl> create(const GCNSubtarget &ST,
+                                                bool TgSplit);
 
   /// Update \p MI memory load instruction to bypass any caches up to
   /// the \p Scope memory scope for address spaces \p
@@ -356,6 +382,11 @@ public:
     return false;
   };
 
+  /// Add final touches to a `mayLoad` instruction \p MI.
+  virtual bool finalizeLoad(MachineBasicBlock::iterator &MI) const {
+    return false;
+  }
+
   /// Handle cooperative load/store atomics.
   virtual bool handleCooperativeAtomic(MachineInstr &MI) const {
     llvm_unreachable(
@@ -386,21 +417,34 @@ public:
                              SIAtomicAddrSpace AddrSpace,
                              Position Pos) const = 0;
 
-  /// Inserts any necessary instructions at position \p Pos relative to
-  /// instruction \p MI to ensure previous memory instructions by this thread
-  /// with address spaces \p AddrSpace have completed and can be observed by
-  /// subsequent memory instructions by any thread executing in memory scope \p
-  /// Scope. \p IsCrossAddrSpaceOrdering indicates if the memory ordering is
-  /// between address spaces. Returns true iff any instructions inserted.
-  virtual bool insertRelease(MachineBasicBlock::iterator &MI,
-                             SIAtomicScope Scope,
-                             SIAtomicAddrSpace AddrSpace,
-                             bool IsCrossAddrSpaceOrdering,
-                             Position Pos) const = 0;
+  /// Inserts any necessary writeback instructions at position \p Pos relative
+  /// to instruction \p MI to make previous memory operations by this thread
+  /// with address spaces \p AddrSpace available to other threads in memory
+  /// scope \p Scope. Does not insert waits; callers must call insertWait
+  /// separately. Returns true iff any instructions inserted.
+  virtual bool insertWriteback(MachineBasicBlock::iterator &MI,
+                               SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace,
+                               Position Pos) const = 0;
+
+  /// Inserts writeback (unless \p IsAVNone) followed by an unconditional wait.
+  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
+                     Position Pos, bool IsAVNone) const {
+    bool Changed = !IsAVNone && insertWriteback(MI, Scope, AddrSpace, Pos);
+    Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                          IsCrossAddrSpaceOrdering, Pos,
+                          AtomicOrdering::Release, /*AtomicsOnly=*/false);
+    return Changed;
+  }
 
   /// Handle operations that are considered non-volatile.
   /// See \ref isNonVolatileMemoryAccess
   virtual bool handleNonVolatile(MachineInstr &MI) const { return false; }
+
+  virtual bool setCFS(const MachineBasicBlock::iterator &MI,
+                      unsigned CFSBits = 0) const {
+    return false;
+  }
 
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
@@ -410,8 +454,8 @@ public:
 /// GFX10.
 class SIGfx6CacheControl final : public SICacheControl {
 public:
-
-  SIGfx6CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
+  SIGfx6CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -440,17 +484,16 @@ public:
                      SIAtomicAddrSpace AddrSpace,
                      Position Pos) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI,
-                     SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace,
-                     bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override;
 };
 
 /// Generates code sequences for the memory model of GFX10/11.
 class SIGfx10CacheControl final : public SICacheControl {
 public:
-  SIGfx10CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {}
+  SIGfx10CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {}
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -481,12 +524,10 @@ public:
   bool insertAcquire(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, Position Pos) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override {
-    return insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                      IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                      /*AtomicsOnly=*/false);
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override {
+    return false;
   }
 };
 
@@ -515,7 +556,8 @@ protected:
                       SIAtomicScope Scope, SIAtomicAddrSpace AddrSpace) const;
 
 public:
-  SIGfx12CacheControl(const GCNSubtarget &ST) : SICacheControl(ST) {
+  SIGfx12CacheControl(const GCNSubtarget &ST, bool TgSplit)
+      : SICacheControl(ST, TgSplit) {
     // GFX120x and GFX125x memory models greatly overlap, and in some cases
     // the behavior is the same if assuming GFX120x in CU mode.
     assert(!ST.hasGFX1250Insts() || ST.hasGFX13Insts() || ST.isCuModeEnabled());
@@ -536,11 +578,13 @@ public:
 
   bool finalizeStore(MachineInstr &MI, bool Atomic) const override;
 
+  bool finalizeLoad(MachineBasicBlock::iterator &MI) const override;
+
   bool handleCooperativeAtomic(MachineInstr &MI) const override;
 
-  bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
-                     SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
-                     Position Pos) const override;
+  bool insertWriteback(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
+                       SIAtomicAddrSpace AddrSpace,
+                       Position Pos) const override;
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
                              SIAtomicScope Scope,
@@ -561,6 +605,9 @@ public:
   }
 
   bool handleNonVolatile(MachineInstr &MI) const override;
+
+  bool setCFS(const MachineBasicBlock::iterator &MI,
+              unsigned CFSBits) const override;
 };
 
 class SIMemoryLegalizer final {
@@ -625,50 +672,38 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 
-static const StringMap<SIAtomicAddrSpace> ASNames = {{
-    {"global", SIAtomicAddrSpace::GLOBAL},
-    {"local", SIAtomicAddrSpace::LDS},
-}};
-
-void diagnoseUnknownMMRAASName(const MachineInstr &MI, StringRef AS) {
-  const MachineFunction *MF = MI.getMF();
-  const Function &Fn = MF->getFunction();
-  SmallString<128> Str;
-  raw_svector_ostream OS(Str);
-  OS << "unknown address space '" << AS << "'; expected one of ";
-  ListSeparator LS;
-  for (const auto &[Name, Val] : ASNames)
-    OS << LS << '\'' << Name << '\'';
-  Fn.getContext().diagnose(
-      DiagnosticInfoUnsupported(Fn, Str.str(), MI.getDebugLoc(), DS_Warning));
-}
-
 /// Reads \p MI's MMRAs to parse the "amdgpu-synchronize-as" MMRA.
 /// If this tag isn't present, or if it has no meaningful values, returns
-/// \p none, otherwise returns the address spaces specified by the MD.
-static std::optional<SIAtomicAddrSpace>
-getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
-  static constexpr StringLiteral FenceASPrefix = "amdgpu-synchronize-as";
+/// \p ATOMIC, otherwise returns the address spaces specified by the MD.
+/// Issues a diagnostic if an unexpected suffix is observed for the MMRA tag.
+static SIAtomicAddrSpace getSynchronizeAddrSpaceMD(const MachineInstr &MI) {
+  return getSynchronizeAddrSpace(MMRAMetadata(MI.getMMRAMetadata()),
+                                 &MI.getMF()->getFunction(), MI.getDebugLoc());
+}
 
-  auto MMRA = MMRAMetadata(MI.getMMRAMetadata());
+static void diagnoseUnknownAVMetadata(const MachineInstr &MI,
+                                      StringRef Suffix) {
+  const MachineFunction *MF = MI.getMF();
+  const Function &Fn = MF->getFunction();
+  Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+      Fn, Twine("unknown amdgcn-av metadata '") + Suffix + Twine('\''),
+      MI.getDebugLoc(), DS_Warning));
+}
+
+static bool hasAVNoneMMRA(const MachineInstr &MI) {
+  MMRAMetadata MMRA(MI.getMMRAMetadata());
   if (!MMRA)
-    return std::nullopt;
-
-  SIAtomicAddrSpace Result = SIAtomicAddrSpace::NONE;
+    return false;
+  bool TagFound = false;
   for (const auto &[Prefix, Suffix] : MMRA) {
-    if (Prefix != FenceASPrefix)
+    if (Prefix != "amdgcn-av")
       continue;
-
-    if (auto It = ASNames.find(Suffix); It != ASNames.end())
-      Result |= It->second;
+    if (Suffix == "none")
+      TagFound = true;
     else
-      diagnoseUnknownMMRAASName(MI, Suffix);
+      diagnoseUnknownAVMetadata(MI, Suffix);
   }
-
-  if (Result == SIAtomicAddrSpace::NONE)
-    return std::nullopt;
-
-  return Result;
+  return TagFound;
 }
 
 } // end anonymous namespace
@@ -719,33 +754,21 @@ SIMemOpAccess::toSIAtomicScope(SyncScope::ID SSID,
   return std::nullopt;
 }
 
-SIAtomicAddrSpace SIMemOpAccess::toSIAtomicAddrSpace(unsigned AS) const {
-  if (AS == AMDGPUAS::FLAT_ADDRESS)
-    return SIAtomicAddrSpace::FLAT;
-  if (AS == AMDGPUAS::GLOBAL_ADDRESS)
-    return SIAtomicAddrSpace::GLOBAL;
-  if (AS == AMDGPUAS::LOCAL_ADDRESS)
-    return SIAtomicAddrSpace::LDS;
-  if (AS == AMDGPUAS::PRIVATE_ADDRESS)
-    return SIAtomicAddrSpace::SCRATCH;
-  if (AS == AMDGPUAS::REGION_ADDRESS)
-    return SIAtomicAddrSpace::GDS;
-  if (AS == AMDGPUAS::BUFFER_FAT_POINTER || AS == AMDGPUAS::BUFFER_RESOURCE ||
-      AS == AMDGPUAS::BUFFER_STRIDED_POINTER)
-    return SIAtomicAddrSpace::GLOBAL;
-
-  return SIAtomicAddrSpace::OTHER;
-}
-
+// TODO: Consider moving single-wave workgroup->wavefront scope relaxation to an
+// IR pass (and extending it to other scoped operations), so middle-end
+// optimizations see wavefront scope earlier.
 SIMemOpAccess::SIMemOpAccess(const AMDGPUMachineModuleInfo &MMI_,
-                             const GCNSubtarget &ST)
-    : MMI(&MMI_), ST(ST) {}
+                             const GCNSubtarget &ST, const MachineFunction &MF)
+    : MMI(&MMI_), ST(ST),
+      CanDemoteWorkgroupToWavefront(
+          ST.isSingleWavefrontWorkgroup(MF.getFunction()) &&
+          MF.getFunction().hasFnAttribute("amdgpu-no-lds-dma")) {}
 
 std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     const MachineBasicBlock::iterator &MI) const {
   assert(MI->getNumMemOperands() > 0);
 
-  SyncScope::ID SSID = SyncScope::SingleThread;
+  std::optional<SyncScope::ID> MergedSSID;
   AtomicOrdering Ordering = AtomicOrdering::NotAtomic;
   AtomicOrdering FailureOrdering = AtomicOrdering::NotAtomic;
   SIAtomicAddrSpace InstrAddrSpace = SIAtomicAddrSpace::NONE;
@@ -753,6 +776,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   bool IsVolatile = false;
   bool IsLastUse = false;
   bool IsCooperative = false;
+  unsigned CFSBits = 0;
 
   // Validator should check whether or not MMOs cover the entire set of
   // locations accessed by the memory instruction.
@@ -761,19 +785,20 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
     IsVolatile |= MMO->isVolatile();
     IsLastUse |= MMO->getFlags() & MOLastUse;
     IsCooperative |= MMO->getFlags() & MOCooperative;
-    InstrAddrSpace |=
-      toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
+    CFSBits = (MMO->getFlags() / MOCFSB0) & AMDGPU::CPol::CFS_MASK;
+    InstrAddrSpace |= toSIAtomicAddrSpace(MMO->getPointerInfo().getAddrSpace());
     AtomicOrdering OpOrdering = MMO->getSuccessOrdering();
     if (OpOrdering != AtomicOrdering::NotAtomic) {
-      const auto &IsSyncScopeInclusion =
-          MMI->isSyncScopeInclusion(SSID, MMO->getSyncScopeID());
-      if (!IsSyncScopeInclusion) {
-        reportUnsupported(MI,
-          "Unsupported non-inclusive atomic synchronization scope");
+      // Merge the accumulated scope with the new one to get the smallest scope
+      // inclusive of both.
+      SyncScope::ID CurSSID = MergedSSID.value_or(MMO->getSyncScopeID());
+      const auto &Merged =
+          MMI->getMergedSyncScopeID(CurSSID, MMO->getSyncScopeID());
+      if (!Merged) {
+        reportUnsupported(MI, "unsupported atomic synchronization scope");
         return std::nullopt;
       }
-
-      SSID = *IsSyncScopeInclusion ? SSID : MMO->getSyncScopeID();
+      MergedSSID = *Merged;
       Ordering = getMergedAtomicOrdering(Ordering, OpOrdering);
       assert(MMO->getFailureOrdering() != AtomicOrdering::Release &&
              MMO->getFailureOrdering() != AtomicOrdering::AcquireRelease);
@@ -781,6 +806,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
           getMergedAtomicOrdering(FailureOrdering, MMO->getFailureOrdering());
     }
   }
+  SyncScope::ID SSID = MergedSSID.value_or(SyncScope::SingleThread);
 
   // FIXME: The MMO of buffer atomic instructions does not always have an atomic
   // ordering. We only need to handle VBUFFER atomics on GFX12+ so we can fix it
@@ -795,26 +821,29 @@ std::optional<SIMemOpInfo> SIMemOpAccess::constructFromMIWithMMO(
   if (Ordering != AtomicOrdering::NotAtomic) {
     auto ScopeOrNone = toSIAtomicScope(SSID, InstrAddrSpace);
     if (!ScopeOrNone) {
-      reportUnsupported(MI, "Unsupported atomic synchronization scope");
+      reportUnsupported(MI, "unsupported atomic synchronization scope");
       return std::nullopt;
     }
     std::tie(Scope, OrderingAddrSpace, IsCrossAddressSpaceOrdering) =
         *ScopeOrNone;
-    if ((OrderingAddrSpace == SIAtomicAddrSpace::NONE) ||
-        ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) != OrderingAddrSpace) ||
-        ((InstrAddrSpace & SIAtomicAddrSpace::ATOMIC) == SIAtomicAddrSpace::NONE)) {
+    if (!OrderingAddrSpace ||
+        ((OrderingAddrSpace & SIAtomicAddrSpace::ATOMIC) !=
+         OrderingAddrSpace) ||
+        !(InstrAddrSpace & SIAtomicAddrSpace::ATOMIC)) {
       reportUnsupported(MI, "Unsupported atomic address space");
       return std::nullopt;
     }
   }
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace, InstrAddrSpace,
                      IsCrossAddressSpaceOrdering, FailureOrdering, IsVolatile,
-                     IsNonTemporal, IsLastUse, IsCooperative);
+                     IsNonTemporal, IsLastUse, IsCooperative,
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront,
+                     CFSBits);
 }
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(MI->mayLoad() && !MI->mayStore()))
     return std::nullopt;
@@ -828,7 +857,7 @@ SIMemOpAccess::getLoadInfo(const MachineBasicBlock::iterator &MI) const {
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(!MI->mayLoad() && MI->mayStore()))
     return std::nullopt;
@@ -842,7 +871,7 @@ SIMemOpAccess::getStoreInfo(const MachineBasicBlock::iterator &MI) const {
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (MI->getOpcode() != AMDGPU::ATOMIC_FENCE)
     return std::nullopt;
@@ -853,7 +882,7 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
   SyncScope::ID SSID = static_cast<SyncScope::ID>(MI->getOperand(1).getImm());
   auto ScopeOrNone = toSIAtomicScope(SSID, SIAtomicAddrSpace::ATOMIC);
   if (!ScopeOrNone) {
-    reportUnsupported(MI, "Unsupported atomic synchronization scope");
+    reportUnsupported(MI, "unsupported atomic synchronization scope");
     return std::nullopt;
   }
 
@@ -872,18 +901,17 @@ SIMemOpAccess::getAtomicFenceInfo(const MachineBasicBlock::iterator &MI) const {
     return std::nullopt;
   }
 
-  auto SynchronizeAS = getSynchronizeAddrSpaceMD(*MI);
-  if (SynchronizeAS)
-    OrderingAddrSpace = *SynchronizeAS;
+  OrderingAddrSpace = getSynchronizeAddrSpaceMD(*MI);
 
   return SIMemOpInfo(ST, Ordering, Scope, OrderingAddrSpace,
                      SIAtomicAddrSpace::ATOMIC, IsCrossAddressSpaceOrdering,
-                     AtomicOrdering::NotAtomic);
+                     AtomicOrdering::NotAtomic, false, false, false, false,
+                     hasAVNoneMMRA(*MI), CanDemoteWorkgroupToWavefront);
 }
 
 std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
     const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!(MI->mayLoad() && MI->mayStore()))
     return std::nullopt;
@@ -897,7 +925,7 @@ std::optional<SIMemOpInfo> SIMemOpAccess::getAtomicCmpxchgOrRmwInfo(
 
 std::optional<SIMemOpInfo>
 SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
-  assert(MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic);
+  assert(SIInstrFlags::isMaybeAtomic(*MI));
 
   if (!SIInstrInfo::isLDSDMA(*MI))
     return std::nullopt;
@@ -917,10 +945,11 @@ static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
   });
 }
 
-SICacheControl::SICacheControl(const GCNSubtarget &ST) : ST(ST) {
+SICacheControl::SICacheControl(const GCNSubtarget &ST, bool TgSplit) : ST(ST) {
   TII = ST.getInstrInfo();
   IV = getIsaVersion(ST.getCPU());
-  InsertCacheInv = !AmdgcnSkipCacheInvalidations;
+  InsertCacheInv = !ST.getCLOpts().skip_cache_invalidations;
+  TgSplitEnabled = TgSplit;
 }
 
 bool SICacheControl::enableCPolBits(const MachineBasicBlock::iterator MI,
@@ -935,21 +964,22 @@ bool SICacheControl::enableCPolBits(const MachineBasicBlock::iterator MI,
 
 bool SICacheControl::canAffectGlobalAddrSpace(SIAtomicAddrSpace AS) const {
   assert((!ST.hasGloballyAddressableScratch() ||
-          (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE ||
-          (AS & SIAtomicAddrSpace::SCRATCH) == SIAtomicAddrSpace::NONE) &&
+          any(AS & SIAtomicAddrSpace::GLOBAL) ||
+          !(AS & SIAtomicAddrSpace::SCRATCH)) &&
          "scratch instructions should already be replaced by flat "
          "instructions if GloballyAddressableScratch is enabled");
-  return (AS & SIAtomicAddrSpace::GLOBAL) != SIAtomicAddrSpace::NONE;
+  return any(AS & SIAtomicAddrSpace::GLOBAL);
 }
 
 /* static */
-std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST) {
+std::unique_ptr<SICacheControl> SICacheControl::create(const GCNSubtarget &ST,
+                                                       bool TgSplit) {
   GCNSubtarget::Generation Generation = ST.getGeneration();
   if (Generation < AMDGPUSubtarget::GFX10)
-    return std::make_unique<SIGfx6CacheControl>(ST);
+    return std::make_unique<SIGfx6CacheControl>(ST, TgSplit);
   if (Generation < AMDGPUSubtarget::GFX12)
-    return std::make_unique<SIGfx10CacheControl>(ST);
-  return std::make_unique<SIGfx12CacheControl>(ST);
+    return std::make_unique<SIGfx10CacheControl>(ST, TgSplit);
+  return std::make_unique<SIGfx12CacheControl>(ST, TgSplit);
 }
 
 bool SIGfx6CacheControl::enableLoadCacheBypass(
@@ -1000,7 +1030,7 @@ bool SIGfx6CacheControl::enableLoadCacheBypass(
       // on different CUs. Therefore need to bypass the L1 which is per CU.
       // Otherwise in non-threadgroup split mode all waves of a work-group are
       // on the same CU, and so the L1 does not need to be bypassed.
-      if (ST.isTgSplitEnabled())
+      if (TgSplitEnabled)
         Changed |= enableCPolBits(MI, CPol::GLC);
     }
     break;
@@ -1098,7 +1128,7 @@ bool SIGfx6CacheControl::enableRMWCacheBypass(
 bool SIGfx6CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
-  // Only handle load and store, not atomic read-modify-write insructions. The
+  // Only handle load and store, not atomic read-modify-write instructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
   assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
@@ -1163,7 +1193,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     ++MI;
 
   // GFX90A+
-  if (ST.hasGFX90AInsts() && ST.isTgSplitEnabled()) {
+  if (ST.hasGFX90AInsts() && TgSplitEnabled) {
     // In threadgroup split mode the waves of a work-group can be executing on
     // different CUs. Therefore need to wait for global or GDS memory operations
     // to complete to ensure they are visible to waves in the other CUs.
@@ -1171,8 +1201,9 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     // the same CU, so no need to wait for global memory as all waves in the
     // work-group access the same the L1, nor wait for GDS as access are ordered
     // on a CU.
-    if (((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
-                       SIAtomicAddrSpace::GDS)) != SIAtomicAddrSpace::NONE) &&
+    if (any(AddrSpace &
+            (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH |
+             SIAtomicAddrSpace::GDS)) &&
         (Scope == SIAtomicScope::WORKGROUP)) {
       // Same as <GFX90A at AGENT scope;
       Scope = SIAtomicScope::AGENT;
@@ -1185,8 +1216,8 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   bool VMCnt = false;
   bool LGKMCnt = false;
 
-  if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
-      SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace &
+          (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH))) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1203,7 +1234,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if ((AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace & SIAtomicAddrSpace::LDS)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1226,7 +1257,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if ((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace & SIAtomicAddrSpace::GDS)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1265,7 +1296,7 @@ bool SIGfx6CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   // SIInsertWaitcnts will later replace this with a vmcnt().
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
       Scope == SIAtomicScope::WORKGROUP &&
-      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+      any(AddrSpace & SIAtomicAddrSpace::LDS)) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
@@ -1304,7 +1335,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   if (canAffectGlobalAddrSpace(AddrSpace)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote VMEM data or
         // stale local VMEM data with MTYPE NC. Local VMEM data with MTYPE RW
         // and CC will never be stale due to the local memory probes.
@@ -1336,7 +1367,7 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       }
       [[fallthrough]];
     case SIAtomicScope::AGENT:
-      if (ST.hasGFX940Insts()) {
+      if (ST.hasBufferInvInst()) {
         // Ensures that following loads will not see stale remote date or local
         // MTYPE NC global data. Local MTYPE RW and CC memory will never be
         // stale due to the memory probes.
@@ -1352,8 +1383,8 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
       Changed = true;
       break;
     case SIAtomicScope::WORKGROUP:
-      if (ST.isTgSplitEnabled()) {
-        if (ST.hasGFX940Insts()) {
+      if (TgSplitEnabled) {
+        if (ST.hasBufferInvInst()) {
           // In threadgroup split mode the waves of a work-group can be
           // executing on different CUs. Therefore need to invalidate the L1
           // which is per CU. Otherwise in non-threadgroup split mode all waves
@@ -1402,67 +1433,56 @@ bool SIGfx6CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
-bool SIGfx6CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                       SIAtomicScope Scope,
-                                       SIAtomicAddrSpace AddrSpace,
-                                       bool IsCrossAddrSpaceOrdering,
-                                       Position Pos) const {
+bool SIGfx6CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
+                                         SIAtomicScope Scope,
+                                         SIAtomicAddrSpace AddrSpace,
+                                         Position Pos) const {
+  if (!ST.hasGFX90AInsts())
+    return false;
+
   bool Changed = false;
+  MachineBasicBlock &MBB = *MI->getParent();
+  const DebugLoc &DL = MI->getDebugLoc();
 
-  if (ST.hasGFX90AInsts()) {
-    MachineBasicBlock &MBB = *MI->getParent();
-    const DebugLoc &DL = MI->getDebugLoc();
+  if (Pos == Position::AFTER)
+    ++MI;
 
-    if (Pos == Position::AFTER)
-      ++MI;
-
-    if (canAffectGlobalAddrSpace(AddrSpace)) {
-      switch (Scope) {
-      case SIAtomicScope::SYSTEM:
-        // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
-        // hardware does not reorder memory operations by the same wave with
-        // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
-        // to initiate writeback of any dirty cache lines of earlier writes by
-        // the same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
-        // writeback has completed.
+  if (canAffectGlobalAddrSpace(AddrSpace)) {
+    switch (Scope) {
+    case SIAtomicScope::SYSTEM:
+      // Inserting a "S_WAITCNT vmcnt(0)" before is not required because the
+      // hardware does not reorder memory operations by the same wave with
+      // respect to a following "BUFFER_WBL2". The "BUFFER_WBL2" is guaranteed
+      // to initiate writeback of any dirty cache lines of earlier writes by
+      // the same wave. A "S_WAITCNT vmcnt(0)" is needed after to ensure the
+      // writeback has completed.
+      BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
+          // Set SC bits to indicate system scope.
+          .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
+      Changed = true;
+      break;
+    case SIAtomicScope::AGENT:
+      if (ST.hasGFX940Insts()) {
         BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-            // Set SC bits to indicate system scope.
-            .addImm(AMDGPU::CPol::SC0 | AMDGPU::CPol::SC1);
+            // Set SC bits to indicate agent scope.
+            .addImm(AMDGPU::CPol::SC1);
         Changed = true;
-        break;
-      case SIAtomicScope::AGENT:
-        if (ST.hasGFX940Insts()) {
-          BuildMI(MBB, MI, DL, TII->get(AMDGPU::BUFFER_WBL2))
-              // Set SC bits to indicate agent scope.
-              .addImm(AMDGPU::CPol::SC1);
-
-          // Since AddrSpace contains SIAtomicAddrSpace::GLOBAL and Scope is
-          // SIAtomicScope::AGENT, the following insertWait will generate the
-          // required "S_WAITCNT vmcnt(0)".
-          Changed = true;
-        }
-        break;
-      case SIAtomicScope::WORKGROUP:
-      case SIAtomicScope::WAVEFRONT:
-      case SIAtomicScope::SINGLETHREAD:
-        // For GFX940, do not generate "BUFFER_WBL2" as there are no caches it
-        // would writeback, and would require an otherwise unnecessary
-        // "S_WAITCNT vmcnt(0)".
-        break;
-      default:
-        llvm_unreachable("Unsupported synchronization scope");
       }
+      break;
+    case SIAtomicScope::WORKGROUP:
+    case SIAtomicScope::WAVEFRONT:
+    case SIAtomicScope::SINGLETHREAD:
+      // For GFX940, do not generate "BUFFER_WBL2" as there are no caches it
+      // would writeback, and would require an otherwise unnecessary
+      // "S_WAITCNT vmcnt(0)".
+      break;
+    default:
+      llvm_unreachable("Unsupported synchronization scope");
     }
-
-    if (Pos == Position::AFTER)
-      --MI;
   }
 
-  // Ensure the necessary S_WAITCNT needed by any "BUFFER_WBL2" as well as other
-  // S_WAITCNT needed.
-  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                        /*AtomicsOnly=*/false);
+  if (Pos == Position::AFTER)
+    --MI;
 
   return Changed;
 }
@@ -1514,7 +1534,7 @@ bool SIGfx10CacheControl::enableVolatileAndOrNonTemporal(
     MachineBasicBlock::iterator &MI, SIAtomicAddrSpace AddrSpace, SIMemOp Op,
     bool IsVolatile, bool IsNonTemporal, bool IsLastUse = false) const {
 
-  // Only handle load and store, not atomic read-modify-write insructions. The
+  // Only handle load and store, not atomic read-modify-write instructions. The
   // latter use glc to indicate if the atomic returns a result and so must not
   // be used for cache control.
   assert((MI->mayLoad() ^ MI->mayStore()) || SIInstrInfo::isLDSDMA(*MI));
@@ -1587,14 +1607,14 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   bool VSCnt = false;
   bool LGKMCnt = false;
 
-  if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
-      SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace &
+          (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH))) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
-      if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+      if (any(Op & SIMemOp::LOAD))
         VMCnt |= true;
-      if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+      if (any(Op & SIMemOp::STORE))
         VSCnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1607,9 +1627,9 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       // happens-before, e.g. other waves of the workgroup must be able to
       // release the memory from another wave at a wider scope.
       if (!ST.isCuModeEnabled() || isReleaseOrStronger(Order)) {
-        if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+        if (any(Op & SIMemOp::LOAD))
           VMCnt |= true;
-        if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+        if (any(Op & SIMemOp::STORE))
           VSCnt |= true;
       }
       break;
@@ -1623,7 +1643,7 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if ((AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace & SIAtomicAddrSpace::LDS)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1646,7 +1666,7 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if ((AddrSpace & SIAtomicAddrSpace::GDS) != SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace & SIAtomicAddrSpace::GDS)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1685,7 +1705,7 @@ bool SIGfx10CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   // SIInsertWaitcnts will later replace this with a vmcnt().
   if (ST.hasVMemToLDSLoad() && isReleaseOrStronger(Order) &&
       Scope == SIAtomicScope::WORKGROUP &&
-      (AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+      any(AddrSpace & SIAtomicAddrSpace::LDS)) {
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAITCNT_lds_direct));
     Changed = true;
   }
@@ -1801,7 +1821,8 @@ bool SIGfx12CacheControl::insertWaitsBeforeSystemScopeStore(
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_LOADCNT_soft)).addImm(0);
   if (ST.hasImageInsts()) {
     BuildMI(MBB, MI, DL, TII->get(S_WAIT_SAMPLECNT_soft)).addImm(0);
-    BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
+    if (ST.hasAnyBVHInsts())
+      BuildMI(MBB, MI, DL, TII->get(S_WAIT_BVHCNT_soft)).addImm(0);
   }
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_KMCNT_soft)).addImm(0);
   BuildMI(MBB, MI, DL, TII->get(S_WAIT_STORECNT_soft)).addImm(0);
@@ -1827,15 +1848,15 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  if ((AddrSpace & (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH)) !=
-      SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace &
+          (SIAtomicAddrSpace::GLOBAL | SIAtomicAddrSpace::SCRATCH))) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
     case SIAtomicScope::CLUSTER:
-      if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+      if (any(Op & SIMemOp::LOAD))
         LOADCnt |= true;
-      if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+      if (any(Op & SIMemOp::STORE))
         STORECnt |= true;
       break;
     case SIAtomicScope::WORKGROUP:
@@ -1857,9 +1878,9 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
       //   guarantee between the ports.
       if (!ST.isCuModeEnabled() || ST.hasGFX1250Insts() ||
           isReleaseOrStronger(Order)) {
-        if ((Op & SIMemOp::LOAD) != SIMemOp::NONE)
+        if (any(Op & SIMemOp::LOAD))
           LOADCnt |= true;
-        if ((Op & SIMemOp::STORE) != SIMemOp::NONE)
+        if (any(Op & SIMemOp::STORE))
           STORECnt |= true;
       }
       break;
@@ -1873,7 +1894,7 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     }
   }
 
-  if ((AddrSpace & SIAtomicAddrSpace::LDS) != SIAtomicAddrSpace::NONE) {
+  if (any(AddrSpace & SIAtomicAddrSpace::LDS)) {
     switch (Scope) {
     case SIAtomicScope::SYSTEM:
     case SIAtomicScope::AGENT:
@@ -1910,7 +1931,8 @@ bool SIGfx12CacheControl::insertWait(MachineBasicBlock::iterator &MI,
     // This also applies to fences. Fences cannot pair with an instruction
     // tracked with bvh/samplecnt as we don't have any atomics that do that.
     if (!AtomicsOnly && ST.hasImageInsts()) {
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
+      if (ST.hasAnyBVHInsts())
+        BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_BVHCNT_soft)).addImm(0);
       BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_SAMPLECNT_soft)).addImm(0);
     }
     BuildMI(MBB, MI, DL, TII->get(AMDGPU::S_WAIT_LOADCNT_soft)).addImm(0);
@@ -1955,10 +1977,16 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
-    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    // If MTYPE NC is not used, HW ensures coherence in L2, so we only need to
+    // invalidate up to SE scope.
+    ScopeImm =
+        ST.hasNoMTypeNC() ? AMDGPU::CPol::SCOPE_SE : AMDGPU::CPol::SCOPE_SYS;
     break;
   case SIAtomicScope::AGENT:
-    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+    // If MTYPE NC is not used, HW ensures coherence in L2, so we only need to
+    // invalidate up to SE scope.
+    ScopeImm =
+        ST.hasNoMTypeNC() ? AMDGPU::CPol::SCOPE_SE : AMDGPU::CPol::SCOPE_DEV;
     break;
   case SIAtomicScope::CLUSTER:
     ScopeImm = AMDGPU::CPol::SCOPE_SE;
@@ -2006,75 +2034,72 @@ bool SIGfx12CacheControl::insertAcquire(MachineBasicBlock::iterator &MI,
   return true;
 }
 
-bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
-                                        SIAtomicScope Scope,
-                                        SIAtomicAddrSpace AddrSpace,
-                                        bool IsCrossAddrSpaceOrdering,
-                                        Position Pos) const {
-  bool Changed = false;
-
-  MachineBasicBlock &MBB = *MI->getParent();
-  const DebugLoc &DL = MI->getDebugLoc();
-
+bool SIGfx12CacheControl::insertWriteback(MachineBasicBlock::iterator &MI,
+                                          SIAtomicScope Scope,
+                                          SIAtomicAddrSpace AddrSpace,
+                                          Position Pos) const {
   // The scratch address space does not need the global memory cache
   // writeback as all memory operations by the same thread are
   // sequentially consistent, and no other thread can access scratch
   // memory.
-  if (canAffectGlobalAddrSpace(AddrSpace)) {
-    if (Pos == Position::AFTER)
-      ++MI;
+  if (!canAffectGlobalAddrSpace(AddrSpace))
+    return false;
 
-    // global_wb is only necessary at system scope for GFX12.0,
-    // they're also necessary at device scope for GFX12.5 as stores
-    // cannot report completion earlier than L2.
-    //
-    // Emitting it for lower scopes is a slow no-op, so we omit it
-    // for performance.
-    std::optional<AMDGPU::CPol::CPol> NeedsWB;
-    switch (Scope) {
-    case SIAtomicScope::SYSTEM:
+  bool Changed = false;
+  MachineBasicBlock &MBB = *MI->getParent();
+  const DebugLoc &DL = MI->getDebugLoc();
+
+  if (Pos == Position::AFTER)
+    ++MI;
+
+  // global_wb is only necessary at system scope for GFX12.0.
+  // They're also necessary at device scope for GFX12.5 as stores
+  // cannot report completion earlier than L2.
+  // global_wb is not necessary if the driver guarantees that MTYPE NC
+  // is not used, since the hardware keeps the L2s coherent in that
+  // case.
+  //
+  // Emitting it for lower scopes is a slow no-op, so we omit it
+  // for performance.
+  std::optional<AMDGPU::CPol::CPol> NeedsWB;
+  switch (Scope) {
+  case SIAtomicScope::SYSTEM:
+    if (!ST.hasNoMTypeNC())
       NeedsWB = AMDGPU::CPol::SCOPE_SYS;
-      break;
-    case SIAtomicScope::AGENT:
-      // GFX12.5 may have >1 L2 per device so we must emit a device scope WB.
-      if (ST.hasGFX1250Insts())
-        NeedsWB = AMDGPU::CPol::SCOPE_DEV;
-      break;
-    case SIAtomicScope::CLUSTER:
-    case SIAtomicScope::WORKGROUP:
-      // No WB necessary, but we still have to wait.
-    case SIAtomicScope::WAVEFRONT:
-    case SIAtomicScope::SINGLETHREAD:
-      // No WB or wait necessary here, but insertWait takes care of that.
-      break;
-    default:
-      llvm_unreachable("Unsupported synchronization scope");
-    }
-
-    if (NeedsWB) {
-      // Target requires a waitcnt to ensure that the proceeding store
-      // proceeding store/rmw operations have completed in L2 so their data will
-      // be written back by the WB instruction.
-      if (ST.hasINVWBL2WaitCntRequirement())
-        insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                   /*IsCrossAddrSpaceOrdering=*/false, Pos,
-                   AtomicOrdering::Release,
-                   /*AtomicsOnly=*/false);
-
-      BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
-      Changed = true;
-    }
-
-    if (Pos == Position::AFTER)
-      --MI;
+    break;
+  case SIAtomicScope::AGENT:
+    // GFX12.5 may have >1 L2 per device so we must emit a device scope WB,
+    // unless MTYPE NC is not used.
+    if (ST.hasGFX1250Insts() && !ST.hasNoMTypeNC())
+      NeedsWB = AMDGPU::CPol::SCOPE_DEV;
+    break;
+  case SIAtomicScope::CLUSTER:
+  case SIAtomicScope::WORKGROUP:
+  case SIAtomicScope::WAVEFRONT:
+  case SIAtomicScope::SINGLETHREAD:
+    break;
+  case SIAtomicScope::NONE:
+    llvm_unreachable("Unsupported synchronization scope");
+    break;
   }
 
-  // We always have to wait for previous memory operations (load/store) to
-  // complete, whether we inserted a WB or not. If we inserted a WB (storecnt),
-  // we of course need to wait for that as well.
-  Changed |= insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
-                        IsCrossAddrSpaceOrdering, Pos, AtomicOrdering::Release,
-                        /*AtomicsOnly=*/false);
+  if (NeedsWB) {
+    // Target requires a waitcnt to ensure that the proceeding store
+    // proceeding store/rmw operations have completed in L2 so their data will
+    // be written back by the WB instruction.
+    if (ST.hasINVWBL2WaitCntRequirement()) {
+      insertWait(MI, Scope, AddrSpace, SIMemOp::LOAD | SIMemOp::STORE,
+                 /*IsCrossAddrSpaceOrdering=*/false, Pos,
+                 AtomicOrdering::Release,
+                 /*AtomicsOnly=*/false);
+    }
+
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(*NeedsWB);
+    Changed = true;
+  }
+
+  if (Pos == Position::AFTER)
+    --MI;
 
   return Changed;
 }
@@ -2165,6 +2190,18 @@ bool SIGfx12CacheControl::finalizeStore(MachineInstr &MI, bool Atomic) const {
   return Changed;
 }
 
+bool SIGfx12CacheControl::finalizeLoad(MachineBasicBlock::iterator &MI) const {
+  if (!SIInstrInfo::isLoadMonitor(MI->getOpcode()))
+    return false;
+
+  // load_monitor instructions need at least SCOPE_SE to ensure L2 is hit.
+  MachineOperand *CPol = TII->getNamedOperand(*MI, AMDGPU::OpName::cpol);
+  assert(CPol && "load_monitor must have a cpol operand");
+  if ((CPol->getImm() & AMDGPU::CPol::SCOPE) < AMDGPU::CPol::SCOPE_SE)
+    return setScope(MI, AMDGPU::CPol::SCOPE_SE);
+  return false;
+}
+
 bool SIGfx12CacheControl::handleCooperativeAtomic(MachineInstr &MI) const {
   if (!ST.hasGFX1250Insts())
     return false;
@@ -2219,6 +2256,27 @@ bool SIGfx12CacheControl::setAtomicScope(const MachineBasicBlock::iterator &MI,
   return Changed;
 }
 
+bool SIGfx12CacheControl::setCFS(const MachineBasicBlock::iterator &MI,
+                                 unsigned CFSBits) const {
+  if (!ST.hasCacheFillSize())
+    return false;
+  auto CoreMI = &*MI;
+
+  MachineOperand *CPol = TII->getNamedOperand(*CoreMI, OpName::cpol);
+  if (!CPol)
+    return false;
+
+  uint64_t NewCFS = CFSBits << AMDGPU::CPol::CFS_SHIFT & AMDGPU::CPol::CFS;
+  if (CFSBits) {
+    if ((CPol->getImm() & AMDGPU::CPol::CFS) != NewCFS) {
+      CPol->setImm((CPol->getImm() & ~AMDGPU::CPol::CFS) | NewCFS);
+      return true;
+    }
+  }
+
+  return false;
+}
+
 bool SIMemoryLegalizer::removeAtomicPseudoMIs() {
   if (AtomicPseudoMIs.empty())
     return false;
@@ -2234,9 +2292,15 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
                                    MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && !MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding load: " << *MI);
+
   bool Changed = false;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire ||
@@ -2249,6 +2313,9 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
     // the scope of the instruction to a greater scope.
     if (MOI.isCooperative())
       Changed |= CC->handleCooperativeAtomic(*MI);
+
+    Changed |= CC->finalizeLoad(MI);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
 
     if (Order == AtomicOrdering::SequentiallyConsistent)
       Changed |= CC->insertWait(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
@@ -2263,9 +2330,10 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
           CC->insertWait(MI, MOI.getScope(), MOI.getInstrAddrSpace(),
                          SIMemOp::LOAD, MOI.getIsCrossAddressSpaceOrdering(),
                          Position::AFTER, Order, /*AtomicsOnly=*/true);
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   Position::AFTER);
+      if (!MOI.isAVNone()) {
+        Changed |= CC->insertAcquire(
+            MI, MOI.getScope(), MOI.getOrderingAddrSpace(), Position::AFTER);
+      }
     }
 
     return Changed;
@@ -2278,6 +2346,9 @@ bool SIMemoryLegalizer::expandLoad(const SIMemOpInfo &MOI,
       MI, MOI.getInstrAddrSpace(), SIMemOp::LOAD, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
 
+  Changed |= CC->finalizeLoad(MI);
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+
   return Changed;
 }
 
@@ -2285,11 +2356,17 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
                                     MachineBasicBlock::iterator &MI) {
   assert(!MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding store: " << *MI);
+
   bool Changed = false;
   // FIXME: Necessary hack because iterator can lose track of the store.
   MachineInstr &StoreMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     if (MOI.getOrdering() == AtomicOrdering::Monotonic ||
         MOI.getOrdering() == AtomicOrdering::Release ||
         MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
@@ -2303,13 +2380,15 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
       Changed |= CC->handleCooperativeAtomic(*MI);
 
     if (MOI.getOrdering() == AtomicOrdering::Release ||
-        MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+        MOI.getOrdering() == AtomicOrdering::SequentiallyConsistent) {
+      Changed |=
+          CC->insertRelease(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                            MOI.getIsCrossAddressSpaceOrdering(),
+                            Position::BEFORE, MOI.isAVNone());
+    }
 
     Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
@@ -2323,6 +2402,8 @@ bool SIMemoryLegalizer::expandStore(const SIMemOpInfo &MOI,
   // GFX12 specific, scope(desired coherence domain in cache hierarchy) is
   // instruction field, do not confuse it with atomic scope.
   Changed |= CC->finalizeStore(StoreMI, /*Atomic=*/false);
+
+  Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
 }
 
@@ -2330,12 +2411,17 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
                                           MachineBasicBlock::iterator &MI) {
   assert(MI->getOpcode() == AMDGPU::ATOMIC_FENCE);
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic fence: " << *MI);
+
   AtomicPseudoMIs.push_back(MI);
   bool Changed = false;
 
   const SIAtomicAddrSpace OrderingAddrSpace = MOI.getOrderingAddrSpace();
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << OrderingAddrSpace << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Acquire) {
       // Acquire fences only need to wait on the previous atomic they pair with.
@@ -2347,7 +2433,7 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
 
     if (Order == AtomicOrdering::Release ||
         Order == AtomicOrdering::AcquireRelease ||
-        Order == AtomicOrdering::SequentiallyConsistent)
+        Order == AtomicOrdering::SequentiallyConsistent) {
       /// TODO: This relies on a barrier always generating a waitcnt
       /// for LDS to ensure it is not reordered with the completion of
       /// the proceeding LDS operations. If barrier had a memory
@@ -2357,18 +2443,21 @@ bool SIMemoryLegalizer::expandAtomicFence(const SIMemOpInfo &MOI,
       /// adding S_WAITCNT before a S_BARRIER.
       Changed |= CC->insertRelease(MI, MOI.getScope(), OrderingAddrSpace,
                                    MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+                                   Position::BEFORE, MOI.isAVNone());
+    }
 
     // TODO: If both release and invalidate are happening they could be combined
     // to use the single "BUFFER_WBINV*" instruction. This could be done by
     // reorganizing this code or as part of optimizing SIInsertWaitcnt pass to
     // track cache invalidate and write back instructions.
 
-    if (Order == AtomicOrdering::Acquire ||
-        Order == AtomicOrdering::AcquireRelease ||
-        Order == AtomicOrdering::SequentiallyConsistent)
+    if ((Order == AtomicOrdering::Acquire ||
+         Order == AtomicOrdering::AcquireRelease ||
+         Order == AtomicOrdering::SequentiallyConsistent) &&
+        !MOI.isAVNone()) {
       Changed |= CC->insertAcquire(MI, MOI.getScope(), OrderingAddrSpace,
                                    Position::BEFORE);
+    }
 
     return Changed;
   }
@@ -2380,10 +2469,18 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
   MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
 
+  LLVM_DEBUG(dbgs() << "Expanding atomic cmpxchg/rmw: " << *MI);
+
   bool Changed = false;
   MachineInstr &RMWMI = *MI;
 
   if (MOI.isAtomic()) {
+    LLVM_DEBUG(dbgs() << "  Atomic: ordering=" << toIRString(MOI.getOrdering())
+                      << ", failure-ordering="
+                      << toIRString(MOI.getFailureOrdering())
+                      << ", scope=" << toString(MOI.getScope())
+                      << ", ordering-AS=" << MOI.getOrderingAddrSpace()
+                      << ", instr-AS=" << MOI.getInstrAddrSpace() << "\n");
     const AtomicOrdering Order = MOI.getOrdering();
     if (Order == AtomicOrdering::Monotonic ||
         Order == AtomicOrdering::Acquire || Order == AtomicOrdering::Release ||
@@ -2396,11 +2493,12 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
     if (Order == AtomicOrdering::Release ||
         Order == AtomicOrdering::AcquireRelease ||
         Order == AtomicOrdering::SequentiallyConsistent ||
-        MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent)
-      Changed |= CC->insertRelease(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   MOI.getIsCrossAddressSpaceOrdering(),
-                                   Position::BEFORE);
+        MOI.getFailureOrdering() == AtomicOrdering::SequentiallyConsistent) {
+      Changed |=
+          CC->insertRelease(MI, MOI.getScope(), MOI.getOrderingAddrSpace(),
+                            MOI.getIsCrossAddressSpaceOrdering(),
+                            Position::BEFORE, MOI.isAVNone());
+    }
 
     if (Order == AtomicOrdering::Acquire ||
         Order == AtomicOrdering::AcquireRelease ||
@@ -2413,21 +2511,26 @@ bool SIMemoryLegalizer::expandAtomicCmpxchgOrRmw(const SIMemOpInfo &MOI,
                          isAtomicRet(*MI) ? SIMemOp::LOAD : SIMemOp::STORE,
                          MOI.getIsCrossAddressSpaceOrdering(), Position::AFTER,
                          Order, /*AtomicsOnly=*/true);
-      Changed |= CC->insertAcquire(MI, MOI.getScope(),
-                                   MOI.getOrderingAddrSpace(),
-                                   Position::AFTER);
+      if (!MOI.isAVNone()) {
+        Changed |= CC->insertAcquire(
+            MI, MOI.getScope(), MOI.getOrderingAddrSpace(), Position::AFTER);
+      }
     }
 
     Changed |= CC->finalizeStore(RMWMI, /*Atomic=*/true);
+    Changed |= CC->setCFS(MI, MOI.getCFS());
     return Changed;
   }
 
+  Changed |= CC->setCFS(MI, MOI.getCFS());
   return Changed;
 }
 
 bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
                                      MachineBasicBlock::iterator &MI) {
   assert(MI->mayLoad() && MI->mayStore());
+
+  LLVM_DEBUG(dbgs() << "Expanding LDS DMA: " << *MI);
 
   // The volatility or nontemporal-ness of the operation is a
   // function of the global memory, not the LDS.
@@ -2437,9 +2540,11 @@ bool SIMemoryLegalizer::expandLDSDMA(const SIMemOpInfo &MOI,
   // Handle volatile and/or nontemporal markers on direct-to-LDS loads and
   // stores. The operation is treated as a volatile/nontemporal store
   // to its second argument.
-  return CC->enableVolatileAndOrNonTemporal(
+  bool Changed = CC->enableVolatileAndOrNonTemporal(
       MI, MOI.getInstrAddrSpace(), OpKind, MOI.isVolatile(),
       MOI.isNonTemporal(), MOI.isLastUse());
+  Changed |= CC->setCFS(MI, MOI.getCFS());
+  return Changed;
 }
 
 bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
@@ -2464,8 +2569,10 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
   bool Changed = false;
 
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST);
-  CC = SICacheControl::create(ST);
+  const Function &F = MF.getFunction();
+  SIMemOpAccess MOA(MMI.getObjFileInfo<AMDGPUMachineModuleInfo>(), ST, MF);
+  bool TgSplit = ST.hasTgSplitSupport() && AMDGPU::isTgSplitEnabled(F);
+  CC = SICacheControl::create(ST, TgSplit);
 
   for (auto &MBB : MF) {
     for (auto MI = MBB.begin(); MI != MBB.end(); ++MI) {
@@ -2484,7 +2591,7 @@ bool SIMemoryLegalizer::run(MachineFunction &MF) {
         MI = MI->eraseFromParent();
       }
 
-      if (MI->getDesc().TSFlags & SIInstrFlags::maybeAtomic) {
+      if (SIInstrFlags::isMaybeAtomic(*MI)) {
         if (const auto &MOI = MOA.getLoadInfo(MI))
           Changed |= expandLoad(*MOI, MI);
         else if (const auto &MOI = MOA.getStoreInfo(MI))

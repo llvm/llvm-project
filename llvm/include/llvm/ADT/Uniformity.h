@@ -11,19 +11,24 @@
 
 namespace llvm {
 
-/// Enum describing how instructions behave with respect to uniformity and
+/// Enum describing how values behave with respect to uniformity and
 /// divergence, to answer the question: if the same instruction is executed by
-/// two threads in a convergent set of threads, will its result value(s) be
+/// two threads in a convergent set of threads, will its result value be
 /// uniform, i.e. the same on both threads?
-enum class InstructionUniformity {
-  /// The result values are uniform if and only if all operands are uniform.
+enum class ValueUniformity {
+  /// The result value is uniform if and only if all operands are uniform.
   Default,
 
-  /// The result values are always uniform.
+  /// The result value is always uniform.
   AlwaysUniform,
 
-  /// The result values can never be assumed to be uniform.
-  NeverUniform
+  /// The result value can never be assumed to be uniform.
+  NeverUniform,
+
+  /// The result value requires a custom uniformity check. A target-specific
+  /// callback determines whether the result is uniform based on which
+  /// operands are uniform.
+  Custom
 };
 
 } // namespace llvm

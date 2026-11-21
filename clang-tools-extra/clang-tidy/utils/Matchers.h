@@ -22,6 +22,18 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
+AST_MATCHER(CXXMethodDecl, isStatic) { return Node.isStatic(); }
+
+AST_MATCHER(FunctionDecl, isOverloadedOperator) {
+  return Node.isOverloadedOperator();
+}
+
+AST_MATCHER(Decl, isOutOfLine) { return Node.isOutOfLine(); }
+
+AST_MATCHER(VarDecl, isLocalVarDecl) { return Node.isLocalVarDecl(); }
+
+AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
+
 AST_MATCHER(QualType, isExpensiveToCopy) {
   std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
@@ -120,9 +132,9 @@ public:
 
   private:
     MatchMode determineMatchMode(StringRef Regex) {
-      if (Regex.starts_with(":") || Regex.starts_with("^:"))
+      if (Regex.starts_with(':') || Regex.starts_with("^:"))
         return MatchMode::MatchFullyQualified;
-      return Regex.contains(":") ? MatchMode::MatchQualified
+      return Regex.contains(':') ? MatchMode::MatchQualified
                                  : MatchMode::MatchUnqualified;
     }
   };
@@ -162,7 +174,7 @@ struct NotIdenticalStatementsPredicate {
 // to ID node.
 AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
   const NotIdenticalStatementsPredicate Predicate{
-      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+      ID, ::clang::DynTypedNode::create(Node), &Finder->getASTContext()};
   return Builder->removeBindings(Predicate);
 }
 

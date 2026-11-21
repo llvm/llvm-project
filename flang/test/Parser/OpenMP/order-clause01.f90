@@ -14,7 +14,7 @@ subroutine test_do_order()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
@@ -31,7 +31,7 @@ subroutine test_simd_order_reproducible()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
@@ -49,7 +49,7 @@ subroutine test_do_simd_order_unconstrained()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = do simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
@@ -67,7 +67,7 @@ subroutine test_parallel_do_order()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
@@ -84,7 +84,7 @@ subroutine test_parallel_do_simd_order_reproducible()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = parallel do simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
@@ -102,7 +102,7 @@ subroutine test_target_simd_order_unconstrained()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
@@ -120,7 +120,7 @@ subroutine test_target_parallel_do_order()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
@@ -137,7 +137,7 @@ subroutine test_target_parallel_do_simd_order_reproducible()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target parallel do simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
@@ -155,7 +155,7 @@ subroutine test_teams_distribute_simd_order_unconstrained()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = teams distribute simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
@@ -173,7 +173,7 @@ subroutine test_teams_distribute_parallel_do_order()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = teams distribute parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
@@ -190,7 +190,7 @@ subroutine test_teams_distribute_parallel_do_simd_order_reproducible()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = teams distribute parallel do simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
@@ -208,7 +208,7 @@ subroutine test_target_teams_distribute_simd_order_unconstrained()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained
@@ -226,7 +226,7 @@ subroutine test_target_teams_distribute_parallel_do_order()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: Ordering = Concurrent
@@ -243,7 +243,7 @@ subroutine test_target_teams_distribute_parallel_do_simd_order_reproducible()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = target teams distribute parallel do simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Reproducible
@@ -261,7 +261,7 @@ subroutine test_taskloop_simd_order_unconstrained()
 end subroutine
 
 !PARSE-TREE: OpenMPConstruct -> OpenMPLoopConstruct
-!PARSE-TREE-NEXT: OmpBeginLoopDirective
+!PARSE-TREE-NEXT: OmpBeginDirective
 !PARSE-TREE-NEXT: OmpDirectiveName -> llvm::omp::Directive = taskloop simd
 !PARSE-TREE-NEXT: OmpClauseList -> OmpClause -> Order -> OmpOrderClause
 !PARSE-TREE-NEXT: OmpOrderModifier -> Value = Unconstrained

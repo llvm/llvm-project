@@ -1,0 +1,36 @@
+# UNSUPPORTED: system-windows
+# RUN: llvm-mc -triple=loongarch64 -mattr=+f,+lbt --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefix=ABINAME
+# RUN: llvm-mc -triple=loongarch64 -mattr=+f,+lbt -M numeric --cdis %s | FileCheck %s --strict-whitespace --match-full-lines -check-prefix=NUMERIC
+
+## Registers and ordinary immediates
+0xe5 0xd8 0x83 0x02
+# ABINAME:	addi.w	[0;36m$a1[0m, [0;36m$a3[0m, [0;31m246[0m
+# NUMERIC:	addi.w	[0;36m$r5[0m, [0;36m$r7[0m, [0;31m246[0m
+
+## PC-relative branch targets
+0x47 0xb1 0x00 0x58
+# ABINAME-NEXT:	beq	[0;36m$a6[0m, [0;36m$a3[0m, [0;31m176[0m
+# NUMERIC-NEXT:	beq	[0;36m$r10[0m, [0;36m$r7[0m, [0;31m176[0m
+0x20 0x61 0x00 0x40
+# ABINAME-NEXT:	beqz	[0;36m$a5[0m, [0;31m96[0m
+# NUMERIC-NEXT:	beqz	[0;36m$r9[0m, [0;31m96[0m
+0x00 0xf8 0x00 0x50
+# ABINAME-NEXT:	b	[0;31m248[0m
+# NUMERIC-NEXT:	b	[0;31m248[0m
+0x00 0xec 0x00 0x54
+# ABINAME-NEXT:	bl	[0;31m236[0m
+# NUMERIC-NEXT:	bl	[0;31m236[0m
+0xc0 0x0c 0x00 0x48
+# ABINAME-NEXT:	bceqz	[0;36m$fcc6[0m, [0;31m12[0m
+# NUMERIC-NEXT:	bceqz	[0;36m$fcc6[0m, [0;31m12[0m
+
+## JIRL and JISCR[01] offsets are not PC-relative branch targets.
+0x81 0x04 0x00 0x4c
+# ABINAME-NEXT:	jirl	[0;36m$ra[0m, [0;36m$a0[0m, [0;31m4[0m
+# NUMERIC-NEXT:	jirl	[0;36m$r1[0m, [0;36m$r4[0m, [0;31m4[0m
+0x00 0x66 0x00 0x48
+# ABINAME-NEXT:	jiscr0	[0;31m100[0m
+# NUMERIC-NEXT:	jiscr0	[0;31m100[0m
+0x00 0x67 0x00 0x48
+# ABINAME-NEXT:	jiscr1	[0;31m100[0m
+# NUMERIC-NEXT:	jiscr1	[0;31m100[0m

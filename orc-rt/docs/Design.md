@@ -55,12 +55,42 @@ controller and can make no further calls to the controller.
 `Service` is an interface for classes that provide services to the Session.
 E.g. memory managers, or dynamic library loaders.
 
-The `Service` interface provides two operations: `detach` and `shutdown`. The
-`shutdown` operation will be called at `Session` destruction time. The `detach`
-operation will be called if the controller detaches. Since this means that no
-further requests for service will be made by the controller, Services may
-implement this operation to abandon any fine-grained book-keeping that is
-needed to provide ongoing services to the controller.
+The `Service` interface provides two operations: `onDetach` and `onShutdown`.
+`onDetach` signals that controller access is permanently unavailable. It is
+always called before `onShutdown`, regardless of how the Session reaches
+shutdown -- including when no controller was ever attached. Since no further
+requests will be made by the controller after `onDetach`, Services may use it
+to abandon any fine-grained book-keeping that is only needed to service
+controller requests. Many Services will implement `onDetach` as a no-op.
+
+The `onShutdown` operation will be called at `Session` destruction time, after
+all outstanding keepalives have been released. Services should release all
+held resources during `onShutdown`.
+
+### Keepalives and shutdown
+
+Session teardown must not proceed while JIT'd code is still live on a stack:
+freeing the JIT'd code (and the resources it runs against) out from under those
+frames would crash the moment control returns to them.
+
+To help enforce this the Session carries a keepalive `TaskGroup`. Code that
+is about to run JIT'd code obtains a `TaskGroup::Token` -- a *keepalive* -- from
+the group to bracket that execution, and the group delays Session shutdown until
+every keepalive has been released. `Session::callWithKeepalive` acquires and
+holds one for you around a synchronous call; keepalives can also be acquired
+manually from the `TokenSource` returned by `Session::keepaliveTokenSource`.
+
+A keepalive brackets a single span of execution on a stack -- *not* a whole
+chain of asynchronous operations. When an asynchronous operation captures a
+continuation, whoever later invokes that continuation must obtain a fresh
+keepalive to bracket the invocation (the continuation can't do it itself: its
+entry point may already be JIT'd code).
+
+Keepalive acquisition fails once Session shutdown has been requested -- and it
+can fail even for a nested or resumed call whose caller already holds one. So
+every caller of JIT'd code needs a way to abort and unwind when acquisition is
+denied; `callWithKeepalive` reports denial through its return value, which
+callers must check.
 
 ### TaskDispatcher
 

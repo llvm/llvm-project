@@ -25,7 +25,7 @@ entry:
 
 ; CHECK: define i32 @read_4_bytes_and_call(ptr %a) {
 ; CHECK-NEXT: entry:
-; CHECK-NEXT:   %0 = call ptr @llvm.returnaddress(i32 0)
+; CHECK-NEXT:   %0 = call ptr @llvm.returnaddress.p0(i32 0)
 ; CHECK-NEXT:   call void @__tsan_func_entry(ptr %0)
 ; CHECK-NEXT:   call void @foo()
 ; CHECK-NEXT:   %tmp1 = load i32, ptr %a, align 4
