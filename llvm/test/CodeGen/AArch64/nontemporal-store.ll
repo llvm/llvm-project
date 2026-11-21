@@ -16,6 +16,20 @@ define void @test_stnp_v4i64(ptr %p, <4 x i64> %v) #0 {
   ret void
 }
 
+define void @test_stnp_v4f64(ptr %p, <4 x double> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v4f64:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v4f64:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <4 x double> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
 define void @test_stnp_v4i32(ptr %p, <4 x i32> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v4i32:
 ; CHECK-LE:       // %bb.0:
@@ -31,6 +45,34 @@ define void @test_stnp_v4i32(ptr %p, <4 x i32> %v) #0 {
   ret void
 }
 
+define void @test_stnp_v8f32(ptr %p, <8 x float> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v8f32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v8f32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <8 x float> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v8i32(ptr %p, <8 x i32> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v8i32:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v8i32:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <8 x i32> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
 define void @test_stnp_v8i16(ptr %p, <8 x i16> %v) #0 {
 ; CHECK-LE-LABEL: test_stnp_v8i16:
 ; CHECK-LE:       // %bb.0:
@@ -43,6 +85,48 @@ define void @test_stnp_v8i16(ptr %p, <8 x i16> %v) #0 {
 ; CHECK-BE-NEXT:    str q0, [x0]
 ; CHECK-BE-NEXT:    ret
   store <8 x i16> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16i16(ptr %p, <16 x i16> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16i16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16i16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x i16> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16f16(ptr %p, <16 x half> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16f16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16f16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x half> %v, ptr %p, align 1, !nontemporal !0
+  ret void
+}
+
+define void @test_stnp_v16bf16(ptr %p, <16 x bfloat> %v) #0 {
+; CHECK-LE-LABEL: test_stnp_v16bf16:
+; CHECK-LE:       // %bb.0:
+; CHECK-LE-NEXT:    stnp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: test_stnp_v16bf16:
+; CHECK-BE:       // %bb.0:
+; CHECK-BE-NEXT:    stp q0, q1, [x0]
+; CHECK-BE-NEXT:    ret
+  store <16 x bfloat> %v, ptr %p, align 1, !nontemporal !0
   ret void
 }
 

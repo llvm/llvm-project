@@ -5435,6 +5435,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
   llvm::SmallVector<Value*, 4> Ops;
   Address PtrOp0 = Address::invalid();
+  Address PtrOp1 = Address::invalid();
   // Note the assumption that SISD intrinsics do not contain extra arguments.
   // TODO: Fold this into a single function call instead of, effectively, two
   // separate checks.
@@ -5457,13 +5458,21 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       case NEON::BI__builtin_neon_vldap1q_lane_s64:
       case NEON::BI__builtin_neon_vstl1_lane_s64:
       case NEON::BI__builtin_neon_vstl1q_lane_s64:
+      case NEON::BI__builtin_neon_vstnq_x2_v:
         // Get the alignment for the argument in addition to the value;
         // we'll use it later.
         PtrOp0 = EmitPointerWithAlignment(E->getArg(0));
         Ops.push_back(PtrOp0.emitRawPointer(*this));
         continue;
       }
+    } else if (i == 1 && BuiltinID == NEON::BI__builtin_neon_vldnq_x2_v) {
+      // vldnq loads a struct of 2 vectors
+      // The struct result ptr is Operand 0 and the source ptr is operand 1
+      PtrOp1 = EmitPointerWithAlignment(E->getArg(1));
+      Ops.push_back(PtrOp1.emitRawPointer(*this));
+      continue;
     }
+
     Ops.push_back(EmitScalarOrConstFoldImmArg(ICEArguments, i, E));
   }
 
@@ -6894,6 +6903,32 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     llvm::Type *Tys[2] = { VTy, Ops[5]->getType() };
     return EmitNeonCall(CGM.getIntrinsic(Intrinsic::aarch64_neon_st4lane, Tys),
                         Ops, "");
+  }
+  case NEON::BI__builtin_neon_vstnq_x2_v: {
+    auto *VecTy = cast<llvm::FixedVectorType>(Ops[1]->getType());
+    const unsigned NumElts = VecTy->getNumElements() * 2;
+    SmallVector<int, 32> ConcatMask(NumElts);
+    std::iota(ConcatMask.begin(), ConcatMask.end(), 0);
+    Value *WideValue = Builder.CreateShuffleVector(Ops[1], Ops[2], ConcatMask);
+    StoreInst *Store =
+        Builder.CreateAlignedStore(WideValue, Ops[0], PtrOp0.getAlignment());
+    Store->setMetadata(
+        LLVMContext::MD_nontemporal,
+        MDNode::get(CGM.getLLVMContext(),
+                    ConstantAsMetadata::get(Builder.getInt32(1))));
+    return Store;
+  }
+  case NEON::BI__builtin_neon_vldnq_x2_v: {
+    auto *VecTy = cast<llvm::FixedVectorType>(VTy);
+    llvm::Type *WideTy = llvm::FixedVectorType::get(
+        VecTy->getElementType(), VecTy->getNumElements() * 2);
+    LoadInst *Load =
+        Builder.CreateAlignedLoad(WideTy, Ops[1], PtrOp1.getAlignment());
+    Load->setMetadata(
+        LLVMContext::MD_nontemporal,
+        MDNode::get(CGM.getLLVMContext(),
+                    ConstantAsMetadata::get(Builder.getInt32(1))));
+    return Builder.CreateDefaultAlignedStore(Load, Ops[0]);
   }
   case NEON::BI__builtin_neon_vtrn_v:
   case NEON::BI__builtin_neon_vtrnq_v: {
