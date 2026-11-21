@@ -1533,28 +1533,6 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
   return false;
 }
 
-namespace {
-/// A buffer exposing a sub-range of an owned buffer.
-class SubMemoryBuffer : public llvm::MemoryBuffer {
-  std::unique_ptr<llvm::MemoryBuffer> Underlying;
-
-public:
-  SubMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Underlying,
-                  StringRef Range)
-      : Underlying(std::move(Underlying)) {
-    init(Range.begin(), Range.end(), /*RequiresNullTerminator=*/false);
-  }
-
-  StringRef getBufferIdentifier() const override {
-    return Underlying->getBufferIdentifier();
-  }
-
-  BufferKind getBufferKind() const override {
-    return Underlying->getBufferKind();
-  }
-};
-} // namespace
-
 /// Compile a module in a separate compiler instance.
 /// Returns true on success, false on failure.
 static bool compileModuleImpl(CompilerInstance &ImportingInstance,
@@ -1604,10 +1582,8 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
   // Readers use the module cache's view of the written PCM. Extracting the AST
   // file (which may be wrapped in an object file) isn't strictly necessary, but
   // it's more efficient to do so now rather than repeatedly in the readers.
-  const PCHContainerReader &Rdr = ImportingInstance.getPCHContainerReader();
-  StringRef ExtractedBuffer = Rdr.ExtractPCH(*Buffer);
   Buffer =
-      std::make_unique<SubMemoryBuffer>(std::move(Buffer), ExtractedBuffer);
+      ImportingInstance.getPCHContainerReader().ExtractPCH(std::move(Buffer));
   ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
       ModuleFileName, std::move(Buffer), Size, ModTime);
 

@@ -824,8 +824,9 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   if (Filename == "-")
     if (auto FE = llvm::expectedToOptional(TmpFileMgr.getSTDIN()))
       if (auto BufRef = TmpFileMgr.getBufferForFile(*FE)) {
-        auto Buf = llvm::MemoryBuffer::getMemBufferCopy(
-            (*BufRef)->getBuffer(), (*BufRef)->getBufferIdentifier());
+        auto Buf =
+            PCHContainerRdr.ExtractPCH(llvm::MemoryBuffer::getMemBufferCopy(
+                (*BufRef)->getBuffer(), (*BufRef)->getBufferIdentifier()));
         off_t BufSize = Buf->getBufferSize();
         AST->ModCache->getInMemoryModuleCache().addBuiltPCM(
             "-", std::move(Buf), BufSize, /*ModTime=*/0);
