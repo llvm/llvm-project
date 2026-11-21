@@ -3,18 +3,18 @@
 
 ; BPI folds the operation chain from the loop-carried PHI to the branch
 ; condition while identifying an unlikely loop-reset edge.
-; FIXME: Honor the function's denormal environment when folding this chain.
-; The reset supplies a subnormal, which should flush to zero. The `one`
-; comparison is then false on the next iteration, making %reset unlikely
-; (33.33%) instead of the current 62.50% estimate.
+; Respect the function's denormal environment when folding both the arithmetic
+; and the comparison. The reset supplies a subnormal, which flushes to zero.
+; The `one` comparison is then false on the next iteration, making %reset
+; unlikely (33.33%).
 
 define void @fadd_chain(float %unknown) denormal_fpenv(float: preservesign) {
 ; CHECK-LABEL: 'fadd_chain'
 ; CHECK-NEXT:  ---- Branch Probabilities ----
 ; CHECK-NEXT:    edge %entry -> %header probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK-NEXT:    edge %header -> %body probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
-; CHECK-NEXT:    edge %body -> %reset probability is 0x50000000 / 0x80000000 = 62.50%
-; CHECK-NEXT:    edge %body -> %latch probability is 0x30000000 / 0x80000000 = 37.50%
+; CHECK-NEXT:    edge %body -> %reset probability is 0x2aaaa8e4 / 0x80000000 = 33.33%
+; CHECK-NEXT:    edge %body -> %latch probability is 0x5555571c / 0x80000000 = 66.67%
 ; CHECK-NEXT:    edge %reset -> %latch probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ; CHECK-NEXT:    edge %latch -> %header probability is 0x80000000 / 0x80000000 = 100.00% [HOT edge]
 ;
