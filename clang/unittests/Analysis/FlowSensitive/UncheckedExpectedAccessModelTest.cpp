@@ -719,4 +719,128 @@ TEST_P(UncheckedExpectedAccessTest, EqualToExpectedUnchecked) {
   )");
 }
 
+TEST_P(UncheckedExpectedAccessTest, EqualToValue) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e == 5)
+        return *e;
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (5 == e)
+        return e.value();
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e != 5)
+        return 0;
+      return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (5 != e)
+        return 0;
+      return *e;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    long target($ns::expected<long, int> e, int v) {
+      if (e == v)
+        return *e;
+      return 0;
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, EqualToValueUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e != 5)
+        return *e; // [[unsafe]]
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (5 != e)
+        return *e; // [[unsafe]]
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e == 5)
+        return 0;
+      return *e; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (5 == e)
+        return 0;
+      return *e; // [[unsafe]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e == 5)
+        return e.error(); // [[unsafe:error]]
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e) {
+      if (e != 5)
+        return e.error(); // [[unsafe:error]]
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> e, bool cond) {
+      if (e == 5 || cond)
+        return *e; // [[unsafe]]
+      return 0;
+    }
+  )");
+}
+
 } // namespace clang::dataflow::test

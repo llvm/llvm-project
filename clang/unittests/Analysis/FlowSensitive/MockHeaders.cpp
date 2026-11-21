@@ -847,6 +847,12 @@ struct unexpect_t {
 
 inline constexpr unexpect_t unexpect{};
 
+template <class T, class E> class expected;
+
+template <class> constexpr bool __is_expected = false;
+template <class T, class E>
+constexpr bool __is_expected<expected<T, E>> = true;
+
 template <class T, class E> class expected {
 public:
   using value_type = T;
@@ -904,6 +910,10 @@ public:
 #if __cplusplus >= 202002L
   template <class T2, class E2>
   friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class T2>
+    requires(!__is_expected<T2>)
+  friend bool operator==(const expected &x, const T2 &v);
 #endif
 };
 
@@ -1103,6 +1113,15 @@ template <class E, class F>
 bool operator==(const expected<void, E> &lhs, const expected<void, F> &rhs);
 template <class E, class F>
 bool operator!=(const expected<void, E> &lhs, const expected<void, F> &rhs);
+
+template <class T, class E, class U>
+bool operator==(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator==(const U &v, const expected<T, E> &x);
+template <class T, class E, class U>
+bool operator!=(const expected<T, E> &x, const U &v);
+template <class T, class E, class U>
+bool operator!=(const U &v, const expected<T, E> &x);
 
 template <class T, class E>
 void swap(expected<T, E> &lhs, expected<T, E> &rhs);
