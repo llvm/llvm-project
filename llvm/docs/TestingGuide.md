@@ -427,7 +427,7 @@ guidelines:
 - Avoid checking `-debug-only` output when the effect can be checked in the
   generated code instead. Debug output is not a stable interface and may be
   reworded at any time.
-- Mark functions `nounwind` unless the test is about unwind information.
+- Mark functions `nounwind` unless the test is about stack frame management.
   Otherwise many targets emit `.cfi_*` directives, which clutter the checks
   and change with unrelated frame lowering changes.
 - Don't specify the target triple both with `-mtriple` on the `RUN` line and
