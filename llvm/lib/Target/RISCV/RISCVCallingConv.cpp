@@ -749,9 +749,11 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
     }
   }
 
+  ArrayRef<MCPhysReg> ArgGPRs = getFastCCArgGPRs(ABI);
+
   // Check if there is an available GPR before hitting the stack.
   if (LocVT == MVT::f64 && Subtarget.is64Bit() && Subtarget.hasStdExtZdinx()) {
-    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
       if (LocVT.getSizeInBits() != Subtarget.getXLen()) {
         LocVT = XLenVT;
         State.addLoc(
@@ -762,8 +764,6 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
       return false;
     }
   }
-
-  ArrayRef<MCPhysReg> ArgGPRs = getFastCCArgGPRs(ABI);
 
   // FIXME: If P extension and V extension are enabled at the same time,
   // who should go first?
@@ -811,7 +811,7 @@ static bool CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   if (LocVT == XLenVT || Subtarget.isPExtPackedType(LocVT)) {
-    if (MCRegister Reg = State.AllocateReg(getFastCCArgGPRs(ABI))) {
+    if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
