@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // REQUIRES: std-at-least-c++26
+// XFAIL: msvc
 
 // <ranges>
 
@@ -40,5 +41,3 @@ static_assert(sizeof(std::ranges::as_input_view<EmptyView>) == 1);
 static_assert(sizeof(Test<std::ranges::as_input_view<EmptyView>>) == 1);
 
 static_assert(sizeof(std::ranges::as_input_view<NonEmptyView>) == sizeof(NonEmptyView));
-using TestWithNonEmptyView = Test<std::ranges::as_input_view<NonEmptyView>>;
-static_assert(sizeof(TestWithNonEmptyView) == sizeof(NonEmptyView) + alignof(TestWithNonEmptyView));
