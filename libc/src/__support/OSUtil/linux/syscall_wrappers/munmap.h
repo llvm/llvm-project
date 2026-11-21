@@ -19,7 +19,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> munmap(void *addr, size_t size) {
-  return syscall_checked<int>(SYS_munmap, addr, size);
+  LIBC_SANITIZER_SYSCALL_PRE(munmap, addr, size);
+  auto syscall_ret = syscall_checked<int>(SYS_munmap, addr, size);
+  LIBC_SANITIZER_SYSCALL_POST(munmap, syscall_result_to_long(syscall_ret), addr,
+                              size);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

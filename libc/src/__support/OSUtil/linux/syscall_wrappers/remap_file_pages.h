@@ -28,8 +28,13 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> remap_file_pages(void *addr, size_t size, int prot,
                                           size_t pgoff, int flags) {
 #ifdef SYS_remap_file_pages
-  return syscall_checked<int>(SYS_remap_file_pages, addr, size, prot, pgoff,
-                              flags);
+  LIBC_SANITIZER_SYSCALL_PRE(remap_file_pages, addr, size, prot, pgoff, flags);
+  auto syscall_ret = syscall_checked<int>(SYS_remap_file_pages, addr, size,
+                                          prot, pgoff, flags);
+  LIBC_SANITIZER_SYSCALL_POST(remap_file_pages,
+                              syscall_result_to_long(syscall_ret), addr, size,
+                              prot, pgoff, flags);
+  return syscall_ret;
 #else
 #error "remap_file_pages syscall is not available."
 #endif

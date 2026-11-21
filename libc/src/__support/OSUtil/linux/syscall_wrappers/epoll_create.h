@@ -27,11 +27,19 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> epoll_create(int size) {
 #ifdef SYS_epoll_create
-  return syscall_checked<int>(SYS_epoll_create, size);
+  LIBC_SANITIZER_SYSCALL_PRE(epoll_create, size);
+  auto syscall_ret = syscall_checked<int>(SYS_epoll_create, size);
+  LIBC_SANITIZER_SYSCALL_POST(epoll_create, syscall_result_to_long(syscall_ret),
+                              size);
+  return syscall_ret;
 #elif defined(SYS_epoll_create1)
   if (size == 0)
     return Error(EINVAL);
-  return syscall_checked<int>(SYS_epoll_create1, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(epoll_create1, 0);
+  auto syscall_ret = syscall_checked<int>(SYS_epoll_create1, 0);
+  LIBC_SANITIZER_SYSCALL_POST(epoll_create1,
+                              syscall_result_to_long(syscall_ret), 0);
+  return syscall_ret;
 #else
 #error                                                                         \
     "epoll_create and epoll_create1 are unavailable. Unable to build epoll_create."

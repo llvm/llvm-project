@@ -24,7 +24,12 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> pause() {
-  return syscall_checked<int>(SYS_ppoll, nullptr, 0, nullptr, nullptr, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(ppoll, nullptr, 0, nullptr, nullptr, 0);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_ppoll, nullptr, 0, nullptr, nullptr, 0);
+  LIBC_SANITIZER_SYSCALL_POST(ppoll, syscall_result_to_long(syscall_ret),
+                              nullptr, 0, nullptr, nullptr, 0);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -27,7 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> bind(int socket, const struct sockaddr *address,
                               socklen_t address_len) {
-  return syscall_checked<int>(SYS_bind, socket, address, address_len);
+  LIBC_SANITIZER_SYSCALL_PRE(bind, socket, address, address_len);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_bind, socket, address, address_len);
+  LIBC_SANITIZER_SYSCALL_POST(bind, syscall_result_to_long(syscall_ret), socket,
+                              address, address_len);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

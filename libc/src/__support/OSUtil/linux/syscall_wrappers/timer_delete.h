@@ -26,7 +26,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> timer_delete(timer_t timerid) {
 #ifdef SYS_timer_delete
-  return syscall_checked<int>(SYS_timer_delete, timerid);
+  LIBC_SANITIZER_SYSCALL_PRE(timer_delete, timerid);
+  auto syscall_ret = syscall_checked<int>(SYS_timer_delete, timerid);
+  LIBC_SANITIZER_SYSCALL_POST(timer_delete, syscall_result_to_long(syscall_ret),
+                              timerid);
+  return syscall_ret;
 #else
 #error "SYS_timer_delete syscall not available."
 #endif

@@ -40,7 +40,11 @@ LIBC_INLINE ErrorOr<int> execle(const char *path, Args... args) {
     argv[i] = reinterpret_cast<const char *>(all[i]);
   argv[total - 1] = nullptr;
 
-  return syscall_checked<int>(SYS_execve, path, argv, envp);
+  LIBC_SANITIZER_SYSCALL_PRE(execve, path, argv, envp);
+  auto syscall_ret = syscall_checked<int>(SYS_execve, path, argv, envp);
+  LIBC_SANITIZER_SYSCALL_POST(execve, syscall_result_to_long(syscall_ret), path,
+                              argv, envp);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

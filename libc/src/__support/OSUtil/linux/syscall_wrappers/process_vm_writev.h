@@ -31,8 +31,15 @@ LIBC_INLINE ErrorOr<ssize_t>
 process_vm_writev(pid_t pid, const struct iovec *local_iov,
                   unsigned long liovcnt, const struct iovec *remote_iov,
                   unsigned long riovcnt, unsigned long flags) {
-  return syscall_checked<ssize_t>(SYS_process_vm_writev, pid, local_iov,
-                                  liovcnt, remote_iov, riovcnt, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(process_vm_writev, pid, local_iov, liovcnt,
+                             remote_iov, riovcnt, flags);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_process_vm_writev, pid, local_iov, liovcnt,
+                               remote_iov, riovcnt, flags);
+  LIBC_SANITIZER_SYSCALL_POST(process_vm_writev,
+                              syscall_result_to_long(syscall_ret), pid,
+                              local_iov, liovcnt, remote_iov, riovcnt, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

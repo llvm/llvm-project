@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> chroot(const char *path) {
-  return syscall_checked<int>(SYS_chroot, path);
+  LIBC_SANITIZER_SYSCALL_PRE(chroot, path);
+  auto syscall_ret = syscall_checked<int>(SYS_chroot, path);
+  LIBC_SANITIZER_SYSCALL_POST(chroot, syscall_result_to_long(syscall_ret),
+                              path);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

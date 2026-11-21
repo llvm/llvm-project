@@ -19,7 +19,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> mprotect(void *addr, size_t size, int prot) {
-  return syscall_checked<int>(SYS_mprotect, addr, size, prot);
+  LIBC_SANITIZER_SYSCALL_PRE(mprotect, addr, size, prot);
+  auto syscall_ret = syscall_checked<int>(SYS_mprotect, addr, size, prot);
+  LIBC_SANITIZER_SYSCALL_POST(mprotect, syscall_result_to_long(syscall_ret),
+                              addr, size, prot);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

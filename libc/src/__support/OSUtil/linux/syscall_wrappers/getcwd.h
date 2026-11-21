@@ -26,7 +26,9 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> getcwd(char *buf, size_t size) {
+  LIBC_SANITIZER_SYSCALL_PRE(getcwd, buf, size);
   auto ret = syscall_checked<ssize_t>(SYS_getcwd, buf, size);
+  LIBC_SANITIZER_SYSCALL_POST(getcwd, syscall_result_to_long(ret), buf, size);
   if (!ret)
     return ret;
 

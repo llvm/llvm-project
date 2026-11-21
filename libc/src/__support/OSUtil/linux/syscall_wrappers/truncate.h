@@ -28,10 +28,19 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> truncate(const char *path, off_t len) {
 #ifdef SYS_truncate64
   // Prefer truncate64 to preserve large offsets on 32-bit systems.
-  return syscall_checked<int>(SYS_truncate64, path, len,
-                              static_cast<uint64_t>(len) >> 32);
+  LIBC_SANITIZER_SYSCALL_PRE(truncate64, path, len,
+                             static_cast<uint64_t>(len) >> 32);
+  auto syscall_ret = syscall_checked<int>(SYS_truncate64, path, len,
+                                          static_cast<uint64_t>(len) >> 32);
+  LIBC_SANITIZER_SYSCALL_POST(truncate64, syscall_result_to_long(syscall_ret),
+                              path, len, static_cast<uint64_t>(len) >> 32);
+  return syscall_ret;
 #elif defined(SYS_truncate)
-  return syscall_checked<int>(SYS_truncate, path, len);
+  LIBC_SANITIZER_SYSCALL_PRE(truncate, path, len);
+  auto syscall_ret = syscall_checked<int>(SYS_truncate, path, len);
+  LIBC_SANITIZER_SYSCALL_POST(truncate, syscall_result_to_long(syscall_ret),
+                              path, len);
+  return syscall_ret;
 #else
 #error "truncate and truncate64 syscalls not available."
 #endif

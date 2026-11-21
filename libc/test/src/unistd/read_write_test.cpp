@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/macros/sanitizer.h"
 #include "src/unistd/close.h"
 #include "src/unistd/pipe.h"
 #include "src/unistd/read.h"
@@ -38,8 +39,13 @@ TEST_F(LlvmLibcUniStd, WriteFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
   EXPECT_THAT(LIBC_NAMESPACE::write(-1, "", 1), Fails<ssize_t>(EBADF));
+#ifndef LIBC_HAS_ADDRESS_SANITIZER
+  // Disabled under ASan because the write syscall wrapper invokes
+  // __sanitizer_syscall_pre_write, which flags the intentionally invalid
+  // buffer pointer before the kernel can return EFAULT.
   EXPECT_THAT(LIBC_NAMESPACE::write(1, reinterpret_cast<const void *>(-1), 1),
               Fails<ssize_t>(EFAULT));
+#endif
 }
 
 TEST_F(LlvmLibcUniStd, ReadFails) {
@@ -48,8 +54,13 @@ TEST_F(LlvmLibcUniStd, ReadFails) {
 
   char buf[1];
   EXPECT_THAT(LIBC_NAMESPACE::read(-1, buf, 1), Fails<ssize_t>(EBADF));
+#ifndef LIBC_HAS_ADDRESS_SANITIZER
+  // Disabled under ASan because the read syscall wrapper invokes
+  // __sanitizer_syscall_pre_read, which flags the intentionally invalid
+  // buffer pointer before the kernel can return EFAULT.
   EXPECT_THAT(LIBC_NAMESPACE::read(0, reinterpret_cast<void *>(-1), 1),
               Fails<ssize_t>(EFAULT));
+#endif
   EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1),
               Fails<ssize_t>(any_of(
                   EBADF, EFAULT)) // Depending on what gets checked first.

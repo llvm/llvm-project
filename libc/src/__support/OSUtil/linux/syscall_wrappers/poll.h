@@ -29,7 +29,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> poll(struct pollfd *fds, nfds_t nfds, int timeout) {
 #if defined(SYS_poll)
-  return syscall_checked<int>(SYS_poll, fds, nfds, timeout);
+  LIBC_SANITIZER_SYSCALL_PRE(poll, fds, nfds, timeout);
+  auto syscall_ret = syscall_checked<int>(SYS_poll, fds, nfds, timeout);
+  LIBC_SANITIZER_SYSCALL_POST(poll, syscall_result_to_long(syscall_ret), fds,
+                              nfds, timeout);
+  return syscall_ret;
 #else // no SYS_poll
   timespec ts, *tsp;
   if (timeout >= 0) {
@@ -47,7 +51,12 @@ LIBC_INLINE ErrorOr<int> poll(struct pollfd *fds, nfds_t nfds, int timeout) {
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(ppoll, fds, nfds, tsp, nullptr, 0);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_ppoll, fds, nfds, tsp, nullptr, 0);
+  LIBC_SANITIZER_SYSCALL_POST(ppoll, syscall_result_to_long(syscall_ret), fds,
+                              nfds, tsp, nullptr, 0);
+  return syscall_ret;
 #else
 #error "poll, ppoll, ppoll_time64 syscalls not available."
 #endif // defined(SYS_ppoll) || defined(SYS_ppoll_time64)

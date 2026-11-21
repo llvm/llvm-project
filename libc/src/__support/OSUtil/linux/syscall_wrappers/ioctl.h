@@ -43,7 +43,11 @@ struct IoctlArg {
 
 LIBC_INLINE ErrorOr<int> ioctl(int fd, unsigned long request,
                                IoctlArg arg = 0) {
-  return syscall_checked<int>(SYS_ioctl, fd, request, arg.val);
+  LIBC_SANITIZER_SYSCALL_PRE(ioctl, fd, request, arg.val);
+  auto syscall_ret = syscall_checked<int>(SYS_ioctl, fd, request, arg.val);
+  LIBC_SANITIZER_SYSCALL_POST(ioctl, syscall_result_to_long(syscall_ret), fd,
+                              request, arg.val);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -37,10 +37,21 @@ LIBC_INLINE ErrorOr<int> fallocate(int fd, int mode, off_t offset, off_t size) {
     uint64_t len_bits = cpp::bit_cast<uint64_t>(size);
     long len_low = static_cast<long>(len_bits & UINT32_MAX);
     long len_high = static_cast<long>(len_bits >> 32);
-    return syscall_checked<int>(SYS_fallocate, fd, mode, offset_low,
-                                offset_high, len_low, len_high);
+    LIBC_SANITIZER_SYSCALL_PRE(fallocate, fd, mode, offset_low, offset_high,
+                               len_low, len_high);
+    auto syscall_ret = syscall_checked<int>(SYS_fallocate, fd, mode, offset_low,
+                                            offset_high, len_low, len_high);
+    LIBC_SANITIZER_SYSCALL_POST(fallocate, syscall_result_to_long(syscall_ret),
+                                fd, mode, offset_low, offset_high, len_low,
+                                len_high);
+    return syscall_ret;
   } else {
-    return syscall_checked<int>(SYS_fallocate, fd, mode, offset, size);
+    LIBC_SANITIZER_SYSCALL_PRE(fallocate, fd, mode, offset, size);
+    auto syscall_ret =
+        syscall_checked<int>(SYS_fallocate, fd, mode, offset, size);
+    LIBC_SANITIZER_SYSCALL_POST(fallocate, syscall_result_to_long(syscall_ret),
+                                fd, mode, offset, size);
+    return syscall_ret;
   }
 }
 

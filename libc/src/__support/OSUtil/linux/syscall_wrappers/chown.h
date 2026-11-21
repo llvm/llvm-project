@@ -28,9 +28,18 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> chown(const char *path, uid_t owner, gid_t group) {
 #ifdef SYS_chown
-  return syscall_checked<int>(SYS_chown, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_PRE(chown, path, owner, group);
+  auto syscall_ret = syscall_checked<int>(SYS_chown, path, owner, group);
+  LIBC_SANITIZER_SYSCALL_POST(chown, syscall_result_to_long(syscall_ret), path,
+                              owner, group);
+  return syscall_ret;
 #elif defined(SYS_fchownat)
-  return syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner, group, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(fchownat, AT_FDCWD, path, owner, group, 0);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_fchownat, AT_FDCWD, path, owner, group, 0);
+  LIBC_SANITIZER_SYSCALL_POST(fchownat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, owner, group, 0);
+  return syscall_ret;
 #else
 #error "chown and fchownat syscalls not available."
 #endif

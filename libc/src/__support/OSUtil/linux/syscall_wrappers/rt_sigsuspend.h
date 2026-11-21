@@ -25,7 +25,13 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rt_sigsuspend(const sigset_t *set) {
-  return syscall_checked<int>(SYS_rt_sigsuspend, set, sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_PRE(rt_sigsuspend, set, sizeof(sigset_t));
+  auto syscall_ret =
+      syscall_checked<int>(SYS_rt_sigsuspend, set, sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_POST(rt_sigsuspend,
+                              syscall_result_to_long(syscall_ret), set,
+                              sizeof(sigset_t));
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

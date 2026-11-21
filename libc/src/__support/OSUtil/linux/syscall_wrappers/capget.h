@@ -27,7 +27,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> capget(cap_user_header_t hdrp, cap_user_data_t datap) {
-  return syscall_checked<int>(SYS_capget, hdrp, datap);
+  LIBC_SANITIZER_SYSCALL_PRE(capget, hdrp, datap);
+  auto syscall_ret = syscall_checked<int>(SYS_capget, hdrp, datap);
+  LIBC_SANITIZER_SYSCALL_POST(capget, syscall_result_to_long(syscall_ret), hdrp,
+                              datap);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

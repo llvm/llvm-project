@@ -75,11 +75,21 @@ struct KernelSigevent {
 LIBC_INLINE ErrorOr<int> timer_create(clockid_t clockid, const sigevent *sevp,
                                       timer_t *timerid) {
 #ifdef SYS_timer_create
-  if (!sevp)
-    return syscall_checked<int>(SYS_timer_create, clockid, nullptr, timerid);
+  if (!sevp) {
+    LIBC_SANITIZER_SYSCALL_PRE(timer_create, clockid, nullptr, timerid);
+    auto ret =
+        syscall_checked<int>(SYS_timer_create, clockid, nullptr, timerid);
+    LIBC_SANITIZER_SYSCALL_POST(timer_create, syscall_result_to_long(ret),
+                                clockid, nullptr, timerid);
+    return ret;
+  }
 
   KernelSigevent ksev(*sevp);
-  return syscall_checked<int>(SYS_timer_create, clockid, &ksev, timerid);
+  LIBC_SANITIZER_SYSCALL_PRE(timer_create, clockid, &ksev, timerid);
+  auto ret = syscall_checked<int>(SYS_timer_create, clockid, &ksev, timerid);
+  LIBC_SANITIZER_SYSCALL_POST(timer_create, syscall_result_to_long(ret),
+                              clockid, &ksev, timerid);
+  return ret;
 #else
 #error "SYS_timer_create syscall not available."
 #endif

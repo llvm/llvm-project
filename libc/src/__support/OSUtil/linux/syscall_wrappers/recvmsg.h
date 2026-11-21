@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> recvmsg(int sockfd, msghdr *msg, int flags) {
-  return syscall_checked<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(recvmsg, sockfd, msg, flags);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_recvmsg, sockfd, msg, flags);
+  LIBC_SANITIZER_SYSCALL_POST(recvmsg, syscall_result_to_long(syscall_ret),
+                              sockfd, msg, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -32,8 +32,22 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<int> fcntl(int fd, int cmd, void *arg = nullptr) {
 #ifdef SYS_fcntl
   constexpr auto FCNTL_SYSCALL_ID = SYS_fcntl;
+  auto do_fcntl = [](int fd, int cmd, void *arg) {
+    LIBC_SANITIZER_SYSCALL_PRE(fcntl, fd, cmd, arg);
+    auto ret = syscall_checked<int>(FCNTL_SYSCALL_ID, fd, cmd, arg);
+    LIBC_SANITIZER_SYSCALL_POST(fcntl, syscall_result_to_long(ret), fd, cmd,
+                                arg);
+    return ret;
+  };
 #elif defined(SYS_fcntl64)
   constexpr auto FCNTL_SYSCALL_ID = SYS_fcntl64;
+  auto do_fcntl = [](int fd, int cmd, void *arg) {
+    LIBC_SANITIZER_SYSCALL_PRE(fcntl64, fd, cmd, arg);
+    auto ret = syscall_checked<int>(FCNTL_SYSCALL_ID, fd, cmd, arg);
+    LIBC_SANITIZER_SYSCALL_POST(fcntl64, syscall_result_to_long(ret), fd, cmd,
+                                arg);
+    return ret;
+  };
 #else
 #error "fcntl and fcntl64 syscalls not available."
 #endif
@@ -49,7 +63,7 @@ LIBC_INLINE ErrorOr<int> fcntl(int fd, int cmd, void *arg = nullptr) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    return syscall_checked<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
+    return do_fcntl(fd, cmd, &flk64);
   }
   case F_OFD_GETLK:
   case F_OFD_SETLK: {
@@ -62,7 +76,7 @@ LIBC_INLINE ErrorOr<int> fcntl(int fd, int cmd, void *arg = nullptr) {
     flk64.l_len = flk->l_len;
     flk64.l_pid = flk->l_pid;
     // create a syscall
-    auto ret = syscall_checked<int>(FCNTL_SYSCALL_ID, fd, cmd, &flk64);
+    auto ret = do_fcntl(fd, cmd, &flk64);
     // On failure, return
     if (!ret)
       return ret;
@@ -82,7 +96,7 @@ LIBC_INLINE ErrorOr<int> fcntl(int fd, int cmd, void *arg = nullptr) {
   }
   case F_GETOWN: {
     struct f_owner_ex fex;
-    auto ret = syscall_checked<int>(FCNTL_SYSCALL_ID, fd, F_GETOWN_EX, &fex);
+    auto ret = do_fcntl(fd, F_GETOWN_EX, &fex);
     if (!ret)
       return ret;
     return fex.type == F_OWNER_PGRP ? -fex.pid : fex.pid;
@@ -109,7 +123,7 @@ LIBC_INLINE ErrorOr<int> fcntl(int fd, int cmd, void *arg = nullptr) {
   // Plain passthrough for all other commands. When only SYS_fcntl64 is
   // available, F_GETLK/F_SETLK/F_SETLKW have been rewritten to their 64-bit
   // variants by the cases above.
-  return syscall_checked<int>(FCNTL_SYSCALL_ID, fd, cmd, arg);
+  return do_fcntl(fd, cmd, arg);
 }
 
 } // namespace linux_syscalls

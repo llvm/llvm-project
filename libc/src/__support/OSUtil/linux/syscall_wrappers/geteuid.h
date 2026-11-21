@@ -23,7 +23,12 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE uid_t geteuid() { return syscall_impl<uid_t>(SYS_geteuid); }
+LIBC_INLINE uid_t geteuid() {
+  LIBC_SANITIZER_SYSCALL_PRE_0(geteuid);
+  auto syscall_ret = syscall_impl<uid_t>(SYS_geteuid);
+  LIBC_SANITIZER_SYSCALL_POST(geteuid, static_cast<long>(syscall_ret));
+  return syscall_ret;
+}
 
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL

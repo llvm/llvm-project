@@ -26,9 +26,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getresgid(gid_t *rgid, gid_t *egid, gid_t *sgid) {
 #if defined(SYS_getresgid32)
-  return syscall_checked<int>(SYS_getresgid32, rgid, egid, sgid);
+  LIBC_SANITIZER_SYSCALL_PRE(getresgid32, rgid, egid, sgid);
+  auto syscall_ret = syscall_checked<int>(SYS_getresgid32, rgid, egid, sgid);
+  LIBC_SANITIZER_SYSCALL_POST(getresgid32, syscall_result_to_long(syscall_ret),
+                              rgid, egid, sgid);
+  return syscall_ret;
 #elif defined(SYS_getresgid)
-  return syscall_checked<int>(SYS_getresgid, rgid, egid, sgid);
+  LIBC_SANITIZER_SYSCALL_PRE(getresgid, rgid, egid, sgid);
+  auto syscall_ret = syscall_checked<int>(SYS_getresgid, rgid, egid, sgid);
+  LIBC_SANITIZER_SYSCALL_POST(getresgid, syscall_result_to_long(syscall_ret),
+                              rgid, egid, sgid);
+  return syscall_ret;
 #else
 #error "SYS_getresgid and SYS_getresgid32 syscalls not available."
 #endif

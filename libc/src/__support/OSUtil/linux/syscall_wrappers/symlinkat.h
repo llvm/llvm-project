@@ -25,7 +25,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> symlinkat(const char *path1, int fd,
                                    const char *path2) {
-  return syscall_checked<int>(SYS_symlinkat, path1, fd, path2);
+  LIBC_SANITIZER_SYSCALL_PRE(symlinkat, path1, fd, path2);
+  auto syscall_ret = syscall_checked<int>(SYS_symlinkat, path1, fd, path2);
+  LIBC_SANITIZER_SYSCALL_POST(symlinkat, syscall_result_to_long(syscall_ret),
+                              path1, fd, path2);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

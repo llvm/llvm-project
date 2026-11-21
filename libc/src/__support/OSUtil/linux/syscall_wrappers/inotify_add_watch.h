@@ -26,7 +26,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> inotify_add_watch(int fd, const char *pathname,
                                            uint32_t mask) {
-  return syscall_checked<int>(SYS_inotify_add_watch, fd, pathname, mask);
+  LIBC_SANITIZER_SYSCALL_PRE(inotify_add_watch, fd, pathname, mask);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_inotify_add_watch, fd, pathname, mask);
+  LIBC_SANITIZER_SYSCALL_POST(inotify_add_watch,
+                              syscall_result_to_long(syscall_ret), fd, pathname,
+                              mask);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

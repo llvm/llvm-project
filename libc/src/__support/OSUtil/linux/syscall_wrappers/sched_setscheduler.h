@@ -28,7 +28,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_setscheduler(pid_t tid, int policy,
                                             const struct sched_param *param) {
-  return syscall_checked<int>(SYS_sched_setscheduler, tid, policy, param);
+  LIBC_SANITIZER_SYSCALL_PRE(sched_setscheduler, tid, policy, param);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_sched_setscheduler, tid, policy, param);
+  LIBC_SANITIZER_SYSCALL_POST(sched_setscheduler,
+                              syscall_result_to_long(syscall_ret), tid, policy,
+                              param);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

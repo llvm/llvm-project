@@ -26,9 +26,16 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> setgid(gid_t gid) {
 #if defined(SYS_setgid32)
-  return syscall_checked<int>(SYS_setgid32, gid);
+  LIBC_SANITIZER_SYSCALL_PRE(setgid32, gid);
+  auto syscall_ret = syscall_checked<int>(SYS_setgid32, gid);
+  LIBC_SANITIZER_SYSCALL_POST(setgid32, syscall_result_to_long(syscall_ret),
+                              gid);
+  return syscall_ret;
 #elif defined(SYS_setgid)
-  return syscall_checked<int>(SYS_setgid, gid);
+  LIBC_SANITIZER_SYSCALL_PRE(setgid, gid);
+  auto syscall_ret = syscall_checked<int>(SYS_setgid, gid);
+  LIBC_SANITIZER_SYSCALL_POST(setgid, syscall_result_to_long(syscall_ret), gid);
+  return syscall_ret;
 #else
 #error "SYS_setgid and SYS_setgid32 syscalls not available."
 #endif

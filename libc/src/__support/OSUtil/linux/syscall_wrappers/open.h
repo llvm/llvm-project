@@ -22,9 +22,18 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> open(const char *path, int flags, mode_t mode_flags) {
 #ifdef SYS_openat
-  return syscall_checked<int>(SYS_openat, AT_FDCWD, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_PRE(openat, AT_FDCWD, path, flags, mode_flags);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_openat, AT_FDCWD, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_POST(openat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, flags, mode_flags);
+  return syscall_ret;
 #else
-  return syscall_checked<int>(SYS_open, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_PRE(open, path, flags, mode_flags);
+  auto syscall_ret = syscall_checked<int>(SYS_open, path, flags, mode_flags);
+  LIBC_SANITIZER_SYSCALL_POST(open, syscall_result_to_long(syscall_ret), path,
+                              flags, mode_flags);
+  return syscall_ret;
 #endif
 }
 

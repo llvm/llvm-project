@@ -22,7 +22,11 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
-LIBC_INLINE void sync() { syscall_impl<int>(SYS_sync); }
+LIBC_INLINE void sync() {
+  LIBC_SANITIZER_SYSCALL_PRE_0(sync);
+  [[maybe_unused]] auto syscall_ret = syscall_impl<int>(SYS_sync);
+  LIBC_SANITIZER_SYSCALL_POST(sync, static_cast<long>(syscall_ret));
+}
 
 } // namespace linux_syscalls
 } // namespace LIBC_NAMESPACE_DECL

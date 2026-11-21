@@ -26,9 +26,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> unlink(const char *path) {
 #ifdef SYS_unlinkat
-  return syscall_checked<int>(SYS_unlinkat, AT_FDCWD, path, 0);
+  LIBC_SANITIZER_SYSCALL_PRE(unlinkat, AT_FDCWD, path, 0);
+  auto syscall_ret = syscall_checked<int>(SYS_unlinkat, AT_FDCWD, path, 0);
+  LIBC_SANITIZER_SYSCALL_POST(unlinkat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, 0);
+  return syscall_ret;
 #elif defined(SYS_unlink)
-  return syscall_checked<int>(SYS_unlink, path);
+  LIBC_SANITIZER_SYSCALL_PRE(unlink, path);
+  auto syscall_ret = syscall_checked<int>(SYS_unlink, path);
+  LIBC_SANITIZER_SYSCALL_POST(unlink, syscall_result_to_long(syscall_ret),
+                              path);
+  return syscall_ret;
 #else
 #error "unlink and unlinkat syscalls not available."
 #endif

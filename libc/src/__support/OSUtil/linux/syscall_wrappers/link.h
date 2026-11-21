@@ -26,10 +26,18 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> link(const char *oldpath, const char *newpath) {
 #ifdef SYS_linkat
-  return syscall_checked<int>(SYS_linkat, AT_FDCWD, oldpath, AT_FDCWD, newpath,
-                              0);
+  LIBC_SANITIZER_SYSCALL_PRE(linkat, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_linkat, AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+  LIBC_SANITIZER_SYSCALL_POST(linkat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, oldpath, AT_FDCWD, newpath, 0);
+  return syscall_ret;
 #elif defined(SYS_link)
-  return syscall_checked<int>(SYS_link, oldpath, newpath);
+  LIBC_SANITIZER_SYSCALL_PRE(link, oldpath, newpath);
+  auto syscall_ret = syscall_checked<int>(SYS_link, oldpath, newpath);
+  LIBC_SANITIZER_SYSCALL_POST(link, syscall_result_to_long(syscall_ret),
+                              oldpath, newpath);
+  return syscall_ret;
 #else
 #error "link and linkat syscalls not available."
 #endif

@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fchown(int fildes, uid_t owner, gid_t group) {
-  return syscall_checked<int>(SYS_fchown, fildes, owner, group);
+  LIBC_SANITIZER_SYSCALL_PRE(fchown, fildes, owner, group);
+  auto syscall_ret = syscall_checked<int>(SYS_fchown, fildes, owner, group);
+  LIBC_SANITIZER_SYSCALL_POST(fchown, syscall_result_to_long(syscall_ret),
+                              fildes, owner, group);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

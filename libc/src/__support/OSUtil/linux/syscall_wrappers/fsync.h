@@ -24,7 +24,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fsync(int fd) {
-  return syscall_checked<int>(SYS_fsync, fd);
+  LIBC_SANITIZER_SYSCALL_PRE(fsync, fd);
+  auto syscall_ret = syscall_checked<int>(SYS_fsync, fd);
+  LIBC_SANITIZER_SYSCALL_POST(fsync, syscall_result_to_long(syscall_ret), fd);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

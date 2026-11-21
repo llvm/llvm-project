@@ -25,7 +25,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> socketpair(int domain, int type, int protocol,
                                     int sv[2]) {
-  return syscall_checked<int>(SYS_socketpair, domain, type, protocol, sv);
+  LIBC_SANITIZER_SYSCALL_PRE(socketpair, domain, type, protocol, sv);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_socketpair, domain, type, protocol, sv);
+  LIBC_SANITIZER_SYSCALL_POST(socketpair, syscall_result_to_long(syscall_ret),
+                              domain, type, protocol, sv);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -28,7 +28,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<unsigned int> alarm(unsigned int seconds) {
 #ifdef SYS_alarm
-  return syscall_checked<unsigned int>(SYS_alarm, seconds);
+  LIBC_SANITIZER_SYSCALL_PRE(alarm, seconds);
+  auto syscall_ret = syscall_checked<unsigned int>(SYS_alarm, seconds);
+  LIBC_SANITIZER_SYSCALL_POST(alarm, syscall_result_to_long(syscall_ret),
+                              seconds);
+  return syscall_ret;
 #elif defined(SYS_setitimer)
   struct itimerval old_itv;
   struct itimerval itv = {};

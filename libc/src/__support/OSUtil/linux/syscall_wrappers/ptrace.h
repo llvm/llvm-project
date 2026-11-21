@@ -27,7 +27,12 @@ namespace linux_syscalls {
 // PTRACE_PEEK requests is returned through the fourth argument.
 LIBC_INLINE ErrorOr<long> ptrace(int request, pid_t pid, void *addr,
                                  void *data) {
-  return syscall_checked<long>(SYS_ptrace, request, pid, addr, data);
+  LIBC_SANITIZER_SYSCALL_PRE(ptrace, request, pid, addr, data);
+  auto syscall_ret =
+      syscall_checked<long>(SYS_ptrace, request, pid, addr, data);
+  LIBC_SANITIZER_SYSCALL_POST(ptrace, syscall_result_to_long(syscall_ret),
+                              request, pid, addr, data);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

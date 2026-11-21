@@ -39,7 +39,11 @@ LIBC_INLINE ErrorOr<int> sched_rr_get_interval(pid_t tid, struct timespec *tp) {
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_sched_rr_get_interval, tid, tp);
+  LIBC_SANITIZER_SYSCALL_PRE(sched_rr_get_interval, tid, tp);
+  auto syscall_ret = syscall_checked<int>(SYS_sched_rr_get_interval, tid, tp);
+  LIBC_SANITIZER_SYSCALL_POST(sched_rr_get_interval,
+                              syscall_result_to_long(syscall_ret), tid, tp);
+  return syscall_ret;
 #else
 #error                                                                         \
     "SYS_sched_rr_get_interval and SYS_sched_rr_get_interval_time64 syscalls not available."

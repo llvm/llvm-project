@@ -24,6 +24,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> shmdt(const void *shmaddr) {
+  LIBC_SANITIZER_SYSCALL_PRE(shmdt, shmaddr);
+  // Do not call LIBC_SANITIZER_SYSCALL_POST(shmdt, ...): compiler-rt's
+  // POST_SYSCALL(shmdt) calls internal_strlen(shmaddr) on the just-unmapped
+  // shared memory address, causing a SEGV.
   return syscall_checked<int>(SYS_shmdt, shmaddr);
 }
 

@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<off_t> lseek(int fd, off_t offset, int whence) {
 #ifdef SYS_lseek
-  return syscall_checked<off_t>(SYS_lseek, fd, offset, whence);
+  LIBC_SANITIZER_SYSCALL_PRE(lseek, fd, offset, whence);
+  auto ret = syscall_checked<off_t>(SYS_lseek, fd, offset, whence);
+  LIBC_SANITIZER_SYSCALL_POST(lseek, syscall_result_to_long(ret), fd, offset,
+                              whence);
+  return ret;
 #elif defined(SYS_llseek) || defined(SYS__llseek)
 #ifdef SYS_llseek
   constexpr long LLSEEK_SYSCALL_NO = SYS_llseek;
@@ -36,9 +40,14 @@ LIBC_INLINE ErrorOr<off_t> lseek(int fd, off_t offset, int whence) {
 #endif
   off_t result;
   uint64_t offset_64 = static_cast<uint64_t>(offset);
-  auto ret = syscall_checked<int>(
-      LLSEEK_SYSCALL_NO, fd, static_cast<long>(offset_64 >> 32),
-      static_cast<long>(offset_64), &result, whence);
+  long offset_high = static_cast<long>(offset_64 >> 32);
+  long offset_low = static_cast<long>(offset_64);
+  LIBC_SANITIZER_SYSCALL_PRE(llseek, fd, offset_high, offset_low, &result,
+                             whence);
+  auto ret = syscall_checked<int>(LLSEEK_SYSCALL_NO, fd, offset_high,
+                                  offset_low, &result, whence);
+  LIBC_SANITIZER_SYSCALL_POST(llseek, syscall_result_to_long(ret), fd,
+                              offset_high, offset_low, &result, whence);
   if (!ret)
     return Error(ret.error());
   return result;

@@ -29,8 +29,13 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<ssize_t> recvfrom(int sockfd, void *buf, size_t len,
                                       int flags, sockaddr *__restrict src_addr,
                                       socklen_t *__restrict addrlen) {
-  return syscall_checked<ssize_t>(SYS_recvfrom, sockfd, buf, len, flags,
-                                  src_addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_PRE(recvfrom, sockfd, buf, len, flags, src_addr,
+                             addrlen);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_recvfrom, sockfd, buf, len,
+                                              flags, src_addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_POST(recvfrom, syscall_result_to_long(syscall_ret),
+                              sockfd, buf, len, flags, src_addr, addrlen);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -26,7 +26,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<size_t> getdents64(int fd, void *buffer, size_t count) {
 #ifdef SYS_getdents64
-  return syscall_checked<size_t>(SYS_getdents64, fd, buffer, count);
+  LIBC_SANITIZER_SYSCALL_PRE(getdents64, fd, buffer, count);
+  auto syscall_ret = syscall_checked<size_t>(SYS_getdents64, fd, buffer, count);
+  LIBC_SANITIZER_SYSCALL_POST(getdents64, syscall_result_to_long(syscall_ret),
+                              fd, buffer, count);
+  return syscall_ret;
 #else
 #error "getdents64 syscalls not available to perform a fetch dirents operation."
 #endif

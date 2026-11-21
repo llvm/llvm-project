@@ -27,7 +27,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> semop(int semid, struct sembuf *sops, size_t nsops) {
-  return syscall_checked<int>(SYS_semop, semid, sops, nsops);
+  LIBC_SANITIZER_SYSCALL_PRE(semop, semid, sops, nsops);
+  auto syscall_ret = syscall_checked<int>(SYS_semop, semid, sops, nsops);
+  LIBC_SANITIZER_SYSCALL_POST(semop, syscall_result_to_long(syscall_ret), semid,
+                              sops, nsops);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

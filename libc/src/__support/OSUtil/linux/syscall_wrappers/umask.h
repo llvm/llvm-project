@@ -25,7 +25,10 @@ namespace linux_syscalls {
 
 LIBC_INLINE mode_t umask(mode_t cmask) {
   // umask is expected to always succeed, thus no error checking here.
-  return syscall_impl<mode_t>(SYS_umask, cmask);
+  LIBC_SANITIZER_SYSCALL_PRE(umask, cmask);
+  auto syscall_ret = syscall_impl<mode_t>(SYS_umask, cmask);
+  LIBC_SANITIZER_SYSCALL_POST(umask, static_cast<long>(syscall_ret), cmask);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

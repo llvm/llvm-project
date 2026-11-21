@@ -26,9 +26,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> getresuid(uid_t *ruid, uid_t *euid, uid_t *suid) {
 #if defined(SYS_getresuid32)
-  return syscall_checked<int>(SYS_getresuid32, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_PRE(getresuid32, ruid, euid, suid);
+  auto syscall_ret = syscall_checked<int>(SYS_getresuid32, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_POST(getresuid32, syscall_result_to_long(syscall_ret),
+                              ruid, euid, suid);
+  return syscall_ret;
 #elif defined(SYS_getresuid)
-  return syscall_checked<int>(SYS_getresuid, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_PRE(getresuid, ruid, euid, suid);
+  auto syscall_ret = syscall_checked<int>(SYS_getresuid, ruid, euid, suid);
+  LIBC_SANITIZER_SYSCALL_POST(getresuid, syscall_result_to_long(syscall_ret),
+                              ruid, euid, suid);
+  return syscall_ret;
 #else
 #error "SYS_getresuid and SYS_getresuid32 syscalls not available."
 #endif

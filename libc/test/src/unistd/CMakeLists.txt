@@ -348,6 +348,7 @@ add_libc_test(
     read_write_test.cpp
   DEPENDS
     libc.include.unistd
+    libc.src.__support.macros.sanitizer
     libc.src.unistd.close
     libc.src.unistd.pipe
     libc.src.unistd.read

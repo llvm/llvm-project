@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> sendmsg(int sockfd, const struct msghdr *msg,
                                      int flags) {
-  return syscall_checked<ssize_t>(SYS_sendmsg, sockfd, msg, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(sendmsg, sockfd, msg, flags);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_sendmsg, sockfd, msg, flags);
+  LIBC_SANITIZER_SYSCALL_POST(sendmsg, syscall_result_to_long(syscall_ret),
+                              sockfd, msg, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

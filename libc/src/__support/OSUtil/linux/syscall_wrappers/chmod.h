@@ -29,9 +29,17 @@ LIBC_INLINE ErrorOr<int> chmod(const char *path, mode_t mode) {
 #if defined(SYS_fchmodat2)
   return syscall_checked<int>(SYS_fchmodat2, AT_FDCWD, path, mode, 0);
 #elif defined(SYS_fchmodat)
-  return syscall_checked<int>(SYS_fchmodat, AT_FDCWD, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(fchmodat, AT_FDCWD, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_fchmodat, AT_FDCWD, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(fchmodat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, mode);
+  return syscall_ret;
 #elif defined(SYS_chmod)
-  return syscall_checked<int>(SYS_chmod, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(chmod, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_chmod, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(chmod, syscall_result_to_long(syscall_ret), path,
+                              mode);
+  return syscall_ret;
 #else
 #error "chmod, fchmodat and fchmodat2 syscalls not available."
 #endif

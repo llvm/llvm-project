@@ -24,7 +24,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> sched_yield() {
-  return syscall_checked<int>(SYS_sched_yield);
+  LIBC_SANITIZER_SYSCALL_PRE_0(sched_yield);
+  auto syscall_ret = syscall_checked<int>(SYS_sched_yield);
+  LIBC_SANITIZER_SYSCALL_POST(sched_yield, syscall_result_to_long(syscall_ret));
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

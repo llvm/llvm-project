@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<void *> shmat(int shmid, const void *shmaddr, int shmflg) {
-  return syscall_checked<void *>(SYS_shmat, shmid, shmaddr, shmflg);
+  LIBC_SANITIZER_SYSCALL_PRE(shmat, shmid, shmaddr, shmflg);
+  auto syscall_ret = syscall_checked<void *>(SYS_shmat, shmid, shmaddr, shmflg);
+  LIBC_SANITIZER_SYSCALL_POST(shmat, syscall_result_to_long(syscall_ret), shmid,
+                              shmaddr, shmflg);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

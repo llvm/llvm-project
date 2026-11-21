@@ -27,9 +27,17 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> mkdir(const char *path, mode_t mode) {
 #ifdef SYS_mkdirat
-  return syscall_checked<int>(SYS_mkdirat, AT_FDCWD, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(mkdirat, AT_FDCWD, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_mkdirat, AT_FDCWD, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(mkdirat, syscall_result_to_long(syscall_ret),
+                              AT_FDCWD, path, mode);
+  return syscall_ret;
 #else
-  return syscall_checked<int>(SYS_mkdir, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(mkdir, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_mkdir, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(mkdir, syscall_result_to_long(syscall_ret), path,
+                              mode);
+  return syscall_ret;
 #endif
 }
 

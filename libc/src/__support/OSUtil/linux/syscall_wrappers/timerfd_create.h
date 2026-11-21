@@ -24,7 +24,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> timerfd_create(int clockid, int flags) {
-  return syscall_checked<int>(SYS_timerfd_create, clockid, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(timerfd_create, clockid, flags);
+  auto syscall_ret = syscall_checked<int>(SYS_timerfd_create, clockid, flags);
+  LIBC_SANITIZER_SYSCALL_POST(
+      timerfd_create, syscall_result_to_long(syscall_ret), clockid, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

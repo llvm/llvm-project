@@ -29,8 +29,13 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<ssize_t> sendto(int sockfd, const void *buf, size_t len,
                                     int flags, const struct sockaddr *dest_addr,
                                     socklen_t addrlen) {
-  return syscall_checked<ssize_t>(SYS_sendto, sockfd, buf, len, flags,
-                                  dest_addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_PRE(sendto, sockfd, buf, len, flags, dest_addr,
+                             addrlen);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_sendto, sockfd, buf, len,
+                                              flags, dest_addr, addrlen);
+  LIBC_SANITIZER_SYSCALL_POST(sendto, syscall_result_to_long(syscall_ret),
+                              sockfd, buf, len, flags, dest_addr, addrlen);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -15,6 +15,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/sanitizer.h"
 
 #ifdef LIBC_TARGET_ARCH_IS_X86_32
 #include "i386/syscall.h"
@@ -54,6 +55,12 @@ template <typename R, typename... Ts>
   if (ret >= -MAX_ERRNO)
     return Error(static_cast<int>(-ret));
   return cpp::bit_or_static_cast<R>(ret);
+}
+
+template <typename R>
+LIBC_INLINE long syscall_result_to_long(const ErrorOr<R> &res) {
+  return res.has_value() ? cpp::bit_or_static_cast<long>(res.value())
+                         : -static_cast<long>(res.error());
 }
 } // namespace linux_syscalls
 

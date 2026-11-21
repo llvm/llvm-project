@@ -27,8 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fchownat(int dirfd, const char *pathname, uid_t owner,
                                   gid_t group, int flags) {
-  return syscall_checked<int>(SYS_fchownat, dirfd, pathname, owner, group,
-                              flags);
+  LIBC_SANITIZER_SYSCALL_PRE(fchownat, dirfd, pathname, owner, group, flags);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_fchownat, dirfd, pathname, owner, group, flags);
+  LIBC_SANITIZER_SYSCALL_POST(fchownat, syscall_result_to_long(syscall_ret),
+                              dirfd, pathname, owner, group, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

@@ -27,7 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> accept4(int sockfd, struct sockaddr *addr,
                                  socklen_t *addrlen, int flags) {
-  return syscall_checked<int>(SYS_accept4, sockfd, addr, addrlen, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(accept4, sockfd, addr, addrlen, flags);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_accept4, sockfd, addr, addrlen, flags);
+  LIBC_SANITIZER_SYSCALL_POST(accept4, syscall_result_to_long(syscall_ret),
+                              sockfd, addr, addrlen, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

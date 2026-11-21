@@ -26,7 +26,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> flistxattr(int fd, char *list, size_t size) {
-  return syscall_checked<ssize_t>(SYS_flistxattr, fd, list, size);
+  LIBC_SANITIZER_SYSCALL_PRE(flistxattr, fd, list, size);
+  auto syscall_ret = syscall_checked<ssize_t>(SYS_flistxattr, fd, list, size);
+  LIBC_SANITIZER_SYSCALL_POST(flistxattr, syscall_result_to_long(syscall_ret),
+                              fd, list, size);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

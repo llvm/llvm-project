@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> mkdirat(int dfd, const char *path, mode_t mode) {
-  return syscall_checked<int>(SYS_mkdirat, dfd, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(mkdirat, dfd, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_mkdirat, dfd, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(mkdirat, syscall_result_to_long(syscall_ret), dfd,
+                              path, mode);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

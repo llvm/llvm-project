@@ -48,11 +48,15 @@ LIBC_INLINE ErrorOr<int> raise(int sig) {
     if (!status.has_value())
       return status;
 
+    LIBC_SANITIZER_SYSCALL_PRE_0(getpid);
     long pid = syscall_impl<long>(SYS_getpid);
+    LIBC_SANITIZER_SYSCALL_POST(getpid, static_cast<long>(pid));
     if (pid < 0)
       return Error(-static_cast<int>(pid));
 
+    LIBC_SANITIZER_SYSCALL_PRE_0(gettid);
     long tid = syscall_impl<long>(SYS_gettid);
+    LIBC_SANITIZER_SYSCALL_POST(gettid, static_cast<long>(tid));
     if (tid < 0)
       return Error(-static_cast<int>(tid));
 

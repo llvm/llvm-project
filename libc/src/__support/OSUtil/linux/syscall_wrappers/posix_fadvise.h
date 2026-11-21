@@ -45,22 +45,47 @@ LIBC_INLINE ErrorOr<int> posix_fadvise(int fd, int64_t offset, int64_t len,
     return syscall_checked<int>(SYS_arm_fadvise64_64, fd, advice, offset_low,
                                 offset_high, len_low, len_high);
 #elif defined(SYS_fadvise64_64)
-    return syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
-                                len_low, len_high, advice);
+    LIBC_SANITIZER_SYSCALL_PRE(fadvise64_64, fd, offset_low, offset_high,
+                               len_low, len_high, advice);
+    auto syscall_ret =
+        syscall_checked<int>(SYS_fadvise64_64, fd, offset_low, offset_high,
+                             len_low, len_high, advice);
+    LIBC_SANITIZER_SYSCALL_POST(
+        fadvise64_64, syscall_result_to_long(syscall_ret), fd, offset_low,
+        offset_high, len_low, len_high, advice);
+    return syscall_ret;
 #elif defined(SYS_fadvise64)
     if (len < 0 ||
         static_cast<uint64_t>(len) > cpp::numeric_limits<size_t>::max())
       return Error(EINVAL);
-    return syscall_checked<int>(SYS_fadvise64, fd, offset_low, offset_high,
+    LIBC_SANITIZER_SYSCALL_PRE(fadvise64, fd, offset_low, offset_high,
+                               static_cast<size_t>(len), advice);
+    auto syscall_ret =
+        syscall_checked<int>(SYS_fadvise64, fd, offset_low, offset_high,
+                             static_cast<size_t>(len), advice);
+    LIBC_SANITIZER_SYSCALL_POST(fadvise64, syscall_result_to_long(syscall_ret),
+                                fd, offset_low, offset_high,
                                 static_cast<size_t>(len), advice);
+    return syscall_ret;
 #else
 #error "fadvise64 syscall not available."
 #endif
   } else {
 #if defined(SYS_fadvise64)
-    return syscall_checked<int>(SYS_fadvise64, fd, offset, len, advice);
+    LIBC_SANITIZER_SYSCALL_PRE(fadvise64, fd, offset, len, advice);
+    auto syscall_ret =
+        syscall_checked<int>(SYS_fadvise64, fd, offset, len, advice);
+    LIBC_SANITIZER_SYSCALL_POST(fadvise64, syscall_result_to_long(syscall_ret),
+                                fd, offset, len, advice);
+    return syscall_ret;
 #elif defined(SYS_fadvise64_64)
-    return syscall_checked<int>(SYS_fadvise64_64, fd, offset, len, advice);
+    LIBC_SANITIZER_SYSCALL_PRE(fadvise64_64, fd, offset, len, advice);
+    auto syscall_ret =
+        syscall_checked<int>(SYS_fadvise64_64, fd, offset, len, advice);
+    LIBC_SANITIZER_SYSCALL_POST(fadvise64_64,
+                                syscall_result_to_long(syscall_ret), fd, offset,
+                                len, advice);
+    return syscall_ret;
 #else
 #error "fadvise64 syscall not available."
 #endif

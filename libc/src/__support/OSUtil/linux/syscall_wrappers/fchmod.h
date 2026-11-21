@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> fchmod(int fd, mode_t mode) {
-  return syscall_checked<int>(SYS_fchmod, fd, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(fchmod, fd, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_fchmod, fd, mode);
+  LIBC_SANITIZER_SYSCALL_POST(fchmod, syscall_result_to_long(syscall_ret), fd,
+                              mode);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

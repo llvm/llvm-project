@@ -27,7 +27,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> getxattr(const char *path, const char *name,
                                       void *value, size_t size) {
-  return syscall_checked<ssize_t>(SYS_getxattr, path, name, value, size);
+  LIBC_SANITIZER_SYSCALL_PRE(getxattr, path, name, value, size);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_getxattr, path, name, value, size);
+  LIBC_SANITIZER_SYSCALL_POST(getxattr, syscall_result_to_long(syscall_ret),
+                              path, name, value, size);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

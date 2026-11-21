@@ -30,11 +30,21 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<ssize_t> sendfile(int out_fd, int in_fd, off_t *offset,
                                       size_t count) {
 #ifdef SYS_sendfile
-  return syscall_checked<ssize_t>(SYS_sendfile, out_fd, in_fd, offset, count);
+  LIBC_SANITIZER_SYSCALL_PRE(sendfile, out_fd, in_fd, offset, count);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_sendfile, out_fd, in_fd, offset, count);
+  LIBC_SANITIZER_SYSCALL_POST(sendfile, syscall_result_to_long(syscall_ret),
+                              out_fd, in_fd, offset, count);
+  return syscall_ret;
 #elif defined(SYS_sendfile64)
   // Same as sendfile but can handle large offsets.
   static_assert(sizeof(off_t) == 8);
-  return syscall_checked<ssize_t>(SYS_sendfile64, out_fd, in_fd, offset, count);
+  LIBC_SANITIZER_SYSCALL_PRE(sendfile64, out_fd, in_fd, offset, count);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_sendfile64, out_fd, in_fd, offset, count);
+  LIBC_SANITIZER_SYSCALL_POST(sendfile64, syscall_result_to_long(syscall_ret),
+                              out_fd, in_fd, offset, count);
+  return syscall_ret;
 #else
 #error "sendfile and sendfile64 syscalls not available."
 #endif

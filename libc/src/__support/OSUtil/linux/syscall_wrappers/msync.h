@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> msync(void *addr, size_t len, int flags) {
-  return syscall_checked<int>(SYS_msync, addr, len, flags);
+  LIBC_SANITIZER_SYSCALL_PRE(msync, addr, len, flags);
+  auto syscall_ret = syscall_checked<int>(SYS_msync, addr, len, flags);
+  LIBC_SANITIZER_SYSCALL_POST(msync, syscall_result_to_long(syscall_ret), addr,
+                              len, flags);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

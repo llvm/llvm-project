@@ -39,7 +39,11 @@ LIBC_INLINE ErrorOr<int> nanosleep(const timespec *req, timespec *rem) {
       "This legacy syscall fallback is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_nanosleep, req, rem);
+  LIBC_SANITIZER_SYSCALL_PRE(nanosleep, req, rem);
+  auto syscall_ret = syscall_checked<int>(SYS_nanosleep, req, rem);
+  LIBC_SANITIZER_SYSCALL_POST(nanosleep, syscall_result_to_long(syscall_ret),
+                              req, rem);
+  return syscall_ret;
 #else
 #error "SYS_nanosleep and SYS_clock_nanosleep_time64 syscalls not available."
 #endif

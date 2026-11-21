@@ -25,7 +25,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> timer_getoverrun(timer_t timerid) {
-  return syscall_checked<int>(SYS_timer_getoverrun, timerid);
+  LIBC_SANITIZER_SYSCALL_PRE(timer_getoverrun, timerid);
+  auto syscall_ret = syscall_checked<int>(SYS_timer_getoverrun, timerid);
+  LIBC_SANITIZER_SYSCALL_POST(timer_getoverrun,
+                              syscall_result_to_long(syscall_ret), timerid);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

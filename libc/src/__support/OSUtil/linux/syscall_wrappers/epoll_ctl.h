@@ -27,7 +27,11 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> epoll_ctl(int epfd, int op, int fd,
                                    epoll_event *event) {
-  return syscall_checked<int>(SYS_epoll_ctl, epfd, op, fd, event);
+  LIBC_SANITIZER_SYSCALL_PRE(epoll_ctl, epfd, op, fd, event);
+  auto syscall_ret = syscall_checked<int>(SYS_epoll_ctl, epfd, op, fd, event);
+  LIBC_SANITIZER_SYSCALL_POST(epoll_ctl, syscall_result_to_long(syscall_ret),
+                              epfd, op, fd, event);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

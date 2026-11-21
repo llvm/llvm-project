@@ -29,8 +29,12 @@ LIBC_INLINE ErrorOr<int> renameat(int olddirfd, const char *oldpath,
   return syscall_checked<int>(SYS_renameat2, olddirfd, oldpath, newdirfd,
                               newpath, 0);
 #elif defined(SYS_renameat)
-  return syscall_checked<int>(SYS_renameat, olddirfd, oldpath, newdirfd,
-                              newpath);
+  LIBC_SANITIZER_SYSCALL_PRE(renameat, olddirfd, oldpath, newdirfd, newpath);
+  auto syscall_ret =
+      syscall_checked<int>(SYS_renameat, olddirfd, oldpath, newdirfd, newpath);
+  LIBC_SANITIZER_SYSCALL_POST(renameat, syscall_result_to_long(syscall_ret),
+                              olddirfd, oldpath, newdirfd, newpath);
+  return syscall_ret;
 #else
 #error "renameat and renameat2 syscalls not available."
 #endif

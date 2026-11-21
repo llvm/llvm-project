@@ -31,7 +31,12 @@ namespace linux_syscalls {
 LIBC_INLINE ErrorOr<pid_t> wait4(pid_t pid, int *wstatus, int options,
                                  struct rusage *rusage) {
 #ifdef SYS_wait4
-  return syscall_checked<pid_t>(SYS_wait4, pid, wstatus, options, rusage);
+  LIBC_SANITIZER_SYSCALL_PRE(wait4, pid, wstatus, options, rusage);
+  auto syscall_ret =
+      syscall_checked<pid_t>(SYS_wait4, pid, wstatus, options, rusage);
+  LIBC_SANITIZER_SYSCALL_POST(wait4, syscall_result_to_long(syscall_ret), pid,
+                              wstatus, options, rusage);
+  return syscall_ret;
 #elif defined(SYS_waitid)
   // Architectures without wait4 (e.g. riscv32) provide waitid instead.
   int idtype = P_PID;
@@ -52,8 +57,11 @@ LIBC_INLINE ErrorOr<pid_t> wait4(pid_t pid, int *wstatus, int options,
   // requires this since POSIX.1-2008 TC1.
   siginfo_t info;
   info.si_pid = 0;
+  LIBC_SANITIZER_SYSCALL_PRE(waitid, idtype, pid, &info, options, rusage);
   auto result =
       syscall_checked<pid_t>(SYS_waitid, idtype, pid, &info, options, rusage);
+  LIBC_SANITIZER_SYSCALL_POST(waitid, syscall_result_to_long(result), idtype,
+                              pid, &info, options, rusage);
   if (!result.has_value())
     return result;
 

@@ -26,7 +26,12 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<ssize_t> readlinkat(int dfd, const char *path, char *buf,
                                         size_t bufsiz) {
-  return syscall_checked<ssize_t>(SYS_readlinkat, dfd, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_PRE(readlinkat, dfd, path, buf, bufsiz);
+  auto syscall_ret =
+      syscall_checked<ssize_t>(SYS_readlinkat, dfd, path, buf, bufsiz);
+  LIBC_SANITIZER_SYSCALL_POST(readlinkat, syscall_result_to_long(syscall_ret),
+                              dfd, path, buf, bufsiz);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

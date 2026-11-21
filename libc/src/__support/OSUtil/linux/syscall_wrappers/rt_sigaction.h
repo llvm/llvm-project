@@ -26,8 +26,13 @@ namespace linux_syscalls {
 
 LIBC_INLINE ErrorOr<int> rt_sigaction(int signum, const void *act,
                                       void *oldact) {
-  return syscall_checked<int>(SYS_rt_sigaction, signum, act, oldact,
-                              sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_PRE(rt_sigaction, signum, act, oldact,
+                             sizeof(sigset_t));
+  auto syscall_ret = syscall_checked<int>(SYS_rt_sigaction, signum, act, oldact,
+                                          sizeof(sigset_t));
+  LIBC_SANITIZER_SYSCALL_POST(rt_sigaction, syscall_result_to_long(syscall_ret),
+                              signum, act, oldact, sizeof(sigset_t));
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

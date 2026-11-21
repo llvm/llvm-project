@@ -28,7 +28,11 @@ namespace linux_syscalls {
 // because its libc counterpart returns an int and the set of possible return
 // values fits: 0, -EFAULT (-14) or -EINVAL (-22).
 LIBC_INLINE ErrorOr<int> getrusage(int who, struct rusage *ru) {
-  return syscall_checked<int>(SYS_getrusage, who, ru);
+  LIBC_SANITIZER_SYSCALL_PRE(getrusage, who, ru);
+  auto syscall_ret = syscall_checked<int>(SYS_getrusage, who, ru);
+  LIBC_SANITIZER_SYSCALL_POST(getrusage, syscall_result_to_long(syscall_ret),
+                              who, ru);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

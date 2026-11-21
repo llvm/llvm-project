@@ -34,7 +34,11 @@ LIBC_INLINE ErrorOr<int> fchmodat(int fd, const char *path, mode_t mode,
 #endif
   if (flags != 0)
     return Error(ENOTSUP);
-  return syscall_checked<int>(SYS_fchmodat, fd, path, mode);
+  LIBC_SANITIZER_SYSCALL_PRE(fchmodat, fd, path, mode);
+  auto syscall_ret = syscall_checked<int>(SYS_fchmodat, fd, path, mode);
+  LIBC_SANITIZER_SYSCALL_POST(fchmodat, syscall_result_to_long(syscall_ret), fd,
+                              path, mode);
+  return syscall_ret;
 }
 
 } // namespace linux_syscalls

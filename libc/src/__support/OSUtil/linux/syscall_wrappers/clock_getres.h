@@ -37,7 +37,11 @@ LIBC_INLINE ErrorOr<int> clock_getres(clockid_t clockid, timespec *res) {
       "This is only safe on platforms where tv_nsec "
       "matches the register size (long). It is unsafe on 32-bit platforms "
       "with 64-bit tv_nsec.");
-  return syscall_checked<int>(SYS_clock_getres, clockid, res);
+  LIBC_SANITIZER_SYSCALL_PRE(clock_getres, clockid, res);
+  auto syscall_ret = syscall_checked<int>(SYS_clock_getres, clockid, res);
+  LIBC_SANITIZER_SYSCALL_POST(clock_getres, syscall_result_to_long(syscall_ret),
+                              clockid, res);
+  return syscall_ret;
 #else
 #error "SYS_clock_getres and SYS_clock_getres_time64 syscalls not available."
 #endif
