@@ -17,6 +17,7 @@ add_public_tablegen_target(LoongArchCommonTableGen)
 
 add_llvm_target(LoongArchCodeGen
   LoongArchAsmPrinter.cpp
+  LoongArchCodeGenPassBuilder.cpp
   LoongArchDeadRegisterDefinitions.cpp
   LoongArchExpandAtomicPseudoInsts.cpp
   LoongArchExpandPseudoInsts.cpp
@@ -45,6 +46,7 @@ add_llvm_target(LoongArchCodeGen
   LoongArchDesc
   LoongArchInfo
   MC
+  Passes
   Scalar
   SelectionDAG
   Support
