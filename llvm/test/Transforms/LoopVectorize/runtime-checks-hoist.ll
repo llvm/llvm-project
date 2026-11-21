@@ -2704,9 +2704,9 @@ define void @expanded_bounds_access_via_phi(ptr %dst, ptr %src, ptr %other, ptr 
 ; CHECK-LABEL: define void @expanded_bounds_access_via_phi(
 ; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[OTHER:%.*]], ptr [[FLAGS:%.*]], i64 [[S:%.*]], i64 [[M:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[S]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[N]], 2
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[OTHER]], i64 [[TMP1]]
+; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[S]], 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[M]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[S]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP3]], 2

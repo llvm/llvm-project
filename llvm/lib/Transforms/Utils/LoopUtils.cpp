@@ -2169,10 +2169,13 @@ struct PointerBounds {
   Value *StrideToCheck;
 };
 
-RuntimeCheckBounds
-llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
-                            const Loop *TheLoop, ScalarEvolution &SE,
-                            bool HoistRuntimeChecks) {
+/// Return the bounds of \p CG in \p TheLoop. If \p HoistRuntimeChecks is true,
+/// bounds varying in the parent loop of \p TheLoop may be widened to cover the
+/// whole parent loop, so that checks using them can be hoisted out of it.
+static RuntimeCheckGroupBounds getGroupBounds(const RuntimeCheckingPtrGroup *CG,
+                                              const Loop *TheLoop,
+                                              ScalarEvolution &SE,
+                                              bool HoistRuntimeChecks) {
   const SCEV *Low = CG->Low, *High = CG->High, *Stride = nullptr;
 
   // If the Low and High values are themselves loop-variant, then we may want
@@ -2220,21 +2223,33 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
   return {Low, High, Stride};
 }
 
-/// Expand code for the lower and upper bound of the pointer group \p CG
-/// in \p TheLoop.  \return the values for the bounds.
+RuntimeCheckBounds llvm::getRuntimeCheckBounds(const RuntimePointerCheck &Check,
+                                               const Loop *TheLoop,
+                                               ScalarEvolution &SE,
+                                               bool HoistRuntimeChecks) {
+  auto GetBounds = [&](const RuntimeCheckingPtrGroup *CG) {
+    LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
+    RuntimeCheckGroupBounds Bounds =
+        getGroupBounds(CG, TheLoop, SE, HoistRuntimeChecks);
+    LLVM_DEBUG(dbgs() << "Start: " << *Bounds.Low << " End: " << *Bounds.High
+                      << "\n");
+    return Bounds;
+  };
+  // Braced initialization evaluates the groups in order.
+  return {GetBounds(Check.first), GetBounds(Check.second)};
+}
+
+/// Expand code for the lower and upper bound \p Bounds of the pointer group
+/// \p CG.  \return the values for the bounds.
 static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
-                                  Loop *TheLoop, Instruction *Loc,
-                                  SCEVExpander &Exp, bool HoistRuntimeChecks) {
+                                  const RuntimeCheckGroupBounds &Bounds,
+                                  Instruction *Loc, SCEVExpander &Exp) {
   LLVMContext &Ctx = Loc->getContext();
   Type *PtrArithTy = PointerType::get(Ctx, CG->AddressSpace);
 
-  Value *Start = nullptr, *End = nullptr;
-  LLVM_DEBUG(dbgs() << "LAA: Adding RT check for range:\n");
-  auto [Low, High, Stride] =
-      getRuntimeCheckBounds(CG, TheLoop, *Exp.getSE(), HoistRuntimeChecks);
-
-  Start = Exp.expandCodeFor(Low, PtrArithTy, Loc);
-  End = Exp.expandCodeFor(High, PtrArithTy, Loc);
+  auto [Low, High, Stride] = Bounds;
+  Value *Start = Exp.expandCodeFor(Low, PtrArithTy, Loc);
+  Value *End = Exp.expandCodeFor(High, PtrArithTy, Loc);
   if (CG->NeedsFreeze) {
     IRBuilder<> Builder(Loc);
     Start = Builder.CreateFreeze(Start, Start->getName() + ".fr");
@@ -2242,7 +2257,6 @@ static PointerBounds expandBounds(const RuntimeCheckingPtrGroup *CG,
   }
   Value *StrideVal =
       Stride ? Exp.expandCodeFor(Stride, Stride->getType(), Loc) : nullptr;
-  LLVM_DEBUG(dbgs() << "Start: " << *Low << " End: " << *High << "\n");
   return {Start, End, StrideVal};
 }
 
@@ -2257,10 +2271,12 @@ expandBounds(const SmallVectorImpl<RuntimePointerCheck> &PointerChecks, Loop *L,
   // same bounds once.
   transform(PointerChecks, std::back_inserter(ChecksWithBounds),
             [&](const RuntimePointerCheck &Check) {
-              PointerBounds First = expandBounds(Check.first, L, Loc, Exp,
-                                                 HoistRuntimeChecks),
-                            Second = expandBounds(Check.second, L, Loc, Exp,
-                                                  HoistRuntimeChecks);
+              RuntimeCheckBounds Bounds = getRuntimeCheckBounds(
+                  Check, L, *Exp.getSE(), HoistRuntimeChecks);
+              PointerBounds First =
+                  expandBounds(Check.first, Bounds.First, Loc, Exp);
+              PointerBounds Second =
+                  expandBounds(Check.second, Bounds.Second, Loc, Exp);
               return std::make_pair(First, Second);
             });
 

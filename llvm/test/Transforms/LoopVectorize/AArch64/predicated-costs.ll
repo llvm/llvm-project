@@ -43,6 +43,9 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[DST_2]], i64 1
 ; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr i8, ptr [[SRC]], i64 1
+; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_2]], [[TMP19]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[TMP18]]
+; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = shl i64 [[OFF]], 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[DST_1]], i64 [[TMP20]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext nneg i32 [[TMP0]] to i64
@@ -52,9 +55,6 @@ define void @test_predicated_load_cast_hint(ptr %dst.1, ptr %dst.2, ptr %src, i8
 ; CHECK-NEXT:    [[TMP26:%.*]] = add i64 [[TMP25]], [[TMP20]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = add i64 [[TMP26]], 8
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr i8, ptr [[DST_1]], i64 [[TMP27]]
-; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST_2]], [[TMP19]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[TMP18]]
-; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
 ; CHECK-NEXT:    [[BOUND016:%.*]] = icmp ult ptr [[DST_2]], [[TMP28]]
 ; CHECK-NEXT:    [[BOUND117:%.*]] = icmp ult ptr [[TMP21]], [[TMP18]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT18:%.*]] = and i1 [[BOUND016]], [[BOUND117]]

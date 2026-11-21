@@ -10,11 +10,11 @@ define void @dep_between_interleaved_store_and_load_with_runtime_checks(ptr %a, 
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 800
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[B]], i64 400
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFF]], 400
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[TMP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[B]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[OFF]], 400
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[B]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[BOUND010:%.*]] = icmp ult ptr [[A]], [[TMP3]]
 ; CHECK-NEXT:    [[BOUND111:%.*]] = icmp ult ptr [[B_OFF]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT12:%.*]] = and i1 [[BOUND010]], [[BOUND111]]
@@ -93,11 +93,11 @@ define void @dep_between_interleaved_store_and_load_with_unknown_dep_same_object
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[A]], i64 796
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr nuw i8, ptr [[A]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[A]], i64 800
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFF]], 796
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[A]], [[TMP2]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP1]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[OFF]], 796
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[BOUND011:%.*]] = icmp ult ptr [[A]], [[TMP4]]
 ; CHECK-NEXT:    [[BOUND112:%.*]] = icmp ult ptr [[A_OFF]], [[TMP0]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT13:%.*]] = and i1 [[BOUND011]], [[BOUND112]]
