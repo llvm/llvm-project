@@ -559,7 +559,10 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // debugger and target via FindDebuggerWithID and
     // FindTargetByGloballyUniqueID.
     llvm::json::Object configuration;
-    configuration.try_emplace("type", "lldb");
+    // Start the child with the debug type of this session, so the client
+    // picks the same debug adapter. This lets clients that contribute their
+    // own debug type (not `lldb`) own the child session.
+    configuration.try_emplace("type", dap->configuration.type);
     configuration.try_emplace("name", created_target.GetTargetSessionName());
 
     json::Object session{{"targetId", created_target.GetGloballyUniqueID()},

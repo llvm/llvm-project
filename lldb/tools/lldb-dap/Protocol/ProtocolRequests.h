@@ -149,6 +149,13 @@ using InitializeResponse = std::optional<Capabilities>;
 /// See package.json debuggers > configurationAttributes > launch or attach >
 /// properties for common configurations.
 struct Configuration {
+  /// The debug type the client launched or attached this session with, such as
+  /// `lldb-dap`. When lldb-dap asks the client to start a session for a new
+  /// target (`startDebugging`), it names this type so that the client starts
+  /// the child with the same debug adapter. Clients that do not send a type
+  /// get `lldb`.
+  std::string type = "lldb";
+
   /// Specify a working directory to use when launching `lldb-dap`. If the debug
   /// information in your executable contains relative paths, this option can be
   /// used so that `lldb-dap` can find source files and object files that have
