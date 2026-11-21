@@ -340,6 +340,12 @@ protected:
   ///
   llvm::Value *getThreadID(CodeGenFunction &CGF, SourceLocation Loc);
 
+  /// Emits the call to __kmpc_copyprivate for the variables whose addresses are
+  /// stored in \p CopyprivateList (of type \p CopyprivateArrayTy).
+  void emitCopyprivateCall(CodeGenFunction &CGF, SourceLocation Loc,
+                           Address CopyprivateList, QualType CopyprivateArrayTy,
+                           llvm::Value *CpyFn, llvm::Value *DidIt);
+
   /// Get the function name of an outlined region.
   std::string getOutlinedHelperName(StringRef Name) const;
   std::string getOutlinedHelperName(CodeGenFunction &CGF) const;
@@ -854,6 +860,20 @@ public:
                                 ArrayRef<const Expr *> DestExprs,
                                 ArrayRef<const Expr *> SrcExprs,
                                 ArrayRef<const Expr *> AssignmentOps);
+
+  /// Emits the copyprivate broadcast (with its barrier) of the scalar private
+  /// variables at \p Addrs from the thread for which the flag at \p DidIt is
+  /// non-zero to all other threads of the team.
+  void emitCopyprivateBroadcast(CodeGenFunction &CGF, SourceLocation Loc,
+                                ArrayRef<Address> Addrs, Address DidIt);
+
+  /// Emits __kmpc_aligned_alloc of \p Size bytes aligned to \p Alignment in
+  /// the default allocator and returns the pointer.
+  llvm::Value *emitAllocCall(CodeGenFunction &CGF, SourceLocation Loc,
+                             llvm::Value *Size, CharUnits Alignment);
+
+  /// Emits __kmpc_free of the memory \p Ptr allocated with emitAllocCall.
+  void emitFreeCall(CodeGenFunction &CGF, SourceLocation Loc, llvm::Value *Ptr);
 
   /// Emit an ordered region.
   /// \param OrderedOpGen Generator for the statement associated with the given
