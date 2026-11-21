@@ -1573,7 +1573,7 @@ public:
   }
 
   void replaceLoadWithValue(LoadInst *LI, Value *V) const override {
-    SafetyInfo.removeUsersOf(LI);
+    Deep.SafetyInfo.removeUsersOf(LI);
   }
 
   void instructionDeleted(Instruction *I) const override {
