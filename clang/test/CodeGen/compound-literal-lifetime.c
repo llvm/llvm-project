@@ -374,6 +374,96 @@ label:
   goto label;
 }
 
+// Verify non-bypassed compound literals in variably modified types emit
+// lifetime markers cleanly without leaving unpopped cleanups.
+// CHECK-LABEL: define dso_local void @test_vla_non_bypassed()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[VLA_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[VLA_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[VLA_CL]])
+void test_vla_non_bypassed(void) {
+  char vla[*(id_ptr(&(int){5}))];
+  use_vla(sizeof(vla), vla);
+}
+
+// Verify a compound literal inside a VLA typedef before a backward-jump label
+// retains its lifetime markers even when the typedef is used after the label.
+// CHECK-LABEL: define dso_local i32 @test_vla_typedef_before_label()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[TD_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[TD_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[TD_CL]])
+int test_vla_typedef_before_label(void) {
+  int *p = 0;
+  typedef char vla_t[*(p = id_ptr(&(int){5}))];
+  int count = 0;
+label:
+  if (count++)
+    return *p;
+  vla_t a;
+  use_vla(sizeof(a), a);
+  goto label;
+}
+
+// CHECK-LABEL: define dso_local void @test_sizeof_vla_non_bypassed()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[SZ_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[SZ_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[SZ_CL]])
+void test_sizeof_vla_non_bypassed(void) {
+  (void)sizeof(char[*(id_ptr(&(int){5}))]);
+}
+
+// CHECK-LABEL: define dso_local void @test_cast_vla_non_bypassed()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[CAST_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[CAST_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[CAST_CL]])
+void test_cast_vla_non_bypassed(void) {
+  (void)(int (*)[*(id_ptr(&(int){5}))])0;
+}
+
+// CHECK-LABEL: define dso_local void @test_typeof_expr_uninit_non_bypassed()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[TO_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[TO_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[TO_CL]])
+void test_typeof_expr_uninit_non_bypassed(void) {
+  int n = 5;
+  char a[n];
+  __typeof__(id_ptr(&(int){5}), &a) bp;
+  (void)bp;
+}
+
+// Verify lifetime.end runs at inner block exit (before side_effect1), not at
+// outer function exit.
+// CHECK-LABEL: define dso_local void @test_vla_nested_block_lifetime()
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[NB_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[NB_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[NB_CL]])
+// CHECK: call void @side_effect1()
+void test_vla_nested_block_lifetime(void) {
+  {
+    char vla[*(id_ptr(&(int){5}))];
+    use_vla(sizeof(vla), vla);
+  }
+  side_effect1();
+}
+
+// CHECK-LABEL: define dso_local void @test_vla_if_branch_lifetime(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[IF_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[IF_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[IF_CL]])
+// CHECK: call void @side_effect1()
+void test_vla_if_branch_lifetime(int cond) {
+  if (cond)
+    (void)sizeof(char[*(id_ptr(&(int){5}))]);
+  side_effect1();
+}
+
+// CHECK-LABEL: define dso_local void @test_vla_param_lifetime(
+// CHECK: call void @llvm.lifetime.start.p0(ptr nonnull %[[PARM_CL:.*]])
+// CHECK: call ptr @id_ptr(ptr noundef nonnull %[[PARM_CL]])
+// CHECK: call void @llvm.lifetime.end.p0(ptr nonnull %[[PARM_CL]])
+void test_vla_param_lifetime(int a[*(id_ptr(&(int){5}))]) {
+  (void)a;
+}
+
 int callee(int);
 
 // Verify that conditional compound literals (which wrap CallLifetimeEnd in

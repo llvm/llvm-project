@@ -205,8 +205,10 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
       DI->recordDeclarationLexicalScope(D);
       DI->EmitAndRetainType(Ty);
     }
-    if (Ty->isVariablyModifiedType())
+    if (Ty->isVariablyModifiedType()) {
+      RunCleanupsScope Cleanups(*this);
       EmitVariablyModifiedType(Ty);
+    }
     return;
   }
   }
@@ -431,8 +433,10 @@ void CodeGenFunction::EmitStaticVarDecl(const VarDecl &D,
   // We can't have a VLA here, but we can have a pointer to a VLA,
   // even though that doesn't really make any sense.
   // Make sure to evaluate VLA bounds now so that we have them for later.
-  if (D.getType()->isVariablyModifiedType())
+  if (D.getType()->isVariablyModifiedType()) {
+    RunCleanupsScope Cleanups(*this);
     EmitVariablyModifiedType(D.getType());
+  }
 
   // Save the type in case adding the initializer forces a type change.
   llvm::Type *expectedType = addr->getType();
@@ -1508,8 +1512,10 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   CharUnits alignment = getContext().getDeclAlign(&D);
 
   // If the type is variably-modified, emit all the VLA sizes for it.
-  if (Ty->isVariablyModifiedType())
+  if (Ty->isVariablyModifiedType()) {
+    RunCleanupsScope Cleanups(*this);
     EmitVariablyModifiedType(Ty);
+  }
 
   auto *DI = getDebugInfo();
   bool EmitDebugInfo = DI && CGM.getCodeGenOpts().hasReducedDebugInfo();

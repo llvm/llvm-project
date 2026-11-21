@@ -1397,8 +1397,10 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
       else
         Ty = VD->getType();
 
-      if (Ty->isVariablyModifiedType())
+      if (Ty->isVariablyModifiedType()) {
+        RunCleanupsScope Cleanups(*this);
         EmitVariablyModifiedType(Ty);
+      }
     }
   }
   // Emit a location at the end of the prologue.
