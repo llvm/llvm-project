@@ -1,4 +1,4 @@
-//===- BTFDebug.h -----------------------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,13 +9,20 @@
 /// \file
 /// This file contains support for writing BTF debug info.
 ///
+/// BTF (BPF Type Format) is a compact debug info format originally designed
+/// for BPF programs but useful for any ELF target. This target-independent
+/// implementation can be used by any backend to emit .BTF and .BTF.ext
+/// sections.
+///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_BPF_BTFDEBUG_H
-#define LLVM_LIB_TARGET_BPF_BTFDEBUG_H
+#ifndef LLVM_CODEGEN_BTFDEBUG_H
+#define LLVM_CODEGEN_BTFDEBUG_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
 #include "llvm/DebugInfo/BTF/BTF.h"
@@ -54,7 +61,7 @@ public:
   virtual uint32_t getSize() { return BTF::CommonTypeSize; }
   /// Complete BTF type generation after all related DebugInfo types
   /// have been visited so their BTF type id's are available
-  /// for cross referece.
+  /// for cross reference.
   virtual void completeType(BTFDebug &BDebug) {}
   /// Emit types for this BTF type entry.
   virtual void emitType(MCStreamer &OS);
@@ -93,7 +100,9 @@ class BTFTypeInt : public BTFTypeBase {
 public:
   BTFTypeInt(uint32_t Encoding, uint32_t SizeInBits, uint32_t OffsetInBits,
              StringRef TypeName);
-  uint32_t getSize() override { return BTFTypeBase::getSize() + sizeof(uint32_t); }
+  uint32_t getSize() override {
+    return BTFTypeBase::getSize() + sizeof(uint32_t);
+  }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
 };
@@ -118,7 +127,9 @@ class BTFTypeArray : public BTFTypeBase {
 
 public:
   BTFTypeArray(uint32_t ElemTypeId, uint32_t NumElems);
-  uint32_t getSize() override { return BTFTypeBase::getSize() + BTF::BTFArraySize; }
+  uint32_t getSize() override {
+    return BTFTypeBase::getSize() + BTF::BTFArraySize;
+  }
   void completeType(BTFDebug &BDebug) override;
   void emitType(MCStreamer &OS) override;
 };
@@ -258,11 +269,14 @@ class BTFStringTable {
   /// of the Table. It is used to avoid putting
   /// duplicated strings in the table.
   std::map<uint32_t, uint32_t> OffsetToIdMap;
+  StringMap<uint32_t> StringOffsets;
+  bool UseStringOffsets;
   /// A vector of strings to represent the string table.
   std::vector<std::string> Table;
 
 public:
-  BTFStringTable() : Size(0) {}
+  explicit BTFStringTable(bool UseStringOffsets)
+      : Size(0), UseStringOffsets(UseStringOffsets) {}
   uint32_t getSize() { return Size; }
   std::vector<std::string> &getTable() { return Table; }
   /// Add a string to the string table and returns its offset
@@ -294,16 +308,22 @@ struct BTFFieldReloc {
 };
 
 /// Collect and emit BTF information.
+///
+/// This is a target-independent base class that handles the core BTF
+/// generation from LLVM IR debug metadata. Target-specific backends
+/// (e.g., BPF) can subclass this to add features like CO-RE relocations.
 class BTFDebug : public DebugHandlerBase {
+protected:
   MCStreamer &OS;
   bool SkipInstruction;
   bool LineInfoGenerated;
   uint32_t SecNameOff;
   uint32_t ArrayIndexTypeId;
-  bool MapDefNotCollected;
   BTFStringTable StringTable;
   std::vector<std::unique_ptr<BTFTypeBase>> TypeEntries;
+  size_t NumCompletedTypes = 0;
   DenseMap<const DIType *, uint32_t> DIToIdMap;
+  DenseSet<const DIType *> UnrepresentableTypes;
   std::map<uint32_t, std::vector<BTFFuncInfo>> FuncInfoTable;
   std::map<uint32_t, std::vector<BTFLineInfo>> LineInfoTable;
   std::map<uint32_t, std::vector<BTFFieldReloc>> FieldRelocTable;
@@ -311,11 +331,15 @@ class BTFDebug : public DebugHandlerBase {
   std::map<std::string, std::unique_ptr<BTFKindDataSec>, std::less<>>
       DataSecEntries;
   std::vector<BTFTypeStruct *> StructTypes;
-  std::map<const GlobalVariable *, std::pair<int64_t, uint32_t>> PatchImms;
-  std::map<const DICompositeType *,
-           std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>>
-      FixupDerivedTypes;
-  std::set<const Function *>ProtoFunctions;
+  std::set<const Function *> ProtoFunctions;
+  DenseSet<const DICompileUnit *> ProcessedCUs;
+  DenseSet<const DISubprogram *> ProcessedSubprograms;
+  DenseSet<const DICompositeType *> RepresentableRecords;
+  DenseMap<const MDString *, uint32_t> ODRRecordIds;
+  using DerivedTypeFixups =
+      std::vector<std::pair<const DIDerivedType *, BTFTypeDerived *>>;
+  std::map<const DICompositeType *, DerivedTypeFixups> FixupDerivedTypes;
+  MapVector<const DICompositeType *, DerivedTypeFixups> GenericFixups;
 
   /// Add types to TypeEntries.
   /// @{
@@ -344,7 +368,7 @@ class BTFDebug : public DebugHandlerBase {
   void visitEnumType(const DICompositeType *ETy, uint32_t &TypeId);
   void visitDerivedType(const DIDerivedType *DTy, uint32_t &TypeId,
                         bool CheckPointer, bool SeenPointer);
-  void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
+  bool isRepresentableValueType(const DIType *Ty);
   /// @}
 
   /// Check whether the type is a forward declaration candidate or not.
@@ -359,14 +383,16 @@ class BTFDebug : public DebugHandlerBase {
                          uint32_t Column);
 
   /// Generate types and variables for globals.
-  void processGlobals(bool ProcessingMapDef);
+  virtual void processGlobals();
 
-  /// Process global variable initializer in pursuit for function
-  /// pointers.
+  /// Scan a global variable initializer for function references.
   void processGlobalInitializer(const Constant *C);
 
-  /// Generate types for function prototypes.
-  void processFuncPrototypes(const Function *);
+  /// Generate BTF types for extern function prototypes.
+  void processFuncPrototypes(const Function *F);
+
+  void processCompileUnitTypes(const DICompileUnit *Unit);
+  void processRetainedNodes(const DISubprogram *SP);
 
   /// Generate types for decl annotations.
   void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
@@ -377,23 +403,11 @@ class BTFDebug : public DebugHandlerBase {
       const DISubprogram *SP, uint32_t ProtoTypeId, uint8_t Scope,
       const SmallDenseMap<uint32_t, uint32_t> *ArgIndexMap = nullptr);
 
-  /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
-  /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to
-  /// the base type of DTy. Return the type id of the first BTF type_tag
-  /// in the chain. If no type_tag's are generated, a negative value
-  /// is returned.
+  /// Generate BTF type_tag's.
   int genBTFTypeTags(const DIDerivedType *DTy, int BaseTypeId);
-
-  /// Generate one field relocation record.
-  void generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
-                             const GlobalVariable *, bool IsAma);
 
   /// Populating unprocessed type on demand.
   unsigned populateType(const DIType *Ty);
-
-  /// Process global variables referenced by relocation instructions
-  /// and extern function references.
-  void processGlobalValue(const MachineOperand &MO);
 
   /// Emit common header of .BTF and .BTF.ext sections.
   void emitCommonHeader();
@@ -402,9 +416,14 @@ class BTFDebug : public DebugHandlerBase {
   void emitBTFSection();
 
   /// Emit the .BTF.ext section.
-  void emitBTFExtSection();
+  virtual void emitBTFExtSection();
 
 protected:
+  /// Construct a function's BTF type, allowing target-specific ABI handling.
+  virtual uint32_t
+  processFunctionType(const MachineFunction *MF, const DISubprogram *SP,
+                      const SmallDenseMap<uint32_t, StringRef> &FuncArgNames);
+
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
@@ -414,8 +433,8 @@ protected:
 public:
   BTFDebug(AsmPrinter *AP);
 
-  ///
-  bool InstLower(const MachineInstr *MI, MCInst &OutMI);
+  /// Strip DW_TAG_atomic_type wrapper if present.
+  static const DIType *tryRemoveAtomicType(const DIType *Ty);
 
   /// Get the special array index type id.
   uint32_t getArrayIndexTypeId() {
@@ -428,11 +447,17 @@ public:
 
   /// Get the type id for a particular DIType.
   uint32_t getTypeId(const DIType *Ty) {
-    assert(Ty && "Invalid null Type");
-    assert(DIToIdMap.find(Ty) != DIToIdMap.end() &&
-           "DIType not added in the BDIToIdMap");
-    return DIToIdMap[Ty];
+    auto It = DIToIdMap.find(Ty);
+    assert((It != DIToIdMap.end() || UnrepresentableTypes.contains(Ty)) &&
+           "DIType not added");
+    return It == DIToIdMap.end() ? 0 : It->second;
   }
+
+  /// Called at the beginning of instruction processing, before line info.
+  /// Subclasses can override to handle target-specific instruction processing
+  /// (e.g., CO-RE relocations) that must add strings to the string table
+  /// before line info strings.
+  virtual void processBeginInstruction(const MachineInstr *MI) {}
 
   /// Process beginning of an instruction.
   void beginInstruction(const MachineInstr *MI) override;
