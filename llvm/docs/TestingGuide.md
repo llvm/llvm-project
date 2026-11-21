@@ -386,6 +386,12 @@ without pre-commit review if you have commit access.
 - Use a minimal number of non-default (`CHECK-<prefix>`) check prefixes.
   Avoid setting a check prefix if all `FileCheck` invocations in the test
   expect the same output.
+- When `RUN` lines are expected to produce mostly the same output, give them
+  a common check prefix in addition to their own (e.g.,
+  `--check-prefixes=CHECK,AVX` and `--check-prefixes=CHECK,SSE`), so the
+  shared output is only checked once. List the more widely shared prefix
+  first; the update scripts use the first prefix in the list whose output
+  matches across all `RUN` lines using it.
 - Don't produce output the test doesn't check. If a `RUN` line only
   checks diagnostics on stderr (e.g., errors, warnings, remarks),
   suppress the normal output instead of writing it to the default
