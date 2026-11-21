@@ -251,7 +251,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_Binary(SDNode *N, RTLIB::Libcall LC) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_BITCAST(SDNode *N) {
-  return BitConvertToInteger(N->getOperand(0));
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  // Widening a runtime value leaves padding bits unspecified.
+  return DAG.getAnyExtOrTrunc(BitConvertToInteger(N->getOperand(0)), SDLoc(N),
+                              NVT);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREEZE(SDNode *N) {
@@ -270,7 +273,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ARITH_FENCE(SDNode *N) {
 SDValue DAGTypeLegalizer::SoftenFloatRes_MERGE_VALUES(SDNode *N,
                                                       unsigned ResNo) {
   SDValue Op = DisintegrateMERGE_VALUES(N, ResNo);
-  return BitConvertToInteger(Op);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(ResNo));
+  return DAG.getAnyExtOrTrunc(BitConvertToInteger(Op), SDLoc(N), NVT);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_BUILD_PAIR(SDNode *N) {
@@ -300,9 +304,10 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ConstantFP(SDNode *N) {
                            TLI.getTypeToTransformTo(*DAG.getContext(),
                                                     CN->getValueType(0)));
   } else {
-    return DAG.getConstant(CN->getValueAPF().bitcastToAPInt(), SDLoc(CN),
-                           TLI.getTypeToTransformTo(*DAG.getContext(),
-                                                    CN->getValueType(0)));
+    EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), CN->getValueType(0));
+    return DAG.getConstant(
+        CN->getValueAPF().bitcastToAPInt().zextOrTrunc(NVT.getSizeInBits()),
+        SDLoc(CN), NVT);
   }
 }
 
@@ -317,17 +322,19 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_ELEMENT(SDNode *N) {
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_EXTRACT_VECTOR_ELT(SDNode *N, unsigned ResNo) {
   SDValue NewOp = BitConvertVectorToIntegerVector(N->getOperand(0));
-  return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
-                     NewOp.getValueType().getVectorElementType(),
-                     NewOp, N->getOperand(1));
+  SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(N),
+                            NewOp.getValueType().getVectorElementType(), NewOp,
+                            N->getOperand(1));
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getAnyExtOrTrunc(Elt, SDLoc(N), NVT);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
   EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
-  unsigned Size = NVT.getSizeInBits();
+  unsigned Size = N->getValueType(0).getSizeInBits();
 
   // Mask = ~(1 << (Size-1))
-  APInt API = APInt::getAllOnes(Size);
+  APInt API = APInt::getAllOnes(NVT.getSizeInBits());
   API.clearBit(Size - 1);
   SDValue Mask = DAG.getConstant(API, SDLoc(N), NVT);
   SDValue Op = GetSoftenedFloat(N->getOperand(0));
@@ -356,7 +363,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
   CanonicalizeFlags.setNoFPExcept(true);
   SDValue Mul = DAG.getNode(ISD::STRICT_FMUL, dl, {VT, MVT::Other},
                             {Chain, Operand, One}, CanonicalizeFlags);
-  return BitConvertToInteger(Mul);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  return DAG.getAnyExtOrTrunc(BitConvertToInteger(Mul), dl, NVT);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
@@ -425,11 +433,21 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N) {
   SDValue RHS = BitConvertToInteger(N->getOperand(1));
   SDLoc dl(N);
 
-  EVT LVT = LHS.getValueType();
+  EVT LVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                     N->getOperand(0).getValueType());
+  // The sign operand is not necessarily softened itself: copysign(x, fpext(y))
+  // is folded into copysign(x, y), so its type may well be legal.
   EVT RVT = RHS.getValueType();
+  if (getTypeAction(N->getOperand(1).getValueType()) ==
+      TargetLowering::TypeSoftenFloat)
+    RVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                   N->getOperand(1).getValueType());
+  // x86_fp80 is bit-cast to i80 but softened to i96, so extend it first.
+  // Padding bits are indeterminate. For other types this is no-op.
+  RHS = DAG.getAnyExtOrTrunc(RHS, dl, RVT);
 
-  unsigned LSize = LVT.getSizeInBits();
-  unsigned RSize = RVT.getSizeInBits();
+  unsigned LSize = N->getOperand(0).getValueType().getSizeInBits();
+  unsigned RSize = N->getOperand(1).getValueType().getSizeInBits();
 
   // First get the sign bit of second operand.
   SDValue SignBit = DAG.getNode(
@@ -439,7 +457,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FCOPYSIGN(SDNode *N) {
   SignBit = DAG.getNode(ISD::AND, dl, RVT, RHS, SignBit);
 
   // Shift right or sign-extend it if the two operands have different types.
-  int SizeDiff = RVT.getSizeInBits() - LVT.getSizeInBits();
+  int SizeDiff = RSize - LSize;
   if (SizeDiff > 0) {
     SignBit =
         DAG.getNode(ISD::SRL, dl, RVT, SignBit,
@@ -555,7 +573,8 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FNEG(SDNode *N) {
   SDLoc dl(N);
 
   // Expand Y = FNEG(X) -> Y = X ^ sign mask
-  APInt SignMask = APInt::getSignMask(NVT.getSizeInBits());
+  APInt SignMask = APInt::getOneBitSet(NVT.getSizeInBits(),
+                                       N->getValueType(0).getSizeInBits() - 1);
   return DAG.getNode(ISD::XOR, dl, NVT, GetSoftenedFloat(N->getOperand(0)),
                      DAG.getConstant(SignMask, dl, NVT));
 }
@@ -943,7 +962,7 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_LOAD(SDNode *N) {
   // use the new one.
   ReplaceValueWith(SDValue(N, 1), NewL.getValue(1));
   auto ExtendNode = DAG.getNode(ISD::FP_EXTEND, dl, VT, NewL);
-  return BitConvertToInteger(ExtendNode);
+  return DAG.getAnyExtOrTrunc(BitConvertToInteger(ExtendNode), dl, NVT);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_ATOMIC_LOAD(SDNode *N) {
@@ -1134,7 +1153,11 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
 SDValue DAGTypeLegalizer::SoftenFloatOp_BITCAST(SDNode *N) {
   SDValue Op0 = GetSoftenedFloat(N->getOperand(0));
 
-  return DAG.getNode(ISD::BITCAST, SDLoc(N), N->getValueType(0), Op0);
+  // The bit-cast result may be wider or narrower or even a vector, so this is
+  // a two-step cast.
+  EVT VT = N->getValueType(0);
+  EVT IVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
+  return DAG.getBitcast(VT, DAG.getAnyExtOrTrunc(Op0, SDLoc(N), IVT));
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatOp_FP_ROUND(SDNode *N) {
@@ -1383,12 +1406,15 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FCOPYSIGN(SDNode *N) {
   SDValue RHS = BitConvertToInteger(N->getOperand(1));
   SDLoc dl(N);
 
-  EVT LVT = LHS.getValueType();
+  EVT LVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                     N->getOperand(0).getValueType());
   EVT ILVT = EVT::getIntegerVT(*DAG.getContext(), LVT.getSizeInBits());
-  EVT RVT = RHS.getValueType();
+  EVT RVT = TLI.getTypeToTransformTo(*DAG.getContext(),
+                                     N->getOperand(1).getValueType());
+  RHS = DAG.getAnyExtOrTrunc(RHS, dl, RVT);
 
-  unsigned LSize = LVT.getSizeInBits();
-  unsigned RSize = RVT.getSizeInBits();
+  unsigned LSize = N->getOperand(0).getValueType().getSizeInBits();
+  unsigned RSize = N->getOperand(1).getValueType().getSizeInBits();
 
   // Shift right or sign-extend it if the two operands have different types.
   int SizeDiff = RSize - LSize;
@@ -1400,7 +1426,7 @@ SDValue DAGTypeLegalizer::SoftenFloatOp_FCOPYSIGN(SDNode *N) {
                                                          DAG.getDataLayout())));
     RHS = DAG.getNode(ISD::TRUNCATE, dl, ILVT, RHS);
   } else if (SizeDiff < 0) {
-    RHS = DAG.getNode(ISD::ANY_EXTEND, dl, LVT, RHS);
+    RHS = DAG.getNode(ISD::ANY_EXTEND, dl, ILVT, RHS);
     RHS =
         DAG.getNode(ISD::SHL, dl, ILVT, RHS,
                     DAG.getConstant(-SizeDiff, dl,
@@ -2513,7 +2539,8 @@ SDValue DAGTypeLegalizer::BitcastToInt_ATOMIC_SWAP(SDNode *N) {
   // new one
   ReplaceValueWith(SDValue(N, 1), NewAtomic.getValue(1));
 
-  return Result;
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), N->getValueType(0));
+  return DAG.getAnyExtOrTrunc(Result, SL, NVT);
 }
 
 //===----------------------------------------------------------------------===//
