@@ -740,7 +740,8 @@ private:
   /// SkipEscapedNewLines - If P points to an escaped newline (or a series of
   /// them), skip over them and return the first non-escaped-newline found,
   /// otherwise return P.
-  static const char *SkipEscapedNewLines(const char *P);
+  static const char *SkipEscapedNewLines(const char *P,
+                                         const LangOptions &LangOpts);
 
   /// getCharAndSizeSlowNoWarn - Same as getCharAndSizeSlow, but never emits a
   /// diagnostic.
