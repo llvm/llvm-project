@@ -19,6 +19,7 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
+    libc.src.__support.OSUtil.linux.syscall_wrappers.write
 )
 
 add_header_library(

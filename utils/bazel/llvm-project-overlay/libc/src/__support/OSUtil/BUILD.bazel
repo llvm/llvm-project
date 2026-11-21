@@ -134,8 +134,11 @@ libc_support_library(
         "@platforms//os:macos": ["darwin/io.h"],
         "@platforms//os:windows": ["windows/io.h"],
     }),
-    deps = [
-        ":syscall",
+    deps = select({
+        "@platforms//os:linux": ["//libc/src/__support/OSUtil/linux/syscall_wrappers:write"],
+        "@platforms//os:macos": [":syscall"],
+        "//conditions:default": [],
+    }) + [
         "//libc/src/__support:common",
         "//libc/src/__support/CPP:string_view",
         "//libc/src/__support/macros:config",
