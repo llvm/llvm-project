@@ -275,10 +275,37 @@ define bfloat @test_fdiv(bfloat %a, bfloat %b) #0 {
   ret bfloat %r
 }
 
-;define bfloat @test_frem(bfloat %a, bfloat %b) #0 {
-;  %r = frem bfloat %a, %b
-;  ret bfloat %r
-;}
+define bfloat @test_frem(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_frem:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    lsl r1, r1, #16
+; CHECK-CVT-NEXT:    vmov s1, r0
+; CHECK-CVT-NEXT:    vmov s0, r1
+; CHECK-CVT-NEXT:    bl fmodf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_frem:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s1
+; CHECK-BF16-NEXT:    vmov r1, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    lsl r1, r1, #16
+; CHECK-BF16-NEXT:    vmov s1, r0
+; CHECK-BF16-NEXT:    vmov s0, r1
+; CHECK-BF16-NEXT:    bl fmodf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = frem bfloat %a, %b
+  ret bfloat %r
+}
 
 define bfloat @test_load(ptr %a) #0 {
 ; CHECK-CVT-LABEL: test_load:
@@ -555,7 +582,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r4, r0
 ; CHECK-CVT-NEXT:    ldrh r0, [r0]
 ; CHECK-CVT-NEXT:    vmov s18, r0
-; CHECK-CVT-NEXT:  .LBB11_1: @ %loop
+; CHECK-CVT-NEXT:  .LBB12_1: @ %loop
 ; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-CVT-NEXT:    ldrh r0, [r4]
 ; CHECK-CVT-NEXT:    vmov.f32 s16, s18
@@ -563,7 +590,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r0, r4
 ; CHECK-CVT-NEXT:    bl test_dummy
 ; CHECK-CVT-NEXT:    tst r0, #1
-; CHECK-CVT-NEXT:    bne .LBB11_1
+; CHECK-CVT-NEXT:    bne .LBB12_1
 ; CHECK-CVT-NEXT:  @ %bb.2: @ %return
 ; CHECK-CVT-NEXT:    vmov.f32 s0, s16
 ; CHECK-CVT-NEXT:    vpop {d8, d9}
@@ -578,7 +605,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r4, r0
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r0]
 ; CHECK-NOFP16-NEXT:    vmov s18, r0
-; CHECK-NOFP16-NEXT:  .LBB11_1: @ %loop
+; CHECK-NOFP16-NEXT:  .LBB12_1: @ %loop
 ; CHECK-NOFP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r4]
 ; CHECK-NOFP16-NEXT:    vmov.f32 s16, s18
@@ -586,7 +613,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r0, r4
 ; CHECK-NOFP16-NEXT:    bl test_dummy
 ; CHECK-NOFP16-NEXT:    tst r0, #1
-; CHECK-NOFP16-NEXT:    bne .LBB11_1
+; CHECK-NOFP16-NEXT:    bne .LBB12_1
 ; CHECK-NOFP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-NOFP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-NOFP16-NEXT:    vpop {d8, d9}
@@ -600,14 +627,14 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-FP16-NEXT:    vpush {d8, d9}
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r0]
 ; CHECK-FP16-NEXT:    mov r4, r0
-; CHECK-FP16-NEXT:  .LBB11_1: @ %loop
+; CHECK-FP16-NEXT:  .LBB12_1: @ %loop
 ; CHECK-FP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-FP16-NEXT:    mov r0, r4
 ; CHECK-FP16-NEXT:    vmov.f32 s16, s18
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r4]
 ; CHECK-FP16-NEXT:    bl test_dummy
 ; CHECK-FP16-NEXT:    tst r0, #1
-; CHECK-FP16-NEXT:    bne .LBB11_1
+; CHECK-FP16-NEXT:    bne .LBB12_1
 ; CHECK-FP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    vpop {d8, d9}
@@ -837,90 +864,459 @@ define bfloat @test_bitcast_f16tobfloat(half %a) #0 {
 ;  ret bfloat %r
 ;}
 
-;define bfloat @test_powi(bfloat %a, i32 %b) #0 {
-;  %r = call bfloat @llvm.powi.bf16.i32(bfloat %a, i32 %b)
-;  ret bfloat %r
-;}
+define bfloat @test_powi(bfloat %a, i32 %b) #0 {
+; CHECK-CVT-LABEL: test_powi:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r1, r1, #16
+; CHECK-CVT-NEXT:    vmov s0, r1
+; CHECK-CVT-NEXT:    bl __powisf2
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_powi:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r1, s0
+; CHECK-BF16-NEXT:    lsl r1, r1, #16
+; CHECK-BF16-NEXT:    vmov s0, r1
+; CHECK-BF16-NEXT:    bl __powisf2
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.powi.bf16.i32(bfloat %a, i32 %b)
+  ret bfloat %r
+}
 
-;define bfloat @test_sin(bfloat %a) #0 {
-;  %r = call bfloat @llvm.sin.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_sin(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_sin:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl sinf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_sin:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl sinf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.sin.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_cos(bfloat %a) #0 {
-;  %r = call bfloat @llvm.cos.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_cos(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_cos:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl cosf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_cos:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl cosf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.cos.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_tan(bfloat %a) #0 {
-;  %r = call bfloat @llvm.tan.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_tan(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_tan:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl tanf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_tan:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl tanf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.tan.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_acos(bfloat %a) #0 {
-;  %r = call bfloat @llvm.acos.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_acos(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_acos:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl acosf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_acos:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl acosf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.acos.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_asin(bfloat %a) #0 {
-;  %r = call bfloat @llvm.asin.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_asin(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_asin:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl asinf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_asin:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl asinf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.asin.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_atan(bfloat %a) #0 {
-;  %r = call bfloat @llvm.atan.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_atan(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_atan:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl atanf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_atan:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl atanf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.atan.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_atan2(bfloat %a, bfloat %b) #0 {
-;  %r = call bfloat @llvm.atan2.bf16(bfloat %a, bfloat %b)
-;  ret bfloat %r
-;}
+define bfloat @test_atan2(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_atan2:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    lsl r1, r1, #16
+; CHECK-CVT-NEXT:    vmov s1, r0
+; CHECK-CVT-NEXT:    vmov s0, r1
+; CHECK-CVT-NEXT:    bl atan2f
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_atan2:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s1
+; CHECK-BF16-NEXT:    vmov r1, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    lsl r1, r1, #16
+; CHECK-BF16-NEXT:    vmov s1, r0
+; CHECK-BF16-NEXT:    vmov s0, r1
+; CHECK-BF16-NEXT:    bl atan2f
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.atan2.bf16(bfloat %a, bfloat %b)
+  ret bfloat %r
+}
 
-;define bfloat @test_cosh(bfloat %a) #0 {
-;  %r = call bfloat @llvm.cosh.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_cosh(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_cosh:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl coshf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_cosh:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl coshf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.cosh.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_sinh(bfloat %a) #0 {
-;  %r = call bfloat @llvm.sinh.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_sinh(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_sinh:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl sinhf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_sinh:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl sinhf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.sinh.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_tanh(bfloat %a) #0 {
-;  %r = call bfloat @llvm.tanh.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_tanh(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_tanh:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl tanhf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_tanh:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl tanhf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.tanh.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_pow(bfloat %a, bfloat %b) #0 {
-;  %r = call bfloat @llvm.pow.bf16(bfloat %a, bfloat %b)
-;  ret bfloat %r
-;}
+define bfloat @test_pow(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_pow:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    lsl r1, r1, #16
+; CHECK-CVT-NEXT:    vmov s1, r0
+; CHECK-CVT-NEXT:    vmov s0, r1
+; CHECK-CVT-NEXT:    bl powf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_pow:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s1
+; CHECK-BF16-NEXT:    vmov r1, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    lsl r1, r1, #16
+; CHECK-BF16-NEXT:    vmov s1, r0
+; CHECK-BF16-NEXT:    vmov s0, r1
+; CHECK-BF16-NEXT:    bl powf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.pow.bf16(bfloat %a, bfloat %b)
+  ret bfloat %r
+}
 
-;define bfloat @test_exp(bfloat %a) #0 {
-;  %r = call bfloat @llvm.exp.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_exp(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_exp:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl expf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_exp:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl expf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.exp.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_exp2(bfloat %a) #0 {
-;  %r = call bfloat @llvm.exp2.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_exp2(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_exp2:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl exp2f
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_exp2:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl exp2f
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.exp2.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_log(bfloat %a) #0 {
-;  %r = call bfloat @llvm.log.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_log(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_log:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl logf
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_log:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl logf
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.log.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_log10(bfloat %a) #0 {
-;  %r = call bfloat @llvm.log10.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_log10(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_log10:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl log10f
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_log10:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl log10f
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.log10.bf16(bfloat %a)
+  ret bfloat %r
+}
 
-;define bfloat @test_log2(bfloat %a) #0 {
-;  %r = call bfloat @llvm.log2.bf16(bfloat %a)
-;  ret bfloat %r
-;}
+define bfloat @test_log2(bfloat %a) #0 {
+; CHECK-CVT-LABEL: test_log2:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    .save {r11, lr}
+; CHECK-CVT-NEXT:    push {r11, lr}
+; CHECK-CVT-NEXT:    vmov r0, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bl log2f
+; CHECK-CVT-NEXT:    bl __truncsfbf2
+; CHECK-CVT-NEXT:    pop {r11, pc}
+;
+; CHECK-BF16-LABEL: test_log2:
+; CHECK-BF16:       @ %bb.0:
+; CHECK-BF16-NEXT:    .save {r11, lr}
+; CHECK-BF16-NEXT:    push {r11, lr}
+; CHECK-BF16-NEXT:    vmov r0, s0
+; CHECK-BF16-NEXT:    lsl r0, r0, #16
+; CHECK-BF16-NEXT:    vmov s0, r0
+; CHECK-BF16-NEXT:    bl log2f
+; CHECK-BF16-NEXT:    vcvtb.bf16.f32 s0, s0
+; CHECK-BF16-NEXT:    pop {r11, pc}
+  %r = call bfloat @llvm.log2.bf16(bfloat %a)
+  ret bfloat %r
+}
 
 ;define bfloat @test_fma(bfloat %a, bfloat %b, bfloat %c) #0 {
 ;  %r = call bfloat @llvm.fma.bf16(bfloat %a, bfloat %b, bfloat %c)
