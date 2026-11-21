@@ -324,6 +324,11 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
     return MemDepResult::getUnknown();
   if (ClosestDependency->getParent() == BB)
     return MemDepResult::getDef(ClosestDependency);
+  // A non-local walk queries the predecessors of the load's block. An access
+  // that precedes the load in its own block is not available at the end of
+  // such a predecessor, so it can be neither a local nor a non-local Def.
+  if (ClosestDependency->getParent() == LI->getParent())
+    return MemDepResult::getUnknown();
   // Def(U) can't be returned here because it is non-local. If local
   // dependency won't be found then return nonLocal counting that the
   // user will call getNonLocalPointerDependency, which will return cached
