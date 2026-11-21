@@ -70,6 +70,10 @@ using namespace llvm;
 using namespace lto;
 using namespace object;
 
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 #define DEBUG_TYPE "lto"
 
 Error LTO::setupOptimizationRemarks() {
@@ -191,6 +195,8 @@ std::string llvm::computeLTOCacheKey(
   else
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
+    AddString(S);
+  for (const std::string &S : Conf.PassPluginArgs)
     AddString(S);
   AddUnsigned(static_cast<int>(Conf.CGOptLevel));
   AddUnsigned(static_cast<int>(Conf.CGFileType));
@@ -1344,12 +1350,25 @@ Error LTO::setupPassPlugins() {
   return Error::success();
 }
 
+static Error passPluginArgs(const Config &Conf) {
+  if (Conf.PassPluginArgs.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> Infos;
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
+    Infos.push_back(Plugin->getInfo());
+#define HANDLE_EXTENSION(Ext) Infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return llvm::passPluginArguments(Infos, Conf.PassPluginArgs);
+}
+
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
   // Call the base class cleanup() explicitly since run() may be invoked on a
   // derived LTO object.
   llvm::scope_exit CleanUp([this]() { LTO::cleanup(); });
 
   if (Error Err = setupPassPlugins())
+    return Err;
+  if (Error Err = passPluginArgs(Conf))
     return Err;
 
   // Compute "dead" symbols, we don't want to import/export these!

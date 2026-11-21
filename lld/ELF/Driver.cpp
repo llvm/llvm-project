@@ -1869,6 +1869,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
