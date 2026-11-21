@@ -135,7 +135,6 @@ cmath limits
 cmath version
 codecvt cctype
 codecvt cerrno
-codecvt cerrno
 codecvt climits
 codecvt clocale
 codecvt compare
@@ -747,6 +746,7 @@ print tuple
 print typeinfo
 print version
 queue cctype
+queue cerrno
 queue climits
 queue compare
 queue cstdint
@@ -765,7 +765,6 @@ queue tuple
 queue vector
 queue version
 random cctype
-random cerrno
 random cerrno
 random climits
 random cmath
@@ -1117,6 +1116,7 @@ variant initializer_list
 variant limits
 variant version
 vector cctype
+vector cerrno
 vector climits
 vector compare
 vector cstdint
