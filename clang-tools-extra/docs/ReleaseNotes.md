@@ -183,6 +183,13 @@ infrastructure are described first, followed by tool-specific sections.
   Finds uses of `#pragma comment` and, for `lib` or `linker` comments, suggests
   using the build system for improved portability.
 
+- New {doc}`readability-redundant-override
+  <clang-tidy/checks/readability/redundant-override>` check.
+
+  Finds virtual overrides that only forward their arguments to the
+  inherited implementation on the same object, without changing its
+  interface.
+
 - New {doc}`readability-redundant-zero-initializer
   <clang-tidy/checks/readability/redundant-zero-initializer>` check.
 
