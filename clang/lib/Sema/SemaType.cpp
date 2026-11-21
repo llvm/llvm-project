@@ -9136,7 +9136,15 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
   if (!CountExpr)
     return;
 
+  // Counts are not supported on K&R parameter declarations, which C23
+  // removed; ignore the count.
   const Declarator &D = State.getDeclarator();
+  if (D.getContext() == DeclaratorContext::KNRTypeList) {
+    S.Diag(Attr.getLoc(), diag::warn_attribute_ignored) << Attr;
+    Attr.setInvalid();
+    return;
+  }
+
   unsigned chunkIndex = State.getCurrentChunkIndex();
 
   Sema::BoundsAttrFlags Flags;
@@ -9159,6 +9167,16 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
       Attr.setInvalid();
       return;
     }
+  }
+
+  // A parameter's count is checked before the type is built, and dropped if
+  // invalid.
+  if ((D.getContext() == DeclaratorContext::Prototype ||
+       D.getContext() == DeclaratorContext::ObjCParameter) &&
+      S.CheckCountedByAttrOnParam(CurType, CountExpr, Flags.CountInBytes,
+                                  Flags.OrNull)) {
+    Attr.setInvalid();
+    return;
   }
 
   QualType NewType = S.BuildCountAttributedArrayOrPointerType(
@@ -9444,18 +9462,22 @@ static void processTypeAttrs(TypeProcessingState &state, QualType &type,
     case ParsedAttr::AT_CountedByOrNull:
     case ParsedAttr::AT_SizedBy:
     case ParsedAttr::AT_SizedByOrNull: {
+      DeclaratorContext Ctx = state.getDeclarator().getContext();
+      bool OnParam = Ctx == DeclaratorContext::Prototype ||
+                     Ctx == DeclaratorContext::ObjCParameter ||
+                     Ctx == DeclaratorContext::KNRTypeList;
       // FIXME: Only the GNU spelling is late-parsed, and the late-parsing path
       // hasn't been switched to the new mechanism to support type-position
       // attributes yet. Leave a late-parsed one to declaration attribute
-      // processing.
+      // processing. A parameter's is parsed where it is written.
       if (state.getSema().getLangOpts().ExperimentalLateParseAttributes &&
-          attr.isGNUAttribute())
+          attr.isGNUAttribute() && !OnParam)
         break;
-      // The attribute only applies to fields for now. Leave it to declaration
-      // attribute processing, which diagnoses the GNU spelling. That doesn't
-      // see a [[]] one on a declarator chunk, so diagnose it here as the
-      // default case would.
-      if (state.getDeclarator().getContext() != DeclaratorContext::Member) {
+      // The attribute only applies to fields and parameters for now. Leave it
+      // to declaration attribute processing, which diagnoses the GNU spelling.
+      // That doesn't see a [[]] one on a declarator chunk, so diagnose it here
+      // as the default case would.
+      if (Ctx != DeclaratorContext::Member && !OnParam) {
         if (!attr.isGNUAttribute() && TAL == TAL_DeclChunk) {
           state.getSema().Diag(attr.getLoc(), diag::err_attribute_not_type_attr)
               << attr << attr.isRegularKeywordAttribute();

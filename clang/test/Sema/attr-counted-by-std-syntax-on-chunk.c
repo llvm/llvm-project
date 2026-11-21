@@ -4,11 +4,12 @@
 // RUN: not %clang_cc1 -std=c23 -fsyntax-only -fexperimental-late-parse-attributes -ast-dump %s 2>/dev/null | FileCheck %s
 
 // A [[]] counted_by-family attribute on a declarator chunk is a type
-// attribute. It applies to a field's pointer, and is rejected rather than
-// dropped elsewhere. It isn't late-parsed, so the late-parsing mode handles it
-// the same way.
+// attribute. It applies to a field's or a parameter's pointer, and is rejected
+// rather than dropped elsewhere. It isn't late-parsed, so the late-parsing mode
+// handles it the same way.
 
-void f(int n, int *[[clang::counted_by(n)]] p); // expected-error{{'clang::counted_by' attribute cannot be applied to types}}
+// CHECK: ParmVarDecl {{.*}} p 'int * __counted_by(n)':'int *'
+void f(int n, int *[[clang::counted_by(n)]] p);
 
 int gn;
 int *[[clang::sized_by(gn)]] gp; // expected-error{{'clang::sized_by' attribute cannot be applied to types}}
