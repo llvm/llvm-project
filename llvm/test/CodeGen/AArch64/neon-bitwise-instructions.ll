@@ -123,423 +123,255 @@ define <16 x i8> @bic16xi8(<16 x i8> %a, <16 x i8> %b) {
 }
 
 define <2 x i32> @orrimm2s_lsl0(<2 x i32> %a) {
-; CHECK-SD-LABEL: orrimm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 255, i32 255>
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @orrimm2s_lsl8(<2 x i32> %a) {
-; CHECK-SD-LABEL: orrimm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 65280, i32 65280>
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @orrimm2s_lsl16(<2 x i32> %a) {
-; CHECK-SD-LABEL: orrimm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 16711680, i32 16711680>
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @orrimm2s_lsl24(<2 x i32> %a) {
-; CHECK-SD-LABEL: orrimm2s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm2s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm2s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 4278190080, i32 4278190080>
 	ret <2 x i32> %tmp1
 }
 
 define <4 x i32> @orrimm4s_lsl0(<4 x i32> %a) {
-; CHECK-SD-LABEL: orrimm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 255, i32 255, i32 255, i32 255>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @orrimm4s_lsl8(<4 x i32> %a) {
-; CHECK-SD-LABEL: orrimm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 65280, i32 65280, i32 65280, i32 65280>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @orrimm4s_lsl16(<4 x i32> %a) {
-; CHECK-SD-LABEL: orrimm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 16711680, i32 16711680, i32 16711680, i32 16711680>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @orrimm4s_lsl24(<4 x i32> %a) {
-; CHECK-SD-LABEL: orrimm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 4278190080, i32 4278190080, i32 4278190080, i32 4278190080>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i16> @orrimm4h_lsl0(<4 x i16> %a) {
-; CHECK-SD-LABEL: orrimm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 255, i16 255, i16 255, i16 255 >
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @orrimm4h_lsl8(<4 x i16> %a) {
-; CHECK-SD-LABEL: orrimm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 65280, i16 65280, i16 65280, i16 65280 >
 	ret <4 x i16> %tmp1
 }
 
 define <8 x i16> @orrimm8h_lsl0(<8 x i16> %a) {
-; CHECK-SD-LABEL: orrimm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255 >
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @orrimm8h_lsl8(<8 x i16> %a) {
-; CHECK-SD-LABEL: orrimm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280, i16 65280 >
 	ret <8 x i16> %tmp1
 }
 
 define <2 x i32> @bicimm2s_lsl0(<2 x i32> %a) {
-; CHECK-SD-LABEL: bicimm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #16
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4294967279, i32 4294967279 >
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @bicimm2s_lsl8(<2 x i32> %a) {
-; CHECK-SD-LABEL: bicimm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #16, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #16, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4294963199, i32  4294963199 >
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @bicimm2s_lsl16(<2 x i32> %a) {
-; CHECK-SD-LABEL: bicimm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #16, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #16
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #16, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4293918719, i32 4293918719 >
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @bicimm2s_lsl124(<2 x i32> %a) {
-; CHECK-SD-LABEL: bicimm2s_lsl124:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #16, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm2s_lsl124:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #16, lsl #24
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm2s_lsl124:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #16, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4026531839, i32  4026531839>
 	ret <2 x i32> %tmp1
 }
 
 define <4 x i32> @bicimm4s_lsl0(<4 x i32> %a) {
-; CHECK-SD-LABEL: bicimm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #16
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4294967279, i32 4294967279, i32 4294967279, i32 4294967279 >
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @bicimm4s_lsl8(<4 x i32> %a) {
-; CHECK-SD-LABEL: bicimm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #16, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #16, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4294963199, i32  4294963199, i32  4294963199, i32  4294963199 >
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @bicimm4s_lsl16(<4 x i32> %a) {
-; CHECK-SD-LABEL: bicimm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #16, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #16
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #16, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4293918719, i32 4293918719, i32 4293918719, i32 4293918719 >
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @bicimm4s_lsl124(<4 x i32> %a) {
-; CHECK-SD-LABEL: bicimm4s_lsl124:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #16, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4s_lsl124:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #16, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4s_lsl124:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #16, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4026531839, i32  4026531839, i32  4026531839, i32  4026531839>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i16> @bicimm4h_lsl0_a(<4 x i16> %a) {
-; CHECK-SD-LABEL: bicimm4h_lsl0_a:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4h_lsl0_a:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4h, #16
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4h_lsl0_a:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 4294967279, i16  4294967279, i16  4294967279, i16  4294967279 >
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @bicimm4h_lsl0_b(<4 x i16> %a) {
-; CHECK-SD-LABEL: bicimm4h_lsl0_b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4h_lsl0_b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4h_lsl0_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 65280, i16  65280, i16  65280, i16 65280 >
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @bicimm4h_lsl8_a(<4 x i16> %a) {
-; CHECK-SD-LABEL: bicimm4h_lsl8_a:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #16, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4h_lsl8_a:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4h, #16, lsl #8
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4h_lsl8_a:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #16, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 4294963199, i16  4294963199, i16  4294963199, i16  4294963199>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @bicimm4h_lsl8_b(<4 x i16> %a) {
-; CHECK-SD-LABEL: bicimm4h_lsl8_b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm4h_lsl8_b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm4h_lsl8_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 255, i16 255, i16 255, i16 255>
 	ret <4 x i16> %tmp1
 }
 
 define <8 x i16> @bicimm8h_lsl0_a(<8 x i16> %a) {
-; CHECK-SD-LABEL: bicimm8h_lsl0_a:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm8h_lsl0_a:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.8h, #16
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm8h_lsl0_a:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 4294967279, i16  4294967279, i16  4294967279, i16  4294967279,
    i16  4294967279, i16  4294967279, i16  4294967279, i16  4294967279 >
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @bicimm8h_lsl0_b(<8 x i16> %a) {
-; CHECK-SD-LABEL: bicimm8h_lsl0_b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm8h_lsl0_b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm8h_lsl0_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 65280, i16  65280, i16  65280, i16 65280, i16 65280, i16  65280, i16  65280, i16 65280 >
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @bicimm8h_lsl8_a(<8 x i16> %a) {
-; CHECK-SD-LABEL: bicimm8h_lsl8_a:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #16, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm8h_lsl8_a:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.8h, #16, lsl #8
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm8h_lsl8_a:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #16, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 4294963199, i16  4294963199, i16  4294963199, i16  4294963199,
    i16  4294963199, i16  4294963199, i16  4294963199, i16  4294963199>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @bicimm8h_lsl8_b(<8 x i16> %a) {
-; CHECK-SD-LABEL: bicimm8h_lsl8_b:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: bicimm8h_lsl8_b:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: bicimm8h_lsl8_b:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
 	ret <8 x i16> %tmp1
 }
@@ -1502,181 +1334,109 @@ define <2 x i64> @bsl2xi64(<2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3) {
 }
 
 define <8 x i8> @orrimm8b_as_orrimm4h_lsl0(<8 x i8> %a) {
-; CHECK-SD-LABEL: orrimm8b_as_orrimm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm8b_as_orrimm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm8b_as_orrimm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255
+; CHECK-NEXT:    ret
   %val = or <8 x i8> %a, <i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0>
   ret <8 x i8> %val
 }
 
 define <8 x i8> @orrimm8b_as_orimm4h_lsl8(<8 x i8> %a) {
-; CHECK-SD-LABEL: orrimm8b_as_orimm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orrimm8b_as_orimm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orrimm8b_as_orimm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
   %val = or <8 x i8> %a, <i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255>
   ret <8 x i8> %val
 }
 
 define <16 x i8> @orimm16b_as_orrimm8h_lsl0(<16 x i8> %a) {
-; CHECK-SD-LABEL: orimm16b_as_orrimm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orimm16b_as_orrimm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orimm16b_as_orrimm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255
+; CHECK-NEXT:    ret
   %val = or <16 x i8> %a, <i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0>
   ret <16 x i8> %val
 }
 
 define <16 x i8> @orimm16b_as_orrimm8h_lsl8(<16 x i8> %a) {
-; CHECK-SD-LABEL: orimm16b_as_orrimm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orimm16b_as_orrimm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orimm16b_as_orrimm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
   %val = or <16 x i8> %a, <i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255>
   ret <16 x i8> %val
 }
 
 define <8 x i8> @and8imm2s_lsl0(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xffffff00ffffff00
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @and8imm2s_lsl8(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xffff00ffffff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @and8imm2s_lsl16(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ffffff00ffff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @and8imm2s_lsl24(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm2s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #254, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm2s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #254, lsl #24
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm2s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #254, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 255, i8 255, i8 255, i8 1, i8 255, i8 255, i8 255, i8 1>
 	ret <8 x i8> %tmp1
 }
 
 define <4 x i16> @and16imm2s_lsl0(<4 x i16> %a) {
-; CHECK-SD-LABEL: and16imm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xffffff00ffffff00
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 65280, i16 65535, i16 65280, i16 65535>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @and16imm2s_lsl8(<4 x i16> %a) {
-; CHECK-SD-LABEL: and16imm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xffff00ffffff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 255, i16 65535, i16 255, i16 65535>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @and16imm2s_lsl16(<4 x i16> %a) {
-; CHECK-SD-LABEL: and16imm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ffffff00ffff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 65535, i16 65280, i16 65535, i16 65280>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @and16imm2s_lsl24(<4 x i16> %a) {
-; CHECK-SD-LABEL: and16imm2s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.2s, #254, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm2s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.2s, #254, lsl #24
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm2s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.2s, #254, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i16> %a, < i16 65535, i16 511, i16 65535, i16 511>
 	ret <4 x i16> %tmp1
 }
@@ -1747,241 +1507,145 @@ define <1 x i64> @and64imm2s_lsl24(<1 x i64> %a) {
 }
 
 define <16 x i8> @and8imm4s_lsl0(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffffff00ffffff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @and8imm4s_lsl8(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffff00ffffff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @and8imm4s_lsl16(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ffffff00ffff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255, i8 255, i8 255, i8 0, i8 255>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @and8imm4s_lsl24(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #254, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #254, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #254, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 255, i8 255, i8 255, i8 1, i8 255, i8 255, i8 255, i8 1, i8 255, i8 255, i8 255, i8 1, i8 255, i8 255, i8 255, i8 1>
 	ret <16 x i8> %tmp1
 }
 
 define <8 x i16> @and16imm4s_lsl0(<8 x i16> %a) {
-; CHECK-SD-LABEL: and16imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffffff00ffffff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 65280, i16 65535, i16 65280, i16 65535, i16 65280, i16 65535, i16 65280, i16 65535>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @and16imm4s_lsl8(<8 x i16> %a) {
-; CHECK-SD-LABEL: and16imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffff00ffffff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 255, i16 65535, i16 255, i16 65535, i16 255, i16 65535, i16 255, i16 65535>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @and16imm4s_lsl16(<8 x i16> %a) {
-; CHECK-SD-LABEL: and16imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ffffff00ffff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 65535, i16 65280, i16 65535, i16 65280, i16 65535, i16 65280, i16 65535, i16 65280>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @and16imm4s_lsl24(<8 x i16> %a) {
-; CHECK-SD-LABEL: and16imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #254, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #254, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #254, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i16> %a, < i16 65535, i16 511, i16 65535, i16 511, i16 65535, i16 511, i16 65535, i16 511>
 	ret <8 x i16> %tmp1
 }
 
 define <2 x i64> @and64imm4s_lsl0(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffffff00ffffff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -1095216660736, i64 -1095216660736>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @and64imm4s_lsl8(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xffff00ffffff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -280375465148161, i64 -280375465148161>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @and64imm4s_lsl16(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ffffff00ffff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -71776119077928961, i64 -71776119077928961>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @and64imm4s_lsl24(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4s, #254, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mvni v1.4s, #254, lsl #24
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4s, #254, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 144115183814443007, i64 144115183814443007>
 	ret <2 x i64> %tmp1
 }
 
 define <8 x i8> @and8imm4h_lsl0(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @and8imm4h_lsl8(<8 x i8> %a) {
-; CHECK-SD-LABEL: and8imm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <8 x i8> %a, < i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0>
 	ret <8 x i8> %tmp1
 }
 
 define <2 x i32> @and16imm4h_lsl0(<2 x i32> %a) {
-; CHECK-SD-LABEL: and16imm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 4278255360, i32 4278255360>
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @and16imm4h_lsl8(<2 x i32> %a) {
-; CHECK-SD-LABEL: and16imm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i32> %a, < i32 16711935, i32 16711935>
 	ret <2 x i32> %tmp1
 }
@@ -2019,91 +1683,55 @@ define <1 x i64> @and64imm4h_lsl8(<1 x i64> %a) {
 }
 
 define <16 x i8> @and8imm8h_lsl0(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, < i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255 >
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @and8imm8h_lsl8(<16 x i8> %a) {
-; CHECK-SD-LABEL: and8imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and8imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and8imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <16 x i8> %a, <i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0 >
 	ret <16 x i8> %tmp1
 }
 
 define <4 x i32> @and16imm8h_lsl0(<4 x i32> %a) {
-; CHECK-SD-LABEL: and16imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 4278255360, i32 4278255360, i32 4278255360, i32 4278255360>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @and16imm8h_lsl8(<4 x i32> %a) {
-; CHECK-SD-LABEL: and16imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and16imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and16imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <4 x i32> %a, < i32 16711935, i32 16711935, i32 16711935, i32 16711935>
 	ret <4 x i32> %tmp1
 }
 
 define <2 x i64> @and64imm8h_lsl0(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 -71777214294589696, i64 -71777214294589696>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @and64imm8h_lsl8(<2 x i64> %a) {
-; CHECK-SD-LABEL: and64imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    bic v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: and64imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: and64imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = and <2 x i64> %a, < i64 71777214294589695, i64 71777214294589695>
 	ret <2 x i64> %tmp1
 }
@@ -2162,10 +1790,10 @@ define <8 x i32> @bic_shifted_knownbits3(<8 x i16> %v) {
 ;
 ; CHECK-GI-LABEL: bic_shifted_knownbits3:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    and v1.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ushll v0.4s, v1.4h, #0
-; CHECK-GI-NEXT:    ushll2 v1.4s, v1.8h, #0
+; CHECK-GI-NEXT:    bic v0.8h, #255, lsl #8
+; CHECK-GI-NEXT:    ushll v2.4s, v0.4h, #0
+; CHECK-GI-NEXT:    ushll2 v1.4s, v0.8h, #0
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
   %a = and <8 x i16> %v, <i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255, i16 255>
   %and.i = zext <8 x i16> %a to <8 x i32>
@@ -2197,121 +1825,73 @@ entry:
 }
 
 define <8 x i8> @orr8imm2s_lsl0(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @orr8imm2s_lsl8(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @orr8imm2s_lsl16(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @orr8imm2s_lsl24(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm2s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm2s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm2s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <4 x i16> @orr16imm2s_lsl0(<4 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm2s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm2s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm2s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 255, i16 0, i16 255, i16 0>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @orr16imm2s_lsl8(<4 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm2s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm2s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm2s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 65280, i16 0, i16 65280, i16 0>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @orr16imm2s_lsl16(<4 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm2s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm2s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm2s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 0, i16 255, i16 0, i16 255>
 	ret <4 x i16> %tmp1
 }
 
 define <4 x i16> @orr16imm2s_lsl24(<4 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm2s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.2s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm2s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm2s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.2s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i16> %a, < i16 0, i16 65280, i16 0, i16 65280>
 	ret <4 x i16> %tmp1
 }
@@ -2381,241 +1961,145 @@ define <1 x i64> @orr64imm2s_lsl24(<1 x i64> %a) {
 }
 
 define <16 x i8> @orr8imm4s_lsl0(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @orr8imm4s_lsl8(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @orr8imm4s_lsl16(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @orr8imm4s_lsl24(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255, i8 0, i8 0, i8 0, i8 255>
 	ret <16 x i8> %tmp1
 }
 
 define <8 x i16> @orr16imm4s_lsl0(<8 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 255, i16 0, i16 255, i16 0, i16 255, i16 0, i16 255, i16 0>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @orr16imm4s_lsl8(<8 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 65280, i16 0, i16 65280, i16 0, i16 65280, i16 0, i16 65280, i16 0>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @orr16imm4s_lsl16(<8 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 0, i16 255, i16 0, i16 255, i16 0, i16 255, i16 0, i16 255>
 	ret <8 x i16> %tmp1
 }
 
 define <8 x i16> @orr16imm4s_lsl24(<8 x i16> %a) {
-; CHECK-SD-LABEL: orr16imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i16> %a, < i16 0, i16 65280, i16 0, i16 65280, i16 0, i16 65280, i16 0, i16 65280>
 	ret <8 x i16> %tmp1
 }
 
 define <2 x i64> @orr64imm4s_lsl0(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm4s_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm4s_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x0000ff000000ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm4s_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 1095216660735, i64 1095216660735>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @orr64imm4s_lsl8(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm4s_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm4s_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0x00ff000000ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm4s_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 280375465148160, i64 280375465148160>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @orr64imm4s_lsl16(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm4s_lsl16:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #16
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm4s_lsl16:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff0000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm4s_lsl16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #16
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 71776119077928960, i64 71776119077928960>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @orr64imm4s_lsl24(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm4s_lsl24:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4s, #255, lsl #24
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm4s_lsl24:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff000000ff000000
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm4s_lsl24:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4s, #255, lsl #24
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 -72057589759737856, i64 -72057589759737856>
 	ret <2 x i64> %tmp1
 }
 
 define <8 x i8> @orr8imm4h_lsl0(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0>
 	ret <8 x i8> %tmp1
 }
 
 define <8 x i8> @orr8imm4h_lsl8(<8 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <8 x i8> %a, < i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255>
 	ret <8 x i8> %tmp1
 }
 
 define <2 x i32> @orr16imm4h_lsl0(<2 x i32> %a) {
-; CHECK-SD-LABEL: orr16imm4h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 16711935, i32 16711935>
 	ret <2 x i32> %tmp1
 }
 
 define <2 x i32> @orr16imm4h_lsl8(<2 x i32> %a) {
-; CHECK-SD-LABEL: orr16imm4h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.4h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm4h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d1, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.8b, v0.8b, v1.8b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm4h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.4h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i32> %a, < i32 4278255360, i32 4278255360>
 	ret <2 x i32> %tmp1
 }
@@ -2653,91 +2137,55 @@ define <1 x i64> @orr64imm4h_lsl8(<1 x i64> %a) {
 }
 
 define <16 x i8> @orr8imm8h_lsl0(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0>
 	ret <16 x i8> %tmp1
 }
 
 define <16 x i8> @orr8imm8h_lsl8(<16 x i8> %a) {
-; CHECK-SD-LABEL: orr8imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr8imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr8imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <16 x i8> %a, < i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255, i8 0, i8 255>
 	ret <16 x i8> %tmp1
 }
 
 define <4 x i32> @orr16imm8h_lsl0(<4 x i32> %a) {
-; CHECK-SD-LABEL: orr16imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 16711935, i32 16711935, i32 16711935, i32 16711935>
 	ret <4 x i32> %tmp1
 }
 
 define <4 x i32> @orr16imm8h_lsl8(<4 x i32> %a) {
-; CHECK-SD-LABEL: orr16imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr16imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr16imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <4 x i32> %a, < i32 4278255360, i32 4278255360, i32 4278255360, i32 4278255360>
 	ret <4 x i32> %tmp1
 }
 
 define <2 x i64> @orr64imm8h_lsl0(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm8h_lsl0:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm8h_lsl0:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm8h_lsl0:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 71777214294589695, i64 71777214294589695>
 	ret <2 x i64> %tmp1
 }
 
 define <2 x i64> @orr64imm8h_lsl8(<2 x i64> %a) {
-; CHECK-SD-LABEL: orr64imm8h_lsl8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    orr v0.8h, #255, lsl #8
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: orr64imm8h_lsl8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi v1.2d, #0xff00ff00ff00ff00
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: orr64imm8h_lsl8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    orr v0.8h, #255, lsl #8
+; CHECK-NEXT:    ret
 	%tmp1 = or <2 x i64> %a, < i64 -71777214294589696, i64 -71777214294589696>
 	ret <2 x i64> %tmp1
 }

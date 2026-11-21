@@ -318,11 +318,11 @@ define <4 x half> @uitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-CVT-SD-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-CVT-SD-NEXT:    ret
 ;
-; CHECK-FP16-SD-LABEL: uitofp_i8:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    bic v0.4h, #255, lsl #8
-; CHECK-FP16-SD-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-FP16-SD-NEXT:    ret
+; CHECK-FP16-LABEL: uitofp_i8:
+; CHECK-FP16:       // %bb.0:
+; CHECK-FP16-NEXT:    bic v0.4h, #255, lsl #8
+; CHECK-FP16-NEXT:    ucvtf v0.4h, v0.4h
+; CHECK-FP16-NEXT:    ret
 ;
 ; CHECK-CVT-GI-LABEL: uitofp_i8:
 ; CHECK-CVT-GI:       // %bb.0:
@@ -332,13 +332,6 @@ define <4 x half> @uitofp_i8(<4 x i8> %a) #0 {
 ; CHECK-CVT-GI-NEXT:    ucvtf v0.4s, v0.4s
 ; CHECK-CVT-GI-NEXT:    fcvtn v0.4h, v0.4s
 ; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: uitofp_i8:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi d1, #0xff00ff00ff00ff
-; CHECK-FP16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-FP16-GI-NEXT:    ucvtf v0.4h, v0.4h
-; CHECK-FP16-GI-NEXT:    ret
   %1 = uitofp <4 x i8> %a to <4 x half>
   ret <4 x half> %1
 }

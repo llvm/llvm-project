@@ -6089,27 +6089,10 @@ define <4 x bfloat> @test_fma(<4 x bfloat> %a, <4 x bfloat> %b, <4 x bfloat> %c)
 }
 
 define <4 x bfloat> @test_fabs(<4 x bfloat> %a) #0 {
-; CHECK-CVT-SD-LABEL: test_fabs:
-; CHECK-CVT-SD:       // %bb.0:
-; CHECK-CVT-SD-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-CVT-SD-NEXT:    ret
-;
-; CHECK-BF16-SD-LABEL: test_fabs:
-; CHECK-BF16-SD:       // %bb.0:
-; CHECK-BF16-SD-NEXT:    bic v0.4h, #128, lsl #8
-; CHECK-BF16-SD-NEXT:    ret
-;
-; CHECK-CVT-GI-LABEL: test_fabs:
-; CHECK-CVT-GI:       // %bb.0:
-; CHECK-CVT-GI-NEXT:    mvni v1.4h, #128, lsl #8
-; CHECK-CVT-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-CVT-GI-NEXT:    ret
-;
-; CHECK-BF16-GI-LABEL: test_fabs:
-; CHECK-BF16-GI:       // %bb.0:
-; CHECK-BF16-GI-NEXT:    mvni v1.4h, #128, lsl #8
-; CHECK-BF16-GI-NEXT:    and v0.8b, v0.8b, v1.8b
-; CHECK-BF16-GI-NEXT:    ret
+; CHECK-LABEL: test_fabs:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic v0.4h, #128, lsl #8
+; CHECK-NEXT:    ret
   %r = call <4 x bfloat> @llvm.fabs.v4bf16(<4 x bfloat> %a)
   ret <4 x bfloat> %r
 }

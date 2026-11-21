@@ -450,6 +450,21 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def vector_bitwise_imm_matchdata : GIDefMatchData<"AdvSIMDModImm">;
+// Vector ANDs and ORs with a constant that BIC or ORR can encode use the
+// immediate form, instead of materializing the constant.
+def vector_and_to_bici : GICombineRule<
+  (defs root:$root, vector_bitwise_imm_matchdata:$matchinfo),
+  (match (G_AND $dst, $src, $mask):$root,
+         [{ return matchVectorBitwiseImm(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyVectorBitwiseImm(*${root}, MRI, B, ${matchinfo}); }])>;
+
+def vector_or_to_orri : GICombineRule<
+  (defs root:$root, vector_bitwise_imm_matchdata:$matchinfo),
+  (match (G_OR $dst, $src, $imm):$root,
+         [{ return matchVectorBitwiseImm(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ applyVectorBitwiseImm(*${root}, MRI, B, ${matchinfo}); }])>;
+
 // Post-legalization combines which should happen at all optimization levels.
 // (E.g. ones that facilitate matching for the selector) For example, matching
 // pseudos.
@@ -461,7 +476,8 @@ def AArch64PostLegalizerLowering
                         vector_sext_inreg_to_shift,
                         unmerge_ext_to_unmerge, lower_mulv2s64,
                         vector_unmerge_lowering, insertelt_nonconst,
-                        unmerge_duplanes]> {
+                        unmerge_duplanes, vector_and_to_bici,
+                        vector_or_to_orri]> {
 }
 
 // Post-legalization combines which are primarily optimizations.

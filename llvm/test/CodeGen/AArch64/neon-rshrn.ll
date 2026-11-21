@@ -1538,9 +1538,8 @@ define <16 x i8> @or_rshrn_v16i16_7(<16 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: or_rshrn_v16i16_7:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8h, #64
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.8h, #64
+; CHECK-GI-NEXT:    orr v1.8h, #64
 ; CHECK-GI-NEXT:    addhn v0.8b, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    addhn2 v0.16b, v1.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
@@ -1559,9 +1558,8 @@ define <16 x i8> @or_rshrn_v16i16_8(<16 x i16> %a) {
 ;
 ; CHECK-GI-LABEL: or_rshrn_v16i16_8:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.8h, #128
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.8h, #128
+; CHECK-GI-NEXT:    orr v1.8h, #128
 ; CHECK-GI-NEXT:    uzp2 v0.16b, v0.16b, v1.16b
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1580,9 +1578,8 @@ define <8 x i16> @or_rshrn_v8i32_15(<8 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: or_rshrn_v8i32_15:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.4s, #64, lsl #8
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.4s, #64, lsl #8
+; CHECK-GI-NEXT:    orr v1.4s, #64, lsl #8
 ; CHECK-GI-NEXT:    addhn v0.4h, v0.4s, v0.4s
 ; CHECK-GI-NEXT:    addhn2 v0.8h, v1.4s, v1.4s
 ; CHECK-GI-NEXT:    ret
@@ -1601,9 +1598,8 @@ define <8 x i16> @or_rshrn_v8i32_16(<8 x i32> %a) {
 ;
 ; CHECK-GI-LABEL: or_rshrn_v8i32_16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.4s, #128, lsl #8
-; CHECK-GI-NEXT:    orr v0.16b, v0.16b, v2.16b
-; CHECK-GI-NEXT:    orr v1.16b, v1.16b, v2.16b
+; CHECK-GI-NEXT:    orr v0.4s, #128, lsl #8
+; CHECK-GI-NEXT:    orr v1.4s, #128, lsl #8
 ; CHECK-GI-NEXT:    uzp2 v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
 entry:

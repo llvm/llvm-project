@@ -152,6 +152,21 @@ def G_VLSHR : AArch64GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// Represents a vector AND with the inverse of an encoded immediate (BIC). The
+// immediate and shift are G_CONSTANTs, as the imported patterns expect.
+def G_BICi : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$imm8, type1:$shift);
+  let hasSideEffects = 0;
+}
+
+// Represents a vector OR with an encoded immediate (ORR).
+def G_ORRi : AArch64GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src, type1:$imm8, type1:$shift);
+  let hasSideEffects = 0;
+}
+
 // Float truncation using round to odd
 def G_FPTRUNC_ODD : AArch64GenericInstruction {
   let OutOperandList = (outs type0:$dst);
@@ -318,6 +333,8 @@ def : GINodeEquiv<G_EXT, AArch64ext>;
 def : GINodeEquiv<G_VASHR, AArch64vashr>;
 def : GINodeEquiv<G_VLSHR, AArch64vlshr>;
 def : GINodeEquiv<G_SITOF, AArch64sitof>;
+def : GINodeEquiv<G_BICi, AArch64bici>;
+def : GINodeEquiv<G_ORRi, AArch64orri>;
 def : GINodeEquiv<G_UITOF, AArch64uitof>;
 
 def : GINodeEquiv<G_FCMEQ, AArch64fcmeq>;
