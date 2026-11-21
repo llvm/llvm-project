@@ -165,7 +165,6 @@ headers_not_available = list(
             "inplace_vector",
             "linalg",
             "rcu",
-            "spanstream",
             "stacktrace",
             "stdfloat",
         ],
