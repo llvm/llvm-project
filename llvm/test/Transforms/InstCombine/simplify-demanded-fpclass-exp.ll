@@ -618,6 +618,42 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %result
 }
 
+define nofpclass(qnan) float @ret__no_qnan__exp__no_demand_qnan(i1 %cond, float nofpclass(snan inf zero sub norm) %qnan, float %unknown) {
+; CHECK-LABEL: define nofpclass(qnan) float @ret__no_qnan__exp__no_demand_qnan(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(snan inf zero sub norm) [[QNAN:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[QNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.exp.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %qnan, float %unknown
+  %result = call float @llvm.exp.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__exp__no_demand_ninf(i1 %cond, float nofpclass(nan pinf zero sub norm) %ninf, float %unknown) {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__exp__no_demand_ninf(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan pinf zero sub norm) [[NINF:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float -inf, float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.exp.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %ninf, float %unknown
+  %result = call float @llvm.exp.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(pzero psub pnorm) float @ret__no_pzero_psub_pnorm__exp__no_demand_nnorm(i1 %cond, float nofpclass(nan inf zero sub pnorm) %nnorm, float %unknown) {
+; CHECK-LABEL: define nofpclass(pzero psub pnorm) float @ret__no_pzero_psub_pnorm__exp__no_demand_nnorm(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero sub pnorm) [[NNORM:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NNORM]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.exp.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %nnorm, float %unknown
+  %result = call float @llvm.exp.f32(float %select)
+  ret float %result
+}
+
 define nofpclass(nzero) float @source_is_known_subnormal_exp(float nofpclass(inf nan norm zero) %must.be.subnormal) {
 ; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_subnormal_exp(
 ; CHECK-SAME: float nofpclass(nan inf zero norm) [[MUST_BE_SUBNORMAL:%.*]]) {
