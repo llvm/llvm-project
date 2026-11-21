@@ -11,6 +11,7 @@ add_llvm_component_library(LLVMInstrumentation
   ControlHeightReduction.cpp
   CopyProf.cpp
   DataFlowSanitizer.cpp
+  DeviceAddressSanitizer.cpp
   GCOVProfiling.cpp
   BlockCoverageInference.cpp
   MemProfInstrumentation.cpp
