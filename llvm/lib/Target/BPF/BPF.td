@@ -37,6 +37,10 @@ def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
 def FuncTable : SubtargetFeature<"func-table", "HasFuncTable", "true",
                                  "Call functions through a table">;
 
+def Arena : SubtargetFeature<"arena", "HasArena", "true",
+                             "Keep the memory of a program in arena",
+                             [FuncTable]>;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;

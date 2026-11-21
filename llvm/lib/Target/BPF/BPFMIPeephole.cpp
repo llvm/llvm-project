@@ -646,7 +646,8 @@ static int64_t computeMinFixedObjOffset(MachineFrameInfo &MFI,
   int64_t MinFixedObjOffset = 0;
   // Same logic as in X86FrameLowering::adjustFrameForMsvcCxxEh()
   for (int I = MFI.getObjectIndexBegin(); I < MFI.getObjectIndexEnd(); ++I) {
-    if (MFI.isDeadObjectIndex(I))
+    // Offsets of objects in the stack in arena are from r12.
+    if (MFI.isDeadObjectIndex(I) || MFI.getStackID(I) != TargetStackID::Default)
       continue;
     MinFixedObjOffset = std::min(MinFixedObjOffset, MFI.getObjectOffset(I));
   }
