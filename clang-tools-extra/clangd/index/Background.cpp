@@ -74,6 +74,10 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
     llvm::sys::path::append(AbsolutePath, Cmd.Filename);
     llvm::sys::path::remove_dots(AbsolutePath, true);
   }
+  // The path is compared with the canonical paths of the indexed files, to
+  // tell which one is the main file. On Windows, a compilation database often
+  // has forward slashes.
+  llvm::sys::path::make_preferred(AbsolutePath);
   return AbsolutePath;
 }
 
