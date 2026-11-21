@@ -536,8 +536,8 @@ define void @global_atomic_xchg_i32_ret_av_av_no_agprs(ptr addrspace(1) %ptr) #0
 ; GFX950-NEXT:    scratch_load_dwordx4 v[4:7], off, s32 offset:16 ; 16-byte Folded Reload
 ; GFX950-NEXT:    scratch_load_dwordx4 v[8:11], off, s32 offset:32 ; 16-byte Folded Reload
 ; GFX950-NEXT:    scratch_load_dwordx4 v[12:15], off, s32 offset:48 ; 16-byte Folded Reload
-; GFX950-NEXT:    v_accvgpr_read_b32 v19, a31 ; Reload Reuse
 ; GFX950-NEXT:    scratch_load_dwordx3 v[16:18], off, s32 offset:64 ; 12-byte Folded Reload
+; GFX950-NEXT:    v_accvgpr_read_b32 v19, a31 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v23, a27 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v22, a28 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v21, a29 ; Reload Reuse
@@ -3262,8 +3262,8 @@ define void @global_atomic_xor_i32_ret_av_av_no_agprs(ptr addrspace(1) %ptr) #0 
 ; GFX950-NEXT:    scratch_load_dwordx4 v[4:7], off, s32 offset:16 ; 16-byte Folded Reload
 ; GFX950-NEXT:    scratch_load_dwordx4 v[8:11], off, s32 offset:32 ; 16-byte Folded Reload
 ; GFX950-NEXT:    scratch_load_dwordx4 v[12:15], off, s32 offset:48 ; 16-byte Folded Reload
-; GFX950-NEXT:    v_accvgpr_read_b32 v19, a31 ; Reload Reuse
 ; GFX950-NEXT:    scratch_load_dwordx3 v[16:18], off, s32 offset:64 ; 12-byte Folded Reload
+; GFX950-NEXT:    v_accvgpr_read_b32 v19, a31 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v23, a27 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v22, a28 ; Reload Reuse
 ; GFX950-NEXT:    v_accvgpr_read_b32 v21, a29 ; Reload Reuse

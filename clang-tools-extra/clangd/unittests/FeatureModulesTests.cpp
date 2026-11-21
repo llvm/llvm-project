@@ -7,15 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
+#include "Feature.h"
 #include "FeatureModule.h"
 #include "Selection.h"
 #include "TestTU.h"
+#include "TidyProvider.h"
 #include "refactor/Tweak.h"
 #include "support/Logger.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendOptions.h"
+#include "clang/Frontend/MultiplexConsumer.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/Support/Error.h"
@@ -301,6 +305,57 @@ TEST(FeatureModulesTest, FinalizeDiagnostic) {
   EXPECT_THAT(TU.build().getDiagnostics(), testing::SizeIs(1));
   EXPECT_EQ(Notes, 1u);
   EXPECT_EQ(Fixes, 1u);
+}
+
+TEST(FeatureModulesTest, ClangTidyTemporaryProvider) {
+  if (!CLANGD_TIDY_CHECKS)
+    GTEST_SKIP() << "Requires clang-tidy checks";
+  FeatureModuleSet Modules;
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(
+      addTidyChecks("modernize-use-nullptr")));
+  auto TU = TestTU::withCode("int *p = 0;");
+  TU.FeatureModules = &Modules;
+  auto *Tidy = Modules.get<ClangTidyFeatureModule>();
+  auto Provider = std::make_shared<const TidyProvider>(addTidyChecks("-*"));
+  // Check-mode timing temporarily overrides tidy's configuration, then
+  // restores the original provider for subsequent builds.
+  Tidy->swapProvider(Provider);
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::IsEmpty());
+  Tidy->swapProvider(Provider);
+  auto AST = TU.build();
+  ASSERT_THAT(AST.getDiagnostics(), testing::SizeIs(1));
+  EXPECT_EQ(AST.getDiagnostics().front().Name, "modernize-use-nullptr");
+}
+
+TEST(FeatureModulesTest, ClangTidyDoesNotReinitializeConsumer) {
+  if (!CLANGD_TIDY_CHECKS)
+    GTEST_SKIP() << "Requires clang-tidy checks";
+  class InitializationGuard final : public MultiplexConsumer {
+  public:
+    using MultiplexConsumer::MultiplexConsumer;
+    void Initialize(ASTContext &Ctx) override {
+      EXPECT_FALSE(Initialized);
+      Initialized = true;
+      MultiplexConsumer::Initialize(Ctx);
+    }
+
+  private:
+    bool Initialized = false;
+  };
+  auto Module = std::make_unique<TestModule>();
+  Module->BeforePPCallbacks = [](CompilerInstance &CI) {
+    if (CI.getFrontendOpts().ProgramAction == frontend::ParseSyntaxOnly)
+      CI.setASTConsumer(
+          std::make_unique<InitializationGuard>(CI.takeASTConsumer()));
+  };
+  FeatureModuleSet Modules;
+  Modules.add(std::move(Module));
+  auto TU = TestTU::withCode("int *p = 0;");
+  TU.FeatureModules = &Modules;
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(
+      addTidyChecks("modernize-use-nullptr")));
+  // Running tidy must not reinitialize the existing AST consumer.
+  EXPECT_THAT(TU.build().getDiagnostics(), testing::SizeIs(1));
 }
 
 } // namespace

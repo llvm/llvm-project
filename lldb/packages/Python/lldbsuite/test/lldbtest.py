@@ -300,12 +300,23 @@ def dump_value_obj(val: lldb.SBValue, max_children: int = 10000) -> str:
     return str(val)
 
 
+class _LazyValueErrorMsg:
+    """Lazily error message that only formats the SBValue when needed."""
+
+    def __init__(self, prefix: str, val: lldb.SBValue):
+        self.prefix = prefix
+        self.val = val
+
+    def __str__(self):
+        return self.prefix + "\nChecking SBValue: " + dump_value_obj(self.val)
+
+
 class ValueCheck:
     def __init__(
         self,
         name: str = None,
         value: str = None,
-        type: str = None,
+        type: Union[str, re.Pattern, None] = None,
         summary: str = None,
         children: [ValueCheck] = None,
         dereference: bool = None,
@@ -364,8 +375,7 @@ class ValueCheck:
         not errors in the child values).
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertSuccess(val.GetError())
 
@@ -377,9 +387,14 @@ class ValueCheck:
             else:
                 test_base.assertEqual(self.expect_value, val.GetValue(), this_error_msg)
         if self.expect_type:
-            test_base.assertEqual(
-                self.expect_type, val.GetDisplayTypeName(), this_error_msg
-            )
+            if isinstance(self.expect_type, re.Pattern):
+                test_base.assertRegex(
+                    val.GetDisplayTypeName(), self.expect_type, this_error_msg
+                )
+            else:
+                test_base.assertEqual(
+                    self.expect_type, val.GetDisplayTypeName(), this_error_msg
+                )
         if self.expect_summary:
             if isinstance(self.expect_summary, re.Pattern):
                 test_base.assertRegex(
@@ -404,8 +419,7 @@ class ValueCheck:
         :param val: The SBValue to check.
         """
 
-        this_error_msg = error_msg if error_msg else ""
-        this_error_msg += "\nChecking SBValue: " + dump_value_obj(val)
+        this_error_msg = _LazyValueErrorMsg(error_msg, val)
 
         test_base.assertEqual(len(self.children), val.GetNumChildren(), this_error_msg)
 
@@ -631,9 +645,8 @@ def builder_module():
 
 class Base(unittest.TestCase):
     """
-    Abstract base for performing lldb (see TestBase) or other generic tests (see
-    BenchBase for one example).  lldbtest.Base works with the test driver to
-    accomplish things.
+    Abstract base for performing lldb (see TestBase) or other generic tests.
+    lldbtest.Base works with the test driver to accomplish things.
 
     """
 
@@ -899,7 +912,7 @@ class Base(unittest.TestCase):
             # pass just because Clang thinks it has a fix-it.
             "settings set target.auto-apply-fixits false",
             # Testsuite runs in parallel and the host can have also other load.
-            "settings set plugin.process.gdb-remote.packet-timeout 60",
+            "settings set plugin.process.gdb-remote.packet-timeout 600",
             # LLDB-internal utility expressions can take very long when the
             # host is under heavy load.
             "settings set target.process.utility-expression-timeout 600",
@@ -1857,6 +1870,28 @@ class Base(unittest.TestCase):
         d = {"CXX_SOURCES": sources, "EXE": exe_name}
         self.build(dictionary=d)
 
+    def buildAndRunDriver(self, driver_sources, inferior_sources):
+        """Build a driver program that links with LLDB and an inferior program,
+        then run the driver with the path to the inferior as its argument.
+        """
+        # The driver links against the host liblldb, so the compiler's target
+        # triple must match liblldb's. Driver tests don't run remotely, so the
+        # OS is the same and only the architecture needs to be checked.
+        if self.getLldbArchitecture() != self.getArchitecture():
+            self.skipTest(
+                "This test is only run if the target arch is the same as the lldb binary arch"
+            )
+
+        self.buildProgram(inferior_sources, "inferior")
+        self.buildDriver(driver_sources, "driver")
+
+        env = dict(os.environ)
+        env["LLDB_TEST_SOURCE_DIR"] = self.getSourceDir()
+        check_call(
+            [self.getBuildArtifact("driver"), self.getBuildArtifact("inferior")],
+            env=env,
+        )
+
     def findBuiltClang(self):
         """Tries to find and use Clang from the build directory as the compiler (instead of the system compiler)."""
         paths_to_try = [
@@ -2189,11 +2224,6 @@ class LLDBTestCaseFactory(type):
                             if enabled
                         ]
 
-                        # PDB is off by default, because it has a lot of failures
-                        # right now. See llvm.org/pr149498.
-                        if original_testcase.TEST_WITH_PDB_DEBUG_INFO:
-                            dbginfo_categories.append("pdb")
-
                     xfail_fns = getattr(attrvalue, "__variant_xfail__", {})
                     skip_fns = getattr(attrvalue, "__variant_skip__", {})
                     xfail_for_debug_info_cat_fn = xfail_fns.get("debug_info", no_reason)
@@ -2304,13 +2334,6 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
     # Subclasses can set this to true (if they don't depend on debug info) to avoid running the
     # test multiple times with various debug info types.
     NO_DEBUG_INFO_TESTCASE = False
-
-    TEST_WITH_PDB_DEBUG_INFO = False
-    """
-    Subclasses can set this to True to test with PDB in addition to the other debug info
-    types. This id off by default because many tests will fail due to missing functionality in PDB.
-    See llvm.org/pr149498.
-    """
 
     def generateSource(self, source):
         template = source + ".template"

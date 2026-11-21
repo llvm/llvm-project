@@ -110,6 +110,13 @@
 ;;             },
 ;;             101, 102, 104);
 ;;
+;;     // same, but local sizes passed as a pointer to the first element
+; CHECK: %[[#ElemPtr:]] = OpPtrAccessChain %[[#]] %[[#]] %[[#Num0i32]] %[[#Num0i32]]
+; CHECK: %[[#LocalSize0:]] = OpPtrAccessChain %[[#]] %[[#ElemPtr]] %[[#Num0i32]]{{$}}
+; CHECK-NEXT: %[[#LocalSize1:]] = OpPtrAccessChain %[[#]] %[[#ElemPtr]] %[[#Num1i32]]{{$}}
+; CHECK-NEXT: %[[#LocalSize2:]] = OpPtrAccessChain %[[#]] %[[#ElemPtr]] %[[#Num2i32]]{{$}}
+; CHECK-NEXT: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#nullPtrEvent]] %[[#InvokeKernel5Ptr]] %[[#]] %[[#Num16i32]] %[[#Num8i32]] %[[#LocalSize0]] %[[#LocalSize1]] %[[#LocalSize2]]
+;;
 ;;     // null event, no var args
 ; CHECK: %[[#]] = OpEnqueueKernel %[[#typeInt32]] %[[#default_queue]] %[[#Num0i32]] %[[#]] %[[#Num0i32]] %[[#nullPtrEvent]] %[[#event2]] %[[#InvokeKernel6Ptr]] %[[#]] %[[#Num36i32]] %[[#Num8i32]]
 ;;     enqueue_kernel(default_queue, flags, ndrange, 0, NULL, &clk_event,
@@ -198,6 +205,8 @@ entry:
   %10 = getelementptr inbounds i8, ptr %block_sizes15.i, i64 16
   store i64 104, ptr %10, align 8
   %11 = call spir_func i32 @__enqueue_kernel_varargs(target("spirv.Queue") %default_queue, i32 0, ptr %tmp14.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.2 to ptr addrspace(4)), i32 3, ptr %block_sizes15.i)
+  %elem_sizes = getelementptr [3 x i64], ptr %block_sizes15.i, i32 0, i32 0
+  %elem_call = call spir_func i32 @__enqueue_kernel_varargs(target("spirv.Queue") %default_queue, i32 0, ptr %tmp14.i, ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_5_kernel to ptr addrspace(4)), ptr addrspace(4) addrspacecast (ptr addrspace(1) @__block_literal_global.2 to ptr addrspace(4)), i32 3, ptr %elem_sizes)
   store i32 36, ptr %block17.i, align 8
   %block.align19.i = getelementptr inbounds i8, ptr %block17.i, i64 4
   store i32 8, ptr %block.align19.i, align 4

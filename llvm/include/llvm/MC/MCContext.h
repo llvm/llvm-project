@@ -136,9 +136,6 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
-  /// For MCFragment instances.
-  BumpPtrAllocator FragmentAllocator;
-
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
@@ -175,7 +172,7 @@ private:
   unsigned GetInstance(unsigned LocalLabelVal);
 
   /// SHT_LLVM_BB_ADDR_MAP version to emit.
-  uint8_t BBAddrMapVersion = 5;
+  uint8_t BBAddrMapVersion = 6;
 
   /// The file name of the log file from the environment variable
   /// AS_SECURE_LOG_FILE.  Which must be set before the .secure_log_unique
@@ -314,14 +311,15 @@ private:
 
   StringMap<MCSectionMachO *> MachOUniquingMap;
   std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
-  StringMap<MCSectionELF *> ELFUniquingMap;
+  StringMap<MCSectionELF *, BumpPtrAllocator &> ELFUniquingMap;
   std::map<std::string, MCSectionGOFF *> GOFFUniquingMap;
   std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
   std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
   StringMap<MCSectionDXContainer *> DXCUniquingMap;
-  StringMap<bool> RelSecNames;
 
-  SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
+  /// Copies of MCSubtargetInfo created by getSubtargetCopy(). These must live
+  /// as long as the context since fragments reference them.
+  SmallVector<std::unique_ptr<MCSubtargetInfo>, 0> SubtargetCopies;
 
   /// Do automatic reset in destructor
   bool AutoReset;

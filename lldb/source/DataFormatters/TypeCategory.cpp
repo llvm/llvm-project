@@ -14,47 +14,26 @@ using namespace lldb;
 using namespace lldb_private;
 
 TypeCategoryImpl::TypeCategoryImpl(IFormatChangeListener *clist,
-                                   ConstString name)
+                                   std::string name)
     : m_format_cont(clist), m_summary_cont(clist), m_filter_cont(clist),
       m_synth_cont(clist), m_enabled(false), m_change_listener(clist),
-      m_mutex(), m_name(name), m_languages() {}
+      m_mutex(), m_name(std::move(name)), m_languages() {}
 
 static bool IsApplicable(lldb::LanguageType category_lang,
                          lldb::LanguageType valobj_lang) {
-  switch (category_lang) {
-  // Unless we know better, allow only exact equality.
-  default:
-    return category_lang == valobj_lang;
-
-  // the C family, we consider it as one
-  case eLanguageTypeC89:
-  case eLanguageTypeC:
-  case eLanguageTypeC99:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99;
-
-  // ObjC knows about C and itself
-  case eLanguageTypeObjC:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 || valobj_lang == eLanguageTypeObjC;
-
-  // C++ knows about C and C++
-  case eLanguageTypeC_plus_plus:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 ||
-           valobj_lang == eLanguageTypeC_plus_plus;
-
-  // ObjC++ knows about C,C++,ObjC and ObjC++
-  case eLanguageTypeObjC_plus_plus:
-    return valobj_lang == eLanguageTypeC89 || valobj_lang == eLanguageTypeC ||
-           valobj_lang == eLanguageTypeC99 ||
-           valobj_lang == eLanguageTypeC_plus_plus ||
-           valobj_lang == eLanguageTypeObjC;
-
   // Categories with unspecified language match everything.
-  case eLanguageTypeUnknown:
+  if (category_lang == eLanguageTypeUnknown)
     return true;
-  }
+
+  // No language plugin claims C, whose versions we consider as one.
+  if (Language::LanguageIsC(category_lang))
+    return Language::LanguageIsC(valobj_lang);
+
+  if (Language *language = Language::FindPlugin(category_lang))
+    return language->IsCategoryApplicable(category_lang, valobj_lang);
+
+  // Unless we know better, allow only exact equality.
+  return category_lang == valobj_lang;
 }
 
 bool TypeCategoryImpl::IsApplicable(lldb::LanguageType lang) {
@@ -148,7 +127,7 @@ void TypeCategoryImpl::Clear(FormatCategoryItems items) {
     m_synth_cont.Clear();
 }
 
-bool TypeCategoryImpl::Delete(ConstString name, FormatCategoryItems items) {
+bool TypeCategoryImpl::Delete(llvm::StringRef name, FormatCategoryItems items) {
   bool success = false;
 
   if (items & eFormatCategoryItemFormat)

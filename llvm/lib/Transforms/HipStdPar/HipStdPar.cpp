@@ -632,7 +632,7 @@ PreservedAnalyses HipStdParMathFixupPass::run(Module &M,
       if (It == std::cend(MathLibToHipStdPar))
         continue;
       ToReplace.emplace_back(&F, It->second);
-      break;
+      continue;
     }
     case Intrinsic::acos:
     case Intrinsic::asin:

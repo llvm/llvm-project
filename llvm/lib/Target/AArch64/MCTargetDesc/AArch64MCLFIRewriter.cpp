@@ -17,6 +17,7 @@
 #include "Utils/AArch64BaseInfo.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -87,9 +88,15 @@ static constexpr MCRegister LFICtxReg = AArch64::X25;
 // 64-bit loads), so a value of 2 means an actual byte offset of 16.
 static constexpr unsigned LFITPOffset = 2;
 
-// Byte offset from the sandbox base register where the syscall handler address
-// is stored (negative because it is below the sandbox base).
+// Byte offset from the context register where the syscall handler address is
+// stored.
 static constexpr int LFISyscallOffset = -8;
+
+AArch64MCLFIRewriter::AArch64MCLFIRewriter(MCContext &Ctx,
+                                           std::unique_ptr<MCRegisterInfo> &&RI,
+                                           std::unique_ptr<MCInstrInfo> &&II)
+    : MCLFIRewriter(Ctx, std::move(RI), std::move(II)),
+      CLOpts(AArch64_MC::getCLOpts(Ctx.getTargetOptions())) {}
 
 static bool isSyscall(const MCInst &Inst) {
   return Inst.getOpcode() == AArch64::SVC;
@@ -552,7 +559,7 @@ void AArch64MCLFIRewriter::rewriteAuthenticatedBranchOrCall(
 // svc #0
 // ->
 // mov x26, x30
-// ldur x30, [x27, #-8]
+// ldur x30, [x25, #-8]
 // blr x30
 // add x30, x27, w26, uxtw
 void AArch64MCLFIRewriter::rewriteSyscall(const MCInst &, MCStreamer &Out,
@@ -560,10 +567,10 @@ void AArch64MCLFIRewriter::rewriteSyscall(const MCInst &, MCStreamer &Out,
   // Save LR to scratch.
   emitMov(LFIScratchReg, AArch64::LR, Out, STI);
 
-  // Load syscall handler address from negative offset from sandbox base.
+  // Load syscall handler address from negative offset from context register.
   emitInst(MCInstBuilder(AArch64::LDURXi)
                .addReg(AArch64::LR)
-               .addReg(LFIBaseReg)
+               .addReg(LFICtxReg)
                .addImm(LFISyscallOffset),
            Out, STI);
 

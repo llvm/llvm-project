@@ -11,13 +11,14 @@
 // Interceptors for operators new and delete.
 //===----------------------------------------------------------------------===//
 
+#include <stddef.h>
+#include <stdlib.h>
+
 #include "hwasan.h"
 #include "interception/interception.h"
 #include "sanitizer_common/sanitizer_allocator.h"
+#include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
-
-#include <stddef.h>
-#include <stdlib.h>
 
 #if HWASAN_REPLACE_OPERATORS_NEW_AND_DELETE
 
@@ -40,23 +41,31 @@
 #  define OPERATOR_NEW_BODY_ARRAY_NOTHROW \
     GET_MALLOC_STACK_TRACE;               \
     return hwasan_malloc(size, &stack)
-#  define OPERATOR_NEW_BODY_ALIGN                                        \
-    GET_MALLOC_STACK_TRACE;                                              \
-    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
-    if (UNLIKELY(!res))                                                  \
-      ReportOutOfMemory(size, &stack);                                   \
+#  define OPERATOR_NEW_BODY_ALIGN                                         \
+    GET_MALLOC_STACK_TRACE;                                               \
+    if (UNLIKELY(!CheckAlignedNewAlignment(static_cast<uptr>(align))))    \
+      ReportInvalidAllocationAlignment(static_cast<uptr>(align), &stack); \
+    void* res = hwasan_memalign(static_cast<uptr>(align), size, &stack);  \
+    if (UNLIKELY(!res))                                                   \
+      ReportOutOfMemory(size, &stack);                                    \
     return res
-#  define OPERATOR_NEW_BODY_ALIGN_NOTHROW \
-    GET_MALLOC_STACK_TRACE;               \
+#  define OPERATOR_NEW_BODY_ALIGN_NOTHROW                                 \
+    GET_MALLOC_STACK_TRACE;                                               \
+    if (UNLIKELY(!CheckAlignedNewAlignment(static_cast<uptr>(align))))    \
+      ReportInvalidAllocationAlignment(static_cast<uptr>(align), &stack); \
     return hwasan_memalign(static_cast<uptr>(align), size, &stack)
-#  define OPERATOR_NEW_BODY_ALIGN_ARRAY                                  \
-    GET_MALLOC_STACK_TRACE;                                              \
-    void *res = hwasan_memalign(static_cast<uptr>(align), size, &stack); \
-    if (UNLIKELY(!res))                                                  \
-      ReportOutOfMemory(size, &stack);                                   \
+#  define OPERATOR_NEW_BODY_ALIGN_ARRAY                                   \
+    GET_MALLOC_STACK_TRACE;                                               \
+    if (UNLIKELY(!CheckAlignedNewAlignment(static_cast<uptr>(align))))    \
+      ReportInvalidAllocationAlignment(static_cast<uptr>(align), &stack); \
+    void* res = hwasan_memalign(static_cast<uptr>(align), size, &stack);  \
+    if (UNLIKELY(!res))                                                   \
+      ReportOutOfMemory(size, &stack);                                    \
     return res
-#  define OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW \
-    GET_MALLOC_STACK_TRACE;                     \
+#  define OPERATOR_NEW_BODY_ALIGN_ARRAY_NOTHROW                           \
+    GET_MALLOC_STACK_TRACE;                                               \
+    if (UNLIKELY(!CheckAlignedNewAlignment(static_cast<uptr>(align))))    \
+      ReportInvalidAllocationAlignment(static_cast<uptr>(align), &stack); \
     return hwasan_memalign(static_cast<uptr>(align), size, &stack)
 
 #  define OPERATOR_DELETE_BODY \

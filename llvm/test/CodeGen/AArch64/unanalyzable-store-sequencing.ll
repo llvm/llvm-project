@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler -enable-unanalyzable-store-sequencing 2>&1 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios -debug-only=machine-scheduler -enable-store-sequencing 2>&1 | FileCheck %s
 
 define void @test_first_store_promoted(ptr %p) {
 ; CHECK-LABEL: test_first_store_promoted:%bb.0

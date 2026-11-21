@@ -69,6 +69,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
@@ -569,12 +570,14 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   loweringOptions.setFPMaxminBehavior(fpMaxminBehavior.getValue());
   std::vector<Fortran::lower::EnvironmentDefault> envDefaults = {};
   Fortran::frontend::TargetOptions targetOpts;
+  targetOpts.cpu = targetMachine.getTargetCPU();
   Fortran::frontend::CodeGenOptions cgOpts;
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
       semanticsContext.targetCharacteristics(), parsing.allCooked(),
       targetTriple, kindMap, loweringOptions, envDefaults,
-      semanticsContext.languageFeatures(), targetMachine, targetOpts, cgOpts);
+      semanticsContext.languageFeatures(),
+      targetMachine.getTargetFeatureString(), targetOpts, cgOpts);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
     if (enableOpenMPGPU && !enableOpenMPDevice) {
@@ -664,8 +667,6 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
     config.SkipConvertComplexPow = targetMachine.getTargetTriple().isAMDGCN();
     if (enableOpenMP)
       config.EnableOpenMP = true;
-    if (enableOpenMPDevice)
-      config.EnableOpenMPIsTargetDevice = true;
     config.NSWOnLoopVarInc = !integerWrapAround;
     fir::registerDefaultInlinerPass(config);
     fir::createDefaultFIROptimizerPassPipeline(pm, config);
@@ -799,11 +800,13 @@ int main(int argc, char **argv) {
     llvm::errs() << "failed to create target machine: " << error << "\n";
     return mlir::failed(mlir::failure());
   }
+  semanticsContext.set_targetTriple(targetMachine->getTargetTriple().str())
+      .set_targetFeatures(targetMachine->getTargetFeatureString().str());
   std::string compilerVersion = Fortran::common::getFlangToolFullVersion("bbc");
   std::string compilerOptions = "";
   Fortran::tools::setUpTargetCharacteristics(
-      semanticsContext.targetCharacteristics(), *targetMachine, {},
-      compilerVersion, compilerOptions);
+      semanticsContext.targetCharacteristics(),
+      targetMachine->getTargetTriple(), {}, compilerVersion, compilerOptions);
 
   return mlir::failed(
       convertFortranSourceToMLIR(inputFilename, options, programPrefix,

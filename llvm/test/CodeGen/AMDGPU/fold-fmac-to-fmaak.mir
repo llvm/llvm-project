@@ -101,8 +101,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_16_lo128 = COPY [[COPY]]
     ; CHECK-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16_lo128 = V_MOV_B16_t16_e64 0, 10526, 0, implicit $exec
-    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 [[V_MOV_B16_t16_e64_]], killed [[COPY1]], 8478, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY killed [[V_FMAAK_F16_t16_]]
+    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 [[V_MOV_B16_t16_e64_]], [[COPY1]], 8478, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[V_FMAAK_F16_t16_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_16 = COPY $vgpr0
@@ -124,8 +124,8 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_16_lo128 = COPY [[COPY]]
     ; CHECK-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16_lo128 = V_MOV_B16_t16_e64 0, 10526, 0, implicit $exec
-    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 [[V_MOV_B16_t16_e64_]], killed [[COPY1]], 8478, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY killed [[V_FMAAK_F16_t16_]]
+    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 [[V_MOV_B16_t16_e64_]], [[COPY1]], 8478, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[V_FMAAK_F16_t16_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_16 = COPY $vgpr0
@@ -146,8 +146,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_16_lo128 = COPY [[COPY]]
-    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 16384, killed [[COPY1]], 8478, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY killed [[V_FMAAK_F16_t16_]]
+    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 16384, [[COPY1]], 8478, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[V_FMAAK_F16_t16_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_16 = COPY $vgpr0
@@ -168,8 +168,8 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_16 = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_16_lo128 = COPY [[COPY]]
-    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 16384, killed [[COPY1]], 8478, implicit $mode, implicit $exec
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY killed [[V_FMAAK_F16_t16_]]
+    ; CHECK-NEXT: [[V_FMAAK_F16_t16_:%[0-9]+]]:vgpr_16_lo128 = contract nofpexcept V_FMAAK_F16_t16 16384, [[COPY1]], 8478, implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_16 = COPY [[V_FMAAK_F16_t16_]]
     ; CHECK-NEXT: $vgpr0 = COPY [[COPY2]]
     ; CHECK-NEXT: SI_RETURN implicit $vgpr0
     %0:vgpr_16 = COPY $vgpr0

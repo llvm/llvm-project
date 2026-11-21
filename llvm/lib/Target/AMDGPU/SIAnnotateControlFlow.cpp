@@ -50,7 +50,6 @@ private:
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  PoisonValue *BoolPoison;
   Constant *IntMaskZero;
 
   Function *If = nullptr;
@@ -121,7 +120,6 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolPoison = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 
@@ -234,7 +232,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
     } else if (L->contains(Inst)) {
       Insert = Term;
     } else {
-      Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+      Insert = &*L->getHeader()->getFirstNonPHIOrLifetime();
     }
 
     return CreateBreak(Insert);
@@ -249,7 +247,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
   }
 
   if (isa<Argument>(Cond)) {
-    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrLifetime();
     return CreateBreak(Insert);
   }
 

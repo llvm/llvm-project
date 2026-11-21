@@ -621,3 +621,234 @@ func.func private @_QPsetup5()
 // CHECK:         fir.load
 // CHECK:         cuf.allocate
 // CHECK:         cuf.free
+
+// -----
+
+// Test 18: Uses in the body of a CFG loop and after it. Their nearest common
+// dominator is the loop header, which runs once per trip, so the group must
+// stay before the branch into the loop rather than sink into the header.
+func.func @_QPuse_in_cfg_loop() {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_cfg_loopEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_cfg_loopEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %c1 = arith.constant 1 : index
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  %5 = arith.cmpi slt, %i, %c1 : index
+  cf.cond_br %5, ^bb2, ^bb3
+^bb2:
+  %6 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  %7 = arith.addi %i, %c1 : index
+  cf.br ^bb1(%7 : index)
+^bb3:
+  %8 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
+  return
+}
+
+// CHECK-LABEL: func.func @_QPuse_in_cfg_loop
+// CHECK:         fir.embox
+// CHECK:         arith.constant 1
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cf.br ^bb1
+// CHECK:       ^bb1
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:         cf.cond_br
+// CHECK:       ^bb2:
+// CHECK:         cuf.allocate
+// CHECK:       ^bb3:
+// CHECK:         fir.load
+// CHECK:         cuf.free
+
+// -----
+
+// Test 19: Uses in the body and the exit of an inner CFG loop, both inside
+// an outer CFG loop. The nearest common dominator is the inner header, so the
+// climb has to pass the outer header as well and end at the entry block.
+func.func @_QPuse_in_nested_cfg_loop() {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuse_in_nested_cfg_loopEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuse_in_nested_cfg_loopEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %c1 = arith.constant 1 : index
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  %5 = arith.cmpi slt, %i, %c1 : index
+  cf.cond_br %5, ^bb2(%c0 : index), ^bb5
+^bb2(%j: index):
+  %6 = arith.cmpi slt, %j, %c1 : index
+  cf.cond_br %6, ^bb3, ^bb4
+^bb3:
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  %8 = arith.addi %j, %c1 : index
+  cf.br ^bb2(%8 : index)
+^bb4:
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
+  %9 = arith.addi %i, %c1 : index
+  cf.br ^bb1(%9 : index)
+^bb5:
+  return
+}
+
+// CHECK-LABEL: func.func @_QPuse_in_nested_cfg_loop
+// CHECK:         fir.embox
+// CHECK:         arith.constant 1
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cf.br ^bb1
+// CHECK:       ^bb1
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:       ^bb3:
+// CHECK:         cuf.allocate
+// CHECK:       ^bb4:
+// CHECK:         cuf.free
+
+// -----
+
+// Test 20: The loop is only reached through a non-loop successor block. The
+// group still sinks out of the entry block, into that block before the branch
+// into the loop header.
+func.func @_QPcfg_loop_in_successor(%arg0: !fir.ref<i32>) {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFcfg_loop_in_successorEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFcfg_loop_in_successorEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %c1 = arith.constant 1 : index
+  %5 = fir.load %arg0 : !fir.ref<i32>
+  %c0_i32 = arith.constant 0 : i32
+  %6 = arith.cmpi slt, %5, %c0_i32 : i32
+  cf.cond_br %6, ^bb1, ^bb2
+^bb1:
+  fir.call @_FortranAStopStatementText(%c0_i32, %c0_i32) : (i32, i32) -> none
+  fir.unreachable
+^bb2:
+  %c2 = arith.constant 2 : index
+  cf.br ^bb3(%c0 : index)
+^bb3(%i: index):
+  %7 = arith.cmpi slt, %i, %c2 : index
+  cf.cond_br %7, ^bb4, ^bb5
+^bb4:
+  %8 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  %9 = arith.addi %i, %c1 : index
+  cf.br ^bb3(%9 : index)
+^bb5:
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
+  return
+}
+func.func private @_FortranAStopStatementText(i32, i32) -> none
+
+// CHECK-LABEL: func.func @_QPcfg_loop_in_successor
+// CHECK:         fir.embox
+// CHECK:         cf.cond_br
+// CHECK:       ^bb1:
+// CHECK:         fir.unreachable
+// CHECK:       ^bb2:
+// CHECK:         arith.constant 2
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cf.br ^bb3
+// CHECK:       ^bb3
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:       ^bb4:
+// CHECK:         cuf.allocate
+// CHECK:       ^bb5:
+// CHECK:         cuf.free
+
+// -----
+
+// Test 21: All uses are in the body block of a CFG loop, so the nearest common
+// dominator is the body itself and the climb takes two steps, body to header
+// to entry.
+func.func @_QPuses_only_in_cfg_loop_body() {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFuses_only_in_cfg_loop_bodyEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFuses_only_in_cfg_loop_bodyEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %c1 = arith.constant 1 : index
+  cf.br ^bb1(%c0 : index)
+^bb1(%i: index):
+  %5 = arith.cmpi slt, %i, %c1 : index
+  cf.cond_br %5, ^bb2, ^bb3
+^bb2:
+  %6 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
+  %7 = arith.addi %i, %c1 : index
+  cf.br ^bb1(%7 : index)
+^bb3:
+  return
+}
+
+// CHECK-LABEL: func.func @_QPuses_only_in_cfg_loop_body
+// CHECK:         fir.embox
+// CHECK:         arith.constant 1
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cf.br ^bb1
+// CHECK:       ^bb1
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:       ^bb2:
+// CHECK:         cuf.allocate
+// CHECK:         cuf.free
+
+// -----
+
+// Test 22: An irreducible cycle (two entries, as GOTO can build) that natural
+// loop analysis does not report as a loop. The uses are in a block on the
+// cycle and after it, so the group must stay at entry.
+func.func @_QPirreducible_cycle(%arg0: !fir.ref<i32>) {
+  %0 = cuf.alloc !fir.box<!fir.heap<!fir.array<?xf32>>> uniq_name("_QFirreducible_cycleEa") bindc_name("a") data_attr(device) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %1 = fir.zero_bits !fir.heap<!fir.array<?xf32>>
+  %c0 = arith.constant 0 : index
+  %2 = fir.shape %c0 : (index) -> !fir.shape<1>
+  %3 = fir.embox %1(%2) allocator_idx(2) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  fir.store %3 to %0 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %4 = fir.declare %0 uniq_name("_QFirreducible_cycleEa") fortran_attrs<allocatable> data_attr(#cuf.cuda<device>) : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  %5 = fir.load %arg0 : !fir.ref<i32>
+  %c0_i32 = arith.constant 0 : i32
+  %6 = arith.cmpi slt, %5, %c0_i32 : i32
+  cf.cond_br %6, ^bb1, ^bb2
+^bb1:
+  cf.br ^bb2
+^bb2:
+  %7 = cuf.allocate %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device) -> i32
+  %8 = fir.load %arg0 : !fir.ref<i32>
+  %9 = arith.cmpi sgt, %8, %c0_i32 : i32
+  cf.cond_br %9, ^bb1, ^bb3
+^bb3:
+  cuf.free %4 : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> data_attr(device)
+  return
+}
+
+// CHECK-LABEL: func.func @_QPirreducible_cycle
+// CHECK:         fir.embox
+// CHECK:         fir.load
+// CHECK:         arith.cmpi
+// CHECK:         cuf.alloc
+// CHECK:         fir.store
+// CHECK:         fir.declare
+// CHECK:         cf.cond_br
+// CHECK:       ^bb1:
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:       ^bb2:
+// CHECK-NOT:     cuf.alloc !fir.box
+// CHECK:         cuf.allocate
+// CHECK:       ^bb3:
+// CHECK:         cuf.free

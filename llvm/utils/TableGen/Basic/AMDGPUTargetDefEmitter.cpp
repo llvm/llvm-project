@@ -165,14 +165,6 @@ namespace {
 struct GPUEntry {
   const Record *Rec;
   bool IsAlias;
-
-  // Whether this entry is (or aliases) a generic family target. \p Canonicals
-  // maps canonical GPU names to their records.
-  bool isGeneric(const StringMap<const Record *> &Canonicals) const {
-    const Record *Canon =
-        IsAlias ? Canonicals.lookup(Rec->getValueAsString("Alias")) : Rec;
-    return Canon && isGenericTarget(Canon);
-  }
 };
 } // namespace
 

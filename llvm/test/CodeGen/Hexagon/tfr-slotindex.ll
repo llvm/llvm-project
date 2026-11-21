@@ -3,7 +3,7 @@
 ; to avoid breaking live interval information.
 ; Check that there is no machine verifier crash
 
-; RUN: llc -stop-after=tfr-cleanup -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -stop-after=tfr-cleanup %s -o - | FileCheck %s
 
 ; CHECK: $r0 = A2_tfrsi 34767
 

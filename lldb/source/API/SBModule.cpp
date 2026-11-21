@@ -306,6 +306,14 @@ size_t SBModule::GetNumSymbols() {
   return 0;
 }
 
+uint32_t SBModule::GetSymtabState() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (ModuleSP module_sp = GetSP())
+    return module_sp->GetSymtabState();
+  return eSymtabStateNone;
+}
+
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
   LLDB_INSTRUMENT_VA(this, idx);
 
@@ -693,5 +701,5 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return m_opaque_sp->GetObjectName().AsCString(nullptr);
+  return ConstString(m_opaque_sp->GetObjectName()).AsCString(nullptr);
 }

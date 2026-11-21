@@ -11,7 +11,7 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -70,11 +70,12 @@ struct TargetToTargetFeaturesPass
     auto fullTargetFeaturesAttr =
         LLVM::TargetFeaturesAttr::get(&getContext(), plussedFeaturesRefs);
 
-    auto updatedTargetAttr =
-        LLVM::TargetAttr::get(&getContext(), targetAttr.getTriple(),
-                              targetAttr.getChip(), fullTargetFeaturesAttr);
-
-    op->setDiscardableAttr(LLVM::LLVMDialect::getTargetAttrName(),
-                           updatedTargetAttr);
+    auto queryOp = dyn_cast<DLTIQueryOpInterface>(op);
+    if (!queryOp ||
+        failed(queryOp.setDlti(StringAttr::get(&getContext(), "features"),
+                               fullTargetFeaturesAttr))) {
+      op->emitError() << "failed to update DLTI target features";
+      return signalPassFailure();
+    }
   }
 };

@@ -190,7 +190,7 @@ define i32 @test_absorbed_or_not_disjoint(ptr %p, i8 %x) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <4 x i32> [[TMP1]], <i32 0, i32 8, i32 16, i32 24>
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP2]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[X:%.*]] to i32
-; CHECK-NEXT:    [[OP_RDX:%.*]] = or disjoint i32 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i32 [[OP_RDX]]
 ;
 entry:

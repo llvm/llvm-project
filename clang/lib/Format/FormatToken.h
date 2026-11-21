@@ -198,6 +198,7 @@ namespace format {
   TYPE(TemplateOpener)                                                         \
   TYPE(TemplateString)                                                         \
   TYPE(TrailingAnnotation)                                                     \
+  TYPE(TrailingCommaVaOptRParen)                                               \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
   TYPE(TypeDeclarationParen)                                                   \
@@ -631,6 +632,10 @@ public:
   ///   >0: number of right braces
   int8_t BraceCount = 0;
 
+  /// Whether a left brace was already inserted after this token when an
+  /// earlier run was analyzed.
+  bool LBraceInserted = false;
+
   /// If this token starts a block, this contains all the unwrapped lines
   /// in it.
   SmallVector<AnnotatedLine *, 1> Children;
@@ -934,6 +939,10 @@ public:
   /// Returns \c true if this token ends a block indented initializer list.
   [[nodiscard]] bool isBlockIndentedInitRBrace(const FormatStyle &Style) const;
 
+  /// Returns \c true if a newline should exist between this token and a
+  /// preceding attribute.
+  [[nodiscard]] bool mustBreakAfterAttributes(const FormatStyle &Style) const;
+
   /// Returns \c true if this tokens starts a block-type list, i.e. a
   /// list that should be indented with a block indent.
   [[nodiscard]] bool opensBlockOrBlockTypeList(const FormatStyle &Style) const;
@@ -1156,6 +1165,7 @@ struct AdditionalKeywords {
     kw___except = &IdentTable.get("__except");
     kw___has_include = &IdentTable.get("__has_include");
     kw___has_include_next = &IdentTable.get("__has_include_next");
+    kw___VA_OPT__ = &IdentTable.get("__VA_OPT__");
 
     kw_mark = &IdentTable.get("mark");
     kw_region = &IdentTable.get("region");
@@ -1545,6 +1555,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw___except;
   IdentifierInfo *kw___has_include;
   IdentifierInfo *kw___has_include_next;
+  IdentifierInfo *kw___VA_OPT__;
 
   // JavaScript keywords.
   IdentifierInfo *kw_as;
@@ -2127,6 +2138,9 @@ inline bool continuesLineComment(const FormatToken &FormatTok,
                                  const FormatToken *Previous,
                                  const FormatToken *MinColumnToken) {
   if (!Previous || !MinColumnToken)
+    return false;
+  // Do not continue a comment section across a formatting-disabled boundary.
+  if (FormatTok.Finalized != Previous->Finalized)
     return false;
   unsigned MinContinueColumn =
       MinColumnToken->OriginalColumn + (isLineComment(*MinColumnToken) ? 0 : 1);

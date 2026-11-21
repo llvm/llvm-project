@@ -94,6 +94,9 @@ public:
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
+  // Write all free blocks to zero.
+  void zeroFreeBlocks();
+
   void unmapTestOnly();
 
   // When all blocks are freed, it has to be the same size as `AllocatedUser`.
@@ -456,6 +459,26 @@ template <typename Config> void SizeClassAllocator64<Config>::unmapTestOnly() {
   }
 }
 
+template <typename Config> void SizeClassAllocator64<Config>::zeroFreeBlocks() {
+  for (uptr ClassId = 0; ClassId < NumClasses; ++ClassId) {
+    if (ClassId == SizeClassMap::BatchClassId)
+      continue;
+
+    RegionInfo *Region = getRegionInfo(ClassId);
+    ScopedLock ML(Region->MMLock);
+    ScopedFLLock FL(Region->FLLock, Region);
+    const uptr BlockSize = getSizeByClassId(ClassId);
+    for (BatchGroupT &BG : Region->FreeListInfo.BlockList) {
+      for (const auto &It : BG.Batches) {
+        for (u16 I = 0; I < It.getCount(); ++I) {
+          void *BlockBegin = decompactPtr(ClassId, It.get(I));
+          memset(BlockBegin, 0, BlockSize);
+        }
+      }
+    }
+  }
+}
+
 template <typename Config>
 void SizeClassAllocator64<Config>::verifyAllBlocksAreReleasedTestOnly() {
   // `BatchGroup` and `Batch` also use the blocks from BatchClass.
@@ -578,6 +601,11 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
     bool PopulateFreeList = false;
     {
       ScopedFLLock FL(Region->FLLock, Region);
+      PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                               MaxBlockCount);
+      if (PopCount != 0U)
+        break;
+
       if (!Region->IsPopulatingFreeList) {
         Region->IsPopulatingFreeList = true;
         PopulateFreeList = true;
@@ -586,6 +614,20 @@ u16 SizeClassAllocator64<Config>::popBlocksWithCV(
 
     if (PopulateFreeList) {
       ScopedLock ML(Region->MMLock);
+
+      // While waiting for `MMLock`, another thread may have pushed blocks or
+      // `releaseToOSMaybe()` may have finished merging `GroupsToRelease` back
+      // into the freelist. Always re-check the freelist before mapping new
+      // pages.
+      {
+        ScopedFLLock FL(Region->FLLock, Region);
+        PopCount = popBlocksImpl(SizeClassAllocator, ClassId, Region, ToArray,
+                                 MaxBlockCount);
+        if (PopCount != 0U) {
+          Region->IsPopulatingFreeList = false;
+          break;
+        }
+      }
 
       const bool RegionIsExhausted = Region->Exhausted;
       if (!RegionIsExhausted) {
@@ -1412,7 +1454,7 @@ template <typename Config>
 BlockInfo SizeClassAllocator64<Config>::findNearestBlock(uptr Ptr)
     NO_THREAD_SAFETY_ANALYSIS {
   uptr ClassId;
-  uptr MinDistance = -1UL;
+  uptr MinDistance = ~static_cast<uptr>(1);
   for (uptr I = 0; I != NumClasses; ++I) {
     if (I == SizeClassMap::BatchClassId)
       continue;
@@ -1495,7 +1537,10 @@ uptr SizeClassAllocator64<Config>::releaseToOSMaybe(RegionInfo *Region,
     // value here so that when we are adapting the `TryReleaseThreshold`
     // later, we are using the right metric.
     RegionPushedBytesDelta =
-        BytesInFreeList - Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint;
+        BytesInFreeList > Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint
+            ? BytesInFreeList -
+                  Region->ReleaseInfo.BytesInFreeListAtLastCheckpoint
+            : 0;
 
     // ==================================================================== //
     // 2. Determine which groups can release the pages. Use a heuristic to
@@ -1711,7 +1756,7 @@ SizeClassAllocator64<Config>::collectGroupsToRelease(
         decompactGroupBase(CompactPtrBase, BG->CompactPtrGroupBase);
     DCHECK_LE(Region->RegionBeg, BatchGroupBase);
     DCHECK_GE(AllocatedUserEnd, BatchGroupBase);
-    DCHECK_EQ((Region->RegionBeg - BatchGroupBase) % GroupSize, 0U);
+    DCHECK_EQ((BatchGroupBase - Region->RegionBeg) % GroupSize, 0U);
     // Batches are pushed in front of BG.Batches. The first one may
     // not have all caches used.
     const uptr NumBlocks = (BG->Batches.size() - 1) * BG->MaxCachedPerBatch +

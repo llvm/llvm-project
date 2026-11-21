@@ -6,7 +6,7 @@ define void @f() safestack {
 ; CHECK-LABEL: define void @f
 entry:
 ; CHECK:  %[[USP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-; CHECK:   getelementptr i8, ptr %[[USP]], i32 -224
+; CHECK:   getelementptr i8, ptr %[[USP]], i64 -224
 
   %x0 = alloca i8, align 16
   %x1 = alloca i8, align 16
@@ -32,51 +32,51 @@ entry:
   %y7 = alloca i8, align 2
   %y8 = alloca i8, align 2
 
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -16
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -16
   call void @capture8(ptr %x0)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -32
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -32
   call void @capture8(ptr %x1)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -48
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -48
   call void @capture8(ptr %x2)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -64
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -64
   call void @capture8(ptr %x3)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -80
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -80
   call void @capture8(ptr %x4)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -96
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -96
   call void @capture8(ptr %x5)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -112
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -112
   call void @capture8(ptr %x6)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -128
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -128
   call void @capture8(ptr %x7)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -144
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -144
   call void @capture8(ptr %x8)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -160
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -160
   call void @capture8(ptr %x9)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -176
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -176
   call void @capture8(ptr %x10)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -192
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -192
   call void @capture8(ptr %x11)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -208
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -208
   call void @capture8(ptr %x12)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -224
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -224
   call void @capture8(ptr %x13)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -2
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -2
   call void @capture8(ptr %y0)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -4
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -4
   call void @capture8(ptr %y1)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -6
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -6
   call void @capture8(ptr %y2)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -8
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -8
   call void @capture8(ptr %y3)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -10
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -10
   call void @capture8(ptr %y4)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -12
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -12
   call void @capture8(ptr %y5)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -14
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -14
   call void @capture8(ptr %y6)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -18
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -18
   call void @capture8(ptr %y7)
-; CHECK: getelementptr i8, ptr %[[USP]], i32 -20
+; CHECK: getelementptr i8, ptr %[[USP]], i64 -20
   call void @capture8(ptr %y8)
 
   ret void

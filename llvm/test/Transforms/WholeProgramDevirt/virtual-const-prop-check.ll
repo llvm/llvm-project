@@ -134,7 +134,7 @@ define i1 @call1(ptr %obj) {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 0, metadata !"typeid")
   %fptr = extractvalue {ptr, i1} %pair, 0
-  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
+  ; CHECK: [[VTGEP1:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -1
   ; CHECK: [[VTLOAD1:%[^ ]*]] = load i8, ptr [[VTGEP1]]
   ; CHECK: [[VTAND1:%[^ ]*]] = and i8 [[VTLOAD1]], 1
   ; CHECK: [[VTCMP1:%[^ ]*]] = icmp ne i8 [[VTAND1]], 0
@@ -151,7 +151,7 @@ define i1 @call2(ptr %obj) {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 8, metadata !"typeid")
   %fptr = extractvalue {ptr, i1} %pair, 0
-  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -1
+  ; CHECK: [[VTGEP2:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -1
   ; CHECK: [[VTLOAD2:%[^ ]*]] = load i8, ptr [[VTGEP2]]
   ; CHECK: [[VTAND2:%[^ ]*]] = and i8 [[VTLOAD2]], 2
   ; CHECK: [[VTCMP2:%[^ ]*]] = icmp ne i8 [[VTAND2]], 0
@@ -168,7 +168,7 @@ define i32 @call3(ptr %obj) {
   %vtable = load ptr, ptr %obj
   %pair = call {ptr, i1} @llvm.type.checked.load(ptr %vtable, i32 16, metadata !"typeid")
   %fptr = extractvalue {ptr, i1} %pair, 0
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 24
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 24
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, ptr [[VTGEP3]]
   %result = call i32 %fptr(ptr %obj)
   ; CHECK: ret i32 [[VTLOAD3]]
@@ -205,7 +205,7 @@ define i32 @call3_rel(ptr %obj) {
   %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid2")
   call void @llvm.assume(i1 %p)
   %fptr = call ptr @llvm.load.relative.i32(ptr %vtable, i32 8)
-  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i32 -4
+  ; CHECK: [[VTGEP3:%[^ ]*]] = getelementptr i8, ptr %vtable, i64 -4
   ; CHECK: [[VTLOAD3:%[^ ]*]] = load i32, ptr [[VTGEP3]]
   %result = call i32 %fptr(ptr %obj)
   ; CHECK: ret i32 [[VTLOAD3]]
