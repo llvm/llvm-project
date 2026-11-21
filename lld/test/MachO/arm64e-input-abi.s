@@ -41,13 +41,44 @@
 # RUN: not %no-fatal-warnings-lld -arch arm64 -arch_errors_fatal %t/main-arm64.o \
 # RUN:   %t/v1.o -o %t/out 2>&1 | FileCheck %s --check-prefix=V1-ARM64
 
-# OLD:       error: {{.*}}old.o has architecture arm64e.old which is incompatible with target architecture arm64e
+## Dylibs and bundle loaders only need a compatible ABI, since their code isn't
+## linked into the output. An ignored dylib gets no load command.
+# RUN: yaml2obj -DSUBTYPE=0x80000002 %t/dylib.yaml -o %t/libv0.dylib
+# RUN: yaml2obj -DSUBTYPE=0x81000002 %t/dylib.yaml -o %t/libv1.dylib
+# RUN: yaml2obj -DSUBTYPE=0x8000000C %t/dylib.yaml -o %t/libx1.dylib
+# RUN: yaml2obj -DSUBTYPE=0x2 %t/dylib.yaml -o %t/libold.dylib
+# RUN: yaml2obj -DSUBTYPE=0xC0000002 %t/dylib.yaml -o %t/libkernel.dylib
+# RUN: yaml2obj -DSUBTYPE=0x82000002 %t/dylib.yaml -o %t/libv2.dylib
+# RUN: yaml2obj -DSUBTYPE=0x0 %t/dylib.yaml -o %t/libarm64.dylib
+# RUN: llvm-lipo -create %t/libarm64.dylib %t/libkernel.dylib -output %t/libfat.dylib
+# RUN: %{lld} %t/libv0.dylib
+# RUN: %{lld} %t/libx1.dylib
+# RUN: %{lld} %t/libv1.dylib
+# RUN: llvm-otool -L %t/out | FileCheck %s --check-prefix=LOAD
+# RUN: %no-fatal-warnings-lld -arch arm64e -arch_errors_fatal %t/main.o -o %t/loader
+# RUN: %{lld} -bundle -bundle_loader %t/loader
+# RUN: not %{lld} %t/libold.dylib 2>&1 | FileCheck %s --check-prefix=OLD
+# RUN: not %{lld} %t/libkernel.dylib 2>&1 | FileCheck %s --check-prefix=KERNEL
+# RUN: not %{lld} %t/libv2.dylib 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/libfat.dylib 2>&1 | FileCheck %s --check-prefix=FAT
+# RUN: %no-fatal-warnings-lld -arch arm64 -arch_errors_fatal %t/main-arm64.o \
+# RUN:   %t/libkernel.dylib -o %t/out
+# RUN: %no-fatal-warnings-lld -arch arm64e %t/main.o %t/libkernel.dylib \
+# RUN:   -o %t/out 2>&1 | FileCheck %s --check-prefix=WARN-DYLIB
+# RUN: llvm-otool -L %t/out | FileCheck %s --check-prefix=NO-LOAD
+
+# OLD:       error: {{.*}}old.{{o|dylib}} has architecture arm64e.old which is incompatible with target architecture arm64e
 # V1:        error: {{.*}}v1.{{[oa]}} has architecture arm64e.v1 which is incompatible with target architecture arm64e
-# KERNEL:    error: {{.*}}kernel.o has architecture arm64e.kernel which is incompatible with target architecture arm64e
+# KERNEL:    error: {{.*}}kernel.{{o|dylib}} has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # KERNEL-V1: error: {{.*}}kernel-v1.o has architecture arm64e.kernel.v1 which is incompatible with target architecture arm64e
-# UNKNOWN:   error: {{.*}}v2.o has architecture unknown which is incompatible with target architecture arm64e
+# UNKNOWN:   error: {{.*}}v2.{{o|dylib}} has architecture unknown which is incompatible with target architecture arm64e
 # WARN:      warning: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # V1-ARM64:  error: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64
+# FAT:       error: {{.*}}libfat.dylib has architecture arm64e.kernel which is incompatible with target architecture arm64e
+# WARN-DYLIB: warning: {{.*}}libkernel.dylib has architecture arm64e.kernel which is incompatible with target architecture arm64e
+# LOAD:      @rpath/libhelper.dylib
+# NO-LOAD:   out:
+# NO-LOAD-NOT: libhelper
 
 #--- main.s
 .globl _main
@@ -85,4 +116,41 @@ LinkEditData:
   StringTable:
     - ''
     - _helper
+...
+
+#--- dylib.yaml
+--- !mach-o
+IsLittleEndian:  true
+FileHeader:
+  magic:           0xFEEDFACF
+  cputype:         0x100000C
+  cpusubtype:      [[SUBTYPE]]
+  filetype:        0x6
+  ncmds:           2
+  sizeofcmds:      64
+  flags:           0x0
+  reserved:        0x0
+LoadCommands:
+  - cmd:             LC_ID_DYLIB
+    cmdsize:         48
+    dylib:
+      name:            24
+      timestamp:       0
+      current_version: 0
+      compatibility_version: 0
+    Content:         '@rpath/libhelper.dylib'
+    ZeroPadBytes:    2
+  - cmd:             LC_DYLD_EXPORTS_TRIE
+    cmdsize:         16
+    dataoff:         96
+    datasize:        2
+LinkEditData:
+  ExportTrie:
+    TerminalSize:    0
+    NodeOffset:      0
+    Name:            ''
+    Flags:           0x0
+    Address:         0x0
+    Other:           0x0
+    ImportName:      ''
 ...

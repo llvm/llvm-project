@@ -48,6 +48,48 @@
 # WARN-X1-ARM64:  warning: {{.*}}arm64e-x1.o has architecture arm64e.x1 which is incompatible with target architecture arm64
 # WARN-X1-ARM64E: warning: {{.*}}arm64e-x1.o has architecture arm64e.x1 which is incompatible with target architecture arm64e
 
+## Dylibs and bitcode are checked too, but an arm64 link takes an arm64e dylib.
+# RUN: %lld -arch arm64 -platform_version macos 13.0 13.0 -dylib %t/arm64.o \
+# RUN:   -o %t/libarm64.dylib
+# RUN: %lld -arch arm64e -platform_version macos 13.0 13.0 -dylib %t/arm64e.o \
+# RUN:   -o %t/libarm64e.dylib
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 \
+# RUN:   -arch_errors_fatal %t/test.o %t/libarm64.dylib -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-DYLIB
+# RUN: %lld -arch arm64 -platform_version macos 13.0 13.0 -arch_errors_fatal \
+# RUN:   %t/test-arm64.o %t/libarm64e.dylib -o /dev/null
+
+## Bitcode is checked in either input order, so LTO never compiles arm64 bitcode
+## into an arm64e image. -ObjC doesn't load an ignored lazy file either.
+# RUN: llvm-as %t/main.ll -o %t/main.bc
+# RUN: llvm-as %t/lib.ll -o %t/lib.bc
+# RUN: opt -mtriple=arm64-apple-macos13.0 %t/lib.ll -o %t/lib-arm64.bc
+# RUN: opt -mtriple=arm64-apple-macos13.0 %t/objc.ll -o %t/objc-arm64.bc
+# RUN: llvm-ar rcs %t/lib-arm64.a %t/lib-arm64.bc
+# RUN: %lld -arch arm64e -platform_version macos 13.0 13.0 -arch_errors_fatal \
+# RUN:   %t/main.bc %t/lib.bc -o /dev/null
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 \
+# RUN:   -arch_errors_fatal %t/main.bc %t/lib-arm64.bc -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-BC
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 \
+# RUN:   -arch_errors_fatal %t/lib-arm64.bc %t/main.bc -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-BC
+# RUN: not %lld -arch arm64e -platform_version macos 13.0 13.0 \
+# RUN:   -arch_errors_fatal %t/main.bc %t/lib-arm64.a -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-BC
+# RUN: not %lld -arch arm64 -platform_version macos 13.0 13.0 \
+# RUN:   -arch_errors_fatal %t/test-arm64.o %t/lib.bc -o /dev/null 2>&1 | \
+# RUN:   FileCheck %s --check-prefix=ERR-BC-ARM64
+# RUN: not %no-fatal-warnings-lld -arch arm64e -platform_version macos 13.0 13.0 \
+# RUN:   -ObjC %t/test.o --start-lib %t/objc-arm64.bc --end-lib -o /dev/null \
+# RUN:   2>&1 | FileCheck %s --check-prefix=WARN-OBJC
+
+# ERR-DYLIB:    error: {{.*}}libarm64.dylib has architecture arm64 which is incompatible with target architecture arm64e
+# ERR-BC:       error: {{.*}}lib-arm64.{{.*}} has architecture arm64 which is incompatible with target architecture arm64e
+# ERR-BC-ARM64: error: {{.*}}lib.bc has architecture arm64e which is incompatible with target architecture arm64
+# WARN-OBJC:    warning: {{.*}}objc-arm64.bc has architecture arm64 which is incompatible with target architecture arm64e
+# WARN-OBJC:    error: undefined symbol: _helper
+
 #--- test.s
 .globl _main
 .p2align 2
@@ -60,3 +102,33 @@ _main:
 .p2align 2
 _helper:
   ret
+
+#--- main.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-macos13.0"
+
+declare void @helper()
+
+define void @main() {
+  call void @helper()
+  ret void
+}
+
+#--- lib.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-macos13.0"
+
+define void @helper() {
+  ret void
+}
+
+#--- objc.ll
+target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-Fn32"
+target triple = "arm64e-apple-macos13.0"
+
+@category = private global i8 0
+@catlist = private global [1 x ptr] [ptr @category], section "__DATA,__objc_catlist,regular,no_dead_strip"
+
+define void @helper() {
+  ret void
+}

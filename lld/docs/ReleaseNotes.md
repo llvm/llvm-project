@@ -40,6 +40,9 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### MachO Improvements
 
+* Dylibs, bundle loaders and bitcode files for another architecture are now
+  ignored with a warning, or rejected with `-arch_errors_fatal`, as in ld-prime.
+  lld used to link against such dylibs and pass such bitcode to LTO.
 * `__objc_stubs` entries are now ordered by the priority of the sections that
   call them, so that stubs reached from prioritized code are laid out together.
   This applies whenever section priorities exist, such as with `-order_file`.
