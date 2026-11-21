@@ -6,20 +6,27 @@
 //
 //===----------------------------------------------------------------------===//
 #include "llvm/Analysis/MemorySSA.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemorySSAUpdater.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
+#include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SourceMgr.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -62,6 +69,50 @@ protected:
   };
 
   std::unique_ptr<TestAnalyses> Analyses;
+
+  /// Parse IR into the module owned by the fixture.
+  bool parseIR(StringRef IR) {
+    SMDiagnostic Error;
+    if (parseAssemblyInto(MemoryBufferRef(IR, "test"), &M, nullptr, Error)) {
+      Error.print("MemorySSATest", errs());
+      return false;
+    }
+    M.setDataLayout(DL);
+    F = M.getFunction("test");
+    return F && !verifyModule(M, &errs());
+  }
+
+  /// Check scope boundaries and PHI inputs, including repeated CFG edges.
+  void expectScope(MemorySSA &S, const Loop &L, MemorySSA &Full) {
+    auto *Entry = S.getLiveOnEntryDef();
+    EXPECT_EQ(Entry->getBlock(), L.getLoopPreheader());
+    for (BasicBlock &BB : *F) {
+      SCOPED_TRACE(BB.getName().str());
+      auto *Phi = S.getMemoryAccess(&BB), *Ref = Full.getMemoryAccess(&BB);
+      ASSERT_EQ(Phi != nullptr, L.contains(&BB) && Ref);
+      if (!L.contains(&BB))
+        EXPECT_EQ(S.getBlockAccesses(&BB), nullptr);
+      if (!Phi)
+        continue;
+      SmallDenseMap<BasicBlock *, unsigned, 4> Edges;
+      for (auto *Pred : predecessors(&BB))
+        ++Edges[Pred];
+      ASSERT_EQ(Phi->getNumIncomingValues(), pred_size(&BB));
+      for (auto [I, Pred] : enumerate(Phi->blocks())) {
+        ASSERT_GT(Edges[Pred]--, 0u);
+        auto *Actual = Phi->getIncomingValue(I);
+        auto *Def =
+            L.contains(Pred) ? Ref->getIncomingValueForBlock(Pred) : nullptr;
+        if (!Def || !L.contains(Def->getBlock()))
+          EXPECT_EQ(Actual, Entry);
+        else if (auto *MD = dyn_cast<MemoryDef>(Def))
+          EXPECT_EQ(Actual, S.getMemoryAccess(MD->getMemoryInst()));
+        else
+          EXPECT_EQ(Actual, S.getMemoryAccess(Def->getBlock()));
+      }
+    }
+    S.verifyMemorySSA(MemorySSA::VerificationLevel::Full);
+  }
 
   void setupAnalyses() {
     assert(F);
@@ -1724,6 +1775,16 @@ TEST_F(MemorySSATest, TestVisitedBlocks) {
   MemorySSAUpdater Updater(&MSSA);
 
   {
+    auto *Load = getInstructionByName(*F, "v1");
+    LoopInfo LI(Analyses->DT);
+    Loop &L = *LI.getLoopFor(Load->getParent());
+    MemorySSA Scoped(L, &Analyses->AA, &Analyses->DT);
+    expectScope(Scoped, L, MSSA);
+    EXPECT_EQ(Scoped.getWalker()->getClobberingMemoryAccess(Load),
+              Scoped.getLiveOnEntryDef());
+  }
+
+  {
     // Move %v1 before the terminator of %header.i.check
     BasicBlock *BB = getBasicBlockByName(*F, "header.i.check");
     Instruction *LI = getInstructionByName(*F, "v1");
@@ -1848,4 +1909,125 @@ TEST_F(MemorySSATest, DeepChainDoesNotRecurse) {
   // The load must be defined by the single store in the entry block.
   EXPECT_EQ(LoadAccess->getDefiningAccess(), MSSA.getMemoryAccess(SI));
   MSSA.verifyMemorySSA();
+}
+
+static constexpr StringLiteral ScopedLoopIR = R"(
+    define void @test(ptr noalias %p, ptr noalias %q, ptr noalias %r, i32 %n, i1 %c) {
+    entry: br i1 %c, label %seed, label %pre
+    seed: store i32 1, ptr %p
+      br label %pre
+    pre: br label %outer
+    outer: %before = load i32, ptr %p
+      store i32 2, ptr %r
+      br label %h
+    h: store i32 3, ptr %r
+      switch i32 %n, label %body []
+    body: switch i32 %n, label %exit [i32 0, label %left i32 1, label %right]
+    left: store i32 4, ptr %r
+      switch i32 %n, label %join []
+    right: store i32 5, ptr %r
+      switch i32 %n, label %join []
+    join: %inside = load i32, ptr %p
+      %stable = load i32, ptr %q
+      br label %latch
+    latch: store i32 6, ptr %r
+      br i1 %c, label %h, label %after
+    after: %out = load i32, ptr %p
+      switch i32 %n, label %exit []
+    exit: ret void
+    dead: switch i32 %n, label %join []
+    }
+)";
+
+TEST_F(MemorySSATest, ScopedNestedLoops) {
+  ASSERT_TRUE(parseIR(ScopedLoopIR));
+  auto BB = [&](StringRef Name) { return getBasicBlockByName(*F, Name); };
+  auto Inst = [&](StringRef Name) { return getInstructionByName(*F, Name); };
+  auto *Writer = cast<StoreInst>(&BB("latch")->front());
+  auto *H = BB("h"), *Left = BB("left"), *Right = BB("right"),
+       *Join = BB("join");
+  auto *Exit = BB("exit"), *Body = BB("body"), *OuterHeader = BB("outer");
+  BasicBlock *Orders[][4] = {{},
+                             {Exit, Right, Left, Join},
+                             {Left, Right, Join, Exit},
+                             {Right, Exit, Left, Join}};
+  std::pair<BasicBlock *, BasicBlock *> RepeatedEdges[] = {
+      {H, H}, {BB("after"), OuterHeader}, {Left, Join}, {BB("dead"), Join}};
+  auto Check = [&](MemorySSA &S, StringRef Name, MemoryAccess *Expected) {
+    EXPECT_EQ(S.getWalker()->getClobberingMemoryAccess(Inst(Name)), Expected)
+        << Name;
+  };
+  for (unsigned N : {1u, 8u, 64u}) {
+    for (auto [From, To] : RepeatedEdges) {
+      auto *S = cast<SwitchInst>(From->getTerminator());
+      while (S->getNumCases() < N - (To == S->getDefaultDest()))
+        S->addCase(B.getInt32(S->getNumCases()), To);
+    }
+    for (bool WritesToP : {false, true})
+      for (auto &Order : Orders) {
+        SCOPED_TRACE(testing::Message() << N << " edges, writer " << WritesToP);
+        Writer->setOperand(StoreInst::getPointerOperandIndex(),
+                           F->getArg(WritesToP ? 0 : 2));
+        TestAnalyses A(*this);
+        LoopInfo LI(A.DT);
+        if (Order[0])
+          for (auto *Child : Order) {
+            A.DT.changeImmediateDominator(Child, &F->getEntryBlock());
+            A.DT.changeImmediateDominator(Child, Body);
+          }
+        for (auto *Header : {OuterHeader, H}) {
+          Loop &L = *LI.getLoopFor(Header);
+          MemorySSA S(L, &A.AA, &A.DT);
+          ASSERT_NO_FATAL_FAILURE(expectScope(S, L, *A.MSSA));
+          auto *Entry = S.getLiveOnEntryDef();
+          auto *Phi = S.getMemoryAccess(H);
+          Check(S, "inside", WritesToP ? Phi : Entry);
+          Check(S, "stable", Entry);
+          if (Header == OuterHeader) {
+            Check(S, "before", WritesToP ? S.getMemoryAccess(Header) : Entry);
+            Check(S, "out", WritesToP ? S.getMemoryAccess(Writer) : Entry);
+            continue;
+          }
+
+          // Compare reachable PHI inputs with the current DT child order.
+          auto IsArm = [&](BasicBlock *P) { return P == Left || P == Right; };
+          SmallVector<BasicBlock *> Expected;
+          for (auto *Child : A.DT.getNode(Body)->children())
+            if (auto *P = Child->getBlock(); IsArm(P))
+              Expected.append(P == Left ? N : 1, P);
+          auto *JoinPhi = S.getMemoryAccess(Join);
+          ASSERT_NE(JoinPhi, nullptr);
+          EXPECT_TRUE(llvm::equal(make_filter_range(JoinPhi->blocks(), IsArm),
+                                  Expected));
+          auto *Skip = S.getSkipSelfWalker();
+          EXPECT_EQ(Skip->getClobberingMemoryAccess(&H->front()), Phi);
+          if (WritesToP) {
+            EXPECT_EQ(S.getWalker()->getClobberingMemoryAccess(Writer), Phi);
+            EXPECT_EQ(Skip->getClobberingMemoryAccess(Writer), Entry);
+          }
+        }
+      }
+  }
+}
+
+TEST_F(MemorySSATest, ScopedIrreducibleBodyClobber) {
+  ASSERT_TRUE(parseIR(ScopedLoopIR));
+  auto *Left = getBasicBlockByName(*F, "left");
+  auto *Right = getBasicBlockByName(*F, "right");
+  // The two arms still have separate entries from body.
+  for (auto [From, To] : {std::pair{Left, Right}, {Right, Left}}) {
+    auto *Switch = cast<SwitchInst>(From->getTerminator());
+    Switch->setCondition(F->getArg(4));
+    Switch->addCase(B.getTrue(), To);
+  }
+  B.SetInsertPoint(Left->begin());
+  auto *Load = B.CreateLoad(B.getInt32Ty(), F->getArg(2));
+  TestAnalyses A(*this);
+  LoopInfo LI(A.DT);
+  Loop &L = *LI.getLoopFor(Left);
+  MemorySSA S(L, &A.AA, &A.DT);
+  expectScope(S, L, *A.MSSA);
+  auto *Phi = S.getMemoryAccess(Left);
+  ASSERT_NE(Phi, nullptr);
+  EXPECT_EQ(S.getWalker()->getClobberingMemoryAccess(Load), Phi);
 }
