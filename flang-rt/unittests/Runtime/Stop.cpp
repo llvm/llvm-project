@@ -119,6 +119,56 @@ TEST_F(TestProgramEnd, ExitTest) {
 
 TEST_F(TestProgramEnd, AbortTest) { EXPECT_DEATH(RTNAME(Abort)(), ""); }
 
+#if defined(FLANG_RT_HAVE_CSIGNAL) && (defined(__unix__) || defined(__APPLE__))
+static void Exit42(int) { std::_Exit(42); }
+
+static void Exit43(int, siginfo_t *, void *) { std::_Exit(43); }
+
+// A handler installed before ProgramStart must still run. Replacing it drops
+// AddressSanitizer's SIGSEGV report.
+TEST_F(TestProgramEnd, PreinstalledHandlerIsKept) {
+  EXPECT_EXIT(
+      {
+        std::signal(SIGSEGV, Exit42);
+        Fortran::runtime::InstallFatalBacktraceHandlers();
+        std::raise(SIGSEGV);
+        std::_Exit(1);
+      },
+      testing::ExitedWithCode(42), "");
+}
+
+// AddressSanitizer installs its handler with SA_SIGINFO. sa_handler and
+// sa_sigaction share storage, so that handler is not SIG_DFL either.
+TEST_F(TestProgramEnd, SiginfoHandlerIsKept) {
+  EXPECT_EXIT(
+      {
+        struct sigaction action;
+        std::memset(&action, 0, sizeof action);
+        action.sa_sigaction = Exit43;
+        action.sa_flags = SA_SIGINFO;
+        sigemptyset(&action.sa_mask);
+        sigaction(SIGSEGV, &action, nullptr);
+        Fortran::runtime::InstallFatalBacktraceHandlers();
+        std::raise(SIGSEGV);
+        std::_Exit(1);
+      },
+      testing::ExitedWithCode(43), "");
+}
+
+// A background job of a non-interactive shell inherits SIGQUIT as SIG_IGN.
+// Installing a handler there kills the process with exit 131.
+TEST_F(TestProgramEnd, IgnoredSignalStaysIgnored) {
+  EXPECT_EXIT(
+      {
+        std::signal(SIGQUIT, SIG_IGN);
+        Fortran::runtime::InstallFatalBacktraceHandlers();
+        std::raise(SIGQUIT);
+        std::_Exit(0);
+      },
+      testing::ExitedWithCode(0), "");
+}
+#endif
+
 TEST_F(TestProgramEnd, CrashTest) {
   static const std::string crashMessage{"bad user code"};
   static const std::string fileName{"file name"};

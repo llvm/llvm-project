@@ -100,6 +100,31 @@ treated as big-endian for both input and output, while units 26 and 27 will be
 treated as little-endian for both input and output.
 
 
+## `FLANG_ERROR_BACKTRACE`
+
+Controls the stack trace printed for a fatal runtime error, an `ERROR STOP`
+statement, the `ABORT` extension, or a deadly signal such as `SIGSEGV` or
+`SIGFPE`. A normal `STOP` statement does not print a trace.
+`CALL BACKTRACE()` always prints one, whether or not this variable disables
+the others.
+
+The value must be `0` or `1`. `1` enables the trace and `0` disables it.
+Any other value is ignored. When the variable is unset, the trace is enabled.
+
+`-fbacktrace` is the compiler default and does not set the variable.
+`-fno-backtrace` sets `FLANG_ERROR_BACKTRACE=0` only when the variable is not
+already set, so a value in the environment wins over the option. The option
+takes effect only for the file that contains the main program, because the
+compiler sets the variable from the main program's startup code. Programs
+started with `EXECUTE_COMMAND_LINE` inherit the variable. With a non-Fortran
+`main()`, no signal handlers are installed and `-fno-backtrace` has no effect,
+so `ERROR STOP` still prints a trace.
+
+This one variable controls both the traces for fatal runtime errors and the
+traces for deadly signals. `gfortran`'s `GFORTRAN_ERROR_BACKTRACE` controls only
+the former. The variable is not read when the runtime is built for a GPU, and
+signal handlers are not installed there.
+
 ## `FLANG_RT_COPYOUT_MODIFIED_ONLY`
 
 The system environment variable `FLANG_RT_COPYOUT_MODIFIED_ONLY` selects how

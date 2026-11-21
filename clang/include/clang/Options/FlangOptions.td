@@ -37,7 +37,6 @@ defm aggressive_function_elimination : BooleanFFlag<"aggressive-function-elimina
 defm align_commons : BooleanFFlag<"align-commons">, Group<gfortran_Group>;
 defm all_intrinsics : BooleanFFlag<"all-intrinsics">, Group<gfortran_Group>;
 def fautomatic : Flag<["-"], "fautomatic">; // -fno-automatic is significant
-defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
 defm cray_pointer : BooleanFFlag<"cray-pointer">, Group<gfortran_Group>;
@@ -146,6 +145,15 @@ def ffixed_line_length_EQ : Joined<["-"], "ffixed-line-length=">, Group<f_Group>
   DocBrief<[{Set column after which characters are ignored in typical fixed-form lines in the source
 file}]>;
 def ffixed_line_length_VALUE : Joined<["-"], "ffixed-line-length-">, Group<f_Group>, Alias<ffixed_line_length_EQ>;
+// ClangOption keeps `clang -fbacktrace` accepted, with the usual unused-argument
+// warning, for build systems that pass one flag set to both drivers.
+let Visibility = [ClangOption, FC1Option, FlangOption] in {
+def fbacktrace : Flag<["-"], "fbacktrace">, Group<f_Group>,
+  HelpText<"Print a stack trace on a fatal runtime error or fatal signal (default)">,
+  DocBrief<[{The traced signals are the same set gfortran uses for -fbacktrace: those whose default POSIX action is to dump core. SIGINT and SIGTERM are not included.}]>;
+def fno_backtrace : Flag<["-"], "fno-backtrace">, Group<f_Group>,
+  HelpText<"Do not print a stack trace on a fatal runtime error or fatal signal">;
+} // let Visibility = [ClangOption, FC1Option, FlangOption]
 def fconvert_EQ : Joined<["-"], "fconvert=">, Group<f_Group>,
   HelpText<"Set endian conversion of data for unformatted files">;
 def fdefault_double_8 : Flag<["-"],"fdefault-double-8">, Group<f_Group>,
