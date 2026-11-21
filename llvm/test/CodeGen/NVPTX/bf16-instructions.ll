@@ -1282,40 +1282,58 @@ define bfloat @test_uitofp_i16(i16 %a) {
 define bfloat @test_uitofp_i32(i32 %a) {
 ; SM70-LABEL: test_uitofp_i32(
 ; SM70:       {
-; SM70-NEXT:    .reg .b32 %r<8>;
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<13>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_param_0];
-; SM70-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM70-NEXT:    shr.u32 %r3, %r2, 16;
+; SM70-NEXT:    cvt.rp.f32.u32 %r2, %r1;
+; SM70-NEXT:    cvt.rm.f32.u32 %r3, %r1;
 ; SM70-NEXT:    and.b32 %r4, %r3, 1;
-; SM70-NEXT:    add.s32 %r5, %r4, %r2;
-; SM70-NEXT:    add.s32 %r6, %r5, 32767;
-; SM70-NEXT:    shr.u32 %r7, %r6, 16;
-; SM70-NEXT:    st.param.b16 [func_retval0], %r7;
+; SM70-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM70-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM70-NEXT:    shr.u32 %r6, %r5, 16;
+; SM70-NEXT:    and.b32 %r7, %r6, 1;
+; SM70-NEXT:    add.s32 %r8, %r7, %r5;
+; SM70-NEXT:    add.s32 %r9, %r8, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r5, %r5;
+; SM70-NEXT:    or.b32 %r10, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r11, %r10, %r9, %p2;
+; SM70-NEXT:    shr.u32 %r12, %r11, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r12;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i32(
 ; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
 ; SM80-NEXT:    .reg .b16 %rs<2>;
-; SM80-NEXT:    .reg .b32 %r<3>;
+; SM80-NEXT:    .reg .b32 %r<6>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_param_0];
-; SM80-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r2;
+; SM80-NEXT:    cvt.rp.f32.u32 %r2, %r1;
+; SM80-NEXT:    cvt.rm.f32.u32 %r3, %r1;
+; SM80-NEXT:    and.b32 %r4, %r3, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM80-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r5;
 ; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_uitofp_i32(
 ; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<3>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<6>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
 ; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_param_0];
-; SM80-FTZ-NEXT:    cvt.rn.f32.u32 %r2, %r1;
-; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r2;
+; SM80-FTZ-NEXT:    cvt.rp.f32.u32 %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.rm.f32.u32 %r3, %r1;
+; SM80-FTZ-NEXT:    and.b32 %r4, %r3, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r5;
 ; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; SM80-FTZ-NEXT:    ret;
 ;
@@ -1347,43 +1365,61 @@ define bfloat @test_uitofp_i32(i32 %a) {
 define bfloat @test_uitofp_i64(i64 %a) {
 ; SM70-LABEL: test_uitofp_i64(
 ; SM70:       {
-; SM70-NEXT:    .reg .b32 %r<7>;
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<12>;
 ; SM70-NEXT:    .reg .b64 %rd<2>;
 ; SM70-EMPTY:
 ; SM70-NEXT:  // %bb.0:
 ; SM70-NEXT:    ld.param.b64 %rd1, [test_uitofp_i64_param_0];
-; SM70-NEXT:    cvt.rn.f32.u64 %r1, %rd1;
-; SM70-NEXT:    shr.u32 %r2, %r1, 16;
+; SM70-NEXT:    cvt.rp.f32.u64 %r1, %rd1;
+; SM70-NEXT:    cvt.rm.f32.u64 %r2, %rd1;
 ; SM70-NEXT:    and.b32 %r3, %r2, 1;
-; SM70-NEXT:    add.s32 %r4, %r3, %r1;
-; SM70-NEXT:    add.s32 %r5, %r4, 32767;
-; SM70-NEXT:    shr.u32 %r6, %r5, 16;
-; SM70-NEXT:    st.param.b16 [func_retval0], %r6;
+; SM70-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM70-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM70-NEXT:    shr.u32 %r5, %r4, 16;
+; SM70-NEXT:    and.b32 %r6, %r5, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r4;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r4;
+; SM70-NEXT:    or.b32 %r9, %r4, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p2;
+; SM70-NEXT:    shr.u32 %r11, %r10, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r11;
 ; SM70-NEXT:    ret;
 ;
 ; SM80-LABEL: test_uitofp_i64(
 ; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
 ; SM80-NEXT:    .reg .b16 %rs<2>;
-; SM80-NEXT:    .reg .b32 %r<2>;
+; SM80-NEXT:    .reg .b32 %r<5>;
 ; SM80-NEXT:    .reg .b64 %rd<2>;
 ; SM80-EMPTY:
 ; SM80-NEXT:  // %bb.0:
 ; SM80-NEXT:    ld.param.b64 %rd1, [test_uitofp_i64_param_0];
-; SM80-NEXT:    cvt.rn.f32.u64 %r1, %rd1;
-; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r1;
+; SM80-NEXT:    cvt.rp.f32.u64 %r1, %rd1;
+; SM80-NEXT:    cvt.rm.f32.u64 %r2, %rd1;
+; SM80-NEXT:    and.b32 %r3, %r2, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM80-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r4;
 ; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; SM80-NEXT:    ret;
 ;
 ; SM80-FTZ-LABEL: test_uitofp_i64(
 ; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
 ; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
-; SM80-FTZ-NEXT:    .reg .b32 %r<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<5>;
 ; SM80-FTZ-NEXT:    .reg .b64 %rd<2>;
 ; SM80-FTZ-EMPTY:
 ; SM80-FTZ-NEXT:  // %bb.0:
 ; SM80-FTZ-NEXT:    ld.param.b64 %rd1, [test_uitofp_i64_param_0];
-; SM80-FTZ-NEXT:    cvt.rn.f32.u64 %r1, %rd1;
-; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r1;
+; SM80-FTZ-NEXT:    cvt.rp.f32.u64 %r1, %rd1;
+; SM80-FTZ-NEXT:    cvt.rm.f32.u64 %r2, %rd1;
+; SM80-FTZ-NEXT:    and.b32 %r3, %r2, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r4;
 ; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; SM80-FTZ-NEXT:    ret;
 ;
@@ -1409,6 +1445,496 @@ define bfloat @test_uitofp_i64(i64 %a) {
 ; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
 ; SM90-NEXT:    ret;
   %r = uitofp i64 %a to bfloat
+  ret bfloat %r
+}
+
+define bfloat @test_sitofp_i32(i32 %a) {
+; SM70-LABEL: test_sitofp_i32(
+; SM70:       {
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<13>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_param_0];
+; SM70-NEXT:    cvt.rp.f32.s32 %r2, %r1;
+; SM70-NEXT:    cvt.rm.f32.s32 %r3, %r1;
+; SM70-NEXT:    and.b32 %r4, %r3, 1;
+; SM70-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM70-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM70-NEXT:    shr.u32 %r6, %r5, 16;
+; SM70-NEXT:    and.b32 %r7, %r6, 1;
+; SM70-NEXT:    add.s32 %r8, %r7, %r5;
+; SM70-NEXT:    add.s32 %r9, %r8, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r5, %r5;
+; SM70-NEXT:    or.b32 %r10, %r5, 4194304;
+; SM70-NEXT:    selp.b32 %r11, %r10, %r9, %p2;
+; SM70-NEXT:    shr.u32 %r12, %r11, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r12;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_sitofp_i32(
+; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<6>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_param_0];
+; SM80-NEXT:    cvt.rp.f32.s32 %r2, %r1;
+; SM80-NEXT:    cvt.rm.f32.s32 %r3, %r1;
+; SM80-NEXT:    and.b32 %r4, %r3, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM80-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r5;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_sitofp_i32(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<6>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_param_0];
+; SM80-FTZ-NEXT:    cvt.rp.f32.s32 %r2, %r1;
+; SM80-FTZ-NEXT:    cvt.rm.f32.s32 %r3, %r1;
+; SM80-FTZ-NEXT:    and.b32 %r4, %r3, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r4, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r5, %r3, %r2, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r5;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_sitofp_i32(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b32 %r<2>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_param_0];
+; SM90-FTZ-NEXT:    cvt.rn.bf16.s32 %rs1, %r1;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_sitofp_i32(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_param_0];
+; SM90-NEXT:    cvt.rn.bf16.s32 %rs1, %r1;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %r = sitofp i32 %a to bfloat
+  ret bfloat %r
+}
+
+define bfloat @test_sitofp_i64(i64 %a) {
+; SM70-LABEL: test_sitofp_i64(
+; SM70:       {
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<12>;
+; SM70-NEXT:    .reg .b64 %rd<2>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b64 %rd1, [test_sitofp_i64_param_0];
+; SM70-NEXT:    cvt.rp.f32.s64 %r1, %rd1;
+; SM70-NEXT:    cvt.rm.f32.s64 %r2, %rd1;
+; SM70-NEXT:    and.b32 %r3, %r2, 1;
+; SM70-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM70-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM70-NEXT:    shr.u32 %r5, %r4, 16;
+; SM70-NEXT:    and.b32 %r6, %r5, 1;
+; SM70-NEXT:    add.s32 %r7, %r6, %r4;
+; SM70-NEXT:    add.s32 %r8, %r7, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r4, %r4;
+; SM70-NEXT:    or.b32 %r9, %r4, 4194304;
+; SM70-NEXT:    selp.b32 %r10, %r9, %r8, %p2;
+; SM70-NEXT:    shr.u32 %r11, %r10, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r11;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_sitofp_i64(
+; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<5>;
+; SM80-NEXT:    .reg .b64 %rd<2>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b64 %rd1, [test_sitofp_i64_param_0];
+; SM80-NEXT:    cvt.rp.f32.s64 %r1, %rd1;
+; SM80-NEXT:    cvt.rm.f32.s64 %r2, %rd1;
+; SM80-NEXT:    and.b32 %r3, %r2, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM80-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r4;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_sitofp_i64(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<5>;
+; SM80-FTZ-NEXT:    .reg .b64 %rd<2>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b64 %rd1, [test_sitofp_i64_param_0];
+; SM80-FTZ-NEXT:    cvt.rp.f32.s64 %r1, %rd1;
+; SM80-FTZ-NEXT:    cvt.rm.f32.s64 %r2, %rd1;
+; SM80-FTZ-NEXT:    and.b32 %r3, %r2, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r3, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r4, %r2, %r1, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r4;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_sitofp_i64(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b64 %rd<2>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b64 %rd1, [test_sitofp_i64_param_0];
+; SM90-FTZ-NEXT:    cvt.rn.bf16.s64 %rs1, %rd1;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_sitofp_i64(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b64 %rd<2>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b64 %rd1, [test_sitofp_i64_param_0];
+; SM90-NEXT:    cvt.rn.bf16.s64 %rs1, %rd1;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %r = sitofp i64 %a to bfloat
+  ret bfloat %r
+}
+
+; Magnitudes of at most 24 bits are exact in f32, so they need no rounding to odd.
+define bfloat @test_uitofp_i32_24bits(i32 %a) {
+; SM70-LABEL: test_uitofp_i32_24bits(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<9>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_24bits_param_0];
+; SM70-NEXT:    and.b32 %r2, %r1, 16777215;
+; SM70-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; SM70-NEXT:    shr.u32 %r4, %r3, 16;
+; SM70-NEXT:    and.b32 %r5, %r4, 1;
+; SM70-NEXT:    add.s32 %r6, %r5, %r3;
+; SM70-NEXT:    add.s32 %r7, %r6, 32767;
+; SM70-NEXT:    shr.u32 %r8, %r7, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r8;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_uitofp_i32_24bits(
+; SM80:       {
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<4>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_24bits_param_0];
+; SM80-NEXT:    and.b32 %r2, %r1, 16777215;
+; SM80-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r3;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_uitofp_i32_24bits(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<4>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_24bits_param_0];
+; SM80-FTZ-NEXT:    and.b32 %r2, %r1, 16777215;
+; SM80-FTZ-NEXT:    cvt.rn.f32.u32 %r3, %r2;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r3;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_uitofp_i32_24bits(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_24bits_param_0];
+; SM90-FTZ-NEXT:    and.b32 %r2, %r1, 16777215;
+; SM90-FTZ-NEXT:    cvt.rn.bf16.u32 %rs1, %r2;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_uitofp_i32_24bits(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_24bits_param_0];
+; SM90-NEXT:    and.b32 %r2, %r1, 16777215;
+; SM90-NEXT:    cvt.rn.bf16.u32 %rs1, %r2;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %b = and i32 %a, 16777215
+  %r = uitofp i32 %b to bfloat
+  ret bfloat %r
+}
+
+define bfloat @test_uitofp_i32_25bits(i32 %a) {
+; SM70-LABEL: test_uitofp_i32_25bits(
+; SM70:       {
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<14>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_25bits_param_0];
+; SM70-NEXT:    and.b32 %r2, %r1, 33554431;
+; SM70-NEXT:    cvt.rp.f32.u32 %r3, %r2;
+; SM70-NEXT:    cvt.rm.f32.u32 %r4, %r2;
+; SM70-NEXT:    and.b32 %r5, %r4, 1;
+; SM70-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM70-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    and.b32 %r8, %r7, 1;
+; SM70-NEXT:    add.s32 %r9, %r8, %r6;
+; SM70-NEXT:    add.s32 %r10, %r9, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r6, %r6;
+; SM70-NEXT:    or.b32 %r11, %r6, 4194304;
+; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p2;
+; SM70-NEXT:    shr.u32 %r13, %r12, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r13;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_uitofp_i32_25bits(
+; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<7>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_25bits_param_0];
+; SM80-NEXT:    and.b32 %r2, %r1, 33554431;
+; SM80-NEXT:    cvt.rp.f32.u32 %r3, %r2;
+; SM80-NEXT:    cvt.rm.f32.u32 %r4, %r2;
+; SM80-NEXT:    and.b32 %r5, %r4, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM80-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r6;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_uitofp_i32_25bits(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<7>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_25bits_param_0];
+; SM80-FTZ-NEXT:    and.b32 %r2, %r1, 33554431;
+; SM80-FTZ-NEXT:    cvt.rp.f32.u32 %r3, %r2;
+; SM80-FTZ-NEXT:    cvt.rm.f32.u32 %r4, %r2;
+; SM80-FTZ-NEXT:    and.b32 %r5, %r4, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r6;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_uitofp_i32_25bits(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_25bits_param_0];
+; SM90-FTZ-NEXT:    and.b32 %r2, %r1, 33554431;
+; SM90-FTZ-NEXT:    cvt.rn.bf16.u32 %rs1, %r2;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_uitofp_i32_25bits(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r1, [test_uitofp_i32_25bits_param_0];
+; SM90-NEXT:    and.b32 %r2, %r1, 33554431;
+; SM90-NEXT:    cvt.rn.bf16.u32 %rs1, %r2;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %b = and i32 %a, 33554431
+  %r = uitofp i32 %b to bfloat
+  ret bfloat %r
+}
+
+define bfloat @test_sitofp_i32_24bits(i32 %a) {
+; SM70-LABEL: test_sitofp_i32_24bits(
+; SM70:       {
+; SM70-NEXT:    .reg .b32 %r<9>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_24bits_param_0];
+; SM70-NEXT:    shr.s32 %r2, %r1, 7;
+; SM70-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; SM70-NEXT:    shr.u32 %r4, %r3, 16;
+; SM70-NEXT:    and.b32 %r5, %r4, 1;
+; SM70-NEXT:    add.s32 %r6, %r5, %r3;
+; SM70-NEXT:    add.s32 %r7, %r6, 32767;
+; SM70-NEXT:    shr.u32 %r8, %r7, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r8;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_sitofp_i32_24bits(
+; SM80:       {
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<4>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_24bits_param_0];
+; SM80-NEXT:    shr.s32 %r2, %r1, 7;
+; SM80-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r3;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_sitofp_i32_24bits(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<4>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_24bits_param_0];
+; SM80-FTZ-NEXT:    shr.s32 %r2, %r1, 7;
+; SM80-FTZ-NEXT:    cvt.rn.f32.s32 %r3, %r2;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r3;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_sitofp_i32_24bits(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_24bits_param_0];
+; SM90-FTZ-NEXT:    shr.s32 %r2, %r1, 7;
+; SM90-FTZ-NEXT:    cvt.rn.bf16.s32 %rs1, %r2;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_sitofp_i32_24bits(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_24bits_param_0];
+; SM90-NEXT:    shr.s32 %r2, %r1, 7;
+; SM90-NEXT:    cvt.rn.bf16.s32 %rs1, %r2;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %b = ashr i32 %a, 7
+  %r = sitofp i32 %b to bfloat
+  ret bfloat %r
+}
+
+define bfloat @test_sitofp_i32_25bits(i32 %a) {
+; SM70-LABEL: test_sitofp_i32_25bits(
+; SM70:       {
+; SM70-NEXT:    .reg .pred %p<3>;
+; SM70-NEXT:    .reg .b32 %r<14>;
+; SM70-EMPTY:
+; SM70-NEXT:  // %bb.0:
+; SM70-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_25bits_param_0];
+; SM70-NEXT:    shr.s32 %r2, %r1, 6;
+; SM70-NEXT:    cvt.rp.f32.s32 %r3, %r2;
+; SM70-NEXT:    cvt.rm.f32.s32 %r4, %r2;
+; SM70-NEXT:    and.b32 %r5, %r4, 1;
+; SM70-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM70-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM70-NEXT:    shr.u32 %r7, %r6, 16;
+; SM70-NEXT:    and.b32 %r8, %r7, 1;
+; SM70-NEXT:    add.s32 %r9, %r8, %r6;
+; SM70-NEXT:    add.s32 %r10, %r9, 32767;
+; SM70-NEXT:    setp.nan.f32 %p2, %r6, %r6;
+; SM70-NEXT:    or.b32 %r11, %r6, 4194304;
+; SM70-NEXT:    selp.b32 %r12, %r11, %r10, %p2;
+; SM70-NEXT:    shr.u32 %r13, %r12, 16;
+; SM70-NEXT:    st.param.b16 [func_retval0], %r13;
+; SM70-NEXT:    ret;
+;
+; SM80-LABEL: test_sitofp_i32_25bits(
+; SM80:       {
+; SM80-NEXT:    .reg .pred %p<2>;
+; SM80-NEXT:    .reg .b16 %rs<2>;
+; SM80-NEXT:    .reg .b32 %r<7>;
+; SM80-EMPTY:
+; SM80-NEXT:  // %bb.0:
+; SM80-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_25bits_param_0];
+; SM80-NEXT:    shr.s32 %r2, %r1, 6;
+; SM80-NEXT:    cvt.rp.f32.s32 %r3, %r2;
+; SM80-NEXT:    cvt.rm.f32.s32 %r4, %r2;
+; SM80-NEXT:    and.b32 %r5, %r4, 1;
+; SM80-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM80-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM80-NEXT:    cvt.rn.bf16.f32 %rs1, %r6;
+; SM80-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-NEXT:    ret;
+;
+; SM80-FTZ-LABEL: test_sitofp_i32_25bits(
+; SM80-FTZ:       {
+; SM80-FTZ-NEXT:    .reg .pred %p<2>;
+; SM80-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM80-FTZ-NEXT:    .reg .b32 %r<7>;
+; SM80-FTZ-EMPTY:
+; SM80-FTZ-NEXT:  // %bb.0:
+; SM80-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_25bits_param_0];
+; SM80-FTZ-NEXT:    shr.s32 %r2, %r1, 6;
+; SM80-FTZ-NEXT:    cvt.rp.f32.s32 %r3, %r2;
+; SM80-FTZ-NEXT:    cvt.rm.f32.s32 %r4, %r2;
+; SM80-FTZ-NEXT:    and.b32 %r5, %r4, 1;
+; SM80-FTZ-NEXT:    setp.ne.b32 %p1, %r5, 0;
+; SM80-FTZ-NEXT:    selp.f32 %r6, %r4, %r3, %p1;
+; SM80-FTZ-NEXT:    cvt.rn.bf16.f32 %rs1, %r6;
+; SM80-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM80-FTZ-NEXT:    ret;
+;
+; SM90-FTZ-LABEL: test_sitofp_i32_25bits(
+; SM90-FTZ:       {
+; SM90-FTZ-NEXT:    .reg .b16 %rs<2>;
+; SM90-FTZ-NEXT:    .reg .b32 %r<3>;
+; SM90-FTZ-EMPTY:
+; SM90-FTZ-NEXT:  // %bb.0:
+; SM90-FTZ-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_25bits_param_0];
+; SM90-FTZ-NEXT:    shr.s32 %r2, %r1, 6;
+; SM90-FTZ-NEXT:    cvt.rn.bf16.s32 %rs1, %r2;
+; SM90-FTZ-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-FTZ-NEXT:    ret;
+;
+; SM90-LABEL: test_sitofp_i32_25bits(
+; SM90:       {
+; SM90-NEXT:    .reg .b16 %rs<2>;
+; SM90-NEXT:    .reg .b32 %r<3>;
+; SM90-EMPTY:
+; SM90-NEXT:  // %bb.0:
+; SM90-NEXT:    ld.param.b32 %r1, [test_sitofp_i32_25bits_param_0];
+; SM90-NEXT:    shr.s32 %r2, %r1, 6;
+; SM90-NEXT:    cvt.rn.bf16.s32 %rs1, %r2;
+; SM90-NEXT:    st.param.b16 [func_retval0], %rs1;
+; SM90-NEXT:    ret;
+  %b = ashr i32 %a, 6
+  %r = sitofp i32 %b to bfloat
   ret bfloat %r
 }
 
