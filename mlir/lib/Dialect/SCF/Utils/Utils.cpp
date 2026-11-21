@@ -1226,6 +1226,7 @@ scf::ParallelOp mlir::collapseParallelLoops(
   // value. The remainders then determine based on that range, which iteration
   // of the original induction value this represents. This is a normalized value
   // that is un-normalized already by the previous logic.
+  SmallVector<Value> newIVs(loops.getNumLoops());
   auto newPloop = scf::ParallelOp::create(
       rewriter, loc, lowerBounds, upperBounds, steps, loops.getInitVals(),
       [&](OpBuilder &insideBuilder, Location, ValueRange ploopIVs, ValueRange) {
@@ -1239,8 +1240,7 @@ scf::ParallelOp mlir::collapseParallelLoops(
             // Determine the current induction value's current loop iteration
             Value iv = arith::RemSIOp::create(insideBuilder, loc, previous,
                                               normalizedUpperBounds[idx]);
-            replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx), iv,
-                                       loops.getRegion());
+            newIVs[idx] = iv;
 
             // Remove the effect of the current induction value to prepare for
             // the next value.
@@ -1250,21 +1250,17 @@ scf::ParallelOp mlir::collapseParallelLoops(
 
           // The final induction value is just the remaining value.
           unsigned idx = combinedDimensions[i][0];
-          replaceAllUsesInRegionWith(loops.getBody()->getArgument(idx),
-                                     previous, loops.getRegion());
+          newIVs[idx] = previous;
         }
       });
 
   // The builder inserts an empty scf.reduce only when there are no reductions.
   // Drop that terminator and move the original one over with the body, so a
   // loop with reductions keeps its scf.reduce and its results.
-  if (!newPloop.getBody()->empty()) {
-    if (auto reduceOp = dyn_cast<scf::ReduceOp>(newPloop.getBody()->back()))
-      rewriter.eraseOp(reduceOp);
-  }
-  newPloop.getBody()->getOperations().splice(newPloop.getBody()->end(),
-                                             loops.getBody()->getOperations());
-  // Replace uses of the results
+  if (loops.getInitVals().empty())
+    rewriter.eraseOp(newPloop.getBody()->getTerminator());
+  rewriter.mergeBlocks(loops.getBody(), newPloop.getBody(), newIVs);
+  // Replace uses of the results.
   rewriter.replaceOp(loops, newPloop);
   return newPloop;
 }
