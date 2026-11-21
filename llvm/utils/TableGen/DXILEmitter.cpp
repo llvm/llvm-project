@@ -624,3 +624,48 @@ static void emitDxilOperation(const RecordKeeper &Records, raw_ostream &OS) {
 
 static TableGen::Emitter::Opt X("gen-dxil-operation", emitDxilOperation,
                                 "Generate DXIL operation information");
+
+static void emitDXILIntrinsicStages(const RecordKeeper &Records,
+                                    raw_ostream &OS) {
+  OS << "// Generated code, do not edit.\n\n";
+  auto Rules = Records.getAllDerivedDefinitions("DXILIntrinsicStages");
+  SequenceToOffsetTable<std::string> Strings;
+  for (const Record *R : Rules) {
+    auto Stages = R->getValueAsListOfDefs("Stages");
+    if (Stages.empty())
+      PrintFatalError(R, "expected at least one shader stage");
+    Strings.add(R->getValueAsString("Name").str());
+    for (const Record *Stage : Stages)
+      Strings.add(Stage->getName().str());
+  }
+  Strings.layout();
+  Strings.emitStringLiteralDef(
+      OS, "static constexpr char DXILIntrinsicStageStrings[]");
+
+  SequenceToOffsetTable<std::vector<unsigned>> StageOffsets(std::nullopt);
+  auto GetStageOffsets = [&](const Record *R) {
+    std::vector<unsigned> Offsets;
+    for (const Record *Stage : R->getValueAsListOfDefs("Stages"))
+      Offsets.push_back(Strings.get(Stage->getName().str()));
+    return Offsets;
+  };
+  for (const Record *R : Rules)
+    StageOffsets.add(GetStageOffsets(R));
+  StageOffsets.layout();
+  OS << "static constexpr unsigned DXILIntrinsicStageOffsets[] = {\n";
+  StageOffsets.emit(OS, [](raw_ostream &OS, unsigned Offset) { OS << Offset; });
+  OS << "};\n\n";
+
+  OS << "static constexpr IntrinsicStageInfo DXILIntrinsicStages[] = {\n";
+  for (const Record *R : Rules) {
+    auto Offsets = GetStageOffsets(R);
+    OS << "  {Intrinsic::" << GetIntrinsicName(R->getValue("Intrin")) << ", "
+       << Strings.get(R->getValueAsString("Name").str()) << ", "
+       << StageOffsets.get(Offsets) << ", " << Offsets.size() << "},\n";
+  }
+  OS << "};\n";
+}
+
+static TableGen::Emitter::Opt Y("gen-dxil-intrinsic-stages",
+                                emitDXILIntrinsicStages,
+                                "Generate DXIL intrinsic stage availability");
