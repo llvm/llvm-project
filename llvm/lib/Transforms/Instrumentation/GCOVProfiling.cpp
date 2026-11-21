@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -43,6 +44,7 @@
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -687,7 +689,8 @@ bool GCOVProfiler::AddFlushBeforeForkAndExec() {
 }
 
 static BasicBlock *getInstrBB(CFGMST<Edge, BBInfo> &MST, Edge &E,
-                              const DenseSet<const BasicBlock *> &ExecBlocks) {
+                              const DenseSet<const BasicBlock *> &ExecBlocks,
+                              std::optional<DominatorTree> &DT) {
   if (E.InMST || E.Removed)
     return nullptr;
 
@@ -718,8 +721,13 @@ static BasicBlock *getInstrBB(CFGMST<Edge, BBInfo> &MST, Edge &E,
   // Some IndirectBr critical edges cannot be split by the previous
   // SplitIndirectBrCriticalEdges call. Bail out.
   const unsigned SuccNum = GetSuccessorNumber(SrcBB, DestBB);
+  if (!DT && TI->getMetadata(LLVMContext::MD_loop))
+    DT.emplace(*SrcBB->getParent());
   BasicBlock *InstrBB =
-      isa<IndirectBrInst>(TI) ? nullptr : SplitCriticalEdge(TI, SuccNum);
+      isa<IndirectBrInst>(TI)
+          ? nullptr
+          : SplitCriticalEdge(
+                TI, SuccNum, CriticalEdgeSplittingOptions(DT ? &*DT : nullptr));
   if (!InstrBB)
     return nullptr;
 
@@ -807,6 +815,8 @@ bool GCOVProfiler::emitProfileNotes(
       CFGMST<Edge, BBInfo> MST(F, /*InstrumentFuncEntry=*/false,
                                /*InstrumentLoopEntries=*/false, BPI, BFI);
 
+      // Build a tree lazily for loop metadata and reuse it across splits.
+      std::optional<DominatorTree> DT;
       // getInstrBB can split basic blocks and push elements to AllEdges.
       for (size_t I : llvm::seq<size_t>(0, MST.numEdges())) {
         auto &E = *MST.allEdges()[I];
@@ -814,7 +824,7 @@ bool GCOVProfiler::emitProfileNotes(
         // used.
         if (HasExecOrFork)
           E.InMST = false;
-        E.Place = getInstrBB(MST, E, ExecBlocks);
+        E.Place = getInstrBB(MST, E, ExecBlocks, DT);
       }
       // Basic blocks in F are finalized at this point.
       BasicBlock &EntryBlock = F.getEntryBlock();
