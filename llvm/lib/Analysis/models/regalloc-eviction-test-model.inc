@@ -3,6 +3,8 @@ public:
   int64_t fieldName0[33];
   const std::map<std::string, char *> reflectionMap = {
       {"mask", reinterpret_cast<char *>(&fieldName0)}};
+  const std::map<std::string, size_t> reflectionSizeMap = {
+      {"mask", sizeof(fieldName0)}};
   char *getBufferForName(std::string v1) {
     char *v2 = reflectionMap.at(v1);
     return v2;

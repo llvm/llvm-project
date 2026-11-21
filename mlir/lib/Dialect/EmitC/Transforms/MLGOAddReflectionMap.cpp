@@ -118,6 +118,9 @@ class MLGOAddReflectionMapPass
 ///   std::map<std::string, char*>"> =
 ///     #emitc.opaque<"{ { \"another_feature\",
 ///     reinterpret_cast<char*>(&fieldName0) } }">
+///   emitc.field @reflectionSizeMap : !emitc.opaque<"const
+///   std::map<std::string, size_t>"> =
+///     #emitc.opaque<"{ { \"another_feature\", sizeof(fieldName0) } }">
 ///   emitc.func @getBufferForName(%name: !emitc.opaque<"std::string">) ->
 ///   !emitc.ptr<!emitc.opaque<"char">> {
 ///     %map = get_field @reflectionMap : !emitc.opaque<"const
@@ -140,6 +143,8 @@ public:
 
     emitc::OpaqueType mapType = mlir::emitc::OpaqueType::get(
         context, "const std::map<std::string, char*>");
+    emitc::OpaqueType sizeMapType = mlir::emitc::OpaqueType::get(
+        context, "const std::map<std::string, size_t>");
 
     // Collect the names of all FieldOps that have one of the attributes in
     // includedFieldAttrs to use the first element of the array attribute
@@ -166,17 +171,24 @@ public:
 
     // Create reflection map contents
     std::string reflectionMapContents;
+    std::string reflectionSizeMapContents;
     reflectionMapContents += "{ ";
+    reflectionSizeMapContents += "{ ";
     bool first = true;
     for (const auto &[name, value] : fieldNames) {
-      if (!first)
+      if (!first) {
         reflectionMapContents += ", ";
+        reflectionSizeMapContents += ", ";
+      }
 
       first = false;
       reflectionMapContents += llvm::formatv(
           "{ \"{0}\", reinterpret_cast<char*>(&{1}) }", name, value);
+      reflectionSizeMapContents +=
+          llvm::formatv("{ \"{0}\", sizeof({1}) }", name, value);
     }
     reflectionMapContents += " }";
+    reflectionSizeMapContents += " }";
 
     // Set insertion point before the first function or after all fields
     // if there are no functions within the class
@@ -199,6 +211,11 @@ public:
         rewriter, classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
         /*sym_visibility=*/nullptr, TypeAttr::get(mapType),
         emitc::OpaqueAttr::get(context, reflectionMapContents));
+
+    FieldOp::create(rewriter, classOp.getLoc(),
+                    rewriter.getStringAttr("reflectionSizeMap"),
+                    /*sym_visibility=*/nullptr, TypeAttr::get(sizeMapType),
+                    emitc::OpaqueAttr::get(context, reflectionSizeMapContents));
 
     // Create getBufferForName method
     emitc::OpaqueType nameType =

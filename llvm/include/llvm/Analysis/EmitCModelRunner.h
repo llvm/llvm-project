@@ -32,6 +32,8 @@ public:
 
   ~EmitCModelRunner() override = default;
 
+  bool isValid() const override { return Valid; }
+
   static bool classof(const MLModelRunner *R) {
     return R->getKind() == MLModelRunner::Kind::Release;
   }
@@ -43,8 +45,18 @@ private:
   void populateTensor(size_t Pos, const TensorSpec &Spec) {
     void *Buffer = nullptr;
     auto It = CompiledModel.reflectionMap.find(Spec.name());
-    if (It != CompiledModel.reflectionMap.end())
-      Buffer = static_cast<void *>(It->second);
+    if (It != CompiledModel.reflectionMap.end()) {
+      const size_t ModelSize = CompiledModel.reflectionSizeMap.at(Spec.name());
+      if (ModelSize == Spec.getTotalTensorBufferSize()) {
+        Buffer = static_cast<void *>(It->second);
+      } else if (Valid) {
+        Valid = false;
+        Ctx.emitError("The compiled model expects " + Twine(ModelSize) +
+                      " bytes for input '" + Spec.name() + "', but " +
+                      Twine(Spec.getTotalTensorBufferSize()) +
+                      " were requested.");
+      }
+    }
     setUpBufferForTensor(Pos, Spec, Buffer);
   }
 
@@ -58,6 +70,7 @@ private:
   }
 
   ResultType Result = {};
+  bool Valid = true;
   TGen CompiledModel = {};
 };
 
