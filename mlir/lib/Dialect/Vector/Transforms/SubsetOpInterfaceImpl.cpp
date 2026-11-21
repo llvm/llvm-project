@@ -20,16 +20,10 @@ template <typename OpTy>
 struct XferOpSubsetOpInterface
     : public SubsetOpInterface::ExternalModel<XferOpSubsetOpInterface<OpTy>,
                                               OpTy> {
-  static bool isMaskedXfer(OpTy xferOp) {
-    return xferOp.getMask() ||
-           (isa<MaskableOpInterface>(xferOp.getOperation()) &&
-            cast<MaskableOpInterface>(xferOp.getOperation()).isMasked());
-  }
-
   FailureOr<HyperrectangularSlice>
   getAccessedHyperrectangularSlice(Operation *op) const {
     auto xferOp = cast<OpTy>(op);
-    if (isMaskedXfer(xferOp))
+    if (xferOp.getMask() || xferOp.isMasked())
       return failure();
     Builder b(xferOp->getContext());
     SmallVector<OpFoldResult> offsets = llvm::map_to_vector(
@@ -46,7 +40,7 @@ struct XferOpSubsetOpInterface
     auto xferOp = cast<OpTy>(op);
     // A masked Xfer is not equivalent to an access of its whole slice.
     // Return false instead of asserting in the default implementation.
-    if (isMaskedXfer(xferOp))
+    if (xferOp.getMask() || xferOp.isMasked())
       return false;
     return ::mlir::detail::defaultOperatesOnEquivalentSubset(xferOp, candidate,
                                                              equivalenceFn);
@@ -57,7 +51,7 @@ struct XferOpSubsetOpInterface
       llvm::function_ref<bool(Value, Value)> equivalenceFn) const {
     auto xferOp = cast<OpTy>(op);
     // A masked Xfer is conservatively not provably disjoint.
-    if (isMaskedXfer(xferOp))
+    if (xferOp.getMask() || xferOp.isMasked())
       return false;
     return ::mlir::detail::defaultOperatesOnDisjointSubset(xferOp, candidate,
                                                            equivalenceFn);
