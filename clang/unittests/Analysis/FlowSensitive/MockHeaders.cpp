@@ -914,6 +914,9 @@ public:
   template <class T2>
     requires(!__is_expected<T2>)
   friend bool operator==(const expected &x, const T2 &v);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
 #endif
 };
 
@@ -959,6 +962,9 @@ public:
 #if __cplusplus >= 202002L
   template <class T2, class E2>
   friend bool operator==(const expected &x, const expected<T2, E2> &y);
+
+  template <class E2>
+  friend bool operator==(const expected &x, const unexpected<E2> &e);
 #endif
 };
 
@@ -1122,6 +1128,15 @@ template <class T, class E, class U>
 bool operator!=(const expected<T, E> &x, const U &v);
 template <class T, class E, class U>
 bool operator!=(const U &v, const expected<T, E> &x);
+
+template <class T, class E>
+bool operator==(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator==(const unexpected<E> &e, const expected<T, E> &x);
+template <class T, class E>
+bool operator!=(const expected<T, E> &x, const unexpected<E> &e);
+template <class T, class E>
+bool operator!=(const unexpected<E> &e, const expected<T, E> &x);
 
 template <class T, class E>
 void swap(expected<T, E> &lhs, expected<T, E> &rhs);
