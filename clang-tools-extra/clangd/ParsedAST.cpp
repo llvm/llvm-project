@@ -29,6 +29,7 @@
 #include "clang/AST/ExternalASTSource.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticIDs.h"
+#include "clang/Basic/DiagnosticLex.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/LLVM.h"
@@ -273,6 +274,12 @@ std::vector<Diag> getIncludeCleanerDiags(ParsedAST &AST, llvm::StringRef Code,
   bool SuppressUnused =
       Cfg.Diagnostics.Suppress.contains("unused-includes") ||
       Cfg.Diagnostics.UnusedIncludes == Config::IncludesPolicy::None;
+  // Behind a header that is not found, uses may not resolve to the headers
+  // that provide them, which would then seem unused.
+  if (llvm::any_of(AST.getDiagnostics(), [](const Diag &D) {
+        return D.Source == Diag::Clang && D.ID == diag::err_pp_file_not_found;
+      }))
+    SuppressUnused = true;
   if (SuppressMissing && SuppressUnused)
     return {};
   auto Findings = computeIncludeCleanerFindings(
