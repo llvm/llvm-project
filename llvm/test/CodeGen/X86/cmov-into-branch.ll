@@ -189,6 +189,171 @@ define i32 @weighted_selects(i32 %a, i32 %b) !prof !19 {
   ret i32 %sel1
 }
 
+; A predictable logical or feeding a branch in the same block.
+declare i64 @slow(i64, ptr, i64)
+
+define i64 @weighted_logical_or_br(i64 %gas, ptr %m, i64 %n) {
+; CHECK-LABEL: weighted_logical_or_br:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rsi), %rax
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2: # %fast
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    addq $-3, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+  %size = load i64, ptr %m, align 8
+  %s = add i64 %size, 32
+  %c1 = icmp ugt i64 %n, %s
+  %capp = getelementptr inbounds i8, ptr %m, i64 8
+  %cap = load i64, ptr %capp, align 8
+  %c2 = icmp ugt i64 %s, %cap
+  %or = select i1 %c1, i1 true, i1 %c2, !prof !16
+  br i1 %or, label %slow, label %fast, !prof !16
+
+fast:
+  store i64 %s, ptr %m, align 8
+  %r = add nsw i64 %gas, -3
+  ret i64 %r
+
+slow:
+  %t = tail call i64 @slow(i64 %gas, ptr %m, i64 %n)
+  ret i64 %t
+}
+
+; The same with three conditions: a logical or and a plain or.
+define i64 @weighted_logical_or3_br(i64 %gas, ptr %m, i64 %n, i64 %k) {
+; CHECK-LABEL: weighted_logical_or3_br:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rsi), %rax
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    cmpq %rax, %rcx
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3: # %fast
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    addq $-3, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+  %size = load i64, ptr %m, align 8
+  %s = add i64 %size, 32
+  %c1 = icmp ugt i64 %n, %s
+  %capp = getelementptr inbounds i8, ptr %m, i64 8
+  %cap = load i64, ptr %capp, align 8
+  %c2 = icmp ugt i64 %s, %cap
+  %or = select i1 %c1, i1 true, i1 %c2, !prof !16
+  %c3 = icmp ugt i64 %k, %s
+  %or3 = or i1 %c3, %or
+  br i1 %or3, label %slow, label %fast, !prof !16
+
+fast:
+  store i64 %s, ptr %m, align 8
+  %r = add nsw i64 %gas, -3
+  ret i64 %r
+
+slow:
+  %t = tail call i64 @slow(i64 %gas, ptr %m, i64 %n)
+  ret i64 %t
+}
+
+; Three conditions as clang emits if (a && b && c) [[likely]]: nested logical
+; ors of the negated conditions, each with branch weights.
+define i64 @weighted_logical_or3_nested_br(i64 %gas, ptr %m, i64 %n) {
+; CHECK-LABEL: weighted_logical_or3_nested_br:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq (%rsi), %rax
+; CHECK-NEXT:    addq $32, %rax
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpq 16(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3: # %fast
+; CHECK-NEXT:    movq %rax, (%rsi)
+; CHECK-NEXT:    addq $-3, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+  %size = load i64, ptr %m, align 8
+  %s = add i64 %size, 32
+  %c1 = icmp ugt i64 %n, %s
+  %capp = getelementptr inbounds i8, ptr %m, i64 8
+  %cap = load i64, ptr %capp, align 8
+  %c2 = icmp ugt i64 %s, %cap
+  %or = select i1 %c1, i1 true, i1 %c2, !prof !16
+  %limp = getelementptr inbounds i8, ptr %m, i64 16
+  %lim = load i64, ptr %limp, align 8
+  %c3 = icmp ugt i64 %s, %lim
+  %or3 = select i1 %or, i1 true, i1 %c3, !prof !16
+  br i1 %or3, label %slow, label %fast, !prof !16
+
+fast:
+  store i64 %s, ptr %m, align 8
+  %r = add nsw i64 %gas, -3
+  ret i64 %r
+
+slow:
+  %t = tail call i64 @slow(i64 %gas, ptr %m, i64 %n)
+  ret i64 %t
+}
+
+; Four conditions with branch weights only on the outer logical or. The inner
+; conditions are ne compares.
+define i64 @weighted_logical_or4_br(i64 %gas, ptr %m, i64 %n) {
+; CHECK-LABEL: weighted_logical_or4_br:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    cmpq %rdx, (%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq $0, 8(%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpq $0, 16(%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    testb $1, 24(%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.4: # %fast
+; CHECK-NEXT:    addq $-3, %rdi
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    retq
+  %a = load i64, ptr %m, align 8
+  %c1 = icmp ne i64 %a, %n
+  %bp = getelementptr inbounds i8, ptr %m, i64 8
+  %b = load i64, ptr %bp, align 8
+  %c2 = icmp ne i64 %b, 0
+  %or1 = select i1 %c1, i1 true, i1 %c2
+  %cp = getelementptr inbounds i8, ptr %m, i64 16
+  %c = load i64, ptr %cp, align 8
+  %c3 = icmp ne i64 %c, 0
+  %or2 = select i1 %or1, i1 true, i1 %c3
+  %dp = getelementptr inbounds i8, ptr %m, i64 24
+  %d = load i8, ptr %dp, align 8
+  %c4 = trunc i8 %d to i1
+  %or3 = select i1 %or2, i1 true, i1 %c4, !prof !16
+  br i1 %or3, label %slow, label %fast, !prof !16
+
+fast:
+  %r = add nsw i64 %gas, -3
+  ret i64 %r
+
+slow:
+  %t = tail call i64 @slow(i64 %gas, ptr %m, i64 %n)
+  ret i64 %t
+}
+
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"ProfileSummary", !1}
 !1 = !{!2, !3, !4, !5, !6, !7, !8, !9}
