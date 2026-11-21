@@ -86,3 +86,18 @@ static_assert(requires { requires bar<int>; });
 // expected-note@-5 {{because 'bar<int>' would be invalid}}
 
 }
+
+namespace GH91564 {
+
+template <class T> using A = struct B { // expected-error {{'GH91564::B' cannot be defined in a type alias template}}
+  template <class> void f() requires (T()); // expected-error {{atomic constraint must be of type 'bool' (found 'int')}} expected-note {{explicit instantiation refers here}}
+};
+template void B::f<void>(); // expected-error {{explicit instantiation of undefined function template 'f'}}
+
+template <class T> using C = struct D { // expected-error {{'GH91564::D' cannot be defined in a type alias template}}
+  using E = T;
+};
+template <class> void g() requires (D::E()); // expected-error {{atomic constraint must be of type 'bool' (found 'D::E' (aka 'int'))}} expected-note {{explicit instantiation refers here}}
+template void g<void>(); // expected-error {{explicit instantiation of undefined function template 'g'}}
+
+} // namespace GH91564
