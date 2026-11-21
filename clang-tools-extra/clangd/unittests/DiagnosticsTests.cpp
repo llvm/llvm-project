@@ -268,6 +268,43 @@ TEST(DiagnosticsTest, DiagnosticPreamble) {
                   diagSource(Diag::Clang), diagName("pp_file_not_found"))));
 }
 
+TEST(DiagnosticsTest, KeepGoingAfterMissingHeader) {
+  // A missing header is a fatal error, which takes effect at the next
+  // diagnostic. All the missing headers are still reported, and templates are
+  // still instantiated: here a base class, in a header of the preamble.
+  Annotations Preamble(R"cpp(
+    #include $first[["not-found.h"]] // error-ok
+    #include $second[["not-found-either.h"]] // error-ok
+    #include "singleton.h"
+    int X = Foo::instance();
+  )cpp");
+  TestTU TU = TestTU::withCode(Preamble.code());
+  TU.AdditionalFiles["singleton.h"] = R"cpp(
+    template <typename T> struct Singleton { static int instance(); };
+    struct Foo : Singleton<Foo> {};
+  )cpp";
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(Diag(Preamble.range("first"), "'not-found.h' file not found"),
+                  Diag(Preamble.range("second"),
+                       "'not-found-either.h' file not found")));
+
+  // The same in the main file, after the preamble.
+  Annotations Main(R"cpp(
+    int Before;
+    #include $first[["not-found.h"]] // error-ok
+    #include $second[["not-found-either.h"]] // error-ok
+    template <typename T> struct S { static int f(); };
+    int X = S<int>::f();
+  )cpp");
+  TU = TestTU::withCode(Main.code());
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      ElementsAre(
+          Diag(Main.range("first"), "'not-found.h' file not found"),
+          Diag(Main.range("second"), "'not-found-either.h' file not found")));
+}
+
 TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
   Annotations Test(R"cpp(
     float foo = [[0.1f]];
