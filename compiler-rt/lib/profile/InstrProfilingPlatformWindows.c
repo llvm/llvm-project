@@ -78,7 +78,13 @@ const __llvm_profile_data *__llvm_profile_end_data(void) { return &DataEnd; }
 const VTableProfData *__llvm_profile_begin_vtables(void) { return NULL; }
 const VTableProfData *__llvm_profile_end_vtables(void) { return NULL; }
 
-const char *__llvm_profile_begin_names(void) { return &NamesStart + 1; }
+const char *__llvm_profile_begin_names(void) {
+  const char *Begin = &NamesStart + 1;
+  // link.exe may pad the byte-sized start sentinel on Windows Arm64.
+  while (Begin < &NamesEnd && *Begin == '\0')
+    ++Begin;
+  return Begin;
+}
 const char *__llvm_profile_end_names(void) { return &NamesEnd; }
 
 // Type profiling isn't supported on Windows, so return NULl to make it more
