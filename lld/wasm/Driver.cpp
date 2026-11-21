@@ -67,6 +67,7 @@ void Ctx::reset() {
   syntheticGlobals.clear();
   syntheticTables.clear();
   whyExtractRecords.clear();
+  fixedTLSBase.reset();
   isPic = false;
   legacyFunctionTable = false;
   emitBssSegments = false;

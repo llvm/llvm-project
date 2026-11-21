@@ -272,6 +272,8 @@ struct Ctx {
   };
   WasmSym sym;
 
+  std::optional<uint64_t> fixedTLSBase;
+
   // True if we are creating position-independent code.
   bool isPic = false;
 

@@ -254,6 +254,8 @@ static unsigned writeCompressedReloc(uint8_t *buf, const WasmRelocation &rel,
   case R_WASM_MEMORY_ADDR_TLS_SLEB:
   case R_WASM_MEMORY_ADDR_TLS_SLEB64:
   case R_WASM_TABLE_INDEX_REL_SLEB:
+    if (!relocIs64(rel.Type))
+      return encodeSLEB128(static_cast<int32_t>(value), buf);
     return encodeSLEB128(static_cast<int64_t>(value), buf);
   case R_WASM_TABLE_INDEX_I32:
   case R_WASM_MEMORY_ADDR_I32:
