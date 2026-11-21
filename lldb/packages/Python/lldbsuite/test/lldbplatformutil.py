@@ -161,8 +161,12 @@ def getPlatform():
         dot = platform.find(".")
         if dot != -1:
             platform = platform[:dot]
+        # Normalize SDK-style names to the canonical lldb platform names
+        # used elsewhere in the test infra (lldbplatform.__name_lookup, etc.).
         if platform == "iphoneos":
             platform = "ios"
+        elif platform == "appletvos":
+            platform = "tvos"
         return platform
 
     return _get_platform_os(lldb.selected_platform)
@@ -298,7 +302,7 @@ def getLLDBArchitecture():
             "file " + lldbtest_config.lldbExec,
         ]
 
-        output = subprocess.check_output(command)
+        output = subprocess.check_output(command, stderr=subprocess.PIPE)
         str = output.decode()
 
         for line in str.splitlines():
@@ -321,7 +325,7 @@ def getCompilerVersion():
     Supports: llvm, clang.
     """
     version_output = subprocess.check_output(
-        [getCompiler(), "--version"], errors="replace"
+        [getCompiler(), "--version"], stderr=subprocess.PIPE, errors="replace"
     )
     m = re.search("version ([0-9.]+)", version_output)
     if m:

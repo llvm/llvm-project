@@ -10,6 +10,7 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
+#include "clang/Basic/AtomicLineLogger.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -34,6 +35,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Lex/TextEncoding.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
@@ -58,6 +60,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
+#include "llvm/Support/Threading.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -183,6 +186,11 @@ void CompilerInstance::setSourceManager(
 
 void CompilerInstance::setPreprocessor(std::shared_ptr<Preprocessor> Value) {
   PP = std::move(Value);
+}
+
+IntrusiveRefCntPtr<ASTContext> CompilerInstance::getASTContextPtr() const {
+  assert(Context && "Compiler instance has no AST context!");
+  return Context;
 }
 
 void CompilerInstance::setASTContext(
@@ -559,6 +567,11 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
 
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
+
+  if (auto EC = TextEncoding::setConvertersFromOptions(
+          PP->getTextEncoding(), getLangOpts(), getTarget()))
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config)
+        << PP->getTextEncoding().getLiteralEncoding();
 }
 
 // ASTContext
@@ -1102,7 +1115,7 @@ void CompilerInstance::LoadRequestedPlugins() {
 
   // Load and store pass plugins for the back-end.
   for (const std::string &Path : getCodeGenOpts().PassPlugins) {
-    if (auto PassPlugin = llvm::PassPlugin::Load(Path)) {
+    if (auto PassPlugin = llvm::PassPlugin::load(Path)) {
       PassPlugins.emplace_back(std::make_unique<llvm::PassPlugin>(*PassPlugin));
     } else {
       getDiagnostics().Report(diag::err_fe_unable_to_load_plugin)
@@ -1122,6 +1135,18 @@ void CompilerInstance::LoadRequestedPlugins() {
   }
 }
 
+bool CompilerInstance::parseLLVMArgs(raw_ostream *Errs) {
+  const std::vector<std::string> &LLVMArgs = getFrontendOpts().LLVMArgs;
+  if (LLVMArgs.empty())
+    return true;
+  SmallVector<const char *> Args = {"clang (LLVM option parsing)"};
+  for (const std::string &Arg : LLVMArgs)
+    Args.push_back(Arg.c_str());
+  return llvm::cl::parseCommandLineOptions(LibraryOptions, Args,
+                                           /*Overview=*/"", Errs,
+                                           &getVirtualFileSystem());
+}
+
 /// Determine the appropriate source input kind based on language
 /// options.
 static Language getLanguageFromOptions(const LangOptions &LangOpts) {
@@ -1137,6 +1162,7 @@ static Language getLanguageFromOptions(const LangOptions &LangOpts) {
 std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
     SourceLocation ImportLoc, StringRef ModuleName, FrontendInputFile Input,
     StringRef OriginalModuleMapFile, StringRef ModuleFileName,
+    ArrayRef<std::string> DirectoryDependencies,
     std::optional<ThreadSafeCloneConfig> ThreadSafeConfig) {
   // Construct a compiler invocation for creating this module.
   auto Invocation = std::make_shared<CompilerInvocation>(getInvocation());
@@ -1156,6 +1182,17 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
                    return HSOpts.ModulesIgnoreMacros.contains(
                        llvm::CachedHashString(MacroDef.split('=').first));
                  });
+  HSOpts.ModulesIgnoreMacros.clear();
+
+  // Remove any search paths that are explicitly ignored by the module.
+  // They aren't supposed to affect how the module is built anyway.
+  if (!HSOpts.ModulesIgnoreSearchPaths.empty())
+    llvm::erase_if(HSOpts.UserEntries,
+                   [&HSOpts](const HeaderSearchOptions::Entry &E) {
+                     return HSOpts.ModulesIgnoreSearchPaths.contains(
+                         llvm::CachedHashString(E.Path));
+                   });
+  HSOpts.ModulesIgnoreSearchPaths.clear();
 
   // If the original compiler invocation had -fmodule-name, pass it through.
   Invocation->getLangOpts().ModuleName =
@@ -1239,6 +1276,11 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   // Make a copy for the new instance.
   Instance.FailedModules = FailedModules;
 
+  // An inferred framework is built from module map text printed by this
+  // instance rather than by repeating the inference, so directories the
+  // inference enumerated (its Frameworks subdirectory) are only known here.
+  Instance.setInheritedDirectoryDependencies(DirectoryDependencies);
+
   // Pass along the GenModuleActionWrapper callback.
   Instance.setGenModuleActionWrapper(getGenModuleActionWrapper());
 
@@ -1296,8 +1338,13 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
 
   // Execute the action to actually build the module in-place. Use a separate
   // thread so that we get a stack large enough.
+  uint64_t ParentTID = llvm::get_threadid();
   bool Crashed = !llvm::CrashRecoveryContext().RunSafelyOnNewStack(
       [&]() {
+        getModuleCache().getLogger().log()
+            << "module_compile_thread: parent=" << ParentTID
+            << " pcm_compile: " << ModuleFileName;
+
         auto OS = std::make_unique<llvm::raw_svector_ostream>(Buffer);
 
         std::unique_ptr<FrontendAction> Action =
@@ -1346,8 +1393,11 @@ CompilerInstance::compileModule(SourceLocation ImportLoc, StringRef ModuleName,
       !Instance.getFrontendOpts().AllowPCMWithCompilerErrors)
     return nullptr;
 
+  // PCMs don't need to be null-terminated. Since the buffer typically has no
+  // spare capacity, adding the terminator would reallocate and copy it.
   return std::make_unique<llvm::SmallVectorMemoryBuffer>(
-      std::move(Buffer), Instance.getFrontendOpts().OutputFile);
+      std::move(Buffer), Instance.getFrontendOpts().OutputFile,
+      /*RequiresNullTerminator=*/false);
 }
 
 static OptionalFileEntryRef getPublicModuleMap(FileEntryRef File,
@@ -1411,7 +1461,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
         ImportLoc, ModuleName,
         FrontendInputFile(ModuleMapFilePath, IK, IsSystem),
         ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-        std::move(ThreadSafeConfig));
+        Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
   }
 
   // FIXME: We only need to fake up an input file here as a way of
@@ -1429,7 +1479,7 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompile(
       ImportLoc, ModuleName,
       FrontendInputFile(FakeModuleMapFile, IK, +Module->IsSystem),
       ModMap.getModuleMapFileForUniquing(Module)->getName(), ModuleFileName,
-      std::move(ThreadSafeConfig));
+      Module->getDirectoryDependencies(), std::move(ThreadSafeConfig));
 
   std::unique_ptr<llvm::MemoryBuffer> ModuleMapBuffer =
       llvm::MemoryBuffer::getMemBufferCopy(InferredModuleMapContent);
@@ -1483,6 +1533,28 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
   return false;
 }
 
+namespace {
+/// A buffer exposing a sub-range of an owned buffer.
+class SubMemoryBuffer : public llvm::MemoryBuffer {
+  std::unique_ptr<llvm::MemoryBuffer> Underlying;
+
+public:
+  SubMemoryBuffer(std::unique_ptr<llvm::MemoryBuffer> Underlying,
+                  StringRef Range)
+      : Underlying(std::move(Underlying)) {
+    init(Range.begin(), Range.end(), /*RequiresNullTerminator=*/false);
+  }
+
+  StringRef getBufferIdentifier() const override {
+    return Underlying->getBufferIdentifier();
+  }
+
+  BufferKind getBufferKind() const override {
+    return Underlying->getBufferKind();
+  }
+};
+} // namespace
+
 /// Compile a module in a separate compiler instance.
 /// Returns true on success, false on failure.
 static bool compileModuleImpl(CompilerInstance &ImportingInstance,
@@ -1509,15 +1581,17 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
 
   off_t Size;
   time_t ModTime;
-  std::error_code EC = ImportingInstance.getModuleCache().write(
-      ModuleFileName, *Buffer, Size, ModTime);
-  if (EC) {
+  llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Written =
+      ImportingInstance.getModuleCache().write(
+          ModuleFileName, std::move(Buffer), Size, ModTime);
+  if (!Written) {
     ImportingInstance.getDiagnostics().Report(ModuleNameLoc,
                                               diag::err_module_not_written)
-        << Module->Name << ModuleFileName << EC.message()
+        << Module->Name << ModuleFileName << Written.getError().message()
         << SourceRange(ImportLoc, ModuleNameLoc);
     return false;
   }
+  Buffer = std::move(*Written);
 
   // The module is built successfully, we can update its timestamp now.
   if (ImportingInstance.getPreprocessor()
@@ -1527,15 +1601,13 @@ static bool compileModuleImpl(CompilerInstance &ImportingInstance,
     ImportingInstance.getModuleCache().updateModuleTimestamp(ModuleFileName);
   }
 
-  // This isn't strictly necessary, but it's more efficient to extract the AST
-  // file (which may be wrapped in an object file) now rather than doing so
-  // repeatedly in the readers.
+  // Readers use the module cache's view of the written PCM. Extracting the AST
+  // file (which may be wrapped in an object file) isn't strictly necessary, but
+  // it's more efficient to do so now rather than repeatedly in the readers.
   const PCHContainerReader &Rdr = ImportingInstance.getPCHContainerReader();
   StringRef ExtractedBuffer = Rdr.ExtractPCH(*Buffer);
-  // FIXME: Avoid the copy here by having InMemoryModuleCache accept both the
-  // owning buffer and the StringRef.
-  Buffer = llvm::MemoryBuffer::getMemBufferCopy(ExtractedBuffer);
-
+  Buffer =
+      std::make_unique<SubMemoryBuffer>(std::move(Buffer), ExtractedBuffer);
   ImportingInstance.getModuleCache().getInMemoryModuleCache().addBuiltPCM(
       ModuleFileName, std::move(Buffer), Size, ModTime);
 

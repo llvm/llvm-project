@@ -14,6 +14,8 @@
 #include "LinkUtils.h"
 #include "MachOUtils.h"
 #include "RelocationMap.h"
+#include "llvm/ADT/StringMap.h"
+#include "llvm/DWARFLinker/DWARFFile.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkLinker.h"
@@ -21,9 +23,12 @@
 #include <optional>
 
 namespace llvm {
+class ThreadPoolInterface;
 using namespace dwarf_linker;
 
 namespace dsymutil {
+
+class PseudoProbeLinker;
 
 /// DwarfLinkerForBinaryRelocationMap contains the logic to handle the
 /// relocations and to store them inside an associated RelocationMap.
@@ -31,26 +36,40 @@ class DwarfLinkerForBinaryRelocationMap {
 public:
   void init(DWARFContext &Context);
 
-  bool isInitialized() {
-    return StoredValidDebugInfoRelocsMap.getMemorySize() != 0;
-  }
+  bool isInitialized() { return !Units.empty(); }
 
-  void addValidRelocs(RelocationMap &RM);
+  /// \returns the number of relocations added to \p RM.
+  size_t addValidRelocs(RelocationMap &RM);
 
-  void updateAndSaveValidRelocs(bool IsDWARF5,
-                                std::vector<ValidReloc> &InRelocs,
+  /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
+  /// unit at \p UnitOffset in the input.
+  void updateAndSaveValidRelocs(RelocSectionKind OutSection,
+                                const std::vector<ValidReloc> &InRelocs,
                                 uint64_t UnitOffset, int64_t LinkedOffset);
 
-  void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                       uint64_t OutputUnitOffset);
+  /// Record where the output of the unit at \p UnitOffset in the input starts
+  /// in .debug_info and .debug_addr, for the relocations saved relative to it.
+  void setUnitOffsets(uint64_t UnitOffset, uint64_t DebugInfoOffset,
+                      uint64_t DebugAddrOffset);
 
-  /// Map compilation unit offset to the valid relocations to store
-  /// @{
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugInfoRelocsMap;
-  DenseMap<uint64_t, std::vector<ValidReloc>> StoredValidDebugAddrRelocsMap;
-  /// @}
+  void setNumInputRelocs(size_t Num) { NumInputRelocs = Num; }
+  size_t getNumInputRelocs() const { return NumInputRelocs; }
 
   DwarfLinkerForBinaryRelocationMap() = default;
+
+private:
+  struct UnitRelocs {
+    std::vector<ValidReloc> DebugInfo;
+    std::vector<ValidReloc> DebugAddr;
+    /// Where the unit starts in each output section, if its relocations are
+    /// relative to it.
+    std::optional<std::pair<uint64_t, uint64_t>> Offsets;
+  };
+
+  /// Map compilation unit offset to the valid relocations to store.
+  DenseMap<uint64_t, UnitRelocs> Units;
+
+  size_t NumInputRelocs = 0;
 };
 
 struct ObjectWithRelocMap {
@@ -73,9 +92,10 @@ struct ObjectWithRelocMap {
 class DwarfLinkerForBinary {
 public:
   DwarfLinkerForBinary(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-                       LinkOptions Options, std::mutex &ErrorHandlerMutex)
+                       LinkOptions Options, std::mutex &ErrorHandlerMutex,
+                       ThreadPoolInterface *ThreadPool = nullptr)
       : OutFile(OutFile), BinHolder(BinHolder), Options(std::move(Options)),
-        ErrorHandlerMutex(ErrorHandlerMutex) {}
+        ErrorHandlerMutex(ErrorHandlerMutex), ThreadPool(ThreadPool) {}
 
   /// Link the contents of the DebugMap.
   bool link(const DebugMap &);
@@ -124,6 +144,9 @@ private:
     /// Address ranges for symbols with sizes (used for assembly file support).
     RangesTy AddressRanges;
 
+    /// Sorted linked start addresses of the symbols with a known size.
+    std::vector<uint64_t> LinkedSymbolStarts;
+
     /// Returns list of valid relocations from \p Relocs,
     /// between \p StartOffset and \p NextOffset.
     ///
@@ -153,30 +176,47 @@ private:
         DebugMapObjectType = MachO::N_LIB;
         LibInstallName.emplace(DMO.getInstallName().value());
         const RelocationMap &RM = DMO.getRelocationMap().value();
-        for (const auto &Reloc : RM.relocations()) {
-          const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
-          if (!DebugMapEntry)
-            continue;
-          std::optional<uint64_t> ObjAddress;
-          ObjAddress.emplace(DebugMapEntry->getValue().ObjectAddress.value());
-          ValidDebugInfoRelocs.emplace_back(
-              Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
-              SymbolMapping(ObjAddress, DebugMapEntry->getValue().BinaryAddress,
-                            DebugMapEntry->getValue().Size));
-          // FIXME: Support relocations debug_addr.
-        }
+        auto AddRelocs =
+            [&](iterator_range<RelocationMap::const_iterator> Relocs,
+                std::vector<ValidReloc> &ValidRelocs) {
+              for (const auto &Reloc : Relocs) {
+                const auto *DebugMapEntry = DMO.lookupSymbol(Reloc.SymbolName);
+                if (!DebugMapEntry)
+                  continue;
+                std::optional<uint64_t> ObjAddress;
+                ObjAddress.emplace(
+                    DebugMapEntry->getValue().ObjectAddress.value());
+                ValidRelocs.emplace_back(
+                    Reloc.Offset, Reloc.Size, Reloc.Addend, Reloc.SymbolName,
+                    SymbolMapping(ObjAddress,
+                                  DebugMapEntry->getValue().BinaryAddress,
+                                  DebugMapEntry->getValue().Size));
+              }
+              // The lookups walk the relocations by offset.
+              llvm::sort(ValidRelocs);
+            };
+        AddRelocs(RM.debugInfoRelocations(), ValidDebugInfoRelocs);
+        AddRelocs(RM.debugAddrRelocations(), ValidDebugAddrRelocs);
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
-      // Populate address ranges from debug map symbols that have sizes.
-      // This is used for assembly files where labels may not have high_pc.
+      DwarfLinkerRelocMap->setNumInputRelocs(ValidDebugInfoRelocs.size() +
+                                             ValidDebugAddrRelocs.size());
+      // Only a sized symbol has a known extent. The ranges stand in for the
+      // high_pc that assembly files lack.
       for (const auto &Entry : DMO.symbols()) {
         const auto &Mapping = Entry.getValue();
-        if (Mapping.Size && Mapping.ObjectAddress)
+        if (!Mapping.Size)
+          continue;
+        LinkedSymbolStarts.push_back(Mapping.BinaryAddress);
+        if (Mapping.ObjectAddress)
           AddressRanges.insert(
               {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
               int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
       }
+      llvm::sort(LinkedSymbolStarts);
+      LinkedSymbolStarts.erase(llvm::unique(LinkedSymbolStarts),
+                               LinkedSymbolStarts.end());
     }
     ~AddressManager() override { clear(); }
 
@@ -226,24 +266,32 @@ private:
 
     bool needToSaveValidRelocs() override { return true; }
 
-    void updateAndSaveValidRelocs(bool IsDWARF5, uint64_t OriginalUnitOffset,
+    bool updateAndSaveValidRelocs(RelocSectionKind InSection,
+                                  RelocSectionKind OutSection,
+                                  uint64_t OriginalUnitOffset,
                                   int64_t LinkedOffset, uint64_t StartOffset,
                                   uint64_t EndOffset) override;
-
-    void updateRelocationsWithUnitOffset(uint64_t OriginalUnitOffset,
-                                         uint64_t OutputUnitOffset) override;
 
     void clear() override {
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
       AddressRanges.clear();
+      LinkedSymbolStarts.clear();
     }
 
-    std::optional<AssemblyRange>
-    getAssemblyRangeForAddress(uint64_t Addr) override {
+    std::optional<SymbolRange>
+    getSymbolRangeForAddress(uint64_t Addr) override {
       if (auto Range = AddressRanges.getRangeThatContains(Addr))
-        return AssemblyRange(Range->Range.start(), Range->Range.end());
+        return SymbolRange(Range->Range.start(), Range->Range.end());
       return std::nullopt;
+    }
+
+    std::optional<uint64_t>
+    getNextLinkedSymbolStart(uint64_t LinkedAddr) override {
+      auto It = llvm::lower_bound(LinkedSymbolStarts, LinkedAddr);
+      if (It == LinkedSymbolStarts.end())
+        return std::nullopt;
+      return *It;
     }
   };
 
@@ -251,18 +299,12 @@ private:
   /// \defgroup Helpers Various helper methods.
   ///
   /// @{
-  template <typename OutStreamer>
-  bool createStreamer(const Triple &TheTriple,
-                      typename OutStreamer::OutputFileType FileType,
-                      std::unique_ptr<OutStreamer> &Streamer,
-                      raw_fd_ostream &OutFile);
-
   /// Attempt to load a debug object from disk.
   ErrorOr<const object::ObjectFile &> loadObject(const DebugMapObject &Obj,
                                                  const Triple &triple);
   ErrorOr<std::unique_ptr<dwarf_linker::DWARFFile>>
   loadObject(const DebugMapObject &Obj, const DebugMap &DebugMap,
-             remarks::RemarkLinker &RL,
+             remarks::RemarkLinker &RL, PseudoProbeLinker &PL,
              std::shared_ptr<DwarfLinkerForBinaryRelocationMap> DLBRM);
 
   void collectRelocationsToApplyToSwiftReflectionSections(
@@ -272,6 +314,10 @@ private:
       const llvm::dsymutil::DebugMapObject *Obj,
       std::vector<MachOUtils::DwarfRelocationApplicationInfo>
           &RelocationsToApply) const;
+
+  /// Find the compilation-prefix-map.json closest to \p ObjectPath, which
+  /// describes how the compiler remapped paths in the object's debug info.
+  std::shared_ptr<PrefixMapper> findCompilationPrefixMap(StringRef ObjectPath);
 
   Error copySwiftInterfaces(StringRef Architecture) const;
 
@@ -295,14 +341,17 @@ private:
   BinaryHolder &BinHolder;
   LinkOptions Options;
   std::mutex &ErrorHandlerMutex;
-
-  std::vector<std::string> EmptyWarnings;
+  ThreadPoolInterface *ThreadPool;
 
   /// A list of all .swiftinterface files referenced by the debug
   /// info, mapping Module name to path on disk. The entries need to
   /// be uniqued and sorted and there are only few entries expected
   /// per compile unit, which is why this is a std::map.
   std::map<std::string, std::string> ParseableSwiftInterfaces;
+
+  /// The compilation prefix map of the objects in each directory, or nullptr
+  /// if there is none.
+  StringMap<std::shared_ptr<PrefixMapper>> CompilationPrefixMaps;
 
   bool ModuleCacheHintDisplayed = false;
   bool ArchiveHintDisplayed = false;

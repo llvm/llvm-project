@@ -17,7 +17,7 @@ struct Empty {};
 
 // DARWIN: define{{.*}} i32 @empty_arg(i32 noundef %a)
 // C: define{{.*}} i32 @empty_arg(i32 noundef %a)
-// CXX: define{{.*}} i32 @empty_arg(i64 %e.coerce, i32 noundef %a)
+// CXX: define{{.*}} i32 @empty_arg(i8 %e.coerce, i32 noundef %a)
 EXTERNC int empty_arg(struct Empty e, int a) {
   return a;
 }
@@ -34,7 +34,7 @@ EXTERNC int empty_align16_arg(struct EmptyAlign16 a, int b) {
   return b;
 }
 
-// CXX: define{{.*}} i32 @empty_align32_arg(ptr noundef dead_on_return %a, i32 noundef %b)
+// CXX: define{{.*}} i32 @empty_align32_arg(ptr nofreeobj noundef align 32 dead_on_return dereferenceable(32) %a, i32 noundef %b)
 struct EmptyAlign32 { long long int __attribute__((aligned(32))) : 0; };
 EXTERNC int empty_align32_arg(struct EmptyAlign32 a, int b) {
   return b;

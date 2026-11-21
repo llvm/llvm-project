@@ -9,7 +9,6 @@ func.func @matmul(%A: tensor<1024x512xf32>,
                   %B: tensor<512x2000xf32>,
                   %C: tensor<1024x2000xf32>) -> tensor<1024x2000xf32> {
 
-// CHECK:      #[[MAP:.*]] = affine_map<()[s0] -> (-(2000 mod s0) + 2000)>
 // CHECK-DAG:  %[[C1:.*]] = arith.constant 1 : index
 // CHECK-DAG:  %[[C2000:.*]] = arith.constant 2000 : index
 // CHECK-DAG:  %[[C8:.*]] = arith.constant 8 : index
@@ -23,7 +22,8 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 
 // Main loop after vectorisation (without masking)
 
-// CHECK:         %[[UB_MAIN:.*]] = affine.apply #[[MAP]]()[%[[STEP]]]
+// CHECK:         %[[REM:.*]] = arith.remui %[[C2000]], %[[STEP]] : index
+// CHECK-NEXT:    %[[UB_MAIN:.*]] = arith.subi %[[C2000]], %[[REM]] : index
 // CHECK:         scf.for {{.*}} %[[C0]] to %[[UB_MAIN]] step %[[STEP]] {{.*}} -> (tensor<1024x2000xf32>) {
 // CHECK:           scf.for %arg7 = %[[C0]] to %[[C512]] step %[[C1]] {{.*}} -> (tensor<1024x2000xf32>) {
 // CHECK-NOT:         vector.mask
@@ -47,7 +47,7 @@ func.func @matmul(%A: tensor<1024x512xf32>,
 // CHECK:           %[[MUL:.*]] = arith.mulf %{{.*}}, %[[RHS]] : vector<8x[16]x1xf32>
 // CHECK:           %[[MASK_3:.*]] = vector.create_mask {{.*}} : vector<8x[16]xi1>
 // CHECK:           vector.shape_cast %[[MUL]] : vector<8x[16]x1xf32> to vector<8x[16]xf32>
-// CHECK:           arith.addf %[[LHS]], %{{.*}} : vector<8x[16]xf32>
+// CHECK:           arith.addf %{{.*}}, %[[LHS]] : vector<8x[16]xf32>
 // CHECK:           arith.select %[[MASK_3]], {{.*}} : vector<8x[16]xi1>, vector<8x[16]xf32>
 // CHECK:           vector.mask %[[MASK_2]] { vector.transfer_write {{.*}} } : vector<8x[16]xi1> -> tensor<8x?xf32>
 // CHECK:           scf.yield %inserted_slice : tensor<1024x2000xf32>

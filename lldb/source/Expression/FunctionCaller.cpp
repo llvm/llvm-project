@@ -25,6 +25,7 @@
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/Policy.h"
 #include "lldb/Utility/State.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectList.h"
@@ -113,7 +114,7 @@ bool FunctionCaller::WriteFunctionWrapper(
       ConstString const_func_name(FunctionName());
       FileSpec jit_file;
       jit_file.SetFilename(const_func_name);
-      jit_module_sp->SetFileSpecAndObjectName(jit_file, ConstString());
+      jit_module_sp->SetFileSpecAndObjectName(jit_file, std::string());
       m_jit_module_wp = jit_module_sp;
       process->GetTarget().GetImages().Append(jit_module_sp,
                                               true /* notify */);
@@ -288,7 +289,7 @@ bool FunctionCaller::FetchFunctionResults(ExecutionContext &exe_ctx,
   // FIXME: How does clang tell us there's no return value?  We need to handle
   // that case.
   // FIXME: Create our ThreadPlanCallFunction with the return CompilerType, and
-  // then use GetReturnValueObject
+  // then use GetReturnValue
   // to fetch the value.  That way we can fetch any values we need.
 
   Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));
@@ -383,6 +384,9 @@ lldb::ExpressionResults FunctionCaller::ExecuteFunction(
   // Objective-C object description
   if (exe_ctx.GetProcessPtr())
     exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
+
+  PolicyStack::Guard expr_policy_guard =
+      PolicyStack::Get().PushPublicStateRunningExpression();
 
   return_value = exe_ctx.GetProcessRef().RunThreadPlan(
       exe_ctx, call_plan_sp, real_options, diagnostic_manager);

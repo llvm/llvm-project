@@ -44,7 +44,7 @@ _Atomic(unsigned long) aul;
 // CHECK: CompoundStmt= [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: CallExpr=fn:3:55 [type=void] [typekind=Void] [args= [int] [Int]] [isPOD=0]
 // CHECK: DeclRefExpr=fn:3:55 [type=void (*)(int)] [typekind=Pointer] [canonicaltype=void (*)(int)] [canonicaltypekind=Pointer] [isPOD=1] [pointeetype=void (int)] [pointeekind=FunctionProto]
-// CHECK: UnaryOperator= [type=int] [typekind=Int] [isPOD=1]
+// CHECK: UnaryOperator=* [type=int] [typekind=Int] [isPOD=1]
 // CHECK: DeclRefExpr=p:3:13 [type=int *] [typekind=Pointer] [isPOD=1] [pointeetype=int] [pointeekind=Int]
 // CHECK: DeclStmt= [type=] [typekind=Invalid] [isPOD=0]
 // CHECK: VarDecl=w:5:17 (Definition) [type=const FooType] [typekind=Typedef] const [canonicaltype=const int] [canonicaltypekind=Int] [isPOD=1]

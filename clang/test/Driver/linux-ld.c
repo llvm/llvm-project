@@ -930,16 +930,9 @@
 // CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-musl-mipsel.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
 
-// Check that we pass --hash-style=both for pre-M Android versions and
-// --hash-style=gnu for newer Android versions.
+// Check that we pass --hash-style=gnu.
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android21 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-L %s
-// CHECK-ANDROID-HASH-STYLE-L: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-HASH-STYLE-L: "--hash-style=both"
-//
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android23 \
+// RUN:     --target=armv7-linux-android \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
@@ -958,16 +951,7 @@
 // CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
 
-// Check that we pass --pack-dyn-relocs=android for API 23-27 and not before.
-// RUN: %clang %s -### -o %t.o 2>&1 \
-// RUN:     --target=armv7-linux-android22 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-22 %s
-// CHECK-ANDROID-RELR-22: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=relr"
-// CHECK-ANDROID-RELR-22-NOT: "--pack-dyn-relocs=android+relr"
-// CHECK-ANDROID-RELR-22-NOT: "--use-android-relr-tags"
-//
+// Check that we pass --pack-dyn-relocs=android for API pre 27.
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android23 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-23 %s
@@ -1652,6 +1636,39 @@
 // RUN:     --target=mips64el-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64EL %s
 // RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsel-pc-linux-musl -mfloat-abi=soft \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSEL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=n32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-muslabin32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa32r6el-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -march=mips32r6 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=i6400 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64R6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=mips64r6 -mabi=n32 -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32R6EL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-O32-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa64r6el-pc-linux-musl -march=mips64r2 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-R2-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC %s
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -1702,12 +1719,35 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
 // CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
 // CHECK-MUSL-MIPSEL:     "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
 // CHECK-MUSL-MIPS64:     "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
 // CHECK-MUSL-MIPS64EL:   "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
+// CHECK-MUSL-MIPS-SF:    "-dynamic-linker" "/lib/ld-musl-mips-sf.so.1"
+// CHECK-MUSL-MIPSEL-SF:  "-dynamic-linker" "/lib/ld-musl-mipsel-sf.so.1"
+// CHECK-MUSL-MIPS64-SF:  "-dynamic-linker" "/lib/ld-musl-mips64-sf.so.1"
+// CHECK-MUSL-MIPSN32EL:  "-dynamic-linker" "/lib/ld-musl-mipsn32el.so.1"
+// CHECK-MUSL-MIPSN32:    "-dynamic-linker" "/lib/ld-musl-mipsn32.so.1"
+// CHECK-MUSL-MIPSR6EL:   "-dynamic-linker" "/lib/ld-musl-mipsr6el.so.1"
+// CHECK-MUSL-MIPSR6:     "-dynamic-linker" "/lib/ld-musl-mipsr6.so.1"
+// CHECK-MUSL-MIPS64R6EL: "-dynamic-linker" "/lib/ld-musl-mips64r6el.so.1"
+// CHECK-MUSL-MIPSN32R6EL-SF: "-dynamic-linker" "/lib/ld-musl-mipsn32r6el-sf.so.1"
+// CHECK-MUSL-O32-OVERRIDE:   "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
+// CHECK-MUSL-R2-OVERRIDE:    "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
 // CHECK-MUSL-PPC:        "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
 // CHECK-MUSL-PPC64:      "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
 // CHECK-MUSL-PPCSPE:     "-dynamic-linker" "/lib/ld-musl-powerpc-sf.so.1"
@@ -1717,6 +1757,12 @@
 // CHECK-MUSL-ARMEBHF:    "-dynamic-linker" "/lib/ld-musl-armebhf.so.1"
 // CHECK-MUSL-AARCH64:    "-dynamic-linker" "/lib/ld-musl-aarch64.so.1"
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
+// CHECK-MUSL-RISCV32-SF: "-dynamic-linker" "/lib/ld-musl-riscv32-sf.so.1"
+// CHECK-MUSL-RISCV32-SP: "-dynamic-linker" "/lib/ld-musl-riscv32-sp.so.1"
+// CHECK-MUSL-RISCV32:    "-dynamic-linker" "/lib/ld-musl-riscv32.so.1"
+// CHECK-MUSL-RISCV64-SF: "-dynamic-linker" "/lib/ld-musl-riscv64-sf.so.1"
+// CHECK-MUSL-RISCV64-SP: "-dynamic-linker" "/lib/ld-musl-riscv64-sp.so.1"
+// CHECK-MUSL-RISCV64:    "-dynamic-linker" "/lib/ld-musl-riscv64.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \

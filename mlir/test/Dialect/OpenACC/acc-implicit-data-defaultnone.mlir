@@ -11,7 +11,7 @@ func.func @test_scalar_parallel_defaultnone() {
   acc.parallel {
     %load = memref.load %alloc[] : memref<f32>
     acc.yield
-  } attributes {defaultAttr = #acc<defaultvalue none>}
+  } defaultAttr(none)
   return
 }
 
@@ -20,4 +20,4 @@ func.func @test_scalar_parallel_defaultnone() {
 // CHECK-NOT: acc.copyin
 
 // ENABLED-LABEL: func.func @test_scalar_parallel_defaultnone
-// ENABLED: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) -> memref<f32> {implicit = true, name = ""}
+// ENABLED: acc.firstprivate varPtr({{.*}} : memref<f32>) recipe({{.*}}) implicit(true) name("") -> memref<f32>

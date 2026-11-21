@@ -10,7 +10,7 @@ module  {
   }
 
   cir.func @bitcast(%p: !cir.ptr<!s32i>) {
-    %0 = cir.cast bitcast %p : !cir.ptr<!s32i> -> !cir.ptr<f32>
+    %0 = cir.cast bitcast %p : !cir.ptr<!s32i> -> !cir.ptr<!cir.float>
     cir.return
   }
 }
@@ -20,4 +20,4 @@ module  {
 // CHECK: %1 = cir.const #cir.int<0> : !s32i
 
 // CHECK: cir.func{{.*}} @bitcast
-// CHECK: %0 = cir.cast bitcast %arg0 : !cir.ptr<!s32i> -> !cir.ptr<f32>
+// CHECK: %0 = cir.cast bitcast %arg0 : !cir.ptr<!s32i> -> !cir.ptr<!cir.float>

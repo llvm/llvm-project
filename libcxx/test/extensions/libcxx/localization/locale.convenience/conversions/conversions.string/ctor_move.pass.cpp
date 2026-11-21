@@ -31,7 +31,7 @@ int main(int, char**)
     // create a converter and perform some conversions to generate some
     // interesting state.
     Myconv myconv;
-    myconv.from_bytes("\xEF\xBF\xBD");
+    (void)myconv.from_bytes("\xEF\xBF\xBD");
     const auto old_converted = myconv.converted();
     assert(myconv.converted() == 3);
     // move construct a new converter and make sure the state is the same.

@@ -2,12 +2,14 @@
 
 ; RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf4-cross-cu-with-loclist.s -o %t.o
 ; RUN: %clang %cflags -nostdlib -no-pie %t.o -o %t.exe
-; RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections --always-convert-to-ranges --debug-thread-count=4
+; RUN: llvm-bolt %t.exe -o %t.exe.bolt --update-debug-sections --always-convert-to-ranges --debug-thread-count=4 2>&1 | FileCheck %s --check-prefix=BOLT
 ; RUN: llvm-objdump --disassemble %t.exe.bolt > %t.txt
 ; RUN: llvm-dwarfdump --show-form --verbose --debug-info --debug-ranges %t.exe.bolt >> %t.txt
 ; RUN: FileCheck %s --input-file=%t.txt
 
 ;; Test that two cross-referenced CUs processed in the same bucket keep their own .debug_ranges entries.
+
+; BOLT-NOT: warning: DWARF unit from offset {{.*}} incl. to offset {{.*}} excl. tries to read DIEs at offset {{.*}}
 
 ; CHECK: <main>:
 ; CHECK-NEXT: [[#%.6x,MAIN:]]

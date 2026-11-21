@@ -744,7 +744,7 @@ define i64 @llround_f16(half %a) nounwind strictfp {
   ret i64 %1
 }
 
-define half @ldexp_f16(half %x, i32 signext %y) nounwind {
+define half @ldexp_f16(half %x, i32 signext %y) nounwind strictfp {
 ; RV32IZFHMIN-LABEL: ldexp_f16:
 ; RV32IZFHMIN:       # %bb.0:
 ; RV32IZFHMIN-NEXT:    addi sp, sp, -16

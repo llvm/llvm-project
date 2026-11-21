@@ -863,6 +863,25 @@ TEST_F(StructuralEquivalenceRecordTest, SameFriendsSameOrder) {
   EXPECT_TRUE(testStructuralMatch(t));
 }
 
+TEST_F(StructuralEquivalenceRecordTest, InstantiatedFriendTemplates) {
+  std::string Code = R"(
+    template <class T> struct A {
+      template <class U> struct B;
+    };
+    template <class T> struct C {
+      template <class U> friend struct A<T>::B;
+    };
+    template struct C<int>;
+  )";
+  auto Decls = makeDecls<ClassTemplateSpecializationDecl>(
+      Code, Code, Lang_CXX11, classTemplateSpecializationDecl(hasName("C")));
+  ASSERT_NE(get<0>(Decls)->friend_begin(), get<0>(Decls)->friend_end());
+  auto *Friend = dyn_cast<FriendTemplateDecl>(*get<0>(Decls)->friend_begin());
+  ASSERT_NE(Friend, nullptr);
+  ASSERT_EQ(Friend->getFriendType(), nullptr);
+  EXPECT_TRUE(testStructuralMatch(Decls));
+}
+
 struct StructuralEquivalenceLambdaTest : StructuralEquivalenceTest {};
 
 TEST_F(StructuralEquivalenceLambdaTest, LambdaClassesWithDifferentMethods) {

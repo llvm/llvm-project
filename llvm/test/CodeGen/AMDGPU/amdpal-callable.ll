@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mattr=-xnack -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 -mattr=-xnack < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
-; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn--amdpal -mattr=-xnack -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal --amdgpu-xnack=false -mattr=+dx10-clamp-and-ieee-mode < %s | FileCheck -check-prefixes=GCN,SDAG,GFX8 -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal --amdgpu-xnack=false < %s | FileCheck -check-prefixes=GCN,SDAG,GFX9 -enable-var-scope %s
+; RUN: llc -global-isel -mtriple=amdgpu9.00--amdpal --amdgpu-xnack=false < %s | FileCheck -check-prefixes=GCN,GISEL,GFX9 -enable-var-scope %s
 
 declare amdgpu_gfx float @extern_func(float) #0
 declare amdgpu_gfx float @extern_func_many_args(<64 x float>) #0
@@ -171,7 +171,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x1{{$}}
 ; GCN-NEXT:      no_stack_call:
-; GCN-NEXT:        .backend_stack_size: 0x10{{$}}
+; GCN-NEXT:        .backend_stack_size: 0x24{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x25{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x10{{$}}
@@ -216,7 +216,7 @@ attributes #0 = { nounwind }
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x14{{$}}
 ; GCN-NEXT:        .vgpr_count:     0x2{{$}}
 ; GCN-NEXT:      simple_stack_call:
-; GCN-NEXT:        .backend_stack_size: 0x20{{$}}
+; GCN-NEXT:        .backend_stack_size: 0x34{{$}}
 ; GCN-NEXT:        .lds_size:       0{{$}}
 ; GCN-NEXT:        .sgpr_count:     0x25{{$}}
 ; GCN-NEXT:        .stack_frame_size_in_bytes: 0x20{{$}}

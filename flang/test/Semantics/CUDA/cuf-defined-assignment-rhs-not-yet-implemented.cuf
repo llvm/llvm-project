@@ -1,0 +1,51 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+module defined_assignment_device_rhs_todo
+  type t
+    integer :: n
+  end type
+
+  interface assignment(=)
+    module procedure assign_t
+  end interface
+
+contains
+  elemental subroutine assign_t(host_t, dev_x)
+    type(t), intent(inout) :: host_t
+    integer, device, intent(in) :: dev_x
+
+    host_t%n = dev_x
+  end subroutine
+end module
+
+subroutine test_associate_device_rhs
+  use defined_assignment_device_rhs_todo
+  integer, device :: x(4)
+  type(t) :: tee(4)
+
+  associate (a => x)
+    !ERROR: not yet implemented: Defined assignment from an ASSOCIATE name with a CUDA DEVICE target is not yet implemented
+    tee = a
+  end associate
+end subroutine
+
+subroutine test_elemental_device_rhs
+  use defined_assignment_device_rhs_todo
+  integer, device :: x(4)
+  type(t) :: tee(4)
+
+  !ERROR: not yet implemented: Elemental defined assignment with a CUDA DEVICE right-hand side is not yet implemented
+  tee = x
+end subroutine
+
+subroutine test_where_device_rhs
+  use defined_assignment_device_rhs_todo
+  integer, device :: x(4)
+  logical :: mask(4)
+  type(t) :: tee(4)
+
+  where (mask)
+    !ERROR: not yet implemented: Defined assignment in WHERE with a CUDA DEVICE right-hand side is not yet implemented
+    tee = x
+  end where
+end subroutine

@@ -107,7 +107,8 @@ LANGSTANDARD(c2y, "c2y",
              LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | HexFloat, 202400)
 LANGSTANDARD(gnu2y, "gnu2y",
              C, "Working Draft for ISO C2y with GNU extensions",
-             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode | HexFloat, 202400)
+             LineComment | C99 | C11 | C17 | C23 | C2y | Digraphs | GNUMode
+                 | HexFloat, 202400)
 // TODO: Add the iso9899:202y alias once ISO publishes the standard.
 
 // C++ modes
@@ -190,6 +191,19 @@ LANGSTANDARD(gnucxx26, "gnu++2c",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | Digraphs | HexFloat | GNUMode, 202400)
 LANGSTANDARD_ALIAS(gnucxx26, "gnu++26")
+
+// FIXME: Use correct version code for C++29 once published.
+// TODO: Add LANGSTANDARD_ALIAS() for "c++29" once C++29 is ratified.
+LANGSTANDARD(cxx29, "c++2d",
+             CXX, "Working draft for C++2d",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat, 202700)
+
+// TODO: Add LANGSTANDARD_ALIAS() for "gnu++29" once C++29 is ratified.
+LANGSTANDARD(gnucxx29, "gnu++2d",
+             CXX, "Working draft for C++2d with GNU extensions",
+             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
+             CPlusPlus20 | CPlusPlus23 | CPlusPlus26 | CPlusPlus29 | Digraphs | HexFloat | GNUMode, 202700)
 
 // OpenCL
 LANGSTANDARD(opencl10, "cl1.0",

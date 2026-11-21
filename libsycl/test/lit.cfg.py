@@ -3,6 +3,7 @@
 # Configuration file for the 'lit' test runner.
 
 import os
+import platform
 import subprocess
 
 from lit.llvm import llvm_config
@@ -13,7 +14,7 @@ from lit.llvm.subst import ToolSubst, FindTool
 config.name = "libsycl"
 
 # suffixes: A list of file extensions to treat as test files.
-config.suffixes = [".cpp"]
+config.suffixes = [".cpp", ".test"]
 
 config.excludes = ["Inputs"]
 
@@ -86,6 +87,10 @@ llvm_config.with_environment(
 
 llvm_config.with_environment("PATH", config.libsycl_tools_dir, append_path=True)
 
+# On Windows, shared libraries (e.g. LLVMOffload.dll) are located via PATH.
+if platform.system() == "Windows":
+    llvm_config.with_environment("PATH", config.libsycl_libs_dir, append_path=True)
+
 if config.extra_environment:
     lit_config.note("Extra environment variables")
     for env_pair in config.extra_environment.split(","):
@@ -112,20 +117,6 @@ class test_env:
         os.environ.update(self.old_environ)
         os.chdir(self.old_dir)
 
-
-# General substritutions
-config.substitutions.append(
-    (
-        "%sycl_options",
-        " -lLLVMSYCL"
-        + " -isystem "
-        + config.libsycl_include
-        + " -isystem "
-        + os.path.join(config.libsycl_include, "sycl")
-        + " -L"
-        + config.libsycl_libs_dir,
-    )
-)
 config.substitutions.append(("%sycl_libs_dir", config.libsycl_libs_dir))
 config.substitutions.append(("%sycl_static_libs_dir", config.libsycl_libs_dir))
 config.substitutions.append(("%obj_ext", ".o"))

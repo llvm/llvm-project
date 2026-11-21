@@ -35,12 +35,11 @@ bool CSEMIRBuilder::dominates(MachineBasicBlock::const_iterator A,
 
 MachineInstrBuilder
 CSEMIRBuilder::getDominatingInstrForID(FoldingSetNodeID &ID,
-                                       void *&NodeInsertPos) {
+                                       FoldingSetInsertToken &Token) {
   GISelCSEInfo *CSEInfo = getCSEInfo();
   assert(CSEInfo && "Can't get here without setting CSEInfo");
   MachineBasicBlock *CurMBB = &getMBB();
-  MachineInstr *MI =
-      CSEInfo->getMachineInstrIfExists(ID, CurMBB, NodeInsertPos);
+  MachineInstr *MI = CSEInfo->getMachineInstrIfExists(ID, CurMBB, Token);
   if (MI) {
     CSEInfo->countOpcodeHit(MI->getOpcode());
     auto CurrPos = getInsertPt();
@@ -130,11 +129,11 @@ void CSEMIRBuilder::profileEverything(unsigned Opc, ArrayRef<DstOp> DstOps,
 }
 
 MachineInstrBuilder CSEMIRBuilder::memoizeMI(MachineInstrBuilder MIB,
-                                             void *NodeInsertPos) {
+                                             FoldingSetInsertToken Token) {
   assert(canPerformCSEForOpc(MIB->getOpcode()) &&
          "Attempting to CSE illegal op");
   MachineInstr *MIBInstr = MIB;
-  getCSEInfo()->insertInstr(MIBInstr, NodeInsertPos);
+  getCSEInfo()->insertInstr(MIBInstr, Token);
   return MIB;
 }
 
@@ -299,6 +298,27 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
       return buildConstant(DstOps[0], Csts[0]);
     return buildBuildVectorConstant(DstOps[0], Csts);
   }
+  case TargetOpcode::G_BITCAST: {
+    assert(SrcOps.size() == 1 && "Expected one source");
+    assert(DstOps.size() == 1 && "Expected one dest");
+
+    LLT SrcTy = SrcOps[0].getLLTTy(*getMRI());
+    LLT DstTy = DstOps[0].getLLTTy(*getMRI());
+
+    if (SrcTy.isVector() || DstTy.isVector())
+      break;
+    auto ConstantSrc = getAnyConstantVRegValWithLookThrough(
+        SrcOps[0].getReg(), *getMRI(), /*LookThroughInstrs=*/false);
+    if (!ConstantSrc.has_value())
+      break;
+
+    if (DstTy.isFloat()) {
+      return buildFConstant(
+          DstOps[0],
+          APFloat(llvm::getFltSemanticForLLT(DstTy), ConstantSrc->Value));
+    }
+    return buildConstant(DstOps[0], ConstantSrc->Value);
+  }
   }
   bool CanCopy = checkCopyToDefsPossible(DstOps);
   if (!canPerformCSEForOpc(Opc))
@@ -314,9 +334,9 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   }
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
-  void *InsertPos = nullptr;
+  FoldingSetInsertToken Token;
   profileEverything(Opc, DstOps, SrcOps, Flag, ProfBuilder);
-  MachineInstrBuilder MIB = getDominatingInstrForID(ID, InsertPos);
+  MachineInstrBuilder MIB = getDominatingInstrForID(ID, Token);
   if (MIB) {
     // Handle generating copies here.
     return generateCopiesIfRequired(DstOps, MIB);
@@ -324,7 +344,7 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
   // This instruction does not exist in the CSEInfo. Build it and CSE it.
   MachineInstrBuilder NewMIB =
       MachineIRBuilder::buildInstr(Opc, DstOps, SrcOps, Flag);
-  return memoizeMI(NewMIB, InsertPos);
+  return memoizeMI(NewMIB, Token);
 }
 
 MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
@@ -342,18 +362,18 @@ MachineInstrBuilder CSEMIRBuilder::buildConstant(const DstOp &Res,
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
-  void *InsertPos = nullptr;
+  FoldingSetInsertToken Token;
   profileMBBOpcode(ProfBuilder, Opc);
   profileDstOp(Res, ProfBuilder);
   ProfBuilder.addNodeIDMachineOperand(MachineOperand::CreateCImm(&Val));
-  MachineInstrBuilder MIB = getDominatingInstrForID(ID, InsertPos);
+  MachineInstrBuilder MIB = getDominatingInstrForID(ID, Token);
   if (MIB) {
     // Handle generating copies here.
     return generateCopiesIfRequired({Res}, MIB);
   }
 
   MachineInstrBuilder NewMIB = MachineIRBuilder::buildConstant(Res, Val);
-  return memoizeMI(NewMIB, InsertPos);
+  return memoizeMI(NewMIB, Token);
 }
 
 MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
@@ -371,15 +391,15 @@ MachineInstrBuilder CSEMIRBuilder::buildFConstant(const DstOp &Res,
 
   FoldingSetNodeID ID;
   GISelInstProfileBuilder ProfBuilder(ID, *getMRI());
-  void *InsertPos = nullptr;
+  FoldingSetInsertToken Token;
   profileMBBOpcode(ProfBuilder, Opc);
   profileDstOp(Res, ProfBuilder);
   ProfBuilder.addNodeIDMachineOperand(MachineOperand::CreateFPImm(&Val));
-  MachineInstrBuilder MIB = getDominatingInstrForID(ID, InsertPos);
+  MachineInstrBuilder MIB = getDominatingInstrForID(ID, Token);
   if (MIB) {
     // Handle generating copies here.
     return generateCopiesIfRequired({Res}, MIB);
   }
   MachineInstrBuilder NewMIB = MachineIRBuilder::buildFConstant(Res, Val);
-  return memoizeMI(NewMIB, InsertPos);
+  return memoizeMI(NewMIB, Token);
 }

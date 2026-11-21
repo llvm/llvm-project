@@ -16,8 +16,8 @@ omp.declare_reduction @add_reduction_byref_box_Uxf32 : !llvm.ptr alloc {
 } combiner {
 ^bb0(%arg0: !llvm.ptr, %arg1: !llvm.ptr):
   %0 = llvm.mlir.constant(0 : i64) : i64
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %1 = llvm.mlir.constant(0 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   llvm.br ^bb1(%0 : i64)
 ^bb1(%3: i64):  // 2 preds: ^bb0, ^bb2
   %4 = llvm.icmp "sgt" %3, %1 : i64
@@ -40,8 +40,8 @@ omp.declare_reduction @add_reduction_byref_box_Uxf32 : !llvm.ptr alloc {
 }
 llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attributes {fir.internal_name = "_QPsectionsreduction"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
-  %1 = llvm.mlir.constant(0 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %1 = llvm.mlir.constant(0 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   omp.parallel {
     %3 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr
     omp.sections reduction(byref @add_reduction_byref_box_Uxf32 %3 -> %arg1 : !llvm.ptr) {

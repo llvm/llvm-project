@@ -53,16 +53,19 @@ struct Byte {
   void zeroBits(uint8_t Mask) {
     ConcreteMask |= Mask;
     Value &= ~Mask;
+    TagMask &= ~Mask;
   }
 
   void poisonBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value &= ~Mask;
+    TagMask &= ~Mask;
   }
 
   void undefBits(uint8_t Mask) {
     ConcreteMask &= ~Mask;
     Value |= Mask;
+    TagMask &= ~Mask;
   }
 
   void writeBits(uint8_t Mask, uint8_t Val) {
@@ -77,6 +80,13 @@ struct Byte {
         "Please ensure pointer bits are concrete before calling writeTagBits.");
     TagMask |= Mask;
     TagValue = (TagValue & ~Mask) | (Tag & Mask);
+  }
+
+  void writeByte(uint8_t Mask, const Byte &RHS) {
+    ConcreteMask = (ConcreteMask & ~Mask) | (RHS.ConcreteMask & Mask);
+    Value = (Value & ~Mask) | (RHS.Value & Mask);
+    TagMask = (TagMask & ~Mask) | (RHS.TagMask & Mask);
+    TagValue = (TagValue & ~Mask) | (RHS.TagValue & Mask);
   }
 
   /// Returns a logical byte that is part of two adjacent bytes.
@@ -99,13 +109,29 @@ struct Byte {
                 static_cast<uint8_t>(TagMask >> Shift),
                 static_cast<uint8_t>(TagValue >> Shift)};
   }
+
+  Byte shl(uint8_t Shift) const {
+    return Byte{static_cast<uint8_t>(ConcreteMask << Shift),
+                static_cast<uint8_t>(Value << Shift),
+                static_cast<uint8_t>(TagMask << Shift),
+                static_cast<uint8_t>(TagValue << Shift)};
+  }
+
+  /// Padding bits may carry pointer provenance. Only require their value bits
+  /// to be concrete zero, or non-concrete for poison.
+  bool isCanonicalPaddingByte(uint8_t PaddingMask) const {
+    bool AreAllValueBitsPoison = (ConcreteMask & ~PaddingMask) == 0;
+    return (ConcreteMask & PaddingMask) ==
+               (AreAllValueBitsPoison ? 0 : PaddingMask) &&
+           (Value & PaddingMask) == 0;
+  }
 };
 
-// TODO: Byte
 enum class StorageKind {
   Integer,
   Float,
   Pointer,
+  Byte,
   Poison,
   None,      // Placeholder for void type
   Aggregate, // Struct, Array or Vector
@@ -220,6 +246,88 @@ public:
   Provenance &provenance() const { return *Prov; }
 };
 
+/// Represents a scalar byte value. If the value is not byte-sized, the padding
+/// bits are guaranteed to be filled by either poison/zero bits.
+///
+/// Byte values do not contain undef bits. The only exception is
+/// Context::fromBytes, which converts undef bits into poison bits after
+/// constructor.
+class ByteValue {
+  // The byte order is endianness-dependent.
+  std::vector<Byte> Val;
+  uint32_t BitWidth : 31;
+  uint32_t IsLittleEndian : 1;
+
+public:
+  /// Specify how to treat the input.
+  enum class CanonicalizeMode {
+    // The padding byte is already canonical.
+    Canonical,
+    // Determine the padding bits from the non-padding bits in the padding
+    // byte.
+    PaddingFromValue,
+    // Set the padding byte to poison when it is non-canonical.
+    FlushNonCanonicalToPoison,
+  };
+
+  ByteValue(const APInt &V, bool IsLittleEndian);
+  ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
+            CanonicalizeMode Mode = CanonicalizeMode::Canonical)
+      : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian, Mode) {}
+  ByteValue(uint32_t BitWidth, std::vector<Byte> Val, bool IsLittleEndian,
+            CanonicalizeMode Mode = CanonicalizeMode::Canonical)
+      : Val(std::move(Val)), BitWidth(BitWidth),
+        IsLittleEndian(IsLittleEndian) {
+    if (Mode == CanonicalizeMode::Canonical)
+      assert(isValid() && "Input padding bits must be canonical.");
+    else
+      canonicalize(Mode);
+  }
+  ByteValue(const ByteValue &) = default;
+  ByteValue(ByteValue &&) = default;
+  ByteValue &operator=(const ByteValue &) = default;
+  ByteValue &operator=(ByteValue &&) = default;
+  ~ByteValue() = default;
+
+  static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
+  static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
+
+  uint32_t getBitWidth() const { return BitWidth; }
+  ArrayRef<Byte> bytes() const { return Val; }
+  /// The caller should call canonicalize after mutation.
+  MutableArrayRef<Byte> mutableBytes() { return Val; }
+
+  /// Make sure the padding byte is canonical.
+  void canonicalize(CanonicalizeMode Mode) {
+    assert(Mode != CanonicalizeMode::Canonical &&
+           "Canonical padding bits should not be canonicalized.");
+    if ((BitWidth & 7) == 0)
+      return;
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
+    if (Mode == CanonicalizeMode::FlushNonCanonicalToPoison) {
+      if (!MSB.isCanonicalPaddingByte(Mask))
+        MSB = Byte::poison();
+    } else {
+      if ((MSB.ConcreteMask & ~Mask) == 0)
+        MSB.poisonBits(Mask);
+      else
+        MSB.zeroBits(Mask);
+    }
+    assert(isValid() && "Padding bits must be canonical.");
+  }
+
+  bool isValid() const {
+    if ((BitWidth & 7) == 0)
+      return true;
+    uint8_t Mask = static_cast<uint8_t>((~0U) << (BitWidth & 7));
+    const Byte &MSB = (IsLittleEndian ? this->Val.back() : this->Val.front());
+    return MSB.isCanonicalPaddingByte(Mask);
+  }
+
+  void print(Context &Ctx, raw_ostream &OS) const;
+};
+
 // Value representation for actual values of LLVM values.
 // We don't model undef values here (except for byte types).
 class [[nodiscard]] AnyValue {
@@ -228,6 +336,7 @@ class [[nodiscard]] AnyValue {
     APInt IntVal;
     APFloat FloatVal;
     Pointer PtrVal;
+    ByteValue ByteVal;
     std::vector<AnyValue> AggVal;
   };
 
@@ -240,6 +349,7 @@ public:
   AnyValue(APInt Val) : Kind(StorageKind::Integer), IntVal(std::move(Val)) {}
   AnyValue(APFloat Val) : Kind(StorageKind::Float), FloatVal(std::move(Val)) {}
   AnyValue(Pointer Val) : Kind(StorageKind::Pointer), PtrVal(std::move(Val)) {}
+  AnyValue(ByteValue Val) : Kind(StorageKind::Byte), ByteVal(std::move(Val)) {}
   AnyValue(std::vector<AnyValue> Val)
       : Kind(StorageKind::Aggregate), AggVal(std::move(Val)) {}
   AnyValue(const AnyValue &Other);
@@ -248,8 +358,9 @@ public:
   AnyValue &operator=(AnyValue &&);
   ~AnyValue() { destroy(); }
 
-  void print(raw_ostream &OS) const;
+  void print(Context &Ctx, raw_ostream &OS) const;
 
+  /// Use getPoisonValue unless you know the scalar type is integer/fp/ptr!
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
   static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
@@ -261,6 +372,7 @@ public:
   bool isInteger() const { return Kind == StorageKind::Integer; }
   bool isFloat() const { return Kind == StorageKind::Float; }
   bool isPointer() const { return Kind == StorageKind::Pointer; }
+  bool isByte() const { return Kind == StorageKind::Byte; }
   bool isAggregate() const { return Kind == StorageKind::Aggregate; }
 
   bool isCompatibleWith(Type *Ty) const {
@@ -275,6 +387,8 @@ public:
       return Ty->isFloatingPointTy();
     case StorageKind::Pointer:
       return Ty->isPointerTy();
+    case StorageKind::Byte:
+      return Ty->isByteTy();
     // We don't check elements recursively.
     case StorageKind::Aggregate:
       return Ty->isAggregateType() || Ty->isVectorTy();
@@ -295,6 +409,16 @@ public:
   const Pointer &asPointer() const {
     assert(Kind == StorageKind::Pointer && "Expect a pointer value");
     return PtrVal;
+  }
+
+  const ByteValue &asByte() const {
+    assert(Kind == StorageKind::Byte && "Expect a byte value");
+    return ByteVal;
+  }
+
+  ByteValue &asMutableByte() {
+    assert(Kind == StorageKind::Byte && "Expect a byte value");
+    return ByteVal;
   }
 
   const std::vector<AnyValue> &asAggregate() const {
@@ -324,10 +448,22 @@ public:
   }
 };
 
-inline raw_ostream &operator<<(raw_ostream &OS, const AnyValue &V) {
-  V.print(OS);
-  return OS;
-}
+class AnyValuePrinter {
+  Context &Ctx;
+  raw_ostream &OS;
+
+public:
+  AnyValuePrinter(Context &Ctx, raw_ostream &OS) : Ctx(Ctx), OS(OS) {}
+  AnyValuePrinter &operator<<(const AnyValue &V) {
+    V.print(Ctx, OS);
+    return *this;
+  }
+  template <typename T> AnyValuePrinter &operator<<(const T &Val) {
+    OS << Val;
+    return *this;
+  }
+  operator raw_ostream &() { return OS; }
+};
 
 inline raw_ostream &operator<<(raw_ostream &OS, const Pointer &P) {
   P.print(OS);

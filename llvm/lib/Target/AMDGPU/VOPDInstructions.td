@@ -103,6 +103,7 @@ class GFXGenD<GFXGen Gen, list<string> DXPseudos, list<string> DYPseudos,
   list<string> VOPDXPseudos = DXPseudos;
   list<string> VOPDYPseudos = DYPseudos;
   Predicate SubtargetPredicate = subtargetPred;
+  bit IsVOPD3 = 0;
 }
 
 class VOPD_Base<dag outs, dag ins, string asm, VOP_Pseudo VDX, VOP_Pseudo VDY,
@@ -188,17 +189,19 @@ defvar VOPDYOnlyPseudosGFX1250 = ["V_MAX_I32_e32", "V_MIN_I32_e32",
                                   "V_SUB_U32_e32", "V_LSHRREV_B32_e32",
                                   "V_ASHRREV_I32_e32"];
 
+defvar VOPDPseudosGFX1250 = !filter(x, VOPDPseudosCommon, !and(!ne(x, "V_DOT2C_F32_F16_e32"), !ne(x, "V_DOT2C_F32_BF16_e32")));
 defvar VOPDXPseudosGFX11 = VOPDPseudosCommon;
 defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
+defvar VOPDXPseudosGFX1250 = VOPDPseudosGFX1250;
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
-defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
+defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX1250, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
 
 def GFX11GenD : GFXGenD<GFX11Not11_70Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX1170GenD : GFXGenD<GFX1170Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX12GenD : GFXGenD<GFX12Not12_50Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
-def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
-def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
+def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX1250, VOPDYPseudosGFX1250>;
+def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX1250, VOPDYPseudosGFX1250>;
 
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
@@ -252,19 +255,24 @@ defvar VOPD3XPseudosExtraGFX13 = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F
 defvar VOPD3XPseudosExtraGFX1250 = ["V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
                                     "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
 defvar VOPD3XPseudosGFX13 = !listconcat(
-                              !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                 !eq(!find(x, "FMAMK"), -1))),
+                              !filter(x, VOPDXPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1), !eq(!find(x, "FMAMK"), -1))),
                               VOPD3XPseudosExtraGFX13);
-defvar VOPD3XPseudosGFX1250 = !listconcat(VOPD3XPseudosGFX13, VOPD3XPseudosExtraGFX1250);
+defvar VOPD3XPseudosGFX1250 = !listconcat(
+                              !filter(x, VOPDXPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                   !eq(!find(x, "FMAMK"), -1))),
+                              VOPD3XPseudosExtraGFX13, VOPD3XPseudosExtraGFX1250);
 defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
 defvar VOPD3YPseudosGFX1250 = !listconcat(
-                                !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                     !eq(!find(x, "FMAMK"), -1))),
+                                !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1), !eq(!find(x, "FMAMK"), -1))),
                                 VOPD3YPseudosExtra);
 
-def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250>;
+def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250> {
+  let IsVOPD3 = 1;
+}
 
-def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250>;
+def GFX13GenD3 : GFXGenD<GFX13Gen, VOPD3XPseudosGFX13, VOPD3YPseudosGFX1250> {
+  let IsVOPD3 = 1;
+}
 
 class getOpcMap<string OPName> {
   defvar BaseName = !substr(OPName,2);
@@ -290,29 +298,26 @@ foreach Gen = [GFX1250GenD3, GFX13GenD3] in {
   }
 }
 
-class VOPDXY<bits<6> Op, int Sub, bit IsVOPD3> {
-  bits<6> VOPDOp = Op;
-  bits<4> Subtarget = Sub;
-  bit VOPD3 = IsVOPD3;
+class VOPDXY<bits<6> Op, bits<4> Sub, bit IsVOPD3, bit X, bit Y> {
+  bits<11> VOPDXYKey = {Op, Sub, IsVOPD3};
+  bit IsX = X;
+  bit IsY = Y;
 }
 
-class VOPDX<bits<6> Op, int Sub, bit IsVOPD3> : VOPDXY<Op, Sub, IsVOPD3>;
-class VOPDY<bits<6> Op, int Sub, bit IsVOPD3> : VOPDXY<Op, Sub, IsVOPD3>;
+foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD,
+               GFX1250GenD3, GFX13GenD3] in {
+  defvar Prefix = !if(Gen.IsVOPD3, "VOPDXY_VOPD3_", "VOPDXY_");
+  defvar XOnly = !listremove(Gen.VOPDXPseudos, Gen.VOPDYPseudos);
+  defvar YOnly = !listremove(Gen.VOPDYPseudos, Gen.VOPDXPseudos);
+  defvar XAndY = !listremove(Gen.VOPDXPseudos, XOnly);
 
-foreach Gen = [GFX11GenD, GFX1170GenD, GFX12GenD, GFX1250GenD, GFX13GenD] in {
-  foreach p = Gen.VOPDXPseudos in
-    def "VOPDX_" # p # Gen.Suffix :
-        VOPDX<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 0>;
-  foreach p = Gen.VOPDYPseudos in
-    def "VOPDY_" # p # Gen.Suffix :
-        VOPDY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 0>;
-}
-
-foreach Gen = [GFX1250GenD3, GFX13GenD3] in {
-  foreach p = Gen.VOPDXPseudos in
-    def "VOPDX_VOPD3_" # p # Gen.Suffix :
-        VOPDX<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 1>;
-  foreach p = Gen.VOPDYPseudos in
-    def "VOPDY_VOPD3_" # p # Gen.Suffix :
-        VOPDY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, 1>;
+  foreach p = XOnly in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 1, 0>;
+  foreach p = YOnly in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 0, 1>;
+  foreach p = XAndY in
+    def Prefix # p # Gen.Suffix :
+        VOPDXY<!cast<VOPD_Component>(p).VOPDOp, Gen.Subtarget, Gen.IsVOPD3, 1, 1>;
 }

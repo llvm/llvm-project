@@ -13,6 +13,8 @@
 #define DOUBLE_PRECISION
 #include "fp_lib.h"
 
+COMPILER_RT_ABI fp_t __adddf3(fp_t a, fp_t b);
+
 // Subtraction; flip the sign bit of b and add.
 COMPILER_RT_ABI fp_t __subdf3(fp_t a, fp_t b) {
   return __adddf3(a, fromRep(toRep(b) ^ signBit));

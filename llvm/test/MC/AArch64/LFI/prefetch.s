@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64_lfi %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64_lfi --aarch64-lfi-guard-elim=false %s | FileCheck %s
 
 prfm pldl1keep, [x0]
 // CHECK: prfm pldl1keep, [x27, w0, uxtw]

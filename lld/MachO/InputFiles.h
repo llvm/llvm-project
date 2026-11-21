@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
+#include <atomic>
 
 #include <vector>
 
@@ -45,7 +46,7 @@ class ConcatInputSection;
 class Symbol;
 class Defined;
 class AliasSymbol;
-struct Relocation;
+class Relocation;
 enum class RefState : uint8_t;
 
 // If --reproduce option is given, all input files are written
@@ -167,6 +168,7 @@ public:
   template <class LP> void parse();
   template <class LP>
   void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
+  void parseDeferredRelocations();
 
   static bool classof(const InputFile *f) { return f->kind() == ObjKind; }
 
@@ -199,6 +201,7 @@ private:
   template <class SectionHeader>
   void parseRelocations(ArrayRef<SectionHeader> sectionHeaders,
                         const SectionHeader &, Section &);
+  template <class LP> void parseDeferredRelocationsImpl();
   void parseDebugInfo();
   void splitEhFrames(ArrayRef<uint8_t> dataArr, Section &ehFrameSection);
   void registerCompactUnwind(Section &compactUnwindSection);
@@ -245,7 +248,7 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
-  unsigned numReferencedSymbols = 0;
+  std::atomic<unsigned> numReferencedSymbols{0};
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;
@@ -328,6 +331,8 @@ extern llvm::DenseMap<llvm::CachedHashStringRef, MemoryBufferRef> cachedReads;
 extern llvm::SmallVector<StringRef> unprocessedLCLinkerOptions;
 
 std::optional<MemoryBufferRef> readFile(StringRef path);
+
+void parseDeferredRelocations();
 
 void extract(InputFile &file, StringRef reason);
 

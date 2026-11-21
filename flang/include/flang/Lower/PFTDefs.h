@@ -14,6 +14,7 @@
 #define FORTRAN_LOWER_PFTDEFS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -55,6 +56,8 @@ using Label = std::uint64_t;
 using LabelSet = llvm::SmallSet<Label, 4>;
 using SymbolLabelMap = llvm::DenseMap<SymbolRef, LabelSet>;
 using LabelEvalMap = llvm::DenseMap<Label, Evaluation *>;
+using IncomingBranchMap =
+    llvm::DenseMap<const Evaluation *, llvm::SmallSetVector<Evaluation *, 2>>;
 
 } // namespace pft
 } // namespace lower

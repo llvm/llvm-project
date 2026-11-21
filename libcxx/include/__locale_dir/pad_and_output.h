@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _CharT, class _OutputIterator>
-_LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
+_OutputIterator __pad_and_output(
     _OutputIterator __s, const _CharT* __ob, const _CharT* __op, const _CharT* __oe, ios_base& __iob, _CharT __fl) {
   streamsize __sz = __oe - __ob;
   streamsize __ns = __iob.width();
@@ -32,15 +32,20 @@ _LIBCPP_HIDE_FROM_ABI _OutputIterator __pad_and_output(
     __ns -= __sz;
   else
     __ns = 0;
-  __s = std::copy(__ob, __op, __s);
-  __s = std::fill_n(__s, __ns, __fl);
-  __s = std::copy(__op, __oe, __s);
+  // Explicitly guard against empty outputs (which are expected to be common here) to avoid unconditionally calling
+  // `memmove`/`memset`. See https://llvm.org/PR178685.
+  if (__ob != __op)
+    __s = std::copy(__ob, __op, __s);
+  if (__ns != 0)
+    __s = std::fill_n(__s, __ns, __fl);
+  if (__op != __oe)
+    __s = std::copy(__op, __oe, __s);
   __iob.width(0);
   return __s;
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
+ostreambuf_iterator<_CharT, _Traits> __pad_and_output(
     ostreambuf_iterator<_CharT, _Traits> __s,
     const _CharT* __ob,
     const _CharT* __op,

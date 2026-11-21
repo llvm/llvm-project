@@ -28,7 +28,8 @@ namespace llvm {
 
 class MachineInstr;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class RegScavenger {

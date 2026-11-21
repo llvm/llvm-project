@@ -1,10 +1,11 @@
-; RUN: llc -global-isel=0 -mtriple=amdgcn < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
-; RUN: not llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx1100 < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=ERR %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu6.00 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu8.02 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00 < %s | FileCheck -strict-whitespace -check-prefix=GCN %s
+; RUN: not llc -global-isel=0 -mtriple=amdgpu11.00 < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=ERR %s
+; RUN: not llc -global-isel=1 -mtriple=amdgpu11.00 < %s 2>&1 | FileCheck -strict-whitespace -check-prefix=ERR %s
 
-; ERR: error: <unknown>:0:0: in function test_export_compr_zeroes_v2f16 void (): intrinsic not supported on subtarget
+; ERR: error: <unknown>:0:0: in function @test_export_compr_zeroes_v2f16 void (): llvm.amdgcn.exp.compr requires target feature '-gfx11-insts'
 
 declare void @llvm.amdgcn.exp.compr.v2f16(i32, i32, <2 x half>, <2 x half>, i1, i1) #0
 declare void @llvm.amdgcn.exp.compr.v2i16(i32, i32, <2 x i16>, <2 x i16>, i1, i1) #0

@@ -656,9 +656,9 @@ Parser::OpenACCClauseParseResult Parser::OpenACCSuccess(OpenACCClause *Clause) {
 
 ExprResult Parser::ParseOpenACCConditionExpr() {
   // FIXME: It isn't clear if the spec saying 'condition' means the same as
-  // it does in an if/while/etc (See ParseCXXCondition), however as it was
-  // written with Fortran/C in mind, we're going to assume it just means an
-  // 'expression evaluating to boolean'.
+  // it does in an if/while/etc (See ParseCondition), however as it was written
+  // with Fortran/C in mind, we're going to assume it just means an 'expression
+  // evaluating to boolean'.
   ExprResult ER = ParseExpression();
 
   if (!ER.isUsable())
@@ -1377,10 +1377,10 @@ ExprResult Parser::ParseOpenACCIDExpression() {
     Name.setIdentifier(FuncName.getIdentifierInfo(), ConsumeToken());
 
     // Ensure this is a valid identifier. We don't accept causing implicit
-    // function declarations per the spec, so always claim to not have trailing
-    // L Paren.
+    // function declarations per the spec, so always claim that this isn't
+    // a call.
     Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, /*HasTrailingLParen=*/false,
+                                    Name, /*IsCall=*/false,
                                     /*isAddressOfOperand=*/false);
   }
 

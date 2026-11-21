@@ -53,6 +53,7 @@ public:
     PtrDiffType = SignedInt;
     IntPtrType = SignedInt;
     Char16Type = UnsignedInt;
+    WCharType = SignedInt;
     WIntType = SignedInt;
     Int16Type = SignedInt;
     Char32Type = UnsignedLong;
@@ -173,7 +174,7 @@ public:
 
   bool isValidCPUName(StringRef Name) const override;
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  bool setCPU(const std::string &Name) override;
+  bool setCPU(StringRef Name) override;
   std::optional<std::string> handleAsmEscapedChar(char EscChar) const override;
   StringRef getABI() const override { return ABI; }
 

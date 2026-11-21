@@ -76,6 +76,14 @@ private:
   void initRealEvent(StringRef PfmEventString);
 };
 
+// A PerfEvent that bypasses libpfm and encodes the counter directly using
+// raw PMU event select and unit mask values. Currently only used with cycles
+// and uops when fields are present in PfmCountersInfo.
+class RawPerfEvent : public PerfEvent {
+public:
+  explicit RawPerfEvent(int EventSelect, int UMask);
+};
+
 // Represents a single event that has been configured in the Linux perf
 // subsystem.
 class ConfiguredEvent {

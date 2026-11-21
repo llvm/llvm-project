@@ -148,9 +148,7 @@ void FunctionElideInfo::collectPostSplitCoroIds() {
   for (auto &I : instructions(this->ContainingFunction)) {
     if (auto *CII = dyn_cast<CoroIdInst>(&I))
       if (CII->getInfo().isPostSplit())
-        // If it is the coroutine itself, don't touch it.
-        if (CII->getCoroutine() != CII->getFunction())
-          CoroIds.push_back(CII);
+        CoroIds.push_back(CII);
 
     // Consider case like:
     // %0 = call i8 @llvm.coro.suspend(...)

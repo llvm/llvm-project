@@ -20,20 +20,22 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
-std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
 NSSet_Additionals::GetAdditionalSummaries() {
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> g_map;
   return g_map;
 }
 
-std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> &
 NSSet_Additionals::GetAdditionalSynthetics() {
-  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>
-      g_map;
+  static llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> g_map;
   return g_map;
 }
 
@@ -246,15 +248,15 @@ bool lldb_private::formatters::NSSetSummaryProvider(
 
   uint64_t value = 0;
 
-  ConstString class_name(descriptor->GetClassName());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
-  static const ConstString g_SetI("__NSSetI");
-  static const ConstString g_OrderedSetI("__NSOrderedSetI");
-  static const ConstString g_SetM("__NSSetM");
-  static const ConstString g_SetCF("__NSCFSet");
-  static const ConstString g_SetCFRef("CFSetRef");
+  static constexpr llvm::StringLiteral g_SetI("__NSSetI");
+  static constexpr llvm::StringLiteral g_OrderedSetI("__NSOrderedSetI");
+  static constexpr llvm::StringLiteral g_SetM("__NSSetM");
+  static constexpr llvm::StringLiteral g_SetCF("__NSCFSet");
+  static constexpr llvm::StringLiteral g_SetCFRef("CFSetRef");
 
-  if (class_name.IsEmpty())
+  if (class_name.empty())
     return false;
 
   if (class_name == g_SetI || class_name == g_OrderedSetI) {
@@ -328,15 +330,15 @@ lldb_private::formatters::NSSetSyntheticFrontEndCreator(
   if (!descriptor || !descriptor->IsValid())
     return nullptr;
 
-  ConstString class_name = descriptor->GetClassName();
+  llvm::StringRef class_name = descriptor->GetClassName();
 
-  static const ConstString g_SetI("__NSSetI");
-  static const ConstString g_OrderedSetI("__NSOrderedSetI");
-  static const ConstString g_SetM("__NSSetM");
-  static const ConstString g_SetCF("__NSCFSet");
-  static const ConstString g_SetCFRef("CFSetRef");
+  static constexpr llvm::StringLiteral g_SetI("__NSSetI");
+  static constexpr llvm::StringLiteral g_OrderedSetI("__NSOrderedSetI");
+  static constexpr llvm::StringLiteral g_SetM("__NSSetM");
+  static constexpr llvm::StringLiteral g_SetCF("__NSCFSet");
+  static constexpr llvm::StringLiteral g_SetCFRef("CFSetRef");
 
-  if (class_name.IsEmpty())
+  if (class_name.empty())
     return nullptr;
 
   if (class_name == g_SetI || class_name == g_OrderedSetI) {
@@ -442,10 +444,13 @@ lldb_private::formatters::NSSetISyntheticFrontEnd::GetChildAtIndex(
       obj_at_idx = m_data_ptr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> obj_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(obj_at_idx);
+      if (!obj_at_idx_or_err) {
+        llvm::consumeError(obj_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      obj_at_idx = *obj_at_idx_or_err;
 
       test_idx++;
 
@@ -541,7 +546,6 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
     if (!process_sp)
       return lldb::ValueObjectSP();
 
-    Status error;
     lldb::addr_t val_at_idx = 0;
 
     uint32_t tries = 0;
@@ -554,9 +558,13 @@ lldb_private::formatters::NSCFSetSyntheticFrontEnd::GetChildAtIndex(
     while (tries < num_children) {
       val_at_idx = m_values_ptr + (test_idx * m_ptr_size);
 
-      val_at_idx = process_sp->ReadPointerFromMemory(val_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> val_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(val_at_idx);
+      if (!val_at_idx_or_err) {
+        llvm::consumeError(val_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      val_at_idx = *val_at_idx_or_err;
 
       test_idx++;
 
@@ -694,10 +702,13 @@ lldb_private::formatters::
       obj_at_idx = m_objs_addr + (test_idx * m_ptr_size);
       if (!process_sp)
         return lldb::ValueObjectSP();
-      Status error;
-      obj_at_idx = process_sp->ReadPointerFromMemory(obj_at_idx, error);
-      if (error.Fail())
+      llvm::Expected<lldb::addr_t> obj_at_idx_or_err =
+          process_sp->ReadPointerFromMemory(obj_at_idx);
+      if (!obj_at_idx_or_err) {
+        llvm::consumeError(obj_at_idx_or_err.takeError());
         return lldb::ValueObjectSP();
+      }
+      obj_at_idx = *obj_at_idx_or_err;
 
       test_idx++;
 

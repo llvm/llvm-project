@@ -10,7 +10,7 @@ define void @test() {
 ; CHECK-NEXT:    store ptr addrspace(1) null, ptr addrspace(1) [[GETELEMENTPTR]], align 8
 ; CHECK-NEXT:    store volatile i32 0, ptr addrspace(1) null, align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 null(<2 x double> zeroinitializer)
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 0, i32 poison>, i32 [[CALL]], i64 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
 ; CHECK-NEXT:    ret void
 ;

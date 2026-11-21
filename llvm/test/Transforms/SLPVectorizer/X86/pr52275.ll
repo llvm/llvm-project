@@ -43,13 +43,10 @@ define  <2 x i8> @test2(<2 x i8> %t6, ptr %t1) {
 ; CHECK-NEXT:    ret <2 x i8> [[T11]]
 ;
 ; FORCE_SLP-LABEL: @test2(
-; FORCE_SLP-NEXT:    [[T3:%.*]] = load i32, ptr [[T1:%.*]], align 4
-; FORCE_SLP-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 1
-; FORCE_SLP-NEXT:    [[T5:%.*]] = load i32, ptr [[T4]], align 4
-; FORCE_SLP-NEXT:    [[T7:%.*]] = trunc i32 [[T3]] to i8
-; FORCE_SLP-NEXT:    [[T8:%.*]] = insertelement <2 x i8> [[T6:%.*]], i8 [[T7]], i64 0
-; FORCE_SLP-NEXT:    [[T9:%.*]] = trunc i32 [[T5]] to i8
-; FORCE_SLP-NEXT:    [[T10:%.*]] = insertelement <2 x i8> [[T8]], i8 [[T9]], i64 1
+; FORCE_SLP-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T1:%.*]], align 4
+; FORCE_SLP-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; FORCE_SLP-NEXT:    [[T8:%.*]] = shufflevector <2 x i8> [[T6:%.*]], <2 x i8> [[TMP2]], <2 x i32> <i32 2, i32 1>
+; FORCE_SLP-NEXT:    [[T10:%.*]] = shufflevector <2 x i8> [[T8]], <2 x i8> [[TMP2]], <2 x i32> <i32 0, i32 3>
 ; FORCE_SLP-NEXT:    [[T11:%.*]] = add <2 x i8> [[T10]], [[T8]]
 ; FORCE_SLP-NEXT:    ret <2 x i8> [[T11]]
 ;
@@ -77,13 +74,10 @@ define  <2 x i8> @test_reorder(<2 x i8> %t6, ptr %t1) {
 ; CHECK-NEXT:    ret <2 x i8> [[T11]]
 ;
 ; FORCE_SLP-LABEL: @test_reorder(
-; FORCE_SLP-NEXT:    [[T3:%.*]] = load i32, ptr [[T1:%.*]], align 4
-; FORCE_SLP-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 1
-; FORCE_SLP-NEXT:    [[T5:%.*]] = load i32, ptr [[T4]], align 4
-; FORCE_SLP-NEXT:    [[T7:%.*]] = trunc i32 [[T3]] to i8
-; FORCE_SLP-NEXT:    [[T8:%.*]] = insertelement <2 x i8> [[T6:%.*]], i8 [[T7]], i64 1
-; FORCE_SLP-NEXT:    [[T9:%.*]] = trunc i32 [[T5]] to i8
-; FORCE_SLP-NEXT:    [[T10:%.*]] = insertelement <2 x i8> [[T8]], i8 [[T9]], i64 0
+; FORCE_SLP-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T1:%.*]], align 4
+; FORCE_SLP-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; FORCE_SLP-NEXT:    [[T8:%.*]] = shufflevector <2 x i8> [[T6:%.*]], <2 x i8> [[TMP2]], <2 x i32> <i32 0, i32 2>
+; FORCE_SLP-NEXT:    [[T10:%.*]] = shufflevector <2 x i8> [[T8]], <2 x i8> [[TMP2]], <2 x i32> <i32 3, i32 1>
 ; FORCE_SLP-NEXT:    [[T11:%.*]] = add <2 x i8> [[T10]], [[T8]]
 ; FORCE_SLP-NEXT:    ret <2 x i8> [[T11]]
 ;
@@ -111,13 +105,11 @@ define  <4 x i8> @test_subvector(<4 x i8> %t6, ptr %t1) {
 ; CHECK-NEXT:    ret <4 x i8> [[T11]]
 ;
 ; FORCE_SLP-LABEL: @test_subvector(
-; FORCE_SLP-NEXT:    [[T3:%.*]] = load i32, ptr [[T1:%.*]], align 4
-; FORCE_SLP-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 1
-; FORCE_SLP-NEXT:    [[T5:%.*]] = load i32, ptr [[T4]], align 4
-; FORCE_SLP-NEXT:    [[T7:%.*]] = trunc i32 [[T3]] to i8
-; FORCE_SLP-NEXT:    [[T8:%.*]] = insertelement <4 x i8> [[T6:%.*]], i8 [[T7]], i64 0
-; FORCE_SLP-NEXT:    [[T9:%.*]] = trunc i32 [[T5]] to i8
-; FORCE_SLP-NEXT:    [[T10:%.*]] = insertelement <4 x i8> [[T8]], i8 [[T9]], i64 1
+; FORCE_SLP-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T1:%.*]], align 4
+; FORCE_SLP-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; FORCE_SLP-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FORCE_SLP-NEXT:    [[T8:%.*]] = shufflevector <4 x i8> [[T6:%.*]], <4 x i8> [[TMP3]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; FORCE_SLP-NEXT:    [[T10:%.*]] = shufflevector <4 x i8> [[T8]], <4 x i8> [[TMP3]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
 ; FORCE_SLP-NEXT:    [[T11:%.*]] = add <4 x i8> [[T10]], [[T8]]
 ; FORCE_SLP-NEXT:    ret <4 x i8> [[T11]]
 ;
@@ -145,13 +137,11 @@ define  <4 x i8> @test_subvector_reorder(<4 x i8> %t6, ptr %t1) {
 ; CHECK-NEXT:    ret <4 x i8> [[T11]]
 ;
 ; FORCE_SLP-LABEL: @test_subvector_reorder(
-; FORCE_SLP-NEXT:    [[T3:%.*]] = load i32, ptr [[T1:%.*]], align 4
-; FORCE_SLP-NEXT:    [[T4:%.*]] = getelementptr inbounds i32, ptr [[T1]], i64 1
-; FORCE_SLP-NEXT:    [[T5:%.*]] = load i32, ptr [[T4]], align 4
-; FORCE_SLP-NEXT:    [[T7:%.*]] = trunc i32 [[T3]] to i8
-; FORCE_SLP-NEXT:    [[T8:%.*]] = insertelement <4 x i8> [[T6:%.*]], i8 [[T7]], i64 3
-; FORCE_SLP-NEXT:    [[T9:%.*]] = trunc i32 [[T5]] to i8
-; FORCE_SLP-NEXT:    [[T10:%.*]] = insertelement <4 x i8> [[T8]], i8 [[T9]], i64 2
+; FORCE_SLP-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr [[T1:%.*]], align 4
+; FORCE_SLP-NEXT:    [[TMP2:%.*]] = trunc <2 x i32> [[TMP1]] to <2 x i8>
+; FORCE_SLP-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i8> [[TMP2]], <2 x i8> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; FORCE_SLP-NEXT:    [[T8:%.*]] = shufflevector <4 x i8> [[T6:%.*]], <4 x i8> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 2, i32 4>
+; FORCE_SLP-NEXT:    [[T10:%.*]] = shufflevector <4 x i8> [[T8]], <4 x i8> [[TMP3]], <4 x i32> <i32 0, i32 1, i32 5, i32 3>
 ; FORCE_SLP-NEXT:    [[T11:%.*]] = add <4 x i8> [[T10]], [[T8]]
 ; FORCE_SLP-NEXT:    ret <4 x i8> [[T11]]
 ;

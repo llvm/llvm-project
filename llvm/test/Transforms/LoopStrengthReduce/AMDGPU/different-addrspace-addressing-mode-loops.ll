@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -mcpu=bonaire -loop-reduce < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu7.01-- -loop-reduce < %s | FileCheck -check-prefix=OPT %s
 
 ; Test that loops with different maximum offsets for different address
 ; spaces are correctly handled.
@@ -153,4 +153,4 @@ bb:
   br i1 %exitcond, label %._crit_edge.loopexit, label %.lr.ph
 }
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hawaii" "use-soft-float"="false" }
+attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "use-soft-float"="false" }

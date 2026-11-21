@@ -1,9 +1,9 @@
 ; RUN: split-file %s %t
-; RUN: not opt -mtriple=amdgcn-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/contains-null-init.ll 2>&1 | FileCheck -check-prefix=ERR0 %s
-; RUN: not opt -mtriple=amdgcn-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/contains-poison-init.ll 2>&1 | FileCheck -check-prefix=ERR1 %s
-; RUN: not opt -mtriple=amdgcn-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/defined-gv-type.ll 2>&1 | FileCheck -check-prefix=ERR2 %s
-; RUN: not opt -mtriple=amdgcn-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/declared-gv-type.ll 2>&1 | FileCheck -check-prefix=ERR3 %s
-; RUN: not opt -mtriple=amdgcn-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/used-global-with-p7.ll 2>&1 | FileCheck -check-prefix=ERR4 %s
+; RUN: not opt -mtriple=amdgpu-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/contains-null-init.ll 2>&1 | FileCheck -check-prefix=ERR0 %s
+; RUN: not opt -mtriple=amdgpu-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/contains-poison-init.ll 2>&1 | FileCheck -check-prefix=ERR1 %s
+; RUN: not opt -mtriple=amdgpu-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/defined-gv-type.ll 2>&1 | FileCheck -check-prefix=ERR2 %s
+; RUN: not opt -mtriple=amdgpu-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/declared-gv-type.ll 2>&1 | FileCheck -check-prefix=ERR3 %s
+; RUN: not opt -mtriple=amdgpu-amd-amdhsa -disable-output -passes=amdgpu-lower-buffer-fat-pointers %t/used-global-with-p7.ll 2>&1 | FileCheck -check-prefix=ERR4 %s
 
 ;--- contains-null-init.ll
 ; ERR0: error: global variables that contain buffer fat pointers (address space 7 pointers) are unsupported. Use buffer resource pointers (address space 8) instead

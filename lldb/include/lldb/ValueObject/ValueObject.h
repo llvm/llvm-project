@@ -356,6 +356,11 @@ public:
 
   virtual bool CanProvideValue();
 
+  /// Returns whether objects of the type of this value occupy no memory, so
+  /// that the value has no data and needs no location. A value whose size is
+  /// unknown is assumed to occupy memory.
+  bool HasNoStorage();
+
   // Subclasses must implement the functions below.
   virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
@@ -496,6 +501,11 @@ public:
   virtual lldb::ValueObjectSP GetChildMemberWithName(llvm::StringRef name,
                                                      bool can_create = true);
 
+  /// Return the index of the child named \c name.
+  ///
+  /// The error is for LLDB developers, not for the user: a missing child is the
+  /// ordinary negative answer to a lookup. Callers that cannot propagate it
+  /// should log it rather than call \c llvm::consumeError.
   virtual llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name);
 
   llvm::Expected<uint32_t> GetNumChildren(uint32_t max = UINT32_MAX);
@@ -590,8 +600,8 @@ public:
   lldb::ValueObjectSP GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
                                                 bool can_create);
 
-  lldb::ValueObjectSP GetSyntheticExpressionPathChild(const char *expression,
-                                                      bool can_create);
+  lldb::ValueObjectSP
+  GetSyntheticExpressionPathChild(llvm::StringRef expression, bool can_create);
 
   virtual lldb::ValueObjectSP
   GetSyntheticChildAtOffset(uint32_t offset, const CompilerType &type,
@@ -851,6 +861,16 @@ public:
 
   virtual bool GetIsConstant() const { return m_update_point.IsConstant(); }
 
+  /// Check if the value may be writable. Returns an error describing
+  /// why this value cannot be modified. Success does not guarantee a
+  /// write will succeed; other runtime conditions can still cause
+  /// SetValue* to fail.
+  virtual llvm::Error CanSetValue() {
+    if (GetIsConstant())
+      return llvm::createStringError("value is not in a writable location");
+    return llvm::Error::success();
+  }
+
   bool NeedsUpdating() {
     const bool accept_invalid_exe_ctx =
         (CanUpdateWithInvalidExecutionContext() == eLazyBoolYes);
@@ -904,9 +924,22 @@ public:
     m_synthetic_children_sp = synth_sp;
   }
 
+  void SetSyntheticChildrenOverride(const lldb::SyntheticChildrenSP &synth_sp) {
+    if (synth_sp.get() == m_synthetic_children_override_sp.get())
+      return;
+    ClearUserVisibleData(eClearUserVisibleDataItemsSyntheticChildren);
+    m_synthetic_children_override_sp = synth_sp;
+  }
+
   lldb::SyntheticChildrenSP GetSyntheticChildren() {
     UpdateFormatsIfNeeded();
+    if (m_synthetic_children_override_sp)
+      return m_synthetic_children_override_sp;
     return m_synthetic_children_sp;
+  }
+
+  virtual SyntheticChildrenFrontEnd *GetSyntheticChildrenFrontEnd() {
+    return nullptr;
   }
 
   // Use GetParent for display purposes, but if you want to tell the parent to
@@ -973,6 +1006,8 @@ public:
   llvm::ArrayRef<uint8_t> GetLocalBuffer() const;
 
   lldb::ValueObjectSP CheckValueObjectOwnership(ValueObject *child);
+
+  virtual void *GetImplementation() { return nullptr; }
 
 protected:
   typedef ClusterManager<ValueObject> ValueObjectManager;
@@ -1108,7 +1143,13 @@ protected:
   uint32_t m_last_format_mgr_revision = 0;
   lldb::TypeSummaryImplSP m_type_summary_sp;
   lldb::TypeFormatImplSP m_type_format_sp;
+
+  /// As determined by `DataVisualization` - may be overridden
   lldb::SyntheticChildrenSP m_synthetic_children_sp;
+
+  /// Sticky override of `m_synthetic_children_sp`
+  lldb::SyntheticChildrenSP m_synthetic_children_override_sp;
+
   ProcessModID m_user_id_of_forced_summary;
   AddressType m_address_type_of_ptr_or_ref_children = eAddressTypeInvalid;
 
@@ -1250,7 +1291,7 @@ public:
 
   ValueImpl(lldb::ValueObjectSP in_valobj_sp,
             lldb::DynamicValueType use_dynamic, bool use_synthetic,
-            const char *name = nullptr);
+            std::string name = {});
 
   ValueImpl(const ValueImpl &rhs) = default;
 
@@ -1261,7 +1302,8 @@ public:
   lldb::ValueObjectSP GetRootSP() { return m_valobj_sp; }
 
   lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
-                            std::unique_lock<std::recursive_mutex> &lock,
+                            TargetAPIMutex &api_mutex,
+                            std::unique_lock<TargetAPIMutex> &lock,
                             Status &error);
 
   void SetUseDynamic(lldb::DynamicValueType use_dynamic) {
@@ -1298,7 +1340,7 @@ private:
   lldb::ValueObjectSP m_valobj_sp;
   lldb::DynamicValueType m_use_dynamic;
   bool m_use_synthetic;
-  ConstString m_name;
+  std::string m_name;
 };
 
 class ValueLocker {
@@ -1306,14 +1348,15 @@ public:
   ValueLocker() = default;
 
   lldb::ValueObjectSP GetLockedSP(ValueImpl &in_value) {
-    return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
+    return in_value.GetSP(m_stop_locker, m_api_mutex, m_lock, m_lock_error);
   }
 
   Status &GetError() { return m_lock_error; }
 
 private:
   Process::StopLocker m_stop_locker;
-  std::unique_lock<std::recursive_mutex> m_lock;
+  TargetAPIMutex m_api_mutex;
+  std::unique_lock<TargetAPIMutex> m_lock;
   Status m_lock_error;
 };
 

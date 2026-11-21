@@ -11,6 +11,7 @@
 
 #include "DWARFLinkerUnit.h"
 #include "llvm/DWARFLinker/DWARFFile.h"
+#include "llvm/DWARFLinker/RelocationFixups.h"
 #include <limits>
 #include <optional>
 
@@ -61,8 +62,13 @@ public:
     /// Input DWARF is loaded.
     Loaded,
 
-    /// Input DWARF is analysed(DIEs pointing to the real code section are
-    /// discovered, type names are assigned if ODR is requested).
+    /// DIEs with a live address are found. Marking a unit reads whether the
+    /// DIEs it references in other units have an address, so every
+    /// inter-connected unit gets here before any of them is marked.
+    LiveRootsCollected,
+
+    /// Input DWARF is analysed(DIEs pointing to the real code section and the
+    /// DIEs they depend on are marked).
     LivenessAnalysisDone,
 
     /// Check if dependencies have incompatible placement.
@@ -98,6 +104,9 @@ public:
   /// Returns stage of overall processing.
   Stage getStage() const { return Stage; }
 
+  /// Returns raw DW_AT_language of the input compile unit.
+  std::optional<uint16_t> getLanguage() const { return Language; }
+
   /// Set stage of overall processing.
   void setStage(Stage Stage) { this->Stage = Stage; }
 
@@ -109,9 +118,24 @@ public:
   StringEntry *getFileName(unsigned FileIdx, StringPool &GlobalStrings);
 
   /// Returns DWARFFile containing this compile unit.
-  const DWARFFile &getContaingFile() const { return File; }
+  const DWARFFile &getContainingFile() const { return File; }
 
-  /// Set deterministic priority for type DIE allocation ordering.
+  std::string remapPath(StringRef Path) const override {
+    return File.remapPath(Path);
+  }
+
+  /// Appends the names of the DW_TAG_module enclosing \p DieEntry, outermost
+  /// first. Returns false when one of them has no name making the module
+  /// unidentifiable across units.
+  bool getModulePath(const DWARFDebugInfoEntry *DieEntry,
+                     SmallVectorImpl<char> &Path);
+
+  /// Must run while the output offsets are still available, and once they are
+  /// final.
+  void noteModuleAnchors();
+
+  /// Set deterministic priority for type DIE allocation ordering. Units compare
+  /// by \p ObjFileIdx first and by \p LocalIdx second.
   /// Lower priority values win when multiple CUs race to define the same type.
   llvm::Error setPriority(uint64_t ObjFileIdx, uint64_t LocalIdx);
 
@@ -144,12 +168,22 @@ public:
   /// Cleanup unneeded resources after compile unit is cloned.
   void cleanupDataAfterClonning();
 
+  RelocationFixups &getRelocFixups() { return RelocFixups; }
+
+  /// Saves the relocations, at offsets relative to the output of the unit,
+  /// which reportUnitOffsets() tells once the sections are placed.
+  void saveRelocations();
+  void reportUnitOffsets();
+
   /// After cloning stage the output DIEs offsets are deallocated.
   /// This method copies output offsets for referenced DIEs into DIEs patches.
   void updateDieRefPatchesWithClonedOffsets();
 
-  /// Search for subprograms and variables referencing live code and discover
-  /// dependend DIEs. Mark live DIEs, set placement for DIEs.
+  /// Search for subprograms and variables referencing live code.
+  void collectLiveRoots();
+
+  /// Discover the DIEs the live roots depend on. Mark live DIEs, set placement
+  /// for DIEs.
   bool resolveDependenciesAndMarkLiveness(
       bool InterCUProcessingStarted,
       std::atomic<bool> &HasNewInterconnectedCUs);
@@ -220,6 +254,36 @@ public:
       return false;
     }
 
+    /// Atomically joins \p Placement into the current placement: the
+    /// least-upper-bound of the lattice NotSet < {TypeTable, PlainDwarf} <
+    /// Both, which is a plain OR because the values are bit flags. The join is
+    /// monotone and never clears a bit, so unlike setPlacement it composes
+    /// correctly when applied concurrently from several marks.
+    void joinPlacement(DieOutputPlacement Placement) {
+      auto InputData = Flags.load();
+      while (!Flags.compare_exchange_weak(InputData, (InputData | Placement))) {
+      }
+    }
+
+    /// Atomically joins \p Placement for a DW_TAG_variable, for which
+    /// PlainDwarf is absorbing because a variable cannot occupy the type table
+    /// and plain DWARF at once. Once the placement is (or concurrently becomes)
+    /// PlainDwarf it stays PlainDwarf, otherwise \p Placement is OR-joined.
+    /// Recomputing inside the compare_exchange loop keeps a racing PlainDwarf
+    /// mark from turning the variable into Both.
+    void joinVariablePlacement(DieOutputPlacement Placement) {
+      auto InputData = Flags.load();
+      uint16_t Desired;
+      do {
+        DieOutputPlacement Current = DieOutputPlacement(InputData & 0x7);
+        DieOutputPlacement Joined =
+            (Current == PlainDwarf || Current == Both)
+                ? PlainDwarf
+                : DieOutputPlacement(Current | Placement);
+        Desired = (InputData & ~0x7) | Joined;
+      } while (!Flags.compare_exchange_weak(InputData, Desired));
+    }
+
 #define SINGLE_FLAG_METHODS_SET(Name, Value)                                   \
   bool get##Name() const { return Flags & Value; }                             \
   void set##Name() {                                                           \
@@ -259,6 +323,10 @@ public:
 
     /// Track liveness for the DIE.
     SINGLE_FLAG_METHODS_SET(HasAnAddress, 0x800)
+
+    /// DIE is a function-local variable with a live address that does not keep
+    /// its function, and is kept wherever the function is.
+    SINGLE_FLAG_METHODS_SET(KeepWithParent, 0x1000)
 
     void unsetFlagsWhichSetDuringLiveAnalysis() {
       auto InputData = Flags.load();
@@ -452,12 +520,18 @@ public:
   // Clone and emit line table.
   Error cloneAndEmitLineTable(const Triple &TargetTriple);
 
-  /// Clone attribute location axpression.
-  void cloneDieAttrExpression(const DWARFExpression &InputExpression,
-                              SmallVectorImpl<uint8_t> &OutputExpression,
-                              SectionDescriptor &Section,
-                              std::optional<int64_t> VarAddressAdjustment,
-                              OffsetsPtrVector &PatchesOffsets);
+  /// Clone attribute location expression. \p Cloned, if set, receives where
+  /// its operations were cloned to in \p OutputExpression. With
+  /// \p KeepAddrIndices, DW_OP_addrx and DW_OP_constx index the output
+  /// .debug_addr, whose entries carry their relocations.
+  void
+  cloneDieAttrExpression(const DWARFExpression &InputExpression,
+                         SmallVectorImpl<uint8_t> &OutputExpression,
+                         SectionDescriptor &Section,
+                         std::optional<int64_t> VarAddressAdjustment,
+                         OffsetsPtrVector &PatchesOffsets,
+                         RelocationFixups::ClonedExpression *Cloned = nullptr,
+                         bool KeepAddrIndices = false);
 
   /// Returns index(inside .debug_addr) of an address.
   uint64_t getDebugAddrIndex(uint64_t Addr) {
@@ -765,6 +839,12 @@ private:
 
   /// Maps an address into the index inside .debug_addr section.
   IndexedValuesMap<uint64_t> DebugAddrIndexMap;
+
+  RelocationFixups RelocFixups;
+
+  /// The input offset of the unit, kept by saveRelocations() for
+  /// reportUnitOffsets(), as the input is unloaded in between.
+  std::optional<uint64_t> SavedRelocsUnitOffset;
 
   std::unique_ptr<DependencyTracker> Dependencies;
 

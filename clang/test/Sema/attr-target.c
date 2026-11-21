@@ -35,6 +35,22 @@ void __attribute__((target("x86-64-v2"))) v2(void) {}
 
 int __attribute__((target("sha"))) good_target_but_not_for_fmv() { return 5; }
 
+// 'apxf' and the individual APX sub-features are all valid in a 'target'
+// attribute when used to enable the feature on a single (non-multiversioned)
+// function, so none of these produce a diagnostic.
+int __attribute__((target("apxf"))) apx_supported(void) { return 6; }
+int __attribute__((target("no-apxf"))) no_apx_supported(void) { return 7; }
+int __attribute__((target("egpr"))) egpr_enabled(void) { return 8; }
+int __attribute__((target("ndd"))) ndd_enabled(void) { return 9; }
+int __attribute__((target("ccmp"))) ccmp_enabled(void) { return 10; }
+int __attribute__((target("nf"))) nf_enabled(void) { return 11; }
+int __attribute__((target("cf"))) cf_enabled(void) { return 12; }
+int __attribute__((target("zu"))) zu_enabled(void) { return 13; }
+int __attribute__((target("push2pop2"))) push2pop2_enabled(void) { return 14; }
+int __attribute__((target("ppx"))) ppx_enabled(void) { return 15; }
+int __attribute__((target("jmpabs"))) jmpabs_enabled(void) { return 16; }
+int __attribute__((target("egpr,ndd,ccmp"))) multiple_enabled(void) { return 17; }
+
 #elifdef __aarch64__
 
 int __attribute__((target("sve,arch=armv8-a"))) foo(void) { return 4; }
@@ -67,7 +83,7 @@ int __attribute__((target("branch-protection=none"))) birch_tree(void) { return 
 
 #elifdef __powerpc__
 
-int __attribute__((target("float128,arch=pwr9"))) foo(void) { return 4; }
+int __attribute__((target("float128,cpu=pwr9"))) foo(void) { return 4; }
 //expected-error@+1 {{'target' attribute takes one argument}}
 int __attribute__((target())) bar(void) { return 4; }
 // no warning, tune is supported for PPC
@@ -84,6 +100,8 @@ int __attribute__((target("cpu=hiss,cpu=woof"))) pine_tree(void) { return 4; }
 int __attribute__((target("cpu=pwr9,cpu=pwr10"))) oak_tree(void) { return 4; }
 //expected-warning@+1 {{unknown tune CPU 'hiss' in the 'target' attribute string; 'target' attribute ignored}}
 int __attribute__((target("tune=hiss,tune=woof"))) apple_tree(void) { return 4; }
+//expected-warning@+1 {{unsupported 'woof' in the 'target' attribute string; 'target' attribute ignored}}
+int __attribute__((target("woof"))) cherry_tree(void) { return 4; }
 
 #else
 

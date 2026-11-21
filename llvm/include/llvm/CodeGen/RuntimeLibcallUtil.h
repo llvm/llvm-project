@@ -92,83 +92,30 @@ LLVM_ABI Libcall getSINTTOFP(EVT OpVT, EVT RetVT);
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getUINTTOFP(EVT OpVT, EVT RetVT);
 
-/// getPOWI - Return the POWI_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getPOWI(EVT RetVT);
-
-/// getPOW - Return the POW_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getPOW(EVT RetVT);
-
-/// getCBRT - Return the CBRT_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getCBRT(EVT RetVT);
-
-/// getLDEXP - Return the LDEXP_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getLDEXP(EVT RetVT);
-
-/// getFREXP - Return the FREXP_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getFREXP(EVT RetVT);
-
-/// Return the SIN_* value for the given types, or UNKNOWN_LIBCALL if there is
-/// none.
-LLVM_ABI Libcall getSIN(EVT RetVT);
-
-/// Return the COS_* value for the given types, or UNKNOWN_LIBCALL if there is
-/// none.
-LLVM_ABI Libcall getCOS(EVT RetVT);
-
-/// getSINCOS - Return the SINCOS_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getSINCOS(EVT RetVT);
-
-/// getSINCOSPI - Return the SINCOSPI_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getSINCOSPI(EVT RetVT);
-
-/// Return the SINCOS_STRET_ value for the given types, or UNKNOWN_LIBCALL if
-/// there is none.
-LLVM_ABI Libcall getSINCOS_STRET(EVT RetVT);
-
-/// getMODF - Return the MODF_* value for the given types, or
-/// UNKNOWN_LIBCALL if there is none.
-LLVM_ABI Libcall getMODF(EVT VT);
-
-/// \return the REM_* value for the given types, or UNKNOWN_LIBCALL if there is
-/// none.
-LLVM_ABI Libcall getREM(EVT VT);
-
-/// \return the LROUND_* value for the given types, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getLROUND(EVT VT);
-
-/// \return the LLROUND_* value for the given types, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getLLROUND(EVT VT);
-
-/// \return the LRINT_* value for the given types, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getLRINT(EVT RetVT);
-
-/// \return the LLRINT_* value for the given types, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getLLRINT(EVT RetVT);
+/// The floating-point selectors get<OP>(EVT) return the <OP>_* libcall for the
+/// given type, or UNKNOWN_LIBCALL. Generated from the RuntimeLibcallFamily
+/// table in RuntimeLibcalls.td.
+#define GET_RUNTIME_LIBCALL_FP_SELECTOR_DECLS
+#include "llvm/IR/RuntimeLibcalls.inc"
 
 /// Return the SYNC_FETCH_AND_* value for the given opcode and type, or
 /// UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getSYNC(unsigned Opc, MVT VT);
 
-/// Return the outline atomics value for the given atomic ordering, access
-/// size and set of libcalls for a given atomic, or UNKNOWN_LIBCALL if there
-/// is none.
-LLVM_ABI Libcall getOutlineAtomicHelper(const Libcall (&LC)[5][4],
-                                        AtomicOrdering Order, uint64_t MemSize);
-
 /// Return the outline atomics value for the given opcode, atomic ordering
 /// and type, or UNKNOWN_LIBCALL if there is none.
 LLVM_ABI Libcall getOUTLINE_ATOMIC(unsigned Opc, AtomicOrdering Order, MVT VT);
+
+struct AtomicLibcall {
+  LibcallImpl Impl = Unsupported;
+  bool IsOutline = false;
+};
+
+/// Lower to outline atomic libcall if outline atomics enabled, or to sync
+/// libcall otherwise.
+LLVM_ABI AtomicLibcall selectAtomicLibcall(const LibcallLoweringInfo &Libcalls,
+                                           unsigned Opc, AtomicOrdering Order,
+                                           MVT VT);
 
 /// getMEMCPY_ELEMENT_UNORDERED_ATOMIC - Return
 /// MEMCPY_ELEMENT_UNORDERED_ATOMIC_* value for the given element size or

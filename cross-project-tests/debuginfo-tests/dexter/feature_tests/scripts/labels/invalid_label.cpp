@@ -1,6 +1,6 @@
 // RUN: %dexter_regression_test_cxx_build %s -o %t
 // RUN: not %dexter_regression_test_run --source-root-dir %S/Inputs \
-// RUN:   --use-script --binary %t -- %s 2>&1 | FileCheck %s
+// RUN:   --binary %t -- %s 2>&1 | FileCheck %s
 
 int main() {
   int a = 4;

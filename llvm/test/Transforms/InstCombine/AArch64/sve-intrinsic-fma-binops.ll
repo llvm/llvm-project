@@ -193,4 +193,28 @@ define <vscale x 2 x double> @no_replace_on_non_ptrue_all_u(<vscale x 2 x double
   ret <vscale x 2 x double> %2
 }
 
+define <vscale x 4 x i32> @canonicalize_mla_u_constant_lhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x) #0 {
+; CHECK-LABEL: @canonicalize_mla_u_constant_lhs
+; CHECK-NEXT:  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> %x, <vscale x 4 x i32> splat (i32 2))
+; CHECK-NEXT:  ret <vscale x 4 x i32> %out
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 2), <vscale x 4 x i32> %x)
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 4 x i32> @fold_mla_u_constant_lhs_one_with_constant_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: @fold_mla_u_constant_lhs_one_with_constant_rhs
+; CHECK-NEXT:  %out = add <vscale x 4 x i32> %a, splat (i32 5)
+; CHECK-NEXT:  ret <vscale x 4 x i32> %out
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 1), <vscale x 4 x i32> splat (i32 5))
+  ret <vscale x 4 x i32> %out
+}
+
+define <vscale x 4 x i32> @fold_mla_u_constant_lhs_allones_with_constant_rhs(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a) #0 {
+; CHECK-LABEL: @fold_mla_u_constant_lhs_allones_with_constant_rhs
+; CHECK-NEXT:  %out = add <vscale x 4 x i32> %a, splat (i32 -5)
+; CHECK-NEXT:  ret <vscale x 4 x i32> %out
+  %out = call <vscale x 4 x i32> @llvm.aarch64.sve.mla.u.nxv4i32(<vscale x 4 x i1> %pg, <vscale x 4 x i32> %a, <vscale x 4 x i32> splat (i32 -1), <vscale x 4 x i32> splat (i32 5))
+  ret <vscale x 4 x i32> %out
+}
+
 attributes #0 = { "target-features"="+sve" }

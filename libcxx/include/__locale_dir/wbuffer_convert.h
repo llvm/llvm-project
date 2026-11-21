@@ -11,6 +11,7 @@
 
 #include <__algorithm/reverse.h>
 #include <__config>
+#include <__locale_dir/codecvt.h>
 #include <__string/char_traits.h>
 #include <ios>
 #include <streambuf>
@@ -27,6 +28,7 @@ _LIBCPP_PUSH_MACROS
 #    include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Codecvt, class _Elem = wchar_t, class _Tr = char_traits<_Elem> >
 class _LIBCPP_DEPRECATED_IN_CXX17 wbuffer_convert : public basic_streambuf<_Elem, _Tr> {
@@ -61,13 +63,13 @@ public:
   explicit _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
 #    else
-  _LIBCPP_EXPLICIT_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI
+  _LIBCPP_HIDE_FROM_ABI
   wbuffer_convert(streambuf* __bytebuf = nullptr, _Codecvt* __pcvt = new _Codecvt, state_type __state = state_type());
 #    endif
 
   _LIBCPP_HIDE_FROM_ABI ~wbuffer_convert();
 
-  _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf() const { return __bufptr_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf() const { return __bufptr_; }
   _LIBCPP_HIDE_FROM_ABI streambuf* rdbuf(streambuf* __bytebuf) {
     streambuf* __r = __bufptr_;
     __bufptr_      = __bytebuf;
@@ -77,7 +79,7 @@ public:
   wbuffer_convert(const wbuffer_convert&)            = delete;
   wbuffer_convert& operator=(const wbuffer_convert&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI state_type state() const { return __st_; }
 
 protected:
   _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual int_type underflow();
@@ -419,6 +421,7 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>* wbuffer_convert<_Codecvt, _Elem, _Tr>::__
 
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

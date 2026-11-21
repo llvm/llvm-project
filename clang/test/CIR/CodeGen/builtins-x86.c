@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -fclangir -emit-cir %s -o %t.cir
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -fclangir -emit-llvm %s -o %t.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -emit-llvm %s -o %t-ogcg.ll
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-feature +avx512fp16 -target-feature +avx512bf16 -target-feature +avx512vl -target-feature +sse4a -emit-llvm %s -o %t-ogcg.ll
 // RUN: FileCheck --input-file=%t-ogcg.ll %s -check-prefix=OGCG
 
 void test_sfence(void) {
@@ -61,7 +61,7 @@ typedef __bf16   v8bf __attribute__((vector_size(16)));
 
 v4f test_cmpeqps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpeqps
-  // CIR: cir.vec.cmp(eq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(oeq, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpeqps
@@ -74,7 +74,7 @@ v4f test_cmpeqps(v4f a, v4f b) {
 
 v4f test_cmpltps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpltps
-  // CIR: cir.vec.cmp(lt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(olt, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpltps
@@ -87,7 +87,7 @@ v4f test_cmpltps(v4f a, v4f b) {
 
 v4f test_cmpleps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpleps
-  // CIR: cir.vec.cmp(le, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(ole, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpleps
@@ -100,7 +100,7 @@ v4f test_cmpleps(v4f a, v4f b) {
 
 v4f test_cmpunordps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpunordps
-  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpunordps
@@ -113,12 +113,10 @@ v4f test_cmpunordps(v4f a, v4f b) {
 
 v4f test_cmpordps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpordps
-  // CIR: cir.vec.cmp(uno, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
-  // CIR: cir.not %{{.*}} : !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(ord, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
 
   // LLVM-LABEL: @test_cmpordps
-  // LLVM: fcmp uno <4 x float>
-  // LLVM: xor <4 x i32> %{{.*}}, splat (i32 -1)
+  // LLVM: fcmp ord <4 x float>
 
   // OGCG-LABEL: @test_cmpordps
   // OGCG: fcmp ord <4 x float>
@@ -127,7 +125,7 @@ v4f test_cmpordps(v4f a, v4f b) {
 
 v4f test_cmpneqps(v4f a, v4f b) {
   // CIR-LABEL: @test_cmpneqps
-  // CIR: cir.vec.cmp(ne, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // CIR: cir.vec.fcmp(une, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
   // CIR: cir.cast bitcast %{{.*}} : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: @test_cmpneqps
@@ -261,3 +259,56 @@ void test_conditional_bzero(void) {
               : foo())
           : __builtin_bzero(dst, len));
 }
+
+void test_movnti(int dest, int src) {
+  // CIR-LABEL: test_movnti
+  // CIR: %[[VAL:.*]] = cir.load
+  // CIR: cir.store nontemporal {{.*}} %[[VAL]]
+  
+  // LLVM-LABEL: @test_movnti
+  // LLVM: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  
+  // OGCG-LABEL: @test_movnti
+  // OGCG: store i32 %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+  return __builtin_ia32_movnti(&dest, src);
+}
+
+void test_movntss(float *dest, v4f src) {
+  // CIR-LABEL: test_movntss
+  // CIR: %[[ARR:.*]] = cir.load align(16) {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
+  // CIR: %[[IDX:.*]] = cir.const #cir.int<0>
+  // CIR: %[[SCALAR:.*]] = cir.vec.extract %[[ARR]][%[[IDX]] : !u64i]
+  // CIR: cir.store nontemporal align(1) %[[SCALAR]], {{.*}} : !cir.float, !cir.ptr<!cir.float>
+
+  // LLVM-LABEL: @test_movntss
+  // LLVM: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal
+
+  // OGCG-LABEL: @test_movntss
+  // OGCG: store float %{{.*}}, ptr %{{.*}}, align 1, !nontemporal 
+  return __builtin_ia32_movntss(dest, src);
+}
+
+float test_fma_f32(float a, float b, float c) {
+  // CIR-LABEL: test_fma_f32 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.float
+
+  // LLVM-LABEL: @test_fma_f32
+  // LLVM: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f32
+  // OGCG: %[[R:.*]] = call float @llvm.fma.f32(float %[[A:.*]], float %[[B:.*]], float %[[C:.*]])
+  return __builtin_fmaf(a, b, c);
+}
+
+double test_fma_f64(double a, double b, double c) {
+  // CIR-LABEL: test_fma_f64 
+  // CIR: %[[R:.*]] = cir.fma %[[A:.*]], %[[B:.*]], %[[C:.*]] : !cir.double
+
+  // LLVM-LABEL: @test_fma_f64
+  // LLVM: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+
+  // OGCG-LABEL: @test_fma_f64
+  // OGCG: %[[R:.*]] = call double @llvm.fma.f64(double %[[A:.*]], double %[[B:.*]], double %[[C:.*]])
+  return __builtin_fma(a, b, c);
+}
+

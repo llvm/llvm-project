@@ -503,11 +503,16 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
       }
     }
   } else {
-    error_stream.Printf("error: unknown error\n");
+    error_stream.PutCString("error: unknown error\n");
   }
 
-  return (success != eExpressionSetupError &&
-          success != eExpressionParseError);
+  // A setup or parse error can be a bug in the evaluator. Any other failure
+  // happens once the expression runs.
+  const bool evaluator_failed =
+      success == eExpressionSetupError || success == eExpressionParseError;
+  if (evaluator_failed)
+    GetDebugger().SuggestBugReport(expr, result.GetErrorStream());
+  return !evaluator_failed;
 }
 
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,

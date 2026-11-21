@@ -37,10 +37,10 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Interfaces/ScriptedBreakpointInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedHookInterface.h"
-#include "lldb/Interpreter/Interfaces/ScriptedStopHookInterface.h"
 #include "lldb/Interpreter/OptionGroupWatchpoint.h"
 #include "lldb/Interpreter/OptionValueEnumeration.h"
 #include "lldb/Interpreter/OptionValues.h"
@@ -61,6 +61,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnixSignals.h"
+#include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/LLDBAssert.h"
@@ -81,6 +82,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <sstream>
 
 using namespace lldb;
@@ -137,7 +139,7 @@ private:
       return {};
 
     remote_file = platform->GetRemoteWorkingDirectory();
-    remote_file.AppendPathComponent(local_file.GetFilename().GetCString());
+    remote_file.AppendPathComponent(local_file.GetFilename());
 
     return remote_file;
   }
@@ -194,7 +196,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_target_session_name(
           llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
-          std::make_unique<StackFrameRecognizerManager>()) {
+          std::make_unique<StackFrameRecognizerManager>()),
+      m_target_groups(debugger, debugger.GetTargetGroupList().m_mutex) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
   SetEventName(eBroadcastBitModulesLoaded, "modules-loaded");
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
@@ -245,7 +248,11 @@ void Target::PrimeFromDummyTarget(Target &target) {
   for (auto const &elem : target.m_breakpoint_overrides) {
     BreakpointResolverOverrideUP new_override_up =
         elem.second->CopyIntoNewTarget(*this);
-    if (new_override_up->Validate())
+    if (llvm::Error error = new_override_up->HasErrors())
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), std::move(error),
+                     "Can't copy breakpoint override from the dummy target: "
+                     "{0}");
+    else
       AddBreakpointResolverOverride(std::move(new_override_up));
   }
 
@@ -268,7 +275,7 @@ void Target::Dump(Stream *s, lldb::DescriptionLevel description_level) {
   } else {
     Module *exe_module = GetExecutableModulePointer();
     if (exe_module)
-      s->PutCString(exe_module->GetFileSpec().GetFilename().GetCString());
+      s->PutCString(exe_module->GetFileSpec().GetFilename());
     else
       s->PutCString("No executable module.");
   }
@@ -385,6 +392,7 @@ void Target::SetREPL(lldb::LanguageType language, lldb::REPLSP repl_sp) {
 }
 
 void Target::Destroy() {
+  m_target_groups.RemoveTarget(shared_from_this());
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   m_valid = false;
   DeleteCurrentProcess();
@@ -407,6 +415,18 @@ void Target::Destroy() {
   m_repl_map.clear();
   Args signal_args;
   ClearDummySignals(signal_args);
+}
+
+std::vector<TargetGroupSP> Target::GetTargetGroups() const {
+  return m_target_groups.GetGroups();
+}
+
+void Target::AddTargetGroup(const TargetGroupSP &group_sp) {
+  m_target_groups.Add(group_sp);
+}
+
+void Target::RemoveTargetGroup(const TargetGroup *group) {
+  m_target_groups.Remove(group);
 }
 
 llvm::StringRef Target::GetABIName() const {
@@ -448,6 +468,10 @@ BreakpointSP Target::GetBreakpointByID(break_id_t break_id) {
 lldb::BreakpointSP
 lldb_private::Target::CreateBreakpointAtUserEntry(Status &error) {
   ModuleSP main_module_sp = GetExecutableModule();
+  if (!main_module_sp) {
+    error = Status::FromErrorString("target has no executable\n");
+    return lldb::BreakpointSP();
+  }
   FileSpecList shared_lib_filter;
   shared_lib_filter.Append(main_module_sp->GetFileSpec());
   llvm::SetVector<std::string, std::vector<std::string>,
@@ -869,7 +893,7 @@ void Target::AddNameToBreakpoint(BreakpointSP &bp_sp, llvm::StringRef name,
   if (!bp_sp)
     return;
 
-  BreakpointName *bp_name = FindBreakpointName(ConstString(name), true, error);
+  BreakpointName *bp_name = FindBreakpointName(name, true, error);
   if (!bp_name)
     return;
 
@@ -882,13 +906,13 @@ void Target::AddBreakpointName(std::unique_ptr<BreakpointName> bp_name) {
       std::make_pair(bp_name->GetName(), std::move(bp_name)));
 }
 
-BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
-                                           Status &error) {
-  BreakpointID::StringIsBreakpointName(name.GetStringRef(), error);
+BreakpointName *Target::FindBreakpointName(llvm::StringRef name,
+                                           bool can_create, Status &error) {
+  BreakpointID::StringIsBreakpointName(name, error);
   if (!error.Success())
     return nullptr;
 
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
   if (iter != m_breakpoint_names.end()) {
     return iter->second.get();
   }
@@ -900,24 +924,24 @@ BreakpointName *Target::FindBreakpointName(ConstString name, bool can_create,
   }
 
   return m_breakpoint_names
-      .insert(std::make_pair(name, std::make_unique<BreakpointName>(name)))
+      .insert(
+          std::make_pair(name, std::make_unique<BreakpointName>(name.str())))
       .first->second.get();
 }
 
-void Target::DeleteBreakpointName(ConstString name) {
-  BreakpointNameList::iterator iter = m_breakpoint_names.find(name);
+void Target::DeleteBreakpointName(llvm::StringRef name) {
+  BreakpointNameMap::iterator iter = m_breakpoint_names.find(name);
 
   if (iter != m_breakpoint_names.end()) {
-    const char *name_cstr = name.AsCString(nullptr);
     m_breakpoint_names.erase(iter);
     for (auto bp_sp : m_breakpoint_list.Breakpoints())
-      bp_sp->RemoveName(name_cstr);
+      bp_sp->RemoveName(name);
   }
 }
 
 void Target::RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp,
-                                      ConstString name) {
-  bp_sp->RemoveName(name.AsCString(nullptr));
+                                      llvm::StringRef name) {
+  bp_sp->RemoveName(name);
 }
 
 void Target::ConfigureBreakpointName(
@@ -930,8 +954,7 @@ void Target::ConfigureBreakpointName(
 
 void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
   llvm::Expected<std::vector<BreakpointSP>> expected_vector =
-      m_breakpoint_list.FindBreakpointsByName(
-          bp_name.GetName().AsCString(nullptr));
+      m_breakpoint_list.FindBreakpointsByName(bp_name.GetName());
 
   if (!expected_vector) {
     LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
@@ -945,34 +968,48 @@ void Target::ApplyNameToBreakpoints(BreakpointName &bp_name) {
 
 void Target::GetBreakpointNames(std::vector<std::string> &names) {
   names.clear();
-  for (const auto& bp_name_entry : m_breakpoint_names) {
-    names.push_back(bp_name_entry.first.GetString());
+  for (const auto &bp_name_entry : m_breakpoint_names) {
+    names.push_back(bp_name_entry.first().str());
   }
   llvm::sort(names);
 }
 
-llvm::Expected<lldb::user_id_t>
-Target::AddBreakpointResolverOverride(llvm::StringRef class_name,
-                                      StructuredData::DictionarySP args_data_sp,
-                                      llvm::StringRef description) {
+llvm::Expected<lldb::user_id_t> Target::AddBreakpointResolverOverride(
+    llvm::StringRef class_name, uint64_t type_mask,
+    StructuredData::DictionarySP args_data_sp, llvm::StringRef description) {
   if (class_name.empty())
-    return LLDB_INVALID_INDEX64;
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "empty class name");
+
+  if (!BreakpointResolver::TypeMaskIsValid(type_mask))
+    return llvm::createStringErrorV(
+        llvm::inconvertibleErrorCode(),
+        "invalid breakpoint type mask: {0}, should be composed of the "
+        "elements of the BreakpointResolverType enum.",
+        type_mask);
 
   StructuredDataImpl impl;
   impl.SetObjectSP(args_data_sp);
 
   BreakpointResolverOverrideUP new_override_up(
       new ScriptedBreakpointResolverOverride(*this, std::string(description),
-                                             std::string(class_name), impl));
-  llvm::Error error = new_override_up->Validate();
+                                             type_mask, std::string(class_name),
+                                             impl));
+  llvm::Error error = new_override_up->HasErrors();
   if (error)
     return error;
 
   return AddBreakpointResolverOverride(std::move(new_override_up));
 }
 
+std::string Target::BreakpointResolverOverride::DescribeTypeMask() {
+  return BreakpointResolver::DescribeMask(m_type_mask);
+}
+
 void Target::DescribeBreakpointOverrides(Stream &stream,
-                                         std::vector<lldb::user_id_t> &idxs) {
+                                         std::vector<lldb::user_id_t> &idxs,
+                                         uint32_t output_width,
+                                         bool use_color) {
   if (m_breakpoint_overrides.size() == 0) {
     stream << "No overrides.\n";
     return;
@@ -984,12 +1021,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
     auto idx_pos = llvm::find(idxs, elem.first);
     if (empty || idx_pos != idxs.end()) {
       if (print_first) {
-        // FIXME: Is there some good way to flow the description?
-        stream << "ID    Description\n";
-        stream << "----  -----------\n";
+
+        ansi::OutputWordWrappedLines(stream, "ID    Mask    Description\n",
+                                     output_width, use_color);
+        ansi::OutputWordWrappedLines(stream, "----  ------  -----------\n",
+                                     output_width, use_color);
         print_first = false;
       }
-      stream.Format("{0,4}  {1}\n", elem.first, elem.second->GetDescription());
+      auto content = llvm::formatv("{0,4}  {1,6}  {2}\n", elem.first,
+                                   elem.second->DescribeTypeMask(),
+                                   elem.second->GetDescription())
+                         .str();
+      ansi::OutputWordWrappedLines(stream, content, output_width, use_color);
       if (!empty)
         idxs.erase(idx_pos);
     }
@@ -998,6 +1041,18 @@ void Target::DescribeBreakpointOverrides(Stream &stream,
 
 bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
+}
+
+lldb::BreakpointResolverSP
+Target::CheckBreakpointOverrides(lldb::BreakpointResolverSP original_sp) {
+  for (auto const &elem : m_breakpoint_overrides) {
+    if (!original_sp->ResolverTyInMask(elem.second->GetTypeMask()))
+      continue;
+    if (lldb::BreakpointResolverSP overriden_sp =
+            elem.second->CheckForOverride(*this, original_sp))
+      return overriden_sp;
+  }
+  return {};
 }
 
 static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
@@ -1602,18 +1657,28 @@ ModuleSP Target::GetExecutableModule() {
       return module_sp;
   }
 
-  // If there is none, fall back return the first module loaded.
-  return m_images.GetModuleAtIndex(0);
+  // If there is none, fall back to the module marked as the executable.
+  ModuleSP executable_sp = m_executable_module_wp.lock();
+  if (executable_sp &&
+      m_images.GetIndexForModule(executable_sp.get()) != LLDB_INVALID_INDEX32)
+    return executable_sp;
+  return nullptr;
 }
 
 Module *Target::GetExecutableModulePointer() {
   return GetExecutableModule().get();
 }
 
+void Target::MarkExecutableModule(const ModuleSP &module_sp) {
+  std::lock_guard<std::recursive_mutex> lock(m_images.GetMutex());
+  m_executable_module_wp = module_sp;
+}
+
 void Target::ClearModules(bool delete_locations) {
   ModulesDidUnload(m_images, delete_locations);
   m_section_load_history.Clear();
   m_images.Clear();
+  MarkExecutableModule(nullptr);
   m_scratch_type_system_map.Clear();
 }
 
@@ -1623,8 +1688,8 @@ void Target::DidExec() {
   m_internal_breakpoint_list.RemoveInvalidLocations(m_arch.GetSpec());
 }
 
-void Target::SetExecutableModule(ModuleSP &executable_sp,
-                                 LoadDependentFiles load_dependent_files) {
+void Target::RebuildModuleListWithExecutable(
+    ModuleSP &executable_sp, LoadDependentFiles load_dependent_files) {
   telemetry::ScopedDispatcher<telemetry::ExecutableModuleInfo> helper(
       &m_debugger);
   Log *log = GetLog(LLDBLog::Target);
@@ -1650,10 +1715,14 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());
-    LLDB_SCOPED_TIMERF("Target::SetExecutableModule (executable = '%s')",
-                       executable_sp->GetFileSpec().GetPath().c_str());
+    LLDB_SCOPED_TIMERF(
+        "Target::RebuildModuleListWithExecutable (executable = '%s')",
+        executable_sp->GetFileSpec().GetPath().c_str());
 
     const bool notify = true;
+    // Mark it before appending, because the append notifies observers that
+    // may ask for the executable.
+    MarkExecutableModule(executable_sp);
     m_images.Append(executable_sp,
                     notify); // The first image is our executable file
 
@@ -1662,7 +1731,8 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     if (!m_arch.GetSpec().IsValid()) {
       m_arch = executable_sp->GetArchitecture();
       LLDB_LOG(log,
-               "Target::SetExecutableModule setting architecture to {0} ({1}) "
+               "Target::RebuildModuleListWithExecutable setting architecture "
+               "to {0} ({1}) "
                "based on executable file",
                m_arch.GetSpec().GetArchitectureName(),
                m_arch.GetSpec().GetTriple().getTriple());
@@ -1836,7 +1906,7 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform,
                                                nullptr, nullptr);
 
     if (!error.Fail() && executable_sp) {
-      SetExecutableModule(executable_sp, eLoadDependentsYes);
+      RebuildModuleListWithExecutable(executable_sp, eLoadDependentsYes);
       return true;
     }
   }
@@ -1906,6 +1976,39 @@ void Target::NotifyModulesRemoved(lldb_private::ModuleList &module_list) {
   ModulesDidUnload(module_list, false);
 }
 
+bool Target::RecordScriptingResources(Module &module) {
+  Log *log = GetLog(LLDBLog::Modules | LLDBLog::Script);
+
+  if (GetReloadModuleScripts()) {
+    LLDB_LOG(log,
+             "Loading the scripts of '{0}' every time: "
+             "target.experimental.reload-module-scripts is set",
+             module.GetFileSpec());
+    return true;
+  }
+
+  // We key the record by UUID rather than by Module, because LLDB can create a
+  // new Module for the same binary, for example after the file moved. Running
+  // its scripts again would duplicate what they already added to this target,
+  // like stop hooks.
+  const UUID &uuid = module.GetUUID();
+  if (!uuid.IsValid()) {
+    LLDB_LOG(log, "Loading the scripts of '{0}' every time: it has no UUID",
+             module.GetFileSpec());
+    return true;
+  }
+
+  std::lock_guard<std::mutex> guard(m_loaded_scripts_mutex);
+  if (!m_loaded_scripts.insert(uuid).second) {
+    LLDB_LOG(log,
+             "Skipping the scripts of '{0}': this target already loaded them",
+             module.GetFileSpec());
+    return false;
+  }
+  LLDB_LOG(log, "Loading the scripts of '{0}'", module.GetFileSpec());
+  return true;
+}
+
 void Target::ModulesDidLoad(ModuleList &module_list) {
   if (GetPreloadSymbols())
     module_list.PreloadSymbols(GetParallelModuleLoad());
@@ -1927,6 +2030,10 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     if (m_process_sp) {
       m_process_sp->ModulesDidLoad(module_list);
     }
+    m_scratch_type_system_map.ForEach([&](lldb::TypeSystemSP type_system) {
+      type_system->ModulesDidLoad(module_list);
+      return true;
+    });
     RunModuleHooks(/*is_load=*/true);
     auto data_sp =
         std::make_shared<TargetEventData>(shared_from_this(), module_list);
@@ -2043,9 +2150,8 @@ size_t Target::ReadMemoryFromFileCache(const Address &addr, void *dst,
         if (bytes_read > 0)
           return bytes_read;
         else
-          error = Status::FromErrorStringWithFormat(
-              "error reading data from section %s",
-              section_sp->GetName().GetCString());
+          error = Status::FromErrorStringWithFormatv(
+              "error reading data from section {0}", section_sp->GetName());
       } else
         error = Status::FromErrorString("address isn't from a object file");
     } else
@@ -2172,6 +2278,7 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (file_cache_read_buffer && file_cache_bytes_read > 0) {
     // Reading from the process failed. If we've previously succeeded in reading
     // something from the file cache, then copy that over and return that.
+    error.Clear();
     std::memcpy(dst, file_cache_read_buffer.get(), file_cache_bytes_read);
     return file_cache_bytes_read;
   }
@@ -2179,7 +2286,17 @@ size_t Target::ReadMemory(const Address &addr, void *dst, size_t dst_len,
   if (!file_cache_read_buffer && resolved_addr.IsSectionOffset()) {
     // If we didn't already try and read from the object file cache, then try
     // it after failing to read from the process.
-    return ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    error.Clear();
+    bytes_read = ReadMemoryFromFileCache(resolved_addr, dst, dst_len, error);
+    // A short read here is only a failure if a live read already failed too.
+    // Reaching this point with a valid process means the process contributed
+    // nothing.
+    if (bytes_read > 0 && bytes_read != dst_len && error.Success() &&
+        ProcessIsValid())
+      error = Status::FromErrorStringWithFormatv(
+          "only {0} of {1} bytes were read from the object file cache",
+          bytes_read, dst_len);
+    return bytes_read;
   }
   return 0;
 }
@@ -2407,7 +2524,8 @@ bool Target::ReadPointerFromMemory(const Address &addr, Status &error,
 }
 
 ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
-                                   bool notify, Status *error_ptr) {
+                                   bool notify, Status *error_ptr,
+                                   bool invoke_symbol_locators) {
   ModuleSP module_sp;
 
   Status error;
@@ -2467,15 +2585,16 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // suitable image.
       if (m_image_search_paths.GetSize()) {
         ModuleSpec transformed_spec(module_spec);
-        ConstString transformed_dir;
+        std::string transformed_dir;
         if (m_image_search_paths.RemapPath(
                 module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
           transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
           transformed_spec.GetFileSpec().SetFilename(
                 module_spec.GetFileSpec().GetFilename());
           transformed_spec.SetTarget(shared_from_this());
-          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                              &old_modules, &did_create_module);
+          error = ModuleList::GetSharedModule(
+              transformed_spec, module_sp, &old_modules, &did_create_module,
+              /*invoke_locate_callback=*/true, invoke_symbol_locators);
         }
       }
     }
@@ -2491,17 +2610,17 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
       // cache.
       if (module_spec.GetUUID().IsValid()) {
         // We have a UUID, it is OK to check the global module list...
-        error = ModuleList::GetSharedModule(module_spec, module_sp,
-                                            &old_modules, &did_create_module);
+        error = ModuleList::GetSharedModule(
+            module_spec, module_sp, &old_modules, &did_create_module,
+            /*invoke_locate_callback=*/true, invoke_symbol_locators);
       }
 
-      if (!module_sp) {
+      if (!module_sp && invoke_symbol_locators) {
         // The platform is responsible for finding and caching an appropriate
         // module in the shared module cache.
         if (m_platform_sp) {
           error = m_platform_sp->GetSharedModule(
-              module_spec, m_process_sp.get(), module_sp, &old_modules,
-              &did_create_module);
+              module_spec, *this, module_sp, &old_modules, &did_create_module);
         } else {
           error = Status::FromErrorString("no platform is currently set");
         }
@@ -2555,8 +2674,8 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
         // in the target's module list. Only do this if there is SOMETHING else
         // in the module spec...
         if (module_spec.GetUUID().IsValid() &&
-            !module_spec.GetFileSpec().GetFilename().IsEmpty() &&
-            !module_spec.GetFileSpec().GetDirectory().IsEmpty()) {
+            !module_spec.GetFileSpec().GetFilename().empty() &&
+            !module_spec.GetFileSpec().GetDirectory().empty()) {
           ModuleSpec module_spec_copy(module_spec.GetFileSpec());
           module_spec_copy.GetUUID().Clear();
 
@@ -2626,8 +2745,10 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &orig_module_spec,
           }
         }
 
-        if (replaced_modules.empty())
-          m_images.Append(module_sp, notify);
+        if (replaced_modules.empty()) {
+          if (!m_images.AppendIfNeeded(module_sp, notify) && notify)
+            NotifyModuleAdded(m_images, module_sp);
+        }
 
         for (ModuleSP &old_module_sp : replaced_modules) {
           auto old_module_wp = old_module_sp->weak_from_this();
@@ -2665,7 +2786,7 @@ void Target::ImageSearchPathsChanged(const PathMappingList &path_list,
   Target *target = (Target *)baton;
   ModuleSP exe_module_sp(target->GetExecutableModule());
   if (exe_module_sp)
-    target->SetExecutableModule(exe_module_sp, eLoadDependentsYes);
+    target->RebuildModuleListWithExecutable(exe_module_sp, eLoadDependentsYes);
 }
 
 llvm::Expected<lldb::TypeSystemSP>
@@ -2696,13 +2817,11 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
                                                             create_on_demand);
 }
 
-CompilerType Target::GetRegisterType(const std::string &name,
-                                     const lldb_private::RegisterFlags &flags,
-                                     uint32_t byte_size) {
+CompilerType Target::GetRegisterType(const RegisterInfo &reg_info) {
   if (!m_register_type_builder_sp)
     m_register_type_builder_sp = PluginManager::GetRegisterTypeBuilder(*this);
   assert(m_register_type_builder_sp);
-  return m_register_type_builder_sp->GetRegisterType(name, flags, byte_size);
+  return m_register_type_builder_sp->GetRegisterType(reg_info);
 }
 
 std::vector<lldb::TypeSystemSP>
@@ -2713,7 +2832,14 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
   // Some TypeSystem instances are associated with several LanguageTypes so
   // they will show up several times in the loop below. The SetVector filters
   // out all duplicates as they serve no use for the caller.
-  std::vector<lldb::TypeSystemSP> scratch_type_systems;
+  //
+  // The insertion order matters: callers such as SBTarget::GetBasicType query
+  // the TypeSystems in order and use the first one that can answer, so the
+  // result has to be a function of the languages and not of where the
+  // instances happen to live in memory.
+  llvm::SetVector<lldb::TypeSystemSP, std::vector<lldb::TypeSystemSP>,
+                  std::set<lldb::TypeSystemSP>>
+      scratch_type_systems;
 
   LanguageSet languages_for_expressions =
       Language::GetLanguagesSupportingTypeSystemsForExpressions();
@@ -2728,15 +2854,11 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
           "Language '{1}' has expression support but no scratch type "
           "system available: {0}",
           Language::GetNameForLanguageType(language));
-    else
-      if (auto ts = *type_system_or_err)
-        scratch_type_systems.push_back(ts);
+    else if (auto ts = *type_system_or_err)
+      scratch_type_systems.insert(ts);
   }
 
-  std::sort(scratch_type_systems.begin(), scratch_type_systems.end());
-  scratch_type_systems.erase(llvm::unique(scratch_type_systems),
-                             scratch_type_systems.end());
-  return scratch_type_systems;
+  return scratch_type_systems.takeVector();
 }
 
 PersistentExpressionState *
@@ -2944,7 +3066,7 @@ ExpressionResults Target::EvaluateExpression(
             GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                     "Unable to get scratch type system");
+                     "Unable to get scratch type system: {0}");
     } else {
       auto ts = *type_system_or_err;
       if (!ts)
@@ -2959,19 +3081,9 @@ ExpressionResults Target::EvaluateExpression(
     result_valobj_sp = persistent_var_sp->GetValueObject();
     execution_results = eExpressionCompleted;
   } else {
-    // If this expression is being evaluated from inside a frame provider,
-    // force single-thread execution. Resuming all threads while a provider
-    // is mid-construction could cause unwanted process state changes.
-    EvaluateExpressionOptions effective_options = options;
-    if (ThreadSP thread_sp = exe_ctx.GetThreadSP()) {
-      if (thread_sp->IsAnyProviderActive()) {
-        effective_options.SetStopOthers(true);
-        effective_options.SetTryAllThreads(false);
-      }
-    }
     llvm::StringRef prefix = GetExpressionPrefixContents();
     execution_results =
-        UserExpression::Evaluate(exe_ctx, effective_options, expr, prefix,
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
                                  result_valobj_sp, fixed_expression, ctx_obj);
   }
 
@@ -3052,7 +3164,7 @@ llvm::Expected<lldb_private::Address> Target::GetEntryPointAddress() {
 
   return llvm::createStringError(
       "Could not find entry point address for primary executable module \"" +
-      exe_module->GetFileSpec().GetFilename().GetStringRef() + "\"");
+      exe_module->GetFileSpec().GetFilename() + "\"");
 }
 
 lldb::addr_t Target::GetCallableLoadAddress(lldb::addr_t load_addr,
@@ -3086,11 +3198,13 @@ Target::ReadInstructions(const Address &start_addr, uint32_t count,
       ReadMemory(start_addr, data.GetBytes(), data.GetByteSize(), error,
                  force_live_memory, &load_addr);
 
-  if (error.Fail())
-    return llvm::createStringErrorV(
-        error.AsCString(
-            "Target::ReadInstructions failed to read memory at {:x}"),
-        start_addr.GetLoadAddress(this));
+  if (error.Fail()) {
+    return llvm::joinErrors(
+        llvm::createStringErrorV(
+            "Target::ReadInstructions failed to read memory at {:x}: ",
+            start_addr.GetLoadAddress(this)),
+        error.takeError());
+  }
 
   const bool data_from_file = load_addr == LLDB_INVALID_ADDRESS;
   if (!flavor_string || flavor_string[0] == '\0') {
@@ -3133,6 +3247,12 @@ Target::StopHookSP Target::CreateStopHook(StopHook::StopHookKind kind,
     m_internal_stop_hooks.push_back(stop_hook_sp);
   else
     m_stop_hooks[new_uid] = stop_hook_sp;
+
+  if (!internal) {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    if (m_module_added_hooks.collecting)
+      m_module_added_hooks.stop_hooks.push_back(stop_hook_sp);
+  }
   return stop_hook_sp;
 }
 
@@ -3195,6 +3315,51 @@ Target::GetStopHooks(bool internal) const {
   return stop_hooks;
 }
 
+void Target::RunCollectedInitialStopHooks() {
+  std::vector<StopHookSP> stop_hooks;
+  std::vector<HookSP> hooks;
+  {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    stop_hooks = std::exchange(m_module_added_hooks.stop_hooks, {});
+    hooks = std::exchange(m_module_added_hooks.hooks, {});
+  }
+
+  // Without a stopped process that this thread can read, these run with the
+  // others at the initial stop or the next stop. While we gain control of a
+  // process, its state may already say stopped, but its run lock doesn't let
+  // us read it until the initial stop, which runs these hooks. An expression
+  // or a utility function, such as the one that loads a library for "process
+  // load", runs the process without a new natural stop.
+  if (m_suppress_stop_hooks || !m_process_sp ||
+      m_process_sp->GetState() != eStateStopped ||
+      m_process_sp->GetModIDRef().IsRunningExpression())
+    return;
+  {
+    // Only check the run lock: a hook may resume the process, which takes the
+    // run lock as a writer.
+    Process::StopLocker stop_locker;
+    if (!stop_locker.TryLock(&m_process_sp->GetRunLock()))
+      return;
+  }
+
+  // Only run the ones added with --at-initial-stop, that weren't deleted or
+  // disabled since.
+  llvm::erase_if(stop_hooks, [this](const StopHookSP &hook) {
+    return !hook->IsActive() || !hook->GetRunAtInitialStop() ||
+           !m_stop_hooks.count(hook->GetID());
+  });
+  llvm::erase_if(hooks, [this](const HookSP &hook) {
+    return !hook->IsEnabled() || !hook->FiresOn(Hook::kProcessStop) ||
+           !hook->GetRunAtInitialStop() || !m_hooks.count(hook->GetID());
+  });
+  if (stop_hooks.empty() && hooks.empty())
+    return;
+
+  // This is the first stop these hooks see, so like at the initial stop, they
+  // run on the first thread if no thread stopped for a reason.
+  RunStopHooksAtCurrentStop(stop_hooks, hooks, /*at_initial_stop=*/true);
+}
+
 bool Target::RunStopHooks(bool at_initial_stop) {
   if (m_suppress_stop_hooks)
     return false;
@@ -3243,6 +3408,32 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
 
+  StopHooksVote vote = RunStopHooksAtCurrentStop(
+      active_hooks, active_unified_hooks, at_initial_stop);
+  if (vote == StopHooksVote::AlreadyContinued)
+    return true;
+
+  // Resume if at least one hook asked to continue and none asked to stay
+  // stopped.
+  if (vote == StopHooksVote::Continue) {
+    Log *log = GetLog(LLDBLog::Process);
+    Status error = m_process_sp->PrivateResume();
+    if (error.Success()) {
+      LLDB_LOG(log, "Resuming from RunStopHooks");
+      return true;
+    } else {
+      LLDB_LOG(log, "Resuming from RunStopHooks failed: {0}", error);
+      return false;
+    }
+  }
+
+  return false;
+}
+
+Target::StopHooksVote
+Target::RunStopHooksAtCurrentStop(llvm::ArrayRef<StopHookSP> active_hooks,
+                                  llvm::ArrayRef<HookSP> active_unified_hooks,
+                                  bool at_initial_stop) {
   std::vector<ExecutionContext> exc_ctx_with_reasons;
 
   ThreadList &cur_threadlist = m_process_sp->GetThreadList();
@@ -3270,11 +3461,11 @@ bool Target::RunStopHooks(bool at_initial_stop) {
           thread_to_use_sp->GetStackFrameAtIndex(0).get());
       num_exe_ctx = 1;
     } else {
-      return false;
+      return StopHooksVote::Stop;
     }
   }
 
-  m_latest_stop_hook_id = last_natural_stop;
+  m_latest_stop_hook_id = m_process_sp->GetModIDRef().GetLastNaturalStopID();
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
   llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
@@ -3295,9 +3486,19 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   // active_hooks list before iterating over the hooks has this effect.
   for (auto cur_hook_sp : active_hooks) {
     bool any_thread_matched = false;
+    bool deleted_one_shot = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
+
+      // A one-shot hook runs for every thread it applies to at this stop, and
+      // votes on continuing like any other hook. We delete it before it first
+      // runs, so it can't run again at a stop it causes by resuming the
+      // process. active_hooks still holds it for the other threads.
+      if (cur_hook_sp->IsOneShot() && !deleted_one_shot) {
+        RemoveStopHookByID(cur_hook_sp->GetID());
+        deleted_one_shot = true;
+      }
 
       bool suppress_output = cur_hook_sp->GetSuppressOutput();
       if (print_hook_header && !any_thread_matched && !suppress_output) {
@@ -3341,7 +3542,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
         // FIXME: if we are doing non-stop mode for real, we would have to
         // check that OUR thread was restarted, otherwise we should keep
         // processing stop hooks.
-        return true;
+        return StopHooksVote::AlreadyContinued;
       }
     }
   }
@@ -3388,26 +3589,14 @@ bool Target::RunStopHooks(bool at_initial_stop) {
                           "  Consider using '-G true' to make "
                           "stop hooks auto-continue.\n",
                           cur_hook_sp->GetID());
-        return true;
+        return StopHooksVote::AlreadyContinued;
       }
     }
   }
 
-  // Resume iff at least one hook requested to continue and no hook asked to
-  // stop.
-  if (requested_continue && !should_stop) {
-    Log *log = GetLog(LLDBLog::Process);
-    Status error = m_process_sp->PrivateResume();
-    if (error.Success()) {
-      LLDB_LOG(log, "Resuming from RunStopHooks");
-      return true;
-    } else {
-      LLDB_LOG(log, "Resuming from RunStopHooks failed: {0}", error);
-      return false;
-    }
-  }
-
-  return false;
+  if (requested_continue && !should_stop)
+    return StopHooksVote::Continue;
+  return StopHooksVote::Stop;
 }
 
 TargetProperties &Target::GetGlobalProperties() {
@@ -3607,8 +3796,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   // its own hijacking listener or if the process is created by the target
   // manually, without the platform).
   if (!launch_info.GetHijackListener())
-    launch_info.SetHijackListener(Listener::MakeListener(
-        Process::LaunchSynchronousHijackListenerName.data()));
+    launch_info.SetHijackListener(
+        Listener::MakeListener(Process::LaunchSynchronousHijackListenerName));
 
   // If we're not already connected to the process, and if we have a platform
   // that can launch a process for debugging, go ahead and do that here.
@@ -3789,8 +3978,8 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   ListenerSP hijack_listener_sp;
   const bool async = attach_info.GetAsync();
   if (!async) {
-    hijack_listener_sp = Listener::MakeListener(
-        Process::AttachSynchronousHijackListenerName.data());
+    hijack_listener_sp =
+        Listener::MakeListener(Process::AttachSynchronousHijackListenerName);
     attach_info.SetHijackListener(hijack_listener_sp);
   }
 
@@ -4114,8 +4303,8 @@ void Target::ClearDummySignals(Args &signal_names) {
 }
 
 void Target::PrintDummySignals(Stream &strm, Args &signal_args) {
-  strm.Printf("NAME         PASS     STOP     NOTIFY\n");
-  strm.Printf("===========  =======  =======  =======\n");
+  strm.PutCString("NAME         PASS     STOP     NOTIFY\n");
+  strm.PutCString("===========  =======  =======  =======\n");
 
   auto str_for_lazy = [] (LazyBool lazy) -> const char * {
     switch (lazy) {
@@ -4151,7 +4340,8 @@ Target::StopHook::StopHook(lldb::TargetSP target_sp, lldb::user_id_t uid)
 Target::StopHook::StopHook(const StopHook &rhs)
     : UserID(rhs.GetID()), m_target_sp(rhs.m_target_sp),
       m_specifier_sp(rhs.m_specifier_sp), m_thread_spec_up(),
-      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue) {
+      m_active(rhs.m_active), m_auto_continue(rhs.m_auto_continue),
+      m_one_shot(rhs.m_one_shot) {
   if (rhs.m_thread_spec_up)
     m_thread_spec_up = std::make_unique<ThreadSpec>(*rhs.m_thread_spec_up);
 }
@@ -4199,6 +4389,9 @@ void Target::StopHook::GetDescription(Stream &s,
 
   if (m_auto_continue)
     s.Indent("AutoContinue on\n");
+
+  if (m_one_shot)
+    s.Indent("One-shot\n");
 
   if (m_specifier_sp) {
     s.Indent();
@@ -4257,6 +4450,7 @@ Target::StopHookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4292,7 +4486,7 @@ Status Target::StopHookScripted::SetScriptCallback(
     return error;
   }
 
-  m_interface_sp = script_interp->CreateScriptedStopHookInterface();
+  m_interface_sp = script_interp->CreateScriptedHookInterface();
   if (!m_interface_sp) {
     error = Status::FromErrorStringWithFormat(
         "ScriptedStopHook::%s () - ERROR: %s", __FUNCTION__,
@@ -4317,6 +4511,19 @@ Status Target::StopHookScripted::SetScriptCallback(
   return {};
 }
 
+/// Hook callbacks have no caller to return an error to, so report a failure
+/// as a debugger diagnostic. \a what names the hook, e.g. "stop hook 1".
+static void ReportScriptedHookError(llvm::Error error, llvm::StringRef what,
+                                    Debugger &debugger) {
+  if (!error)
+    return;
+
+  Debugger::ReportError(
+      llvm::formatv("{0} failed: {1}", what, llvm::toString(std::move(error)))
+          .str(),
+      debugger.GetID());
+}
+
 Target::StopHook::StopHookResult
 Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
                                      StreamSP output_sp) {
@@ -4331,8 +4538,9 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
   output_sp->PutCString(
       reinterpret_cast<StreamString *>(stream.get())->GetData());
   if (!should_stop_or_err) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), should_stop_or_err.takeError(),
-                   "scripted stop hook HandleStop failed: {0}");
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("stop hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHookResult::KeepStopped;
   }
 
@@ -4571,6 +4779,7 @@ Target::HookCommandLine::HandleStop(ExecutionContext &exc_ctx,
 
   CommandReturnObject result(false);
   result.SetImmediateOutputStream(output_sp);
+  result.SetImmediateErrorStream(output_sp);
   result.SetInteractive(false);
   Debugger &debugger = exc_ctx.GetTargetPtr()->GetDebugger();
   CommandInterpreterRunOptions options;
@@ -4641,18 +4850,32 @@ void Target::HookScripted::HandleModuleLoaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleLoaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleLoaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger());
 }
 
 void Target::HookScripted::HandleModuleUnloaded(StreamSP output_sp) {
   if (!m_interface_sp)
     return;
 
+  TargetSP target_sp = GetTarget();
+  if (!target_sp)
+    return;
+
   StreamSP stream = std::make_shared<StreamString>();
-  m_interface_sp->HandleModuleUnloaded(stream);
+  llvm::Error error = m_interface_sp->HandleModuleUnloaded(stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
+  ReportScriptedHookError(std::move(error),
+                          llvm::formatv("hook {0}", GetID()).str(),
+                          target_sp->GetDebugger());
 }
 
 Target::StopHook::StopHookResult
@@ -4667,8 +4890,12 @@ Target::HookScripted::HandleStop(ExecutionContext &exc_ctx,
   lldb::StreamSP stream = std::make_shared<lldb_private::StreamString>();
   auto should_stop_or_err = m_interface_sp->HandleStop(exc_ctx, stream);
   output_sp->PutCString(static_cast<StreamString *>(stream.get())->GetData());
-  if (!should_stop_or_err)
+  if (!should_stop_or_err) {
+    ReportScriptedHookError(should_stop_or_err.takeError(),
+                            llvm::formatv("hook {0}", GetID()).str(),
+                            exc_ctx.GetTargetPtr()->GetDebugger());
     return StopHook::StopHookResult::KeepStopped;
+  }
 
   return *should_stop_or_err ? StopHook::StopHookResult::KeepStopped
                              : StopHook::StopHookResult::RequestContinue;
@@ -4732,6 +4959,11 @@ Target::HookSP Target::CreateHook(Hook::HookKind kind) {
     break;
   }
   m_hooks[new_uid] = hook_sp;
+  {
+    std::lock_guard<std::mutex> guard(m_module_added_hooks.mutex);
+    if (m_module_added_hooks.collecting)
+      m_module_added_hooks.hooks.push_back(hook_sp);
+  }
   return hook_sp;
 }
 
@@ -4873,6 +5105,19 @@ static constexpr OptionEnumValueElement g_x86_dis_flavor_value_types[] = {
         eX86DisFlavorATT,
         "att",
         "AT&T disassembler flavor.",
+    },
+};
+
+static constexpr OptionEnumValueElement g_jit_engine_value_types[] = {
+    {
+        eJITEngineMCJIT,
+        "mcjit",
+        "Use LLVM's MCJIT execution engine.",
+    },
+    {
+        eJITEngineORC,
+        "orc",
+        "Use LLVM's ORC execution engine.",
     },
 };
 
@@ -5141,25 +5386,31 @@ bool TargetProperties::GetInjectLocalVariables(
       .value_or(true);
 }
 
-bool TargetProperties::GetUseDIL(ExecutionContext *exe_ctx) const {
+bool TargetProperties::GetUseDILForCreatingValues() const {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    return exp_values->GetPropertyAtIndexAs<bool>(ePropertyUseDIL, exe_ctx)
+    return exp_values
+        ->GetPropertyAtIndexAs<bool>(ePropertyUseDILForCreatingValues)
         .value_or(false);
   else
     return true;
 }
 
-void TargetProperties::SetUseDIL(ExecutionContext *exe_ctx, bool b) {
+bool TargetProperties::GetReloadModuleScripts() const {
+  return GetExperimentalPropertyValue(ePropertyReloadModuleScripts)
+      .value_or(false);
+}
+
+void TargetProperties::SetUseDILForCreatingValues(bool b) {
   const Property *exp_property =
-      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental, exe_ctx);
+      m_collection_sp->GetPropertyAtIndex(ePropertyExperimental);
   OptionValueProperties *exp_values =
       exp_property->GetValue()->GetAsProperties();
   if (exp_values)
-    exp_values->SetPropertyAtIndex(ePropertyUseDIL, true, exe_ctx);
+    exp_values->SetPropertyAtIndex(ePropertyUseDILForCreatingValues, b);
 }
 
 ArchSpec TargetProperties::GetDefaultArchitecture() const {
@@ -5495,6 +5746,12 @@ FileSpec TargetProperties::GetSaveJITObjectsDir() const {
   return GetPropertyAtIndexAs<FileSpec>(idx, {});
 }
 
+JITEngine TargetProperties::GetJITEngine() const {
+  const uint32_t idx = ePropertyJITEngine;
+  return GetPropertyAtIndexAs<JITEngine>(
+      idx, static_cast<JITEngine>(g_target_properties[idx].default_uint_value));
+}
+
 void TargetProperties::CheckJITObjectsDir() {
   FileSpec new_dir = GetSaveJITObjectsDir();
   if (!new_dir)
@@ -5650,6 +5907,13 @@ bool TargetProperties::GetBreakpointsConsultPlatformAvoidList() {
   const uint32_t idx = ePropertyBreakpointUseAvoidList;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);
+}
+
+BreakpointConditionMode TargetProperties::GetBreakpointsConditionMode() const {
+  const uint32_t idx = ePropertyBreakpointsConditionMode;
+  return GetPropertyAtIndexAs<BreakpointConditionMode>(
+      idx, static_cast<BreakpointConditionMode>(
+               g_target_properties[idx].default_uint_value));
 }
 
 bool TargetProperties::GetUseHexImmediates() const {
@@ -5957,15 +6221,15 @@ Target::TargetEventData::GetModuleListFromEvent(const Event *event_ptr) {
   return module_list;
 }
 
-std::recursive_mutex &Target::GetAPIMutex() {
+TargetAPIMutex Target::GetAPIMutex() {
+  return TargetAPIMutex(shared_from_this());
+}
+
+std::recursive_mutex *Target::GetAPIMutexForCurrentPolicy() {
   Policy policy = PolicyStack::Get().Current();
-  if (policy.view == Policy::View::Private)
-    return m_private_mutex;
-
-  if (GetProcessSP() && GetProcessSP()->CurrentThreadIsPrivateStateThread())
-    return m_private_mutex;
-
-  return m_mutex;
+  if (policy.capabilities.can_bypass_target_api_mutex)
+    return nullptr;
+  return policy.view == Policy::View::Private ? &m_private_mutex : &m_mutex;
 }
 
 /// Get metrics associated with this target in JSON format.

@@ -151,14 +151,14 @@ entry:
 }
 
 ; PUSH2/POP2 must be used for callee-saved registers including R30+R31 pair.
-define void @test_push2pop2_r30_r31() nounwind "target-features"="+egpr,+push2pop2" {
+define void @test_push2pop2_r30_r31() nounwind "target-features"="+egpr,+push2pop2" "frame-pointer"="all" {
 ; CHECK-LABEL: test_push2pop2_r30_r31:
 ; CHECK: push2 %r30, %r31
 ; CHECK: callq external
 ; CHECK: pop2 %r31, %r30
 ; CHECK: retq
   call void @external()
-  call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31},~{rbp},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15}"()
+  call void asm sideeffect "", "~{rax},~{rcx},~{rdx},~{rsi},~{rdi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15}"()
   ret void
 }
 

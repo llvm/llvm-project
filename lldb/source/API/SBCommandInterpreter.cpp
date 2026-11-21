@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Listener.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -167,9 +168,8 @@ const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {
   if (!IsValid())
     return nullptr;
 
-  return ConstString(
-             m_opaque_ptr->GetDebugger().GetTopIOHandlerControlSequence(ch))
-      .GetCString();
+  return m_opaque_ptr->GetDebugger().GetStringPool().Intern(
+      m_opaque_ptr->GetDebugger().GetTopIOHandlerControlSequence(ch));
 }
 
 lldb::ReturnStatus
@@ -221,7 +221,7 @@ void SBCommandInterpreter::HandleCommandsFromFile(
   if (!file.IsValid()) {
     SBStream s;
     file.GetDescription(s);
-    result->AppendErrorWithFormat("File is not valid: %s", s.GetData());
+    result->AppendErrorWithFormat("File is not valid: %s", s.GetString());
   }
 
   FileSpec tmp_spec = file.ref();
@@ -385,7 +385,8 @@ SBProcess SBCommandInterpreter::GetProcess() {
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
     if (target_sp) {
-      std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
+      TargetAPIMutex api_lock = target_sp->GetAPIMutex();
+      std::lock_guard<TargetAPIMutex> guard(api_lock);
       process_sp = target_sp->GetProcessSP();
       sb_process.SetSP(process_sp);
     }
@@ -472,9 +473,12 @@ void SBCommandInterpreter::SourceInitFileInGlobalDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileGlobal(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -495,9 +499,12 @@ void SBCommandInterpreter::SourceInitFileInHomeDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileHome(result.ref(), is_repl);
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -511,9 +518,12 @@ void SBCommandInterpreter::SourceInitFileInCurrentWorkingDirectory(
   result.Clear();
   if (IsValid()) {
     TargetSP target_sp(m_opaque_ptr->GetSelectedTarget());
-    std::unique_lock<std::recursive_mutex> lock;
-    if (target_sp)
-      lock = std::unique_lock<std::recursive_mutex>(target_sp->GetAPIMutex());
+    TargetAPIMutex api_lock;
+    std::unique_lock<TargetAPIMutex> guard;
+    if (target_sp) {
+      api_lock = TargetAPIMutex(target_sp->GetAPIMutex());
+      guard = std::unique_lock<TargetAPIMutex>(api_lock);
+    }
     m_opaque_ptr->SourceInitFileCwd(result.ref());
   } else {
     result->AppendError("SBCommandInterpreter is not valid");
@@ -531,24 +541,24 @@ SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
 const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
-      .AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      CommandInterpreter::GetStaticBroadcasterClass());
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return ConstString(CommandObject::GetArgumentTypeAsCString(arg_type))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      CommandObject::GetArgumentTypeAsCString(arg_type));
 }
 
 const char *SBCommandInterpreter::GetArgumentDescriptionAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return ConstString(CommandObject::GetArgumentDescriptionAsCString(arg_type))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      CommandObject::GetArgumentDescriptionAsCString(arg_type));
 }
 
 bool SBCommandInterpreter::EventIsCommandInterpreterEvent(
@@ -584,9 +594,8 @@ SBStructuredData SBCommandInterpreter::GetStatistics() {
   if (!IsValid())
     return data;
 
-  std::string json_str =
-      llvm::formatv("{0:2}", m_opaque_ptr->GetStatistics()).str();
-  data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+  llvm::json::Value stats = m_opaque_ptr->GetStatistics();
+  data.m_impl_up->SetObjectSP(StructuredData::ParseJSONValue(stats));
   return data;
 }
 
@@ -650,7 +659,33 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
   return lldb::SBCommand();
 }
 
+SBCommandPluginInterface::SBCommandPluginInterface() = default;
+
+SBCommandPluginInterface::~SBCommandPluginInterface() = default;
+
 SBCommand::SBCommand() { LLDB_INSTRUMENT_VA(this); }
+
+SBCommand::SBCommand(const SBCommand &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBCommand &SBCommand::operator=(const SBCommand &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
+SBCommand::SBCommand(SBCommand &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)) {}
+
+SBCommand &SBCommand::operator=(SBCommand &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  return *this;
+}
+
+SBCommand::~SBCommand() = default;
 
 SBCommand::SBCommand(lldb::CommandObjectSP cmd_sp) : m_opaque_sp(cmd_sp) {}
 
@@ -667,22 +702,30 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid()
-              ? ConstString(m_opaque_sp->GetCommandName()).AsCString(nullptr)
-              : nullptr);
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetCommandName())
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString(nullptr)
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetHelp())
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString(nullptr)
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetHelpLong())
                     : nullptr);
 }
 

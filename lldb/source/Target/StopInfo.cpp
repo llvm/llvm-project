@@ -193,7 +193,7 @@ public:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Breakpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     ThreadSP thread_sp(m_thread_wp.lock());
     if (thread_sp) {
@@ -250,7 +250,7 @@ public:
             }
           }
 
-          strm.Printf("breakpoint ");
+          strm.PutCString("breakpoint ");
           m_async_stopped_locs.GetDescription(&strm, eDescriptionLevelBrief);
           m_description = std::string(strm.GetString());
         } else {
@@ -436,8 +436,7 @@ protected:
           ExecutionContext exe_ctx(thread_sp->GetStackFrameAtIndex(0));
           Process *process = exe_ctx.GetProcessPtr();
           Policy policy = PolicyStack::Get().Current();
-          if (!policy.capabilities.can_run_breakpoint_actions ||
-              process->GetModIDRef().IsRunningExpression()) {
+          if (!policy.capabilities.can_run_breakpoint_actions) {
             // If we are in the middle of evaluating an expression, don't run
             // asynchronous breakpoint commands or expressions.  That could
             // lead to infinite recursion if the command or condition re-calls
@@ -903,7 +902,7 @@ protected:
   bool ShouldStopSynchronous(Event *event_ptr) override {
     // Watchpoint callbacks run on the PST during stop processing. Push
     // private state context so callback code sees the private reality.
-    PolicyStack::Guard policy_guard(Policy::PrivateState());
+    PolicyStack::Guard policy_guard = PolicyStack::Get().PushPrivateState();
 
     // If we are running our step-over the watchpoint plan, stop if it's done
     // and continue if it's not:
@@ -1455,14 +1454,34 @@ public:
   }
 };
 
+class StopInfoDyld : public StopInfo {
+public:
+  StopInfoDyld(Thread &thread, const char *description) : StopInfo(thread, 0) {
+    SetDescription(description && description[0] ? description
+                                                 : "dynamic loader");
+  }
+
+  ~StopInfoDyld() override = default;
+
+  StopReason GetStopReason() const override { return eStopReasonDynamicLoader; }
+
+  bool ShouldStopSynchronous(Event *event_ptr) override {
+    if (ThreadSP thread_sp = GetThread()) {
+      if (ProcessSP process_sp = thread_sp->GetProcess())
+        return process_sp->GetStopOnSharedLibraryEvents();
+    }
+    return false;
+  }
+};
+
 // StopInfoThreadPlan
 
 class StopInfoThreadPlan : public StopInfo {
 public:
-  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ValueObjectSP &return_valobj_sp,
+  StopInfoThreadPlan(ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
                      ExpressionVariableSP &expression_variable_sp)
       : StopInfo(plan_sp->GetThread(), LLDB_INVALID_UID), m_plan_sp(plan_sp),
-        m_return_valobj_sp(return_valobj_sp),
+        m_return_value(std::move(return_value)),
         m_expression_variable_sp(expression_variable_sp) {}
 
   ~StopInfoThreadPlan() override = default;
@@ -1478,7 +1497,7 @@ public:
     return m_description.c_str();
   }
 
-  ValueObjectSP GetReturnValueObject() { return m_return_valobj_sp; }
+  ThreadPlanReturnValue GetReturnValue() { return m_return_value; }
 
   ExpressionVariableSP GetExpressionVariable() {
     return m_expression_variable_sp;
@@ -1494,7 +1513,7 @@ protected:
 
 private:
   ThreadPlanSP m_plan_sp;
-  ValueObjectSP m_return_valobj_sp;
+  ThreadPlanReturnValue m_return_value;
   ExpressionVariableSP m_expression_variable_sp;
 };
 
@@ -1729,9 +1748,9 @@ StopInfoSP StopInfo::CreateStopReasonToTrace(Thread &thread) {
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithPlan(
-    ThreadPlanSP &plan_sp, ValueObjectSP return_valobj_sp,
+    ThreadPlanSP &plan_sp, ThreadPlanReturnValue return_value,
     ExpressionVariableSP expression_variable_sp) {
-  return std::make_shared<StopInfoThreadPlan>(plan_sp, return_valobj_sp,
+  return std::make_shared<StopInfoThreadPlan>(plan_sp, std::move(return_value),
                                               expression_variable_sp);
 }
 
@@ -1748,6 +1767,11 @@ StopInfoSP StopInfo::CreateStopReasonProcessorTrace(Thread &thread,
 StopInfoSP StopInfo::CreateStopReasonHistoryBoundary(Thread &thread,
                                                      const char *description) {
   return std::make_shared<StopInfoHistoryBoundary>(thread, description);
+}
+
+StopInfoSP StopInfo::CreateStopReasonDyld(Thread &thread,
+                                          const char *description) {
+  return std::make_shared<StopInfoDyld>(thread, description);
 }
 
 StopInfoSP StopInfo::CreateStopReasonWithExec(Thread &thread) {
@@ -1771,14 +1795,14 @@ StopInfoSP StopInfo::CreateStopReasonVForkDone(Thread &thread) {
   return std::make_shared<StopInfoVForkDone>(thread);
 }
 
-ValueObjectSP StopInfo::GetReturnValueObject(StopInfoSP &stop_info_sp) {
+ThreadPlanReturnValue StopInfo::GetReturnValue(StopInfoSP &stop_info_sp) {
   if (stop_info_sp &&
       stop_info_sp->GetStopReason() == eStopReasonPlanComplete) {
     StopInfoThreadPlan *plan_stop_info =
         static_cast<StopInfoThreadPlan *>(stop_info_sp.get());
-    return plan_stop_info->GetReturnValueObject();
+    return plan_stop_info->GetReturnValue();
   } else
-    return ValueObjectSP();
+    return {};
 }
 
 ExpressionVariableSP StopInfo::GetExpressionVariable(StopInfoSP &stop_info_sp) {

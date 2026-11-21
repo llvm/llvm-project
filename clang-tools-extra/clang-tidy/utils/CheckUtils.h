@@ -7,7 +7,7 @@ namespace clang::tidy::utils {
 
 /// Emits a configuration diagnostic when a deprecated check alias is enabled
 /// and the canonical check name is not also enabled.
-inline void diagDeprecatedCheckAlias(ClangTidyCheck &Check,
+inline void diagDeprecatedCheckAlias(const ClangTidyCheck &Check,
                                      const ClangTidyContext &Context,
                                      StringRef DeprecatedName,
                                      StringRef CanonicalName) {

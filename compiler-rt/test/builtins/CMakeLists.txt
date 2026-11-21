@@ -43,6 +43,19 @@ if (MSVC AND NOT "${CMAKE_C_COMPILER_ID}" MATCHES "Clang")
 endif()
 pythonize_bool(BUILTINS_IS_MSVC)
 
+# Check if the linker supports --start-group options
+# Standalone builtins builds set CMAKE_TRY_COMPILE_TARGET_TYPE to
+# STATIC_LIBRARY to avoid invoking the linker during compiler checks.
+# Such builds are typically intended for target environments (e.g.
+# bare-metal) where support for --start-group is assumed.
+if(CMAKE_TRY_COMPILE_TARGET_TYPE STREQUAL "STATIC_LIBRARY")
+  set(COMPILER_RT_HAS_START_GROUP ON)
+else()
+  include(CheckLinkerFlag)
+  check_linker_flag(C "-Wl,--start-group" COMPILER_RT_HAS_START_GROUP)
+endif()
+pythonize_bool(COMPILER_RT_HAS_START_GROUP)
+
 set(BUILTIN_TEST_ARCH ${BUILTIN_SUPPORTED_ARCH})
 if(APPLE)
   darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)
@@ -60,6 +73,9 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     elseif("${arch}" MATCHES "nvptx")
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS
            -Wno-multi-gpu -flto -march=native -nogpulib -startfiles -stdlib)
+    elseif("${arch}" MATCHES "spirv64")
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS
+	       -Wno-multi-gpu -nogpulib -mllvm -spirv-ext=+SPV_EXT_relaxed_printf_string_address_space)
     endif()
     list(APPEND BUILTINS_TEST_TARGET_CFLAGS --target=${COMPILER_RT_DEFAULT_TARGET_TRIPLE})
     string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")

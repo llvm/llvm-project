@@ -3,8 +3,8 @@
 # An important constraint of the build is that it only produces libraries
 # based on the ability of the host toolchain to target various platforms.
 
-cmake_minimum_required(VERSION 3.20.0)
-set(LLVM_SUBPROJECT_TITLE "Compiler-RT")
+cmake_minimum_required(VERSION 3.31.0)
+set(LLVM_SUBPROJECT_TITLE "compiler-rt")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
@@ -84,6 +84,8 @@ option(COMPILER_RT_BUILD_CTX_PROFILE "Build ctx profile runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_CTX_PROFILE)
 option(COMPILER_RT_BUILD_MEMPROF "Build memory profiling runtime" ON)
 mark_as_advanced(COMPILER_RT_BUILD_MEMPROF)
+option(COMPILER_RT_BUILD_COPYPROF "Build copy profiling runtime" ON)
+mark_as_advanced(COMPILER_RT_BUILD_COPYPROF)
 option(COMPILER_RT_BUILD_XRAY_NO_PREINIT "Build xray with no preinit patching" OFF)
 mark_as_advanced(COMPILER_RT_BUILD_XRAY_NO_PREINIT)
 option(COMPILER_RT_BUILD_ORC "Build ORC runtime" ON)
@@ -386,6 +388,7 @@ endif()
 if(COMPILER_RT_GPU_BUILD)
   append_list_if(UBSAN_COMMON_SUPPORTED_ARCH -ffreestanding SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_NOGPULIB_FLAG -nogpulib SANITIZER_COMMON_CFLAGS)
+  append_list_if(COMPILER_RT_HAS_NOSTDLIBINC_FLAG -nostdlibinc SANITIZER_COMMON_CFLAGS)
   append_list_if(COMPILER_RT_HAS_FLTO_FLAG -flto SANITIZER_COMMON_CFLAGS)
   if(COMPILER_RT_TARGET_AMDGPU)
     append_list_if(COMPILER_RT_HAS_CODE_OBJECT_VERSION_FLAG
@@ -501,12 +504,12 @@ if (NOT MSVC)
 endif()
 
 # Determine if we should restrict stack frame sizes.
-# Stack frames on PowerPC, Mips, SystemZ and in debug build can be much larger than
-# anticipated.
+# Stack frames on PowerPC, Mips, SystemZ, PA-RISC and in debug build can be
+# much larger than anticipated.
 # FIXME: Fix all sanitizers and add -Wframe-larger-than to
 # SANITIZER_COMMON_FLAGS
 if(COMPILER_RT_HAS_WFRAME_LARGER_THAN_FLAG AND NOT COMPILER_RT_DEBUG
-   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips|s390x")
+   AND NOT ${COMPILER_RT_DEFAULT_TARGET_ARCH} MATCHES "powerpc|mips|s390x|hppa")
   set(SANITIZER_LIMIT_FRAME_SIZE TRUE)
 else()
   set(SANITIZER_LIMIT_FRAME_SIZE FALSE)
@@ -522,10 +525,12 @@ endif()
 # in cflags during testing. This fixes the compiler/linker version mismatch
 # issue when running a clang built with a newer Xcode in an older Xcode
 set(COMPILER_RT_DARWIN_LINKER_VERSION)
-if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*")
+get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld")
   get_darwin_linker_version(COMPILER_RT_DARWIN_LINKER_VERSION)
   message(STATUS "Host linker version: ${COMPILER_RT_DARWIN_LINKER_VERSION}")
 endif()
+unset(CLANG_LINKER_NAME)
 
 # Build sanitizer runtimes with debug info.
 if(MSVC)

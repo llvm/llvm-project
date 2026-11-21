@@ -15,13 +15,13 @@
 // UNKNOWN: no analysis registered for 'AnalysisName(NoSuchAnalysis)'
 
 // ============================================================================
-// Error: valid analysis name but LUSummary lacks entity data for it
+// Success: Analyses might not add summaries in every run.
+// Valid analysis name but LUSummary lacks entity data for it is not an error.
 // ============================================================================
 
-// RUN: not %clang-ssaf-analyzer-with-plugin %S/Inputs/lu-tags-only.json \
+// RUN: %clang-ssaf-analyzer-with-plugin %S/Inputs/lu-tags-only.json \
 // RUN:   -o %t/missing-data.json -a PairsAnalysisResult 2>&1 \
-// RUN:   | FileCheck %s --check-prefix=MISSING-DATA
-// MISSING-DATA: no data for analysis 'AnalysisName(PairsAnalysisResult)' in LUSummary
+// RUN:   | count 0
 
 // ============================================================================
 // Success: run TagsAnalysisResult only (single analysis)

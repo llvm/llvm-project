@@ -23,6 +23,7 @@
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
@@ -503,29 +504,28 @@ void writeHTMLReport(FileID File, const include_cleaner::Includes &Includes,
                      llvm::raw_ostream &OS) {
   Reporter R(OS, Ctx, PP, Includes, PI, File);
   const auto &SM = Ctx.getSourceManager();
-  for (Decl *Root : Roots)
-    walkAST(*Root, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
-      // FIXME: we should merge this logic with `walkUsed` to prevent
-      // divergences in the future. It isn't trivial though, as we also update
-      // RefType. Since HTMLReport is only used for debugging purposes,
-      // divergences aren't critical.
-      auto SpellLoc = SM.getSpellingLoc(Loc);
-      // Tokens resulting from macro concatenation ends up in scratch space and
-      // clang currently doesn't have a good/simple APIs for tracking where
-      // pieces of a concataned token originated from.
-      // So we use the macro expansion location instead, and downgrade reference
-      // type to ambigious to prevent false negatives.
-      if (SM.isWrittenInScratchSpace(SpellLoc)) {
-        Loc = SM.getExpansionLoc(Loc);
-        if (T == RefType::Explicit)
-          T = RefType::Ambiguous;
-        SpellLoc = SM.getSpellingLoc(Loc);
-      }
-      auto FID = SM.getFileID(SpellLoc);
-      if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
-        return;
-      R.addRef(SymbolReference{D, Loc, T});
-    });
+  walkAST(Roots, [&](SourceLocation Loc, const NamedDecl &D, RefType T) {
+    // FIXME: we should merge this logic with `walkUsed` to prevent
+    // divergences in the future. It isn't trivial though, as we also update
+    // RefType. Since HTMLReport is only used for debugging purposes,
+    // divergences aren't critical.
+    auto SpellLoc = SM.getSpellingLoc(Loc);
+    // Tokens resulting from macro concatenation ends up in scratch space and
+    // clang currently doesn't have a good/simple APIs for tracking where
+    // pieces of a concataned token originated from.
+    // So we use the macro expansion location instead, and downgrade reference
+    // type to ambigious to prevent false negatives.
+    if (SM.isWrittenInScratchSpace(SpellLoc)) {
+      Loc = SM.getExpansionLoc(Loc);
+      if (T == RefType::Explicit)
+        T = RefType::Ambiguous;
+      SpellLoc = SM.getSpellingLoc(Loc);
+    }
+    auto FID = SM.getFileID(SpellLoc);
+    if (FID != SM.getMainFileID() && FID != SM.getPreambleFileID())
+      return;
+    R.addRef(SymbolReference{D, Loc, T});
+  });
   for (const SymbolReference &Ref : MacroRefs) {
     if (!SM.isWrittenInMainFile(SM.getSpellingLoc(Ref.RefLocation)))
       continue;

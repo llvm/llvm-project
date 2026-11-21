@@ -4,7 +4,7 @@
 ; RUN: llvm-lto -o %t2 %t1 -mcpu arm1176jz-s
 ; RUN: llvm-nm %t2 | FileCheck %s
 
-target datalayout = "e-m:o-p:32:32-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
+target datalayout = "e-m:o-p:32:32-Fi8-f64:32:64-v64:32:64-v128:32:128-a:0:32-n32-S32"
 target triple = "thumbv7-apple-ios"
 
 ; CHECK: ___addsf3vfp

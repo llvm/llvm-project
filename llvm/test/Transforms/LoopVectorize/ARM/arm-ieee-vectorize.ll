@@ -1,7 +1,7 @@
-; RUN: opt -mtriple armv7-linux-gnueabihf -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
-; RUN: opt -mtriple armv8-linux-gnu -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
-; RUN: opt -mtriple armv8.1.m-none-eabi -mattr=+mve.fp -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MVE
-; RUN: opt -mtriple armv7-unknwon-darwin -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output -o /dev/null 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
+; RUN: opt -mtriple armv7-linux-gnueabihf -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
+; RUN: opt -mtriple armv8-linux-gnu -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=LINUX
+; RUN: opt -mtriple armv8.1.m-none-eabi -mattr=+mve.fp -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=MVE
+; RUN: opt -mtriple armv7-unknwon-darwin -passes=loop-vectorize -S %s -debug-only=loop-vectorize --disable-output 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=DARWIN
 ; REQUIRES: asserts
 
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
@@ -15,7 +15,7 @@ target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; Integer loops are always vectorizeable
 ; CHECK: Checking a loop in 'sumi'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define void @sumi(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp5 = icmp eq i32 %N, 0
@@ -48,9 +48,9 @@ for.end:
 ; LINUX: Checking a loop in 'sumf'
 ; LINUX: Potentially unsafe FP op prevents vectorization
 ; MVE: Checking a loop in 'sumf'
-; MVE: We can vectorize this loop!
+; MVE: Loop passed LoopVectorizationLegality checks!
 ; DARWIN: Checking a loop in 'sumf'
-; DARWIN: We can vectorize this loop!
+; DARWIN: Loop passed LoopVectorizationLegality checks!
 define void @sumf(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp5 = icmp eq i32 %N, 0
@@ -81,7 +81,7 @@ for.end:
 
 ; Integer loops are always vectorizeable
 ; CHECK: Checking a loop in 'redi'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define i32 @redi(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
   br label %for.body.preheader
@@ -114,9 +114,9 @@ for.end:
 ; LINUX: Checking a loop in 'redf'
 ; LINUX: Potentially unsafe FP op prevents vectorization
 ; MVE: Checking a loop in 'redf'
-; MVE: We can vectorize this loop!
+; MVE: Loop passed LoopVectorizationLegality checks!
 ; DARWIN: Checking a loop in 'redf'
-; DARWIN: We can vectorize this loop!
+; DARWIN: Loop passed LoopVectorizationLegality checks!
 define float @redf(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
   br label %for.body.preheader
@@ -149,7 +149,7 @@ for.end:
 ; LINUX: Checking a loop in 'fabs'
 ; LINUX: Potentially unsafe FP op prevents vectorization
 ; DARWIN: Checking a loop in 'fabs'
-; DARWIN: We can vectorize this loop!
+; DARWIN: Loop passed LoopVectorizationLegality checks!
 define void @fabs(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp10 = icmp eq i32 %N, 0
@@ -173,9 +173,128 @@ for.end:
   ret void
 }
 
+; Loop whose only FP op is a compare feeding a select.
+; CHECK: Checking a loop in 'fcmp_select'
+; CHECK: Loop passed LoopVectorizationLegality checks!
+; LINUX: Potentially unsafe FP op prevents vectorization
+define void @fcmp_select(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.06 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.06
+  %1 = load float, ptr %arrayidx1, align 4
+  %cmp = fcmp olt float %0, %1
+  %sel = select i1 %cmp, float %0, float %1
+  %arrayidx2 = getelementptr inbounds float, ptr %C, i32 %i.06
+  store float %sel, ptr %arrayidx2, align 4
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; Loop whose only FP op is a NaN check, which is unaffected by denormal flushing.
+; CHECK: Checking a loop in 'fcmp_uno_select'
+; CHECK: Loop passed LoopVectorizationLegality checks!
+; LINUX-NOT: Potentially unsafe FP op prevents vectorization
+define void @fcmp_uno_select(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.06 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.06
+  %1 = load float, ptr %arrayidx1, align 4
+  %cmp = fcmp uno float %0, %1
+  %sel = select i1 %cmp, float 0.000000e+00, float %0
+  %arrayidx2 = getelementptr inbounds float, ptr %C, i32 %i.06
+  store float %sel, ptr %arrayidx2, align 4
+  %inc = add nuw nsw i32 %i.06, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; Select-based FP max reduction whose compare has nnan nsz, but not full fast-math.
+; CHECK: Checking a loop in 'fmax_select'
+; CHECK: Loop passed LoopVectorizationLegality checks!
+; LINUX: Potentially unsafe FP op prevents vectorization
+define float @fmax_select(ptr noalias nocapture readonly %a, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %Red.06 = phi float [ %sel, %for.body ], [ 0.0e+00, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp = fcmp nnan nsz ogt float %Red.06, %0
+  %sel = select nnan nsz i1 %cmp, float %Red.06, float %0
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret float %sel
+}
+
+; Also without any fast-math flags
+; CHECK: Checking a loop in 'fmax_select_no_fmf'
+; CHECK: Found an unidentified PHI
+define float @fmax_select_no_fmf(ptr noalias nocapture readonly %a, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %Red.06 = phi float [ %sel, %for.body ], [ 0.0e+00, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp = fcmp ogt float %Red.06, %0
+  %sel = select i1 %cmp, float %Red.06, float %0
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret float %sel
+}
+
+; Also with a fast compare, but no fast-math flags on the select
+; CHECK: Checking a loop in 'fmax_select_fast_fcmp'
+; CHECK: Found an unidentified PHI
+define float @fmax_select_fast_fcmp(ptr noalias nocapture readonly %a, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.07 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %Red.06 = phi float [ %sel, %for.body ], [ 0.0e+00, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %a, i32 %i.07
+  %0 = load float, ptr %arrayidx, align 4
+  %cmp = fcmp fast ogt float %Red.06, %0
+  %sel = select i1 %cmp, float %Red.06, float %0
+  %inc = add nuw nsw i32 %i.07, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret float %sel
+}
+
 ; Integer loops are always vectorizeable
 ; CHECK: Checking a loop in 'sumi_fast'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define void @sumi_fast(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp5 = icmp eq i32 %N, 0
@@ -206,7 +325,7 @@ for.end:
 
 ; Floating-point loops can be vectorizeable with fast-math
 ; CHECK: Checking a loop in 'sumf_fast'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define void @sumf_fast(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp5 = icmp eq i32 %N, 0
@@ -237,7 +356,7 @@ for.end:
 
 ; Integer loops are always vectorizeable
 ; CHECK: Checking a loop in 'redi_fast'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define i32 @redi_fast(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
   %cmp5 = icmp eq i32 %N, 0
@@ -270,7 +389,7 @@ for.end:
 
 ; Floating-point loops can be vectorizeable with fast-math
 ; CHECK: Checking a loop in 'redf_fast'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define float @redf_fast(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, i32 %N) {
 entry:
   br label %for.body.preheader
@@ -301,7 +420,7 @@ for.end:
 
 ; Make sure calls that turn into builtins are also covered
 ; CHECK: Checking a loop in 'fabs_fast'
-; CHECK: We can vectorize this loop!
+; CHECK: Loop passed LoopVectorizationLegality checks!
 define void @fabs_fast(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
 entry:
   %cmp10 = icmp eq i32 %N, 0
@@ -318,6 +437,32 @@ for.body:
   %arrayidx4 = getelementptr inbounds float, ptr %C, i32 %i.011
   store float %conv3, ptr %arrayidx4, align 4
   %inc = add nuw nsw i32 %i.011, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret void
+}
+
+; FP compares can be vectorizeable with fast-math
+; CHECK: Checking a loop in 'fcmp_select_fast'
+; CHECK: Loop passed LoopVectorizationLegality checks!
+; LINUX-NOT: Potentially unsafe FP op prevents vectorization
+define void @fcmp_select_fast(ptr noalias nocapture readonly %A, ptr noalias nocapture readonly %B, ptr noalias nocapture %C, i32 %N) {
+entry:
+  br label %for.body
+
+for.body:
+  %i.06 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds float, ptr %A, i32 %i.06
+  %0 = load float, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr %B, i32 %i.06
+  %1 = load float, ptr %arrayidx1, align 4
+  %cmp = fcmp fast olt float %0, %1
+  %sel = select i1 %cmp, float %0, float %1
+  %arrayidx2 = getelementptr inbounds float, ptr %C, i32 %i.06
+  store float %sel, ptr %arrayidx2, align 4
+  %inc = add nuw nsw i32 %i.06, 1
   %exitcond = icmp eq i32 %inc, %N
   br i1 %exitcond, label %for.end, label %for.body
 

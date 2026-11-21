@@ -75,7 +75,7 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const override;
 
   SanitizerMask
-  getSupportedSanitizers(StringRef BoundArch,
+  getSupportedSanitizers(BoundArch BA,
                          Action::OffloadKind DeviceOffloadKind) const override;
 
 protected:

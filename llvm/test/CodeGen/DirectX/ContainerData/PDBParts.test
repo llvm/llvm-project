@@ -1,5 +1,5 @@
 RUN: rm -rf %t && mkdir %t
-RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-file=%t/parts.pdb
+RUN: llc %S/Inputs/SourceInfo.ll --filetype=obj -o %t.dxbc --dx-pdb-path=%t/parts.pdb
 RUN: llvm-pdbutil pdb2yaml --dxcontainer %t/parts.pdb | FileCheck %s
 
 # Check that debug-related container parts are emitted into companion PDB file.

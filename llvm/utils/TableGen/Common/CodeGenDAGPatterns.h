@@ -17,6 +17,7 @@
 #include "Basic/CodeGenIntrinsics.h"
 #include "Basic/SDNodeProperties.h"
 #include "CodeGenTarget.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PointerUnion.h"
@@ -177,14 +178,15 @@ private:
 
 raw_ostream &operator<<(raw_ostream &OS, const MachineValueTypeSet &T);
 
-struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
+struct TypeSetByHwMode
+    : public InfoByHwMode<MachineValueTypeSet,
+                          SortedVectorMap<unsigned, MachineValueTypeSet, 1>> {
   using SetType = MachineValueTypeSet;
-  unsigned AddrSpace = std::numeric_limits<unsigned>::max();
 
   TypeSetByHwMode() = default;
   TypeSetByHwMode(const TypeSetByHwMode &VTS) = default;
   TypeSetByHwMode &operator=(const TypeSetByHwMode &) = default;
-  TypeSetByHwMode(MVT VT) : TypeSetByHwMode(ValueTypeByHwMode(VT)) {}
+  TypeSetByHwMode(MVT VT) { getOrCreate(DefaultMode).insert(VT); }
   TypeSetByHwMode(ArrayRef<ValueTypeByHwMode> VTList);
 
   SetType &getOrCreate(unsigned Mode) { return Map[Mode]; }
@@ -205,11 +207,13 @@ struct TypeSetByHwMode : public InfoByHwMode<MachineValueTypeSet> {
 
   bool isPossible() const;
 
-  bool isPointer() const { return getValueTypeByHwMode().isPointer(); }
+  bool isPointer() const {
+    return PtrAddrSpace != std::numeric_limits<unsigned>::max();
+  }
 
   unsigned getPtrAddrSpace() const {
     assert(isPointer());
-    return getValueTypeByHwMode().PtrAddrSpace;
+    return PtrAddrSpace;
   }
 
   bool insert(const ValueTypeByHwMode &VVT);
@@ -242,13 +246,6 @@ struct TypeInfer {
   /// otherwise.
 
   bool MergeInTypeInfo(TypeSetByHwMode &Out, const TypeSetByHwMode &In) const;
-  bool MergeInTypeInfo(TypeSetByHwMode &Out, MVT InVT) const {
-    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
-  }
-  bool MergeInTypeInfo(TypeSetByHwMode &Out,
-                       const ValueTypeByHwMode &InVT) const {
-    return MergeInTypeInfo(Out, TypeSetByHwMode(InVT));
-  }
 
   /// Reduce the set \p Out to have at most one element for each mode.
   bool forceArbitrary(TypeSetByHwMode &Out);
@@ -738,7 +735,6 @@ public:
 
   bool hasProperTypeByHwMode() const;
   bool hasPossibleType() const;
-  bool setDefaultMode(unsigned Mode);
 
   bool hasAnyPredicate() const { return !PredicateCalls.empty(); }
 
@@ -1028,7 +1024,6 @@ public:
 
   unsigned getNumResults() const { return Results.size(); }
   unsigned getNumOperands() const { return Operands.size(); }
-  unsigned getNumImpResults() const { return ImpResults.size(); }
   ArrayRef<const Record *> getImpResults() const { return ImpResults; }
 
   const Record *getResult(unsigned RN) const {
@@ -1039,11 +1034,6 @@ public:
   const Record *getOperand(unsigned ON) const {
     assert(ON < Operands.size());
     return Operands[ON];
-  }
-
-  const Record *getImpResult(unsigned RN) const {
-    assert(RN < ImpResults.size());
-    return ImpResults[RN];
   }
 
   TreePatternNodePtr getSrcPattern() const { return SrcPattern; }
@@ -1058,7 +1048,6 @@ class PatternToMatch {
   TreePatternNodePtr SrcPattern; // Source pattern to match.
   TreePatternNodePtr DstPattern; // Resulting pattern.
   std::vector<const Record *> Dstregs; // Physical register defs being matched.
-  std::string HwModeFeatures;
   int AddedComplexity;    // Add to matching pattern complexity.
   bool GISelShouldIgnore; // Should GlobalISel ignore importing this pattern.
   unsigned ID;            // Unique ID for the record.
@@ -1067,10 +1056,10 @@ public:
   PatternToMatch(const Record *srcrecord, const ListInit *preds,
                  TreePatternNodePtr src, TreePatternNodePtr dst,
                  ArrayRef<const Record *> dstregs, int complexity, unsigned uid,
-                 bool ignore, const Twine &hwmodefeatures = "")
+                 bool ignore)
       : SrcRecord(srcrecord), Predicates(preds), SrcPattern(src),
-        DstPattern(dst), Dstregs(dstregs), HwModeFeatures(hwmodefeatures.str()),
-        AddedComplexity(complexity), GISelShouldIgnore(ignore), ID(uid) {}
+        DstPattern(dst), Dstregs(dstregs), AddedComplexity(complexity),
+        GISelShouldIgnore(ignore), ID(uid) {}
 
   const Record *getSrcRecord() const { return SrcRecord; }
   const ListInit *getPredicates() const { return Predicates; }
@@ -1079,7 +1068,6 @@ public:
   TreePatternNode &getDstPattern() const { return *DstPattern; }
   TreePatternNodePtr getDstPatternShared() const { return DstPattern; }
   ArrayRef<const Record *> getDstRegs() const { return Dstregs; }
-  StringRef getHwModeFeatures() const { return HwModeFeatures; }
   int getAddedComplexity() const { return AddedComplexity; }
   bool getGISelShouldIgnore() const { return GISelShouldIgnore; }
   unsigned getID() const { return ID; }
@@ -1101,6 +1089,7 @@ private:
   const RecordKeeper &Records;
   CodeGenTarget Target;
   CodeGenIntrinsicTable Intrinsics;
+  DenseMap<const Record *, unsigned> IntrinsicIDs;
 
   std::map<const Record *, SDNodeInfo, LessRecordByID> SDNodes;
 
@@ -1126,7 +1115,7 @@ private:
   unsigned NumScopes = 0;
 
 public:
-  CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode = true);
+  CodeGenDAGPatterns(const RecordKeeper &R);
 
   CodeGenTarget &getTargetInfo() { return Target; }
   const CodeGenTarget &getTargetInfo() const { return Target; }
@@ -1155,10 +1144,7 @@ public:
   }
 
   const CodeGenIntrinsic &getIntrinsic(const Record *R) const {
-    for (const CodeGenIntrinsic &Intrinsic : Intrinsics)
-      if (Intrinsic.TheDef == R)
-        return Intrinsic;
-    llvm_unreachable("Unknown intrinsic!");
+    return Intrinsics[getIntrinsicID(R)];
   }
 
   const CodeGenIntrinsic &getIntrinsicInfo(unsigned IID) const {
@@ -1168,10 +1154,9 @@ public:
   }
 
   unsigned getIntrinsicID(const Record *R) const {
-    for (unsigned i = 0, e = Intrinsics.size(); i != e; ++i)
-      if (Intrinsics[i].TheDef == R)
-        return i;
-    llvm_unreachable("Unknown intrinsic!");
+    auto I = IntrinsicIDs.find(R);
+    assert(I != IntrinsicIDs.end() && "Unknown intrinsic!");
+    return I->second;
   }
 
   const DAGDefaultOperand &getDefaultOperand(const Record *R) const {
@@ -1241,7 +1226,6 @@ private:
   void ParseDefaultOperands();
   void ParseInstructions();
   void ParsePatterns();
-  void ExpandHwModeBasedTypes();
   void InferInstructionFlags();
   void GenerateVariants();
   void VerifyInstructionFlags();

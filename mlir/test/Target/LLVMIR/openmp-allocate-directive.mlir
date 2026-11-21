@@ -115,3 +115,124 @@ llvm.func @test_allocate_array_global() {
   omp.allocate_free (%z : !llvm.ptr) allocator(%alloc6 : i32)
   llvm.return
 }
+
+// -----
+
+// Verifies that array size is correctly calculated from a stack alloca:
+// [10 x i32] = 40 bytes, rounded up to alignment 64 => 64 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_array_stack
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_aligned_alloc(i32 %[[TID]], i64 64, i64 64, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_array_stack() {
+  %one = llvm.mlir.constant(1 : i64) : i64
+  %arr = llvm.alloca %one x !llvm.array<10 x i32> : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr) align(64)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies that loads and stores after omp.allocate_dir use the OMP-allocated
+// pointer rather than the original storage.
+//
+// CHECK-LABEL: define void @test_allocate_use
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 8, ptr null)
+// CHECK:   store i32 42, ptr %[[ALLOC]]
+// CHECK:   %[[VAL:.*]] = load i32, ptr %[[ALLOC]]
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_use(%arg0: !llvm.ptr) {
+  omp.allocate_dir (%arg0 : !llvm.ptr)
+  %c42 = llvm.mlir.constant(42 : i32) : i32
+  llvm.store %c42, %arg0 : i32, !llvm.ptr
+  %v = llvm.load %arg0 : !llvm.ptr -> i32
+  omp.allocate_free (%arg0 : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies that a use before omp.allocate_dir keeps the original storage while
+// later uses go through the OMP-allocated pointer.
+//
+// CHECK-LABEL: define void @test_allocate_use_before
+// CHECK-SAME: (ptr %[[ARG0:.*]])
+// CHECK:   %[[PRE:.*]] = load i32, ptr %[[ARG0]]
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 8, ptr null)
+// CHECK:   store i32 42, ptr %[[ALLOC]]
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_use_before(%arg0: !llvm.ptr) {
+  %pre = llvm.load %arg0 : !llvm.ptr -> i32
+  omp.allocate_dir (%arg0 : !llvm.ptr)
+  %c42 = llvm.mlir.constant(42 : i32) : i32
+  llvm.store %c42, %arg0 : i32, !llvm.ptr
+  omp.allocate_free (%arg0 : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies dynamic array size with an i32 element count on llvm.alloca.
+//
+// CHECK-LABEL: define void @test_allocate_dynamic_i32_count
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 40, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_dynamic_i32_count() {
+  %count = llvm.mlir.constant(10 : i32) : i32
+  %arr = llvm.alloca %count x i32 : (i32) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies runtime dynamic array size from a stack alloca: count * 4 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_dynamic_runtime_count
+// CHECK-SAME: (i64 %[[COUNT:.*]])
+// CHECK:   %[[MUL:.*]] = mul i64 %[[COUNT]], 4
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 {{.*}}, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_dynamic_runtime_count(%count: i64) {
+  %arr = llvm.alloca %count x i32 : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}
+
+// -----
+
+// Verifies dynamic array size uses ABI alloc size (stride), not store size.
+// For x86_fp80 on x86_64, store size is 10 bytes but alloc size is 16 bytes.
+//
+// CHECK-LABEL: define void @test_allocate_x86_fp80_array
+// CHECK-SAME: (i64 %[[COUNT:.*]])
+// CHECK:   %[[MUL:.*]] = mul i64 %[[COUNT]], 16
+// CHECK:   %[[TID:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   %[[ALLOC:.*]] = call ptr @__kmpc_alloc(i32 %[[TID]], i64 {{.*}}, ptr null)
+// CHECK:   %[[TID_FREE:.*]] = call i32 @__kmpc_global_thread_num(
+// CHECK:   call void @__kmpc_free(i32 %[[TID_FREE]], ptr %[[ALLOC]], ptr null)
+// CHECK:   ret void
+llvm.func @test_allocate_x86_fp80_array(%count: i64) {
+  %arr = llvm.alloca %count x f80 : (i64) -> !llvm.ptr
+  omp.allocate_dir (%arr : !llvm.ptr)
+  omp.allocate_free (%arr : !llvm.ptr)
+  llvm.return
+}

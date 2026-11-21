@@ -1,0 +1,67 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// A non-trivial record is returned through a default address space sret on
+// AMDGPU, while CIRGen puts `__retval` in addrspace(5) and views it through an
+// address_space cast. The view becomes the sret pointer itself.
+
+!s32i = !cir.int<s, 32>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.record_layouts = {NT = #cir.record_layout<
+    arg_passing_kind = cannot_pass_in_regs, has_trivial_dtor = false,
+    record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  cir.func private @_ZN2NTC1Ev(!cir.ptr<!rec_NT>)
+  cir.func private @make() -> !rec_NT requires_call_conv_lowering
+
+  // CHECK:      cir.func private @_ZN2NTC1Ev(!cir.ptr<!rec_NT>)
+  // CHECK-NEXT: cir.func private @make(!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable})
+
+  // The constructor builds the result in the caller's sret slot.
+  cir.func @ret_ctor() -> !rec_NT requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(4) init : !cir.ptr<!rec_NT, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+    cir.call @_ZN2NTC1Ev(%1) : (!cir.ptr<!rec_NT>) -> ()
+    %2 = cir.load %0 : !cir.ptr<!rec_NT, target_address_space(5)>, !rec_NT
+    cir.return %2 : !rec_NT
+  }
+
+  // CHECK-NEXT: cir.func @ret_ctor(%[[SRET:.*]]: !cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NT, llvm.writable}) {
+  // CHECK-NEXT:   cir.call @_ZN2NTC1Ev(%[[SRET]]) : (!cir.ptr<!rec_NT>) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // The returned call writes straight into this function's own sret slot.
+  cir.func @ret_call() -> !rec_NT requires_call_conv_lowering {
+    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_NT, target_address_space(5)>
+    %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+    %2 = cir.call @make() : () -> !rec_NT
+    cir.store align(4) %2, %1 : !rec_NT, !cir.ptr<!rec_NT>
+    %3 = cir.load %0 : !cir.ptr<!rec_NT, target_address_space(5)>, !rec_NT
+    cir.return %3 : !rec_NT
+  }
+
+  // CHECK-NEXT: cir.func @ret_call(%[[SRET:.*]]: !cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.noalias, llvm.sret = !rec_NT, llvm.writable}) {
+  // CHECK-NEXT:   cir.call @make(%[[SRET]]) : (!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  // A discarded result still gets stack memory, passed as a generic pointer.
+  cir.func @discard_nt() requires_call_conv_lowering {
+    %0 = cir.call @make() : () -> !rec_NT
+    cir.return
+  }
+
+  // CHECK-NEXT: cir.func @discard_nt() {
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "sret" align(4) : !cir.ptr<!rec_NT, target_address_space(5)>
+  // CHECK-NEXT:   %[[SLOT_VIEW:.*]] = cir.cast address_space %[[SLOT]] : !cir.ptr<!rec_NT, target_address_space(5)> -> !cir.ptr<!rec_NT>
+  // CHECK-NEXT:   cir.call @make(%[[SLOT_VIEW]]) : (!cir.ptr<!rec_NT> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_NT, llvm.writable}) -> ()
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+}

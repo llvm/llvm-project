@@ -11,6 +11,12 @@
 
   integer(yellow) anint4
 
+  ! F2023 7.6.1 errata f23/013: an interoperable enumerator may be
+  ! initialized by a BOZ literal, with the value of INT(boz, C_INT).
+  enum, bind(C)
+    enumerator :: boz = z'2a', after_boz
+  end enum
+
   enum, bind(C)
     enumerator :: square, cicrle
     !ERROR: 'square' is already declared in this scoping unit

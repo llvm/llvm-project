@@ -67,51 +67,55 @@ class WithGetter<string g="", Bytecode t=Bytecode<>> :
 class CompositeBytecode<string t = ""> : WithType<t>;
 
 class AttributeKind :
-  WithParser <"succeeded($_reader.readAttribute($_var))",
+  WithParser <"::mlir::succeeded($_reader.readAttribute($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeAttribute($_getter)">>>;
-def Attribute : AttributeKind;
+def Attribute : AttributeKind {
+  let cType = "::mlir::Attribute";
+}
 class TypeKind :
-  WithParser <"succeeded($_reader.readType($_var))",
+  WithParser <"::mlir::succeeded($_reader.readType($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeType($_getter)">>>;
-def Type : TypeKind;
+def Type : TypeKind {
+  let cType = "::mlir::Type";
+}
 
 def VarInt :
-  WithParser <"succeeded($_reader.readVarInt($_var))",
+  WithParser <"::mlir::succeeded($_reader.readVarInt($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeVarInt($_getter)",
   WithType   <"uint64_t">>>>;
 def SignedVarInt :
-  WithParser <"succeeded($_reader.readSignedVarInt($_var))",
+  WithParser <"::mlir::succeeded($_reader.readSignedVarInt($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeSignedVarInt($_getter)",
   WithType   <"int64_t">>>>;
 def Blob :
-  WithParser <"succeeded($_reader.readBlob($_var))",
+  WithParser <"::mlir::succeeded($_reader.readBlob($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeOwnedBlob($_getter)",
-  WithType   <"ArrayRef<char>">>>>;
+  WithType   <"::llvm::ArrayRef<char>">>>>;
 def Bool :
-  WithParser <"succeeded($_reader.readBool($_var))",
+  WithParser <"::mlir::succeeded($_reader.readBool($_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeOwnedBool($_getter)",
   WithType   <"bool">>>>;
 class KnownWidthAPInt<string s> :
-  WithParser <"succeeded(readAPIntWithKnownWidth($_reader, " # s # ", $_var))",
+  WithParser <"::mlir::succeeded(readAPIntWithKnownWidth($_reader, " # s # ", $_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeAPIntWithKnownWidth($_getter)",
-  WithType   <"FailureOr<APInt>">>>>;
+  WithType   <"::mlir::FailureOr<::llvm::APInt>">>>>;
 class KnownSemanticsAPFloat<string s> :
-  WithParser <"succeeded(readAPFloatWithKnownSemantics($_reader, " # s # ", $_var))",
+  WithParser <"::mlir::succeeded(readAPFloatWithKnownSemantics($_reader, " # s # ", $_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeAPFloatWithKnownSemantics($_getter)",
-  WithType   <"FailureOr<APFloat>">>>>;
+  WithType   <"::mlir::FailureOr<::llvm::APFloat>">>>>;
 class ResourceHandle<string s> :
-  WithParser <"succeeded(readResourceHandle<" # s # ">($_reader, $_var))",
+  WithParser <"::mlir::succeeded(::mlir::readResourceHandle<" # s # ">($_reader, $_var))",
   WithBuilder<"$_args",
   WithPrinter<"$_writer.writeResourceHandle($_getter)",
-  WithType   <"FailureOr<" # s # ">">>>>;
+  WithType   <"::mlir::FailureOr<" # s # ">">>>>;
 
 // Helper to define variable that is defined later but not parsed nor printed.
 class LocalVar<string t, string d> :
@@ -125,6 +129,15 @@ class Array<Bytecode t> {
   Bytecode elemT = t;
 
   string cBuilder = "$_args";
+
+  // Optional custom getter expression for the array from the parent type.
+  string cGetter = "";
+}
+// - Array variant where the size is known from a previously serialized member.
+//   This avoids encoding a redundant length prefix.
+class ArrayWithKnownSize<Bytecode t, string sizeRef> : Array<t> {
+ // Expression providing the element count (e.g., "otherMember.size()").
+  string knownSizeRef = sizeRef;
 }
 // - Array elements currently needs a different bytecode type to accommodate
 //   for the list print/parsing.
@@ -146,12 +159,12 @@ class DialectAttrOrType<dag d> {
 }
 
 class DialectAttribute<dag d> : DialectAttrOrType<d>, AttributeKind {
-  let cParser = "succeeded($_reader.readAttribute<$_resultType>($_var))";
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+  let cParser = "::mlir::succeeded($_reader.readAttribute<$_resultType>($_var))";
+  let cBuilder = "::mlir::getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
 class DialectType<dag d> : DialectAttrOrType<d>, TypeKind {
-  let cParser = "succeeded($_reader.readType<$_resultType>($_var))";
-  let cBuilder = "getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
+  let cParser = "::mlir::succeeded($_reader.readType<$_resultType>($_var))";
+  let cBuilder = "::mlir::getChecked<$_resultType>([&]() { return reader.emitError(); }, context, $_args)";
 }
 // Variant of the above, where it never prints. Useful for staging.
 class DialectTypeNoPrint<dag d> : DialectType<d> {
@@ -177,4 +190,3 @@ def none;
 def ReservedOrDead : DialectAttrOrType<(none)>;
 
 #endif // BYTECODE_BASE
-

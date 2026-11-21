@@ -24,9 +24,9 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/WindowsError.h"
 
-#if LLDB_ENABLE_POSIX
-#include "lldb/Host/posix/DomainSocket.h"
+#include "lldb/Host/DomainSocket.h"
 
+#if LLDB_ENABLE_POSIX
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <netinet/in.h>
@@ -211,7 +211,7 @@ std::unique_ptr<Socket> Socket::Create(const SocketProtocol protocol,
     socket_up = std::make_unique<UDPSocket>(should_close);
     break;
   case ProtocolUnixDomain:
-#if LLDB_ENABLE_POSIX
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
     socket_up = std::make_unique<DomainSocket>(should_close);
 #else
     error = Status::FromErrorString(
@@ -241,10 +241,17 @@ Socket::CreatePair(std::optional<SocketProtocol> protocol) {
   switch (protocol.value_or(kBestProtocol)) {
   case ProtocolTcp:
     return TCPSocket::CreatePair();
-#if LLDB_ENABLE_POSIX
   case ProtocolUnixDomain:
+#if LLDB_ENABLE_POSIX || defined(_WIN32)
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
+#endif
   case ProtocolUnixAbstract:
-    return DomainSocket::CreatePair();
+#if LLDB_ENABLE_POSIX
+    return DomainSocketPlatform::CreatePair();
+#else
+    return llvm::createStringError("unsupported protocol");
 #endif
   default:
     return llvm::createStringError("unsupported protocol");

@@ -12,7 +12,7 @@
 
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "llvm/TargetParser/Host.h"
@@ -247,6 +247,47 @@ void fir::setIsPIE(mlir::ModuleOp mod, bool value) {
 }
 
 bool fir::getIsPIE(mlir::ModuleOp mod) { return mod->hasAttr(isPIEName); }
+
+static constexpr const char *cudaHeapAllocModeName = "fir.cuda_heap_alloc";
+
+static void setCudaHeapAllocModeOn(mlir::Operation *op,
+                                   fir::CudaHeapAllocMode mode) {
+  if (mode == fir::CudaHeapAllocMode::None) {
+    if (op->hasAttr(cudaHeapAllocModeName))
+      op->removeAttr(cudaHeapAllocModeName);
+    return;
+  }
+  llvm::StringRef value =
+      mode == fir::CudaHeapAllocMode::Unified ? "unified" : "managed";
+  op->setAttr(cudaHeapAllocModeName,
+              mlir::StringAttr::get(op->getContext(), value));
+}
+
+static fir::CudaHeapAllocMode getCudaHeapAllocModeOf(mlir::Operation *op) {
+  if (auto attr = op->getAttrOfType<mlir::StringAttr>(cudaHeapAllocModeName)) {
+    if (attr.getValue() == "unified")
+      return fir::CudaHeapAllocMode::Unified;
+    if (attr.getValue() == "managed")
+      return fir::CudaHeapAllocMode::Managed;
+  }
+  return fir::CudaHeapAllocMode::None;
+}
+
+void fir::setCudaHeapAllocMode(mlir::ModuleOp mod, CudaHeapAllocMode mode) {
+  setCudaHeapAllocModeOn(mod.getOperation(), mode);
+}
+
+fir::CudaHeapAllocMode fir::getCudaHeapAllocMode(mlir::ModuleOp mod) {
+  return getCudaHeapAllocModeOf(mod.getOperation());
+}
+
+void fir::setCudaHeapAllocMode(mlir::Operation *op, CudaHeapAllocMode mode) {
+  setCudaHeapAllocModeOn(op, mode);
+}
+
+fir::CudaHeapAllocMode fir::getCudaHeapAllocMode(mlir::Operation *op) {
+  return getCudaHeapAllocModeOf(op);
+}
 
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.

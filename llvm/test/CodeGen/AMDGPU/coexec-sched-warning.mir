@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=GFX1100
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o /dev/null 2>&1 | FileCheck --allow-empty %s --check-prefix=GFX1250
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=GFX1100
+# RUN: llc -mtriple=amdgpu12.50 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec %s -o /dev/null 2>&1 | FileCheck --allow-empty %s --check-prefix=GFX1250
 
 # GFX1100: warning: {{.*}}'amdgpu-sched-strategy'='coexec' is only supported for gfx1250
 # GFX1250-NOT: warning:

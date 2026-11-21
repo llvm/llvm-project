@@ -1,7 +1,10 @@
 import("//llvm/utils/TableGen/tablegen.gni")
 
 tablegen("MipsGenAsmMatcher") {
-  visibility = [ ":AsmParser" ]
+  visibility = [
+    ":AsmParser",
+    "//llvm/lib/Target/Mips/MCTargetDesc",
+  ]
   args = [ "-gen-asm-matcher" ]
   td_file = "../Mips.td"
 }

@@ -56,8 +56,8 @@ public:
     std::vector<std::unique_ptr<DIEInfo>> DieInfoVector;
     DIE *UnitDie = nullptr;
     uint32_t UnitId = 0;
-    uint32_t UnitOffset = 0;
-    uint32_t UnitLength = 0;
+    uint64_t UnitOffset = 0;
+    uint64_t UnitLength = 0;
     bool IsConstructed = false;
     // A map of DIE offsets in original DWARF section to DIE ID.
     // Which is used to access DieInfoVector.

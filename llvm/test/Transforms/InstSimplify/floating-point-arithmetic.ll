@@ -280,7 +280,7 @@ define { float, float } @test_fmul_0_assumed_finite(float %x) {
 ; CHECK-NEXT:    ret { float, float } { float 0.000000e+00, float -0.000000e+00 }
 ;
   %fabs.x = call float @llvm.fabs.f32(float %x)
-  %is.finite.x = fcmp one float %fabs.x, 0x7FF0000000000000
+  %is.finite.x = fcmp one float %fabs.x, +inf
   call void @llvm.assume(i1 %is.finite.x)
   %mul.0 = fmul float %fabs.x, 0.0
   %mul.neg0 = fmul float %fabs.x, -0.0
@@ -482,7 +482,7 @@ define float @fabs_select_nan_nan(i32 %c) {
 ; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, float 0x7FF8000000000000, float 0x7FF8000100000000
+  %select = select i1 %cmp, float +qnan, float 0x7FF8000100000000
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
@@ -494,7 +494,7 @@ define <2 x float> @fabs_select_nan_nan_vector(i32 %c) {
 ; CHECK-NEXT:    ret <2 x float> [[SELECT]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
+  %select = select i1 %cmp, <2 x float> <float +qnan, float +qnan>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %select)
   ret <2 x float> %fabs
 }
@@ -507,7 +507,7 @@ define float @fabs_select_negnan_nan(i32 %c) {
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000000000000
+  %select = select i1 %cmp, float -qnan, float +qnan
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
@@ -520,7 +520,7 @@ define <2 x float> @fabs_select_negnan_nan_vector(i32 %c) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>
+  %select = select i1 %cmp, <2 x float> <float -qnan, float -qnan>, <2 x float> <float +qnan, float +qnan>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %select)
   ret <2 x float> %fabs
 }
@@ -533,7 +533,7 @@ define float @fabs_select_negnan_negnan(i32 %c) {
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, float 0xFFF8000000000000, float 0x7FF8000100000000
+  %select = select i1 %cmp, float -qnan, float 0x7FF8000100000000
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
@@ -546,7 +546,7 @@ define <2 x float> @fabs_select_negnan_negnan_vector(i32 %c) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
+  %select = select i1 %cmp, <2 x float> <float -qnan, float -qnan>, <2 x float> <float 0x7FF8000100000000, float 0x7FF8000100000000>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %select)
   ret <2 x float> %fabs
 }
@@ -559,7 +559,7 @@ define float @fabs_select_negnan_negzero(i32 %c) {
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, float 0xFFF8000000000000, float -0.0
+  %select = select i1 %cmp, float -qnan, float -0.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
@@ -572,7 +572,7 @@ define <2 x float> @fabs_select_negnan_negzero_vector(i32 %c) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float -0.0, float -0.0>
+  %select = select i1 %cmp, <2 x float> <float -qnan, float -qnan>, <2 x float> <float -0.0, float -0.0>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %select)
   ret <2 x float> %fabs
 }
@@ -585,7 +585,7 @@ define float @fabs_select_negnan_zero(i32 %c) {
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, float 0xFFF8000000000000, float 0.0
+  %select = select i1 %cmp, float -qnan, float 0.0
   %fabs = call float @llvm.fabs.f32(float %select)
   ret float %fabs
 }
@@ -598,7 +598,7 @@ define <2 x float> @fabs_select_negnan_zero_vector(i32 %c) {
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %cmp = icmp eq i32 %c, 0
-  %select = select i1 %cmp, <2 x float> <float 0xFFF8000000000000, float 0xFFF8000000000000>, <2 x float> <float 0.0, float 0.0>
+  %select = select i1 %cmp, <2 x float> <float -qnan, float -qnan>, <2 x float> <float 0.0, float 0.0>
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %select)
   ret <2 x float> %fabs
 }
@@ -912,7 +912,7 @@ define double @fadd_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fadd_nnan_inf_op0(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fadd nnan double 0x7ff0000000000000, %x
+  %r = fadd nnan double +inf, %x
   ret double %r
 }
 
@@ -920,7 +920,7 @@ define double @fadd_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fadd_nnan_inf_op1(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fadd nnan double %x, 0x7ff0000000000000
+  %r = fadd nnan double %x, +inf
   ret double %r
 }
 
@@ -928,7 +928,7 @@ define <2 x double> @fadd_nnan_neginf_op1(<2 x double> %x) {
 ; CHECK-LABEL: @fadd_nnan_neginf_op1(
 ; CHECK-NEXT:    ret <2 x double> <double -inf, double poison>
 ;
-  %r = fadd nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
+  %r = fadd nnan <2 x double> %x, <double -inf, double poison>
   ret <2 x double> %r
 }
 
@@ -936,7 +936,7 @@ define double @fadd_nnan_neginf_op0(double %x) {
 ; CHECK-LABEL: @fadd_nnan_neginf_op0(
 ; CHECK-NEXT:    ret double -inf
 ;
-  %r = fadd nnan double 0xfff0000000000000, %x
+  %r = fadd nnan double -inf, %x
   ret double %r
 }
 
@@ -947,7 +947,7 @@ define double @fadd_inf_op0(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = fadd double +inf, [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fadd double 0x7ff0000000000000, %x
+  %r = fadd double +inf, %x
   ret double %r
 }
 
@@ -955,7 +955,7 @@ define double @fsub_nnan_inf_op0(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op0(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fsub nnan double 0x7ff0000000000000, %x
+  %r = fsub nnan double +inf, %x
   ret double %r
 }
 
@@ -965,7 +965,7 @@ define double @fsub_nnan_inf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op1(
 ; CHECK-NEXT:    ret double -inf
 ;
-  %r = fsub nnan double %x, 0x7ff0000000000000
+  %r = fsub nnan double %x, +inf
   ret double %r
 }
 
@@ -973,7 +973,7 @@ define <2 x double> @fsub_nnan_inf_op1_vec(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_inf_op1_vec(
 ; CHECK-NEXT:    ret <2 x double> <double +inf, double poison>
 ;
-  %r = fsub nnan <2 x double> %x, <double 0xfff0000000000000, double poison>
+  %r = fsub nnan <2 x double> %x, <double -inf, double poison>
   ret <2 x double> %r
 }
 
@@ -981,7 +981,7 @@ define <2 x double> @fsub_nnan_neginf_op0(<2 x double> %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op0(
 ; CHECK-NEXT:    ret <2 x double> <double -inf, double poison>
 ;
-  %r = fsub nnan <2 x double> <double 0xfff0000000000000, double poison>, %x
+  %r = fsub nnan <2 x double> <double -inf, double poison>, %x
   ret <2 x double> %r
 }
 
@@ -991,7 +991,7 @@ define double @fsub_nnan_neginf_op1(double %x) {
 ; CHECK-LABEL: @fsub_nnan_neginf_op1(
 ; CHECK-NEXT:    ret double +inf
 ;
-  %r = fsub nnan double %x, 0xfff0000000000000
+  %r = fsub nnan double %x, -inf
   ret double %r
 }
 
@@ -1002,7 +1002,7 @@ define double @fsub_inf_op0(double %x) {
 ; CHECK-NEXT:    [[R:%.*]] = fsub double +inf, [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fsub double 0x7ff0000000000000, %x
+  %r = fsub double +inf, %x
   ret double %r
 }
 
@@ -1282,7 +1282,7 @@ define float @fabs_fmul_nan(float %x) {
 ; CHECK-NEXT:    ret float [[ABS2]]
 ;
   %abs = call nnan float @llvm.fabs.f32(float %x)
-  %mul = fmul float %abs, 0x7FF0000000000000
+  %mul = fmul float %abs, +inf
   %abs2 = call float @llvm.fabs.f32(float %mul)
   ret float %abs2
 }
@@ -1295,7 +1295,7 @@ define <2 x float> @fabs_fmul_nan_vector(<2 x float> %x) {
 ; CHECK-NEXT:    ret <2 x float> [[ABS2]]
 ;
   %abs = call nnan <2 x float> @llvm.fabs.v2f32(<2 x float> %x)
-  %mul = fmul <2 x float> %abs, splat (float 0x7FF0000000000000)
+  %mul = fmul <2 x float> %abs, splat (float +inf)
   %abs2 = call <2 x float> @llvm.fabs.v2f32(<2 x float> %mul)
   ret <2 x float> %abs2
 }

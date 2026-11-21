@@ -9,6 +9,7 @@
 #include "CodegenUtils.h"
 
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -97,18 +98,6 @@ StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(OverheadType ot) {
 
 StringRef mlir::sparse_tensor::overheadTypeFunctionSuffix(Type tp) {
   return overheadTypeFunctionSuffix(overheadTypeEncoding(tp));
-}
-
-bool mlir::sparse_tensor::isValidPrimaryType(Type elemTp) {
-  if (elemTp.isF64() || elemTp.isF32() || elemTp.isF16() || elemTp.isBF16() ||
-      elemTp.isInteger(64) || elemTp.isInteger(32) || elemTp.isInteger(16) ||
-      elemTp.isInteger(8))
-    return true;
-  if (auto complexTp = dyn_cast<ComplexType>(elemTp)) {
-    Type elt = complexTp.getElementType();
-    return elt.isF64() || elt.isF32();
-  }
-  return false;
 }
 
 PrimaryType mlir::sparse_tensor::primaryTypeEncoding(Type elemTp) {
@@ -344,8 +333,8 @@ FlatSymbolRefAttr mlir::sparse_tensor::getFunc(ModuleOp module, StringRef name,
         FunctionType::get(context, operands.getTypes(), resultType));
     func.setPrivate();
     if (static_cast<bool>(emitCInterface))
-      func->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
-                    UnitAttr::get(context));
+      func->setDiscardableAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                               UnitAttr::get(context));
   }
   return result;
 }

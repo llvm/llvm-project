@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -passes=load-store-vectorizer < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu-- -passes=load-store-vectorizer < %s | FileCheck -check-prefix=OPT %s
 
 ; OPT-LABEL: @buffer_fat_ptrs(
 define void @buffer_fat_ptrs(ptr addrspace(7) %out) {

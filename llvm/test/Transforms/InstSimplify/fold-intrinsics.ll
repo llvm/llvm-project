@@ -45,6 +45,14 @@ define void @powi_i16(float %V, ptr%P) {
   ret void
 }
 
+define float @powi_const_fold() {
+; CHECK-LABEL: @powi_const_fold(
+; CHECK-NEXT:    ret float f0x41E8FBBA
+;
+  %r = tail call float @llvm.powi.f32.i16(float 1.234567, i16 16) nounwind
+  ret float %r
+}
+
 define i32 @test_ctpop_poison(i32 %a) {
 ; CHECK-LABEL: @test_ctpop_poison(
 ; CHECK-NEXT:    ret i32 poison
@@ -583,6 +591,46 @@ define void @llrint_poison(ptr %P) {
 
   %llrint_4xf64 = call <4 x i64> @llvm.llrint(<4 x double> poison)
   store volatile <4 x i64> %llrint_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @lround_poison(ptr %P) {
+; CHECK-LABEL: @lround_poison(
+; CHECK-NEXT:    store volatile i32 poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x i32> poison, ptr [[P]], align 8
+; CHECK-NEXT:    store volatile <4 x i64> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %lround_f32 = call i32 @llvm.lround(float poison)
+  store volatile i32 %lround_f32, ptr %P
+
+  %lround_2xf32 = call <2 x i32> @llvm.lround(<2 x float> poison)
+  store volatile <2 x i32> %lround_2xf32, ptr %P
+
+  %lround_4xf64 = call <4 x i64> @llvm.lround(<4 x double> poison)
+  store volatile <4 x i64> %lround_4xf64, ptr %P
+
+  ret void
+}
+
+
+define void @llround_poison(ptr %P) {
+; CHECK-LABEL: @llround_poison(
+; CHECK-NEXT:    store volatile i64 poison, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    store volatile <2 x i64> poison, ptr [[P]], align 16
+; CHECK-NEXT:    store volatile <4 x i64> poison, ptr [[P]], align 32
+; CHECK-NEXT:    ret void
+;
+  %llround_f32 = call i64 @llvm.llround(float poison)
+  store volatile i64 %llround_f32, ptr %P
+
+  %llround_2xf32 = call <2 x i64> @llvm.llround(<2 x float> poison)
+  store volatile <2 x i64> %llround_2xf32, ptr %P
+
+  %llround_4xf64 = call <4 x i64> @llvm.llround(<4 x double> poison)
+  store volatile <4 x i64> %llround_4xf64, ptr %P
 
   ret void
 }

@@ -17,7 +17,15 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/Support/Compiler.h"
 
+#include <cassert>
+
 namespace clang {
+
+/// Constants for TokenKinds.def
+enum TokenKey : unsigned {
+#define EMIT_TOKENKEY
+#include "clang/Basic/BuiltinTraits.inc"
+};
 
 namespace tok {
 

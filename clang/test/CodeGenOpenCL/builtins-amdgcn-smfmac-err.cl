@@ -1,6 +1,6 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx908 -verify -S -o - %s
-// RUN: %clang_cc1 -triple amdgcn-unknown-unknown -target-cpu gfx90a -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.08-unknown-unknown -verify -S -o - %s
+// RUN: %clang_cc1 -triple amdgpu9.0a-unknown-unknown -verify -S -o - %s
 
 typedef int    v2i   __attribute__((ext_vector_type(2)));
 typedef float  v4f   __attribute__((ext_vector_type(4)));

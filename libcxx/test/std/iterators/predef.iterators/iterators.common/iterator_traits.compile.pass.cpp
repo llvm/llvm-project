@@ -11,9 +11,11 @@
 // template<input_iterator I, class S>
 //   struct iterator_traits<common_iterator<I, S>>;
 
-#include <iterator>
-
+#include <concepts>
 #include <cstddef>
+#include <cstdint>
+#include <iterator>
+#include <ranges>
 #include "test_iterators.h"
 #include "test_macros.h"
 #include "types.h"
@@ -30,7 +32,20 @@ struct NonVoidOutputIterator {
     void operator=(int) const;
 };
 
+template <class It, class Se>
+concept has_iterator_category =
+    requires { typename std::iterator_traits<std::common_iterator<It, Se>>::iterator_category; };
+
 void test() {
+  // LWG 3749: common_iterator should handle integer-class difference types
+  {
+    using WideIota = decltype(std::views::iota(std::uint64_t{0}));
+    using WideIter = std::ranges::iterator_t<WideIota>;
+    using WideSent = std::ranges::sentinel_t<WideIota>;
+
+    constexpr bool is_diff_integral = std::integral<std::iter_difference_t<WideIter>>;
+    static_assert(has_iterator_category<WideIter, WideSent> == is_diff_integral);
+  }
   {
     using Iter = simple_iterator<int*>;
     using CommonIter = std::common_iterator<Iter, sentinel_type<int*>>;

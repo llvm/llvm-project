@@ -1,5 +1,5 @@
 # REQUIRES: amdgpu-registered-target
-# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgcn-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
+# RUN: llvm-reduce -abort-on-invalid-reduction -simplify-mir -mtriple=amdgpu9.00-amd-amdhsa --delta-passes=instructions --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t 2> %t.log
 # RUN: FileCheck --check-prefix=RESULT %s < %t
 
 # Make sure there's no crash with unreachable blocks.
@@ -18,7 +18,7 @@
 # RESULT-NEXT: S_BRANCH %bb.3
 
 # RESULT: bb.2:
-# RESULT-NEXT: S_NOP 0, implicit %{{[0-9]+}}, implicit killed %{{[0-9]+}}, implicit %{{[0-9]+}}
+# RESULT-NEXT: S_NOP 0, implicit %{{[0-9]+}}, implicit %{{[0-9]+}}, implicit %{{[0-9]+}}
 
 ---
 name: unreachable_block
@@ -35,7 +35,7 @@ body:             |
 
   bb.2:
     %2:vreg_64 = IMPLICIT_DEF
-    S_NOP 0, implicit %0, implicit killed %2, implicit %1
+    S_NOP 0, implicit %0, implicit %2, implicit %1
     S_BRANCH %bb.3
 
   bb.3:

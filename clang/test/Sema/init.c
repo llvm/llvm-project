@@ -204,3 +204,57 @@ union PR4517_u {
 const union PR4517_u u1 = {4.0f};
 const union PR4517_u u2 = u1; // no-warning
 const union PR4517_u u3 = {u1.y}; // expected-error {{initializer element is not a compile-time constant}}
+
+int PR192471_1 = {{}, {}, {}}; // expected-warning {{too many braces around scalar initializer}} expected-warning {{excess elements in scalar initializer}}
+char PR192471_2[] = {
+    "1110",
+#embed __FILE__ // expected-warning {{#embed is a C23 extension}} \
+                   expected-warning {{excess elements in char array initializer}}
+};
+char PR192471_3[1] = {
+#embed __FILE__ limit(1) // expected-warning {{#embed is a C23 extension}}
+, 49, 49, 49, 48 // expected-warning {{excess elements in array initializer}}
+};
+
+void PR192471_4(int *ptr) {
+  *ptr = (int){{}, // expected-warning {{too many braces around scalar initializer}}
+#embed __FILE__ limit(1) // expected-warning {{#embed is a C23 extension}} \
+                           expected-warning {{excess elements in scalar initializer}}
+  };
+}
+
+// GH137845
+struct GH137845_Data; // expected-note 2 {{forward declaration of 'struct GH137845_Data'}}
+double GH137845_swap(struct GH137845_Data *, struct GH137845_Data *);
+void GH137845(void) {
+  GH137845_swap(
+      (struct GH137845_Data[5]){{}, 1}, // expected-error {{array has incomplete element type 'struct GH137845_Data'}} \
+                                             expected-warning {{too many braces around scalar initializer}} \
+                                             expected-warning {{excess elements in scalar initializer}}
+      (struct GH137845_Data[5]){{}, 4}); // expected-error {{array has incomplete element type 'struct GH137845_Data'}} \
+                                              expected-warning {{too many braces around scalar initializer}} \
+                                              expected-warning {{excess elements in scalar initializer}}
+}
+
+// GH69213
+int GH69213_ptr;
+void GH69213(void) {
+  *GH69213_ptr = (int){{}, 0}; // expected-error {{indirection requires pointer operand ('int' invalid)}} \
+                                      expected-warning {{too many braces around scalar initializer}} \
+                                      expected-warning {{excess elements in scalar initializer}}
+}
+
+// GH198767
+void GH198767(void) {
+  static __thread static char buffer[128] = {{{}, 0}}; // expected-warning {{duplicate 'static' declaration specifier}} \
+                                                             expected-warning {{too many braces around scalar initializer}} \
+                                                             expected-warning {{excess elements in scalar initializer}}
+}
+
+struct GH207566 {};
+struct GH207566 **GH207566_s = {{}, NULL}; // expected-warning {{too many braces around scalar initializer}} \
+                                                 expected-warning {{excess elements in scalar initializer}}
+
+GH106180 = {{}, 1}; // expected-error {{type specifier missing, defaults to 'int'; ISO C99 and later do not support implicit int}} \
+                           expected-warning {{too many braces around scalar initializer}} \
+                           expected-warning {{excess elements in scalar initializer}}

@@ -437,3 +437,59 @@ TEST(DWARFDebugAbbrevTest, DWARFDebugAbbrevParseError) {
           "abbreviation declaration attribute list was not terminated with a "
           "null entry"));
 }
+
+TEST(DWARFDebugAbbrevTest, ReadAbbrevAttributeRegular) {
+  SmallString<16> RawData;
+  raw_svector_ostream OS(RawData);
+  encodeULEB128(DW_AT_name, OS);
+  encodeULEB128(DW_FORM_strp, OS);
+
+  DataExtractor Data(RawData, sys::IsLittleEndianHost);
+  uint64_t Offset = 0;
+  dwarf::Attribute Name;
+  dwarf::Form Form;
+  std::optional<int64_t> ImplicitConst;
+  EXPECT_TRUE(readAbbrevAttribute(Data, &Offset, Name, Form, ImplicitConst));
+  EXPECT_EQ(Name, DW_AT_name);
+  EXPECT_EQ(Form, DW_FORM_strp);
+  EXPECT_FALSE(ImplicitConst.has_value());
+  // The attribute and form were consumed; no inline value follows.
+  EXPECT_EQ(Offset, RawData.size());
+}
+
+TEST(DWARFDebugAbbrevTest, ReadAbbrevAttributeImplicitConst) {
+  SmallString<16> RawData;
+  raw_svector_ostream OS(RawData);
+  encodeULEB128(DW_AT_const_value, OS);
+  encodeULEB128(DW_FORM_implicit_const, OS);
+  encodeSLEB128(-42, OS);
+
+  DataExtractor Data(RawData, sys::IsLittleEndianHost);
+  uint64_t Offset = 0;
+  dwarf::Attribute Name;
+  dwarf::Form Form;
+  std::optional<int64_t> ImplicitConst;
+  EXPECT_TRUE(readAbbrevAttribute(Data, &Offset, Name, Form, ImplicitConst));
+  EXPECT_EQ(Name, DW_AT_const_value);
+  EXPECT_EQ(Form, DW_FORM_implicit_const);
+  ASSERT_TRUE(ImplicitConst.has_value());
+  EXPECT_EQ(*ImplicitConst, -42);
+  // The inline SLEB128 value was consumed in addition to the (attribute, form)
+  // pair.
+  EXPECT_EQ(Offset, RawData.size());
+}
+
+TEST(DWARFDebugAbbrevTest, ReadAbbrevAttributeTerminator) {
+  SmallString<16> RawData;
+  raw_svector_ostream OS(RawData);
+  encodeULEB128(0, OS);
+  encodeULEB128(0, OS);
+
+  DataExtractor Data(RawData, sys::IsLittleEndianHost);
+  uint64_t Offset = 0;
+  dwarf::Attribute Name;
+  dwarf::Form Form;
+  std::optional<int64_t> ImplicitConst;
+  EXPECT_FALSE(readAbbrevAttribute(Data, &Offset, Name, Form, ImplicitConst));
+  EXPECT_FALSE(ImplicitConst.has_value());
+}

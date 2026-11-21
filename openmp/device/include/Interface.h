@@ -44,6 +44,7 @@ int omp_get_dynamic(void);
 ///
 ///{
 void omp_set_num_threads(int);
+void kmp_set_num_threads_8(int64_t);
 int omp_get_max_threads(void);
 ///}
 
@@ -142,6 +143,18 @@ int omp_get_initial_device(void);
 
 void *llvm_omp_target_dynamic_shared_alloc();
 
+/// Dynamic groupprivate memory
+///
+///{
+void *omp_get_dyn_gprivate_ptr(size_t Offset, omp_access_t AccessGroup);
+
+void *omp_get_dyn_gprivate_nofb_ptr(size_t Offset, omp_access_t AccessGroup);
+
+size_t omp_get_dyn_gprivate_size(omp_access_t AccessGroup);
+
+omp_memspace_handle_t omp_get_dyn_gprivate_memspace(omp_access_t AccessGroup);
+///}
+
 /// Synchronization
 ///
 ///{
@@ -217,6 +230,9 @@ uint32_t __kmpc_get_hardware_num_threads_in_block();
 /// External interface to get the warp size.
 uint32_t __kmpc_get_warp_size();
 
+/// External interface to get how many of a block's threads a team can use.
+uint32_t __kmpc_get_max_team_threads(int32_t IsSPMD);
+
 /// Kernel
 ///
 ///{
@@ -224,6 +240,8 @@ uint32_t __kmpc_get_warp_size();
 struct KernelEnvironmentTy;
 
 int8_t __kmpc_is_spmd_exec_mode();
+
+int32_t __kmpc_is_team_main_thread();
 
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment,
                            KernelLaunchEnvironmentTy *KernelLaunchEnvironment);
@@ -235,19 +253,18 @@ void __kmpc_target_deinit();
 /// Reduction
 ///
 ///{
-void *__kmpc_reduction_get_fixed_buffer();
-
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(IdentTy *Loc,
                                                uint64_t reduce_data_size,
                                                void *reduce_data,
                                                ShuffleReductFnTy shflFct,
                                                InterWarpCopyFnTy cpyFct);
 
-int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
-    IdentTy *Loc, void *GlobalBuffer, uint32_t num_of_records,
-    uint64_t reduce_data_size, void *reduce_data, ShuffleReductFnTy shflFct,
-    InterWarpCopyFnTy cpyFct, ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct,
-    ListGlobalFnTy glcpyFct, ListGlobalFnTy glredFct);
+int32_t __kmpc_gpu_xteam_reduce_nowait(IdentTy *Loc, void *reduce_data,
+                                       ShuffleReductFnTy shflFct,
+                                       InterWarpCopyFnTy cpyFct,
+                                       ListGlobalFnTy lgcpyFct,
+                                       ListGlobalFnTy glcpyFct,
+                                       ListGlobalFnTy glredFct);
 ///}
 
 /// Synchronization
@@ -356,6 +373,10 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
 int32_t __kmpc_cancellationpoint(IdentTy *Loc, int32_t TId, int32_t CancelVal);
 
 int32_t __kmpc_cancel(IdentTy *Loc, int32_t TId, int32_t CancelVal);
+
+/// Report a user-directed error. \p Severity matches kmp_severity_t: 1 is a
+/// warning and execution continues, 2 is fatal and execution aborts.
+void __kmpc_error(IdentTy *Loc, int32_t Severity, const char *Message);
 ///}
 
 /// Shuffle

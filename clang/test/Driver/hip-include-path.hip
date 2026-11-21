@@ -16,10 +16,22 @@
 // RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm --no-offload-inc -nogpulib --offload-inc %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,CLANG,HIP -DRESOURCE_DIR=%clang-resource-dir %s
 
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib -nostdinc++ %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=COMMON,CLANG,HIP -DRESOURCE_DIR=%clang-resource-dir %s
+
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm-invalid -nogpulib %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=NOLIBHIPCXX %s
+
+// NOLIBHIPCXX: "-idirafter" "{{[^"]*}}Inputs/rocm-invalid/include"
+// NOLIBHIPCXX-NOT: "{{.*}}Inputs/rocm-invalid/include/libhipcxx"
+
 // COMMON-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1"
 // CLANG-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include/cuda_wrappers"
 // NOCLANG-NOT: "[[RESOURCE_DIR]]/include/cuda_wrappers"
 // HIP-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include"
+// HIP-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include/libhipcxx"
 // HIP-SAME: "-include" "__clang_hip_runtime_wrapper.h"
 // NOHIP-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
@@ -31,6 +43,7 @@
 // CLANG-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include/cuda_wrappers"
 // NOCLANG-NOT: "[[RESOURCE_DIR]]/include/cuda_wrappers"
 // HIP-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include"
+// HIP-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include/libhipcxx"
 // HIP-SAME: "-include" "__clang_hip_runtime_wrapper.h"
 // NOHIP-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
@@ -46,6 +59,17 @@
 // ROCM35-NOT: "[[RESOURCE_DIR]]/include/cuda_wrappers"
 // ROCM35-SAME: "-internal-isystem" "[[RESOURCE_DIR]]"
 // ROCM35-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include"
+// ROCM35-SAME: "-idirafter" "{{[^"]*}}Inputs/rocm/include/libhipcxx"
 // ROCM35-NOT: "-include" "__clang_hip_runtime_wrapper.h"
 // skip check of standard C++ include path
 // ROCM35-SAME: "-internal-isystem" "[[RESOURCE_DIR]]/include"
+
+// The device compilation must pick up the host toolchain's system include paths
+// so host C++ library headers are usable.
+// RUN: %clang -c -### --target=x86_64-unknown-linux-gnu --cuda-gpu-arch=gfx900 \
+// RUN:   -std=c++11 --rocm-path=%S/Inputs/rocm -nogpulib \
+// RUN:   --sysroot=%S/Inputs/basic_linux_tree %s 2>&1 \
+// RUN:   | FileCheck -check-prefixes=HOSTINC %s
+
+// HOSTINC-LABEL: "{{[^"]*}}clang{{[^"]*}}" "-cc1" "-triple" "amdgpu9.00-amd-amdhsa"
+// HOSTINC: "-internal-externc-isystem" "{{[^"]*}}Inputs/basic_linux_tree/usr/include"

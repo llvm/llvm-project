@@ -33,8 +33,13 @@ if(LLVM_ENABLE_PIC)
       set(LTO_LIBRARY_NAME LTO)
   endif()
 
+  # LLVM_C_EXPORTS (below) sets this library apart from every shared PCH.
   add_llvm_library(${LTO_LIBRARY_NAME} ${LTO_LIBRARY_TYPE} INSTALL_WITH_TOOLCHAIN
-      ${SOURCES} DEPENDS intrinsics_gen)
+      DISABLE_PCH_REUSE ${SOURCES} DEPENDS intrinsics_gen)
+
+  # libLTO defines the lto_* C API but consumes the LLVM C++ API. Export the
+  # former without marking the latter as exported.
+  target_compile_definitions(${LTO_LIBRARY_NAME} PRIVATE LLVM_C_EXPORTS)
 
   install(FILES ${LLVM_MAIN_INCLUDE_DIR}/llvm-c/lto.h
     DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/llvm-c"

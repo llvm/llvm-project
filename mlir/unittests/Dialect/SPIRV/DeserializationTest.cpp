@@ -108,6 +108,41 @@ protected:
     return id;
   }
 
+  uint32_t addVectorType(uint32_t elementType, uint32_t count) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeVector, {id, elementType, count});
+    return id;
+  }
+
+  uint32_t addArrayType(uint32_t elementType, uint32_t countID) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpTypeArray, {id, elementType, countID});
+    return id;
+  }
+
+  uint32_t addIntConstant(uint32_t type, uint32_t value) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpConstant, {type, id, value});
+    return id;
+  }
+
+  uint32_t addConstantComposite(uint32_t type,
+                                ArrayRef<uint32_t> constituents) {
+    auto id = nextID++;
+    SmallVector<uint32_t, 4> operands;
+    operands.push_back(type);
+    operands.push_back(id);
+    operands.append(constituents.begin(), constituents.end());
+    addInstruction(spirv::Opcode::OpConstantComposite, operands);
+    return id;
+  }
+
+  uint32_t addUndef(uint32_t type) {
+    auto id = nextID++;
+    addInstruction(spirv::Opcode::OpUndef, {type, id});
+    return id;
+  }
+
   uint32_t addFunctionType(uint32_t retType, ArrayRef<uint32_t> paramTypes) {
     auto id = nextID++;
     SmallVector<uint32_t, 4> operands;
@@ -175,6 +210,174 @@ TEST_F(DeserializationTest, InsufficientWordFailure) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("insufficient words for the last instruction");
+}
+
+TEST_F(DeserializationTest, FunctionParameterAttributeMissingOperand) {
+  addHeader();
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {1, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr)});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpDecorate with FuncParamAttr needs a single function "
+                   "parameter attribute");
+}
+
+TEST_F(DeserializationTest, FunctionParameterAttributeExcessOperands) {
+  addHeader();
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {1, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr),
+       static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoAlias),
+       static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoCapture)});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpDecorate with FuncParamAttr needs a single function "
+                   "parameter attribute");
+}
+
+TEST_F(DeserializationTest, FunctionParameterAttributeUnknownValue) {
+  addHeader();
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {1, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr), 100});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("invalid FunctionParameterAttribute code: 100");
+}
+
+TEST_F(DeserializationTest, FunctionReturnAttributeOnVoid) {
+  addHeader();
+  auto fnID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {fnID, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr),
+       static_cast<uint32_t>(spirv::FunctionParameterAttribute::Zext)});
+  auto voidType = addVoidType();
+  auto fnType = addFunctionType(voidType, {});
+  addInstruction(spirv::Opcode::OpFunction,
+                 {voidType, fnID,
+                  static_cast<uint32_t>(spirv::FunctionControl::None), fnType});
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addInstruction(spirv::Opcode::OpReturn, {});
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "FuncParamAttr decoration requires a non-void function result");
+}
+
+TEST_F(DeserializationTest, FunctionParameterAttributeOnGlobalUnsupported) {
+  addHeader();
+  auto varID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {varID, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr),
+       static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoAlias)});
+  auto intType = addIntType(32);
+  auto ptrType = nextID++;
+  auto storageClass =
+      static_cast<uint32_t>(spirv::StorageClass::CrossWorkgroup);
+  addInstruction(spirv::Opcode::OpTypePointer,
+                 {ptrType, storageClass, intType});
+  addInstruction(spirv::Opcode::OpVariable, {ptrType, varID, storageClass});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "FuncParamAttr decoration on result <id> 1 is not supported: "
+      "expected OpFunctionParameter or OpFunction");
+}
+
+TEST_F(DeserializationTest, FunctionParameterAttributeUnknownTarget) {
+  addHeader();
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {42, static_cast<uint32_t>(spirv::Decoration::FuncParamAttr),
+       static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoAlias)});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "FuncParamAttr decoration on result <id> 42 is not supported: "
+      "expected OpFunctionParameter or OpFunction");
+}
+
+class MultipleParameterDecorationsTest
+    : public DeserializationTest,
+      public ::testing::WithParamInterface<spirv::Decoration> {};
+
+TEST_P(MultipleParameterDecorationsTest, RejectCombinedWithOtherDecorations) {
+  addHeader();
+  auto argID = nextID++;
+  SmallVector<uint32_t> operands = {argID, static_cast<uint32_t>(GetParam())};
+  if (GetParam() == spirv::Decoration::Alignment)
+    operands.push_back(16);
+  else if (GetParam() == spirv::Decoration::FuncParamAttr)
+    operands.push_back(
+        static_cast<uint32_t>(spirv::FunctionParameterAttribute::NoWrite));
+  addInstruction(spirv::Opcode::OpDecorate, operands);
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {argID, static_cast<uint32_t>(spirv::Decoration::Constant)});
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {argID, static_cast<uint32_t>(spirv::Decoration::Volatile)});
+
+  auto voidType = addVoidType();
+  auto intType = addIntType(32);
+  auto ptrType = nextID++;
+  addInstruction(spirv::Opcode::OpTypePointer,
+                 {ptrType,
+                  static_cast<uint32_t>(spirv::StorageClass::CrossWorkgroup),
+                  intType});
+  auto fnType = addFunctionType(voidType, {ptrType});
+  addFunction(voidType, fnType);
+  addInstruction(spirv::Opcode::OpFunctionParameter, {ptrType, argID});
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(
+      "already found a decoration for function argument with result <id> 1");
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    SPIRV, MultipleParameterDecorationsTest,
+    ::testing::Values(spirv::Decoration::Alignment,
+                      spirv::Decoration::FuncParamAttr,
+                      spirv::Decoration::Restrict,
+                      spirv::Decoration::RelaxedPrecision));
+
+TEST_F(DeserializationTest, NonUnitParameterDecoration) {
+  addHeader();
+  auto argID = nextID++;
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {argID, static_cast<uint32_t>(spirv::Decoration::Location), 0});
+
+  auto voidType = addVoidType();
+  auto intType = addIntType(32);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, argID});
+  addInstruction(spirv::Opcode::OpLabel, {nextID++});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("unhandled decoration 'location' on function argument with "
+                   "result <id> 1");
+}
+
+TEST_F(DeserializationTest, AlignmentMissingOperand) {
+  addHeader();
+  addInstruction(spirv::Opcode::OpDecorate,
+                 {1, static_cast<uint32_t>(spirv::Decoration::Alignment)});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpDecorate with Alignment needs a single integer literal");
+}
+
+TEST_F(DeserializationTest, AlignmentExcessOperands) {
+  addHeader();
+  addInstruction(
+      spirv::Opcode::OpDecorate,
+      {1, static_cast<uint32_t>(spirv::Decoration::Alignment), 4, 8});
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpDecorate with Alignment needs a single integer literal");
 }
 
 TEST_F(DeserializationTest, OpExtInstMissingOperands) {
@@ -318,6 +521,59 @@ TEST_F(DeserializationTest, OpMemberNameExcessOperands) {
 }
 
 //===----------------------------------------------------------------------===//
+// Constants
+//===----------------------------------------------------------------------===//
+
+TEST_F(DeserializationTest, ConstantCompositeMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeVectorMissingConstituentsFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto vectorType = addVectorType(int32Type, 2);
+  addConstantComposite(vectorType, {});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpConstantComposite must have at least 1 parameter");
+}
+
+TEST_F(DeserializationTest, ConstantCompositeUndefConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  auto undef = addUndef(int32Type);
+  addConstantComposite(arrayType, {two, undef});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #1 <id> " + Twine(undef) +
+                    " is an OpUndef, which cannot be represented in "
+                    "spirv.Constant")
+                       .str());
+}
+
+TEST_F(DeserializationTest, ConstantCompositeNonConstantConstituentFailure) {
+  addHeader();
+  auto int32Type = addIntType(32);
+  auto two = addIntConstant(int32Type, 2);
+  auto arrayType = addArrayType(int32Type, two);
+  addConstantComposite(arrayType, {int32Type, two});
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic(("OpConstantComposite component #0 <id> " +
+                    Twine(int32Type) + " must come from a normal constant")
+                       .str());
+}
+
+//===----------------------------------------------------------------------===//
 // Functions
 //===----------------------------------------------------------------------===//
 
@@ -368,4 +624,87 @@ TEST_F(DeserializationTest, FunctionMalformedLabelFailure) {
 
   ASSERT_FALSE(deserialize());
   expectDiagnostic("OpLabel should only have result <id>");
+}
+
+//===----------------------------------------------------------------------===//
+// Switch
+//===----------------------------------------------------------------------===//
+
+TEST_F(DeserializationTest, SwitchInt64LiteralWordOrder) {
+  addHeader();
+  auto voidType = addVoidType();
+  auto intType = addIntType(64);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  auto selectorID = nextID++;
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, selectorID});
+  auto entryID = nextID++;
+  auto headerID = nextID++;
+  auto defaultID = nextID++;
+  auto caseID = nextID++;
+  auto mergeID = nextID++;
+  addInstruction(spirv::Opcode::OpLabel, {entryID});
+  addInstruction(spirv::Opcode::OpBranch, {headerID});
+  addInstruction(spirv::Opcode::OpLabel, {headerID});
+  addInstruction(
+      spirv::Opcode::OpSelectionMerge,
+      {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
+  // 64-bit literals span two words with the low-order word first:
+  // {1, 0} encodes 1, {0, 1} encodes 1 << 32, and {0xffffffff, 0xffffffff}
+  // encodes -1.
+  addInstruction(spirv::Opcode::OpSwitch,
+                 {selectorID, defaultID, 1, 0, caseID, 0, 1, caseID,
+                  0xffffffffu, 0xffffffffu, caseID});
+  addInstruction(spirv::Opcode::OpLabel, {defaultID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {caseID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {mergeID});
+  addReturn();
+  addFunctionEnd();
+
+  auto moduleOp = deserialize();
+  ASSERT_TRUE(moduleOp);
+  SmallVector<int64_t> literals;
+  moduleOp->walk([&](spirv::SwitchOp switchOp) {
+    for (APInt literal : switchOp.getLiterals()->getValues<APInt>())
+      literals.push_back(literal.getSExtValue());
+  });
+  EXPECT_THAT(literals,
+              ::testing::ElementsAre(1, static_cast<int64_t>(1) << 32, -1));
+}
+
+TEST_F(DeserializationTest, SwitchInt64LiteralOperandCountMismatch) {
+  addHeader();
+  auto voidType = addVoidType();
+  auto intType = addIntType(64);
+  auto fnType = addFunctionType(voidType, {intType});
+  addFunction(voidType, fnType);
+  auto selectorID = nextID++;
+  addInstruction(spirv::Opcode::OpFunctionParameter, {intType, selectorID});
+  auto entryID = nextID++;
+  auto headerID = nextID++;
+  auto defaultID = nextID++;
+  auto caseID = nextID++;
+  auto mergeID = nextID++;
+  addInstruction(spirv::Opcode::OpLabel, {entryID});
+  addInstruction(spirv::Opcode::OpBranch, {headerID});
+  addInstruction(spirv::Opcode::OpLabel, {headerID});
+  addInstruction(
+      spirv::Opcode::OpSelectionMerge,
+      {mergeID, static_cast<uint32_t>(spirv::SelectionControl::None)});
+  // A single-word literal is not valid for a 64-bit selector.
+  addInstruction(spirv::Opcode::OpSwitch, {selectorID, defaultID, 1, caseID});
+  addInstruction(spirv::Opcode::OpLabel, {defaultID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {caseID});
+  addInstruction(spirv::Opcode::OpBranch, {mergeID});
+  addInstruction(spirv::Opcode::OpLabel, {mergeID});
+  addReturn();
+  addFunctionEnd();
+
+  ASSERT_FALSE(deserialize());
+  expectDiagnostic("OpSwitch must specify selector, default target and any "
+                   "number of literal and label <id> pairs, where each literal "
+                   "of a 64-bit selector spans 2 word(s)");
 }

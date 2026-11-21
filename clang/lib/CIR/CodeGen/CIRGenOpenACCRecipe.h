@@ -17,6 +17,7 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/OpenACCClause.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Basic/OpenACCKinds.h"
 
@@ -176,9 +177,7 @@ public:
                BuiltinType::ArraySection) &&
            "array section shouldn't make it to recipe creation");
 
-    mlir::ModuleOp mod = builder.getBlock()
-                             ->getParent()
-                             ->template getParentOfType<mlir::ModuleOp>();
+    mlir::ModuleOp mod = cgf.cgm.getModule();
 
     std::string recipeName = getRecipeName(varRef->getSourceRange(), baseType,
                                            numBounds, reductionOp);
@@ -194,10 +193,12 @@ public:
     RecipeTy recipe;
 
     if constexpr (std::is_same_v<RecipeTy, mlir::acc::ReductionRecipeOp>) {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType(),
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType(),
                                 convertReductionOp(reductionOp));
     } else {
-      recipe = RecipeTy::create(modBuilder, loc, recipeName, mainOp.getType());
+      recipe = RecipeTy::create(modBuilder, loc, recipeName,
+                                /*sym_visibility=*/nullptr, mainOp.getType());
     }
     insertLocation = modBuilder.saveInsertionPoint();
 

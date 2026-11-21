@@ -116,8 +116,11 @@ protected:
 
 private:
   Type *VTy;
+
+protected:
   Use *UseList = nullptr;
 
+private:
   friend class ValueAsMetadata; // Allow access to IsUsedByMD.
   friend class ValueHandleBase; // Allow access to HasValueHandle.
 
@@ -165,11 +168,13 @@ private:
     }
   };
 
+protected:
   template <typename UserTy> // UserTy == 'User' or 'const User'
   class user_iterator_impl {
     use_iterator_impl<Use> UI;
     explicit user_iterator_impl(Use *U) : UI(U) {}
     friend class Value;
+    friend class Instruction;
 
   public:
     using iterator_category = std::forward_iterator_tag;
@@ -198,9 +203,7 @@ private:
     }
 
     // Retrieve a pointer to the current User.
-    UserTy *operator*() const {
-      return UI->getUser();
-    }
+    UserTy *operator*() const { return cast<UserTy>(UI->getUser()); }
 
     UserTy *operator->() const { return operator*(); }
 
@@ -211,7 +214,6 @@ private:
     Use &getUse() const { return *UI; }
   };
 
-protected:
   LLVM_ABI Value(Type *Ty, unsigned scid);
 
   /// Value's destructor should be virtual by design, but that would require
@@ -683,7 +685,7 @@ public:
   /// accumulated even if the GEP is not "inbounds".
   ///
   /// If \p AllowInvariantGroup is true then this method also looks through
-  /// strip.invariant.group and launder.invariant.group intrinsics.
+  /// launder.invariant.group intrinsics.
   ///
   /// If \p ExternalAnalysis is provided it will be used to calculate a offset
   /// when a operand of GEP is not constant.

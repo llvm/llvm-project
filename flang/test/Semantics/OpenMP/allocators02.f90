@@ -1,13 +1,10 @@
-! REQUIRES: openmp_runtime
-
-! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags
+! RUN: %python %S/../test_errors.py %s %flang_fc1 %openmp_flags -fopenmp-version=52
 ! OpenMP Version 5.2
 ! 6.7 allocators construct
 ! A variable that is part of another variable (as an array or
 ! structure element) cannot appear in an allocatprs construct.
 
 subroutine allocate()
-use omp_lib
 
   type my_type
     integer, allocatable :: array(:)

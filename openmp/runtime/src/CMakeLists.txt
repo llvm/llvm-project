@@ -86,6 +86,7 @@ else()
     kmp_atomic.cpp
     kmp_csupport.cpp
     kmp_debug.cpp
+    kmp_device_env.cpp
     kmp_itt.cpp
     kmp_invoke_microtask.cpp
     kmp_environment.cpp
@@ -98,6 +99,7 @@ else()
     kmp_str.cpp
     kmp_tasking.cpp
     kmp_threadprivate.cpp
+    kmp_traits.cpp
     kmp_utility.cpp
     kmp_barrier.cpp
     kmp_wait_release.cpp
@@ -155,6 +157,10 @@ libomp_get_asmflags(LIBOMP_CONFIGURED_ASMFLAGS)
 set_source_files_properties(${LIBOMP_CXXFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_CXXFLAGS}")
 set_source_files_properties(${LIBOMP_ASMFILES} ${LIBOMP_GNUASMFILES} PROPERTIES COMPILE_FLAGS "${LIBOMP_CONFIGURED_ASMFLAGS}")
 
+# OpenMP version and date
+add_compile_definitions(KMP_SPEC_VERSION=${LIBOMP_VERSION_MAJOR}.${LIBOMP_VERSION_MINOR})
+add_compile_definitions(KMP_SPEC_DATE=${LIBOMP_OMP_YEAR_MONTH})
+
 # Disable libstdc++ assertions, even in an LLVM_ENABLE_ASSERTIONS build, to
 # avoid an unwanted dependency on libstdc++.so.
 add_compile_definitions(_GLIBCXX_NO_ASSERTIONS)
@@ -199,12 +205,10 @@ if(LIBOMP_USE_HWLOC)
   # the options to other libraries that depend on it, e.g. libompd.
   target_include_directories(obj.omp
     PRIVATE
-    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
   target_include_directories(omp
     INTERFACE
-    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>"
-    "$<INSTALL_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
+    "$<BUILD_INTERFACE:${LIBOMP_HWLOC_INCLUDE_DIR}>")
 endif()
 
 if(OPENMP_MSVC_NAME_SCHEME)
@@ -413,7 +417,10 @@ set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS omp)
 # We want to install libomp in ${DESTDIR}/${CMAKE_INSTALL_FULL_LIBDIR}
 # We want to install headers in ${DESTDIR}/${CMAKE_INSTALL_FULL_INCLUDEDIR}
 if(WIN32)
-  install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT openmp)
+  # Do not install arm64ec openmp library if building for arm64x; we need to only install the arm64x one.
+  if(NOT LIBOMP_ENABLE_ARM64X OR LIBOMP_ARCH STREQUAL "aarch64")
+    install(TARGETS omp ${export_to_llvmexports} RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" COMPONENT openmp)
+  endif()
   install(TARGETS ${LIBOMP_IMP_LIB_TARGET} ARCHIVE DESTINATION "${OPENMP_INSTALL_LIBDIR}" COMPONENT openmp)
   # Create aliases (regular copies) of the library for backwards compatibility
   set(LIBOMP_ALIASES "libiomp5md")

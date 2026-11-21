@@ -578,8 +578,8 @@ define void @store_red_double(ptr noalias %A, ptr noalias %B, ptr noalias %C, i3
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds double, ptr [[A:%.*]], i64 [[MUL]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[ARRAYIDX2]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast <2 x double> [[TMP0]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[ADD8:%.*]] = fadd fast double [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds double, ptr [[C:%.*]], i64 [[I_018]]
 ; CHECK-NEXT:    store double [[ADD8]], ptr [[ARRAYIDX9]], align 8

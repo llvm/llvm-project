@@ -52,6 +52,19 @@ entry:
 ; CHECK: call i32 @foo
 }
 
+; Make sure architecture features like +armv8-a do not interfere with inlining.
+define i32 @callee_crc(i32 %x, i32 %y) "target-features"="+armv7-a,+crc" {
+  %res = call i32 @llvm.arm.crc32b(i32 %x, i32 %y)
+  ret i32 %res
+}
+
+define i32 @caller_crc(i32 %x, i32 %y) "target-features"="+armv8-a,+crc" {
+; CHECK-LABEL: caller_crc
+; CHECK: call i32 @llvm.arm.crc32b
+  %res = call i32 @callee_crc(i32 %x, i32 %y)
+  ret i32 %res
+}
+
 attributes #0 = { "target-cpu"="generic" "target-features"="+dsp,+neon" }
 attributes #1 = { "target-cpu"="generic" "target-features"="+dsp,+neon,+fp16" }
 attributes #2 = { "target-cpu"="generic" "target-features"="+dsp,+neon,+fp16,+thumb-mode" }

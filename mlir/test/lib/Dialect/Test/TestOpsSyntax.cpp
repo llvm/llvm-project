@@ -8,7 +8,8 @@
 
 #include "TestOpsSyntax.h"
 #include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsConversion.h"
+#include "TestOpsCore.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
 
@@ -456,7 +457,8 @@ void PolyForOp::print(OpAsmPrinter &p) {
 
 void PolyForOp::getAsmBlockArgumentNames(Region &region,
                                          OpAsmSetValueNameFn setNameFn) {
-  auto arrayAttr = getOperation()->getAttrOfType<ArrayAttr>("arg_names");
+  auto arrayAttr =
+      getOperation()->getDiscardableAttrOfType<ArrayAttr>("arg_names");
   if (!arrayAttr)
     return;
   auto args = getRegion().front().getArguments();

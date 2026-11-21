@@ -205,8 +205,8 @@ int f() {
 namespace uninit_reference_used {
   int y;
   constexpr int &r = r; // expected-error {{must be initialized by a constant expression}} \
-  // expected-note {{initializer of 'r' is not a constant expression}} \
-  // expected-note {{declared here}}
+                        // expected-note {{initializer of 'r' is not a constant expression}} \
+                        // expected-note {{declared here}}
   constexpr int &rr = (rr, y);
   constexpr int &g() {
     int &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
@@ -224,12 +224,12 @@ namespace uninit_reference_used {
   // expected-note {{in call to 'g2()'}}
   constexpr int &g3() {
     int &x = (x,y); // expected-warning{{left operand of comma operator has no effect}} \
-    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
-    // nointerpreter-note {{use of reference outside its lifetime is not allowed in a constant expression}}
+                    // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \
+                    // expected-note {{use of reference outside its lifetime is not allowed in a constant expression}}
     return x;
   }
-  constexpr int &gg3 = g3(); // nointerpreter-error {{must be initialized by a constant expression}} \
-  // nointerpreter-note {{in call to 'g3()'}}
+  constexpr int &gg3 = g3(); // expected-error {{must be initialized by a constant expression}} \
+                             // expected-note {{in call to 'g3()'}}
   typedef decltype(sizeof(1)) uintptr_t;
   constexpr uintptr_t g4() {
     uintptr_t * &x = x; // expected-warning {{reference 'x' is not yet bound to a value when used within its own initialization}} \

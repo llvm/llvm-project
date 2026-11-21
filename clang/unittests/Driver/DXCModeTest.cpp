@@ -13,6 +13,7 @@
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/OffloadArch.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/CreateInvocationFromArgs.h"
@@ -86,7 +87,11 @@ TEST(DxcModeTest, TargetProfileValidation) {
                         InMemoryFileSystem, Diags);
   validateTargetProfile("-Tcs_6_8", "dxilv1.8--shadermodel6.8-compute",
                         InMemoryFileSystem, Diags);
-  validateTargetProfile("-Tlib_6_x", "dxilv1.9--shadermodel6.15-library",
+  validateTargetProfile("-Tcs_6_9", "dxilv1.9--shadermodel6.9-compute",
+                        InMemoryFileSystem, Diags);
+  validateTargetProfile("-Tlib_6_10", "dxilv1.10--shadermodel6.10-library",
+                        InMemoryFileSystem, Diags);
+  validateTargetProfile("-Tlib_6_x", "dxilv1.10--shadermodel6.15-library",
                         InMemoryFileSystem, Diags);
 
   // Invalid tests.
@@ -129,7 +134,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   std::unique_ptr<llvm::opt::DerivedArgList> TranslatedArgs{
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None)};
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None)};
   EXPECT_NE(TranslatedArgs, nullptr);
   if (TranslatedArgs) {
     auto *A =
@@ -150,7 +155,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 1u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
@@ -166,7 +171,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 2u);
   EXPECT_STREQ(DiagConsumer->Errors.back().c_str(),
                "invalid validator version : 1; format of validator version is "
@@ -181,7 +186,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 3u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),
@@ -197,7 +202,7 @@ TEST(DxcModeTest, ValidatorVersionValidation) {
     DAL->append(A);
 
   TranslatedArgs.reset(
-      TC.TranslateArgs(*DAL, "0", Action::OffloadKind::OFK_None));
+      TC.TranslateArgs(*DAL, BoundArch("0"), Action::OffloadKind::OFK_None));
   EXPECT_EQ(Diags.getNumErrors(), 4u);
   EXPECT_STREQ(
       DiagConsumer->Errors.back().c_str(),

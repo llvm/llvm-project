@@ -45,6 +45,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   {
     std::basic_string<char, std::char_traits<char>, test_allocator<char>> str2((test_allocator<char>(&alloc_stats)));
     str2 = "long long string so no SSO";
+    (void)str2;
     assert(alloc_stats.alloc_count > 0);
     LIBCPP_ASSERT(alloc_stats.alloc_count == 1);
   }

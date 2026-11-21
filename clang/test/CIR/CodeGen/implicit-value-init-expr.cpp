@@ -20,7 +20,7 @@ void test(void *p) {
 // CIR-NEXT:    cir.store align(4) %[[P3]], %[[P2]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM:    define{{.*}} void @_Z4testPv(ptr{{.*}} %[[ARG:.*]])
-// LLVM-NEXT:   %[[P:.*]] = alloca ptr, i64 1, align 8
+// LLVM-NEXT:   %[[P:.*]] = alloca ptr, align 8
 // LLVM-NEXT:   store ptr %[[ARG]], ptr %[[P]], align 8
 // LLVM-NEXT:   %[[P1:.*]] = load ptr, ptr %[[P]], align 8
 // LLVM-NEXT:   store i32 0, ptr %[[P1]], align 4
@@ -77,25 +77,35 @@ void test_aggregate() {
 
 // CIR: cir.func {{.*}} @_ZN3FooC2Ev(
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
+
 // CIR:   %[[BAR:.*]] = cir.get_member %[[THIS]][0] {name = "bar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!s32i x 5>>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!s32i x 5>
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[BAR]] : !cir.array<!s32i x 5>, !cir.ptr<!cir.array<!s32i x 5>>
+// CIR:   %[[BAR_PTR_I8:.*]] = cir.cast bitcast %[[BAR]] : !cir.ptr<!cir.array<!s32i x 5>> -> !cir.ptr<!u8i>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR:   %[[CONST_20:.*]] = cir.const #cir.int<20> : !u64i
+// CIR:   %[[BAR_VOID_PTR:.*]] = cir.cast bitcast %[[BAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:   cir.libc.memset %[[CONST_20]] bytes at %[[BAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   %[[DBAR:.*]] = cir.get_member %[[THIS]][1] {name = "dbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!cir.double x 5>>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!cir.double x 5>
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[DBAR]] : !cir.array<!cir.double x 5>, !cir.ptr<!cir.array<!cir.double x 5>>
+// CIR:   %[[DBAR_PTR_I8:.*]] = cir.cast bitcast %[[DBAR]] : !cir.ptr<!cir.array<!cir.double x 5>> -> !cir.ptr<!u8i>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR:   %[[CONST_40:.*]] = cir.const #cir.int<40> : !u64i
+// CIR:   %[[DBAR_VOID_PTR:.*]] = cir.cast bitcast %[[DBAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:   cir.libc.memset %[[CONST_40]] bytes at %[[DBAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   %[[SBAR:.*]] = cir.get_member %[[THIS]][2] {name = "sbar_"} : !cir.ptr<!rec_Foo> -> !cir.ptr<!cir.array<!rec_S x 5>>
-// CIR:   %[[ZERO:.*]] = cir.const #cir.zero : !cir.array<!rec_S x 5>
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[SBAR]] : !cir.array<!rec_S x 5>, !cir.ptr<!cir.array<!rec_S x 5>>
+// CIR:   %[[SBAR_PTR_I8:.*]] = cir.cast bitcast %[[SBAR]] : !cir.ptr<!cir.array<!rec_S x 5>> -> !cir.ptr<!u8i>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.int<0> : !u8i
+// CIR:   %[[CONST_40:.*]] = cir.const #cir.int<40> : !u64i
+// CIR:   %[[SBAR_VOID_PTR:.*]] = cir.cast bitcast %[[SBAR_PTR_I8]] : !cir.ptr<!u8i> -> !cir.ptr<!void>
+// CIR:   cir.libc.memset %[[CONST_40]] bytes at %[[SBAR_VOID_PTR]] {{.*}} to %[[CONST_0]] : !cir.ptr<!void>, !u8i, !u64i
 // CIR:   cir.return
 
 // LLVM: define {{.*}} void @_ZN3FooC2Ev(
 // LLVM:   %[[THIS:.*]] = load ptr, ptr
 // LLVM:   %[[BAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 0
-// LLVM:   store [5 x i32] zeroinitializer, ptr %[[BAR]]
+// LLVM:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[BAR]], i8 0, i64 20, i1 false)
 // LLVM:   %[[DBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 1
-// LLVM:   store [5 x double] zeroinitializer, ptr %[[DBAR]]
+// LLVM:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[DBAR]], i8 0, i64 40, i1 false)
 // LLVM:   %[[SBAR:.*]] = getelementptr inbounds nuw %struct.Foo, ptr %[[THIS]], i32 0, i32 2
-// LLVM:   store [5 x %struct.S] zeroinitializer, ptr %[[SBAR]]
+// LLVM:   call void @llvm.memset.p0.i64(ptr {{.*}}%[[SBAR]], i8 0, i64 40, i1 false)
 // LLVM:   ret void
 
 // OGCG: define{{.*}} void @_ZN3FooC2Ev(

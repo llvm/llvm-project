@@ -1,5 +1,6 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 %s -triple=i686-apple-darwin -target-feature +ssse3 -O1 -S -flax-vector-conversions=none -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple=i686-apple-darwin -target-feature +ssse3 -O1 -S -flax-vector-conversions=none -o - | FileCheck %s %}
 
 #define _mm_alignr_epi8(a, b, n) (__builtin_ia32_palignr128((a), (b), (n)))
 typedef char __v16qi __attribute__((__vector_size__(16)));

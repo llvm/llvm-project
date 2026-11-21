@@ -179,9 +179,9 @@ public:
                 uint64_t pltEntryAddr) const override;
   void writeIplt(uint8_t *buf, const Symbol &sym,
                  uint64_t pltEntryAddr) const override;
-  template <class ELFT, class RelTy>
-  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  void scanSection(InputSectionBase &) override;
+  template <class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>, unsigned shard);
+  void scanSection(InputSectionBase &, unsigned shard) override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
   void writeGotHeader(uint8_t *buf) const override;
@@ -256,7 +256,7 @@ static bool addOptional(Ctx &ctx, StringRef name, uint64_t value,
   Symbol *sym = ctx.symtab->find(name);
   if (!sym || sym->isDefined())
     return false;
-  sym->resolve(ctx, Defined{ctx, ctx.internalFile, StringRef(), STB_GLOBAL,
+  sym->resolve(ctx, Defined{ctx.internalFile, StringRef(), STB_GLOBAL,
                             STV_HIDDEN, STT_FUNC, value,
                             /*size=*/0, /*section=*/nullptr});
   defined.push_back(cast<Defined>(sym));
@@ -1061,9 +1061,9 @@ void PPC64::writePlt(uint8_t *buf, const Symbol &sym,
 }
 
 void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
-                      uint64_t /*pltEntryAddr*/) const {
-  writePPC64LoadAndBranch(ctx, buf,
-                          sym.getGotPltVA(ctx) - getPPC64TocBase(ctx));
+                      uint64_t pltEntryAddr) const {
+  writePPC64LoadAndBranch(ctx, buf, pltEntryAddr, sym.getGotPltVA(ctx),
+                          /*toc=*/false);
 }
 
 static bool isTocOptType(RelType type) {
@@ -1113,21 +1113,22 @@ static bool missingTlsGdLdMarker(InputSectionBase &sec, Relocs<RelTy> rels) {
   return hasGotGdLd;
 }
 
-template <class ELFT, class RelTy>
-void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
-  RelocScan rs(ctx, &sec);
+template <class RelTy>
+void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
+                            unsigned shard) {
+  RelocScan rs(ctx, &sec, shard);
   sec.relocations.reserve(rels.size());
   bool optimizeTlsGdLd =
       !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.shared;
   for (auto it = rels.begin(); it != rels.end(); ++it) {
     RelType type = it->getType(false);
     uint32_t symIdx = it->getSymbol(false);
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     uint64_t offset = it->r_offset;
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(*it, type);
+    int64_t addend = rs.getAddend(*it, type);
     if (ctx.arg.isPic && type == R_PPC64_TOC)
       addend += getPPC64TocBase(ctx);
 
@@ -1352,11 +1353,11 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   }
 }
 
-void PPC64::scanSection(InputSectionBase &sec) {
+void PPC64::scanSection(InputSectionBase &sec, unsigned shard) {
   if (ctx.arg.isLE)
-    elf::scanSection1<PPC64, ELF64LE>(*this, sec);
+    elf::scanSection1<ELF64LE>(*this, sec, shard);
   else
-    elf::scanSection1<PPC64, ELF64BE>(*this, sec);
+    elf::scanSection1<ELF64BE>(*this, sec, shard);
 
   // Sort relocations by offset for .toc sections. This is needed so that
   // sections addressed with small code model relocations come first.

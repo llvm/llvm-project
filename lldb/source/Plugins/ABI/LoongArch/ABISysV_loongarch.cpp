@@ -167,7 +167,7 @@ static bool UpdateRegister(RegisterContext *reg_ctx,
 
   const RegisterInfo *reg_info = reg_ctx->GetRegisterInfo(reg_kind, reg_num);
 
-  LLDB_LOG(log, "Writing {0}: 0x{1:x}", reg_info->name,
+  LLDB_LOG(log, "Writing {0}: {1:x}", reg_info->name,
            static_cast<uint64_t>(value));
   if (!reg_ctx->WriteRegisterFromUnsigned(reg_info, value)) {
     LLDB_LOG(log, "Writing {0}: failed", reg_info->name);
@@ -648,12 +648,12 @@ void ABISysV_loongarch::AugmentRegisterInfo(
       {"r29", "s6"},  {"r30", "s7"}, {"r31", "s8"}};
 
   for (auto it : llvm::enumerate(regs)) {
-    llvm::StringRef reg_name = it.value().name.GetStringRef();
+    llvm::StringRef reg_name = it.value().name;
 
     // Set alt name for certain registers for convenience
     llvm::StringRef alias_name = isa_to_abi_alias_map.lookup(reg_name);
     if (!alias_name.empty())
-      it.value().alt_name.SetString(alias_name);
+      it.value().alt_name = alias_name.str();
 
     // Set generic regnum so lldb knows what the PC, etc is
     it.value().regnum_generic = GetGenericNum(reg_name);

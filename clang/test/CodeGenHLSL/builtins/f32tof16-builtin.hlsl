@@ -2,8 +2,10 @@
 // RUN:   -triple dxil-pc-shadermodel6.3-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl \
-// RUN:   -triple spirv-unknown-vulkan-compute %s -emit-llvm -O0 -o - | \
+// RUN:   -triple spirv-unknown-vulkan-library %s -emit-llvm -O0 -o - | \
 // RUN:   FileCheck %s --check-prefix=SPIRV
+
+using namespace hlsl;
 
 // CHECK: define hidden noundef i32 @_Z11test_scalarf(float noundef nofpclass(nan inf) %p0) #0 {
 // CHECK: %hlsl.f32tof16 = call i32 @llvm.dx.legacyf32tof16.f32(float %[[#]])

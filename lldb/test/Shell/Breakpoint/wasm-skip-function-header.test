@@ -1,0 +1,119 @@
+# A WebAssembly function begins with a local variable declaration header that is
+# part of the function but is not an executable instruction. A breakpoint set at
+# a function's raw start address, such as one added by a scripted resolver, must
+# skip the header and resolve to the first instruction, otherwise it can never
+# be hit.
+#
+# The function "helper" starts at file address 0x5 with a 3-byte header, so its
+# first instruction is at 0x8.
+
+# RUN: split-file %s %t
+# RUN: yaml2obj %t/hdr.yaml -o %t/a.wasm
+# RUN: %lldb %t/a.wasm \
+# RUN:   -o "command script import %t/resolver.py" \
+# RUN:   -o "breakpoint set -P resolver.HelperResolver" \
+# RUN:   -o "breakpoint list" \
+# RUN:   -o exit 2>&1 | FileCheck %s
+
+# CHECK: Breakpoint 1: where = {{.*}}`helper + 3{{.*}}, address = 0x{{0*}}8
+
+#--- resolver.py
+import lldb
+
+
+class HelperResolver:
+    def __init__(self, bkpt, extra_args, internal_dict):
+        self.bkpt = bkpt
+
+    def __callback__(self, sym_ctx):
+        # Add a location at the raw function start, as a scripted resolver does.
+        symbol = sym_ctx.module.FindSymbol("helper")
+        if symbol:
+            self.bkpt.AddLocation(symbol.GetStartAddress())
+
+    def __get_depth__(self):
+        return lldb.eSearchDepthModule
+
+    def get_short_help(self):
+        return "Resolve at helper's start"
+
+
+#--- hdr.yaml
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+      - Index:           1
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+      - Index:           2
+        ParamTypes:      []
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0, 1, 2 ]
+  - Type:            MEMORY
+    Memories:
+      - Minimum:         0x1
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            0B
+      - Index:           1
+        Locals:
+          - Type:            I32
+            Count:           1
+        Body:            23808080800041106B21012001200036020C2001200128020C41016A36020820012802080F0B
+      - Index:           2
+        Locals:          []
+        Body:            41291081808080000F0B
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110155170000022E01110112064018030E3A0B3B0B271949133F1900000305000218030E3A0B3B0B491300000434000218030E3A0B3B0B49130000052E00110112064018030E3A0B3B0B271949133F190000062400030E3E0B0B0B000000
+  - Type:            CUSTOM
+    HeaderSecSizeEncodingLen: 2
+    Name:            .debug_info
+    Payload:         7A0000000400000000000401290000001D00230000000000000014000000000000000000000002050000002900000004ED00019F080000000101760000000302910C02000000010176000000040291080000000001027600000000052F0000000B00000007ED03000000009F0F0000000105760000000604000000050400
+  - Type:            CUSTOM
+    Name:            .debug_ranges
+    Payload:         050000002E0000002F0000003A0000000000000000000000
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         79007800696E740068656C706572006B656570002F746D702F7761736D726570726F006864722E6300636C616E672076657273696F6E2032322E312E302D776173692D73646B202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420343433346461626236393931363835366238323466363861363462303239633637313735653533322900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         5800000004001D000000010101FB0E0D000101010100000001000001006864722E6300000000000005020500000001050B0A084B050D067405073C050A063D05030658020200010105190A0005023000000016051206820202000101
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            __wasm_call_ctors
+      - Index:           1
+        Name:            helper
+      - Index:           2
+        Name:            keep
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+...

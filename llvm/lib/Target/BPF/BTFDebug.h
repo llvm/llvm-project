@@ -14,6 +14,7 @@
 #ifndef LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 #define LLVM_LIB_TARGET_BPF_BTFDEBUG_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
@@ -125,12 +126,13 @@ public:
 /// Handle struct/union type.
 class BTFTypeStruct : public BTFTypeBase {
   const DICompositeType *STy;
+  std::vector<const DINode *> Elements;
   bool HasBitField;
   std::vector<struct BTF::BTFMember> Members;
 
 public:
-  BTFTypeStruct(const DICompositeType *STy, bool IsStruct, bool HasBitField,
-                uint32_t NumMembers);
+  BTFTypeStruct(const DICompositeType *STy, ArrayRef<const DINode *> Elements,
+                bool IsStruct, bool HasBitField, uint32_t NumMembers);
   uint32_t getSize() override {
     return BTFTypeBase::getSize() + Members.size() * BTF::BTFMemberSize;
   }

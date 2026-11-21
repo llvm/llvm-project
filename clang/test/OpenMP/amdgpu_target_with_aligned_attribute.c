@@ -5,8 +5,8 @@
 #ifndef HEADER
 #define HEADER
 
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-amd.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgcn-amd-amdhsa -fopenmp-targets=amdgcn-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - | FileCheck %s --check-prefix=CHECK-AMD
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple powerpc64le-unknown-unknown -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm-bc %s -o %t-ppc-host-amd.bc
+// RUN: %clang_cc1 -verify -fopenmp -x c -triple amdgpu-amd-amdhsa -fopenmp-targets=amdgpu-amd-amdhsa -emit-llvm %s -fopenmp-is-target-device -fopenmp-host-ir-file-path %t-ppc-host-amd.bc -o - | FileCheck %s --check-prefix=CHECK-AMD
 
 
 void write_to_aligned_array(int *a, int N) {
@@ -199,7 +199,7 @@ void write_to_aligned_array(int *a, int N) {
 //
 //
 // CHECK-AMD-LABEL: define {{[^@]+}}@{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_write_to_aligned_array_l14_omp_outlined_omp_outlined
-// CHECK-AMD-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR1]] {
+// CHECK-AMD-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], i64 noundef [[DOTPREVIOUS_LB_:%.*]], i64 noundef [[DOTPREVIOUS_UB_:%.*]], i64 noundef [[N:%.*]], ptr noundef [[APTR:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-AMD-NEXT:  entry:
 // CHECK-AMD-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-AMD-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8, addrspace(5)

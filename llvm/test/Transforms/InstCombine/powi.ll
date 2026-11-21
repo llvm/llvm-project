@@ -11,7 +11,7 @@ declare void @use(double)
 define double @powi_fneg_even_int(double %x) {
 ; CHECK-LABEL: @powi_fneg_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -23,7 +23,7 @@ entry:
 define double @powi_fabs_even_int(double %x) {
 ; CHECK-LABEL: @powi_fabs_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:
@@ -35,7 +35,7 @@ entry:
 define double @powi_copysign_even_int(double %x, double %y) {
 ; CHECK-LABEL: @powi_copysign_even_int(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = tail call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
+; CHECK-NEXT:    [[R:%.*]] = call double @llvm.powi.f64.i32(double [[X:%.*]], i32 4)
 ; CHECK-NEXT:    ret double [[R]]
 ;
 entry:

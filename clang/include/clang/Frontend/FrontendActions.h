@@ -251,14 +251,6 @@ public:
   bool hasCodeCompletionSupport() const override { return false; }
 };
 
-class TemplightDumpAction : public ASTFrontendAction {
-protected:
-  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
-                                                 StringRef InFile) override;
-
-  void ExecuteAction() override;
-};
-
 /**
  * Frontend action adaptor that merges ASTs together.
  *

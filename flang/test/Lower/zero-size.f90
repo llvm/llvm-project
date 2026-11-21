@@ -11,9 +11,9 @@ subroutine zero2
   type dt
     integer :: j = 17
   end type
-  ! CHECK: %[[z:[0-9]*]] = fir.alloca !fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>> {bindc_name = "z", uniq_name = "_QFzero2Ez"}
+  ! CHECK: %[[z:[0-9]*]] = fir.alloca !fir.array<0x!fir.type<_QFzero2Tdt{j:i32}>> <{bindc_name = "z", uniq_name = "_QFzero2Ez"}>
   ! CHECK: %[[shape:[0-9]*]] = fir.shape %c0 : (index) -> !fir.shape<1>
-  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) {uniq_name = "_QFzero2Ez"}
+  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) uniq_name("_QFzero2Ez")
   type(dt) :: z(0)
   print*, size(z), z, ':'
 end
@@ -25,7 +25,7 @@ subroutine zero3
   end type
   ! CHECK: %[[z:[0-9]*]] = fir.address_of(@_QFzero3Ez) : !fir.ref<!fir.array<0x!fir.type<_QFzero3Tdt{j:i32}>>>
   ! CHECK: %[[shape:[0-9]*]] = fir.shape %c0 : (index) -> !fir.shape<1>
-  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) {uniq_name = "_QFzero3Ez"}
+  ! CHECK: %{{.*}}:2 = hlfir.declare %[[z]](%[[shape]]) uniq_name("_QFzero3Ez")
   type(dt) :: z(0) = dt(99)
   print*, size(z), z, ':'
 end
@@ -39,7 +39,7 @@ program prog
     end
   end interface
   ! CHECK: %[[shape:[0-9]*]] = fir.shape_shift %c2, %c0 : (index, index) -> !fir.shapeshift<1>
-  ! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}}(%[[shape]]) {uniq_name = "_QFEnada"}
+  ! CHECK: %{{.*}}:2 = hlfir.declare %{{.*}}(%[[shape]]) uniq_name("_QFEnada")
   call zero1(nada)
   call zero2
   call zero3

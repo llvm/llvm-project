@@ -1765,6 +1765,32 @@ define i8 @select_trunc_or_2(i8 %x, i8 %y) {
   ret i8 %select
 }
 
+define i16 @select_trunc_or_signbit(i8 %x, i16 %y) {
+; CHECK-LABEL: @select_trunc_or_signbit(
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i8 [[X:%.*]] to i16
+; CHECK-NEXT:    [[TMP2:%.*]] = shl i16 [[TMP1]], 15
+; CHECK-NEXT:    [[SELECT:%.*]] = or i16 [[Y:%.*]], [[TMP2]]
+; CHECK-NEXT:    ret i16 [[SELECT]]
+;
+  %trunc = trunc i8 %x to i1
+  %or = or i16 %y, -32768
+  %select = select i1 %trunc, i16 %or, i16 %y
+  ret i16 %select
+}
+
+define i16 @neg_select_trunc_or_not_signbit(i8 %x, i16 %y) {
+; CHECK-LABEL: @neg_select_trunc_or_not_signbit(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[OR:%.*]] = or i16 [[Y:%.*]], 16384
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[TRUNC]], i16 [[OR]], i16 [[Y]]
+; CHECK-NEXT:    ret i16 [[SELECT]]
+;
+  %trunc = trunc i8 %x to i1
+  %or = or i16 %y, 16384
+  %select = select i1 %trunc, i16 %or, i16 %y
+  ret i16 %select
+}
+
 define i8 @select_not_trunc_or_2(i8 %x, i8 %y) {
 ; CHECK-LABEL: @select_not_trunc_or_2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i8 [[X:%.*]], 1

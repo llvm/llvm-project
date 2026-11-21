@@ -25,6 +25,7 @@
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/DXContainer.h"
+#include "llvm/Frontend/OpenMP/OMPVersion.h"
 #include "llvm/Support/AllocToken.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
@@ -319,6 +320,13 @@ public:
     BKey
   };
 
+  enum class SignReturnAddressHardeningKind {
+    /// Regular return address signing.
+    None,
+    /// Hardened return address signing with load from the return address.
+    LoadReturnAddress
+  };
+
   enum class ThreadModelKind {
     /// POSIX Threads.
     POSIX,
@@ -507,6 +515,10 @@ public:
   /// (files, functions) should or should not be instrumented.
   std::vector<std::string> ProfileListFiles;
 
+  /// Names of BPF enums whose enumerators are not relocated, from
+  /// -fbpf-no-enum-reloc=.
+  std::vector<std::string> BPFNoEnumRelocs;
+
   clang::ObjCRuntime ObjCRuntime;
 
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;
@@ -621,6 +633,9 @@ public:
   /// The allocation token mode.
   std::optional<llvm::AllocTokenMode> AllocTokenMode;
 
+  /// Name of the literal encoding to convert the internal encoding to.
+  std::string LiteralEncoding;
+
   LangOptions();
 
   /// Set language defaults for the given input language and
@@ -706,6 +721,14 @@ public:
     return ConvergentFunctions;
   }
 
+  /// Return true if using -fbounds-safety in full or attribute-only mode.
+  /// Attribute-only mode exists only downstream, where this predicate gates
+  /// behavior that diverges from upstream. It is kept here to minimize that
+  /// divergence.
+  // TODO: Remove this once upstream and downstream no longer diverge and
+  // attribute-only mode is deprecated downstream.
+  bool hasBoundsSafetyAttributes() const { return BoundsSafety; }
+
   /// Return true if atomicrmw operations targeting allocations in private
   /// memory are undefined.
   bool threadPrivateMemoryAtomicsAreUndefined() const {
@@ -758,6 +781,12 @@ public:
   /// Check if leaf functions are also signed.
   bool isSignReturnAddressScopeAll() const {
     return getSignReturnAddressScope() == SignReturnAddressScopeKind::All;
+  }
+
+  /// Check if return address authentication hardening is enabled
+  bool hasSignReturnAddressHardening() const {
+    return getSignReturnAddressHardening() !=
+           SignReturnAddressHardeningKind::None;
   }
 
   bool isSYCL() const { return SYCLIsDevice || SYCLIsHost; }
@@ -817,6 +846,11 @@ public:
   /// True when compiling for an offloading target device.
   bool isTargetDevice() const {
     return OpenMPIsTargetDevice || CUDAIsDevice || SYCLIsDevice;
+  }
+
+  /// Return the OpenMP version.
+  llvm::omp::Version getOpenMPVersion() const {
+    return llvm::omp::Version(OpenMP);
   }
 
   /// Returns the most applicable C standard-compliant language version code.
@@ -986,6 +1020,10 @@ public:
 ///
 /// The is implemented as a value of the new FPOptions plus a mask showing which
 /// fields are actually set in it.
+///
+/// NOTE: This type is serialized into the AST format (e.g. for defaulted
+/// functions). When adding a new field here or in FPOptions, ensure that the
+/// AST VERSION_MAJOR is bumped if it changes the layout or size.
 class FPOptionsOverride {
   FPOptions Options = FPOptions::getFromOpaqueInt(0);
   FPOptions::storage_type OverrideMask = 0;

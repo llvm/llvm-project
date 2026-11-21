@@ -12,5 +12,7 @@
 #include "llvm/Support/CommandLine.h"
 
 extern llvm::cl::opt<bool> enableDelayedPrivatization;
+extern llvm::cl::opt<bool> enableDelayedPrivatizationStaging;
+extern llvm::cl::opt<bool> enableImplicitDefaultMapperAllocatableMembers;
 
 #endif // FORTRAN_SUPPORT_FLAGS_H_

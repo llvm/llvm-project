@@ -9,7 +9,6 @@
 ! RUN: | fir-opt --lower-hlfir-ordered-assignments \
 ! RUN:           --bufferize-hlfir \
 ! RUN:           --convert-hlfir-to-fir \
-! RUN:           --array-value-copy \
 ! RUN:           --stack-arrays \
 ! RUN: | FileCheck %s
 

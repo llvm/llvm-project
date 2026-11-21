@@ -22,4 +22,11 @@ LOGFILE_MISSING: error: --log-file: missing argument
 RUN: not %platformserver --log-channels 2>&1 | FileCheck --check-prefixes=LOGCHANNELS_MISSING,ALL %s
 LOGCHANNELS_MISSING: error: --log-channels: missing argument
 
+RUN: not %platformserver --log-channels not_a_channel 2>&1 | FileCheck --check-prefixes=INVALID_LOG_CHANNEL %s
+INVALID_LOG_CHANNEL: Unable to setup logging for channel "not_a_channel": Invalid log channel 'not_a_channel'.
+
+RUN: not %platformserver --log-channels "lldb not_a_category" 2>&1 | FileCheck --check-prefixes=INVALID_LOG_CATEGORY %s
+INVALID_LOG_CATEGORY: Unable to setup logging for channel "lldb": error: unrecognized log category 'not_a_category'
+INVALID_LOG_CATEGORY-NEXT: Logging categories for 'lldb':
+
 ALL: Use 'lldb-server{{(\.exe)?}} {{p|platform}} --help' for a complete list of options.

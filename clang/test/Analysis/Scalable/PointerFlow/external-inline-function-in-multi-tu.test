@@ -4,7 +4,7 @@
 // during bounds propagation.
 
 
-// DEFINE: %{extract} = %clang_cc1 -fsyntax-only -I %t --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage
+// DEFINE: %{extract} = %clang_cc1 -fsyntax-only -I %t --ssaf-extract-summaries=PointerFlow,UnsafeBufferUsage,TypeConstrainedPointers
 
 // RUN: rm -rf %t
 // RUN: mkdir -p %t

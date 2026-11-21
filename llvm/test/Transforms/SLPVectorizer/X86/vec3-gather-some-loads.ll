@@ -14,12 +14,12 @@ define void @test_insert_loads(ptr %A, ptr noalias %B, float %0) #0 {
 ; NON-POW2-NEXT:    [[L_A_12:%.*]] = load float, ptr [[A_12]], align 4
 ; NON-POW2-NEXT:    [[GEP_4:%.*]] = getelementptr i8, ptr [[B]], i64 4
 ; NON-POW2-NEXT:    [[L_B_0:%.*]] = load float, ptr [[B]], align 4
-; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <7 x float> poison, float [[TMP0]], i32 0
+; NON-POW2-NEXT:    [[TMP1:%.*]] = insertelement <7 x float> poison, float [[TMP0]], i64 0
 ; NON-POW2-NEXT:    [[TMP2:%.*]] = shufflevector <7 x float> [[TMP1]], <7 x float> poison, <7 x i32> zeroinitializer
-; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <7 x float> <float poison, float poison, float poison, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>, float [[L_A_12]], i32 0
-; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <7 x float> [[TMP3]], float [[L_A_28]], i32 1
+; NON-POW2-NEXT:    [[TMP3:%.*]] = insertelement <7 x float> <float poison, float poison, float poison, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>, float [[L_A_12]], i64 0
+; NON-POW2-NEXT:    [[TMP4:%.*]] = insertelement <7 x float> [[TMP3]], float [[L_A_28]], i64 1
 ; NON-POW2-NEXT:    [[TMP5:%.*]] = shufflevector <7 x float> [[TMP4]], <7 x float> poison, <7 x i32> <i32 0, i32 1, i32 1, i32 3, i32 4, i32 5, i32 6>
-; NON-POW2-NEXT:    [[TMP6:%.*]] = insertelement <7 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>, float [[L_B_0]], i32 0
+; NON-POW2-NEXT:    [[TMP6:%.*]] = insertelement <7 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 4.000000e+00, float 3.000000e+00, float 2.000000e+00, float 1.000000e+00>, float [[L_B_0]], i64 0
 ; NON-POW2-NEXT:    [[TMP7:%.*]] = call <7 x float> @llvm.fmuladd.v7f32(<7 x float> [[TMP2]], <7 x float> [[TMP5]], <7 x float> [[TMP6]])
 ; NON-POW2-NEXT:    store <7 x float> [[TMP7]], ptr [[GEP_4]], align 4
 ; NON-POW2-NEXT:    ret void
@@ -28,7 +28,7 @@ define void @test_insert_loads(ptr %A, ptr noalias %B, float %0) #0 {
 ; POW2-ONLY-SAME: ptr [[A:%.*]], ptr noalias [[B:%.*]], float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; POW2-ONLY-NEXT:  entry:
 ; POW2-ONLY-NEXT:    [[MULADD_0:%.*]] = tail call float @llvm.fmuladd.f32(float [[TMP0]], float 1.000000e+00, float 1.000000e+00)
-; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> poison, float [[TMP0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <2 x i32> zeroinitializer
 ; POW2-ONLY-NEXT:    [[TMP3:%.*]] = call <2 x float> @llvm.fmuladd.v2f32(<2 x float> [[TMP2]], <2 x float> <float 3.000000e+00, float 2.000000e+00>, <2 x float> <float 3.000000e+00, float 2.000000e+00>)
 ; POW2-ONLY-NEXT:    [[A_28:%.*]] = getelementptr i8, ptr [[A]], i64 28
@@ -39,12 +39,12 @@ define void @test_insert_loads(ptr %A, ptr noalias %B, float %0) #0 {
 ; POW2-ONLY-NEXT:    [[L_B_0:%.*]] = load float, ptr [[B]], align 4
 ; POW2-ONLY-NEXT:    [[GEP_28:%.*]] = getelementptr i8, ptr [[B]], i64 28
 ; POW2-ONLY-NEXT:    [[GEP_20:%.*]] = getelementptr i8, ptr [[B]], i64 20
-; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> poison, <4 x i32> zeroinitializer
-; POW2-ONLY-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 4.000000e+00>, float [[L_A_12]], i32 0
-; POW2-ONLY-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[L_A_28]], i32 1
+; POW2-ONLY-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 4.000000e+00>, float [[L_A_12]], i64 0
+; POW2-ONLY-NEXT:    [[TMP7:%.*]] = insertelement <4 x float> [[TMP6]], float [[L_A_28]], i64 1
 ; POW2-ONLY-NEXT:    [[TMP8:%.*]] = shufflevector <4 x float> [[TMP7]], <4 x float> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 3>
-; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 4.000000e+00>, float [[L_B_0]], i32 0
+; POW2-ONLY-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> <float poison, float 0.000000e+00, float 0.000000e+00, float 4.000000e+00>, float [[L_B_0]], i64 0
 ; POW2-ONLY-NEXT:    [[TMP10:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP5]], <4 x float> [[TMP8]], <4 x float> [[TMP9]])
 ; POW2-ONLY-NEXT:    store <4 x float> [[TMP10]], ptr [[GEP_4]], align 4
 ; POW2-ONLY-NEXT:    store <2 x float> [[TMP3]], ptr [[GEP_20]], align 4

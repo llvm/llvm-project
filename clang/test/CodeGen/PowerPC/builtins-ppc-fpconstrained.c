@@ -18,8 +18,8 @@
 typedef __attribute__((vector_size(4 * sizeof(float)))) float vec_float;
 typedef __attribute__((vector_size(2 * sizeof(double)))) double vec_double;
 
-volatile vec_double vd;
-volatile vec_float vf;
+volatile vec_double vd, vd1, vd2, vd3;
+volatile vec_float vf, vf1, vf2, vf3;
 
 void test_float(void) {
   vf = __builtin_vsx_xvsqrtsp(vf);
@@ -94,19 +94,19 @@ void test_float(void) {
   // CHECK-CONSTRAINED: @llvm.experimental.constrained.trunc.v2f64(<2 x double> %{{.*}}, metadata !"fpexcept.strict")
   // CHECK-ASM: xvrdpiz
 
-  vf = __builtin_vsx_xvmaddasp(vf, vf, vf);
+  vf = __builtin_vsx_xvmaddasp(vf1, vf2, vf3);
   // CHECK-LABEL: try-xvmaddasp
   // CHECK-UNCONSTRAINED: @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   // CHECK-CONSTRAINED: @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvmaddasp
 
-  vd = __builtin_vsx_xvmaddadp(vd, vd, vd);
+  vd = __builtin_vsx_xvmaddadp(vd1, vd2, vd3);
   // CHECK-LABEL: try-xvmaddadp
   // CHECK-UNCONSTRAINED: @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-CONSTRAINED: @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvmaddadp
 
-  vf = __builtin_vsx_xvnmaddasp(vf, vf, vf);
+  vf = __builtin_vsx_xvnmaddasp(vf1, vf2, vf3);
   // CHECK-LABEL: try-xvnmaddasp
   // CHECK-UNCONSTRAINED: [[RESULT:%[^ ]+]] = call <4 x float> @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   // CHECK-UNCONSTRAINED: fneg <4 x float> [[RESULT]]
@@ -116,7 +116,7 @@ void test_float(void) {
   // FIXME-CHECK: xvmaddasp
   // FIXME-CHECK: xvnegsp
 
-  vd = __builtin_vsx_xvnmaddadp(vd, vd, vd);
+  vd = __builtin_vsx_xvnmaddadp(vd1, vd2, vd3);
   // CHECK-LABEL: try-xvnmaddadp
   // CHECK-UNCONSTRAINED: [[RESULT:%[^ ]+]] = call <2 x double> @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-UNCONSTRAINED: fneg <2 x double> [[RESULT]]
@@ -124,7 +124,7 @@ void test_float(void) {
   // CHECK-CONSTRAINED: fneg <2 x double> [[RESULT]]
   // CHECK-ASM: xvnmaddadp
 
-  vf = __builtin_vsx_xvmsubasp(vf, vf, vf);
+  vf = __builtin_vsx_xvmsubasp(vf1, vf2, vf3);
   // CHECK-LABEL: try-xvmsubasp
   // CHECK-UNCONSTRAINED: [[RESULT:%[^ ]+]] = fneg <4 x float> %{{.*}}
   // CHECK-UNCONSTRAINED: @llvm.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[RESULT]])
@@ -132,7 +132,7 @@ void test_float(void) {
   // CHECK-CONSTRAINED: @llvm.experimental.constrained.fma.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> [[RESULT]], metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM: xvmsubasp
 
-  vd = __builtin_vsx_xvmsubadp(vd, vd, vd);
+  vd = __builtin_vsx_xvmsubadp(vd1, vd2, vd3);
   // CHECK-LABEL: try-xvmsubadp
   // CHECK-UNCONSTRAINED: [[RESULT:%[^ ]+]] = fneg <2 x double> %{{.*}}
   // CHECK-UNCONSTRAINED: @llvm.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[RESULT]])
@@ -140,7 +140,7 @@ void test_float(void) {
   // CHECK-CONSTRAINED: @llvm.experimental.constrained.fma.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> [[RESULT]], metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK-ASM:  xvmsubadp
 
-  vf = __builtin_vsx_xvnmsubasp(vf, vf, vf);
+  vf = __builtin_vsx_xvnmsubasp(vf1, vf2, vf3);
   // CHECK-LABEL: try-xvnmsubasp
   // CHECK-UNCONSTRAINED: call <4 x float> @llvm.ppc.fnmsub.v4f32(<4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}})
   // CHECK-CONSTRAINED: [[RESULT0:%[^ ]+]] = fneg <4 x float> %{{.*}}
@@ -148,7 +148,7 @@ void test_float(void) {
   // CHECK-CONSTRAINED: fneg <4 x float> [[RESULT1]]
   // CHECK-ASM: xvnmsubasp
 
-  vd = __builtin_vsx_xvnmsubadp(vd, vd, vd);
+  vd = __builtin_vsx_xvnmsubadp(vd1, vd2, vd3);
   // CHECK-LABEL: try-xvnmsubadp
   // CHECK-UNCONSTRAINED: call <2 x double> @llvm.ppc.fnmsub.v2f64(<2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}})
   // CHECK-CONSTRAINED: [[RESULT0:%[^ ]+]] = fneg <2 x double> %{{.*}}

@@ -142,6 +142,12 @@ uint32_t RTNAME(fegetexcept)() {
 
 // Check if the processor has the ability to control whether to halt or
 // continue execution when a given exception is raised.
+//
+// TODO: Support halting on x86 without glibc. The MXCSR helpers above (guarded
+// by _MM_EXCEPT_DENORM) already provide the machinery, so this gate could be
+// widened to `#if defined(__USE_GNU) || defined(_MM_EXCEPT_DENORM)` to cover
+// x86_64 macOS/BSD and musl-Linux. Doing so also needs the x87 control word for
+// REAL(10), 32-bit x86 (__i386__), and Windows SEH handling; see PR discussion.
 bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #ifdef __USE_GNU
   except = RTNAME(MapException)(except);
@@ -161,6 +167,25 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 #endif
 }
 
+void RTNAME(EnableFPETraps)(uint32_t excepts) {
+  // Enable halting only for those exceptions whose halting control is supported
+  // by the processor. The Fortran standard restricts IEEE_SET_HALTING_MODE to
+  // flags for which IEEE_SUPPORT_HALTING is true (F2023 17.11.40); on targets
+  // without halting control (e.g. non-glibc), this is a no-op.
+  uint32_t supported = 0;
+  for (uint32_t flag = 1; flag <= excepts; flag <<= 1) {
+    if ((excepts & flag) && RTNAME(SupportHalting)(flag)) {
+      supported |= flag;
+    }
+  }
+  if (supported == 0) {
+    return;
+  }
+  uint32_t mapped = RTNAME(MapException)(supported);
+  RTNAME(feclearexcept)(mapped);
+  RTNAME(feenableexcept)(mapped);
+}
+
 // A hardware FZ (flush to zero) bit is the negation of the
 // ieee_[get|set]_underflow_mode GRADUAL argument.
 #if defined(_MM_FLUSH_ZERO_MASK)
@@ -170,6 +195,18 @@ bool RTNAME(SupportHalting)([[maybe_unused]] uint32_t except) {
 // bit 24: FZ   -- single, double precision flush to zero bit
 // bit 19: FZ16 -- half precision flush to zero bit [not currently relevant]
 #define _FPU_FPCR_FZ_MASK_ 0x01080000
+#if defined(__aarch64__) && defined(__CUDACC__) && \
+    __CUDACC_VER_MAJOR__ == 12 && __CUDACC_VER_MINOR__ == 0
+// glibc's _FPU_GETCW/_FPU_SETCW expand to __builtin_aarch64_[gs]et_fpcr,
+// which CUDA 12.0 does not recognize. Access FPCR directly.
+#define FLANG_RT_GET_FPCR(fpcr) \
+  __asm__ __volatile__("mrs %0, fpcr" : "=r"(fpcr))
+#define FLANG_RT_SET_FPCR(fpcr) \
+  __asm__ __volatile__("msr fpcr, %0" : : "r"(fpcr))
+#else
+#define FLANG_RT_GET_FPCR(fpcr) _FPU_GETCW(fpcr)
+#define FLANG_RT_SET_FPCR(fpcr) _FPU_SETCW(fpcr)
+#endif
 #endif
 
 bool RTNAME(GetUnderflowMode)(void) {
@@ -177,7 +214,7 @@ bool RTNAME(GetUnderflowMode)(void) {
   return _MM_GET_FLUSH_ZERO_MODE() == _MM_FLUSH_ZERO_OFF;
 #elif defined(_FPU_GETCW)
   uint64_t fpcr;
-  _FPU_GETCW(fpcr);
+  FLANG_RT_GET_FPCR(fpcr);
   return (fpcr & _FPU_FPCR_FZ_MASK_) == 0;
 #else
   return false;
@@ -188,13 +225,13 @@ void RTNAME(SetUnderflowMode)(bool flag) {
   _MM_SET_FLUSH_ZERO_MODE(flag ? _MM_FLUSH_ZERO_OFF : _MM_FLUSH_ZERO_ON);
 #elif defined(_FPU_GETCW)
   uint64_t fpcr;
-  _FPU_GETCW(fpcr);
+  FLANG_RT_GET_FPCR(fpcr);
   if (flag) {
     fpcr &= ~_FPU_FPCR_FZ_MASK_;
   } else {
     fpcr |= _FPU_FPCR_FZ_MASK_;
   }
-  _FPU_SETCW(fpcr);
+  FLANG_RT_SET_FPCR(fpcr);
 #endif
 }
 
@@ -206,7 +243,13 @@ size_t RTNAME(GetModesTypeSize)(void) {
 #endif
 }
 size_t RTNAME(GetStatusTypeSize)(void) {
-  return sizeof(fenv_t); // byte size of ieee_status_type data
+  // byte size of ieee_status_type data
+#if defined(_AIX)
+  // the raw FPSCR double is needed for trap-enable bit round-trip
+  return sizeof(fenv_t) + sizeof(double);
+#else
+  return sizeof(fenv_t);
+#endif
 }
 
 } // extern "C"

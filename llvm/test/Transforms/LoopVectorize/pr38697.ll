@@ -38,7 +38,7 @@ define void @testCountIncrLoop(ptr %ptr, i32 %lim, i32 %count, i32 %val) mustpro
 ; CHECK:       loop1.body:
 ; CHECK:       while.cond.preheader:
 ; CHECK:       while.body.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0:%.*]], [[COUNT:%.*]]
+; CHECK:         [[TMP1:%.*]] = udiv i32 [[TMP0:%.*]], [[COUNT:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK:       exit:
 ; CHECK:         ret void

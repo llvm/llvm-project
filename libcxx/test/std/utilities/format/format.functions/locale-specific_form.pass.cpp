@@ -88,6 +88,7 @@
 #include <format>
 #include <cassert>
 #include <iostream>
+#include <locale>
 #include <vector>
 
 #include "test_macros.h"

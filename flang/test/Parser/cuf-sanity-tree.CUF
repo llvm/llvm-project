@@ -21,7 +21,8 @@ include "cuf-sanity-common"
 !CHECK: | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !CHECK: | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
 !CHECK: | | | AttrSpec -> Allocatable
-!CHECK: | | | AttrSpec -> CUDADataAttr = Pinned
+!CHECK: | | | AttrSpec -> CUDADataAttrSpec
+!CHECK: | | | | CUDADataAttr = Pinned
 !CHECK: | | | EntityDecl
 !CHECK: | | | | Name = 'pa'
 !CHECK: | | | | ArraySpec -> DeferredShapeSpecList -> int
@@ -111,7 +112,8 @@ include "cuf-sanity-common"
 !CHECK: | | | | | Name = 'devx1'
 !CHECK: | | | | DeclarationConstruct -> SpecificationConstruct -> TypeDeclarationStmt
 !CHECK: | | | | | DeclarationTypeSpec -> IntrinsicTypeSpec -> Real
-!CHECK: | | | | | AttrSpec -> CUDADataAttr = Device
+!CHECK: | | | | | AttrSpec -> CUDADataAttrSpec
+!CHECK: | | | | | | CUDADataAttr = Device
 !CHECK: | | | | | EntityDecl
 !CHECK: | | | | | | Name = 'devx2'
 !CHECK: | | | ExecutionPart -> Block

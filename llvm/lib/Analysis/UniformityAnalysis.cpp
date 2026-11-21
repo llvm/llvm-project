@@ -109,11 +109,11 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
 
 template <>
 bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
-    const Instruction &I, const Cycle &DefCycle) const {
+    const Instruction &I, CycleRef DefCycle) const {
   assert(!isAlwaysUniform(I));
   for (const Use &U : I.operands()) {
     if (auto *I = dyn_cast<Instruction>(&U)) {
-      if (DefCycle.contains(I->getParent()))
+      if (CI.contains(DefCycle, I->getParent()))
         return true;
     }
   }
@@ -123,13 +123,13 @@ bool llvm::GenericUniformityAnalysisImpl<SSAContext>::usesValueFromCycle(
 template <>
 void llvm::GenericUniformityAnalysisImpl<
     SSAContext>::propagateTemporalDivergence(const Instruction &I,
-                                             const Cycle &DefCycle) {
+                                             CycleRef DefCycle) {
   for (auto *User : I.users()) {
     auto *UserInstr = cast<Instruction>(User);
-    if (DefCycle.contains(UserInstr->getParent()))
+    if (CI.contains(DefCycle, UserInstr->getParent()))
       continue;
     markDivergent(*UserInstr);
-    recordTemporalDivergence(&I, UserInstr, &DefCycle);
+    recordTemporalDivergence(&I, UserInstr, DefCycle);
   }
 }
 

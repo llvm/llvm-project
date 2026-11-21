@@ -148,7 +148,6 @@ public:
   unsigned getKind() const { return Kind; }
   const char *getKindName() const;
 
-  bool hasName() const { return !Name.empty(); }
   StringRef getName() const { return Name; }
 
   virtual void print(raw_ostream &OS, bool PrintName = true) const = 0;
@@ -692,6 +691,7 @@ private:
 enum BuiltinKind {
   BI_ReplaceReg,
   BI_EraseRoot,
+  BI_HasOneUse,
 };
 
 class BuiltinPattern : public InstructionPattern {
@@ -702,9 +702,10 @@ class BuiltinPattern : public InstructionPattern {
     unsigned NumDefs;
   };
 
-  static constexpr std::array<BuiltinInfo, 2> KnownBuiltins = {{
+  static constexpr std::array<BuiltinInfo, 3> KnownBuiltins = {{
       {"GIReplaceReg", BI_ReplaceReg, 2, 1},
       {"GIEraseRoot", BI_EraseRoot, 0, 0},
+      {"GIHasOneUse", BI_HasOneUse, 1, 0},
   }};
 
 public:

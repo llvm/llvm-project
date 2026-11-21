@@ -2,8 +2,6 @@
 Clang-Tidy
 ==========
 
-.. contents::
-
 See also:
 
 .. toctree::
@@ -94,7 +92,6 @@ Name prefix            Description
                        don't relate to any particular coding style.
 ``readability-``       Checks that target readability-related issues that
                        don't relate to any particular coding style.
-``zircon-``            Checks related to Zircon kernel coding conventions.
 ====================== ========================================================
 
 Clang diagnostics are treated in a similar way as check diagnostics. Clang

@@ -75,7 +75,7 @@ for.cond.cleanup:
 !18 = !DILocation(line: 4, column: 5, scope: !7)
 !19 = !DILocation(line: 4, column: 10, scope: !7)
 !20 = distinct !{!20, !21}
-!21 = !{!"llvm.loop.distribute.enable", i1 true}
+!21 = !{!"llvm.loop.distribute.enable"}
 !22 = !{!"function_entry_count", i64 3}
 !23 = !{!"branch_weights", i32 99, i32 1}
 !24 = !{!"branch_weights", i32 1, i32 99}

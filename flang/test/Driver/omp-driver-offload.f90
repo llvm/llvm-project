@@ -23,7 +23,7 @@
 ! RUN:   | FileCheck %s --check-prefix=OFFLOAD-HOST-AND-DEVICE
 
 ! OFFLOAD-HOST-AND-DEVICE: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! OFFLOAD-HOST-AND-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-HOST-AND-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! OFFLOAD-HOST-AND-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-HOST-AND-DEVICE: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
@@ -43,7 +43,7 @@
 ! RUN:   | FileCheck %s --check-prefix=OFFLOAD-DEVICE
 
 ! OFFLOAD-DEVICE: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
-! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! OFFLOAD-DEVICE-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-DEVICE-NOT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
@@ -57,11 +57,11 @@
 ! RUN: --target=aarch64-unknown-linux-gnu -nogpulib\
 ! RUN:   | FileCheck %s --check-prefix=OPENMP-OFFLOAD-ARGS
 ! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp-host-ir-file-path" "{{.*}}.bc" "-fopenmp-is-target-device"
 ! OPENMP-OFFLOAD-ARGS-SAME:  {{.*}}.f90"
-! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.s,triple=amdgcn-amd-amdhsa,arch=gfx90a,kind=openmp"
+! OPENMP-OFFLOAD-ARGS: "{{[^"]*}}llvm-offload-binary{{.*}}" {{.*}} "--image=file={{.*}}.s,triple=amdgpu9.0a-amd-amdhsa,arch=gfx90a,kind=openmp"
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fopenmp"
 ! OPENMP-OFFLOAD-ARGS-SAME:  "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
@@ -77,7 +77,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-threads-oversubscription -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
-! CHECK-THREADS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-threads-oversubscription" {{.*}}.f90"
+! CHECK-THREADS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-threads-oversubscription" "-fopenmp-is-target-device" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
@@ -89,7 +89,7 @@
 ! RUN: -fopenmp-targets=nvptx64-nvidia-cuda \
 ! RUN: -fopenmp-assume-teams-oversubscription -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
-! CHECK-TEAMS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-teams-oversubscription" {{.*}}.f90"
+! CHECK-TEAMS-OVS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-teams-oversubscription" "-fopenmp-is-target-device" {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a \
@@ -153,8 +153,8 @@
 ! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
 ! RUN: -fopenmp-assume-no-thread-state -nogpulib \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-RTL-ALL
-! CHECK-RTL-ALL: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" "-fopenmp-assume-teams-oversubscription"
-! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
+! CHECK-RTL-ALL: "{{[^"]*}}flang{{[^"]*}}" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-assume-teams-oversubscription" "-fopenmp-assume-threads-oversubscription"
+! CHECK-RTL-ALL: "-fopenmp-is-target-device" "-fopenmp-target-debug" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
 ! CHECK-RTL-ALL: {{.*}}.f90"
 
 ! RUN: %flang -### %s -o %t 2>&1 \
@@ -203,14 +203,14 @@
 
 ! FORCE-USM-OFFLOAD: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 ! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
-! FORCE-USM-OFFLOAD-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! FORCE-USM-OFFLOAD-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! FORCE-USM-OFFLOAD-SAME: "-fopenmp" "-fopenmp-force-usm"
 
 ! RUN:   %flang -### -v --target=x86_64-unknown-linux-gnu -fopenmp  \
 ! RUN:      --offload-arch=gfx900 \
 ! RUN:      --rocm-path=%S/Inputs/rocm %s 2>&1 \
 ! RUN:   | FileCheck --check-prefix=MLINK-BUILTIN-BITCODE  %s
-! MLINK-BUILTIN-BITCODE:      "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! MLINK-BUILTIN-BITCODE:      "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.00-amd-amdhsa"
 ! MLINK-BUILTIN-BITCODE-SAME: "-mlink-builtin-bitcode" {{.*Inputs.*rocm.*amdgcn.*bitcode.*}}oclc_isa_version_900.bc
 
 ! Test that the -fopenmp-targets option is added to host compilation invocations
@@ -225,8 +225,60 @@
 ! RUN: | FileCheck %s --check-prefix=OFFLOAD-TARGETS
 
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"
-! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+! OFFLOAD-TARGETS-NEXT: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
 ! OFFLOAD-TARGETS-NOT: --offload-targets
 ! OFFLOAD-TARGETS: "{{[^"]*}}flang{{[^"]*}}" "-fc1" "-triple" "x86_64-unknown-linux-gnu"
-! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgcn-amd-amdhsa"
+! OFFLOAD-TARGETS-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+
+! Verify the implicit default mapper allocatable members flags are applied to both host
+! and device phases of the offload compilation when the negative flag is used and ignored
+! in the positive case as it is the default.
+
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp -fimplicit-default-mapper-allocatable-members --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
+! RUN:   | FileCheck %s --check-prefix=ENABLE-IMP-MAPPER
+
+! ENABLE-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
+! ENABLE-IMP-MAPPER-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
+! ENABLE-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! ENABLE-IMP-MAPPER-SAME: "-fopenmp"
+! ENABLE-IMP-MAPPER-NOT: implicit-default-mapper-allocatable-members
+
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp -fno-implicit-default-mapper-allocatable-members --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
+! RUN:   | FileCheck %s --check-prefix=DISABLE-IMP-MAPPER
+
+! Verify when multiple flags passed the final flag wins out
+
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a \
+! RUN: -fimplicit-default-mapper-allocatable-members \
+! RUN: -fimplicit-default-mapper-allocatable-members \
+! RUN: -fno-implicit-default-mapper-allocatable-members \
+! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
+! RUN:   | FileCheck %s --check-prefix=DISABLE-IMP-MAPPER
+
+! DISABLE-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+! DISABLE-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! DISABLE-IMP-MAPPER-SAME: "-fopenmp" {{.*}} "-fno-implicit-default-mapper-allocatable-members"
+
+! Verify when no implicit-default-mapper flags passed we do not inadvertently add the flag
+
+! RUN: %flang -### %s 2>&1 \
+! RUN: -fopenmp --offload-arch=gfx90a \
+! RUN: --target=x86_64-unknown-linux-gnu -nogpulib \
+! RUN:   | FileCheck %s --check-prefix=NO-IMP-MAPPER
+
+! NO-IMP-MAPPER: "-fc1" "-triple" "x86_64-unknown-linux-gnu"
+! NO-IMP-MAPPER-SAME: "-fopenmp"
+! NO-IMP-MAPPER-SAME: "--offload-targets=amdgpu-amd-amdhsa"
+! NO-IMP-MAPPER-NOT: "-fno-implicit-default-mapper-allocatable-members"
+! NO-IMP-MAPPER-NEXT: "-fc1" "-triple" "amdgpu9.0a-amd-amdhsa"
+! NO-IMP-MAPPER-SAME: "-fopenmp"
+! NO-IMP-MAPPER-NOT: "-fno-implicit-default-mapper-allocatable-members"

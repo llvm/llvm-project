@@ -13,8 +13,11 @@
 // RUN: %clangxx -o %t5 %s
 // RUN: %run %t5 2>&1 | FileCheck --check-prefix=NCFI %s
 
-// RUN: %clangxx_cfi_diag -o %t6 %s
+// RUN: %clangxx_cfi_diag -fno-whole-program-vtables -o %t6 %s
 // RUN: %run %t6 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
+
+// RUN: %clangxx_cfi_diag -DB32 -o %t7 %s
+// RUN: %run %t7 2>&1 | FileCheck --check-prefix=CFI-DIAG %s
 
 // Tests that the CFI enforcement also applies to virtual destructor calls made
 // via 'delete'.
@@ -48,6 +51,7 @@ int main() {
 
   // CFI-DIAG: runtime error: control flow integrity check for type 'B' failed during virtual call
   // CFI-DIAG-NEXT: note: vtable is of type '{{(struct )?}}A'
+  // CFI-DIAG: SUMMARY: UndefinedBehaviorSanitizer: cfi-vcall
   delete (B *)a; // UB here
 
   // CFI-NOT: {{^2$}}
