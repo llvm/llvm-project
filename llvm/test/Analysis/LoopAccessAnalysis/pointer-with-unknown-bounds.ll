@@ -43,15 +43,18 @@ for.end:                                          ; preds = %for.body
   ret void
 }
 
-; TODO: We cannot compute the bound for %arrayidxA_ub, because the index is
-; loaded on each iteration. As %a and %b are no-alias, no memchecks are required
-; and unknown bounds should not prevent further analysis.
+; The index of %arrayidxA_ub is loaded on each iteration; its bounds come from
+; the i16 range of the index and the inbounds GEP. The indirect access to %a
+; then is an unsafe dependence with the store to %a.
 define void @loaded_bound(ptr noalias %a, ptr noalias %b) {
 ; CHECK-LABEL: loaded_bound
 ; CHECK-NEXT:  for.body:
-; CHECK-NEXT:    Report: cannot identify array bounds
+; CHECK-NEXT:    Report: unsafe dependent memory operations in loop
+; CHECK-NEXT:    Unsafe indirect dependence.
 ; CHECK-NEXT:    Dependences:
-; CHECK-NEXT:    Run-time memory checks:
+; CHECK-NEXT:      IndirectUnsafe:
+; CHECK-NEXT:        %loadA_ub = load i16, ptr %arrayidxA_ub, align 2 ->
+; CHECK-NEXT:        store i16 %mul, ptr %arrayidxA, align 2
 
 entry:
   br label %for.body

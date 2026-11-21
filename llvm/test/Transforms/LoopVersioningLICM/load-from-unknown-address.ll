@@ -187,16 +187,27 @@ define void @gep_strange_offset(ptr %p, ptr %q, ptr %r, i32 %n) {
 ; CHECK-LABEL: define void @gep_strange_offset(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], ptr [[R:%.*]], i32 [[N:%.*]]) {
 ; CHECK-NEXT:  [[WHILE_BODY_LVER_CHECK:.*:]]
+; CHECK-NEXT:    [[R2:%.*]] = ptrtoaddr ptr [[R]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP1]], 2
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP3]]
 ; CHECK-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[Q]], i64 4
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[R2]], i64 8)
+; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 0, [[UMIN]]
+; CHECK-NEXT:    [[SCEVGEP3:%.*]] = getelementptr i8, ptr [[R]], i64 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 -1, [[R2]]
+; CHECK-NEXT:    [[UMIN4:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP5]], i64 8)
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[R]], i64 [[UMIN4]]
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[P]], [[SCEVGEP1]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[Q]], [[SCEVGEP]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[WHILE_BODY_PH_LVER_ORIG:.*]], label %[[WHILE_BODY_PH:.*]]
+; CHECK-NEXT:    [[BOUND06:%.*]] = icmp ult ptr [[P]], [[SCEVGEP5]]
+; CHECK-NEXT:    [[BOUND17:%.*]] = icmp ult ptr [[SCEVGEP3]], [[SCEVGEP]]
+; CHECK-NEXT:    [[FOUND_CONFLICT8:%.*]] = and i1 [[BOUND06]], [[BOUND17]]
+; CHECK-NEXT:    [[CONFLICT_RDX:%.*]] = or i1 [[FOUND_CONFLICT]], [[FOUND_CONFLICT8]]
+; CHECK-NEXT:    br i1 [[CONFLICT_RDX]], label %[[WHILE_BODY_PH_LVER_ORIG:.*]], label %[[WHILE_BODY_PH:.*]]
 ; CHECK:       [[WHILE_BODY_PH_LVER_ORIG]]:
 ; CHECK-NEXT:    br label %[[WHILE_BODY_LVER_ORIG:.*]]
 ; CHECK:       [[WHILE_BODY_LVER_ORIG]]:
@@ -223,12 +234,12 @@ define void @gep_strange_offset(ptr %p, ptr %q, ptr %r, i32 %n) {
 ; CHECK-NEXT:    [[REM1:%.*]] = srem i32 [[DEC1]], 2
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = sext i32 [[REM1]] to i64
 ; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i32, ptr [[R]], i64 [[IDXPROM1]]
-; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[ARRAYIDX1]], align 4, !alias.scope [[META20:![0-9]+]]
 ; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[VAL1]], [[QVAL1]]
 ; CHECK-NEXT:    [[INCDEC_PTR1]] = getelementptr inbounds nuw i8, ptr [[P_ADDR1]], i64 4
-; CHECK-NEXT:    store i32 [[ADD1]], ptr [[P_ADDR1]], align 4, !alias.scope [[META20:![0-9]+]], !noalias [[META17]]
+; CHECK-NEXT:    store i32 [[ADD1]], ptr [[P_ADDR1]], align 4, !alias.scope [[META22:![0-9]+]], !noalias [[META24:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL_NOT1:%.*]] = icmp eq i32 [[DEC1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT1]], label %[[WHILE_END_LOOPEXIT2:.*]], label %[[WHILE_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT1]], label %[[WHILE_END_LOOPEXIT2:.*]], label %[[WHILE_BODY]], !llvm.loop [[LOOP25:![0-9]+]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[WHILE_END:.*]]
 ; CHECK:       [[WHILE_END_LOOPEXIT2]]:
@@ -285,9 +296,9 @@ define void @memcpy_load_src(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[VAL:%.*]] = load i8, ptr [[SRC_VAL]], align 1
 ; CHECK-NEXT:    store i8 [[VAL]], ptr [[DST_VAL]], align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[DEC]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY_LVER_ORIG]], !llvm.loop [[LOOP23:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label %[[WHILE_END_LOOPEXIT:.*]], label %[[WHILE_BODY_LVER_ORIG]], !llvm.loop [[LOOP26:![0-9]+]]
 ; CHECK:       [[WHILE_BODY_PH]]:
-; CHECK-NEXT:    [[SRC_PROMOTED:%.*]] = load ptr, ptr [[SRC]], align 8, !alias.scope [[META24:![0-9]+]], !noalias [[META27:![0-9]+]]
+; CHECK-NEXT:    [[SRC_PROMOTED:%.*]] = load ptr, ptr [[SRC]], align 8, !alias.scope [[META27:![0-9]+]], !noalias [[META30:![0-9]+]]
 ; CHECK-NEXT:    br label %[[WHILE_BODY:.*]]
 ; CHECK:       [[WHILE_BODY]]:
 ; CHECK-NEXT:    [[SRC_VAL_NEXT3:%.*]] = phi ptr [ [[SRC_VAL_NEXT1:%.*]], %[[WHILE_BODY]] ], [ [[SRC_PROMOTED]], %[[WHILE_BODY_PH]] ]
@@ -296,11 +307,11 @@ define void @memcpy_load_src(ptr %dst, ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[DEC1]] = add nsw i32 [[N_VAL1]], -1
 ; CHECK-NEXT:    [[SRC_VAL_NEXT1]] = getelementptr inbounds nuw i8, ptr [[SRC_VAL_NEXT3]], i64 1
 ; CHECK-NEXT:    [[DST_VAL_NEXT1]] = getelementptr inbounds nuw i8, ptr [[DST_VAL1]], i64 1
-; CHECK-NEXT:    store ptr [[SRC_VAL_NEXT1]], ptr [[SRC]], align 8, !alias.scope [[META24]], !noalias [[META27]]
+; CHECK-NEXT:    store ptr [[SRC_VAL_NEXT1]], ptr [[SRC]], align 8, !alias.scope [[META27]], !noalias [[META30]]
 ; CHECK-NEXT:    [[VAL1:%.*]] = load i8, ptr [[SRC_VAL_NEXT3]], align 1
-; CHECK-NEXT:    store i8 [[VAL1]], ptr [[DST_VAL1]], align 1, !alias.scope [[META27]]
+; CHECK-NEXT:    store i8 [[VAL1]], ptr [[DST_VAL1]], align 1, !alias.scope [[META30]]
 ; CHECK-NEXT:    [[TOBOOL_NOT1:%.*]] = icmp eq i32 [[DEC1]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL_NOT1]], label %[[WHILE_END_LOOPEXIT2:.*]], label %[[WHILE_BODY]], !llvm.loop [[LOOP29:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT1]], label %[[WHILE_END_LOOPEXIT2:.*]], label %[[WHILE_BODY]], !llvm.loop [[LOOP32:![0-9]+]]
 ; CHECK:       [[WHILE_END_LOOPEXIT]]:
 ; CHECK-NEXT:    br label %[[WHILE_END:.*]]
 ; CHECK:       [[WHILE_END_LOOPEXIT2]]:
