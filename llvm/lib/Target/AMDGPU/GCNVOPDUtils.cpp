@@ -125,14 +125,14 @@ static bool canMapVOP3PToVOPD(const SIInstrInfo &TII, const MachineInstr &MI,
 // back the wrong value if it is the last VGPR the wave owns.
 // A wave always owns a whole number of VGPR allocation granules, so only a
 // register just below a granule boundary can be the last one. The wave also
-// owns at least as many VGPRs as this function uses, so a source which has a
-// register above it in use here cannot be the last one either.
+// owns at least as many VGPRs as this function reports, \p NumVGPRs, so a
+// source which has a reported register above it cannot be the last one either.
 // The number of VGPRs the wave is actually given is not available until the
 // assembler has seen the whole module, but that can only come out above this
-// function's own usage, so this is conservatively correct.
+// function's own count, so this is conservatively correct.
 static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
                                    const MachineInstr &MIX,
-                                   const MachineInstr &MIY) {
+                                   const MachineInstr &MIY, unsigned NumVGPRs) {
   const MachineFunction &MF = *MIX.getMF();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   if (!ST.hasVOPD3F64OPYSrcHazard())
@@ -148,8 +148,6 @@ static bool isVOPD3F64OPYSrcHazard(const SIInstrInfo &TII,
   unsigned Granule =
       AMDGPU::getVGPRAllocGranule(ST.getTargetID().getGPUKind(), ST.isWave32());
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
-  unsigned NumVGPRs = TRI->getNumUsedPhysRegs(
-      MF.getRegInfo(), AMDGPU::VGPR_32RegClass, /*IncludeCalls=*/false);
   for (AMDGPU::OpName Name :
        {AMDGPU::OpName::src0, AMDGPU::OpName::src1, AMDGPU::OpName::src2}) {
     const MachineOperand *Src = TII.getNamedOperand(MIY, Name);
@@ -173,7 +171,7 @@ static bool canMaterializeVOPDLiterals(const MachineFunction &MF) {
 
 static bool checkVOPDRegConstraints(
     const SIInstrInfo &TII, const MachineInstr &MIX, const MachineInstr &MIY,
-    bool IsVOPD3, bool AllowSameVGPR,
+    bool IsVOPD3, bool AllowSameVGPR, unsigned NumVGPRs,
     SmallVectorImpl<VOPDLiteralFixup> &LiteralFixups, bool (&CommuteXY)[2]) {
   namespace VOPD = AMDGPU::VOPD;
 
@@ -182,7 +180,7 @@ static bool checkVOPDRegConstraints(
 
   if (IsVOPD3 && !ST.hasVOPD3())
     return false;
-  if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY))
+  if (IsVOPD3 && isVOPD3F64OPYSrcHazard(TII, MIX, MIY, NumVGPRs))
     return false;
   // Components which only map once src0 and src1 are commuted. The checks
   // below look at their operands as they will be after the commute.
@@ -369,7 +367,7 @@ static bool checkVOPDRegConstraints(
 static std::optional<VOPDMatchInfo>
 tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
                         MachineInstr &FirstMI, MachineInstr &SecondMI,
-                        bool IsVOPD3) {
+                        bool IsVOPD3, unsigned NumVGPRs) {
   unsigned Opc = FirstMI.getOpcode();
   unsigned Opc2 = SecondMI.getOpcode();
   AMDGPU::CanBeVOPD FirstCanBeVOPD =
@@ -395,7 +393,7 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
 
   if (FirstCanBeVOPD.X && SecondCanBeVOPD.Y) {
     if (checkVOPDRegConstraints(TII, FirstMI, SecondMI, IsVOPD3, AllowSameVGPR,
-                                Fixups, CommuteXY))
+                                NumVGPRs, Fixups, CommuteXY))
       return VOPDMatchInfo{
           {&FirstMI, &SecondMI},
           0,
@@ -412,7 +410,7 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
     if (IsAntiDep && !TII.isVOPDAntidependencyAllowed(SecondMI))
       return std::nullopt;
     if (checkVOPDRegConstraints(TII, SecondMI, FirstMI, IsVOPD3, AllowSameVGPR,
-                                Fixups, CommuteXY))
+                                NumVGPRs, Fixups, CommuteXY))
       return VOPDMatchInfo{
           {&FirstMI, &SecondMI},
           1,
@@ -426,27 +424,33 @@ tryMatchVOPDPairVariant(const SIInstrInfo &TII, unsigned EncodingFamily,
 
 std::optional<VOPDMatchInfo> llvm::tryMatchVOPDPair(const SIInstrInfo &TII,
                                                     MachineInstr &FirstMI,
-                                                    MachineInstr &SecondMI) {
+                                                    MachineInstr &SecondMI,
+                                                    unsigned NumVGPRs) {
   const GCNSubtarget &ST = TII.getSubtarget();
   unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(ST);
-  if (auto Match = tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI,
-                                           SecondMI, /*IsVOPD3=*/false))
+  if (auto Match = tryMatchVOPDPairVariant(
+          TII, EncodingFamily, FirstMI, SecondMI, /*IsVOPD3=*/false, NumVGPRs))
     return Match;
   if (ST.hasVOPD3())
     return tryMatchVOPDPairVariant(TII, EncodingFamily, FirstMI, SecondMI,
-                                   /*IsVOPD3=*/true);
+                                   /*IsVOPD3=*/true, NumVGPRs);
   return std::nullopt;
+}
+
+unsigned llvm::getNumVGPRsForVOPDPairing(const MachineFunction &MF) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  return ST.hasVOPD3F64OPYSrcHazard()
+             ? ST.getRegisterInfo()->getNumReportedVGPRs(MF)
+             : 0;
 }
 
 /// Check if the instr pair, FirstMI and SecondMI, should be scheduled
 /// together. Given SecondMI, when FirstMI is unspecified, then check if
 /// SecondMI may be part of a fused pair at all.
-static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
-                                       const TargetSubtargetInfo &TSI,
+static bool shouldScheduleVOPDAdjacent(const SIInstrInfo &STII,
                                        const MachineInstr *FirstMI,
                                        const MachineInstr &SecondMI,
-                                       const SDep *) {
-  const SIInstrInfo &STII = static_cast<const SIInstrInfo &>(TII);
+                                       unsigned NumVGPRs) {
   const GCNSubtarget &ST = STII.getSubtarget();
 
   // One instruction case: just check whether SecondMI is eligible at all.
@@ -473,7 +477,7 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
 #endif
 
   return tryMatchVOPDPair(STII, *const_cast<MachineInstr *>(FirstMI),
-                          const_cast<MachineInstr &>(SecondMI))
+                          const_cast<MachineInstr &>(SecondMI), NumVGPRs)
       .has_value();
 }
 
@@ -573,15 +577,16 @@ namespace {
 /// be turned into VOPD instructions
 /// Greedily pairs instruction candidates. O(n^2) algorithm.
 struct VOPDPairingMutation : ScheduleDAGMutation {
-  MacroFusionPredTy shouldScheduleAdjacent; // NOLINT: function pointer
+  /// The VGPR count tryMatchVOPDPair needs. Scheduling does not rename
+  /// registers, so it holds for every region of the function.
+  unsigned NumVGPRs;
 
-  VOPDPairingMutation(
-      MacroFusionPredTy shouldScheduleAdjacent) // NOLINT: function pointer
-      : shouldScheduleAdjacent(shouldScheduleAdjacent) {}
+  VOPDPairingMutation(const MachineFunction &MF)
+      : NumVGPRs(getNumVGPRsForVOPDPairing(MF)) {}
 
   void apply(ScheduleDAGInstrs *DAG) override {
-    const TargetInstrInfo &TII = *DAG->TII;
     const GCNSubtarget &ST = DAG->MF.getSubtarget<GCNSubtarget>();
+    const SIInstrInfo &TII = *ST.getInstrInfo();
     if (!AMDGPU::hasVOPD(ST) || !ST.isWave32()) {
       LLVM_DEBUG(dbgs() << "Target does not support VOPDPairingMutation\n");
       return;
@@ -593,7 +598,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
     for (auto ISUI = DAG->SUnits.begin(), E = DAG->SUnits.end(); ISUI != E;
          ++ISUI, ++IIdx) {
       const MachineInstr *IMI = ISUI->getInstr();
-      if (shouldScheduleAdjacent(TII, ST, nullptr, *IMI, nullptr) &&
+      if (shouldScheduleVOPDAdjacent(TII, nullptr, *IMI, NumVGPRs) &&
           hasLessThanNumFused(*ISUI, 2))
         VOPDCapable[IIdx] = true;
     }
@@ -624,7 +629,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
           continue;
         const MachineInstr *JMI = JSUI->getInstr();
         if (!hasLessThanNumFused(*JSUI, 2) ||
-            !shouldScheduleAdjacent(TII, ST, IMI, *JMI, nullptr))
+            !shouldScheduleVOPDAdjacent(TII, IMI, *JMI, NumVGPRs))
           continue;
 
         if (loadsMayOverlap(*ISUI, ILoadSuccs, *JSUI, LoadPredsComputed,
@@ -643,6 +648,7 @@ struct VOPDPairingMutation : ScheduleDAGMutation {
 };
 } // namespace
 
-std::unique_ptr<ScheduleDAGMutation> llvm::createVOPDPairingMutation() {
-  return std::make_unique<VOPDPairingMutation>(shouldScheduleVOPDAdjacent);
+std::unique_ptr<ScheduleDAGMutation>
+llvm::createVOPDPairingMutation(const MachineFunction &MF) {
+  return std::make_unique<VOPDPairingMutation>(MF);
 }

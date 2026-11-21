@@ -2979,7 +2979,10 @@ bool GCNHazardRecognizer::fixShift64HighRegBug(MachineInstr *MI) {
   if (!TRI.isVGPR(MRI, AmtReg) || ((AmtReg - AMDGPU::VGPR0) & 7) != 7)
     return false;
 
-  if (AmtReg != AMDGPU::VGPR255 && MRI.isPhysRegUsed(AmtReg + 1))
+  // The wave owns at least the VGPRs the function reports.
+  if (!NumReportedVGPRs)
+    NumReportedVGPRs = TRI.getNumReportedVGPRs(MF);
+  if (TRI.getHWRegIndex(AmtReg) + 1 < NumReportedVGPRs)
     return false;
 
   assert(ST.needsAlignedVGPRs());
