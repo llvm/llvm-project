@@ -1,0 +1,84 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+
+; An excluded process's broken stack must change neither the selected profile
+; nor its diagnostics, even when its callchain follows a valid selected sample.
+; RUN: cat %t/mappings %t/selected > %t/selected.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --skip-symbolization \
+; RUN:   --perfscript=%t/selected.perfscript --output=%t/selected.raw 2> %t/selected.err
+; RUN: FileCheck %s --match-full-lines --input-file=%t/selected.raw
+; RUN: cat %t/selected.perfscript %t/excluded-broken > %t/mixed.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --skip-symbolization \
+; RUN:   --perfscript=%t/mixed.perfscript --output=%t/mixed.raw 2> %t/mixed.err
+; RUN: cmp %t/selected.raw %t/mixed.raw
+; RUN: cmp %t/selected.err %t/mixed.err
+
+; Excluded flat and hybrid samples must also leave the warning denominator
+; unchanged for a selected sample whose leaf frame is outside the binary.
+; RUN: cat %t/mappings %t/external-leaf > %t/external.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --skip-symbolization \
+; RUN:   --perfscript=%t/external.perfscript --output=%t/external.raw 2> %t/external.err
+; RUN: FileCheck %s --check-prefix=EXTERNAL --input-file=%t/external.err
+; RUN: cat %t/external.perfscript %t/excluded-hybrid > %t/hybrid.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --skip-symbolization \
+; RUN:   --perfscript=%t/hybrid.perfscript --output=%t/hybrid.raw 2> %t/hybrid.err
+; RUN: cmp %t/external.raw %t/hybrid.raw
+; RUN: cmp %t/external.err %t/hybrid.err
+; RUN: cat %t/external.perfscript %t/excluded-flat > %t/flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=100 --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin --skip-symbolization \
+; RUN:   --perfscript=%t/flat.perfscript --output=%t/flat.raw 2> %t/flat.err
+; RUN: cmp %t/external.raw %t/flat.raw
+; RUN: cmp %t/external.err %t/flat.err
+
+; CHECK-NOT:  {{.}}
+; CHECK:      [main:1 @ foo]
+; CHECK-NEXT:   0
+; CHECK-NEXT:   1
+; CHECK-NEXT:   62f->5b0:1
+; CHECK-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-NEXT:   1
+; CHECK-NEXT:   5b0-5c8:1
+; CHECK-NEXT:   1
+; CHECK-NEXT:   5c8->5dc:1
+; CHECK-NOT:  {{.}}
+; EXTERNAL: 100.00%(1/1) of samples have leaf external frame in call stack.
+
+;--- mappings
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+;--- selected
+100 2.000000:
+          5005dc
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- excluded-broken
+200 3.000000:
+          6005dc
+          6005b0
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- external-leaf
+100 2.000000:
+          700000
+          500634
+          500684
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- excluded-hybrid
+200 3.000000:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- excluded-flat
+200 3.000000: 6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0

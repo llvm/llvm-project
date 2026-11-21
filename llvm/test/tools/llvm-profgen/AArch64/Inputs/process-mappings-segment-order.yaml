@@ -1,0 +1,74 @@
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_AARCH64
+  Entry:   0x401000
+Sections:
+  - Name:         .text.second
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x501120
+    Offset:       0x1120
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x401000
+    Offset:       0x5000
+    AddressAlign: 0x4
+    Content:      C0035FD6
+  - Name:         .text.first.tail
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x402000
+    Offset:       0x6000
+    AddressAlign: 0x4
+    Content:      C0035FD6
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R ]
+    Offset:   0x0
+    VAddr:    0x400000
+    FileSize: 0x1000
+    MemSize:  0x1000
+    Align:    0x1000
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x5000
+    VAddr:    0x401000
+    FileSize: 0x1004
+    MemSize:  0x1004
+    Align:    0x1000
+    FirstSec: .text.first
+    LastSec:  .text.first.tail
+  - Type:     PT_LOAD
+    Flags:    [ PF_X, PF_R ]
+    Offset:   0x1120
+    VAddr:    0x501120
+    FileSize: 0x4
+    MemSize:  0x4
+    Align:    0x1000
+    FirstSec: .text.second
+    LastSec:  .text.second
+Symbols:
+  - Name:    first
+    Type:    STT_FUNC
+    Section: .text.first
+    Binding: STB_GLOBAL
+    Value:   0x401000
+    Size:    0x4
+  - Name:    first_tail
+    Type:    STT_FUNC
+    Section: .text.first.tail
+    Binding: STB_GLOBAL
+    Value:   0x402000
+    Size:    0x4
+  - Name:    second
+    Type:    STT_FUNC
+    Section: .text.second
+    Binding: STB_GLOBAL
+    Value:   0x501120
+    Size:    0x4

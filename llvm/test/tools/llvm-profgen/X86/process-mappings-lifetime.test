@@ -1,0 +1,202 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+; RUN: split-file %S/Inputs/process-mappings-lifetime.txt %t
+
+; Recording begins with a worker's mmap, not a complete task inventory. Its
+; exit cannot retire the surviving leader's map or a later child's inheritance.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/worker-first.perfscript --skip-symbolization --output=%t/worker-first.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/worker-first.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/worker-first.perfscript --skip-symbolization --output=%t/worker-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/worker-child.raw
+
+; Timestamp-zero forks describe an initial snapshot, not live inheritance.
+; The selected child owns only its explicit mmap in the snapshot case. A live
+; fork from an unselected parent gives it the parent's executable alias too.
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/snapshot.perfscript --skip-symbolization --output=%t/snapshot.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/snapshot.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/fork.perfscript --skip-symbolization --output=%t/fork.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/fork.raw
+
+; Real process and worker births establish a complete inventory. Subsequent
+; COMM and unrelated read-only mmaps repeat known live TIDs without withdrawing
+; completeness. Leader exit preserves workers; the final worker retires maps.
+; A child forked by a worker retains its own inherited mappings after every
+; parent task exits. Exec by the child's worker invalidates its entire old
+; address space; the post-exec leader's mmap establishes a different ASLR base.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/lifetime.perfscript --skip-symbolization --output=%t/all.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=7 --input-file=%t/all.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/lifetime.perfscript --skip-symbolization --output=%t/100.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/100.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/lifetime.perfscript --skip-symbolization --output=%t/200.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=4 --input-file=%t/200.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/lifetime.perfscript --format=text --profile-summary-cold-count=0 --output=%t/200.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/200.raw --format=text --profile-summary-cold-count=0 --output=%t/replay.prof
+; RUN: cmp %t/200.prof %t/replay.prof
+
+; A zero-size mmap repeats an already announced worker without withdrawing
+; completeness, even though the mmap adds no range.
+; RUN: sed 's/0x900000(0x1000)/0x900000(0)/g' %t/lifetime.perfscript > %t/zero-size.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-size.perfscript --skip-symbolization --output=%t/zero-size.raw
+; RUN: cmp %t/all.raw %t/zero-size.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-size.perfscript --skip-symbolization --output=%t/zero-size-child.raw
+; RUN: cmp %t/200.raw %t/zero-size-child.raw
+
+; A real fork records the leader even before the target library is loaded.
+; A worker can load it and exit while the leader and a later child keep using it.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/late-load.perfscript --skip-symbolization --output=%t/late-load.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/late-load.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/late-load.perfscript --skip-symbolization --output=%t/late-leader.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/late-leader.raw
+; RUN: llvm-profgen --per-process-mappings --pid=300 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/late-load.perfscript --skip-symbolization --output=%t/late-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/late-child.raw
+
+; Recording can start at the worker fork, before any observation of its parent.
+; The final observation models a surviving, unobserved thread. Retain its map
+; after the last observed exit; the known-birth control must still reject it.
+; RUN: sed '1d' %t/late-load.perfscript > %t/partial.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/partial.perfscript --skip-symbolization --output=%t/partial.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=4 --input-file=%t/partial.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/partial.perfscript --skip-symbolization --output=%t/partial-leader.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/partial-leader.raw
+; RUN: llvm-profgen --per-process-mappings --pid=300 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/partial.perfscript --skip-symbolization --output=%t/partial-child.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/partial-child.raw
+
+; A previously exited TID reappearing without a birth withdraws completeness.
+; Exercise ordinary COMM, unrelated mmap (including zero size), a live FORK's
+; parent, and an unknown EXIT. The child inherits the retained map, but its
+; own observed birth makes its final EXIT conclusive. Its post-exit sample is
+; a structural negative control, not a claim of normal producer output.
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_MMAP2 100/101: [0x900000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other-file|' %t/observed-comm.perfscript > %t/observed-mmap.perfscript
+; RUN: sed 's/0x900000(0x1000)/0x900000(0)/' %t/observed-mmap.perfscript > %t/observed-zero.perfscript
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_FORK(150:150):(100:101)|' %t/observed-comm.perfscript > %t/observed-parent.perfscript
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_EXIT(100:101):(100:100)|' %t/observed-comm.perfscript > %t/observed-exit.perfscript
+; RUN: sed '/1.00000[23]:/d' %t/observed-comm.perfscript > %t/unannounced.perfscript
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/observed-comm.perfscript --skip-symbolization --output=%t/observed-comm.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/observed-comm.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/observed-mmap.perfscript --skip-symbolization --output=%t/observed-mmap.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/observed-mmap.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/observed-zero.perfscript --skip-symbolization --output=%t/observed-zero.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/observed-zero.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/observed-parent.perfscript --skip-symbolization --output=%t/observed-parent.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/observed-parent.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/observed-exit.perfscript --skip-symbolization --output=%t/observed-exit.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/observed-exit.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/unannounced.perfscript --skip-symbolization --output=%t/unannounced.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/unannounced.raw
+
+; In contrast, an explicit same-PID worker rebirth preserves completeness.
+; Only the two PID-100 samples before final exit count; neither child inherits.
+; RUN: sed 's|PERF_RECORD_COMM: worker:100/101|PERF_RECORD_FORK(100:101):(100:100)|' %t/observed-comm.perfscript > %t/announced.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/announced.perfscript --skip-symbolization --output=%t/announced.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/announced.raw
+
+; Exec and a reused PID born from a non-target parent replace even an incomplete
+; old lifetime. Probe the old address before reloading, and retain one earlier
+; and one new-base sample. The new complete lifetime retires at its final EXIT.
+; RUN: head -n 3 %t/worker-first.perfscript > %t/exec.perfscript
+; RUN: cat %t/replace-tail.perfscript >> %t/exec.perfscript
+; RUN: sed 's|PERF_RECORD_COMM exec: replacement:100/100|PERF_RECORD_FORK(100:100):(900:900)|' %t/exec.perfscript > %t/reuse.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/exec.perfscript --skip-symbolization --output=%t/exec.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/exec.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/reuse.perfscript --skip-symbolization --output=%t/reuse.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/reuse.raw
+
+; Timestamp-zero exec still resets the old image but cannot certify the new
+; inventory. This is a synthetic transition check, not producer-capture evidence.
+; RUN: sed '/PERF_RECORD_COMM exec/s/1.000003/0.000000/' %t/exec.perfscript > %t/synthetic-exec.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/synthetic-exec.perfscript --skip-symbolization --output=%t/synthetic-exec.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=4 --input-file=%t/synthetic-exec.raw
+
+; RAW-NOT:  {{.}}
+; RAW:      1
+; RAW-NEXT: 5b0-5c8:[[#COUNT]]
+; RAW-NEXT: 2
+; RAW-NEXT: 5c8->5dc:[[#COUNT]]
+; RAW-NEXT: 62f->5b0:[[#COUNT]]
+; RAW-NOT:  {{.}}
+
+;--- snapshot.perfscript
+    100 0.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 0.000000: PERF_RECORD_FORK(200:200):(100:100)
+    200 0.000000: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000002:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- fork.perfscript
+    100 0.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000000: PERF_RECORD_FORK(200:200):(100:100)
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000002:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000003:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+;--- lifetime.perfscript
+    900 0.999997: PERF_RECORD_FORK(100:100):(900:900)
+    100 0.999998: PERF_RECORD_FORK(100:101):(100:100)
+    100 0.999999: PERF_RECORD_FORK(100:103):(100:100)
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001: PERF_RECORD_COMM: worker:100/101
+    100 1.000002: PERF_RECORD_FORK(100:102):(100:101)
+    100 1.000003: PERF_RECORD_MMAP2 100/103: [0x900000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other-file
+    100 1.000004: PERF_RECORD_FORK(200:200):(100:101)
+    200 1.000004: PERF_RECORD_FORK(200:201):(200:200)
+    200 1.000005: PERF_RECORD_MMAP2 200/201: [0x900000(0x1000) @ 0 00:1d 2 1]: r--p /tmp/other-file
+    200 1.000006:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000007: PERF_RECORD_EXIT(100:100):(1:1)
+    100 1.000008:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000009: PERF_RECORD_EXIT(100:101):(100:100)
+    100 1.000010:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000011: PERF_RECORD_EXIT(100:102):(100:101)
+    100 1.000012:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000013: PERF_RECORD_EXIT(100:103):(100:100)
+    100 1.000014:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000015:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000016: PERF_RECORD_EXIT(200:200):(100:101)
+    200 1.000017:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000018: PERF_RECORD_COMM exec: replacement:200/200
+    200 1.000019:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000020: PERF_RECORD_MMAP2 200/200: [0x700000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000021:           7005dc 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+    200 1.000022:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000023: PERF_RECORD_EXIT(200:200):(100:101)
+    200 1.000024:           7005dc 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+
+;--- late-load.perfscript
+    100 1.000000: PERF_RECORD_FORK(200:200):(100:100)
+    200 1.000001: PERF_RECORD_FORK(200:201):(200:200)
+    200 1.000002: PERF_RECORD_MMAP2 200/201: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000003:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000004: PERF_RECORD_EXIT(200:201):(200:200)
+    200 1.000005:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000006: PERF_RECORD_FORK(300:300):(200:200)
+    300 1.000007:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000008: PERF_RECORD_EXIT(200:200):(100:100)
+    200 1.000009:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
