@@ -293,10 +293,12 @@ void X86DynAllocaExpander::lower(MachineInstr *MI, Lowering L) {
   Register AmountReg = MI->getOperand(0).getReg();
   MI->eraseFromParent();
 
-  // Delete the definition of AmountReg.
-  if (MRI->use_empty(AmountReg))
-    if (MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg))
+  // Delete the definition of AmountReg. Debug uses must not keep it alive.
+  if (MRI->use_nodbg_empty(AmountReg))
+    if (MachineInstr *AmountDef = MRI->getUniqueVRegDef(AmountReg)) {
+      MRI->markUsesInDebugValueAsUndef(AmountReg);
       AmountDef->eraseFromParent();
+    }
 }
 
 bool X86DynAllocaExpander::run(MachineFunction &MF) {
