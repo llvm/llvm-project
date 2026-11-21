@@ -23,8 +23,8 @@ empty_var:
 # rtdyld-check: empty_var = section_addr(COFF_AArch64_empty_section.s.tmp.obj, .bss)
 
 // A non-empty discardable section is not loaded, so symbols in it resolve to
-// address zero. (Check this via a relocation; the checker treats a symbol
-// address of zero as not found.)
+// address zero. Checking this via a relocation which results in the address
+// zero.
   .data
 discard_ptr:
   .quad discard_var
