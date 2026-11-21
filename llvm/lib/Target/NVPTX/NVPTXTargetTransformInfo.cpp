@@ -477,6 +477,42 @@ NVPTXTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return I;
   if (Instruction *I = foldAbsIntoRedux(IC, II))
     return I;
+  Intrinsic::ID IID = II.getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::nvvm_mul24_i:
+    // try to do constant folding here, since mul24 are the same as mul.
+    if (ConstantInt *LCI = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+      if (ConstantInt *RCI = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
+        // for signed mul24, treat the operands as 24-bit value, and
+        // the bit-23 as the sign and sign-extend the operand.
+        int lc = (int)(LCI->getSExtValue() & 0xffffff);
+        int rc = (int)(RCI->getSExtValue() & 0xffffff);
+        if (lc & 0x800000)
+          lc = lc | 0xff000000;
+        if (rc & 0x800000)
+          rc = rc | 0xff000000;
+        LCI = ConstantInt::getSigned(LCI->getIntegerType(), (int64_t)lc);
+        RCI = ConstantInt::getSigned(RCI->getIntegerType(), (int64_t)rc);
+        return BinaryOperator::Create(Instruction::Mul, LCI, RCI);
+      }
+    }
+    break;
+
+  case Intrinsic::nvvm_mul24_ui:
+    // try to do constant folding here, since mul24 are the same as mul.
+    if (ConstantInt *LCI = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+      if (ConstantInt *RCI = dyn_cast<ConstantInt>(II.getArgOperand(1))) {
+        // for unsigned mul24, treat the operands as 24-bit value, and
+        // zero extend the rest of the operands
+        uint64_t lc = LCI->getZExtValue() & 0xffffff;
+        uint64_t rc = RCI->getZExtValue() & 0xffffff;
+        LCI = ConstantInt::get(LCI->getIntegerType(), lc);
+        RCI = ConstantInt::get(LCI->getIntegerType(), rc);
+        return BinaryOperator::Create(Instruction::Mul, LCI, RCI);
+      }
+    }
+    break;
+  }
   return std::nullopt;
 }
 
