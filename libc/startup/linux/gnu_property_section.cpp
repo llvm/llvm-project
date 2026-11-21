@@ -97,11 +97,13 @@ bool GnuPropertySection::parse(const ElfW(Phdr) * gnu_property_phdr,
         reinterpret_cast<const ElfW(ProgramProperty) *>(
             &note_nhdr->n_desc[offset]);
 
-    // Sanity check that property is correctly aligned.
-    if (distance_to_align_up<sizeof(ElfW(Word))>(property) > 0)
+    // Sanity check that property is aligned to ElfW(Addr) (8 bytes on
+    // ELFCLASS64, 4 bytes on ELFCLASS32) per the Linux ELF ABI.
+    if (distance_to_align_up<sizeof(ElfW(Addr))>(property) > 0)
       return false;
 
-    const ElfW(Xword) property_size = sizeof(*property) + property->pr_datasz;
+    const ElfW(Xword) property_size =
+        sizeof(*property) + static_cast<ElfW(Xword)>(property->pr_datasz);
     // Also check that pr_data does not reach out of bounds.
     if ((offset + property_size) > nhdr_desc_size)
       return false;
@@ -124,7 +126,13 @@ bool GnuPropertySection::parse(const ElfW(Phdr) * gnu_property_phdr,
       break;
     }
 
-    offset += static_cast<ElfW(Word)>(property_size);
+    // Each program property entry is padded to ElfW(Addr) alignment.
+    constexpr ElfW(Xword) ALIGN_MASK = sizeof(ElfW(Addr)) - 1;
+    const ElfW(Xword) aligned_property_size =
+        (property_size + ALIGN_MASK) & ~ALIGN_MASK;
+    if ((offset + aligned_property_size) > nhdr_desc_size)
+      return false;
+    offset += static_cast<ElfW(Word)>(aligned_property_size);
   }
 
   return true;
