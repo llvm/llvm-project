@@ -1054,7 +1054,7 @@ define weak_odr void @weak_caller(ptr nonnull %a) {
 ;
 ; ATTRIBUTOR-LABEL: define weak_odr void @weak_caller(
 ; ATTRIBUTOR-SAME: ptr nonnull [[A:%.*]]) {
-; ATTRIBUTOR-NEXT:    call void @called_by_weak(ptr nonnull readnone captures(none) [[A]])
+; ATTRIBUTOR-NEXT:    call void @called_by_weak(ptr nonnull [[A]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   call void @called_by_weak(ptr %a)
