@@ -13,13 +13,14 @@ void test() {
 }
 
 // Automatic local variables in braceless arms of
-// if statement are placed in the same DILexicalBlock.
+// an if statement are placed in separate DILexicalBlocks.
 // Test that the behavior for static locals is the same as
 // for automatic variables in that case.
 void test_braceless(int x) {
   if (x)
     static int foo = 30;
   else
+  arm_label:
     static int foo = 40;
   if (x)
 #line 100
@@ -27,6 +28,8 @@ void test_braceless(int x) {
   else
 #line 200
     int foobar = 60;
+  if (true)
+    int folded = x;
 }
 
 // CHECK: ![[FS_GVE:[0-9]+]] = !DIGlobalVariableExpression(var: ![[FS_GV:[0-9]+]]
@@ -42,16 +45,24 @@ void test_braceless(int x) {
 // CHECK: ![[LB2SCOPE]] = distinct !DILexicalBlock(scope: ![[LB1SCOPE]]
 
 // CHECK: ![[B_LB1_GVE:[0-9]+]] = !DIGlobalVariableExpression(var: ![[B_LB1_GV:[0-9]+]]
-// CHECK: ![[B_LB1_GV]] = distinct !DIGlobalVariable(name: "foo", scope: ![[B_LBSCOPE:[0-9]+]]
-// CHECK: ![[B_LBSCOPE]] = distinct !DILexicalBlock(scope: ![[BSCOPE:[0-9]+]]
+// CHECK: ![[B_LB1_GV]] = distinct !DIGlobalVariable(name: "foo", scope: ![[THEN_SCOPE:[0-9]+]],
+// CHECK: ![[THEN_SCOPE]] = distinct !DILexicalBlock(scope: ![[STATIC_IF:[0-9]+]],
+// CHECK: ![[STATIC_IF]] = distinct !DILexicalBlock(scope: ![[BSCOPE:[0-9]+]],
 // CHECK: ![[BSCOPE]] = distinct !DISubprogram(name: "test_braceless"
 // CHECK-SAME:                                retainedNodes: ![[B_DECLS:[0-9]+]]
 // CHECK: ![[B_DECLS]] = !{![[B_LB1_GVE]], ![[B_LB2_GVE:[0-9]+]]}
 // CHECK: ![[B_LB2_GVE]] = !DIGlobalVariableExpression(var: ![[B_LB2_GV:[0-9]+]]
-// CHECK: ![[B_LB2_GV]] = distinct !DIGlobalVariable(name: "foo", scope: ![[B_LBSCOPE:[0-9]+]]
+// CHECK: ![[B_LB2_GV]] = distinct !DIGlobalVariable(name: "foo", scope: ![[ELSE_SCOPE:[0-9]+]],
+// CHECK: ![[ELSE_SCOPE]] = distinct !DILexicalBlock(scope: ![[STATIC_IF]],
 
-// CHECK: ![[LOCAL_VAR_SCOPE:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BSCOPE]]
-// CHECK: ![[LOCAL_VAR1:[0-9]+]] = !DILocalVariable(name: "foobar", scope: ![[LOCAL_VAR_SCOPE]]
+// CHECK: ![[AUTO_IF:[0-9]+]] = distinct !DILexicalBlock(scope: ![[BSCOPE]],
+// CHECK: !DILocalVariable(name: "foobar", scope: ![[AUTO_THEN:[0-9]+]],
 // CHECK-SAME:                                      line: 100
-// CHECK: ![[LOCAL_VAR2:[0-9]+]] = !DILocalVariable(name: "foobar", scope: ![[LOCAL_VAR_SCOPE]]
+// CHECK: ![[AUTO_THEN]] = distinct !DILexicalBlock(scope: ![[AUTO_IF]],
+// CHECK: !DILocalVariable(name: "foobar", scope: ![[AUTO_ELSE:[0-9]+]],
 // CHECK-SAME:                                      line: 200
+// CHECK: ![[AUTO_ELSE]] = distinct !DILexicalBlock(scope: ![[AUTO_IF]],
+
+// CHECK: !DILocalVariable(name: "folded", scope: ![[FOLDED_ARM:[0-9]+]],
+// CHECK: ![[FOLDED_ARM]] = distinct !DILexicalBlock(scope: ![[FOLDED_IF:[0-9]+]],
+// CHECK: ![[FOLDED_IF]] = distinct !DILexicalBlock(scope: ![[BSCOPE]],
