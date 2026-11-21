@@ -1489,7 +1489,8 @@ def ProcessorFeatures {
                                                   FeaturePREFETCHI];
   list<SubtargetFeature> NVLFeatures =
       !listconcat(PTLFeatures, NVLAdditionalFeatures);
-  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC];
+  list<SubtargetFeature> NVLAdditionalTuning = [TuningPreferLegacySetCC,
+                                                TuningPrefer256Bit];
   list<SubtargetFeature> NVLTuning = !listconcat(ADLTuning, NVLAdditionalTuning);
 
   // Clearwaterforest
