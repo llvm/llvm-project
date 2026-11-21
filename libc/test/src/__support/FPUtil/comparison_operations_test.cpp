@@ -8,6 +8,7 @@
 
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/__support/FPUtil/comparison_operations.h"
+#include "src/__support/FPUtil/float16.h"
 #include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -20,6 +21,7 @@ using LIBC_NAMESPACE::fputil::less_than;
 using LIBC_NAMESPACE::fputil::less_than_or_equals;
 
 using BFloat16 = LIBC_NAMESPACE::fputil::BFloat16;
+using SoftFloat16 = LIBC_NAMESPACE::fputil::Float16;
 
 template <typename T>
 class ComparisonOperationsTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
@@ -335,3 +337,4 @@ TEST_COMPARISON_OPS(DFloat128, float128)
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST_COMPARISON_OPS(BFloat16, BFloat16)
+TEST_COMPARISON_OPS(SoftFloat16, SoftFloat16)

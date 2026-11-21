@@ -71,6 +71,10 @@ template <> struct ExtraPrecision<float80> {
 };
 #endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
 
+template <> struct ExtraPrecision<LIBC_NAMESPACE::fputil::Float16> {
+  static constexpr unsigned int VALUE = 128;
+};
+
 template <> struct ExtraPrecision<bfloat16> {
   static constexpr unsigned int VALUE = 64;
 };
@@ -118,12 +122,14 @@ public:
   // to float, as the MPFR API does not support float16, thus requiring
   // conversion to a higher-precision format.
   template <typename XType,
-            cpp::enable_if_t<cpp::is_same_v<float, XType>
+            cpp::enable_if_t<
+                cpp::is_same_v<float, XType>
 #ifdef LIBC_TYPES_HAS_FLOAT16
-                                 || cpp::is_same_v<float16, XType>
+                    || cpp::is_same_v<float16, XType>
 #endif
-                                 || cpp::is_same_v<bfloat16, XType>,
-                             int> = 0>
+                    || cpp::is_same_v<LIBC_NAMESPACE::fputil::Float16, XType> ||
+                    cpp::is_same_v<bfloat16, XType>,
+                int> = 0>
   explicit MPFRNumber(XType x,
                       unsigned int precision = ExtraPrecision<XType>::VALUE,
                       RoundingMode rounding = RoundingMode::Nearest)

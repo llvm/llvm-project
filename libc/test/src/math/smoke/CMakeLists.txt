@@ -252,6 +252,7 @@ add_fp_unittest(
   HDRS
     FAbsTest.h
   DEPENDS
+    libc.src.__support.FPUtil.float16
     libc.src.math.fabsf16
 )
 

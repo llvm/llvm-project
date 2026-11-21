@@ -17,12 +17,12 @@
     !defined(__arm__) && !defined(_M_ARM) && !defined(__riscv) &&              \
     !defined(_WIN32) && (!defined(__i386__) || defined(__SSE2__))
 #define LIBC_TYPES_HAS_FLOAT16
+#endif
 
 // TODO: This would no longer be required if HdrGen let us guard function
 // declarations with multiple macros.
-#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
+#if defined(LIBC_TYPES_HAS_FLOAT16) && defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 #define LIBC_TYPES_HAS_FLOAT16_AND_FLOAT128
-#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT16 && LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_MACROS_FLOAT16_MACROS_H
