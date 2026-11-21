@@ -8823,29 +8823,36 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                          DAG.getConstant(0, sdl, MVT::i64)));
     return;
   case Intrinsic::masked_udiv:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_UDIV, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
   case Intrinsic::masked_sdiv:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_SDIV, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
   case Intrinsic::masked_urem:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_UREM, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
+  case Intrinsic::masked_srem: {
+    // PreISelIntrinsicLowering expands scalar calls in the standard pipeline;
+    // keep a matching fallback here for direct SelectionDAG inputs.
+    bool IsSigned = Intrinsic == Intrinsic::masked_sdiv ||
+                    Intrinsic == Intrinsic::masked_srem;
+    EVT VT = EVT::getEVT(I.getType());
+    if (IsSigned && VT == MVT::i1) {
+      // In signed i1 (0 and -1), 0 / -1 == 0 is the sole defined case.
+      setValue(&I, DAG.getConstant(0, sdl, VT));
+      return;
+    }
+    unsigned Opcode = Intrinsic == Intrinsic::masked_udiv   ? ISD::MASKED_UDIV
+                      : Intrinsic == Intrinsic::masked_sdiv ? ISD::MASKED_SDIV
+                      : Intrinsic == Intrinsic::masked_urem ? ISD::MASKED_UREM
+                                                            : ISD::MASKED_SREM;
+    SDValue LHS = getValue(I.getArgOperand(0));
+    SDValue RHS = getValue(I.getArgOperand(1));
+    if (!VT.isVector()) {
+      SDValue Mask = DAG.getFreeze(getValue(I.getArgOperand(2)));
+      RHS = DAG.getSelect(sdl, VT, Mask, RHS, DAG.getConstant(1, sdl, VT));
+      setValue(&I, DAG.getNode(ISD::getUnmaskedBinOpOpcode(Opcode), sdl, VT,
+                               LHS, RHS));
+      return;
+    }
+    setValue(&I, DAG.getNode(Opcode, sdl, VT, LHS, RHS,
+                             getValue(I.getArgOperand(2))));
     return;
-  case Intrinsic::masked_srem:
-    setValue(&I,
-             DAG.getNode(ISD::MASKED_SREM, sdl, EVT::getEVT(I.getType()),
-                         getValue(I.getOperand(0)), getValue(I.getOperand(1)),
-                         getValue(I.getOperand(2))));
-    return;
+  }
   }
 }
 

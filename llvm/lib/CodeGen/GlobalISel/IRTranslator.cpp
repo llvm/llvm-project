@@ -3066,6 +3066,35 @@ bool IRTranslatorImpl::translateKnownIntrinsic(const CallInst &CI,
   switch (ID) {
   default:
     break;
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem: {
+    // PreISelIntrinsicLowering expands scalar calls in the standard pipeline;
+    // keep a matching fallback here for direct GlobalISel inputs.
+    if (!CI.getType()->isIntegerTy())
+      return false;
+    bool IsSigned =
+        ID == Intrinsic::masked_sdiv || ID == Intrinsic::masked_srem;
+    if (IsSigned && CI.getType()->isIntegerTy(1)) {
+      // In signed i1 (0 and -1), 0 / -1 == 0 is the sole defined case.
+      MIRBuilder.buildConstant(getOrCreateVReg(CI), 0);
+      return true;
+    }
+    unsigned Opcode = ID == Intrinsic::masked_udiv   ? TargetOpcode::G_UDIV
+                      : ID == Intrinsic::masked_sdiv ? TargetOpcode::G_SDIV
+                      : ID == Intrinsic::masked_urem ? TargetOpcode::G_UREM
+                                                     : TargetOpcode::G_SREM;
+    LLT Ty = getLLTForType(*CI.getType(), *DL);
+    Register LHS = getOrCreateVReg(*CI.getArgOperand(0));
+    Register RHS = getOrCreateVReg(*CI.getArgOperand(1));
+    Register Mask = getOrCreateVReg(*CI.getArgOperand(2));
+    auto FrozenMask = MIRBuilder.buildFreeze(MRI->getType(Mask), Mask);
+    auto One = MIRBuilder.buildConstant(Ty, 1);
+    RHS = MIRBuilder.buildSelect(Ty, FrozenMask, RHS, One).getReg(0);
+    MIRBuilder.buildInstr(Opcode, {getOrCreateVReg(CI)}, {LHS, RHS});
+    return true;
+  }
   case Intrinsic::lifetime_start:
   case Intrinsic::lifetime_end: {
     // No stack colouring in O0, discard region information.

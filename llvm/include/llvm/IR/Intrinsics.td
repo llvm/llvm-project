@@ -2501,28 +2501,28 @@ def int_experimental_vector_compress:
               [IntrNoMem]>;
 
 def int_masked_udiv:
-  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_sdiv:
-  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_urem:
-  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
             [IntrNoMem]>;
 
 def int_masked_srem:
-  DefaultAttrsIntrinsic<[llvm_any_vector_int_ty],
+  DefaultAttrsIntrinsic<[llvm_anyint_ty],
             [LLVMMatchType<0>,
              LLVMMatchType<0>,
              LLVMScalarOrSameVectorWidth<0, llvm_i1_ty>],
