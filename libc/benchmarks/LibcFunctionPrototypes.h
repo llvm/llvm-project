@@ -50,6 +50,12 @@ struct StrlenConfiguration {
   llvm::StringRef name;
 };
 
+using StrcmpFunction = int (*)(const char *, const char *);
+struct StrcmpConfiguration {
+  StrcmpFunction function;
+  llvm::StringRef name;
+};
+
 } // namespace libc_benchmarks
 } // namespace llvm
 
