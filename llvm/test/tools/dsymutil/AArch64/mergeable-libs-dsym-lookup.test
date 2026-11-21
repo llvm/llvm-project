@@ -1,0 +1,140 @@
+Check how dsymutil finds the dSYM of a merged library, and that without a
+usable one, the object files of the library are linked instead.
+
+The inputs are those of mergeable-libs-relocation-map.test, plus a _debug
+build variant of libfoo, which is built at -O0 under the same install name,
+and merged with libbar into libvariant:
+
+$ cd llvm/test/tools/dsymutil
+$ D=Inputs/mergeable-libs/dwarf5
+$ LINK="clang -target arm64-apple-macos15 -dynamiclib \
+    -Wl,-oso_prefix,$(pwd -P)/ -Wl,-segalign,0x1000"
+$ clang -target arm64-apple-macos15 -isysroot / -g -gdwarf-5 -O0 \
+    -fdebug-compilation-dir=/tmp -c Inputs/mergeable-libs/foo.c \
+    -o $D/foo_debug.o
+$ ZERO_AR_DATE=1 $LINK -Wl,-make_mergeable \
+    -install_name /path/to/libfoo.dylib $D/foo_debug.o -o $D/libfoo_debug.dylib
+$ ZERO_AR_DATE=1 $LINK $D/client.o -Wl,-merge_library,$D/libfoo_debug.dylib \
+    -Wl,-merge_library,$D/libbar.dylib -o $D/libvariant.dylib
+
+DEFINE: %{in} = %p/../Inputs/mergeable-libs/dwarf5
+DEFINE: %{dsymutil} = dsymutil -oso-prepend-path=%p/..
+DEFINE: %{map} = Contents/Resources/Relocations/aarch64
+
+RUN: rm -rf %t && split-file %s %t
+
+A variant has its own DWARF and relocation map in the dSYM of the library,
+which are used before those of the library itself. libbar has no variant.
+Search paths without the dSYMs are skipped silently.
+
+RUN: %{dsymutil} %{in}/libfoo.dylib -o %t/dsyms/libfoo.dylib.dSYM
+RUN: %{dsymutil} %{in}/libfoo_debug.dylib -o %t/dsyms/libfoo.dylib.dSYM
+RUN: %{dsymutil} %{in}/libbar.dylib -o %t/dsyms/libbar.dylib.dSYM
+RUN: %{dsymutil} -build-variant-suffix=_debug -D %t/nowhere -D %t/dsyms \
+RUN:   %{in}/libvariant.dylib -o %t/variant.dSYM 2>&1 | count 0
+RUN: llvm-dwarfdump --debug-info %t/variant.dSYM \
+RUN:   | FileCheck %s --check-prefix=VARIANT
+
+VARIANT:      DW_AT_name ("Inputs/mergeable-libs/foo.c")
+VARIANT:      DW_AT_APPLE_origin ("/path/to/libfoo.dylib")
+VARIANT:      DW_TAG_subprogram
+VARIANT-NEXT:   DW_AT_low_pc (0x00000000000004f4)
+VARIANT:        DW_AT_name ("foo")
+VARIANT:      DW_TAG_formal_parameter
+VARIANT-NEXT:   DW_AT_location (DW_OP_breg31 WSP+8)
+VARIANT:      DW_AT_name ("Inputs/mergeable-libs/bar.c")
+VARIANT:      DW_AT_APPLE_origin ("/path/to/libbar.dylib")
+VARIANT:      DW_TAG_subprogram
+VARIANT-NEXT:   DW_AT_low_pc (0x0000000000000574)
+VARIANT:        DW_AT_name ("bar")
+
+Without the dSYM of libbar, its object file is linked. libbar comes after
+libfoo, whose dSYM is found, and must not get the symbols of libbar.
+
+RUN: %{dsymutil} %{in}/libfoo.dylib -o %t/onlyfoo/libfoo.dylib.dSYM
+RUN: %{dsymutil} -D %t/onlyfoo %{in}/libclient.dylib -o %t/nobar.dSYM 2>&1 \
+RUN:   | FileCheck %s --check-prefix=NOBAR-WARN --implicit-check-not=warning
+RUN: llvm-dwarfdump --debug-info %t/nobar.dSYM \
+RUN:   | FileCheck %s --check-prefix=NOBAR
+
+NOBAR-WARN: warning: (arm64) /path/to/libbar.dylib no usable dSYM of the library was found in the dSYM search paths, linking its object files instead
+
+NOBAR:      DW_AT_name ("Inputs/mergeable-libs/foo.c")
+NOBAR:      DW_AT_APPLE_origin ("/path/to/libfoo.dylib")
+NOBAR:      DW_TAG_subprogram
+NOBAR-NEXT:   DW_AT_low_pc (0x00000000000004f4)
+NOBAR:        DW_AT_name ("foo")
+NOBAR:      DW_AT_name ("Inputs/mergeable-libs/bar.c")
+NOBAR-NOT:  DW_AT_APPLE_origin
+NOBAR:      DW_TAG_variable
+NOBAR-NEXT:   DW_AT_name ("bar_counter")
+NOBAR:        DW_AT_location (DW_OP_addr 0x1028)
+NOBAR:      DW_TAG_subprogram
+NOBAR-NEXT:   DW_AT_low_pc (0x0000000000000558)
+NOBAR:        DW_AT_name ("bar")
+
+A merged library has an N_LIB entry for each of its object files: the missing
+dSYM of libclient is reported once, and its three object files are linked.
+
+RUN: %{dsymutil} -D %t/nowhere %{in}/libtop.dylib -o %t/noclient.dSYM 2>&1 \
+RUN:   | FileCheck %s --check-prefix=NOCLIENT-WARN --implicit-check-not=warning
+RUN: llvm-dwarfdump --debug-info %t/noclient.dSYM \
+RUN:   | FileCheck %s --check-prefix=NOCLIENT \
+RUN:       --implicit-check-not=DW_AT_APPLE_origin
+
+NOCLIENT-WARN: warning: (arm64) /path/to/libclient.dylib no usable dSYM of the library was found in the dSYM search paths, linking its object files instead
+
+NOCLIENT:      DW_AT_name ("Inputs/mergeable-libs/top.c")
+NOCLIENT:      DW_AT_name ("Inputs/mergeable-libs/client.c")
+NOCLIENT:      DW_TAG_subprogram
+NOCLIENT-NEXT:   DW_AT_low_pc (0x00000000000004e0)
+NOCLIENT:        DW_AT_name ("display")
+NOCLIENT:      DW_AT_name ("Inputs/mergeable-libs/foo.c")
+NOCLIENT:      DW_TAG_subprogram
+NOCLIENT-NEXT:   DW_AT_low_pc (0x000000000000050c)
+NOCLIENT:        DW_AT_name ("foo")
+NOCLIENT:      DW_AT_name ("Inputs/mergeable-libs/bar.c")
+NOCLIENT:      DW_TAG_subprogram
+NOCLIENT-NEXT:   DW_AT_low_pc (0x0000000000000570)
+NOCLIENT:        DW_AT_name ("bar")
+
+A dSYM is unusable without the relocations to merge its debug info: when its
+relocation map has none, as older dsymutils wrote for DWARF 5, or when the
+relocations could not be in its DWARF.
+
+RUN: %{dsymutil} %{in}/libfoo.dylib -o %t/bad/libfoo.dylib.dSYM
+RUN: %{dsymutil} %{in}/libbar.dylib -o %t/bad/libbar.dylib.dSYM
+RUN: cp %t/empty.yml %t/bad/libfoo.dylib.dSYM/%{map}/libfoo.dylib.yml
+RUN: cp %t/oversized.yml %t/bad/libbar.dylib.dSYM/%{map}/libbar.dylib.yml
+RUN: %{dsymutil} -D %t/bad %{in}/libclient.dylib -o %t/bad.dSYM 2>&1 \
+RUN:   | FileCheck %s --check-prefix=BAD-WARN --implicit-check-not=warning
+RUN: llvm-dwarfdump --debug-info %t/bad.dSYM \
+RUN:   | FileCheck %s --check-prefix=BAD --implicit-check-not=DW_AT_APPLE_origin
+
+BAD-WARN:      warning: (arm64) {{.*}}libfoo.dylib.yml relocation map file has no relocation
+BAD-WARN-NEXT: warning: (arm64) /path/to/libfoo.dylib no usable dSYM of the library was found in the dSYM search paths, linking its object files instead
+BAD-WARN-NEXT: warning: (arm64) {{.*}}libbar.dylib.yml relocation map file does not match the DWARF of the dSYM
+BAD-WARN-NEXT: warning: (arm64) /path/to/libbar.dylib no usable dSYM of the library was found in the dSYM search paths, linking its object files instead
+
+BAD:      DW_AT_name ("Inputs/mergeable-libs/foo.c")
+BAD:      DW_TAG_subprogram
+BAD-NEXT:   DW_AT_low_pc (0x00000000000004f4)
+BAD:        DW_AT_name ("foo")
+BAD:      DW_AT_name ("Inputs/mergeable-libs/bar.c")
+BAD:      DW_TAG_subprogram
+BAD-NEXT:   DW_AT_low_pc (0x0000000000000558)
+BAD:        DW_AT_name ("bar")
+
+#--- empty.yml
+---
+triple:          'arm64-apple-darwin'
+binary-path:     libfoo.dylib
+relocations:     []
+...
+#--- oversized.yml
+---
+triple:          'arm64-apple-darwin'
+binary-path:     libbar.dylib
+relocations:
+  - { offset: 0x8, size: 0x40, addend: 0x0, symName: _bar, symBinAddr: 0x380, symSize: 0x18 }
+...

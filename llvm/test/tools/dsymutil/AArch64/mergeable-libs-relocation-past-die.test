@@ -1,0 +1,26 @@
+A relocation map which does not describe the DWARF of its dSYM can hold a
+relocation running past the end of the DIE it starts in. dsymutil skips it,
+rather than writing past the DIE.
+
+The inputs are those of mergeable-libs-relocation-map.test. The relocation of
+the address of bar_counter is moved one byte, past the DW_OP_addr of its
+DW_AT_location, which ends the DIE.
+
+RUN: rm -rf %t && mkdir -p %t
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/mergeable-libs/dwarf4/libfoo.dylib \
+RUN:   -o %t/libfoo.dylib.dSYM
+RUN: dsymutil -oso-prepend-path=%p/.. %p/../Inputs/mergeable-libs/dwarf4/libbar.dylib \
+RUN:   -o %t/libbar.dylib.dSYM
+RUN: %python -c "import re, sys; p = sys.argv[1]; t = open(p).read(); \
+RUN:   t = re.sub(r'offset: 0x([0-9A-F]+)(?=, size: 0x8, addend: 0x0, symName: _bar_counter,)', \
+RUN:              lambda m: 'offset: ' + hex(int(m.group(1), 16) + 1), t); open(p, 'w').write(t)" \
+RUN:   %t/libbar.dylib.dSYM/Contents/Resources/Relocations/aarch64/libbar.dylib.yml
+
+RUN: dsymutil --linker classic -oso-prepend-path=%p/.. -D %t \
+RUN:   %p/../Inputs/mergeable-libs/dwarf4/libclient.dylib -o %t/classic.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not=warning
+RUN: dsymutil --linker parallel -oso-prepend-path=%p/.. -D %t \
+RUN:   %p/../Inputs/mergeable-libs/dwarf4/libclient.dylib -o %t/parallel.dSYM 2>&1 \
+RUN:   | FileCheck %s --implicit-check-not=warning
+
+CHECK: warning: ignoring relocation at offset 0x{{[0-9a-f]+}}, which does not fit its DIE
