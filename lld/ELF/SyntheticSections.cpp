@@ -2089,6 +2089,20 @@ void SymbolTableBaseSection::addSymbol(Symbol *b) {
   symbols.push_back({b, strTabSec.addString(b->getName(), false)});
 }
 
+// Relaxation can change ISA mapping symbols after addSymbol has recorded their
+// string table offsets.
+void SymbolTableBaseSection::renameLocalSymbols(
+    const DenseMap<const Symbol *, StringRef> &names) {
+  for (SymbolTableEntry &entry : symbols) {
+    auto it = names.find(entry.sym);
+    if (it != names.end()) {
+      assert(entry.sym->isLocal());
+      entry.sym->setName(it->second);
+      entry.strTabOffset = strTabSec.addString(it->second);
+    }
+  }
+}
+
 size_t SymbolTableBaseSection::getSymbolIndex(const Symbol &sym) {
   if (this == ctx.in.dynSymTab.get())
     return sym.dynsymIndex;

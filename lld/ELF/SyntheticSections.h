@@ -646,6 +646,8 @@ public:
   void finalizeContents() override;
   size_t getSize() const override { return getNumSymbols() * entsize; }
   void addSymbol(Symbol *sym);
+  void
+  renameLocalSymbols(const llvm::DenseMap<const Symbol *, StringRef> &names);
   void maybeAddSttFile();
   void markGlobalPart() { firstGlobalIdx = symbols.size(); }
   size_t getNumSymbols() const { return symbols.size() + 1; }

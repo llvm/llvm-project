@@ -418,6 +418,13 @@ defm relax_gp: BB<"relax-gp",
   "Enable global pointer relaxation",
   "Disable global pointer relaxation (default)">;
 
+def relax_tbljal: JJ<"relax-tbljal=">, MetaVarName<"<scheme>">,
+  HelpText<"Enable RISC-V table-jump relaxation (supported scheme: zcmt)">;
+def : FF<"relax-tbljal">, Alias<relax_tbljal>, AliasArgs<["zcmt"]>,
+  HelpText<"Alias for --relax-tbljal=zcmt">;
+def no_relax_tbljal: FF<"no-relax-tbljal">,
+  HelpText<"Disable RISC-V table-jump relaxation (default)">;
+
 defm remap_inputs: EEq<"remap-inputs",
   "Remap input files matching <from-glob> to <to-file>">,
   MetaVarName<"<from-glob>=<to-file>">;
