@@ -149,32 +149,7 @@ void SymbolRegionValue::dumpToStream(raw_ostream &os) const {
   os << getKindStr() << getSymbolID() << '<' << getType() << ' ' << R << '>';
 }
 
-bool SymExpr::symbol_iterator::operator==(const symbol_iterator &X) const {
-  return itr == X.itr;
-}
-
-bool SymExpr::symbol_iterator::operator!=(const symbol_iterator &X) const {
-  return itr != X.itr;
-}
-
-SymExpr::symbol_iterator::symbol_iterator(const SymExpr *SE) {
-  itr.push_back(SE);
-}
-
-SymExpr::symbol_iterator &SymExpr::symbol_iterator::operator++() {
-  assert(!itr.empty() && "attempting to iterate on an 'end' iterator");
-  expand();
-  return *this;
-}
-
-SymbolRef SymExpr::symbol_iterator::operator*() {
-  assert(!itr.empty() && "attempting to dereference an 'end' iterator");
-  return itr.back();
-}
-
-void SymExpr::symbol_iterator::expand() {
-  const SymExpr *SE = itr.pop_back_val();
-
+void SymExpr::symbol_iterator::expand(const SymExpr *SE) {
   switch (SE->getKind()) {
     case SymExpr::SymbolRegionValueKind:
     case SymExpr::SymbolConjuredKind:
@@ -183,21 +158,21 @@ void SymExpr::symbol_iterator::expand() {
     case SymExpr::SymbolMetadataKind:
       return;
     case SymExpr::SymbolCastKind:
-      itr.push_back(cast<SymbolCast>(SE)->getOperand());
+      WL->push_back(cast<SymbolCast>(SE)->getOperand());
       return;
     case SymExpr::UnarySymExprKind:
-      itr.push_back(cast<UnarySymExpr>(SE)->getOperand());
+      WL->push_back(cast<UnarySymExpr>(SE)->getOperand());
       return;
     case SymExpr::SymIntExprKind:
-      itr.push_back(cast<SymIntExpr>(SE)->getLHS());
+      WL->push_back(cast<SymIntExpr>(SE)->getLHS());
       return;
     case SymExpr::IntSymExprKind:
-      itr.push_back(cast<IntSymExpr>(SE)->getRHS());
+      WL->push_back(cast<IntSymExpr>(SE)->getRHS());
       return;
     case SymExpr::SymSymExprKind: {
       const auto *x = cast<SymSymExpr>(SE);
-      itr.push_back(x->getLHS());
-      itr.push_back(x->getRHS());
+      WL->push_back(x->getLHS());
+      WL->push_back(x->getRHS());
       return;
     }
   }
