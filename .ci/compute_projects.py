@@ -24,7 +24,7 @@ PROJECT_DEPENDENCIES = {
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
     "cross-project-tests": {"clang", "lldb", "lld"},
-    "libc": {"clang", "lld"},
+    "libc": {"clang", "clang-tools-extra", "lld"},
     "openmp": {"clang", "lld"},
     "orc-rt": {"llvm"},
     "flang": {"llvm", "clang"},
