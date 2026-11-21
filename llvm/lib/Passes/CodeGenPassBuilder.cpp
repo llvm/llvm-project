@@ -263,12 +263,9 @@ Error CodeGenPassBuilder::buildPipeline(
   return verifyStartStop(*StartStopInfo);
 }
 
-Error CodeGenPassBuilder::buildPipelineImpl(PassManagerWrapper &PMW,
-                                            ModuleAnalysisManager &MAM,
-                                            raw_pwrite_stream &Out,
-                                            raw_pwrite_stream *DwoOut,
-                                            CodeGenFileType FileType,
-                                            MCContext &Ctx) {
+Error CodeGenPassBuilder::buildPipelineImpl(
+    PassManagerWrapper &PMW, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
   bool PrintAsm = CompletesPipeline;
   bool PrintMIR = !PrintAsm && FileType != CodeGenFileType::Null;
 
