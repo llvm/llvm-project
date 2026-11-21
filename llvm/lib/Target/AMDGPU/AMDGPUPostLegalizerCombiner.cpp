@@ -222,7 +222,12 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
   if (Ty == LLT::scalar(32) || Ty == LLT::scalar(16)) {
     Register SrcReg = MI.getOperand(1).getReg();
     unsigned SrcSize = MRI.getType(SrcReg).getSizeInBits();
+
     assert(SrcSize == 16 || SrcSize == 32 || SrcSize == 64);
+
+    if (SrcSize == 16 && Ty.isFloat(16))
+      return false;
+
     const APInt Mask = APInt::getHighBitsSet(SrcSize, SrcSize - 8);
     return Helper.getValueTracking()->maskedValueIsZero(SrcReg, Mask);
   }
