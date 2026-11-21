@@ -1092,6 +1092,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
   // Core in Vulkan 1.1 and earlier.
   addAvailableCaps({Capability::Int64,
                     Capability::Geometry,
+                    Capability::Tessellation,
                     Capability::Float16,
                     Capability::Float64,
                     Capability::GroupNonUniform,
