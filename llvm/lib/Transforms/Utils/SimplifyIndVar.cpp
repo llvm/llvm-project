@@ -278,11 +278,16 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   SmallVector<Instruction *, 4> Users;
   for (auto *U : ICmp->users())
     Users.push_back(cast<Instruction>(U));
+
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
     SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
+    // The Cmp may (directly/indirectly) affect an exit of any loop in the nest,
+    // so drop cached SCEV info such as BackedgeTakenCounts.
+    SE->forgetTopmostLoop(L);
+
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
     ++NumElimCmp;
     Changed = true;
