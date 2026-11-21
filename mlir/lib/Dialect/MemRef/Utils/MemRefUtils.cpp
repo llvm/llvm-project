@@ -17,6 +17,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/MathExtras.h"
 
 namespace mlir {
 namespace memref {
@@ -482,5 +483,44 @@ bool hasNoAliasingAccessInScope(Value base, Operation *scope,
   return true;
 }
 
+llvm::MaybeAlign getAlignmentAfterOffset(llvm::MaybeAlign alignment,
+                                         MemRefType memRefType,
+                                         ArrayRef<int64_t> offsets) {
+  if (!alignment)
+    return {};
+  assert(offsets.size() <= static_cast<size_t>(memRefType.getRank()) &&
+         "more offsets than memref dimensions");
+  if (llvm::all_of(offsets, [](int64_t offset) { return offset == 0; }))
+    return alignment;
+
+  Type elementType = memRefType.getElementType();
+  if (!elementType.isIntOrFloat() ||
+      elementType.getIntOrFloatBitWidth() % 8 != 0)
+    return {};
+  SmallVector<int64_t> strides;
+  int64_t memRefOffset;
+  if (failed(memRefType.getStridesAndOffset(strides, memRefOffset)))
+    return {};
+
+  int64_t elementOffset = 0;
+  size_t start = strides.size() - offsets.size();
+  for (auto [i, offset] : llvm::enumerate(offsets)) {
+    if (offset == 0)
+      continue;
+    if (ShapedType::isDynamic(strides[start + i]))
+      return {};
+    int64_t dimOffset;
+    if (llvm::MulOverflow(offset, strides[start + i], dimOffset) ||
+        llvm::AddOverflow(elementOffset, dimOffset, elementOffset))
+      return {};
+  }
+  int64_t byteOffset;
+  if (llvm::MulOverflow(
+          elementOffset,
+          static_cast<int64_t>(elementType.getIntOrFloatBitWidth() / 8),
+          byteOffset))
+    return {};
+  return llvm::commonAlignment(*alignment, llvm::AbsoluteValue(byteOffset));
+}
 } // namespace memref
 } // namespace mlir

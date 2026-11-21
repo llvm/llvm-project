@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
@@ -841,8 +842,11 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
          StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {
       SmallVector<Value> indices =
           sliceLoadStoreIndices(rewriter, loc, loadOp.getIndices(), offsets);
-      Value slicedLoad = vector::LoadOp::create(rewriter, loc, targetVecType,
-                                                loadOp.getBase(), indices);
+      Value slicedLoad = vector::LoadOp::create(
+          rewriter, loc, targetVecType, loadOp.getBase(), indices,
+          loadOp.getNontemporal(),
+          memref::getAlignmentAfterOffset(loadOp.getMaybeAlign(),
+                                          loadOp.getMemRefType(), offsets));
       result = rewriter.createOrFold<vector::InsertStridedSliceOp>(
           loc, slicedLoad, result, offsets, strides);
     }
@@ -886,7 +890,10 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
           sliceLoadStoreIndices(rewriter, loc, storeOp.getIndices(), offsets);
       Value slice = rewriter.createOrFold<vector::ExtractStridedSliceOp>(
           loc, vector, offsets, *targetShape, strides);
-      vector::StoreOp::create(rewriter, loc, slice, base, indices);
+      vector::StoreOp::create(
+          rewriter, loc, slice, base, indices, storeOp.getNontemporal(),
+          memref::getAlignmentAfterOffset(storeOp.getMaybeAlign(),
+                                          storeOp.getMemRefType(), offsets));
     }
     rewriter.eraseOp(storeOp);
     return success();
