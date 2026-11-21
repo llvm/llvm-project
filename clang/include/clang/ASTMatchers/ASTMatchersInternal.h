@@ -2254,7 +2254,7 @@ std::optional<SourceLocation> getExpansionLocOfMacro(StringRef MacroName,
                                                      const ASTContext &Context);
 
 inline std::optional<StringRef> getOpName(const UnaryOperator &Node) {
-  return Node.getOpcodeStr(Node.getOpcode());
+  return Node.getOpcodeStr();
 }
 inline std::optional<StringRef> getOpName(const BinaryOperator &Node) {
   return Node.getOpcodeStr();
@@ -2297,7 +2297,7 @@ public:
 
 private:
   static std::optional<StringRef> getOpName(const UnaryOperator &Node) {
-    return Node.getOpcodeStr(Node.getOpcode());
+    return Node.getOpcodeStr();
   }
   static std::optional<StringRef> getOpName(const BinaryOperator &Node) {
     return Node.getOpcodeStr();
