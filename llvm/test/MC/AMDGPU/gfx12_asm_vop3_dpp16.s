@@ -13978,12 +13978,12 @@ v_subrev_co_u32_e64_dpp v5, null, v1, v2 quad_perm:[3,2,1,0]
 // GFX12: v_subrev_co_u32_e64_dpp v5, null, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x7c,0x02,0xd7,0xfa,0x04,0x02,0x00,0x01,0x1b,0x00,0xff]
 
 v_subrev_co_u32_e64_dpp v5, s6, v1, s2 quad_perm:[3,2,1,0]
-// W32: v_subrev_co_u32_e64_dpp v5, s6, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x06,0x02,0xd7,0xfa,0x04,0x00,0x00,0x01,0x1b,0x00,0xff]
+// W32-ERR: :[[@LINE-1]]:37: error: invalid operand for instruction
 // W64-ERR: :[[@LINE-2]]:29: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, s[12:13], v1, s2 quad_perm:[3,2,1,0]
 // W32-ERR: :[[@LINE-1]]:29: error: invalid operand for instruction
-// W64: v_subrev_co_u32_e64_dpp v5, s[12:13], v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x0c,0x02,0xd7,0xfa,0x04,0x00,0x00,0x01,0x1b,0x00,0xff]
+// W64-ERR: :[[@LINE-2]]:43: error: invalid operand for instruction
 
 v_subrev_co_u32_e64_dpp v5, s6, v1, v2 quad_perm:[3,2,1,0] bound_ctrl:0
 // W32: v_subrev_co_u32_e64_dpp v5, s6, v1, v2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x06,0x02,0xd7,0xfa,0x04,0x02,0x00,0x01,0x1b,0x00,0xff]
