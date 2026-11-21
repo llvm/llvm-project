@@ -1413,12 +1413,11 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b32:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b64:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b96:
-  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b128: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_b128:
+    return emitBuiltinWithOneOverloadedType<5>(expr,
+                                               "amdgcn.raw.ptr.buffer.store",
+                                               convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f32:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_store_format_v4f16:
     return emitBuiltinWithOneOverloadedType<5>(
@@ -1436,12 +1435,10 @@ CIRGenFunction::emitAMDGPUBuiltinExpr(unsigned builtinId,
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b32:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b64:
   case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b96:
-  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b128: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AMDGPU builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinId));
-    return mlir::Value{};
-  }
+  case AMDGPU::BI__builtin_amdgcn_raw_buffer_load_b128:
+    return emitBuiltinWithOneOverloadedType<4>(
+               expr, "amdgcn.raw.ptr.buffer.load", convertType(expr->getType()))
+        .getValue();
   case AMDGPU::BI__builtin_amdgcn_raw_ptr_buffer_atomic_add_i32:
     return emitBuiltinWithOneOverloadedType<5>(
                expr, "amdgcn.raw.ptr.buffer.atomic.add")
