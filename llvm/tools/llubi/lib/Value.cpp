@@ -25,8 +25,8 @@ IntrusiveRefCntPtr<Provenance> Provenance::nullary() {
 IntrusiveRefCntPtr<Provenance>
 Provenance::getWithKnownMemoryObject(MemoryObject &KnownObj) {
   assert(!Obj && Wildcard && "The memory object has been determined.");
-  auto Res = makeIntrusiveRefCnt<Provenance>(*this);
-  Res->Obj = &KnownObj;
+  auto Res = makeIntrusiveRefCnt<Provenance>(*this, &KnownObj, Capability);
+  Res->Wildcard = Wildcard;
   Res->Tag = APInt();
   return Res;
 }

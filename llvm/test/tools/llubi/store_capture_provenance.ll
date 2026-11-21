@@ -9,7 +9,7 @@ define ptr @address_read_provenance(ptr captures(address, read_provenance) %p) {
 
 define void @main() {
   %g_address_read_provenance = call ptr @address_read_provenance(ptr @g)
-  ; Only read_provenance is captured. It is UB to store via the pointer.
+  ; Storing through a read-only pointer is immediate UB.
   store i8 1, ptr %g_address_read_provenance
   ret void
 }
