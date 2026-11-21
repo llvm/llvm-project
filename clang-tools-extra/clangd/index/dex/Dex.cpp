@@ -149,19 +149,28 @@ void Dex::buildIndex(bool SupportContainedRefs) {
     Builder.add(*Symbols[SymbolRank], SymbolRank);
   InvertedIndex = std::move(Builder).build();
 
+  this->SupportContainedRefs = SupportContainedRefs;
+}
+
+const std::vector<Dex::RevRef> &Dex::revRefs() const {
+  std::lock_guard<std::mutex> Lock(LazyRevRefsMutex);
+  if (LazyRevRefsBuilt)
+    return LazyRevRefs;
+  LazyRevRefsBuilt = true;
   // If the containedRefs() operation is supported, build the RevRefs
   // data structure used to implement it.
   if (!SupportContainedRefs)
-    return;
+    return LazyRevRefs;
   for (const auto &[ID, RefList] : Refs)
     for (const auto &R : RefList)
       if ((R.Kind & ContainedRefsRequest::SupportedRefKinds) !=
           RefKind::Unknown)
-        RevRefs.emplace_back(R, ID);
+        LazyRevRefs.emplace_back(R, ID);
   // Sort by container ID so we can use binary search for lookup.
-  llvm::sort(RevRefs, [](const RevRef &A, const RevRef &B) {
+  llvm::sort(LazyRevRefs, [](const RevRef &A, const RevRef &B) {
     return A.ref().Container < B.ref().Container;
   });
+  return LazyRevRefs;
 }
 
 std::unique_ptr<Iterator> Dex::iterator(const Token &Tok) const {
@@ -336,6 +345,7 @@ Dex::lookupRevRefs(const SymbolID &Container) const {
   QueryRef.Container = Container;
   RevRef Query(QueryRef, SymbolID{});
 
+  const std::vector<RevRef> &RevRefs = revRefs();
   auto ItPair = std::equal_range(RevRefs.cbegin(), RevRefs.cend(), Query,
                                  [](const RevRef &A, const RevRef &B) {
                                    return A.ref().Container < B.ref().Container;
@@ -416,7 +426,10 @@ size_t Dex::estimateMemoryUsage() const {
   for (const auto &TokenToPostingList : InvertedIndex)
     Bytes += TokenToPostingList.second.bytes();
   Bytes += Refs.getMemorySize();
-  Bytes += RevRefs.size() * sizeof(RevRef);
+  {
+    std::lock_guard<std::mutex> Lock(LazyRevRefsMutex);
+    Bytes += LazyRevRefs.size() * sizeof(RevRef);
+  }
   Bytes += Relations.getMemorySize();
   Bytes += ReverseRelations.getMemorySize();
   return Bytes + BackingDataSize;
