@@ -9,73 +9,54 @@
 
 ; Copy of a divergent i1 that is used in another block of the loop
 ; (Vreg1LoweringHelper::lowerCopiesToI1).
-define amdgpu_kernel void @copy_debug_use_outside_loop(ptr addrspace(1) %p, i32 %n) {
+define void @copy_debug_use_outside_loop(ptr addrspace(1) %p, ptr addrspace(1) %q, i1 %done) {
 ; CHECK-LABEL: copy_debug_use_outside_loop:
 ; CHECK:  ; %bb.0: ; %entry
-; CHECK:    s_load_dwordx2 s[2:3], s[4:5], 0x24
-; CHECK:    s_load_dword s10, s[4:5], 0x2c
-; CHECK:    s_mov_b32 s4, 0
-; CHECK:    v_mov_b32_e32 v1, 0
+; CHECK:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK:    v_and_b32_e32 v4, 1, v4
+; CHECK:    v_cmp_eq_u32_e32 vcc, 1, v4
+; CHECK:    s_mov_b64 s[6:7], 0
+; CHECK:    v_mov_b32_e32 v4, 0
 ; CHECK:    s_branch .LBB0_2
 ; CHECK:  .LBB0_1: ; %latch
 ; CHECK:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK:    s_add_i32 s4, s4, 1
-; CHECK:    s_cmp_lg_u32 s10, s4
-; CHECK:    s_cbranch_scc0 .LBB0_6
+; CHECK:    s_or_b64 exec, exec, s[8:9]
+; CHECK:    s_and_b64 s[8:9], exec, vcc
+; CHECK:    s_or_b64 s[6:7], s[8:9], s[6:7]
+; CHECK:    v_cndmask_b32_e64 v5, 0, 1, s[4:5]
+; CHECK:    global_store_dword v[0:1], v5, off
+; CHECK:    s_andn2_b64 exec, exec, s[6:7]
+; CHECK:    s_cbranch_execz .LBB0_4
 ; CHECK:  .LBB0_2: ; %loop
 ; CHECK:    ; =>This Inner Loop Header: Depth=1
-; CHECK:    s_ashr_i32 s5, s4, 31
-; CHECK:    s_lshl_b64 s[0:1], s[4:5], 2
-; CHECK:    s_waitcnt lgkmcnt(0)
-; CHECK:    s_add_u32 s6, s2, s0
-; CHECK:    s_addc_u32 s7, s3, s1
-; CHECK:    global_load_dword v2, v1, s[6:7]
+; CHECK:    global_load_dword v5, v[0:1], off
 ; CHECK:    s_waitcnt vmcnt(0)
-; CHECK:    v_cmp_lt_i32_e64 s[0:1], v0, v2
-; CHECK:    s_and_saveexec_b64 s[8:9], s[0:1]
-; CHECK:    s_cbranch_execz .LBB0_4
+; CHECK:    v_cmp_lt_i32_e64 s[4:5], 0, v5
+; CHECK:    s_and_saveexec_b64 s[8:9], s[4:5]
+; CHECK:    s_cbranch_execz .LBB0_1
 ; CHECK:  ; %bb.3: ; %st
 ; CHECK:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK:    global_store_dword v1, v0, s[6:7]
-; CHECK:  .LBB0_4: ; %mid
-; CHECK:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK:    s_or_b64 exec, exec, s[8:9]
-; CHECK:    v_cmp_gt_i32_e32 vcc, 4, v2
-; CHECK:    s_cbranch_vccnz .LBB0_1
-; CHECK:  ; %bb.5: ; %then
-; CHECK:    ; in Loop: Header=BB0_2 Depth=1
-; CHECK:    v_cndmask_b32_e64 v2, 0, 1, s[0:1]
-; CHECK:    global_store_dword v1, v2, s[6:7]
+; CHECK:    global_store_dword v[2:3], v4, off
 ; CHECK:    s_branch .LBB0_1
-; CHECK:  .LBB0_6: ; %exit
-; CHECK:    s_endpgm
+; CHECK:  .LBB0_4: ; %exit
+; CHECK:    s_or_b64 exec, exec, s[6:7]
+; CHECK:    s_waitcnt vmcnt(0)
+; CHECK:    s_setpc_b64 s[30:31]
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
   br label %loop
 
 loop:
-  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
-  %gep = getelementptr i32, ptr addrspace(1) %p, i32 %i
-  %x = load i32, ptr addrspace(1) %gep
-  %b = icmp slt i32 %id, %x
-  br i1 %b, label %st, label %mid
+  %x = load i32, ptr addrspace(1) %p
+  %b = icmp sgt i32 %x, 0
+  br i1 %b, label %st, label %latch
 
 st:
-  store i32 %id, ptr addrspace(1) %gep
-  br label %mid
-
-mid:
-  %c = icmp sgt i32 %x, 3
-  br i1 %c, label %then, label %latch
-
-then:
-  %z = zext i1 %b to i32
-  store i32 %z, ptr addrspace(1) %gep
+  store i32 0, ptr addrspace(1) %q
   br label %latch
 
 latch:
-  %i.next = add i32 %i, 1
-  %done = icmp eq i32 %i.next, %n
+  %z = zext i1 %b to i32
+  store i32 %z, ptr addrspace(1) %p
   br i1 %done, label %exit, label %loop
 
 exit:
@@ -84,52 +65,40 @@ exit:
 }
 
 ; Divergent i1 loop phi (PhiLoweringHelper::mergeIncomingLaneMasks).
-define amdgpu_kernel void @phi_debug_use_outside_loop(ptr addrspace(1) %p, i32 %n) {
+define void @phi_debug_use_outside_loop(ptr addrspace(1) %p, i1 %c.next) {
 ; CHECK-LABEL: phi_debug_use_outside_loop:
 ; CHECK:  ; %bb.0: ; %entry
-; CHECK:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; CHECK:    s_load_dword s6, s[4:5], 0x2c
-; CHECK:    s_mov_b64 s[2:3], -1
-; CHECK:    s_mov_b32 s4, 0
-; CHECK:    v_mov_b32_e32 v1, 0
+; CHECK:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK:    v_and_b32_e32 v2, 1, v2
+; CHECK:    v_cmp_eq_u32_e64 s[4:5], 1, v2
+; CHECK:    s_mov_b64 s[8:9], 0
+; CHECK:    s_mov_b64 s[6:7], 0
+; CHECK:    v_mov_b32_e32 v3, 0
 ; CHECK:  .LBB1_1: ; %loop
 ; CHECK:    ; =>This Inner Loop Header: Depth=1
-; CHECK:    s_ashr_i32 s5, s4, 31
-; CHECK:    s_lshl_b64 s[8:9], s[4:5], 2
-; CHECK:    s_waitcnt lgkmcnt(0)
-; CHECK:    s_add_u32 s8, s0, s8
-; CHECK:    s_addc_u32 s9, s1, s9
-; CHECK:    global_load_dword v2, v1, s[8:9]
-; CHECK:    v_cndmask_b32_e64 v3, 1, 2, s[2:3]
-; CHECK:    s_add_i32 s4, s4, 1
-; CHECK:    global_store_dword v1, v3, s[8:9]
-; CHECK:    s_waitcnt vmcnt(1)
-; CHECK:    v_cmp_lt_i32_e32 vcc, v2, v0
-; CHECK:    s_xor_b64 s[2:3], s[2:3], vcc
-; CHECK:    s_cmp_lg_u32 s6, s4
-; CHECK:    s_cbranch_scc1 .LBB1_1
+; CHECK:    s_and_b64 s[10:11], exec, s[4:5]
+; CHECK:    v_mov_b32_e32 v2, v3
+; CHECK:    v_cndmask_b32_e64 v3, 0, 1, s[8:9]
+; CHECK:    s_or_b64 s[6:7], s[10:11], s[6:7]
+; CHECK:    s_mov_b64 s[8:9], s[4:5]
+; CHECK:    s_andn2_b64 exec, exec, s[6:7]
+; CHECK:    s_cbranch_execnz .LBB1_1
 ; CHECK:  ; %bb.2: ; %exit
-; CHECK:    s_endpgm
+; CHECK:    s_or_b64 exec, exec, s[6:7]
+; CHECK:    global_store_dword v[0:1], v2, off
+; CHECK:    s_waitcnt vmcnt(0)
+; CHECK:    s_setpc_b64 s[30:31]
 entry:
-  %id = call i32 @llvm.amdgcn.workitem.id.x()
   br label %loop
 
 loop:
-  %i = phi i32 [ 0, %entry ], [ %i.next, %loop ]
-  %c = phi i1 [ true, %entry ], [ %c.next, %loop ]
-  %gep = getelementptr i32, ptr addrspace(1) %p, i32 %i
-  %x = load i32, ptr addrspace(1) %gep
-  %s = select i1 %c, i32 2, i32 1
-  store i32 %s, ptr addrspace(1) %gep
-  %d = icmp slt i32 %x, %id
-  %c.next = xor i1 %c, %d
-  %i.next = add i32 %i, 1
-  %done = icmp eq i32 %i.next, %n
-  br i1 %done, label %exit, label %loop
+  %x = phi i32 [ 0, %entry ], [ %s, %loop ]
+  %c = phi i1 [ false, %entry ], [ %c.next, %loop ]
+  %s = select i1 %c, i32 1, i32 0
+  store i32 %x, ptr addrspace(1) %p
+  br i1 %c.next, label %exit, label %loop
 
 exit:
   %dead = zext i1 %c to i32
   ret void
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
