@@ -37,20 +37,25 @@ LIBC_INLINE void heap_sort(const A &array, const F &is_less) {
     }
 
     // Sift start down the heap.
-    size_t root = start;
-    while (left_child(root) < end) {
-      size_t child = left_child(root);
-      // If there are two children, set child to the greater.
-      if ((child + 1 < end) && is_less(array.get(child), array.get(child + 1)))
-        ++child;
+    size_t i, j;
 
-      // If the root is less than the greater child
-      if (!is_less(array.get(root), array.get(child)))
-        break;
+    // Find the sift-down path all the way to the leaves.
+    for (i = start; j = left_child(i), j + 1 < end;)
+      i = is_less(array.get(j), array.get(j + 1)) ? (j + 1) : j;
 
-      // Swap the root with the greater child and continue sifting down.
-      array.swap(root, child);
-      root = child;
+    // Special case for the last leaf with no sibling.
+    if (j < end)
+      i = j;
+
+    // Backtrack to the correct location.
+    while (i != start && is_less(array.get(i), array.get(start)))
+      i = (i - 1) / 2;
+
+    // Shift the element into its correct place.
+    j = i;
+    while (i != start) {
+      i = (i - 1) / 2;
+      array.swap(i, j);
     }
   }
 }
