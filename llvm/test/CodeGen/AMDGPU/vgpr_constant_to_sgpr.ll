@@ -8,13 +8,13 @@ declare fastcc void @unknown_call()
 define protected amdgpu_kernel void @kern(ptr %addr) !llvm.amdgcn.lds.kernel.id !0 {
 ; CHECK-LABEL: kern:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    s_add_u32 s12, s12, s17
 ; CHECK-NEXT:    s_addc_u32 s13, s13, 0
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
 ; CHECK-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; CHECK-NEXT:    s_add_u32 s0, s0, s17
 ; CHECK-NEXT:    s_addc_u32 s1, s1, 0
+; CHECK-NEXT:    s_mov_b32 s32, 0
 ; CHECK-NEXT:    ; implicit-def: $vgpr40 : SGPR spill to VGPR lane
 ; CHECK-NEXT:    v_writelane_b32 v40, s16, 0
 ; CHECK-NEXT:    s_mov_b32 s13, s15

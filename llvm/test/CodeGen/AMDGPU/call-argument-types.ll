@@ -6053,8 +6053,8 @@ define amdgpu_kernel void @test_call_external_void_func_byval_struct_i8_i32() #0
 ; HSA-NEXT:    buffer_store_dword v0, off, s[0:3], 0 offset:4
 ; HSA-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:4
 ; HSA-NEXT:    buffer_load_dword v1, off, s[0:3], 0
-; HSA-NEXT:    s_movk_i32 s32, 0x400
 ; HSA-NEXT:    s_mov_b32 flat_scratch_lo, s7
+; HSA-NEXT:    s_movk_i32 s32, 0x400
 ; HSA-NEXT:    s_getpc_b64 s[8:9]
 ; HSA-NEXT:    s_add_u32 s8, s8, external_void_func_byval_struct_i8_i32@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s9, s9, external_void_func_byval_struct_i8_i32@rel32@hi+12
@@ -6622,8 +6622,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; VI-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x64
 ; VI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xa4
 ; VI-NEXT:    s_load_dwordx16 s[36:51], s[2:3], 0x24
-; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    s_addc_u32 s53, s53, 0
+; VI-NEXT:    s_mov_b32 s32, 0
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v0, s23
 ; VI-NEXT:    buffer_store_dword v0, off, s[52:55], s32
@@ -6681,8 +6681,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; CI-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x19
 ; CI-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0x29
 ; CI-NEXT:    s_load_dwordx16 s[36:51], s[2:3], 0x9
-; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_addc_u32 s53, s53, 0
+; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-NEXT:    v_mov_b32_e32 v0, s23
 ; CI-NEXT:    buffer_store_dword v0, off, s[52:55], s32
@@ -6740,8 +6740,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; SDAG-NEXT:    s_load_dwordx16 s[8:23], s[2:3], 0x64
 ; SDAG-NEXT:    s_load_dwordx2 s[4:5], s[2:3], 0xa4
 ; SDAG-NEXT:    s_load_dwordx16 s[36:51], s[2:3], 0x24
-; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_addc_u32 s53, s53, 0
+; SDAG-NEXT:    s_mov_b32 s32, 0
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s23
 ; SDAG-NEXT:    buffer_store_dword v0, off, s[52:55], s32
@@ -6837,8 +6837,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; HSA-NEXT:    s_load_dwordx16 s[8:23], s[6:7], 0x40
 ; HSA-NEXT:    s_load_dwordx2 s[24:25], s[6:7], 0x80
 ; HSA-NEXT:    s_load_dwordx16 s[36:51], s[6:7], 0x0
-; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_addc_u32 s1, s1, 0
+; HSA-NEXT:    s_mov_b32 s32, 0
 ; HSA-NEXT:    s_waitcnt lgkmcnt(0)
 ; HSA-NEXT:    v_mov_b32_e32 v0, s23
 ; HSA-NEXT:    buffer_store_dword v0, off, s[0:3], s32
@@ -6895,8 +6895,8 @@ define amdgpu_kernel void @stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val
 ; GISEL-NEXT:    s_load_dwordx16 s[36:51], s[2:3], 0x24
 ; GISEL-NEXT:    s_mov_b32 s55, 0xe00000
 ; GISEL-NEXT:    s_add_u32 s52, s52, s5
-; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_addc_u32 s53, s53, 0
+; GISEL-NEXT:    s_mov_b32 s32, 0
 ; GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GISEL-NEXT:    v_mov_b32_e32 v0, s23
 ; GISEL-NEXT:    buffer_store_dword v0, off, s[52:55], s32
