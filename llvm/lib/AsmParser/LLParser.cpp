@@ -11388,12 +11388,6 @@ bool LLParser::parseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
         return true;
       GVFlags.NoRenameOnPromotion = Flag;
       break;
-    case lltok::kw_ifuncResolver:
-      Lex.Lex();
-      if (parseToken(lltok::colon, "expected ':'") || parseFlag(Flag))
-        return true;
-      GVFlags.IFuncResolver = Flag;
-      break;
     default:
       return error(Lex.getLoc(), "expected gv flag type");
     }

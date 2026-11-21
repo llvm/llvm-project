@@ -413,7 +413,6 @@ enum Kind {
   kw_definition,
   kw_declaration,
   kw_noRenameOnPromotion,
-  kw_ifuncResolver,
   kw_function,
   kw_insts,
   kw_funcFlags,

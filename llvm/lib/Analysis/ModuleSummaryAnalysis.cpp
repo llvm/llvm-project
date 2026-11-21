@@ -1089,9 +1089,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
   // Iterate through ifuncs, set their resolvers all alive.
   for (const GlobalIFunc &I : M.ifuncs()) {
     I.applyAlongResolverPath([&Index](const GlobalValue &GV) {
-      auto *Summary = Index.getGlobalValueSummary(GV);
-      Summary->setLive(true);
-      Summary->setIFuncResolver();
+      Index.getGlobalValueSummary(GV)->setLive(true);
     });
   }
 

@@ -1872,6 +1872,9 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
                                    bool PropagateAttrs) {
   llvm::TimeTraceScope timeScope("ThinLTO finalize in module");
   DenseSet<Comdat *> NonPrevailingComdats;
+  DenseSet<const GlobalValue *> IFuncResolvers;
+  for (const GlobalIFunc &I : TheModule.ifuncs())
+    IFuncResolvers.insert(I.getResolverFunction());
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
     const auto &GS = DefinedGlobals.find(GV.getGUIDOrFallback());
@@ -1914,6 +1917,12 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
       GV.setVisibility(GS->second->getVisibility());
 
     if (NewLinkage == GV.getLinkage())
+      return;
+
+    // An ifunc resolver must remain a definition for the linker, even when
+    // its copy is not prevailing.
+    if (IFuncResolvers.count(&GV) &&
+        GlobalValue::isAvailableExternallyLinkage(NewLinkage))
       return;
 
     // Check for a non-prevailing def that has interposable linkage
