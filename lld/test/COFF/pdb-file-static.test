@@ -1,7 +1,9 @@
 # RUN: yaml2obj %S/Inputs/pdb-file-statics-a.yaml -o %t.a.obj
 # RUN: yaml2obj %S/Inputs/pdb-file-statics-b.yaml -o %t.b.obj
 # RUN: lld-link %t.a.obj %t.b.obj /nodefaultlib /entry:main /debug /pdb:%t.pdb
+# RUN: %if zstd %{ lld-link %t.a.obj %t.b.obj /nodefaultlib /entry:main /debug /pdb:%t.msfz /pdbmsfz:1 %}
 # RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
+# RUN: %if zstd %{ llvm-pdbutil dump -symbols %t.msfz | FileCheck %s %}
 
 # S_FILESTATIC records are unique in that they refer to the string table, but
 # they do *not* go through the file checksums table.  They refer directly to

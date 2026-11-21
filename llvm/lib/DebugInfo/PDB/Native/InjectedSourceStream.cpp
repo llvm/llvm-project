@@ -20,9 +20,12 @@ using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
+InjectedSourceStream::InjectedSourceStream(std::unique_ptr<BinaryStream> Stream)
+    : Stream(std::move(Stream)) {}
+
 InjectedSourceStream::InjectedSourceStream(
     std::unique_ptr<MappedBlockStream> Stream)
-    : Stream(std::move(Stream)) {}
+    : InjectedSourceStream(std::unique_ptr<BinaryStream>(std::move(Stream))) {}
 
 Error InjectedSourceStream::reload(const PDBStringTable &Strings) {
   BinaryStreamReader Reader(*Stream);

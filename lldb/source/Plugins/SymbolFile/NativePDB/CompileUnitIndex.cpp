@@ -14,7 +14,6 @@
 #include "llvm/DebugInfo/CodeView/LazyRandomTypeCollection.h"
 #include "llvm/DebugInfo/CodeView/SymbolDeserializer.h"
 #include "llvm/DebugInfo/CodeView/TypeDeserializer.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
@@ -161,25 +160,28 @@ CompilandIndexItem &CompileUnitIndex::GetOrCreateCompiland(uint16_t modi) {
   const DbiModuleList &modules = m_index.dbi().modules();
   llvm::pdb::DbiModuleDescriptor descriptor = modules.getModuleDescriptor(modi);
   uint16_t stream = descriptor.getModuleStreamIndex();
-  std::unique_ptr<llvm::msf::MappedBlockStream> stream_data =
-      m_index.pdb().createIndexedStream(stream);
+  auto stream_data = m_index.pdb().safelyCreateStream(stream);
 
-
-  std::unique_ptr<CompilandIndexItem>& cci = result.first->second;
+  std::unique_ptr<CompilandIndexItem> &cci = result.first->second;
 
   if (!stream_data) {
-    llvm::pdb::ModuleDebugStreamRef debug_stream(descriptor, nullptr);
-    cci = std::make_unique<CompilandIndexItem>(PdbCompilandId{ modi }, debug_stream, std::move(descriptor));
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), stream_data.takeError(),
+                   "Failed to create debug stream for module {1}: {0}", modi);
+    llvm::pdb::ModuleDebugStreamRef debug_stream(
+        descriptor, std::unique_ptr<llvm::BinaryStream>());
+    cci = std::make_unique<CompilandIndexItem>(
+        PdbCompilandId{modi}, debug_stream, std::move(descriptor));
     return *cci;
   }
 
   llvm::pdb::ModuleDebugStreamRef debug_stream(descriptor,
-                                               std::move(stream_data));
+                                               std::move(*stream_data));
 
   if (llvm::Error err = debug_stream.reload()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
                    "Failed to reload debug stream for module {1}: {0}", modi);
-    llvm::pdb::ModuleDebugStreamRef empty_stream(descriptor, nullptr);
+    llvm::pdb::ModuleDebugStreamRef empty_stream(
+        descriptor, std::unique_ptr<llvm::BinaryStream>());
     cci = std::make_unique<CompilandIndexItem>(
         PdbCompilandId{modi}, empty_stream, std::move(descriptor));
     return *cci;

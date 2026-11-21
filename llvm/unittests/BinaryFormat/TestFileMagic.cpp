@@ -88,6 +88,8 @@ const char macho_dynamically_linked_shared_lib_stub[] =
 const char ms_dos_stub_broken[] = "\x4d\x5a\x20\x20";
 const char pdb[] = "Microsoft C/C++ MSF 7.00\r\n\x1a"
                    "DS\x00\x00\x00";
+const char msfz[] = "Microsoft MSFZ Container\r\n\x1a"
+                    "ALD\x00\x00";
 const char tapi_file[] = "--- !tapi-tbd-v1\n";
 const char tapi_file_tbd_v1[] = "---\narchs: [";
 const char spirv_object_le[] = "\x03\x02\x23\x07";
@@ -131,6 +133,7 @@ TEST_F(MagicTest, Magic) {
        file_magic ::spirv_object},
       DEFINE(windows_resource),
       DEFINE(pdb),
+      {"msfz", msfz, sizeof(msfz), file_magic::pdb},
       {"ms_dos_stub_broken", ms_dos_stub_broken, sizeof(ms_dos_stub_broken),
        file_magic::unknown},
       DEFINE(tapi_file),

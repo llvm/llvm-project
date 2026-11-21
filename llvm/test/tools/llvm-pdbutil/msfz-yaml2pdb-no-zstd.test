@@ -1,0 +1,3 @@
+# UNSUPPORTED: zstd
+# RUN: not llvm-pdbutil yaml2pdb %S/msfz-yaml2pdb.test --msfz --pdb=%t.pdz 2>&1 | FileCheck %s
+# CHECK: MSFZ output requires LLVM_ENABLE_ZSTD

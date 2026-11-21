@@ -43,6 +43,12 @@ YAMLOutputStyle::YAMLOutputStyle(PDBFile &File)
 }
 
 Error YAMLOutputStyle::dump() {
+  if (File.isMSFZ())
+    return make_error<StringError>(
+        "pdb2yaml requires an MSF block layout and does not support "
+        "MSFZ",
+        inconvertibleErrorCode());
+
   if (opts::pdb2yaml::StreamDirectory)
     opts::pdb2yaml::StreamMetadata = true;
 

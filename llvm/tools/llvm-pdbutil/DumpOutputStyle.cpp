@@ -34,7 +34,6 @@
 #include "llvm/DebugInfo/CodeView/SymbolVisitorCallbacks.h"
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
 #include "llvm/DebugInfo/CodeView/TypeIndexDiscovery.h"
-#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Native/DbiModuleDescriptor.h"
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/FormatUtil.h"
@@ -250,8 +249,11 @@ Error DumpOutputStyle::dumpFileSummary() {
   AutoIndent Indent(P);
   ExitOnError Err("Invalid PDB Format: ");
 
-  P.formatLine("Block Size: {0}", getPdb().getBlockSize());
-  P.formatLine("Number of blocks: {0}", getPdb().getBlockCount());
+  P.formatLine("Container: {0}", getPdb().isMSFZ() ? "MSFZ" : "MSF");
+  if (!getPdb().isMSFZ()) {
+    P.formatLine("Block Size: {0}", getPdb().getBlockSize());
+    P.formatLine("Number of blocks: {0}", getPdb().getBlockCount());
+  }
   P.formatLine("Number of streams: {0}", getPdb().getNumStreams());
 
   auto &PS = Err(getPdb().getPDBInfoStream());
@@ -362,7 +364,10 @@ Error DumpOutputStyle::dumpStreamSummary() {
     discoverStreamPurposes(getPdb(), StreamPurposes);
 
   uint32_t StreamCount = getPdb().getNumStreams();
-  uint32_t MaxStreamSize = getPdb().getMaxStreamSize();
+  uint64_t MaxStreamSize = getPdb().getMaxStreamSize();
+
+  if (opts::dump::DumpStreamBlocks && getPdb().isMSFZ())
+    P.formatLine("MSF stream blocks are unavailable for MSFZ.");
 
   for (uint32_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
     P.formatLine(
@@ -372,7 +377,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
                   NumDigitsBase10(MaxStreamSize)),
         StreamPurposes[StreamIdx].getLongName());
 
-    if (opts::dump::DumpStreamBlocks) {
+    if (opts::dump::DumpStreamBlocks && !getPdb().isMSFZ()) {
       auto Blocks = getPdb().getStreamBlockList(StreamIdx);
       std::vector<uint32_t> BV(Blocks.begin(), Blocks.end());
       P.formatLine("       {0}  Blocks: [{1}]",
@@ -384,7 +389,7 @@ Error DumpOutputStyle::dumpStreamSummary() {
   return Error::success();
 }
 
-static Expected<std::pair<std::unique_ptr<MappedBlockStream>,
+static Expected<std::pair<std::unique_ptr<BinaryStream>,
                           ArrayRef<llvm::object::coff_section>>>
 loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
   if (!File.hasPDBDbiStream())
@@ -400,21 +405,20 @@ loadSectionHeaders(PDBFile &File, DbgHeaderType Type) {
         "PDB does not contain the requested image section header type",
         inconvertibleErrorCode());
 
-  auto Stream = File.createIndexedStream(SI);
+  auto Stream = File.safelyCreateStream(SI);
   if (!Stream)
-    return make_error<StringError>("Could not load the required stream data",
-                                   inconvertibleErrorCode());
+    return Stream.takeError();
 
   ArrayRef<object::coff_section> Headers;
-  if (Stream->getLength() % sizeof(object::coff_section) != 0)
+  if ((*Stream)->getLength() % sizeof(object::coff_section) != 0)
     return make_error<StringError>(
         "Section header array size is not a multiple of section header size",
         inconvertibleErrorCode());
 
-  uint32_t NumHeaders = Stream->getLength() / sizeof(object::coff_section);
-  BinaryStreamReader Reader(*Stream);
+  uint32_t NumHeaders = (*Stream)->getLength() / sizeof(object::coff_section);
+  BinaryStreamReader Reader(**Stream);
   cantFail(Reader.readArray(Headers, NumHeaders));
-  return std::make_pair(std::move(Stream), Headers);
+  return std::make_pair(std::move(*Stream), Headers);
 }
 
 static Expected<std::vector<std::string>> getSectionNames(PDBFile &File) {
@@ -422,7 +426,7 @@ static Expected<std::vector<std::string>> getSectionNames(PDBFile &File) {
   if (!ExpectedHeaders)
     return ExpectedHeaders.takeError();
 
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
   ArrayRef<object::coff_section> Headers;
   std::tie(Stream, Headers) = std::move(*ExpectedHeaders);
   std::vector<std::string> Names;
@@ -1789,7 +1793,7 @@ void DumpOutputStyle::dumpSectionHeaders(StringRef Label, DbgHeaderType Type) {
 
   AutoIndent Indent(P);
   ExitOnError Err("Error dumping section headers: ");
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<BinaryStream> Stream;
   ArrayRef<object::coff_section> Headers;
   auto ExpectedHeaders = loadSectionHeaders(getPdb(), Type);
   if (!ExpectedHeaders) {

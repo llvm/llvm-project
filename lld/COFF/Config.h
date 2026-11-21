@@ -148,6 +148,8 @@ struct Configuration {
   unsigned debugTypes = static_cast<unsigned>(DebugType::None);
   llvm::SmallVector<llvm::StringRef, 0> mllvmOpts;
   llvm::cl::LibraryOptionsContext libraryOptions;
+  std::optional<int> pdbMSFZCompressionLevel;
+  uint32_t pdbMSFZChunkSize = 1024 * 1024;
   std::vector<std::string> natvisFiles;
   llvm::StringMap<std::string> namedStreams;
   llvm::SmallString<128> pdbAltPath;

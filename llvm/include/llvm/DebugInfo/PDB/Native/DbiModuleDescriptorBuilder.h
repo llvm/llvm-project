@@ -30,7 +30,7 @@ class DebugSubsection;
 namespace msf {
 class MSFBuilder;
 struct MSFLayout;
-}
+} // namespace msf
 namespace pdb {
 
 // Represents merged or unmerged symbols. Merged symbols can be written to the
@@ -130,6 +130,9 @@ public:
                                     WritableBinaryStreamRef MsfBuffer);
 
 private:
+  Error commitSymbolStream(const msf::MSFLayout &MsfLayout,
+                           WritableBinaryStreamRef MsfBuffer, bool ForwardOnly);
+  Error commitSymbolStream(WritableBinaryStreamRef Stream, bool ForwardOnly);
   uint32_t calculateC13DebugInfoSize() const;
 
   void addSourceFile(StringRef Path);
