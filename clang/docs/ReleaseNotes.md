@@ -917,6 +917,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed USR generation for declarations whose signature mentions a class-type
   non-type template parameter. (#GH212351)
 - Fixed an assertion caused by Microsoft integer literals exceeding the maximum value. (#GH212504)
+- Fixed an assertion failure when `#pragma omp atomic compare` used an equality comparison on a `long double` on x86-64, whose 80-bit value is stored in 16 bytes. The padding bytes no longer take part in the comparison. The atomic operation now uses the alignment of `x` instead of assuming the natural alignment of its type, so `atomic compare` on an `x` whose alignment is smaller than the size of the access, such as a packed member or a `double` on 32-bit x86, may now need libatomic. (#GH140080)
+- Fixed `#pragma omp atomic compare capture` with an equality comparison storing `e` instead of `d` into `v` when `v = x` follows the update, and storing -1 into a signed `r`. `#pragma omp atomic compare` on a `volatile` `x` now emits volatile atomic accesses.
 - Fixed an assertion failure when a value of a Unicode character type (`char8_t`, `char16_t`, `char32_t`) was implicitly splatted to a vector of the same element type, e.g. when comparing an `ext_vector_type` of `char32_t` with one of its elements. (#GH202317)
 - Fixed a crash when checking scalar type with excess braces. (#GH69213), (#GH137845), (#GH198767), (#GH207566), (#GH106180)
 - Fixed an assertion failure when a global variable in a non-default address space, such as one declared with `__seg_gs`, is mapped into an OpenMP `target` region. (#GH140069)
