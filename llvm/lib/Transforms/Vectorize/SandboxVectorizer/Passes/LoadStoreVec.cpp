@@ -69,6 +69,24 @@ bool LoadStoreVec::acceptOrRevert() {
   return true;
 }
 
+/// \returns \p ElemTy, or <N x \p ElemTy>, with the same bit width as \p Ty.
+/// \p ElemTy must be a scalar. A scalar wider than \p ElemTy becomes a vector,
+/// so this is the lane type occupied by \p Ty, not an element-type swap:
+///   Ty = float,       ElemTy = i32 -> i32
+///   Ty = <2 x float>, ElemTy = i32 -> <2 x i32>
+///   Ty = double,      ElemTy = i32 -> <2 x i32>
+/// Pointer size comes from \p DL, and a scalar such as double can span more
+/// than one lane, so FixedVectorType::getNumElements() is not enough.
+static Type *getSameBitWidthType(Type *Ty, Type *ElemTy, const DataLayout &DL) {
+  assert(!ElemTy->isVectorTy() && "Expected a scalar element type!");
+  unsigned ElemBits = Utils::getNumBits(ElemTy, DL);
+  unsigned TyBits = Utils::getNumBits(Ty, DL);
+  assert(ElemBits != 0 && TyBits % ElemBits == 0 &&
+         "Expected Ty to be a multiple of ElemTy!");
+  unsigned NumElems = TyBits / ElemBits;
+  return NumElems == 1 ? ElemTy : FixedVectorType::get(ElemTy, NumElems);
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
@@ -120,6 +138,18 @@ SameSizeReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
   // pointers and a scalar pointer of the same width need all three.
   assert(Chain.size() <= 3 && "Unexpected reinterpret cast chain!");
   return Chain;
+}
+
+Value *SameSizeReinterpret::reinterpretValue(Value *V, Type *DestTy,
+                                             BasicBlock::iterator WhereIt,
+                                             Context &Ctx,
+                                             const DataLayout &DL) {
+  if (!canReinterpret(V->getType(), DestTy, DL))
+    return nullptr;
+  Value *NewV = V;
+  for (auto [Opc, Ty] : getCastChain(V->getType(), DestTy, DL))
+    NewV = CastInst::create(Ty, Opc, NewV, WhereIt, Ctx, "VCast");
+  return NewV;
 }
 
 Constant *SameSizeReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
@@ -331,10 +361,13 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   if (!VecTy)
     return nullptr;
 
-  // TODO: Support mixed-type top-level load chains.
+  // Each load is unpacked from the lanes it occupies in the vector and, for a
+  // chain of mixed types, reinterpreted back as the type of the load.
   Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  if (!all_of(Loads, [VecElemTy](Instruction *I) {
-        return VecUtils::getElementType(I->getType()) == VecElemTy;
+  if (any_of(Loads, [this, VecElemTy](Instruction *I) {
+        return !SameSizeReinterpret::canReinterpret(
+            getSameBitWidthType(I->getType(), VecElemTy, *DL), I->getType(),
+            *DL);
       }))
     return nullptr;
 
@@ -343,14 +376,20 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
 
+  // Lanes are counted in units of VecElemTy, so a load wider than VecElemTy
+  // spans several lanes.
   BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  for (auto [Lane, OrigV] : VecUtils::enumerateLanes(Loads)) {
-    auto *OrigLoad = cast<LoadInst>(OrigV);
-    if (OrigLoad->hasNUses(0))
-      continue;
-    Value *Unpacked =
-        VecUtils::unpack(VecLoad, OrigLoad->getType(), Lane, WhereIt);
-    OrigLoad->replaceAllUsesWith(Unpacked);
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    Type *UnpackTy = getSameBitWidthType(I->getType(), VecElemTy, *DL);
+    unsigned NumLanes = VecUtils::getNumLanes(UnpackTy);
+    if (!I->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, UnpackTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(Unpacked, I->getType(),
+                                                       WhereIt, *Ctx, *DL);
+      I->replaceAllUsesWith(Unpacked);
+    }
+    Lane += NumLanes;
   }
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
