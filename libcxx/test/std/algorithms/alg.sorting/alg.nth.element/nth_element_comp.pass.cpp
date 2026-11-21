@@ -15,7 +15,9 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <functional>
+#include <vector>
 
 #include "test_macros.h"
 #include "test_iterators.h"
@@ -66,6 +68,67 @@ TEST_CONSTEXPR_CXX20 bool test()
     return true;
 }
 
+#if TEST_STD_VER >= 11
+// McIlroy's "A Killer Adversary for Quicksort", also used by sort.pass.cpp. The value of an element is only decided
+// when it gets compared, in a way that makes every pivot a bad one.
+struct AdversaryComparator {
+  TEST_CONSTEXPR_CXX20 AdversaryComparator(int n, std::vector<int>& values, std::size_t& comparisons)
+      : gas_(n - 1), values_(values), comparisons_(comparisons) {
+    values_.assign(n, gas_);
+  }
+
+  TEST_CONSTEXPR_CXX20 bool operator()(int x, int y) {
+    ++comparisons_;
+    if (values_[x] == gas_ && values_[y] == gas_) {
+      if (x == candidate_)
+        values_[x] = solid_++;
+      else
+        values_[y] = solid_++;
+    }
+    if (values_[x] == gas_)
+      candidate_ = x;
+    else if (values_[y] == gas_)
+      candidate_ = y;
+    return values_[x] < values_[y];
+  }
+
+private:
+  int gas_;
+  std::vector<int>& values_;
+  std::size_t& comparisons_;
+  int candidate_ = 0;
+  int solid_     = 0;
+};
+
+TEST_CONSTEXPR_CXX20 void test_adversary(int n, int nth) {
+  std::vector<int> indices(n);
+  for (int i = 0; i != n; ++i)
+    indices[i] = i;
+  std::vector<int> values;
+  std::size_t comparisons = 0;
+  std::nth_element(indices.begin(), indices.begin() + nth, indices.end(), AdversaryComparator(n, values, comparisons));
+
+  for (int i = 0; i != nth; ++i)
+    assert(values[indices[i]] <= values[indices[nth]]);
+  for (int i = nth + 1; i != n; ++i)
+    assert(values[indices[i]] >= values[indices[nth]]);
+
+  // Plain quickselect needs about n * n / 4 comparisons on this input.
+  std::size_t log2_n = 0;
+  for (int m = n; m > 1; m /= 2)
+    ++log2_n;
+  LIBCPP_ASSERT(comparisons <= 8 * static_cast<std::size_t>(n) * log2_n);
+}
+
+TEST_CONSTEXPR_CXX20 bool test_adversaries(int n) {
+  test_adversary(n, 0);
+  test_adversary(n, n / 2);
+  test_adversary(n, n - 2);
+  test_adversary(n, n - 1);
+  return true;
+}
+#endif
+
 int main(int, char**)
 {
     test<int, random_access_iterator<int*> >();
@@ -74,6 +137,7 @@ int main(int, char**)
 #if TEST_STD_VER >= 11
     test<MoveOnly, random_access_iterator<MoveOnly*>>();
     test<MoveOnly, MoveOnly*>();
+    test_adversaries(10000);
 #endif
 
 #if TEST_STD_VER >= 20
@@ -81,6 +145,7 @@ int main(int, char**)
     static_assert(test<int, int*>());
     static_assert(test<MoveOnly, random_access_iterator<MoveOnly*>>());
     static_assert(test<MoveOnly, MoveOnly*>());
+    static_assert(test_adversaries(100));
 #endif
 
     return 0;
