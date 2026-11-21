@@ -352,8 +352,7 @@ entry:
 define amdgpu_ps void @fptrunc_f32_to_bf16(float %a, ptr %out) {
 ; GFX-942-LABEL: fptrunc_f32_to_bf16:
 ; GFX-942:       ; %bb.0: ; %entry
-; GFX-942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-942-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-942-NEXT:    v_bfe_u32 v1, v0, 16, 1
 ; GFX-942-NEXT:    s_movk_i32 s0, 0x7fff
 ; GFX-942-NEXT:    v_add3_u32 v1, v1, v0, s0
@@ -366,8 +365,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16(float %a, ptr %out) {
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16:
 ; GFX-950:       ; %bb.0: ; %entry
-; GFX-950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-950-NEXT:    v_cvt_pk_bf16_f32 v0, v0, s0
 ; GFX-950-NEXT:    flat_store_short v[2:3], v0
 ; GFX-950-NEXT:    s_endpgm
@@ -391,8 +389,7 @@ entry:
 define amdgpu_ps void @fptrunc_f32_to_bf16_abs(float %a, ptr %out) {
 ; GFX-942-LABEL: fptrunc_f32_to_bf16_abs:
 ; GFX-942:       ; %bb.0: ; %entry
-; GFX-942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-942-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-942-NEXT:    v_and_b32_e32 v1, 0x7fffffff, v0
 ; GFX-942-NEXT:    v_bfe_u32 v4, v1, 16, 1
 ; GFX-942-NEXT:    s_movk_i32 s0, 0x7fff
@@ -406,8 +403,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_abs(float %a, ptr %out) {
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16_abs:
 ; GFX-950:       ; %bb.0: ; %entry
-; GFX-950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-950-NEXT:    v_cvt_pk_bf16_f32 v0, |v0|, s0
 ; GFX-950-NEXT:    flat_store_short v[2:3], v0
 ; GFX-950-NEXT:    s_endpgm
@@ -432,8 +428,7 @@ entry:
 define amdgpu_ps void @fptrunc_f32_to_bf16_neg(float %a, ptr %out) {
 ; GFX-942-LABEL: fptrunc_f32_to_bf16_neg:
 ; GFX-942:       ; %bb.0: ; %entry
-; GFX-942-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-942-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-942-NEXT:    v_xor_b32_e32 v1, 0x80000000, v0
 ; GFX-942-NEXT:    v_bfe_u32 v4, v1, 16, 1
 ; GFX-942-NEXT:    s_movk_i32 s0, 0x7fff
@@ -447,8 +442,7 @@ define amdgpu_ps void @fptrunc_f32_to_bf16_neg(float %a, ptr %out) {
 ;
 ; GFX-950-LABEL: fptrunc_f32_to_bf16_neg:
 ; GFX-950:       ; %bb.0: ; %entry
-; GFX-950-NEXT:    v_mov_b32_e32 v3, v2
-; GFX-950-NEXT:    v_mov_b32_e32 v2, v1
+; GFX-950-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[2:3] op_sel:[1,0]
 ; GFX-950-NEXT:    v_cvt_pk_bf16_f32 v0, -v0, s0
 ; GFX-950-NEXT:    flat_store_short v[2:3], v0
 ; GFX-950-NEXT:    s_endpgm

@@ -45,8 +45,7 @@ define amdgpu_kernel void @mfma_16x16_interleave(
 ; CHECK-NEXT:    s_nop 2
 ; CHECK-NEXT:    global_store_dwordx4 v29, v[0:3], s[14:15] offset:32
 ; CHECK-NEXT:    global_store_dwordx4 v29, v[20:23], s[14:15] offset:48
-; CHECK-NEXT:    v_mov_b32_e32 v6, s0
-; CHECK-NEXT:    v_mov_b32_e32 v7, s1
+; CHECK-NEXT:    v_mov_b64_e32 v[6:7], s[0:1]
 ; CHECK-NEXT:    global_store_dwordx4 v29, v[4:7], s[14:15] offset:64
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s2
 ; CHECK-NEXT:    global_store_dword v29, v0, s[14:15] offset:80

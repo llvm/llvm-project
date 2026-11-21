@@ -113,8 +113,7 @@ define i64 @fi_add_i64_carry_out_uniform(i64 inreg %i) #0 {
 ; GFX942-NEXT:    s_addc_u32 s1, 0, s1
 ; GFX942-NEXT:    scratch_store_dword off, v0, s32 offset:32 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-NEXT:    v_mov_b32_e32 v1, s1
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %pad = alloca [8 x i32], align 4, addrspace(5)

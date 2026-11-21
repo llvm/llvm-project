@@ -139,11 +139,10 @@ define amdgpu_kernel void @v9f64_uniform_idx(ptr addrspace(1) %out, double %a, d
 ; CHECK-NEXT:    s_waitcnt vmcnt(4)
 ; CHECK-NEXT:    v_mov_b32_e32 v18, s2
 ; CHECK-NEXT:    v_mov_b32_e32 v33, s3
-; CHECK-NEXT:    v_mov_b32_e32 v34, s6
+; CHECK-NEXT:    v_mov_b64_e32 v[34:35], s[6:7]
 ; CHECK-NEXT:    s_lshl_b32 s4, s4, 1
 ; CHECK-NEXT:    s_add_i32 s2, s4, 2
 ; CHECK-NEXT:    s_add_i32 s3, s4, 3
-; CHECK-NEXT:    v_mov_b32_e32 v35, s7
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    s_set_gpr_idx_on s4, gpr_idx(DST)
 ; CHECK-NEXT:    v_mov_b32_e32 v0, v18

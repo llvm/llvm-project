@@ -53,6 +53,7 @@
 #include "SIFixSGPRCopies.h"
 #include "SIFixVGPRCopies.h"
 #include "SIFoldOperands.h"
+#include "SIFoldPackedMoves.h"
 #include "SIFormMemoryClauses.h"
 #include "SILoadStoreOptimizer.h"
 #include "SILowerControlFlow.h"
@@ -95,6 +96,7 @@
 #include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/CodeGen/RegAllocGreedyPass.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
+#include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
@@ -503,6 +505,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSIFixSGPRCopiesLegacyPass(*PR);
   initializeSIFixVGPRCopiesLegacyPass(*PR);
   initializeSIFoldOperandsLegacyPass(*PR);
+  initializeSIFoldPackedMovesLegacyPass(*PR);
   initializeSIPeepholeSDWALegacyPass(*PR);
   initializeSIShrinkInstructionsLegacyPass(*PR);
   initializeSIOptimizeExecMaskingPreRALegacyPass(*PR);
@@ -1826,6 +1829,8 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
 }
 
 void GCNPassConfig::addPostRegAlloc() {
+  if (getOptLevel() != CodeGenOptLevel::None && getOptimizeRegAlloc())
+    addPass(&SIFoldPackedMovesLegacyID);
   addPass(&SIFixVGPRCopiesID);
   if (getOptLevel() > CodeGenOptLevel::None)
     addPass(&SIOptimizeExecMaskingLegacyID);
@@ -2584,6 +2589,9 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None &&
+      Opt.OptimizeRegAlloc == cl::boolOrDefault::BOU_TRUE)
+    addMachineFunctionPass(SIFoldPackedMovesPass(), PMW);
   addMachineFunctionPass(SIFixVGPRCopiesPass(), PMW);
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addMachineFunctionPass(SIOptimizeExecMaskingPass(), PMW);

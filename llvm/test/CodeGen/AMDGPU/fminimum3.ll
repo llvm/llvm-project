@@ -4705,8 +4705,7 @@ define amdgpu_ps <2 x i32> @s_no_fminimum3_f16__multi_use(half inreg %a, half in
 ;
 ; GFX950-LABEL: s_no_fminimum3_f16__multi_use:
 ; GFX950:       ; %bb.0:
-; GFX950-NEXT:    v_mov_b32_e32 v0, s0
-; GFX950-NEXT:    v_mov_b32_e32 v1, s1
+; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[0:1]
 ; GFX950-NEXT:    v_mov_b32_e32 v2, s2
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s1, s1
 ; GFX950-NEXT:    v_pk_minimum3_f16 v1, s0, v1, v2

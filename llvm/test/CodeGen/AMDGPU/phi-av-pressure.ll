@@ -41,14 +41,10 @@ define amdgpu_kernel void @main(i1 %arg, ptr %ptr, ptr addrspace(1) %ptr1, ptr a
 ; GFX950-NEXT:    s_and_b64 vcc, exec, s[34:35]
 ; GFX950-NEXT:    v_mov_b32_e32 v40, v41
 ; GFX950-NEXT:    s_mov_b32 s0, s1
-; GFX950-NEXT:    v_mov_b32_e32 v10, v41
-; GFX950-NEXT:    v_mov_b32_e32 v11, v41
-; GFX950-NEXT:    v_mov_b32_e32 v12, v41
-; GFX950-NEXT:    v_mov_b32_e32 v14, v41
-; GFX950-NEXT:    v_mov_b32_e32 v13, v41
-; GFX950-NEXT:    v_mov_b32_e32 v15, v41
-; GFX950-NEXT:    v_mov_b32_e32 v16, v41
-; GFX950-NEXT:    v_mov_b32_e32 v17, v41
+; GFX950-NEXT:    v_pk_mov_b32 v[10:11], v[40:41], v[40:41] op_sel:[1,1]
+; GFX950-NEXT:    v_pk_mov_b32 v[12:13], v[40:41], v[40:41] op_sel:[1,1]
+; GFX950-NEXT:    v_pk_mov_b32 v[14:15], v[40:41], v[40:41] op_sel:[1,1]
+; GFX950-NEXT:    v_pk_mov_b32 v[16:17], v[40:41], v[40:41] op_sel:[1,1]
 ; GFX950-NEXT:  .LBB0_1: ; %bb4
 ; GFX950-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX950-NEXT:    s_lshl_b64 s[2:3], s[0:1], 3

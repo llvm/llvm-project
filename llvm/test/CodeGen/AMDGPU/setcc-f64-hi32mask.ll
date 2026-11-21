@@ -230,8 +230,7 @@ define i32 @select.hi32.sgpr.olt.bad.nan(double inreg %x, double inreg %y, i32 i
 ; CHECK-LABEL: select.hi32.sgpr.olt.bad.nan:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s18
-; CHECK-NEXT:    v_mov_b32_e32 v1, s19
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[18:19], s[18:19] op_sel:[0,1]
 ; CHECK-NEXT:    v_cmp_lt_f64_e64 s[4:5], |s[16:17]|, |v[0:1]|
 ; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cselect_b32 s4, s20, s21
@@ -383,8 +382,7 @@ define i32 @select.hi32.sgpr.ole.bad.0(double inreg %x, double inreg %y, i32 inr
 ; CHECK-NEXT:    s_andn2_b32 s19, s19, -2.0
 ; CHECK-NEXT:    s_and_b32 s5, s17, 0x7fffffff
 ; CHECK-NEXT:    s_mov_b32 s4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v0, s18
-; CHECK-NEXT:    v_mov_b32_e32 v1, s19
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[18:19], s[18:19] op_sel:[0,1]
 ; CHECK-NEXT:    v_cmp_le_f64_e32 vcc, s[4:5], v[0:1]
 ; CHECK-NEXT:    s_cmp_lg_u64 vcc, 0
 ; CHECK-NEXT:    s_cselect_b32 s4, s20, s21
@@ -405,8 +403,7 @@ define i32 @select.hi32.sgpr.ole.bad.1(double inreg %x, double inreg %y, i32 inr
 ; CHECK-LABEL: select.hi32.sgpr.ole.bad.1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s18
-; CHECK-NEXT:    v_mov_b32_e32 v1, s19
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[18:19], s[18:19] op_sel:[0,1]
 ; CHECK-NEXT:    s_and_b32 s5, s17, 0x3fffffff
 ; CHECK-NEXT:    s_mov_b32 s4, 0
 ; CHECK-NEXT:    v_cmp_le_f64_e64 s[4:5], s[4:5], |v[0:1]|
@@ -468,8 +465,7 @@ define i32 @select.hi32.sgpr.ule.bad(double inreg %x, double inreg %y, i32 inreg
 ; CHECK-LABEL: select.hi32.sgpr.ule.bad:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_mov_b32_e32 v0, s18
-; CHECK-NEXT:    v_mov_b32_e32 v1, s19
+; CHECK-NEXT:    v_pk_mov_b32 v[0:1], s[18:19], s[18:19] op_sel:[0,1]
 ; CHECK-NEXT:    v_cmp_ngt_f64_e64 s[4:5], |s[16:17]|, |v[0:1]|
 ; CHECK-NEXT:    s_cmp_lg_u64 s[4:5], 0
 ; CHECK-NEXT:    s_cselect_b32 s4, s20, s21

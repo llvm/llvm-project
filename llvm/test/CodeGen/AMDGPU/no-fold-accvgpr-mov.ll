@@ -18,15 +18,14 @@ define amdgpu_kernel void @matmul_kernel(i32 %a0, i32 %a1) {
 ; GFX942-NEXT:  .LBB0_1: ; %bb2
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_mov_b32 s1, s0
-; GFX942-NEXT:    s_nop 1
+; GFX942-NEXT:    s_nop 2
 ; GFX942-NEXT:    v_mov_b64_e32 v[4:5], s[0:1]
-; GFX942-NEXT:    v_mov_b32_e32 v2, v1
-; GFX942-NEXT:    v_mov_b32_e32 v3, v1
+; GFX942-NEXT:    v_pk_mov_b32 v[2:3], v[0:1], v[0:1] op_sel:[1,1]
 ; GFX942-NEXT:    s_or_b32 s5, s4, 1
 ; GFX942-NEXT:    s_ashr_i32 s1, s4, 31
-; GFX942-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[4:5], v[4:5], v[0:3]
 ; GFX942-NEXT:    s_and_b32 s4, s1, s5
-; GFX942-NEXT:    s_nop 5
+; GFX942-NEXT:    v_mfma_f32_16x16x16_f16 v[2:5], v[4:5], v[4:5], v[0:3]
+; GFX942-NEXT:    s_nop 6
 ; GFX942-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX942-NEXT:    s_and_b64 s[6:7], s[2:3], exec
 ; GFX942-NEXT:    s_cbranch_scc1 .LBB0_1

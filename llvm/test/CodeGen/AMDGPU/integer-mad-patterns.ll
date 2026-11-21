@@ -8274,10 +8274,9 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX90A-SDAG:       ; %bb.0: ; %bb
 ; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX90A-SDAG-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX90A-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v0, v2, v0
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX90A-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v1, 1, v2
 ; GFX90A-SDAG-NEXT:    global_store_dword v[4:5], v2, off
@@ -8294,8 +8293,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_all(i32 %arg, i32 %arg1, i32 %ar
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    v_add_u32_e32 v0, 1, v0
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v2, v3
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v3, v4
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX90A-GISEL-NEXT:    v_mul_lo_u32 v4, v0, v1
 ; GFX90A-GISEL-NEXT:    v_add_u32_e32 v0, v4, v0
 ; GFX90A-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1
@@ -8612,12 +8610,11 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX90A-SDAG:       ; %bb.0: ; %bb
 ; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v0, 1, v0
+; GFX90A-SDAG-NEXT:    v_pk_mov_b32 v[4:5], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX90A-SDAG-NEXT:    v_mul_lo_u32 v2, v0, v1
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v0, v2, v0
 ; GFX90A-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX90A-SDAG-NEXT:    v_add_u32_e32 v1, 1, v2
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v5, v4
-; GFX90A-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX90A-SDAG-NEXT:    v_mul_lo_u32 v0, v0, v1
 ; GFX90A-SDAG-NEXT:    global_store_dword v[4:5], v2, off
 ; GFX90A-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -8630,8 +8627,7 @@ define i32 @v_multi_use_mul_chain_add_other_use_some(i32 %arg, i32 %arg1, i32 %a
 ; GFX90A-GISEL:       ; %bb.0: ; %bb
 ; GFX90A-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-GISEL-NEXT:    v_add_u32_e32 v0, 1, v0
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v2, v3
-; GFX90A-GISEL-NEXT:    v_mov_b32_e32 v3, v4
+; GFX90A-GISEL-NEXT:    v_pk_mov_b32 v[2:3], v[2:3], v[4:5] op_sel:[1,0]
 ; GFX90A-GISEL-NEXT:    v_mul_lo_u32 v4, v0, v1
 ; GFX90A-GISEL-NEXT:    v_add_u32_e32 v0, v4, v0
 ; GFX90A-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v1

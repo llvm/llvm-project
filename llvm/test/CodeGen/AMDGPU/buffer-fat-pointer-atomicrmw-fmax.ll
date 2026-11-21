@@ -33,8 +33,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s16
+; GFX942-NEXT:    v_pk_mov_b32 v[0:1], s[16:17], v[0:1]
 ; GFX942-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:1024
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -84,8 +83,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], v[0:1]
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -755,8 +753,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s16
+; GFX942-NEXT:    v_pk_mov_b32 v[0:1], s[16:17], v[0:1]
 ; GFX942-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:1024
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -845,8 +842,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], v[0:1]
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -1006,8 +1002,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s16
+; GFX942-NEXT:    v_pk_mov_b32 v[0:1], s[16:17], v[0:1]
 ; GFX942-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:1024
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -1057,8 +1052,7 @@ define float @buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_g
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory__amdgpu_no_remote_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], v[0:1]
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -1595,8 +1589,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX942-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v7, v6
-; GFX942-NEXT:    v_mov_b32_e32 v6, v5
+; GFX942-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
 ; GFX942-NEXT:    s_mov_b64 s[2:3], exec
 ; GFX942-NEXT:    buffer_wbl2 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
@@ -1619,8 +1612,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX942-NEXT:  ; %bb.2:
 ; GFX942-NEXT:    s_mov_b64 exec, s[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v0, v6
-; GFX942-NEXT:    v_mov_b32_e32 v1, v7
+; GFX942-NEXT:    v_mov_b64_e32 v[0:1], v[6:7]
 ; GFX942-NEXT:    buffer_inv sc1
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1721,8 +1713,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX90A-LABEL: buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v7, v6
-; GFX90A-NEXT:    v_mov_b32_e32 v6, v5
+; GFX90A-NEXT:    v_pk_mov_b32 v[6:7], v[4:5], v[6:7] op_sel:[1,0]
 ; GFX90A-NEXT:    s_mov_b64 s[6:7], exec
 ; GFX90A-NEXT:  .LBB7_1: ; =>This Inner Loop Header: Depth=1
 ; GFX90A-NEXT:    v_readfirstlane_b32 s8, v0
@@ -1742,8 +1733,7 @@ define double @buffer_fat_ptr_agent_atomic_fmax_ret_f64__offset__waterfall__amdg
 ; GFX90A-NEXT:  ; %bb.2:
 ; GFX90A-NEXT:    s_mov_b64 exec, s[6:7]
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v0, v6
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v7
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], v[6:7], v[6:7] op_sel:[0,1]
 ; GFX90A-NEXT:    buffer_wbinvl1
 ; GFX90A-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -9877,8 +9867,7 @@ define float @buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_
 ; GFX942-LABEL: buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX942:       ; %bb.0:
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX942-NEXT:    v_mov_b32_e32 v1, v0
-; GFX942-NEXT:    v_mov_b32_e32 v0, s16
+; GFX942-NEXT:    v_pk_mov_b32 v[0:1], s[16:17], v[0:1]
 ; GFX942-NEXT:    buffer_load_dword v0, v0, s[0:3], 0 offen offset:1024
 ; GFX942-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX942-NEXT:    v_max_f32_e32 v2, v1, v1
@@ -9928,8 +9917,7 @@ define float @buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_
 ; GFX90A-LABEL: buffer_fat_ptr_system_atomic_fmax_ret_f32__offset__amdgpu_no_fine_grained_memory:
 ; GFX90A:       ; %bb.0:
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-NEXT:    v_mov_b32_e32 v1, v0
-; GFX90A-NEXT:    v_mov_b32_e32 v0, s20
+; GFX90A-NEXT:    v_pk_mov_b32 v[0:1], s[20:21], v[0:1]
 ; GFX90A-NEXT:    buffer_load_dword v0, v0, s[16:19], 0 offen offset:1024
 ; GFX90A-NEXT:    s_mov_b64 s[4:5], 0
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v1, v1
