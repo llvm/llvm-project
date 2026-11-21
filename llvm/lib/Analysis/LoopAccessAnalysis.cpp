@@ -261,29 +261,31 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
       return false;
   }
 
-  // Compute MaxOffset per direction: for a non-negative step, the exclusive
-  // upper offset of the accessed range; for a negative step, the offset of the
-  // start of the highest access.
+  // Size of the accessed range in bytes.
+  const SCEV *EltSizeW = SE.getNoopOrZeroExtend(EltSize, WiderTy);
+  const SCEV *AccessedBytes = addSCEVNoOverflow(DistToLastIter, EltSizeW, SE);
+  if (!AccessedBytes)
+    return false;
+
+  // Exclusive upper offset of the accessed range.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    // Total length in bytes of the accessed range (from the first accessed
-    // byte through the end of the last access).
-    const SCEV *AccessedBytes = addSCEVNoOverflow(
-        DistToLastIter, SE.getNoopOrZeroExtend(EltSize, WiderTy), SE);
-    if (!AccessedBytes)
-      return false;
     MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
     if (!MaxOffset)
       return false;
   } else {
-    // For a negative step StartOffset is the highest offset and AR at MaxBTC
-    // is DistToLastIter below it, so it must not fall below StartPtr. The end
-    // of the first access, Start + EltSize, does not depend on MaxBTC and is
-    // not checked here.
+    // The lowest access must not start below StartPtr. Compare the access
+    // ends, as SCEV may fail to order the starts.
     assert(SE.isKnownNegative(Step) && "must be known negative");
-    if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, StartOffset, DistToLastIter))
+    const SCEV *EndOffset = addSCEVNoOverflow(StartOffset, EltSizeW, SE);
+    if (!EndOffset ||
+        !SE.isKnownPredicate(CmpInst::ICMP_UGE, EndOffset, AccessedBytes))
       return false;
-    MaxOffset = StartOffset;
+    // The first access only has to start in bounds; if that can't be proven,
+    // check its end.
+    if (SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV))
+      return true;
+    MaxOffset = EndOffset;
   }
   // MaxOffset must not exceed the deref-region end.
   return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
