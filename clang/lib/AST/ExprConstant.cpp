@@ -4712,10 +4712,30 @@ static bool AreElementsOfSameArray(QualType ObjType,
   return CommonLength >= A.Entries.size() - IsArray;
 }
 
-/// Find the complete object to which an LValue refers.
-static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
-                                         AccessKinds AK, const LValue &LVal,
-                                         QualType LValType) {
+/// GNU extension: a compound literal that is immediately read by an
+/// lvalue-to-rvalue conversion, possibly through '.' member access or
+/// __real/__imag, as in 'int x = (int){1};' or 'int y = (struct S){1}.a;', is
+/// not a read of the compound literal object; the value of its initializer is
+/// used directly. Returns that compound literal, if E is such an operand.
+const CompoundLiteralExpr *getDirectlyReadCompoundLiteral(const Expr *E) {
+  while (true) {
+    E = E->IgnoreParens();
+    if (const auto *ME = dyn_cast<MemberExpr>(E); ME && !ME->isArrow())
+      E = ME->getBase();
+    else if (const auto *UO = dyn_cast<UnaryOperator>(E);
+             UO && (UO->getOpcode() == UO_Real || UO->getOpcode() == UO_Imag))
+      E = UO->getSubExpr();
+    else
+      return dyn_cast<CompoundLiteralExpr>(E);
+  }
+}
+
+/// Find the complete object to which an LValue refers. \p DirectlyReadCLE is a
+/// compound literal that may be read; see getDirectlyReadCompoundLiteral.
+static CompleteObject
+findCompleteObject(EvalInfo &Info, const Expr *E, AccessKinds AK,
+                   const LValue &LVal, QualType LValType,
+                   const CompoundLiteralExpr *DirectlyReadCLE = nullptr) {
   if (LVal.InvalidBase) {
     Info.FFDiag(E);
     return CompleteObject();
@@ -4974,22 +4994,13 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
         assert(BaseVal && "got reference to unevaluated temporary");
       } else if (const CompoundLiteralExpr *CLE =
                      dyn_cast_or_null<CompoundLiteralExpr>(Base)) {
-        // According to GCC info page:
-        //
-        // 6.28 Compound Literals
-        //
-        // As an optimization, G++ sometimes gives array compound literals
-        // longer lifetimes: when the array either appears outside a function or
-        // has a const-qualified type. If foo and its initializer had elements
-        // of type char *const rather than char *, or if foo were a global
-        // variable, the array would have static storage duration. But it is
-        // probably safest just to avoid the use of array compound literals in
-        // C++ code.
-        //
-        // Obey that rule by checking constness for converted array types.
-        if (QualType CLETy = CLE->getType(); CLETy->isArrayType() &&
-                                             !LValType->isArrayType() &&
-                                             !CLETy.isConstant(Info.Ctx)) {
+        // A compound literal with static storage duration is an unnamed object
+        // (C11 6.5.2.5) that can be modified unless it is const-qualified, so
+        // its value is not known, except in the GNU extension
+        // 'int x = (int){1};'; see getDirectlyReadCompoundLiteral.
+        if (!CLE->getType().isConstant(Info.Ctx) && CLE != DirectlyReadCLE) {
+          if (!IsAccess)
+            return CompleteObject(LVal.getLValueBase(), nullptr, BaseType);
           Info.FFDiag(E);
           Info.Note(CLE->getExprLoc(), diag::note_declared_at);
           return CompleteObject();
@@ -5047,10 +5058,12 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
 /// \param WantObjectRepresentation - If true, we're looking for the object
 ///               representation rather than the value, and in particular,
 ///               there is no requirement that the result be fully initialized.
-static bool
-handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
-                               const LValue &LVal, APValue &RVal,
-                               bool WantObjectRepresentation = false) {
+/// \param DirectlyReadCLE - The compound literal read directly by this
+///               conversion, if any; see getDirectlyReadCompoundLiteral.
+static bool handleLValueToRValueConversion(
+    EvalInfo &Info, const Expr *Conv, QualType Type, const LValue &LVal,
+    APValue &RVal, bool WantObjectRepresentation = false,
+    const CompoundLiteralExpr *DirectlyReadCLE = nullptr) {
   if (LVal.Designator.Invalid)
     return false;
 
@@ -5086,7 +5099,8 @@ handleLValueToRValueConversion(EvalInfo &Info, const Expr *Conv, QualType Type,
     }
   }
 
-  CompleteObject Obj = findCompleteObject(Info, Conv, AK, LVal, Type);
+  CompleteObject Obj =
+      findCompleteObject(Info, Conv, AK, LVal, Type, DirectlyReadCLE);
   return Obj && extractSubobject(Info, Conv, Obj, LVal.Designator, RVal, AK);
 }
 
@@ -9376,8 +9390,10 @@ public:
         return false;
       APValue RVal;
       // Note, we use the subexpression's type in order to retain cv-qualifiers.
-      if (!handleLValueToRValueConversion(Info, E, E->getSubExpr()->getType(),
-                                          LVal, RVal))
+      if (!handleLValueToRValueConversion(
+              Info, E, E->getSubExpr()->getType(), LVal, RVal,
+              /*WantObjectRepresentation=*/false,
+              getDirectlyReadCompoundLiteral(E->getSubExpr())))
         return false;
       return DerivedSuccess(RVal, E);
     }
@@ -10610,8 +10626,10 @@ bool PointerExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     APValue RVal;
     // Note, we use the subexpression's type in order to retain cv-qualifiers.
-    if (!handleLValueToRValueConversion(Info, E, E->getSubExpr()->getType(),
-                                        LVal, RVal))
+    if (!handleLValueToRValueConversion(
+            Info, E, E->getSubExpr()->getType(), LVal, RVal,
+            /*WantObjectRepresentation=*/false,
+            getDirectlyReadCompoundLiteral(SubExpr)))
       return InvalidBaseOK &&
              evaluateLValueAsAllocSize(Info, LVal.Base, Result);
     return Success(RVal, E);

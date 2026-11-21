@@ -486,6 +486,9 @@ protected:
   /// DefaultInit- or DefaultArgExpr, needed for SourceLocExpr.
   const Expr *SourceLocDefaultExpr = nullptr;
 
+  /// Compound literal read by the current lvalue-to-rvalue conversion.
+  const CompoundLiteralExpr *DirectlyReadCLE = nullptr;
+
   /// Flag indicating if return value is to be discarded.
   bool DiscardResult = false;
 
