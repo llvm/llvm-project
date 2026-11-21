@@ -55,6 +55,8 @@ public:
 
   bool enableShrinkWrapping(const MachineFunction &MF) const override;
 
+  bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
+
   void inlineStackProbe(MachineFunction &MF,
                         MachineBasicBlock &PrologueMBB) const override;
 
@@ -66,7 +68,7 @@ private:
   void allocateStack(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                      MachineFunction &MF, uint64_t Offset,
                      uint64_t RealStackSize, bool EmitCFI, bool NeedProbe,
-                     uint64_t ProbeSize, bool DynAllocation,
+                     uint64_t ProbeSize, bool FollowupAllocs,
                      MachineInstr::MIFlag Flag) const;
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
