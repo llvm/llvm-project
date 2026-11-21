@@ -1255,6 +1255,8 @@ LogicalResult spirv::Deserializer::processType(spirv::Opcode opcode,
     return processSamplerType(operands);
   case spirv::Opcode::OpTypeNamedBarrier:
     return processNamedBarrierType(operands);
+  case spirv::Opcode::OpTypeUntypedPointerKHR:
+    return processUntypedPointerType(operands);
   case spirv::Opcode::OpTypeSampledImage:
     return processSampledImageType(operands);
   case spirv::Opcode::OpTypeRuntimeArray:
@@ -1755,6 +1757,17 @@ spirv::Deserializer::processNamedBarrierType(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "OpTypeNamedBarrier must have no parameters");
 
   typeMap[operands[0]] = spirv::NamedBarrierType::get(context);
+  return success();
+}
+
+LogicalResult
+spirv::Deserializer::processUntypedPointerType(ArrayRef<uint32_t> operands) {
+  if (operands.size() != 2)
+    return emitError(unknownLoc,
+                     "OpTypeUntypedPointerKHR must have one parameter");
+
+  typeMap[operands[0]] = spirv::UntypedPointerType::get(
+      context, static_cast<spirv::StorageClass>(operands[1]));
   return success();
 }
 

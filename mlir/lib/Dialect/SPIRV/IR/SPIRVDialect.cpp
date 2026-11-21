@@ -485,6 +485,28 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   return PointerType::get(pointeeType, *storageClass);
 }
 
+// untyped-pointer-type ::= `!spirv.untyped_ptr<` storage-class `>`
+static Type parseUntypedPointerType(SPIRVDialect const &dialect,
+                                    DialectAsmParser &parser) {
+  if (parser.parseLess())
+    return Type();
+
+  StringRef storageClassSpec;
+  SMLoc storageClassLoc = parser.getCurrentLocation();
+  if (parser.parseKeyword(&storageClassSpec))
+    return Type();
+
+  auto storageClass = symbolizeStorageClass(storageClassSpec);
+  if (!storageClass) {
+    parser.emitError(storageClassLoc, "unknown storage class: ")
+        << storageClassSpec;
+    return Type();
+  }
+  if (parser.parseGreater())
+    return Type();
+  return UntypedPointerType::get(dialect.getContext(), *storageClass);
+}
+
 // runtime-array-type ::= `!spirv.rtarray` `<` element-type
 //                        (`,` `stride` `=` integer-literal)? `>`
 static Type parseRuntimeArrayType(SPIRVDialect const &dialect,
@@ -883,6 +905,8 @@ Type SPIRVDialect::parseType(DialectAsmParser &parser) const {
     return SamplerType::get(getContext());
   if (keyword == "named_barrier")
     return NamedBarrierType::get(getContext());
+  if (keyword == "untyped_ptr")
+    return parseUntypedPointerType(*this, parser);
   if (keyword == "struct")
     return parseStructType(*this, parser);
   if (keyword == "matrix")
@@ -933,6 +957,10 @@ static void print(SamplerType type, DialectAsmPrinter &os) { os << "sampler"; }
 
 static void print(NamedBarrierType type, DialectAsmPrinter &os) {
   os << "named_barrier";
+}
+
+static void print(UntypedPointerType type, DialectAsmPrinter &os) {
+  os << "untyped_ptr<" << stringifyStorageClass(type.getStorageClass()) << ">";
 }
 
 static void print(StructType type, DialectAsmPrinter &os) {
@@ -1030,7 +1058,7 @@ void SPIRVDialect::printType(Type type, DialectAsmPrinter &os) const {
   TypeSwitch<Type>(type)
       .Case<ArrayType, CooperativeMatrixType, PointerType, RuntimeArrayType,
             ImageType, SampledImageType, SamplerType, NamedBarrierType,
-            StructType, MatrixType, TensorArmType>(
+            StructType, MatrixType, TensorArmType, UntypedPointerType>(
           [&](auto type) { print(type, os); })
       .DefaultUnreachable("Unhandled SPIR-V type");
 }
