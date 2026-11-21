@@ -21,6 +21,32 @@ void basic_correct() {
 
 CFMutableArrayRef provide_cf();
 
+NS_RETURNS_RETAINED SomeObj *provide_retained_ns();
+NS_RETURNS_RETAINED dispatch_queue_t provide_retained_queue();
+
+@interface SomeObj (ReturnsRetained)
++ (SomeObj *)makeRetained NS_RETURNS_RETAINED;
++ (SomeObj *)newSomeObj;
++ (SomeObj *)newNotRetained __attribute__((ns_returns_not_retained));
+@end
+
+void returns_retained_good() {
+  auto ns1 = adoptNS(provide_retained_ns());
+  auto ns2 = adoptNS([SomeObj makeRetained]);
+  auto ns3 = adoptNS([SomeObj newSomeObj]);
+  auto os1 = adoptOSObject(provide_retained_queue());
+  auto os2 = adoptOSObject(dispatch_queue_create("q", nullptr));
+}
+
+void returns_retained_wrong() {
+  RetainPtr<SomeObj> ns1 = provide_retained_ns();
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak when ARC is disabled [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  RetainPtr<SomeObj> ns2 = [SomeObj newSomeObj];
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak when ARC is disabled [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  auto ns3 = adoptNS([SomeObj newNotRetained]);
+  // expected-warning@-1{{Incorrect use of adoptNS; the argument is +0 and results in an use-after-free when ARC is disabled [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
 void basic_wrong() {
   RetainPtr<SomeObj> ns1 = [[SomeObj alloc] init];
   // expected-warning@-1{{Incorrect use of RetainPtr constructor; the argument is +1 and results in a memory leak when ARC is disabled [alpha.webkit.RetainPtrCtorAdoptChecker]}}

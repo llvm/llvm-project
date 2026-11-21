@@ -182,7 +182,7 @@ public:
       return;
     }
     if (Result == IsOwnedResult::Owned || Result == IsOwnedResult::Skip ||
-        isNullPtr(Arg)) {
+        isNullPtr(Arg) || (RTC.isARCEnabled() && isRetainedWithoutARC(Arg))) {
       CreateOrCopyFnCall.insert(Arg);
       return;
     }
@@ -336,7 +336,8 @@ public:
       Result = IsOwnedResult::NotOwned;
     if (Result == IsOwnedResult::Owned)
       reportLeak(Name, CE, DeclWithIssue);
-    else if (RTC.isARCEnabled() && isAllocInit(Arg))
+    else if (RTC.isARCEnabled() &&
+             (isAllocInit(Arg) || isRetainedWithoutARC(Arg)))
       reportLeak(Name, CE, DeclWithIssue, "when ARC is disabled");
     else if (isCreateOrCopy(Arg))
       reportLeak(Name, CE, DeclWithIssue);
@@ -462,6 +463,41 @@ public:
     auto CalleeName = safeGetName(FnDecl);
     return CalleeName.find("Create") != std::string::npos ||
            CalleeName.find("Copy") != std::string::npos;
+  }
+
+  // Under ARC, RetainSummaryManager reports ns_returns_retained and
+  // alloc/new/copy family results as not owned because ARC balances them, but
+  // the "when ARC is disabled" diagnostics ask about non-ARC semantics.
+  bool isRetainedWithoutARC(const Expr *E) const {
+    if (auto *CE = dyn_cast<CallExpr>(E)) {
+      // ARC records ns_returns_retained in the callee's function type, which
+      // also covers calls through function pointers.
+      QualType T = CE->getCallee()->getType();
+      if (auto *PT = T->getAs<PointerType>())
+        T = PT->getPointeeType();
+      auto *FT = T->getAs<FunctionType>();
+      return FT && FT->getExtInfo().getProducesResult();
+    }
+    auto *Msg = dyn_cast<ObjCMessageExpr>(E);
+    if (!Msg)
+      return false;
+    auto *Method = Msg->getMethodDecl();
+    if (!Method || Method->hasAttr<NSReturnsNotRetainedAttr>())
+      return false;
+    // Sema adds an implicit ns_returns_retained to init methods; isAllocInit
+    // handles those.
+    if (auto *Attr = Method->getAttr<NSReturnsRetainedAttr>();
+        Attr && !Attr->isImplicit())
+      return true;
+    switch (Msg->getMethodFamily()) {
+    case OMF_alloc:
+    case OMF_new:
+    case OMF_copy:
+    case OMF_mutableCopy:
+      return true;
+    default:
+      return false;
+    }
   }
 
   enum class IsOwnedResult { Unknown, Skip, Owned, NotOwned };
