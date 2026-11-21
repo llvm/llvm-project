@@ -949,8 +949,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                         "0x" + Twine::utohexstr(getARMCDECoprocMask()));
   }
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Twine(getWCharWidth() / 8));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
