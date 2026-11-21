@@ -32,6 +32,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/VFABIDemangler.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
@@ -4227,6 +4228,10 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
   if (CI->isStrictFP())
     return nullptr;
 
+  // The mappings live on the callee declaration and an intrinsic call drops
+  // them.
+  bool HasVectorMappings = CI->hasFnAttr(VFABI::MappingsAttrName);
+
   if (Value *V = optimizeSymmetric(CI, Func, Builder))
     return V;
 
@@ -4239,12 +4244,12 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return optimizeSinCosPi(CI, /*IsSin*/false, Builder);
   case LibFunc_sinf:
   case LibFunc_sinl:
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(CI, Builder, Intrinsic::sin);
     return nullptr;
   case LibFunc_cosf:
   case LibFunc_cosl:
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(CI, Builder, Intrinsic::cos);
     return nullptr;
   case LibFunc_powf:
@@ -4348,11 +4353,11 @@ Value *LibCallSimplifier::optimizeFloatingPointLibCall(CallInst *CI,
     return replaceUnaryCall(CI, Builder, Intrinsic::trunc);
   case LibFunc_sin:
   case LibFunc_cos:
-    if (UnsafeFPShrink &&
+    if (UnsafeFPShrink && !HasVectorMappings &&
         hasFloatVersion(M, CI->getCalledFunction()->getName()))
       if (Value *V = optimizeUnaryDoubleFP(CI, Builder, TLI, true))
         return V;
-    if (CI->doesNotAccessMemory())
+    if (CI->doesNotAccessMemory() && !HasVectorMappings)
       return replaceUnaryCall(
           CI, Builder, Func == LibFunc_sin ? Intrinsic::sin : Intrinsic::cos);
     return nullptr;
