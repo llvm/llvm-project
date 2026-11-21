@@ -3950,6 +3950,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     default:
@@ -4037,7 +4038,9 @@ SDValue SITargetLowering::LowerCallResult(
       Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
       break;
     case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
+      Val = DAG.getNode(ISD::TRUNCATE, DL,
+                        VA.getValVT().changeTypeToInteger(), Val);
+      Val = DAG.getBitcast(VA.getValVT(), Val);
       break;
     default:
       llvm_unreachable("Unknown loc info!");
