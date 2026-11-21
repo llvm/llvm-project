@@ -115,6 +115,7 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX11-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX11-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-SDAG-NEXT:    s_cmp_lt_i32 s0, 1
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-SDAG-NEXT:  ; %bb.1: ; %else
 ; GFX11-SDAG-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24
@@ -131,6 +132,7 @@ define amdgpu_kernel void @test2(ptr %p, i32 %x) {
 ; GFX11-GISEL-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-GISEL-NEXT:    s_cmp_le_i32 s0, 0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_cbranch_scc0 .LBB2_2
 ; GFX11-GISEL-NEXT:  ; %bb.1: ; %else
 ; GFX11-GISEL-NEXT:    s_load_b64 s[2:3], s[4:5], 0x24

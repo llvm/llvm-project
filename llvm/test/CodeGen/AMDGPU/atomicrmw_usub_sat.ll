@@ -849,11 +849,12 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -884,9 +885,11 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -961,11 +964,12 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -996,9 +1000,11 @@ define i16 @global_atomic_usub_sat_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i16 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -1078,11 +1084,12 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1113,9 +1120,11 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1191,11 +1200,12 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1226,9 +1236,11 @@ define i16 @global_atomic_usub_sat_offset_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB7_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i16, ptr addrspace(1) %ptr, i64 1024
@@ -1305,7 +1317,7 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1338,6 +1350,7 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1411,7 +1424,7 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1444,6 +1457,7 @@ define void @global_atomic_usub_sat_nortn_16(ptr addrspace(1) %ptr, i16 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB8_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1523,7 +1537,7 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1556,6 +1570,7 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1631,7 +1646,7 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1664,6 +1679,7 @@ define void @global_atomic_usub_sat_offset_nortn_16(ptr addrspace(1) %ptr, i16 %
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB9_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -1762,7 +1778,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1798,6 +1814,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -1898,7 +1915,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -1935,6 +1952,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_16(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB10_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -2028,7 +2046,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2059,6 +2077,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -2144,7 +2163,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2176,6 +2195,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_16(ptr 
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB11_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -2269,11 +2289,12 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2308,9 +2329,11 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2389,11 +2412,12 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2426,9 +2450,11 @@ define i8 @global_atomic_usub_sat_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB12_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %ret = atomicrmw usub_sat ptr addrspace(1) %ptr, i8 %data syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
@@ -2519,11 +2545,12 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2558,9 +2585,11 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2639,11 +2668,12 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -2676,9 +2706,11 @@ define i8 @global_atomic_usub_sat_offset_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB13_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    v_mov_b16_e32 v0.l, v3.l
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr i8, ptr addrspace(1) %ptr, i64 1024
@@ -2767,7 +2799,7 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2804,6 +2836,7 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -2882,7 +2915,7 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -2918,6 +2951,7 @@ define void @global_atomic_usub_sat_nortn_8(ptr addrspace(1) %ptr, i8 %data) {
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB14_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -3007,7 +3041,7 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3044,6 +3078,7 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -3122,7 +3157,7 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3158,6 +3193,7 @@ define void @global_atomic_usub_sat_offset_nortn_8(ptr addrspace(1) %ptr, i8 %da
 ; GFX12-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB15_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
@@ -3269,7 +3305,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
 ; GFX11-GISEL-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3310,6 +3346,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -3414,7 +3451,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3454,6 +3491,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_8(ptr addrspa
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB16_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s3
@@ -3560,7 +3598,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-GISEL-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3596,6 +3634,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-GISEL-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-GISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -3684,7 +3723,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v0, v1
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX11-SDAG-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s2
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -3718,6 +3757,7 @@ define amdgpu_kernel void @global_atomic_usub_sat_sgpr_base_offset_nortn_8(ptr a
 ; GFX12-SDAG-NEXT:    s_or_b32 s3, vcc_lo, s3
 ; GFX12-SDAG-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s3
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_execnz .LBB17_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -4133,11 +4173,12 @@ define i32 @flat_atomic_usub_sat(ptr %ptr, i32 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB21_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4218,11 +4259,12 @@ define i32 @flat_atomic_usub_sat(ptr %ptr, i32 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB21_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4304,7 +4346,7 @@ define void @flat_atomic_usub_sat_nortn(ptr %ptr, i32 %data) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB22_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4385,7 +4427,7 @@ define void @flat_atomic_usub_sat_nortn(ptr %ptr, i32 %data) {
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB22_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4473,11 +4515,12 @@ define i32 @flat_atomic_usub_sat__amdgpu_no_fine_grained_memory(ptr %ptr, i32 %d
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB23_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4558,11 +4601,12 @@ define i32 @flat_atomic_usub_sat__amdgpu_no_fine_grained_memory(ptr %ptr, i32 %d
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB23_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4644,7 +4688,7 @@ define void @flat_atomic_usub_sat_nortn__amdgpu_no_fine_grained_memory(ptr %ptr,
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB24_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4725,7 +4769,7 @@ define void @flat_atomic_usub_sat_nortn__amdgpu_no_fine_grained_memory(ptr %ptr,
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v4
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v4, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB24_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -4810,11 +4854,12 @@ define i32 @local_atomic_usub_sat(ptr addrspace(3) %ptr, i32 %data) {
 ; GFX11-GISEL-NEXT:    buffer_gl0_inv
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB25_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-GISEL-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4892,11 +4937,12 @@ define i32 @local_atomic_usub_sat(ptr addrspace(3) %ptr, i32 %data) {
 ; GFX11-SDAG-NEXT:    buffer_gl0_inv
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v2, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB25_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX11-SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -4975,7 +5021,7 @@ define void @local_atomic_usub_sat_nortn(ptr addrspace(3) %ptr, i32 %data) {
 ; GFX11-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v2
 ; GFX11-GISEL-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX11-GISEL-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-GISEL-NEXT:    s_cbranch_execnz .LBB26_1
 ; GFX11-GISEL-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -5053,7 +5099,7 @@ define void @local_atomic_usub_sat_nortn(ptr addrspace(3) %ptr, i32 %data) {
 ; GFX11-SDAG-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v3, v2
 ; GFX11-SDAG-NEXT:    v_mov_b32_e32 v2, v3
 ; GFX11-SDAG-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX11-SDAG-NEXT:    s_cbranch_execnz .LBB26_1
 ; GFX11-SDAG-NEXT:  ; %bb.2: ; %atomicrmw.end

@@ -221,7 +221,7 @@ define double @test_bitextract_double_var(b128 %src, i32 %off) {
 ; GFX12-NEXT:    v_or_b32_e32 v6, v6, v8
 ; GFX12-NEXT:    v_or_b32_e32 v5, v5, v7
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_dual_cndmask_b32 v3, v3, v6 :: v_dual_cndmask_b32 v2, v2, v5
 ; GFX12-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v4
 ; GFX12-NEXT:    s_wait_alu depctr_va_vcc(0)

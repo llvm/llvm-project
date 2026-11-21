@@ -4729,6 +4729,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX11-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB132_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
@@ -4744,6 +4745,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_scc0 .LBB132_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -4760,6 +4762,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 4
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_scc0 .LBB132_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-NEXT:    s_endpgm
@@ -4833,6 +4836,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX11-NEXT:    s_add_u32 s0, s0, 4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB133_1
 ; GFX11-NEXT:  ; %bb.2: ; %bb2
 ; GFX11-NEXT:    s_endpgm
@@ -4850,6 +4854,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-SDAG-NEXT:    s_add_co_i32 s2, s2, -1
 ; GFX12-SDAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 4
 ; GFX12-SDAG-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-SDAG-NEXT:    s_cbranch_scc0 .LBB133_1
 ; GFX12-SDAG-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-SDAG-NEXT:    s_endpgm
@@ -4868,6 +4873,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-NEXT:    s_add_co_u32 s0, s0, 4
 ; GFX12-GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s2, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cbranch_scc0 .LBB133_1
 ; GFX12-GISEL-NEXT:  ; %bb.2: ; %bb2
 ; GFX12-GISEL-NEXT:    s_endpgm

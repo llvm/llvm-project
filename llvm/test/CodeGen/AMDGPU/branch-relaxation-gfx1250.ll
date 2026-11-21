@@ -30,6 +30,7 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
 ; GCN-NEXT:  ; %bb.3: ; %bb
 ; GCN-NEXT:    s_get_pc_i64 s[2:3]
@@ -60,6 +61,7 @@ define amdgpu_kernel void @uniform_conditional_max_short_forward_branch(ptr addr
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB0_1
 ; GCN-ADD-PC64-NEXT:  ; %bb.3: ; %bb
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB0_2-.Lpost_addpc0
@@ -104,6 +106,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
 ; GCN-NEXT:    s_get_pc_i64 s[2:3]
@@ -135,6 +138,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_branch(ptr addrs
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB1_1
 ; GCN-ADD-PC64-NEXT:  ; %bb.3: ; %bb0
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB1_2-.Lpost_addpc1
@@ -181,6 +185,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_f32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB2_1
 ; GCN-NEXT:  ; %bb.3: ; %bb0
 ; GCN-NEXT:    s_get_pc_i64 s[2:3]
@@ -213,6 +218,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_f32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB2_1
 ; GCN-ADD-PC64-NEXT:  ; %bb.3: ; %bb0
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB2_2-.Lpost_addpc2
@@ -351,7 +357,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_mov_b32 s0, 0
 ; GCN-NEXT:  .LBB4_1: ; %bb2
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GCN-NEXT:    s_add_co_i32 s0, s0, 1
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    v_nop_e64
@@ -378,7 +384,7 @@ define amdgpu_kernel void @long_backward_sbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-ADD-PC64-NEXT:    s_mov_b32 s0, 0
 ; GCN-ADD-PC64-NEXT:  .LBB4_1: ; %bb2
 ; GCN-ADD-PC64-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_add_co_i32 s0, s0, 1
 ; GCN-ADD-PC64-NEXT:    ;;#ASMSTART
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
@@ -422,6 +428,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB5_1
 ; GCN-NEXT:  ; %bb.6: ; %bb0
 ; GCN-NEXT:    s_get_pc_i64 s[0:1]
@@ -463,6 +470,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_forward_branch(ptr add
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[4:5], 0x2c nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB5_1
 ; GCN-ADD-PC64-NEXT:  ; %bb.6: ; %bb0
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB5_2-.Lpost_addpc6
@@ -585,6 +593,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_lt_i32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB7_1
 ; GCN-NEXT:  ; %bb.6: ; %bb0
 ; GCN-NEXT:    s_get_pc_i64 s[0:1]
@@ -596,6 +605,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 3
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GCN-NEXT:  ; %bb.4: ; %bb1
 ; GCN-NEXT:    s_get_pc_i64 s[0:1]
@@ -628,6 +638,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[4:5], 0x24 nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB7_1
 ; GCN-ADD-PC64-NEXT:  ; %bb.6: ; %bb0
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB7_2-.Lpost_addpc9
@@ -636,6 +647,7 @@ define amdgpu_kernel void @expand_requires_expand(i32 %cond0) #0 {
 ; GCN-ADD-PC64-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_u32 s0, 3
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB7_2
 ; GCN-ADD-PC64-NEXT:  ; %bb.4: ; %bb1
 ; GCN-ADD-PC64-NEXT:    s_add_pc_i64 .LBB7_3-.Lpost_addpc8
@@ -905,6 +917,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c nv
 ; GCN-NEXT:    s_wait_kmcnt 0x0
 ; GCN-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s3, 6
 ; GCN-NEXT:    s_cbranch_scc0 .LBB10_1
@@ -916,7 +929,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_set_pc_i64 s[6:7]
 ; GCN-NEXT:  .LBB10_1: ; %bb9
 ; GCN-NEXT:    s_min_i32 s6, s2, 10
-; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cmp_lt_i32 s6, s3
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:    s_cbranch_scc1 .LBB10_6
@@ -949,6 +962,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-NEXT:    s_set_pc_i64 s[0:1]
 ; GCN-NEXT:  .LBB10_3: ; %bb14
 ; GCN-NEXT:    s_cmp_lt_i32 s1, 9
+; GCN-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GCN-NEXT:    s_cselect_b32 s1, -1, 0
 ; GCN-NEXT:    s_cmp_lt_i32 s2, s3
 ; GCN-NEXT:    s_cselect_b32 s2, -1, 0
@@ -982,6 +996,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-ADD-PC64-NEXT:    s_load_b128 s[0:3], s[4:5], 0x2c nv
 ; GCN-ADD-PC64-NEXT:    s_wait_kmcnt 0x0
 ; GCN-ADD-PC64-NEXT:    s_cmp_eq_u32 s0, 0
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cselect_b32 s0, -1, 0
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s3, 6
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc0 .LBB10_1
@@ -990,7 +1005,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-ADD-PC64-NEXT:  .Lpost_addpc16:
 ; GCN-ADD-PC64-NEXT:  .LBB10_1: ; %bb9
 ; GCN-ADD-PC64-NEXT:    s_min_i32 s6, s2, 10
-; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s6, s3
 ; GCN-ADD-PC64-NEXT:    ; implicit-def: $sgpr6
 ; GCN-ADD-PC64-NEXT:    s_cbranch_scc1 .LBB10_6
@@ -1014,6 +1029,7 @@ define amdgpu_kernel void @long_branch_hang(ptr addrspace(1) nocapture %arg, i32
 ; GCN-ADD-PC64-NEXT:  .Lpost_addpc15:
 ; GCN-ADD-PC64-NEXT:  .LBB10_3: ; %bb14
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s1, 9
+; GCN-ADD-PC64-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GCN-ADD-PC64-NEXT:    s_cselect_b32 s1, -1, 0
 ; GCN-ADD-PC64-NEXT:    s_cmp_lt_i32 s2, s3
 ; GCN-ADD-PC64-NEXT:    s_cselect_b32 s2, -1, 0

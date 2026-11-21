@@ -24,6 +24,7 @@ body:             |
 
     ; GCN-NEXT: s_set_vgpr_msb 0x45
     ; ASM-SAME:                                         ;  msbs: dst=1 src0=1 src1=1 src2=0
+    ; GCN-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; GCN-NEXT: v_add_f16_e64 v0.h /*v256.h*/, v1.h /*v257.h*/, v2.h /*v258.h*/
     $vgpr256_hi16 = V_ADD_F16_t16_e64 0, undef $vgpr257_hi16, 0, undef $vgpr258_hi16, 0, 0, 0, implicit $exec, implicit $mode
 
@@ -38,6 +39,7 @@ body:             |
 
     ; GCN-NEXT: s_set_vgpr_msb 0x458a
     ; ASM-SAME:                                         ;  msbs: dst=2 src0=2 src1=2 src2=0
+    ; GCN-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; GCN-NEXT: v_add_f16_e64 v0.h /*v512.h*/, v1.h /*v513.h*/, v2.h /*v514.h*/
     $vgpr512_hi16 = V_ADD_F16_t16_e64 0, undef $vgpr513_hi16, 0, undef $vgpr514_hi16, 0, 0, 0, implicit $exec, implicit $mode
 
@@ -52,6 +54,7 @@ body:             |
 
     ; GCN-NEXT: s_set_vgpr_msb 0x8acf
     ; ASM-SAME:                                         ;  msbs: dst=3 src0=3 src1=3 src2=0
+    ; GCN-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; GCN-NEXT: v_add_f16_e64 v0.h /*v768.h*/, v1.h /*v769.h*/, v2.h /*v770.h*/
     $vgpr768_hi16 = V_ADD_F16_t16_e64 0, undef $vgpr769_hi16, 0, undef $vgpr770_hi16, 0, 0, 0, implicit $exec, implicit $mode
 
@@ -77,10 +80,12 @@ body:             |
     ; We use an extra instruction to set the MSB, and then we expect it to be reset to 0 (lower 16-bit).
 
     ; GCN: s_set_vgpr_msb 0xcf
+    ; GCN-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; GCN-NEXT: v_add_f16_e64 v0.h /*v768.h*/, v1.h /*v769.h*/, v2.h /*v770.h*/
     $vgpr768_hi16 = V_ADD_F16_t16_e64 0, undef $vgpr769_hi16, 0, undef $vgpr770_hi16, 0, 0, 0, implicit $exec, implicit $mode
 
     ; GCN-NEXT: s_set_vgpr_msb 0xcf00
+    ; GCN-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; GCN-NEXT: v_fmamk_f16 v26.l, v56.l, 0x1, v58.l
     $vgpr26_lo16 = V_FMAMK_F16_t16 undef $vgpr56_lo16, 1, undef $vgpr58_lo16, implicit $exec, implicit $mode
 

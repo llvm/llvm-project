@@ -150,7 +150,7 @@ define void @v_mov_b64_double(ptr addrspace(1) %ptr) {
 ; GFX13-NEXT:    v_cmp_eq_u64_e32 vcc_lo, v[2:3], v[4:5]
 ; GFX13-NEXT:    v_dual_mov_b32 v5, v3 :: v_dual_mov_b32 v4, v2
 ; GFX13-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
 ; GFX13-NEXT:    s_cbranch_execnz .LBB6_1
 ; GFX13-NEXT:  ; %bb.2: ; %atomicrmw.end
@@ -355,6 +355,7 @@ define amdgpu_ps <2 x float> @v_add_f64_200.1(double %a) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_add_f64_e32 v[0:1], 0x4069033333333333, v[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -377,6 +378,7 @@ define amdgpu_ps <2 x float> @v_add_f64_200.0(double %a) {
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-NEXT:    v_add_f64_e32 v[0:1], 0x40690000, v[0:1]
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
@@ -502,6 +504,7 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GFX1250-SDAG-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], 0x4069033333333333
 ; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1250-SDAG-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], s[0:1]
 ; GFX1250-SDAG-NEXT:    ; return to shader part epilog
 ;
@@ -514,7 +517,7 @@ define amdgpu_ps <2 x float> @v_add_neg_f64(double %a) {
 ; GFX1250-GISEL-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[0:1]
 ; GFX1250-GISEL-NEXT:    v_mov_b64_e32 v[2:3], 0x4069033333333333
 ; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 2, 2), 0 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX1250-GISEL-NEXT:    v_add_f64_e64 v[0:1], -v[0:1], v[2:3]
 ; GFX1250-GISEL-NEXT:    ; return to shader part epilog
 ;

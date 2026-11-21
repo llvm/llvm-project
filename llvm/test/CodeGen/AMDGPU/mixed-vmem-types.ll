@@ -108,23 +108,26 @@ define amdgpu_cs void @mixed_vmem_types_sampler_reads(i32 inreg %globalTable, i3
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s4, v4
 ; GFX12-GISEL-NEXT:    s_cmp_eq_f32 s0, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s1, 0xac0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s2, 0xac0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_3)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_f32 s3, 1.0
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s3, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s4, 0xac0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s4, 1, 0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_and_b32 s3, s4, s3
-; GFX12-GISEL-NEXT:    s_and_b32 s2, s3, s2
 ; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_and_b32 s2, s3, s2
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, s2, s1
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, s1, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s0, 1, 0
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX12-GISEL-NEXT:    buffer_store_b32 v0, off, s[40:43], null
@@ -311,7 +314,7 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[20:21], v[12:13]
 ; GFX12-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[22:23], v[14:15]
 ; GFX12-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX12-GISEL-NEXT:    image_bvh64_intersect_ray v[12:15], [v[0:1], v2, v[3:5], v[6:8], v[9:11]], s[20:23]
 ; GFX12-GISEL-NEXT:    ; implicit-def: $vgpr12
@@ -340,6 +343,7 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    v_readfirstlane_b32 s0, v2
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s1, 0xac0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, 1, 0
 ; GFX12-GISEL-NEXT:    s_cmp_eq_u32 s0, 0xac0
 ; GFX12-GISEL-NEXT:    v_cmp_eq_f32_e64 s0, 0, v13
@@ -347,6 +351,7 @@ define amdgpu_cs void @mixed_vmem_types_bvh_reads(i32 inreg %descTable0, i32 inr
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, s1, 1
 ; GFX12-GISEL-NEXT:    s_and_b32 s3, s3, vcc_lo
 ; GFX12-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_3) | instid1(SALU_CYCLE_1)
 ; GFX12-GISEL-NEXT:    s_cselect_b32 s1, exec_lo, 0
 ; GFX12-GISEL-NEXT:    s_and_b32 s2, s2, 1
 ; GFX12-GISEL-NEXT:    s_and_b32 s1, s3, s1
