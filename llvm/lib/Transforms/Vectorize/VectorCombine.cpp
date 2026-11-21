@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -6253,14 +6254,26 @@ static bool canWidenDeinterleavedOperations(
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
+
+  if (all_of(Members, [&](Value *V) { return Visited.count(V); }))
+    return true;
+
   if (Visited.size() + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
+
+  auto addUnDroppableUsers = [&](Value *V) {
+    for (User *U : V->users()) {
+      if (U->isDroppable())
+        continue;
+      OutstandingUsers.insert(U);
+    }
+  };
 
   auto *FirstInst = dyn_cast<Instruction>(Members.front());
   if (!FirstInst || !isSupportedElementwise(FirstInst))
     return false;
   if (Visited.insert(FirstInst).second && !FirstInst->getSingleUndroppableUse())
-    OutstandingUsers.insert_range(FirstInst->users());
+    addUnDroppableUsers(FirstInst);
 
   for (Value *Member : Members.drop_front()) {
     auto *Inst = dyn_cast<Instruction>(Member);
@@ -6268,7 +6281,7 @@ static bool canWidenDeinterleavedOperations(
         !FirstInst->isSameOperationAs(Inst, Instruction::CompareCallTargets))
       return false;
     if (Visited.insert(Inst).second && !Inst->getSingleUndroppableUse())
-      OutstandingUsers.insert_range(Inst->users());
+      addUnDroppableUsers(Inst);
   }
 
   // Scalars operands should be equal among all members.
@@ -6280,12 +6293,6 @@ static bool canWidenDeinterleavedOperations(
                                          OutstandingUsers))
       return false;
   }
-
-  // Clear the current members from outstanding users once the recursive
-  // canWidenDeinterleavedOperations call return.
-  for (Value *Member : Members)
-    OutstandingUsers.erase(cast<Instruction>(Member));
-
   return true;
 }
 
@@ -6314,11 +6321,15 @@ static Value *createWideInstruction(Instruction *NarrowInst,
 
 static Value *widenDeinterleavedOperations(
     ArrayRef<Value *> Members, ElementCount WideEC, IRBuilderBase &Builder,
-    DenseMap<SmallVector<Value *, 8>, Value *> &OperandCache) {
+    DenseMap<ArrayRef<Value *>, Value *> &WideValueCache) {
+  if (Value *WideValue = WideValueCache.lookup(Members))
+    return WideValue;
+
   if (auto *Deinterleave = getCommonDeinterleavedSource(Members)) {
     Value *Source = Deinterleave->getArgOperand(0);
     assert(cast<VectorType>(Source->getType())->getElementCount() == WideEC &&
            "deinterleave source must have the interleaved element count");
+    WideValueCache[Members] = Source;
     return Source;
   }
 
@@ -6328,19 +6339,17 @@ static Value *widenDeinterleavedOperations(
   NewOperands.reserve(NumOperands);
   for (unsigned Op = 0; Op != NumOperands; ++Op) {
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
-    Value *&NewOperand = OperandCache[Operands];
-    if (!NewOperand) {
-      if ((NewOperand = getCommonSplatValue(Operands))) {
-        if (isa<VectorType>(Operands.front()->getType())) {
-          Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
-          NewOperand = Builder.CreateVectorSplat(WideEC, NewOperand);
-        } else {
-          assert(all_equal(Operands) && "expected all operands to be equal");
-        }
+    Value *NewOperand = nullptr;
+    if ((NewOperand = getCommonSplatValue(Operands))) {
+      if (isa<VectorType>(Operands.front()->getType())) {
+        Builder.SetCurrentDebugLocation(NarrowInst->getDebugLoc());
+        NewOperand = Builder.CreateVectorSplat(WideEC, NewOperand);
       } else {
-        NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder,
-                                                  OperandCache);
+        assert(all_equal(Operands) && "expected all operands to be equal");
       }
+    } else {
+      NewOperand = widenDeinterleavedOperations(Operands, WideEC, Builder,
+                                                WideValueCache);
     }
     NewOperands.push_back(NewOperand);
   }
@@ -6354,6 +6363,7 @@ static Value *widenDeinterleavedOperations(
     propagateIRFlags(NewInst, Members);
     propagateMetadata(NewInst, Members);
   }
+  WideValueCache[Members] = NewValue;
   return NewValue;
 }
 
@@ -6409,19 +6419,17 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
   if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
                                        OutstandingUsers))
     return false;
-  for (Value *Root : RootMembers)
-    OutstandingUsers.erase(cast<Instruction>(Root));
-  if (any_of(OutstandingUsers, [](const User *U) { return !U->isDroppable(); }))
+  if (!set_is_subset(OutstandingUsers, Visited))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
   // Mapping from `<Factor x Value *>` (original operand value on the same
-  // operand index) to the new operand value. This avoids emitting redundant
+  // operand index) to the new wide value. This avoids emitting redundant
   // instructions when a new operand value has more than one use.
-  DenseMap<SmallVector<Value *, 8>, Value *> OperandCache;
-  Value *WideValue =
-      widenDeinterleavedOperations(RootMembers, WideEC, Builder, OperandCache);
+  DenseMap<ArrayRef<Value *>, Value *> WideValueCache;
+  Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder,
+                                                  WideValueCache);
   assert(WideValue->getType() == Interleave->getType());
   replaceValue(*Interleave, *WideValue);
   return true;
