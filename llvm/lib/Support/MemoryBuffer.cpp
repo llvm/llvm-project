@@ -62,7 +62,7 @@ void MemoryBuffer::init(const char *BufStart, const char *BufEnd,
 /// null-terminates it.
 static void CopyStringRef(char *Memory, StringRef Data) {
   if (!Data.empty())
-    memcpy(Memory, Data.data(), Data.size());
+    llvm::copy(Data, Memory);
   Memory[Data.size()] = 0; // Null terminate string.
 }
 
