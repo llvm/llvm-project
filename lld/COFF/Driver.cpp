@@ -206,7 +206,7 @@ static bool compatibleMachineType(COFFLinkerContext &ctx, MachineTypes mt) {
   }
 }
 
-static llvm::SmallVector<std::string, 3>
+static llvm::SmallVector<StringRef, 3>
 perTargetRuntimeDirForMachineType(MachineTypes mt) {
   switch (mt) {
   case ARM64:
@@ -900,27 +900,34 @@ void LinkerDriver::addClangLibSearchPaths(const std::string &argv0) {
 
   SmallString<128> libDir(rootDir);
   sys::path::append(libDir, "lib");
+  clangLibDir = saver().save(libDir.str());
 
   // Add the resource dir library path
-  SmallString<128> runtimeLibDir(rootDir);
-  sys::path::append(runtimeLibDir, "lib", "clang",
-                    std::to_string(LLVM_VERSION_MAJOR), "lib");
-  clangRuntimeLibDir = runtimeLibDir.str();
+  SmallString<128> resourceLibDir(libDir);
+  sys::path::append(resourceLibDir, "clang", std::to_string(LLVM_VERSION_MAJOR),
+                    "lib");
+  clangResourceLibDir = saver().save(resourceLibDir.str());
   // Resource dir + osname, which is hardcoded to windows since we are in the
   // COFF driver.
-  SmallString<128> runtimeLibDirWithOS(runtimeLibDir);
-  sys::path::append(runtimeLibDirWithOS, "windows");
+  SmallString<128> resourceLibDirWithOS(resourceLibDir);
+  sys::path::append(resourceLibDirWithOS, "windows");
 
-  searchPaths.push_back(saver().save(runtimeLibDirWithOS.str()));
-  searchPaths.push_back(saver().save(runtimeLibDir.str()));
-  searchPaths.push_back(saver().save(libDir.str()));
+  searchPaths.push_back(saver().save(resourceLibDirWithOS.str()));
+  searchPaths.push_back(clangResourceLibDir);
+  searchPaths.push_back(clangLibDir);
 }
 
 void LinkerDriver::addClangPerTargetRuntimeDirSearchPaths() {
   auto machineDirs = perTargetRuntimeDirForMachineType(ctx.config.machine);
   // Add per-target resource dir library path
-  for (std::string machineDir : machineDirs) {
-    SmallString<128> targetRuntimeDir(clangRuntimeLibDir);
+  for (StringRef machineDir : machineDirs) {
+    SmallString<128> targetResourceDir(clangResourceLibDir);
+    sys::path::append(targetResourceDir, machineDir);
+    searchPaths.push_back(saver().save(targetResourceDir.str()));
+  }
+  // Add per-target runtime library path
+  for (StringRef machineDir : machineDirs) {
+    SmallString<128> targetRuntimeDir(clangLibDir);
     sys::path::append(targetRuntimeDir, machineDir);
     searchPaths.push_back(saver().save(targetRuntimeDir.str()));
   }
