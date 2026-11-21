@@ -280,20 +280,26 @@ define riscv_vector_cc void @test_vector_callee_realign() nounwind {
 ; SPILL-O2-NEXT:    slli a0, a0, 1
 ; SPILL-O2-NEXT:    sub sp, sp, a0
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 128
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
-; SPILL-O2-NEXT:    addi a0, sp, 128
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O2-NEXT:    andi sp, sp, -64
 ; SPILL-O2-NEXT:    sw zero, 64(sp)
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 128
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
-; SPILL-O2-NEXT:    addi a0, sp, 128
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O2-NEXT:    addi sp, s0, -144
 ; SPILL-O2-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
@@ -319,10 +325,13 @@ define riscv_vector_cc void @test_vector_callee_realign_bp(i32 %n) nounwind {
 ; SPILL-O2-NEXT:    slli a1, a1, 1
 ; SPILL-O2-NEXT:    sub sp, sp, a1
 ; SPILL-O2-NEXT:    csrr a1, vlenb
-; SPILL-O2-NEXT:    add a1, s1, a1
-; SPILL-O2-NEXT:    addi a1, a1, 128
+; SPILL-O2-NEXT:    sub a1, s0, a1
+; SPILL-O2-NEXT:    addi a1, a1, -16
 ; SPILL-O2-NEXT:    vs1r.v v1, (a1) # vscale x 8-byte Folded Spill
-; SPILL-O2-NEXT:    addi a1, s1, 128
+; SPILL-O2-NEXT:    csrr a1, vlenb
+; SPILL-O2-NEXT:    slli a1, a1, 1
+; SPILL-O2-NEXT:    sub a1, s0, a1
+; SPILL-O2-NEXT:    addi a1, a1, -16
 ; SPILL-O2-NEXT:    vs1r.v v24, (a1) # vscale x 8-byte Folded Spill
 ; SPILL-O2-NEXT:    andi sp, sp, -64
 ; SPILL-O2-NEXT:    mv s1, sp
@@ -335,10 +344,13 @@ define riscv_vector_cc void @test_vector_callee_realign_bp(i32 %n) nounwind {
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    add a0, s1, a0
-; SPILL-O2-NEXT:    addi a0, a0, 128
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
-; SPILL-O2-NEXT:    addi a0, s1, 128
+; SPILL-O2-NEXT:    csrr a0, vlenb
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O2-NEXT:    addi sp, s0, -144
 ; SPILL-O2-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
@@ -366,16 +378,13 @@ define riscv_vector_cc void @test_vector_callee_realign_rvv_local() nounwind {
 ; SPILL-O2-NEXT:    slli a0, a0, 3
 ; SPILL-O2-NEXT:    sub sp, sp, a0
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    slli a1, a0, 3
-; SPILL-O2-NEXT:    sub a0, a1, a0
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 32
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vs1r.v v1, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    li a1, 6
-; SPILL-O2-NEXT:    mul a0, a0, a1
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 32
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vs1r.v v24, (a0) # vscale x 8-byte Folded Spill
 ; SPILL-O2-NEXT:    andi sp, sp, -32
 ; SPILL-O2-NEXT:    vsetvli a0, zero, e64, m4, ta, ma
@@ -385,16 +394,13 @@ define riscv_vector_cc void @test_vector_callee_realign_rvv_local() nounwind {
 ; SPILL-O2-NEXT:    #APP
 ; SPILL-O2-NEXT:    #NO_APP
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    slli a1, a0, 3
-; SPILL-O2-NEXT:    sub a0, a1, a0
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 32
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v1, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O2-NEXT:    csrr a0, vlenb
-; SPILL-O2-NEXT:    li a1, 6
-; SPILL-O2-NEXT:    mul a0, a0, a1
-; SPILL-O2-NEXT:    add a0, sp, a0
-; SPILL-O2-NEXT:    addi a0, a0, 32
+; SPILL-O2-NEXT:    slli a0, a0, 1
+; SPILL-O2-NEXT:    sub a0, s0, a0
+; SPILL-O2-NEXT:    addi a0, a0, -16
 ; SPILL-O2-NEXT:    vl1r.v v24, (a0) # vscale x 8-byte Folded Reload
 ; SPILL-O2-NEXT:    addi sp, s0, -48
 ; SPILL-O2-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload

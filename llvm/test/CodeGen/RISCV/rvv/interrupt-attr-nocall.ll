@@ -186,7 +186,10 @@ define void @foo_lmul1_realign() nounwind #0 {
 ; CHECK-RV32-NEXT:    csrr a0, vlenb
 ; CHECK-RV32-NEXT:    slli a0, a0, 1
 ; CHECK-RV32-NEXT:    sub sp, sp, a0
-; CHECK-RV32-NEXT:    addi a0, sp, 128
+; CHECK-RV32-NEXT:    csrr a0, vlenb
+; CHECK-RV32-NEXT:    slli a0, a0, 1
+; CHECK-RV32-NEXT:    sub a0, s0, a0
+; CHECK-RV32-NEXT:    addi a0, a0, -16
 ; CHECK-RV32-NEXT:    vs2r.v v8, (a0) # vscale x 16-byte Folded Spill
 ; CHECK-RV32-NEXT:    andi sp, sp, -64
 ; CHECK-RV32-NEXT:    sw zero, 64(sp)
@@ -201,7 +204,10 @@ define void @foo_lmul1_realign() nounwind #0 {
 ; CHECK-RV32-NEXT:    lui a0, %hi(c)
 ; CHECK-RV32-NEXT:    addi a0, a0, %lo(c)
 ; CHECK-RV32-NEXT:    vse32.v v8, (a0)
-; CHECK-RV32-NEXT:    addi a0, sp, 128
+; CHECK-RV32-NEXT:    csrr a0, vlenb
+; CHECK-RV32-NEXT:    slli a0, a0, 1
+; CHECK-RV32-NEXT:    sub a0, s0, a0
+; CHECK-RV32-NEXT:    addi a0, a0, -16
 ; CHECK-RV32-NEXT:    vl2r.v v8, (a0) # vscale x 16-byte Folded Reload
 ; CHECK-RV32-NEXT:    addi sp, s0, -144
 ; CHECK-RV32-NEXT:    lw ra, 140(sp) # 4-byte Folded Reload
