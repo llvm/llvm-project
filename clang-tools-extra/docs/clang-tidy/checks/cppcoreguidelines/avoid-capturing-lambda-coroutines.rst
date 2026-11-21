@@ -63,6 +63,13 @@ Options
   check, because the captures are moved into the coroutine frame, decoupling
   their lifetime from the lambda object.
 
+  This exemption is a heuristic. The closure object is copied into the frame
+  when the call operator is *invoked*, so the lambda object must still be alive
+  at that point. Code that keeps only a reference to the lambda and calls it
+  later, such as a coroutine that takes a forwarding reference ``F&&``, still
+  copies from a destroyed closure and is not made safe by an explicit object
+  parameter.
+
   Default is `false`.
 
   The example from above can be made safe and will pass this check with the
