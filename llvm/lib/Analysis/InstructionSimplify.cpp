@@ -5148,6 +5148,14 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
   assert(TrueVal->getType() == FalseVal->getType() &&
          "Select must have same types for true/false ops");
 
+  // Selecting infinity would make the result poison.
+  if (FMF.noInfs() && TrueVal->getType()->isFloatingPointTy()) {
+    if (match(TrueVal, m_Inf()))
+      return FalseVal;
+    if (match(FalseVal, m_Inf()))
+      return TrueVal;
+  }
+
   if (Cond->getType() == TrueVal->getType()) {
     // select i1 Cond, i1 true, i1 false --> i1 Cond
     if (match(TrueVal, m_One()) && match(FalseVal, m_ZeroInt()))
