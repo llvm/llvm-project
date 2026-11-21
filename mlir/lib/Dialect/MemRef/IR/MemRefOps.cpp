@@ -1043,6 +1043,14 @@ static FailureOr<llvm::SmallBitVector> computeMemRefRankReductionMaskByStrides(
   if (static_cast<int64_t>(unusedDims.count()) + reducedType.getRank() !=
       originalType.getRank())
     return failure();
+  // Counting does not check which dim each stride belongs to, so only accept
+  // the mask if the kept dims match the reduced shape in order.
+  SmallVector<int64_t> keptSizes;
+  for (auto [dim, size] : llvm::enumerate(originalType.getShape()))
+    if (!unusedDims.test(dim))
+      keptSizes.push_back(size);
+  if (!llvm::equal(keptSizes, reducedType.getShape()))
+    return failure();
   return unusedDims;
 }
 
@@ -1103,10 +1111,15 @@ computeMemRefRankReductionMask(MemRefType originalType, MemRefType reducedType,
 }
 
 llvm::SmallBitVector SubViewOp::getDroppedDims() {
-  MemRefType sourceType = getSourceType();
+  // Compute the dropped dims the same way as the verifier: from the
+  // non-rank-reduced result type, whose strides are the source strides
+  // multiplied by the subview strides.
+  MemRefType expectedType =
+      SubViewOp::inferResultType(getSourceType(), getStaticOffsets(),
+                                 getStaticSizes(), getStaticStrides());
   MemRefType resultType = getType();
   FailureOr<llvm::SmallBitVector> unusedDims =
-      computeMemRefRankReductionMask(sourceType, resultType, getMixedSizes());
+      computeMemRefRankReductionMask(expectedType, resultType, getMixedSizes());
   assert(succeeded(unusedDims) && "unable to find unused dims of subview");
   return *unusedDims;
 }
