@@ -54,3 +54,6 @@ def : GINodeEquiv<G_FIST, X86fp_to_mem>;
 def : GINodeEquiv<G_FNSTCW16, X86fp_cwd_get16>;
 def : GINodeEquiv<G_FLDCW16, X86fp_cwd_set16>;
 def : GINodeEquiv<G_WRAPPER_RIP, X86WrapperRIP>;
+
+// X86 patterns use insertelt instead of vector_insert.
+def : GINodeEquiv<G_INSERT_VECTOR_ELT, insertelt>;
