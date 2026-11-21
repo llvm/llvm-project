@@ -107,8 +107,8 @@ struct __attribute__((packed)) P {
 
 // CHECK-LABEL: define {{.*}}void @p(
 // CHECK:         [[X:%.*]] = getelementptr inbounds {{.*}}%struct.P, ptr {{%.*}}, i32 0, i32 1
-// CHECK:         load atomic i128, ptr [[X]] monotonic, align 1
-// CHECK:         cmpxchg ptr [[X]], i128 {{%.*}}, i128 {{%.*}} monotonic monotonic, align 1
+// CHECK:         load atomic i128, ptr [[X]] monotonic, align 1{{$}}
+// CHECK:         cmpxchg ptr [[X]], i128 {{%.*}}, i128 {{%.*}} monotonic monotonic, align 1{{$}}
 void p(struct P *s, long double e, long double d) {
 #pragma omp atomic compare
   s->x = s->x == e ? d : s->x;
@@ -190,7 +190,7 @@ struct __attribute__((packed)) Q {
 
 // CHECK-LABEL: define {{.*}}void @q_double(
 // CHECK:         [[X:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 1
-// CHECK:         cmpxchg ptr [[X]], i64 {{%.*}}, i64 {{%.*}} monotonic monotonic, align 1
+// CHECK:         cmpxchg ptr [[X]], i64 {{%.*}}, i64 {{%.*}} monotonic monotonic, align 1{{$}}
 void q_double(struct Q *q, double e, double d) {
 #pragma omp atomic compare
   q->d = q->d == e ? d : q->d;
@@ -198,7 +198,7 @@ void q_double(struct Q *q, double e, double d) {
 
 // CHECK-LABEL: define {{.*}}void @q_int_min(
 // CHECK:         [[X:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 2
-// CHECK:         atomicrmw max ptr [[X]], i32 {{%.*}} monotonic, align 1
+// CHECK:         atomicrmw max ptr [[X]], i32 {{%.*}} monotonic, align 1{{$}}
 void q_int_min(struct Q *q, int e) {
 #pragma omp atomic compare
   q->i = q->i < e ? e : q->i;
@@ -207,8 +207,8 @@ void q_int_min(struct Q *q, int e) {
 // CHECK-LABEL: define {{.*}}void @q_vr(
 // CHECK:         [[V:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 3
 // CHECK:         [[R:%.*]] = getelementptr inbounds {{.*}}%struct.Q, ptr {{%.*}}, i32 0, i32 4
-// CHECK:         store x86_fp80 {{%.*}}, ptr [[V]], align 1
-// CHECK:         store i32 {{%.*}}, ptr [[R]], align 1
+// CHECK:         store x86_fp80 {{%.*}}, ptr [[V]], align 1{{$}}
+// CHECK:         store i32 {{%.*}}, ptr [[R]], align 1{{$}}
 void q_vr(struct Q *q, long double *x, long double e, long double d) {
 #pragma omp atomic compare capture
   {
