@@ -55,7 +55,7 @@ T tmain(T argc) {
 #pragma omp teams thread_limit(-10u)
   foo();
 #pragma omp target
-#pragma omp teams thread_limit(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp teams thread_limit(3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
 
   return 0;

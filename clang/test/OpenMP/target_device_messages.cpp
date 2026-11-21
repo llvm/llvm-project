@@ -45,6 +45,10 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target device (3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   foo();
+  #pragma omp target device (foobool) // expected-error {{expression must have integral or unscoped enumeration type, not 'bool (int)'}}
+  foo();
+  #pragma omp target device (foobool(argc))
+  foo();
   #pragma omp target device (ancestor) // expected-error {{use of undeclared identifier 'ancestor'}}
   foo();
 

@@ -41,7 +41,7 @@ T tmain(T argc) {
   for (int i=0; i<100; i++) foo();
 #pragma omp target teams distribute parallel for simd num_teams(-10u)
   for (int i=0; i<100; i++) foo();
-#pragma omp target teams distribute parallel for simd num_teams(3.14) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'double'}}
+#pragma omp target teams distribute parallel for simd num_teams(3.14) // expected-error {{expression must have integral or unscoped enumeration type, not 'double'}}
   for (int i=0; i<100; i++) foo();
 
   return 0;
