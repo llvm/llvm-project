@@ -10,11 +10,13 @@
 #include "io-api-gpu.h"
 #include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Common/fp-control.h"
 #include <cfenv>
 #include <cstdio>
 #include <cstdlib>
 
 static void ConfigureFloatingPoint() {
+  FLANG_FENV_ACCESS_ON
 #ifdef feclearexcept // a macro in some environments; omit std::
   feclearexcept(FE_ALL_EXCEPT);
 #else
