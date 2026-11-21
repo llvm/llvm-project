@@ -204,10 +204,10 @@
 # CHECK: {nf}	rol	dx
 # CHECK: encoding: [0x62,0xf4,0x7d,0x0c,0xd1,0xc2]
          {nf}	rol	dx
-# CHECK: rol	dx, dx
+# CHECK: rol	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xc2]
          rol	dx, dx
-# CHECK: {nf}	rol	dx, dx
+# CHECK: {nf}	rol	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xc2]
          {nf}	rol	dx, dx
 # CHECK: {evex}	rol	ecx
@@ -216,10 +216,10 @@
 # CHECK: {nf}	rol	ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x0c,0xd1,0xc1]
          {nf}	rol	ecx
-# CHECK: rol	ecx, ecx
+# CHECK: rol	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xc1]
          rol	ecx, ecx
-# CHECK: {nf}	rol	ecx, ecx
+# CHECK: {nf}	rol	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xc1]
          {nf}	rol	ecx, ecx
 # CHECK: {evex}	rol	r9
@@ -228,10 +228,10 @@
 # CHECK: {nf}	rol	r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xc1]
          {nf}	rol	r9
-# CHECK: rol	r9, r9
+# CHECK: rol	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xc1]
          rol	r9, r9
-# CHECK: {nf}	rol	r9, r9
+# CHECK: {nf}	rol	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xc1]
          {nf}	rol	r9, r9
 # CHECK: {evex}	rol	byte ptr [r8 + 4*rax + 291]
@@ -240,10 +240,10 @@
 # CHECK: {nf}	rol	byte ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd0,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	byte ptr [r8 + 4*rax + 291]
-# CHECK: rol	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: rol	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x84,0x80,0x23,0x01,0x00,0x00]
          rol	bl, byte ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	rol	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	rol	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	bl, byte ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	rol	word ptr [r8 + 4*rax + 291]
@@ -252,10 +252,10 @@
 # CHECK: {nf}	rol	word ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	word ptr [r8 + 4*rax + 291]
-# CHECK: rol	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: rol	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x18,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          rol	dx, word ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	rol	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	rol	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x1c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	dx, word ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	rol	dword ptr [r8 + 4*rax + 291]
@@ -264,10 +264,10 @@
 # CHECK: {nf}	rol	dword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	dword ptr [r8 + 4*rax + 291]
-# CHECK: rol	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: rol	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x18,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          rol	ecx, dword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	rol	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	rol	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x1c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	ecx, dword ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	rol	qword ptr [r8 + 4*rax + 291]
@@ -276,9 +276,9 @@
 # CHECK: {nf}	rol	qword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	qword ptr [r8 + 4*rax + 291]
-# CHECK: rol	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: rol	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          rol	r9, qword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	rol	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	rol	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0x84,0x80,0x23,0x01,0x00,0x00]
          {nf}	rol	r9, qword ptr [r8 + 4*rax + 291]

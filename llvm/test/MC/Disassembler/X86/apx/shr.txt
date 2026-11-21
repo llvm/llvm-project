@@ -137,12 +137,12 @@
 # INTEL: {nf}	shr	bl
 0x62,0xf4,0x7c,0x0c,0xd0,0xeb
 
-# ATT:   shrb	%bl, %bl
-# INTEL: shr	bl, bl
+# ATT:   shrb	$1, %bl, %bl
+# INTEL: shr	bl, bl, 1
 0x62,0xf4,0x64,0x18,0xd0,0xeb
 
-# ATT:   {nf}	shrb	%bl, %bl
-# INTEL: {nf}	shr	bl, bl
+# ATT:   {nf}	shrb	$1, %bl, %bl
+# INTEL: {nf}	shr	bl, bl, 1
 0x62,0xf4,0x64,0x1c,0xd0,0xeb
 
 # ATT:   {evex}	shrb	%cl, %bl
@@ -281,12 +281,12 @@
 # INTEL: {nf}	shr	dx
 0x62,0xf4,0x7d,0x0c,0xd1,0xea
 
-# ATT:   shrw	%dx, %dx
-# INTEL: shr	dx, dx
+# ATT:   shrw	$1, %dx, %dx
+# INTEL: shr	dx, dx, 1
 0x62,0xf4,0x6d,0x18,0xd1,0xea
 
-# ATT:   {nf}	shrw	%dx, %dx
-# INTEL: {nf}	shr	dx, dx
+# ATT:   {nf}	shrw	$1, %dx, %dx
+# INTEL: {nf}	shr	dx, dx, 1
 0x62,0xf4,0x6d,0x1c,0xd1,0xea
 
 # ATT:   {evex}	shrl	%ecx
@@ -297,12 +297,12 @@
 # INTEL: {nf}	shr	ecx
 0x62,0xf4,0x7c,0x0c,0xd1,0xe9
 
-# ATT:   shrl	%ecx, %ecx
-# INTEL: shr	ecx, ecx
+# ATT:   shrl	$1, %ecx, %ecx
+# INTEL: shr	ecx, ecx, 1
 0x62,0xf4,0x74,0x18,0xd1,0xe9
 
-# ATT:   {nf}	shrl	%ecx, %ecx
-# INTEL: {nf}	shr	ecx, ecx
+# ATT:   {nf}	shrl	$1, %ecx, %ecx
+# INTEL: {nf}	shr	ecx, ecx, 1
 0x62,0xf4,0x74,0x1c,0xd1,0xe9
 
 # ATT:   {evex}	shrq	%r9
@@ -313,12 +313,12 @@
 # INTEL: {nf}	shr	r9
 0x62,0xd4,0xfc,0x0c,0xd1,0xe9
 
-# ATT:   shrq	%r9, %r9
-# INTEL: shr	r9, r9
+# ATT:   shrq	$1, %r9, %r9
+# INTEL: shr	r9, r9, 1
 0x62,0xd4,0xb4,0x18,0xd1,0xe9
 
-# ATT:   {nf}	shrq	%r9, %r9
-# INTEL: {nf}	shr	r9, r9
+# ATT:   {nf}	shrq	$1, %r9, %r9
+# INTEL: {nf}	shr	r9, r9, 1
 0x62,0xd4,0xb4,0x1c,0xd1,0xe9
 
 # ATT:   {evex}	shrb	291(%r8,%rax,4)
@@ -329,12 +329,12 @@
 # INTEL: {nf}	shr	byte ptr [r8 + 4*rax + 291]
 0x62,0xd4,0x7c,0x0c,0xd0,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   shrb	291(%r8,%rax,4), %bl
-# INTEL: shr	bl, byte ptr [r8 + 4*rax + 291]
+# ATT:   shrb	$1, 291(%r8,%rax,4), %bl
+# INTEL: shr	bl, byte ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x64,0x18,0xd0,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   {nf}	shrb	291(%r8,%rax,4), %bl
-# INTEL: {nf}	shr	bl, byte ptr [r8 + 4*rax + 291]
+# ATT:   {nf}	shrb	$1, 291(%r8,%rax,4), %bl
+# INTEL: {nf}	shr	bl, byte ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x64,0x1c,0xd0,0xac,0x80,0x23,0x01,0x00,0x00
 
 # ATT:   {evex}	shrw	291(%r8,%rax,4)
@@ -345,12 +345,12 @@
 # INTEL: {nf}	shr	word ptr [r8 + 4*rax + 291]
 0x62,0xd4,0x7d,0x0c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   shrw	291(%r8,%rax,4), %dx
-# INTEL: shr	dx, word ptr [r8 + 4*rax + 291]
+# ATT:   shrw	$1, 291(%r8,%rax,4), %dx
+# INTEL: shr	dx, word ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x6d,0x18,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   {nf}	shrw	291(%r8,%rax,4), %dx
-# INTEL: {nf}	shr	dx, word ptr [r8 + 4*rax + 291]
+# ATT:   {nf}	shrw	$1, 291(%r8,%rax,4), %dx
+# INTEL: {nf}	shr	dx, word ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x6d,0x1c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
 # ATT:   {evex}	shrl	291(%r8,%rax,4)
@@ -361,12 +361,12 @@
 # INTEL: {nf}	shr	dword ptr [r8 + 4*rax + 291]
 0x62,0xd4,0x7c,0x0c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   shrl	291(%r8,%rax,4), %ecx
-# INTEL: shr	ecx, dword ptr [r8 + 4*rax + 291]
+# ATT:   shrl	$1, 291(%r8,%rax,4), %ecx
+# INTEL: shr	ecx, dword ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x74,0x18,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   {nf}	shrl	291(%r8,%rax,4), %ecx
-# INTEL: {nf}	shr	ecx, dword ptr [r8 + 4*rax + 291]
+# ATT:   {nf}	shrl	$1, 291(%r8,%rax,4), %ecx
+# INTEL: {nf}	shr	ecx, dword ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0x74,0x1c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
 # ATT:   {evex}	shrq	291(%r8,%rax,4)
@@ -377,10 +377,10 @@
 # INTEL: {nf}	shr	qword ptr [r8 + 4*rax + 291]
 0x62,0xd4,0xfc,0x0c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   shrq	291(%r8,%rax,4), %r9
-# INTEL: shr	r9, qword ptr [r8 + 4*rax + 291]
+# ATT:   shrq	$1, 291(%r8,%rax,4), %r9
+# INTEL: shr	r9, qword ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0xb4,0x18,0xd1,0xac,0x80,0x23,0x01,0x00,0x00
 
-# ATT:   {nf}	shrq	291(%r8,%rax,4), %r9
-# INTEL: {nf}	shr	r9, qword ptr [r8 + 4*rax + 291]
+# ATT:   {nf}	shrq	$1, 291(%r8,%rax,4), %r9
+# INTEL: {nf}	shr	r9, qword ptr [r8 + 4*rax + 291], 1
 0x62,0xd4,0xb4,0x1c,0xd1,0xac,0x80,0x23,0x01,0x00,0x00

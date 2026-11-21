@@ -204,10 +204,10 @@
 # CHECK: {nf}	sar	dx
 # CHECK: encoding: [0x62,0xf4,0x7d,0x0c,0xd1,0xfa]
          {nf}	sar	dx
-# CHECK: sar	dx, dx
+# CHECK: sar	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xfa]
          sar	dx, dx
-# CHECK: {nf}	sar	dx, dx
+# CHECK: {nf}	sar	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xfa]
          {nf}	sar	dx, dx
 # CHECK: {evex}	sar	ecx
@@ -216,10 +216,10 @@
 # CHECK: {nf}	sar	ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x0c,0xd1,0xf9]
          {nf}	sar	ecx
-# CHECK: sar	ecx, ecx
+# CHECK: sar	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xf9]
          sar	ecx, ecx
-# CHECK: {nf}	sar	ecx, ecx
+# CHECK: {nf}	sar	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xf9]
          {nf}	sar	ecx, ecx
 # CHECK: {evex}	sar	r9
@@ -228,10 +228,10 @@
 # CHECK: {nf}	sar	r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xf9]
          {nf}	sar	r9
-# CHECK: sar	r9, r9
+# CHECK: sar	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xf9]
          sar	r9, r9
-# CHECK: {nf}	sar	r9, r9
+# CHECK: {nf}	sar	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xf9]
          {nf}	sar	r9, r9
 # CHECK: {evex}	sar	byte ptr [r8 + 4*rax + 291]
@@ -240,10 +240,10 @@
 # CHECK: {nf}	sar	byte ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd0,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	byte ptr [r8 + 4*rax + 291]
-# CHECK: sar	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: sar	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0xbc,0x80,0x23,0x01,0x00,0x00]
          sar	bl, byte ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	sar	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	sar	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	bl, byte ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	sar	word ptr [r8 + 4*rax + 291]
@@ -252,10 +252,10 @@
 # CHECK: {nf}	sar	word ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	word ptr [r8 + 4*rax + 291]
-# CHECK: sar	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: sar	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x18,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          sar	dx, word ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	sar	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	sar	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x1c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	dx, word ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	sar	dword ptr [r8 + 4*rax + 291]
@@ -264,10 +264,10 @@
 # CHECK: {nf}	sar	dword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	dword ptr [r8 + 4*rax + 291]
-# CHECK: sar	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: sar	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x18,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          sar	ecx, dword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	sar	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	sar	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x1c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	ecx, dword ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	sar	qword ptr [r8 + 4*rax + 291]
@@ -276,9 +276,9 @@
 # CHECK: {nf}	sar	qword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	qword ptr [r8 + 4*rax + 291]
-# CHECK: sar	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: sar	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          sar	r9, qword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	sar	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	sar	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xbc,0x80,0x23,0x01,0x00,0x00]
          {nf}	sar	r9, qword ptr [r8 + 4*rax + 291]

@@ -204,10 +204,10 @@
 # CHECK: {nf}	shl	dx
 # CHECK: encoding: [0x62,0xf4,0x7d,0x0c,0xd1,0xe2]
          {nf}	shl	dx
-# CHECK: shl	dx, dx
+# CHECK: shl	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x18,0xd1,0xe2]
          shl	dx, dx
-# CHECK: {nf}	shl	dx, dx
+# CHECK: {nf}	shl	dx, dx, 1
 # CHECK: encoding: [0x62,0xf4,0x6d,0x1c,0xd1,0xe2]
          {nf}	shl	dx, dx
 # CHECK: {evex}	shl	ecx
@@ -216,10 +216,10 @@
 # CHECK: {nf}	shl	ecx
 # CHECK: encoding: [0x62,0xf4,0x7c,0x0c,0xd1,0xe1]
          {nf}	shl	ecx
-# CHECK: shl	ecx, ecx
+# CHECK: shl	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x18,0xd1,0xe1]
          shl	ecx, ecx
-# CHECK: {nf}	shl	ecx, ecx
+# CHECK: {nf}	shl	ecx, ecx, 1
 # CHECK: encoding: [0x62,0xf4,0x74,0x1c,0xd1,0xe1]
          {nf}	shl	ecx, ecx
 # CHECK: {evex}	shl	r9
@@ -228,10 +228,10 @@
 # CHECK: {nf}	shl	r9
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xe1]
          {nf}	shl	r9
-# CHECK: shl	r9, r9
+# CHECK: shl	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xe1]
          shl	r9, r9
-# CHECK: {nf}	shl	r9, r9
+# CHECK: {nf}	shl	r9, r9, 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xe1]
          {nf}	shl	r9, r9
 # CHECK: {evex}	shl	byte ptr [r8 + 4*rax + 291]
@@ -240,10 +240,10 @@
 # CHECK: {nf}	shl	byte ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd0,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	byte ptr [r8 + 4*rax + 291]
-# CHECK: shl	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: shl	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0xa4,0x80,0x23,0x01,0x00,0x00]
          shl	bl, byte ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	shl	bl, byte ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	shl	bl, byte ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	bl, byte ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	shl	word ptr [r8 + 4*rax + 291]
@@ -252,10 +252,10 @@
 # CHECK: {nf}	shl	word ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7d,0x0c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	word ptr [r8 + 4*rax + 291]
-# CHECK: shl	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: shl	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x18,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          shl	dx, word ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	shl	dx, word ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	shl	dx, word ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x6d,0x1c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	dx, word ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	shl	dword ptr [r8 + 4*rax + 291]
@@ -264,10 +264,10 @@
 # CHECK: {nf}	shl	dword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0x7c,0x0c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	dword ptr [r8 + 4*rax + 291]
-# CHECK: shl	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: shl	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x18,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          shl	ecx, dword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	shl	ecx, dword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	shl	ecx, dword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0x74,0x1c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	ecx, dword ptr [r8 + 4*rax + 291]
 # CHECK: {evex}	shl	qword ptr [r8 + 4*rax + 291]
@@ -276,9 +276,9 @@
 # CHECK: {nf}	shl	qword ptr [r8 + 4*rax + 291]
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	qword ptr [r8 + 4*rax + 291]
-# CHECK: shl	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: shl	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x18,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          shl	r9, qword ptr [r8 + 4*rax + 291]
-# CHECK: {nf}	shl	r9, qword ptr [r8 + 4*rax + 291]
+# CHECK: {nf}	shl	r9, qword ptr [r8 + 4*rax + 291], 1
 # CHECK: encoding: [0x62,0xd4,0xb4,0x1c,0xd1,0xa4,0x80,0x23,0x01,0x00,0x00]
          {nf}	shl	r9, qword ptr [r8 + 4*rax + 291]

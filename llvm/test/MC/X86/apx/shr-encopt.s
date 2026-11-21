@@ -24,28 +24,28 @@
 # CHECK: {nf}	shrq	%rax
 # CHECK: encoding: [0x62,0xf4,0xfc,0x0c,0xd1,0xe8]
          {nf}	shrq	$1, %rax
-# CHECK: shrb	%al, %bl
+# CHECK: shrb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd0,0xe8]
          shrb	$1, %al, %bl
-# CHECK: shrw	%ax, %bx
+# CHECK: shrw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x18,0xd1,0xe8]
          shrw	$1, %ax, %bx
-# CHECK: shrl	%eax, %ebx
+# CHECK: shrl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x18,0xd1,0xe8]
          shrl	$1, %eax, %ebx
-# CHECK: shrq	%rax, %rbx
+# CHECK: shrq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x18,0xd1,0xe8]
          shrq	$1, %rax, %rbx
-# CHECK: {nf}	shrb	%al, %bl
+# CHECK: {nf}	shrb	$1, %al, %bl
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd0,0xe8]
          {nf}	shrb	$1, %al, %bl
-# CHECK: {nf}	shrw	%ax, %bx
+# CHECK: {nf}	shrw	$1, %ax, %bx
 # CHECK: encoding: [0x62,0xf4,0x65,0x1c,0xd1,0xe8]
          {nf}	shrw	$1, %ax, %bx
-# CHECK: {nf}	shrl	%eax, %ebx
+# CHECK: {nf}	shrl	$1, %eax, %ebx
 # CHECK: encoding: [0x62,0xf4,0x64,0x1c,0xd1,0xe8]
          {nf}	shrl	$1, %eax, %ebx
-# CHECK: {nf}	shrq	%rax, %rbx
+# CHECK: {nf}	shrq	$1, %rax, %rbx
 # CHECK: encoding: [0x62,0xf4,0xe4,0x1c,0xd1,0xe8]
          {nf}	shrq	$1, %rax, %rbx
 # CHECK: {evex}	shrb	123(%r8,%rax,4)
@@ -72,27 +72,27 @@
 # CHECK: {nf}	shrq	123(%r8,%rax,4)
 # CHECK: encoding: [0x62,0xd4,0xfc,0x0c,0xd1,0x6c,0x80,0x7b]
          {nf}	shrq	$1, 123(%r8,%rax,4)
-# CHECK: shrb	123(%r8,%rax,4), %bl
+# CHECK: shrb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd0,0x6c,0x80,0x7b]
          shrb	$1, 123(%r8,%rax,4), %bl
-# CHECK: shrw	123(%r8,%rax,4), %bx
+# CHECK: shrw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x18,0xd1,0x6c,0x80,0x7b]
          shrw	$1, 123(%r8,%rax,4), %bx
-# CHECK: shrl	123(%r8,%rax,4), %ebx
+# CHECK: shrl	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x18,0xd1,0x6c,0x80,0x7b]
          shrl	$1, 123(%r8,%rax,4), %ebx
-# CHECK: shrq	123(%r8,%rax,4), %rbx
+# CHECK: shrq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x18,0xd1,0x6c,0x80,0x7b]
          shrq	$1, 123(%r8,%rax,4), %rbx
-# CHECK: {nf}	shrb	123(%r8,%rax,4), %bl
+# CHECK: {nf}	shrb	$1, 123(%r8,%rax,4), %bl
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd0,0x6c,0x80,0x7b]
          {nf}	shrb	$1, 123(%r8,%rax,4), %bl
-# CHECK: {nf}	shrw	123(%r8,%rax,4), %bx
+# CHECK: {nf}	shrw	$1, 123(%r8,%rax,4), %bx
 # CHECK: encoding: [0x62,0xd4,0x65,0x1c,0xd1,0x6c,0x80,0x7b]
          {nf}	shrw	$1, 123(%r8,%rax,4), %bx
-# CHECK: {nf}	shrl	123(%r8,%rax,4), %ebx
+# CHECK: {nf}	shrl	$1, 123(%r8,%rax,4), %ebx
 # CHECK: encoding: [0x62,0xd4,0x64,0x1c,0xd1,0x6c,0x80,0x7b]
          {nf}	shrl	$1, 123(%r8,%rax,4), %ebx
-# CHECK: {nf}	shrq	123(%r8,%rax,4), %rbx
+# CHECK: {nf}	shrq	$1, 123(%r8,%rax,4), %rbx
 # CHECK: encoding: [0x62,0xd4,0xe4,0x1c,0xd1,0x6c,0x80,0x7b]
          {nf}	shrq	$1, 123(%r8,%rax,4), %rbx

@@ -63,17 +63,13 @@ multiclass ShiftRotate<string m, Format RegMRM, Format MemMRM, SDPatternOperator
       def 32r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi32>, OpSize32;
       def 64r1 : UnaryOpR_RF<0xD1, RegMRM, m, Xi64>;
 
-      // FIXME: Assembler can't tell whether it's 8r1_ND or 8rCL when the source register is cl, e.g.
-      //
-      //  shlb %cl, %al
-      //
-      // GNU binutils distinguish them by adding an explicit $1 to asm string of 8r1_ND. But we haven't support
-      // constant immediate in asm string for X86 in TD. So we add DisassembleOnly for 8r1_ND for the time being.
+      // Print $1 like GNU binutils does. Without it "shlb %cl, %al" could be
+      // either 8r1_ND or 8rCL.
       let Predicates = [In64BitMode] in {
-        def 8r1_ND  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8, null_frag, 1>, DisassembleOnly;
-        def 16r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi16, null_frag, 1>, PD;
-        def 32r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi32, null_frag, 1>;
-        def 64r1_ND : UnaryOpR_RF<0xD1, RegMRM, m, Xi64, null_frag, 1>;
+        def 8r1_ND  : UnaryOpR_RF_1<0xD1, RegMRM, m, Xi8>;
+        def 16r1_ND : UnaryOpR_RF_1<0xD1, RegMRM, m, Xi16>, PD;
+        def 32r1_ND : UnaryOpR_RF_1<0xD1, RegMRM, m, Xi32>;
+        def 64r1_ND : UnaryOpR_RF_1<0xD1, RegMRM, m, Xi64>;
 
         def 8r1_EVEX  : UnaryOpR_RF<0xD1, RegMRM, m, Xi8>, PL;
         def 16r1_EVEX : UnaryOpR_RF<0xD1, RegMRM, m, Xi16>, PL, PD;
@@ -96,10 +92,10 @@ multiclass ShiftRotate<string m, Format RegMRM, Format MemMRM, SDPatternOperator
       }
     }
     let SchedRW = [mi, ri], Predicates = [In64BitMode] in {
-      def 8m1_ND  : UnaryOpM_RF<0xD1, MemMRM, m, Xi8>;
-      def 16m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi16>, PD;
-      def 32m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi32>;
-      def 64m1_ND : UnaryOpM_RF<0xD1, MemMRM, m, Xi64>;
+      def 8m1_ND  : UnaryOpM_RF_1<0xD1, MemMRM, m, Xi8>;
+      def 16m1_ND : UnaryOpM_RF_1<0xD1, MemMRM, m, Xi16>, PD;
+      def 32m1_ND : UnaryOpM_RF_1<0xD1, MemMRM, m, Xi32>;
+      def 64m1_ND : UnaryOpM_RF_1<0xD1, MemMRM, m, Xi64>;
     }
   }
 
@@ -170,21 +166,16 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
     def 64mi_NF_ND : BinOpMI8U_R<m, MemMRM, Xi64>, Sched<[mi, ri]>, EVEX_NF;
 
     let SchedRW = [ri] in {
-      // FIXME: Assembler can't tell whether it's 8r1_NF_ND or 8rCL_NF when the source register is cl, e.g.
-      //
-      //  {nf} shlb %cl, %al
-      //
-      // GNU binutils distinguish them by adding an explicit $1 to asm string of 8r1_NF_ND. But we haven't support
-      // constant immediate in asm string for X86 in TD. So we add DisassembleOnly for 8r1_NF_ND for the time being.
       def 8r1_NF  : UnaryOpR_R<0xD1, RegMRM, m, Xi8>, NF;
       def 16r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi16>, NF, PD;
       def 32r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi32>, NF;
       def 64r1_NF : UnaryOpR_R<0xD1, RegMRM, m, Xi64>, NF;
 
-      def 8r1_NF_ND  : UnaryOpR_R<0xD1, RegMRM, m, Xi8, null_frag, 1>, EVEX_NF, DisassembleOnly;
-      def 16r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi16, null_frag, 1>, EVEX_NF, PD;
-      def 32r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi32, null_frag, 1>, EVEX_NF;
-      def 64r1_NF_ND : UnaryOpR_R<0xD1, RegMRM, m, Xi64, null_frag, 1>, EVEX_NF;
+      // Same as 8r1_ND.
+      def 8r1_NF_ND  : UnaryOpR_R_1<0xD1, RegMRM, m, Xi8>, EVEX_NF;
+      def 16r1_NF_ND : UnaryOpR_R_1<0xD1, RegMRM, m, Xi16>, EVEX_NF, PD;
+      def 32r1_NF_ND : UnaryOpR_R_1<0xD1, RegMRM, m, Xi32>, EVEX_NF;
+      def 64r1_NF_ND : UnaryOpR_R_1<0xD1, RegMRM, m, Xi64>, EVEX_NF;
     }
 
     let SchedRW = [mi, WriteRMW] in {
@@ -194,10 +185,10 @@ multiclass ShiftRotate_NF<string m, Format RegMRM, Format MemMRM, SchedReadWrite
       def 64m1_NF : UnaryOpM_M<0xD1, MemMRM, m, Xi64>, NF;
     }
     let SchedRW = [mi, ri] in {
-      def 8m1_NF_ND  : UnaryOpM_R<0xD1, MemMRM, m, Xi8>, EVEX_NF;
-      def 16m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi16>, EVEX_NF, PD;
-      def 32m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi32>, EVEX_NF;
-      def 64m1_NF_ND : UnaryOpM_R<0xD1, MemMRM, m, Xi64>, EVEX_NF;
+      def 8m1_NF_ND  : UnaryOpM_R_1<0xD1, MemMRM, m, Xi8>, EVEX_NF;
+      def 16m1_NF_ND : UnaryOpM_R_1<0xD1, MemMRM, m, Xi16>, EVEX_NF, PD;
+      def 32m1_NF_ND : UnaryOpM_R_1<0xD1, MemMRM, m, Xi32>, EVEX_NF;
+      def 64m1_NF_ND : UnaryOpM_R_1<0xD1, MemMRM, m, Xi64>, EVEX_NF;
     }
 
     let Uses = [CL] in {
@@ -238,6 +229,30 @@ defm SAR: ShiftRotate_NF<"sar", MRM7r, MRM7m, WriteShiftCL, WriteShift, WriteShi
 
 defm ROL: ShiftRotate_NF<"rol", MRM0r, MRM0m, WriteRotateCL, WriteRotate, WriteRotateCLLd, WriteRotateLd>;
 defm ROR: ShiftRotate_NF<"ror", MRM1r, MRM1m, WriteRotateCL, WriteRotate, WriteRotateCLLd, WriteRotateLd>;
+
+// Two-operand form of the NDD shift/rotate by 1, e.g. "shlw %ax, %bx". Not for
+// 8-bit registers, "shlb %cl, %al" is the shift by CL.
+multiclass ShiftRotateBy1NDAliases<string m, string suffix> {
+  let Predicates = [In64BitMode] in {
+    foreach s = ["16", "32", "64"] in {
+      defvar t = !cast<X86TypeInfo>("Xi"#s);
+      def : InstAlias<m#"{"#t.InstrSuffix#"}\t{$src1, $dst|$dst, $src1}",
+                      (!cast<Instruction>(NAME#s#"r1"#suffix)
+                       t.RegClass:$dst, t.RegClass:$src1), 0>;
+    }
+    foreach s = ["8", "16", "32", "64"] in {
+      defvar t = !cast<X86TypeInfo>("Xi"#s);
+      def : InstAlias<m#"{"#t.InstrSuffix#"}\t{$src1, $dst|$dst, $src1}",
+                      (!cast<Instruction>(NAME#s#"m1"#suffix)
+                       t.RegClass:$dst, t.MemOperand:$src1), 0>;
+    }
+  }
+}
+
+foreach m = ["shl", "shr", "sar", "rol", "ror", "rcl", "rcr"] in
+  defm !toupper(m) : ShiftRotateBy1NDAliases<m, "_ND">;
+foreach m = ["shl", "shr", "sar", "rol", "ror"] in
+  defm !toupper(m) : ShiftRotateBy1NDAliases<m, "_NF_ND">;
 
 // Use the opposite rotate if allows us to use the rotate by 1 instruction.
 let Predicates = [NoNDD] in {

@@ -97,6 +97,7 @@ class DisassembleOnly {
 
 defvar unaryop_args = "$src1";
 defvar unaryop_ndd_args = "{$src1, $dst|$dst, $src1}";
+defvar unaryop_ndd_1_args = "{$$1, $src1, $dst|$dst, $src1, 1}";
 defvar binop_args = "{$src2, $src1|$src1, $src2}";
 defvar binop_ndd_args = "{$src2, $src1, $dst|$dst, $src1, $src2}";
 defvar binop_cl_args = "{%cl, $src1|$src1, cl}";
@@ -1347,6 +1348,16 @@ class UnaryOpR_RF<bits<8> o, Format f, string m, X86TypeInfo t,
              (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, (node t.RegClass:$src1))]>,
     DefEFLAGS, NDD<ndd>;
+// UnaryOpR_R_1 - NDD shift/rotate by 1 that reads "reg" and writes "reg", with
+// an explicit 1 in the asm string.
+class UnaryOpR_R_1<bits<8> o, Format f, string m, X86TypeInfo t>
+  : UnaryOpR<o, f, m, unaryop_ndd_1_args, t, (outs t.RegClass:$dst), []>,
+    NDD<1>;
+// UnaryOpR_RF_1 - NDD shift/rotate by 1 that reads "reg" and writes
+// "reg"/EFLAGS, with an explicit 1 in the asm string.
+class UnaryOpR_RF_1<bits<8> o, Format f, string m, X86TypeInfo t>
+  : UnaryOpR<o, f, m, unaryop_ndd_1_args, t, (outs t.RegClass:$dst), []>,
+    DefEFLAGS, NDD<1>;
 
 // UnaryOpM - Instructions that read "[mem]".
 class UnaryOpM<bits<8> o, Format f, string m, string args, X86TypeInfo t,
@@ -1365,6 +1376,16 @@ class UnaryOpM_RF<bits<8> o, Format f, string m, X86TypeInfo t,
                   SDPatternOperator node = null_frag>
   : UnaryOpM<o, f, m, unaryop_ndd_args, t, (outs t.RegClass:$dst),
              [(set t.RegClass:$dst, EFLAGS, (node (t.LoadNode ndd_addr:$src1)))]>,
+    Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
+// UnaryOpM_R_1 - NDD shift/rotate by 1 that reads "[mem]" and writes "reg",
+// with an explicit 1 in the asm string.
+class UnaryOpM_R_1<bits<8> o, Format f, string m, X86TypeInfo t>
+  : UnaryOpM<o, f, m, unaryop_ndd_1_args, t, (outs t.RegClass:$dst), []>,
+    Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, NDD<1>;
+// UnaryOpM_RF_1 - NDD shift/rotate by 1 that reads "[mem]" and writes
+// "reg"/EFLAGS, with an explicit 1 in the asm string.
+class UnaryOpM_RF_1<bits<8> o, Format f, string m, X86TypeInfo t>
+  : UnaryOpM<o, f, m, unaryop_ndd_1_args, t, (outs t.RegClass:$dst), []>,
     Sched<[WriteALU.Folded, WriteALU.ReadAfterFold]>, DefEFLAGS, NDD<1>;
 // UnaryOpM_M - Instructions that read "[mem]" and writes "[mem]".
 class UnaryOpM_M<bits<8> o, Format f, string m, X86TypeInfo t,
