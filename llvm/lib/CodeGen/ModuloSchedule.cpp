@@ -2830,7 +2830,7 @@ public:
   ModuloScheduleTest() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  void runOnLoop(MachineFunction &MF, MachineLoop &L);
+  bool runOnLoop(MachineFunction &MF, MachineLoop &L);
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineLoopInfoWrapperPass>();
@@ -2854,8 +2854,7 @@ bool ModuloScheduleTest::runOnMachineFunction(MachineFunction &MF) {
   for (auto *L : MLI) {
     if (L->getTopBlock() != L->getBottomBlock())
       continue;
-    runOnLoop(MF, *L);
-    return false;
+    return runOnLoop(MF, *L);
   }
   return false;
 }
@@ -2879,7 +2878,7 @@ static void parseSymbolString(StringRef S, int &Cycle, int &Stage) {
   dbgs() << "  Stage=" << Stage << ", Cycle=" << Cycle << "\n";
 }
 
-void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
+bool ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
   LiveIntervals &LIS = getAnalysis<LiveIntervalsWrapperPass>().getLIS();
   MachineBasicBlock *BB = L.getTopBlock();
   dbgs() << "--- ModuloScheduleTest running on BB#" << BB->getNumber() << "\n";
@@ -2902,6 +2901,7 @@ void ModuloScheduleTest::runOnLoop(MachineFunction &MF, MachineLoop &L) {
       MF, MS, LIS, /*InstrChanges=*/ModuloScheduleExpander::InstrChangesTy());
   MSE.expand();
   MSE.cleanup();
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
