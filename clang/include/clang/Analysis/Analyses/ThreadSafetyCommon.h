@@ -33,6 +33,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
@@ -455,6 +456,8 @@ private:
 
   til::SExpr *translateDeclStmt(const DeclStmt *S, CallingContext *Ctx);
   til::SExpr *translateStmtExpr(const StmtExpr *SE, CallingContext *Ctx);
+  const StmtExpr *getDeclaringStmtExpr(const ValueDecl *VD);
+  void markIfStmtExprLocal(const ValueDecl *VD);
 
   // Map from statements in the clang CFG to SExprs in the til::SCFG.
   using StatementMap = llvm::DenseMap<const Stmt *, til::SExpr *>;
@@ -548,8 +551,22 @@ private:
       std::function<const Expr *(const NamedDecl *)>;
   // Recursion guard.
   llvm::DenseSet<const ValueDecl *> VarsBeingTranslated;
+  // Function bodies that have been scanned for statement expressions, the
+  // innermost statement expression that declares each local variable found
+  // in them and the enclosing statement expression of each statement
+  // expression.
+  llvm::SmallPtrSet<const Decl *, 4> ScannedBodies;
+  llvm::DenseMap<const ValueDecl *, const StmtExpr *> StmtExprLocalCache;
+  llvm::DenseMap<const StmtExpr *, const StmtExpr *> StmtExprParentCache;
+  // The statement expressions that declare the variables named by the
+  // local variable definitions that are being translated. A null entry
+  // stands for a name that must not be used.
+  SmallVector<const StmtExpr *, 4> ReferencedStmtExprs;
   // Context-dependent lookup of currently valid definitions of local variables.
   LookupLocalVarExprClosure LookupLocalVarExpr;
+  // The state of LookupLocalVarExpr where the variable that is translated
+  // first is used, while variable definitions are looked through.
+  LookupLocalVarExprClosure OuterLookupLocalVarExpr;
 };
 
 #ifndef NDEBUG
