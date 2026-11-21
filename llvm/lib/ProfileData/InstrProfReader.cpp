@@ -1502,9 +1502,10 @@ InstrProfSymtab &IndexedInstrProfReader::getSymtab() {
 
 Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
     StringRef FuncName, uint64_t FuncHash, StringRef DeprecatedFuncName,
-    uint64_t *MismatchedFuncSum) {
+    uint64_t *MismatchedFuncSum, bool *MismatchedAllZeros) {
   ArrayRef<NamedInstrProfRecord> Data;
   uint64_t FuncSum = 0;
+  bool AllZeros = true;
   auto Err = Remapper->getRecords(FuncName, Data);
   if (Err) {
     // If we don't find FuncName, try DeprecatedFuncName to handle profiles
@@ -1545,14 +1546,23 @@ Expected<NamedInstrProfRecord> IndexedInstrProfReader::getInstrProfRecord(
     if (NamedInstrProfRecord::hasCSFlagInHash(I.Hash) ==
         NamedInstrProfRecord::hasCSFlagInHash(FuncHash)) {
       CSBitMatch = true;
-      if (MismatchedFuncSum == nullptr)
+      if (I.getCountPseudoKind() != InstrProfRecord::NotPseudo) {
+        AllZeros = false;
         continue;
-      FuncSum = std::max(FuncSum, getFuncSum(I.Counts));
+      }
+      if (MismatchedFuncSum == nullptr && MismatchedAllZeros == nullptr)
+        continue;
+      uint64_t Sum = getFuncSum(I.Counts);
+      if (Sum > 0)
+        AllZeros = false;
+      FuncSum = std::max(FuncSum, Sum);
     }
   }
   if (CSBitMatch) {
     if (MismatchedFuncSum != nullptr)
       *MismatchedFuncSum = FuncSum;
+    if (MismatchedAllZeros != nullptr)
+      *MismatchedAllZeros = AllZeros;
     return error(instrprof_error::hash_mismatch);
   }
   return error(instrprof_error::unknown_function);

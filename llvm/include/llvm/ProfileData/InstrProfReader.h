@@ -820,13 +820,16 @@ public:
   /// When return a hash_mismatch error and MismatchedFuncSum is not nullptr,
   /// the sum of all counters in the mismatched function will be set to
   /// MismatchedFuncSum. If there are multiple instances of mismatched
-  /// functions, MismatchedFuncSum returns the maximum. If \c FuncName is not
-  /// found, try to lookup \c DeprecatedFuncName to handle profiles built by
-  /// older compilers.
+  /// functions, MismatchedFuncSum returns the maximum. When MismatchedAllZeros
+  /// is not nullptr, it is set to true iff all mismatched records had only zero
+  /// real counter values (and none were pseudo-count records). If \c FuncName
+  /// is not found, try to lookup \c DeprecatedFuncName to handle profiles built
+  /// by older compilers.
   Expected<NamedInstrProfRecord>
   getInstrProfRecord(StringRef FuncName, uint64_t FuncHash,
                      StringRef DeprecatedFuncName = "",
-                     uint64_t *MismatchedFuncSum = nullptr);
+                     uint64_t *MismatchedFuncSum = nullptr,
+                     bool *MismatchedAllZeros = nullptr);
 
   /// Return the memprof record for the function identified by
   /// llvm::md5(Name).
