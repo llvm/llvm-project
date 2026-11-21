@@ -13081,8 +13081,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     });
   case Builtin::BI__builtin_elementwise_mulh:
     return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt &RHS) {
-          return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS,RHS) : llvm::APIntOps::mulhu(LHS,RHS);
-        });
+      return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS, RHS)
+                            : llvm::APIntOps::mulhu(LHS, RHS);
+    });
   case X86::BI__builtin_ia32_extract128i256:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
@@ -18220,10 +18221,11 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
         !EvaluateInteger(E->getArg(1), RHS, Info))
       return false;
 
-    APInt Result = LHS.isSigned() ? llvm::APIntOps::mulhs(LHS,RHS) : llvm::APIntOps::mulhu(LHS,RHS);
+    APInt Result = LHS.isSigned() ? llvm::APIntOps::mulhs(LHS, RHS)
+                                  : llvm::APIntOps::mulhu(LHS, RHS);
     return Success(APSInt(Result, !LHS.isSigned()), E);
   }
-  
+
   case Builtin::BI__builtin_elementwise_max: {
     APSInt LHS, RHS;
     if (!EvaluateInteger(E->getArg(0), LHS, Info) ||

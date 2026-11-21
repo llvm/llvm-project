@@ -5629,8 +5629,9 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
 
   case Builtin::BI__builtin_elementwise_mulh:
     return interp__builtin_elementwise_int_binop(
-        S, OpPC, Call,[](const APSInt &LHS, const APSInt &RHS) {
-          return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS,RHS) : llvm::APIntOps::mulhu(LHS,RHS);
+        S, OpPC, Call, [](const APSInt &LHS, const APSInt &RHS) {
+          return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS, RHS)
+                                : llvm::APIntOps::mulhu(LHS, RHS);
         });
 
   case Builtin::BI__builtin_elementwise_pdep:
