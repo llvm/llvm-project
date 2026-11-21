@@ -26,4 +26,14 @@
 // EXECUTOR-FAIL: clang-doc error:
 // EXECUTOR-FAIL: Executor "invalid" is not registered
 
+/// Missing compile commands database.
+// RUN: not clang-doc --executor=all-TUs 2>&1 | FileCheck %s --check-prefix=NO-DB
+// NO-DB: clang-doc error:
+// NO-DB-SAME: Please provide a directory/file path in the compilation database
+
+/// Missing source files.
+// RUN: not clang-doc 2>&1 | FileCheck %s --check-prefix=NO-INPUT
+// NO-INPUT: clang-doc error:
+// NO-INPUT-SAME: No positional argument found
+
 ///TODO: Add tests for failures in generateDocs() and in createResources().
