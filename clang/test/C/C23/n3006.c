@@ -47,12 +47,12 @@ void enum_test(void) {
 void constexpr_test(void) {
   constexpr auto ce_struct = (struct S1){ 1, 2 };                   // expected-error {{variable has incomplete type 'struct S1'}} \
                                                                        expected-note {{forward declaration of 'struct S1'}}
-  constexpr auto ce_struct_zero_init = (struct S2 { int x; }){ 0 };
-  constexpr int ce_struct_field = (struct S3 { int y; }){ 0 }.y;
+  constexpr auto ce_struct_zero_init = (constexpr struct S2 { int x; }){ 0 };
+  constexpr int ce_struct_field = (constexpr struct S3 { int y; }){ 0 }.y;
   constexpr auto ce_union = (union U1){ .a = 12 };                  // expected-error {{variable has incomplete type 'union U1'}} \
                                                                        expected-note {{forward declaration of 'union U1'}}
 
-  constexpr auto ce_enum = (enum E1 { BAZ, QUX }){ BAZ };
+  constexpr auto ce_enum = (constexpr enum E1 { BAZ, QUX }){ BAZ };
   constexpr auto ce_empty_enum = (enum E2){ FOO };                  // expected-error {{use of undeclared identifier 'FOO'}}
 }
 
@@ -71,14 +71,14 @@ void redefinition_test(void) {
 
 void declaring_an_underspecified_defied_object_test(void) {
   struct S { int x, y; };
-  constexpr int i = (struct T { int a, b; }){0, 1}.a;
+  constexpr int i = (constexpr struct T { int a, b; }){0, 1}.a;
 
   struct T t = { 1, 2 };
 }
 
 void constexpr_complience_test(void) {
   int x = (struct Foo { int x; }){ 0 }.x;
-  constexpr int y = (struct Bar { int x; }){ 0 }.x;
+  constexpr int y = (constexpr struct Bar { int x; }){ 0 }.x;
 }
 
 void builtin_functions_test(void) {
