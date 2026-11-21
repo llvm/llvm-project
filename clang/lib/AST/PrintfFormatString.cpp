@@ -35,8 +35,9 @@ class PrintfFormatStringParser : analyze_format_string::FormatStringParser {
 public:
   PrintfFormatStringParser(FormatStringHandler &H, const LangOptions &LO,
                            const TargetInfo &Target, bool Warn,
-                           bool IsFreeBSDKPrintf)
-      : FormatStringParser(H, LO, Target, /*IsScanf=*/false), Warn(Warn),
+                           bool IsFreeBSDKPrintf,
+                           const llvm::TextEncodingConverter &Conv)
+      : FormatStringParser(H, LO, Target, /*IsScanf=*/false, Conv), Warn(Warn),
         IsFreeBSDKPrintf(IsFreeBSDKPrintf) {}
 
   PrintfSpecifierResult parseSpecifier(const char *&Beg, const char *E,
@@ -489,7 +490,7 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       FS.setConversionSpecifier(CS);
     }
     // Assume the conversion takes one argument.
-    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len);
+    return !H.HandleInvalidPrintfConversionSpecifier(FS, Start, Len, Conv);
   }
   return PrintfSpecifierResult(Start, FS);
 }
@@ -501,7 +502,10 @@ bool clang::analyze_format_string::ParsePrintfString(
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf);
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
+  PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf,
+                             Conv);
   while (I != E) {
     const PrintfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
@@ -514,7 +518,7 @@ bool clang::analyze_format_string::ParsePrintfString(
       continue;
     // We have a format specifier.  Pass it to the callback.
     if (!H.HandlePrintfSpecifier(FSR.getValue(), FSR.getStart(),
-                                 I - FSR.getStart(), Target))
+                                 I - FSR.getStart(), Target, Conv))
       return true;
   }
   assert(I == E && "Format string not exhausted");
@@ -529,8 +533,10 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
 
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
-                             /*IsFreeBSDKPrintf=*/false);
+                             /*IsFreeBSDKPrintf=*/false, Conv);
   while (I != E) {
     const PrintfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);
     // Did a fail-stop error of any kind occur when parsing the specifier?
@@ -556,8 +562,10 @@ bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
+  llvm::TextEncodingConverter Conv =
+      llvm::TextEncodingConverter::createNoopConverter();
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
-                             /*IsFreeBSDKPrintf=*/false);
+                             /*IsFreeBSDKPrintf=*/false, Conv);
   while (Begin != End) {
     const PrintfSpecifierResult &FSR = P.parseSpecifier(Begin, End, ArgIndex);
     if (FSR.shouldStop())
