@@ -636,6 +636,7 @@ alias(
         "exp10m1f16",
         "exp10m1f",
         "exp2",
+        "exp2bf16",
         "exp2f",
         "exp2f16",
         "exp2m1f",
