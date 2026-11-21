@@ -50,6 +50,11 @@ public:
     return TTI::PSK_FastHardware;
   }
 
+  bool hasBranchDivergence(const Function *F = nullptr) const override {
+    // Shader and OpenCL work-items execute divergently across invocations.
+    return true;
+  }
+
   unsigned getFlatAddressSpace() const override {
     // Clang has 2 distinct address space maps. One where
     // default=Generic, and one with default=Function. This depends on the
