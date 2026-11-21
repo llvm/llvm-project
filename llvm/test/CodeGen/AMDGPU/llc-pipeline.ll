@@ -78,7 +78,6 @@
 ; GCN-O0-NEXT:      Function Alias Analysis Results
 ; GCN-O0-NEXT:      Memory SSA
 ; GCN-O0-NEXT:      AMDGPU Annotate Uniform Values
-; GCN-O0-NEXT:      Natural Loop Information
 ; GCN-O0-NEXT:      SI annotate control flow
 ; GCN-O0-NEXT:      Cycle Info Analysis
 ; GCN-O0-NEXT:      Uniformity Analysis
@@ -283,7 +282,6 @@
 ; GCN-O1-NEXT:      Function Alias Analysis Results
 ; GCN-O1-NEXT:      Memory SSA
 ; GCN-O1-NEXT:      AMDGPU Annotate Uniform Values
-; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      SI annotate control flow
 ; GCN-O1-NEXT:      Cycle Info Analysis
 ; GCN-O1-NEXT:      Uniformity Analysis
@@ -597,7 +595,6 @@
 ; GCN-O1-OPTS-NEXT:      Function Alias Analysis Results
 ; GCN-O1-OPTS-NEXT:      Memory SSA
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Uniform Values
-; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      SI annotate control flow
 ; GCN-O1-OPTS-NEXT:      Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:      Uniformity Analysis
@@ -922,7 +919,6 @@
 ; GCN-O2-NEXT:      Function Alias Analysis Results
 ; GCN-O2-NEXT:      Memory SSA
 ; GCN-O2-NEXT:      AMDGPU Annotate Uniform Values
-; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      SI annotate control flow
 ; GCN-O2-NEXT:      Cycle Info Analysis
 ; GCN-O2-NEXT:      Uniformity Analysis
@@ -1264,7 +1260,6 @@
 ; GCN-O3-NEXT:      Function Alias Analysis Results
 ; GCN-O3-NEXT:      Memory SSA
 ; GCN-O3-NEXT:      AMDGPU Annotate Uniform Values
-; GCN-O3-NEXT:      Natural Loop Information
 ; GCN-O3-NEXT:      SI annotate control flow
 ; GCN-O3-NEXT:      Cycle Info Analysis
 ; GCN-O3-NEXT:      Uniformity Analysis

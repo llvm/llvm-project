@@ -47,6 +47,7 @@ define void @divergent_loop(ptr addrspace(1) %p, i32 %n) {
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    s_mov_b32 s2, 0
 ; GFX942-NEXT:    s_mov_b64 s[0:1], 0
+; GFX942-NEXT:    .p2align 6
 ; GFX942-NEXT:  .LBB1_1: ; %loop
 ; GFX942-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX942-NEXT:    s_ashr_i32 s3, s2, 31
@@ -88,6 +89,7 @@ define amdgpu_kernel void @uniform_loop_divergent_latches(ptr addrspace(1) %p, p
 ; GFX942-NEXT:    v_mov_b32_e32 v1, 2
 ; GFX942-NEXT:    v_mov_b32_e32 v2, 1
 ; GFX942-NEXT:    s_branch .LBB2_2
+; GFX942-NEXT:    .p2align 6
 ; GFX942-NEXT:  .LBB2_1: ; %Flow4
 ; GFX942-NEXT:    ; in Loop: Header=BB2_2 Depth=1
 ; GFX942-NEXT:    s_or_b64 exec, exec, s[2:3]

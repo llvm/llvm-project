@@ -12,7 +12,7 @@ define void @single_latch(i32 %n) {
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp uge i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -58,7 +58,7 @@ define void @two_latches(i32 %n, i1 %c2) {
 ; CHECK:       [[FLOW2]]:
 ; CHECK-NEXT:    [[TMP3]] = phi i32 [ [[TMP0]], %[[FLOW1]] ], [ poison, %[[HEADER]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi i1 [ false, %[[FLOW1]] ], [ true, %[[HEADER]] ]
-; CHECK-NEXT:    br i1 [[TMP4]], label %[[EXIT:.*]], label %[[HEADER]]
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[EXIT:.*]], label %[[HEADER]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -209,11 +209,11 @@ define void @nested_loops(i32 %n, i32 %m) {
 ; CHECK-NEXT:    [[J:%.*]] = phi i32 [ [[J_NEXT:%.*]], %[[INNER]] ], [ 0, %[[OUTER]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = add i32 [[J]], 1
 ; CHECK-NEXT:    [[C_INNER:%.*]] = icmp uge i32 [[J_NEXT]], [[M]]
-; CHECK-NEXT:    br i1 [[C_INNER]], label %[[OUTER_LATCH]], label %[[INNER]]
+; CHECK-NEXT:    br i1 [[C_INNER]], label %[[OUTER_LATCH]], label %[[INNER]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i32 [[I]], 1
 ; CHECK-NEXT:    [[C_OUTER:%.*]] = icmp uge i32 [[I_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[C_OUTER]], label %[[EXIT:.*]], label %[[OUTER]]
+; CHECK-NEXT:    br i1 [[C_OUTER]], label %[[EXIT:.*]], label %[[OUTER]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -262,7 +262,7 @@ define i32 @backedge_to_flow_block(i32 %s) {
 ; CHECK-NEXT:    [[TMP5]] = phi i32 [ [[I_NEXT]], %[[FLOW2]] ], [ [[TMP1]], %[[FLOW]] ]
 ; CHECK-NEXT:    [[TMP6:%.*]] = phi i1 [ [[TMP8:%.*]], %[[FLOW2]] ], [ true, %[[FLOW]] ]
 ; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[TMP9:%.*]], %[[FLOW2]] ], [ [[TMP2]], %[[FLOW]] ]
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[FLOW3:.*]], label %[[FLOW]]
+; CHECK-NEXT:    br i1 [[TMP6]], label %[[FLOW3:.*]], label %[[FLOW]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[I_NEXT]], 3
 ; CHECK-NEXT:    br label %[[FLOW2]]
@@ -314,14 +314,14 @@ define void @latches_in_nested_regions(i1 %c1, i1 %c2, i1 %c3, i1 %c4) {
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = phi i1 [ [[C2_INV]], %[[A]] ], [ true, %[[HEADER]] ]
-; CHECK-NEXT:    br i1 [[TMP0]], label %[[MID:.*]], label %[[HEADER]]
+; CHECK-NEXT:    br i1 [[TMP0]], label %[[MID:.*]], label %[[HEADER]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       [[MID]]:
 ; CHECK-NEXT:    br i1 [[C3]], label %[[B:.*]], label %[[FLOW1:.*]]
 ; CHECK:       [[B]]:
 ; CHECK-NEXT:    br label %[[FLOW1]]
 ; CHECK:       [[FLOW1]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ [[C4_INV]], %[[B]] ], [ true, %[[MID]] ]
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[HEADER]]
+; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[HEADER]], !llvm.loop [[LOOP6]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
@@ -394,7 +394,7 @@ define void @latches_below_top_level_header(i1 %c1, i1 %c2, i1 %c3) {
 ; CHECK-NEXT:    [[C3_INV:%.*]] = xor i1 [[C3]], true
 ; CHECK-NEXT:    br label %[[HEADER:.*]]
 ; CHECK:       [[FLOW1:.*]]:
-; CHECK-NEXT:    br label %[[HEADER]]
+; CHECK-NEXT:    br label %[[HEADER]], !llvm.loop [[LOOP7:![0-9]+]]
 ; CHECK:       [[HEADER]]:
 ; CHECK-NEXT:    br i1 [[C1]], label %[[BODY:.*]], label %[[EXIT1:.*]]
 ; CHECK:       [[BODY]]:
@@ -494,3 +494,13 @@ exit:
 !12 = distinct !{!12, !1}
 !13 = distinct !{!13, !14}
 !14 = !{!"llvm.loop.align", i32 32}
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.align", i32 64}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
+; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
+; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
+; CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
+; CHECK: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]]}
+;.
