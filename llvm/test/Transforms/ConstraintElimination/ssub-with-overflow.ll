@@ -395,3 +395,103 @@ check.2:
 exit:
   ret i1 false
 }
+
+define i1 @ssub_difference_of_difference_nsw(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_difference_of_difference_nsw(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END:%.*]], [[START:%.*]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %d = sub nsw i8 %end, %start
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %end, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
+
+define i1 @ssub_difference_of_difference_assume(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_difference_of_difference_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[NONNEG:%.*]] = icmp sge i8 [[START:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NONNEG]])
+; CHECK-NEXT:    [[ORDERED:%.*]] = icmp sge i8 [[END:%.*]], [[START]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[ORDERED]])
+; CHECK-NEXT:    [[D:%.*]] = sub nuw nsw i8 [[END]], [[START]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %nonneg = icmp sge i8 %start, 0
+  call void @llvm.assume(i1 %nonneg)
+  %ordered = icmp sge i8 %end, %start
+  call void @llvm.assume(i1 %ordered)
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %end, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
+
+define i1 @ssub_double_start(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_double_start(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END:%.*]], [[START:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[START]], i8 [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+entry:
+  %d = sub nsw i8 %end, %start
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %start, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
+
+define i1 @ssub_difference_unordered(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_difference_unordered(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[D:%.*]] = sub i8 [[END:%.*]], [[START:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[END]], i8 [[D]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+entry:
+  %d = sub i8 %end, %start
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %end, i8 %d)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
+
+define i1 @ssub_smax_negated_with_lower_bound(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_smax_negated_with_lower_bound(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[LO:%.*]] = icmp sge i8 [[END:%.*]], -100
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LO]])
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END]], [[START:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[D]], i8 5)
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %lo = icmp sge i8 %end, -100
+  call void @llvm.assume(i1 %lo)
+  %d = sub nsw i8 %end, %start
+  %m = call i8 @llvm.smax.i8(i8 %d, i8 5)
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %end, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
+
+define i1 @ssub_smax_negated_no_lower_bound(i8 %start, i8 %end) {
+; CHECK-LABEL: @ssub_smax_negated_no_lower_bound(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[D:%.*]] = sub nsw i8 [[END:%.*]], [[START:%.*]]
+; CHECK-NEXT:    [[M:%.*]] = call i8 @llvm.smax.i8(i8 [[D]], i8 5)
+; CHECK-NEXT:    [[R:%.*]] = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 [[END]], i8 [[M]])
+; CHECK-NEXT:    [[OV:%.*]] = extractvalue { i8, i1 } [[R]], 1
+; CHECK-NEXT:    ret i1 [[OV]]
+;
+entry:
+  %d = sub nsw i8 %end, %start
+  %m = call i8 @llvm.smax.i8(i8 %d, i8 5)
+  %r = call { i8, i1 } @llvm.ssub.with.overflow.i8(i8 %end, i8 %m)
+  %ov = extractvalue { i8, i1 } %r, 1
+  ret i1 %ov
+}
