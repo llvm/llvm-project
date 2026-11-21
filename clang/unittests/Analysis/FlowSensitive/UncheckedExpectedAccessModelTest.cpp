@@ -62,8 +62,9 @@ protected:
   //   for an unchecked error access on that line.
   void ExpectDiagnosticsFor(std::string SourceCode) {
     // `tl::expected` is usable since C++17, and `std::expected` since C++23.
-    for (const char *CxxMode : {"-std=c++17", "-std=c++23"})
-      ExpectDiagnosticsFor(SourceCode, CxxMode);
+    if (GetParam().NamespaceName == "tl")
+      ExpectDiagnosticsFor(SourceCode, "-std=c++17");
+    ExpectDiagnosticsFor(SourceCode, "-std=c++23");
   }
 
   void ExpectDiagnosticsFor(std::string SourceCode, const char *CxxMode) {
@@ -606,6 +607,114 @@ TEST_P(UncheckedExpectedAccessTest, UnexpectedErrorIsNotAnAccess) {
     void target() {
       $ns::unexpected<int> u(1);
       u.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, EqualToExpected) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a == b && b)
+        return *a;
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a == b && !b)
+        return a.error();
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a == b) {
+        if (b)
+          return *a;
+      }
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a != b)
+        return 0;
+      if (b)
+        return *a;
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<long, int> b) {
+      if (a == b && b)
+        return *a;
+      return 0;
+    }
+  )");
+
+  // `expected<void, E>` objects that both hold a value are equal.
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<void, int> a, $ns::expected<void, int> b) {
+      if (a != b && a)
+        b.error();
+    }
+  )");
+}
+
+TEST_P(UncheckedExpectedAccessTest, EqualToExpectedUnchecked) {
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a == b)
+        return *a; // [[unsafe]]
+      return 0;
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a != b && b)
+        return *a; // [[unsafe]]
+      return 0;
+    }
+  )");
+
+  // Unequal expecteds may both hold values that differ.
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    void target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a != b && a)
+        b.error(); // [[unsafe:error]]
+    }
+  )");
+
+  ExpectDiagnosticsFor(R"(
+    #include "unchecked_expected_access_test.h"
+
+    int target($ns::expected<int, int> a, $ns::expected<int, int> b) {
+      if (a == b || b)
+        return *a; // [[unsafe]]
+      return 0;
     }
   )");
 }
