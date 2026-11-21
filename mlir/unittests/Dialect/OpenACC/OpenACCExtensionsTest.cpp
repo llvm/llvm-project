@@ -9,7 +9,8 @@
 #include "mlir/Conversion/OpenACCToLLVM/ACCToLLVM.h"
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Extensions/MemRefInterfaces.h"
@@ -87,7 +88,7 @@ TEST(OpenACCExtensions, EitherLoadingOrder) {
                                 MemRefLayoutAttrInterface{}, space);
     auto pointer = dyn_cast<acc::PointerLikeType>(type);
     ASSERT_TRUE(pointer);
-    EXPECT_TRUE(pointer.isDeviceAccessible({}));
+    EXPECT_TRUE(pointer.isDeviceAccessible({}, nullptr));
     EXPECT_TRUE(
         isa<acc::PointerLikeType>(LLVM::LLVMPointerType::get(&context)));
 

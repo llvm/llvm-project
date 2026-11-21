@@ -29,6 +29,9 @@ This file is a list of the [maintainers](https://llvm.org/docs/DeveloperPolicy.h
 - Nicolas Celik
 - its.overmighty@gmail.com (email), [OverMighty](https://github.com/overmighty) (github)
 
+- Sukumar Sawant
+- sawantsukumar@gmail.com (email), [Zorojuro](https://github.com/sukumarsawant) (github)
+
 ## Threading, FreeBSD
 - Yifan Zhu
 - yifanzhu@rochester.edu (email), [Schrodinger ZHU Yifan](https://github.com/schrodingerzhu) (github)
@@ -52,6 +55,10 @@ This file is a list of the [maintainers](https://llvm.org/docs/DeveloperPolicy.h
 ## ARM and AArch64
 - Victor Campos
 - victor.campos@arm.com (email), [vhscampos](https://github.com/vhscampos) (github)
+
+## Arm64EC
+- Daniel Paoliello
+- danpao@microsoft.com (email), [dpaoliello](https://github.com/dpaoliello) (github)
 
 ## Hexagon
 - Kushal Pal

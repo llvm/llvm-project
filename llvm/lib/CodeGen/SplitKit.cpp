@@ -179,7 +179,7 @@ void SplitAnalysis::analyzeUses() {
     if (!MO.isUndef())
       UseSlots.push_back(LIS.getInstructionIndex(*MO.getParent()).getRegSlot());
 
-  array_pod_sort(UseSlots.begin(), UseSlots.end());
+  llvm::sort(UseSlots, std::less<>());
 
   // Remove duplicates, keeping the smaller slot for each instruction.
   // That is what we want for early clobbers.
@@ -1601,7 +1601,6 @@ void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {
   }
 
   // Now check if any registers were separated into multiple components.
-  ConnectedVNInfoEqClasses ConEQ(LIS);
   for (unsigned i = 0, e = Edit->size(); i != e; ++i) {
     // Don't use iterators, they are invalidated by create() below.
     Register VReg = Edit->get(i);

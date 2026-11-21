@@ -10,10 +10,19 @@
 #define LLVM_LIB_PASSES_PASSESOPTIONS_H
 
 #include "llvm/Analysis/InlineAdvisor.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #define OPTIONS_STRUCT_DECL
 #include "PassesOptions.inc"
+
+namespace llvm {
+
+inline const PassesOptions &getPassesOptions(const LLVMContext &C) {
+  return C.getLibraryOptions().get<PassesOptions>();
+}
+
+} // namespace llvm
 
 #endif // LLVM_LIB_PASSES_PASSESOPTIONS_H

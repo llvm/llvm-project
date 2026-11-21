@@ -16,9 +16,10 @@ using namespace clang;
 using namespace dependencies;
 
 llvm::ErrorOr<DependencyScanningWorkerFilesystem::TentativeEntry>
-DependencyScanningWorkerFilesystem::readFile(StringRef Filename) {
+DependencyScanningWorkerFilesystem::readFile(StringRef Filename,
+                                             llvm::vfs::FileSystem &FS) {
   // Load the file and its content from the file system.
-  auto MaybeFile = getUnderlyingFS().openFileForRead(Filename);
+  auto MaybeFile = FS.openFileForRead(Filename);
   if (!MaybeFile)
     return MaybeFile.getError();
   auto File = std::move(*MaybeFile);
@@ -223,13 +224,47 @@ const CachedRealPath &DependencyScanningFilesystemSharedCache::CacheShard::
   return *StoredRealPath;
 }
 
+static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+combineGlobalAndLocalFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> GlobalFS,
+                        IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS) {
+  if (LocalFS) {
+    // LocalFS takes precedence over GlobalFS, like it does for the queries that
+    // don't go through this overlay.
+    auto OverlayVFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
+        std::move(GlobalFS));
+    OverlayVFS->pushOverlay(std::move(LocalFS));
+    return OverlayVFS;
+  }
+  return GlobalFS;
+}
+
 DependencyScanningWorkerFilesystem::DependencyScanningWorkerFilesystem(
     DependencyScanningService &Service,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS)
     : llvm::RTTIExtends<DependencyScanningWorkerFilesystem,
-                        llvm::vfs::ProxyFileSystem>(std::move(FS)),
-      Service(Service), WorkingDirForCacheLookup(llvm::errc::invalid_argument) {
+                        llvm::vfs::ProxyFileSystem>(
+          combineGlobalAndLocalFS(FS, LocalFS)),
+      Service(Service), WorkingDirForCacheLookup(llvm::errc::invalid_argument),
+      LocalFS(std::move(LocalFS)), BaseFS(FS) {
   updateWorkingDirForCacheLookup();
+}
+
+const CachedFileSystemEntry *DependencyScanningWorkerFilesystem::createEntry(
+    llvm::ErrorOr<TentativeEntry> &TEntry,
+    llvm::SpecificBumpPtrAllocator<CachedFileContents> &ContentsStorage,
+    llvm::SpecificBumpPtrAllocator<CachedFileSystemEntry> &EntryStorage) {
+  if (TEntry) {
+    CachedFileContents *StoredContents = nullptr;
+    if (TEntry->Contents)
+      StoredContents = new (ContentsStorage.Allocate())
+          CachedFileContents(std::move(TEntry->Contents));
+    return new (EntryStorage.Allocate())
+        CachedFileSystemEntry(std::move(TEntry->Status), StoredContents);
+  } else {
+    return new (EntryStorage.Allocate())
+        CachedFileSystemEntry(TEntry.getError());
+  }
 }
 
 const CachedFileSystemEntry *
@@ -245,8 +280,8 @@ DependencyScanningWorkerFilesystem::resolveUIDThroughSharedCache(
   }
   auto UIDProducer = std::move(std::get<SlotProducer>(UIDSlot));
 
-  auto TEntry =
-      Stat.isDirectory() ? TentativeEntry(Stat) : readFile(OriginalFilename);
+  auto TEntry = Stat.isDirectory() ? TentativeEntry(Stat)
+                                   : readFile(OriginalFilename, *BaseFS);
 
   // Allocate the entry and bind the UID slot under one shard-lock acquisition
   // (BumpPtrAllocator isn't thread-safe). On read-failure, the entry wraps
@@ -257,17 +292,8 @@ DependencyScanningWorkerFilesystem::resolveUIDThroughSharedCache(
     std::lock_guard<std::mutex> ShardLock(UIDShard.CacheLock);
     auto &State = UIDShard.EntriesByUID[Stat.getUniqueID()];
     assert(!State.Entry && "UID slot already published an entry");
-    if (TEntry) {
-      CachedFileContents *StoredContents = nullptr;
-      if (TEntry->Contents)
-        StoredContents = new (UIDShard.ContentsStorage.Allocate())
-            CachedFileContents(std::move(TEntry->Contents));
-      SharedEntry = new (UIDShard.EntryStorage.Allocate())
-          CachedFileSystemEntry(std::move(TEntry->Status), StoredContents);
-    } else {
-      SharedEntry = new (UIDShard.EntryStorage.Allocate())
-          CachedFileSystemEntry(TEntry.getError());
-    }
+    SharedEntry =
+        createEntry(TEntry, UIDShard.ContentsStorage, UIDShard.EntryStorage);
     State.Entry = SharedEntry;
     State.InProgress.reset();
   }
@@ -275,9 +301,23 @@ DependencyScanningWorkerFilesystem::resolveUIDThroughSharedCache(
   return SharedEntry;
 }
 
+const CachedFileSystemEntry *
+DependencyScanningWorkerFilesystem::createCachedFSEntryForLocal(
+    StringRef OriginalFilename, const llvm::vfs::Status &Stat) {
+  assert(LocalFS);
+  auto TEntry = Stat.isDirectory() ? TentativeEntry(Stat)
+                                   : readFile(OriginalFilename, *LocalFS);
+  return createEntry(TEntry, LocalContentsStorage, LocalEntryStorage);
+}
+
 llvm::ErrorOr<const CachedFileSystemEntry *>
 DependencyScanningWorkerFilesystem::resolveFilenameThroughSharedCache(
     StringRef OriginalFilename, StringRef FilenameForLookup) {
+  if (LocalFS) {
+    if (auto Stat = LocalFS->status(OriginalFilename)) {
+      return createCachedFSEntryForLocal(OriginalFilename, *Stat);
+    }
+  }
   assert(llvm::sys::path::is_absolute_gnu(FilenameForLookup));
   auto &FilenameShard =
       Service.getSharedCache().getShardForFilename(FilenameForLookup);
@@ -295,7 +335,7 @@ DependencyScanningWorkerFilesystem::resolveFilenameThroughSharedCache(
   //   - Stat failed, not cacheable: publish the error to current waiters but
   //     don't persist; a later separate query re-runs the stat (so a file
   //     created mid-scan becomes visible).
-  auto Stat = getUnderlyingFS().status(OriginalFilename);
+  auto Stat = BaseFS->status(OriginalFilename);
   const bool ShouldCacheNegativeStat =
       !Stat && Service.getOpts().CacheNegativeStats &&
       shouldCacheNegativeStatsForPath(OriginalFilename);
@@ -450,6 +490,17 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   if (Local.RealPath)
     return HandleCachedRealPath(*Local.RealPath);
 
+  // Resolve through the local VFS without going through the shared cache.
+  if (LocalFS && LocalFS->exists(OriginalFilename)) {
+    std::error_code EC = LocalFS->getRealPath(OriginalFilename, Output);
+    CachedRealPath RealPath = EC;
+    if (!EC)
+      RealPath = std::string(Output.begin(), Output.end());
+    Local.RealPath = new (LocalRealPathStorage.Allocate())
+        CachedRealPath(std::move(RealPath));
+    return HandleCachedRealPath(*Local.RealPath);
+  }
+
   // If we have the result in the shared cache, cache it locally.
   auto &Shard =
       Service.getSharedCache().getShardForFilename(*FilenameForLookup);
@@ -460,7 +511,7 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   }
 
   // If we don't know the real path, compute it...
-  std::error_code EC = getUnderlyingFS().getRealPath(OriginalFilename, Output);
+  std::error_code EC = BaseFS->getRealPath(OriginalFilename, Output);
   llvm::ErrorOr<llvm::StringRef> ComputedRealPath = EC;
   if (!EC)
     ComputedRealPath = StringRef{Output.data(), Output.size()};

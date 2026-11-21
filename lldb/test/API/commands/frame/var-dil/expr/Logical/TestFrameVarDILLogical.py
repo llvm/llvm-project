@@ -17,8 +17,6 @@ class TestFrameVarLogical(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         self.expect_var_path("1 && 2", value="true")
         self.expect_var_path("0 && 1", value="false")
         self.expect_var_path("0 || 1", value="true")

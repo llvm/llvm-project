@@ -310,8 +310,8 @@ one list by the parser.
 #### Miscellaneous Attributes
 
 The attributes `IsAddressTaken`, `IsLandingPad`,
-`IsInlineAsmBrIndirectTarget` and `Alignment` can be specified in parentheses
-after the block's definition:
+`IsInlineAsmBrIndirectTarget`, `LabelMustBeEmitted` and `Alignment` can be
+specified in parentheses after the block's definition:
 
 ```text
 bb.0.entry (address-taken):
@@ -321,6 +321,8 @@ bb.2.else (align 4):
 bb.3(landing-pad, align 4):
   <instructions>
 bb.4 (inlineasm-br-indirect-target):
+  <instructions>
+bb.5 (label-must-be-emitted):
   <instructions>
 ```
 
@@ -508,6 +510,9 @@ dead $eax = XOR32rr undef $eax, undef $eax, implicit-def dead $eflags, implicit-
 
 Note that subregister-index, register-class and type cannot be specified for
 physical registers. Additionally, tied-def can only be specified for a use.
+
+If a tied use and its def are the same virtual register, they must use the
+same subregister index.
 
 (register-flags)=
 

@@ -51,7 +51,6 @@ SetVariableRequestHandler::Run(const SetVariableArguments &args) const {
   if (args.variablesReference.Kind() == eReferenceKindInvalid) {
     return llvm::make_error<DAPError>(
         llvm::formatv("invalid reference {}", args.variablesReference),
-        llvm::inconvertibleErrorCode(),
         /*show_user=*/false);
   }
 

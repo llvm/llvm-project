@@ -505,7 +505,7 @@ void RegisterInfoEmitter::EmitRegMappingTables(
   for (auto &RE : Regs) {
     const Record *Reg = RE.TheDef;
     const RecordVal *V = Reg->getValue("DwarfAlias");
-    if (!V || !V->getValue())
+    if (!V)
       continue;
 
     const DefInit *DI = cast<DefInit>(V->getValue());
@@ -664,8 +664,6 @@ public:
       Values.resize(((v / 8) + 1) * 8); // Round up to the next byte.
     Values[v] = true;
   }
-
-  unsigned byteSize() const { return (Values.size() + 7) / 8; }
 
   void print(raw_ostream &OS) { printBitVectorAsHex(OS, Values, 8); }
 };
@@ -1207,7 +1205,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
     SmallVector<unsigned, 8> &MaskIndices = SuperRegMaskIndices[RC.EnumValue];
     for (auto &Idx : SubRegIndices) {
       MaskBV.reset();
-      RC.getSuperRegClasses(&Idx, MaskBV);
+      RC.getSuperRegClasses(&Idx, RegBank, MaskBV);
       if (MaskBV.none())
         continue;
       SRIList.push_back(&Idx);

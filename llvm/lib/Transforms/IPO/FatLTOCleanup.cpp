@@ -16,12 +16,9 @@
 
 #include "llvm/Transforms/IPO/FatLTOCleanup.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/IR/Use.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/IPO/LowerTypeTests.h"
 
 using namespace llvm;

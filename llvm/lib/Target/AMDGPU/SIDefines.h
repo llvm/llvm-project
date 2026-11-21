@@ -129,6 +129,9 @@ enum : uint64_t {
   VOP3_OPSEL = UINT64_C(1) << 42,
   maybeAtomic = UINT64_C(1) << 43,
 
+  // A load or store pseudo of the VGPR "as memory" address space (13).
+  VGPRAsMem = UINT64_C(1) << 44,
+
   // Is a clamp on FP type.
   FPClamp = UINT64_C(1) << 45,
 
@@ -321,6 +324,9 @@ template <typename... T> constexpr bool hasVOP3OpSel(const T &...O) {
 }
 template <typename... T> constexpr bool isMaybeAtomic(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::maybeAtomic;
+}
+template <typename... T> constexpr bool isVGPRAsMem(const T &...O) {
+  return getTSFlags(O...) & DontUseRawTSFlags::VGPRAsMem;
 }
 template <typename... T> constexpr bool hasFPClamp(const T &...O) {
   return getTSFlags(O...) & DontUseRawTSFlags::FPClamp;
@@ -638,15 +644,24 @@ enum CPol {
 
   SWZ = 1 << 6, // Swizzle bit
 
-  SCAL = 1 << 11, // Scale offset bit
+  // Cache fill size
+  CFS_SHIFT = 7,
+  CFS_MASK = 0x3,
+  CFS = CFS_MASK << CFS_SHIFT,
+  CFS_256B = 0 << CFS_SHIFT,
+  CFS_128B = 1 << CFS_SHIFT,
+  CFS_64B = 2 << CFS_SHIFT,
+  CFS_32B = 3 << CFS_SHIFT,
 
-  ALL = TH | SCOPE | NV,
+  ALL = TH | SCOPE | NV | CFS,
+
+  SCAL = 1 << 9, // Scale offset bit
 
   // Helper bits
-  TH_TYPE_LOAD = 1 << 7,    // TH_LOAD policy
-  TH_TYPE_STORE = 1 << 8,   // TH_STORE policy
-  TH_TYPE_ATOMIC = 1 << 9,  // TH_ATOMIC policy
-  TH_REAL_BYPASS = 1 << 10, // is TH=3 bypass policy or not
+  TH_TYPE_LOAD = 1 << 27,   // TH_LOAD policy
+  TH_TYPE_STORE = 1 << 28,  // TH_STORE policy
+  TH_TYPE_ATOMIC = 1 << 29, // TH_ATOMIC policy
+  TH_REAL_BYPASS = 1 << 30, // is TH=3 bypass policy or not
 
   // Volatile (used to preserve/signal operation volatility for buffer
   // operations not a real instruction bit)
@@ -1368,6 +1383,7 @@ enum SyntheticAperture {
   None = 0x00000000,
 
   BARRIER = 0x00000001,
+  VGPR = 0x00000003,
 };
 } // namespace SyntheticAperture
 

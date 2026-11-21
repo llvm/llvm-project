@@ -1,4 +1,4 @@
-; RUN: llc --filetype=obj %s --stop-after=dxil-write-bitcode -o %t.bc
+; RUN: llc --filetype=obj %s --stop-after=dxil-writer -o %t.bc
 ; RUN: llvm-bcanalyzer --dump --non-symbolic --disable-histogram %t.bc | \
 ; RUN:   FileCheck %s --check-prefix=BITCODE
 ; RUN: llvm-dis %t.bc -o - | FileCheck %s --check-prefix=LLVM

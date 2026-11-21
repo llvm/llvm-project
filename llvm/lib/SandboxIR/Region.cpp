@@ -15,12 +15,17 @@ Region::Region(Context &Ctx, RegionClassID ID) : Ctx(Ctx), ID(ID) {
   auto *RegionStrMD = MDString::get(LLVMCtx, RegionStr);
   RegionMDN = MDNode::getDistinct(LLVMCtx, {RegionStrMD});
 
+  // Note: We may have multiple Region callbacks with the same name, thus the
+  // *Region name with the '*' prefix.
   CreateInstCB = Ctx.registerCreateInstrCallback(
-      [this](Instruction *NewInst) { addRaw(NewInst); });
-  EraseInstCB = Ctx.registerEraseInstrCallback([this](Instruction *ErasedInst) {
-    remove(ErasedInst);
-    removeFromAux(ErasedInst);
-  });
+      [this](Instruction *NewInst) { addRaw(NewInst); }, "Region",
+      /*AllowDuplicateNames=*/true);
+  EraseInstCB = Ctx.registerEraseInstrCallback(
+      [this](Instruction *ErasedInst) {
+        remove(ErasedInst);
+        removeFromAux(ErasedInst);
+      },
+      "Region", /*AllowDuplicateNames=*/true);
 }
 
 Region::~Region() {

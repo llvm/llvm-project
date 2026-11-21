@@ -78,15 +78,14 @@ public:
   getReductionType(const omp::clause::ProcedureDesignator &pd);
 
   static ReductionIdentifier
-  getReductionType(omp::clause::DefinedOperator::IntrinsicOperator intrinsicOp);
+  getReductionType(omp::clause::IntrinsicOperator intrinsicOp);
 
   /// Map a clause-level intrinsic operator to the parser-level one, so callers
-  /// can build the operator's mangled reduction name
-  /// (MangledIntrinsicOperatorReductionName) that semantics stores a
-  /// user-defined intrinsic-operator reduction under. Only the operators a user
-  /// reduction may use are handled.
+  /// can build the operator's mangled reduction name (MakeNameFromOperator)
+  /// that semantics stores a user-defined intrinsic-operator reduction under.
+  /// Only the operators a user reduction may use are handled.
   static parser::DefinedOperator::IntrinsicOperator
-  toParserIntrinsicOperator(omp::clause::DefinedOperator::IntrinsicOperator op);
+  toParserIntrinsicOperator(omp::clause::IntrinsicOperator op);
 
   static ReductionIdentifier
   getReductionType(const fir::ReduceOperationEnum &pd);
@@ -184,6 +183,8 @@ public:
   ///   creating new allocas. This ensures that nested composite wrappers
   ///   (e.g. wsloop and simd in DO SIMD) share the same SSA values, allowing
   ///   the genLoopVars() mapper to correctly remap inner wrapper operands.
+  /// \param [in,out] hasUserDefinedReduction - if provided, set to true when
+  ///   any variable binds a user-defined reduction.
   template <typename OpType, typename RedOperatorListTy>
   static bool processReductionArguments(
       mlir::Location currentLocation, lower::AbstractConverter &converter,
@@ -194,7 +195,28 @@ public:
       const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
       semantics::SemanticsContext *semaCtx = nullptr,
       llvm::DenseMap<const semantics::Symbol *, mlir::Value>
-          *reductionVarCache = nullptr);
+          *reductionVarCache = nullptr,
+      bool *hasUserDefinedReduction = nullptr);
+
+private:
+  /// Resolve the omp.declare_reduction op that an OpenMP reduction clause binds
+  /// for one reduction variable, handling the user-defined operator, intrinsic
+  /// operator, named, and intrinsic-shadowing forms (materializing an imported
+  /// declaration on demand).
+  ///
+  /// Returns true when the declaration has already been appended to
+  /// \p reductionDeclSymbols and the caller should move on to the next
+  /// variable, and false when the caller should create the declaration itself
+  /// from the \p reductionName and \p redId set here.
+  template <typename OpType>
+  static bool processOpenMPReductionOperator(
+      mlir::Location currentLocation, lower::AbstractConverter &converter,
+      const omp::clause::ReductionOperatorList &redOperatorList,
+      llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
+      const semantics::Symbol &reductionSymbol,
+      semantics::SemanticsContext *semaCtx, fir::ReferenceType redType,
+      bool isByRef, const fir::KindMapping &kindMap, std::string &reductionName,
+      ReductionIdentifier &redId, bool *hasUserDefinedReduction);
 };
 
 template <typename FloatOp, typename IntegerOp>

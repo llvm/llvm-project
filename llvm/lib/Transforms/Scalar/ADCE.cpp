@@ -588,8 +588,7 @@ PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &FAM) {
   // to update analysis if it is already available.
   auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
   auto &PDT = FAM.getResult<PostDominatorTreeAnalysis>(F);
-  const ScalarOptions &Opts =
-      F.getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(F);
   ADCEChanged Changed = AggressiveDeadCodeElimination(Opts, F, DT, PDT)
                             .performDeadCodeElimination();
   if (!Changed.ChangedAnything)

@@ -275,8 +275,14 @@ public:
   using Base::size;
 
   // forward iterator creation methods.
-  iterator begin() { return (iterator)this->BeginX; }
-  const_iterator begin() const { return (const_iterator)this->BeginX; }
+  // BeginX may point to uninitialized storage (e.g. when empty or before
+  // constructing elements in place).
+  LLVM_NO_SANITIZE_CFI_UNRELATED_CAST iterator begin() {
+    return (iterator)this->BeginX;
+  }
+  LLVM_NO_SANITIZE_CFI_UNRELATED_CAST const_iterator begin() const {
+    return (const_iterator)this->BeginX;
+  }
   iterator end() { return begin() + size(); }
   const_iterator end() const { return begin() + size(); }
 
@@ -450,7 +456,8 @@ void SmallVectorTemplateBase<T, TriviallyCopyable>::grow(size_t MinSize) {
 }
 
 template <typename T, bool TriviallyCopyable>
-T *SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
+LLVM_NO_SANITIZE_CFI_UNRELATED_CAST T *
+SmallVectorTemplateBase<T, TriviallyCopyable>::mallocForGrow(
     size_t MinSize, size_t &NewCapacity) {
   return static_cast<T *>(
       SmallVectorBase<SmallVectorSizeType<T>>::mallocForGrow(
@@ -1174,6 +1181,13 @@ struct SmallVectorStorage {
 /// well-defined.
 template <typename T> struct alignas(T) SmallVectorStorage<T, 0> {};
 
+/// A tag for constructors that leave new elements default-initialized, like
+/// resize_for_overwrite.
+struct for_overwrite_t {
+  explicit for_overwrite_t() = default;
+};
+inline constexpr for_overwrite_t for_overwrite{};
+
 /// Forward declaration of SmallVector so that
 /// calculateSmallVectorDefaultInlinedElements can reference
 /// `sizeof(SmallVector<T, 0>)`.
@@ -1266,6 +1280,12 @@ public:
 
   SmallVector(size_t SizeArg, const T &Value) : SmallVectorImpl<T>(N) {
     this->assign(SizeArg, Value);
+  }
+
+  template <typename Tag,
+            typename = std::enable_if_t<std::is_same_v<Tag, for_overwrite_t>>>
+  SmallVector(size_t SizeArg, Tag) : SmallVectorImpl<T>(N) {
+    this->resize_for_overwrite(SizeArg);
   }
 
   template <typename ItTy, typename = EnableIfConvertibleToInputIterator<ItTy>>

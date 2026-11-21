@@ -877,8 +877,6 @@ define <8 x i32> @PR63946(<8 x i32> %a0, <8 x i32> %b0) nounwind {
 ; AVX2-NEXT:    vpcmpeqd %ymm0, %ymm8, %ymm0
 ; AVX2-NEXT:    vpor %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpor %ymm0, %ymm1, %ymm0
-; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
-; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR63946:
@@ -1050,9 +1048,8 @@ define <16 x i16> @PR233272(<16 x i16> %v0, <16 x i16> %v1, <16 x i16> %v2, <16 
 ; AVX2-NEXT:    vpandn %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpcmpgtw %ymm0, %ymm6, %ymm0
 ; AVX2-NEXT:    vpandn %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpsllw $15, %ymm0, %ymm0
-; AVX2-NEXT:    vpsraw $15, %ymm0, %ymm0
-; AVX2-NEXT:    vpand %ymm7, %ymm0, %ymm0
+; AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpblendvb %ymm0, %ymm7, %ymm1, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: PR233272:

@@ -34,11 +34,15 @@ def MisalignedMemAccess : SubtargetFeature<"allows-misaligned-mem-access",
                                            "AllowsMisalignedMemAccess", "true",
                                            "Allows misaligned memory access">;
 
+def FuncTable : SubtargetFeature<"func-table", "HasFuncTable", "true",
+                                 "Call functions through a table">;
+
 def : Proc<"generic", []>;
 def : Proc<"v1", []>;
 def : Proc<"v2", []>;
 def : Proc<"v3", [ALU32]>;
 def : Proc<"v4", [ALU32]>;
+def : Proc<"v5", [ALU32]>;
 def : Proc<"probe", []>;
 
 def BPFInstPrinter : AsmWriter {

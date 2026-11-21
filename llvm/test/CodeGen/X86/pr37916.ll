@@ -10,17 +10,13 @@ define void @fn1() local_unnamed_addr {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1: # %if.end
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl a, %eax
-; CHECK-NEXT:    movl a+4, %ecx
-; CHECK-NEXT:    orl %eax, %ecx
-; CHECK-NEXT:    movl a+4, %ecx
 ; CHECK-NEXT:    movl $a, f
-; CHECK-NEXT:    je .LBB0_3
-; CHECK-NEXT:  # %bb.2: # %if.end
-; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl a, %eax
+; CHECK-NEXT:    orl a+4, %eax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    andb %al, %al
 ; CHECK-NEXT:    jne .LBB0_1
-; CHECK-NEXT:  .LBB0_3: # %cond.false
+; CHECK-NEXT:  # %bb.2: # %cond.false
 entry:
   br label %if.end
 

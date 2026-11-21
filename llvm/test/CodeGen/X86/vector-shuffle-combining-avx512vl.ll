@@ -165,3 +165,28 @@ define <8 x double> @PR143606(ptr %px, ptr %py) {
   %res = shufflevector <4 x double> %lo, <4 x double> %hi, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x double> %res
 }
+
+define <4 x i64> @PR241253(<4 x i64> %y) {
+; X86-LABEL: PR241253:
+; X86:       # %bb.0:
+; X86-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-NEXT:    vpmovsxwq {{.*#+}} ymm1 = [256,12288,63,7]
+; X86-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X86-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR241253:
+; X64:       # %bb.0:
+; X64-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-NEXT:    vpmovsxwq {{.*#+}} ymm1 = [256,12288,63,7]
+; X64-NEXT:    vpand %ymm1, %ymm0, %ymm2
+; X64-NEXT:    vpsllvq %ymm1, %ymm0, %ymm0
+; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm2[0,1,2,3,4,5],ymm0[6,7]
+; X64-NEXT:    retq
+  %x = shl <4 x i64> %y, <i64 0, i64 0, i64 0, i64 8>
+  %and = and <4 x i64> %x, <i64 256, i64 12288, i64 63, i64 7>
+  %shl = shl nuw nsw <4 x i64> %x, <i64 256, i64 12288, i64 63, i64 7>
+  %blend = shufflevector <4 x i64> %and, <4 x i64> %shl, <4 x i32> <i32 0, i32 1, i32 2, i32 7>
+  ret <4 x i64> %blend
+}

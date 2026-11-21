@@ -721,8 +721,7 @@ static bool mergeBlocksIntoPredecessors(Loop &L, DominatorTree &DT,
 static bool simplifyLoopCFG(Loop &L, DominatorTree &DT, LoopInfo &LI,
                             ScalarEvolution &SE, MemorySSAUpdater *MSSAU,
                             bool &IsLoopDeleted) {
-  const ScalarOptions &Opts =
-      L.getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(L);
   bool Changed = false;
 
   // Constant-fold terminators with known constant conditions.

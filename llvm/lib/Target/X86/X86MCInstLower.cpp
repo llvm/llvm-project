@@ -2022,6 +2022,10 @@ static void addConstantComments(const MachineInstr *MI,
     CASE_ARITH_RM(PADDW)
     CASE_ARITH_RM(PADDD)
     CASE_ARITH_RM(PADDQ)
+    CASE_ARITH_RM(PSUBB)
+    CASE_ARITH_RM(PSUBW)
+    CASE_ARITH_RM(PSUBD)
+    CASE_ARITH_RM(PSUBQ)
     CASE_ARITH_RM(PMADDUBSW)
     CASE_ARITH_RM(PMADDWD)
     CASE_ARITH_RM(PMULDQ)
@@ -2794,7 +2798,7 @@ void X86AsmPrinter::maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI) {
   // We only need to insert NOPs after CALLs when targeting Windows on AMD64.
   // (Don't let the name fool you: Itanium refers to table-based exception
   // handling, not the Itanium architecture.)
-  if (MAI.getExceptionHandlingType() != ExceptionHandling::WinEH ||
+  if (getModuleExceptionModel() != ExceptionHandling::WinEH ||
       MAI.getWinEHEncodingType() != WinEH::EncodingType::Itanium) {
     return;
   }
