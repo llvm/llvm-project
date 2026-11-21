@@ -167,6 +167,32 @@ struct NamedFirst { int a : 8; int : 16; };
 struct UnnamedFirst { int : 16; int a : 8; };
 // CIR-DAG: !rec_UnnamedFirst = !cir.struct<"UnnamedFirst" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!s32i, 16, unnamed>, #cir.bitfield_decl<!s32i, 8>]>}>
 
+struct BitfieldBeforeEmpty {
+  unsigned a : 16;
+  unsigned b : 8;
+  Empty e;
+};
+// CIR-DAG: !rec_BitfieldBeforeEmpty = !cir.struct<"BitfieldBeforeEmpty" {bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 16>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 8>]>, data !rec_Empty}>
+// LLVMCIR-DAG: %struct.BitfieldBeforeEmpty = type { i16, i8, %struct.Empty }
+// OGCG-DAG: %struct.BitfieldBeforeEmpty = type { i32 }
+
+struct BitfieldBeforeNuaEmpty {
+  unsigned a : 16;
+  unsigned b : 8;
+  [[no_unique_address]] Empty e;
+};
+// CIR-DAG: !rec_BitfieldBeforeNuaEmpty = !cir.struct<"BitfieldBeforeNuaEmpty" {bitfield !cir.bitfield<!u32i, [#cir.bitfield_decl<!u32i, 16>, #cir.bitfield_decl<!u32i, 8>]>}>
+// LLVM-DAG: %struct.BitfieldBeforeNuaEmpty = type { i32 }
+
+struct BitfieldBeforeNuaHoldsAbiData {
+  unsigned a : 16;
+  unsigned b : 8;
+  [[no_unique_address]] EmptyForLayoutOnly e;
+};
+// CIR-DAG: !rec_BitfieldBeforeNuaHoldsAbiData = !cir.struct<"BitfieldBeforeNuaHoldsAbiData" {bitfield !cir.bitfield<!u16i, [#cir.bitfield_decl<!u32i, 16>]>, bitfield !cir.bitfield<!u8i, [#cir.bitfield_decl<!u32i, 8>]>, data !rec_EmptyForLayoutOnly}>
+// LLVMCIR-DAG: %struct.BitfieldBeforeNuaHoldsAbiData = type { i16, i8, %struct.EmptyForLayoutOnly }
+// OGCG-DAG: %struct.BitfieldBeforeNuaHoldsAbiData = type { i32 }
+
 // A zero-length bit-field separates one span into two units, so the field
 // after it sits in a unit of its own.  A record can carry a named unit and an
 // unnamed one at once, in either order.
@@ -238,6 +264,9 @@ void useTypes(HoldsEmpty *, NuaEmpty *, NuaEmptyUnion *, NuaPolyUnion *,
   NuaMixedInner nmi2;
   TwoFields tf;
   DeepOuter deep;
+  BitfieldBeforeEmpty bbe;
+  BitfieldBeforeNuaEmpty bbne;
+  BitfieldBeforeNuaHoldsAbiData bbnhad;
 }
 
 // The zero-length bit-field member leaves the record's alignment alone, so
