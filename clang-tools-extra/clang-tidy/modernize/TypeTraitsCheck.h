@@ -33,6 +33,7 @@ public:
 
 private:
   const bool IgnoreMacros;
+  const bool UseCxx20Aliases;
 };
 
 } // namespace clang::tidy::modernize

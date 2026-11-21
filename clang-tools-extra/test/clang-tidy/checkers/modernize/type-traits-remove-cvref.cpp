@@ -1,6 +1,8 @@
 // RUN: %check_clang_tidy -std=c++20-or-later %s modernize-type-traits %t -check-suffixes=',MACRO'
 // RUN: %check_clang_tidy -std=c++20-or-later %s modernize-type-traits %t -- \
 // RUN:   -config='{CheckOptions: {modernize-type-traits.IgnoreMacros: true}}'
+// RUN: %check_clang_tidy -check-suffix=NOCXX20 -std=c++20-or-later %s modernize-type-traits %t -- \
+// RUN:   -config='{CheckOptions: {modernize-type-traits.UseCxx20Aliases: false}}'
 
 namespace std {
 template <class> struct remove_cv {
