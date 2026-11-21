@@ -5357,8 +5357,8 @@ static void computeKnownFPClassForFPTrunc(const Operator *Op,
                                           KnownFPClass &Known,
                                           const SimplifyQuery &Q,
                                           unsigned Depth) {
-  if ((InterestedClasses &
-       (KnownFPClass::OrderedLessThanZeroMask | fcNan)) == fcNone)
+  if ((InterestedClasses & (KnownFPClass::OrderedLessThanZeroMask | fcNan)) ==
+      fcNone)
     return;
 
   KnownFPClass KnownSrc;
@@ -6598,7 +6598,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // the shuffle result.
     APInt DemandedLHS, DemandedRHS;
     auto *Shuf = dyn_cast<ShuffleVectorInst>(Op);
-    if (!Shuf || !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
+    if (!Shuf ||
+        !getShuffleDemandedElts(Shuf, DemandedElts, DemandedLHS, DemandedRHS))
       return;
 
     if (!!DemandedLHS) {
