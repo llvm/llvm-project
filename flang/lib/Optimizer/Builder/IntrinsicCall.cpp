@@ -932,6 +932,16 @@ static llvm::cl::opt<bool>
                                     "instead of libm complex operations"),
                      llvm::cl::init(false));
 
+enum class FastRealModTrunc { MathTrunc, EmulateTrunc };
+static llvm::cl::opt<FastRealModTrunc> fastRealModTrunc(
+    "fast-real-mod-trunc",
+    llvm::cl::desc("Truncation of the quotient in the inline REAL MOD:"),
+    llvm::cl::values(
+        clEnumValN(FastRealModTrunc::MathTrunc, "math-trunc", "math.trunc"),
+        clEnumValN(FastRealModTrunc::EmulateTrunc, "emulate-trunc",
+                   "|q| < 2**(precision-1) ? sitofp(fptosi(q)) : q")),
+    llvm::cl::init(FastRealModTrunc::MathTrunc), llvm::cl::Hidden);
+
 /// Return a string containing the given Fortran intrinsic name
 /// with the type of its arguments specified in funcType
 /// surrounded by the given prefix/suffix.
@@ -7069,6 +7079,32 @@ mlir::Value IntrinsicLibrary::genMergeBits(mlir::Type resultType,
 }
 
 // MOD
+/// Truncate \p q toward zero. Every value with magnitude at or above
+/// 2**(precision-1) is already integral, and every value below it converts
+/// exactly to an integer as wide as the floating-point type, so the integer
+/// round trip never overflows.
+static mlir::Value
+genEmulatedTrunc(fir::FirOpBuilder &builder, mlir::Location loc, mlir::Value q,
+                 mlir::arith::FastMathFlagsAttr fastmathAttr) {
+  auto floatTy = mlir::cast<mlir::FloatType>(q.getType());
+  const llvm::fltSemantics &sem = floatTy.getFloatSemantics();
+  int precision = llvm::APFloat::semanticsPrecision(sem);
+  llvm::APFloat bound = llvm::scalbn(llvm::APFloat::getOne(sem), precision - 1,
+                                     llvm::APFloat::rmNearestTiesToEven);
+  mlir::Value boundVal = builder.createRealConstant(loc, floatTy, bound);
+  mlir::Value absQ = mlir::math::AbsFOp::create(builder, loc, q, fastmathAttr);
+  mlir::Value inRange =
+      mlir::arith::CmpFOp::create(builder, loc, mlir::arith::CmpFPredicate::OLT,
+                                  absQ, boundVal, fastmathAttr.getValue());
+  mlir::Type intTy = builder.getIntegerType(floatTy.getWidth());
+  mlir::Value intQ = mlir::arith::FPToSIOp::create(builder, loc, intTy, q);
+  mlir::Value truncQ =
+      mlir::arith::SIToFPOp::create(builder, loc, floatTy, intQ);
+  return mlir::arith::SelectOp::create(builder, loc, inRange, truncQ, q);
+}
+
+/// The quotient is truncated in floating point rather than through an integer
+/// type, which would clamp quotients outside the integer range.
 static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
                               mlir::Value a, mlir::Value p) {
   auto fastmathFlags = mlir::arith::FastMathFlags::contract;
@@ -7076,12 +7112,18 @@ static mlir::Value genFastMod(fir::FirOpBuilder &builder, mlir::Location loc,
       mlir::arith::FastMathFlagsAttr::get(builder.getContext(), fastmathFlags);
   mlir::Value divResult =
       mlir::arith::DivFOp::create(builder, loc, a, p, fastmathAttr);
-  mlir::Type intType = builder.getIntegerType(
-      a.getType().getIntOrFloatBitWidth(), /*signed=*/true);
-  mlir::Value intResult = builder.createConvert(loc, intType, divResult);
-  mlir::Value cnvResult = builder.createConvert(loc, a.getType(), intResult);
+  // The integer conversions of REAL(10) and REAL(16) are library calls.
+  mlir::Type floatTy = a.getType();
+  bool useEmulatedTrunc = fastRealModTrunc == FastRealModTrunc::EmulateTrunc &&
+                          (floatTy.isF16() || floatTy.isBF16() ||
+                           floatTy.isF32() || floatTy.isF64());
+  mlir::Value truncResult =
+      useEmulatedTrunc
+          ? genEmulatedTrunc(builder, loc, divResult, fastmathAttr)
+          : mlir::math::TruncOp::create(builder, loc, divResult, fastmathAttr)
+                .getResult();
   mlir::Value mulResult =
-      mlir::arith::MulFOp::create(builder, loc, cnvResult, p, fastmathAttr);
+      mlir::arith::MulFOp::create(builder, loc, truncResult, p, fastmathAttr);
   mlir::Value subResult =
       mlir::arith::SubFOp::create(builder, loc, a, mulResult, fastmathAttr);
   return subResult;
