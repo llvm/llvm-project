@@ -18,6 +18,7 @@
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SuperHTargetParser.h"
 #include <cassert>
 #include <cstring>
 using namespace llvm;
@@ -121,6 +122,10 @@ StringRef Triple::getArchTypeName(ArchType Kind) {
     return "riscv32be";
   case riscv64be:
     return "riscv64be";
+  case sheb:
+    return "sheb";
+  case shel:
+    return "shel";
   case shave:
     return "shave";
   case sparc:
@@ -201,6 +206,42 @@ StringRef Triple::getArchName(ArchType Kind, SubArchType SubArch) {
   case Triple::x86_64:
     if (SubArch == X86_64SubArch_lfi)
       return "x86_64_lfi";
+    break;
+  case Triple::sheb:
+    if (SubArch == SuperHSubArch_1)
+      return "sh1eb";
+    if (SubArch == SuperHSubArch_2)
+      return "sh2eb";
+    if (SubArch == SuperHSubArch_2a)
+      return "sh2aeb";
+    if (SubArch == SuperHSubArch_2e)
+      return "sh2eeb";
+    if (SubArch == SuperHSubArch_3)
+      return "sh3eb";
+    if (SubArch == SuperHSubArch_3e)
+      return "sh3eeb";
+    if (SubArch == SuperHSubArch_4)
+      return "sh4eb";
+    if (SubArch == SuperHSubArch_4a)
+      return "sh4aeb";
+    break;
+  case Triple::shel:
+    if (SubArch == SuperHSubArch_1)
+      return "sh1el";
+    if (SubArch == SuperHSubArch_2)
+      return "sh2el";
+    if (SubArch == SuperHSubArch_2a)
+      return "sh2ael";
+    if (SubArch == SuperHSubArch_2e)
+      return "sh2eel";
+    if (SubArch == SuperHSubArch_3)
+      return "sh3el";
+    if (SubArch == SuperHSubArch_3e)
+      return "sh3eel";
+    if (SubArch == SuperHSubArch_4)
+      return "sh4el";
+    if (SubArch == SuperHSubArch_4a)
+      return "sh4ael";
     break;
   case Triple::spirv:
     switch (SubArch) {
@@ -309,6 +350,10 @@ StringRef Triple::getArchTypePrefix(ArchType Kind) {
   case bpfel:
   case bpfeb:
     return "bpf";
+
+  case sheb:
+  case shel:
+    return "sh";
 
   case sparcv9:
   case sparcel:
@@ -459,8 +504,24 @@ static Triple::ArchType parseBPFArch(StringRef ArchName) {
   }
 }
 
+static Triple::ArchType parseSuperHArch(StringRef ArchName) {
+  SuperH::ISAKind ISA = SuperH::parseArchISA(ArchName);
+  if (ISA != SuperH::ISAKind::INVALID) {
+    SuperH::EndianKind ENDIAN = SuperH::parseArchEndian(ArchName);
+    switch(ENDIAN) {
+      default: break;
+      case SuperH::EndianKind::BIG:
+        return Triple::sheb;
+      case SuperH::EndianKind::LITTLE:
+        return Triple::shel;
+    }
+  }
+  return Triple::UnknownArch;
+}
+
 Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
   Triple::ArchType BPFArch(parseBPFArch(Name));
+  Triple::ArchType SHArch(parseSuperHArch(Name));
   return StringSwitch<Triple::ArchType>(Name)
       .Case("aarch64", aarch64)
       .Case("aarch64_be", aarch64_be)
@@ -493,6 +554,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("riscv32be", riscv32be)
       .Case("riscv64be", riscv64be)
       .Case("hexagon", hexagon)
+      .StartsWith("sh", SHArch)
       .Case("sparc", sparc)
       .Case("sparcel", sparcel)
       .Case("sparcv9", sparcv9)
@@ -697,6 +759,8 @@ Triple::ArchType Triple::parseArch(StringRef ArchName) {
       return parseARMArch(ArchName);
     if (ArchName.starts_with("bpf"))
       return parseBPFArch(ArchName);
+    if (ArchName.starts_with("sh"))
+      return parseSuperHArch(ArchName);
   }
 
   return AT;
@@ -859,6 +923,30 @@ Triple::SubArchType Triple::parseSubArch(StringRef SubArchName) {
         .Default(Triple::NoSubArch);
   }
 
+  // SuperH sub arch.
+  if (SubArchName.starts_with("sh")) {
+    switch(SuperH::parseArchISA(SubArchName)) {
+    case SuperH::ISAKind::SH1:
+      return Triple::SuperHSubArch_1;
+    case SuperH::ISAKind::SH2:
+      return Triple::SuperHSubArch_2;
+    case SuperH::ISAKind::SH2A:
+      return Triple::SuperHSubArch_2a;
+    case SuperH::ISAKind::SH2E:
+      return Triple::SuperHSubArch_2e;
+    case SuperH::ISAKind::SH3:
+      return Triple::SuperHSubArch_3;
+    case SuperH::ISAKind::SH3E:
+      return Triple::SuperHSubArch_3e;
+    case SuperH::ISAKind::SH4:
+      return Triple::SuperHSubArch_4;
+    case SuperH::ISAKind::SH4A:
+      return Triple::SuperHSubArch_4a;
+    default:
+      return Triple::NoSubArch;
+    }
+  }
+
   StringRef ARMSubArch = ARM::getCanonicalArchName(SubArchName);
 
   // For now, this is the small part. Early return.
@@ -1006,6 +1094,8 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
   case Triple::riscv64:
   case Triple::riscv32be:
   case Triple::riscv64be:
+  case Triple::sheb:
+  case Triple::shel:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1775,6 +1865,8 @@ unsigned Triple::getArchPointerBitWidth(llvm::Triple::ArchType Arch) {
   case llvm::Triple::renderscript32:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv32be:
+  case llvm::Triple::sheb:
+  case llvm::Triple::shel:
   case llvm::Triple::shave:
   case llvm::Triple::sparc:
   case llvm::Triple::sparcel:
@@ -1887,6 +1979,8 @@ Triple Triple::get32BitArchVariant() const {
   case Triple::renderscript32:
   case Triple::riscv32:
   case Triple::riscv32be:
+  case Triple::sheb:
+  case Triple::shel:
   case Triple::shave:
   case Triple::sparc:
   case Triple::sparcel:
@@ -1980,6 +2074,8 @@ Triple Triple::get64BitArchVariant() const {
   case Triple::msp430:
   case Triple::nanomips:
   case Triple::r600:
+  case Triple::sheb:
+  case Triple::shel:
   case Triple::shave:
   case Triple::sparcel:
   case Triple::tce:
@@ -2161,6 +2257,9 @@ Triple Triple::getBigEndianArchVariant() const {
   case Triple::sparcel:
     T.setArch(Triple::sparc);
     break;
+  case Triple::shel:
+    T.setArch(Triple::sheb);
+    break;
   case Triple::tcele:
     T.setArch(Triple::tce);
     break;
@@ -2216,6 +2315,9 @@ Triple Triple::getLittleEndianArchVariant() const {
   case Triple::sparc:
     T.setArch(Triple::sparcel);
     break;
+  case Triple::sheb:
+    T.setArch(Triple::shel);
+    break;
   case Triple::tce:
     T.setArch(Triple::tcele);
     break;
@@ -2257,6 +2359,7 @@ bool Triple::isLittleEndian() const {
   case Triple::riscv32:
   case Triple::riscv64:
   case Triple::shave:
+  case Triple::shel:
   case Triple::sparcel:
   case Triple::spir64:
   case Triple::spir:
