@@ -245,6 +245,23 @@ Modules maintain references to each of the headers that were part of the module 
   prebuilt modules paths (specified via `-fprebuilt-module-path`), we will
   look for a matching implicit module in the prebuilt modules paths.
 
+`-fimplicit-modules-validation-key=<key>`
+
+: Record `<key>` in each implicitly built module, and treat the module as out
+  of date if it is later loaded with a different list of keys. The keys are
+  compared in order and are otherwise opaque.
+
+  Keys are conservative indicators that something more permanent about the
+  environment has changed in a way that:
+  - is expensive or fragile for Clang to check,
+  - is potentially cheap for the build system to conservatively check, and
+  - will not change based on the build configuration.
+
+  These do not impact the context hash as the intent is to replace the old
+  modules in the cache to reduce cache size growth on invalidation. An example
+  of this is the SDK version of Apple SDKs on Darwin-based systems, which the
+  driver passes as a validation key.
+
 #### -cc1 Options
 
 `-fmodules-strict-context-hash`

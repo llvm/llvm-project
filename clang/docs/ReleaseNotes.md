@@ -404,6 +404,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   to be moved without rewriting paths. Paths outside the working directory
   remain absolute. This option cannot be combined with `--relocatable-pch`.
 
+- New option `-fimplicit-modules-validation-key=<key>` makes an implicitly
+  built module out of date when it is validated with different keys than it was
+  built with. When targeting Darwin, the driver adds a key for the SDK's
+  `SystemVersion.plist`, so implicitly built modules are rebuilt when the SDK
+  is updated in place.
+
 - New option `-fmodules-validate-directory-dependencies` makes an implicitly
   built module out of date when a header is added to a directory it enumerated,
   such as an umbrella directory or the directory of an umbrella header, after it
