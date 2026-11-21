@@ -55,11 +55,6 @@ elseif(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   set_source_files_properties(ConstantFolding.cpp PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
 endif()
 
-# LLVM libc math headers use C99 _Complex types.
-if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set_property(SOURCE ConstantFolding.cpp APPEND PROPERTY COMPILE_OPTIONS "-Wno-c99-extensions")
-endif()
-
 add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
@@ -211,6 +206,11 @@ add_llvm_component_library(LLVMAnalysis
   )
 
 target_include_directories(LLVMAnalysis PRIVATE ${LLVM_SOURCE_DIR}/../libc)
+
+# LLVM libc math headers use C99 _Complex types.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set_property(SOURCE ConstantFolding.cpp APPEND PROPERTY COMPILE_OPTIONS "-Wno-c99-extensions")
+endif()
 
 include(CheckCXXSymbolExists)
 check_cxx_symbol_exists(logf128 math.h HAS_LOGF128)
