@@ -10,6 +10,10 @@
 # RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
 # RUN: %lld -lSystem --icf=safe -o %t/safe %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-EMPTY --allow-empty
+# RUN: not %lld -lSystem --icf=safe_thunks -o %t/thunks %t/main.o 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=DIAG-SAFE-THUNKS
+# RUN: not %lld -lSystem --icf=relaxed_thunks -o %t/relaxed %t/main.o 2>&1 \
+# RUN:     | FileCheck %s --check-prefix=DIAG-RELAXED-THUNKS
 # RUN: not %lld -lSystem --icf=junk -o %t/junk %t/main.o 2>&1 \
 # RUN:     | FileCheck %s --check-prefix=DIAG-JUNK
 # RUN: %lld -lSystem --icf=all -no_deduplicate -o %t/none2 %t/main.o 2>&1 \
@@ -19,6 +23,8 @@
 
 # DIAG-EMPTY-NOT: {{.}}
 # DIAG-JUNK: unknown --icf=OPTION `junk', defaulting to `none'
+# DIAG-SAFE-THUNKS: --icf=safe_thunks is only supported on arm64 targets
+# DIAG-RELAXED-THUNKS: --icf=relaxed_thunks is only supported on arm64 targets
 
 # RUN: llvm-objdump -d --syms %t/all | FileCheck %s --check-prefix=FOLD
 # RUN: llvm-objdump -d --syms %t/all2 | FileCheck %s --check-prefix=FOLD
