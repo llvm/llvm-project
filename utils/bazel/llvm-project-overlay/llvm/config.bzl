@@ -28,6 +28,7 @@ def native_arch_defines(arch, triple):
 
 posix_defines = [
     "LLVM_ON_UNIX=1",
+    "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_PLUGINS=1",
     "LLVM_ENABLE_THREADS=1",
@@ -53,6 +54,7 @@ emscripten_defines = [
     "LLVM_ON_UNIX=1",
     r'LTDL_SHLIB_EXT=\".so\"',
     r'LLVM_PLUGIN_EXT=\".so\"',
+    "LLVM_ENABLE_LLVM_C_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS=1",
     "LLVM_ENABLE_PLUGINS=0",
     "LLVM_ENABLE_THREADS=0",
