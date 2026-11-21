@@ -41,6 +41,7 @@ set(SANITIZER_UNITTESTS
   sanitizer_procmaps_test.cpp
   sanitizer_procmaps_mac_test.cpp
   sanitizer_range_test.cpp
+  sanitizer_report_receiver_test.cpp
   sanitizer_ring_buffer_test.cpp
   sanitizer_quarantine_test.cpp
   sanitizer_stack_store_test.cpp

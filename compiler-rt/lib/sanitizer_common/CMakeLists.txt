@@ -94,6 +94,7 @@ set(SANITIZER_SYMBOLIZER_SOURCES
   sanitizer_symbolizer_markup.cpp
   sanitizer_symbolizer_markup_fuchsia.cpp
   sanitizer_symbolizer_posix_libcdep.cpp
+  sanitizer_report_receiver.cpp
   sanitizer_symbolizer_report.cpp
   sanitizer_symbolizer_report_fuchsia.cpp
   sanitizer_symbolizer_win.cpp
@@ -191,6 +192,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_range.h
   sanitizer_redefine_builtins.h
   sanitizer_report_decorator.h
+  sanitizer_report_receiver.h
   sanitizer_ring_buffer.h
   sanitizer_signal_interceptors.inc
   sanitizer_stack_store.h
