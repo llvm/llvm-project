@@ -222,6 +222,7 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
     path = path.substr(1);
   std::unique_ptr<MemoryBuffer> layoutFile =
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  addDependencyFile(path);
   StringRef content = layoutFile->getBuffer();
   int index = 0;
 
@@ -256,6 +257,7 @@ void LinkerDriver::parseSectionLayout(StringRef path) {
 void LinkerDriver::parseDosStub(StringRef path) {
   std::unique_ptr<MemoryBuffer> stub =
       CHECK(MemoryBuffer::getFile(path), "could not open " + path);
+  addDependencyFile(path);
   size_t bufferSize = stub->getBufferSize();
   const char *bufferStart = stub->getBufferStart();
   // MS link.exe compatibility:
@@ -475,6 +477,7 @@ LinkerDriver::createManifestXmlWithInternalMt(StringRef defaultXml) {
   for (StringRef filename : ctx.config.manifestInput) {
     std::unique_ptr<MemoryBuffer> manifest =
         check(MemoryBuffer::getFile(filename));
+    addDependencyFile(filename);
     // Call takeBuffer to include in /reproduce: output if applicable.
     if (auto e = merger.merge(takeBuffer(std::move(manifest))))
       Fatal(ctx) << "internal manifest tool failed on file " << filename << ": "
@@ -505,6 +508,7 @@ LinkerDriver::createManifestXmlWithExternalMt(StringRef defaultXml) {
   for (StringRef filename : ctx.config.manifestInput) {
     e.add("/manifest");
     e.add(filename);
+    addDependencyFile(filename);
 
     // Manually add the file to the /reproduce: tar if needed.
     if (tar)

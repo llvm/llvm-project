@@ -36,6 +36,12 @@ from the [LLVM releases web site](https://llvm.org/releases/).
 
 ### COFF Improvements
 
+* `/dependency-file:<file>` writes the files the link read, in the format of a
+  compiler's `-MD` file, as ELF's `--dependency-file` does. It lists the
+  libraries found through `/defaultlib:` and `/libpath:`, the members of thin
+  archives that the link reads, and the files named by options such as `/def:`
+  and `/natvis:`.
+
 ### MinGW Improvements
 
 ### MachO Improvements
