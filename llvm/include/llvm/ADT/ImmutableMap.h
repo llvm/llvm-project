@@ -133,6 +133,17 @@ public:
         return ImmutableMap(T);
     }
 
+    /// Returns \p Old without the entries for which \p Pred is false (see
+    /// ImutAVLFactory::filterTree).
+    template <typename PredFn>
+    [[nodiscard]] ImmutableMap filter(ImmutableMap Old, PredFn Pred) {
+      TreeTy *T = F.filterTree(Old.Root.get(), Pred);
+      if constexpr (Canonicalize)
+        return ImmutableMap(F.getCanonicalTree(T));
+      else
+        return ImmutableMap(T);
+    }
+
     typename TreeTy::Factory *getTreeFactory() const {
       return const_cast<typename TreeTy::Factory *>(&F);
     }
