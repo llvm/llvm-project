@@ -12,12 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "DirectXTargetMachine.h"
-#include "DXILRootSignature.h"
-#include "DXILShaderFlags.h"
-#include "DXILSignatureAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
-#include "DirectXAsmPrinter.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -154,11 +150,6 @@ DirectXTargetMachine::DirectXTargetMachine(const Target &T, const Triple &TT,
 }
 
 DirectXTargetMachine::~DirectXTargetMachine() {}
-
-void DirectXTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
-#define GET_PASS_REGISTRY "DirectXPassRegistry.def"
-#include "llvm/Passes/TargetPassRegistry.inc"
-}
 
 bool DirectXTargetMachine::addPassesToEmitFile(
     PassManagerBase &PM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
