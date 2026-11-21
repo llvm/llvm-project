@@ -23,6 +23,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include <numeric>
 
 #define DEBUG_TYPE "static-memory-planner"
@@ -90,11 +91,16 @@ findFreedAllocs(memref::DeallocOp dealloc,
   return allocs;
 }
 
-/// Compute the size in bytes for a memref type.
+/// Compute the size in bytes for a memref type. Lowered memrefs do not
+/// bit-pack their elements: each element occupies a whole number of bytes
+/// (e.g., memref<16xi1> takes 16 bytes). The element size is also rounded up
+/// to a power of two, an upper bound on the padded size of non-power-of-two
+/// widths (e.g., i24 takes 4 bytes).
 static int64_t computeSizeInBytes(MemRefType memrefType) {
   int64_t numElements = memrefType.getNumElements();
-  unsigned elementSizeInBits = memrefType.getElementTypeBitWidth();
-  return (numElements * elementSizeInBits + 7) / 8; // Round up to bytes
+  uint64_t elementSizeInBytes = llvm::PowerOf2Ceil(
+      llvm::divideCeil(memrefType.getElementTypeBitWidth(), 8));
+  return numElements * elementSizeInBytes;
 }
 
 /// Build lifetime-annotated allocation descriptors from candidates.
