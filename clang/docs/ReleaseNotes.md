@@ -399,6 +399,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Added `__builtin_elementwise_mulh`, which returns the high half of
   an unsigned or signed integer multiplication, and 
   works on integer scalars, vectors and `_BitInt`.
+  This includes constexpr evaluation support.
 
 ### New Compiler Flags
 
