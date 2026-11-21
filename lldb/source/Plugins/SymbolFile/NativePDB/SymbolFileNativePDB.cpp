@@ -2359,6 +2359,112 @@ void SymbolFileNativePDB::FindFunctions(
     resolve_from(m_func_base_names);
   if (name_type_mask & eFunctionNameTypeMethod)
     resolve_from(m_func_method_names);
+
+  if (!include_inlines || parent_decl_ctx.IsValid())
+    return;
+
+  CacheInlineSiteNames();
+  std::vector<uint64_t> inline_site_uids;
+  if (name_type_mask & eFunctionNameTypeFull)
+    m_inline_site_full_names.GetValues(name, inline_site_uids);
+  if (name_type_mask & (eFunctionNameTypeBase | eFunctionNameTypeMethod))
+    m_inline_site_base_names.GetValues(name, inline_site_uids);
+
+  std::set<uint64_t> resolved_sites;
+  for (uint64_t uid : inline_site_uids)
+    if (resolved_sites.insert(uid).second)
+      AppendInlineSite(PdbSymUid(uid).asCompilandSym(), sc_list);
+}
+
+void SymbolFileNativePDB::CacheInlineSiteNames() {
+  if (m_cached_inline_site_names)
+    return;
+  m_cached_inline_site_names = true;
+
+  LazyRandomTypeCollection &ids = m_index->ipi().typeCollection();
+  for (uint16_t modi = 0; modi < GetNumCompileUnits(); ++modi) {
+    CompilandIndexItem &cci = m_index->compilands().GetOrCreateCompiland(modi);
+    const CVSymbolArray &syms = cci.m_debug_stream.getSymbolArray();
+    for (auto iter = syms.begin(); iter != syms.end(); ++iter) {
+      if (iter->kind() != S_INLINESITE)
+        continue;
+      InlineSiteSym inline_site(SymbolRecordKind::InlineSiteSym);
+      if (llvm::Error error = SymbolDeserializer::deserializeAs<InlineSiteSym>(
+              *iter, inline_site)) {
+        llvm::consumeError(std::move(error));
+        continue;
+      }
+      std::optional<CVType> inlinee = ids.tryGetType(inline_site.Inlinee);
+      if (!inlinee)
+        continue;
+
+      llvm::StringRef basename;
+      std::string full_name;
+      if (inlinee->kind() == LF_FUNC_ID) {
+        FuncIdRecord fir;
+        if (llvm::Error error =
+                TypeDeserializer::deserializeAs<FuncIdRecord>(*inlinee, fir)) {
+          llvm::consumeError(std::move(error));
+          continue;
+        }
+        basename = fir.getName();
+        if (!fir.getParentScope().isNoneType())
+          full_name =
+              (ids.getTypeName(fir.getParentScope()) + "::" + basename).str();
+      } else if (inlinee->kind() == LF_MFUNC_ID) {
+        MemberFuncIdRecord mfr;
+        if (llvm::Error error =
+                TypeDeserializer::deserializeAs<MemberFuncIdRecord>(*inlinee,
+                                                                    mfr)) {
+          llvm::consumeError(std::move(error));
+          continue;
+        }
+        basename = mfr.getName();
+        full_name =
+            (m_index->tpi().typeCollection().getTypeName(mfr.getClassType()) +
+             "::" + basename)
+                .str();
+      } else {
+        continue;
+      }
+
+      uint64_t uid = toOpaqueUid(PdbCompilandSymId(modi, iter.offset()));
+      m_inline_site_base_names.Append(ConstString(basename), uid);
+      m_inline_site_full_names.Append(
+          ConstString(full_name.empty() ? basename : full_name), uid);
+    }
+  }
+  m_inline_site_base_names.Sort(std::less<uint64_t>());
+  m_inline_site_full_names.Sort(std::less<uint64_t>());
+}
+
+void SymbolFileNativePDB::AppendInlineSite(PdbCompilandSymId inline_site_id,
+                                           SymbolContextList &sc_list) {
+  // Inline sites are nested in the procedure they were inlined into.
+  std::optional<PdbCompilandSymId> func_id = inline_site_id;
+  while (func_id) {
+    SymbolKind kind = m_index->ReadSymbolRecord(*func_id).kind();
+    if (kind == S_GPROC32 || kind == S_LPROC32)
+      break;
+    func_id = FindSymbolScope(*func_id);
+  }
+  if (!func_id)
+    return;
+
+  CompilandIndexItem &cci =
+      m_index->compilands().GetOrCreateCompiland(inline_site_id.modi);
+  SymbolContext sc;
+  sc.comp_unit = GetOrCreateCompileUnit(cci).get();
+  if (!sc.comp_unit)
+    return;
+  sc.function = GetOrCreateFunction(*func_id, *sc.comp_unit).get();
+  if (!sc.function)
+    return;
+  sc.block = sc.function->GetBlock(/*can_create=*/true)
+                 .FindBlockByID(toOpaqueUid(inline_site_id));
+  if (!sc.block)
+    return;
+  sc_list.Append(sc);
 }
 
 void SymbolFileNativePDB::FindFunctions(const RegularExpression &regex,

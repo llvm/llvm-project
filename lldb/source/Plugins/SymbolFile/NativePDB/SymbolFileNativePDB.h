@@ -323,6 +323,14 @@ private:
 
   std::string MakeFunctionCallLabel(PdbSymUid uid, llvm::StringRef lookup_name);
 
+  /// Index the S_INLINESITE records of all compile units by the name of the
+  /// function they inline.
+  void CacheInlineSiteNames();
+
+  /// Append the inlined function at the S_INLINESITE \p inline_site_id.
+  void AppendInlineSite(PdbCompilandSymId inline_site_id,
+                        SymbolContextList &sc_list);
+
   /// Append the function referenced by the S_PROCREF/S_LPROCREF \p global.
   void AppendFunctionForProcRef(PdbGlobalSymId global,
                                 SymbolContextList &sc_list);
@@ -380,6 +388,11 @@ private:
   lldb_private::UniqueCStringMap<uint32_t> m_func_base_names;
   /// method basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_func_method_names;
+
+  /// inlined function basename/full name -> UID(s) of its S_INLINESITEs
+  bool m_cached_inline_site_names = false;
+  lldb_private::UniqueCStringMap<uint64_t> m_inline_site_base_names;
+  lldb_private::UniqueCStringMap<uint64_t> m_inline_site_full_names;
 
   /// global variable basename -> Global ID(s)
   lldb_private::UniqueCStringMap<uint32_t> m_global_variable_base_names;
