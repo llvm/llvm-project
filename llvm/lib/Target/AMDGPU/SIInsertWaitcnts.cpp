@@ -1782,16 +1782,17 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
       }
       Wait = Wait.combined(OldWait);
 
-      // Merge consecutive waitcnt of the same type by erasing multiples.
-      if (WaitcntInstr) {
+      if (TrySimplify) {
+        // What a soft wait needs depends on the incoming state, which can
+        // still grow through a loop back edge. Keep it unchanged so later
+        // visits see the original request, let a hard wait carry what is
+        // needed now, and erase the soft wait once the fixpoint is reached.
+        DeferredErasures.insert(&II);
+      } else if (WaitcntInstr) {
+        // Merge consecutive waitcnt of the same type by erasing multiples.
         DeferredErasures.erase(&II);
         II.eraseFromParent();
         Modified = true;
-      } else if (!Wait.hasWaitExceptStoreCnt() && TrySimplify) {
-        // Might or might not be redundant, depending on if there's a loop
-        // carried dependency. Stash it away so we can erase it if nothing saves
-        // it.
-        DeferredErasures.insert(&II);
       } else {
         WaitcntInstr = &II;
         DeferredErasures.erase(&II);
@@ -1828,13 +1829,13 @@ bool WaitcntGeneratorPreGFX12::applyPreexistingWaitcnt(
       Wait.set(AMDGPU::STORE_CNT,
                std::min(Wait.get(AMDGPU::STORE_CNT), OldVSCnt));
 
-      if (WaitcntVsCntInstr) {
+      if (TrySimplify) {
+        // See the S_WAITCNT case above.
+        DeferredErasures.insert(&II);
+      } else if (WaitcntVsCntInstr) {
         DeferredErasures.erase(&II);
         II.eraseFromParent();
         Modified = true;
-      } else if (!Wait.hasWaitStoreCnt() && TrySimplify) {
-        // Loop-carried dependencies guard, see S_WAITCNT case above.
-        DeferredErasures.insert(&II);
       } else {
         WaitcntVsCntInstr = &II;
         DeferredErasures.erase(&II);
