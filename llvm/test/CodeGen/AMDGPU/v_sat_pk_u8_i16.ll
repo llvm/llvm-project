@@ -745,18 +745,16 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-GFX9:       ; %bb.0:
 ; GISEL-GFX9-NEXT:    s_load_dword s2, s[4:5], 0x2c
 ; GISEL-GFX9-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, 0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s4, s2
+; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX9-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX9-NEXT:    s_max_i32 s3, s4, s3
+; GISEL-GFX9-NEXT:    s_max_i32 s3, s3, 0
 ; GISEL-GFX9-NEXT:    s_max_i32 s2, s2, 0
 ; GISEL-GFX9-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
 ; GISEL-GFX9-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX9-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX9-NEXT:    s_sext_i32_i16 s4, 0xff00ff
-; GISEL-GFX9-NEXT:    s_min_i32 s3, s3, s4
+; GISEL-GFX9-NEXT:    s_min_i32 s3, s3, 0xff
 ; GISEL-GFX9-NEXT:    s_min_i32 s2, s2, 0xff
 ; GISEL-GFX9-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v0, s2
@@ -768,19 +766,17 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-GFX11-NEXT:    s_clause 0x1
 ; GISEL-GFX11-NEXT:    s_load_b32 s2, s[4:5], 0x2c
 ; GISEL-GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
-; GISEL-GFX11-NEXT:    s_sext_i32_i16 s3, 0
 ; GISEL-GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_sext_i32_i16 s4, s2
+; GISEL-GFX11-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX11-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX11-NEXT:    s_max_i32 s3, s4, s3
+; GISEL-GFX11-NEXT:    s_max_i32 s3, s3, 0
 ; GISEL-GFX11-NEXT:    s_max_i32 s2, s2, 0
-; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
-; GISEL-GFX11-NEXT:    s_sext_i32_i16 s3, 0xff00ff
-; GISEL-GFX11-NEXT:    s_sext_i32_i16 s4, s2
+; GISEL-GFX11-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX11-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX11-NEXT:    s_min_i32 s3, s4, s3
+; GISEL-GFX11-NEXT:    s_min_i32 s3, s3, 0xff
 ; GISEL-GFX11-NEXT:    s_min_i32 s2, s2, 0xff
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX11-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
@@ -791,19 +787,17 @@ define amdgpu_kernel void @vec_smax_smin_sgpr(ptr addrspace(1) %out, <2 x i16> i
 ; GISEL-GFX12-LABEL: vec_smax_smin_sgpr:
 ; GISEL-GFX12:       ; %bb.0:
 ; GISEL-GFX12-NEXT:    s_load_b96 s[0:2], s[4:5], 0x24
-; GISEL-GFX12-NEXT:    s_sext_i32_i16 s3, 0
 ; GISEL-GFX12-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    s_sext_i32_i16 s4, s2
+; GISEL-GFX12-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX12-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX12-NEXT:    s_max_i32 s3, s4, s3
+; GISEL-GFX12-NEXT:    s_max_i32 s3, s3, 0
 ; GISEL-GFX12-NEXT:    s_max_i32 s2, s2, 0
-; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX12-NEXT:    s_pack_ll_b32_b16 s2, s3, s2
-; GISEL-GFX12-NEXT:    s_sext_i32_i16 s3, 0xff00ff
-; GISEL-GFX12-NEXT:    s_sext_i32_i16 s4, s2
+; GISEL-GFX12-NEXT:    s_sext_i32_i16 s3, s2
 ; GISEL-GFX12-NEXT:    s_ashr_i32 s2, s2, 16
-; GISEL-GFX12-NEXT:    s_min_i32 s3, s4, s3
+; GISEL-GFX12-NEXT:    s_min_i32 s3, s3, 0xff
 ; GISEL-GFX12-NEXT:    s_min_i32 s2, s2, 0xff
 ; GISEL-GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GISEL-GFX12-NEXT:    s_pack_ll_b32_b16 s2, s3, s2

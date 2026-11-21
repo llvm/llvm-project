@@ -628,7 +628,7 @@ define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_and_b32 s0, s0, 0x3fff3fff
 ; GFX9-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX9-NEXT:    s_lshl_b32 s0, s0, 0x20002
+; GFX9-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX9-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX9-NEXT:    s_pack_ll_b32_b16 s0, s0, s1
 ; GFX9-NEXT:    s_lshr_b32 s1, s0, 16
@@ -639,7 +639,7 @@ define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_and_b32 s0, s0, 0x3fff3fff
 ; GFX10-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX10-NEXT:    s_lshl_b32 s0, s0, 0x20002
+; GFX10-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX10-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX10-NEXT:    s_pack_ll_b32_b16 s1, s0, s1
 ; GFX10-NEXT:    s_and_b32 s0, s1, 0xffff
@@ -650,7 +650,7 @@ define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0x3fff3fff
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s0, s0, 0x20002
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s0, s1
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s1
@@ -661,7 +661,7 @@ define amdgpu_ps <2 x i32> @s_shl_v2i32_zext_v2i16(<2 x i16> inreg %x) {
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0x3fff3fff
 ; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 16
-; GFX11-FAKE16-NEXT:    s_lshl_b32 s0, s0, 0x20002
+; GFX11-FAKE16-NEXT:    s_lshl_b32 s0, s0, 2
 ; GFX11-FAKE16-NEXT:    s_lshl_b32 s1, s1, 2
 ; GFX11-FAKE16-NEXT:    s_pack_ll_b32_b16 s1, s0, s1
 ; GFX11-FAKE16-NEXT:    s_and_b32 s0, s1, 0xffff

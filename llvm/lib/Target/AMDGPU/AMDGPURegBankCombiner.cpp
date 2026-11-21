@@ -109,6 +109,15 @@ public:
   bool matchCombine_mul24(MachineInstr &MI) const;
   void applyCombine_mul24(MachineInstr &MI) const;
 
+  bool matchBitcastOfBuildVectorOfConstants(MachineInstr &MI,
+                                            APInt &MatchInfo) const;
+  bool matchSextInRegOfConstant(MachineInstr &MI, APInt &MatchInfo) const;
+  void applyFoldToConstant(MachineInstr &MI, const APInt &Val) const;
+
+  bool matchOutOfRangeConstantShiftAmt(MachineInstr &MI,
+                                       APInt &MatchInfo) const;
+  void applyMaskedConstantShiftAmt(MachineInstr &MI, const APInt &Amt) const;
+
 private:
   SIModeRegisterDefaults getMode() const;
   bool getIEEE() const;
@@ -423,6 +432,73 @@ void AMDGPURegBankCombinerImpl::applyCanonicalizeZextShiftAmt(
   MRI.setRegBank(NewExt.getReg(0), RB);
   MRI.setRegBank(Mask.getReg(0), RB);
   MRI.setRegBank(And.getReg(0), RB);
+  MI.eraseFromParent();
+}
+
+// (bitcast (build_vector C0, C1, ...)) -> C
+bool AMDGPURegBankCombinerImpl::matchBitcastOfBuildVectorOfConstants(
+    MachineInstr &MI, APInt &MatchInfo) const {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  auto *BV = getOpcodeDef<GBuildVector>(MI.getOperand(1).getReg(), MRI);
+  if (!BV || !DstTy.isScalar() || DstTy.isFloat())
+    return false;
+
+  unsigned EltBits = MRI.getType(BV->getReg(0)).getScalarSizeInBits();
+  APInt Val(DstTy.getSizeInBits(), 0);
+  for (unsigned I = 0, E = BV->getNumSources(); I != E; ++I) {
+    std::optional<APInt> Elt = getIConstantVRegVal(BV->getSourceReg(I), MRI);
+    if (!Elt || Elt->getBitWidth() != EltBits)
+      return false;
+    Val.insertBits(*Elt, I * EltBits);
+  }
+
+  MatchInfo = Val;
+  return true;
+}
+
+// (sext_inreg C, N) -> C'
+bool AMDGPURegBankCombinerImpl::matchSextInRegOfConstant(
+    MachineInstr &MI, APInt &MatchInfo) const {
+  std::optional<APInt> Cst =
+      getIConstantVRegVal(MI.getOperand(1).getReg(), MRI);
+  if (!Cst || !MRI.getType(MI.getOperand(0).getReg()).isScalar())
+    return false;
+
+  MatchInfo = Cst->trunc(MI.getOperand(2).getImm()).sext(Cst->getBitWidth());
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyFoldToConstant(MachineInstr &MI,
+                                                    const APInt &Val) const {
+  B.buildConstant(MI.getOperand(0).getReg(), Val);
+  MI.eraseFromParent();
+}
+
+// (shift x, C) -> (shift x, C & (bitwidth - 1)) for C >= bitwidth.
+bool AMDGPURegBankCombinerImpl::matchOutOfRangeConstantShiftAmt(
+    MachineInstr &MI, APInt &MatchInfo) const {
+  LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+  unsigned BitWidth = Ty.getSizeInBits();
+  if (!Ty.isScalar() || !isPowerOf2_32(BitWidth))
+    return false;
+
+  std::optional<APInt> Amt =
+      getIConstantVRegVal(MI.getOperand(2).getReg(), MRI);
+  if (!Amt || Amt->ult(BitWidth))
+    return false;
+
+  MatchInfo = APInt(Amt->getBitWidth(), Amt->urem(BitWidth));
+  return true;
+}
+
+void AMDGPURegBankCombinerImpl::applyMaskedConstantShiftAmt(
+    MachineInstr &MI, const APInt &Amt) const {
+  Register AmtReg = MI.getOperand(2).getReg();
+
+  Register NewAmt = B.buildConstant(MRI.getType(AmtReg), Amt).getReg(0);
+  MRI.setRegBank(NewAmt, *MRI.getRegBank(AmtReg));
+  B.buildInstr(MI.getOpcode(), {MI.getOperand(0)}, {MI.getOperand(1), NewAmt},
+               MI.getFlags());
   MI.eraseFromParent();
 }
 
