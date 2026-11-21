@@ -13079,11 +13079,13 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt &RHS) {
       return LHS.isSigned() ? LHS.ssub_sat(RHS) : LHS.usub_sat(RHS);
     });
+
   case Builtin::BI__builtin_elementwise_mulh:
     return EvaluateBinOpExpr([](const APSInt &LHS, const APSInt &RHS) {
       return LHS.isSigned() ? llvm::APIntOps::mulhs(LHS, RHS)
                             : llvm::APIntOps::mulhu(LHS, RHS);
     });
+
   case X86::BI__builtin_ia32_extract128i256:
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
