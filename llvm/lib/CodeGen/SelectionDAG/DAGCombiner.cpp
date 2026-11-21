@@ -10298,6 +10298,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   SmallPtrSet<LoadSDNode *, 8> Loads;
   std::optional<SDByteProvider> FirstByteProvider;
   int64_t FirstOffset = INT64_MAX;
+  uint64_t ByteOffsetInFirstLoad = 0;
 
   // Check if all the bytes of the OR we are looking at are loaded from the same
   // base address. Collect bytes offsets from Base address in ByteOffsets.
@@ -10339,11 +10340,12 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     // due to different ExtractElement indices. To accurately determine the
     // byte position of an ExtractElement, we offset the base load ptr with
     // the index multiplied by the byte size of each element in the vector.
+    uint64_t ByteOffsetFromVector = 0;
     if (L->getMemoryVT().isVector()) {
       unsigned LoadWidthInBit = L->getMemoryVT().getScalarSizeInBits();
       if (LoadWidthInBit % 8 != 0)
         return SDValue();
-      unsigned ByteOffsetFromVector = P->SrcOffset * LoadWidthInBit / 8;
+      ByteOffsetFromVector = P->SrcOffset * LoadWidthInBit / 8;
       Ptr.addToOffset(ByteOffsetFromVector);
     }
 
@@ -10361,6 +10363,7 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     if (ByteOffsetFromBase < FirstOffset) {
       FirstByteProvider = P;
       FirstOffset = ByteOffsetFromBase;
+      ByteOffsetInFirstLoad = ByteOffsetFromVector + MemoryByteOffset(*P);
     }
 
     Loads.insert(L);
@@ -10388,19 +10391,16 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
 
   assert(FirstByteProvider && "must be set");
 
-  // Ensure that the first byte is loaded from zero offset of the first load.
-  // So the combined value can be loaded from the first load address.
-  if (MemoryByteOffset(*FirstByteProvider) != 0)
-    return SDValue();
   auto *FirstLoad = cast<LoadSDNode>(FirstByteProvider->Src.value());
+  Align FirstAlign =
+      commonAlignment(FirstLoad->getAlign(), ByteOffsetInFirstLoad);
 
   // Before legalization we allow introducing loads that are wider than legal,
   // which will later be split into legally sized loads. This enables us to
   // combine, for example, i8 loads forming an i64 into an i64 load, which get
   // then gets split up into couple of i32 loads on 32 bit targets.
   if (LegalOperations &&
-      !TLI.isLoadLegal(VT, MemVT, FirstLoad->getAlign(),
-                       FirstLoad->getAddressSpace(),
+      !TLI.isLoadLegal(VT, MemVT, FirstAlign, FirstLoad->getAddressSpace(),
                        NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, false))
     return SDValue();
 
@@ -10430,16 +10430,22 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
   unsigned Fast = 0;
   bool Allowed =
       TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
-                             *FirstLoad->getMemOperand(), &Fast);
+                             FirstLoad->getAddressSpace(), FirstAlign,
+                             FirstLoad->getMemOperand()->getFlags(), &Fast);
   if (!Allowed || !Fast)
     return SDValue();
 
   const MDNode *MemCacheHint = getCommonMemCacheHint(Loads);
 
+  SDValue Ptr = FirstLoad->getBasePtr();
+  if (ByteOffsetInFirstLoad)
+    Ptr = DAG.getMemBasePlusOffset(
+        Ptr, TypeSize::getFixed(ByteOffsetInFirstLoad), SDLoc(N));
+
   SDValue NewLoad = DAG.getExtLoad(
-      NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain,
-      FirstLoad->getBasePtr(), FirstLoad->getPointerInfo(), MemVT,
-      FirstLoad->getAlign(), MachineMemOperand::MONone,
+      NeedsZext ? ISD::ZEXTLOAD : ISD::NON_EXTLOAD, SDLoc(N), VT, Chain, Ptr,
+      FirstLoad->getPointerInfo().getWithOffset(ByteOffsetInFirstLoad), MemVT,
+      FirstAlign, MachineMemOperand::MONone,
       MMOMetadata(AAMDNodes(), nullptr, MemCacheHint));
 
   // Transfer chain users from old loads to the new load.

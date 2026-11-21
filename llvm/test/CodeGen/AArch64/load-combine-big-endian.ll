@@ -545,14 +545,11 @@ define i32 @zext_load_i32_by_i8_bswap_shl_16(ptr %arg) {
 ; ptr p1.i16 = (ptr) p;
 ; (p1.i16[0] << 8) | ((i16) p[2])
 ;
-; This is essentialy a i16 load from p[1], but we don't fold the pattern now
-; because in the original DAG we don't have p[1] address available
+; This is essentially a i16 load from p[1]
 define i16 @load_i16_from_nonzero_offset(ptr %p) {
 ; CHECK-LABEL: load_i16_from_nonzero_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldrb w9, [x0, #2]
-; CHECK-NEXT:    orr w0, w9, w8, lsl #8
+; CHECK-NEXT:    ldurh w0, [x0, #1]
 ; CHECK-NEXT:    ret
   %p2.i8 = getelementptr i8, ptr %p, i64 2
   %v1 = load i16, ptr %p
@@ -569,16 +566,10 @@ define i16 @load_i16_from_nonzero_offset(ptr %p) {
 ; (p1.i16[0] << 24) | ((i32) p[2] << 16) | p3.i16[0]
 ;
 ; This is an i32 load from p[1].
-; FIXME: Should be a single load from p[1].
 define i32 @load_i32_from_nonzero_offset(ptr %p) {
 ; CHECK-LABEL: load_i32_from_nonzero_offset:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrh w9, [x0]
-; CHECK-NEXT:    ldurh w10, [x0, #3]
-; CHECK-NEXT:    lsl w8, w8, #16
-; CHECK-NEXT:    orr w8, w8, w9, lsl #24
-; CHECK-NEXT:    orr w0, w8, w10
+; CHECK-NEXT:    ldur w0, [x0, #1]
 ; CHECK-NEXT:    ret
   %p2.i8 = getelementptr i8, ptr %p, i64 2
   %p3.i16 = getelementptr i8, ptr %p, i64 3
@@ -595,11 +586,10 @@ define i32 @load_i32_from_nonzero_offset(ptr %p) {
   ret i32 %res
 }
 
-; FIXME: Loads from %in instead of %in + 1.
 define void @load_i16_from_vector_elt1(ptr %in, ptr %out, ptr %p) {
 ; CHECK-LABEL: load_i16_from_vector_elt1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ldurh w8, [x0, #1]
 ; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    strh w8, [x1]
 ; CHECK-NEXT:    str w9, [x2]

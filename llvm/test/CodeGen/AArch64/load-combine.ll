@@ -715,11 +715,10 @@ define void @short_vector_to_i64(ptr %in, ptr %out, ptr %p) {
 }
 
 ; x1 = bswap(x0[1:2])
-; FIXME: Loads from x0 instead of x0 + 1.
 define void @short_vector_elt1_to_i16_bswap(ptr %in, ptr %out, ptr %p) {
 ; CHECK-LABEL: short_vector_elt1_to_i16_bswap:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
+; CHECK-NEXT:    ldurh w8, [x0, #1]
 ; CHECK-NEXT:    ldr w9, [x0]
 ; CHECK-NEXT:    rev w8, w8
 ; CHECK-NEXT:    lsr w8, w8, #16
@@ -744,16 +743,16 @@ define void @short_vector_elt1_to_i16_bswap(ptr %in, ptr %out, ptr %p) {
 }
 
 ; x1 = bswap(x0[1:2]), with x0 + 1 only 1-byte aligned
-; FIXME: Loads from x0 instead of x0 + 1.
 define void @short_vector_elt1_to_i16_bswap_strict_align(ptr %in, ptr %out, ptr %p) #1 {
 ; CHECK-LABEL: short_vector_elt1_to_i16_bswap_strict_align:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrh w8, [x0]
-; CHECK-NEXT:    ldr w9, [x0]
-; CHECK-NEXT:    rev w8, w8
-; CHECK-NEXT:    lsr w8, w8, #16
+; CHECK-NEXT:    ldr s0, [x0]
+; CHECK-NEXT:    ldrb w9, [x0, #2]
+; CHECK-NEXT:    ushll v1.8h, v0.8b, #0
+; CHECK-NEXT:    umov w8, v1.h[1]
+; CHECK-NEXT:    orr w8, w9, w8, lsl #8
 ; CHECK-NEXT:    strh w8, [x1]
-; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    str s0, [x2]
 ; CHECK-NEXT:    ret
   %p2 = getelementptr inbounds i8, ptr %in, i64 2
   %x2 = load i8, ptr %p2, align 1
