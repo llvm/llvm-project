@@ -3019,7 +3019,8 @@ static void CollectEnclosingNamespace(Sema::AssociatedNamespaceSet &Namespaces,
 // lookup that involves a template argument (C++ [basic.lookup.argdep]p2).
 static void
 addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
-                                  const TemplateArgument &Arg) {
+                                  const TemplateArgument &Arg,
+                                  SmallVectorImpl<const Type *> &Queue) {
   // C++ [basic.lookup.argdep]p2, last bullet:
   //   -- [...] ;
   switch (Arg.getKind()) {
@@ -3030,7 +3031,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
       // [...] the namespaces and classes associated with the types of the
       // template arguments provided for template type parameters (excluding
       // template template parameters)
-      addAssociatedClassesAndNamespaces(Result, Arg.getAsType());
+      Queue.push_back(Arg.getAsType()->getCanonicalTypeInternal().getTypePtr());
       break;
 
     case TemplateArgument::Template:
@@ -3061,7 +3062,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
     case TemplateArgument::Pack:
       for (const auto &P : Arg.pack_elements())
-        addAssociatedClassesAndNamespaces(Result, P);
+        addAssociatedClassesAndNamespaces(Result, P, Queue);
       break;
   }
 }
@@ -3070,7 +3071,8 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 // with an argument of class type (C++ [basic.lookup.argdep]p2).
 static void
 addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
-                                  CXXRecordDecl *Class) {
+                                  CXXRecordDecl *Class,
+                                  SmallVectorImpl<const Type *> &Queue) {
 
   // Just silently ignore anything whose name is __va_list_tag.
   if (Class->getDeclName() == Result.S.VAListTagName)
@@ -3115,7 +3117,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result,
 
     const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
     for (unsigned I = 0, N = TemplateArgs.size(); I != N; ++I)
-      addAssociatedClassesAndNamespaces(Result, TemplateArgs[I]);
+      addAssociatedClassesAndNamespaces(Result, TemplateArgs[I], Queue);
   }
 
   // Add the class itself. If we've already transitively visited this class,
@@ -3220,7 +3222,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
       // FIXME: This should use the original decl.
       auto *Class = cast<CXXRecordDecl>(cast<RecordType>(T)->getDecl())
                         ->getDefinitionOrSelf();
-      addAssociatedClassesAndNamespaces(Result, Class);
+      addAssociatedClassesAndNamespaces(Result, Class, Queue);
       break;
     }
 
@@ -3273,7 +3275,7 @@ addAssociatedClassesAndNamespaces(AssociatedLookup &Result, QualType Ty) {
     case Type::MemberPointer: {
       const MemberPointerType *MemberPtr = cast<MemberPointerType>(T);
       if (CXXRecordDecl *Class = MemberPtr->getMostRecentCXXRecordDecl())
-        addAssociatedClassesAndNamespaces(Result, Class);
+        addAssociatedClassesAndNamespaces(Result, Class, Queue);
       T = MemberPtr->getPointeeType().getTypePtr();
       continue;
     }
