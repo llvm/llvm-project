@@ -162,6 +162,18 @@ profiles for source code coverage. See [binary id] RFC for the design.
 This section stores the metadata to map counters and value profiles back to
 instrumented code regions (e.g., LLVM IR for IRPGO).
 
+On Windows x64 and Arm64 with the MSVC ABI (excluding hybrid targets), ordinary
+instrumentation emits an index of image-relative record addresses. The runtime
+follows these addresses rather than treating linker padding as records. This
+index is **not** part of the raw profile: the writer emits packed records and
+adjusts their relative offsets if necessary. Objects using the index require a
+runtime that understands it. Older objects can be linked with that runtime,
+but their records still require the historical contiguous layout. Arm64EC
+objects also retain that layout; the Arm64EC runtime can read the index for x64
+objects linked into the same image. In a composite Arm64X DLL, each view
+requires its own profile section ranges. The index does not partition ranges
+that a linker combines across views.
+
 The in-memory representation of the metadata is [__llvm_profile_data](https://github.com/llvm/llvm-project/blob/7c3b67d2038cfb48a80299089f6a1308eee1df7f/compiler-rt/include/profile/InstrProfData.inc#L65-L95).
 Some fields are used to reference data from other sections in the profile.
 The fields are documented as follows:

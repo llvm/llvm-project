@@ -24,13 +24,15 @@ uint64_t lprofGetLoadModuleSignature(void) {
   uint64_t Version = __llvm_profile_get_version();
   uint64_t NumCounters = __llvm_profile_get_num_counters(
       __llvm_profile_begin_counters(), __llvm_profile_end_counters());
-  uint64_t NumData = __llvm_profile_get_num_data(__llvm_profile_begin_data(),
-                                                 __llvm_profile_end_data());
+  ProfDataRange Data = lprofGetModuleData();
+  if (!lprofDataIsValid(Data))
+    return 0;
+  uint64_t NumData = lprofNumData(Data);
   uint64_t NamesSize =
       (uint64_t)(__llvm_profile_end_names() - __llvm_profile_begin_names());
   uint64_t NumVnodes =
       (uint64_t)(__llvm_profile_end_vnodes() - __llvm_profile_begin_vnodes());
-  const __llvm_profile_data *FirstD = __llvm_profile_begin_data();
+  const __llvm_profile_data *FirstD = lprofNextData(&Data);
 
   return (NamesSize << 40) + (NumCounters << 30) + (NumData << 20) +
          (NumVnodes << 10) + (NumData > 0 ? FirstD->NameRef : 0) + Version +
@@ -53,7 +55,10 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
     return 1;
 
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
-  __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
+  ProfDataRange Data = lprofGetModuleData();
+  if (!lprofDataIsValid(Data))
+    return 1;
+  __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData;
   SrcDataStart =
       (__llvm_profile_data *)(ProfileData + sizeof(__llvm_profile_header) +
                               Header->BinaryIdsSize);
@@ -62,9 +67,7 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
   /* Check the header first.  */
   if (Header->Magic != __llvm_profile_get_magic() ||
       Header->Version != __llvm_profile_get_version() ||
-      Header->NumData !=
-          __llvm_profile_get_num_data(__llvm_profile_begin_data(),
-                                      __llvm_profile_end_data()) ||
+      Header->NumData != lprofNumData(Data) ||
       Header->NumCounters !=
           __llvm_profile_get_num_counters(__llvm_profile_begin_counters(),
                                           __llvm_profile_end_counters()) ||
@@ -84,9 +87,8 @@ int __llvm_profile_check_compatibility(const char *ProfileData,
           Header->NumBitmapBytes)
     return 1;
 
-  for (SrcData = SrcDataStart,
-       DstData = (__llvm_profile_data *)__llvm_profile_begin_data();
-       SrcData < SrcDataEnd; ++SrcData, ++DstData) {
+  for (SrcData = SrcDataStart; SrcData < SrcDataEnd; ++SrcData) {
+    const __llvm_profile_data *DstData = lprofNextData(&Data);
     if (SrcData->NameRef != DstData->NameRef ||
         SrcData->FuncHash != DstData->FuncHash ||
         SrcData->NumCounters != DstData->NumCounters ||
@@ -129,6 +131,9 @@ getDistanceFromCounterToValueProf(const __llvm_profile_header *const Header) {
 COMPILER_RT_VISIBILITY
 int __llvm_profile_merge_from_buffer(const char *ProfileData,
                                      uint64_t ProfileSize) {
+  ProfDataRange Data = lprofGetModuleData();
+  if (!lprofDataIsValid(Data))
+    return 1;
   if (__llvm_profile_get_version() & VARIANT_MASK_TEMPORAL_PROF) {
     PROF_ERR("%s\n",
              "Temporal profiles do not support profile merging at runtime. "
@@ -151,7 +156,8 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
   uintptr_t SrcBitmapStart =
       SrcCountersEnd +
       __llvm_profile_get_num_padding_bytes(SrcCountersEnd - SrcCountersStart);
-  uintptr_t SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes;
+  uintptr_t SrcNameStart = SrcBitmapStart + Header->NumBitmapBytes +
+                           Header->PaddingBytesAfterBitmapBytes;
   uintptr_t SrcValueProfDataStart =
       SrcNameStart + getDistanceFromCounterToValueProf(Header);
   if (SrcNameStart < SrcCountersStart || SrcNameStart < SrcBitmapStart)
@@ -174,12 +180,13 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
     return 0;
   }
 
-  __llvm_profile_data *SrcData, *DstData;
+  __llvm_profile_data *SrcData;
   uintptr_t SrcValueProfData;
-  for (SrcData = SrcDataStart,
-      DstData = (__llvm_profile_data *)__llvm_profile_begin_data(),
-      SrcValueProfData = SrcValueProfDataStart;
-       SrcData < SrcDataEnd; ++SrcData, ++DstData) {
+  for (SrcData = SrcDataStart, SrcValueProfData = SrcValueProfDataStart;
+       SrcData < SrcDataEnd; ++SrcData) {
+    __llvm_profile_data *DstData = (__llvm_profile_data *)lprofNextData(&Data);
+    if (!DstData)
+      return 1;
     // For the in-memory destination, CounterPtr is the distance from the start
     // address of the data to the start address of the counter. On WIN64,
     // CounterPtr is a truncated 32-bit value due to COFF limitation. Sign

@@ -220,8 +220,7 @@ static int writeOneValueProfData(ProfBufferIO *BufferIO,
 
 static int writeValueProfData(ProfDataWriter *Writer,
                               VPDataReaderType *VPDataReader,
-                              const __llvm_profile_data *DataBegin,
-                              const __llvm_profile_data *DataEnd) {
+                              ProfDataRange Data) {
   ProfBufferIO *BufferIO;
   const __llvm_profile_data *DI = 0;
 
@@ -230,7 +229,7 @@ static int writeValueProfData(ProfDataWriter *Writer,
 
   BufferIO = lprofCreateBufferIO(Writer);
 
-  for (DI = DataBegin; DI < DataEnd; DI++) {
+  while ((DI = lprofNextData(&Data))) {
     if (writeOneValueProfData(BufferIO, VPDataReader, DI))
       return -1;
   }
@@ -246,8 +245,6 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
                                           VPDataReaderType *VPDataReader,
                                           int SkipNameDataWrite) {
   /* Match logic in __llvm_profile_write_buffer(). */
-  const __llvm_profile_data *DataBegin = __llvm_profile_begin_data();
-  const __llvm_profile_data *DataEnd = __llvm_profile_end_data();
   const char *CountersBegin = __llvm_profile_begin_counters();
   const char *CountersEnd = __llvm_profile_end_counters();
   const char *BitmapBegin = __llvm_profile_begin_bitmap();
@@ -259,7 +256,7 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
   const char *VNamesBegin = __llvm_profile_begin_vtabnames();
   const char *VNamesEnd = __llvm_profile_end_vtabnames();
   uint64_t Version = __llvm_profile_get_version();
-  return lprofWriteDataImpl(Writer, DataBegin, DataEnd, CountersBegin,
+  return lprofWriteDataImpl(Writer, lprofGetModuleData(), CountersBegin,
                             CountersEnd, BitmapBegin, BitmapEnd,
                             /*UniformCountersBegin=*/NULL,
                             /*UniformCountersEnd=*/NULL, VPDataReader,
@@ -267,9 +264,63 @@ COMPILER_RT_VISIBILITY int lprofWriteData(ProfDataWriter *Writer,
                             VNamesBegin, VNamesEnd, SkipNameDataWrite, Version);
 }
 
+#ifdef LPROF_COFF_RECORD_RVAS
+/* The COFF object contains 32-bit label differences even on Win64. Convert
+ * each to a file-relative difference from its own packed record. */
+static uintptr_t rawOffset(const __llvm_profile_data *D, const void *Relative,
+                           const char *Section, uint64_t Delta,
+                           uintptr_t RecordOffset) {
+  return (uintptr_t)D + (intptr_t)(int32_t)(uintptr_t)Relative -
+         (uintptr_t)Section + (uintptr_t)Delta - RecordOffset;
+}
+
+static int writeIndexedData(ProfDataWriter *Writer, ProfDataRange Range,
+                            const __llvm_profile_header *Header,
+                            const char *Counters, const char *Bitmap,
+                            const char *UniformCounters) {
+  const __llvm_profile_data *D;
+  char Batch[16][sizeof(*D)];
+  size_t Used = 0;
+  uintptr_t RecordOffset = 0;
+  while ((D = lprofNextData(&Range))) {
+    /* A byte copy lets us rewrite const fields without mutating live records.
+     * FunctionPointer and Values are absolute, not record-relative. */
+    char *Bytes = Batch[Used++];
+    memcpy(Bytes, D, sizeof(*D));
+    uintptr_t Counter = rawOffset(D, D->CounterPtr, Counters,
+                                  Header->CountersDelta, RecordOffset);
+    memcpy(Bytes + offsetof(__llvm_profile_data, CounterPtr), &Counter,
+           sizeof(Counter));
+    if (D->NumBitmapBytes) {
+      uintptr_t Offset =
+          rawOffset(D, D->BitmapPtr, Bitmap, Header->BitmapDelta, RecordOffset);
+      memcpy(Bytes + offsetof(__llvm_profile_data, BitmapPtr), &Offset,
+             sizeof(Offset));
+    }
+    if (D->UniformCounterPtr) {
+      uintptr_t Offset =
+          UniformCounters
+              ? rawOffset(D, D->UniformCounterPtr, UniformCounters,
+                          Header->UniformCountersDelta, RecordOffset)
+              : 0;
+      memcpy(Bytes + offsetof(__llvm_profile_data, UniformCounterPtr), &Offset,
+             sizeof(Offset));
+    }
+    if (Used == sizeof(Batch) / sizeof(*Batch)) {
+      ProfDataIOVec IO = {Batch, sizeof(*Batch), Used, 0};
+      if (Writer->Write(Writer, &IO, 1))
+        return -1;
+      Used = 0;
+    }
+    RecordOffset += sizeof(*D);
+  }
+  ProfDataIOVec IO = {Batch, sizeof(*Batch), Used, 0};
+  return Used && Writer->Write(Writer, &IO, 1) ? -1 : 0;
+}
+#endif
+
 COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
-    ProfDataWriter *Writer, const __llvm_profile_data *DataBegin,
-    const __llvm_profile_data *DataEnd, const char *CountersBegin,
+    ProfDataWriter *Writer, ProfDataRange Data, const char *CountersBegin,
     const char *CountersEnd, const char *BitmapBegin, const char *BitmapEnd,
     const char *UniformCountersBegin, const char *UniformCountersEnd,
     VPDataReaderType *VPDataReader, const char *NamesBegin,
@@ -277,9 +328,11 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
     const VTableProfData *VTableEnd, const char *VNamesBegin,
     const char *VNamesEnd, int SkipNameDataWrite, uint64_t Version) {
   /* Calculate size of sections. */
-  const uint64_t DataSectionSize =
-      __llvm_profile_get_data_size(DataBegin, DataEnd);
-  const uint64_t NumData = __llvm_profile_get_num_data(DataBegin, DataEnd);
+  if (!lprofDataIsValid(Data))
+    return -1;
+  const __llvm_profile_data *DataBegin;
+  const uint64_t NumData = lprofDataLayout(Data, &DataBegin);
+  const uint64_t DataSectionSize = NumData * sizeof(*DataBegin);
   const uint64_t CountersSectionSize =
       __llvm_profile_get_counters_size(CountersBegin, CountersEnd);
   const uint64_t NumCounters =
@@ -332,6 +385,13 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
   Header.BitmapDelta = (uint32_t)Header.BitmapDelta;
   Header.UniformCountersDelta = (uint32_t)Header.UniformCountersDelta;
 #endif
+#ifdef LPROF_COFF_RECORD_RVAS
+  if (!DataBegin && NumData) {
+    Header.CountersDelta = DataSectionSize + PaddingBytesBeforeCounters;
+    Header.BitmapDelta =
+        Header.CountersDelta + CountersSectionSize + PaddingBytesAfterCounters;
+  }
+#endif
 
   /* Recompute UniformCountersDelta from file layout. The macro initializer
      uses in-memory pointer arithmetic which is wrong when sections are in
@@ -377,7 +437,18 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
       {NULL, sizeof(uint8_t), PaddingBytesAfterVTable, 1},
       {SkipNameDataWrite ? NULL : VNamesBegin, sizeof(uint8_t), VNamesSize, 0},
       {NULL, sizeof(uint8_t), PaddingBytesAfterVNames, 1}};
-  if (Writer->Write(Writer, IOVecData, sizeof(IOVecData) / sizeof(*IOVecData)))
+  uint32_t FirstIO = 0;
+#ifdef LPROF_COFF_RECORD_RVAS
+  if (!DataBegin && NumData) {
+    if (writeIndexedData(Writer, Data, &Header, CountersBegin, BitmapBegin,
+                         UniformCountersBegin))
+      return -1;
+    FirstIO = 1;
+  }
+#endif
+  if (Writer->Write(Writer, IOVecData + FirstIO,
+                    (uint32_t)(sizeof(IOVecData) / sizeof(*IOVecData)) -
+                        FirstIO))
     return -1;
 
   /* Value profiling is not yet supported in continuous mode and profile
@@ -386,7 +457,7 @@ COMPILER_RT_VISIBILITY int lprofWriteDataImpl(
       (NumData == 0 && NamesSize == 0))
     return 0;
 
-  return writeValueProfData(Writer, VPDataReader, DataBegin, DataEnd);
+  return writeValueProfData(Writer, VPDataReader, Data);
 }
 
 /*
