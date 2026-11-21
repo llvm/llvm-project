@@ -4,83 +4,97 @@
 // Test that the second argument (strategy) must be a constant integer
 
 void test_wave_reduce_u32(unsigned int val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_add_u32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_sub_u32(val, 1);
-  (void)__builtin_amdgcn_wave_reduce_min_u32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_max_u32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_and_b32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_or_b32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_xor_b32(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_add_u32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_add_u32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_sub_u32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_sub_u32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_min_u32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_u32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_max_u32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_u32' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_add(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 1);
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_and(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_or(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_xor(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_add(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
 }
 
 void test_wave_reduce_i32(int val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_min_i32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_max_i32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_and_b32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_or_b32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_xor_b32(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_min_i32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_i32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_max_i32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_i32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_and_b32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_and_b32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_or_b32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_or_b32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_xor_b32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_xor_b32' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_and(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_or(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_xor(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_and(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_or(val, strategy);  // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_xor(val, strategy); // expected-error {{expression is not an integer constant expression}}
 }
 
 void test_wave_reduce_u64(unsigned long val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_add_u64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_sub_u64(val, 1);
-  (void)__builtin_amdgcn_wave_reduce_min_u64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_max_u64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_and_b64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_or_b64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_xor_b64(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_add_u64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_add_u64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_sub_u64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_sub_u64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_min_u64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_u64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_max_u64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_u64' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_add(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 1);
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_and(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_or(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_xor(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_add(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
 }
 
 void test_wave_reduce_i64(long val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_min_i64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_max_i64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_and_b64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_or_b64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_xor_b64(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_min_i64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_min_i64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_max_i64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_max_i64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_and_b64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_and_b64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_or_b64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_or_b64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_xor_b64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_xor_b64' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_and(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_or(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_xor(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_and(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_or(val, strategy);  // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_xor(val, strategy); // expected-error {{expression is not an integer constant expression}}
 }
 
 void test_wave_reduce_f32(float val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_fadd_f32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_fsub_f32(val, 1);
-  (void)__builtin_amdgcn_wave_reduce_fmin_f32(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_fmax_f32(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_fadd_f32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fadd_f32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fsub_f32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fsub_f32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fmin_f32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fmin_f32' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fmax_f32(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fmax_f32' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_add(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 1);
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_add(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
 }
 
 void test_wave_reduce_f64(double val, int strategy) {
-  (void)__builtin_amdgcn_wave_reduce_fadd_f64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_fsub_f64(val, 1);
-  (void)__builtin_amdgcn_wave_reduce_fmin_f64(val, 0);
-  (void)__builtin_amdgcn_wave_reduce_fmax_f64(val, 0);
-  
-  (void)__builtin_amdgcn_wave_reduce_fadd_f64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fadd_f64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fsub_f64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fsub_f64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fmin_f64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fmin_f64' must be a constant integer}}
-  (void)__builtin_amdgcn_wave_reduce_fmax_f64(val, strategy); // expected-error {{argument to '__builtin_amdgcn_wave_reduce_fmax_f64' must be a constant integer}}
+  (void)__builtin_amdgcn_wave_reduce_add(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 1);
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0);
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0);
+
+  (void)__builtin_amdgcn_wave_reduce_add(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, strategy); // expected-error {{expression is not an integer constant expression}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, strategy); // expected-error {{expression is not an integer constant expression}}
+}
+
+struct S { double x; long long y; };
+
+void test_wave_reduce_struct(struct S val, int strategy) {
+  (void)__builtin_amdgcn_wave_reduce_add(val, 0); // expected-error {{'val' argument must be a scalar integer or floating-point type (was '__private struct S')}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 1); // expected-error {{'val' argument must be a scalar integer or floating-point type (was '__private struct S')}}
+  (void)__builtin_amdgcn_wave_reduce_min(val, 0); // expected-error {{'val' argument must be a scalar integer or floating-point type (was '__private struct S')}}
+  (void)__builtin_amdgcn_wave_reduce_max(val, 0); // expected-error {{'val' argument must be a scalar integer or floating-point type (was '__private struct S')}}
+}
+
+void test_wave_reduce_invalid_strategy(int val) {
+  (void)__builtin_amdgcn_wave_reduce_add(val, -1); // expected-error {{argument value 4294967295 is outside the valid range [0, 2]}}
+  (void)__builtin_amdgcn_wave_reduce_sub(val, 3);  // expected-error {{argument value 3 is outside the valid range [0, 2]}}
 }
