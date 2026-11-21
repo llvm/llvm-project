@@ -47,6 +47,6 @@ define void @test(i1 %c) {
   ret void
 }
 ;.
-; CHECK: [[META0]] = !{ptr @[[GLOB0]]}
+; CHECK: [[META0]] = !{ptr @[[GLOB0]], ptr @[[GLOB1]]}
 ; CHECK: [[META1]] = !{ptr @named_a, ptr @named_b}
 ;.

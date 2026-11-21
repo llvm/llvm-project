@@ -50,19 +50,21 @@ public:
   /// refer.
   enum CVPLatticeStateTy { Undefined, FunctionSet, Overdefined, Untracked };
 
-  /// Comparator for sorting the functions set. We want to keep the order
-  /// deterministic for testing, etc.
+  /// Comparator for sorting the functions set. Compare using the unique and
+  /// deterministic function indices for deterministic output.
   struct Compare {
+    const DenseMap<const Function *, uint32_t> &FunctionIndices;
     bool operator()(const Function *LHS, const Function *RHS) const {
-      return LHS->getName() < RHS->getName();
+      return FunctionIndices.at(LHS) < FunctionIndices.at(RHS);
     }
   };
 
   CVPLatticeVal() = default;
   CVPLatticeVal(CVPLatticeStateTy LatticeState) : LatticeState(LatticeState) {}
-  CVPLatticeVal(std::vector<Function *> &&Functions)
+  CVPLatticeVal(std::vector<Function *> &&Functions,
+                const DenseMap<const Function *, uint32_t> &FunctionIndices)
       : LatticeState(FunctionSet), Functions(std::move(Functions)) {
-    assert(llvm::is_sorted(this->Functions, Compare()));
+    assert(llvm::is_sorted(this->Functions, Compare{FunctionIndices}));
   }
 
   /// Get a reference to the functions held by this lattice value. The number
@@ -104,13 +106,16 @@ private:
 class CVPLatticeFunc
     : public AbstractLatticeFunction<CVPLatticeKey, CVPLatticeVal> {
   const IPOOptions &Opts;
+  const DenseMap<const Function *, uint32_t> &FunctionIndices;
 
 public:
-  explicit CVPLatticeFunc(const IPOOptions &Opts)
+  explicit CVPLatticeFunc(
+      const IPOOptions &Opts,
+      const DenseMap<const Function *, uint32_t> &FunctionIndices)
       : AbstractLatticeFunction(CVPLatticeVal(CVPLatticeVal::Undefined),
                                 CVPLatticeVal(CVPLatticeVal::Overdefined),
                                 CVPLatticeVal(CVPLatticeVal::Untracked)),
-        Opts(Opts) {}
+        Opts(Opts), FunctionIndices(FunctionIndices) {}
 
   /// Compute and return a CVPLatticeVal for the given CVPLatticeKey.
   CVPLatticeVal ComputeLatticeVal(CVPLatticeKey Key) override {
@@ -150,10 +155,11 @@ public:
     std::vector<Function *> Union;
     std::set_union(X.getFunctions().begin(), X.getFunctions().end(),
                    Y.getFunctions().begin(), Y.getFunctions().end(),
-                   std::back_inserter(Union), CVPLatticeVal::Compare{});
+                   std::back_inserter(Union),
+                   CVPLatticeVal::Compare{FunctionIndices});
     if (Union.size() > Opts.cvp_max_functions_per_value)
       return getOverdefinedVal();
-    return CVPLatticeVal(std::move(Union));
+    return CVPLatticeVal(std::move(Union), FunctionIndices);
   }
 
   /// Compute the lattice values that change as a result of executing the given
@@ -225,7 +231,7 @@ private:
     if (isa<ConstantPointerNull>(C))
       return CVPLatticeVal(CVPLatticeVal::FunctionSet);
     if (auto *F = dyn_cast<Function>(C->stripPointerCasts()))
-      return CVPLatticeVal({F});
+      return CVPLatticeVal({F}, FunctionIndices);
     return getOverdefinedVal();
   }
 
@@ -365,8 +371,14 @@ template <> struct LatticeKeyInfo<CVPLatticeKey> {
 } // namespace llvm
 
 static bool runCVP(Module &M) {
+  // Assign unique numbers to functions, to be used when ordering the functions
+  // in the lattice.
+  DenseMap<const Function *, uint32_t> FunctionIndices;
+  for (const auto &[Idx, F] : enumerate(M))
+    FunctionIndices.try_emplace(&F, Idx);
+
   // Our custom lattice function and generic sparse propagation solver.
-  CVPLatticeFunc Lattice(getIPOOptions(M));
+  CVPLatticeFunc Lattice(getIPOOptions(M), FunctionIndices);
   SparseSolver<CVPLatticeKey, CVPLatticeVal> Solver(&Lattice);
 
   // For each function in the module, if we can't track its arguments, let the
