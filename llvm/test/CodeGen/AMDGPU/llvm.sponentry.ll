@@ -115,6 +115,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_calls(i32 %val) #0 {
 ; DAGISEL-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; DAGISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; DAGISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
 ; DAGISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; DAGISEL-NEXT:    s_wait_storecnt 0x0
@@ -134,6 +135,7 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_calls(i32 %val) #0 {
 ; GISEL-NEXT:    s_cselect_b32 s32, 0x1d0, 16
 ; GISEL-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; GISEL-NEXT:    s_getreg_b32 s0, hwreg(HW_REG_WAVE_HW_ID2, 8, 2)
+; GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GISEL-NEXT:    s_wait_storecnt 0x0
 ; GISEL-NEXT:    scratch_store_b32 off, v0, s33 scope:SCOPE_SYS
 ; GISEL-NEXT:    s_wait_storecnt 0x0
