@@ -3018,6 +3018,21 @@ def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
 def JalOneReg : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs),
                       "jal\t$rs"> ;
 
+// PIC load of a symbol address from the GOT, emitted by the "la" and "jal"
+// macro expansions when the symbol is not defined yet. Whether the symbol is
+// local or global is only known once the whole file has been parsed, so
+// PseudoGOTLoadGlobal is relaxed to PseudoGOTLoadLocal by MipsAsmBackend when
+// the symbol turns out to be local. MipsMCCodeEmitter expands both into real
+// instructions. $flags is a mask of MipsII::GOTLoadFlags.
+let isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 1 in {
+  def PseudoGOTLoadGlobal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+  def PseudoGOTLoadLocal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+}
+
 class NORIMM_DESC_BASE<RegisterOperand RO, DAGOperand Imm> :
    MipsAsmPseudoInst<(outs RO:$rs), (ins RO:$rt, Imm:$imm),
                       "nor\t$rs, $rt, $imm">;
