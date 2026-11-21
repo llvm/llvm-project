@@ -127,3 +127,23 @@ NS_REQUIRES_PROPERTY_DEFINITIONS
 @synthesize prop_string4;
 @synthesize prop_string5;
 @end
+
+
+void writeStrongStringOut(NSString * __strong *out);
+
+@interface IvarWritesARC : NSObject
+@property (nonatomic, copy) NSString *name;
+@property (nonatomic, readonly, strong) NSString *readonlyName;
+@property (nonatomic, strong) dispatch_queue_t queue;
+@end
+
+@implementation IvarWritesARC
+- (instancetype)initWithName:(NSString *)name {
+  self = [super init];
+  _name = name;
+  _readonlyName = name;
+  writeStrongStringOut(&_name);
+  _queue = dispatch_queue_create("q", nullptr);
+  return self;
+}
+@end
