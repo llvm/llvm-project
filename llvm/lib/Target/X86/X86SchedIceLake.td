@@ -341,7 +341,9 @@ defm : ICXWriteResPair<WriteFBlendY,[ICXPort015], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteFBlendZ,[ICXPort015], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteFVarBlend, [ICXPort015], 2, [2], 2, 6>; // Fp vector variable blends.
 defm : ICXWriteResPair<WriteFVarBlendY,[ICXPort015], 2, [2], 2, 7>;
-defm : ICXWriteResPair<WriteFVarBlendZ,[ICXPort015], 2, [2], 2, 7>;
+defm : ICXWriteResPair<WriteFMaskBlendX, [ICXPort015], 1, [1], 1, 6>; // Fp vector masked blends.
+defm : ICXWriteResPair<WriteFMaskBlendY, [ICXPort015], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WriteFMaskBlendZ, [ICXPort05], 2, [1], 1, 6>;
 
 // FMA Scheduling helper class.
 // class FMASC { X86FoldableSchedWrite Sched = WriteFAdd; }
@@ -406,7 +408,9 @@ defm : ICXWriteResPair<WritePBLENDWX, [ICXPort15], 1, [1], 1, 6>; // Vector blen
 defm : ICXWriteResPair<WritePBLENDWY, [ICXPort15], 1, [1], 1, 7>;
 defm : ICXWriteResPair<WriteVarBlend, [ICXPort015], 2, [2], 2, 6>; // Vector variable blends.
 defm : ICXWriteResPair<WriteVarBlendY,[ICXPort015], 2, [2], 2, 6>;
-defm : ICXWriteResPair<WriteVarBlendZ,[ICXPort05],  2, [1], 1, 6>;
+defm : ICXWriteResPair<WriteMaskBlendX, [ICXPort015], 1, [1], 1, 6>; // Vector masked blends.
+defm : ICXWriteResPair<WriteMaskBlendY, [ICXPort015], 1, [1], 1, 7>;
+defm : ICXWriteResPair<WriteMaskBlendZ, [ICXPort05], 2, [1], 1, 6>;
 defm : ICXWriteResPair<WriteMPSAD,   [ICXPort15,ICXPort5], 4, [1,1], 2, 6>; // Vector MPSAD.
 defm : ICXWriteResPair<WriteMPSADY,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
 defm : ICXWriteResPair<WriteMPSADZ,  [ICXPort15,ICXPort5], 4, [1,1], 2, 7>;
@@ -709,15 +713,9 @@ def ICXWriteResGroup9 : SchedWriteRes<[ICXPort015]> {
   let NumMicroOps = 1;
   let ReleaseAtCycles = [1];
 }
-def: InstRW<[ICXWriteResGroup9], (instregex "VBLENDMPD(Z128|Z256)rr",
-                                            "VBLENDMPS(Z128|Z256)rr",
-                                            "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
+def: InstRW<[ICXWriteResGroup9], (instregex "VPADD(B|D|Q|W)(Y|Z|Z128|Z256)rr",
                                             "(V?)PADD(B|D|Q|W)rr",
                                             "(V?)MOV(SD|SS)(Z?)rr",
-                                            "VPBLENDMB(Z128|Z256)rr",
-                                            "VPBLENDMD(Z128|Z256)rr",
-                                            "VPBLENDMQ(Z128|Z256)rr",
-                                            "VPBLENDMW(Z128|Z256)rr",
                                             "VPSUB(B|D|Q|W)(Y|Z|Z128|Z256)rrk",
                                             "VPTERNLOGD(Z|Z128|Z256)rri",
                                             "VPTERNLOGQ(Z|Z128|Z256)rri")>;
@@ -1341,9 +1339,7 @@ def ICXWriteResGroup95 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
-                                  (instregex "VBLENDMPDZ128rm(b?)",
-                                             "VBLENDMPSZ128rm(b?)",
-                                             "VBROADCASTI32X2Z128rm(b?)",
+                                  (instregex "VBROADCASTI32X2Z128rm(b?)",
                                              "VBROADCASTSSZ128rm(b?)",
                                              "VINSERT(F|I)128rm",
                                              "VMOVAPDZ128rm(b?)",
@@ -1361,7 +1357,6 @@ def: InstRW<[ICXWriteResGroup95, ReadAfterVecXLd],
                                              "VMOVUPSZ128rm(b?)",
                                              "VPADD(B|D|Q|W)Z128rm(b?)",
                                              "(V?)PADD(B|D|Q|W)rm",
-                                             "VPBLENDM(B|D|Q|W)Z128rm(b?)",
                                              "VPBROADCASTDZ128rm(b?)",
                                              "VPBROADCASTQZ128rm(b?)",
                                              "VPSUB(B|D|Q|W)Z128rm(b?)",
@@ -1537,9 +1532,7 @@ def ICXWriteResGroup121 : SchedWriteRes<[ICXPort23,ICXPort015]> {
   let ReleaseAtCycles = [1,1];
 }
 def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
-                                   (instregex "VBLENDMPD(Z|Z256)rm(b?)",
-                                              "VBLENDMPS(Z|Z256)rm(b?)",
-                                              "VBROADCASTF32X2Z256rm(b?)",
+                                   (instregex "VBROADCASTF32X2Z256rm(b?)",
                                               "VBROADCASTF32X2Zrm(b?)",
                                               "VBROADCASTF32X4Z256rm(b?)",
                                               "VBROADCASTF32X4Zrm(b?)",
@@ -1580,7 +1573,6 @@ def: InstRW<[ICXWriteResGroup121, ReadAfterVecYLd],
                                               "VMOVUPS(Z|Z256)rm(b?)",
                                               "VPADD(B|D|Q|W)Yrm",
                                               "VPADD(B|D|Q|W)(Z|Z256)rm(b?)",
-                                              "VPBLENDM(B|D|Q|W)(Z|Z256)rm(b?)",
                                               "VPBROADCASTD(Z|Z256)rm(b?)",
                                               "VPBROADCASTQ(Z|Z256)rm(b?)",
                                               "VPSUB(B|D|Q|W)Yrm",

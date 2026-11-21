@@ -955,7 +955,9 @@ defm : Zn3WriteResYMMPair<WriteFBlendY, [Zn3FPFMul01], 1, [1], 1>; // Floating p
 defm : X86WriteResPairUnsupported<WriteFBlendZ>; // Floating point vector blends (ZMM).
 defm : Zn3WriteResXMMPair<WriteFVarBlend, [Zn3FPFMul01], 1, [1], 1>; // Fp vector variable blends.
 defm : Zn3WriteResYMMPair<WriteFVarBlendY, [Zn3FPFMul01], 1, [1], 1>; // Fp vector variable blends (YMM).
-defm : X86WriteResPairUnsupported<WriteFVarBlendZ>; // Fp vector variable blends (ZMM).
+defm : X86WriteResPairUnsupported<WriteFMaskBlendX>; // Fp vector masked blends.
+defm : X86WriteResPairUnsupported<WriteFMaskBlendY>; // Fp vector masked blends (YMM).
+defm : X86WriteResPairUnsupported<WriteFMaskBlendZ>; // Fp vector masked blends (ZMM).
 
 // Horizontal Add/Sub (float and integer)
 defm : Zn3WriteResXMMPair<WriteFHAdd, [Zn3FPFAdd0], 6, [2], 4>;
@@ -1123,7 +1125,9 @@ defm : Zn3WriteResXMMPair<WritePBLENDWX, [Zn3FPVMisc0123], 1, [1], 1>; // Vector
 defm : Zn3WriteResYMMPair<WritePBLENDWY, [Zn3FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn3WriteResXMMPair<WriteVarBlend, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends.
 defm : Zn3WriteResYMMPair<WriteVarBlendY, [Zn3FPVMul01], 1, [1], 1>; // Vector variable blends (YMM).
-defm : X86WriteResPairUnsupported<WriteVarBlendZ>; // Vector variable blends (ZMM).
+defm : X86WriteResPairUnsupported<WriteMaskBlendX>; // Vector masked blends.
+defm : X86WriteResPairUnsupported<WriteMaskBlendY>; // Vector masked blends (YMM).
+defm : X86WriteResPairUnsupported<WriteMaskBlendZ>; // Vector masked blends (ZMM).
 defm : Zn3WriteResXMMPair<WritePSADBW, [Zn3FPVAdd0123], 3, [2], 1>;  // Vector PSADBW.
 defm : Zn3WriteResXMMPair<WritePSADBWX, [Zn3FPVAdd0123], 3, [2], 1>; // Vector PSADBW (XMM).
 defm : Zn3WriteResYMMPair<WritePSADBWY, [Zn3FPVAdd0123], 3, [2], 1>; // Vector PSADBW (YMM).

@@ -81,6 +81,46 @@ valignq           $1, %ymm16, %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax), %ymm17, %ymm19 {z}{k1}
 valignq           $1, (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
+vblendmpd         %xmm16, %xmm17, %xmm19
+vblendmpd         (%rax), %xmm17, %xmm19
+vblendmpd         (%rax){1to2}, %xmm17, %xmm19
+vblendmpd         %xmm16, %xmm17, %xmm19 {k1}
+vblendmpd         (%rax), %xmm17, %xmm19 {k1}
+vblendmpd         (%rax){1to2}, %xmm17, %xmm19 {k1}
+vblendmpd         %xmm16, %xmm17, %xmm19 {z}{k1}
+vblendmpd         (%rax), %xmm17, %xmm19 {z}{k1}
+vblendmpd         (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+vblendmpd         %ymm16, %ymm17, %ymm19
+vblendmpd         (%rax), %ymm17, %ymm19
+vblendmpd         (%rax){1to4}, %ymm17, %ymm19
+vblendmpd         %ymm16, %ymm17, %ymm19 {k1}
+vblendmpd         (%rax), %ymm17, %ymm19 {k1}
+vblendmpd         (%rax){1to4}, %ymm17, %ymm19 {k1}
+vblendmpd         %ymm16, %ymm17, %ymm19 {z}{k1}
+vblendmpd         (%rax), %ymm17, %ymm19 {z}{k1}
+vblendmpd         (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vblendmps         %xmm16, %xmm17, %xmm19
+vblendmps         (%rax), %xmm17, %xmm19
+vblendmps         (%rax){1to4}, %xmm17, %xmm19
+vblendmps         %xmm16, %xmm17, %xmm19 {k1}
+vblendmps         (%rax), %xmm17, %xmm19 {k1}
+vblendmps         (%rax){1to4}, %xmm17, %xmm19 {k1}
+vblendmps         %xmm16, %xmm17, %xmm19 {z}{k1}
+vblendmps         (%rax), %xmm17, %xmm19 {z}{k1}
+vblendmps         (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+vblendmps         %ymm16, %ymm17, %ymm19
+vblendmps         (%rax), %ymm17, %ymm19
+vblendmps         (%rax){1to8}, %ymm17, %ymm19
+vblendmps         %ymm16, %ymm17, %ymm19 {k1}
+vblendmps         (%rax), %ymm17, %ymm19 {k1}
+vblendmps         (%rax){1to8}, %ymm17, %ymm19 {k1}
+vblendmps         %ymm16, %ymm17, %ymm19 {z}{k1}
+vblendmps         (%rax), %ymm17, %ymm19 {z}{k1}
+vblendmps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
 vbroadcastf32x4   (%rax), %ymm19
 vbroadcastf32x4   (%rax), %ymm19 {k1}
 vbroadcastf32x4   (%rax), %ymm19 {z}{k1}
@@ -896,6 +936,46 @@ vpaddq            (%rax){1to4}, %ymm17, %ymm19 {k1}
 vpaddq            %ymm16, %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax), %ymm17, %ymm19 {z}{k1}
 vpaddq            (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
+
+vpblendmd         %xmm16, %xmm17, %xmm19
+vpblendmd         (%rax), %xmm17, %xmm19
+vpblendmd         (%rax){1to4}, %xmm17, %xmm19
+vpblendmd         %xmm16, %xmm17, %xmm19 {k1}
+vpblendmd         (%rax), %xmm17, %xmm19 {k1}
+vpblendmd         (%rax){1to4}, %xmm17, %xmm19 {k1}
+vpblendmd         %xmm16, %xmm17, %xmm19 {z}{k1}
+vpblendmd         (%rax), %xmm17, %xmm19 {z}{k1}
+vpblendmd         (%rax){1to4}, %xmm17, %xmm19 {z}{k1}
+
+vpblendmd         %ymm16, %ymm17, %ymm19
+vpblendmd         (%rax), %ymm17, %ymm19
+vpblendmd         (%rax){1to8}, %ymm17, %ymm19
+vpblendmd         %ymm16, %ymm17, %ymm19 {k1}
+vpblendmd         (%rax), %ymm17, %ymm19 {k1}
+vpblendmd         (%rax){1to8}, %ymm17, %ymm19 {k1}
+vpblendmd         %ymm16, %ymm17, %ymm19 {z}{k1}
+vpblendmd         (%rax), %ymm17, %ymm19 {z}{k1}
+vpblendmd         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
+
+vpblendmq         %xmm16, %xmm17, %xmm19
+vpblendmq         (%rax), %xmm17, %xmm19
+vpblendmq         (%rax){1to2}, %xmm17, %xmm19
+vpblendmq         %xmm16, %xmm17, %xmm19 {k1}
+vpblendmq         (%rax), %xmm17, %xmm19 {k1}
+vpblendmq         (%rax){1to2}, %xmm17, %xmm19 {k1}
+vpblendmq         %xmm16, %xmm17, %xmm19 {z}{k1}
+vpblendmq         (%rax), %xmm17, %xmm19 {z}{k1}
+vpblendmq         (%rax){1to2}, %xmm17, %xmm19 {z}{k1}
+
+vpblendmq         %ymm16, %ymm17, %ymm19
+vpblendmq         (%rax), %ymm17, %ymm19
+vpblendmq         (%rax){1to4}, %ymm17, %ymm19
+vpblendmq         %ymm16, %ymm17, %ymm19 {k1}
+vpblendmq         (%rax), %ymm17, %ymm19 {k1}
+vpblendmq         (%rax){1to4}, %ymm17, %ymm19 {k1}
+vpblendmq         %ymm16, %ymm17, %ymm19 {z}{k1}
+vpblendmq         (%rax), %ymm17, %ymm19 {z}{k1}
+vpblendmq         (%rax){1to4}, %ymm17, %ymm19 {z}{k1}
 
 vpbroadcastd      %xmm16, %xmm19
 vpbroadcastd      (%rax), %xmm19
@@ -1984,6 +2064,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      3     1.00                        valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      10    1.00    *                   valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmpd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vblendmpd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmpd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vblendmps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vblendmps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vblendmps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x4	(%rax), %ymm19
 # CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x4	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  2      8     0.50    *                   vbroadcastf32x4	(%rax), %ymm19 {%k1} {z}
@@ -2710,6 +2826,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  1      1     0.33                        vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  2      8     0.50    *                   vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmd	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vpblendmd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmd	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  2      7     0.50    *                   vpblendmq	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  1      1     0.33                        vpblendmq	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  2      8     0.50    *                   vpblendmq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %xmm19
 # CHECK-NEXT:  2      7     0.50    *                   vpbroadcastd	(%rax), %xmm19
 # CHECK-NEXT:  1      1     1.00                        vpbroadcastd	%xmm16, %xmm19 {%k1}
@@ -3601,7 +3753,7 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]
-# CHECK-NEXT:  -     423.00 463.00 359.00 542.83 542.83 148.00 1086.00 12.00 49.33
+# CHECK-NEXT:  -     423.00 487.00 383.00 566.83 566.83 148.00 1110.00 12.00 49.33
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    Instructions:
@@ -3677,6 +3829,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     valignq	$1, %ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     valignq	$1, (%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -     0.50   0.50    -     1.00    -      -     valignq	$1, (%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmpd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmpd	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vblendmps	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vblendmps	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vbroadcastf32x4	(%rax), %ymm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vbroadcastf32x4	(%rax), %ymm19 {%k1}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vbroadcastf32x4	(%rax), %ymm19 {%k1} {z}
@@ -4403,6 +4591,42 @@ vunpcklps         (%rax){1to8}, %ymm17, %ymm19 {z}{k1}
 # CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpaddq	%ymm16, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpaddq	(%rax), %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpaddq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to4}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to4}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to4}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to8}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to8}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmd	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmd	(%rax){1to8}, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%xmm16, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to2}, %xmm17, %xmm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%xmm16, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to2}, %xmm17, %xmm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%xmm16, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to2}, %xmm17, %xmm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%ymm16, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to4}, %ymm17, %ymm19
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%ymm16, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to4}, %ymm17, %ymm19 {%k1}
+# CHECK-NEXT:  -      -     0.33   0.33    -      -      -     0.33    -      -     vpblendmq	%ymm16, %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax), %ymm17, %ymm19 {%k1} {z}
+# CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpblendmq	(%rax){1to4}, %ymm17, %ymm19 {%k1} {z}
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %xmm19
 # CHECK-NEXT:  -      -     0.33   0.33   0.50   0.50    -     0.33    -      -     vpbroadcastd	(%rax), %xmm19
 # CHECK-NEXT:  -      -      -      -      -      -      -     1.00    -      -     vpbroadcastd	%xmm16, %xmm19 {%k1}
