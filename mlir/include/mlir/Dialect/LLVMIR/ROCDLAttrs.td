@@ -89,6 +89,9 @@ def ROCDL_SchedGroupMaskAttr
 def ROCDL_AsyncStagesAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_AsyncStages, "async_stages">;
 
+def ROCDL_WaitcntCounterAttr
+    : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_WaitcntCounter, "waitcnt_counter">;
+
 def ROCDL_PreGfx12CachePolicyAttr
     : ROCDL_IntrinsicIntegerEnumAttr<ROCDL_PreGfx12CachePolicy,
                                      "pre_gfx12_cache_policy">;

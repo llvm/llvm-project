@@ -827,6 +827,26 @@ def ROCDL_IglpOpt : ROCDL_ConcreteNonMemIntrOp<"iglp.opt", [], 0, [0], ["variant
   }];
 }
 
+def ROCDL_PadWaitcntOp
+  : ROCDL_ConcreteNonMemIntrOp<"pad.waitcnt", [], 0, [0, 1],
+      ["counter", "count"]>,
+    Arguments<(ins ROCDL_WaitcntCounterAttr:$counter,
+                   ConfinedAttr<I32Attr, [IntPositive]>:$count)> {
+  let assemblyFormat = "enum($counter) `,` $count attr-dict";
+  let summary =
+      "optional hint to add counter events on the opposite branch edge";
+  let description = [{
+    Requests `count` extra counter events on the opposite edge of a conditional
+    branch. `counter` selects the counter to pad: `load` is the only supported
+    counter. `count` must be positive.
+
+    Example:
+    ```mlir
+    rocdl.pad.waitcnt load, 1
+    ```
+  }];
+}
+
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
 

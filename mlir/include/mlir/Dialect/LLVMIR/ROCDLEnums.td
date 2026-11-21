@@ -319,4 +319,16 @@ def ROCDL_Gfx12AtomicCachePolicy : ROCDL_I32BitEnum<"Gfx12AtomicCachePolicy",
   let printBitEnumQuoted = 0;
 }
 
+//===----------------------------------------------------------------------===//
+// Wait counter padding enum.
+//===----------------------------------------------------------------------===//
+
+// Keep these values in sync with the counter encoding of
+// llvm.amdgcn.pad.waitcnt.
+def ROCDL_WaitcntCounter : ROCDL_I32Enum<"WaitcntCounter",
+    "hardware wait counter padded by rocdl.pad.waitcnt",
+    [
+      I32EnumCase<"load", 0>
+    ]>;
+
 #endif // ROCDLIR_ENUMS
