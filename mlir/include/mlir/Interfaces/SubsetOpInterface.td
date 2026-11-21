@@ -134,6 +134,32 @@ def SubsetExtractionOpInterface
         /*methodName=*/"getSourceOperand",
         /*args=*/(ins)
       >,
+      InterfaceMethod<
+        /*desc=*/[{
+          Return "true" if this extraction supports forwarding from the given
+          insertion. Forwarding uses the insertion's source value directly as the
+          extraction's result. The caller must ensure that the two ops access
+          equivalent subsets.
+
+          An extraction can change the value type through rank reduction without
+          changing the accessed subset. Forwarding requires identical types
+          because it replaces one SSA value with another without a conversion.
+
+          The ops may also arrange the elements differently. For example, a
+          transposed write and an identity read access the same tile but return
+          different element orders.
+
+          Therefore, implementations must check any additional conditions needed
+          to forward the inserted value directly to the extraction.
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"canForwardFromInsertion",
+        /*args=*/(ins "::mlir::SubsetInsertionOpInterface":$insertion),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          return false;
+        }]
+      >,
   ];
 
   let verify = [{

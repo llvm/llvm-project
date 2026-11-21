@@ -241,3 +241,101 @@ func.func @full_lower_rank_xfer_write(
       : vector<4xf32>, tensor<1x4xf32>
   return %written : tensor<1x4xf32>
 }
+
+// -----
+
+// The masked write must preserve the original values of unwritten elements.
+// The fill therefore needs a separate buffer.
+
+// CHECK-LABEL: func @masked_transfer_write_preserves_slice(
+//  CHECK-SAME: %[[T:.*]]: memref<4xi32,
+//       CHECK: %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<2xi32>
+//       CHECK: linalg.fill {{.*}} outs(%[[ALLOC]] : memref<2xi32>)
+//       CHECK: %[[OBSERVED:.*]] = memref.load %[[ALLOC]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[T]][
+//       CHECK: return %[[T]], %[[OBSERVED]]
+
+// CHECK-ANALYSIS-LABEL: func @masked_transfer_write_preserves_slice(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["false"]
+func.func @masked_transfer_write_preserves_slice(
+    %t: tensor<4xi32> {bufferization.writable = true},
+    %v: vector<2xi32>, %mask: vector<2xi1>, %fill: i32)
+    -> (tensor<4xi32>, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %slice = tensor.extract_slice %t[0][2][1]
+      : tensor<4xi32> to tensor<2xi32>
+  %filled = linalg.fill ins(%fill : i32) outs(%slice : tensor<2xi32>)
+      -> tensor<2xi32>
+  %observed = tensor.extract %filled[%c1] : tensor<2xi32>
+  %out = vector.transfer_write %v, %t[%c0], %mask
+      : vector<2xi32>, tensor<4xi32>
+  return %out, %observed : tensor<4xi32>, i32
+}
+
+// -----
+
+// The vector.mask can leave some elements untouched, so the fill needs a
+// separate buffer.
+
+// CHECK-LABEL: func @vector_mask_transfer_write_preserves_slice(
+//  CHECK-SAME: %[[T:.*]]: memref<4xi32,
+//       CHECK: %[[ALLOC:.*]] = memref.alloc() {{.*}} : memref<2xi32>
+//       CHECK: linalg.fill {{.*}} outs(%[[ALLOC]] : memref<2xi32>)
+//       CHECK: %[[OBSERVED:.*]] = memref.load %[[ALLOC]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[T]][
+//       CHECK: return %[[T]], %[[OBSERVED]]
+
+// CHECK-ANALYSIS-LABEL: func @vector_mask_transfer_write_preserves_slice(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["false"]
+func.func @vector_mask_transfer_write_preserves_slice(
+    %t: tensor<4xi32> {bufferization.writable = true},
+    %v: vector<2xi32>, %mask: vector<2xi1>, %fill: i32)
+    -> (tensor<4xi32>, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %slice = tensor.extract_slice %t[0][2][1]
+      : tensor<4xi32> to tensor<2xi32>
+  %filled = linalg.fill ins(%fill : i32) outs(%slice : tensor<2xi32>)
+      -> tensor<2xi32>
+  %observed = tensor.extract %filled[%c1] : tensor<2xi32>
+  %out = vector.mask %mask {
+    vector.transfer_write %v, %t[%c0]
+        : vector<2xi32>, tensor<4xi32>
+  } : vector<2xi1> -> tensor<4xi32>
+  return %out, %observed : tensor<4xi32>, i32
+}
+
+// -----
+
+// The unmasked write overwrites the entire slice, so the fill can reuse
+// the original tensor's buffer.
+
+// CHECK-LABEL: func @unmasked_transfer_write_overwrites_slice(
+//  CHECK-SAME: %[[T:.*]]: memref<4xi32,
+//       CHECK: %[[SLICE:.*]] = memref.subview %[[T]][0] [2] [1]
+//       CHECK: linalg.fill {{.*}} outs(%[[SLICE]] :
+//       CHECK: %[[OBSERVED:.*]] = memref.load %[[SLICE]]
+//       CHECK: vector.transfer_write %{{.*}}, %[[T]][
+//       CHECK: return %[[T]], %[[OBSERVED]]
+
+// CHECK-ANALYSIS-LABEL: func @unmasked_transfer_write_overwrites_slice(
+// CHECK-ANALYSIS: tensor.extract_slice
+// CHECK-ANALYSIS-SAME: __inplace_operands_attr__ = ["true"]
+func.func @unmasked_transfer_write_overwrites_slice(
+    %t: tensor<4xi32> {bufferization.writable = true},
+    %v: vector<2xi32>, %fill: i32)
+    -> (tensor<4xi32>, i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %slice = tensor.extract_slice %t[0][2][1]
+      : tensor<4xi32> to tensor<2xi32>
+  %filled = linalg.fill ins(%fill : i32) outs(%slice : tensor<2xi32>)
+      -> tensor<2xi32>
+  %observed = tensor.extract %filled[%c1] : tensor<2xi32>
+  %out = vector.transfer_write %v, %t[%c0]
+      : vector<2xi32>, tensor<4xi32>
+  return %out, %observed : tensor<4xi32>, i32
+}

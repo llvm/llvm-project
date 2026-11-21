@@ -31,6 +31,14 @@ struct ExtractSliceOpSubsetExtractionOpInterface
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<tensor::ExtractSliceOp>(op).getSourceMutable();
   }
+
+  bool canForwardFromInsertion(Operation *op,
+                               SubsetInsertionOpInterface insertion) const {
+    return isa<tensor::InsertSliceOp, tensor::ParallelInsertSliceOp>(
+               insertion.getOperation()) &&
+           cast<tensor::ExtractSliceOp>(op).getType() ==
+               insertion.getSourceOperand().get().getType();
+  }
 };
 
 template <typename OpTy>

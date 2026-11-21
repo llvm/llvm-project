@@ -15,11 +15,30 @@ using namespace mlir;
 using namespace mlir::vector;
 
 namespace {
+// Check both the mask operand and an enclosing vector.mask.
+bool isMaskedTransfer(VectorTransferOpInterface transfer) {
+  return transfer.getMask() ||
+         cast<MaskableOpInterface>(transfer.getOperation()).isMasked();
+}
 
 template <typename OpTy>
 struct XferOpSubsetOpInterface
     : public SubsetOpInterface::ExternalModel<XferOpSubsetOpInterface<OpTy>,
                                               OpTy> {
+  bool operatesOnEquivalentSubset(
+      Operation *op, SubsetOpInterface candidate,
+      function_ref<bool(Value, Value)> equivalenceFn) const {
+    auto transfer = cast<VectorTransferOpInterface>(op);
+    // A mask can restrict access to part of the rectangular transfer region.
+    if (isMaskedTransfer(transfer))
+      return false;
+    auto other = dyn_cast<VectorTransferOpInterface>(candidate.getOperation());
+    if (other && isMaskedTransfer(other))
+      return false;
+    return mlir::detail::defaultOperatesOnEquivalentSubset(op, candidate,
+                                                           equivalenceFn);
+  }
+
   FailureOr<HyperrectangularSlice>
   getAccessedHyperrectangularSlice(Operation *op) const {
     auto xferOp = cast<OpTy>(op);
@@ -38,6 +57,14 @@ struct TransferReadOpSubsetExtractionOpInterface
           TransferReadOpSubsetExtractionOpInterface, vector::TransferReadOp> {
   OpOperand &getSourceOperand(Operation *op) const {
     return cast<vector::TransferReadOp>(op).getBaseMutable();
+  }
+
+  bool canForwardFromInsertion(Operation *op,
+                               SubsetInsertionOpInterface insertion) const {
+    auto read = cast<vector::TransferReadOp>(op);
+    auto write = dyn_cast<vector::TransferWriteOp>(insertion.getOperation());
+    return write && read.getVectorType() == write.getVectorType() &&
+           read.getPermutationMap() == write.getPermutationMap();
   }
 };
 
@@ -64,7 +91,6 @@ struct TransferWriteOpSubsetInsertionOpInterface
     return {};
   }
 };
-
 } // namespace
 
 void mlir::vector::registerSubsetOpInterfaceExternalModels(
