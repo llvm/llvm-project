@@ -559,6 +559,10 @@ bool object::areTargetsEquivalent(const OffloadFile::TargetID &LHS,
 
 bool object::areTargetsCompatible(const OffloadFile::TargetID &Provided,
                                   const OffloadFile::TargetID &Requested) {
+  // Unless the image is generic, the "code" lists must be identical.
+  if (Provided.Arch != "generic" && Provided.Code != Requested.Code)
+    return false;
+
   llvm::Triple ProvidedTT(Provided.Triple);
   llvm::Triple RequestedTT(Requested.Triple);
 
@@ -567,23 +571,15 @@ bool object::areTargetsCompatible(const OffloadFile::TargetID &Provided,
   if (ProvidedTT.isAMDGPU()) {
     AMDGPU::TargetID ProvidedID(ProvidedTT, Provided.Arch);
     AMDGPU::TargetID RequestedID(RequestedTT, Requested.Arch);
-    return Provided.Code == Requested.Code &&
-           ProvidedID.providesFor(RequestedID);
+    return ProvidedID.providesFor(RequestedID);
   }
 
   // For other targets the triples must be compatible.
   if (!ProvidedTT.isCompatibleWith(RequestedTT))
     return false;
 
-  // A generic device image can be linked into any group.
-  if (Provided.Arch == "generic")
-    return true;
-
-  if (Provided.Code != Requested.Code)
-    return false;
-
-  // A generic group accepts a device image of any architecture.
-  if (Requested.Arch == "generic")
+  // If the architecture is "generic" we assume it is always compatible.
+  if (Provided.Arch == "generic" || Requested.Arch == "generic")
     return true;
 
   return Provided.Arch == Requested.Arch;
