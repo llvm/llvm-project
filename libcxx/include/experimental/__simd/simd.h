@@ -34,7 +34,7 @@ template <class _Simd, class _Impl>
 class __simd_int_operators<_Simd, _Impl, true> {
 public:
   // unary operators for integral _Tp
-  _LIBCPP_HIDE_FROM_ABI _Simd operator~() const noexcept {
+  _Simd operator~() const noexcept {
     return _Simd(_Impl::__bitwise_not((*static_cast<const _Simd*>(this)).__s_), _Simd::__storage_tag);
   }
 };
@@ -56,26 +56,26 @@ public:
   using mask_type  = simd_mask<_Tp, _Abi>;
   using abi_type   = _Abi;
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
+  static constexpr size_t size() noexcept { return simd_size_v<value_type, abi_type>; }
 
-  _LIBCPP_HIDE_FROM_ABI simd() noexcept = default;
+  simd() noexcept = default;
 
   // explicit conversion from and to implementation-defined types
   struct __storage_tag_t {};
   static constexpr __storage_tag_t __storage_tag{};
-  explicit _LIBCPP_HIDE_FROM_ABI operator _Storage() const { return __s_; }
-  explicit _LIBCPP_HIDE_FROM_ABI simd(const _Storage& __s, __storage_tag_t) : __s_(__s) {}
+  explicit operator _Storage() const { return __s_; }
+  explicit simd(const _Storage& __s, __storage_tag_t) : __s_(__s) {}
 
   // broadcast constructor
   template <class _Up, enable_if_t<__can_broadcast_v<value_type, __remove_cvref_t<_Up>>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}
+  simd(_Up&& __v) noexcept : __s_(_Impl::__broadcast(static_cast<value_type>(__v))) {}
 
   // implicit type conversion constructor
   template <class _Up,
             enable_if_t<!is_same_v<_Up, _Tp> && is_same_v<abi_type, simd_abi::fixed_size<size()>> &&
                             __is_non_narrowing_convertible_v<_Up, value_type>,
                         int> = 0>
-  _LIBCPP_HIDE_FROM_ABI simd(const simd<_Up, simd_abi::fixed_size<size()>>& __v) noexcept {
+  simd(const simd<_Up, simd_abi::fixed_size<size()>>& __v) noexcept {
     for (size_t __i = 0; __i < size(); __i++) {
       (*this)[__i] = static_cast<value_type>(__v[__i]);
     }
@@ -83,60 +83,57 @@ public:
 
   // generator constructor
   template <class _Generator, enable_if_t<__can_generate_v<value_type, _Generator, size()>, int> = 0>
-  explicit _LIBCPP_HIDE_FROM_ABI simd(_Generator&& __g) noexcept
-      : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
+  explicit simd(_Generator&& __g) noexcept : __s_(_Impl::__generate(std::forward<_Generator>(__g))) {}
 
   // load constructor
   template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI simd(const _Up* __mem, _Flags) {
+  simd(const _Up* __mem, _Flags) {
     _Impl::__load(__s_, _Flags::template __apply<simd>(__mem));
   }
 
   // copy functions
   template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void copy_from(const _Up* __mem, _Flags) {
+  void copy_from(const _Up* __mem, _Flags) {
     _Impl::__load(__s_, _Flags::template __apply<simd>(__mem));
   }
 
   template <class _Up, class _Flags, enable_if_t<__is_vectorizable_v<_Up> && is_simd_flag_type_v<_Flags>, int> = 0>
-  _LIBCPP_HIDE_FROM_ABI void copy_to(_Up* __mem, _Flags) const {
+  void copy_to(_Up* __mem, _Flags) const {
     _Impl::__store(__s_, _Flags::template __apply<simd>(__mem));
   }
 
   // scalar access [simd.subscr]
-  _LIBCPP_HIDE_FROM_ABI reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
-  _LIBCPP_HIDE_FROM_ABI value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
+  reference operator[](size_t __i) noexcept { return reference(__s_, __i); }
+  value_type operator[](size_t __i) const noexcept { return __s_.__get(__i); }
 
   // simd unary operators
-  _LIBCPP_HIDE_FROM_ABI simd& operator++() noexcept {
+  simd& operator++() noexcept {
     _Impl::__increment(__s_);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI simd operator++(int) noexcept {
+  simd operator++(int) noexcept {
     simd __r = *this;
     _Impl::__increment(__s_);
     return __r;
   }
 
-  _LIBCPP_HIDE_FROM_ABI simd& operator--() noexcept {
+  simd& operator--() noexcept {
     _Impl::__decrement(__s_);
     return *this;
   }
 
-  _LIBCPP_HIDE_FROM_ABI simd operator--(int) noexcept {
+  simd operator--(int) noexcept {
     simd __r = *this;
     _Impl::__decrement(__s_);
     return __r;
   }
 
-  _LIBCPP_HIDE_FROM_ABI mask_type operator!() const noexcept {
-    return mask_type(_Impl::__negate(__s_), mask_type::__storage_tag);
-  }
+  mask_type operator!() const noexcept { return mask_type(_Impl::__negate(__s_), mask_type::__storage_tag); }
 
-  _LIBCPP_HIDE_FROM_ABI simd operator+() const noexcept { return *this; }
+  simd operator+() const noexcept { return *this; }
 
-  _LIBCPP_HIDE_FROM_ABI simd operator-() const noexcept { return simd(_Impl::__unary_minus(__s_), __storage_tag); }
+  simd operator-() const noexcept { return simd(_Impl::__unary_minus(__s_), __storage_tag); }
 };
 
 template <class _Tp, class _Abi>

@@ -61,14 +61,14 @@ private:
 
 public:
   // constructors and seeding functions
-  _LIBCPP_HIDE_FROM_ABI __independent_bits_engine(_Engine& __e, size_t __w);
+  __independent_bits_engine(_Engine& __e, size_t __w);
 
   // generating functions
-  _LIBCPP_HIDE_FROM_ABI result_type operator()() { return __eval(integral_constant<bool, _Rp != 0>()); }
+  result_type operator()() { return __eval(integral_constant<bool, _Rp != 0>()); }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(false_type);
-  _LIBCPP_HIDE_FROM_ABI result_type __eval(true_type);
+  result_type __eval(false_type);
+  result_type __eval(true_type);
 };
 
 template <class _Engine, class _UIntType>
@@ -148,16 +148,16 @@ public:
   public:
     typedef uniform_int_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __a = 0, result_type __b = numeric_limits<result_type>::max())
+    explicit param_type(result_type __a = 0, result_type __b = numeric_limits<result_type>::max())
         : __a_(__a), __b_(__b) {}
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __a_; }
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __b_; }
+    [[__nodiscard__]] result_type a() const { return __a_; }
+    [[__nodiscard__]] result_type b() const { return __b_; }
 
-    _LIBCPP_HIDE_FROM_ABI friend bool operator==(const param_type& __x, const param_type& __y) {
+    friend bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__a_ == __y.__a_ && __x.__b_ == __y.__b_;
     }
-    _LIBCPP_HIDE_FROM_ABI friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
   };
 
 private:
@@ -166,41 +166,38 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI uniform_int_distribution() : uniform_int_distribution(0) {}
-  _LIBCPP_HIDE_FROM_ABI explicit uniform_int_distribution(
-      result_type __a, result_type __b = numeric_limits<result_type>::max())
+  uniform_int_distribution() : uniform_int_distribution(0) {}
+  explicit uniform_int_distribution(result_type __a, result_type __b = numeric_limits<result_type>::max())
       : __p_(param_type(__a, __b)) {}
 #else
   explicit uniform_int_distribution(result_type __a = 0, result_type __b = numeric_limits<result_type>::max())
       : __p_(param_type(__a, __b)) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit uniform_int_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit uniform_int_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type a() const { return __p_.a(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type b() const { return __p_.b(); }
+  [[__nodiscard__]] result_type a() const { return __p_.a(); }
+  [[__nodiscard__]] result_type b() const { return __p_.b(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return a(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return b(); }
+  [[__nodiscard__]] result_type min() const { return a(); }
+  [[__nodiscard__]] result_type max() const { return b(); }
 
-  _LIBCPP_HIDE_FROM_ABI friend bool
-  operator==(const uniform_int_distribution& __x, const uniform_int_distribution& __y) {
+  friend bool operator==(const uniform_int_distribution& __x, const uniform_int_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  _LIBCPP_HIDE_FROM_ABI friend bool
-  operator!=(const uniform_int_distribution& __x, const uniform_int_distribution& __y) {
+  friend bool operator!=(const uniform_int_distribution& __x, const uniform_int_distribution& __y) {
     return !(__x == __y);
   }
 };
@@ -230,7 +227,7 @@ typename uniform_int_distribution<_IntType>::result_type uniform_int_distributio
 }
 
 template <class _CharT, class _Traits, class _IT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const uniform_int_distribution<_IT>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _Ostream;
@@ -241,8 +238,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const uniform_int_distribution<
 }
 
 template <class _CharT, class _Traits, class _IT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, uniform_int_distribution<_IT>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, uniform_int_distribution<_IT>& __x) {
   typedef uniform_int_distribution<_IT> _Eng;
   typedef typename _Eng::result_type result_type;
   typedef typename _Eng::param_type param_type;

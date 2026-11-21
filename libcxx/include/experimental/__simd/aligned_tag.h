@@ -26,7 +26,7 @@ struct element_aligned_tag {
   static constexpr size_t __alignment = alignof(_Up);
 
   template <class _Tp, class _Up>
-  static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {
+  static constexpr _Up* __apply(_Up* __ptr) {
     return __ptr;
   }
 };
@@ -39,7 +39,7 @@ struct vector_aligned_tag {
   static constexpr size_t __alignment = memory_alignment_v<_Tp, remove_const_t<_Up>>;
 
   template <class _Tp, class _Up>
-  static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {
+  static constexpr _Up* __apply(_Up* __ptr) {
     return std::__assume_aligned<__alignment<_Tp, _Up>, _Up>(__ptr);
   }
 };
@@ -53,7 +53,7 @@ struct overaligned_tag {
   static constexpr size_t __alignment = _Np;
 
   template <class _Tp, class _Up>
-  static _LIBCPP_HIDE_FROM_ABI constexpr _Up* __apply(_Up* __ptr) {
+  static constexpr _Up* __apply(_Up* __ptr) {
     return std::__assume_aligned<__alignment<_Tp, _Up>, _Up>(__ptr);
   }
 };
