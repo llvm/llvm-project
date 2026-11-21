@@ -3,8 +3,8 @@
 ; RUN: llc -mtriple=amdgpu7.01-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=PREGFX9 %s
 ; RUN: llc -mtriple=amdgpu8.03-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=PREGFX9 %s
 ; RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=PREGFX9 %s
-; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=GFX10PLUS %s
-; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=GFX10PLUS %s
+; RUN: llc -mtriple=amdgpu10.30-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgpu11.00-amd-amdhsa --global-isel < %s | FileCheck --check-prefix=GFX11 %s
 
 define i32 @check_v_bfe(i16 %a) {
 ; PREGFX9-LABEL: check_v_bfe:
@@ -13,11 +13,17 @@ define i32 @check_v_bfe(i16 %a) {
 ; PREGFX9-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; PREGFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX10PLUS-LABEL: check_v_bfe:
-; GFX10PLUS:       ; %bb.0: ; %entry
-; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
+; GFX10-LABEL: check_v_bfe:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_bfe_i32 v0, v0, 0, 16
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-LABEL: check_v_bfe:
+; GFX11:       ; %bb.0: ; %entry
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %res = sext i16 %a to i32
   ret i32 %res

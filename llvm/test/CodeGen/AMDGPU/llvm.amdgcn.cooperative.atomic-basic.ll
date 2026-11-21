@@ -133,7 +133,7 @@ define i32 @test_load_8x16B_sext_inreg(ptr addrspace(1) noundef readonly %addr) 
 ; GCN-NEXT:    global_load_b128 v[0:3], v[0:1], off scope:SCOPE_SYS
 ; GCN-NEXT:    s_wait_loadcnt 0x0
 ; GCN-NEXT:    s_wait_xcnt 0x0
-; GCN-NEXT:    v_bfe_i32 v0, v3, 0, 16
+; GCN-NEXT:    v_cvt_i32_i16_e32 v0, v3.l
 ; GCN-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %0 = tail call <4 x i32> @llvm.amdgcn.cooperative.atomic.load.8x16B.p1(ptr addrspace(1) %addr, i32 0, metadata !0)

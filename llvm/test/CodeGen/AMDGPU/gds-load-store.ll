@@ -1750,18 +1750,31 @@ define i32 @atomic_load_sext_i16(ptr addrspace(2) %ptr) {
 ; GFX10-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-LABEL: atomic_load_sext_i16:
-; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_mov_b32 m0, 0
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    ds_load_u16 v0, v0 gds
-; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    buffer_gl1_inv
-; GFX11-NEXT:    buffer_gl0_inv
-; GFX11-NEXT:    s_waitcnt expcnt(0)
-; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-TRUE16-LABEL: atomic_load_sext_i16:
+; GFX11-TRUE16:       ; %bb.0:
+; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    s_mov_b32 m0, 0
+; GFX11-TRUE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-TRUE16-NEXT:    ds_load_u16 v0, v0 gds
+; GFX11-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-TRUE16-NEXT:    buffer_gl1_inv
+; GFX11-TRUE16-NEXT:    buffer_gl0_inv
+; GFX11-TRUE16-NEXT:    s_waitcnt expcnt(0)
+; GFX11-TRUE16-NEXT:    v_cvt_i32_i16_e32 v0, v0.l
+; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-FAKE16-LABEL: atomic_load_sext_i16:
+; GFX11-FAKE16:       ; %bb.0:
+; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    s_mov_b32 m0, 0
+; GFX11-FAKE16-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-FAKE16-NEXT:    ds_load_u16 v0, v0 gds
+; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-FAKE16-NEXT:    buffer_gl1_inv
+; GFX11-FAKE16-NEXT:    buffer_gl0_inv
+; GFX11-FAKE16-NEXT:    s_waitcnt expcnt(0)
+; GFX11-FAKE16-NEXT:    v_cvt_i32_i16_e32 v0, v0
+; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic i16, ptr addrspace(2) %ptr seq_cst, align 2
   %ext = sext i16 %load to i32
   ret i32 %ext

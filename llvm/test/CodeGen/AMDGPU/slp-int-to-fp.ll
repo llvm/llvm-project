@@ -645,30 +645,31 @@ define void @sitofp_i12_to_bfloat(ptr addrspace(1) noalias %out, ptr addrspace(1
 ; GFX1100-NEXT:    v_pk_ashrrev_i16 v3, 4, v3 op_sel_hi:[0,1]
 ; GFX1100-NEXT:    v_pk_ashrrev_i16 v2, 4, v2 op_sel_hi:[0,1]
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX1100-NEXT:    v_bfe_i32 v4, v3, 0, 16
-; GFX1100-NEXT:    v_bfe_i32 v5, v2, 0, 16
+; GFX1100-NEXT:    v_cvt_i32_i16_e32 v4, v3.l
+; GFX1100-NEXT:    v_cvt_i32_i16_e32 v5, v2.l
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_ashrrev_i32_e32 v2, 16, v2
 ; GFX1100-NEXT:    v_ashrrev_i32_e32 v3, 16, v3
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_cvt_f32_i32_e32 v4, v4
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_cvt_f32_i32_e32 v5, v5
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_cvt_f32_i32_e32 v2, v2
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_cvt_f32_i32_e32 v3, v3
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_bfe_u32 v6, v4, 16, 1
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_bfe_u32 v7, v5, 16, 1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_bfe_u32 v8, v2, 16, 1
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_bfe_u32 v9, v3, 16, 1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_add3_u32 v4, v6, v4, 0x7fff
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_add3_u32 v5, v7, v5, 0x7fff
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_add3_u32 v2, v8, v2, 0x7fff
-; GFX1100-NEXT:    v_add3_u32 v3, v9, v3, 0x7fff
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1100-NEXT:    v_add3_u32 v3, v9, v3, 0x7fff
 ; GFX1100-NEXT:    v_mov_b16_e32 v3.l, v4.h
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4)
 ; GFX1100-NEXT:    v_mov_b16_e32 v2.l, v5.h
 ; GFX1100-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
@@ -686,8 +687,8 @@ define void @sitofp_i12_to_bfloat(ptr addrspace(1) noalias %out, ptr addrspace(1
 ; GFX1250-NEXT:    v_pk_ashrrev_i16 v5, 4, v5 op_sel_hi:[0,1]
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX1250-NEXT:    v_dual_ashrrev_i32 v6, 16, v4 :: v_dual_ashrrev_i32 v7, 16, v5
-; GFX1250-NEXT:    v_bfe_i32 v4, v4, 0, 16
-; GFX1250-NEXT:    v_bfe_i32 v5, v5, 0, 16
+; GFX1250-NEXT:    v_cvt_i32_i16_e32 v4, v4.l
+; GFX1250-NEXT:    v_cvt_i32_i16_e32 v5, v5.l
 ; GFX1250-NEXT:    v_cvt_f32_i32_e32 v6, v6
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1250-NEXT:    v_cvt_f32_i32_e32 v7, v7
