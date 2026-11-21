@@ -375,7 +375,9 @@ without pre-commit review if you have commit access.
   an existing file rather than creating a new one. If your test requires
   a specific target, prefer putting it in a target-specific test
   subdirectory rather than requiring a specific backend to be built with a
-  `REQUIRES:` line.
+  `REQUIRES:` line. These subdirectories aren't special; each has a
+  `lit.local.cfg` that marks its tests unsupported when the target isn't
+  built.
 - Tests that only run a target-independent IR pass with `opt` belong under
   that pass's `test/Transforms` directory, even if they are target-specific
   (e.g., `test/Transforms/LoopVectorize/AArch64`), not in
