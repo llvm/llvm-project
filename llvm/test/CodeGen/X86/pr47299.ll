@@ -56,12 +56,13 @@ define <7 x i1> @create_mask7(i64 %0) {
 define <16 x i1> @create_mask16(i64 %0) {
 ; CHECK-LABEL: create_mask16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k0, k1, k0
+; CHECK-NEXT:    cmp rdi, 16
+; CHECK-NEXT:    mov eax, 16
+; CHECK-NEXT:    cmovb rax, rdi
+; CHECK-NEXT:    mov ecx, -1
+; CHECK-NEXT:    bzhi eax, ecx, eax
+; CHECK-NEXT:    kmovd k0, eax
 ; CHECK-NEXT:    vpmovm2b xmm0, k0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret
   %2 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i64(i64 0, i64 %0)
   ret <16 x i1> %2
@@ -70,14 +71,12 @@ define <16 x i1> @create_mask16(i64 %0) {
 define <32 x i1> @create_mask32(i64 %0) {
 ; CHECK-LABEL: create_mask32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k1, k1, k2
-; CHECK-NEXT:    kunpckwd k0, k1, k0
+; CHECK-NEXT:    cmp rdi, 32
+; CHECK-NEXT:    mov eax, 32
+; CHECK-NEXT:    cmovb rax, rdi
+; CHECK-NEXT:    mov ecx, -1
+; CHECK-NEXT:    bzhi eax, ecx, eax
+; CHECK-NEXT:    kmovd k0, eax
 ; CHECK-NEXT:    vpmovm2b ymm0, k0
 ; CHECK-NEXT:    ret
   %2 = call <32 x i1> @llvm.get.active.lane.mask.v32i1.i64(i64 0, i64 %0)
@@ -87,22 +86,12 @@ define <32 x i1> @create_mask32(i64 %0) {
 define <64 x i1> @create_mask64(i64 %0) {
 ; CHECK-LABEL: create_mask64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastq zmm0, rdi
-; CHECK-NEXT:    vpcmpnleuq k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k1, k1, k2
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckwd k0, k1, k0
-; CHECK-NEXT:    vpcmpnleuq k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k1, k1, k2
-; CHECK-NEXT:    vpcmpnleuq k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleuq k3, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckbw k2, k3, k2
-; CHECK-NEXT:    kunpckwd k1, k2, k1
-; CHECK-NEXT:    kunpckdq k0, k1, k0
+; CHECK-NEXT:    cmp rdi, 64
+; CHECK-NEXT:    mov eax, 64
+; CHECK-NEXT:    cmovb rax, rdi
+; CHECK-NEXT:    mov rcx, -1
+; CHECK-NEXT:    bzhi rax, rcx, rax
+; CHECK-NEXT:    kmovq k0, rax
 ; CHECK-NEXT:    vpmovm2b zmm0, k0
 ; CHECK-NEXT:    ret
   %2 = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i64(i64 0, i64 %0)
@@ -112,10 +101,13 @@ define <64 x i1> @create_mask64(i64 %0) {
 define <16 x i1> @create_mask16_i32(i32 %0) {
 ; CHECK-LABEL: create_mask16_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastd zmm0, edi
-; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
+; CHECK-NEXT:    cmp edi, 16
+; CHECK-NEXT:    mov eax, 16
+; CHECK-NEXT:    cmovb eax, edi
+; CHECK-NEXT:    mov ecx, -1
+; CHECK-NEXT:    bzhi eax, ecx, eax
+; CHECK-NEXT:    kmovd k0, eax
 ; CHECK-NEXT:    vpmovm2b xmm0, k0
-; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret
   %2 = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 %0)
   ret <16 x i1> %2
@@ -124,14 +116,12 @@ define <16 x i1> @create_mask16_i32(i32 %0) {
 define <64 x i1> @create_mask64_i32(i32 %0) {
 ; CHECK-LABEL: create_mask64_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastd zmm0, edi
-; CHECK-NEXT:    vpcmpnleud k0, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    vpcmpnleud k2, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckwd k0, k1, k0
-; CHECK-NEXT:    vpcmpnleud k1, zmm0, zmmword ptr [rip + {{\.?LCPI[0-9]+_[0-9]+}}]
-; CHECK-NEXT:    kunpckwd k1, k1, k2
-; CHECK-NEXT:    kunpckdq k0, k1, k0
+; CHECK-NEXT:    cmp edi, 64
+; CHECK-NEXT:    mov eax, 64
+; CHECK-NEXT:    cmovb eax, edi
+; CHECK-NEXT:    mov rcx, -1
+; CHECK-NEXT:    bzhi rax, rcx, rax
+; CHECK-NEXT:    kmovq k0, rax
 ; CHECK-NEXT:    vpmovm2b zmm0, k0
 ; CHECK-NEXT:    ret
   %2 = call <64 x i1> @llvm.get.active.lane.mask.v64i1.i32(i32 0, i32 %0)
