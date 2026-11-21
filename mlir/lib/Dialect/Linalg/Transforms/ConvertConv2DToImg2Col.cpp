@@ -333,6 +333,15 @@ rewriteInIm2Col(RewriterBase &rewriter,
   int fh = filterTShape[1];
   int fw = filterTShape[2];
 
+  // Replicate the filter across input batches to match the flattened (n, c)
+  // batch dimension of batch_matvec.
+  Value broadcastFilterInit = tensor::EmptyOp::create(
+      rewriter, loc, {n, c, fh, fw}, filterType.getElementType());
+  Value broadcastedFilter =
+      linalg::BroadcastOp::create(rewriter, loc, filterT, broadcastFilterInit,
+                                  ArrayRef<int64_t>{0})
+          ->getResult(0);
+
   SmallVector<int64_t> colTensorShape = {n, c, oh, ow, fh, fw};
   Value transposedOutputTensor = transposeOperand(output, {0, 3, 1, 2});
 
@@ -369,23 +378,24 @@ rewriteInIm2Col(RewriterBase &rewriter,
 
   SmallVector<ReassociationIndices> img2ColTensorReassocIndices = {
       {0, 1}, {2, 3}, {4, 5}};
-  SmallVector<ReassociationIndices> filterReassociationIndice = {{0}, {1, 2}};
+  SmallVector<ReassociationIndices> filterReassociationIndices = {{0, 1},
+                                                                  {2, 3}};
   SmallVector<ReassociationIndices> outputReassociationIndice = {{0, 1},
                                                                  {2, 3}};
 
   auto reshapedImg2ColTensorType = RankedTensorType::get(
       {n * c, oh * ow, fh * fw}, inputType.getElementType());
   auto reshapedFilterTensorType =
-      RankedTensorType::get({c, fh * fw}, filterType.getElementType());
+      RankedTensorType::get({n * c, fh * fw}, filterType.getElementType());
   auto reshapedOutputTensorType =
       RankedTensorType::get({n * c, oh * ow}, outputType.getElementType());
 
   Value reshapedImg2ColTensor = tensor::CollapseShapeOp::create(
       rewriter, loc, reshapedImg2ColTensorType, img2ColTensor.getResult(0),
       img2ColTensorReassocIndices);
-  Value reshapedFilterTensor =
-      tensor::CollapseShapeOp::create(rewriter, loc, reshapedFilterTensorType,
-                                      filterT, filterReassociationIndice);
+  Value reshapedFilterTensor = tensor::CollapseShapeOp::create(
+      rewriter, loc, reshapedFilterTensorType, broadcastedFilter,
+      filterReassociationIndices);
   Value reshapedoutputTensor = tensor::CollapseShapeOp::create(
       rewriter, loc, reshapedOutputTensorType, transposedOutputTensor,
       outputReassociationIndice);
