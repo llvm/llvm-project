@@ -85,12 +85,8 @@ std::string prepareCIRModuleTriple(mlir::ModuleOp mod) {
   return triple;
 }
 
-llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
-                                               llvm::StringRef rawTriple) {
-  auto *context = mod.getContext();
-
-  // Data layout is fully determined by the target triple. Here we only pass the
-  // triple to get the data layout.
+std::optional<std::string>
+getTargetDataLayoutString(llvm::StringRef rawTriple) {
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> diagID(
       new clang::DiagnosticIDs);
   clang::DiagnosticOptions diagOpts;
@@ -103,19 +99,46 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   targetOptions.Triple = rawTriple;
   llvm::IntrusiveRefCntPtr<clang::TargetInfo> targetInfo =
       clang::TargetInfo::CreateTargetInfo(*diagnostics, targetOptions);
-  if (!targetInfo) {
+  if (!targetInfo)
+    return std::nullopt;
+  return targetInfo->getDataLayoutString();
+}
+
+llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
+                                               llvm::StringRef rawTriple) {
+  auto *context = mod.getContext();
+
+  // Data layout is fully determined by the target triple. Here we only pass the
+  // triple to get the data layout.
+  std::optional<std::string> layoutString =
+      getTargetDataLayoutString(rawTriple);
+  if (!layoutString) {
     mod.emitError() << "error: invalid target triple '" << rawTriple << "'\n";
     return llvm::failure();
   }
-  std::string layoutString = targetInfo->getDataLayoutString();
 
   // Registered dialects may not be loaded yet, ensure they are.
   context->loadDialect<mlir::DLTIDialect, mlir::LLVM::LLVMDialect,
                        mlir::omp::OpenMPDialect>();
 
-  cir::setMLIRDataLayout(mod, llvm::DataLayout(layoutString));
+  cir::setMLIRDataLayout(mod, llvm::DataLayout(*layoutString));
 
   return llvm::success();
+}
+
+void canonicalizeDataLayout(llvm::Module &llvmModule) {
+  std::optional<std::string> targetLayout =
+      getTargetDataLayoutString(llvmModule.getTargetTriple().str());
+  if (!targetLayout)
+    return;
+  llvm::Expected<llvm::DataLayout> parsed =
+      llvm::DataLayout::parse(*targetLayout);
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return;
+  }
+  if (*parsed == llvmModule.getDataLayout())
+    llvmModule.setDataLayout(*targetLayout);
 }
 
 /// Prepare requirements like cir.triple and data layout.
@@ -172,6 +195,7 @@ void registerToLLVMTranslation() {
                                                       enableOpenMP);
         if (!llvmModule)
           return mlir::failure();
+        cir::canonicalizeDataLayout(*llvmModule);
         llvmModule->renumberMetadataForAssembly();
         llvmModule->print(output, nullptr);
         return mlir::success();
