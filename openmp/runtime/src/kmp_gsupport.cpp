@@ -1773,6 +1773,16 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
   int sched;
   T *loop_bounds;
   int gtid = __kmp_entry_gtid();
+#if OMPT_SUPPORT
+  // The return address into the user code was stored by the calling function.
+  // Load it once, and pass it either as an argument, or set the pointer again
+  // before calling consuming functions.
+  void *codeptr_ra = nullptr;
+  if (UNLIKELY(ompt_enabled.enabled)) {
+    codeptr_ra = OMPT_LOAD_RETURN_ADDRESS(gtid);
+    KMP_DEBUG_ASSERT2(codeptr_ra, "codeptr_ra not set by caller");
+  }
+#endif
   kmp_int32 flags = 0;
   int if_val = gomp_flags & (1u << 10);
   int nogroup = gomp_flags & (1u << 11);
@@ -1852,7 +1862,7 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
 
   if (!nogroup) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-    OMPT_STORE_RETURN_ADDRESS(gtid);
+    OMPT_STORE_RETURN_ADDRESS_VALUE(gtid, codeptr_ra);
 #endif
     __kmpc_taskgroup(&loc, gtid);
     if (reductions) {
@@ -1865,12 +1875,15 @@ void __GOMP_taskloop(void (*func)(void *), void *data,
       KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKGROUP_REDUCTION_REGISTER)(d);
     }
   }
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS_VALUE(gtid, codeptr_ra);
+#endif
   __kmpc_taskloop(&loc, gtid, task, if_val, (kmp_uint64 *)&(loop_bounds[0]),
                   (kmp_uint64 *)&(loop_bounds[1]), (kmp_int64)step, 1, sched,
                   (kmp_uint64)num_tasks, (void *)task_dup);
   if (!nogroup) {
 #if OMPT_SUPPORT && OMPT_OPTIONAL
-    OMPT_STORE_RETURN_ADDRESS(gtid);
+    OMPT_STORE_RETURN_ADDRESS_VALUE(gtid, codeptr_ra);
 #endif
     __kmpc_end_taskgroup(&loc, gtid);
   }
@@ -1930,6 +1943,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKLOOP)(
     void (*func)(void *), void *data, void (*copy_func)(void *, void *),
     long arg_size, long arg_align, unsigned gomp_flags, unsigned long num_tasks,
     int priority, long start, long end, long step) {
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(__kmp_entry_gtid());
+#endif
   __GOMP_taskloop<long>(func, data, copy_func, arg_size, arg_align, gomp_flags,
                         num_tasks, priority, start, end, step);
 }
@@ -1939,6 +1955,9 @@ void KMP_EXPAND_NAME(KMP_API_NAME_GOMP_TASKLOOP_ULL)(
     long arg_size, long arg_align, unsigned gomp_flags, unsigned long num_tasks,
     int priority, unsigned long long start, unsigned long long end,
     unsigned long long step) {
+#if OMPT_SUPPORT
+  OMPT_STORE_RETURN_ADDRESS(__kmp_entry_gtid());
+#endif
   __GOMP_taskloop<unsigned long long>(func, data, copy_func, arg_size,
                                       arg_align, gomp_flags, num_tasks,
                                       priority, start, end, step);
