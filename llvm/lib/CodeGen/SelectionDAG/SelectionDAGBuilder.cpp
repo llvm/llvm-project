@@ -1122,8 +1122,6 @@ void SelectionDAGBuilder::init(GCFunctionInfo *gfi, BatchAAResults *aa,
   LPadToCallSiteMap.clear();
   this->TTI = &TTI;
   SL->init(DAG.getTargetLoweringInfo(), TM, DAG.getDataLayout());
-  AssignmentTrackingEnabled = isAssignmentTrackingEnabled(
-      *DAG.getMachineFunction().getFunction().getParent());
   CanDescribeGlobalAddressInLocationList =
       canDescribeGlobalAddressInLocationList(DAG.getMachineFunction());
 }

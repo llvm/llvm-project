@@ -7,13 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHLASMAsmStreamer.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionGOFF.h"
 #include "llvm/MC/MCSymbolGOFF.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Signals.h"
 #include <tuple>
 
@@ -276,7 +279,7 @@ void SystemZHLASMAsmStreamer::emitAlignmentDS(uint64_t ByteAlignment,
   if (!isPowerOf2_64(ByteAlignment))
     report_fatal_error("Only power-of-two alignments are supported ");
 
-  OS << " DS 0";
+  OS.indent(Indent) << "DS 0";
   switch (ValueSize) {
   default:
     llvm_unreachable("Invalid size for machine code value!");
@@ -354,14 +357,69 @@ void SystemZHLASMAsmStreamer::emitCodeAlignment(Align Alignment,
     emitAlignmentDS(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
 }
 
-void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+static bool isPrintableText(StringRef Text) {
+  return all_of(Text, [](char C) { return isPrint(C); });
+}
+
+// Emit Text inside a character constant, doubling the characters that HLASM
+// would otherwise treat as the delimiter or as a variable substitution.
+static void emitQuotedText(raw_ostream &OS, StringRef Text) {
+  for (char C : Text) {
+    if (C == '\'' || C == '&')
+      OS << C;
+    OS << C;
+  }
+}
+
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data, bool MayBeString) {
   assert(getCurrentSectionOnly() &&
          "Cannot emit contents before setting section!");
+
+  // Printable text is emitted as a character constant: CE for EBCDIC-1047
+  // (converted to ASCII for the output) or CA for ASCII.
+  auto EmitAsString = [this](StringRef Data) {
+    SmallString<MaxXLLen> EBCDICText;
+    ConverterEBCDIC::convertToUTF8(Data, EBCDICText);
+    if (isPrintableText(EBCDICText)) {
+      OS.indent(Indent) << "DC CE'";
+      emitQuotedText(OS, EBCDICText);
+      OS << '\'';
+      return true;
+    }
+    if (isPrintableText(Data)) {
+      OS.indent(Indent) << "DC CA'";
+      emitQuotedText(OS, Data);
+      OS << '\'';
+      return true;
+    }
+    return false;
+  };
+
   for (size_t I = 0, E = Data.size(); I < E; I += MaxXLLen) {
     StringRef Chunk = Data.substr(I, MaxXLLen);
-    OS << " DC XL" << Chunk.size() << '\'' << toHex(Chunk) << '\'';
+    if (!(MayBeString && Chunk.size() > 1 && EmitAsString(Chunk)))
+      OS.indent(Indent) << "DC XL" << Chunk.size() << '\'' << toHex(Chunk)
+                        << '\'';
     EmitEOL();
   }
+}
+
+void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/true);
+}
+
+void SystemZHLASMAsmStreamer::emitBinaryData(StringRef Data) {
+  emitBytes(Data, /*MayBeString=*/false);
+}
+
+void SystemZHLASMAsmStreamer::emitIntValue(uint64_t Value, unsigned Size) {
+  assert(1 <= Size && Size <= 8 && "Invalid size");
+  assert((isUIntN(8 * Size, Value) || isIntN(8 * Size, Value)) &&
+         "Invalid size");
+  OS.indent(Indent) << "DC XL" << Size << '\''
+                    << format_hex_no_prefix(Value, Size * 2, /*Upper=*/true)
+                    << '\'';
+  EmitEOL();
 }
 
 void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
@@ -382,8 +440,8 @@ void SystemZHLASMAsmStreamer::emitFill(const MCExpr &NumBytes,
   if (Count == 0)
     return;
 
-  OS << " DC " << Count << "XL1'"
-     << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
+  OS.indent(Indent) << "DC " << Count << "XL1'"
+                    << format_hex_no_prefix(FillValue & 0xff, 2, true) << '\'';
   EmitEOL();
 }
 
@@ -486,6 +544,8 @@ void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,
   addEncodingComment(Inst, STI);
   EmitEOL();
 
+  // The instruction printer emits a single leading blank.
+  OS.indent(Indent - 1);
   InstPrinter->printInst(&Inst, 0, "", STI, OS);
   EmitEOL();
 }
@@ -504,7 +564,7 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
         Sym->getName() !=
         static_cast<MCSectionGOFF &>(Sym->getSection()).getParent()->getName();
     if (EmitLabelAndEntry) {
-      OS << " ENTRY " << Sym->getName();
+      OS.indent(Indent) << "ENTRY " << Sym->getName();
       EmitEOL();
     }
 
@@ -640,7 +700,7 @@ void SystemZHLASMAsmStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
   }
 
   MCStreamer::emitValueImpl(Value, Size, Loc);
-  OS << " DC ";
+  OS.indent(Indent) << "DC ";
   emitHLASMValueImpl(Value, Size, true);
   EmitEOL();
 }
@@ -655,7 +715,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
          << Sym.getName() << ")";
       EmitEOL();
     } else {
-      OS << " " << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " " << Sym.getName();
+      OS.indent(Indent) << (Sym.isWeak() ? "WXTRN" : "EXTRN") << " "
+                        << Sym.getName();
       EmitEOL();
     }
     emitXATTR(OS, Sym.getName(), Sym.getADA(), Sym.isIndirect(),
@@ -666,6 +727,6 @@ void SystemZHLASMAsmStreamer::finishImpl() {
   }
 
   // Finish the assembly output.
-  OS << " END";
+  OS.indent(Indent) << "END";
   EmitEOL();
 }

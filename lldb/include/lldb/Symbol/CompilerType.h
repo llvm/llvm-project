@@ -126,8 +126,6 @@ public:
   bool IsVectorType(CompilerType *element_type = nullptr,
                     uint64_t *size = nullptr) const;
 
-  bool IsArrayOfScalarType() const;
-
   bool IsAggregateType() const;
 
   bool IsAnonymousType() const;
@@ -182,8 +180,6 @@ public:
   /// \param target_type    Can pass nullptr.
   bool IsPossibleDynamicType(CompilerType *target_type, bool check_cplusplus,
                              bool check_objc) const;
-
-  bool IsPointerToScalarType() const;
 
   bool IsRuntimeGeneratedType() const;
 

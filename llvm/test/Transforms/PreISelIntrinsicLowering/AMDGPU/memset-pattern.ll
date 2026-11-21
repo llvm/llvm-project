@@ -94,7 +94,7 @@ define void @memset_pattern_i128_len1_nz_as(ptr addrspace(3) align 16 %a) {
 ; CHECK-NEXT:    br label [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY:%.*]]
 ; CHECK:       memset.pattern-expansion-residual-body:
 ; CHECK-NEXT:    [[RESIDUAL_LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP2:%.*]], [[MEMSET_PATTERN_EXPANSION_RESIDUAL_BODY]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc i64 [[RESIDUAL_LOOP_INDEX]] to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = trunc nsw i64 [[RESIDUAL_LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) [[A:%.*]], i32 [[TMP4]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(3) [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP2]] = add i64 [[RESIDUAL_LOOP_INDEX]], 1
@@ -177,7 +177,7 @@ define void @memset_pattern_i128_dynlen_nz_as(ptr addrspace(3) align 16 %a, i64 
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[MEMSET_PATTERN_EXPANSION_MAIN_BODY:%.*]], label [[MEMSET_PATTERN_POST_EXPANSION:%.*]]
 ; CHECK:       memset.pattern-expansion-main-body:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP3:%.*]], [[MEMSET_PATTERN_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc nsw i64 [[LOOP_INDEX]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [16 x i8], ptr addrspace(3) [[A:%.*]], i32 [[TMP5]]
 ; CHECK-NEXT:    store i128 -113427455635030943652277463699152839203, ptr addrspace(3) [[TMP2]], align 16
 ; CHECK-NEXT:    [[TMP3]] = add i64 [[LOOP_INDEX]], 1

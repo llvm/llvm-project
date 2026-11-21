@@ -317,6 +317,7 @@ add_header_library(
   DEPENDS
     libc.src.__support.macros.optimization
     libc.src.__support.macros.properties.cpu_features
+    .bit
     .utility
     .tuple
 )
