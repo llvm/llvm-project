@@ -1838,8 +1838,10 @@ bool SampleProfileLoader::doInitialization(Module &M,
       // cap, thus they are bounded.
       InlineOpts.LimitMin = Opts.sample_profile_inline_limit_min.value_or(
           std::numeric_limits<unsigned>::max());
-      InlineOpts.LimitMax = Opts.sample_profile_inline_limit_max.value_or(
-          std::numeric_limits<unsigned>::max());
+      InlineOpts.LimitMax =
+          std::max(Opts.sample_profile_inline_limit_max.value_or(
+                       std::numeric_limits<unsigned>::max()),
+                   InlineOpts.LimitMin);
     }
   }
 
@@ -2112,18 +2114,23 @@ StringRef SampleProfileLoaderPass::getSampleProfileFile(const LLVMContext &C) {
 
 SampleProfileInlineOptions
 SampleProfileLoaderPass::getInlineOptions(const cl::LibraryOptionsContext &C,
-                                          SampleProfileInlineOptions R) {
+                                          SampleProfileInlineOptions Defaults) {
   const auto &Opts = C.get<IPOOptions>();
-  R.HotCallSiteThreshold =
-      Opts.sample_profile_hot_inline_threshold.value_or(R.HotCallSiteThreshold);
-  R.ColdCallSiteThreshold = Opts.sample_profile_cold_inline_threshold.value_or(
-      R.ColdCallSiteThreshold);
-  R.GrowthLimit =
-      Opts.sample_profile_inline_growth_limit.value_or(R.GrowthLimit);
-  R.LimitMin = Opts.sample_profile_inline_limit_min.value_or(R.LimitMin);
-  R.LimitMax = Opts.sample_profile_inline_limit_max.value_or(R.LimitMax);
-  R.SortProfiledSCC = valueOr(Opts.sort_profiled_scc_member, R.SortProfiledSCC);
-  return R;
+  Defaults.HotCallSiteThreshold =
+      Opts.sample_profile_hot_inline_threshold.value_or(
+          Defaults.HotCallSiteThreshold);
+  Defaults.ColdCallSiteThreshold =
+      Opts.sample_profile_cold_inline_threshold.value_or(
+          Defaults.ColdCallSiteThreshold);
+  Defaults.GrowthLimit =
+      Opts.sample_profile_inline_growth_limit.value_or(Defaults.GrowthLimit);
+  Defaults.LimitMin =
+      Opts.sample_profile_inline_limit_min.value_or(Defaults.LimitMin);
+  Defaults.LimitMax =
+      Opts.sample_profile_inline_limit_max.value_or(Defaults.LimitMax);
+  Defaults.SortProfiledSCC =
+      valueOr(Opts.sort_profiled_scc_member, Defaults.SortProfiledSCC);
+  return Defaults;
 }
 
 SampleProfileLoaderPass::SampleProfileLoaderPass(

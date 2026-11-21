@@ -29,8 +29,9 @@ namespace cl {
 class LibraryOptionsContext;
 }
 
-/// The thresholds of the priority-based sample profile loader inliner, which
-/// llvm-profgen's preinliner shares.
+/// The thresholds of the priority-based sample profile loader inliner. The
+/// member initializers are the loader's defaults; llvm-profgen's preinliner
+/// passes its own to getInlineOptions.
 struct SampleProfileInlineOptions {
   int HotCallSiteThreshold = 3000;
   int ColdCallSiteThreshold = 45;
@@ -56,10 +57,10 @@ public:
   /// Return -sample-profile-file.
   LLVM_ABI static StringRef getSampleProfileFile(const LLVMContext &C);
 
-  /// Return \p R overridden by the inliner options given in \p C.
+  /// Return \p Defaults overridden by the inliner options given in \p C.
   LLVM_ABI static SampleProfileInlineOptions
   getInlineOptions(const cl::LibraryOptionsContext &C,
-                   SampleProfileInlineOptions R);
+                   SampleProfileInlineOptions Defaults);
 
 private:
   std::string ProfileFileName;
