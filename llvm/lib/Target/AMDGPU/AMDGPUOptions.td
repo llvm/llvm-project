@@ -147,6 +147,8 @@ defm : ValueField<"amdgpu-promote-alloca-to-vector-limit", "unsigned", "0",
   "Maximum byte size to consider promote alloca to vector">;
 defm : OptionalValueField<"amdgpu-promote-alloca-to-vector-max-regs", "unsigned",
   "Maximum vector size (in 32b registers) to use when promoting alloca">;
+defm : OptionalValueField<"amdgpu-promote-alloca-to-vector-select-ratio", "unsigned",
+  "Number of selects a removed memory access is worth when promoting alloca with a divergent index">;
 // Use up to 1/4 of available register budget for vectorization. FIXME: Increase
 // the limit for whole function budgets? Perhaps x2?
 defm : OptionalValueField<"amdgpu-promote-alloca-to-vector-vgpr-ratio", "unsigned",
