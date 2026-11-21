@@ -342,7 +342,8 @@ define void @test3_pr58811(ptr %dst) {
 ; VF2-NEXT:    br i1 false, label %[[LOOP_2]], label %[[LOOP_3_PREHEADER:.*]]
 ; VF2:       [[LOOP_3_PREHEADER]]:
 ; VF2-NEXT:    [[ADD101_LCSSA:%.*]] = phi i32 [ [[ADD101]], %[[LOOP_2]] ]
-; VF2-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[P_1]]
+; VF2-NEXT:    [[TMP4:%.*]] = call i32 @llvm.umax.i32(i32 [[P_1]], i32 1)
+; VF2-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[TMP4]]
 ; VF2-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[P_1]], [[TMP0]]
 ; VF2-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; VF2-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[P_2]]
@@ -403,7 +404,8 @@ define void @test3_pr58811(ptr %dst) {
 ; CHECK-NEXT:    br i1 false, label %[[LOOP_2]], label %[[LOOP_3_PREHEADER:.*]]
 ; CHECK:       [[LOOP_3_PREHEADER]]:
 ; CHECK-NEXT:    [[ADD101_LCSSA:%.*]] = phi i32 [ [[ADD101]], %[[LOOP_2]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[P_1]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.umax.i32(i32 [[P_1]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 1, [[TMP8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul nuw i32 [[P_1]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i32 [[TMP2]], [[P_2]]
