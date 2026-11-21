@@ -86,6 +86,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   %e10 = alloca %struct.E, align 4
 // CHECK-NEXT:   store ptr %this, ptr %this.addr, align 8
 // CHECK-NEXT:   %this1 = load ptr, ptr %this.addr, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %0, align 8
 // CHECK-NEXT:   %1 = getelementptr inbounds nuw %class.anon, ptr %this1, i32 0, i32 0
 // CHECK-NEXT:   %2 = load ptr, ptr %1, align 8
 // CHECK-NEXT:   store ptr %2, ptr %0, align 8
@@ -113,6 +114,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   store i32 %add4, ptr %13, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %e, ptr align 4 @__const._ZZ20unexpanded_pack_goodIJ1ES0_EEiDpT_ENKUlvE0_clEv.e, i64 8, i1 false)
 // CHECK-NEXT:   call void @_ZN1EC1Eii(ptr {{.*}} %e, i32 {{.*}} 5, i32 {{.*}} 6)
 // CHECK-NEXT:   %x5 = getelementptr inbounds nuw %struct.E, ptr %e, i32 0, i32 0
 // CHECK-NEXT:   %15 = load i32, ptr %x5, align 4
@@ -126,6 +128,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   store i32 %add8, ptr %18, align 4
 // CHECK-NEXT:   br label %expand.next9
 // CHECK: expand.next9:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %e10, ptr align 4 @__const._ZZ20unexpanded_pack_goodIJ1ES0_EEiDpT_ENKUlvE0_clEv.e.1, i64 8, i1 false)
 // CHECK-NEXT:   call void @_ZN1EC1Eii(ptr {{.*}} %e10, i32 {{.*}} 7, i32 {{.*}} 8)
 // CHECK-NEXT:   %x11 = getelementptr inbounds nuw %struct.E, ptr %e10, i32 0, i32 0
 // CHECK-NEXT:   %20 = load i32, ptr %x11, align 4
@@ -152,6 +155,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   %e10 = alloca %struct.E, align 4
 // CHECK-NEXT:   store ptr %this, ptr %this.addr, align 8
 // CHECK-NEXT:   %this1 = load ptr, ptr %this.addr, align 8
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %0, align 8
 // CHECK-NEXT:   %1 = getelementptr inbounds nuw %class.anon.0, ptr %this1, i32 0, i32 0
 // CHECK-NEXT:   %2 = load ptr, ptr %1, align 8
 // CHECK-NEXT:   store ptr %2, ptr %0, align 8
@@ -179,6 +183,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   store i32 %add4, ptr %13, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %e, ptr align 4 @__const._ZZ20unexpanded_pack_goodIJ1ES0_EEiDpT_ENKUlvE_clEv.e, i64 8, i1 false)
 // CHECK-NEXT:   call void @_ZN1EC1Eii(ptr {{.*}} %e, i32 {{.*}} 5, i32 {{.*}} 6)
 // CHECK-NEXT:   %x5 = getelementptr inbounds nuw %struct.E, ptr %e, i32 0, i32 0
 // CHECK-NEXT:   %15 = load i32, ptr %x5, align 4
@@ -192,6 +197,7 @@ int unexpanded_pack() {
 // CHECK-NEXT:   store i32 %add8, ptr %18, align 4
 // CHECK-NEXT:   br label %expand.next9
 // CHECK: expand.next9:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %e10, ptr align 4 @__const._ZZ20unexpanded_pack_goodIJ1ES0_EEiDpT_ENKUlvE_clEv.e.2, i64 8, i1 false)
 // CHECK-NEXT:   call void @_ZN1EC1Eii(ptr {{.*}} %e10, i32 {{.*}} 7, i32 {{.*}} 8)
 // CHECK-NEXT:   %x11 = getelementptr inbounds nuw %struct.E, ptr %e10, i32 0, i32 0
 // CHECK-NEXT:   %20 = load i32, ptr %x11, align 4

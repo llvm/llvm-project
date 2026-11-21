@@ -218,6 +218,7 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gPKc(ptr {{.*}} %1)
 // CHECK-NEXT:   br label %expand.next2
 // CHECK: expand.next2:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x3, ptr align 4 @__const._Z2f2v.x, i64 4, i1 false)
 // CHECK-NEXT:   call void @_ZN1SC1Ei(ptr {{.*}} %x3, i32 {{.*}} 45)
 // CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %agg.tmp, ptr align 4 %x3, i64 4, i1 false)
 // CHECK-NEXT:   %coerce.dive = getelementptr inbounds nuw %struct.S, ptr %agg.tmp, i32 0, i32 0
@@ -361,33 +362,36 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %6)
 // CHECK-NEXT:   br label %expand.end27
 // CHECK: expand.end27:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x28, ptr align 4 @__const._Z2f5v.x, i64 4, i1 false)
 // CHECK-NEXT:   call void @_ZN1SC1Ei(ptr {{.*}} %x28, i32 {{.*}} 16)
 // CHECK-NEXT:   %x29 = getelementptr inbounds nuw %struct.S, ptr %x28, i32 0, i32 0
 // CHECK-NEXT:   %7 = load i32, ptr %x29, align 4
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %7)
 // CHECK-NEXT:   br label %expand.next30
 // CHECK: expand.next30:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x31, ptr align 4 @__const._Z2f5v.x.1, i64 4, i1 false)
 // CHECK-NEXT:   call void @_ZN1SC1Ei(ptr {{.*}} %x31, i32 {{.*}} 17)
 // CHECK-NEXT:   %x32 = getelementptr inbounds nuw %struct.S, ptr %x31, i32 0, i32 0
 // CHECK-NEXT:   %8 = load i32, ptr %x32, align 4
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %8)
 // CHECK-NEXT:   br label %expand.next33
 // CHECK: expand.next33:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x34, ptr align 4 @__const._Z2f5v.x.2, i64 4, i1 false)
 // CHECK-NEXT:   call void @_ZN1SC1Ei(ptr {{.*}} %x34, i32 {{.*}} 18)
 // CHECK-NEXT:   %x35 = getelementptr inbounds nuw %struct.S, ptr %x34, i32 0, i32 0
 // CHECK-NEXT:   %9 = load i32, ptr %x35, align 4
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %9)
 // CHECK-NEXT:   br label %expand.end36
 // CHECK: expand.end36:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x37, ptr align 4 @__const._Z2f5v.x, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x37, ptr align 4 @__const._Z2f5v.x.3, i64 4, i1 false)
 // CHECK-NEXT:   %call38 = call {{.*}} i32 @_Z2tgILi19EEiv()
 // CHECK-NEXT:   br label %expand.next39
 // CHECK: expand.next39:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x40, ptr align 4 @__const._Z2f5v.x.1, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x40, ptr align 4 @__const._Z2f5v.x.4, i64 4, i1 false)
 // CHECK-NEXT:   %call41 = call {{.*}} i32 @_Z2tgILi20EEiv()
 // CHECK-NEXT:   br label %expand.next42
 // CHECK: expand.next42:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x43, ptr align 4 @__const._Z2f5v.x.2, i64 4, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x43, ptr align 4 @__const._Z2f5v.x.5, i64 4, i1 false)
 // CHECK-NEXT:   %call44 = call {{.*}} i32 @_Z2tgILi21EEiv()
 // CHECK-NEXT:   br label %expand.end45
 // CHECK: expand.end45:
@@ -1097,6 +1101,7 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %34)
 // CHECK-NEXT:   br label %expand.end41
 // CHECK: expand.end41:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x42, ptr align 4 @__const._Z2t3IJiiiEEvDpT_.x, i64 12, i1 false)
 // CHECK-NEXT:   %a = getelementptr inbounds nuw %struct.X, ptr %x42, i32 0, i32 0
 // CHECK-NEXT:   %35 = load i32, ptr %ts.addr, align 4
 // CHECK-NEXT:   store i32 %35, ptr %a, align 4
@@ -1111,6 +1116,7 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %38)
 // CHECK-NEXT:   br label %expand.next44
 // CHECK: expand.next44:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x45, ptr align 4 @__const._Z2t3IJiiiEEvDpT_.x.6, i64 12, i1 false)
 // CHECK-NEXT:   %a46 = getelementptr inbounds nuw %struct.X, ptr %x45, i32 0, i32 0
 // CHECK-NEXT:   %39 = load i32, ptr %ts.addr, align 4
 // CHECK-NEXT:   store i32 %39, ptr %a46, align 4
@@ -1125,12 +1131,13 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %42)
 // CHECK-NEXT:   br label %expand.next50
 // CHECK: expand.next50:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x51, ptr align 4 @__const._Z2t3IJiiiEEvDpT_.x, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x51, ptr align 4 @__const._Z2t3IJiiiEEvDpT_.x.7, i64 12, i1 false)
 // CHECK-NEXT:   %a52 = getelementptr inbounds nuw %struct.X, ptr %x51, i32 0, i32 0
 // CHECK-NEXT:   %43 = load i32, ptr %a52, align 4
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %43)
 // CHECK-NEXT:   br label %expand.end53
 // CHECK: expand.end53:
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x54, ptr align 4 @__const._Z2t3IJiiiEEvDpT_.x.8, i64 12, i1 false)
 // CHECK-NEXT:   %a55 = getelementptr inbounds nuw %struct.X, ptr %x54, i32 0, i32 0
 // CHECK-NEXT:   %44 = load i32, ptr %ts.addr, align 4
 // CHECK-NEXT:   store i32 %44, ptr %a55, align 4
@@ -1279,17 +1286,17 @@ int references_enumerating() {
 // CHECK-NEXT:   %call58 = call {{.*}} i32 @_Z2tgILi42EEiv()
 // CHECK-NEXT:   br label %expand.next59
 // CHECK: expand.next59:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x60, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.3, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x60, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.9, i64 12, i1 false)
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} 42)
 // CHECK-NEXT:   %call61 = call {{.*}} i32 @_Z2tgILi42EEiv()
 // CHECK-NEXT:   br label %expand.next62
 // CHECK: expand.next62:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x63, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.4, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x63, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.10, i64 12, i1 false)
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} 6)
 // CHECK-NEXT:   %call64 = call {{.*}} i32 @_Z2tgILi6EEiv()
 // CHECK-NEXT:   br label %expand.end65
 // CHECK: expand.end65:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x66, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.5, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x66, ptr align 4 @__const._Z2t4IJLi42ELi43ELi44EEEvv.x.11, i64 12, i1 false)
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} 42)
 // CHECK-NEXT:   %call67 = call {{.*}} i32 @_Z2tgILi42EEiv()
 // CHECK-NEXT:   br label %expand.end68
@@ -1354,7 +1361,7 @@ int references_enumerating() {
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %6)
 // CHECK-NEXT:   br label %expand.next12
 // CHECK: expand.next12:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x13, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.6, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x13, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.12, i64 12, i1 false)
 // CHECK-NEXT:   %a14 = getelementptr inbounds nuw %struct.X, ptr %x13, i32 0, i32 0
 // CHECK-NEXT:   %7 = load i32, ptr %a14, align 4
 // CHECK-NEXT:   call void @_Z1gi(i32 {{.*}} %7)
@@ -1384,11 +1391,11 @@ int references_enumerating() {
 // CHECK-NEXT:   %call31 = call {{.*}} i32 @_Z2tgILi6EEiv()
 // CHECK-NEXT:   br label %expand.end32
 // CHECK: expand.end32:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x33, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.7, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x33, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.13, i64 12, i1 false)
 // CHECK-NEXT:   %call34 = call {{.*}} i32 @_Z2tgILi1EEiv()
 // CHECK-NEXT:   br label %expand.next35
 // CHECK: expand.next35:
-// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x36, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.8, i64 12, i1 false)
+// CHECK-NEXT:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %x36, ptr align 4 @__const._ZN2s2IJLi1ELi2ELi3EEE2tfIJLi4ELi5ELi6EEEEvv.x.14, i64 12, i1 false)
 // CHECK-NEXT:   %call37 = call {{.*}} i32 @_Z2tgILi4EEiv()
 // CHECK-NEXT:   br label %expand.end38
 // CHECK: expand.end38:
@@ -1426,6 +1433,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 1, ptr %x, align 4
 // CHECK-NEXT:   store i32 2, ptr %y, align 4
 // CHECK-NEXT:   store i32 3, ptr %z, align 4
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v, align 8
 // CHECK-NEXT:   store ptr %x, ptr %v, align 8
 // CHECK-NEXT:   %0 = load ptr, ptr %v, align 8
 // CHECK-NEXT:   %1 = load i32, ptr %0, align 4
@@ -1433,6 +1441,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 %inc, ptr %0, align 4
 // CHECK-NEXT:   br label %expand.next
 // CHECK: expand.next:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v1, align 8
 // CHECK-NEXT:   store ptr %y, ptr %v1, align 8
 // CHECK-NEXT:   %2 = load ptr, ptr %v1, align 8
 // CHECK-NEXT:   %3 = load i32, ptr %2, align 4
@@ -1440,6 +1449,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 %inc2, ptr %2, align 4
 // CHECK-NEXT:   br label %expand.next3
 // CHECK: expand.next3:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v4, align 8
 // CHECK-NEXT:   store ptr %z, ptr %v4, align 8
 // CHECK-NEXT:   %4 = load ptr, ptr %v4, align 8
 // CHECK-NEXT:   %5 = load i32, ptr %4, align 4
@@ -1447,6 +1457,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 %inc5, ptr %4, align 4
 // CHECK-NEXT:   br label %expand.end
 // CHECK: expand.end:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v6, align 8
 // CHECK-NEXT:   store ptr %x, ptr %v6, align 8
 // CHECK-NEXT:   %6 = load ptr, ptr %v6, align 8
 // CHECK-NEXT:   %7 = load i32, ptr %6, align 4
@@ -1454,6 +1465,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 %inc7, ptr %6, align 4
 // CHECK-NEXT:   br label %expand.next8
 // CHECK: expand.next8:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v9, align 8
 // CHECK-NEXT:   store ptr %y, ptr %v9, align 8
 // CHECK-NEXT:   %8 = load ptr, ptr %v9, align 8
 // CHECK-NEXT:   %9 = load i32, ptr %8, align 4
@@ -1461,6 +1473,7 @@ int references_enumerating() {
 // CHECK-NEXT:   store i32 %inc10, ptr %8, align 4
 // CHECK-NEXT:   br label %expand.next11
 // CHECK: expand.next11:
+// CHECK-NEXT:   store ptr inttoptr (i64 -6148914691236517206 to ptr), ptr %v12, align 8
 // CHECK-NEXT:   store ptr %z, ptr %v12, align 8
 // CHECK-NEXT:   %10 = load ptr, ptr %v12, align 8
 // CHECK-NEXT:   %11 = load i32, ptr %10, align 4
