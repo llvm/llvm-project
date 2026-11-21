@@ -4461,7 +4461,16 @@ TEST_F(DIExpressionTest, isValid) {
   EXPECT_VALID(dwarf::DW_OP_constu, 1, dwarf::DW_OP_swap,
                dwarf::DW_OP_xderef_size, 255);
 
+  EXPECT_VALID(dwarf::DW_OP_constu, 6, dwarf::DW_OP_LLVM_user,
+               dwarf::DW_OP_LLVM_form_aspace_address);
+  EXPECT_VALID(dwarf::DW_OP_plus_uconst, 12, dwarf::DW_OP_constu, 6,
+               dwarf::DW_OP_LLVM_user, dwarf::DW_OP_LLVM_form_aspace_address,
+               dwarf::DW_OP_LLVM_fragment, 0, 32);
+
   // Invalid constructions.
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_user);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_user, 0);
+  EXPECT_INVALID(dwarf::DW_OP_LLVM_user, dwarf::DW_OP_LLVM_offset_uconst, 4);
   EXPECT_INVALID(~0u);
   EXPECT_INVALID(dwarf::DW_OP_plus, 0);
   EXPECT_INVALID(dwarf::DW_OP_plus_uconst);

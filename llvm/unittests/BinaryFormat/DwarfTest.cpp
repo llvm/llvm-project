@@ -63,6 +63,13 @@ TEST(DwarfTest, SubOperationEncoding) {
             SubOperationEncodingString(DW_OP_LLVM_user, DW_OP_LLVM_nop));
   EXPECT_EQ(DW_OP_LLVM_nop,
             getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_LLVM_nop"));
+  EXPECT_EQ(DW_OP_LLVM_form_aspace_address,
+            getSubOperationEncoding(DW_OP_LLVM_user,
+                                    "DW_OP_LLVM_form_aspace_address"));
+
+  // Invalid sub-operations must allow callers to diagnose malformed input.
+  EXPECT_EQ(0u, getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_deref"));
+  EXPECT_EQ(0u, getSubOperationEncoding(DW_OP_LLVM_user, "DW_OP_LLVM_unknown"));
 }
 
 TEST(DwarfTest, LanguageStringOnInvalid) {
