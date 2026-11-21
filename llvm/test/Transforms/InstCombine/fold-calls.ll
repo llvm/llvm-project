@@ -16,4 +16,12 @@ define double @bar() {
   ret double %t
 }
 
+; The nearest double result is one ulp above what some host libms return.
+define double @sin_hard_to_round() {
+; CHECK-LABEL: @sin_hard_to_round(
+; CHECK: ret double f0x3FED109AD145C88F
+  %r = call double @sin(double f0x400005023D32FEE5)
+  ret double %r
+}
+
 declare double @sin(double)

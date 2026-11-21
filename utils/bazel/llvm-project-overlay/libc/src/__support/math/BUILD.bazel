@@ -61,7 +61,7 @@ libc_support_library(
 )
 
 filegroup(
-    name = "headers_for_apfloat",
+    name = "headers",
     srcs = glob(["**/*.h"]),
 )
 

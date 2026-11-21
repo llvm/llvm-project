@@ -46,10 +46,10 @@ libc_header_library(
     ],
 )
 
-# This target is only used by APFloat.cpp in the Support library.
+# Shared LLVM libc math headers for LLVMSupport and LLVMAnalysis.
 cc_library(
-    name = "math_headers_for_apfloat",
-    srcs = ["//libc/src/__support/math:headers_for_apfloat"],
+    name = "math_headers",
+    srcs = ["//libc/src/__support/math:headers"],
     hdrs = [
         "libc_common.h",
         "math.h",

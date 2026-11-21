@@ -63,6 +63,9 @@
 #include <cmath>
 #include <cstdint>
 
+#define LIBC_NAMESPACE __llvm_libc_constant_folding
+#include "shared/math.h"
+
 using namespace llvm;
 
 static cl::opt<bool> DisableFPCallFolding(
@@ -3363,7 +3366,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     case LibFunc_sin:
     case LibFunc_sinf:
       if (TLI->has(Func))
-        return ConstantFoldFP(sin, APF, Ty);
+        return ConstantFoldFP(LIBC_NAMESPACE::shared::sin, APF, Ty);
       break;
     case LibFunc_sinh:
     case LibFunc_sinhf:
