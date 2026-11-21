@@ -479,14 +479,14 @@ define <4 x double> @sitofp_v16i8_v4f64(<16 x i8> %a) {
 define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
 ; LA32-LABEL: sitofp_v5i32_v5f64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a1, 4
 ; LA32-NEXT:    fld.s $fa0, $a1, 0
+; LA32-NEXT:    ld.w $a2, $a1, 4
 ; LA32-NEXT:    ld.w $a3, $a1, 8
 ; LA32-NEXT:    ld.w $a4, $a1, 12
+; LA32-NEXT:    fld.s $fa1, $a1, 16
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a3, 2
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a4, 3
-; LA32-NEXT:    fld.s $fa1, $a1, 16
 ; LA32-NEXT:    vsllwil.d.w $vr2, $vr0, 0
 ; LA32-NEXT:    vffint.d.l $vr2, $vr2
 ; LA32-NEXT:    vexth.d.w $vr0, $vr0
@@ -500,14 +500,14 @@ define <5 x double> @sitofp_v5i32_v5f64(<5 x i32> %a) {
 ;
 ; LA64-LABEL: sitofp_v5i32_v5f64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.w $a2, $a1, 8
 ; LA64-NEXT:    fld.s $fa0, $a1, 0
+; LA64-NEXT:    ld.w $a2, $a1, 8
 ; LA64-NEXT:    ld.w $a3, $a1, 16
 ; LA64-NEXT:    ld.w $a4, $a1, 24
+; LA64-NEXT:    fld.s $fa1, $a1, 32
 ; LA64-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA64-NEXT:    vinsgr2vr.w $vr0, $a3, 2
 ; LA64-NEXT:    vinsgr2vr.w $vr0, $a4, 3
-; LA64-NEXT:    fld.s $fa1, $a1, 32
 ; LA64-NEXT:    vsllwil.d.w $vr2, $vr0, 0
 ; LA64-NEXT:    vffint.d.l $vr2, $vr2
 ; LA64-NEXT:    vexth.d.w $vr0, $vr0
