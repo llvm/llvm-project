@@ -77,5 +77,7 @@
 
 // RUN: %clang_cl /Tc%s -fuse-ld=lld -Xlinker --version -### 2>&1 \
 // RUN: | FileCheck %s --check-prefix=XLINKER --implicit-check-not="warning:"
+// RUN: %clang_cl /Tc%s -fuse-ld=lld -Xlinker=--version -### 2>&1 \
+// RUN: | FileCheck %s --check-prefix=XLINKER --implicit-check-not="warning:"
 // XLINKER: lld-link
 // XLINKER: --version

@@ -26,6 +26,9 @@
 // RUN: %clang -target i686-pc-win32 -fuse-ld=link -### \
 // RUN:   -Xlinker one -Wl,two %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=WIN %s
+// RUN: %clang -target i686-pc-win32 -fuse-ld=link -### \
+// RUN:   -Xlinker=one -Wl,two %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=WIN %s
 // WIN: link.exe
 // WIN: "one"
 // WIN: "two"
