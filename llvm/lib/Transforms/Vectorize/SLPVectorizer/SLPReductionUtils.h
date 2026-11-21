@@ -77,6 +77,13 @@ Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 /// vectorization.
 bool isReductionCandidate(Instruction *I);
 
+/// Checks if \p I is select(C, X, Y), which is an or of select(C, X, 0) and
+/// Y: Y is a chain of selects, ending with zero, C and the conditions of the
+/// chain compare the same value with constants, and the conditions of the
+/// chain are false and not poison, if C is true. The chain is looked through
+/// up to \p MaxDepth selects.
+bool isOrLikeSelect(Instruction *I, const DataLayout &DL, unsigned MaxDepth);
+
 /// Checks if the reduction, rooted at \p Root, reduces the loop accumulators,
 /// whose updates are the same expressions \p Shape in the same block, loading
 /// from consecutive addresses at each position. Such a reduction vectorizes

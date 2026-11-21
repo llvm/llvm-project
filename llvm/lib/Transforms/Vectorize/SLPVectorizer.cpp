@@ -4266,12 +4266,17 @@ private:
     int SchedulingRegionID = 0;
     /// Bundle, this data is part of.
     ScheduleBundle &Bundle;
+    /// True if the copyable model uses the condition and the true value of the
+    /// or-like select instead of the instruction itself.
+    const bool UsesOperands = false;
 
   public:
     ScheduleCopyableData(int BlockSchedulingRegionID, Instruction *I,
-                         const EdgeInfo &EI, ScheduleBundle &Bundle)
+                         const EdgeInfo &EI, ScheduleBundle &Bundle,
+                         bool UsesOperands)
         : ScheduleEntity(Kind::ScheduleCopyableData), Inst(I), EI(EI),
-          SchedulingRegionID(BlockSchedulingRegionID), Bundle(Bundle) {}
+          SchedulingRegionID(BlockSchedulingRegionID), Bundle(Bundle),
+          UsesOperands(UsesOperands) {}
     static bool classof(const ScheduleEntity *Entity) {
       return Entity->getKind() == Kind::ScheduleCopyableData;
     }
@@ -4316,6 +4321,15 @@ private:
 
     /// Gets the instruction.
     Instruction *getInst() const { return Inst; }
+
+    /// Returns the instructions, used by the copyable model: the instruction
+    /// itself or the condition and the true value of the or-like select.
+    SmallVector<Instruction *, 2> getModelOperands() const {
+      if (!UsesOperands)
+        return {Inst};
+      return to_vector<2>(
+          make_isa_range<Instruction>(drop_end(Inst->operand_values())));
+    }
 
     /// Clears all dependency information.
     void clearDependencies() {
@@ -4671,13 +4685,16 @@ private:
     ScheduleCopyableData &addScheduleCopyableData(const EdgeInfo &EI,
                                                   Instruction *I,
                                                   int SchedulingRegionID,
-                                                  ScheduleBundle &Bundle) {
+                                                  ScheduleBundle &Bundle,
+                                                  bool UsesOperands) {
       assert(!getScheduleCopyableData(EI, I) && "already in the map");
+      assert((!UsesOperands || !EI.UserTE) &&
+             "Only the root copyables may use the operands.");
       ScheduleCopyableData *CD =
           ScheduleCopyableDataMap
               .try_emplace(std::make_pair(EI, I),
                            std::make_unique<ScheduleCopyableData>(
-                               SchedulingRegionID, I, EI, Bundle))
+                               SchedulingRegionID, I, EI, Bundle, UsesOperands))
               .first->getSecond()
               .get();
       ScheduleCopyableDataMapByInst[I].push_back(CD);
@@ -4731,8 +4748,8 @@ private:
           It = find(make_range(std::next(It), Op.end()), I);
         } while (It != Op.end());
       } else {
-        ScheduleCopyableDataMapByUsers.try_emplace(I).first->getSecond().insert(
-            CD);
+        for (Instruction *Op : CD->getModelOperands())
+          ScheduleCopyableDataMapByUsers[Op].insert(CD);
       }
       return *CD;
     }
@@ -4750,7 +4767,8 @@ private:
         }
         const EdgeInfo EI = CD->getEdgeInfo();
         llvm::erase(ScheduleCopyableDataMapByInst.find(I)->getSecond(), CD);
-        ScheduleCopyableDataMapByUsers[I].remove(CD);
+        for (Instruction *Op : CD->getModelOperands())
+          ScheduleCopyableDataMapByUsers[Op].remove(CD);
         if (EI.UserTE) {
           ArrayRef<Value *> Op = EI.UserTE->getOperand(EI.EdgeIdx);
           const auto *It = find(Op, I);
@@ -4791,8 +4809,9 @@ private:
               ScheduleCopyableDataMapByUsers[I].insert(UserCD);
           }
         }
-        if (ScheduleCopyableDataMapByUsers[I].empty())
-          ScheduleCopyableDataMapByUsers.erase(I);
+        for (Instruction *Op : CD->getModelOperands())
+          if (ScheduleCopyableDataMapByUsers[Op].empty())
+            ScheduleCopyableDataMapByUsers.erase(Op);
         ScheduleCopyableDataMap.erase(std::make_pair(EI, I));
       }
     }
@@ -5090,15 +5109,18 @@ private:
           // releases the schedule data of the copyable instruction itself.
           // Release it here to keep the unscheduled-deps counters balanced,
           // consuming its self-use count so the reassociated-operand release
-          // below cannot release the same schedule data twice.
-          if (isa<ScheduleCopyableData>(BundleMember) && !FoundInOpColumns) {
+          // below cannot release the same schedule data twice. The or-like
+          // select model releases its condition and true value instead.
+          if (auto *CD = dyn_cast<ScheduleCopyableData>(BundleMember);
+              CD && !FoundInOpColumns) {
             auto UseIt = OperandsUses.find(In);
             if (UseIt != OperandsUses.end() && UseIt->second > 0) {
               --UseIt->getSecond();
               --TotalOpCount;
             }
-            if (ScheduleData *OpSD = getScheduleData(In))
-              DecrUnsched(OpSD, /*IsControl=*/false);
+            for (Instruction *Op : CD->getModelOperands())
+              if (ScheduleData *OpSD = getScheduleData(Op))
+                DecrUnsched(OpSD, /*IsControl=*/false);
           }
           // Vector intrinsics may keep some arguments scalar (e.g. the
           // exponent of llvm.powi). Such scalar arguments are not modeled as
@@ -10682,6 +10704,12 @@ class InstructionsCompatibilityAnalysis {
     // freeze(V) refines V.
     if (MainOpcode == Instruction::Freeze)
       return {V};
+    // The or-like select(C, X, Y) is reduced as select(C, X, 0).
+    if (MainOpcode == Instruction::Select) {
+      auto *SI = cast<SelectInst>(V);
+      return {SI->getCondition(), SI->getTrueValue(),
+              Constant::getNullValue(SI->getType())};
+    }
     assert(isSupportedMainOp(MainOp) && "Unsupported opcode");
     Type *Ty = V->getType();
     if (PoisonPlaceholder &&
@@ -11961,6 +11989,26 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
   InstructionsState S = Analysis.buildInstructionsState(
       VL, *this, /*WithProfitabilityCheck=*/true, /*SkipSameCodeCheck=*/false,
       isUsedOnlyByFPMath(UserTreeIdx));
+  // The reduced values of the or reduction may be the or-like selects, which
+  // are also reduction operations: select(C, X, Y) is reduced as
+  // select(C, X, 0), Y is reduced separately. Model them as copyables of a
+  // non-reduction select, the main op. Only the main op may have a non-zero
+  // false value among the non-reduction selects.
+  auto IsRdxOp = [&](Value *V) { return UserIgnoreSet.contains(V); };
+  if (S && S.getOpcode() == Instruction::Select && !UserTreeIdx.UserTE &&
+      any_of(VL, IsRdxOp)) {
+    auto IsZeroFalseSelect = [](Value *V) {
+      return match(V, m_Select(m_Value(), m_Value(), m_Zero()));
+    };
+    auto Others = make_filter_range(VL, std::not_fn(IsRdxOp));
+    if (!Others.empty() && all_of(Others, IsaPred<SelectInst>) &&
+        count_if(Others, std::not_fn(IsZeroFalseSelect)) <= 1) {
+      const auto *It = find_if(
+          VL, [&](Value *V) { return !IsZeroFalseSelect(V) && !IsRdxOp(V); });
+      auto *MainOp = cast<Instruction>(It == VL.end() ? *Others.begin() : *It);
+      S = InstructionsState(MainOp, MainOp, /*HasCopyables=*/true);
+    }
+  }
 
   bool AreScatterAllGEPSameBlock = false;
   if (!S) {
@@ -11990,9 +12038,10 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
                  dbgs() << "[";
                  interleaveComma(VL, dbgs(), [&](Value *V) { dbgs() << *V; });
                  dbgs() << "]\n");
-      return ScalarsVectorizationLegality(S, /*IsLegal=*/false,
-                                          /*TryToFindDuplicates=*/true,
-                                          /*TrySplitVectorize=*/true);
+      // The or-like selects are vectorized only in the root select node.
+      return ScalarsVectorizationLegality(
+          S, /*IsLegal=*/false, /*TryToFindDuplicates=*/true,
+          /*TrySplitVectorize=*/none_of(VL, IsRdxOp));
     }
     // Reset S to make it GetElementPtr kind of node.
     const auto *It = find_if(VL, IsaPred<GetElementPtrInst>);
@@ -12179,10 +12228,12 @@ BoUpSLP::getScalarsVectorizationLegality(ArrayRef<Value *> VL, unsigned Depth,
     }
   }
 
-  // The reduction nodes (stored in UserIgnoreSet) also should stay scalar.
+  // The reduction nodes (stored in UserIgnoreSet) also should stay scalar,
+  // except for the or-like selects, the copyables of the root select node.
   if (isReductionTree()) {
     for (Value *V : VL) {
-      if (UserIgnoreSet.contains(V)) {
+      if (IsRdxOp(V) && (!S || S.getOpcode() != Instruction::Select ||
+                         !S.isCopyableElement(V))) {
         LLVM_DEBUG(dbgs() << "SLP: Gathering due to gathered scalar.\n");
         return ScalarsVectorizationLegality(S, /*IsLegal=*/false);
       }
@@ -27764,10 +27815,13 @@ BoUpSLP::vectorizeTree(const ExtraValueToDebugLocsMap &ExternallyUsedValues,
             IE->Idx >= *GatheredLoadsEntriesFirst && getRootNode().isGather() &&
             is_contained(getRootNodeScalars(), I)) &&
           !(!getRootNode().isGather() && getRootNode().isCopyableElement(I)) &&
-          // Dropped narrowed reduction chain instructions may still use
+          // Dropped narrowed reduction chain instructions and the or-like
+          // selects, modeled as copyables of the root node, may still use
           // non-root scalars; such uses must be cleared as well.
-          none_of(I->users(),
-                  [&](User *U) { return NarrowedChainInsts.contains(U); }))
+          none_of(I->users(), [&](User *U) {
+            return NarrowedChainInsts.contains(U) ||
+                   getRootNode().isCopyableElement(U);
+          }))
         continue;
       SmallVector<SelectInst *> LogicalOpSelects;
       I->replaceUsesWithIf(PoisonValue::get(I->getType()), [&](Use &U) {
@@ -28000,8 +28054,9 @@ BoUpSLP::ScheduleBundle &BoUpSLP::BlockScheduling::buildBundle(
     auto *I = cast<Instruction>(V);
     if (S.isCopyableElement(V)) {
       // Add a copyable element model.
-      ScheduleCopyableData &SD =
-          addScheduleCopyableData(EI, I, SchedulingRegionID, *BundlePtr);
+      ScheduleCopyableData &SD = addScheduleCopyableData(
+          EI, I, SchedulingRegionID, *BundlePtr,
+          /*UsesOperands=*/isa<SelectInst>(S.getMainOp()));
       // Group the instructions to a bundle.
       BundlePtr->add(&SD);
       continue;
@@ -28299,14 +28354,16 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
       SmallDenseMap<std::pair<Instruction *, Value *>, unsigned> UserOpToNumOps;
       for (ScheduleEntity *SE : Bundle.getBundle()) {
         if (ScheduleCopyableData *SD = dyn_cast<ScheduleCopyableData>(SE)) {
-          if (ScheduleData *BundleMember = getScheduleData(SD->getInst());
-              BundleMember && BundleMember->hasValidDependencies()) {
-            BundleMember->clearDirectDependencies();
-            if (RegionHasStackSave ||
-                !isGuaranteedToTransferExecutionToSuccessor(
-                    BundleMember->getInst()) ||
-                isWriteVisibleOnUnwind(BundleMember->getInst()))
-              ControlDependentMembers.push_back(BundleMember);
+          for (Instruction *Op : SD->getModelOperands()) {
+            if (ScheduleData *BundleMember = getScheduleData(Op);
+                BundleMember && BundleMember->hasValidDependencies()) {
+              BundleMember->clearDirectDependencies();
+              if (RegionHasStackSave ||
+                  !isGuaranteedToTransferExecutionToSuccessor(
+                      BundleMember->getInst()) ||
+                  isWriteVisibleOnUnwind(BundleMember->getInst()))
+                ControlDependentMembers.push_back(BundleMember);
+            }
           }
           continue;
         }
@@ -31936,6 +31993,13 @@ class HorizontalReduction {
            (match(I, m_LogicalAnd()) || match(I, m_LogicalOr()));
   }
 
+  /// Checks if the reduction op \p V is an or-like select: among the or
+  /// reduction ops, only the or-like selects are non-boolean scalar selects.
+  static bool isOrLikeRdxOp(const Value *V) {
+    return isa_and_present<SelectInst>(V) && V->getType()->isIntegerTy() &&
+           !V->getType()->isIntegerTy(1);
+  }
+
   /// Checks if instruction is associative and can be vectorized.
   enum class ReductionOrdering { Unordered, Ordered, None };
   ReductionOrdering RK = ReductionOrdering::None;
@@ -31946,7 +32010,7 @@ class HorizontalReduction {
 
     // Integer ops that map to select instructions or intrinsics are fine.
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
-        isBoolLogicOp(I))
+        isa<SelectInst>(I))
       return ReductionOrdering::Unordered;
 
     // No need to check for associativity, if 2 reduced values.
@@ -32167,9 +32231,12 @@ private:
       unsigned ZExtIdx = ZExtIt->second;
       unsigned SelectIdx = SelectIt->second;
       auto *ZExt = cast<ZExtInst>(ReducedVals[ZExtIdx].front());
-      // ZExt is compatible with Select? Merge select to zext, if so.
+      // ZExt is compatible with Select? Merge select to zext, if so. The
+      // or-like selects are vectorized only in the root select node, do not
+      // merge them.
       if (ZExt->getSrcTy()->isIntegerTy(1) &&
-          ZExt->getType() == ReducedVals[SelectIdx].front()->getType()) {
+          ZExt->getType() == ReducedVals[SelectIdx].front()->getType() &&
+          none_of(ReductionOps.front(), isOrLikeRdxOp)) {
         ReducedVals[ZExtIdx].append(ReducedVals[SelectIdx]);
         ReducedVals.erase(std::next(ReducedVals.begin(), SelectIdx));
       }
@@ -32394,6 +32461,11 @@ public:
                                isFlattenableNegation(Root);
     if (IsNegatedRoot)
       RdxKind = RecurKind::FAdd;
+    const bool IsOrLikeRoot =
+        RdxKind == RecurKind::None &&
+        isOrLikeSelect(Root, DL, Opts.slp_recursion_max_depth);
+    if (IsOrLikeRoot)
+      RdxKind = RecurKind::Or;
     RK = isVectorizable(RdxKind, Root);
     if (RK == ReductionOrdering::None)
       return false;
@@ -32405,8 +32477,9 @@ public:
       return false;
 
     // Though the ultimate reduction may have multiple uses, its condition must
-    // have only single use.
-    if (auto *Sel = dyn_cast<SelectInst>(Root))
+    // have only single use. The condition of the or-like select is an operand
+    // of its reduced value, not a reduction operation.
+    if (auto *Sel = dyn_cast<SelectInst>(Root); Sel && !IsOrLikeRoot)
       if (!Sel->getCondition()->hasOneUse())
         RK = ReductionOrdering::Ordered;
 
@@ -32497,6 +32570,9 @@ public:
       auto IsChainLink = [&](Instruction *I) {
         if (getRdxKind(I) == RdxKind)
           return true;
+        if (RdxKind == RecurKind::Or &&
+            isOrLikeSelect(I, DL, Opts.slp_recursion_max_depth))
+          return true;
         return TrackSign && isFlattenableNegation(I);
       };
       // Checks if the operands of the \p TreeN instruction are also reduction
@@ -32506,9 +32582,15 @@ public:
           [&](Instruction *TreeN, SmallVectorImpl<Value *> &PossibleReducedVals,
               SmallVectorImpl<std::pair<Instruction *, bool>> &ReductionOps,
               ReductionOpsType &AllReductionOps, unsigned Level, bool Negated) {
+            // An or-like select is reduced by itself, as select(C, X, 0), and
+            // its false value continues the chain.
+            const bool IsOrLikeSel =
+                RdxKind == RecurKind::Or && isOrLikeRdxOp(TreeN);
             for (int I : reverse(seq<int>(getFirstOperandIndex(TreeN),
                                           getNumberOfOperands(TreeN)))) {
               Value *EdgeVal = getRdxOperand(TreeN, I);
+              if (IsOrLikeSel)
+                EdgeVal = I == 0 ? TreeN : TreeN->getOperand(2);
               auto *EdgeInst = dyn_cast<Instruction>(EdgeVal);
               // The link may be an elidable cast round-trip; look through it to
               // continue the chain. It is dropped when the reduction is folded.
@@ -32525,7 +32607,9 @@ public:
                   }
                 }
               }
-              ReducedValsToOps[EdgeVal].push_back(TreeN);
+              // A non-root or-like select is mapped by its parent link.
+              if (EdgeVal != TreeN || TreeN == Root)
+                ReducedValsToOps[EdgeVal].push_back(TreeN);
               // fsub flips its second operand's sign, fneg its only
               // operand's.
               bool EdgeNegated =
@@ -32536,7 +32620,7 @@ public:
               // the main reduction opcode or has too many uses - possible
               // reduced value. Also, do not try to reduce const values, if
               // the operation is not foldable.
-              bool IsReducedVal = !EdgeInst ||
+              bool IsReducedVal = EdgeVal == TreeN || !EdgeInst ||
                                   Level > Opts.slp_recursion_max_depth ||
                                   !IsChainLink(EdgeInst) ||
                                   IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
@@ -32585,9 +32669,8 @@ public:
         auto [TreeN, Level, Negated] = Worklist.pop_back_val();
         if (!Visited.insert(TreeN).second)
           continue;
-        // A chain link other than the reduction operation is a flattened
-        // fsub/fneg.
-        if (getRdxKind(TreeN) != RdxKind)
+        // The fsub/fneg chain links are flattened.
+        if (isFlattenableNegation(TreeN))
           FlattenedNegations = true;
         SmallVector<Value *> PossibleRedVals;
         SmallVector<std::pair<Instruction *, bool>> PossibleReductionOps;
@@ -33467,6 +33550,43 @@ public:
     Instruction *InstBeforeRoot =
         cast<Instruction>(ReductionRoot)->getPrevNode();
 
+    // The lanes of the or-like select chains are or-ed together, so their
+    // conditions must stay mutually exclusive for the undef compared values:
+    // freeze them. The freezes are dropped, if nothing is vectorized.
+    auto *Root = cast<Instruction>(ReductionRoot);
+    SmallMapVector<Value *, Instruction *, 4> Freezes;
+    scope_exit DropFreezes([&]() {
+      if (Freezes.empty() || V.isDeleted(Root))
+        return;
+      for (auto [CmpOp, Fr] : Freezes)
+        Fr->replaceAllUsesWith(CmpOp);
+      V.removeInstructionsAndOperands(
+          ArrayRef(to_vector(make_second_range(Freezes))), {});
+    });
+    if (RdxKind == RecurKind::Or && RK == ReductionOrdering::Unordered) {
+      for (Value *RdxOp :
+           make_filter_range(ReductionOps.front(), isOrLikeRdxOp)) {
+        auto *Sel = cast<SelectInst>(RdxOp);
+        // All conditions of the chain compare the same value.
+        Value *CmpOp = cast<ICmpInst>(Sel->getCondition())->getOperand(0);
+        if (isGuaranteedNotToBeUndef(CmpOp, AC))
+          continue;
+        Instruction *&Fr = Freezes[CmpOp];
+        if (!Fr) {
+          IRBuilderBase::InsertPointGuard Guard(Builder);
+          if (auto *CmpOpI = dyn_cast<Instruction>(CmpOp))
+            Builder.SetInsertPoint(*CmpOpI->getInsertionPointAfterDef());
+          else
+            Builder.SetInsertPoint(
+                Root->getFunction()->getEntryBlock().getFirstInsertionPt());
+          Fr = cast<Instruction>(
+              Builder.CreateFreeze(CmpOp, CmpOp->getName() + ".fr"));
+        }
+        for (; Sel; Sel = dyn_cast<SelectInst>(Sel->getFalseValue()))
+          cast<ICmpInst>(Sel->getCondition())->setOperand(0, Fr);
+      }
+    }
+
     // Track the reduced values in case if they are replaced by extractelement
     // because of the vectorization.
     DenseMap<Value *, WeakTrackingVH> TrackedVals(ReducedVals.size() *
@@ -33519,6 +33639,10 @@ public:
       for (Value *RdxOp :
            make_filter_range(RdxOps, [](Value *RdxOp) { return RdxOp; }))
         IgnoreList.insert(RdxOp);
+    // The or-like selects are both the reduced values and the reduction ops.
+    auto IsOrLikeRdxVal = [&](Value *V) {
+      return isa<SelectInst>(V) && IgnoreList.contains(V);
+    };
     // Dropped with the reduction; do not treat as external uses.
     IgnoreList.insert_range(NarrowedChainInsts);
     // Intersect the fast-math-flags from all reduction operations.
@@ -33623,8 +33747,12 @@ public:
         continue;
       }
       // Do some copyables analysis only if more than 2 groups exist or they
-      // are large enough.
-      if (SameSign && !TwoGroupsOfSameSmallSize) {
+      // are large enough. The or-like selects are vectorized only in the root
+      // select node, their groups are not merged with others.
+      if (SameSign && !TwoGroupsOfSameSmallSize &&
+          (LocalReducedVals.empty() ||
+           (none_of(RV, IsOrLikeRdxVal) &&
+            none_of(LocalReducedVals[MergeIdx], IsOrLikeRdxVal)))) {
         SmallVector<Value *> Ops;
         if (!LocalReducedVals.empty())
           Ops = LocalReducedVals[MergeIdx];
@@ -34056,12 +34184,19 @@ public:
         // instructions, so set it as externally used to prevent it from being
         // deleted.
         LocalExternallyUsedValues.insert(ReductionRoot);
+        auto MarkExternallyUsed = [&](Value *RdxVal) {
+          LocalExternallyUsedValues.insert(RdxVal);
+          // The or-like select is reduced as select(C, X, 0) by the epilogue.
+          if (IsOrLikeRdxVal(RdxVal))
+            LocalExternallyUsedValues.insert_range(
+                drop_end(cast<SelectInst>(RdxVal)->operand_values()));
+        };
         for (unsigned Cnt = 0, Sz = ReducedVals.size(); Cnt < Sz; ++Cnt) {
           if (Cnt == I || (ShuffledExtracts && Cnt == I - 1))
             continue;
           for (Instruction *Inst :
                make_isa_range<Instruction>(ReducedVals[Cnt]))
-            LocalExternallyUsedValues.insert(TrackedVals[Inst]);
+            MarkExternallyUsed(TrackedVals[Inst]);
         }
         if (!IsSupportedHorRdxIdentityOp) {
           // Number of uses of the candidates in the vector of values.
@@ -34101,7 +34236,7 @@ public:
           // Scalars not reduced by the top node may be used by the reduction
           // epilogue, even if not vectorized as part of the tree.
           if (!VLScalars.contains(RdxVal)) {
-            LocalExternallyUsedValues.insert(RdxVal);
+            MarkExternallyUsed(RdxVal);
             continue;
           }
           Value *OrigV = TrackedToOrig[Cnt];
@@ -34350,7 +34485,9 @@ public:
       if (OptReusedScalars && !AnyVectorized) {
         for (const std::pair<Value *, unsigned> &P : SameValuesCounter) {
           Value *RdxVal = TrackedVals.at(P.first);
-          if (NeedsOrigOrder(RdxVal))
+          // The or-like select is left for the scalar remainder, which reduces
+          // it as select(C, X, 0).
+          if (NeedsOrigOrder(RdxVal) || IsOrLikeRdxVal(RdxVal))
             continue;
           Value *RedVal = emitScaleForReusedOps(RdxVal, Builder, P.second);
           AddReducedPart(P.first, RedVal, GroupNegated);
@@ -34439,7 +34576,6 @@ public:
       // the scalar chain is merely reshuffled (which may also break the scalar
       // fma formation), while the original code may still be vectorizable as
       // an operand tree - drop the scalar parts emitted so far and give up.
-      auto *Root = cast<Instruction>(ReductionRoot);
       for (Instruction *I = Root->getPrevNode(); I && I != InstBeforeRoot;) {
         Instruction *Prev = I->getPrevNode();
         if (I->use_empty() && !V.isAnalyzedReductionRoot(I))
@@ -34507,9 +34643,18 @@ public:
     if (VectorizedTree)
       ExtraReductions.emplace_back(cast<Instruction>(ReductionRoot),
                                    VectorizedTree);
-    for (const auto &[RedOp, RdxVal] : LeftoverReductions)
+    for (auto [RedOp, RdxVal] : LeftoverReductions) {
+      // The leftover or-like select is reduced as select(C, X, 0).
+      if (IsOrLikeRdxVal(RdxVal)) {
+        auto *Sel = cast<SelectInst>(RdxVal);
+        Builder.SetCurrentDebugLocation(Sel->getDebugLoc());
+        RdxVal = Builder.CreateSelect(Sel->getCondition(), Sel->getTrueValue(),
+                                      Constant::getNullValue(Sel->getType()),
+                                      "", /*MDFrom=*/Sel);
+      }
       (IsNegated(RdxVal) ? NegExtraReductions : ExtraReductions)
           .emplace_back(RedOp, RdxVal);
+    }
     // Iterate through all not-vectorized reduction values/extra arguments,
     // combining them pairwise.
     auto CombineReds =
