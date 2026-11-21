@@ -1444,7 +1444,7 @@ def VPrintfChk : Builtin {
 
 def Unpredictable : Builtin {
   let Spellings = ["__builtin_unpredictable"];
-  let Attributes = [NoThrow, Const];
+  let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "long int(long int)";
 }
 
