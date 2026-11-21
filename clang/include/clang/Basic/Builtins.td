@@ -607,6 +607,13 @@ def IsUnordered : Builtin {
   let Prototype = "int(...)";
 }
 
+def IsEqSig : Builtin {
+  let Spellings = ["__builtin_iseqsig"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
 // Unary FP classification.
 def FPClassify : Builtin {
   let Spellings = ["__builtin_fpclassify"];

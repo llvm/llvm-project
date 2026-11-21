@@ -724,6 +724,8 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
         }
         case Builtin::BI__builtin_isunordered:
           return LHS.compare(RHS) == ComparisonCategoryResult::Unordered;
+        case Builtin::BI__builtin_iseqsig:
+          return LHS.compare(RHS) == ComparisonCategoryResult::Equal;
         default:
           llvm_unreachable("Unexpected builtin ID: Should be a floating point "
                            "comparison function");
@@ -4927,6 +4929,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig:
     return interp_floating_comparison(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_isfpclass:
