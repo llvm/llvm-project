@@ -91,7 +91,7 @@ define i16 @v_powi_f16(i16 %l, i32 %r) {
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_i32_e32 v1, v1
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v2, v2.l
 ; GFX11-TRUE16-NEXT:    v_trunc_f32_e32 v6, v1

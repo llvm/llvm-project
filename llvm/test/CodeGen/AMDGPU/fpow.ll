@@ -802,7 +802,7 @@ define half @v_pow_f16(half %x, half %y) {
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, v0.l
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.h, v0.l
+; GFX11-TRUE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cvt_f32_f16_e32 v3, v2.l
 ; GFX11-TRUE16-NEXT:    v_cmp_lt_f32_e64 s0, |v3|, 0x800000
