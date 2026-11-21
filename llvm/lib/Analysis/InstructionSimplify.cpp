@@ -33,6 +33,7 @@
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/OverflowInstAnalysis.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantFPRange.h"
@@ -7732,6 +7733,37 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
       }
     }
     return nullptr;
+  }
+  case Intrinsic::type_checked_load: {
+    // Load a function pointer from a constant vtable when possible.
+
+    // We need a constant offset into the vtable to know what slot to load.
+    auto *SlotOffset = dyn_cast<ConstantInt>(Args[1]);
+    if (!SlotOffset)
+      return nullptr;
+
+    // Try to convert the vtable operand into a constant by stripping offsets.
+    APInt BaseOff(Q.DL.getIndexTypeSizeInBits(Args[0]->getType()), 0);
+    auto *GV =
+        dyn_cast<GlobalVariable>(Args[0]->stripAndAccumulateConstantOffsets(
+            Q.DL, BaseOff, /*AllowNonInbounds=*/true));
+    if (!GV || !GV->isConstant() || !GV->hasDefinitiveInitializer())
+      return nullptr;
+
+    // Check whether the vtable is associated with the given type ID.
+    Metadata *TypeId = cast<MetadataAsValue>(Args[2])->getMetadata();
+    if (!isTypeIdMemberAtOffset(*GV, BaseOff.getZExtValue(), TypeId))
+      return nullptr;
+
+    // Look up the vtable entry.
+    uint64_t Offset = BaseOff.getZExtValue() + SlotOffset->getSExtValue();
+    auto [Fn, FnPtr] =
+        getFunctionAtVTableOffset(GV, Offset, *Call->getModule());
+    if (!Fn)
+      return nullptr;
+
+    return ConstantStruct::getAnon(
+        {FnPtr, ConstantInt::getTrue(Call->getContext())});
   }
   default: {
     // Use the default FP environment if none is found.
