@@ -572,7 +572,9 @@ bool InlineAsmLowering::lowerInlineAsm(
         Flag.setRegClass(RC->getID());
       }
       Inst.addImm(Flag);
-      if (!buildAnyextOrCopy(OpInfo.Regs[0], SourceRegs[0], MIRBuilder))
+      Register SrcReg =
+          lowerAsmInputValue(OpInfo.Regs[0], SourceRegs[0], MIRBuilder);
+      if (!buildAnyextOrCopy(OpInfo.Regs[0], SrcReg, MIRBuilder))
         return false;
       Inst.addReg(OpInfo.Regs[0]);
       break;
