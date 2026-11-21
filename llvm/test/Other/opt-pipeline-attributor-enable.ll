@@ -28,11 +28,11 @@
 ; LIGHT-LTO-SAME: ,called-value-propagation,attributor-light,globalsplit,
 ; LIGHT-LTO-SAME: ,tailcallelim),cgscc(attributor-light-cgscc),
 
-; MODULE: ,openmp-opt,attributor,ipsccp
+; MODULE: ,openmp-opt,assign-guid,attributor,ipsccp
 
-; CGSCC: inline,attributor-cgscc,function-attrs
+; CGSCC: assign-guid,cgscc(devirt<4>(inline,attributor-cgscc,function-attrs
 
-; FULL: openmp-opt,attributor,
+; FULL: openmp-opt,assign-guid,attributor,
 ; FULL-SAME: attributor-cgscc,function-attrs
 define ptr @return_arg(ptr %arg) {
   ret ptr %arg
