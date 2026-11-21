@@ -85,6 +85,11 @@ private:
   void handleAssignment(const Expr *TargetExpr, const Expr *LHSExpr,
                         const Expr *RHSExpr);
 
+  /// Models a call to an overloaded `operator=`, spelled `a = b` or
+  /// `a.operator=(b)`, as an assignment. Returns whether it did.
+  bool handleAssignmentOperatorCall(const CallExpr *CE, const Expr *LHSExpr,
+                                    const Expr *RHSExpr);
+
   void handlePointerArithmetic(const BinaryOperator *BO);
 
   bool handlePlacementNew(const CXXNewExpr *NE, OriginList *NewList);
