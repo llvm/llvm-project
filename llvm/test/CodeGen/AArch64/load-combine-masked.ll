@@ -178,6 +178,81 @@ define i16 @load_2_bytes_bswap_masked(ptr %p) {
   ret i16 %result
 }
 
+; Two 16-bit halves, upper half's high byte masked under a nested shift.
+define i32 @load_4_bytes_nested_shl_masked(ptr %p) {
+; LE-LABEL: load_4_bytes_nested_shl_masked:
+; LE:       ; %bb.0:
+; LE-NEXT:    ldr w8, [x0]
+; LE-NEXT:    and w0, w8, #0xfffffff
+; LE-NEXT:    ret
+;
+; BE-LABEL: load_4_bytes_nested_shl_masked:
+; BE:       // %bb.0:
+; BE-NEXT:    ldr w8, [x0]
+; BE-NEXT:    rev w8, w8
+; BE-NEXT:    and w0, w8, #0xfffffff
+; BE-NEXT:    ret
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %l0 = load i8, ptr %p, align 1
+  %l1 = load i8, ptr %p1, align 1
+  %l2 = load i8, ptr %p2, align 1
+  %l3 = load i8, ptr %p3, align 1
+  %l3.m = and i8 %l3, 15
+  %e0 = zext i8 %l0 to i16
+  %e1 = zext i8 %l1 to i16
+  %e2 = zext i8 %l2 to i16
+  %e3 = zext i8 %l3.m to i16
+  %s1 = shl i16 %e1, 8
+  %s3 = shl i16 %e3, 8
+  %lo = or i16 %e0, %s1
+  %hi = or i16 %e2, %s3
+  %lo.e = zext i16 %lo to i32
+  %hi.e = zext i16 %hi to i32
+  %hi.s = shl i32 %hi.e, 16
+  %result = or i32 %lo.e, %hi.s
+  ret i32 %result
+}
+
+; Byte-swapped low half, its masked byte under a shift inside the bswap.
+define i32 @load_4_bytes_bswap_nested_shl_masked(ptr %p) {
+; LE-LABEL: load_4_bytes_bswap_nested_shl_masked:
+; LE:       ; %bb.0:
+; LE-NEXT:    ldr w8, [x0]
+; LE-NEXT:    and w0, w8, #0xffffff0f
+; LE-NEXT:    ret
+;
+; BE-LABEL: load_4_bytes_bswap_nested_shl_masked:
+; BE:       // %bb.0:
+; BE-NEXT:    ldr w8, [x0]
+; BE-NEXT:    rev w8, w8
+; BE-NEXT:    and w0, w8, #0xffffff0f
+; BE-NEXT:    ret
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %l0 = load i8, ptr %p, align 1
+  %l1 = load i8, ptr %p1, align 1
+  %l2 = load i8, ptr %p2, align 1
+  %l3 = load i8, ptr %p3, align 1
+  %l0.m = and i8 %l0, 15
+  %e0 = zext i8 %l0.m to i16
+  %e1 = zext i8 %l1 to i16
+  %e2 = zext i8 %l2 to i16
+  %e3 = zext i8 %l3 to i16
+  %s0 = shl i16 %e0, 8
+  %s3 = shl i16 %e3, 8
+  %lo.swapped = or i16 %e1, %s0
+  %lo = call i16 @llvm.bswap.i16(i16 %lo.swapped)
+  %hi = or i16 %e2, %s3
+  %lo.e = zext i16 %lo to i32
+  %hi.e = zext i16 %hi to i32
+  %hi.s = shl i32 %hi.e, 16
+  %result = or i32 %lo.e, %hi.s
+  ret i32 %result
+}
+
 ; --- Negative tests (should NOT fold) ---
 
 ; Non-adjacent loads (gap between them).

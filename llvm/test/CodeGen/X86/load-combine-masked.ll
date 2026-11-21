@@ -143,6 +143,55 @@ define i32 @load_4_bytes_bswap_masked(ptr %p) {
   ret i32 %result
 }
 
+; Two 16-bit halves, upper half's high byte masked under a nested shift.
+define i32 @load_4_bytes_nested_shl_masked(ptr %p) {
+; CHECK-LABEL: load_4_bytes_nested_shl_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $268435455, %eax # imm = 0xFFFFFFF
+; CHECK-NEXT:    andl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %p3 = getelementptr i8, ptr %p, i64 3
+  %lo = load i16, ptr %p, align 1
+  %l2 = load i8, ptr %p2, align 1
+  %l3 = load i8, ptr %p3, align 1
+  %l3.m = and i8 %l3, 15
+  %e2 = zext i8 %l2 to i16
+  %e3 = zext i8 %l3.m to i16
+  %s3 = shl i16 %e3, 8
+  %hi = or i16 %e2, %s3
+  %lo.e = zext i16 %lo to i32
+  %hi.e = zext i16 %hi to i32
+  %hi.s = shl i32 %hi.e, 16
+  %result = or i32 %lo.e, %hi.s
+  ret i32 %result
+}
+
+; Byte-swapped low half, its masked byte under a shift inside the bswap.
+define i32 @load_4_bytes_bswap_nested_shl_masked(ptr %p) {
+; CHECK-LABEL: load_4_bytes_bswap_nested_shl_masked:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl $-241, %eax
+; CHECK-NEXT:    andl (%rdi), %eax
+; CHECK-NEXT:    retq
+  %p1 = getelementptr i8, ptr %p, i64 1
+  %p2 = getelementptr i8, ptr %p, i64 2
+  %l0 = load i8, ptr %p, align 1
+  %l1 = load i8, ptr %p1, align 1
+  %hi = load i16, ptr %p2, align 1
+  %l0.m = and i8 %l0, 15
+  %e0 = zext i8 %l0.m to i16
+  %e1 = zext i8 %l1 to i16
+  %s0 = shl i16 %e0, 8
+  %lo.swapped = or i16 %e1, %s0
+  %lo = call i16 @llvm.bswap.i16(i16 %lo.swapped)
+  %lo.e = zext i16 %lo to i32
+  %hi.e = zext i16 %hi to i32
+  %hi.s = shl i32 %hi.e, 16
+  %result = or i32 %lo.e, %hi.s
+  ret i32 %result
+}
+
 ; --- Negative tests (should NOT fold) ---
 
 ; Non-adjacent loads (gap between them).
