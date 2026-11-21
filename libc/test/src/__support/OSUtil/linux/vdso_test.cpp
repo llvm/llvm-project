@@ -113,11 +113,13 @@ TEST(LlvmLibcOSUtilVDSOTest, RtSigReturn) {
   struct sigaction sa{};
   struct sigaction old_sa{};
   sa.sa_handler = sigprof_handler;
-  sa.sa_flags = SA_RESTORER;
   vdso::TypedSymbol<vdso::VDSOSym::RTSigReturn> symbol;
   if (!symbol)
     return;
+#ifdef SA_RESTORER
+  sa.sa_flags = SA_RESTORER;
   sa.sa_restorer = symbol;
+#endif
   ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGPROF, &sa, &old_sa), Succeeds());
   raise(SIGPROF);
   ASSERT_TRUE(flag);
