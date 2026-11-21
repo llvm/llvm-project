@@ -46,7 +46,7 @@ namespace ranges {
 template <input_range _View>
   requires view<_View>
 class as_input_view : public view_interface<as_input_view<_View>> {
-  _View __base_ = _View();
+  _LIBCPP_NO_UNIQUE_ADDRESS _View __base_ = _View();
 
   template <bool _Const>
   class __iterator;

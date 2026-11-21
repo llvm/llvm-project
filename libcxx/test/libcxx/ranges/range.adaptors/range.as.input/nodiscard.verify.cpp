@@ -14,7 +14,7 @@
 //    requires view<V>
 //  class as_input_view : public view_interface<as_input_view<V>>
 
-// Check that functions are marked [[nodiscard]]
+// Check that functions are marked [[nodiscard]].
 
 #include <concepts>
 #include <ranges>
