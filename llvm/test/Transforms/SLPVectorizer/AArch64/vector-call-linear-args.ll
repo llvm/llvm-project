@@ -3,26 +3,17 @@
 ; RUN: opt -mtriple=aarch64-unknown-linux-gnu -vector-library=ArmPL -passes=inject-tli-mappings,slp-vectorizer -S %s | FileCheck %s --check-prefixes=CHECK,ARMPL
 
 define void @sincos_f32(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
-; CHECK-LABEL: define void @sincos_f32(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds float, ptr [[S]], i64 1
-; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds float, ptr [[S]], i64 2
-; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds float, ptr [[S]], i64 3
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
-; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
-; CHECK-NEXT:    [[C3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR0:[0-9]+]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR0]]
-; CHECK-NEXT:    ret void
+; SLEEF-LABEL: define void @sincos_f32(
+; SLEEF-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
+; SLEEF-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; SLEEF-NEXT:    call void @_ZGVnN4vl4l4_sincosf(<4 x float> [[TMP1]], ptr [[S]], ptr [[C]])
+; SLEEF-NEXT:    ret void
+;
+; ARMPL-LABEL: define void @sincos_f32(
+; ARMPL-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
+; ARMPL-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; ARMPL-NEXT:    call aarch64_vector_pcs void @armpl_vsincosq_f32(<4 x float> [[TMP1]], ptr [[S]], ptr [[C]])
+; ARMPL-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
   %x2p = getelementptr inbounds float, ptr %x, i64 2
@@ -45,16 +36,17 @@ define void @sincos_f32(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 }
 
 define void @sincos_f64(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
-; CHECK-LABEL: define void @sincos_f64(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds double, ptr [[X]], i64 1
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds double, ptr [[S]], i64 1
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
-; CHECK-NEXT:    call void @sincos(double [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @sincos(double [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
-; CHECK-NEXT:    ret void
+; SLEEF-LABEL: define void @sincos_f64(
+; SLEEF-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
+; SLEEF-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X]], align 8
+; SLEEF-NEXT:    call void @_ZGVnN2vl8l8_sincos(<2 x double> [[TMP1]], ptr [[S]], ptr [[C]])
+; SLEEF-NEXT:    ret void
+;
+; ARMPL-LABEL: define void @sincos_f64(
+; ARMPL-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) {
+; ARMPL-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[X]], align 8
+; ARMPL-NEXT:    call aarch64_vector_pcs void @armpl_vsincosq_f64(<2 x double> [[TMP1]], ptr [[S]], ptr [[C]])
+; ARMPL-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds double, ptr %x, i64 1
   %s1 = getelementptr inbounds double, ptr %s, i64 1
@@ -67,30 +59,19 @@ define void @sincos_f64(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 }
 
 define void @modf_f32(ptr noalias %x, ptr noalias %ip, ptr noalias %r) {
-; CHECK-LABEL: define void @modf_f32(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[IP1:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 1
-; CHECK-NEXT:    [[IP2:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 2
-; CHECK-NEXT:    [[IP3:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 3
-; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds float, ptr [[R]], i64 1
-; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds float, ptr [[R]], i64 2
-; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds float, ptr [[R]], i64 3
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    [[M0:%.*]] = call float @modff(float [[X0]], ptr [[IP]]) #[[ATTR2:[0-9]+]]
-; CHECK-NEXT:    [[M1:%.*]] = call float @modff(float [[X1]], ptr [[IP1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M2:%.*]] = call float @modff(float [[X2]], ptr [[IP2]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M3:%.*]] = call float @modff(float [[X3]], ptr [[IP3]]) #[[ATTR2]]
-; CHECK-NEXT:    store float [[M0]], ptr [[R]], align 4
-; CHECK-NEXT:    store float [[M1]], ptr [[R1]], align 4
-; CHECK-NEXT:    store float [[M2]], ptr [[R2]], align 4
-; CHECK-NEXT:    store float [[M3]], ptr [[R3]], align 4
-; CHECK-NEXT:    ret void
+; SLEEF-LABEL: define void @modf_f32(
+; SLEEF-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
+; SLEEF-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; SLEEF-NEXT:    [[TMP2:%.*]] = call <4 x float> @_ZGVnN4vl4_modff(<4 x float> [[TMP1]], ptr [[IP]])
+; SLEEF-NEXT:    store <4 x float> [[TMP2]], ptr [[R]], align 4
+; SLEEF-NEXT:    ret void
+;
+; ARMPL-LABEL: define void @modf_f32(
+; ARMPL-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
+; ARMPL-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; ARMPL-NEXT:    [[TMP2:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float> [[TMP1]], ptr [[IP]])
+; ARMPL-NEXT:    store <4 x float> [[TMP2]], ptr [[R]], align 4
+; ARMPL-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
   %x2p = getelementptr inbounds float, ptr %x, i64 2
@@ -118,30 +99,21 @@ define void @modf_f32(ptr noalias %x, ptr noalias %ip, ptr noalias %r) {
 
 ; The jumbled inputs are shuffled, the lanes of the calls keep their order.
 define void @modf_jumbled(ptr noalias %x, ptr noalias %ip, ptr noalias %r) {
-; CHECK-LABEL: define void @modf_jumbled(
-; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
-; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
-; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[IP1:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 1
-; CHECK-NEXT:    [[IP2:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 2
-; CHECK-NEXT:    [[IP3:%.*]] = getelementptr inbounds float, ptr [[IP]], i64 3
-; CHECK-NEXT:    [[R1:%.*]] = getelementptr inbounds float, ptr [[R]], i64 1
-; CHECK-NEXT:    [[R2:%.*]] = getelementptr inbounds float, ptr [[R]], i64 2
-; CHECK-NEXT:    [[R3:%.*]] = getelementptr inbounds float, ptr [[R]], i64 3
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
-; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
-; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    [[M0:%.*]] = call float @modff(float [[X1]], ptr [[IP]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M1:%.*]] = call float @modff(float [[X0]], ptr [[IP1]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M2:%.*]] = call float @modff(float [[X3]], ptr [[IP2]]) #[[ATTR2]]
-; CHECK-NEXT:    [[M3:%.*]] = call float @modff(float [[X2]], ptr [[IP3]]) #[[ATTR2]]
-; CHECK-NEXT:    store float [[M0]], ptr [[R]], align 4
-; CHECK-NEXT:    store float [[M1]], ptr [[R1]], align 4
-; CHECK-NEXT:    store float [[M2]], ptr [[R2]], align 4
-; CHECK-NEXT:    store float [[M3]], ptr [[R3]], align 4
-; CHECK-NEXT:    ret void
+; SLEEF-LABEL: define void @modf_jumbled(
+; SLEEF-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
+; SLEEF-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; SLEEF-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; SLEEF-NEXT:    [[TMP3:%.*]] = call <4 x float> @_ZGVnN4vl4_modff(<4 x float> [[TMP2]], ptr [[IP]])
+; SLEEF-NEXT:    store <4 x float> [[TMP3]], ptr [[R]], align 4
+; SLEEF-NEXT:    ret void
+;
+; ARMPL-LABEL: define void @modf_jumbled(
+; ARMPL-SAME: ptr noalias [[X:%.*]], ptr noalias [[IP:%.*]], ptr noalias [[R:%.*]]) {
+; ARMPL-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[X]], align 4
+; ARMPL-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; ARMPL-NEXT:    [[TMP3:%.*]] = call aarch64_vector_pcs <4 x float> @armpl_vmodfq_f32(<4 x float> [[TMP2]], ptr [[IP]])
+; ARMPL-NEXT:    store <4 x float> [[TMP3]], ptr [[R]], align 4
+; ARMPL-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
   %x2p = getelementptr inbounds float, ptr %x, i64 2
@@ -184,10 +156,10 @@ define void @sincos_errno(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR3:[0-9]+]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR3]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR3]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR0:[0-9]+]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR0]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -227,10 +199,10 @@ define void @sincos_stride2(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -268,10 +240,10 @@ define void @sincos_overlap(ptr noalias %x, ptr noalias %s) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[S1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[S2]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[S4]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[S1]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[S2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S3]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[S4]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -306,10 +278,10 @@ define void @sincos_same_out(ptr noalias %x, ptr noalias %s) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[S]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[S1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S2]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[S3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[S]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[S1]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[S3]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -341,13 +313,13 @@ define void @sincos_chain(ptr noalias %s, ptr noalias %c) {
 ; CHECK-NEXT:    [[C2:%.*]] = getelementptr inbounds float, ptr [[C]], i64 2
 ; CHECK-NEXT:    [[C3:%.*]] = getelementptr inbounds float, ptr [[C]], i64 3
 ; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[S]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S1]], ptr [[C]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S1]], ptr [[C]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[S1]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S2]], ptr [[C1]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S2]], ptr [[C1]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[S2]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S3]], ptr [[C2]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S3]], ptr [[C2]]) #[[ATTR1]]
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[S3]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S4]], ptr [[C3]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S4]], ptr [[C3]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %s1 = getelementptr inbounds float, ptr %s, i64 1
@@ -385,10 +357,10 @@ define void @sincos_reverse(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR0]]
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR0]]
+; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[C3]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[C2]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds float, ptr %x, i64 1
@@ -421,9 +393,9 @@ define void @sincos_atomic(ptr noalias %x, ptr noalias %s, ptr noalias %c, ptr n
 ; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds double, ptr [[C]], i64 1
 ; CHECK-NEXT:    [[X0:%.*]] = load double, ptr [[X]], align 8
 ; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[X1P]], align 8
-; CHECK-NEXT:    call void @sincos(double [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincos(double [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    store atomic i32 1, ptr [[G]] release, align 4
-; CHECK-NEXT:    call void @sincos(double [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @sincos(double [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret void
 ;
   %x1p = getelementptr inbounds double, ptr %x, i64 1
@@ -443,6 +415,3 @@ declare float @modff(float, ptr)
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 attributes #1 = { nocallback nofree nosync nounwind willreturn memory(argmem: write, errnomem: write) }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; ARMPL: {{.*}}
-; SLEEF: {{.*}}

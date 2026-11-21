@@ -39,6 +39,12 @@ Type *llvm::toScalarizedStructTy(StructType *StructTy) {
       }));
 }
 
+FunctionType *llvm::toScalarizedFunctionTy(FunctionType *FTy) {
+  return FunctionType::get(toScalarizedTy(FTy->getReturnType()),
+                           map_to_vector(FTy->params(), toScalarizedTy),
+                           FTy->isVarArg());
+}
+
 /// Returns true if `StructTy` is an unpacked literal struct where all elements
 /// are vectors of matching element count. This does not include empty structs.
 bool llvm::isVectorizedStructTy(StructType *StructTy) {

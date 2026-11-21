@@ -5,20 +5,15 @@
 define void @sincos_part_overlap(ptr noalias %x, ptr noalias %s, ptr noalias %c) {
 ; CHECK-LABEL: define void @sincos_part_overlap(
 ; CHECK-SAME: ptr noalias [[X:%.*]], ptr noalias [[S:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[X1P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 1
 ; CHECK-NEXT:    [[X2P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 2
 ; CHECK-NEXT:    [[X3P:%.*]] = getelementptr inbounds float, ptr [[X]], i64 3
-; CHECK-NEXT:    [[S1:%.*]] = getelementptr inbounds float, ptr [[S]], i64 1
 ; CHECK-NEXT:    [[S2:%.*]] = getelementptr inbounds float, ptr [[S]], i64 2
 ; CHECK-NEXT:    [[S3:%.*]] = getelementptr inbounds float, ptr [[S]], i64 3
-; CHECK-NEXT:    [[C1:%.*]] = getelementptr inbounds float, ptr [[C]], i64 1
-; CHECK-NEXT:    [[X0:%.*]] = load float, ptr [[X]], align 4
-; CHECK-NEXT:    [[X1:%.*]] = load float, ptr [[X1P]], align 4
 ; CHECK-NEXT:    [[X2:%.*]] = load float, ptr [[X2P]], align 4
 ; CHECK-NEXT:    [[X3:%.*]] = load float, ptr [[X3P]], align 4
-; CHECK-NEXT:    call void @sincosf(float [[X0]], ptr [[S]], ptr [[C]]) #[[ATTR1:[0-9]+]]
-; CHECK-NEXT:    call void @sincosf(float [[X1]], ptr [[S1]], ptr [[C1]]) #[[ATTR1]]
-; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S2]]) #[[ATTR1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[X]], align 4
+; CHECK-NEXT:    call void @vsincosf2(<2 x float> [[TMP1]], ptr [[S]], ptr [[C]])
+; CHECK-NEXT:    call void @sincosf(float [[X2]], ptr [[S2]], ptr [[S2]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @sincosf(float [[X3]], ptr [[S3]], ptr [[S3]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret void
 ;
