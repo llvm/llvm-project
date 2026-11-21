@@ -79,6 +79,15 @@ struct InputFileInfo {
   }
 };
 
+/// Where a loaded module file keeps the source location entries of one of its
+/// input files, in the global source space. Invalid if it kept none.
+struct InputFileLoc {
+  FileID FID;
+  SourceLocation::UIntTy Offset = 0;
+
+  bool isValid() const { return FID.isValid(); }
+};
+
 /// The input file that has been loaded from this AST file, along with
 /// bools indicating whether this was an overridden buffer or if it was
 /// out-of-date or not-found.
@@ -203,6 +212,12 @@ public:
   FileID OriginalSourceFileID;
 
   std::string ModuleMapPath;
+
+  /// The index of the first source location entry this module file wrote for
+  /// \c ModuleMapPath, and the offset that entry starts at. The index counts
+  /// from one, and is zero if no entries were written.
+  unsigned ModuleMapSLocIndex = 0;
+  SourceLocation::UIntTy ModuleMapSLocOffset = 0;
 
   /// Directories this module file depends on the listing of.
   std::vector<std::string> DirectoryDependencies;
