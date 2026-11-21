@@ -65,9 +65,13 @@ text_label:
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
 # CHECK:        sra     $4, $4, 31              # encoding: [0x00,0x04,0x27,0xc3]
 # CHECK:        mfhi    $1                      # encoding: [0x00,0x00,0x08,0x10]
-# CHECK:        beq     $4, $1, $tmp0           # encoding: [0x10,0x81,A,A]
-# CHECK:        nop                             # encoding: [0x00,0x00,0x00,0x00]
-# CHECK:        break   6                       # encoding: [0x00,0x06,0x00,0x0d]
+# CHECK-NEXT:   .set    push
+# CHECK-NEXT:   .set    noreorder
+# CHECK-NEXT:   beq     $4, $1, $tmp0           # encoding: [0x10,0x81,A,A]
+# CHECK-NEXT:   #   fixup A - offset: 0, value: $tmp0-4, kind: fixup_Mips_PC16
+# CHECK-NEXT:   nop                             # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT:   .set    pop
+# CHECK-NEXT:   break   6                       # encoding: [0x00,0x06,0x00,0x0d]
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
 # CHECK-TRAP:   mult    $4, $5                  # encoding: [0x00,0x85,0x00,0x18]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
@@ -95,9 +99,13 @@ text_label:
 # CHECK:        multu   $4, $5                  # encoding: [0x00,0x85,0x00,0x19]
 # CHECK:        mfhi    $1                      # encoding: [0x00,0x00,0x08,0x10]
 # CHECK:        mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
-# CHECK:        beqz    $1, $tmp2               # encoding: [0x10,0x20,A,A]
-# CHECK:        nop                             # encoding: [0x00,0x00,0x00,0x00]
-# CHECK:        break   6                       # encoding: [0x00,0x06,0x00,0x0d]
+# CHECK-NEXT:   .set    push
+# CHECK-NEXT:   .set    noreorder
+# CHECK-NEXT:   beqz    $1, $tmp2               # encoding: [0x10,0x20,A,A]
+# CHECK-NEXT:   #   fixup A - offset: 0, value: $tmp2-4, kind: fixup_Mips_PC16
+# CHECK-NEXT:   nop                             # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT:   .set    pop
+# CHECK-NEXT:   break   6                       # encoding: [0x00,0x06,0x00,0x0d]
 # CHECK-TRAP:   multu   $4, $5                  # encoding: [0x00,0x85,0x00,0x19]
 # CHECK-TRAP:   mfhi    $1                      # encoding: [0x00,0x00,0x08,0x10]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
@@ -152,3 +160,18 @@ text_label:
 # CHECK-TRAP:   mfhi    $1                      # encoding: [0x00,0x00,0x08,0x10]
 # CHECK-TRAP:   mflo    $4                      # encoding: [0x00,0x00,0x20,0x12]
 # CHECK-TRAP:   tne     $1, $zero, 6            # encoding: [0x00,0x20,0x01,0xb6]
+
+# The overflow check branch still needs its delay slot filled in noreorder
+# mode, so that break isn't executed unconditionally.
+ .set noreorder
+ mulo $4, $5, $6
+# CHECK:        .set    noreorder
+# CHECK:        beq     $4, $1, $tmp6           # encoding: [0x10,0x81,A,A]
+# CHECK-NEXT:   #   fixup A - offset: 0, value: $tmp6-4, kind: fixup_Mips_PC16
+# CHECK-NEXT:   nop                             # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT:   break   6                       # encoding: [0x00,0x06,0x00,0x0d]
+ mulou $4, $5, $6
+# CHECK:        beqz    $1, $tmp7               # encoding: [0x10,0x20,A,A]
+# CHECK-NEXT:   #   fixup A - offset: 0, value: $tmp7-4, kind: fixup_Mips_PC16
+# CHECK-NEXT:   nop                             # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT:   break   6                       # encoding: [0x00,0x06,0x00,0x0d]

@@ -34,14 +34,20 @@ foo:
 
 # CHECK-FOR-STORE: sw  $gp, 8($sp)
 
-# CHECK: .cprestore 8
-# CHECK: jalr  $25                 # encoding: [0x03,0x20,0xf8,0x09]
-# CHECK: nop                       # encoding: [0x00,0x00,0x00,0x00]
-# CHECK: lw    $gp, 8($sp)         # encoding: [0x8f,0xbc,0x00,0x08]
+# CHECK:      .cprestore 8
+# CHECK:      .set push
+# CHECK-NEXT: .set noreorder
+# CHECK-NEXT: jalr  $25            # encoding: [0x03,0x20,0xf8,0x09]
+# CHECK-NEXT: nop                  # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT: .set pop
+# CHECK-NEXT: lw    $gp, 8($sp)    # encoding: [0x8f,0xbc,0x00,0x08]
 
-# CHECK: jalr  $4,  $25            # encoding: [0x03,0x20,0x20,0x09]
-# CHECK: nop                       # encoding: [0x00,0x00,0x00,0x00]
-# CHECK: lw    $gp, 8($sp)         # encoding: [0x8f,0xbc,0x00,0x08]
+# CHECK-NEXT: .set push
+# CHECK-NEXT: .set noreorder
+# CHECK-NEXT: jalr  $4,  $25       # encoding: [0x03,0x20,0x20,0x09]
+# CHECK-NEXT: nop                  # encoding: [0x00,0x00,0x00,0x00]
+# CHECK-NEXT: .set pop
+# CHECK-NEXT: lw    $gp, 8($sp)    # encoding: [0x8f,0xbc,0x00,0x08]
 
 # CHECK: lw    $25, %got(foo)($gp) # encoding: [0x8f,0x99,A,A]
 # CHECK:                           #   fixup A - offset: 0, value: %got(foo), kind: fixup_Mips_GOT
