@@ -23,8 +23,8 @@ define void @test(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 56
-; CHECK-NEXT:    subq $104, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 160
+; CHECK-NEXT:    subq $168, %rsp
+; CHECK-NEXT:    .cfi_def_cfa_offset 224
 ; CHECK-NEXT:    .cfi_offset %rbx, -56
 ; CHECK-NEXT:    .cfi_offset %r12, -48
 ; CHECK-NEXT:    .cfi_offset %r13, -40
@@ -37,50 +37,58 @@ define void @test(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h
 ; CHECK-NEXT:    movl %edx, %r15d
 ; CHECK-NEXT:    movl %esi, %r12d
 ; CHECK-NEXT:    movl %edi, %r13d
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
 ; CHECK-NEXT:    movabsq $_bar, %rax
 ; CHECK-NEXT:    callq *%rax
 ; CHECK-NEXT:    movl %r13d, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %r12d, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %r15d, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %r14d, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r12d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r13d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebp
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r14d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ebx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r11d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r10d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r9d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %r8d
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %esi
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %edx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %ecx
-; CHECK-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; CHECK-NEXT:    movabsq $_bar, %r15
-; CHECK-NEXT:    callq *%r15 ## 96-byte Folded Reload
+; CHECK-NEXT:    movl %r12d, %ecx
+; CHECK-NEXT:    movl %r15d, %edx
+; CHECK-NEXT:    movl %r14d, %esi
+; CHECK-NEXT:    movl %ebp, %edi
+; CHECK-NEXT:    movl %ebx, %r8d
+; CHECK-NEXT:    movabsq $_bar, %r9
+; CHECK-NEXT:    callq *%r9 ## 160-byte Folded Reload
 ; CHECK-NEXT:  Ltmp0:
-; CHECK-NEXT:    addq $104, %rsp
+; CHECK-NEXT:    addq $168, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13

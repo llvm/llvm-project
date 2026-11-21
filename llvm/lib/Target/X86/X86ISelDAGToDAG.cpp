@@ -165,6 +165,10 @@ namespace {
     /// Disable direct TLS access through segment registers.
     bool IndirectTlsSegRefs;
 
+    /// Virtual registers defined in already selected blocks by a value that
+    /// satisfies isDef32.
+    SmallDenseSet<Register, 16> Def32VRegs;
+
   public:
     X86DAGToDAGISel() = delete;
 
@@ -180,6 +184,7 @@ namespace {
 
       // OptFor[Min]Size are used in pattern predicates that isel is matching.
       OptForMinSize = MF.getFunction().hasMinSize();
+      Def32VRegs.clear();
       return SelectionDAGISel::runOnMachineFunction(MF);
     }
 
@@ -527,15 +532,21 @@ namespace {
 
     // Any instruction that defines a 32-bit result zeroes the upper 32 bits of
     // the 64-bit register. Truncate can be lowered to EXTRACT_SUBREG.
-    // CopyFromReg may be copying from a truncate. AssertSext/AssertZext/
-    // AssertAlign aren't saying anything about the upper 32 bits. FREEZE may
-    // be coming from a truncate. BitScan fall through values may not zero the
-    // upper bits correctly. Called from the def32 PatLeaf in tablegen.
+    // CopyFromReg may be copying from a truncate, unless its virtual register
+    // was recorded in Def32VRegs. AssertSext/AssertZext/AssertAlign generate
+    // no code, so look through them. FREEZE may be coming from a truncate.
+    // BitScan fall through values may not zero the upper bits correctly.
+    // Called from the def32 PatLeaf in tablegen.
     bool isDef32(SDNode *N) const {
       unsigned Opc = N->getOpcode();
+      if (Opc == ISD::AssertSext || Opc == ISD::AssertZext ||
+          Opc == ISD::AssertAlign)
+        return isDef32(N->getOperand(0).getNode());
+      if (Opc == ISD::CopyFromReg) {
+        Register Reg = cast<RegisterSDNode>(N->getOperand(1))->getReg();
+        return Reg.isVirtual() && Def32VRegs.contains(Reg);
+      }
       return Opc != ISD::TRUNCATE && Opc != TargetOpcode::EXTRACT_SUBREG &&
-             Opc != ISD::CopyFromReg && Opc != ISD::AssertSext &&
-             Opc != ISD::AssertZext && Opc != ISD::AssertAlign &&
              Opc != ISD::FREEZE &&
              !((Opc == X86ISD::BSF || Opc == X86ISD::BSR) &&
                !N->getOperand(0).isUndef() &&
@@ -1645,6 +1656,17 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
   // Remove any dead nodes that may have been left behind.
   if (MadeChange)
     CurDAG->RemoveDeadNodes();
+
+  // Record virtual registers that pass a def32 value to other blocks.
+  for (SDNode &N : CurDAG->allnodes()) {
+    if (N.getOpcode() != ISD::CopyToReg)
+      continue;
+    Register Reg = cast<RegisterSDNode>(N.getOperand(1))->getReg();
+    SDValue Val = N.getOperand(2);
+    if (Reg.isVirtual() && Val.getValueType() == MVT::i32 &&
+        isDef32(Val.getNode()))
+      Def32VRegs.insert(Reg);
+  }
 }
 
 // Look for a redundant movzx/movsx that can occur after an 8-bit divrem.
