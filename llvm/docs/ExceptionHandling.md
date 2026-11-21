@@ -516,6 +516,25 @@ expressions, and frontends must outline them ahead of time. Local variables of
 the parent function can be escaped and accessed using the `llvm.localescape`
 and `llvm.localrecover` intrinsics.
 
+### Preserving asynchronous SEH regions during IR optimization
+
+For table-based SEH with the `eh-asynch` module flag, invokes of
+`llvm.seh.try.begin` and `llvm.seh.try.end` describe protected regions.
+The handler selected for a fault depends on the instruction address in the
+emitted scope table, so sinking instructions between regions can change which
+handler observes a fault.
+
+`SEHTryRegionInfo` associates IR blocks with their protecting EH pad. Its
+region comparison is conservative for unreachable blocks or ambiguous
+nesting. The result is a snapshot: consumers must recompute it after changing
+the CFG or region markers. InstCombine and CodeGenPrepare use it when deciding
+whether to sink instructions between blocks. The query does not enable new
+behavior for other personalities or for modules without `eh-asynch`.
+
+This analysis consumes existing IR. It does not change Clang's marker emission,
+introduce new intrinsics, or change the language rules for undefined behavior,
+volatile accesses, or `nounwind`.
+
 ### New exception handling instructions
 
 The primary design goal of the new EH instructions is to support funclet
