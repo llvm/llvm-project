@@ -31,6 +31,7 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DebugLog.h"
@@ -1733,7 +1734,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
     newOp = ForallOp::create(rewriter, loc, newMixedLowerBounds,
                              newMixedUpperBounds, newMixedSteps,
                              op.getOutputs(), std::nullopt, nullptr);
-    newOp.getBodyRegion().getBlocks().clear();
+    rewriter.eraseBlock(newOp.getBody());
     newOp.setMappingAttr(op.getMappingAttr());
     newOp->setDiscardableAttrs(op->getDiscardableAttrDictionary());
     rewriter.cloneRegionBefore(op.getRegion(), newOp.getRegion(),
@@ -1764,6 +1765,82 @@ struct ForallOpReplaceConstantInductionVar : public OpRewritePattern<ForallOp> {
       rewriter.replaceAllUsesWith(
           iv, getValueOrCreateConstantIndexOp(rewriter, loc, lb));
       changed = true;
+    }
+    return success(changed);
+  }
+};
+
+/// Replace a read of the init value of a shared_outs in the body with a read of
+/// the tied block argument, when the read is a tensor.extract_slice of a tile
+/// that the iteration also writes with a tensor.parallel_insert_slice. This
+/// lets bufferization read and write the tile in place, without copying the
+/// whole tensor.
+///
+/// Reads of other tiles are left alone, because other iterations may update
+/// them in the block argument but not in the init value.
+///
+/// Example:
+///  INPUT:
+///   scf.forall (%i) ... shared_outs(%arg1 = %a) {
+///     tensor.extract_slice %a[%i] [1]
+///     ...
+///     scf.forall.in_parallel {
+///       tensor.parallel_insert_slice ... into %arg1[%i] [1]
+///     }
+///   }
+///
+///  OUTPUT:
+///   scf.forall (%i) ... shared_outs(%arg1 = %a) {
+///     tensor.extract_slice %arg1[%i] [1]
+///     ...
+///     scf.forall.in_parallel {
+///       tensor.parallel_insert_slice ... into %arg1[%i] [1]
+///     }
+///   }
+struct ForallOpReplaceInitUsesWithBlockArg : public OpRewritePattern<ForallOp> {
+  using OpRewritePattern<ForallOp>::OpRewritePattern;
+
+  /// Whether `slice` is provably equivalent to one of `candidates`.
+  static bool isEquivalentToAny(MLIRContext *ctx,
+                                const HyperrectangularSlice &slice,
+                                ArrayRef<HyperrectangularSlice> candidates) {
+    return llvm::any_of(candidates, [&](const HyperrectangularSlice &other) {
+      FailureOr<bool> equivalent =
+          ValueBoundsConstraintSet::areEquivalentSlices(ctx, slice, other);
+      return succeeded(equivalent) && *equivalent;
+    });
+  }
+
+  LogicalResult matchAndRewrite(ForallOp op,
+                                PatternRewriter &rewriter) const override {
+    bool changed = false;
+    for (OpResult result : op.getResults()) {
+      OpOperand *init = op.getTiedOpOperand(result);
+      BlockArgument blockArg = op.getTiedBlockArgument(init);
+      // The tiles of the shared_outs that the iteration writes.
+      SmallVector<HyperrectangularSlice> written = llvm::map_to_vector(
+          llvm::make_filter_range(op.getCombiningOps(blockArg),
+                                  llvm::IsaPred<tensor::ParallelInsertSliceOp>),
+          [](Operation *combiningOp) {
+            return HyperrectangularSlice(
+                cast<tensor::ParallelInsertSliceOp>(combiningOp));
+          });
+
+      // Whether `use` of the init reads, inside the body, one of those tiles.
+      auto isReadOfWrittenTile = [&](OpOperand &use) {
+        auto extractOp = dyn_cast<tensor::ExtractSliceOp>(use.getOwner());
+        return extractOp && op->isProperAncestor(extractOp) &&
+               isEquivalentToAny(op.getContext(),
+                                 HyperrectangularSlice(extractOp), written);
+      };
+      for (OpOperand &use : llvm::make_early_inc_range(llvm::make_filter_range(
+               init->get().getUses(), isReadOfWrittenTile))) {
+        // Read the block argument instead. Both are the same tensor here, and
+        // for the block argument bufferization can tell that the tile is read
+        // and written in place, with no copy.
+        rewriter.modifyOpInPlace(use.getOwner(), [&] { use.set(blockArg); });
+        changed = true;
+      }
     }
     return success(changed);
   }
@@ -1869,7 +1946,8 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<DimOfForallOp, FoldTensorCastOfOutputIntoForallOp,
               ForallOpControlOperandsFolder, ForallOpIterArgsFolder,
               ForallOpSingleOrZeroIterationDimsFolder,
-              ForallOpReplaceConstantInductionVar>(context);
+              ForallOpReplaceConstantInductionVar,
+              ForallOpReplaceInitUsesWithBlockArg>(context);
 }
 
 void ForallOp::getSuccessorRegions(RegionBranchPoint point,

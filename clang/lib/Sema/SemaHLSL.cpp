@@ -1013,6 +1013,8 @@ static bool isVkPipelineBuiltin(const ASTContext &AstContext, FunctionDecl *FD,
     return true;
   case SemanticKind::InstanceID:
     return ST == llvm::Triple::Vertex && IsInput;
+  case SemanticKind::IsFrontFace:
+    return ST == llvm::Triple::Pixel && IsInput;
   case SemanticKind::ShadingRate:
     // Lowered to:
     //  - ShadingRateKHR built-in for fragment input.
@@ -1526,6 +1528,15 @@ void SemaHLSL::diagnoseSemanticType(const Decl *D,
           << A->getAttrName() << /* scalar */ 0 << 1
           << /* 16 or 32 bit unsigned integer / 32 bit unsigned integer */
           (IsSPIRV ? 4 : 3) << DeclaredTy;
+    return;
+  case SemanticKind::IsFrontFace:
+    // Accept bool or int; SPIR-V FrontFacing BuiltIn is always a bool
+    // and CodeGen converts it to the declared type.
+    if (DeclaredTy != T || !T->isScalarType() ||
+        !(T->isBooleanType() || isIntElementOfWidth(Ctx, T, 32)))
+      Diag(A->getLoc(), diag::err_hlsl_semantic_invalid_type)
+          << A->getAttrName() << /* scalar */ 0 << 1
+          << /* bool or 32 bit integer */ 5 << DeclaredTy;
     return;
   default:
     // Other semantics only have the general signature type restrictions.
@@ -2373,7 +2384,6 @@ void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
   case SemanticKind::OutputControlPointID:
   case SemanticKind::DomainLocation:
   case SemanticKind::GSInstanceID:
-  case SemanticKind::IsFrontFace:
   case SemanticKind::Coverage:
   case SemanticKind::InnerCoverage:
   case SemanticKind::Depth:
@@ -3933,11 +3943,12 @@ static bool CheckNoDoubleVectors(Sema *S, SourceLocation Loc, int ArgOrdinal,
   return false;
 }
 
-static bool CheckFloatingOrIntRepresentation(Sema *S, SourceLocation Loc,
-                                             int ArgOrdinal,
-                                             clang::QualType PassedType) {
-  if (!PassedType->hasIntegerRepresentation() &&
-      !PassedType->hasFloatingRepresentation())
+static bool CheckNumericRepresentation(Sema *S, SourceLocation Loc,
+                                       int ArgOrdinal,
+                                       clang::QualType PassedType) {
+  if (getScalarComponentType(PassedType)->isBooleanType() ||
+      (!PassedType->hasIntegerRepresentation() &&
+       !PassedType->hasFloatingRepresentation()))
     return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
            << ArgOrdinal << /* scalar or vector of */ 5 << /* integer */ 1
            << /* fp */ 1 << PassedType;
@@ -5287,7 +5298,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.PrepareBuiltinElementwiseMathOneArgCall(TheCall))
       return true;
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
-                                   CheckFloatingOrIntRepresentation))
+                                   CheckNumericRepresentation))
       return true;
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().IntTy);
     break;

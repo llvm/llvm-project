@@ -11,11 +11,11 @@
 
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/double_double.h"
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/integer_literals.h"
 #include "src/__support/macros/config.h"

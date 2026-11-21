@@ -7406,8 +7406,8 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // Set up the root buffer of the module to start with the initial
       // diagnostic state of the module itself, to cover files that contain no
       // explicit transitions (for which we did not serialize anything).
-      Diag.DiagStatesByLoc.Files[F.OriginalSourceFileID]
-          .StateTransitions.push_back({FirstState, 0});
+      Diag.DiagStatesByLoc.getOrInsertFile(F.OriginalSourceFileID)
+          .first->StateTransitions.push_back({FirstState, 0});
     } else {
       // For prefix ASTs, start with whatever the user configured on the
       // command line.
@@ -7428,7 +7428,7 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // we won't be changing the diagnostic state within imported FileIDs
       // (other than perhaps appending to the main source file, which has no
       // parent).
-      auto &F = Diag.DiagStatesByLoc.Files[FID];
+      auto &F = *Diag.DiagStatesByLoc.getOrInsertFile(FID).first;
       F.StateTransitions.reserve(F.StateTransitions.size() + Transitions);
       for (unsigned I = 0; I != Transitions; ++I) {
         unsigned Offset = Record[Idx++];
@@ -7450,7 +7450,8 @@ void ASTReader::ReadPragmaDiagnosticMappings(DiagnosticsEngine &Diag) {
       // Preserve the property that the imaginary root file describes the
       // current state.
       FileID NullFile;
-      auto &T = Diag.DiagStatesByLoc.Files[NullFile].StateTransitions;
+      auto &T = Diag.DiagStatesByLoc.getOrInsertFile(NullFile)
+                    .first->StateTransitions;
       if (T.empty())
         T.push_back({CurState, 0});
       else
@@ -7674,19 +7675,25 @@ void TypeLocReader::VisitDependentAddressSpaceTypeLoc(
 void TypeLocReader::VisitDependentSizedExtVectorTypeLoc(
                                         DependentSizedExtVectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitVectorTypeLoc(VectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitDependentVectorTypeLoc(
     DependentVectorTypeLoc TL) {
   TL.setNameLoc(readSourceLocation());
+  TL.setAttrNameLoc(readSourceLocation());
+  TL.setSizeExpr(Reader.readExpr());
 }
 
 void TypeLocReader::VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-  TL.setNameLoc(readSourceLocation());
+  VisitVectorTypeLoc(TL);
 }
 
 void TypeLocReader::VisitConstantMatrixTypeLoc(ConstantMatrixTypeLoc TL) {

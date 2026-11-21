@@ -1362,12 +1362,9 @@ static uint16_t getChainedFixupsPointerFormat() {
 }
 
 static bool shouldEmitRelativeMethodLists(const InputArgList &args) {
-  const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
-                                   OPT_no_objc_relative_method_lists);
-  if (arg && arg->getOption().getID() == OPT_objc_relative_method_lists)
-    return true;
-  if (arg && arg->getOption().getID() == OPT_no_objc_relative_method_lists)
-    return false;
+  if (const Arg *arg = args.getLastArg(OPT_objc_relative_method_lists,
+                                       OPT_no_objc_relative_method_lists))
+    return arg->getOption().matches(OPT_objc_relative_method_lists);
 
   // If no flag is specified, enable this on newer versions by default.
   // The min versions is taken from
@@ -2141,7 +2138,11 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       args.hasFlag(OPT_warn_missing_subsections_via_symbols,
                    OPT_no_warn_missing_subsections_via_symbols, false);
   config->generateUuid = !args.hasArg(OPT_no_uuid);
+#ifdef NDEBUG
+  config->disableVerify = true;
+#else
   config->disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   config->separateCstringLiteralSections =
       args.hasFlag(OPT_separate_cstring_literal_sections,
                    OPT_no_separate_cstring_literal_sections, false);
@@ -2499,8 +2500,6 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
       for (const Arg *arg : args.filtered(OPT_sub_library))
         reexportHandler(arg, extensions);
     }
-
-    cl::ResetAllOptionOccurrences();
 
     // Parse LTO options.
     if (const Arg *arg = args.getLastArg(OPT_mcpu))

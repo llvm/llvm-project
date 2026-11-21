@@ -10,7 +10,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINCOSF_UTILS_H
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
@@ -121,7 +121,7 @@ sincosf_eval(double xd, uint32_t x_abs, double &sin_k, double &cos_k,
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT int64_t range_reduction_sincospi(double x,
                                                                     double &y) {
   double kd = fputil::nearest_integer(x * 32);
-  y = fputil::multiply_add(x, 32.0, -kd);
+  y = fputil::multiply_sub(x, 32.0, kd);
 
   return static_cast<int64_t>(kd);
 }

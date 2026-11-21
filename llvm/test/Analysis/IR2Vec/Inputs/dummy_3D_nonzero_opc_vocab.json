@@ -89,6 +89,7 @@
         "Pointer": [0, 0, 0],
         "Constant": [0, 0, 0],
         "Variable": [0, 0, 0],
+        "Label": [0, 0, 0],
         "FCMP_false": [0, 0, 0],
         "FCMP_oeq": [0, 0, 0],
         "FCMP_ogt": [0, 0, 0],

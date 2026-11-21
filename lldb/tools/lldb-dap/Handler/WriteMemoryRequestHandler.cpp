@@ -42,8 +42,7 @@ WriteMemoryRequestHandler::Run(const WriteMemoryArguments &args) const {
   auto decode_error = llvm::decodeBase64(args.data, output);
 
   if (decode_error) {
-    return llvm::make_error<DAPError>(
-        llvm::toString(std::move(decode_error)).c_str());
+    return llvm::make_error<DAPError>(llvm::toString(std::move(decode_error)));
   }
 
   lldb::SBError write_error;

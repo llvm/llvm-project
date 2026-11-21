@@ -33,6 +33,7 @@ public:
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
@@ -41,6 +42,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void LanaiCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -72,8 +75,6 @@ void LanaiCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void LanaiCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(LanaiAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void LanaiTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "LanaiPassRegistry.def"
