@@ -26,7 +26,19 @@
 // RUN:     --rocm-path=%S/Inputs/rocm --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x hip %s 2>&1 | FileCheck %s --check-prefix=HIP
 // HIP-NOT: "--device-linker=amdgcn-amd-amdhsa=-lc"
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx908 \
+// RUN:     -foffload-via-llvm --sysroot=%S/Inputs/basic_gpu_tree \
+// RUN:     -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x hip %s 2>&1 | FileCheck %s --check-prefix=HIP-VIA-LLVM
+// HIP-VIA-LLVM-NOT: "--device-linker=amdgcn-amd-amdhsa-llvm=-lc"
+// HIP-VIA-LLVM-NOT: "--device-linker=amdgcn-amd-amdhsa-llvm=-lm"
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fgpu-rdc --offload-arch=sm_52 \
 // RUN:     --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda --sysroot=%S/Inputs/basic_gpu_tree \
 // RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x cuda %s 2>&1 | FileCheck %s --check-prefix=CUDA
 // CUDA-NOT: "--device-linker=nvptx64-nvidia-cuda=-lc"
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=sm_52 \
+// RUN:     -foffload-via-llvm --sysroot=%S/Inputs/basic_gpu_tree \
+// RUN:     -resource-dir %S/Inputs/resource_dir_with_per_target_subdir \
+// RUN:     -ccc-install-dir %S/Inputs/basic_gpu_tree/bin -x cuda %s 2>&1 | FileCheck %s --check-prefix=CUDA-VIA-LLVM
+// CUDA-VIA-LLVM-NOT: "--device-linker=nvptx64-nvidia-cuda-llvm=-lc"
+// CUDA-VIA-LLVM-NOT: "--device-linker=nvptx64-nvidia-cuda-llvm=-lm"
