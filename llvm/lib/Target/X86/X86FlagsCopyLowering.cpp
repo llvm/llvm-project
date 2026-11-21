@@ -489,7 +489,11 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
       // No clobber found along a path from the begin to end.
       return false;
     };
+    // Don't hoist out of an INLINEASM_BR's indirect target. The asm branches
+    // there from the middle of its block, so a test at the end of that block
+    // wouldn't run on the way.
     while (TestMBB->isLiveIn(X86::EFLAGS) && !TestMBB->pred_empty() &&
+           !TestMBB->isInlineAsmBrIndirectTarget() &&
            !HasEFLAGSClobber(TestMBB->begin(), TestPos)) {
       // Find the nearest common dominator of the predecessors, as
       // that will be the best candidate to hoist into.
@@ -551,8 +555,28 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
     SmallPtrSet<MachineBasicBlock *, 2> VisitedBlocks;
     Blocks.push_back(&MBB);
 
+    // An INLINEASM_BR before the copy branches to its indirect targets before
+    // the copy runs, so the copied EFLAGS don't reach them along that edge.
+    // They read the EFLAGS at the asm instead.
+    SmallPtrSet<MachineBasicBlock *, 2> IndirectTargetsBeforeCopy;
+    if (MBB.mayHaveInlineAsmBr()) {
+      for (MachineInstr &MI :
+           make_range(MBB.instr_begin(), CopyI->getIterator())) {
+        if (MI.getOpcode() != TargetOpcode::INLINEASM_BR)
+          continue;
+
+        for (const MachineOperand &MO : MI.operands())
+          if (MO.isMBB())
+            IndirectTargetsBeforeCopy.insert(MO.getMBB());
+      }
+    }
+
     do {
       MachineBasicBlock &UseMBB = *Blocks.pop_back_val();
+
+      // The first scan of the copy's block starts at the copy. A later one,
+      // around a cycle, starts at the top of the block.
+      bool ScanFromCopy = &UseMBB == &MBB && !VisitedBlocks.contains(&UseMBB);
 
       // Track when if/when we find a kill of the flags in this block.
       bool FlagsKilled = false;
@@ -566,9 +590,8 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
       // a symptom of all of this routine needing to be refactored into
       // documentable components. Once done, there may be a better way to write
       // this loop.
-      for (auto MII = (&UseMBB == &MBB && !VisitedBlocks.count(&UseMBB))
-                          ? std::next(CopyI->getIterator())
-                          : UseMBB.instr_begin(),
+      for (auto MII = ScanFromCopy ? std::next(CopyI->getIterator())
+                                   : UseMBB.instr_begin(),
                 MIE = UseMBB.instr_end();
            MII != MIE;) {
         MachineInstr &MI = *MII++;
@@ -644,6 +667,7 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
       // and queue those up for processing.
       for (MachineBasicBlock *SuccMBB : UseMBB.successors())
         if (SuccMBB->isLiveIn(X86::EFLAGS) &&
+            !(ScanFromCopy && IndirectTargetsBeforeCopy.contains(SuccMBB)) &&
             VisitedBlocks.insert(SuccMBB).second) {
           // We currently don't do any PHI insertion and so we require that the
           // test basic block dominates all of the use basic blocks. Further, we
