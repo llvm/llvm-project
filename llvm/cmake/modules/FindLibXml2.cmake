@@ -36,6 +36,7 @@ find_library(LIBXML2_STATIC_LIBRARY NAMES
   "${CMAKE_STATIC_LIBRARY_PREFIX}libxml2s${CMAKE_STATIC_LIBRARY_SUFFIX}"
   "${CMAKE_STATIC_LIBRARY_PREFIX}xml2${CMAKE_STATIC_LIBRARY_SUFFIX}"
   "${CMAKE_STATIC_LIBRARY_PREFIX}libxml2${CMAKE_STATIC_LIBRARY_SUFFIX}"
+  "${CMAKE_STATIC_LIBRARY_PREFIX}libxml2s${CMAKE_STATIC_LIBRARY_SUFFIX}"
   HINTS
   ${PC_LIBXML_LIBDIR}
   ${PC_LIBXML_LIBRARY_DIRS}
@@ -91,8 +92,17 @@ if(LibXml2_FOUND)
         IMPORTED_LOCATION "${LIBXML2_LIBRARY}")
     # A prefix containing only a static libxml2 also supplies the default target.
     if(LIBXML2_LIBRARY STREQUAL LIBXML2_STATIC_LIBRARY)
-      set_property(TARGET LibXml2::LibXml2 PROPERTY
-        INTERFACE_LINK_LIBRARIES "${LIBXML2_STATIC_DEPS}")
+      if(LIBXML2_STATIC_DEPS)
+        set_property(TARGET LibXml2::LibXml2 PROPERTY
+          INTERFACE_LINK_LIBRARIES "${LIBXML2_STATIC_DEPS}")
+      endif()
+      set_target_properties(LibXml2::LibXml2 PROPERTIES
+          INTERFACE_COMPILE_DEFINITIONS LIBXML_STATIC)
+      if (WIN32)
+        # On Windows Libxml2 requires bcrypt.lib for static linking.
+        set_target_properties(LibXml2::LibXml2 PROPERTIES
+            INTERFACE_LINK_LIBRARIES $<LINK_ONLY:bcrypt>)
+      endif()
     endif()
   endif()
   if(LIBXML2_STATIC_LIBRARY AND NOT TARGET LibXml2::LibXml2Static)
@@ -100,11 +110,17 @@ if(LibXml2_FOUND)
     set_target_properties(LibXml2::LibXml2Static PROPERTIES
         INTERFACE_INCLUDE_DIRECTORIES "${LIBXML2_INCLUDE_DIR}"
         INTERFACE_COMPILE_OPTIONS "${LIBXML2_DEFINITIONS}"
+        INTERFACE_COMPILE_DEFINITIONS LIBXML_STATIC
         IMPORTED_LOCATION "${LIBXML2_STATIC_LIBRARY}")
     if(LIBXML2_STATIC_DEPS)
       set_target_properties(LibXml2::LibXml2Static PROPERTIES
           INTERFACE_LINK_LIBRARIES "${LIBXML2_STATIC_DEPS}")
     endif()
+    if (WIN32)
+      # On Windows Libxml2 requires bcrypt.lib for static linking.
+      set_target_properties(LibXml2::LibXml2Static PROPERTIES
+          INTERFACE_LINK_LIBRARIES $<LINK_ONLY:bcrypt>)
+	  endif()
   endif()
 endif()
 
