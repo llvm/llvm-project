@@ -130,10 +130,9 @@ static APFloat::opStatus executeFold(FPOp Opcode, APFloat &Result,
 /// If RM is necessary for the operation, it must be valid and non-dynamic.
 /// Dynamic denormal modes reject the fold if subnormal inputs are present or
 /// if the output is subnormal and may need flushing.
-static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
-                                                   ArrayRef<APFloat> Args,
-                                                   RoundingMode RM,
-                                                   DenormalMode Denorms) {
+static std::optional<FPFoldResult>
+tryFoldFPOpImpl(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
+                DenormalMode Denorms, bool AvoidFoldingToNaN) {
   assert(!Args.empty() && Args.size() <= 3);
   assert(Denorms.isValid() && "invalid denormal mode");
 
@@ -148,6 +147,8 @@ static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
   APFloat Result = FlushedArgs[0];
   APFloat::opStatus Status = executeFold(Opcode, Result, FlushedArgs, RM);
 
+  if (AvoidFoldingToNaN && Result.isNaN())
+    return std::nullopt;
   if (Denorms.Output == DenormalMode::Dynamic && Result.isDenormal())
     return std::nullopt;
   if (Denorms.Output != DenormalMode::IEEE &&
@@ -158,24 +159,24 @@ static std::optional<FPFoldResult> tryFoldFPOpImpl(FPOp Opcode,
 
 // Fold FPOps that do not require a rounding mode (or use the default RN)
 std::optional<FPFoldResult> llvm::tryFoldFP(FPOp Opcode, ArrayRef<APFloat> Args,
-                                            DenormalMode Denorms) {
+                                            DenormalMode Denorms,
+                                            bool AvoidFoldingToNaN) {
   assert(!Args.empty());
-  return tryFoldFPOpImpl(Opcode, Args, RoundingMode::NearestTiesToEven,
-                         Denorms);
+  return tryFoldFPOpImpl(Opcode, Args, RoundingMode::NearestTiesToEven, Denorms,
+                         AvoidFoldingToNaN);
 }
 
 // Fold FPOps that do require a rounding mode. Handle the possibility
 // that the RM is dynamic (fold with RN and allow the fold
 // only if no rounding is required).
-std::optional<FPFoldResult> llvm::tryFoldFPWithRM(FPOp Opcode,
-                                                  ArrayRef<APFloat> Args,
-                                                  RoundingMode RM,
-                                                  DenormalMode Denorms) {
+std::optional<FPFoldResult>
+llvm::tryFoldFPWithRM(FPOp Opcode, ArrayRef<APFloat> Args, RoundingMode RM,
+                      DenormalMode Denorms, bool AvoidFoldingToNaN) {
   assert(RM != RoundingMode::Invalid && "invalid rounding mode");
   assert(!Args.empty());
   RoundingMode EvalRM =
       RM == RoundingMode::Dynamic ? RoundingMode::NearestTiesToEven : RM;
-  auto Res = tryFoldFPOpImpl(Opcode, Args, EvalRM, Denorms);
+  auto Res = tryFoldFPOpImpl(Opcode, Args, EvalRM, Denorms, AvoidFoldingToNaN);
   if (RM == RoundingMode::Dynamic && Res && (Res->Status & APFloat::opInexact))
     return std::nullopt;
   return Res;
