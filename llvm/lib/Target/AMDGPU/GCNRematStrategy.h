@@ -33,7 +33,13 @@ namespace llvm {
 ///    target-independent logic, or if not, has no non-constant and
 ///    non-ignorable physical register use.
 /// 3  The register has no virtual register use whose live range would be
-///    extended by the rematerialization.
+///    extended by the rematerialization. When reducing spilling under
+///    -amdgpu-remat-extend-deps, rematerializable dependencies holding a single
+///    value that still reaches the rematerialization points are exempt; their
+///    live range is extended instead. This is only allowed when the
+///    register's own pressure covers the pressure of those dependencies in
+///    every register class, such that the rematerialization cannot increase
+///    RP anywhere.
 /// 4. The register has at least one user outside its defining region. If
 ///    rematerialized, one copy is made per using region and the original
 ///    register stays if the defining region has users.
@@ -142,6 +148,11 @@ private:
     void addToLiveMaps(Register Reg, LaneBitmask Mask, const BitVector &LiveIn,
                        const BitVector &LiveOut);
 
+    /// Sets the live-in and live-out lanes of register \p Reg in regions set in
+    /// \p Regions from its current live interval. Returns the regions in which
+    /// \p Reg became live-in or live-out.
+    BitVector refreshLiveMaps(Register Reg, const BitVector &Regions);
+
   private:
     static const uint64_t FreqScaleFactor = 1024;
 
@@ -183,6 +194,10 @@ private:
     void updateRPTargets(const BitVector &UpdateRegions,
                          const GCNRegPressure &RPSave);
 
+    /// In all regions set in \p UpdateRegions, adds pressure \p AddedRP and
+    /// sets it as a target if its RP target is no longer reached.
+    void addRP(const BitVector &UpdateRegions, const GCNRegPressure &AddedRP);
+
     /// Fully recomputes RP from the DAG in \p UpdateRegions. Among those
     /// regions, sets again all targets that were optimistically marked as
     /// satisfied but are actually not, and returns whether there were any such
@@ -200,6 +215,9 @@ private:
   struct RematCandidate {
     /// The register index handle in the rematerializer.
     RegisterIdx RegIdx;
+    /// Rematerializable dependencies whose live range has to be extended to
+    /// reach the rematerialization points.
+    SmallVector<RegisterIdx, 2> ExtendedDeps;
     /// Regions in which the register is live-in/live-out/live anywhere.
     BitVector LiveIn, LiveOut, Live;
     /// Subset of \ref Live regions in which the rematerialization is not
@@ -320,15 +338,36 @@ private:
   LiveIntervals &LIS;
 
   /// Creates rematerialization candidates. The strategy has more restrictions
-  /// on what it can rematerialize compared to the rematerializer.
-  void createCandidates();
+  /// on what it can rematerialize compared to the rematerializer. When \p
+  /// AllowExtendDeps is set, candidates may have rematerializable dependencies
+  /// whose live range has to be extended to reach the rematerialization points.
+  void createCandidates(bool AllowExtendDeps);
 
   /// Determines whether users of rematerialization candidate \p CandIdx are
   /// compatible with the strategy's rematerialization constraints/limitations.
   /// Registers in \p MarkedRegs have already been deemed rematerializable by
-  /// the strategy.
-  bool candidateHasValidUsers(RegisterIdx CandIdx,
-                              const SmallSet<Register, 4> &MarkedRegs) const;
+  /// the strategy. When \p ExtendedDeps is non-null, a rematerializable
+  /// dependency which is not live at a rematerialization point but whose value
+  /// still reaches it does not invalidate the candidate; it is instead added to
+  /// \p ExtendedDeps.
+  bool candidateHasValidUsers(
+      RegisterIdx CandIdx, const SmallSet<Register, 4> &MarkedRegs,
+      SmallVectorImpl<RegisterIdx> *ExtendedDeps = nullptr) const;
+
+  /// Determines whether the pressure of rematerialization candidate \p CandIdx
+  /// covers the summed pressure of \p ExtendedDeps in every register class.
+  /// Extended dependencies only become live in regions where the candidate was
+  /// live and no longer is after rematerialization. So when this function
+  /// returns true the rematerialization does notincrease RP in any of these
+  /// regions.
+  bool
+  candidateSaveCoversExtendedDeps(RegisterIdx CandIdx,
+                                  ArrayRef<RegisterIdx> ExtendedDeps) const;
+
+  /// Refreshes live-ins/live-outs of \p Cand's extended dependencies in the
+  /// regions where \p Cand was live, and adds the dependencies' pressure to
+  /// \p Targets in regions where they became live-in or live-out.
+  void updateExtendedDeps(const RematCandidate &Cand, RematTargets &Targets);
 };
 
 } // namespace llvm
