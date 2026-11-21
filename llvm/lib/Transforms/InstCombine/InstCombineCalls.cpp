@@ -5486,9 +5486,21 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
   return Changed ? &Call : nullptr;
 }
 
-/// If the callee is a constexpr cast of a function, attempt to move the cast to
-/// the arguments of the call/invoke.
-/// CallBrInst is not supported.
+/// If the function type does not match between the call-site and the callee,
+/// try to adjust the call-site signature to match.
+///
+/// In practice, we care about this in two contexts. In K&R style C:
+///  * K&R style function declarations like "void foo();" leave the function
+///    arguments unspecified. On some targets, this will be lowered to a
+///    variadic call "call void (...) @foo()", while the corresponding
+///    definition will be non-variadic.
+///
+/// In Fortran when implicit interfaces are used:
+///  * Trailing extra arguments at the call-site, e.g. when passing a Fortran
+///    CHARACTER to a function taking an INTEGER(1) argument.
+///  * Missing arguments at the call-site, when emulating variadic functions
+///    in F77, prior to OPTIONAL support.
+///  * A call-site with void return calling a function with a non-void return.
 bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   auto *Callee =
       dyn_cast<Function>(Call.getCalledOperand()->stripPointerCasts());
