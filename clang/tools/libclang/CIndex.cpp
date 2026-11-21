@@ -4748,7 +4748,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
 
   if (expr->getStmtClass() == Stmt::ImplicitCastExprClass) {
     const auto *I = cast<ImplicitCastExpr>(expr);
-    auto *subExpr = I->getSubExprAsWritten();
+    auto *subExpr = I->getSubExprAsWritten()->IgnoreParens();
     if (subExpr->getStmtClass() == Stmt::StringLiteralClass ||
         subExpr->getStmtClass() == Stmt::ObjCStringLiteralClass) {
       const StringLiteral *StrE = nullptr;
@@ -4759,7 +4759,7 @@ static const ExprEvalResult *evaluateExpr(Expr *expr, CXCursor C) {
         StrE = ObjCExpr->getString();
         result->EvalType = CXEval_ObjCStrLiteral;
       } else {
-        StrE = cast<StringLiteral>(I->getSubExprAsWritten());
+        StrE = cast<StringLiteral>(subExpr);
         result->EvalType = CXEval_StrLiteral;
       }
 
