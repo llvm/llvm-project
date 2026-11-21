@@ -150,6 +150,9 @@ void test17(void) {
   T(EnumValue1);
   T((enum Enum)(int)EnumValue2);
 
+  //  - a record that folds to a known value
+  T((struct Aggregate){0, 1});
+
   //  - the address of the first character of a string literal, losslessly cast
   //    to any type
   T("string literal");
@@ -163,7 +166,6 @@ void test17(void) {
   F(test17_c);
   F(&test17_c);
   F(&test17_d);
-  F((struct Aggregate){0, 1});
   F((IntVector){0, 1, 2, 3});
   F(test17);
 

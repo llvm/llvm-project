@@ -275,7 +275,7 @@ static bool CheckTemporary(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 }
 
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
-                              PrimType PT);
+                              PrimType PT, bool IsRecord);
 
 bool diagnoseShiftFailure(InterpState &S, CodePtr OpPC, ShiftFailure Failure,
                           const APSInt *Value, unsigned Bits) {
@@ -339,7 +339,67 @@ void cleanupAfterFunctionCall(InterpState &S, const Function *Func) {
     S.Stk.discard<Pointer>();
 }
 
-bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
+static bool CheckBCPRecord(InterpState &S, CodePtr OpPC, const Pointer &Ptr);
+
+static bool CheckBCPArray(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+
+  for (unsigned I = 0, N = Ptr.getNumElems(); I != N; ++I) {
+    Pointer Elem = Ptr.atIndex(I).narrow();
+    const Descriptor *Desc = Elem.getFieldDesc();
+    if (Desc->isRecord()) {
+      if (!CheckBCPRecord(S, OpPC, Elem))
+        return false;
+    } else if (Desc->isArray()) {
+      if (!CheckBCPArray(S, OpPC, Elem))
+        return false;
+    } else if (!CheckLoad(S, OpPC, Elem)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+static bool CheckBCPRecord(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
+  if (!CheckLoad(S, OpPC, Ptr))
+    return false;
+
+  const Record *R = Ptr.getRecord();
+  if (!R)
+    return false;
+
+  for (const Record::Field &F : R->fields()) {
+    Pointer Field = Ptr.atField(F.Offset);
+    if (R->isUnion() && !Field.isActive())
+      continue;
+
+    const Descriptor *Desc = Field.getFieldDesc();
+    if (Desc->isRecord()) {
+      if (!CheckBCPRecord(S, OpPC, Field))
+        return false;
+    } else if (Desc->isArray()) {
+      if (!CheckBCPArray(S, OpPC, Field))
+        return false;
+    } else if (!CheckLoad(S, OpPC, Field)) {
+      return false;
+    }
+  }
+
+  for (const Record::Base &B : R->bases())
+    if (!CheckBCPRecord(S, OpPC, Ptr.atField(B.Offset)))
+      return false;
+
+  if (!Ptr.isBaseClass())
+    for (const Record::Base &B : R->virtual_bases())
+      if (!CheckBCPRecord(S, OpPC, Ptr.atField(B.Offset)))
+        return false;
+
+  return true;
+}
+
+bool CheckBCPResult(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
+                    bool IsRecord) {
   if (Ptr.isDummy())
     return false;
   if (Ptr.isZero())
@@ -350,6 +410,12 @@ bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
     return true;
   if (Ptr.isTypeidPointer())
     return true;
+
+  if (IsRecord) {
+    PushIgnoreDiags(S);
+    auto _ = llvm::scope_exit([&]() { PopIgnoreDiags(S); });
+    return CheckBCPRecord(S, OpPC, Ptr);
+  }
 
   if (Ptr.getType()->isAnyComplexType())
     return true;
@@ -3847,8 +3913,8 @@ bool Interpret(InterpState &S) {
 /// OR (of course), when we encounter an error and one of the opcodes
 /// returns false.
 PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
-                              PrimType PT) {
-  // PC after reading the BCP opcode and both Offset/PT arguments.
+                              PrimType PT, bool IsRecord) {
+  // PC after reading the BCP opcode and its Offset/PT/IsRecord arguments.
   [[maybe_unused]] CodePtr PCBefore = S.PC;
   size_t StackSizeBefore = S.Stk.size();
 
@@ -3889,7 +3955,7 @@ PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
       const auto &Ptr = S.Stk.pop<Pointer>();
       assert(S.Stk.size() == StackSizeBefore);
       S.Stk.push<Integral<32, true>>(
-          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
+          Integral<32, true>::from(CheckBCPResult(S, OpPC, Ptr, IsRecord)));
     } else {
       // Pop the result from the stack and return success.
       TYPE_SWITCH(PT, S.Stk.discard<T>(););
@@ -3899,7 +3965,7 @@ PRESERVE_NONE static bool BCP(InterpState &S, CodePtr OpPC, int32_t Offset,
   } else {
     // Jump to the end of the speculation, just after the actual EndSpeculation
     // op.
-    S.PC = PCBefore + Offset - align(sizeof(Opcode));
+    S.PC = PCBefore + Offset - align(sizeof(PrimType)) - align(sizeof(bool));
 
     // End the speculation manually since we didn't call EndSpeculation
     // naturally.
