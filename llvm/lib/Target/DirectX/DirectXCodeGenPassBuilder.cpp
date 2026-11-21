@@ -99,12 +99,9 @@ void DirectXCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(DXILAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
-Error DirectXCodeGenPassBuilder::buildPipelineImpl(PassManagerWrapper &PMW,
-                                                   ModuleAnalysisManager &MAM,
-                                                   raw_pwrite_stream &Out,
-                                                   raw_pwrite_stream *DwoOut,
-                                                   CodeGenFileType FileType,
-                                                   MCContext &Ctx) {
+Error DirectXCodeGenPassBuilder::buildPipelineImpl(
+    PassManagerWrapper &PMW, ModuleAnalysisManager &MAM, raw_pwrite_stream &Out,
+    raw_pwrite_stream *DwoOut, CodeGenFileType FileType, MCContext &Ctx) {
   addModulePass(RequireAnalysisPass<MachineModuleAnalysis, Module>(), PMW,
                 /*Force=*/true);
   addCodeGenPrepare(PMW);
