@@ -6156,6 +6156,11 @@ AbstractManglingParser<Derived, Alloc>::parseTemplateArgs(bool TagTemplates) {
   if (!consumeIf('I'))
     return nullptr;
 
+  // Template arguments after a type are ambiguous only at the outermost level
+  // of a conversion operator's <type>. Everything nested inside this I...E
+  // belongs to its own types, so re-enable them.
+  ScopedOverride<bool> SaveTemplate(TryToParseTemplateArgs, true);
+
   // <template-params> refer to the innermost <template-args>. Clear out any
   // outer args that we may have inserted into TemplateParams.
   if (TagTemplates) {
