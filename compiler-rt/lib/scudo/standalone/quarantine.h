@@ -103,21 +103,37 @@ public:
     addToSize(B->Size);
   }
 
-  QuarantineBatch *dequeueBatch() {
+  QuarantineBatch *dequeueBatch(Callback Cb) {
     if (List.empty())
       return nullptr;
     QuarantineBatch *B = List.front();
+    // The batch may have been reached through a corrupted link: make sure it is
+    // one of ours before following its own link or reading its size.
+    Cb.checkBatch(B);
     List.pop_front();
     subFromSize(B->Size);
     return B;
   }
 
-  void mergeBatches(QuarantineCache *ToDeallocate) {
+  void mergeBatches(Callback Cb, QuarantineCache *ToDeallocate) {
     uptr ExtractedSize = 0;
     QuarantineBatch *Current = List.front();
+    if (Current)
+      Cb.checkBatch(Current);
+    // The number of batches walked past: only the last batch of the list has
+    // no next one, so a corrupted link can't take the walk past the end of the
+    // list or around a cycle.
+    uptr Walked = 0;
     while (Current && Current->Next) {
-      if (Current->canMerge(Current->Next)) {
-        QuarantineBatch *Extracted = Current->Next;
+      QuarantineBatch *Next = Current->Next;
+      CHECK_LT(Walked + 1, List.size());
+      // A corrupted link leaves the header of the current batch intact, so the
+      // next batch must be checked before it is merged or walked to, and must
+      // not be the current batch itself.
+      CHECK_NE(Next, Current);
+      Cb.checkBatch(Next);
+      if (Current->canMerge(Next)) {
+        QuarantineBatch *Extracted = Next;
         // Move all the chunks into the current batch.
         Current->merge(Extracted);
         DCHECK_EQ(Extracted->Count, 0);
@@ -128,7 +144,8 @@ public:
         // Add it to deallocation list.
         ToDeallocate->enqueueBatch(Extracted);
       } else {
-        Current = Current->Next;
+        Current = Next;
+        Walked++;
       }
     }
     subFromSize(ExtractedSize);
@@ -180,8 +197,8 @@ public:
   void enqueue(UNUSED Callback Cb, UNUSED void *Ptr, UNUSED uptr Size) {}
   void transfer(UNUSED QuarantineCache *From) {}
   void enqueueBatch(UNUSED QuarantineBatch *B) {}
-  QuarantineBatch *dequeueBatch() { return nullptr; }
-  void mergeBatches(UNUSED QuarantineCache *ToDeallocate) {}
+  QuarantineBatch *dequeueBatch(UNUSED Callback Cb) { return nullptr; }
+  void mergeBatches(UNUSED Callback Cb, UNUSED QuarantineCache *ToDeallocate) {}
   void getStats(UNUSED ScopedString *Str) const {}
 };
 
@@ -189,6 +206,7 @@ public:
 // void Callback::recycle(Node *Ptr);
 // void *Callback::allocate(uptr Size);
 // void Callback::deallocate(void *Ptr);
+// void Callback::checkBatch(void *Ptr);
 template <typename Callback, typename Node, bool QuarantineDisabled = false>
 class GlobalQuarantine {
 public:
@@ -296,19 +314,19 @@ private:
       if (CacheSize > OverheadSize &&
           OverheadSize * (100 + OverheadThresholdPercents) >
               CacheSize * OverheadThresholdPercents) {
-        Cache.mergeBatches(&Tmp);
+        Cache.mergeBatches(Cb, &Tmp);
       }
       // Extract enough chunks from the quarantine to get below the max
       // quarantine size and leave some leeway for the newly quarantined chunks.
       while (Cache.getSize() > MinSize)
-        Tmp.enqueueBatch(Cache.dequeueBatch());
+        Tmp.enqueueBatch(Cache.dequeueBatch(Cb));
     }
     RecycleMutex.unlock();
     doRecycle(&Tmp, Cb);
   }
 
   void NOINLINE doRecycle(CacheT *C, Callback Cb) {
-    while (QuarantineBatch *B = C->dequeueBatch()) {
+    while (QuarantineBatch *B = C->dequeueBatch(Cb)) {
       const u32 Seed = static_cast<u32>(
           (reinterpret_cast<uptr>(B) ^ reinterpret_cast<uptr>(C)) >> 4);
       B->shuffle(Seed);
