@@ -200,8 +200,29 @@ Preprocessor::~Preprocessor() {
     delete &HeaderInfo;
 }
 
-void Preprocessor::Initialize(const TargetInfo &Target,
-                              const TargetInfo *AuxTarget) {
+#ifndef NDEBUG
+/// Whether \p Builtins were collected for \p Target and \p AuxTarget.
+static bool areBuiltinsFor(const Builtin::TargetBuiltins &Builtins,
+                           const TargetInfo &Target,
+                           const TargetInfo *AuxTarget) {
+  auto SameShards = [](ArrayRef<Builtin::InfosShard> A,
+                       ArrayRef<Builtin::InfosShard> B) {
+    return llvm::equal(
+        A, B, [](const Builtin::InfosShard &X, const Builtin::InfosShard &Y) {
+          return X.Infos.data() == Y.Infos.data() &&
+                 X.Infos.size() == Y.Infos.size();
+        });
+  };
+  return SameShards(Builtins.getTargetShards(), Target.getTargetBuiltins()) &&
+         SameShards(Builtins.getAuxTargetShards(),
+                    AuxTarget ? AuxTarget->getTargetBuiltins()
+                              : SmallVector<Builtin::InfosShard>());
+}
+#endif
+
+void Preprocessor::Initialize(
+    const TargetInfo &Target, const TargetInfo *AuxTarget,
+    std::shared_ptr<const Builtin::TargetBuiltins> SharedBuiltins) {
   assert((!this->Target || this->Target == &Target) &&
          "Invalid override of target information");
   this->Target = &Target;
@@ -210,12 +231,22 @@ void Preprocessor::Initialize(const TargetInfo &Target,
          "Invalid override of aux target information.");
   this->AuxTarget = AuxTarget;
 
-  // Initialize information about built-ins.
-  BuiltinInfo->InitializeTarget(Target, AuxTarget);
+  // Initialize information about built-ins. The context is replaced rather
+  // than created here because an ASTContext may already refer to it.
+  assert(
+      (!SharedBuiltins || areBuiltinsFor(*SharedBuiltins, Target, AuxTarget)) &&
+      "Builtins collected for other targets");
+  *BuiltinInfo = SharedBuiltins ? Builtin::Context(std::move(SharedBuiltins))
+                                : Builtin::Context(Target, AuxTarget);
   HeaderInfo.setTarget(Target);
 
   // Populate the identifier table with info about keywords for the current language.
   Identifiers.AddKeywords(LangOpts);
+
+  // Make the identifier table assign builtin IDs. This is done before any AST
+  // file gets loaded, so that the identifiers read from AST files get their
+  // builtin IDs from this compilation rather than from the AST file.
+  Identifiers.setBuiltinInfo(*BuiltinInfo, LangOpts);
 
   // Initialize the __FTL_EVAL_METHOD__ macro to the TargetInfo.
   setTUFPEvalMethod(getTargetInfo().getFPEvalMethod());

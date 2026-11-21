@@ -16,12 +16,14 @@
 #define LLVM_CLANG_BASIC_BUILTINS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringTable.h"
 #include "llvm/TargetParser/Triple.h"
 #include <cstring>
+#include <memory>
 
 // VC++ defines 'alloca' as an object-like macro, which interferes with our
 // builtins.
@@ -29,7 +31,6 @@
 
 namespace clang {
 class TargetInfo;
-class IdentifierTable;
 class LangOptions;
 
 enum LanguageID : uint16_t {
@@ -229,32 +230,97 @@ struct InfosShard {
       CLANG_TARGET_BUILTIN_DETAIL_STR_OFFSETS(ID, TYPE, ATTRS, FEATURE),       \
       HeaderDesc::HEADER, LANG},
 
-/// Holds information about both target-independent and
-/// target-specific builtins, allowing easy queries by clients.
+/// The builtins of a target and an optional aux target: their shards, and a
+/// hash table from their names to their builtin IDs.
 ///
-/// Builtins from an optional auxiliary target are stored in
-/// AuxTSRecords. Their IDs are shifted up by TSRecords.size() and need to
-/// be translated back with getAuxBuiltinID() before use.
-class Context {
-  llvm::SmallVector<InfosShard> BuiltinShards;
+/// It contains every builtin of the targets, whether or not it's supported by
+/// some language options; \c Context checks that when looking a name up. It's
+/// immutable, so any number of contexts for the same targets can use it, also
+/// concurrently.
+class TargetBuiltins {
+  /// Open addressing with linear probing. A slot holds the hash of the name in
+  /// the upper 32 bits and the builtin ID in the lower 32 bits, or zero if
+  /// it's empty (zero is \c NotBuiltin).
+  std::unique_ptr<uint64_t[]> Slots;
+  size_t Mask = 0;
 
-  llvm::SmallVector<InfosShard> TargetShards;
-  llvm::SmallVector<InfosShard> AuxTargetShards;
+  /// The target-independent shard, then the target's and the aux target's
+  /// shards: the order of their builtin IDs.
+  llvm::SmallVector<InfosShard, 16> Shards;
+  unsigned NumTargetShards = 0;
 
   unsigned NumTargetBuiltins = 0;
   unsigned NumAuxTargetBuiltins = 0;
 
+  /// Whether the builtin with \p ID is named \p Name.
+  bool hasName(unsigned ID, llvm::StringRef Name) const;
+
 public:
+  /// Collect the builtins of \p Target and \p AuxTarget, which may be null.
+  TargetBuiltins(const TargetInfo &Target, const TargetInfo *AuxTarget);
+
+  /// The shards of the target's builtins.
+  llvm::ArrayRef<InfosShard> getTargetShards() const {
+    return llvm::ArrayRef(Shards).slice(1, NumTargetShards);
+  }
+
+  /// The shards of the aux target's builtins.
+  llvm::ArrayRef<InfosShard> getAuxTargetShards() const {
+    return llvm::ArrayRef(Shards).drop_front(1 + NumTargetShards);
+  }
+
+  unsigned getNumTargetBuiltins() const { return NumTargetBuiltins; }
+
+  /// Return the shard of the builtin with \p ID and its info.
+  std::pair<const InfosShard &, const Info &>
+  getShardAndInfo(unsigned ID) const;
+
+  /// Return the IDs of all builtins named \p Name, in no particular order.
+  llvm::SmallVector<unsigned, 2> lookup(llvm::StringRef Name) const;
+};
+
+/// Holds information about both target-independent and
+/// target-specific builtins, allowing easy queries by clients.
+///
+/// Builtins from an optional auxiliary target follow the target's builtins.
+/// Their IDs are shifted up by the number of target builtins and need to be
+/// translated back with getAuxBuiltinID() before use.
+class Context {
+  /// The builtins of the target and the aux target. Null for a context without
+  /// a target, which only has the target-independent builtins.
+  std::shared_ptr<const TargetBuiltins> Builtins;
+
+  /// A copy of the number of target builtins in Builtins, so that the inline
+  /// isAuxBuiltinID() and getAuxBuiltinID() don't need to go through it.
+  unsigned NumTargetBuiltins = 0;
+
+public:
+  /// Create a context with only the target-independent builtins. It doesn't
+  /// know any builtin names: \c lookupBuiltinID() always returns
+  /// \c NotBuiltin.
   Context();
 
-  /// Perform target-specific initialization
-  /// \param AuxTarget Target info to incorporate builtins from. May be nullptr.
-  void InitializeTarget(const TargetInfo &Target, const TargetInfo *AuxTarget);
+  /// Create a context with the builtins of \p Target and \p AuxTarget, which
+  /// may be null.
+  Context(const TargetInfo &Target, const TargetInfo *AuxTarget);
 
-  /// Mark the identifiers for all the builtins with their
-  /// appropriate builtin ID # and mark any non-portable builtin identifiers as
-  /// such.
-  void initializeBuiltins(IdentifierTable &Table, const LangOptions& LangOpts);
+  /// Create a context with \p Builtins, which can be shared with other
+  /// contexts for the same targets.
+  explicit Context(std::shared_ptr<const TargetBuiltins> Builtins);
+
+  /// Return the ID of the builtin named \p Name, or \c NotBuiltin if there's
+  /// none, \p LangOpts doesn't support it, or -fno-builtin-* disables it.
+  /// \c IdentifierTable::setBuiltinInfo() makes the table call this for each
+  /// identifier it creates.
+  unsigned lookupBuiltinID(llvm::StringRef Name,
+                           const LangOptions &LangOpts) const;
+
+  /// Call \p Fn with the name of every builtin supported by \p LangOpts,
+  /// whether or not the identifier table contains an identifier for it. Does
+  /// nothing for a context without a target. The order is unspecified, and
+  /// names might repeat.
+  void forEachBuiltinName(const LangOptions &LangOpts,
+                          llvm::function_ref<void(llvm::StringRef)> Fn) const;
 
   /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".

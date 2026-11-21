@@ -88,7 +88,8 @@ class NoTrivialPPDirectiveTracer;
 
 namespace Builtin {
 class Context;
-}
+class TargetBuiltins;
+} // namespace Builtin
 
 /// Stores token information for comparing actual tokens with
 /// predefined values.  Only handles simple tokens and identifiers.
@@ -1252,8 +1253,12 @@ public:
   /// lifetime of the preprocessor.
   /// \param AuxTarget is owned by the caller and must remain valid for
   /// the lifetime of the preprocessor.
-  void Initialize(const TargetInfo &Target,
-                  const TargetInfo *AuxTarget = nullptr);
+  /// \param SharedBuiltins are the builtins of \p Target and \p AuxTarget.
+  /// They must have been collected for exactly these targets (or targets with
+  /// the same builtins). If null, the preprocessor collects them.
+  void Initialize(
+      const TargetInfo &Target, const TargetInfo *AuxTarget = nullptr,
+      std::shared_ptr<const Builtin::TargetBuiltins> SharedBuiltins = nullptr);
 
   /// Initialize the preprocessor to parse a model file
   ///

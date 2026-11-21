@@ -11,6 +11,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/Basic/AtomicLineLogger.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticFrontend.h"
@@ -482,7 +483,10 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
                                       /*IdentifierInfoLookup=*/nullptr,
                                       /*OwnsHeaderSearch=*/true, TUKind);
   getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
-  PP->Initialize(getTarget(), getAuxTarget());
+  if (!SharedBuiltins)
+    SharedBuiltins = std::make_shared<const Builtin::TargetBuiltins>(
+        getTarget(), getAuxTarget());
+  PP->Initialize(getTarget(), getAuxTarget(), SharedBuiltins);
 
   if (PPOpts.DetailedRecord)
     PP->createPreprocessingRecord();
@@ -1235,6 +1239,10 @@ std::unique_ptr<CompilerInstance> CompilerInstance::cloneForModuleCompileImpl(
   auto InstancePtr = std::make_unique<CompilerInstance>(
       std::move(Invocation), getPCHContainerOperations(), std::move(ModCache));
   auto &Instance = *InstancePtr;
+
+  // The module build has the same targets as this instance, so it can use
+  // the same builtins.
+  Instance.SharedBuiltins = SharedBuiltins;
 
   auto &Inv = Instance.getInvocation();
 
