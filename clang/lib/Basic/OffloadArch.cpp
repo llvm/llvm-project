@@ -35,6 +35,12 @@ llvm::IntelGPU::IGCATarget OffloadArch::igcaTarget() const {
   return llvm::IntelGPU::IGCATarget::unpack(Kind);
 }
 
+OffloadArch OffloadArch::intelGPUIGCATarget() const {
+  assert(isIntelGPU() &&
+         "cannot get IGCA target of a non-Intel-GPU OffloadArch");
+  return getIntelIGCA(llvm::IntelGPU::getIGCATarget(intelGPUKind()));
+}
+
 const char *OffloadArchToString(OffloadArch A) {
   switch (A.targetArch()) {
   case OffloadArch::TargetArch::Unused:
@@ -70,9 +76,10 @@ const char *OffloadArchToVirtualArchString(OffloadArch A) {
     return "unknown";
   case OffloadArch::TargetArch::IntelIGCA:
     return llvm::IntelGPU::getIGCATargetName(A.igcaTarget()).data();
+  case OffloadArch::TargetArch::IntelGPU:
+    return OffloadArchToString(A.intelGPUIGCATarget());
   case OffloadArch::TargetArch::Unused:
   case OffloadArch::TargetArch::IntelCPU:
-  case OffloadArch::TargetArch::IntelGPU:
   case OffloadArch::TargetArch::Generic:
     return "";
   }

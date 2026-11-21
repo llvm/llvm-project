@@ -110,6 +110,9 @@ public:
   }
   /// Which IGCA target this is; only valid when isIntelIGCA().
   llvm::IntelGPU::IGCATarget igcaTarget() const;
+  /// The IGCA target of this Intel GPU, e.g. igca_30r for xe-mtl-u; only valid
+  /// when isIntelGPU().
+  OffloadArch intelGPUIGCATarget() const;
 
   bool operator==(const OffloadArch &Other) const {
     return V == Other.V && Kind == Other.Kind;
