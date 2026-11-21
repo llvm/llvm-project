@@ -237,7 +237,7 @@
 ; MSVC-NEXT: declare double @__pow_finite(double, double) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare float @__powf_finite(float, float) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS]]
-; MSVC-NEXT: declare void @__security_check_cookie(ptr)
+; MSVC-NEXT: declare void @__security_check_cookie(ptr) [[NOUNWIND_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -445,6 +445,7 @@
 ; MSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; MSVC-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
 ; MSVC-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
+; MSVC-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; MSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }

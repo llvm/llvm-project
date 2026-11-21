@@ -1,6 +1,6 @@
 "Issue #","Issue Name","Meeting","Status","First released version","GitHub issue","Notes"
 "[LWG3417](https://wg21.link/LWG3417)","Missing `volatile` atomic deprecations","2026-06 (Brno)","","","[#204440](https://github.com/llvm/llvm-project/issues/204440)",""
-"[LWG4121](https://wg21.link/LWG4121)","`ranges::to` constructs associative containers via `c.emplace(c.end(), *it)`","2026-06 (Brno)","","","[#204441](https://github.com/llvm/llvm-project/issues/204441)",""
+"[LWG4121](https://wg21.link/LWG4121)","`ranges::to` constructs associative containers via `c.emplace(c.end(), *it)`","2026-06 (Brno)","{{Complete}}","24","[#204441](https://github.com/llvm/llvm-project/issues/204441)",""
 "[LWG4125](https://wg21.link/LWG4125)","`move_iterator`'s default constructor should be constrained","2026-06 (Brno)","{{Complete}}","23","[#204442](https://github.com/llvm/llvm-project/issues/204442)",""
 "[LWG4158](https://wg21.link/LWG4158)","`packaged_task::operator=` should abandon its shared state","2026-06 (Brno)","","","[#204443](https://github.com/llvm/llvm-project/issues/204443)",""
 "[LWG4182](https://wg21.link/LWG4182)","Definition of `NULL` is too broad","2026-06 (Brno)","","","[#204444](https://github.com/llvm/llvm-project/issues/204444)",""

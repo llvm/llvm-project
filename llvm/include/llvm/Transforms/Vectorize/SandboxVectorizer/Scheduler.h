@@ -382,9 +382,11 @@ public:
     MoveInstrCB = Ctx.registerMoveInstrCallback(
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
-        });
+        },
+        "Scheduler");
     SetUseCB = Ctx.registerSetUseCallback(
-        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); },
+        "Scheduler");
   }
   ~Scheduler() {
     if (MoveInstrCB)

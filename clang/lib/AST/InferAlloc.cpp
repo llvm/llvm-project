@@ -14,13 +14,10 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "llvm/ADT/SmallPtrSet.h"
-#include "llvm/ADT/SmallVector.h"
 
 using namespace clang;
 using namespace infer_alloc;
@@ -170,11 +167,11 @@ static QualType inferPossibleTypeFromCastExpr(const CallExpr *CallE,
   return QualType();
 }
 
-QualType infer_alloc::inferPossibleType(
-    const CallExpr *E, const ASTContext &Ctx, const CastExpr *CastE,
-    llvm::function_ref<QualType(const CallExpr *)> PlacementNewType) {
+QualType infer_alloc::inferPossibleType(const CallExpr *E,
+                                        const ASTContext &Ctx,
+                                        const CastExpr *CastE) {
   QualType AllocType;
-  // First check arguments: a sizeof states what the allocation was sized for.
+  // First check arguments.
   for (const Expr *Arg : E->arguments()) {
     AllocType = inferPossibleTypeFromArithSizeofExpr(Arg);
     if (AllocType.isNull())
@@ -182,114 +179,10 @@ QualType infer_alloc::inferPossibleType(
     if (!AllocType.isNull())
       break;
   }
-  // Then check for a placement new into the result, which names the object
-  // constructed there and is stronger evidence than a cast of the result.
-  if (AllocType.isNull() && PlacementNewType)
-    AllocType = PlacementNewType(E);
   // Then check later casts.
   if (AllocType.isNull())
     AllocType = inferPossibleTypeFromCastExpr(E, CastE);
   return AllocType;
-}
-
-/// Strips parentheses and non-static field accesses of a by-value object
-/// (e.g. the pointer member of a size-returning allocation result) from an
-/// lvalue, down to the expression naming the object. Indirect member accesses
-/// (`->`) name other storage and stop the walk.
-static const Expr *stripFields(const Expr *E) {
-  E = E->IgnoreParens();
-  while (const auto *ME = dyn_cast<MemberExpr>(E)) {
-    if (ME->isArrow() || !isa<FieldDecl>(ME->getMemberDecl()))
-      break;
-    // The base of a member of a temporary is a MaterializeTemporaryExpr.
-    E = ME->getBase()->IgnoreParenImpCasts();
-  }
-  return E;
-}
-
-namespace {
-/// Implements collectPlacementNewTypes(). A variable qualifies if every
-/// reference to it other than its initializer is an lvalue-to-rvalue read.
-class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
-public:
-  // Resolved after the traversal: a use that is not a read may follow the
-  // placement new and still disqualify the variable.
-  llvm::DenseMap<const CallExpr *, QualType> finish() && {
-    for (const auto &[VD, T] : Uses)
-      if (const CallExpr *CE = Defs.lookup(VD))
-        record(CE, T);
-    return std::move(CallTypes);
-  }
-
-  bool VisitVarDecl(const VarDecl *VD) override {
-    const Expr *Init = VD->getInit();
-    if (Init && VD->hasLocalStorage() && !isa<ParmVarDecl>(VD))
-      if (const auto *CE =
-              dyn_cast<CallExpr>(Init->IgnoreImplicit()->IgnoreParenCasts()))
-        Defs.try_emplace(VD, CE);
-    return true;
-  }
-
-  // A read of the variable or of one of its fields. Traversal is pre-order,
-  // so the conversion is seen before the DeclRefExpr below it.
-  bool VisitImplicitCastExpr(const ImplicitCastExpr *ICE) override {
-    if (ICE->getCastKind() == CK_LValueToRValue)
-      if (const auto *DRE =
-              dyn_cast<DeclRefExpr>(stripFields(ICE->getSubExpr())))
-        Reads.insert(DRE);
-    return true;
-  }
-
-  // Any other reference may modify the variable.
-  bool VisitDeclRefExpr(const DeclRefExpr *DRE) override {
-    if (!Reads.contains(DRE))
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        Defs.erase(VD);
-    return true;
-  }
-
-  bool VisitCXXNewExpr(const CXXNewExpr *NE) override {
-    // Only the reserved placement form is known to construct into its
-    // argument; dependent new-expressions have no operator new yet.
-    const FunctionDecl *OperatorNew = NE->getOperatorNew();
-    if (NE->getNumPlacementArgs() != 1 || !OperatorNew ||
-        !OperatorNew->isReservedGlobalPlacementOperator())
-      return true;
-    const Expr *Source =
-        stripFields(NE->getPlacementArg(0)->IgnoreParenCasts());
-    QualType T = NE->getAllocatedType();
-    if (const auto *CE = dyn_cast<CallExpr>(Source))
-      record(CE, T);
-    else if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
-      if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        Uses.emplace_back(VD, T);
-    return true;
-  }
-
-private:
-  void record(const CallExpr *CE, QualType T) {
-    auto [It, Inserted] = CallTypes.try_emplace(CE, T);
-    // Different types constructed into the same storage: ambiguous.
-    if (!Inserted && !It->second.isNull() &&
-        It->second.getCanonicalType() != T.getCanonicalType())
-      It->second = QualType();
-  }
-
-  llvm::DenseMap<const CallExpr *, QualType> CallTypes;
-  // Variable -> the allocation call initializing it; erased on any use that
-  // is not a read.
-  llvm::DenseMap<const VarDecl *, const CallExpr *> Defs;
-  llvm::SmallPtrSet<const DeclRefExpr *, 16> Reads;
-  llvm::SmallVector<std::pair<const VarDecl *, QualType>> Uses;
-};
-} // namespace
-
-llvm::DenseMap<const CallExpr *, QualType>
-infer_alloc::collectPlacementNewTypes(const Stmt *Body) {
-  PlacementNewCollector Collector;
-  if (Body)
-    Collector.TraverseStmt(Body);
-  return std::move(Collector).finish();
 }
 
 std::optional<llvm::AllocTokenMetadata>

@@ -172,6 +172,7 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
                       AssemblerPredicate<(all_of FeatureMips2)>;
+def NotMips2     :    Predicate<"!Subtarget->hasMips2()">;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
                       AssemblerPredicate<(all_of FeatureMips3_32)>;
 def HasMips3_32r2 :   Predicate<"Subtarget->hasMips3_32r2()">,
@@ -301,6 +302,10 @@ class SYM_64 { list<Predicate> SYMPredicates = [IsSym64]; }
 //        limit long enough to develop an alternative way to handle P1||P2
 //        predicates.
 class ISA_MIPS1 {
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
+class ISA_MIPS1_NOT_MIPS2 {
+  list<Predicate> InsnPredicates = [NotMips2];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
 class ISA_MIPS1_NOT_MIPS3 {

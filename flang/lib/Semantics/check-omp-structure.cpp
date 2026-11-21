@@ -570,6 +570,15 @@ private:
   bool found_{false};
 };
 
+bool OmpStructureChecker::InExecutionPart() const {
+  return !partStack_.empty() && partStack_.back() == PartKind::ExecutionPart;
+}
+
+bool OmpStructureChecker::InSpecificationPart() const {
+  return !partStack_.empty() &&
+      partStack_.back() == PartKind::SpecificationPart;
+}
+
 bool OmpStructureChecker::IsAllowedClause(llvm::omp::Clause clauseId) {
   // Do not do clause checks while processing METADIRECTIVE.
   if (GetDirectiveNest(ContextSelectorNest) > 0) {
@@ -2639,7 +2648,7 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
   const parser::OmpDirectiveName &dirName{beginSpec.DirName()};
   ++allocateDirectiveLevel_;
 
-  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+  bool isExecutable{InExecutionPart()};
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   if (isExecutable && allocateDirectiveLevel_ == 1 && version >= 52) {
@@ -2682,7 +2691,7 @@ void OmpStructureChecker::Enter(const parser::OmpAllocateDirective &x) {
 }
 
 void OmpStructureChecker::Leave(const parser::OmpAllocateDirective &x) {
-  bool isExecutable{partStack_.back() == PartKind::ExecutionPart};
+  bool isExecutable{InExecutionPart()};
   if (isExecutable && allocateDirectiveLevel_ == 1) {
     CheckExecutableAllocateDirective(x);
   }
