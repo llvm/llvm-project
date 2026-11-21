@@ -3351,7 +3351,7 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
   }
   if (Tok.isNot(tok::identifier)) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_invalid_argument)
-      << PP.getSpelling(Tok);
+        << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
     return;
   }
   const IdentifierInfo *II = Tok.getIdentifierInfo();
@@ -3361,14 +3361,14 @@ void PragmaOptimizeHandler::HandlePragma(Preprocessor &PP,
     IsOn = true;
   } else if (!II->isStr("off")) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_invalid_argument)
-      << PP.getSpelling(Tok);
+        << PP.getSpelling(Tok);
     return;
   }
   PP.Lex(Tok);
 
   if (Tok.isNot(tok::eod)) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_optimize_extra_argument)
-      << PP.getSpelling(Tok);
+        << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok));
     return;
   }
 
@@ -3432,8 +3432,8 @@ void PragmaFPHandler::HandlePragma(Preprocessor &PP,
     // Don't diagnose if we have an eval_metod pragma with "double" kind.
     if (Tok.isNot(tok::identifier) && !isEvalMethodDouble) {
       PP.Diag(Tok.getLocation(), diag::err_pragma_fp_invalid_argument)
-          << PP.getSpelling(Tok) << OptionInfo->getName()
-          << static_cast<int>(*FlagKind);
+          << (Tok.isAnnotation() ? "" : PP.getSpelling(Tok))
+          << OptionInfo->getName() << static_cast<int>(*FlagKind);
       return;
     }
     const IdentifierInfo *II = Tok.getIdentifierInfo();
