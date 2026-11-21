@@ -340,3 +340,32 @@ define i64 @fuzz_b369_f17(i64 %a, i64 %b, i64 %c, double %fa, double %fb) nounwi
   %v21 = xor i64 %v20, %v6
   ret i64 %v21
 }
+
+define i64 @sext_not_slt_lhs(i64 %x) {
+; CHECK-LABEL: sext_not_slt_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slti $a0, $a0, 2
+; CHECK-NEXT:    sub.d $a0, $zero, $a0
+; CHECK-NEXT:    ret
+  %c = icmp slt i64 1, %x
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %m = ashr i64 %s, 63
+  ret i64 %m
+}
+
+define i64 @sext_not_sge_lhs(i64 %x) {
+; CHECK-LABEL: sext_not_sge_lhs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    slti $a0, $a0, 6
+; CHECK-NEXT:    addi.d $a0, $a0, -1
+; CHECK-NEXT:    ret
+  %c = icmp sge i64 5, %x
+  %z = zext i1 %c to i64
+  %n = xor i64 %z, 1
+  %s = shl i64 %n, 63
+  %m = ashr i64 %s, 63
+  ret i64 %m
+}
+
