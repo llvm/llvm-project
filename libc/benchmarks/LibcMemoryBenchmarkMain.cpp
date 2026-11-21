@@ -30,6 +30,7 @@ extern void *memset(void *, int, size_t);
 extern void bzero(void *, size_t);
 extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
+extern void *memchr(const void *, int, size_t);
 
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -91,6 +92,9 @@ using BenchmarkSetup = ComparisonSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_BCMP)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_BCMP
 using BenchmarkSetup = ComparisonSetup;
+#elif defined(LIBC_BENCHMARK_FUNCTION_MEMCHR)
+#define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_MEMCHR
+using BenchmarkSetup = SearchSetup;
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
 #endif

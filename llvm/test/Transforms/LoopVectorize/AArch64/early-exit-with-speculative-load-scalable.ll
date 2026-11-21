@@ -6,7 +6,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; A scalable VF cannot provide the power-of-2 byte count required by the
 ; @llvm.can.load.speculatively check, so a fixed VF is used.
 
-define i64 @find_first_eq_const(ptr %A, i64 %n) {
+define i64 @find_first_eq_const(ptr %A, i64 %n) vscale_range(1,16) {
 entry:
   br label %loop.header
 
@@ -102,7 +102,7 @@ exit:
 ; CHECK-NEXT:    ret i64 [[LANES]]
 ;
 ;.
-; CHECK: attributes #[[ATTR0]] = { "target-features"="+sve" }
+; CHECK: attributes #[[ATTR0]] = { vscale_range(1,16) "target-features"="+sve" }
 ; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2]] = { mustprogress noinline nosync nounwind optnone willreturn memory(argmem: read) "oracle-function" }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

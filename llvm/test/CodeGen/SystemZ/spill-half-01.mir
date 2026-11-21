@@ -7,7 +7,6 @@
 
 ---
 name: fun0
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $f0h, $f2h, $f4h

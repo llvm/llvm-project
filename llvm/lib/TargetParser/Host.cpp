@@ -2060,6 +2060,114 @@ VendorSignatures getVendorSignature(unsigned *MaxLeaf) {
 } // namespace llvm
 #endif
 
+StringMap<bool>
+sys::detail::getHostCPUFeaturesForARM(StringRef ProcCpuinfoContent) {
+  StringMap<bool> Features;
+  SmallVector<StringRef, 32> Lines;
+  ProcCpuinfoContent.split(Lines, '\n');
+
+  SmallVector<StringRef, 32> CPUFeatures;
+
+  // Look for the CPU features.
+  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
+    if (Lines[I].starts_with("Features")) {
+      Lines[I].split(CPUFeatures, ' ');
+      break;
+    }
+
+#if defined(__aarch64__)
+  // All of these are "crypto" features, but we must sift out actual features
+  // as the former meaning of "crypto" as a single feature is no more.
+  enum { CAP_AES = 0x1, CAP_PMULL = 0x2, CAP_SHA1 = 0x4, CAP_SHA2 = 0x8 };
+  uint32_t crypto = 0;
+#endif
+
+  for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
+    StringRef LLVMFeatureStr = StringSwitch<StringRef>(CPUFeatures[I])
+#if defined(__aarch64__)
+                                   .Case("asimd", "neon")
+                                   .Case("fp", "fp-armv8")
+                                   .Case("crc32", "crc")
+                                   .Case("atomics", "lse")
+                                   .Case("rng", "rand")
+                                   .Case("sha3", "sha3")
+                                   .Case("sm4", "sm4")
+                                   .Case("sve", "sve")
+                                   .Case("sve2", "sve2")
+                                   .Case("sveaes", "sve-aes")
+                                   .Case("svesha3", "sve-sha3")
+                                   .Case("svesm4", "sve-sm4")
+                                   .Case("sme", "sme")
+                                   .Case("smei16i64", "sme-i16i64")
+                                   .Case("smef64f64", "sme-f64f64")
+                                   .Case("smefa64", "sme-fa64")
+                                   .Case("sme2", "sme2")
+                                   .Case("sme2p1", "sme2p1")
+                                   .Case("smeb16b16", "sme-b16b16")
+                                   .Case("smef16f16", "sme-f16f16")
+                                   .Case("smef8f16", "sme-f8f16")
+                                   .Case("smef8f32", "sme-f8f32")
+                                   .Case("smesf8fma", "ssve-fp8fma")
+                                   .Case("smesf8dp4", "ssve-fp8dot4")
+                                   .Case("smesf8dp2", "ssve-fp8dot2")
+                                   .Case("smeaes", "ssve-aes")
+                                   .Case("sme2p2", "sme2p2")
+                                   .Case("sme2p3", "sme2p3")
+#else
+                                   .Case("half", "fp16")
+                                   .Case("neon", "neon")
+                                   .Case("vfpv3", "vfp3")
+                                   .Case("vfpv3d16", "vfp3d16")
+                                   .Case("vfpv4", "vfp4")
+                                   .Case("idiva", "hwdiv-arm")
+                                   .Case("idivt", "hwdiv")
+#endif
+                                   .Default("");
+
+#if defined(__aarch64__)
+    // We need to check crypto separately since we need all of the crypto
+    // extensions to enable the subtarget feature
+    if (CPUFeatures[I] == "aes")
+      crypto |= CAP_AES;
+    else if (CPUFeatures[I] == "pmull")
+      crypto |= CAP_PMULL;
+    else if (CPUFeatures[I] == "sha1")
+      crypto |= CAP_SHA1;
+    else if (CPUFeatures[I] == "sha2")
+      crypto |= CAP_SHA2;
+#endif
+
+    if (LLVMFeatureStr != "")
+      Features[LLVMFeatureStr] = true;
+  }
+
+#if defined(__aarch64__)
+  // LLVM has decided some AArch64 CPUs have all the instructions they _may_
+  // have, as opposed to all the instructions they _must_ have, so allow runtime
+  // information to correct us on that.
+  uint32_t Aes = CAP_AES | CAP_PMULL;
+  uint32_t Sha2 = CAP_SHA1 | CAP_SHA2;
+  Features["aes"] = (crypto & Aes) == Aes;
+  Features["sha2"] = (crypto & Sha2) == Sha2;
+
+  // Even if an underlying core supports SVE/SME, it might not be available if
+  // it's disabled by the OS, or some other layer. Disable SVE/SME if we don't
+  // detect support at runtime.
+  if (!Features.contains("sve"))
+    Features["sve"] = false;
+  if (!Features.contains("sme"))
+    Features["sme"] = false;
+  if (!Features.contains("sme2"))
+    Features["sme2"] = false;
+
+  // Also disable RNG if we can't detect support at runtime.
+  if (!Features.contains("rand"))
+    Features["rand"] = false;
+#endif
+
+  return Features;
+}
+
 #if (defined(__i386__) || defined(_M_IX86) || defined(__x86_64__) ||           \
      defined(_M_X64)) &&                                                       \
     !defined(_M_ARM64EC)
@@ -2286,94 +2394,11 @@ StringMap<bool> sys::getHostCPUFeatures() {
 }
 #elif defined(__linux__) && (defined(__arm__) || defined(__aarch64__))
 StringMap<bool> sys::getHostCPUFeatures() {
-  StringMap<bool> Features;
   std::unique_ptr<llvm::MemoryBuffer> P = getProcCpuinfoContent();
   if (!P)
-    return Features;
+    return {};
 
-  SmallVector<StringRef, 32> Lines;
-  P->getBuffer().split(Lines, '\n');
-
-  SmallVector<StringRef, 32> CPUFeatures;
-
-  // Look for the CPU features.
-  for (unsigned I = 0, E = Lines.size(); I != E; ++I)
-    if (Lines[I].starts_with("Features")) {
-      Lines[I].split(CPUFeatures, ' ');
-      break;
-    }
-
-#if defined(__aarch64__)
-  // All of these are "crypto" features, but we must sift out actual features
-  // as the former meaning of "crypto" as a single feature is no more.
-  enum { CAP_AES = 0x1, CAP_PMULL = 0x2, CAP_SHA1 = 0x4, CAP_SHA2 = 0x8 };
-  uint32_t crypto = 0;
-#endif
-
-  for (unsigned I = 0, E = CPUFeatures.size(); I != E; ++I) {
-    StringRef LLVMFeatureStr = StringSwitch<StringRef>(CPUFeatures[I])
-#if defined(__aarch64__)
-                                   .Case("asimd", "neon")
-                                   .Case("fp", "fp-armv8")
-                                   .Case("crc32", "crc")
-                                   .Case("atomics", "lse")
-                                   .Case("rng", "rand")
-                                   .Case("sha3", "sha3")
-                                   .Case("sm4", "sm4")
-                                   .Case("sve", "sve")
-                                   .Case("sve2", "sve2")
-                                   .Case("sveaes", "sve-aes")
-                                   .Case("svesha3", "sve-sha3")
-                                   .Case("svesm4", "sve-sm4")
-#else
-                                   .Case("half", "fp16")
-                                   .Case("neon", "neon")
-                                   .Case("vfpv3", "vfp3")
-                                   .Case("vfpv3d16", "vfp3d16")
-                                   .Case("vfpv4", "vfp4")
-                                   .Case("idiva", "hwdiv-arm")
-                                   .Case("idivt", "hwdiv")
-#endif
-                                   .Default("");
-
-#if defined(__aarch64__)
-    // We need to check crypto separately since we need all of the crypto
-    // extensions to enable the subtarget feature
-    if (CPUFeatures[I] == "aes")
-      crypto |= CAP_AES;
-    else if (CPUFeatures[I] == "pmull")
-      crypto |= CAP_PMULL;
-    else if (CPUFeatures[I] == "sha1")
-      crypto |= CAP_SHA1;
-    else if (CPUFeatures[I] == "sha2")
-      crypto |= CAP_SHA2;
-#endif
-
-    if (LLVMFeatureStr != "")
-      Features[LLVMFeatureStr] = true;
-  }
-
-#if defined(__aarch64__)
-  // LLVM has decided some AArch64 CPUs have all the instructions they _may_
-  // have, as opposed to all the instructions they _must_ have, so allow runtime
-  // information to correct us on that.
-  uint32_t Aes = CAP_AES | CAP_PMULL;
-  uint32_t Sha2 = CAP_SHA1 | CAP_SHA2;
-  Features["aes"] = (crypto & Aes) == Aes;
-  Features["sha2"] = (crypto & Sha2) == Sha2;
-
-  // Even if an underlying core supports SVE, it might not be available if
-  // it's disabled by the OS, or some other layer. Disable SVE if we don't
-  // detect support at runtime.
-  if (!Features.contains("sve"))
-    Features["sve"] = false;
-
-  // Also disable RNG if we can't detect support at runtime.
-  if (!Features.contains("rand"))
-    Features["rand"] = false;
-#endif
-
-  return Features;
+  return detail::getHostCPUFeaturesForARM(P->getBuffer());
 }
 #elif defined(_WIN32) && (defined(__aarch64__) || defined(_M_ARM64) ||         \
                           defined(__arm64ec__) || defined(_M_ARM64EC))

@@ -186,3 +186,72 @@ TEST_F(TestRiscvInstEmulation, TestSimpleRiscvFunction) {
   EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
   EXPECT_EQ(-8, regloc.GetOffset());
 }
+
+// Store-conditional instructions can appear outside of a recognized
+// LR/SC sequence: trap handlers issue a lone SC to drop any dangling
+// reservation, and the unwinder visits every instruction of a well-formed
+// LR/SC loop linearly. Emulating them must not abort.
+TEST_F(TestRiscvInstEmulation, TestStoreConditional) {
+  ArchSpec arch("riscv64-unknown-linux-gnu");
+  std::unique_ptr<UnwindAssemblyInstEmulation> engine(
+      static_cast<UnwindAssemblyInstEmulation *>(
+          UnwindAssemblyInstEmulation::CreateInstance(arch)));
+  ASSERT_NE(nullptr, engine);
+
+  uint8_t data[] = {// 0x00: addi sp, sp, -16
+                    0x13, 0x01, 0x01, 0xff,
+                    // 0x04: sd ra, 8(sp)
+                    0x23, 0x34, 0x11, 0x00,
+                    // 0x08: sd s0, 0(sp)
+                    0x23, 0x30, 0x81, 0x00,
+                    // 0x0C: sc.w t0, t0, (t0)
+                    0xaf, 0xa2, 0x52, 0x18,
+                    // 0x10: lr.w a5, (s0)
+                    0xaf, 0x27, 0x04, 0x10,
+                    // 0x14: bnez a5, 0x20
+                    0x63, 0x96, 0x07, 0x00,
+                    // 0x18: sc.w a3, a4, (s0)
+                    0xaf, 0x26, 0xe4, 0x18,
+                    // 0x1C: bnez a3, 0x10
+                    0xe3, 0x9a, 0x06, 0xfe,
+                    // 0x20: sc.d t0, t0, (t0)
+                    0xaf, 0xb2, 0x52, 0x18,
+                    // 0x24: ld ra, 8(sp)
+                    0x83, 0x30, 0x81, 0x00,
+                    // 0x28: ld s0, 0(sp)
+                    0x03, 0x34, 0x01, 0x00,
+                    // 0x2C: addi sp, sp, 16
+                    0x13, 0x01, 0x01, 0x01,
+                    // 0x30: ret
+                    0x67, 0x80, 0x00, 0x00};
+
+  AddressRange sample_range(0x1000, sizeof(data));
+  UnwindPlan unwind_plan(eRegisterKindLLDB);
+  UnwindPlan::Row::AbstractRegisterLocation regloc;
+
+  EXPECT_TRUE(engine->GetNonCallSiteUnwindPlanFromAssembly(
+      sample_range, data, sizeof(data), unwind_plan));
+
+  // The state established by the prologue is unchanged past the SC
+  // instructions.
+  const UnwindPlan::Row *row = unwind_plan.GetRowForFunctionOffset(0x24);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(gpr_sp_riscv, row->GetCFAValue().GetRegisterNumber());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_EQ(16, row->GetCFAValue().GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(gpr_ra_riscv, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-8, regloc.GetOffset());
+
+  EXPECT_TRUE(row->GetRegisterInfo(gpr_fp_riscv, regloc));
+  EXPECT_TRUE(regloc.IsAtCFAPlusOffset());
+  EXPECT_EQ(-16, regloc.GetOffset());
+
+  // The epilogue was reached and emulated.
+  row = unwind_plan.GetRowForFunctionOffset(0x30);
+  ASSERT_NE(nullptr, row);
+  EXPECT_EQ(gpr_sp_riscv, row->GetCFAValue().GetRegisterNumber());
+  EXPECT_TRUE(row->GetCFAValue().IsRegisterPlusOffset());
+  EXPECT_EQ(0, row->GetCFAValue().GetOffset());
+}

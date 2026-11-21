@@ -462,17 +462,16 @@ public:
                             cir::DynamicCastInfoAttr info) {
     auto castKind =
         isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
-    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
-                                      /*relative_layout=*/false);
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src,
+                                      info);
   }
 
-  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
-                                  bool vtableUseRelativeLayout) {
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
     cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
-    return cir::DynamicCastOp::create(
-        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
-        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
+    return cir::DynamicCastOp::create(*this, loc, destTy,
+                                      cir::DynamicCastKind::Ptr, src,
+                                      cir::DynamicCastInfoAttr{});
   }
 
   //===--------------------------------------------------------------------===//
@@ -643,22 +642,27 @@ public:
                                                   mlir::Value objectPtr,
                                                   mlir::Value memberPtr) {
     auto memberPtrTy = mlir::cast<cir::DataMemberType>(memberPtr.getType());
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
 
-    // TODO(cir): consider address space.
-    assert(!cir::MissingFeatures::addressSpace());
-    cir::PointerType resultTy = getPointerTo(memberPtrTy.getMemberTy());
+    // The member lives in the same address space as the object.
+    cir::PointerType resultTy =
+        getPointerTo(memberPtrTy.getMemberTy(), objectPtrTy.getAddrSpace());
 
     return cir::GetRuntimeMemberOp::create(*this, loc, resultTy, objectPtr,
                                            memberPtr);
   }
 
-  /// Create a cir.ptr_stride operation to get access to an array element.
-  /// \p idx is the index of the element to access, \p shouldDecay is true if
-  /// the result should decay to a pointer to the element type.
-  mlir::Value getArrayElement(mlir::Location arrayLocBegin,
-                              mlir::Location arrayLocEnd, mlir::Value arrayPtr,
-                              mlir::Type eltTy, mlir::Value idx,
-                              bool shouldDecay);
+  /// Create a cir.get_element or cir.ptr_stride operation to get access to an
+  /// array element.  \p idx is the index of the element to access,
+  /// \p shouldDecay is true if the result should decay to a pointer to the
+  /// element type.  \p flags are set on the cir.get_element emitted when
+  /// \p shouldDecay is true and \p arrayPtr points to the array type
+  /// \p eltTy, and are dropped when a cir.ptr_stride is emitted.
+  mlir::Value
+  getArrayElement(mlir::Location arrayLocBegin, mlir::Location arrayLocEnd,
+                  mlir::Value arrayPtr, mlir::Type eltTy, mlir::Value idx,
+                  bool shouldDecay,
+                  cir::PtrOffsetFlags flags = cir::PtrOffsetFlags::None);
 
   /// Returns a decayed pointer to the first element of the array
   /// pointed to by \p arrayPtr.
@@ -808,6 +812,19 @@ public:
   }
 
   cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
+                                     mlir::Type resultTy,
+                                     llvm::ArrayRef<int64_t> mask) {
+    cir::ConstantOp poison =
+        getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
+    auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
+        llvm::map_range(mask, [&](int32_t idx) {
+          return cir::IntAttr::get(getSInt32Ty(), idx);
+        }));
+    return cir::VecShuffleOp::create(*this, loc, resultTy, vec1, poison,
+                                     getArrayAttr(maskAttrs));
+  }
+
+  cir::VecShuffleOp createVecShuffle(mlir::Location loc, mlir::Value vec1,
                                      mlir::Value vec2,
                                      llvm::ArrayRef<int64_t> mask) {
     auto maskAttrs = llvm::to_vector_of<mlir::Attribute>(
@@ -915,6 +932,14 @@ public:
                *this, loc, this->getStringAttr(str), resTy,
                std::forward<Operands>(op)..., fastmath)
         .getResult();
+  }
+
+  /// Converts \p src to \p dstTy, saturating at its bounds. The signedness of
+  /// \p dstTy selects between fptosi.sat and fptoui.sat.
+  mlir::Value createFPToIntSat(mlir::Location loc, mlir::Value src,
+                               cir::IntType dstTy) {
+    return emitIntrinsicCallOp(
+        loc, dstTy.isSigned() ? "fptosi.sat" : "fptoui.sat", dstTy, src);
   }
 };
 

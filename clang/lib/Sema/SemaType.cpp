@@ -46,6 +46,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <bitset>
 #include <optional>
 
@@ -2398,6 +2399,15 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       return QualType();
     }
   }
+
+  // Remember where the bound of a VLA is evaluated. Bounds in a function
+  // prototype are evaluated in that function, which doesn't exist yet, so they
+  // are not recorded and their uses are not diagnosed.
+  if (const VariableArrayType *VAT = Context.getAsVariableArrayType(T))
+    if (CurContext->isFunctionOrMethod() &&
+        !(getCurScope() && getCurScope()->isFunctionPrototypeScope()))
+      if (const Expr *Size = VAT->getSizeExpr())
+        VLASizeExprOwners.try_emplace(Size, CurContext);
 
   return T;
 }
@@ -5979,6 +5989,26 @@ static void fillMatrixTypeLoc(MatrixTypeLoc MTL,
   llvm_unreachable("no matrix_type attribute found at the expected location!");
 }
 
+// FIXME: Also handle attributes on the decl-specifier, declarator and
+// declaration. Matrix type locations need the same handling.
+static void fillVectorTypeLoc(VectorTypeLoc VTL,
+                              const ParsedAttributesView &Attrs) {
+  auto Kind = isa<ExtVectorType>(VTL.getTypePtr())
+                  ? ParsedAttr::AT_ExtVectorType
+                  : ParsedAttr::AT_VectorSize;
+  for (const ParsedAttr &AL : Attrs) {
+    if (AL.getKind() == Kind && !AL.isInvalid() && AL.getNumArgs() == 1) {
+      VTL.setAttrNameLoc(AL.getLoc());
+      VTL.setSizeExpr(AL.getArgAsExpr(0));
+      return;
+    }
+  }
+
+  // The attribute may be on the declarator rather than this chunk, or the
+  // vector may use a target-specific attribute. Keep the default locations
+  // when no matching attribute is present.
+}
+
 static void fillAtomicQualLoc(AtomicTypeLoc ATL, const DeclaratorChunk &Chunk) {
   SourceLocation Loc;
   switch (Chunk.Kind) {
@@ -6381,19 +6411,19 @@ namespace {
     void VisitMacroQualifiedTypeLoc(MacroQualifiedTypeLoc TL) {
       TL.setExpansionLoc(Chunk.Loc);
     }
-    void VisitVectorTypeLoc(VectorTypeLoc TL) { TL.setNameLoc(Chunk.Loc); }
-    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitVectorTypeLoc(VectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
+      fillVectorTypeLoc(TL, Chunk.getAttrs());
     }
-    void VisitExtVectorTypeLoc(ExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+    void VisitDependentVectorTypeLoc(DependentVectorTypeLoc TL) {
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitAtomicTypeLoc(AtomicTypeLoc TL) {
       fillAtomicQualLoc(TL, Chunk);
     }
     void
     VisitDependentSizedExtVectorTypeLoc(DependentSizedExtVectorTypeLoc TL) {
-      TL.setNameLoc(Chunk.Loc);
+      TL.initializeLocal(Context, Chunk.Loc);
     }
     void VisitMatrixTypeLoc(MatrixTypeLoc TL) {
       fillMatrixTypeLoc(TL, Chunk.getAttrs());
@@ -8870,31 +8900,36 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
       S.Context.getBuiltinVectorTypeInfo(CurType->castAs<BuiltinType>());
   unsigned MinElts = Info.EC.getKnownMinValue();
 
-  VectorKind VecKind = VectorKind::RVVFixedLengthData;
+  VectorKind VecKind;
   unsigned ExpectedSize = VScale->first * MinElts;
   QualType EltType = CurType->getRVVEltType(S.Context);
   unsigned EltSize = S.Context.getTypeSize(EltType);
   unsigned NumElts;
   if (Info.ElementType == S.Context.BoolTy) {
+    // A mask is stored in bytes. One with fewer than 8 lanes takes a single
+    // byte, and its lane count is recorded in the vector kind.
     NumElts = VecSize / S.Context.getCharWidth();
+    unsigned SubByteLanes = 0;
     if (!NumElts) {
       NumElts = 1;
-      switch (VecSize) {
-      case 1:
-        VecKind = VectorKind::RVVFixedLengthMask_1;
-        break;
-      case 2:
-        VecKind = VectorKind::RVVFixedLengthMask_2;
-        break;
-      case 4:
-        VecKind = VectorKind::RVVFixedLengthMask_4;
-        break;
-      }
-    } else
-      VecKind = VectorKind::RVVFixedLengthMask;
+      if (VecSize == 1 || VecSize == 2 || VecSize == 4)
+        SubByteLanes = VecSize;
+    }
+    // Record the ratio of the vbool<R>_t type in the vector kind, so that
+    // later stages do not have to re-derive it from VLEN and the lane count.
+    // vbool<R>_t has RVVBitsPerBlock / R lanes at vscale=1.
+    VecKind = getRVVFixedLengthMaskVectorKind(
+        llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock / MinElts), SubByteLanes);
   } else {
     ExpectedSize *= EltSize;
     NumElts = VecSize / EltSize;
+
+    // Record the LMUL of the sizeless type in the vector kind, so that later
+    // stages do not have to re-derive it from VLEN and the element count.
+    //   LMUL = MinElts * EltSize / RVVBitsPerBlock
+    VecKind = getRVVFixedLengthDataVectorKind(
+        int(llvm::Log2_32(MinElts * EltSize)) -
+        int(llvm::Log2_32(llvm::RISCV::RVVBitsPerBlock)));
   }
 
   // The attribute vector size must match -mrvv-vector-bits.

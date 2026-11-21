@@ -2126,9 +2126,10 @@ size_t Process::ReadMemory(const ProcessAddress &process_addr, void *buf,
     return DoReadMemory(process_addr, buf, size, error);
   }
 
-  lldb::addr_t addr = process_addr.GetValue();
-  if (ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
+  const lldb::addr_t addr = FixAnyAddress(process_addr.GetValue());
+
+  if (!ShouldUseMemoryCache(addr))
+    return DoReadMemory(addr, buf, size, error);
 
   if (GetDisableMemoryCache())
     return ReadMemoryFromInferior(addr, buf, size, error);
@@ -2819,14 +2820,22 @@ Process::ReadModuleFromMemory(const FileSpec &file_spec,
 
   Status error;
   std::unique_ptr<Progress> progress_up;
-  // Reading an ObjectFile from a local corefile is very fast,
-  // only print a progress update if we're reading from a
-  // live session which might go over gdb remote serial protocol.
-  if (IsLiveDebugSession())
+  bool disable_memory_symtab_caching;
+  if (IsLiveDebugSession()) {
+    // Reading an ObjectFile from a local corefile is very fast,
+    // only print a progress update if we're reading from a
+    // live session which might go over gdb remote serial protocol.
     progress_up = std::make_unique<Progress>("Reading binary from memory",
                                              file_spec.GetFilename().str());
+    // Allow caching of memory-read modules in a live process.
+    disable_memory_symtab_caching = false;
+  } else {
+    // This is a corefile target; no memory-read module caching.
+    disable_memory_symtab_caching = true;
+  }
 
   if (module_sp->GetMemoryObjectFile(shared_from_this(), header_addr, error,
+                                     disable_memory_symtab_caching,
                                      size_to_read))
     return module_sp;
 
@@ -2899,6 +2908,11 @@ Status Process::Launch(ProcessLaunchInfo &launch_info) {
       LaunchPrivate(launch_info, state_after_launch, first_stop_event_sp);
   if (status.Fail())
     return status;
+
+  if (state_after_launch == eStateExited) {
+    HandlePrivateEvent(first_stop_event_sp);
+    return Status();
+  }
 
   if (state_after_launch != eStateStopped &&
       state_after_launch != eStateCrashed)
@@ -3021,9 +3035,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
   }
 
   if (state == eStateExited) {
-    // We exited while trying to launch somehow.  Don't call DidLaunch
-    // as that's not likely to work, and return an invalid pid.
-    HandlePrivateEvent(event_sp);
+    // We exited while trying to launch. Don't call DidLaunch as that's not
+    // likely to work. Let Launch handle the event after restoring the outer
+    // launch listener.
     return Status();
   }
 
@@ -6834,9 +6848,13 @@ bool Process::CallVoidArgVoidPtrReturn(const Address *address,
       ExpressionResults result =
           RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
       if (result == eExpressionCompleted) {
+        ThreadPlanReturnValue return_value = call_plan_sp->GetReturnValue();
+        auto *returned = std::get_if<ReturnedValue>(&return_value);
+        if (!returned)
+          return false;
+
         returned_func =
-            call_plan_sp->GetReturnValueObject()->GetValueAsUnsigned(
-                LLDB_INVALID_ADDRESS);
+            returned->valobj_sp->GetValueAsUnsigned(LLDB_INVALID_ADDRESS);
 
         if (GetAddressByteSize() == 4) {
           if (returned_func == UINT32_MAX)

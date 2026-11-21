@@ -50,7 +50,6 @@ private:
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  PoisonValue *BoolPoison;
   Constant *IntMaskZero;
 
   Function *If = nullptr;
@@ -121,7 +120,6 @@ void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolPoison = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 

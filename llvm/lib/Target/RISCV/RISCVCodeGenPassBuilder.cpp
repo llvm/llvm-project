@@ -64,6 +64,7 @@ public:
     // uses the base class default (disabled).
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;
@@ -92,6 +93,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -335,8 +338,6 @@ void RISCVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void RISCVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(RISCVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "RISCVPassRegistry.def"

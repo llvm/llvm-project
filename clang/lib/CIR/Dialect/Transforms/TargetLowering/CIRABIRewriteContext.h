@@ -27,11 +27,14 @@
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <utility>
 
 namespace cir {
+
+class CIRBaseBuilderTy;
 
 /// CIR-specific implementation of mlir::abi::ABIRewriteContext.
 ///
@@ -43,8 +46,11 @@ namespace cir {
 /// queries.  The DataLayout must outlive the rewrite context.
 class CIRABIRewriteContext : public mlir::abi::ABIRewriteContext {
 public:
-  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl)
-      : module(module), dl(dl), cirDataLayout(module), aliasAnalysis(module) {
+  CIRABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
+                       cir::CallConvTarget target, bool enableNoundefAttrs)
+      : module(module), dl(dl), target(target),
+        enableNoundefAttrs(enableNoundefAttrs), cirDataLayout(module),
+        aliasAnalysis(module) {
     cir::registerCIRAliasAnalyses(aliasAnalysis, module);
   }
 
@@ -63,8 +69,8 @@ public:
                   const mlir::abi::FunctionClassification &fc,
                   mlir::OpBuilder &builder) override;
 
-  /// Expand a `cir.va_arg` into the x86-64 SysV register-save-area /
-  /// overflow-area sequence.
+  /// Expand a `cir.va_arg` with the va_arg rules of the target this context
+  /// lowers for.
   mlir::LogicalResult rewriteVAArg(mlir::Operation *vaArgOp,
                                    const mlir::abi::ArgClassification &ac,
                                    mlir::OpBuilder &builder) override;
@@ -79,11 +85,12 @@ public:
 
   /// Bring each non-byval indirect parameter of \p funcOp into the shape the
   /// rest of the rewrite assumes: the parameter's only use, if it has one, is
-  /// a single store into an alloca of the matching pointer type that no other
-  /// non-byval indirect parameter spills to, and that alloca states the
-  /// alignment the ABI promises rather than the one CIRGen picked for a local
-  /// copy.  A use of the parameter as a call argument is routed through a load
-  /// of that slot, so that it names the storage an argument has to name.
+  /// a single store into an alloca of the incoming pointer's type, directly or
+  /// through an address_space cast of it.  No other non-byval indirect
+  /// parameter spills to that alloca, and it states the alignment the ABI
+  /// promises rather than the one CIRGen picked for a local copy.  A use of
+  /// the parameter as a call argument is routed through a load of that slot,
+  /// so that it names the storage an argument has to name.
   ///
   /// Call for every function before any definition or call site is rewritten.
   /// findParamSpill asserts this shape while the enclosing definition is
@@ -113,8 +120,28 @@ public:
   mlir::StringRef getDialectNamespace() const override { return "cir"; }
 
 private:
+  /// Expand \p op into the x86-64 SysV register-save-area / overflow-area
+  /// sequence.
+  mlir::LogicalResult rewriteVAArgX86_64(cir::VAArgOp op,
+                                         const mlir::abi::ArgClassification &ac,
+                                         CIRBaseBuilderTy &builder);
+
+  /// Expand \p op into a read from the 4-byte slots its pointer va_list walks.
+  mlir::LogicalResult rewriteVAArgAMDGPU(cir::VAArgOp op,
+                                         const mlir::abi::ArgClassification &ac,
+                                         CIRBaseBuilderTy &builder);
+
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
+
+  /// The target whose rules drive the target-specific rewrites, such as
+  /// va_arg expansion.
+  cir::CallConvTarget target;
+
+  /// Whether extended and indirect arguments are marked llvm.noundef.  Set
+  /// from the enable_noundef_attrs field of the module's
+  /// #cir.lowering_options.
+  bool enableNoundefAttrs;
 
   /// The CIR view of the module's data layout, which provides the store and
   /// alloc sizes that \c dl does not.

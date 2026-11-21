@@ -68,8 +68,7 @@ RegisterInfo_ppc64::RegisterInfo_ppc64(
 
 size_t RegisterInfo_ppc64::GetGPRSize() const { return m_gpr_size; }
 
-const lldb_private::RegisterInfo *
-RegisterInfo_ppc64::GetRegisterInfo() const {
+const lldb_private::RegisterInfo *RegisterInfo_ppc64::GetRegisterInfo() const {
   return m_register_info_p;
 }
 

@@ -7,7 +7,7 @@
 // AMDGCN-SAME: float noundef [[X:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // AMDGCN-NEXT:  [[ENTRY:.*:]]
 // AMDGCN-NEXT:    [[TMP0:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-// AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp une float [[TMP0]], +inf
+// AMDGCN-NEXT:    [[TMP1:%.*]] = fcmp{{.*}} une float [[TMP0]], +inf
 // AMDGCN-NEXT:    [[TMP2:%.*]] = select contract i1 [[TMP1]], float [[TMP0]], float +qnan
 // AMDGCN-NEXT:    [[TMP3:%.*]] = fcmp ult float [[TMP2]], 1.310720e+05
 // AMDGCN-NEXT:    br i1 [[TMP3]], label %[[BB109:.*]], label %[[BB4:.*]]
@@ -129,7 +129,7 @@
 // AMDGCN-NEXT:    [[TMP114:%.*]] = tail call contract noundef float @llvm.fma.f32(float [[TMP111]], float f0xA7C234C4, float [[TMP113]])
 // AMDGCN-NEXT:    [[TMP115:%.*]] = fptosi float [[TMP111]] to i32
 // AMDGCN-NEXT:    [[TMP116:%.*]] = and i32 [[TMP115]], 3
-// AMDGCN-NEXT:    [[TMP117:%.*]] = fcmp ord float [[TMP111]], 0.000000e+00
+// AMDGCN-NEXT:    [[TMP117:%.*]] = fcmp{{.*}} ord float [[TMP111]], 0.000000e+00
 // AMDGCN-NEXT:    [[TMP118:%.*]] = select i1 [[TMP117]], i32 [[TMP116]], i32 0
 // AMDGCN-NEXT:    br label %[[_Z3COSF_EXIT]]
 // AMDGCN:       [[_Z3COSF_EXIT]]:
