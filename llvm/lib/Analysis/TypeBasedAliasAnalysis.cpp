@@ -101,7 +101,8 @@
 
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "AnalysisOptions.h"
-#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/IR/Constants.h"
@@ -447,19 +448,21 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
   if (A == B)
     return A;
 
-  SmallSetVector<const MDNode *, 4> PathA;
+  SmallVector<const MDNode *> PathA;
   TBAANode TA(A);
   while (TA.getNode()) {
-    [[maybe_unused]] bool Inserted = PathA.insert(TA.getNode());
-    assert(Inserted && "Cycle found in TBAA metadata.");
+    assert(!is_contained(PathA, TA.getNode()) &&
+           "Cycle found in TBAA metadata.");
+    PathA.push_back(TA.getNode());
     TA = TA.getParent();
   }
 
-  SmallSetVector<const MDNode *, 4> PathB;
+  SmallVector<const MDNode *> PathB;
   TBAANode TB(B);
   while (TB.getNode()) {
-    [[maybe_unused]] bool Inserted = PathB.insert(TB.getNode());
-    assert(Inserted && "Cycle found in TBAA metadata.");
+    assert(!is_contained(PathB, TB.getNode()) &&
+           "Cycle found in TBAA metadata.");
+    PathB.push_back(TB.getNode());
     TB = TB.getParent();
   }
 
