@@ -101,8 +101,7 @@ protected:
 private:
   void determineFrameLayout(MachineFunction &MF) const;
   void emitCalleeSavedRVVPrologCFI(MachineBasicBlock &MBB,
-                                   MachineBasicBlock::iterator MI,
-                                   bool HasFP) const;
+                                   MachineBasicBlock::iterator MI) const;
   void emitCalleeSavedRVVEpilogCFI(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MI) const;
   void deallocateStack(MachineFunction &MF, MachineBasicBlock &MBB,

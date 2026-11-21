@@ -1283,7 +1283,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
     std::advance(MBBI, getRVVCalleeSavedInfo(MF, CSI).size());
     if (NeedsDwarfCFI)
-      emitCalleeSavedRVVPrologCFI(MBB, MBBI, hasFP(MF));
+      emitCalleeSavedRVVPrologCFI(MBB, MBBI);
   }
 
   if (hasFP(MF)) {
@@ -1806,6 +1806,17 @@ RISCVFrameLowering::getFrameIndexReference(const MachineFunction &MF, int FI,
     // |--------------------------| -- <-- BP (if var sized objects present)
     // | VarSize objects          | |
     // |--------------------------| -- <-- SP
+    if (StackID == TargetStackID::ScalableVector &&
+        MFI.isCalleeSavedObjectIndex(FI)) {
+      // The prologue saves these before it realigns SP and sets up BP.
+      FrameReg = FPReg;
+      int64_t ScalarLocalVarSize =
+          MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
+          RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
+      return Offset + StackOffset::getFixed(ScalarLocalVarSize -
+                                            getStackSizeWithRVVPadding(MF) +
+                                            RVFI->getVarArgsSaveSize());
+    }
     if (hasBP(MF)) {
       FrameReg = RISCVABI::getBPReg();
     } else {
@@ -2662,7 +2673,7 @@ static unsigned getCalleeSavedRVVNumRegs(const Register &BaseReg) {
 }
 
 void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, bool HasFP) const {
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI) const {
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = MF->getFrameInfo();
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
@@ -2672,24 +2683,24 @@ void RISCVFrameLowering::emitCalleeSavedRVVPrologCFI(
   if (RVVCSI.empty())
     return;
 
-  uint64_t FixedSize = getStackSizeWithRVVPadding(*MF);
-  if (!HasFP) {
-    uint64_t ScalarLocalVarSize =
-        MFI.getStackSize() - RVFI->getCalleeSavedStackSize() -
-        RVFI->getVarArgsSaveSize() + RVFI->getRVVPadding();
-    FixedSize -= ScalarLocalVarSize;
-  }
+  StackOffset CFAFromFP = StackOffset::getFixed(RVFI->getVarArgsSaveSize());
+  StackOffset CFAFromSP = StackOffset::get(getStackSizeWithRVVPadding(*MF),
+                                           RVFI->getRVVStackSize());
 
   CFIInstBuilder CFIBuilder(MBB, MI, MachineInstr::FrameSetup);
   for (auto &CS : RVVCSI) {
-    // Insert the spill to the stack frame.
-    int FI = CS.getFrameIdx();
+    Register FrameReg;
+    StackOffset Offset =
+        getFrameIndexReference(*MF, CS.getFrameIdx(), FrameReg);
+    assert((FrameReg == FPReg || FrameReg == SPReg) &&
+           "RVV callee-saved registers are saved relative to FP or SP");
+    Offset -= FrameReg == FPReg ? CFAFromFP : CFAFromSP;
     MCRegister BaseReg = getRVVBaseRegister(TRI, CS.getReg());
     unsigned NumRegs = getCalleeSavedRVVNumRegs(CS.getReg());
     for (unsigned i = 0; i < NumRegs; ++i) {
       CFIBuilder.insertCFIInst(createDefCFAOffset(
           TRI, BaseReg + i,
-          StackOffset::get(-FixedSize, MFI.getObjectOffset(FI) / 8 + i)));
+          StackOffset::get(Offset.getFixed(), Offset.getScalable() / 8 + i)));
     }
   }
 }
