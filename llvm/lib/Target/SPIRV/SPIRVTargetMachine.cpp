@@ -70,6 +70,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSPIRVTarget() {
   initializeSPIRVCtorDtorLoweringLegacyPass(PR);
   initializeSPIRVFinalizeShaderLinkageLegacyPass(PR);
   initializeSPIRVRemoveUnusedResourcesLegacyPass(PR);
+  initializeSPIRVLowerResourceNamesLegacyPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -190,6 +191,8 @@ void SPIRVPassConfig::addIRPasses() {
   addPass(createAtomicExpandLegacyPass());
 
   TargetPassConfig::addIRPasses();
+
+  addPass(createSPIRVLowerResourceNamesLegacyPass());
 
   if (TM.getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None)

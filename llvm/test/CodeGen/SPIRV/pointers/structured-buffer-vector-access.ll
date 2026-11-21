@@ -15,18 +15,16 @@
 
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: main
-; CHECK:       %33 = OpFunction %2 None %3 ; -- Begin function main
+; CHECK:       %18 = OpFunction %2 None %3 ; -- Begin function main
 ; CHECK-NEXT:    %1 = OpLabel
-; CHECK-NEXT:    %34 = OpVariable %20 Function %29
-; CHECK-NEXT:    %35 = OpVariable %19 Function %30
-; CHECK-NEXT:    %36 = OpCopyObject %12 %31
-; CHECK-NEXT:    %37 = OpCopyObject %10 %32
-; CHECK-NEXT:    %38 = OpAccessChain %7 %36 %21 %21
-; CHECK-NEXT:    %39 = OpLoad %6 %38
-; CHECK-NEXT:    %40 = OpCompositeExtract %4 %39 1
-; CHECK-NEXT:    %41 = OpAccessChain %7 %37 %21 %21
-; CHECK-NEXT:    %42 = OpInBoundsAccessChain %5 %41 %22
-; CHECK-NEXT:    OpStore %42 %40
+; CHECK-NEXT:    %19 = OpCopyObject %12 %16
+; CHECK-NEXT:    %20 = OpCopyObject %10 %17
+; CHECK-NEXT:    %21 = OpAccessChain %7 %19 %14 %14
+; CHECK-NEXT:    %22 = OpLoad %6 %21
+; CHECK-NEXT:    %23 = OpCompositeExtract %4 %22 1
+; CHECK-NEXT:    %24 = OpAccessChain %7 %20 %14 %14
+; CHECK-NEXT:    %25 = OpInBoundsAccessChain %5 %24 %15
+; CHECK-NEXT:    OpStore %25 %23
 ; CHECK-NEXT:    OpReturn
 ; CHECK-NEXT:    OpFunctionEnd
 entry:
