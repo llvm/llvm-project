@@ -670,3 +670,163 @@ TEST_F(ContextTest, FlatProfileConcurrentAllocation) {
     EXPECT_GE(Entry.second[0], 1U);
   }
 }
+
+TEST_F(ContextTest, NestedContendedAndUncontendedRootsPreserveOuterLock) {
+  __llvm_ctx_profile_start_collection();
+  FunctionData ContendedRoot;
+  ContendedRoot.getOrAllocateContextRoot();
+  FunctionData UncontendedRoot;
+  UncontendedRoot.getOrAllocateContextRoot();
+
+  __sanitizer::Semaphore ContendedLocked;
+  __sanitizer::Semaphore ReleaseHolder;
+  std::thread Holder([&]() {
+    EXPECT_FALSE(
+        isScratch(__llvm_ctx_profile_start_context(&ContendedRoot, 2, 4, 1)));
+    ContendedLocked.Post();
+    ReleaseHolder.Wait();
+    __llvm_ctx_profile_release_context(&ContendedRoot);
+  });
+  ContendedLocked.Wait();
+
+  auto *OuterCtx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  ASSERT_FALSE(isScratch(OuterCtx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  // Entering a contended inner root must not clear the outer root's TLS.
+  EXPECT_TRUE(
+      isScratch(__llvm_ctx_profile_start_context(&ContendedRoot, 2, 4, 1)));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  __llvm_ctx_profile_release_context(&ContendedRoot);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  // Entering an uncontended inner root must not steal the outer root's TLS or
+  // take the inner root's lock.
+  EXPECT_TRUE(
+      isScratch(__llvm_ctx_profile_start_context(&UncontendedRoot, 3, 4, 1)));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  if (UncontendedRoot.CtxRoot->Taken.TryLock())
+    UncontendedRoot.CtxRoot->Taken.Unlock();
+  else
+    ADD_FAILURE() << "Uncontended inner root lock was unexpectedly held";
+  __llvm_ctx_profile_release_context(&UncontendedRoot);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  EXPECT_FALSE(Root.CtxRoot->Taken.TryLock());
+
+  // Outer root still collects subcontexts after inner root exits.
+  int CalleeAddr = 0;
+  __llvm_ctx_profile_expected_callee[0] = &CalleeAddr;
+  __llvm_ctx_profile_callsite[0] = &OuterCtx->subContexts()[0];
+  FunctionData CalleeData;
+  auto *SubCtx =
+      __llvm_ctx_profile_get_context(&CalleeData, &CalleeAddr, 10, 2, 0);
+  EXPECT_FALSE(isScratch(SubCtx));
+  EXPECT_EQ(OuterCtx->subContexts()[0], SubCtx);
+  EXPECT_EQ(CalleeData.FlatCtx, nullptr);
+
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  if (Root.CtxRoot->Taken.TryLock())
+    Root.CtxRoot->Taken.Unlock();
+  else
+    ADD_FAILURE() << "Outer root lock remained held";
+
+  ReleaseHolder.Post();
+  Holder.join();
+
+  FunctionData PostRootFunc;
+  int PostAddr = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&PostRootFunc, &PostAddr, 11, 2, 0)));
+  ASSERT_NE(PostRootFunc.FlatCtx, nullptr);
+
+  FlatCounterWriter W;
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W));
+  EXPECT_EQ(W.FlatsWritten, 1);
+}
+
+TEST_F(ContextTest, RecursiveHeldRootUnlocksOnlyOnOutermostExit) {
+  __llvm_ctx_profile_start_collection();
+
+  auto *OuterCtx = __llvm_ctx_profile_start_context(&Root, 1, 10, 4);
+  ASSERT_FALSE(isScratch(OuterCtx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  // Recursive entry via start_context returns scratch and keeps the outer
+  // root active.
+  EXPECT_TRUE(isScratch(__llvm_ctx_profile_start_context(&Root, 1, 10, 4)));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+
+  // Inner exit must not unlock Taken or re-enable flat profiling.
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, Root.CtxRoot);
+  EXPECT_FALSE(Root.CtxRoot->Taken.TryLock());
+
+  int CalleeAddr = 0;
+  __llvm_ctx_profile_expected_callee[0] = &CalleeAddr;
+  __llvm_ctx_profile_callsite[0] = &OuterCtx->subContexts()[1];
+  FunctionData CalleeData;
+  auto *SubCtx =
+      __llvm_ctx_profile_get_context(&CalleeData, &CalleeAddr, 20, 2, 0);
+  EXPECT_FALSE(isScratch(SubCtx));
+  EXPECT_EQ(OuterCtx->subContexts()[1], SubCtx);
+  EXPECT_EQ(CalleeData.FlatCtx, nullptr);
+
+  // Outermost exit unlocks Taken and resumes flat profiling.
+  __llvm_ctx_profile_release_context(&Root);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  if (Root.CtxRoot->Taken.TryLock())
+    Root.CtxRoot->Taken.Unlock();
+  else
+    ADD_FAILURE() << "Outer root lock remained held";
+
+  // Also test recursive and nested autodetected roots via get_context.
+  FunctionData AutoRoot1;
+  AutoRoot1.getOrAllocateContextRoot();
+  FunctionData AutoRoot2;
+  AutoRoot2.getOrAllocateContextRoot();
+  int AutoAddr1 = 0;
+  int AutoAddr2 = 0;
+
+  auto *AutoOuterCtx =
+      __llvm_ctx_profile_get_context(&AutoRoot1, &AutoAddr1, 30, 4, 2);
+  ASSERT_FALSE(isScratch(AutoOuterCtx));
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, AutoRoot1.CtxRoot);
+
+  __llvm_ctx_profile_expected_callee[0] = &AutoAddr1;
+  __llvm_ctx_profile_callsite[0] = &AutoOuterCtx->subContexts()[0];
+  auto *AutoRecCtx =
+      __llvm_ctx_profile_get_context(&AutoRoot1, &AutoAddr1, 30, 4, 2);
+  EXPECT_FALSE(isScratch(AutoRecCtx));
+
+  __llvm_ctx_profile_expected_callee[0] = &AutoAddr2;
+  __llvm_ctx_profile_callsite[0] = &AutoOuterCtx->subContexts()[1];
+  auto *AutoNestedCtx =
+      __llvm_ctx_profile_get_context(&AutoRoot2, &AutoAddr2, 31, 4, 0);
+  EXPECT_FALSE(isScratch(AutoNestedCtx));
+
+  __llvm_ctx_profile_release_context(&AutoRoot2);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, AutoRoot1.CtxRoot);
+  EXPECT_FALSE(AutoRoot1.CtxRoot->Taken.TryLock());
+
+  __llvm_ctx_profile_release_context(&AutoRoot1);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, AutoRoot1.CtxRoot);
+  EXPECT_FALSE(AutoRoot1.CtxRoot->Taken.TryLock());
+
+  __llvm_ctx_profile_release_context(&AutoRoot1);
+  EXPECT_EQ(__llvm_ctx_profile_current_context_root, nullptr);
+  if (AutoRoot1.CtxRoot->Taken.TryLock())
+    AutoRoot1.CtxRoot->Taken.Unlock();
+  else
+    ADD_FAILURE() << "Autodetected recursive root lock remained held";
+
+  FunctionData PostFunc;
+  int PostAddr = 0;
+  EXPECT_TRUE(isScratch(
+      __llvm_ctx_profile_get_context(&PostFunc, &PostAddr, 32, 2, 0)));
+  ASSERT_NE(PostFunc.FlatCtx, nullptr);
+
+  FlatCounterWriter W;
+  EXPECT_TRUE(__llvm_ctx_profile_fetch(W));
+  EXPECT_EQ(W.FlatsWritten, 1);
+}
