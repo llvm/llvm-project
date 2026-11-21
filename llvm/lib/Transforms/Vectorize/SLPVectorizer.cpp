@@ -10357,9 +10357,9 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         Ops1.empty() ? TTI::OperandValueInfo() : TTI::getOperandInfo(Ops1);
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind, Op0Info, Op1Info,
-                                    {}, LocalState.getMainOp()) +
+                                    {}, LocalState.getMainOp(), TLI, VL) +
         TTI->getArithmeticInstrCost(Opcode1, VecTy, CostKind, Op0Info, Op1Info,
-                                    {}, LocalState.getAltOp());
+                                    {}, LocalState.getAltOp(), TLI, VL);
     SmallVector<int> OriginalMask(VL.size(), PoisonMaskElem);
     for (unsigned Idx : seq<unsigned>(VL.size())) {
       if (isa<PoisonValue>(VL[Idx]))
@@ -10371,9 +10371,11 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                             CostKind, OriginalMask);
     InstructionCost NewVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, Op1VecTy, CostKind, Op0Info,
-                                    Op1Info, {}, LocalState.getMainOp()) +
+                                    Op1Info, {}, LocalState.getMainOp(), TLI,
+                                    Op1) +
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind, Op0Info,
-                                    Op1Info, {}, LocalState.getAltOp());
+                                    Op1Info, {}, LocalState.getAltOp(), TLI,
+                                    Op2);
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
         (!VectorizableTree.empty() && getRootNode().hasState() &&
@@ -11481,7 +11483,7 @@ public:
             MainOpcode, VecTy, Kind,
             TTI::commonOperandInfo(Operands[0][0], Operands[0][1]),
             TTI::commonOperandInfo(Operands[1][0], Operands[1][1]), {},
-            S.getMainOp(), &TLI);
+            S.getMainOp(), &TLI, VL);
         break;
       default:
         // Calls (min/max, fmuladd) return above before reaching this switch.
@@ -18092,7 +18094,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, E->Scalars);
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -18109,7 +18111,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
               TTI::getOperandInfo(E->getOperand(Idx)), {},
-              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, E->Scalars);
         }
       }
       return Cost + CommonCost;
@@ -18462,11 +18464,17 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           for (unsigned Idx : seq<unsigned>(1, E->getNumOperands())) {
             TTI::OperandValueInfo ColInfo =
                 TTI::getOperandInfo(E->getOperand(Idx));
-            if (!RunningInfo.isConstant() || !ColInfo.isConstant())
+            if (!RunningInfo.isConstant() || !ColInfo.isConstant()) {
+              bool IsFinal = Idx + 1 == E->getNumOperands();
               Cost += TTIRef.getArithmeticInstrCost(
                   Opcode, VecTy, CostKind, RunningInfo, ColInfo, {},
-                  Opcode == E->getOpcode() ? E->getMainOp() : E->getAltOp(),
-                  TLI);
+                  IsFinal ? (Opcode == E->getOpcode() ? E->getMainOp()
+                                                      : E->getAltOp())
+                          : nullptr,
+                  TLI,
+                  IsFinal ? ArrayRef<const Value *>(E->Scalars)
+                          : ArrayRef<const Value *>{});
+            }
             TTI::OperandValueKind Kind = TTI::OK_AnyValue;
             if (RunningInfo.isConstant() && ColInfo.isConstant())
               Kind = RunningInfo.Kind == TTI::OK_UniformConstantValue &&
