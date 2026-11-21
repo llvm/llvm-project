@@ -194,6 +194,9 @@ checkTempObjectsInNoPool(const Decl *D, AnalysisManager &AM, BugReporter &BR,
 void RunLoopAutoreleaseLeakChecker::checkASTCodeBody(const Decl *D,
                         AnalysisManager &AM,
                         BugReporter &BR) const {
+  // The matchers below can only match Objective-C code.
+  if (!AM.getLangOpts().ObjC)
+    return;
   checkTempObjectsInSamePool(D, AM, BR, this);
   checkTempObjectsInNoPool(D, AM, BR, this);
 }

@@ -170,6 +170,9 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
 void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
                                                   AnalysisManager &AM,
                                                   BugReporter &BR) const {
+  // The matchers below can only match Objective-C code.
+  if (!AM.getLangOpts().ObjC)
+    return;
 
   auto DoublePointerParamM =
       parmVarDecl(hasType(hasCanonicalType(pointerType(
