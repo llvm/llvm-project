@@ -38,15 +38,15 @@ enum class VirtualRegisterKind : unsigned {
   B128 = 5,
 };
 
-constexpr unsigned VirtualRegisterKindShift = 27;
+constexpr unsigned VirtualRegisterKindShift = 28;
 constexpr unsigned VirtualRegisterNumMask =
     (1u << VirtualRegisterKindShift) - 1;
 
 // The packed registers are carried in MCOperands, so they must stay inside the
 // range MCRegister reserves for physical registers.
-static_assert(((static_cast<unsigned>(VirtualRegisterKind::B128)
+static_assert(((static_cast<unsigned>(VirtualRegisterKind::B1)
                 << VirtualRegisterKindShift) |
-               VirtualRegisterNumMask) <= MCRegister::LastPhysicalReg,
+               VirtualRegisterNumMask) > MCRegister::LastPhysicalReg,
               "Packed virtual register does not fit in an MCRegister");
 
 /// The name prefix shared by all virtual registers of \p Kind.
