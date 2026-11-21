@@ -12,6 +12,9 @@ Three kinds of loops can be converted:
 - Loops over containers, using iterators.
 - Loops over array-like containers, using `operator[]` and `at()`.
 
+For statically allocated arrays, the check also recognizes inclusive bounds
+such as `i <= N - 1` and `N - 1 >= i`, where `N` is the array size.
+
 ## MinConfidence option
 
 ### risky

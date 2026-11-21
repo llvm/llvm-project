@@ -413,7 +413,8 @@ static bool isAliasDecl(const ASTContext *Context, const Decl *TheDecl,
 }
 
 /// Determines whether the bound of a for loop condition expression is
-/// the same as the statically computable size of ArrayType.
+/// the same as the statically computable size of ArrayType, or one less for
+/// an inclusive bound.
 ///
 /// Given
 /// \code
@@ -424,10 +425,12 @@ static bool isAliasDecl(const ASTContext *Context, const Decl *TheDecl,
 /// \code
 ///   for (int i = 0; i < N; ++i) {  /* use arr[i] */ }
 ///   for (int i = 0; i < arraysize(arr); ++i) { /* use arr[i] */ }
+///   for (int i = 0; i <= N - 1; ++i) { /* use arr[i] */ }
 /// \endcode
 static bool arrayMatchesBoundExpr(const ASTContext *Context,
                                   const QualType &ArrayType,
-                                  const Expr *ConditionExpr) {
+                                  const Expr *ConditionExpr, QualType IndexType,
+                                  bool IsInclusive) {
   if (!ConditionExpr || ConditionExpr->isValueDependent())
     return false;
   const ConstantArrayType *ConstType =
@@ -438,19 +441,27 @@ static bool arrayMatchesBoundExpr(const ASTContext *Context,
       ConditionExpr->getIntegerConstantExpr(*Context);
   if (!ConditionSize)
     return false;
-  const llvm::APSInt ArraySize(ConstType->getSize());
+  llvm::APSInt ArraySize(ConstType->getSize());
+  if (IsInclusive) {
+    // The increment after the last element must not overflow the index.
+    const llvm::APSInt MaxIndex = llvm::APSInt::getMaxValue(
+        Context->getIntWidth(IndexType), IndexType->isUnsignedIntegerType());
+    if (ArraySize.isZero() ||
+        llvm::APSInt::compareValues(ArraySize, MaxIndex) > 0)
+      return false;
+    --ArraySize;
+  }
   return llvm::APSInt::isSameValue(*ConditionSize, ArraySize);
 }
 
-ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(ASTContext *Context,
-                                               const VarDecl *IndexVar,
-                                               const VarDecl *EndVar,
-                                               const Expr *ContainerExpr,
-                                               const Expr *ArrayBoundExpr,
-                                               bool ContainerNeedsDereference)
+ForLoopIndexUseVisitor::ForLoopIndexUseVisitor(
+    ASTContext *Context, const VarDecl *IndexVar, const VarDecl *EndVar,
+    const Expr *ContainerExpr, const Expr *ArrayBoundExpr,
+    bool ContainerNeedsDereference, bool ArrayBoundIsInclusive)
     : Context(Context), IndexVar(IndexVar), EndVar(EndVar),
       ContainerExpr(ContainerExpr), ArrayBoundExpr(ArrayBoundExpr),
       ContainerNeedsDereference(ContainerNeedsDereference),
+      ArrayBoundIsInclusive(ArrayBoundIsInclusive),
 
       ConfidenceLevel(Confidence::CL_Safe) {
   if (ContainerExpr)
@@ -688,7 +699,8 @@ bool ForLoopIndexUseVisitor::TraverseArraySubscriptExpr(ArraySubscriptExpr *E) {
   if ((ContainerExpr && !areSameExpr(Context, Arr->IgnoreParenImpCasts(),
                                      ContainerExpr->IgnoreParenImpCasts())) ||
       !arrayMatchesBoundExpr(Context, Arr->IgnoreImpCasts()->getType(),
-                             ArrayBoundExpr)) {
+                             ArrayBoundExpr, IndexVar->getType(),
+                             ArrayBoundIsInclusive)) {
     // If we have already discovered the array being indexed and this isn't it
     // or this array doesn't match, mark this loop as unconvertible.
     OnlyUsedAsIndex = false;
