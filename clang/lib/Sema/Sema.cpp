@@ -1179,9 +1179,17 @@ static bool IsRecordFullyDefined(const CXXRecordDecl *RD,
     // Check if friend classes and methods are complete.
     if (TypeSourceInfo *TSI = Friend->getFriendType()) {
       // Friend classes are available as the TypeSourceInfo of the FriendDecl.
-      if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl())
+      if (CXXRecordDecl *FriendD = TSI->getType()->getAsCXXRecordDecl()) {
         Complete = MethodsAndNestedClassesComplete(FriendD, MNCComplete);
-      else
+        // A friend class with member function templates may instantiate
+        // specializations in other TUs that access RD's private fields.
+        for (const Decl *D : FriendD->decls()) {
+          if (isa<FunctionTemplateDecl>(D)) {
+            Complete = false;
+            break;
+          }
+        }
+      } else
         Complete = false;
     } else {
       // Friend functions are available through the NamedDecl of FriendDecl.
