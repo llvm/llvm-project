@@ -1,5 +1,8 @@
-# RUN: llvm-mc %s -triple=riscv32 | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 --defsym RV32=1 \
+# RUN:   | FileCheck %s --check-prefixes=CHECK,RV32
 # RUN: llvm-mc %s -triple=riscv64 | FileCheck %s
+# RUN: llvm-mc %s -triple=riscv32 -o /dev/null 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=WARN --implicit-check-not=warning:
 
 .cfi_startproc
 # CHECK: .cfi_offset zero, 0
@@ -66,6 +69,31 @@
 .cfi_offset x30, 240
 # CHECK: .cfi_offset t6, 248
 .cfi_offset x31, 248
+.cfi_endproc
+
+.cfi_startproc
+# CHECK: .cfi_register 64, 4929
+.cfi_register 64, mepc
+# CHECK: .cfi_return_column 4930
+.cfi_return_column mcause
+# CHECK: .cfi_same_value 4416
+.cfi_same_value sscratch
+# CHECK: .cfi_same_value 4099
+.cfi_same_value fcsr
+# CHECK: .cfi_same_value 6066
+.cfi_same_value dscratch
+# CHECK: .cfi_same_value 4419
+# WARN: :[[@LINE+1]]:17: warning: 'sbadaddr' is a deprecated alias for 'stval'
+.cfi_same_value sbadaddr
+.option push
+.option arch, +xaifet
+# CHECK: .cfi_same_value 7376
+.cfi_same_value aif.hartid
+.option pop
+.ifdef RV32
+# RV32: .cfi_same_value 7296
+.cfi_same_value cycleh
+.endif
 .cfi_endproc
 
 .cfi_startproc
