@@ -1034,6 +1034,8 @@ Linux::getSupportedSanitizers(BoundArch BA,
     Res |= SanitizerKind::Concurrency;
   if (IsX86_64 || IsAArch64 || IsSystemZ || IsHexagon)
     Res |= SanitizerKind::Type;
+  if (IsX86_64 || IsAArch64 || IsPowerPC64)
+    Res |= SanitizerKind::DeviceAddress;
   if (IsX86_64 || IsSystemZ || IsPowerPC64)
     Res |= SanitizerKind::KernelMemory;
   if (IsX86_64 || IsMIPS64 || IsAArch64 || IsX86 || IsMIPS || IsArmArch ||

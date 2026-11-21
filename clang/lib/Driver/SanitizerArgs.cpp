@@ -777,6 +777,15 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                      SanitizerKind::Address | SanitizerKind::Thread |
                          SanitizerKind::Undefined | SanitizerKind::Memory |
                          SanitizerKind::Type),
+      // TODO: Need to split the runtime to support this.
+      std::make_pair(
+          SanitizerKind::DeviceAddress,
+          SanitizerKind::Address | SanitizerKind::Thread |
+              SanitizerKind::Memory | SanitizerKind::Type |
+              SanitizerKind::Realtime | SanitizerKind::Undefined |
+              SanitizerKind::Integer | SanitizerKind::ImplicitConversion |
+              SanitizerKind::Nullability | SanitizerKind::LocalBounds |
+              SanitizerKind::FloatDivideByZero),
       std::make_pair(SanitizerKind::AllocToken,
                      SanitizerKind::Address | SanitizerKind::HWAddress |
                          SanitizerKind::KernelAddress |
