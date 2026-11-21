@@ -11,7 +11,7 @@ func.func @slice_resultType_unranked(%arg0: tensor<?xf32>) -> (tensor<*xf32>) {
 
 // -----
 
-// CHECK-LABEL:  @reshape_unsupported_shape_computation
+
 func.func @reshape_unsupported_shape_computation(%arg0: tensor<?x4xf32>) -> tensor<?xf32> {
   %dim = tosa.dim %arg0 axis(0) : (tensor<?x4xf32>) -> !tosa.shape<1>
   %four = tosa.const_shape values(dense<4> : tensor<1xindex>) : () -> !tosa.shape<1>
