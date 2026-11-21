@@ -21325,9 +21325,9 @@ static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
   SDValue X = N->getOperand(0);
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
-  SDValue ShiftAmt = DAG.getConstant(Log2_64(MulAmtLowBit), DL, VT);
+  SDValue ShiftAmt = DAG.getShiftAmountConstant(Log2_64(MulAmtLowBit), VT, DL);
   SDValue Shift = DAG.getNode(ISD::SHL, DL, VT, X, ShiftAmt);
-  return DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Shift);
+  return DAG.getNegative(Shift, DL, VT);
 }
 
 // X * (2^N +/- 2^M) -> (add/sub (shl X, C1), (shl X, C2))
