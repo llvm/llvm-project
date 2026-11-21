@@ -18,6 +18,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
+#include <limits>
 #include <numeric>
 #include <optional>
 
@@ -272,6 +273,18 @@ MaybeLocalRepr presburger::computeSingleVarRepr(
   DynamicAPInt divisorDynamicAPInt;
   MaybeLocalRepr result = computeSingleVarRepr(
       cst, foundRepr, pos, dividendDynamicAPInt, divisorDynamicAPInt);
+  if (!result)
+    return {};
+
+  // Check the normalized representation before modifying either output.
+  if (divisorDynamicAPInt <= 0 ||
+      divisorDynamicAPInt > std::numeric_limits<unsigned>::max())
+    return {};
+  for (const DynamicAPInt &coefficient : dividendDynamicAPInt)
+    if (coefficient < std::numeric_limits<int64_t>::min() ||
+        coefficient > std::numeric_limits<int64_t>::max())
+      return {};
+
   dividend = getInt64Vec(dividendDynamicAPInt);
   divisor = unsigned(int64_t(divisorDynamicAPInt));
   return result;
