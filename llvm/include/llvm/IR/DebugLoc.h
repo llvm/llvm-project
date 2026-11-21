@@ -245,8 +245,8 @@ public:
   appendInlinedAt(const DebugLoc &DL, DILocation *InlinedAt, LLVMContext &Ctx,
                   DenseMap<const MDNode *, MDNode *> &Cache);
 
-  /// Return true if the source locations match, ignoring isImplicitCode,
-  /// source atom info and intermediate-IR layers.
+  /// Return true if the source locations match, ignoring isImplicitCode and
+  /// source atom info.
   bool isSameSourceLocation(const DebugLoc &Other) const {
     if (get() == Other.get())
       return true;
