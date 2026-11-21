@@ -38,6 +38,12 @@
 #  define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS 0
 #endif
 
+#if __has_feature(thread_sanitizer)
+#  define _LIBCPP_ENABLE_TSAN_ANNOTATIONS 1
+#else
+#  define _LIBCPP_ENABLE_TSAN_ANNOTATIONS 0
+#endif
+
 #if _LIBCPP_INSTRUMENTED_WITH_ASAN && !_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 #  error "We can't disable ASAN container checks when libc++ has been built with ASAN container checks enabled"
 #endif
@@ -55,7 +61,14 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 
 #endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 
+#if _LIBCPP_ENABLE_TSAN_ANNOTATIONS
+extern "C" {
+_LIBCPP_EXPORTED_FROM_ABI void __tsan_release(void*);
+}
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
+
 
 // ASan choices
 #if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
