@@ -1,8 +1,5 @@
 # Threading Support API
 
-```{contents}
-:local: true
-```
 
 ## Overview
 

@@ -1,8 +1,5 @@
 # Feature Test Macros
 
-:::{contents}
-:local: true
-:::
 
 ## Overview
 

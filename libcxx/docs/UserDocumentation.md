@@ -2,9 +2,6 @@
 
 # User documentation
 
-:::{contents}
-:local: true
-:::
 
 This page contains information for users of libc++: how to use libc++ if it is not
 the default library used by the toolchain, and what configuration knobs are available

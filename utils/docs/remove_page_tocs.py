@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 CONTENTS = re.compile(
-    r"(?m)^```\{contents\}[^\n]*\n(?:.*\n)*?^```\n?|"
+    r"(?m)^(?P<fence>`{3,}|:{3,})\{contents\}[^\n]*\n(?:.*\n)*?^(?P=fence)[ \t]*\n?|"
     r"\n*^\.\. contents::[^\n]*(?:\n(?:[ \t].*|[ \t]*))*\n*"
 )
 SUFFIXES = (".rst", ".md", ".td")
@@ -28,7 +28,7 @@ def rewrite(path: Path) -> int:
     text = path.read_text(encoding="utf-8")
 
     def replacement(match: re.Match[str]) -> str:
-        if match.group(0).lstrip("\n").startswith("```") or not match.start():
+        if match.group("fence") or not match.start():
             return ""
         return "\n\n" if match.end() < len(text) else "\n"
 

@@ -1,8 +1,5 @@
 # Experimental Features
 
-:::{contents}
-:local: true
-:::
 
 (experimental features)=
 
