@@ -856,10 +856,13 @@ OverlayCDB::getProjectModules(PathRef File) const {
     log("Failed to get compilation Database for {0}", File);
     return {};
   }
-  MDB->setCommandMangler([&Mangler = Mangler](tooling::CompileCommand &Command,
-                                              PathRef CommandPath) {
-    Mangler(Command, CommandPath);
-  });
+  if (Mangler) {
+    MDB->setCommandMangler(
+        [&Mangler = Mangler](tooling::CompileCommand &Command,
+                             PathRef CommandPath) {
+          Mangler(Command, CommandPath);
+        });
+  }
   return MDB;
 }
 

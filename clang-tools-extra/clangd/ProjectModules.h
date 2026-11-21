@@ -15,6 +15,7 @@
 #include "clang/Tooling/CompilationDatabase.h"
 
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -53,6 +54,13 @@ public:
                                              PathRef RequiredSrcFile) = 0;
   virtual ModuleNameState getModuleNameState(llvm::StringRef ModuleName) {
     return ModuleNameState::Unknown;
+  }
+
+  /// Returns a compile command for \p File from this project's underlying
+  /// compilation database, with any configured CommandMangler applied.
+  virtual std::optional<tooling::CompileCommand>
+  getCompileCommand(PathRef File) const {
+    return std::nullopt;
   }
 
   virtual void setCommandMangler(CommandMangler Mangler) {}
