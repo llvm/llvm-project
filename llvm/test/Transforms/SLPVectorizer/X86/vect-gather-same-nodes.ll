@@ -8,8 +8,9 @@ define void @test(ptr %a, ptr %b) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr null, align 4
 ; CHECK-NEXT:    [[ARRAYIDX120:%.*]] = getelementptr [4 x float], ptr [[B:%.*]], i64 0, i64 3
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[ARRAYIDX120]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP2]], float [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP2]], <4 x float> [[TMP13]], <4 x i32> <i32 5, i32 poison, i32 2, i32 4>
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load float, ptr null, align 4

@@ -87,10 +87,11 @@ define i1 @fcmp_lt_gt(double %a, double %b, double %c) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> poison, double [[SUB:%.*]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP6]], double [[FNEG]], i64 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[SUB]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[ADD]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP0]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub <2 x double> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP1]], [[TMP3]]
@@ -130,10 +131,11 @@ define i1 @fcmp_lt(double %a, double %b, double %c) {
 ; CHECK-LABEL: @fcmp_lt(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg double [[B:%.*]]
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[A:%.*]], 2.000000e+00
-; CHECK-NEXT:    [[ADD:%.*]] = fsub double [[C:%.*]], [[B]]
-; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[FNEG]], [[C]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[SUB:%.*]], i64 1
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x double> [[TMP7]], double [[FNEG]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[SUB]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[ADD]], i64 1
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x double> [[TMP1]], double [[B]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP8]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[MUL]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP3]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x double> [[TMP2]], [[TMP4]]
