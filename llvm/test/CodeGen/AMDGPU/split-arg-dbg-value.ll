@@ -1,4 +1,5 @@
-; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,SDAG %s
+; RUN: llc -global-isel=1 -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck -check-prefixes=GCN,GISEL %s
 ; Make sure dbg_value reports something for argument registers when they are split into multiple registers
 
 define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unnamed_addr #0 !dbg !7 {
@@ -9,10 +10,14 @@ define hidden <4 x float> @split_v4f32_arg(<4 x float> returned %arg) local_unna
 ; GCN-NEXT:    .cfi_sections .debug_frame
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -31,12 +36,18 @@ define hidden <4 x float> @split_v4f32_multi_arg(<4 x float> %arg0, <2 x float> 
 ; GCN-NEXT:    .loc 0 7 0 ; /tmp/dbg.cl:7:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr5
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr4
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr5
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr4
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg0 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr4
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f32_multi_arg:arg1 <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr5
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    .cfi_undefined 2560
@@ -71,8 +82,10 @@ define hidden <4 x half> @split_v4f16_arg(<4 x half> returned %arg) local_unname
 ; GCN-NEXT:    .loc 0 11 0 is_stmt 1 ; /tmp/dbg.cl:11:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v4f16_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -91,8 +104,10 @@ define hidden double @split_f64_arg(double returned %arg) local_unnamed_addr #0 
 ; GCN-NEXT:    .loc 0 15 0 ; /tmp/dbg.cl:15:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -111,10 +126,16 @@ define hidden <2 x double> @split_v2f64_arg(<2 x double> returned %arg) local_un
 ; GCN-NEXT:    .loc 0 19 0 ; /tmp/dbg.cl:19:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
-; GCN-NEXT:    ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
-; GCN-NEXT:    ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] $vgpr3
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] $vgpr2
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; FIXME: The legalizer drops these locations when it folds the nested merges
+; into the unmerge of the return value.
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] undef
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] undef
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 64 32] undef
+; GISEL-NEXT:  ;DEBUG_VALUE: split_v2f64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 96 32] undef
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -133,8 +154,10 @@ define hidden i64 @split_i64_arg(i64 returned %arg) local_unnamed_addr #0 !dbg !
 ; GCN-NEXT:    .loc 0 23 0 ; /tmp/dbg.cl:23:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_i64_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -153,8 +176,10 @@ define hidden ptr addrspace(1) @split_ptr_arg(ptr addrspace(1) readnone returned
 ; GCN-NEXT:    .loc 0 27 0 ; /tmp/dbg.cl:27:0
 ; GCN-NEXT:    .cfi_startproc
 ; GCN-NEXT:  ; %bb.0:
-; GCN-NEXT:    ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
-; GCN-NEXT:    ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; SDAG-NEXT:   ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
+; SDAG-NEXT:   ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr0
+; GISEL-NEXT:  ;DEBUG_VALUE: split_ptr_arg:arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr1
 ; GCN-NEXT:    .cfi_llvm_def_aspace_cfa 64, 0, 6
 ; GCN-NEXT:    .cfi_llvm_register_pair 16, 62, 32, 63, 32
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

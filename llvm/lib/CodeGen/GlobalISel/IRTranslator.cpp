@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/InlineAsmLowering.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
@@ -247,6 +248,20 @@ class IRTranslatorImpl {
                                const DIExpression *Expression,
                                const DebugLoc &DL,
                                MachineIRBuilder &MIRBuilder);
+
+  /// If \p Arg was split across registers by the calling convention, emit one
+  /// fragment DBG_VALUE per part, as SelectionDAG does, and return true. The
+  /// value that call lowering reassembles is folded away by the legalizer.
+  ///
+  /// Example:
+  ///   %0:_(i64) = G_MERGE_VALUES %1(i32), %2(i32)
+  /// gives
+  ///   DBG_VALUE %1, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 0, 32)
+  ///   DBG_VALUE %2, $noreg, !x, !DIExpression(DW_OP_LLVM_fragment, 32, 32)
+  bool translateSplitArgDbgValue(const Argument &Arg,
+                                 const DILocalVariable *Variable,
+                                 const DIExpression *Expression,
+                                 MachineIRBuilder &MIRBuilder);
 
   /// Translate a debug-info record of a variadic dbg.value (one using a
   /// DIArgList) into a DBG_VALUE_LIST instruction.
@@ -4662,6 +4677,86 @@ void IRTranslatorImpl::finishPendingPhis() {
   }
 }
 
+/// Append the registers that the merge-like instructions defining \p Reg
+/// combine to \p Parts, lowest offset first. Returns false for a
+/// G_MERGE_VALUES on a big-endian target, where the first source is not at
+/// offset 0.
+static bool getMergedParts(Register Reg, const MachineRegisterInfo &MRI,
+                           bool IsLittleEndian,
+                           SmallVectorImpl<Register> &Parts) {
+  auto *Merge = dyn_cast_if_present<GMergeLikeInstr>(MRI.getVRegDef(Reg));
+  if (!Merge) {
+    Parts.push_back(Reg);
+    return true;
+  }
+  if (isa<GMerge>(Merge) && !IsLittleEndian)
+    return false;
+  for (unsigned I = 0, E = Merge->getNumSources(); I != E; ++I)
+    if (!getMergedParts(Merge->getSourceReg(I), MRI, IsLittleEndian, Parts))
+      return false;
+  return true;
+}
+
+/// Return the frame index that \p Reg is loaded from in full, if any.
+static std::optional<int> getLoadedFrameIndex(Register Reg,
+                                              const MachineRegisterInfo &MRI) {
+  auto *Load = dyn_cast_if_present<GLoad>(MRI.getVRegDef(Reg));
+  if (!Load || Load->getMemSizeInBits() !=
+                   LocationSize::precise(MRI.getType(Reg).getSizeInBits()))
+    return std::nullopt;
+  MachineInstr *PtrDef = MRI.getVRegDef(Load->getPointerReg());
+  if (!PtrDef || PtrDef->getOpcode() != TargetOpcode::G_FRAME_INDEX)
+    return std::nullopt;
+  return PtrDef->getOperand(1).getIndex();
+}
+
+bool IRTranslatorImpl::translateSplitArgDbgValue(
+    const Argument &Arg, const DILocalVariable *Variable,
+    const DIExpression *Expression, MachineIRBuilder &MIRBuilder) {
+  ArrayRef<Register> VRegs = getOrCreateVRegs(Arg);
+  SmallVector<Register, 4> Parts;
+  if (VRegs.size() != 1 ||
+      !getMergedParts(VRegs.front(), *MRI, DL->isLittleEndian(), Parts) ||
+      Parts.size() < 2)
+    return false;
+
+  // As in SelectionDAG's splitMultiRegDbgValue, only the bits inside the
+  // fragment that the expression already describes are kept.
+  std::optional<DIExpression::FragmentInfo> ExprFragment =
+      Expression->getFragmentInfo();
+  SmallVector<std::pair<Register, DIExpression *>, 4> Fragments;
+  uint64_t OffsetInBits = 0;
+  for (Register Part : Parts) {
+    TypeSize Size = MRI->getType(Part).getSizeInBits();
+    if (Size.isScalable())
+      return false;
+    uint64_t SizeInBits = Size.getFixedValue();
+    if (ExprFragment) {
+      if (OffsetInBits >= ExprFragment->SizeInBits)
+        break;
+      SizeInBits =
+          std::min(SizeInBits, ExprFragment->SizeInBits - OffsetInBits);
+    }
+    std::optional<DIExpression *> FragmentExpr =
+        DIExpression::createFragmentExpression(Expression, OffsetInBits,
+                                               SizeInBits);
+    if (!FragmentExpr)
+      return false;
+    Fragments.push_back({Part, *FragmentExpr});
+    OffsetInBits += Size.getFixedValue();
+  }
+
+  for (auto [Part, FragmentExpr] : Fragments) {
+    // A part passed on the stack is described by its slot, which stays valid
+    // after the loaded value is dead.
+    if (std::optional<int> FI = getLoadedFrameIndex(Part, *MRI))
+      MIRBuilder.buildFIDbgValue(*FI, Variable, FragmentExpr);
+    else
+      MIRBuilder.buildDirectDbgValue(Part, Variable, FragmentExpr);
+  }
+  return true;
+}
+
 void IRTranslatorImpl::translateDbgValueRecord(Value *V,
                                                const DILocalVariable *Variable,
                                                const DIExpression *Expression,
@@ -4700,6 +4795,9 @@ void IRTranslatorImpl::translateDbgValueRecord(Value *V,
   }
   if (translateIfEntryValueArgument(false, V, Variable, Expression, DL,
                                     MIRBuilder))
+    return;
+  if (auto *Arg = dyn_cast<Argument>(V);
+      Arg && translateSplitArgDbgValue(*Arg, Variable, Expression, MIRBuilder))
     return;
   for (Register Reg : getOrCreateVRegs(*V)) {
     // FIXME: This does not handle register-indirect values at offset 0. The
