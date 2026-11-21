@@ -1,0 +1,30 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! A non-elemental specific is preferred to an elemental one (F2023 15.5.5.2 and
+! 15.5.6p2) even when the elemental one has the smaller distance, whichever is
+! declared first. For a MANAGED array actual, the host array dummy has distance
+! 3 and the MANAGED elemental scalar dummy has distance 0.
+module elemental_preference
+  interface elemental_last
+    module procedure host_array, elemental_managed
+  end interface
+  interface elemental_first
+    module procedure elemental_managed, host_array
+  end interface
+contains
+  subroutine host_array(x)
+    integer :: x(:)
+  end subroutine
+  pure elemental subroutine elemental_managed(x)
+    integer, managed, intent(in) :: x
+  end subroutine
+
+  ! CHECK-LABEL: func.func @_QMelemental_preferencePcaller(
+  subroutine caller()
+    integer, managed :: y(2)
+    ! CHECK: fir.call @_QMelemental_preferencePhost_array(
+    call elemental_last(y)
+    ! CHECK: fir.call @_QMelemental_preferencePhost_array(
+    call elemental_first(y)
+  end subroutine
+end module

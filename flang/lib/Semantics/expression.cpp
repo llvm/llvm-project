@@ -3363,7 +3363,11 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
-    std::optional<CudaMatchingDistance> crtMatchingDistance;
+    struct Match {
+      const Symbol *specific;
+      CudaMatchingDistance distance;
+    };
+    std::vector<Match> elementalMatches, nonElementalMatches;
     bool inHostCode{
         context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
         !GetContextualMessages().at().empty() &&
@@ -3404,42 +3408,52 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                   *procedure, localActuals, foldingContext_)) {
             CudaMatchingDistance d{ComputeCudaMatchingDistance(
                 context_, *procedure, localActuals)};
-            if ((procedure->IsElemental() && elemental) ||
-                (!procedure->IsElemental() && nonElemental)) {
-              if (crtMatchingDistance) {
-                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-                if (cmp > 0) {
-                  continue;
-                }
-                if (cmp == 0) {
-                  // 16.9.144(6): a bare NULL() is not allowed as an actual
-                  // argument to a generic procedure if the specific procedure
-                  // cannot be unambiguously distinguished
-                  // Underspecified external procedure actual arguments can
-                  // also lead to ambiguity.
-                  return {
-                      nullptr, true /* due to ambiguity */, std::move(tried)};
-                }
-                // Matching distance is smaller than the previously matched
-                // specific. Let it go through so the current procedure is
-                // picked.
-              }
-            }
-            if (!procedure->IsElemental()) {
-              // takes priority over elemental match
-              nonElemental = specific;
-            } else {
-              elemental = specific;
-            }
-            crtMatchingDistance = std::move(d);
+            auto &matches{procedure->IsElemental() ? elementalMatches
+                                                   : nonElementalMatches};
+            matches.push_back({specific, std::move(d)});
           }
         }
       }
-      if (!skipDeviceOnly || nonElemental || elemental) {
+      if (!skipDeviceOnly || !nonElementalMatches.empty() ||
+          !elementalMatches.empty()) {
         break;
       }
       skipDeviceOnly = false;
       tried.erase(tried.begin() + triedBefore, tried.end());
+    }
+    // A non-elemental specific is preferred to an elemental one (F2023 15.5.5.2
+    // and 15.5.6p2), whatever their distances, so rank only the non-elemental
+    // matches when there are any. All the matches are collected first so that
+    // an early tie cannot hide a better match found later, and the result does
+    // not depend on the order of the specifics.
+    const auto &matches{
+        nonElementalMatches.empty() ? elementalMatches : nonElementalMatches};
+    const Match *best{nullptr};
+    bool ambiguous{false};
+    for (const Match &match : matches) {
+      int cmp{best ? CompareCudaMatchingDistance(match.distance, best->distance)
+                   : -1};
+      if (cmp < 0) {
+        best = &match;
+        ambiguous = false;
+      } else if (cmp == 0) {
+        ambiguous = true;
+      }
+    }
+    if (ambiguous) {
+      // 16.9.144(6): a bare NULL() is not allowed as an actual
+      // argument to a generic procedure if the specific procedure
+      // cannot be unambiguously distinguished
+      // Underspecified external procedure actual arguments can
+      // also lead to ambiguity.
+      return {nullptr, true /* due to ambiguity */, std::move(tried)};
+    }
+    if (best) {
+      if (nonElementalMatches.empty()) {
+        elemental = best->specific;
+      } else {
+        nonElemental = best->specific;
+      }
     }
   }
   // Is there a derived type of the same name?
