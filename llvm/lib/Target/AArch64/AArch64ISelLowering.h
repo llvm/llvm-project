@@ -163,6 +163,13 @@ public:
   /// shuffle mask can be codegen'd directly.
   bool isVectorClearMaskLegal(ArrayRef<int> M, EVT VT) const override;
 
+  bool isMultiStoresCheaperThanBitsMerge(EVT LTy, EVT HTy) const override {
+    // AArch64LoadStoreOptimizer merges the two stores into a single STP, so the
+    // ORR (and any zero-extend) goes away without adding a store. Narrower
+    // halves have no STP form and would only trade a BFI for an extra store.
+    return LTy == MVT::i32 && HTy == MVT::i32;
+  }
+
   /// Return the ISD::SETCC ValueType.
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
