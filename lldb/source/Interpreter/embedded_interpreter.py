@@ -44,13 +44,23 @@ def strip_and_check_exit(line):
 
 
 def readfunc(prompt):
+    if lldb.debugger:
+        lldb.debugger.GetCommandInterpreter().GetBroadcaster().BroadcastEventByType(
+            lldb.SBCommandInterpreter.eBroadcastBitReadyForInput
+        )
     line = input(prompt)
     return strip_and_check_exit(line)
 
 
 def readfunc_stdio(prompt):
+    # Flush stdout and stderr to ensure consistency.
+    sys.stderr.flush()
     sys.stdout.write(prompt)
     sys.stdout.flush()
+    if lldb.debugger:
+        lldb.debugger.GetCommandInterpreter().GetBroadcaster().BroadcastEventByType(
+            lldb.SBCommandInterpreter.eBroadcastBitReadyForInput
+        )
     line = sys.stdin.readline()
     # Readline always includes a trailing newline character unless the file
     # ends with an incomplete line. An empty line indicates EOF.
