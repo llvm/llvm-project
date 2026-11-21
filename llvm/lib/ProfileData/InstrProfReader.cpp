@@ -634,7 +634,6 @@ Error RawInstrProfReader<IntPtrT>::readHeader(
   auto NamesSize = swap(Header.NamesSize);
   auto VTableNameSize = swap(Header.VNamesSize);
   auto NumVTables = swap(Header.NumVTables);
-  ValueKindLast = swap(Header.ValueKindLast);
 
   auto DataSize = NumData * sizeof(RawInstrProf::ProfileData<IntPtrT>);
   auto PaddingBytesAfterNames = getNumPaddingBytes(NamesSize);

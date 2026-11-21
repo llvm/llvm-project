@@ -38,7 +38,8 @@ public:
 
   bool isInitialized() { return !Units.empty(); }
 
-  void addValidRelocs(RelocationMap &RM);
+  /// \returns the number of relocations added to \p RM.
+  size_t addValidRelocs(RelocationMap &RM);
 
   /// Save \p InRelocs, moved by \p LinkedOffset into \p OutSection, for the
   /// unit at \p UnitOffset in the input.
@@ -50,6 +51,9 @@ public:
   /// in .debug_info and .debug_addr, for the relocations saved relative to it.
   void setUnitOffsets(uint64_t UnitOffset, uint64_t DebugInfoOffset,
                       uint64_t DebugAddrOffset);
+
+  void setNumInputRelocs(size_t Num) { NumInputRelocs = Num; }
+  size_t getNumInputRelocs() const { return NumInputRelocs; }
 
   DwarfLinkerForBinaryRelocationMap() = default;
 
@@ -64,6 +68,8 @@ private:
 
   /// Map compilation unit offset to the valid relocations to store.
   DenseMap<uint64_t, UnitRelocs> Units;
+
+  size_t NumInputRelocs = 0;
 };
 
 struct ObjectWithRelocMap {
@@ -194,6 +200,8 @@ private:
       } else {
         findValidRelocsInDebugSections(Obj, DMO);
       }
+      DwarfLinkerRelocMap->setNumInputRelocs(ValidDebugInfoRelocs.size() +
+                                             ValidDebugAddrRelocs.size());
       // Only a sized symbol has a known extent. The ranges stand in for the
       // high_pc that assembly files lack.
       for (const auto &Entry : DMO.symbols()) {

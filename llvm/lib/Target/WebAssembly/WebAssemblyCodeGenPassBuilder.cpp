@@ -97,6 +97,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Add signatures to prototype-less function declarations
   flushFPMsToMPM(PMW);
@@ -304,8 +306,6 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"

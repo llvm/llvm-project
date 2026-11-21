@@ -33,19 +33,17 @@ using __locale_t _LIBCPP_NODEBUG = ::locale_t;
 #if defined(_LIBCPP_BUILDING_LIBRARY)
 using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
-inline _LIBCPP_HIDE_FROM_ABI __locale_t __newlocale(int __category_mask, const char* __locale, __locale_t __base) {
+inline __locale_t __newlocale(int __category_mask, const char* __locale, __locale_t __base) {
   return ::newlocale(__category_mask, __locale, __base);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void __freelocale(__locale_t __loc) { ::freelocale(__loc); }
+inline void __freelocale(__locale_t __loc) { ::freelocale(__loc); }
 
-inline _LIBCPP_HIDE_FROM_ABI char* __setlocale(int __category, char const* __locale) {
-  return ::setlocale(__category, __locale);
-}
+inline char* __setlocale(int __category, char const* __locale) { return ::setlocale(__category, __locale); }
 
-inline _LIBCPP_HIDE_FROM_ABI __lconv_t* __localeconv(__locale_t&) { return std::localeconv(); }
+inline __lconv_t* __localeconv(__locale_t&) { return std::localeconv(); }
 
-inline _LIBCPP_HIDE_FROM_ABI const char* __get_locale_encoding(__locale_t) { return nullptr; }
+inline const char* __get_locale_encoding(__locale_t) { return nullptr; }
 #endif // _LIBCPP_BUILDING_LIBRARY
 
 } // namespace __locale
