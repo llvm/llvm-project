@@ -26,13 +26,13 @@ source_filename = "test.ll"
 ;  00 is type = SD
 ; The 01 at offset 0x57 is the id of the symbol.
 ; The 60 at offset 0x89 is the tasking behavior.
-; The 01 at offset 0x91 is the binding scope.
-; The name begins at offset 0x97, and is test#C.
+; The 00 at offset 0x91 is the binding scope (unspecified).
+; The name begins at offset 0x97 and is a single blank (0x40).
 ; CHECK-NEXT: 000050 03 00 00 00 [[ROOTSD:00 00 00 01]] 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000060 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000070 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000080 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 60
-; CHECK-NEXT: 000090 00 01 00 00 00 00 00 06 a3 85 a2 a3 7b c3 00 00
+; CHECK-NEXT: 000090 00 00 00 00 00 00 00 01 40 00 00 00 00 00 00 00
 
 ; ESD record, type ED.
 ; The name is C_CODE64.
@@ -124,12 +124,12 @@ source_filename = "test.ll"
 ; CHECK-NEXT: 000400 00 40 04 00 00 00 00 07 c3 6d e6 e2 c1 f6 f4 00
 
 ; ESD record, type PR.
-; The name is test#S.
+; The name is a single blank.
 ; CHECK-NEXT: 000410 03 00 00 03 [[TESTS:00 00 00 0c]] [[C_WSA64]] 00 00 00 00
 ; CHECK-NEXT: 000420 00 00 00 00 00 00 00 00 00 00 00 {{..}} 00 00 00 00
 ; CHECK-NEXT: 000430 00 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000440 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 01
-; CHECK-NEXT: 000450 00 01 24 00 00 00 00 06 a3 85 a2 a3 7b e2 00 00
+; CHECK-NEXT: 000450 00 01 24 00 00 00 00 01 40 00 00 00 00 00 00 00
 
 ; ESD record, type ED.
 ; The name is B_IDRL.
@@ -140,12 +140,12 @@ source_filename = "test.ll"
 ; CHECK-NEXT: 0004a0 00 80 03 00 00 00 00 06 c2 6d c9 c4 d9 d3 00 00
 
 ; ESD record, type LD.
-; The name is test#C.
+; The name is a single blank.
 ; CHECK-NEXT: 0004b0 03 00 00 02 [[TESTC:00 00 00 0e]] [[C_CODE64]] 00 00 00 00
 ; CHECK-NEXT: 0004c0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 0004d0 00 00 00 00 00 00 00 00 01 20 00 00 [[TESTS]]
 ; CHECK-NEXT: 0004e0 00 00 00 00 00 00 00 00 00 00 00 00 04 00 00 02
-; CHECK-NEXT: 0004f0 00 01 20 00 00 00 00 06 a3 85 a2 a3 7b c3 00 00
+; CHECK-NEXT: 0004f0 00 01 20 00 00 00 00 01 40 00 00 00 00 00 00 00
 
 ; ESD record, type ER.
 ; The name is CELQSTRT.

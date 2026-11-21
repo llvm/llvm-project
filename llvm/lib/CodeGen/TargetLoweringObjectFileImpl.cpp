@@ -2907,17 +2907,45 @@ void TargetLoweringObjectFileGOFF::initialize(MCContext &Ctx,
     FileName = FileName.substr(1, FileName.size() - 2);
   DefaultRootSDName = Twine(FileName).concat("#C").str();
   DefaultADAPRName = Twine(FileName).concat("#S").str();
+
+  // The CSECT names given with the module flags replace the default names.
+  bool HasCsectCodeName = false;
+  bool HasCsectStaticName = false;
+  if (auto *MD = dyn_cast_or_null<MDString>(M.getModuleFlag("zos_csect_code"));
+      MD && !MD->getString().empty()) {
+    DefaultRootSDName = MD->getString().str();
+    HasCsectCodeName = true;
+  }
+  if (auto *MD =
+          dyn_cast_or_null<MDString>(M.getModuleFlag("zos_csect_static"));
+      MD && !MD->getString().empty()) {
+    DefaultADAPRName = MD->getString().str();
+    HasCsectStaticName = true;
+  }
+
   MCSectionGOFF *RootSD =
       static_cast<MCSectionGOFF *>(TextSection)->getParent();
   MCSectionGOFF *ADAPR = static_cast<MCSectionGOFF *>(ADASection);
   RootSD->setName(DefaultRootSDName);
   ADAPR->setName(DefaultADAPRName);
+  if (HasCsectStaticName)
+    ADAPR->setBindingScope(GOFF::ESD_BSC_Library);
+  // Without a CSECT name, write a single blank as the external name.
+  if (!HasCsectCodeName)
+    RootSD->setExternalName(" ");
+  if (!HasCsectStaticName)
+    ADAPR->setExternalName(" ");
   // Initialize the label for the text section.
   MCSymbolGOFF *TextLD = static_cast<MCSymbolGOFF *>(
       getContext().getOrCreateSymbol(RootSD->getName()));
   TextLD->setCodeData(GOFF::ESD_EXE_CODE);
   TextLD->setLinkage(GOFF::ESD_LT_XPLink);
-  TextLD->setExternal(false);
+  // MCSymbolGOFF::getBindingScope gives Library scope for a defined, external,
+  // hidden symbol, so external and hidden are set.
+  TextLD->setExternal(HasCsectCodeName);
+  TextLD->setHidden(HasCsectCodeName);
+  if (!HasCsectCodeName)
+    TextLD->setExternalName(" ");
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
@@ -2948,8 +2976,7 @@ MCSection *TargetLoweringObjectFileGOFF::getSectionForLSDA(
   std::string Name = "GCC_except." + F.getName().str();
 
   MCSectionGOFF *SD = getContext().getGOFFSection(
-      SectionKind::getMetadata(), Name,
-      GOFF::SDAttr{GOFF::ESD_TA_Unspecified, GOFF::ESD_BSC_Section});
+      SectionKind::getMetadata(), Name, GOFF::SDAttr{GOFF::ESD_TA_Unspecified});
   MCSectionGOFF *WSA = getContext().getGOFFSection(
       SectionKind::getMetadata(), GOFF::CLASS_WSA,
       GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
@@ -2977,9 +3004,6 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
             ? (GO->hasDefaultVisibility() ? GOFF::ESD_BSC_ImportExport
                                           : GOFF::ESD_BSC_Library)
             : GOFF::ESD_BSC_Section;
-    GOFF::ESDBindingScope SDBindingScope =
-        PRBindingScope == GOFF::ESD_BSC_Section ? GOFF::ESD_BSC_Section
-                                                : GOFF::ESD_BSC_Unspecified;
     MaybeAlign Alignment;
     if (auto *F = dyn_cast<Function>(GO))
       Alignment = F->getAlign();
@@ -2987,7 +3011,7 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
       Alignment = V->getAlign();
     MCSectionGOFF *SD = getContext().getGOFFSection(
         SectionKind::getMetadata(), Symbol->getName(),
-        GOFF::SDAttr{GOFF::ESD_TA_Unspecified, SDBindingScope});
+        GOFF::SDAttr{GOFF::ESD_TA_Unspecified});
     MCSectionGOFF *ED = getContext().getGOFFSection(
         SectionKind::getMetadata(), GOFF::CLASS_WSA,
         GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
