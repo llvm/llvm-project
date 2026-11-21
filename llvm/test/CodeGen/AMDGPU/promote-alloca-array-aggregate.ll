@@ -154,16 +154,15 @@ define amdgpu_vs void @promote_load_from_store_aggr_varoff(<4 x i32> %input) {
 
 define amdgpu_vs void @promote_memmove_aggr() #0 {
 ; CHECK-LABEL: @promote_memmove_aggr(
-; CHECK-NEXT:    [[F1:%.*]] = freeze <5 x float> poison
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <5 x float> [[F1]], float 0.000000e+00, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <5 x float> [[TMP1]], float 0.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <5 x float> [[TMP2]], float 0.000000e+00, i32 2
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <5 x float> [[TMP3]], float 0.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <5 x float> [[TMP4]], float 0.000000e+00, i32 4
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <5 x float> [[TMP5]], float 1.000000e+00, i32 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <5 x float> [[TMP6]], float 2.000000e+00, i32 3
-; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <5 x float> [[TMP7]], <5 x float> poison, <5 x i32> <i32 1, i32 2, i32 3, i32 4, i32 4>
-; CHECK-NEXT:    store float 1.000000e+00, ptr addrspace(1) @pv, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast float 1.000000e+00 to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast float 0.000000e+00 to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast float 2.000000e+00 to i32
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast float 0.000000e+00 to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i32 [[TMP2]] to float
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast i32 [[TMP3]] to float
+; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i32 [[TMP4]] to float
+; CHECK-NEXT:    [[TMP8:%.*]] = bitcast i32 [[TMP1]] to float
+; CHECK-NEXT:    store float [[TMP8]], ptr addrspace(1) @pv, align 4
 ; CHECK-NEXT:    ret void
 ;
   %f1 = alloca [5 x float], addrspace(5)
