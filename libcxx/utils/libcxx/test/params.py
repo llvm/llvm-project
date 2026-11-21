@@ -53,7 +53,6 @@ _warningFlags = [
     "-Wunused-parameter",
     "-Wunreachable-code",
     "-Wno-unused-local-typedef",
-
     # We no longer care about Clang before 10.
     "-Wno-gnu-inline-cpp-without-extern",
 
