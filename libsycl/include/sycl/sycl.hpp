@@ -36,6 +36,7 @@
 #include <sycl/__impl/queue.hpp>
 #include <sycl/__impl/sub_group.hpp>
 #include <sycl/__impl/usm_alloc_type.hpp>
+#include <sycl/__impl/usm_allocator.hpp>
 #include <sycl/__impl/usm_functions.hpp>
 
 #endif // _LIBSYCL_SYCL_HPP
