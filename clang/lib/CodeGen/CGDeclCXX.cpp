@@ -16,6 +16,7 @@
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
 #include "CodeGenFunction.h"
+#include "RISCVLpadLabelGen.h"
 #include "TargetInfo.h"
 #include "clang/AST/Attr.h"
 #include "clang/Basic/LangOptions.h"
@@ -294,8 +295,13 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
   llvm::FunctionType *StubTy =
       llvm::FunctionType::get(CGM.IntTy, {CGM.IntTy}, true);
 
+  FunctionProtoType::ExtProtoInfo EPI;
+  EPI.Variadic = true;
+  QualType StubSigTy = CGM.getContext().getFunctionType(
+      CGM.getContext().IntTy, {CGM.getContext().IntTy}, EPI);
   llvm::Function *DtorStub = CGM.CreateGlobalInitOrCleanUpFunction(
-      StubTy, FnName.str(), FI, D.getLocation());
+      StubTy, FnName.str(), FI, D.getLocation(),
+      /*TLS=*/false, llvm::GlobalVariable::InternalLinkage, StubSigTy);
 
   CodeGenFunction CGF(CGM);
 
@@ -438,8 +444,22 @@ void CodeGenFunction::EmitCXXGuardedInitBranch(llvm::Value *NeedsInit,
 
 llvm::Function *CodeGenModule::CreateGlobalInitOrCleanUpFunction(
     llvm::FunctionType *FTy, const Twine &Name, const CGFunctionInfo &FI,
-    SourceLocation Loc, bool TLS, llvm::GlobalVariable::LinkageTypes Linkage) {
+    SourceLocation Loc, bool TLS, llvm::GlobalVariable::LinkageTypes Linkage,
+    QualType RISCVLpadSigTy) {
   llvm::Function *Fn = llvm::Function::Create(FTy, Linkage, Name, &getModule());
+
+  assert((!RISCVLpadSigTy.isNull() ||
+          (FTy->getReturnType()->isVoidTy() && FTy->params().empty() &&
+           !FTy->isVarArg())) &&
+         "CreateGlobalInitOrCleanUpFunction: omitted RISCVLpadSigTy "
+         "implies a plain void() signature, but FTy does not match it");
+
+  QualType SigTy =
+      RISCVLpadSigTy.isNull()
+          ? getContext().getFunctionType(getContext().VoidTy, {},
+                                         FunctionProtoType::ExtProtoInfo())
+          : RISCVLpadSigTy;
+  setRISCVLpadFunctionAttr(Fn, SigTy);
 
   if (!getLangOpts().AppleKext && !TLS) {
     // Set the section if needed.
@@ -1183,7 +1203,9 @@ llvm::Function *CodeGenFunction::generateDestroyHelper(
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, args);
   llvm::FunctionType *FTy = CGM.getTypes().GetFunctionType(FI);
   llvm::Function *fn = CGM.CreateGlobalInitOrCleanUpFunction(
-      FTy, "__cxx_global_array_dtor", FI, VD->getLocation());
+      FTy, "__cxx_global_array_dtor", FI, VD->getLocation(),
+      /*TLS=*/false, llvm::GlobalVariable::InternalLinkage,
+      buildDtorSigTy(getContext()));
 
   CurEHLocation = VD->getBeginLoc();
 

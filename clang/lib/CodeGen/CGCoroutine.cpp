@@ -439,6 +439,11 @@ CodeGenFunction::generateAwaitSuspendWrapper(Twine const &CoroName,
       LTy, llvm::GlobalValue::InternalLinkage, FuncName, &CGM.getModule());
   CGM.SetInternalFunctionAttributes(GlobalDecl(), Fn, FI);
 
+  QualType VoidPtrTy = C.getPointerType(C.VoidTy);
+  QualType WrapperSigTy = C.getFunctionType(ReturnTy, {VoidPtrTy, VoidPtrTy},
+                                            FunctionProtoType::ExtProtoInfo());
+  CGM.setRISCVLpadFunctionAttr(Fn, WrapperSigTy);
+
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NonNull);
   Fn->addParamAttr(0, llvm::Attribute::AttrKind::NoUndef);
 

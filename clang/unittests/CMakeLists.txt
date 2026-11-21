@@ -133,3 +133,6 @@ add_distinct_clang_unittest(AllClangUnitTests
 # the merged clang unit test binary, we can update the include paths and make
 # this the default.
 include_directories(Tooling)
+# RISCVLpadLabelGenTest.cpp needs access to clang/lib/CodeGen's private
+# headers (RISCVLpadLabelGen.h) for direct unit testing.
+include_directories(${CLANG_SOURCE_DIR}/lib/CodeGen)

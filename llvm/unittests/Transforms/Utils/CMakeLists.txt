@@ -34,4 +34,5 @@ add_llvm_unittest(UtilsTests
   UnrollLoopTest.cpp
   ValueMapperTest.cpp
   ProfDataUtilTest.cpp
+  RISCVZicfilpHashTest.cpp
   )

@@ -1075,7 +1075,8 @@ public:
       llvm::FunctionType *ty, const Twine &name, const CGFunctionInfo &FI,
       SourceLocation Loc = SourceLocation(), bool TLS = false,
       llvm::GlobalVariable::LinkageTypes Linkage =
-          llvm::GlobalVariable::InternalLinkage);
+          llvm::GlobalVariable::InternalLinkage,
+      QualType RISCVLpadSigTy = QualType());
 
   /// Return the AST address space of the underlying global variable for D, as
   /// determined by its declaration. Normally this is the same as the address
@@ -1995,6 +1996,20 @@ public:
 
   std::string getPFPFieldName(const FieldDecl *FD);
   llvm::GlobalValue *getPFPDeactivationSymbol(const FieldDecl *FD);
+
+  CFBranchLabelSchemeKind getResolvedCFBranchLabelScheme() const {
+    auto Scheme = CodeGenOpts.getCFBranchLabelScheme();
+    if (Scheme == CFBranchLabelSchemeKind::Default)
+      Scheme = Target.getDefaultCFBranchLabelScheme();
+    return Scheme;
+  }
+
+  void setRISCVLpadFunctionAttr(llvm::Function *Fn, const FunctionDecl *FD);
+  void setRISCVLpadFunctionAttr(llvm::Function *Fn, QualType FnTy);
+  void setRISCVLpadCallSiteMetadata(llvm::CallBase *CallOrInvoke,
+                                    const FunctionDecl *FD);
+  void setRISCVLpadCallSiteMetadata(llvm::CallBase *CallOrInvoke, QualType FnTy,
+                                    SourceLocation Loc);
 
 private:
   /// Translate an llvm::abi::ArgInfo (computed by the LLVMABI library) into
