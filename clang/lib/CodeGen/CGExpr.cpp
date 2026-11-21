@@ -1416,7 +1416,7 @@ llvm::MDNode *CodeGenFunction::buildAllocToken(const CallExpr *E) {
   auto PlacementNewType = [this](const CallExpr *Call) -> QualType {
     if (!AllocTokenPlacementTypes)
       AllocTokenPlacementTypes = infer_alloc::collectPlacementNewTypes(
-          CurCodeDecl ? CurCodeDecl->getBody() : nullptr);
+          CurCodeDecl ? CurCodeDecl->getBody() : nullptr, getContext());
     return AllocTokenPlacementTypes->lookup(Call);
   };
   return buildAllocToken(infer_alloc::inferPossibleType(

@@ -12,6 +12,7 @@
 
 #include "clang/AST/InferAlloc.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
@@ -207,17 +208,89 @@ static const Expr *stripFields(const Expr *E) {
   return E;
 }
 
+/// The size allocated by \p CE if it is a constant: the arguments named by
+/// alloc_size, or the only argument.
+static std::optional<uint64_t> getConstantAllocSize(const CallExpr *CE,
+                                                    const ASTContext &Ctx) {
+  SmallVector<const Expr *, 2> Args;
+  const FunctionDecl *FD = CE->getDirectCallee();
+  if (const auto *A = FD ? FD->getAttr<AllocSizeAttr>() : nullptr) {
+    Args.push_back(CE->getArg(A->getElemSizeParam().getASTIndex()));
+    if (A->getNumElemsParam().isValid())
+      Args.push_back(CE->getArg(A->getNumElemsParam().getASTIndex()));
+  } else if (CE->getNumArgs() == 1) {
+    Args.push_back(CE->getArg(0));
+  }
+  if (Args.empty())
+    return std::nullopt;
+  uint64_t Size = 1;
+  for (const Expr *Arg : Args) {
+    Expr::EvalResult R;
+    if (Arg->isValueDependent() || !Arg->EvaluateAsInt(R, Ctx))
+      return std::nullopt;
+    Size *= R.Val.getInt().getZExtValue();
+  }
+  return Size;
+}
+
+/// Whether \p T ends in a flexible array member, or an array treated as one
+/// under -fstrict-flex-arrays, possibly in its last field or only base.
+static bool endsInFlexibleArray(QualType T, const ASTContext &Ctx) {
+  const RecordDecl *RD = T->getAsRecordDecl();
+  while (RD && RD->isCompleteDefinition() && !RD->isUnion()) {
+    const FieldDecl *Last = nullptr;
+    for (const FieldDecl *FD : RD->fields())
+      Last = FD;
+    if (!Last) {
+      const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD);
+      if (!CXXRD || CXXRD->getNumBases() != 1)
+        return false;
+      RD = CXXRD->bases_begin()->getType()->getAsRecordDecl();
+      continue;
+    }
+    if (Last->getType()->isArrayType())
+      return Decl::isFlexibleArrayMemberLike(
+          Ctx, Last, Last->getType(),
+          Ctx.getLangOpts().getStrictFlexArraysLevel(),
+          /*IgnoreTemplateOrMacroSubstitution=*/true);
+    RD = Last->getType()->getAsRecordDecl();
+  }
+  return false;
+}
+
+/// Whether the object \p NE constructs into the storage allocated by \p CE
+/// describes all of it. It may construct only a header, with other data
+/// (possibly pointers) after it, e.g. `new (malloc(n + 8)) size_t(n)`. A
+/// pointer-free type is used only for a constant allocation of its size, an
+/// array new, or a type ending in a flexible array, whose elements are assumed
+/// to fill the rest.
+static bool coversAllocation(const CallExpr *CE, const CXXNewExpr *NE,
+                             const ASTContext &Ctx) {
+  QualType T = NE->getAllocatedType();
+  llvm::SmallPtrSet<const RecordDecl *, 4> VisitedRD;
+  bool IncompleteType = false;
+  if (NE->isArray() || typeContainsPointer(T, VisitedRD, IncompleteType) ||
+      IncompleteType)
+    return true;
+  std::optional<uint64_t> Size = getConstantAllocSize(CE, Ctx);
+  if (Size && *Size == uint64_t(Ctx.getTypeSizeInChars(T).getQuantity()))
+    return true;
+  return endsInFlexibleArray(T, Ctx);
+}
+
 namespace {
 /// Implements collectPlacementNewTypes(). A variable qualifies if every
 /// reference to it other than its initializer is an lvalue-to-rvalue read.
 class PlacementNewCollector : public ConstDynamicRecursiveASTVisitor {
 public:
+  explicit PlacementNewCollector(const ASTContext &Ctx) : Ctx(Ctx) {}
+
   // Resolved after the traversal: a use that is not a read may follow the
   // placement new and still disqualify the variable.
   llvm::DenseMap<const CallExpr *, QualType> finish() && {
-    for (const auto &[VD, T] : Uses)
+    for (const auto &[VD, NE] : Uses)
       if (const CallExpr *CE = Defs.lookup(VD))
-        record(CE, T);
+        record(CE, NE);
     return std::move(CallTypes);
   }
 
@@ -257,36 +330,39 @@ public:
       return true;
     const Expr *Source =
         stripFields(NE->getPlacementArg(0)->IgnoreParenCasts());
-    QualType T = NE->getAllocatedType();
     if (const auto *CE = dyn_cast<CallExpr>(Source))
-      record(CE, T);
+      record(CE, NE);
     else if (const auto *DRE = dyn_cast<DeclRefExpr>(Source))
       if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl()))
-        Uses.emplace_back(VD, T);
+        Uses.emplace_back(VD, NE);
     return true;
   }
 
 private:
-  void record(const CallExpr *CE, QualType T) {
+  void record(const CallExpr *CE, const CXXNewExpr *NE) {
+    QualType T =
+        coversAllocation(CE, NE, Ctx) ? NE->getAllocatedType() : QualType();
     auto [It, Inserted] = CallTypes.try_emplace(CE, T);
     // Different types constructed into the same storage: ambiguous.
     if (!Inserted && !It->second.isNull() &&
-        It->second.getCanonicalType() != T.getCanonicalType())
+        (T.isNull() || It->second.getCanonicalType() != T.getCanonicalType()))
       It->second = QualType();
   }
+
+  const ASTContext &Ctx;
 
   llvm::DenseMap<const CallExpr *, QualType> CallTypes;
   // Variable -> the allocation call initializing it; erased on any use that
   // is not a read.
   llvm::DenseMap<const VarDecl *, const CallExpr *> Defs;
   llvm::SmallPtrSet<const DeclRefExpr *, 16> Reads;
-  llvm::SmallVector<std::pair<const VarDecl *, QualType>> Uses;
+  llvm::SmallVector<std::pair<const VarDecl *, const CXXNewExpr *>> Uses;
 };
 } // namespace
 
 llvm::DenseMap<const CallExpr *, QualType>
-infer_alloc::collectPlacementNewTypes(const Stmt *Body) {
-  PlacementNewCollector Collector;
+infer_alloc::collectPlacementNewTypes(const Stmt *Body, const ASTContext &Ctx) {
+  PlacementNewCollector Collector(Ctx);
   if (Body)
     Collector.TraverseStmt(Body);
   return std::move(Collector).finish();

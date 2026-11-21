@@ -439,6 +439,49 @@ void test_placement_new_lambda() {
   construct2(PlacedNoPtr{});
 }
 
+// The placed object may be only a header, with other data (possibly pointers)
+// after it. A pointer-free type is used only for a constant allocation of its
+// size, an array new, or a type ending in a flexible array (possibly in its
+// last field or only base).
+struct PlacedHeader {
+  long len;
+  int n;
+};
+struct FlatBase {
+  long len;
+  int refcount;
+  unsigned char tag;
+  unsigned char storage[3];
+};
+struct Flat : FlatBase {};
+struct NestedFlat {
+  int n;
+  PlacedNoPtr tail;
+};
+// CHECK-LABEL: define dso_local void @_Z24test_placement_new_coverm(
+// CHECK: call noalias ptr @malloc(i64 noundef %{{.*}})
+// CHECK-NOT: !alloc_token
+// CHECK: call {{.*}}@_Znwm(i64 noundef %{{.*}})
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 64)
+// CHECK-NOT: !alloc_token
+// CHECK: call noalias ptr @malloc(i64 noundef 16){{.*}} !alloc_token [[META_PLACEDHEADER:![0-9]+]]
+// CHECK: call noalias ptr @malloc(i64 noundef %{{.*}}){{.*}} !alloc_token [[META_PLACEDHEADER]]
+// CHECK: call { ptr, i64 } @__size_returning_new(i64 noundef %{{.*}}){{.*}} !alloc_token [[META_FLAT:![0-9]+]]
+// CHECK: call noalias ptr @malloc(i64 noundef %{{.*}}){{.*}} !alloc_token [[META_NESTEDFLAT:![0-9]+]]
+// CHECK: call noalias ptr @malloc(i64 noundef %{{.*}}){{.*}} !alloc_token [[META_PLACEDWITHPTR]]
+void test_placement_new_cover(size_t n) {
+  void *ptr = malloc(n + 8);
+  size_t *count = new (ptr) size_t(n);
+  PlacedHeader *h1 = new (::operator new(n)) PlacedHeader();
+  PlacedHeader *h2 = new (malloc(64)) PlacedHeader();
+  PlacedHeader *h3 = new (malloc(16)) PlacedHeader();
+  PlacedHeader *h4 = new (malloc(n)) PlacedHeader[4];
+  Flat *f = new (__size_returning_new(n).p) Flat();
+  NestedFlat *nf = new (malloc(n)) NestedFlat();
+  PlacedWithPtr *wp = new (malloc(n)) PlacedWithPtr();
+}
+
 template <typename T>
 T *placement_construct(size_t size) {
   __sized_ptr_t res = __size_returning_new(size);
@@ -466,3 +509,6 @@ void test_placement_new_template() {
 // CHECK: [[META_CHAR]] = !{!"char", i1 false}
 // CHECK: [[META_DERIVEDWITHPTR]] = !{!"DerivedWithPtr", i1 true}
 // CHECK: [[META_CLASSPLACEMENT]] = !{!"ClassPlacement", i1 true}
+// CHECK: [[META_PLACEDHEADER]] = !{!"PlacedHeader", i1 false}
+// CHECK: [[META_FLAT]] = !{!"Flat", i1 false}
+// CHECK: [[META_NESTEDFLAT]] = !{!"NestedFlat", i1 false}

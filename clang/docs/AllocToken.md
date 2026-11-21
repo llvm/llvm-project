@@ -66,7 +66,11 @@ heuristics are syntactic: `sizeof` expressions and casts ignore control flow
 and reassignments, and a placement `new` through a variable is only used if
 the variable is initialized by the allocation call and otherwise only read
 (variables that are reassigned, or whose address or reference is taken, are
-not used for inference). If no type can be inferred, the allocation receives
+not used for inference). Since a placement `new` may construct only a header
+of the allocation, a pointer-free type from it is only used if the allocation
+size is a constant equal to the type's size, for an array `new`, or if the type
+ends in a flexible array member (or an array treated as one under
+`-fstrict-flex-arrays`). If no type can be inferred, the allocation receives
 the fallback token.
 
 ## Querying Token IDs with `__builtin_infer_alloc_token`

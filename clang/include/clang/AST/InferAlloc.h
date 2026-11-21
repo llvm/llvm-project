@@ -35,10 +35,11 @@ QualType inferPossibleType(
 
 /// Maps the allocation calls in \p Body whose result is used as placement-new
 /// storage to the constructed type (null if different types are constructed
-/// into it), e.g. `void *mem = alloc(n); new (mem) T();`. A local variable is
-/// only used if it is initialized by the call and otherwise only read.
+/// into it, or if a pointer-free type may not cover the whole allocation),
+/// e.g. `void *mem = alloc(n); new (mem) T();`. A local variable is only used
+/// if it is initialized by the call and otherwise only read.
 llvm::DenseMap<const CallExpr *, QualType>
-collectPlacementNewTypes(const Stmt *Body);
+collectPlacementNewTypes(const Stmt *Body, const ASTContext &Ctx);
 
 /// Get the information required for construction of an allocation token ID.
 std::optional<llvm::AllocTokenMetadata>
