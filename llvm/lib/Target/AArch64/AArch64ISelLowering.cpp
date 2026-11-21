@@ -9271,9 +9271,109 @@ static unsigned getIntrinsicID(const SDNode *N) {
   }
 }
 
+// Refuse only the constant-arm reassociation which would hide an otherwise
+// foldable global offset from performGlobalAddressCombine.  This is not a
+// memory transform: the existing global combine and address selector retain
+// responsibility for constructing the address and selecting its load.
+static bool shouldPreserveIndexedGlobalBase(SelectionDAG &DAG, SDValue N0,
+                                            SDValue N1,
+                                            const AArch64Subtarget &ST,
+                                            const AArch64TargetLowering &TLI) {
+  const TargetMachine &TM = DAG.getTarget();
+  const DataLayout &DL = DAG.getDataLayout();
+  if (TM.getCodeModel() != CodeModel::Small ||
+      DL.getPointerSizeInBits(0) != 64 || N0.getValueType() != MVT::i64 ||
+      N1.getValueType() != MVT::i64 || N0.getOpcode() != ISD::ADD ||
+      !N0.hasOneUse() || !N1.hasOneUse())
+    return false;
+
+  SDValue Global = N0.getOperand(0);
+  auto *C = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+  if (!C) {
+    Global = N0.getOperand(1);
+    C = dyn_cast<ConstantSDNode>(N0.getOperand(0));
+  }
+  if (!C || Global.getOpcode() != ISD::GlobalAddress || !Global.hasOneUse())
+    return false;
+  auto *GN = cast<GlobalAddressSDNode>(Global);
+  auto *GV = dyn_cast<GlobalVariable>(GN->getGlobal());
+  if (!GV || GV->getAddressSpace() != 0 || GV->isThreadLocal() ||
+      GV->hasDLLImportStorageClass() || GN->getTargetFlags() != 0 ||
+      ST.ClassifyGlobalReference(GV, TM) != AArch64II::MO_NO_FLAG ||
+      *GN->user_begin() != N0.getNode())
+    return false;
+
+  // Match the existing relocation-fold bounds, but exclude the one-past base.
+  // Checking both terms against the limit before adding also proves no wrap.
+  constexpr uint64_t OffsetLimit = 1ULL << 20;
+  if (GN->getOffset() < 0 || uint64_t(GN->getOffset()) >= OffsetLimit ||
+      C->getAPIntValue().isNegative() || C->isZero())
+    return false;
+  uint64_t OldOffset = uint64_t(GN->getOffset());
+  uint64_t ConstantOffset = C->getZExtValue();
+  if (ConstantOffset >= OffsetLimit - OldOffset)
+    return false;
+  uint64_t NewOffset = OldOffset + ConstantOffset;
+  Type *ObjectTy = GV->getValueType();
+  if (!ObjectTy->isSized())
+    return false;
+  TypeSize ObjectSize = DL.getTypeAllocSize(ObjectTy);
+  if (ObjectSize.isScalable() || NewOffset >= ObjectSize.getFixedValue())
+    return false;
+
+  // Counts alone do not establish this relationship.  Verify that the sole
+  // use is exactly ADD(N0, N1), then exactly the load's address operand.
+  SDNode *Address = *N0->user_begin();
+  if (Address->getOpcode() != ISD::ADD || Address->getNumOperands() != 2 ||
+      Address->getValueType(0) != MVT::i64 ||
+      !((Address->getOperand(0) == N0 && Address->getOperand(1) == N1) ||
+        (Address->getOperand(1) == N0 && Address->getOperand(0) == N1)))
+    return false;
+  SDValue AddressValue(Address, 0);
+  if (!AddressValue.hasOneUse())
+    return false;
+  auto *Load = dyn_cast<LoadSDNode>(*Address->user_begin());
+  if (!Load || Load->getBasePtr() != AddressValue || Load->isVolatile() ||
+      Load->isAtomic() || Load->getAddressingMode() != ISD::UNINDEXED ||
+      Load->getAddressSpace() != 0)
+    return false;
+  EVT MemVT = Load->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return false;
+  EVT ResultVT = Load->getValueType(0);
+  if (!((Load->getExtensionType() == ISD::NON_EXTLOAD && ResultVT == MemVT) ||
+        (MemVT == MVT::i32 && ResultVT == MVT::i64 &&
+         (Load->getExtensionType() == ISD::SEXTLOAD ||
+          Load->getExtensionType() == ISD::ZEXTLOAD))))
+    return false;
+
+  if (N1.getOpcode() != ISD::SHL)
+    return false;
+  auto *Shift = dyn_cast<ConstantSDNode>(N1.getOperand(1));
+  unsigned Bytes = MemVT.getFixedSizeInBits() / 8;
+  if (!Shift || Shift->getZExtValue() != Log2_32(Bytes))
+    return false;
+  SDValue Index = N1.getOperand(0);
+  if (Index.getValueType() != MVT::i64 || Index.getOpcode() == ISD::ANY_EXTEND)
+    return false;
+  if ((Index.getOpcode() == ISD::SIGN_EXTEND ||
+       Index.getOpcode() == ISD::ZERO_EXTEND) &&
+      Index.getOperand(0).getValueType() != MVT::i32)
+    return false;
+
+  TargetLowering::AddrMode AM;
+  AM.HasBaseReg = true;
+  AM.Scale = Bytes;
+  return TLI.isLegalAddressingMode(DL, AM,
+                                   MemVT.getTypeForEVT(*DAG.getContext()), 0);
+}
+
 bool AArch64TargetLowering::isReassocProfitable(SelectionDAG &DAG, SDValue N0,
                                                 SDValue N1) const {
   if (!N0.hasOneUse())
+    return false;
+
+  if (shouldPreserveIndexedGlobalBase(DAG, N0, N1, *Subtarget, *this))
     return false;
 
   unsigned IID = getIntrinsicID(N1.getNode());
