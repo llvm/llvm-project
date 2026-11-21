@@ -107,8 +107,8 @@ template <typename RangeT> void moveToFront(RangeT &Range, size_t Idx) {
 
 /// Returns the virtual register defined by the ARGUMENT instruction of the
 /// swiftasync argument, or an invalid register if there is none. The argument
-/// arrives in local 0, which must hold the async context for the whole
-/// function.
+/// arrives in local 0, which holds the async context. Only the lowering of
+/// llvm.swift.async.context.addr may write local 0.
 Register getSwiftAsyncArgReg(const MachineFunction &MF);
 
 } // end namespace WebAssembly
