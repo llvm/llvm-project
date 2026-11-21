@@ -3021,13 +3021,12 @@ define <4 x i8> @to_e5m3fnu_v4f32(<4 x float> %x) {
 ; GFX1310-NEXT:    v_cndmask_b32_e32 v2, 0xff, v5, vcc_lo
 ; GFX1310-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
 ; GFX1310-NEXT:    v_bitop3_b16 v2, v2, v3, 0xff bitop3:0xec
-; GFX1310-NEXT:    s_mov_b32 s0, 0xffff
-; GFX1310-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
-; GFX1310-NEXT:    v_dual_cndmask_b32 v4, 0, v4, vcc_lo :: v_dual_bitop2_b32 v3, s0, v1 bitop3:0x40
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1310-NEXT:    v_perm_b32 v3, v2, v1, 0x5040100
+; GFX1310-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc_lo
 ; GFX1310-NEXT:    v_cmp_o_f32_e32 vcc_lo, v0, v0
-; GFX1310-NEXT:    v_lshl_or_b32 v3, v2, 16, v3
 ; GFX1310-NEXT:    s_mov_b32 s0, 0xff
-; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instid1(SALU_CYCLE_1)
+; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GFX1310-NEXT:    v_dual_cndmask_b32 v0, s0, v4, vcc_lo :: v_dual_lshlrev_b32 v4, 16, v2
 ; GFX1310-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1310-NEXT:    v_bitop3_b16 v0, v0, v1, 0xff bitop3:0xec
