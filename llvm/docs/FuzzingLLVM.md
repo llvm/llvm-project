@@ -37,7 +37,7 @@ level:
 
 ### clang-format-fuzzer
 
-A {{ generic_fuzzer }} that runs [clang-format][clang-format] on C++ text fragments. Some of the
+A {{ generic_fuzzer }} that runs [clang-format](inv:clang:std:doc#ClangFormat) on C++ text fragments. Some of the
 bugs this fuzzer has reported are [on bugzilla](https://llvm.org/pr23052)
 and [on OSS Fuzz's tracker](https://bugs.chromium.org/p/oss-fuzz/issues/list?q=proj-llvm+clang-format-fuzzer).
 
@@ -235,7 +235,6 @@ similarly to functions such as `add_llvm_tool`, but it takes care of linking
 to LibFuzzer when appropriate and can be passed the `DUMMY_MAIN` argument to
 enable standalone testing.
 
-[clang-format]: https://clang.llvm.org/docs/ClangFormat.html
 [discussed at eurollvm 2017]: https://www.youtube.com/watch?v=UBbQ_s6hNgg
 [libprotobuf-mutator]: https://github.com/google/libprotobuf-mutator
 [llvm on oss fuzz]: https://github.com/google/oss-fuzz/blob/master/projects/llvm

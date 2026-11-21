@@ -6,7 +6,7 @@ This document contains information about building LLVM and
 Clang on a host machine, targeting another platform.
 
 For more information on how to use Clang as a cross-compiler,
-please check <https://clang.llvm.org/docs/CrossCompilation.html>.
+please check [Cross-compilation using Clang](inv:clang:std:doc#CrossCompilation).
 
 This document describes cross-building a compiler in a single stage, using an
 existing `clang` install as the host compiler.

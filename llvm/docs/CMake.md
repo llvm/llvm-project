@@ -389,7 +389,7 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 **LLVM_BUILD_INSTRUMENTED_COVERAGE**:BOOL
 
 :   If enabled, [source-based code
-    coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html)
+    coverage](inv:clang:std:doc#SourceBasedCodeCoverage)
     instrumentation is enabled while building llvm. If CMake can locate the
     code coverage scripts and the llvm-cov and llvm-profdata tools that pair
     with your compiler, the build will also generate the
@@ -623,8 +623,7 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
 
 **LLVM_ENABLE_MODULES**:BOOL
 
-:   Compile with [Clang Header
-    Modules](https://clang.llvm.org/docs/Modules.html).
+:   Compile with [Clang Header Modules](inv:clang:std:doc#Modules).
 
 (llvm_enable_pdb)=
 
@@ -687,7 +686,7 @@ sub-projects. Nearly all of these variable names begin with `LLVM_`.
     toolchain. It will build the builtins separately from the other runtimes to
     preserve correct dependency ordering. If you want to build the runtimes
     using a system compiler, see the [libc++
-    documentation](https://libcxx.llvm.org/VendorDocumentation.html).
+    documentation](inv:libcxx:std:doc#VendorDocumentation).
 
     :::{note}
     The list should not have duplicates with `LLVM_ENABLE_PROJECTS`.

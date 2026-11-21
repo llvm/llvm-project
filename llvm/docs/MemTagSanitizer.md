@@ -85,7 +85,6 @@ Address Tag is returned.
 - [LLVM Developer Meeting 2018 talk on Memory Tagging](https://llvm.org/devmtg/2018-10/slides/Serebryany-Stepanov-Tsyrklevich-Memory-Tagging-Slides-LLVM-2018.pdf)
 - [Memory Tagging Whitepaper](https://arxiv.org/pdf/1802.09517.pdf)
 
-[addresssanitizer]: https://clang.llvm.org/docs/AddressSanitizer.html
-[hardwareassistedaddresssanitizer]: https://clang.llvm.org/docs/HardwareAssistedAddressSanitizerDesign.html
+[addresssanitizer]: inv:clang:std:doc#AddressSanitizer
+[hardwareassistedaddresssanitizer]: inv:clang:std:doc#HardwareAssistedAddressSanitizerDesign
 [memory tagging extension]: https://community.arm.com/developer/ip-products/processors/b/processors-ip-blog/posts/arm-a-profile-architecture-2018-developments-armv85a
-
