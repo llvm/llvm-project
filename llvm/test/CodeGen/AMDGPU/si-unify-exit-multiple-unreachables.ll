@@ -164,6 +164,7 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:    ; Label of block must be emitted
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc, 10, v0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, vcc
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  ; %bb.5: ; %if.then3
