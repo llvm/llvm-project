@@ -33,6 +33,7 @@ pythonize_bool(LIBOMP_OMPT_OPTIONAL)
 pythonize_bool(LIBOMP_TASKGRAPH_EXPERIMENTAL)
 pythonize_bool(LIBOMP_HAVE_LIBM)
 pythonize_bool(LIBOMP_HAVE_LIBATOMIC)
+pythonize_bool(LIBOMP_ENABLE_SHARED)
 pythonize_bool(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS)
 
 add_library(ompt-print-callback INTERFACE)
