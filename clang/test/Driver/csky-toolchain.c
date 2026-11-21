@@ -37,3 +37,35 @@
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/lib/../lib"
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/lib"
 // C-CSKY-LINUX-CK860V: "-L{{.*}}/Inputs/multilib_csky_linux_sdk/lib/gcc/csky-linux-gnuabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-linux-gnuabiv2/libc/ck860v/usr/lib"
+
+// RUN: %clang --sysroot= -### %s -fuse-ld=ld --target=csky-unknown-elf --rtlib=platform \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_csky_elf_tree 2>&1 | FileCheck -check-prefix=C-CSKY-ELF %s
+
+// C-CSKY-ELF-NOT: warning:
+// C-CSKY-ELF: "-internal-isystem" "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2{{/|\\\\}}include"
+// C-CSKY-ELF: "-internal-isystem" "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2{{/|\\\\}}sys-include"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2/bin{{/|\\\\}}ld"
+// C-CSKY-ELF-NOT: "--sysroot=
+// C-CSKY-ELF: "-Bstatic" "-m" "cskyelf"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2/lib{{/|\\\\}}crt0.o"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0{{/|\\\\}}crti.o"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0{{/|\\\\}}crtbegin.o"
+// C-CSKY-ELF: "-L{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0"
+// C-CSKY-ELF: "-L{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2/lib"
+// C-CSKY-ELF: "--start-group" "-lgcc" "-lc" "-lnosys" "--end-group"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0{{/|\\\\}}crtend.o"
+// C-CSKY-ELF: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0{{/|\\\\}}crtn.o"
+
+// RUN: %clang --sysroot= -### %s -fuse-ld=ld --target=csky-unknown-elf --rtlib=platform -march=ck860v -msim \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_csky_elf_tree 2>&1 | FileCheck -check-prefix=C-CSKY-ELF-CK860V %s
+
+// C-CSKY-ELF-CK860V-NOT: warning:
+// C-CSKY-ELF-CK860V: "-Bstatic" "-m" "cskyelf"
+// C-CSKY-ELF-CK860V: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2/lib/ck860v{{/|\\\\}}crt0.o"
+// C-CSKY-ELF-CK860V: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/ck860v{{/|\\\\}}crti.o"
+// C-CSKY-ELF-CK860V: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/ck860v{{/|\\\\}}crtbegin.o"
+// C-CSKY-ELF-CK860V: "-L{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/ck860v"
+// C-CSKY-ELF-CK860V: "-L{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/../../..{{/|\\\\}}..{{/|\\\\}}csky-elf-noneabiv2/lib/ck860v"
+// C-CSKY-ELF-CK860V: "--start-group" "-lgcc" "-lc" "-lsemi" "--end-group"
+// C-CSKY-ELF-CK860V: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/ck860v{{/|\\\\}}crtend.o"
+// C-CSKY-ELF-CK860V: "{{.*}}/Inputs/basic_csky_elf_tree/lib/gcc/csky-elf-noneabiv2/6.3.0/ck860v{{/|\\\\}}crtn.o"
