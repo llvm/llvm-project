@@ -28,10 +28,10 @@
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
 #include <optional>
@@ -1159,9 +1159,9 @@ hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
 // match.
 static std::optional<UnsafeLibcFunctionFamily>
 getPredefinedUnsafeLibcFuncFamily(const FunctionDecl &Node) {
-  static const llvm::StringMap<UnsafeLibcFunctionFamily> PredefinedNames = [] {
-    using F = UnsafeLibcFunctionFamily;
-    llvm::StringMap<F> M;
+  using F = UnsafeLibcFunctionFamily;
+  static const llvm::DenseMap<StringRef, F> PredefinedNames = [] {
+    llvm::DenseMap<StringRef, F> M;
     auto Add = [&](F Family, std::initializer_list<StringRef> Names) {
       for (StringRef N : Names)
         M[N] = Family;

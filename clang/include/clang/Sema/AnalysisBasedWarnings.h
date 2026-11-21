@@ -71,6 +71,15 @@ private:
   llvm::DenseMap<const void *, Policy>
       PolicyCache[static_cast<unsigned>(DiagStateSystemClass::NUM_CLASSES)];
 
+  /// Caches results for shouldRunUnsafeBufferUsageAnalysis(), keyed like
+  /// PolicyCache and flushed with it.
+  llvm::DenseMap<const void *, bool>
+      UnsafeBufferUsageCache[static_cast<unsigned>(
+          DiagStateSystemClass::NUM_CLASSES)];
+
+  /// \return true iff a -Wunsafe-buffer-usage analysis is enabled at \p Loc.
+  bool shouldRunUnsafeBufferUsageAnalysis(SourceLocation Loc);
+
   /// \name Statistics
   /// @{
 
@@ -139,7 +148,8 @@ public:
   // will override the policy used to issue warnings.
   Policy &getPolicyOverrides() { return PolicyOverrides; }
 
-  /// Drop cached getPolicyInEffectAt() results (diagnostic state changed).
+  /// Drop cached getPolicyInEffectAt() and shouldRunUnsafeBufferUsageAnalysis()
+  /// results (diagnostic state changed).
   void clearPolicyCache();
 
   void PrintStats() const;
