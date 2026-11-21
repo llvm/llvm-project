@@ -47,6 +47,8 @@ module TypeKind = struct
   | ScalableVector
   | BFloat
   | X86_amx
+  | TargetExt
+  | Byte
 end
 
 module Linkage = struct
@@ -255,6 +257,8 @@ module Opcode  = struct
   | PtrToAddr
   | UncondBr
   | CondBr
+  | BitInsert
+  | BitExtract
 end
 
 module LandingPadClauseTy = struct
@@ -529,6 +533,10 @@ external i64_type : llcontext -> lltype = "llvm_i64_type"
 
 external integer_type : llcontext -> int -> lltype = "llvm_integer_type"
 external integer_bitwidth : lltype -> int = "llvm_integer_bitwidth"
+
+(*--... Operations on byte types ...........................................--*)
+external byte_type : llcontext -> int -> lltype = "llvm_byte_type"
+external byte_bitwidth : lltype -> int = "llvm_byte_bitwidth"
 
 (*--... Operations on real types ...........................................--*)
 external float_type : llcontext -> lltype = "llvm_float_type"
@@ -1380,6 +1388,8 @@ external build_fpext : llvalue -> lltype -> string -> llbuilder -> llvalue
                      = "llvm_build_fpext"
 external build_ptrtoint : llvalue -> lltype -> string -> llbuilder -> llvalue
                         = "llvm_build_prttoint"
+external build_ptrtoaddr : llvalue -> lltype -> string -> llbuilder -> llvalue
+                         = "llvm_build_ptrtoaddr"
 external build_inttoptr : llvalue -> lltype -> string -> llbuilder -> llvalue
                         = "llvm_build_inttoptr"
 external build_bitcast : llvalue -> lltype -> string -> llbuilder -> llvalue
@@ -1433,6 +1443,10 @@ external build_ptrdiff : lltype -> llvalue -> llvalue -> string -> llbuilder ->
                          llvalue = "llvm_build_ptrdiff"
 external build_freeze : llvalue -> string -> llbuilder -> llvalue
                       = "llvm_build_freeze"
+external build_bitinsert : llvalue -> llvalue -> llvalue -> string ->
+                           llbuilder -> llvalue = "llvm_build_bitinsert"
+external build_bitextract : lltype -> llvalue -> llvalue -> string ->
+                            llbuilder -> llvalue = "llvm_build_bitextract"
 
 
 (*===-- Memory buffers ----------------------------------------------------===*)

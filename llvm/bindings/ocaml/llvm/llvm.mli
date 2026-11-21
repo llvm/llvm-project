@@ -86,6 +86,8 @@ module TypeKind : sig
   | ScalableVector
   | BFloat
   | X86_amx
+  | TargetExt
+  | Byte
 end
 
 (** The linkage of a global value, accessed with {!linkage} and
@@ -281,6 +283,8 @@ module Opcode : sig
   | PtrToAddr
   | UncondBr
   | CondBr
+  | BitInsert
+  | BitExtract
 end
 
 (** The type of a clause of a [landingpad] instruction.
@@ -710,6 +714,17 @@ val integer_type : llcontext -> int -> lltype
 (** [integer_bitwidth c ty] returns the number of bits in the integer type [ty]
     in the context [c].  See the method [llvm::IntegerType::getBitWidth]. *)
 val integer_bitwidth : lltype -> int
+
+
+(** {7 Operations on byte types} *)
+
+(** [byte_type c n] returns a byte type of bitwidth [n] in the context [c].
+    See the method [llvm::ByteType::get]. *)
+val byte_type : llcontext -> int -> lltype
+
+(** [byte_bitwidth ty] returns the number of bits in the byte type [ty].
+    See the method [llvm::ByteType::getBitWidth]. *)
+val byte_bitwidth : lltype -> int
 
 
 (** {7 Operations on real types} *)
@@ -2463,6 +2478,12 @@ val build_fpext : llvalue -> lltype -> string -> llbuilder -> llvalue
     See the method [llvm::LLVMBuilder::CreatePtrToInt]. *)
 val build_ptrtoint : llvalue -> lltype -> string -> llbuilder -> llvalue
 
+(** [build_ptrtoaddr v ty name b] creates a
+    [%name = ptrtoaddr %p to %ty]
+    instruction at the position specified by the instruction builder [b].
+    See the method [llvm::LLVMBuilder::CreatePtrToAddr]. *)
+val build_ptrtoaddr : llvalue -> lltype -> string -> llbuilder -> llvalue
+
 (** [build_inttoptr v ty name b] creates a
     [%name = inttoptr %p to %ty]
     instruction at the position specified by the instruction builder [b].
@@ -2621,6 +2642,22 @@ val build_ptrdiff : lltype -> llvalue -> llvalue -> string -> llbuilder ->
     instruction at the position specified by the instruction builder [b].
     See the method [llvm::LLVMBuilder::CreateFreeze]. *)
 val build_freeze : llvalue -> string -> llbuilder -> llvalue
+
+(** [build_bitinsert base v offset name b] creates a
+    [%name = bitinsert %base, %v, %offset]
+    instruction at the position specified by the instruction builder [b].
+    [base] has a byte type and [offset] is an [i32].
+    See the method [llvm::LLVMBuilder::CreateBitInsert]. *)
+val build_bitinsert : llvalue -> llvalue -> llvalue -> string -> llbuilder ->
+                      llvalue
+
+(** [build_bitextract ty src offset name b] creates a
+    [%name = bitextract %ty, %src, %offset]
+    instruction at the position specified by the instruction builder [b].
+    [src] has a byte type and [offset] is an [i32].
+    See the method [llvm::LLVMBuilder::CreateBitExtract]. *)
+val build_bitextract : lltype -> llvalue -> llvalue -> string -> llbuilder ->
+                       llvalue
 
 
 (** {6 Memory buffers} *)
