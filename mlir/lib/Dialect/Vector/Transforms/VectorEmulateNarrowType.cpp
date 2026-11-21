@@ -1301,6 +1301,10 @@ struct ConvertVectorTransferRead final
   LogicalResult
   matchAndRewrite(vector::TransferReadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    // TODO: Support masked reads, the mask would have to be compressed as in
+    // ConvertVectorMaskedLoad.
+    if (op.getMask() || op.isMasked())
+      return rewriter.notifyMatchFailure(op, "masked reads are not supported");
 
     // Prerequisites:  memref in the vector.transfer_read op is flattened into
     // 1-D.
