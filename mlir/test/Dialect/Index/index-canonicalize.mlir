@@ -165,12 +165,30 @@ func.func @ceildivs_edge() -> (index, index) {
   %cIntMin = index.constant -2147483648
   %cIntMax = index.constant 2147483647
 
-  // The result is 0 on 32-bit.
-  // CHECK-DAG: %[[A:.*]] = index.constant 2147483648
+  // `INT_MIN / -1` overflows on a 32-bit index, so this must not fold.
+  // CHECK-DAG: %[[A:.*]] = index.ceildivs
   %0 = index.ceildivs %cIntMin, %cn1
 
   // CHECK-DAG: %[[B:.*]] = index.constant -2147483647
   %1 = index.ceildivs %cIntMax, %cn1
+
+  // CHECK: return %[[A]], %[[B]]
+  return %0, %1 : index, index
+}
+
+// CHECK-LABEL: @ceildivs_intmin64
+func.func @ceildivs_intmin64() -> (index, index) {
+  %cIntMin = index.constant -9223372036854775808
+  %cn1 = index.constant -1
+  %c2 = index.constant 2
+
+  // `INT64_MIN / -1` is not representable, so this must not fold.
+  // CHECK-DAG: %[[A:.*]] = index.ceildivs
+  %0 = index.ceildivs %cIntMin, %cn1
+
+  // Must fold to the correct negative result, not a sign-flipped positive one.
+  // CHECK-DAG: %[[B:.*]] = index.constant -4611686018427387904
+  %1 = index.ceildivs %cIntMin, %c2
 
   // CHECK: return %[[A]], %[[B]]
   return %0, %1 : index, index
