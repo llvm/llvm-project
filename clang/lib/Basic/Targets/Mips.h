@@ -176,6 +176,7 @@ public:
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
+  StringRef getISALevel() const;
   unsigned getISARev() const;
 
   void getTargetDefines(const LangOptions &Opts,
