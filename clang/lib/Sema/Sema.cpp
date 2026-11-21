@@ -2806,10 +2806,29 @@ void Sema::clearDocumentationDiagsCache() {
   DocDiagsExactComputed = 0;
 }
 
+bool Sema::areDocumentationDiagsSourceLocationDependent() {
+  // Documentation diagnostics are not location-dependent, except if a
+  // (location-dependent) warning suppression mapping is active.
+  if (!DocDiagsInSuppressionMapping) {
+    if (Diags.hasDiagSuppressionMapping()) {
+      SmallVector<diag::kind, 64> DocDiags;
+      for (StringRef Group : {"documentation", "documentation-pedantic"})
+        Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+            diag::Flavor::WarningOrError, Group, DocDiags);
+      DocDiagsInSuppressionMapping = llvm::any_of(DocDiags, [&](diag::kind D) {
+        return Diags.hasDiagSuppressionMappingFor(D);
+      });
+    } else {
+      DocDiagsInSuppressionMapping = false;
+    }
+  }
+  return *DocDiagsInSuppressionMapping;
+}
+
 bool Sema::areDocumentationDiagsEnabled(SourceLocation Loc) {
-  // Under a suppression mapping the severity depends on the file path rather
-  // than the diagnostic state, so there is nothing stable to key a cache on.
-  if (Loc.isInvalid() || Diags.hasDiagSuppressionMapping())
+  // Under a suppression mapping the severity can depend on the file path rather
+  // than the diagnostic state. Then there is nothing stable to key a cache on.
+  if (Loc.isInvalid() || areDocumentationDiagsSourceLocationDependent())
     return computeDocumentationDiagsAt(Loc);
 
   const void *StateKey = Diags.getDiagStateKeyForLoc(Loc);
