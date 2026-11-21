@@ -1894,7 +1894,7 @@ def ElementwisePdep : Builtin {
 
 def ElementwiseMulh : Builtin {
   let Spellings = ["__builtin_elementwise_mulh"];
-  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Attributes = [NoThrow, Const, CustomTypeChecking,Constexpr];
   let Prototype = "void(...)";
 }
 
