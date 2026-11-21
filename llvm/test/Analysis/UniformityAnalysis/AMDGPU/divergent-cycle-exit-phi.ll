@@ -110,3 +110,103 @@ exit.uniform:
   %acc = phi i32 [ 0, %loop ], [ 1, %mid ]
   ret void
 }
+
+; The divergent branch is the header's terminator, and its paths leave the cycle
+; through different exiting blocks. Threads leave in different iterations, so
+; the exit phi is divergent although its incoming values are identical, and so
+; is the use of %i outside the cycle.
+define amdgpu_kernel void @header_divergent_cycle_exit_phi(i32 %n, i32 %m) {
+; CHECK-LABEL: UniformityInfo for function 'header_divergent_cycle_exit_phi':
+; CHECK: DIVERGENT:   %i.lcssa
+; CHECK: DIVERGENT:   %r
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %div.cond = icmp ult i32 %tid, 7
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  br i1 %div.cond, label %early, label %latch
+
+early:
+  %stop = icmp eq i32 %i, %m
+  br i1 %stop, label %exit, label %latch
+
+latch:
+  %i.next = add i32 %i, 1
+  %exit.cond = icmp eq i32 %i.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  %i.lcssa = phi i32 [ %i, %early ], [ %i, %latch ]
+  %r = add i32 %i, 1000
+  ret void
+}
+
+; The divergent branch is the header's terminator, but its paths join inside the
+; cycle, and all threads leave the cycle in the same iteration.
+define amdgpu_kernel void @header_divergent_uniform_cycle_exit_phi(i32 %n) {
+; CHECK-LABEL: UniformityInfo for function 'header_divergent_uniform_cycle_exit_phi':
+; CHECK-NOT: DIVERGENT:   %i.lcssa
+; CHECK-NOT: DIVERGENT:   %r
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %div.cond = icmp ult i32 %tid, 7
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %i.next, %latch ]
+  br i1 %div.cond, label %then, label %latch
+
+then:
+  br label %latch
+
+latch:
+  %i.next = add i32 %i, 1
+  %exit.cond = icmp eq i32 %i.next, %n
+  br i1 %exit.cond, label %exit, label %loop
+
+exit:
+  %i.lcssa = phi i32 [ %i, %latch ]
+  %r = add i32 %i, 1000
+  ret void
+}
+
+; Nested cycles: the divergent branch is the inner header's terminator, and its
+; paths leave the inner cycle, but not the outer one, through different exiting
+; blocks.
+define amdgpu_kernel void @nested_header_divergent_cycle_exit_phi(i32 %n, i32 %m) {
+; CHECK-LABEL: UniformityInfo for function 'nested_header_divergent_cycle_exit_phi':
+; CHECK: DIVERGENT:   %i.lcssa
+; CHECK-NOT: DIVERGENT:   %o.next
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %div.cond = icmp ult i32 %tid, 7
+  br label %outer.header
+
+outer.header:
+  %o = phi i32 [ 0, %entry ], [ %o.next, %outer.latch ]
+  br label %inner.header
+
+inner.header:
+  %i = phi i32 [ 0, %outer.header ], [ %i.next, %inner.latch ]
+  br i1 %div.cond, label %inner.early, label %inner.latch
+
+inner.early:
+  %stop = icmp eq i32 %i, %m
+  br i1 %stop, label %outer.latch, label %inner.latch
+
+inner.latch:
+  %i.next = add i32 %i, 1
+  %inner.cond = icmp eq i32 %i.next, %n
+  br i1 %inner.cond, label %outer.latch, label %inner.header
+
+outer.latch:
+  %i.lcssa = phi i32 [ %i, %inner.early ], [ %i, %inner.latch ]
+  %o.next = add i32 %o, 1
+  %outer.cond = icmp eq i32 %o.next, 4
+  br i1 %outer.cond, label %exit, label %outer.header
+
+exit:
+  ret void
+}
