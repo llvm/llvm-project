@@ -66,3 +66,27 @@ define void @nonnull3(ptr %v) {
   call void @use(i1 %c1)
   ret void
 }
+
+define void @range0(i32 %v) {
+; CHECK-LABEL: @range0(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V:%.*]], i32 0, i32 1) ]
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i32 %v, i32 0, i32 1) ]
+  ret void
+}
+
+define void @range1(i32 %v) {
+; CHECK-LABEL: @range1(
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "range"(i32 [[V:%.*]], i32 0, i32 1) ]
+; CHECK-NEXT:  ; assume predicate info { Attribute: range, Range: [0,1), RenamedOp: [[V]] }
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[V]] to i32
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    call void @use(i1 [[C1]])
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.assume(i1 true) [ "range"(i32 %v, i32 0, i32 1) ]
+  %c1 = icmp eq i32 %v, 1
+  call void @use(i1 %c1)
+  ret void
+}
