@@ -304,14 +304,17 @@ bool RegBankLegalizeHelper::executeInWaterfallLoop(MachineIRBuilder &B,
 }
 
 // Analyze a combined offset from an llvm.amdgcn.s.buffer intrinsic and store
-// the three offsets (voffset, soffset and instoffset)
+// the three offsets (voffset, soffset and instoffset). `Align` constrains the
+// alignment of each component of the result, and `ExtraBytes` indicates how
+// many more bytes will be added to the offset by the caller.
 unsigned RegBankLegalizeHelper::setBufferOffsets(
     MachineIRBuilder &B, Register CombinedOffset, Register &VOffsetReg,
-    Register &SOffsetReg, int64_t &InstOffsetVal, Align Alignment) {
+    Register &SOffsetReg, int64_t &InstOffsetVal, unsigned ExtraBytes,
+    Align Alignment) {
   if (std::optional<int64_t> Imm =
           getIConstantVRegSExtVal(CombinedOffset, MRI)) {
     uint32_t SOffset, ImmOffset;
-    if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, Alignment)) {
+    if (TII.splitMUBUFOffset(*Imm, SOffset, ImmOffset, ExtraBytes, Alignment)) {
       VOffsetReg = B.buildConstant(VgprRB_I32, 0).getReg(0);
       SOffsetReg = B.buildConstant(SgprRB_I32, SOffset).getReg(0);
       InstOffsetVal = ImmOffset;
@@ -324,7 +327,7 @@ unsigned RegBankLegalizeHelper::setBufferOffsets(
       /*CheckNUW=*/CheckNUW);
   uint32_t SOffset, ImmOffset;
   if (static_cast<int32_t>(Offset) > 0 &&
-      TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
+      TII.splitMUBUFOffset(Offset, SOffset, ImmOffset, ExtraBytes, Alignment)) {
     if (Base.isValid() && MRI.getRegBank(Base) == VgprRB) {
       VOffsetReg = Base;
       SOffsetReg = B.buildConstant(SgprRB_I32, SOffset).getReg(0);
@@ -650,13 +653,16 @@ bool RegBankLegalizeHelper::lowerSBufToBuf(MachineInstr &MI,
   for (int I = 0; I < NumLoads; ++I)
     LoadParts.emplace_back(MRI.createVirtualRegister({VgprRB, Ty}));
   MachineMemOperand *OrigMMO = *MI.memoperands_begin();
-  const Align Alignment = OrigMMO->getAlign();
+
   MachineFunction &MF = B.getMF();
   Register SOffset;
   Register VOffset;
   int64_t ImmOffset = 0;
-  unsigned MMOOffset = setBufferOffsets(B, MI.getOperand(2).getReg(), VOffset,
-                                        SOffset, ImmOffset, Alignment);
+
+  // Vbuffer instructions don't separately constrain the immediate's alignment.
+  unsigned MMOOffset = setBufferOffsets(
+      B, MI.getOperand(2).getReg(), VOffset, SOffset, ImmOffset,
+      /*ExtraBytes=*/(NumLoads - 1) * 16, Align(1));
   const unsigned MemSize = divideCeil(OrigMMO->getSize().getValue(), NumLoads);
   MachineMemOperand *BaseMMO = MF.getMachineMemOperand(OrigMMO, 0, MemSize);
   if (MMOOffset != 0)

@@ -74,7 +74,8 @@ public:
                          const OperandsMapper &OpdMapper, int RSrcIdx) const;
   unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
                             Register &VOffsetReg, Register &SOffsetReg,
-                            int64_t &InstOffsetVal, Align Alignment) const;
+                            int64_t &InstOffsetVal, unsigned ExtraBytes,
+                            Align Alignment) const;
   bool applyMappingSBufferLoad(MachineIRBuilder &B,
                                const OperandsMapper &OpdMapper) const;
 
