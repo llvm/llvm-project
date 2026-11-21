@@ -798,6 +798,46 @@ struct SingleInputConcatOp : public OpRewritePattern<ConcatOp> {
   }
 };
 
+/// Fold nested concats on the same dimension into a single concat.
+///
+/// Example:
+///
+/// ```mlir
+///   %2 = tensor.concat dim(0) %0, %1 : (tensor<2xi32>, tensor<3xi32>)
+//        -> tensor<5xi32>
+///   %3 = tensor.concat dim(0) %2, %4 : (tensor<5xi32>, tensor<7xi32>)
+//        -> tensor<12xi32>
+/// ```
+/// ->
+/// ```mlir
+///   %3 = tensor.concat dim(0) %0, %1, %4 : (tensor<2xi32>, tensor<3xi32>,
+//          tensor<7xi32>) -> tensor<12xi32>
+/// ```
+struct NestedConcatOps : public OpRewritePattern<ConcatOp> {
+  using OpRewritePattern<ConcatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ConcatOp concatOp,
+                                PatternRewriter &rewriter) const override {
+    bool modified = false;
+    SmallVector<Value> newInputs;
+    for (auto input : concatOp.getInputs()) {
+      auto innerConcat = input.getDefiningOp<ConcatOp>();
+      if (innerConcat && innerConcat.getDim() == concatOp.getDim()) {
+        llvm::append_range(newInputs, innerConcat.getInputs());
+        modified = true;
+      } else {
+        newInputs.push_back(input);
+      }
+    }
+
+    if (!modified)
+      return failure();
+    rewriter.modifyOpInPlace(
+        concatOp, [&]() { concatOp.getInputsMutable().assign(newInputs); });
+    return success();
+  }
+};
+
 /// Propagate static shapes into the operands of a `tensor.concat`.
 ///
 /// `tensor.concat` requires every operand to match on all dimensions except the
@@ -899,9 +939,8 @@ struct InferConcatResultType : public OpRewritePattern<ConcatOp> {
 
 void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                            MLIRContext *context) {
-  results
-      .add<SingleInputConcatOp, InferConcatOperandTypes, InferConcatResultType>(
-          context);
+  results.add<SingleInputConcatOp, NestedConcatOps, InferConcatOperandTypes,
+              InferConcatResultType>(context);
 }
 
 //===----------------------------------------------------------------------===//
