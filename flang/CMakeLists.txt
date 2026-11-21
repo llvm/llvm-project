@@ -403,15 +403,15 @@ endmacro()
 
 check_compiler_flag("-Werror -Wno-deprecated-copy" CXX_SUPPORTS_NO_DEPRECATED_COPY_FLAG)
 if (CXX_SUPPORTS_NO_DEPRECATED_COPY_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-copy")
+  llvm_add_warning_options(CXX -Wno-deprecated-copy)
 endif()
 check_compiler_flag("-Wstring-conversion" CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG)
 if (CXX_SUPPORTS_NO_STRING_CONVERSION_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-string-conversion")
+  llvm_add_warning_options(CXX -Wno-string-conversion)
 endif()
 check_compiler_flag("-Wno-ctad-maybe-unsupported" CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
 if (CXX_SUPPORTS_NO_CTAD_MAYBE_UNSUPPORTED_FLAG)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-ctad-maybe-unsupported")
+  llvm_add_warning_options(CXX -Wno-ctad-maybe-unsupported)
 endif()
 
 # Add appropriate flags for GCC
@@ -420,13 +420,13 @@ if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   if (NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-semantic-interposition")
   else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-command-line-argument -Wstring-conversion \
-          -Wcovered-switch-default")
+    llvm_add_warning_options(CXX -Wno-unused-command-line-argument
+      -Wstring-conversion -Wcovered-switch-default)
   endif()  # Clang.
 
   check_cxx_compiler_flag("-Werror -Wnested-anon-types" CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG)
   if (CXX_SUPPORTS_NO_NESTED_ANON_TYPES_FLAG)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nested-anon-types")
+    llvm_add_warning_options(CXX -Wno-nested-anon-types)
   endif()
 
   # Add to build type flags.

@@ -99,7 +99,9 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "GNU")
   # a copy operator is defined through "using" a base class copy operator.
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "12.0")
     check_cxx_compiler_flag("-Wno-deprecated-copy" CXX_SUPPORTS_WNO_DEPRECTAED_COPY)
-    append_if(CXX_SUPPORTS_WNO_DEPRECTAED_COPY "-Wno-deprecated-copy" CMAKE_CXX_FLAGS)
+    if (CXX_SUPPORTS_WNO_DEPRECTAED_COPY)
+      llvm_add_warning_options(CXX -Wno-deprecated-copy)
+    endif()
   endif()
 endif()
 

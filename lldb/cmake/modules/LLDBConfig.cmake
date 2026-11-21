@@ -333,16 +333,17 @@ endif()
 
 if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
   # Disable GCC warnings
-  append("-Wno-unknown-pragmas" CMAKE_CXX_FLAGS)
-  append("-Wno-strict-aliasing" CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(CXX -Wno-unknown-pragmas -Wno-strict-aliasing)
 
   check_cxx_compiler_flag("-Wstringop-truncation" CXX_SUPPORTS_STRINGOP_TRUNCATION)
-  append_if(CXX_SUPPORTS_STRINGOP_TRUNCATION "-Wno-stringop-truncation" CMAKE_CXX_FLAGS)
+  if (CXX_SUPPORTS_STRINGOP_TRUNCATION)
+    llvm_add_warning_options(CXX -Wno-stringop-truncation)
+  endif()
 endif()
 
 # Disable Clang warnings
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  append("-Wno-vla-extension" CMAKE_CXX_FLAGS)
+  llvm_add_warning_options(CXX -Wno-vla-extension)
 endif()
 
 # Disable MSVC warnings
