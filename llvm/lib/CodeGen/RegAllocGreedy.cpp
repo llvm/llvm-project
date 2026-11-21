@@ -3095,6 +3095,7 @@ bool RAGreedy::run(MachineFunction &mf) {
   if (Compact) {
     // Compaction unlinks what it erases; this is what makes that safe.
     LIS->removeUnreferencedIntervals();
+    LSS->canonicalizeIndexes(*Indexes);
     Indexes->compactIndexes();
   } else {
     Indexes->packIndexes();
