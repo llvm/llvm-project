@@ -294,23 +294,33 @@ static ArrayRef<MCPhysReg> getFastCCArgGPRF32s(const RISCVABI::ABI ABI) {
   return ArrayRef(FastCCIGPRs);
 }
 
+static bool is2XLenScalar(Type *OrigTy, const DataLayout &DL, unsigned XLen) {
+  if (!OrigTy)
+    return false;
+
+  // Floating-point reals use aggregate-style, memory-layout ordering under
+  // the base integer calling convention.
+  if (!OrigTy->isIntegerTy() && !OrigTy->isPointerTy())
+    return false;
+
+  return DL.getTypeAllocSize(OrigTy) == (2 * XLen) / 8;
+}
+
 // Pass a 2*XLEN argument that has been split into two XLEN values through
 // registers or the stack as necessary.
 static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
                                 ISD::ArgFlagsTy ArgFlags1, unsigned ValNo2,
                                 MVT ValVT2, MVT LocVT2,
                                 ISD::ArgFlagsTy ArgFlags2,
-                                const RISCVSubtarget &Subtarget) {
+                                const RISCVSubtarget &Subtarget,
+                                bool UseSignificanceOrder) {
   unsigned XLen = Subtarget.getXLen();
   unsigned XLenInBytes = XLen / 8;
 
   ArrayRef<MCPhysReg> ArgGPRs = RISCV::getArgGPRs(Subtarget);
 
-  if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
-    // At least one half can be passed via register.
-    State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
-                                     VA1.getLocVT(), CCValAssign::Full));
-  } else {
+  MCRegister Reg = State.AllocateReg(ArgGPRs);
+  if (!Reg) {
     // Both halves must be passed on the stack, with proper alignment.
     // TODO: To be compatible with GCC's behaviors, we clamp the alignment by
     // the ABI stack alignment. This behavior may be changed when RV32E/ILP32E
@@ -328,10 +338,36 @@ static bool CC_RISCVAssign2XLen(CCState &State, CCValAssign VA1,
     return false;
   }
 
-  if (MCRegister Reg = State.AllocateReg(ArgGPRs)) {
+  MCRegister Reg2 = State.AllocateReg(ArgGPRs);
+  if (UseSignificanceOrder) {
+    // On big-endian targets, legal splitting presents the high-order XLEN bits
+    // first. Named scalar arguments and return values still use
+    // significance-based ordering, so the low-order XLEN bits go in the
+    // lower-numbered register when one is available.
+    if (Reg2) {
+      State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg2,
+                                       VA1.getLocVT(), CCValAssign::Full));
+      State.addLoc(
+          CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
+    } else {
+      State.addLoc(CCValAssign::getMem(
+          VA1.getValNo(), VA1.getValVT(),
+          State.AllocateStack(XLenInBytes, Align(XLenInBytes)), VA1.getLocVT(),
+          CCValAssign::Full));
+      State.addLoc(
+          CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
+    }
+    return false;
+  }
+
+  // At least one half can be passed via register.
+  State.addLoc(CCValAssign::getReg(VA1.getValNo(), VA1.getValVT(), Reg,
+                                   VA1.getLocVT(), CCValAssign::Full));
+
+  if (Reg2) {
     // The second half can also be passed via register.
     State.addLoc(
-        CCValAssign::getReg(ValNo2, ValVT2, Reg, LocVT2, CCValAssign::Full));
+        CCValAssign::getReg(ValNo2, ValVT2, Reg2, LocVT2, CCValAssign::Full));
   } else {
     // The second half is passed via the stack, without additional alignment.
     State.addLoc(CCValAssign::getMem(
@@ -585,8 +621,11 @@ static bool CC_RISCV_Impl(unsigned ValNo, MVT ValVT, MVT LocVT,
     ISD::ArgFlagsTy AF = PendingArgFlags[0];
     PendingLocs.clear();
     PendingArgFlags.clear();
+    bool UseSignificanceOrder = !Subtarget.isLittleEndian() &&
+                                !ArgFlags.isVarArg() &&
+                                is2XLenScalar(OrigTy, DL, XLen);
     return CC_RISCVAssign2XLen(State, VA, AF, ValNo, ValVT, LocVT, ArgFlags,
-                               Subtarget);
+                               Subtarget, UseSignificanceOrder);
   }
 
   // Split arguments might be passed indirectly, so keep track of the pending

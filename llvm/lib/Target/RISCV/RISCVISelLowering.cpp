@@ -18119,9 +18119,8 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
                                    DAG.getVTList(MVT::i32, MVT::i32), Op0);
       SDValue Lo = NewReg.getValue(0);
       SDValue Hi = NewReg.getValue(1);
-      // For big-endian, swap the order when building the i64 pair.
-      if (!Subtarget.isLittleEndian())
-        std::swap(Lo, Hi);
+      // SplitF64 produces significance-ordered halves regardless of
+      // endianness, matching BUILD_PAIR's operand order.
       SDValue RetReg = DAG.getNode(ISD::BUILD_PAIR, DL, MVT::i64, Lo, Hi);
       Results.push_back(RetReg);
     } else if (!VT.isVector() && Op0VT.isFixedLengthVector() &&
@@ -28962,6 +28961,51 @@ void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
       MachineOperand::CreateReg(RISCV::FRM, /*isDef*/ false, /*isImp*/ true));
 }
 
+static bool is2XLenScalarType(const Type *Ty, const DataLayout &DL,
+                              unsigned XLen) {
+  if (!Ty)
+    return false;
+
+  // Floating-point reals use aggregate-style, memory-layout ordering under
+  // the base integer calling convention.
+  if (!Ty->isIntegerTy() && !Ty->isPointerTy())
+    return false;
+
+  return DL.getTypeAllocSize(const_cast<Type *>(Ty)) == (2 * XLen) / 8;
+}
+
+template <typename ArgT>
+static void setRetOrigTy(SmallVectorImpl<ArgT> &Args, const Type *RetTy) {
+  if (!RetTy)
+    return;
+
+  Type *NonConstRetTy = const_cast<Type *>(RetTy);
+  for (ArgT &Arg : Args)
+    if (!Arg.Flags.isSwiftError())
+      Arg.OrigTy = NonConstRetTy;
+}
+
+template <typename ArgT>
+static void mark2XLenScalarRetSplit(SmallVectorImpl<ArgT> &Args,
+                                    const Type *RetTy, const DataLayout &DL,
+                                    unsigned XLen) {
+  unsigned XLenInBytes = XLen / 8;
+  unsigned TwoXLenInBytes = (2 * XLen) / 8;
+
+  if (!is2XLenScalarType(RetTy, DL, XLen) || Args.size() < 2)
+    return;
+
+  if (Args[0].VT.getStoreSize() != XLenInBytes ||
+      Args[1].VT.getStoreSize() != XLenInBytes ||
+      Args[0].ArgVT.getStoreSize() != TwoXLenInBytes ||
+      Args[1].ArgVT.getStoreSize() != TwoXLenInBytes)
+    return;
+
+  Args[0].Flags.setSplit();
+  Args[1].Flags.setOrigAlign(Align(1));
+  Args[1].Flags.setSplitEnd();
+}
+
 // Convert Val to a ValVT. Should not be called for CCValAssign::Indirect
 // values.
 static SDValue convertLocVTToValVT(SelectionDAG &DAG, SDValue Val,
@@ -29240,7 +29284,11 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, ArgLocs, *DAG.getContext());
 
-  CCInfo.AnalyzeFormalArguments(Ins, CC_RISCV);
+  SmallVector<ISD::InputArg, 16> CCIns(Ins.begin(), Ins.end());
+  for (ISD::InputArg &In : CCIns)
+    if (In.isOrigArg())
+      In.OrigTy = Func.getArg(In.getOrigArgIndex())->getType();
+  CCInfo.AnalyzeFormalArguments(CCIns, CC_RISCV);
 
   for (unsigned i = 0, e = ArgLocs.size(), InsIdx = 0; i != e; ++i, ++InsIdx) {
     CCValAssign &VA = ArgLocs[i];
@@ -29490,7 +29538,11 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     break;
   }
 
-  ArgCCInfo.AnalyzeCallOperands(Outs, CC_RISCV);
+  SmallVector<ISD::OutputArg, 16> CCOuts(Outs.begin(), Outs.end());
+  for (ISD::OutputArg &Out : CCOuts)
+    if (Out.OrigArgIndex < CLI.getArgs().size())
+      Out.OrigTy = CLI.getArgs()[Out.OrigArgIndex].OrigTy;
+  ArgCCInfo.AnalyzeCallOperands(CCOuts, CC_RISCV);
 
   // Check if it's really possible to do a tail call.
   if (IsTailCall)
@@ -29928,7 +29980,13 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RVLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RVLocs, *DAG.getContext());
-  RetCCInfo.AnalyzeFormalArguments(Ins, RetCC_RISCV);
+  SmallVector<ISD::InputArg, 4> RetIns(Ins.begin(), Ins.end());
+  if (!Subtarget.isLittleEndian()) {
+    setRetOrigTy(RetIns, CLI.OrigRetTy);
+    mark2XLenScalarRetSplit(RetIns, CLI.OrigRetTy, DAG.getDataLayout(),
+                            Subtarget.getXLen());
+  }
+  RetCCInfo.AnalyzeFormalArguments(RetIns, RetCC_RISCV);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
@@ -29979,7 +30037,13 @@ bool RISCVTargetLowering::CanLowerReturn(
     const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, IsVarArg, MF, RVLocs, Context);
-  return CCInfo.CheckReturn(Outs, RetCC_RISCV);
+  SmallVector<ISD::OutputArg, 4> RetOuts(Outs.begin(), Outs.end());
+  if (!Subtarget.isLittleEndian()) {
+    setRetOrigTy(RetOuts, RetTy);
+    mark2XLenScalarRetSplit(RetOuts, RetTy, MF.getDataLayout(),
+                            Subtarget.getXLen());
+  }
+  return CCInfo.CheckReturn(RetOuts, RetCC_RISCV);
 }
 
 SDValue
@@ -29996,8 +30060,15 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   // Info about the registers and stack slot.
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), RVLocs,
                  *DAG.getContext());
+  SmallVector<ISD::OutputArg, 4> RetOuts(Outs.begin(), Outs.end());
+  if (!Subtarget.isLittleEndian()) {
+    const Function &Func = DAG.getMachineFunction().getFunction();
+    setRetOrigTy(RetOuts, Func.getReturnType());
+    mark2XLenScalarRetSplit(RetOuts, Func.getReturnType(), DAG.getDataLayout(),
+                            Subtarget.getXLen());
+  }
 
-  CCInfo.AnalyzeCallOperands(Outs, RetCC_RISCV);
+  CCInfo.AnalyzeCallOperands(RetOuts, RetCC_RISCV);
 
   if (CallConv == CallingConv::GHC && !RVLocs.empty())
     reportFatalUsageError("GHC functions return void only");

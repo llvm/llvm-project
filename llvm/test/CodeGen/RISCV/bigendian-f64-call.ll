@@ -2,8 +2,9 @@
 ; RUN: llc -mtriple=riscv32 -target-abi=ilp32 -mattr=+d -verify-machineinstrs < %s | FileCheck -check-prefix=RV32LE %s
 ; RUN: llc -mtriple=riscv32be -target-abi=ilp32 -mattr=+d -verify-machineinstrs < %s | FileCheck -check-prefix=RV32BE %s
 
-; Test f64 function calls with D extension and soft-float ABI
-; This specifically tests the LowerCall path that needs to swap Lo/Hi for BE
+; Test f64 calls with the D extension available but using the base integer ABI.
+; The fadd case forces GPR-to-FPR and FPR-to-GPR conversion, making RV32BE
+; memory-layout observable.
 
 declare double @external_func(double, double)
 
@@ -91,4 +92,50 @@ define double @test_f64_call_with_fadd(double %a, double %b) {
   %sum = fadd double %a, %b
   %result = call double @external_func(double %sum, double %sum)
   ret double %result
+}
+
+; Floating-point values use memory-layout ordering under the base integer
+; calling convention. On RV32BE, the high word is therefore in the
+; lower-numbered GPR.
+define i32 @bitcast_f64_low(double %x) {
+; RV32BE-LABEL: bitcast_f64_low:
+; RV32BE:       # %bb.0:
+; RV32BE-NEXT:    mv a0, a1
+; RV32BE-NEXT:    ret
+  %bits = bitcast double %x to i64
+  %low = trunc i64 %bits to i32
+  ret i32 %low
+}
+
+define i32 @bitcast_f64_high(double %x) {
+; RV32BE-LABEL: bitcast_f64_high:
+; RV32BE:       # %bb.0:
+; RV32BE-NEXT:    ret
+  %bits = bitcast double %x to i64
+  %shift = lshr i64 %bits, 32
+  %high = trunc i64 %shift to i32
+  ret i32 %high
+}
+
+define i32 @bitcast_split_f64_low(i32 %a0, i32 %a1, i32 %a2, i32 %a3,
+                                  i32 %a4, i32 %a5, i32 %a6, double %x) {
+; RV32BE-LABEL: bitcast_split_f64_low:
+; RV32BE:       # %bb.0:
+; RV32BE-NEXT:    lw a0, 0(sp)
+; RV32BE-NEXT:    ret
+  %bits = bitcast double %x to i64
+  %low = trunc i64 %bits to i32
+  ret i32 %low
+}
+
+define i32 @bitcast_split_f64_high(i32 %a0, i32 %a1, i32 %a2, i32 %a3,
+                                   i32 %a4, i32 %a5, i32 %a6, double %x) {
+; RV32BE-LABEL: bitcast_split_f64_high:
+; RV32BE:       # %bb.0:
+; RV32BE-NEXT:    mv a0, a7
+; RV32BE-NEXT:    ret
+  %bits = bitcast double %x to i64
+  %shift = lshr i64 %bits, 32
+  %high = trunc i64 %shift to i32
+  ret i32 %high
 }
