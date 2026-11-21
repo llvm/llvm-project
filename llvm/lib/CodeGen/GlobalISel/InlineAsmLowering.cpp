@@ -69,7 +69,8 @@ public:
       Flags |= InlineAsm::Extra_MayUnwind;
     if (CB.isConvergent())
       Flags |= InlineAsm::Extra_IsConvergent;
-    Flags |= IA->getDialect() * InlineAsm::Extra_AsmDialect;
+    if (IA->getDialect() == InlineAsm::AD_Intel)
+      Flags |= InlineAsm::Extra_AsmDialect;
   }
 
   void update(const TargetLowering::AsmOperandInfo &OpInfo) {
