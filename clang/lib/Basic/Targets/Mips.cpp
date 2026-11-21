@@ -68,6 +68,24 @@ void MipsTargetInfo::fillValidCPUList(
   Values.append(std::begin(ValidCPUNames), std::end(ValidCPUNames));
 }
 
+// Clang does not expand the features implied by a CPU feature, so p5600,
+// i6400, i6500 and r5900 are listed with the ISA they imply.
+unsigned MipsTargetInfo::getISALevelFromFeature(StringRef Feature) {
+  return llvm::StringSwitch<unsigned>(Feature)
+      .Case("+mips1", 1)
+      .Case("+mips2", 2)
+      .Cases({"+mips3", "+r5900"}, 3)
+      .Case("+mips4", 4)
+      .Case("+mips5", 5)
+      .Cases({"+mips32", "+mips32r2", "+mips32r3", "+mips32r5", "+mips32r6",
+              "+p5600"},
+             32)
+      .Cases({"+mips64", "+mips64r2", "+mips64r3", "+mips64r5", "+mips64r6",
+              "+i6400", "+i6500"},
+             64)
+      .Default(0);
+}
+
 unsigned MipsTargetInfo::getISARev() const {
   return llvm::StringSwitch<unsigned>(getCPU())
       .Cases({"mips32", "mips64"}, 1)
@@ -93,20 +111,20 @@ void MipsTargetInfo::getTargetDefines(const LangOptions &Opts,
   if (Opts.GNUMode)
     Builder.defineMacro("mips");
 
-  if (ABI == "o32") {
-    Builder.defineMacro("__mips", "32");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS32");
-  } else {
-    Builder.defineMacro("__mips", "64");
+  // Like GCC, __mips and _MIPS_ISA give the ISA level: 1 to 5 for MIPS I to
+  // MIPS V, and 32 or 64 for any revision of MIPS32 or MIPS64.
+  unsigned Level = ISALevel ? ISALevel : (ABI == "o32" ? 32 : 64);
+  Builder.defineMacro("__mips", Twine(Level));
+  Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS" + Twine(Level));
+
+  if (ABI != "o32") {
     Builder.defineMacro("__mips64");
     Builder.defineMacro("__mips64__");
-    Builder.defineMacro("_MIPS_ISA", "_MIPS_ISA_MIPS64");
   }
 
-  const std::string ISARev = std::to_string(getISARev());
-
-  if (!ISARev.empty())
-    Builder.defineMacro("__mips_isa_rev", ISARev);
+  // __mips_isa_rev is only defined for MIPS32 and MIPS64.
+  if (unsigned ISARev = getISARev())
+    Builder.defineMacro("__mips_isa_rev", Twine(ISARev));
 
   if (ABI == "o32") {
     Builder.defineMacro("__mips_o32");
