@@ -830,12 +830,18 @@ always define a pointer to their "content" type because they describe a
 region of memory, and all {ref}`allocated object<allocatedobjects>` in LLVM are
 accessed through pointers.
 
-Global variables can be marked with `unnamed_addr` which indicates that
-the address is not significant, only the content. Constants marked like
-this can be merged with other constants if they have the same initializer,
-and can also be duplicated. Note that a constant with significant address
-*can* be merged with a `unnamed_addr` constant, the result being a
-constant whose address is significant.
+Global variable definitions can be marked with `unnamed_addr` which indicates that
+the address is not significant, only the content. Variables with this marking
+can overlap with other variables.  Overlapping variables still have distinct provenance.
+Note that a constant with significant address can overlap with an `unnamed_addr`
+constant.
+
+A global variable definition which is not `unnamed_addr` does not overlap
+with any other variable which is not `unnamed_addr`, and the address of any byte
+of its contents is not equal to the address of any function definition which
+is not `unnnamed_addr`.
+
+`unnamed_addr` constants can also be duplicated.
 
 :::{warning}
 Constant duplication currently makes it unsound to compare pointers
@@ -848,6 +854,9 @@ make any usage of `unnamed_addr` unsound, but in practice it is
 unlikely that input IR that does not explicitly compare pointers
 will be affected by this issue.
 :::
+
+On a declaration, or a weak definition which is overridden, `unnamed_addr` is
+equivalent to `local_unnamed_addr`.
 
 If the `local_unnamed_addr` attribute is given, the address is known to
 not be significant within the module.
@@ -1070,8 +1079,18 @@ provided, is treated as a hint; the final alignment of the function will
 generally be set to a value somewhere between the minimum alignment and
 the preferred alignment.
 
-If the `unnamed_addr` attribute is given, the address is known to not
-be significant and two identical functions can be merged.
+Functions definitions can be marked `unnamed_addr`, which indicates the address of the
+the function is not significant.  The address of a function which is not
+`unnamed_addr` is not equal to the address of any other function which is not
+`unnamed_addr`.  It is also not equal to the address of any global variable
+with non-zero size which is not `unnamed_addr`.
+
+If two functions that are `unnamed_addr` are located at the same address, they
+are still distinct functions: they have separate provanance, and may have
+different behavior according to the abstract semantics.
+
+On a declaration, or a weak definition which is overridden, `unnamed_addr` is
+equivalent to `local_unnamed_addr`.
 
 If the `local_unnamed_addr` attribute is given, the address is known to
 not be significant within the module.
@@ -1109,6 +1128,10 @@ is aliased.
 Aliases that are not `unnamed_addr` are guaranteed to have the same address as
 the aliasee expression. `unnamed_addr` ones are only guaranteed to point
 to the same content.
+
+The provenance of an alias is distinct from the provenance of its aliasee.  In
+other words, alias analysis may assume two variable declarations don't alias,
+even if there might be an alias definition in another translation unit.
 
 If the `local_unnamed_addr` attribute is given, the address is known to
 not be significant within the module.
