@@ -9,6 +9,7 @@
 #include "llvm/IR/ConstantFPRange.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/IR/ConstantRange.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -275,6 +276,21 @@ ConstantFPRange::makeExactFCmpRegion(FCmpInst::Predicate Pred,
   return makeSatisfyingFCmpRegion(Pred, ConstantFPRange(Other));
 }
 
+ConstantFPRange ConstantFPRange::makeFromIntRange(const ConstantRange &CR,
+                                                  const fltSemantics &DstSem,
+                                                  bool IsSigned,
+                                                  APFloat::roundingMode RM) {
+  if (CR.isEmptySet())
+    return getEmpty(DstSem);
+  APInt IntMin = IsSigned ? CR.getSignedMin() : CR.getUnsignedMin();
+  APInt IntMax = IsSigned ? CR.getSignedMax() : CR.getUnsignedMax();
+  APFloat Lo(DstSem), Hi(DstSem);
+  Lo.convertFromAPInt(IntMin, IsSigned, RM);
+  Hi.convertFromAPInt(IntMax, IsSigned, RM);
+  // The conversion is monotonic and maps 0 to +0.
+  return getNonNaN(std::move(Lo), std::move(Hi));
+}
+
 bool ConstantFPRange::fcmp(FCmpInst::Predicate Pred,
                            const ConstantFPRange &Other) const {
   return makeSatisfyingFCmpRegion(Pred, Other).contains(*this);
@@ -527,6 +543,50 @@ void ConstantFPRange::flushDenormals(DenormalMode::DenormalModeKind Mode) {
          "ZeroLower is greater than ZeroUpper.");
   Lower = minnum(Lower, APFloat::getZero(Sem, ZeroLowerNegative));
   Upper = maxnum(Upper, APFloat::getZero(Sem, ZeroUpperNegative));
+}
+
+void ConstantFPRange::widenByULPs(const APFloat &ULPs) {
+  assert(!ULPs.isNaN() && !ULPs.isNegative() && "Invalid error bound");
+  if (isNaNOnly())
+    return;
+  const fltSemantics &Sem = getSemantics();
+  APFloat N = ULPs;
+  bool LosesInfo;
+  N.convert(Sem, APFloat::rmTowardPositive, &LosesInfo);
+
+  auto Widen = [&](APFloat &B, bool Down) {
+    if (B.isInfinity()) {
+      if (B.isNegative() == Down)
+        return;
+      B = APFloat::getLargest(Sem, B.isNegative());
+    }
+    APFloat Mag = llvm::abs(B);
+    APFloat Delta = Mag;
+    Delta.next(/*nextDown=*/false);
+    if (Delta.isInfinity()) {
+      // The largest value has the same ULP on both sides.
+      Delta = Mag;
+      Delta.next(/*nextDown=*/true);
+      Delta = Mag - Delta;
+    } else {
+      Delta.subtract(Mag, APFloat::rmNearestTiesToEven);
+    }
+    Delta.multiply(N, APFloat::rmTowardPositive);
+    if (Down)
+      B.subtract(Delta, APFloat::rmTowardNegative);
+    else
+      B.add(Delta, APFloat::rmTowardPositive);
+  };
+  Widen(Lower, /*Down=*/true);
+  Widen(Upper, /*Down=*/false);
+}
+
+void ConstantFPRange::addOppositeZero() {
+  if (!(classify() & fcZero))
+    return;
+  const fltSemantics &Sem = getSemantics();
+  Lower = minnum(Lower, APFloat::getZero(Sem, /*Negative=*/true));
+  Upper = maxnum(Upper, APFloat::getZero(Sem, /*Negative=*/false));
 }
 
 /// Represent a contiguous range of values sharing the same sign.
