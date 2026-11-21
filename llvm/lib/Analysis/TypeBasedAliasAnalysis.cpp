@@ -482,7 +482,7 @@ static const MDNode *getLeastCommonType(const MDNode *A, const MDNode *B) {
 AAMDNodes AAMDNodes::merge(const AAMDNodes &Other) const {
   AAMDNodes Result;
   Result.TBAA = MDNode::getMostGenericTBAA(TBAA, Other.TBAA);
-  Result.TBAAStruct = nullptr;
+  Result.TBAAStruct = TBAAStruct == Other.TBAAStruct ? TBAAStruct : nullptr;
   Result.Scope = MDNode::getMostGenericAliasScope(Scope, Other.Scope);
   Result.NoAlias = MDNode::intersect(NoAlias, Other.NoAlias);
   Result.NoAliasAddrSpace = MDNode::getMostGenericNoaliasAddrspace(
