@@ -119,7 +119,76 @@ entry:
 }
 
 
+; Treatment of operation on a select.
+
+; If the operation folds for both select arms, it becomes a select of the
+; results, even in strict mode.
+define fp128 @sel_fpext_strict(i1 %c) #0 {
+; CHECK-LABEL: @sel_fpext_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], fp128 0.000000e+00, fp128 -0.000000e+00
+; CHECK-NEXT:    ret fp128 [[RESULT]]
+;
+entry:
+  %sel = select i1 %c, double 0.0, double -0.0
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %sel, metadata !"fpexcept.strict") #0
+  ret fp128 %result
+}
+
+define float @sel_fadd_dynamic_strict(i1 %c) #0 {
+; CHECK-LABEL: @sel_fadd_dynamic_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = select i1 [[C:%.*]], float 2.000000e+00, float 3.000000e+00
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+entry:
+  %sel = select i1 %c, float 1.0, float 2.0
+  %result = call float @llvm.experimental.constrained.fadd.f32(float %sel, float 1.0, metadata !"round.dynamic", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+; If the operation does not fold for one arm, the select is kept.
+define float @sel_fdiv_strict(i1 %c) #0 {
+; CHECK-LABEL: @sel_fdiv_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], float 1.000000e+00, float 3.000000e+00
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.experimental.constrained.fdiv.f32(float 1.000000e+00, float [[SEL]], metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+entry:
+  %sel = select i1 %c, float 1.0, float 3.0
+  %result = call float @llvm.experimental.constrained.fdiv.f32(float 1.0, float %sel, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
+  ret float %result
+}
+
+define fp128 @sel_fpext_snan_strict(i1 %c) #0 {
+; CHECK-LABEL: @sel_fpext_snan_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], double 1.000000e+00, double +snan(0x4000000000000)
+; CHECK-NEXT:    [[RESULT:%.*]] = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double [[SEL]], metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret fp128 [[RESULT]]
+;
+entry:
+  %sel = select i1 %c, double 1.0, double 0x7ff4000000000000
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %sel, metadata !"fpexcept.strict") #0
+  ret fp128 %result
+}
+
+define fp128 @sel_fpext_var_strict(i1 %c, double %x) #0 {
+; CHECK-LABEL: @sel_fpext_var_strict(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], double 1.000000e+00, double [[X:%.*]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double [[SEL]], metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret fp128 [[RESULT]]
+;
+entry:
+  %sel = select i1 %c, double 1.0, double %x
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double %sel, metadata !"fpexcept.strict") #0
+  ret fp128 %result
+}
+
 declare float @llvm.experimental.constrained.fadd.f32(float, float, metadata, metadata)
 declare float @llvm.experimental.constrained.fdiv.f32(float, float, metadata, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.f64(double, metadata)
 
 attributes #0 = { strictfp }
