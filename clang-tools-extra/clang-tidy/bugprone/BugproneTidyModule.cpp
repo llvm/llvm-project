@@ -111,6 +111,7 @@
 #include "UnhandledSelfAssignmentCheck.h"
 #include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
+#include "UnsafeFormatStringCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnsafeToAllowExceptionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
@@ -324,6 +325,8 @@ public:
         "bugprone-unique-ptr-array-mismatch");
     CheckFactories.registerCheck<CrtpConstructorAccessibilityCheck>(
         "bugprone-crtp-constructor-accessibility");
+    CheckFactories.registerCheck<UnsafeFormatStringCheck>(
+        "bugprone-unsafe-format-string");
     CheckFactories.registerCheck<UnsafeFunctionsCheck>(
         "bugprone-unsafe-functions");
     CheckFactories.registerCheck<UnsafeToAllowExceptionsCheck>(
