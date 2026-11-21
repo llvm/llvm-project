@@ -15,6 +15,7 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Listener.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
@@ -167,9 +168,8 @@ const char *SBCommandInterpreter::GetIOHandlerControlSequence(char ch) {
   if (!IsValid())
     return nullptr;
 
-  return ConstString(
-             m_opaque_ptr->GetDebugger().GetTopIOHandlerControlSequence(ch))
-      .GetCString();
+  return m_opaque_ptr->GetDebugger().GetStringPool().Intern(
+      m_opaque_ptr->GetDebugger().GetTopIOHandlerControlSequence(ch));
 }
 
 lldb::ReturnStatus
@@ -541,24 +541,24 @@ SBBroadcaster SBCommandInterpreter::GetBroadcaster() {
 const char *SBCommandInterpreter::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(CommandInterpreter::GetStaticBroadcasterClass())
-      .AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      CommandInterpreter::GetStaticBroadcasterClass());
 }
 
 const char *SBCommandInterpreter::GetArgumentTypeAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return ConstString(CommandObject::GetArgumentTypeAsCString(arg_type))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      CommandObject::GetArgumentTypeAsCString(arg_type));
 }
 
 const char *SBCommandInterpreter::GetArgumentDescriptionAsCString(
     const lldb::CommandArgumentType arg_type) {
   LLDB_INSTRUMENT_VA(arg_type);
 
-  return ConstString(CommandObject::GetArgumentDescriptionAsCString(arg_type))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(
+      CommandObject::GetArgumentDescriptionAsCString(arg_type));
 }
 
 bool SBCommandInterpreter::EventIsCommandInterpreterEvent(
@@ -659,7 +659,33 @@ lldb::SBCommand SBCommandInterpreter::AddCommand(
   return lldb::SBCommand();
 }
 
+SBCommandPluginInterface::SBCommandPluginInterface() = default;
+
+SBCommandPluginInterface::~SBCommandPluginInterface() = default;
+
 SBCommand::SBCommand() { LLDB_INSTRUMENT_VA(this); }
+
+SBCommand::SBCommand(const SBCommand &rhs) : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBCommand &SBCommand::operator=(const SBCommand &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
+}
+
+SBCommand::SBCommand(SBCommand &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)) {}
+
+SBCommand &SBCommand::operator=(SBCommand &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  return *this;
+}
+
+SBCommand::~SBCommand() = default;
 
 SBCommand::SBCommand(lldb::CommandObjectSP cmd_sp) : m_opaque_sp(cmd_sp) {}
 
@@ -676,22 +702,30 @@ SBCommand::operator bool() const {
 const char *SBCommand::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid()
-              ? ConstString(m_opaque_sp->GetCommandName()).AsCString(nullptr)
-              : nullptr);
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetCommandName())
+                    : nullptr);
 }
 
 const char *SBCommand::GetHelp() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelp()).AsCString(nullptr)
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetHelp())
                     : nullptr);
 }
 
 const char *SBCommand::GetHelpLong() {
   LLDB_INSTRUMENT_VA(this);
 
-  return (IsValid() ? ConstString(m_opaque_sp->GetHelpLong()).AsCString(nullptr)
+  return (IsValid() ? m_opaque_sp->GetCommandInterpreter()
+                          .GetDebugger()
+                          .GetStringPool()
+                          .InternNonEmpty(m_opaque_sp->GetHelpLong())
                     : nullptr);
 }
 

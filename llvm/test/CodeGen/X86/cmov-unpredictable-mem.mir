@@ -26,7 +26,6 @@
 ...
 ---
 name: load_or_zero
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: load_or_zero
@@ -42,7 +41,6 @@ body: |
 ...
 ---
 name: load_or_zero_nohint
-tracksRegLiveness: true
 noVRegs: false
 body: |
   ; CHECK-LABEL: name: load_or_zero_nohint

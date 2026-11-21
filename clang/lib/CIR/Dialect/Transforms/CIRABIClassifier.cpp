@@ -54,6 +54,13 @@ static bool recordIsTransparentUnion(ModuleOp modOp, cir::RecordType recTy) {
   return layout && layout.getTransparentUnion();
 }
 
+/// Read from the layout, which also covers a last field that has one.
+static bool recordHasFlexibleArrayMember(ModuleOp modOp,
+                                         cir::RecordType recTy) {
+  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
+  return layout && layout.getFlexibleArrayMember();
+}
+
 /// Whether the classifier could give this type the SSEUP class, looking
 /// through arrays and records at the types they hold.
 static bool mayReachSseUp(mlir::Type ty, const DataLayout &dl) {
@@ -99,29 +106,15 @@ static bool memberIsEmptyRecord(mlir::Type ty) {
   return recTy && recTy.isEmptyForABI();
 }
 
-/// A record's declared alignment, which the ABI uses for the byval and sret
-/// alignment of an indirect argument.  DataLayout derives alignment from the
-/// members, so it cannot see `__attribute__((aligned(N)))`.  The declared value
-/// comes from the module's record-layout metadata instead.  CIRGen emits an
-/// entry for every record it names, so the computed fallback only serves
-/// hand-written CIR.
-static llvm::Align recordDeclaredAlign(ModuleOp modOp, cir::RecordType recTy,
-                                       const DataLayout &dl) {
-  auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
-  if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
-  return llvm::Align(layout.getRecordAlign());
-}
-
 /// A record's unadjusted alignment, the alignment its members give it before
-/// an alignment attribute on the record raises it.  Like the declared
-/// alignment, it comes from the module's record-layout metadata, and the
-/// computed fallback only serves hand-written CIR.
+/// an alignment attribute on the record raises it.  It comes from the module's
+/// record-layout metadata, and the computed fallback only serves hand-written
+/// CIR.
 static llvm::Align recordUnadjustedAlign(ModuleOp modOp, cir::RecordType recTy,
-                                         const DataLayout &dl) {
+                                         const cir::CIRDataLayout &cirDL) {
   auto layout = cir::tryGetRecordLayout(modOp, recTy.getName());
   if (!layout)
-    return llvm::Align(dl.getTypeABIAlignment(recTy));
+    return llvm::Align(cirDL.getTypeLanguageAlignment(recTy));
   return llvm::Align(layout.getUnadjustedAlign());
 }
 
@@ -329,13 +322,15 @@ static mlir::Type unwrapLongDoubleVectorElement(mlir::Type ty) {
 /// reach this function.
 static const llvm::abi::Type *mapCIRType(mlir::Type type,
                                          mlir::abi::ABITypeMapper &typeMapper,
-                                         const DataLayout &dl, ModuleOp modOp) {
+                                         const DataLayout &dl,
+                                         const cir::CIRDataLayout &cirDL,
+                                         ModuleOp modOp) {
   llvm::abi::TypeBuilder &tb = typeMapper.getTypeBuilder();
   return llvm::TypeSwitch<mlir::Type, const llvm::abi::Type *>(type)
       .Case([&](cir::IntType intTy) {
-        return tb.getIntegerType(intTy.getWidth(),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
-                                 intTy.isSigned(), intTy.getIsBitInt());
+        return tb.getIntegerType(
+            intTy.getWidth(), llvm::Align(cirDL.getTypeLanguageAlignment(type)),
+            intTy.isSigned(), intTy.getIsBitInt());
       })
       .Case([&](cir::PointerType ptrTy) {
         unsigned addrSpace = 0;
@@ -345,45 +340,50 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           addrSpace = targetAsAttr.getValue();
         // Any address-space attribute is a qualifier.
         bool hasAddressSpaceQualifier = ptrTy.getAddrSpace() != nullptr;
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)),
-                                 addrSpace, hasAddressSpaceQualifier);
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)), addrSpace,
+            hasAddressSpaceQualifier);
       })
       .Case([&](cir::VPtrType) {
         // cir::VPtrType carries no address-space parameter yet, so this
         // always maps into the default one until that gap closes.
         assert(!cir::MissingFeatures::addressSpace());
-        return tb.getPointerType(dl.getTypeSizeInBits(type),
-                                 llvm::Align(dl.getTypeABIAlignment(type)));
+        return tb.getPointerType(
+            dl.getTypeSizeInBits(type),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::BoolType) {
         // A bool is a one-bit integer to the classifier, as QualTypeMapper
         // maps it, so a bool vector is sized one bit per element.
-        return tb.getIntegerType(1, llvm::Align(dl.getTypeABIAlignment(type)),
-                                 /*Signed=*/false);
+        return tb.getIntegerType(
+            1, llvm::Align(cirDL.getTypeLanguageAlignment(type)),
+            /*Signed=*/false);
       })
       .Case([&](cir::VoidType) { return tb.getVoidType(); })
       .Case([&](cir::FPTypeInterface fpTy) {
         // LongDoubleType reports its underlying format's semantics, so the
         // classifier sees x87 or IEEE quad rather than the wrapper.
-        return tb.getFloatType(fpTy.getFloatSemantics(),
-                               llvm::Align(dl.getTypeABIAlignment(type)));
+        return tb.getFloatType(
+            fpTy.getFloatSemantics(),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::ComplexType complexTy) {
         return tb.getComplexType(
-            mapCIRType(complexTy.getElementType(), typeMapper, dl, modOp),
-            llvm::Align(dl.getTypeABIAlignment(type)));
+            mapCIRType(complexTy.getElementType(), typeMapper, dl, cirDL,
+                       modOp),
+            llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::VectorType vecTy) {
         // isSupportedType rejects a scalable vector, so the element count is
         // always fixed here.
         return tb.getVectorType(
-            mapCIRType(vecTy.getElementType(), typeMapper, dl, modOp),
-            vecTy.getSize(), llvm::Align(dl.getTypeABIAlignment(type)));
+            mapCIRType(vecTy.getElementType(), typeMapper, dl, cirDL, modOp),
+            vecTy.getSize(), llvm::Align(cirDL.getTypeLanguageAlignment(type)));
       })
       .Case([&](cir::ArrayType arrTy) {
         const llvm::abi::Type *elemAbi =
-            mapCIRType(arrTy.getElementType(), typeMapper, dl, modOp);
+            mapCIRType(arrTy.getElementType(), typeMapper, dl, cirDL, modOp);
         return tb.getArrayType(elemAbi, arrTy.getSize(),
                                dl.getTypeSizeInBits(type).getFixedValue());
       })
@@ -393,10 +393,13 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
           flags = flags | llvm::abi::RecordFlags::CanPassInRegisters;
         if (recordIsTransparentUnion(modOp, recTy))
           flags = flags | llvm::abi::RecordFlags::IsTransparent;
+        if (recordHasFlexibleArrayMember(modOp, recTy))
+          flags = flags | llvm::abi::RecordFlags::HasFlexibleArrayMember;
         llvm::TypeSize sizeBits = llvm::TypeSize::getFixed(
             dl.getTypeSizeInBits(type).getFixedValue());
-        llvm::Align align = recordDeclaredAlign(modOp, recTy, dl);
-        llvm::Align unadjustedAlign = recordUnadjustedAlign(modOp, recTy, dl);
+        llvm::Align align(cirDL.getTypeLanguageAlignment(recTy));
+        llvm::Align unadjustedAlign =
+            recordUnadjustedAlign(modOp, recTy, cirDL);
 
         // Mapped with no fields, an empty record reaches Ignore on its own.
         // The size still matters, since a target may pass a large empty
@@ -440,14 +443,15 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
             const bool holdsUnit = idx == 0 && unitTy;
             if (holdsUnit)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(unitTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(unitTy, typeMapper, dl, cirDL, modOp), offsetBits,
                   /*IsBitField=*/true, decl.getWidth(),
                   /*IsUnnamedBitField=*/decl.getIsUnnamed()));
             mlir::Type declaredTy = decl.getDeclaredType();
             if (!holdsUnit ||
                 dl.getTypeSizeInBits(declaredTy).getFixedValue() > unitBits)
               fields.push_back(llvm::abi::FieldInfo(
-                  mapCIRType(declaredTy, typeMapper, dl, modOp), offsetBits,
+                  mapCIRType(declaredTy, typeMapper, dl, cirDL, modOp),
+                  offsetBits,
                   /*IsBitField=*/true, holdsUnit ? 0 : decl.getWidth(),
                   /*IsUnnamedBitField=*/holdsUnit || decl.getIsUnnamed()));
           }
@@ -478,7 +482,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                 memberIsEmptyRecord(variantTy))
               continue;
             fields.push_back(llvm::abi::FieldInfo(
-                mapCIRType(variantTy, typeMapper, dl, modOp)));
+                mapCIRType(variantTy, typeMapper, dl, cirDL, modOp)));
           }
           return tb.getUnionType(fields, sizeBits, align, unadjustedAlign,
                                  llvm::abi::StructPacking::Default, flags);
@@ -508,7 +512,7 @@ static const llvm::abi::Type *mapCIRType(mlir::Type type,
                  "an empty-for-ABI member must not reach the classifier as an "
                  "unnamed bit-field");
           fields.push_back(llvm::abi::FieldInfo(
-              mapCIRType(fieldTy, typeMapper, dl, modOp),
+              mapCIRType(fieldTy, typeMapper, dl, cirDL, modOp),
               recTy.getElementOffset(dl, idx) * 8,
               /*IsBitField=*/isUnnamed, isUnnamed ? widthBits : 0,
               /*IsUnnamedBitField=*/isUnnamed));
@@ -552,7 +556,9 @@ static bool coerceKeepsScalarValue(mlir::Type origTy,
 /// means the value is passed unchanged in its own type.  Otherwise the
 /// rewriter converts the value to coercedType, and when that is a struct and
 /// canFlatten is set, passes each field of the struct as a separate argument.
-static std::optional<ArgClassification>
+/// When the classifier names no coerce type, a struct or _Complex that can be
+/// flattened is coerced to a struct of its own fields.
+static mlir::FailureOr<ArgClassification>
 convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                      mlir::Type origTy) {
   assert(origTy && "a Direct value must have a type");
@@ -571,11 +577,23 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 
   const llvm::abi::Type *coercedAbiTy = info.getCoerceToType();
   if (!coercedAbiTy) {
-    // A struct the classifier allows to be flattened is coerced to its own
-    // type, so that its fields are passed as separate arguments.
+    // A record the classifier allows to be flattened is coerced to its own
+    // type, so that its fields are passed as separate arguments.  A union is
+    // flattened as its LLVM type, the storage member and the tail padding.
     auto recTy = dyn_cast<cir::RecordType>(origTy);
-    if (recTy && recTy.isStruct() && info.getCanBeFlattened())
+    if (recTy && (recTy.isStruct() || recTy.isUnion()) &&
+        info.getCanBeFlattened())
       return passCoerced(recTy, /*offset=*/0);
+    // A _Complex is flattened the same way, as its {real, imag} pair.
+    if (auto complexTy = dyn_cast<cir::ComplexType>(origTy);
+        complexTy && info.getCanBeFlattened()) {
+      SmallVector<mlir::Type, 2> parts(2, complexTy.getElementType());
+      return passCoerced(
+          cir::StructType::get(ctx, parts, /*packed=*/false,
+                               /*is_class=*/false,
+                               cir::RecordType::getAllDataKinds(parts)),
+          /*offset=*/0);
+    }
     return passUnchanged();
   }
 
@@ -585,7 +603,7 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   // or when it fetches the struct in va_arg, so this is reported as NYI.
   bool coercedIsStruct = isa<llvm::abi::RecordType>(coercedAbiTy);
   if (offset && coercedIsStruct)
-    return std::nullopt;
+    return mlir::failure();
 
   // A scalar at byte 0 that is not split into a struct is coerced when the
   // classifier names a wider integer or a pointer in another address space.
@@ -629,13 +647,13 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 
   mlir::Type coerced = abiTypeToCIR(coercedAbiTy, ctx);
   if (!coerced)
-    return std::nullopt;
+    return mlir::failure();
   if (coerced == unwrapLongDoubleVectorElement(origTy)) {
     // ArgClassification has no way to represent a coercion to the value's own
     // type at an offset, since a coerced type equal to the value's own type
     // is treated as no coercion.  This is reported as NYI.
     if (offset)
-      return std::nullopt;
+      return mlir::failure();
     // A vector the classifier passes as itself needs no rewrite.
     if (isa<cir::VectorType>(origTy))
       return passUnchanged();
@@ -646,9 +664,9 @@ convertDirectArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
 }
 
 /// Convert an llvm::abi::ArgInfo into the ArgClassification consumed by
-/// CIRABIRewriteContext.  Returns std::nullopt when the classifier picks a
+/// CIRABIRewriteContext.  Returns failure when the classifier picks a
 /// coercion this bridge cannot represent, which the caller reports as NYI.
-static std::optional<ArgClassification>
+static mlir::FailureOr<ArgClassification>
 convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
                   mlir::Type origTy) {
   if (info.isDirect())
@@ -658,21 +676,19 @@ convertABIArgInfo(const llvm::abi::ArgInfo &info, MLIRContext *ctx,
   if (info.isExtend()) {
     assert(origTy && "an extended value must have a type");
     if (isa<cir::BoolType>(origTy))
-      return ArgClassification::getExtend(nullptr, info.isSignExt());
+      return ArgClassification::getExtend(nullptr, info.isSignExt(),
+                                          info.isConservative());
     assert((isa<cir::IntType, cir::RecordType>(origTy)) &&
            "Extend is only expected for integers, bool, and transparent "
            "unions");
     mlir::Type extendedTy = abiTypeToCIR(info.getCoerceToType(), ctx);
-    return ArgClassification::getExtend(extendedTy, info.isSignExt());
+    return ArgClassification::getExtend(extendedTy, info.isSignExt(),
+                                        info.isConservative());
   }
-  if (info.isIndirect()) {
-    // The rewriter has no address space for the Indirect pointer yet.
-    if (info.getIndirectAddrSpace() != 0)
-      return std::nullopt;
+  if (info.isIndirect())
     return ArgClassification::getIndirect(info.getIndirectAlign(),
                                           info.getIndirectByVal(),
-                                          /*addrSpace=*/0);
-  }
+                                          info.getIndirectAddrSpace());
   if (info.isIndirectAliased())
     return ArgClassification::getIndirectAliased(info.getIndirectAlign(),
                                                  info.getIndirectAddrSpace());
@@ -696,10 +712,11 @@ static llvm::abi::RequiredArgs requiredArgs(cir::FuncType fnTy) {
 /// pointer's pointee FuncType).  \p required marks where the declared
 /// parameters in \p inputs end.  The classifier treats every argument past that
 /// point as passed through an ellipsis.  \p callConv is the calling convention
-/// the signature is classified under.  Returns std::nullopt and emits an NYI
+/// the signature is classified under.  Returns failure and emits an NYI
 /// error via \p emitError if the signature uses a type the bridge does not
 /// handle yet.
-std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
+mlir::FailureOr<FunctionClassification>
+CIRABIClassifierCommon::classifySignature(
     mlir::Type retCIR, mlir::TypeRange inputs, llvm::abi::RequiredArgs required,
     const llvm::abi::TargetInfo &targetInfo, llvm::CallingConv::ID callConv,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
@@ -718,23 +735,23 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
     return true;
   };
   if (!voidRet && reject(retCIR))
-    return std::nullopt;
+    return mlir::failure();
   for (mlir::Type a : inputs)
     if (reject(a))
-      return std::nullopt;
+      return mlir::failure();
 
   const llvm::abi::Type *retAbi =
       voidRet ? typeMapper.getTypeBuilder().getVoidType()
-              : mapCIRType(retCIR, typeMapper, dl, modOp);
+              : mapCIRType(retCIR, typeMapper, dl, cirDataLayout, modOp);
   SmallVector<const llvm::abi::Type *> argAbi;
   for (mlir::Type a : inputs)
-    argAbi.push_back(mapCIRType(a, typeMapper, dl, modOp));
+    argAbi.push_back(mapCIRType(a, typeMapper, dl, cirDataLayout, modOp));
 
   std::unique_ptr<llvm::abi::FunctionInfo> fi =
       llvm::abi::FunctionInfo::create(callConv, retAbi, argAbi, required);
   targetInfo.computeInfo(*fi);
 
-  // convertABIArgInfo returns nullopt when the classifier picks a coercion this
+  // convertABIArgInfo returns failure when the classifier picks a coercion this
   // bridge cannot represent.
   auto nyiCoercion = [&](mlir::Type t) {
     emitError() << "calling-convention lowering not yet "
@@ -745,26 +762,28 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
   FunctionClassification fc;
   fc.returnsVoid = voidRet;
   mlir::Type origRet = voidRet ? mlir::Type() : retCIR;
-  std::optional<ArgClassification> retAc =
+  mlir::FailureOr<ArgClassification> retAc =
       convertABIArgInfo(fi->getReturnInfo(), ctx, origRet);
-  if (!retAc) {
+  if (failed(retAc)) {
     nyiCoercion(retCIR);
-    return std::nullopt;
+    return mlir::failure();
   }
   fc.returnInfo = *retAc;
   for (unsigned i = 0, e = fi->arg_size(); i < e; ++i) {
     mlir::Type origArg = inputs[i];
     const llvm::abi::ArgInfo &argInfo = fi->getArgInfo(i).Info;
-    std::optional<ArgClassification> ac =
+    mlir::FailureOr<ArgClassification> ac =
         convertABIArgInfo(argInfo, ctx, origArg);
-    if (!ac) {
+    if (failed(ac)) {
       nyiCoercion(origArg);
-      return std::nullopt;
+      return mlir::failure();
     }
     // The classifier passes a transparent union as its first member, and
-    // names no coerce type when it passes that member as its own type.
+    // names no coerce type when it passes that member as its own type.  The
+    // union is then left unchanged or coerced to itself above.
     auto recTy = dyn_cast<cir::RecordType>(origArg);
-    if (ac->kind == ArgKind::Direct && !ac->coercedType && recTy &&
+    if (ac->kind == ArgKind::Direct && recTy &&
+        (!ac->coercedType || ac->coercedType == recTy) &&
         recordIsTransparentUnion(modOp, recTy))
       ac->coercedType = recTy.getMembers().front();
     ac->neededIntRegs = argInfo.getNeededIntRegs();
@@ -774,18 +793,19 @@ std::optional<FunctionClassification> CIRABIClassifierCommon::classifySignature(
   return fc;
 }
 
-/// FIXME: Only the AMDGPU kernel convention is mapped. Every other convention
-/// is classified as C.
+/// FIXME: Implement proper support for other calling conventions.
 llvm::CallingConv::ID cir::convertCallingConv(cir::CallingConv cc) {
   if (cc == cir::CallingConv::AMDGPUKernel)
     return llvm::CallingConv::AMDGPU_KERNEL;
+  if (cc == cir::CallingConv::SpirKernel)
+    return llvm::CallingConv::SPIR_KERNEL;
   return llvm::CallingConv::C;
 }
 
-/// Classify a cir.func using the LLVM ABI library.  Returns std::nullopt and
+/// Classify a cir.func using the LLVM ABI library.  Returns failure and
 /// emits an NYI error if the signature uses a type the bridge does not handle
 /// yet.
-std::optional<FunctionClassification>
+mlir::FailureOr<FunctionClassification>
 CIRABIClassifierCommon::classifyFunction(cir::FuncOp func) {
   cir::FuncType fnTy = func.getFunctionType();
   return classifySignature(fnTy.getReturnType(), fnTy.getInputs(),
@@ -795,17 +815,17 @@ CIRABIClassifierCommon::classifyFunction(cir::FuncOp func) {
 }
 
 /// Classify the single type fetched by a `cir.va_arg` as an unnamed argument
-/// (RequiredArgs(0)) with a full register budget.  Returns std::nullopt and
+/// (RequiredArgs(0)) with a full register budget.  Returns failure and
 /// emits an NYI error if the type is not one this bridge handles.
-std::optional<ArgClassification> CIRABIClassifierCommon::classifyVarArgType(
+mlir::FailureOr<ArgClassification> CIRABIClassifierCommon::classifyVarArgType(
     mlir::Type ty, const llvm::abi::TargetInfo &targetInfo,
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError) {
   MLIRContext *ctx = modOp->getContext();
-  std::optional<FunctionClassification> fc = classifySignature(
+  mlir::FailureOr<FunctionClassification> fc = classifySignature(
       cir::VoidType::get(ctx), mlir::TypeRange(ty), llvm::abi::RequiredArgs(0),
       targetInfo, llvm::CallingConv::C, emitError);
-  if (!fc)
-    return std::nullopt;
+  if (failed(fc))
+    return mlir::failure();
   return fc->argInfos[0];
 }
 
@@ -816,7 +836,7 @@ std::optional<ArgClassification> CIRABIClassifierCommon::classifyVarArgType(
 /// small struct is passed in registers early in the list and in memory once
 /// the integer registers are gone.  Classifying from the call's operands
 /// rather than the callee's signature is what makes that accounting right.
-std::optional<FunctionClassification>
+mlir::FailureOr<FunctionClassification>
 CIRABIClassifierCommon::classifyVariadicCall(
     cir::CIRCallOpInterface call, cir::FuncType calleeTy,
     const llvm::abi::TargetInfo &targetInfo, llvm::CallingConv::ID callConv) {
@@ -829,7 +849,7 @@ CIRABIClassifierCommon::classifyVariadicCall(
                            [&]() { return op->emitOpError(); });
 }
 
-std::optional<FunctionClassification>
+mlir::FailureOr<FunctionClassification>
 CIRABIClassifierCommon::classifyVariadicCall(cir::CIRCallOpInterface call,
                                              cir::FuncOp callee) {
   return classifyVariadicCall(call, callee.getFunctionType(),
@@ -837,7 +857,7 @@ CIRABIClassifierCommon::classifyVariadicCall(cir::CIRCallOpInterface call,
                               convertCallingConv(callee.getCallingConv()));
 }
 
-std::optional<FunctionClassification>
+mlir::FailureOr<FunctionClassification>
 CIRABIClassifierCommon::classifyIndirectCall(cir::CIRCallOpInterface call) {
   cir::FuncType funcTy = getIndirectCalleeType(call);
   const llvm::abi::TargetInfo &targetInfo =
@@ -857,19 +877,19 @@ CIRABIClassifierCommon::classifyIndirectCall(cir::CIRCallOpInterface call) {
 /// classification-attr schema carries no return type at all.  Both route
 /// through here so a classification always reaches needsRewrite paired with
 /// the return type it was built from.
-static std::optional<FunctionClassification>
-withReturnVoidness(std::optional<FunctionClassification> fc,
+static mlir::FailureOr<FunctionClassification>
+withReturnVoidness(mlir::FailureOr<FunctionClassification> fc,
                    mlir::Type returnType) {
-  if (fc)
+  if (succeeded(fc))
     fc->returnsVoid = mlir::isa<cir::VoidType>(returnType);
   return fc;
 }
 
 /// Classify \p func using whichever driver mode is configured.  Returns
-/// std::nullopt and emits an error on the function if classification fails
+/// failure and emits an error on the function if classification fails
 /// (e.g. injection-driver mode but the function is missing the attribute,
 /// or the attribute is malformed).
-static std::optional<FunctionClassification>
+static mlir::FailureOr<FunctionClassification>
 classifyFunction(cir::FuncOp func, const DataLayout &dl,
                  cir::CallConvTarget target, StringRef classificationAttrName) {
   ArrayRef<Type> argTypes = func.getFunctionType().getInputs();
@@ -881,7 +901,7 @@ classifyFunction(cir::FuncOp func, const DataLayout &dl,
       func.emitOpError()
           << "missing classification attribute '" << classificationAttrName
           << "' (CallConvLowering driver mode 'classification-attr')";
-      return std::nullopt;
+      return mlir::failure();
     }
     return withReturnVoidness(mlir::abi::test::parseClassificationAttr(
                                   attr, [&]() { return func.emitOpError(); }),
@@ -905,27 +925,27 @@ class TestTargetClassifier final : public CIRABIClassifier {
 public:
   explicit TestTargetClassifier(const mlir::DataLayout &dl) : dl(dl) {}
 
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyFunction(cir::FuncOp func) final {
     return ::classifyFunction(func, dl, cir::CallConvTarget::Test,
                               /*classificationAttrName=*/"");
   }
 
   /// The test target classifies only declared parameters.
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncOp) final {
     call->emitOpError()
         << "variadic arguments not yet implemented in CallConvLowering";
-    return std::nullopt;
+    return mlir::failure();
   }
 
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyIndirectCall(cir::CIRCallOpInterface call) final {
     cir::FuncType funcTy = getIndirectCalleeType(call);
     if (call.getNumArgOperands() > funcTy.getNumInputs()) {
       call->emitOpError()
           << "variadic arguments not yet implemented in CallConvLowering";
-      return std::nullopt;
+      return mlir::failure();
     }
     return withReturnVoidness(mlir::abi::test::classify(funcTy.getInputs(),
                                                         funcTy.getReturnType(),
@@ -933,10 +953,10 @@ public:
                               funcTy.getReturnType());
   }
 
-  std::optional<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) final {
+  mlir::FailureOr<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) final {
     vaArg->emitOpError()
         << "not yet implemented in CallConvLowering for the test target";
-    return std::nullopt;
+    return mlir::failure();
   }
 
 private:
@@ -951,33 +971,33 @@ public:
   InjectedClassifier(const mlir::DataLayout &dl, llvm::StringRef attrName)
       : dl(dl), attrName(attrName) {}
 
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyFunction(cir::FuncOp func) final {
     return ::classifyFunction(func, dl, cir::CallConvTarget::None, attrName);
   }
 
   /// The injected classification covers a function's declared parameters, so
   /// it cannot describe an operand passed through an ellipsis.
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyVariadicCall(cir::CIRCallOpInterface call, cir::FuncOp) final {
     call->emitOpError()
         << "variadic arguments not yet implemented in CallConvLowering";
-    return std::nullopt;
+    return mlir::failure();
   }
 
   /// Nor can it describe a callee resolved at run time, which names no
   /// function to read the attribute from.
-  std::optional<FunctionClassification>
+  mlir::FailureOr<FunctionClassification>
   classifyIndirectCall(cir::CIRCallOpInterface call) final {
     call->emitOpError() << "indirect call cannot be classified in the "
                            "'classification-attr' driver mode";
-    return std::nullopt;
+    return mlir::failure();
   }
 
-  std::optional<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) final {
+  mlir::FailureOr<ArgClassification> classifyVAArg(cir::VAArgOp vaArg) final {
     vaArg->emitOpError() << "cannot be classified in the "
                             "'classification-attr' driver mode";
-    return std::nullopt;
+    return mlir::failure();
   }
 
 private:

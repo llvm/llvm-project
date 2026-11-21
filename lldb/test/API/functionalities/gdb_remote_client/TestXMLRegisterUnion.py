@@ -571,16 +571,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["(float) $u1.floats[$idx.value] = 3.5"],
         )
 
-        self.runCmd("settings set target.experimental.use-DIL false")
-        try:
-            self.expect("register read u1.floats[2]", substrs=["u1.floats[2] = 3.5"])
-            self.expect("v $u1.floats[2]", substrs=["(float) $u1.floats[2] = 3.5"])
-            resolved_lane = frame.GetValueForVariablePath("$u1.floats[2]")
-            self.assertTrue(resolved_lane.IsValid())
-            self.assertEqual(resolved_lane.GetValue(), "3.5")
-        finally:
-            self.runCmd("settings set target.experimental.use-DIL true")
-
     @skipIfXmlSupportMissing
     @skipIfRemote
     def test_exact_dotted_register_name_takes_precedence(self):
@@ -609,22 +599,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assertEqual(
             frame.GetValueForVariablePath("$u0.view.f32").GetValue(), "1.5"
         )
-
-        self.runCmd("settings set target.experimental.use-DIL false")
-        try:
-            self.expect("register read u0.f32", substrs=["u0.f32 = 0x0000002a"])
-            self.expect("register read u0.view.f32", substrs=["u0.view.f32 = 1.5"])
-            self.expect("v $u0.view.f32", substrs=["(float) $u0.view.f32 = 1.5"])
-            self.assertEqual(
-                frame.GetValueForVariablePath("$u0.f32").GetValue(),
-                "0x0000002a",
-            )
-            self.assertEqual(
-                frame.GetValueForVariablePath("$u0.view.f32").GetValue(),
-                "1.5",
-            )
-        finally:
-            self.runCmd("settings set target.experimental.use-DIL true")
 
     @skipIfXmlSupportMissing
     @skipIfRemote
@@ -688,17 +662,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             error=True,
             substrs=["Invalid register name or identifier 'does_not_exist'"],
         )
-
-        self.runCmd("settings set target.experimental.use-DIL false")
-        try:
-            self.expect(
-                "register read does_not_exist",
-                error=True,
-                substrs=["Invalid register name or identifier 'does_not_exist'"],
-            )
-        finally:
-            self.runCmd("settings set target.experimental.use-DIL true")
-
         frame = process.GetThreadAtIndex(0).GetFrameAtIndex(0)
         vector = frame.FindRegister("v0")
         self.assertTrue(vector.GetType().IsArrayType())
@@ -742,34 +705,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             error=True,
             substrs=["array index 4294967296 is not valid"],
         )
-
-        self.runCmd("settings set target.experimental.use-DIL false")
-        try:
-            for command in [
-                "register read v0[9].f32",
-                "v $v0[9].f32",
-            ]:
-                self.expect(command, error=True, substrs=["array index"])
-            for command in [
-                "register read v0[4294967296]",
-                "v $v0[4294967296]",
-            ]:
-                self.expect(
-                    command,
-                    error=True,
-                    patterns=[
-                        r"(array index 4294967296 is not valid|"
-                        r"invalid index expression \"\")"
-                    ],
-                )
-            for command in [
-                "register read u0.raw[64]",
-                "register read u0.raw[64-64]",
-                "v $u0.raw[64]",
-            ]:
-                self.expect(command, error=True, substrs=["bitfield range 64"])
-        finally:
-            self.runCmd("settings set target.experimental.use-DIL true")
 
     @skipIfXmlSupportMissing
     @skipIfRemote

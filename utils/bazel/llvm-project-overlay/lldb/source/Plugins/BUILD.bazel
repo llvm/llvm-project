@@ -1187,6 +1187,23 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "PluginDynamicLoaderAcceleratorGDBRemote",
+    srcs = glob(["DynamicLoader/AcceleratorGDBRemote/*.cpp"]),
+    hdrs = glob(["DynamicLoader/AcceleratorGDBRemote/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
+    ],
+)
+
 alias(
     name = "PluginDynamicLoaderPosixDYLD",
     actual = ":PluginProcessElfCore",

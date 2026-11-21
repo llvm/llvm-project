@@ -1,8 +1,11 @@
+// CIR calling-convention lowering does not handle SVE scalable vector types
+// yet, so the -fclangir runs disable it. Remove
+// -fno-clangir-call-conv-lowering once those types are supported.
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -target-feature +sve \
-// RUN:   -fclangir -emit-cir %s -o %t.cir
+// RUN:   -fclangir -fno-clangir-call-conv-lowering -emit-cir %s -o %t.cir
 // RUN: FileCheck --check-prefix=CIR --input-file=%t.cir %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -target-feature +sve \
-// RUN:   -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN:   -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple aarch64-unknown-linux-gnu -target-feature +sve \
 // RUN:   -emit-llvm %s -o %t.ll

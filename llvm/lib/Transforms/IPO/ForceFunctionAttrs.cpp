@@ -10,7 +10,6 @@
 #include "IPOOptions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -19,38 +18,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "forceattrs"
 
-static cl::list<std::string> ForceAttributes(
-    "force-attribute", cl::Hidden,
-    cl::desc(
-        "Add an attribute to a function. This can be a "
-        "pair of 'function-name:attribute-name', to apply an attribute to a "
-        "specific function. For "
-        "example -force-attribute=foo:noinline. Specifying only an attribute "
-        "will apply the attribute to every function in the module. This "
-        "option can be specified multiple times."));
-
-static cl::list<std::string> ForceRemoveAttributes(
-    "force-remove-attribute", cl::Hidden,
-    cl::desc("Remove an attribute from a function. This can be a "
-             "pair of 'function-name:attribute-name' to remove an attribute "
-             "from a specific function. For "
-             "example -force-remove-attribute=foo:noinline. Specifying only an "
-             "attribute will remove the attribute from all functions in the "
-             "module. This "
-             "option can be specified multiple times."));
-
 static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   switch (Kind) {
   case Attribute::AlwaysInline:
-    return F.hasFnAttribute(Attribute::NoInline) ||
-           F.hasFnAttribute(Attribute::OptimizeNone);
+    return F.hasFnAttribute(Attribute::NoInline);
 
   case Attribute::NoInline:
     return F.hasFnAttribute(Attribute::AlwaysInline);
 
   case Attribute::OptimizeNone:
-    return F.hasFnAttribute(Attribute::AlwaysInline) ||
-           F.hasFnAttribute(Attribute::MinSize) ||
+    return F.hasFnAttribute(Attribute::MinSize) ||
            F.hasFnAttribute(Attribute::OptimizeForSize) ||
            F.hasFnAttribute(Attribute::OptimizeForDebugging);
 
@@ -72,22 +49,11 @@ static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   }
 }
 
-static void addRequiredFnAttrs(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::OptimizeNone && !F.hasFnAttribute(Attribute::NoInline))
-    F.addFnAttr(Attribute::NoInline);
-}
-
-static bool wouldRemoveRequiredFnAttr(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::NoInline && F.hasFnAttribute(Attribute::OptimizeNone))
-    return true;
-  return false;
-}
-
 /// If F has any forced attributes given on the command line, add them.
 /// If F has any forced remove attributes given on the command line, remove
 /// them. When both force and force-remove are given to a function, the latter
 /// takes precedence.
-static void forceAttributes(Function &F) {
+static void forceAttributes(const IPOOptions &Opts, Function &F) {
   auto ParseFunctionAndAttr = [&](StringRef S) {
     StringRef AttributeText;
     if (S.contains(':')) {
@@ -106,26 +72,20 @@ static void forceAttributes(Function &F) {
     return Kind;
   };
 
-  for (const auto &S : ForceAttributes) {
+  for (const auto &S : Opts.force_attribute) {
     auto Kind = ParseFunctionAndAttr(S);
     if (Kind == Attribute::None || F.hasFnAttribute(Kind) ||
         hasConflictingFnAttr(Kind, F))
       continue;
-    addRequiredFnAttrs(Kind, F);
     F.addFnAttr(Kind);
   }
 
-  for (const auto &S : ForceRemoveAttributes) {
+  for (const auto &S : Opts.force_remove_attribute) {
     auto Kind = ParseFunctionAndAttr(S);
-    if (Kind == Attribute::None || !F.hasFnAttribute(Kind) ||
-        wouldRemoveRequiredFnAttr(Kind, F))
+    if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
       continue;
     F.removeFnAttr(Kind);
   }
-}
-
-static bool hasForceAttributes() {
-  return !ForceAttributes.empty() || !ForceRemoveAttributes.empty();
 }
 
 PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
@@ -162,7 +122,6 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
               !hasConflictingFnAttr(AttrKind, *Func)) {
             // TODO: There could be string attributes without a value, we should
             // support those, too.
-            addRequiredFnAttrs(AttrKind, *Func);
             Func->addFnAttr(AttrKind);
             Changed = true;
           } else
@@ -177,9 +136,9 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
       }
     }
   }
-  if (hasForceAttributes()) {
+  if (!Opts.force_attribute.empty() || !Opts.force_remove_attribute.empty()) {
     for (Function &F : M.functions())
-      forceAttributes(F);
+      forceAttributes(Opts, F);
     Changed = true;
   }
   // Just conservatively invalidate analyses if we've made any changes, this

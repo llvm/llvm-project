@@ -226,7 +226,8 @@ mlir::Attribute rewriteAttribute(const mlir::TypeConverter &tc,
         return cir::VTableAttr::get(
             tc.convertType(vta.getType()),
             mlir::cast<mlir::ArrayAttr>(
-                rewriteAttribute(tc, ctx, vta.getData())));
+                rewriteAttribute(tc, ctx, vta.getData())),
+            vta.getAddressPoints());
       })
       .Case<cir::TypeInfoAttr>([&tc, ctx](cir::TypeInfoAttr tia) {
         return cir::TypeInfoAttr::get(
@@ -362,7 +363,6 @@ mlir::LogicalResult CIRAllocaOpABILowering::matchAndRewrite(
       op.getAlignmentAttr(), /*dynAllocSize=*/adaptor.getDynAllocSize());
   loweredOp.setInit(op.getInit());
   loweredOp.setConstant(op.getConstant());
-  loweredOp.setAnnotationsAttr(op.getAnnotationsAttr());
 
   rewriter.replaceOp(op, loweredOp);
   return mlir::success();
