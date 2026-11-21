@@ -477,7 +477,7 @@ void AMDGPU::PhiLoweringHelper::mergeIncomingLaneMasks(
   // Values in a loop that are observed outside the loop receive a simple but
   // conservatively correct treatment.
   SmallVector<MachineBasicBlock *, 4> DomBlocks = {&MBB};
-  for (MachineInstr &Use : MRI->use_instructions(DstReg))
+  for (MachineInstr &Use : MRI->use_nodbg_instructions(DstReg))
     DomBlocks.push_back(Use.getParent());
 
   MachineBasicBlock *PostDomBound = PDT.findNearestCommonDominator(DomBlocks);
@@ -633,7 +633,7 @@ bool Vreg1LoweringHelper::lowerCopiesToI1() {
       // Defs in a loop that are observed outside the loop must be transformed
       // into appropriate bit manipulation.
       std::vector<MachineBasicBlock *> DomBlocks = {&MBB};
-      for (MachineInstr &Use : MRI->use_instructions(DstReg))
+      for (MachineInstr &Use : MRI->use_nodbg_instructions(DstReg))
         DomBlocks.push_back(Use.getParent());
 
       MachineBasicBlock *PostDomBound =
