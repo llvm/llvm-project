@@ -18,7 +18,7 @@ void test() {
 
 // CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"??R<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr noundef %this, ptr inalloca(<{ %struct.A }>) %[[ARG:.*]])
+// CHECK-SAME: (ptr noundef %this, ptr inalloca(<{ %struct.A }>) align 4 %[[ARG:.*]])
 // CHECK: %[[V:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
@@ -26,7 +26,7 @@ void test() {
 
 // CHECK: define internal noundef i32
 // CHECK-SAME: @"?__invoke@<lambda_0>@?0??test@@YAXXZ@CA?A?<auto>@@UA@@@Z"
-// CHECK-SAME: (ptr inalloca(<{ %struct.A }>) %[[ARG:.*]])
+// CHECK-SAME: (ptr inalloca(<{ %struct.A }>) align 4 %[[ARG:.*]])
 // CHECK: %unused.capture = alloca %class.anon, align 1
 // CHECK: %[[VAR:.*]] = getelementptr inbounds nuw <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
 // CHECK: %call = call x86_thiscallcc noundef i32

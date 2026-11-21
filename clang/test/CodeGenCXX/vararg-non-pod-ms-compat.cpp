@@ -13,7 +13,7 @@ void test(X x) {
   // CHECK-LABEL: define dso_local void @"?test@@YAXUX@@@Z"
 
   // X86: %[[argmem:[^ ]*]] = alloca inalloca <{ %struct.X }>
-  // X86: call void (ptr, ...) @"?vararg@@YAXZZ"(ptr inalloca(<{ %struct.X }>) %[[argmem]])
+  // X86: call void (ptr, ...) @"?vararg@@YAXZZ"(ptr inalloca(<{ %struct.X }>) align 4 %[[argmem]])
 
   // X64: alloca %struct.X
 

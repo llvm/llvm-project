@@ -15,10 +15,10 @@ struct C : A, B { C(); virtual void foo(Agg x); };
 C::C() {} // force emission
 
 // CHECK32-LABEL: define linkonce_odr dso_local x86_thiscallcc void @"?foo@C@byval_thunk@@W3AEXUAgg@2@@Z"
-// CHECK32:             (ptr noundef %this, ptr inalloca(<{ %"struct.byval_thunk::Agg" }>) %0)
+// CHECK32:             (ptr noundef %this, ptr inalloca(<{ %"struct.byval_thunk::Agg" }>) align 4 %0)
 // CHECK32:   getelementptr i8, ptr %{{.*}}, i32 -4
 // CHECK32:   musttail call x86_thiscallcc void @"?foo@C@byval_thunk@@UAEXUAgg@2@@Z"
-// CHECK32:       (ptr noundef %{{.*}}, ptr inalloca(<{ %"struct.byval_thunk::Agg" }>) %0)
+// CHECK32:       (ptr noundef %{{.*}}, ptr inalloca(<{ %"struct.byval_thunk::Agg" }>) align 4 %0)
 // CHECK32-NEXT: ret void
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@byval_thunk@@W7EAAXUAgg@2@@Z"
@@ -44,13 +44,13 @@ struct C : A, B { C(); virtual void __stdcall foo(Agg x); };
 C::C() {} // force emission
 
 // CHECK32-LABEL: define linkonce_odr dso_local x86_stdcallcc void @"?foo@C@stdcall_thunk@@W3AGXUAgg@2@@Z"
-// CHECK32:             (ptr inalloca(<{ ptr, %"struct.stdcall_thunk::Agg" }>) %0)
+// CHECK32:             (ptr inalloca(<{ ptr, %"struct.stdcall_thunk::Agg" }>) align 4 %0)
 // CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds nuw <{ ptr, %"struct.stdcall_thunk::Agg" }>, ptr %0, i32 0, i32 0
 // CHECK32:   load ptr, ptr %[[this_slot]]
 // CHECK32:   getelementptr i8, ptr %{{.*}}, i32 -4
 // CHECK32:   store ptr %{{.*}}, ptr %[[this_slot]]
 // CHECK32:   musttail call x86_stdcallcc void @"?foo@C@stdcall_thunk@@UAGXUAgg@2@@Z"
-// CHECK32:       (ptr  inalloca(<{ ptr, %"struct.stdcall_thunk::Agg" }>) %0)
+// CHECK32:       (ptr  inalloca(<{ ptr, %"struct.stdcall_thunk::Agg" }>) align 4 %0)
 // CHECK32-NEXT: ret void
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@stdcall_thunk@@W7EAAXUAgg@2@@Z"
@@ -76,13 +76,13 @@ struct C : A, B { C(); virtual Agg __cdecl foo(Agg x); };
 C::C() {} // force emission
 
 // CHECK32-LABEL: define linkonce_odr dso_local ptr @"?foo@C@sret_thunk@@W3AA?AUAgg@2@U32@@Z"
-// CHECK32:             (ptr inalloca(<{ ptr, ptr, %"struct.sret_thunk::Agg" }>) %0)
+// CHECK32:             (ptr inalloca(<{ ptr, ptr, %"struct.sret_thunk::Agg" }>) align 4 %0)
 // CHECK32:   %[[this_slot:[^ ]*]] = getelementptr inbounds nuw <{ ptr, ptr, %"struct.sret_thunk::Agg" }>, ptr %0, i32 0, i32 0
 // CHECK32:   load ptr, ptr %[[this_slot]]
 // CHECK32:   getelementptr i8, ptr %{{.*}}, i32 -4
 // CHECK32:   store ptr %{{.*}}, ptr %[[this_slot]]
 // CHECK32:   %[[rv:[^ ]*]] = musttail call ptr @"?foo@C@sret_thunk@@UAA?AUAgg@2@U32@@Z"
-// CHECK32:       (ptr  inalloca(<{ ptr, ptr, %"struct.sret_thunk::Agg" }>) %0)
+// CHECK32:       (ptr  inalloca(<{ ptr, ptr, %"struct.sret_thunk::Agg" }>) align 4 %0)
 // CHECK32-NEXT: ret ptr %[[rv]]
 
 // CHECK64-LABEL: define linkonce_odr dso_local void @"?foo@C@sret_thunk@@W7EAA?AUAgg@2@U32@@Z"
