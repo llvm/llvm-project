@@ -250,7 +250,7 @@ bool isLinearizableVector(VectorType type);
 /// In that case, when `permutationMap` is provided the in_bounds attribute is
 /// inferred from it: dimension i is in-bounds when the map result is an
 /// AffineDimExpr pointing to a static memref dimension divisible by the vector
-/// size, or an AffineConstantExpr (broadcast). Custom`indices` must also be
+/// size, or an AffineConstantExpr (broadcast). Custom `indices` must also be
 /// supplied in that case; if `indices` is empty, all offsets default to 0.
 Value createReadOrMaskedRead(OpBuilder &builder, Location loc, Value source,
                              const VectorType &vecToReadTy,
