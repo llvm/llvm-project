@@ -15,52 +15,52 @@
 
 define void @test_vXf64(<2 x double> %src128, <4 x double> %src256, <8 x double> %src512, <16 x double> %src1024, <2 x i32> %idx128, <4 x i32> %idx256, <8 x i32> %idx512, <16 x i32> %idx1024) {
 ; SSE2-LABEL: 'test_vXf64'
-; SSE2-NEXT:  Cost Model: Found costs of 7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 30 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; SSE2-NEXT:  Cost Model: Found costs of 60 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:34 Lat:58 SizeLat:34 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:180 CodeSize:68 Lat:116 SizeLat:68 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXf64'
-; SSSE3-NEXT:  Cost Model: Found costs of 7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; SSSE3-NEXT:  Cost Model: Found costs of 15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; SSSE3-NEXT:  Cost Model: Found costs of 30 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; SSSE3-NEXT:  Cost Model: Found costs of 60 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:21 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:58 CodeSize:34 Lat:58 SizeLat:34 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:180 CodeSize:68 Lat:116 SizeLat:68 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'test_vXf64'
-; SSE42-NEXT:  Cost Model: Found costs of 6 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; SSE42-NEXT:  Cost Model: Found costs of 12 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; SSE42-NEXT:  Cost Model: Found costs of 24 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; SSE42-NEXT:  Cost Model: Found costs of 48 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:14 Lat:26 SizeLat:14 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:28 Lat:52 SizeLat:28 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:168 CodeSize:56 Lat:104 SizeLat:56 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'test_vXf64'
-; XOP-NEXT:  Cost Model: Found costs of 6 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 14 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 29 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; XOP-NEXT:  Cost Model: Found costs of 58 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; XOP-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:31 Lat:55 SizeLat:31 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:62 Lat:110 SizeLat:62 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXf64'
-; AVX1-NEXT:  Cost Model: Found costs of 6 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 14 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 29 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; AVX1-NEXT:  Cost Model: Found costs of 58 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:31 Lat:55 SizeLat:31 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:62 Lat:110 SizeLat:62 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXf64'
-; AVX2-NEXT:  Cost Model: Found costs of 6 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 14 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 29 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; AVX2-NEXT:  Cost Model: Found costs of 58 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:31 Lat:55 SizeLat:31 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:110 CodeSize:62 Lat:110 SizeLat:62 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXf64'
-; AVX512-NEXT:  Cost Model: Found costs of 6 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 14 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 31 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
-; AVX512-NEXT:  Cost Model: Found costs of 63 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V128 = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V256 = call <4 x double> @llvm.vector.shuffle.v4f64.v4i32(<4 x double> %src256, <4 x i32> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V512 = call <8 x double> @llvm.vector.shuffle.v8f64.v8i32(<8 x double> %src512, <8 x i32> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:81 CodeSize:65 Lat:113 SizeLat:65 for: %V1024 = call <16 x double> @llvm.vector.shuffle.v16f64.v16i32(<16 x double> %src1024, <16 x i32> %idx1024)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V128  = call <2 x double> @llvm.vector.shuffle.v2f64.v2i32(<2 x double> %src128, <2 x i32> %idx128)
@@ -72,52 +72,52 @@ define void @test_vXf64(<2 x double> %src128, <4 x double> %src256, <8 x double>
 
 define void @test_vXi64(<2 x i64> %src128, <4 x i64> %src256, <8 x i64> %src512, <16 x i64> %src1024, <2 x i32> %idx128, <4 x i32> %idx256, <8 x i32> %idx512, <16 x i32> %idx1024) {
 ; SSE2-LABEL: 'test_vXi64'
-; SSE2-NEXT:  Cost Model: Found costs of 11 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 23 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 46 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; SSE2-NEXT:  Cost Model: Found costs of 92 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:16 SizeLat:10 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:21 Lat:33 SizeLat:21 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:42 Lat:66 SizeLat:42 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:196 CodeSize:84 Lat:132 SizeLat:84 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXi64'
-; SSSE3-NEXT:  Cost Model: Found costs of 11 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; SSSE3-NEXT:  Cost Model: Found costs of 23 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; SSSE3-NEXT:  Cost Model: Found costs of 46 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; SSSE3-NEXT:  Cost Model: Found costs of 92 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:16 SizeLat:10 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:25 CodeSize:21 Lat:33 SizeLat:21 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:42 Lat:66 SizeLat:42 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:196 CodeSize:84 Lat:132 SizeLat:84 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'test_vXi64'
-; SSE42-NEXT:  Cost Model: Found costs of 8 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; SSE42-NEXT:  Cost Model: Found costs of 16 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; SSE42-NEXT:  Cost Model: Found costs of 32 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; SSE42-NEXT:  Cost Model: Found costs of 64 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:20 CodeSize:16 Lat:28 SizeLat:16 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:56 CodeSize:32 Lat:56 SizeLat:32 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:176 CodeSize:64 Lat:112 SizeLat:64 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'test_vXi64'
 ; XOP-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:2 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 18 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 37 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; XOP-NEXT:  Cost Model: Found costs of 74 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; XOP-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:35 Lat:59 SizeLat:35 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:118 CodeSize:70 Lat:118 SizeLat:70 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXi64'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:2 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 18 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 37 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; AVX1-NEXT:  Cost Model: Found costs of 74 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:35 Lat:59 SizeLat:35 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:118 CodeSize:70 Lat:118 SizeLat:70 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXi64'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:2 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 18 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 37 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; AVX2-NEXT:  Cost Model: Found costs of 74 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:43 CodeSize:35 Lat:59 SizeLat:35 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:118 CodeSize:70 Lat:118 SizeLat:70 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXi64'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:1 CodeSize:2 Lat:1 SizeLat:2 for: %V128 = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 18 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 39 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
-; AVX512-NEXT:  Cost Model: Found costs of 79 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:17 Lat:29 SizeLat:17 for: %V256 = call <4 x i64> @llvm.vector.shuffle.v4i64.v4i32(<4 x i64> %src256, <4 x i32> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:36 CodeSize:36 Lat:60 SizeLat:36 for: %V512 = call <8 x i64> @llvm.vector.shuffle.v8i64.v8i32(<8 x i64> %src512, <8 x i32> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:89 CodeSize:73 Lat:121 SizeLat:73 for: %V1024 = call <16 x i64> @llvm.vector.shuffle.v16i64.v16i32(<16 x i64> %src1024, <16 x i32> %idx1024)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V128  = call <2 x i64> @llvm.vector.shuffle.v2i64.v2i32(<2 x i64> %src128, <2 x i32> %idx128)
@@ -129,59 +129,59 @@ define void @test_vXi64(<2 x i64> %src128, <4 x i64> %src256, <8 x i64> %src512,
 
 define void @test_vXf32_vXi32(<2 x float> %src64, <4 x float> %src128, <8 x float> %src256, <16 x float> %src512, <32 x float> %src1024, <2 x i32> %idx64, <4 x i32> %idx128, <8 x i32> %idx256, <16 x i32> %idx512, <32 x i32> %idx1024) {
 ; SSE2-LABEL: 'test_vXf32_vXi32'
-; SSE2-NEXT:  Cost Model: Found costs of 7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; SSE2-NEXT:  Cost Model: Found costs of 17 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 34 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 68 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; SSE2-NEXT:  Cost Model: Found costs of 136 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:18 Lat:30 SizeLat:18 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:36 Lat:60 SizeLat:36 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:72 Lat:120 SizeLat:72 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:368 CodeSize:144 Lat:240 SizeLat:144 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXf32_vXi32'
-; SSSE3-NEXT:  Cost Model: Found costs of 7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; SSSE3-NEXT:  Cost Model: Found costs of 17 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; SSSE3-NEXT:  Cost Model: Found costs of 34 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; SSSE3-NEXT:  Cost Model: Found costs of 68 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; SSSE3-NEXT:  Cost Model: Found costs of 136 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:18 CodeSize:18 Lat:30 SizeLat:18 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:44 CodeSize:36 Lat:60 SizeLat:36 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:120 CodeSize:72 Lat:120 SizeLat:72 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:368 CodeSize:144 Lat:240 SizeLat:144 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'test_vXf32_vXi32'
-; SSE42-NEXT:  Cost Model: Found costs of 6 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; SSE42-NEXT:  Cost Model: Found costs of 14 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; SSE42-NEXT:  Cost Model: Found costs of 28 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; SSE42-NEXT:  Cost Model: Found costs of 56 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; SSE42-NEXT:  Cost Model: Found costs of 112 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:38 CodeSize:30 Lat:54 SizeLat:30 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:108 CodeSize:60 Lat:108 SizeLat:60 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:344 CodeSize:120 Lat:216 SizeLat:120 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'test_vXf32_vXi32'
-; XOP-NEXT:  Cost Model: Found costs of 6 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; XOP-NEXT:  Cost Model: Found costs of 14 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 31 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 62 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; XOP-NEXT:  Cost Model: Found costs of 124 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; XOP-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; XOP-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; XOP-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:112 SizeLat:64 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:128 Lat:224 SizeLat:128 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXf32_vXi32'
-; AVX1-NEXT:  Cost Model: Found costs of 6 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; AVX1-NEXT:  Cost Model: Found costs of 14 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 31 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 62 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; AVX1-NEXT:  Cost Model: Found costs of 124 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:112 SizeLat:64 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:128 Lat:224 SizeLat:128 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXf32_vXi32'
-; AVX2-NEXT:  Cost Model: Found costs of 6 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; AVX2-NEXT:  Cost Model: Found costs of 14 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 31 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 62 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; AVX2-NEXT:  Cost Model: Found costs of 124 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:112 SizeLat:64 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:128 Lat:224 SizeLat:128 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXf32_vXi32'
-; AVX512-NEXT:  Cost Model: Found costs of 6 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
-; AVX512-NEXT:  Cost Model: Found costs of 14 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 31 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 65 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
-; AVX512-NEXT:  Cost Model: Found costs of 130 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:7 Lat:13 SizeLat:7 for: %V64 = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:15 CodeSize:15 Lat:27 SizeLat:15 for: %V128 = call <4 x float> @llvm.vector.shuffle.v4f32.v4i32(<4 x float> %src128, <4 x i32> %idx128)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V256 = call <8 x float> @llvm.vector.shuffle.v8f32.v8i32(<8 x float> %src256, <8 x i32> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:66 Lat:114 SizeLat:66 for: %V512 = call <16 x float> @llvm.vector.shuffle.v16f32.v16i32(<16 x float> %src512, <16 x i32> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:132 Lat:228 SizeLat:132 for: %V1024 = call <32 x float> @llvm.vector.shuffle.v32f32.v32i32(<32 x float> %src1024, <32 x i32> %idx1024)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V64  = call <2 x float> @llvm.vector.shuffle.v2f32.v2i32(<2 x float> %src64, <2 x i32> %idx64)
@@ -194,59 +194,59 @@ define void @test_vXf32_vXi32(<2 x float> %src64, <4 x float> %src128, <8 x floa
 
 define void @test_vXi32_vXi32(<2 x i32> %src64, <4 x i32> %src128, <8 x i32> %src256, <16 x i32> %src512, <32 x i32> %src1024, <2 x i32> %idx64, <4 x i32> %idx128, <8 x i32> %idx256, <16 x i32> %idx512, <32 x i32> %idx1024) {
 ; SSE2-LABEL: 'test_vXi32_vXi32'
-; SSE2-NEXT:  Cost Model: Found costs of 11 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
-; SSE2-NEXT:  Cost Model: Found costs of 25 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 50 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 100 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; SSE2-NEXT:  Cost Model: Found costs of 200 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:16 SizeLat:10 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:22 Lat:34 SizeLat:22 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:44 Lat:68 SizeLat:44 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:136 CodeSize:88 Lat:136 SizeLat:88 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:400 CodeSize:176 Lat:272 SizeLat:176 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXi32_vXi32'
-; SSSE3-NEXT:  Cost Model: Found costs of 11 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
-; SSSE3-NEXT:  Cost Model: Found costs of 25 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; SSSE3-NEXT:  Cost Model: Found costs of 50 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; SSSE3-NEXT:  Cost Model: Found costs of 100 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; SSSE3-NEXT:  Cost Model: Found costs of 200 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:10 CodeSize:10 Lat:16 SizeLat:10 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:22 Lat:34 SizeLat:22 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:52 CodeSize:44 Lat:68 SizeLat:44 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:136 CodeSize:88 Lat:136 SizeLat:88 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; SSSE3-NEXT:  Cost Model: Found costs of RThru:400 CodeSize:176 Lat:272 SizeLat:176 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; SSSE3-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSE42-LABEL: 'test_vXi32_vXi32'
-; SSE42-NEXT:  Cost Model: Found costs of 8 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
-; SSE42-NEXT:  Cost Model: Found costs of 16 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; SSE42-NEXT:  Cost Model: Found costs of 32 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; SSE42-NEXT:  Cost Model: Found costs of 64 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; SSE42-NEXT:  Cost Model: Found costs of 128 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:28 SizeLat:16 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:40 CodeSize:32 Lat:56 SizeLat:32 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:112 CodeSize:64 Lat:112 SizeLat:64 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; SSE42-NEXT:  Cost Model: Found costs of RThru:352 CodeSize:128 Lat:224 SizeLat:128 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; SSE42-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; XOP-LABEL: 'test_vXi32_vXi32'
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 35 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 70 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; XOP-NEXT:  Cost Model: Found costs of 140 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; XOP-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:34 Lat:58 SizeLat:34 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:68 Lat:116 SizeLat:68 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:232 CodeSize:136 Lat:232 SizeLat:136 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXi32_vXi32'
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 35 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 70 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; AVX1-NEXT:  Cost Model: Found costs of 140 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:34 Lat:58 SizeLat:34 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:68 Lat:116 SizeLat:68 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:232 CodeSize:136 Lat:232 SizeLat:136 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXi32_vXi32'
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 35 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 70 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; AVX2-NEXT:  Cost Model: Found costs of 140 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:34 Lat:58 SizeLat:34 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:84 CodeSize:68 Lat:116 SizeLat:68 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:232 CodeSize:136 Lat:232 SizeLat:136 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXi32_vXi32'
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %src128, <4 x i32> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 35 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 73 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
-; AVX512-NEXT:  Cost Model: Found costs of 146 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:34 CodeSize:34 Lat:58 SizeLat:34 for: %V256 = call <8 x i32> @llvm.vector.shuffle.v8i32.v8i32(<8 x i32> %src256, <8 x i32> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:70 CodeSize:70 Lat:118 SizeLat:70 for: %V512 = call <16 x i32> @llvm.vector.shuffle.v16i32.v16i32(<16 x i32> %src512, <16 x i32> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:172 CodeSize:140 Lat:236 SizeLat:140 for: %V1024 = call <32 x i32> @llvm.vector.shuffle.v32i32.v32i32(<32 x i32> %src1024, <32 x i32> %idx1024)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V64  = call <2 x i32> @llvm.vector.shuffle.v2i32.v2i32(<2 x i32> %src64, <2 x i32> %idx64)
@@ -259,11 +259,11 @@ define void @test_vXi32_vXi32(<2 x i32> %src64, <4 x i32> %src128, <8 x i32> %sr
 
 define void @test_vXi16_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src128, <16 x i16> %src256, <32 x i16> %src512, <64 x i16> %src1024, <2 x i16> %idx32, <4 x i16> %idx64, <8 x i16> %idx128, <16 x i16> %idx256, <32 x i16> %idx512, <64 x i16> %idx1024) {
 ; SSE2-LABEL: 'test_vXi16_vXi16'
-; SSE2-NEXT:  Cost Model: Found costs of 8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
-; SSE2-NEXT:  Cost Model: Found costs of 16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
-; SSE2-NEXT:  Cost Model: Found costs of 32 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 64 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 128 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:8 Lat:14 SizeLat:8 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:16 CodeSize:16 Lat:28 SizeLat:16 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:32 Lat:56 SizeLat:32 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:80 CodeSize:64 Lat:112 SizeLat:64 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:224 CodeSize:128 Lat:224 SizeLat:128 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXi16_vXi16'
@@ -286,32 +286,32 @@ define void @test_vXi16_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src
 ; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 67 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 134 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:66 Lat:114 SizeLat:66 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:132 Lat:228 SizeLat:132 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXi16_vXi16'
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 67 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 134 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:66 Lat:114 SizeLat:66 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:132 Lat:228 SizeLat:132 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXi16_vXi16'
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 67 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 134 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:66 Lat:114 SizeLat:66 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:164 CodeSize:132 Lat:228 SizeLat:132 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXi16_vXi16'
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V32 = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V64 = call <4 x i16> @llvm.vector.shuffle.v4i16.v4i16(<4 x i16> %src64, <4 x i16> %idx64)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:3 Lat:6 SizeLat:5 for: %V128 = call <8 x i16> @llvm.vector.shuffle.v8i16.v8i16(<8 x i16> %src128, <8 x i16> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 67 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 137 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:66 CodeSize:66 Lat:114 SizeLat:66 for: %V256 = call <16 x i16> @llvm.vector.shuffle.v16i16.v16i16(<16 x i16> %src256, <16 x i16> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:134 CodeSize:134 Lat:230 SizeLat:134 for: %V512 = call <32 x i16> @llvm.vector.shuffle.v32i16.v32i16(<32 x i16> %src512, <32 x i16> %idx512)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V32  = call <2 x i16> @llvm.vector.shuffle.v2i16.v2i16(<2 x i16> %src32, <2 x i16> %idx32)
@@ -324,12 +324,12 @@ define void @test_vXi16_vXi16(<2 x i16> %src32, <4 x i16> %src64, <8 x i16> %src
 
 define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <16 x i8> %src128, <32 x i8> %src256, <64 x i8> %src512, <2 x i8> %idx16, <4 x i8> %idx32, <8 x i8> %idx64, <16 x i8> %idx128, <32 x i8> %idx256, <64 x i8> %idx512) {
 ; SSE2-LABEL: 'test_vXi8_vXi8'
-; SSE2-NEXT:  Cost Model: Found costs of 11 for: %V16 = call <2 x i8> @llvm.vector.shuffle.v2i8.v2i8(<2 x i8> %src16, <2 x i8> %idx16)
-; SSE2-NEXT:  Cost Model: Found costs of 25 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
-; SSE2-NEXT:  Cost Model: Found costs of 53 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
-; SSE2-NEXT:  Cost Model: Found costs of 109 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
-; SSE2-NEXT:  Cost Model: Found costs of 218 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
-; SSE2-NEXT:  Cost Model: Found costs of 436 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:12 CodeSize:10 Lat:16 SizeLat:10 for: %V16 = call <2 x i8> @llvm.vector.shuffle.v2i8.v2i8(<2 x i8> %src16, <2 x i8> %idx16)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:22 CodeSize:22 Lat:34 SizeLat:22 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:46 CodeSize:46 Lat:70 SizeLat:46 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:94 CodeSize:94 Lat:142 SizeLat:94 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:220 CodeSize:188 Lat:284 SizeLat:188 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
+; SSE2-NEXT:  Cost Model: Found costs of RThru:568 CodeSize:376 Lat:568 SizeLat:376 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
 ; SSE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; SSSE3-LABEL: 'test_vXi8_vXi8'
@@ -355,8 +355,8 @@ define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
 ; XOP-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
-; XOP-NEXT:  Cost Model: Found costs of 131 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
-; XOP-NEXT:  Cost Model: Found costs of 262 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
+; XOP-NEXT:  Cost Model: Found costs of RThru:130 CodeSize:130 Lat:226 SizeLat:130 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
+; XOP-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:260 Lat:452 SizeLat:260 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
 ; XOP-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX1-LABEL: 'test_vXi8_vXi8'
@@ -364,8 +364,8 @@ define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
 ; AVX1-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
-; AVX1-NEXT:  Cost Model: Found costs of 131 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
-; AVX1-NEXT:  Cost Model: Found costs of 262 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:130 CodeSize:130 Lat:226 SizeLat:130 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
+; AVX1-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:260 Lat:452 SizeLat:260 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
 ; AVX1-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX2-LABEL: 'test_vXi8_vXi8'
@@ -373,8 +373,8 @@ define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
 ; AVX2-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
-; AVX2-NEXT:  Cost Model: Found costs of 131 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
-; AVX2-NEXT:  Cost Model: Found costs of 262 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:130 CodeSize:130 Lat:226 SizeLat:130 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
+; AVX2-NEXT:  Cost Model: Found costs of RThru:324 CodeSize:260 Lat:452 SizeLat:260 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
 ; AVX2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; AVX512-LABEL: 'test_vXi8_vXi8'
@@ -382,8 +382,8 @@ define void @test_vXi8_vXi8(<2 x i8> %src16, <4 x i8> %src32, <8 x i8> %src64, <
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V32 = call <4 x i8> @llvm.vector.shuffle.v4i8.v4i8(<4 x i8> %src32, <4 x i8> %idx32)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V64 = call <8 x i8> @llvm.vector.shuffle.v8i8.v8i8(<8 x i8> %src64, <8 x i8> %idx64)
 ; AVX512-NEXT:  Cost Model: Found costs of 1 for: %V128 = call <16 x i8> @llvm.vector.shuffle.v16i8.v16i8(<16 x i8> %src128, <16 x i8> %idx128)
-; AVX512-NEXT:  Cost Model: Found costs of 131 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
-; AVX512-NEXT:  Cost Model: Found costs of 265 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:130 CodeSize:130 Lat:226 SizeLat:130 for: %V256 = call <32 x i8> @llvm.vector.shuffle.v32i8.v32i8(<32 x i8> %src256, <32 x i8> %idx256)
+; AVX512-NEXT:  Cost Model: Found costs of RThru:262 CodeSize:262 Lat:454 SizeLat:262 for: %V512 = call <64 x i8> @llvm.vector.shuffle.v64i8.v64i8(<64 x i8> %src512, <64 x i8> %idx512)
 ; AVX512-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %V16  = call <2 x i8> @llvm.vector.shuffle.v2i8.2i8(<2 x i8> %src16, <2 x i8> %idx16)
