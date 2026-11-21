@@ -714,8 +714,8 @@ set(files
   __pstl/backends/statpart/stable_sort.h
   __pstl/backends/statpart/swap_ranges.h
   __pstl/backends/statpart/transform.h
-  __pstl/backends/statpart/transform_inclusive_scan.h
   __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/transform_scan.h
   __pstl/backends/statpart/uninitialized_copy.h
   __pstl/backends/statpart/uninitialized_move.h
   __pstl/dispatch.h
