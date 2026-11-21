@@ -45,6 +45,7 @@ bit cstdint
 bit limits
 bit version
 bitset cctype
+bitset cerrno
 bitset climits
 bitset compare
 bitset cstdint
