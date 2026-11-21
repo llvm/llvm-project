@@ -71,7 +71,7 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo &mai,
       MAI(mai), MRI(&mri), MSTI(&msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset) {
+      ELFUniquingMap(Allocator), AutoReset(DoAutoReset) {
   const MCTargetOptions &TO = getTargetOptions();
   SaveTempLabels = TO.MCSaveTempLabels;
   if (SaveTempLabels)
@@ -162,6 +162,7 @@ void MCContext::reset() {
   SubtargetCopies.clear();
   InlineAsmUsedLabelNames.clear();
   Symbols.clear();
+  ELFUniquingMap.clear();
   Allocator.Reset();
   Instances.clear();
   CompilationDir.clear();
@@ -174,7 +175,6 @@ void MCContext::reset() {
   CurrentDwarfLoc = MCDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0);
 
   MachOUniquingMap.clear();
-  ELFUniquingMap.clear();
   GOFFUniquingMap.clear();
   COFFUniquingMap.clear();
   WasmUniquingMap.clear();
