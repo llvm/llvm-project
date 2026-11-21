@@ -326,6 +326,12 @@ void MultiplexExternalSemaSource::ReadExtnameUndeclaredIdentifiers(
     Sources[i]->ReadExtnameUndeclaredIdentifiers(EI);
 }
 
+void MultiplexExternalSemaSource::ReadMappedUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &MI) {
+  for (size_t i = 0; i < Sources.size(); ++i)
+    Sources[i]->ReadMappedUndeclaredIdentifiers(MI);
+}
+
 void MultiplexExternalSemaSource::ReadUsedVTables(
                                   SmallVectorImpl<ExternalVTableUse> &VTables) {
   for(size_t i = 0; i < Sources.size(); ++i)

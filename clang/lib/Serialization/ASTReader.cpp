@@ -4170,6 +4170,26 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       }
       break;
 
+    case MAPPED_UNDECLARED_IDENTIFIERS:
+      if (Record.size() % 3 != 0)
+        return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                       "invalid mapped identifiers record");
+
+      // FIXME: Ignore #pragma map'd, undeclared identifiers from non-original
+      // PCH files, as is done for #pragma redefine_extname.
+      MappedUndeclaredIdentifiers.clear();
+
+      // Translate the #pragma map'd, undeclared identifiers into global IDs.
+      for (unsigned I = 0, N = Record.size(); I < N; /* in loop */) {
+        MappedUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        MappedUndeclaredIdentifiers.push_back(
+            getGlobalIdentifierID(F, Record[I++]));
+        MappedUndeclaredIdentifiers.push_back(
+            ReadSourceLocation(F, Record, I).getRawEncoding());
+      }
+      break;
+
     case SELECTOR_OFFSETS: {
       F.SelectorOffsets = (const uint32_t *)Blob.data();
       F.LocalNumSelectors = Record[0];
@@ -9948,6 +9968,27 @@ void ASTReader::ReadExtnameUndeclaredIdentifiers(
     ExtnameIDs.push_back(std::make_pair(NameId, Attr));
   }
   ExtnameUndeclaredIdentifiers.clear();
+}
+
+void ASTReader::ReadMappedUndeclaredIdentifiers(
+    SmallVectorImpl<std::pair<IdentifierInfo *, AsmLabelAttr *>> &MappedIDs) {
+  if (MappedUndeclaredIdentifiers.empty())
+    return;
+
+  for (unsigned I = 0, N = MappedUndeclaredIdentifiers.size(); I < N; I += 3) {
+    IdentifierInfo *NameId =
+        DecodeIdentifierInfo(MappedUndeclaredIdentifiers[I]);
+    IdentifierInfo *MappedId =
+        DecodeIdentifierInfo(MappedUndeclaredIdentifiers[I + 1]);
+    SourceLocation Loc =
+        SourceLocation::getFromRawEncoding(MappedUndeclaredIdentifiers[I + 2]);
+    AsmLabelAttr *Attr = AsmLabelAttr::CreateImplicit(
+        getContext(), MappedId->getName(),
+        AttributeCommonInfo(NameId, SourceRange(Loc),
+                            AttributeCommonInfo::Form::Pragma()));
+    MappedIDs.push_back(std::make_pair(NameId, Attr));
+  }
+  MappedUndeclaredIdentifiers.clear();
 }
 
 void ASTReader::ReadUsedVTables(SmallVectorImpl<ExternalVTableUse> &VTables) {

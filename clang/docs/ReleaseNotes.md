@@ -1577,6 +1577,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### SystemZ Support
 
+- Add support for `#pragma map` for z/OS.  This pragma is used by the z/OS
+  system headers to define the external name for declarations in the translation
+  unit.  This is very similar to asm labels and `#pragma redefine_extname`.
+
 ### DWARF Support in Clang
 
 ### Floating Point Support in Clang
