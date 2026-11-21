@@ -58,7 +58,7 @@
 "[P2591R5](https://wg21.link/P2591R5)","Concatenation of strings and string views","2024-03 (Tokyo)","{{Complete}}","19","[#105420](https://github.com/llvm/llvm-project/issues/105420)",""
 "[P2248R8](https://wg21.link/P2248R8)","Enabling list-initialization for algorithms","2024-03 (Tokyo)","","","[#105421](https://github.com/llvm/llvm-project/issues/105421)",""
 "[P2810R4](https://wg21.link/P2810R4)","`is_debugger_present` `is_replaceable`","2024-03 (Tokyo)","{{Complete}}","24","[#105422](https://github.com/llvm/llvm-project/issues/105422)",""
-"[P1068R11](https://wg21.link/P1068R11)","Vector API for random number generation","2024-03 (Tokyo)","","","[#105423](https://github.com/llvm/llvm-project/issues/105423)",""
+"[P1068R11](https://wg21.link/P1068R11)","Vector API for random number generation","2024-03 (Tokyo)","{{Complete}}","24","[#105423](https://github.com/llvm/llvm-project/issues/105423)",""
 "[P2944R3](https://wg21.link/P2944R3)","Comparisons for `reference_wrapper`","2024-03 (Tokyo)","{{Complete}}","22","[#105424](https://github.com/llvm/llvm-project/issues/105424)","The changes to `tuple`'s equality overload from P2165R4 are not yet implemented."
 "[P2642R6](https://wg21.link/P2642R6)","Padded `mdspan` layouts","2024-03 (Tokyo)","","","[#105425](https://github.com/llvm/llvm-project/issues/105425)",""
 "[P3029R1](https://wg21.link/P3029R1)","Better `mdspan`'s CTAD","2024-03 (Tokyo)","{{Complete}}","19","[#105426](https://github.com/llvm/llvm-project/issues/105426)","Implemented as a DR against C++20 since LLVM 23."

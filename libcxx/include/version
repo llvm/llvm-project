@@ -147,7 +147,6 @@ __cpp_lib_freestanding_variant                          202311L <variant>
 __cpp_lib_fstream_native_handle                         202306L <fstream>
 __cpp_lib_function_ref                                  202603L <functional>
 __cpp_lib_gcd_lcm                                       201606L <numeric>
-__cpp_lib_generate_random                               202403L <random>
 __cpp_lib_generic_associative_lookup                    201304L <map> <set>
 __cpp_lib_generic_unordered_lookup                      201811L <unordered_map> <unordered_set>
 __cpp_lib_hardened_array                                202502L <array>
@@ -259,6 +258,7 @@ __cpp_lib_ranges_contains                               202207L <algorithm>
 __cpp_lib_ranges_enumerate                              202302L <ranges>
 __cpp_lib_ranges_find_last                              202207L <algorithm>
 __cpp_lib_ranges_fold                                   202207L <algorithm>
+__cpp_lib_ranges_generate_random                        202403L <random>
 __cpp_lib_ranges_indices                                202506L <ranges>
 __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
@@ -663,7 +663,6 @@ __cpp_lib_void_t                                        201411L <type_traits>
 #   define __cpp_lib_fstream_native_handle              202306L
 # endif
 # define __cpp_lib_function_ref                         202603L
-// # define __cpp_lib_generate_random                      202403L
 // # define __cpp_lib_hardened_array                       202502L
 // # define __cpp_lib_hardened_basic_stacktrace            202506L
 // # define __cpp_lib_hardened_basic_string                202502L
@@ -715,6 +714,7 @@ __cpp_lib_void_t                                        201411L <type_traits>
 // # define __cpp_lib_ranges_as_input                      202502L
 // # define __cpp_lib_ranges_cache_latest                  202411L
 # define __cpp_lib_ranges_concat                        202403L
+# define __cpp_lib_ranges_generate_random               202403L
 # define __cpp_lib_ranges_indices                       202506L
 // # define __cpp_lib_ranges_reserve_hint                  202502L
 # define __cpp_lib_ratio                                202306L

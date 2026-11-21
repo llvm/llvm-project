@@ -262,7 +262,6 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_freestanding_variant`                       | *unimplemented* |
 | `__cpp_lib_fstream_native_handle`                      | `202306L`       |
 | `__cpp_lib_function_ref`                               | `202603L`       |
-| `__cpp_lib_generate_random`                            | *unimplemented* |
 | `__cpp_lib_hardened_array`                             | *unimplemented* |
 | `__cpp_lib_hardened_basic_stacktrace`                  | *unimplemented* |
 | `__cpp_lib_hardened_basic_string`                      | *unimplemented* |
@@ -303,6 +302,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_ranges_as_input`                            | *unimplemented* |
 | `__cpp_lib_ranges_cache_latest`                        | *unimplemented* |
 | `__cpp_lib_ranges_concat`                              | `202403L`       |
+| `__cpp_lib_ranges_generate_random`                     | `202403L`       |
 | `__cpp_lib_ranges_indices`                             | `202506L`       |
 | `__cpp_lib_ranges_reserve_hint`                        | *unimplemented* |
 | `__cpp_lib_ratio`                                      | `202306L`       |

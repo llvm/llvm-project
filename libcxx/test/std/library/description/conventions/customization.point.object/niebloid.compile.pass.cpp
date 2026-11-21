@@ -202,6 +202,17 @@ static_assert(test(std::ranges::uninitialized_value_construct_n, a, 10));
 
 // [numeric.ops.overview] currently has no ranges algorithms. See P1813, P2214
 
+// [rand.synopsis]
+
+#if TEST_STD_VER >= 26
+std::uniform_int_distribution<int> dist;
+
+static_assert(test(std::ranges::generate_random, a, g));
+static_assert(test(std::ranges::generate_random, a, a + 10, g));
+static_assert(test(std::ranges::generate_random, a, g, dist));
+static_assert(test(std::ranges::generate_random, a, a + 10, g, dist));
+#endif
+
 // [range.iter.ops]
 
 static_assert(test(std::ranges::advance, p, 5));
