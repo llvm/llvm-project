@@ -232,13 +232,17 @@ SBThread::GetStopReasonExtendedBacktraces(InstrumentationRuntimeType type) {
 
   ProcessSP process_sp = exe_ctx->GetProcessSP();
 
+  InstrumentationRuntimeSP runtime_sp =
+      process_sp->GetInstrumentationRuntime(type);
+  if (!runtime_sp)
+    return threads;
+
   StopInfoSP stop_info = exe_ctx->GetThreadPtr()->GetStopInfo();
   StructuredData::ObjectSP info = stop_info->GetExtendedInfo();
   if (!info)
     return threads;
 
-  threads = process_sp->GetInstrumentationRuntime(type)
-                ->GetBacktracesFromExtendedStopInfo(info);
+  threads = runtime_sp->GetBacktracesFromExtendedStopInfo(info);
   return threads;
 }
 
