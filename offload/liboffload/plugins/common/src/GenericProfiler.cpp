@@ -15,8 +15,7 @@
 #include <memory>
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 uint64_t GenericProfilerTy::getDeviceTimeStamp(GenericDeviceTy *D) {
@@ -31,6 +30,5 @@ GenericProfilerTy &getNoOpProfiler() {
   return NoOpProfiler;
 }
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm

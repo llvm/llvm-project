@@ -88,6 +88,11 @@ class LLDBTest(TestFormat):
                 test.config.maxIndividualTestTime
             )
 
+        # On Windows, dotest writes CRLF line endings. Normalize them here, as
+        # lit's own text-mode output would otherwise turn them into CRCRLF.
+        out = out.replace("\r\n", "\n") if out else out
+        err = err.replace("\r\n", "\n") if err else err
+
         output = """Script:\n--\n%s\n--\nExit Code: %d\n""" % (" ".join(cmd), exitCode)
         if timeoutInfo is not None:
             output += """Timeout: %s\n""" % (timeoutInfo,)

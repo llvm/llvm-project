@@ -20,7 +20,6 @@ class DILSyntheticDereferenceTestCase(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.runCmd("script from wrapPtrSynthProvider import *")
         self.runCmd("type synth add -l wrapPtrSynthProvider wrap_ptr")
 

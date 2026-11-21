@@ -2838,6 +2838,7 @@ static const auto &getFrontendActionTable() {
       {frontend::EmitAssembly, OPT_S},
       {frontend::EmitBC, OPT_emit_llvm_bc},
       {frontend::EmitCIR, OPT_emit_cir},
+      {frontend::EmitCIR, OPT_emit_cir_EQ},
       {frontend::EmitCIRBC, OPT_emit_cir_bc},
       {frontend::EmitHTML, OPT_emit_html},
       {frontend::EmitLLVM, OPT_emit_llvm},
@@ -3094,6 +3095,18 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
       }
     }
 
+    if (Opt == OPT_emit_cir_EQ) {
+      std::optional<bool> DisablePasses =
+          llvm::StringSwitch<std::optional<bool>>(A->getValue())
+              .Case("pristine", true)
+              .Default(std::nullopt);
+      if (DisablePasses)
+        Opts.ClangIRDisablePasses = *DisablePasses;
+      else
+        Diags.Report(diag::err_drv_invalid_value)
+            << A->getAsString(Args) << A->getValue();
+    }
+
     if (ProgramAction == frontend::FixIt && Opt == OPT_fixit_EQ)
       Opts.FixItSuffix = A->getValue();
 
@@ -3202,7 +3215,7 @@ static bool ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   if (Opts.ProgramAction != frontend::GenerateModule && Opts.IsSystemModule)
     Diags.Report(diag::err_drv_argument_only_allowed_with) << "-fsystem-module"
                                                            << "-emit-module";
-  if (Args.hasArg(OPT_emit_cir, OPT_emit_cir_bc))
+  if (Args.hasArg(OPT_emit_cir, OPT_emit_cir_EQ, OPT_emit_cir_bc))
     Opts.UseClangIRPipeline = true;
 
 #if CLANG_ENABLE_CIR

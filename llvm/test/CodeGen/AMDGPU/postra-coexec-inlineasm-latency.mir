@@ -1,0 +1,93 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=postmisched -misched-cluster=false -verify-machineinstrs -verify-misched %s -o - | FileCheck %s
+
+# A real asm input must retain its native LDS producer's modeled latency in
+# default and coexec schedules. Check empty tied and nonempty inputs, including
+# IGLP.
+
+--- |
+  define amdgpu_kernel void @tied_input_default() { ret void }
+  define amdgpu_kernel void @tied_input_coexec() #0 { ret void }
+  define amdgpu_kernel void @explicit_input_coexec() #0 { ret void }
+  define amdgpu_kernel void @iglp_input_coexec() #0 { ret void }
+  attributes #0 = { "amdgpu-sched-strategy"="coexec" }
+...
+
+---
+name: tied_input_default
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: tied_input_default
+  ; CHECK: liveins: $vgpr0, $vgpr4, $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: $vgpr2_vgpr3 = DS_READ_B64_TR_B16
+  bb.0:
+    liveins: $vgpr0, $vgpr4, $exec
+
+    $vgpr2_vgpr3 = DS_READ_B64_TR_B16 $vgpr0, 64, 0, implicit $exec :: (load (s64), addrspace 3)
+    INLINEASM &"", attdialect, regdef:VReg_64_Align2, def $vgpr2_vgpr3, reguse tiedto:$0, $vgpr2_vgpr3(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    INLINEASM &"s_nop 0", sideeffect attdialect, regdef:VGPR_32, def $vgpr4, reguse tiedto:$0, $vgpr4(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    $vgpr5 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: tied_input_coexec
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: tied_input_coexec
+  ; CHECK: liveins: $vgpr0, $vgpr4, $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: $vgpr2_vgpr3 = DS_READ_B64_TR_B16
+  bb.0:
+    liveins: $vgpr0, $vgpr4, $exec
+
+    $vgpr2_vgpr3 = DS_READ_B64_TR_B16 $vgpr0, 64, 0, implicit $exec :: (load (s64), addrspace 3)
+    INLINEASM &"", attdialect, regdef:VReg_64_Align2, def $vgpr2_vgpr3, reguse tiedto:$0, $vgpr2_vgpr3(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    INLINEASM &"s_nop 0", sideeffect attdialect, regdef:VGPR_32, def $vgpr4, reguse tiedto:$0, $vgpr4(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    $vgpr5 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: explicit_input_coexec
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: explicit_input_coexec
+  ; CHECK: liveins: $vgpr0, $vgpr4, $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: $vgpr2 = DS_READ_B32_gfx9
+  bb.0:
+    liveins: $vgpr0, $vgpr4, $exec
+
+    $vgpr2 = DS_READ_B32_gfx9 $vgpr0, 64, 0, implicit $exec :: (load (s32), addrspace 3)
+    INLINEASM &"v_add_u32 $0, $1, 1", attdialect, regdef:VGPR_32, def $vgpr6, reguse:VGPR_32, $vgpr2
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    INLINEASM &"s_nop 0", sideeffect attdialect, regdef:VGPR_32, def $vgpr4, reguse tiedto:$0, $vgpr4(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    $vgpr5 = V_ADD_U32_e32 1, $vgpr6, implicit $exec
+    S_ENDPGM 0
+...
+
+---
+name: iglp_input_coexec
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: name: iglp_input_coexec
+  ; CHECK: $vgpr2_vgpr3 = DS_READ_B64_TR_B16
+  ; CHECK: $vgpr4 = V_ADD_U32_e32 1,
+  bb.0:
+    liveins: $vgpr0, $vgpr4, $exec
+
+    IGLP_OPT 3
+    $vgpr2_vgpr3 = DS_READ_B64_TR_B16 $vgpr0, 64, 0, implicit $exec :: (load (s64), addrspace 3)
+    INLINEASM &"", attdialect, regdef:VReg_64_Align2, def $vgpr2_vgpr3, reguse tiedto:$0, $vgpr2_vgpr3(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 1, $vgpr4, implicit $exec
+    INLINEASM &"s_nop 0", sideeffect attdialect, regdef:VGPR_32, def $vgpr4, reguse tiedto:$0, $vgpr4(tied-def 3)
+    $vgpr4 = V_ADD_U32_e32 2, $vgpr4, implicit $exec
+    $vgpr5 = V_ADD_U32_e32 $vgpr2, $vgpr3, implicit $exec
+    S_ENDPGM 0
+...
