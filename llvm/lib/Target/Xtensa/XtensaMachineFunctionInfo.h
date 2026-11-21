@@ -29,6 +29,10 @@ class XtensaMachineFunctionInfo : public MachineFunctionInfo {
   int VarArgsInRegsFrameIndex;
   bool SaveFrameRegister = false;
   unsigned CPLabelId = 0;
+  /// FrameIndex of the slot that holds the original (pre-realignment) stack
+  /// pointer. Used to reference incoming (caller-relative) stack arguments in
+  /// functions whose frame is dynamically realigned. -1 when not needed.
+  int RealignSP0FrameIndex = -1;
 
 public:
   explicit XtensaMachineFunctionInfo(const Function &F,
@@ -55,6 +59,9 @@ public:
 
   bool isSaveFrameRegister() const { return SaveFrameRegister; }
   void setSaveFrameRegister() { SaveFrameRegister = true; }
+
+  int getRealignSP0FrameIndex() const { return RealignSP0FrameIndex; }
+  void setRealignSP0FrameIndex(int FI) { RealignSP0FrameIndex = FI; }
 
   unsigned createCPLabelId() { return CPLabelId++; }
 };
