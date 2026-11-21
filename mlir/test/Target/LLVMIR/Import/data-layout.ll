@@ -4,9 +4,7 @@
 
 ; CHECK: dlti.dl_spec =
 ; CHECK: #dlti.dl_spec<
-; CHECK-SAME:   !llvm.ptr = dense<64> : vector<4xi64>
-; CHECK-SAME:   i1 = dense<8> : vector<2xi64>
-; CHECK-SAME:   i8 = dense<8> : vector<2xi64>
+; CHECK-SAME:   !llvm.ptr = dense<64> : vector<4xi64>, i8 = dense<8> : vector<2xi64>
 ; CHECK-SAME:   i16 = dense<16> : vector<2xi64>
 ; CHECK-SAME:   i32 = dense<32> : vector<2xi64>
 ; CHECK-SAME:   i64 = dense<[32, 64]> : vector<2xi64>
