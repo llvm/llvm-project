@@ -201,6 +201,14 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
       setOperationAction(Op, MVT::f32, Legal);
       setOperationAction(Op, MVT::f64, Legal);
     }
+
+    // MIPS I has no sqrt.fmt, use a libcall.
+    if (!Subtarget.hasMips2()) {
+      for (auto Op : {ISD::FSQRT, ISD::STRICT_FSQRT}) {
+        setOperationAction(Op, MVT::f32, Expand);
+        setOperationAction(Op, MVT::f64, Expand);
+      }
+    }
   }
 
   // Targets with 64bits integer registers, but no 64bit floating point register
