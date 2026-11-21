@@ -17,28 +17,20 @@
 define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct.wxString)  %agg.result, ptr %this, ptr %format, ptr %tz, i1 %foo) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: _ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE:
 ; CHECK:       ## %bb.0: ## %entry
-; CHECK-NEXT:    pushl %ebp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %ebx
-; CHECK-NEXT:    .cfi_def_cfa_offset 12
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    .cfi_def_cfa_offset 20
-; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    .cfi_offset %esi, -20
-; CHECK-NEXT:    .cfi_offset %edi, -16
-; CHECK-NEXT:    .cfi_offset %ebx, -12
-; CHECK-NEXT:    .cfi_offset %ebp, -8
+; CHECK-NEXT:    .cfi_def_cfa_offset 12
+; CHECK-NEXT:    subl $20, %esp
+; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset %esi, -12
+; CHECK-NEXT:    .cfi_offset %ebx, -8
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; CHECK-NEXT:    testb $1, %bl
 ; CHECK-NEXT:    je LBB0_21
 ; CHECK-NEXT:  ## %bb.1:
-; CHECK-NEXT:    movl L_.str89$non_lazy_ptr, %edi
 ; CHECK-NEXT:    movb $1, %bh
-; CHECK-NEXT:    movl L_.str$non_lazy_ptr, %ebp
 ; CHECK-NEXT:    jmp LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_17: ## %bb7806
@@ -56,7 +48,8 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:  ## %bb.3: ## %bb3306
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:  Ltmp0: ## EH_LABEL
-; CHECK-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movl L_.str89$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $0, (%esp)
 ; CHECK-NEXT:    calll __ZN12wxStringBaseaSEPKw
 ; CHECK-NEXT:  Ltmp1: ## EH_LABEL
@@ -99,7 +92,8 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl L__ZZNK10wxDateTime5GetTmERKNS_8TimeZoneEE12__FUNCTION__$non_lazy_ptr, %eax
 ; CHECK-NEXT:    movl %eax, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl %ebp, (%esp)
+; CHECK-NEXT:    movl L_.str$non_lazy_ptr, %eax
+; CHECK-NEXT:    movl %eax, (%esp)
 ; CHECK-NEXT:    movl $1717, {{[0-9]+}}(%esp) ## imm = 0x6B5
 ; CHECK-NEXT:    calll __Z10wxOnAssertPKwiPKcS0_S0_
 ; CHECK-NEXT:  Ltmp7: ## EH_LABEL
@@ -145,11 +139,9 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:  Ltmp3: ## EH_LABEL
 ; CHECK-NEXT:  LBB0_21: ## %bb115.critedge.i
 ; CHECK-NEXT:    movl %esi, %eax
-; CHECK-NEXT:    addl $28, %esp
+; CHECK-NEXT:    addl $20, %esp
 ; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    popl %ebx
-; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl $4
 ; CHECK-NEXT:  LBB0_19: ## %lpad.loopexit.split-lp
 ; CHECK-NEXT:  Ltmp15: ## EH_LABEL
