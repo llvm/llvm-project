@@ -1328,6 +1328,56 @@ static Value *likeBitCastFromVector(InstCombinerImpl &IC, Value *V) {
   return U;
 }
 
+/// Fold logic(bitcast(X), C) to logic(X, bitcast(C)) in X's vector type.
+/// The bitcast and logic op must each have one use so both die when the
+/// store is replaced.
+///
+///     %words = bitcast <32 x i8> %lookup to <16 x i16>
+///     %lo = and <16 x i16> %words, splat (i16 13107)
+///     store <16 x i16> %lo, ptr %out, align 2
+///
+/// Each i16 mask element is 0x3333, so casting the mask to <32 x i8> yields a
+/// splat of 0x33. The caller uses the new AND to write 32 bytes at align 2.
+///
+///     %lo = and <32 x i8> %lookup, splat (i8 51)
+///     store <32 x i8> %lo, ptr %out, align 2
+static Value *foldBitwiseOpOfBitCast(InstCombinerImpl &IC, Value *V) {
+  Value *X;
+  Constant *Mask;
+  Type *OpTy = V->getType();
+  if (!isa<FixedVectorType>(OpTy) ||
+      !match(V, m_OneUse(
+                    m_BinOp(m_OneUse(m_Isa<Instruction>(m_BitCast(m_Value(X)))),
+                            m_Constant(Mask)))))
+    return nullptr;
+
+  const DataLayout &DL = IC.getDataLayout();
+  Type *XTy = X->getType();
+  if (!isa<FixedVectorType>(XTy) || !XTy->isIntOrIntVectorTy() ||
+      !DL.typeSizeEqualsStoreSize(OpTy->getScalarType()) ||
+      !DL.typeSizeEqualsStoreSize(XTy->getScalarType()))
+    return nullptr;
+
+  Constant *NewMask;
+  Instruction::BinaryOps Opcode = cast<BinaryOperator>(V)->getOpcode();
+  switch (Opcode) {
+  default:
+    return nullptr;
+  case Instruction::And:
+    // A mask with poison lanes may make more bits poison after regrouping.
+    if (isa<ConstantExpr>(Mask) || Mask->containsUndefOrPoisonElement())
+      return nullptr;
+
+    NewMask = ConstantFoldCastOperand(Instruction::BitCast, Mask, XTy, DL);
+    // A symbolic vector element can leave the cast as a constant expression.
+    if (isa<ConstantExpr>(NewMask))
+      return nullptr;
+    break;
+  }
+
+  return IC.Builder.CreateBinOp(Opcode, X, NewMask, V->getName());
+}
+
 /// Combine stores to match the type of value being stored.
 ///
 /// The core idea here is that the memory does not have any intrinsic type and
@@ -1362,6 +1412,8 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
     return false;
 
   Value *V = SI.getValueOperand();
+  if (!isa<BitCastInst, InsertValueInst, BinaryOperator>(V))
+    return false;
 
   // Fold away bit casts of the stored value by storing the original type.
   if (auto *BC = dyn_cast<BitCastInst>(V)) {
@@ -1380,6 +1432,12 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
 
   if (Value *U = likeBitCastFromVector(IC, V))
     if (!SI.isAtomic() || isSupportedAtomicType(U->getType())) {
+      combineStoreToNewValue(IC, SI, U);
+      return true;
+    }
+
+  if (SI.isSimple())
+    if (Value *U = foldBitwiseOpOfBitCast(IC, V)) {
       combineStoreToNewValue(IC, SI, U);
       return true;
     }
