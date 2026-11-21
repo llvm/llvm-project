@@ -567,68 +567,76 @@ int ClangTool::run(ToolAction *Action) {
     for (CompileCommand &CompileCommand : CompileCommandsForFile) {
       // If the 'directory' field of the compilation database is empty, display
       // an error and use the working directory instead.
-      StringRef Directory = CompileCommand.Directory;
-      if (Directory.empty()) {
+      if (CompileCommand.Directory.empty()) {
         llvm::errs() << "'directory' field of compilation database is empty; "
                         "using the current working directory instead.\n";
-        Directory = InitialWorkingDir;
+        CompileCommand.Directory = InitialWorkingDir;
       }
 
-      // FIXME: chdir is thread hostile; on the other hand, creating the same
-      // behavior as chdir is complex: chdir resolves the path once, thus
-      // guaranteeing that all subsequent relative path operations work
-      // on the same path the original chdir resulted in. This makes a
-      // difference for example on network filesystems, where symlinks might be
-      // switched during runtime of the tool. Fixing this depends on having a
-      // file system abstraction that allows openat() style interactions.
-      if (OverlayFileSystem->setCurrentWorkingDirectory(Directory))
-        llvm::report_fatal_error("Cannot chdir into \"" + Twine(Directory) +
-                                 "\"!");
+      auto Invoke = [&]() -> bool {
+        StringRef Directory = CompileCommand.Directory;
 
-      // Now fill the in-memory VFS with the relative file mappings so it will
-      // have the correct relative paths. We never remove mappings but that
-      // should be fine.
-      if (SeenWorkingDirectories.insert(Directory).second)
-        for (const auto &MappedFile : MappedFileContents)
-          if (!llvm::sys::path::is_absolute(MappedFile.first))
-            InMemoryFileSystem->addFile(
-                MappedFile.first, 0,
-                llvm::MemoryBuffer::getMemBuffer(MappedFile.second));
+        // FIXME: chdir is thread hostile; on the other hand, creating the same
+        // behavior as chdir is complex: chdir resolves the path once, thus
+        // guaranteeing that all subsequent relative path operations work
+        // on the same path the original chdir resulted in. This makes a
+        // difference for example on network filesystems, where symlinks might
+        // be switched during runtime of the tool. Fixing this depends on
+        // having a file system abstraction that allows openat() style
+        // interactions.
+        if (OverlayFileSystem->setCurrentWorkingDirectory(Directory))
+          llvm::report_fatal_error("Cannot chdir into \"" + Twine(Directory) +
+                                   "\"!");
 
-      std::vector<std::string> CommandLine = CompileCommand.CommandLine;
-      if (ArgsAdjuster)
-        CommandLine = ArgsAdjuster(CommandLine, CompileCommand.Filename);
-      assert(!CommandLine.empty());
+        // Now fill the in-memory VFS with the relative file mappings so it
+        // will have the correct relative paths. We never remove mappings but
+        // that should be fine.
+        if (SeenWorkingDirectories.insert(Directory).second)
+          for (const auto &MappedFile : MappedFileContents)
+            if (!llvm::sys::path::is_absolute(MappedFile.first))
+              InMemoryFileSystem->addFile(
+                  MappedFile.first, 0,
+                  llvm::MemoryBuffer::getMemBuffer(MappedFile.second));
 
-      // Add the resource dir based on the binary of this tool. argv[0] in the
-      // compilation database may refer to a different compiler and we want to
-      // pick up the very same standard library that compiler is using. The
-      // builtin headers in the resource dir need to match the exact clang
-      // version the tool is using.
-      // FIXME: On linux, GetMainExecutable is independent of the value of the
-      // first argument, thus allowing ClangTool and runToolOnCode to just
-      // pass in made-up names here. Make sure this works on other platforms.
-      injectResourceDir(CommandLine, "clang_tool", &StaticSymbol);
+        std::vector<std::string> CommandLine = CompileCommand.CommandLine;
+        if (ArgsAdjuster)
+          CommandLine = ArgsAdjuster(CommandLine, CompileCommand.Filename);
+        assert(!CommandLine.empty());
 
-      ++CurrentCommandIndexForFile;
+        // Add the resource dir based on the binary of this tool. argv[0] in
+        // the compilation database may refer to a different compiler and we
+        // want to pick up the very same standard library that compiler is
+        // using. The builtin headers in the resource dir need to match the
+        // exact clang version the tool is using.
+        // FIXME: On linux, GetMainExecutable is independent of the value of
+        // the first argument, thus allowing ClangTool and runToolOnCode to
+        // just pass in made-up names here. Make sure this works on other
+        // platforms.
+        injectResourceDir(CommandLine, "clang_tool", &StaticSymbol);
 
-      // FIXME: We need a callback mechanism for the tool writer to output a
-      // customized message for each file.
-      if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1) {
-        llvm::errs() << "[" << std::to_string(CurrentFileIndex) << "/"
-                     << std::to_string(NumOfTotalFiles) << "]";
-        if (CompileCommandsForFile.size() > 1) {
-          llvm::errs() << " (" << std::to_string(CurrentCommandIndexForFile)
-                       << "/" << std::to_string(CompileCommandsForFile.size())
-                       << ")";
+        ++CurrentCommandIndexForFile;
+
+        // FIXME: We need a callback mechanism for the tool writer to output a
+        // customized message for each file.
+        if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1) {
+          llvm::errs() << "[" << std::to_string(CurrentFileIndex) << "/"
+                       << std::to_string(NumOfTotalFiles) << "]";
+          if (CompileCommandsForFile.size() > 1) {
+            llvm::errs() << " (" << std::to_string(CurrentCommandIndexForFile)
+                         << "/" << std::to_string(CompileCommandsForFile.size())
+                         << ")";
+          }
+          llvm::errs() << " Processing file " << File << ".\n";
         }
-        llvm::errs() << " Processing file " << File << ".\n";
-      }
-      ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
-                                PCHContainerOps);
-      Invocation.setDiagnosticConsumer(DiagConsumer);
+        ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
+                                  PCHContainerOps);
+        Invocation.setDiagnosticConsumer(DiagConsumer);
+        return Invocation.run();
+      };
 
-      if (!Invocation.run()) {
+      bool Success =
+          InvocationWrap ? InvocationWrap(CompileCommand, Invoke) : Invoke();
+      if (!Success) {
         // FIXME: Diagnostics should be used instead.
         if (PrintErrorMessage)
           llvm::errs() << "Error while processing " << File << ".\n";
