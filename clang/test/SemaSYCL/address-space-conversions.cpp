@@ -58,6 +58,9 @@ void usages() {
 
   // Explicit casts between disjoint address spaces are disallowed
   GLOB = (int [[clang::sycl_global]] *)PRIV; // expected-error {{C-style cast from '[[clang::sycl_private]] int *' to '[[clang::sycl_global]] int *' converts between mismatching address spaces}}
+  (void)(int [[clang::sycl_global]] &)*PRIV; // expected-error {{C-style cast from '[[clang::sycl_private]] int' to '[[clang::sycl_global]] int &' converts between mismatching address spaces}}
+  (void)(int [[clang::sycl_local]] &)*GLOB;  // expected-error {{C-style cast from '[[clang::sycl_global]] int' to '[[clang::sycl_local]] int &' converts between mismatching address spaces}}
+  (void)(int &)*GLOB;
 
   (void)static_cast<int *>(GLOB);
   (void)static_cast<void *>(GLOB);
