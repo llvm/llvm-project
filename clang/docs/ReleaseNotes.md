@@ -1348,6 +1348,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Miscellaneous Clang Crashes Fixed
 
+- Fixed a crash when processing Microsoft `__pragma(mark ...)` expressions
+  without a character lexer.
+
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
   `__identifier` expression reached the end of a preprocessing directive or
