@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ProcessImplicitDefs.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -46,10 +45,7 @@ class ProcessImplicitDefs {
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
-  SmallSetVector<MachineInstr *, 16> WorkList;
-
-  void processImplicitDef(MachineInstr *MI);
-  bool canTurnIntoImplicitDef(MachineInstr *MI);
+  void processImplicitDef(MachineInstr *MI, const ImplicitDefInfo &Info);
 
 public:
   bool run(MachineFunction &MF);
@@ -68,19 +64,46 @@ void ProcessImplicitDefsLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-bool ProcessImplicitDefs::canTurnIntoImplicitDef(MachineInstr *MI) {
-  if (!MI->isCopyLike() &&
-      !MI->isInsertSubreg() &&
-      !MI->isRegSequence() &&
-      !MI->isPHI())
-    return false;
-  for (const MachineOperand &MO : MI->all_uses())
-    if (MO.readsReg())
-      return false;
-  return true;
+static bool canBecomeImplicitDef(const MachineInstr &MI) {
+  return MI.isCopyLike() || MI.isInsertSubreg() || MI.isRegSequence() ||
+         MI.isPHI();
 }
 
-void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
+ImplicitDefInfo::ImplicitDefInfo(const MachineFunction &MF) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  SmallVector<const MachineInstr *> WorkList;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (MI.isImplicitDef() && MI.getOperand(0).getReg().isVirtual())
+        WorkList.push_back(&MI);
+
+  while (!WorkList.empty()) {
+    const MachineInstr *MI = WorkList.pop_back_val();
+    Register Reg = MI->getOperand(0).getReg();
+    bool AllUsesUndef = true;
+    for (const MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
+      const MachineInstr &UseMI = *MO.getParent();
+      if (UseMI.hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
+        AllUsesUndef = false;
+        continue;
+      }
+      UndefUses.insert(&MO);
+      if (canBecomeImplicitDef(UseMI) && !NewImplicitDefs.contains(&UseMI) &&
+          all_of(UseMI.all_uses(), [&](const MachineOperand &Use) {
+            return !Use.readsReg() || UndefUses.contains(&Use);
+          })) {
+        NewImplicitDefs.insert(&UseMI);
+        if (UseMI.getOperand(0).getReg().isVirtual())
+          WorkList.push_back(&UseMI);
+      }
+    }
+    if (AllUsesUndef)
+      ErasedImplicitDefs.insert(MI);
+  }
+}
+
+void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI,
+                                             const ImplicitDefInfo &Info) {
   LLVM_DEBUG(dbgs() << "Processing " << *MI);
   Register Reg = MI->getOperand(0).getReg();
   // Trim any extra operands.
@@ -90,23 +113,7 @@ void ProcessImplicitDefs::processImplicitDef(MachineInstr *MI) {
   MachineBasicBlock *MBB = MI->getParent();
 
   if (Reg.isVirtual()) {
-    // For virtual registers, mark all uses as <undef>, and convert users to
-    // implicit-def when possible.
-    bool AllUsesUndef = true;
-    for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-      MachineInstr *UserMI = MO.getParent();
-      if (UserMI->hasTiedAndOtherReadOf(Reg, MO.getSubReg())) {
-        AllUsesUndef = false;
-        continue;
-      }
-      MO.setIsUndef();
-      if (!canTurnIntoImplicitDef(UserMI))
-        continue;
-      LLVM_DEBUG(dbgs() << "Converting to IMPLICIT_DEF: " << *UserMI);
-      UserMI->setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
-      WorkList.insert(UserMI);
-    }
-    if (AllUsesUndef) {
+    if (Info.isErased(*MI)) {
       MI->eraseFromParent();
       return;
     }
@@ -201,29 +208,33 @@ bool ProcessImplicitDefs::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** PROCESS IMPLICIT DEFS **********\n"
                     << "********** Function: " << MF.getName() << '\n');
 
-  bool Changed = false;
-
   TII = MF.getSubtarget().getInstrInfo();
   TRI = MF.getSubtarget().getRegisterInfo();
   MRI = &MF.getRegInfo();
-  assert(WorkList.empty() && "Inconsistent worklist state");
 
+  ImplicitDefInfo Info(MF);
   for (MachineBasicBlock &MBB : MF) {
-    // Scan the basic block for implicit defs.
-    for (MachineInstr &MI : MBB)
-      if (MI.isImplicitDef())
-        WorkList.insert(&MI);
+    for (MachineInstr &MI : MBB) {
+      for (MachineOperand &MO : MI.all_uses())
+        if (Info.isUndef(MO))
+          MO.setIsUndef();
+      if (Info.becomesImplicitDef(MI)) {
+        LLVM_DEBUG(dbgs() << "Converting to IMPLICIT_DEF: " << MI);
+        MI.setDesc(TII->get(TargetOpcode::IMPLICIT_DEF));
+      }
+    }
+  }
 
-    if (WorkList.empty())
-      continue;
-
-    LLVM_DEBUG(dbgs() << printMBBReference(MBB) << " has " << WorkList.size()
-                      << " implicit defs.\n");
-    Changed = true;
-
-    // Drain the WorkList to recursively process any new implicit defs.
-    do processImplicitDef(WorkList.pop_back_val());
-    while (!WorkList.empty());
+  // Bottom-up, so that erased IMPLICIT_DEFs don't count towards the search
+  // limit for physical registers.
+  bool Changed = false;
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : make_early_inc_range(reverse(MBB))) {
+      if (MI.isImplicitDef()) {
+        processImplicitDef(&MI, Info);
+        Changed = true;
+      }
+    }
   }
   return Changed;
 }
