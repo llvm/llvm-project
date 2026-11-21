@@ -226,13 +226,13 @@ define <16 x i8> @interleave2_hi_halves_v16i8(<16 x i8> %a, <16 x i8> %b) {
 define void @interleave2_hi_halves_v16f32_256(<16 x float> %a, <16 x float> %b) vscale_range(2, 2) nounwind {
 ; CHECK-LABEL: interleave2_hi_halves_v16f32_256:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    ptrue p0.s, vl4
 ; CHECK-NEXT:    // kill: def $q6 killed $q6 def $z6
 ; CHECK-NEXT:    // kill: def $q2 killed $q2 def $z2
 ; CHECK-NEXT:    // kill: def $q7 killed $q7 def $z7
 ; CHECK-NEXT:    // kill: def $q3 killed $q3 def $z3
-; CHECK-NEXT:    splice z6.d, p0, z6.d, z7.d
-; CHECK-NEXT:    splice z2.d, p0, z2.d, z3.d
+; CHECK-NEXT:    splice z6.s, p0, z6.s, z7.s
+; CHECK-NEXT:    splice z2.s, p0, z2.s, z3.s
 ; CHECK-NEXT:    zip1 z0.s, z2.s, z6.s
 ; CHECK-NEXT:    zip2 z1.s, z2.s, z6.s
 ; CHECK-NEXT:    // fake_use: $z0
