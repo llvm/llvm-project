@@ -121,6 +121,43 @@ constexpr bool match_m256d(__m256d _v, double a, double b, double c, double d) {
   return v[0] == __builtin_bit_cast(unsigned long long, a) && v[1] == __builtin_bit_cast(unsigned long long, b) && v[2] == __builtin_bit_cast(unsigned long long, c) && v[3] == __builtin_bit_cast(unsigned long long, d);
 }
 
+constexpr bool match_cmp_mask(__m128 _v, bool a, bool b, bool c, bool d) {
+  __v4su v = (__v4su)_v;
+  return v[0] == (a ? ~0U : 0U) && v[1] == (b ? ~0U : 0U) &&
+         v[2] == (c ? ~0U : 0U) && v[3] == (d ? ~0U : 0U);
+}
+
+constexpr bool match_cmp_mask(__m128d _v, bool a, bool b) {
+  __v2du v = (__v2du)_v;
+  return v[0] == (a ? ~0ULL : 0ULL) && v[1] == (b ? ~0ULL : 0ULL);
+}
+
+constexpr bool match_cmp_mask(__m256 _v, bool a, bool b, bool c, bool d,
+                              bool e, bool f, bool g, bool h) {
+  __v8su v = (__v8su)_v;
+  return v[0] == (a ? ~0U : 0U) && v[1] == (b ? ~0U : 0U) &&
+         v[2] == (c ? ~0U : 0U) && v[3] == (d ? ~0U : 0U) &&
+         v[4] == (e ? ~0U : 0U) && v[5] == (f ? ~0U : 0U) &&
+         v[6] == (g ? ~0U : 0U) && v[7] == (h ? ~0U : 0U);
+}
+
+constexpr bool match_cmp_mask(__m256d _v, bool a, bool b, bool c, bool d) {
+  __v4du v = (__v4du)_v;
+  return v[0] == (a ? ~0ULL : 0ULL) && v[1] == (b ? ~0ULL : 0ULL) &&
+         v[2] == (c ? ~0ULL : 0ULL) && v[3] == (d ? ~0ULL : 0ULL);
+}
+
+constexpr bool match_scalar_cmp_mask(__m128 _v, __m128 _a, bool result) {
+  __v4su v = (__v4su)_v, a = (__v4su)_a;
+  return v[0] == (result ? ~0U : 0U) && v[1] == a[1] && v[2] == a[2] &&
+         v[3] == a[3];
+}
+
+constexpr bool match_scalar_cmp_mask(__m128d _v, __m128d _a, bool result) {
+  __v2du v = (__v2du)_v, a = (__v2du)_a;
+  return v[0] == (result ? ~0ULL : 0ULL) && v[1] == a[1];
+}
+
 #ifdef __SSE2__
 constexpr bool match_m256h(__m256h _v, _Float16 __e00, _Float16 __e01, _Float16 __e02, _Float16 __e03, _Float16 __e04, _Float16 __e05, _Float16 __e06, _Float16 __e07,
                                        _Float16 __e08, _Float16 __e09, _Float16 __e10, _Float16 __e11, _Float16 __e12, _Float16 __e13, _Float16 __e14, _Float16 __e15) {
