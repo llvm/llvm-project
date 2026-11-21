@@ -594,3 +594,167 @@ else:
   tail call void @llvm.assume(i1 %c.2)
   ret i1 %c.2
 }
+
+; Conditions reaching an assume only via a phi must not be replaced, to keep
+; the information carried by the assume.
+define void @cond_used_by_phi_feeding_assume(i8 %a, i1 %c) {
+; CHECK-LABEL: @cond_used_by_phi_feeding_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[EXIT]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 20
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[THEN]] ], [ [[C_2]], [[THEN_2]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[P]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then.2, label %exit
+
+then.2:
+  %c.2 = icmp ult i8 %a, 20
+  br label %exit
+
+exit:
+  %p = phi i1 [ true, %entry ], [ true, %then ], [ %c.2, %then.2 ]
+  call void @llvm.assume(i1 %p)
+  ret void
+}
+
+; The phi has a non-assume user, so the condition can be replaced.
+define i1 @cond_used_by_phi_feeding_assume_and_other_user(i8 %a, i1 %c) {
+; CHECK-LABEL: @cond_used_by_phi_feeding_assume_and_other_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[EXIT]]
+; CHECK:       then.2:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[THEN]] ], [ true, [[THEN_2]] ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[P]])
+; CHECK-NEXT:    ret i1 [[P]]
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then.2, label %exit
+
+then.2:
+  %c.2 = icmp ult i8 %a, 20
+  br label %exit
+
+exit:
+  %p = phi i1 [ true, %entry ], [ true, %then ], [ %c.2, %then.2 ]
+  call void @llvm.assume(i1 %p)
+  ret i1 %p
+}
+
+; Conditions reaching an assume via logical ops must not be replaced.
+define void @cond_used_by_and_feeding_assume(i8 %a, i1 %c) {
+; CHECK-LABEL: @cond_used_by_and_feeding_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    [[C_3:%.*]] = icmp ult i8 [[A]], 30
+; CHECK-NEXT:    [[OR:%.*]] = select i1 [[C]], i1 true, i1 [[C_3]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[OR]])
+; CHECK-NEXT:    ret void
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then, label %exit
+
+then:
+  %c.2 = icmp ult i8 %a, 20
+  %and = and i1 %c.2, %c
+  call void @llvm.assume(i1 %and)
+  %c.3 = icmp ult i8 %a, 30
+  %or = select i1 %c, i1 true, i1 %c.3
+  call void @llvm.assume(i1 %or)
+  ret void
+
+exit:
+  ret void
+}
+
+; Conditions reaching an assume via a chain of phis and logical ops must not
+; be replaced.
+define void @cond_used_by_phi_and_chain_feeding_assume(i8 %a, i1 %c, i1 %d) {
+; CHECK-LABEL: @cond_used_by_phi_and_chain_feeding_assume(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN_2:%.*]], label [[EXIT]]
+; CHECK:       then.2:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 20
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P:%.*]] = phi i1 [ true, [[ENTRY:%.*]] ], [ true, [[THEN]] ], [ [[C_2]], [[THEN_2]] ]
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[P]], [[D:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  br i1 %c, label %then, label %exit
+
+then:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then.2, label %exit
+
+then.2:
+  %c.2 = icmp ult i8 %a, 20
+  br label %exit
+
+exit:
+  %p = phi i1 [ true, %entry ], [ true, %then ], [ %c.2, %then.2 ]
+  %and = and i1 %p, %d
+  call void @llvm.assume(i1 %and)
+  ret void
+}
+
+; %c.2 is also used by a non-ephemeral instruction, so that use is replaced.
+define i1 @cond_used_by_and_feeding_assume_and_other_user(i8 %a, i1 %c) {
+; CHECK-LABEL: @cond_used_by_and_feeding_assume_and_other_user(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C_1:%.*]] = icmp ult i8 [[A:%.*]], 10
+; CHECK-NEXT:    br i1 [[C_1]], label [[THEN:%.*]], label [[EXIT:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[C_2:%.*]] = icmp ult i8 [[A]], 20
+; CHECK-NEXT:    [[AND:%.*]] = and i1 [[C_2]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AND]])
+; CHECK-NEXT:    ret i1 true
+; CHECK:       exit:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %c.1 = icmp ult i8 %a, 10
+  br i1 %c.1, label %then, label %exit
+
+then:
+  %c.2 = icmp ult i8 %a, 20
+  %and = and i1 %c.2, %c
+  call void @llvm.assume(i1 %and)
+  ret i1 %c.2
+
+exit:
+  ret i1 false
+}
