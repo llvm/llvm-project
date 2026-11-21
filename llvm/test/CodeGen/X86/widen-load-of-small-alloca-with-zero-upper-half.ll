@@ -1896,8 +1896,8 @@ define void @load_1byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-BMI2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    leal (,%rsi,8), %eax
-; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    movl %eax, %ecx
+; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    notl %eax
 ; X64-BMI2-NEXT:    andl $56, %esi
 ; X64-BMI2-NEXT:    movl -120(%rsp,%rsi), %edi
@@ -2060,8 +2060,8 @@ define void @load_2byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-BMI2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    leal (,%rsi,8), %eax
-; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    movl %eax, %ecx
+; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    notl %eax
 ; X64-BMI2-NEXT:    andl $56, %esi
 ; X64-BMI2-NEXT:    movl -120(%rsp,%rsi), %edi
@@ -2223,8 +2223,8 @@ define void @load_4byte_chunk_of_64byte_alloca_with_zero_upper_half(ptr %src, i6
 ; X64-BMI2-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-BMI2-NEXT:    leal (,%rsi,8), %eax
-; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    movl %eax, %ecx
+; X64-BMI2-NEXT:    andl $56, %eax
 ; X64-BMI2-NEXT:    notl %eax
 ; X64-BMI2-NEXT:    andl $56, %esi
 ; X64-BMI2-NEXT:    movl -120(%rsp,%rsi), %edi
