@@ -3363,7 +3363,12 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
   const Symbol *nonElemental{nullptr}; // matching non-elemental specific
   const auto *genericDetails{ultimate.detailsIf<semantics::GenericDetails>()};
   if (genericDetails) {
-    std::optional<CudaMatchingDistance> crtMatchingDistance;
+    struct Match {
+      const Symbol *specific;
+      CudaMatchingDistance distance;
+      bool isElemental;
+    };
+    std::vector<Match> matches;
     bool inHostCode{
         context_.languageFeatures().IsEnabled(common::LanguageFeature::CUDA) &&
         !GetContextualMessages().at().empty() &&
@@ -3404,42 +3409,45 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
                   *procedure, localActuals, foldingContext_)) {
             CudaMatchingDistance d{ComputeCudaMatchingDistance(
                 context_, *procedure, localActuals)};
-            if ((procedure->IsElemental() && elemental) ||
-                (!procedure->IsElemental() && nonElemental)) {
-              if (crtMatchingDistance) {
-                int cmp{CompareCudaMatchingDistance(d, *crtMatchingDistance)};
-                if (cmp > 0) {
-                  continue;
-                }
-                if (cmp == 0) {
-                  // 16.9.144(6): a bare NULL() is not allowed as an actual
-                  // argument to a generic procedure if the specific procedure
-                  // cannot be unambiguously distinguished
-                  // Underspecified external procedure actual arguments can
-                  // also lead to ambiguity.
-                  return {
-                      nullptr, true /* due to ambiguity */, std::move(tried)};
-                }
-                // Matching distance is smaller than the previously matched
-                // specific. Let it go through so the current procedure is
-                // picked.
-              }
-            }
-            if (!procedure->IsElemental()) {
-              // takes priority over elemental match
-              nonElemental = specific;
-            } else {
-              elemental = specific;
-            }
-            crtMatchingDistance = std::move(d);
+            matches.push_back(
+                {specific, std::move(d), procedure->IsElemental()});
           }
         }
       }
-      if (!skipDeviceOnly || nonElemental || elemental) {
+      if (!skipDeviceOnly || !matches.empty()) {
         break;
       }
       skipDeviceOnly = false;
       tried.erase(tried.begin() + triedBefore, tried.end());
+    }
+    // Choose among all the matches, so that the result does not depend on the
+    // order of the specifics. The best match is one that no other beats, and a
+    // second such match is a tie. A match with a smaller distance beats one
+    // with a larger distance; at the same distance a non-elemental specific
+    // beats an elemental one (F2023 15.5.5.2).
+    auto beats{[](const Match &x, const Match &y) {
+      int cmp{CompareCudaMatchingDistance(x.distance, y.distance)};
+      return cmp < 0 || (cmp == 0 && !x.isElemental && y.isElemental);
+    }};
+    const Match *best{nullptr};
+    bool ambiguous{false};
+    for (const Match &match : matches) {
+      if (std::none_of(matches.begin(), matches.end(),
+              [&](const Match &other) { return beats(other, match); })) {
+        ambiguous |= best != nullptr;
+        best = &match;
+      }
+    }
+    if (ambiguous) {
+      // 16.9.144(6): a bare NULL() is not allowed as an actual
+      // argument to a generic procedure if the specific procedure
+      // cannot be unambiguously distinguished
+      // Underspecified external procedure actual arguments can
+      // also lead to ambiguity.
+      return {nullptr, true /* due to ambiguity */, std::move(tried)};
+    }
+    if (best) {
+      (best->isElemental ? elemental : nonElemental) = best->specific;
     }
   }
   // Is there a derived type of the same name?

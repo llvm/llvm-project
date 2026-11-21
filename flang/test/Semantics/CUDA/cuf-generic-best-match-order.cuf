@@ -1,0 +1,37 @@
+! RUN: %python %S/../test_errors.py %s %flang_fc1
+
+! The specific procedure of a generic is chosen from all the matching ones, so
+! the choice does not depend on the order in which they are declared. s1 and s2
+! tie at distances [0,2] and s3 is better, [0,0], so every order selects s3.
+! Before, the first tie was reported as soon as it was found, so a generic that
+! listed s1 and s2 before s3 was reported ambiguous.
+module best_match_order
+  interface g1
+    module procedure s1, s2, s3
+  end interface
+  interface g2
+    module procedure s3, s1, s2
+  end interface
+  interface g3
+    module procedure s1, s3, s2
+  end interface
+contains
+  subroutine s1(p, n)
+    integer, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine s2(p, n)
+    real, pointer :: p
+    integer, device :: n
+  end subroutine
+  subroutine s3(p, n)
+    logical, pointer :: p
+    integer, managed :: n
+  end subroutine
+  subroutine user
+    integer, managed :: mn
+    call g1(null(), mn)
+    call g2(null(), mn)
+    call g3(null(), mn)
+  end subroutine
+end module
