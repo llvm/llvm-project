@@ -60,7 +60,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: ']' is the first character.
-  if (*I == ']') {
+  if (*I == u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;
@@ -68,7 +68,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Special case: "^]" are the first characters.
-  if (I + 1 != E && I[0] == '^' && I[1] == ']') {
+  if (I + 1 != E && I[0] == u8'^' && I[1] == u8']') {
     I += 2;
     if (I == E) {
       H.HandleIncompleteScanList(start, I - 1);
@@ -77,7 +77,7 @@ bool ScanfFormatStringParser::parseScanList(ScanfConversionSpecifier &CS,
   }
 
   // Look for a ']' character which denotes the end of the scan list.
-  while (*I != ']') {
+  while (*I != u8']') {
     if (++I == E) {
       H.HandleIncompleteScanList(start, I - 1);
       return true;
@@ -107,7 +107,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
       H.HandleNullChar(I);
       return true;
     }
-    if (c == '%') {
+    if (c == u8'%') {
       Start = I++; // Record the start of the format specifier.
       break;
     }
@@ -134,7 +134,7 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   }
 
   // Look for '*' flag if it is present.
-  if (*I == '*') {
+  if (*I == u8'*') {
     FS.setSuppressAssignment(I);
     if (++I == E) {
       H.HandleIncompleteSpecifier(Start, E - Start);
@@ -175,86 +175,86 @@ ScanfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
   switch (*conversionPosition) {
   default:
     break;
-  case '%':
+  case u8'%':
     k = ConversionSpecifier::PercentArg;
     break;
-  case 'b':
+  case u8'b':
     k = ConversionSpecifier::bArg;
     break;
-  case 'A':
+  case u8'A':
     k = ConversionSpecifier::AArg;
     break;
-  case 'E':
+  case u8'E':
     k = ConversionSpecifier::EArg;
     break;
-  case 'F':
+  case u8'F':
     k = ConversionSpecifier::FArg;
     break;
-  case 'G':
+  case u8'G':
     k = ConversionSpecifier::GArg;
     break;
-  case 'X':
+  case u8'X':
     k = ConversionSpecifier::XArg;
     break;
-  case 'a':
+  case u8'a':
     k = ConversionSpecifier::aArg;
     break;
-  case 'd':
+  case u8'd':
     k = ConversionSpecifier::dArg;
     break;
-  case 'e':
+  case u8'e':
     k = ConversionSpecifier::eArg;
     break;
-  case 'f':
+  case u8'f':
     k = ConversionSpecifier::fArg;
     break;
-  case 'g':
+  case u8'g':
     k = ConversionSpecifier::gArg;
     break;
-  case 'i':
+  case u8'i':
     k = ConversionSpecifier::iArg;
     break;
-  case 'n':
+  case u8'n':
     k = ConversionSpecifier::nArg;
     break;
-  case 'c':
+  case u8'c':
     k = ConversionSpecifier::cArg;
     break;
-  case 'C':
+  case u8'C':
     k = ConversionSpecifier::CArg;
     break;
-  case 'S':
+  case u8'S':
     k = ConversionSpecifier::SArg;
     break;
-  case '[':
+  case u8'[':
     k = ConversionSpecifier::ScanListArg;
     break;
-  case 'u':
+  case u8'u':
     k = ConversionSpecifier::uArg;
     break;
-  case 'x':
+  case u8'x':
     k = ConversionSpecifier::xArg;
     break;
-  case 'o':
+  case u8'o':
     k = ConversionSpecifier::oArg;
     break;
-  case 's':
+  case u8's':
     k = ConversionSpecifier::sArg;
     break;
-  case 'p':
+  case u8'p':
     k = ConversionSpecifier::pArg;
     break;
   // Apple extensions
   // Apple-specific
-  case 'D':
+  case u8'D':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::DArg;
     break;
-  case 'O':
+  case u8'O':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::OArg;
     break;
-  case 'U':
+  case u8'U':
     if (Target.getTriple().isOSDarwin())
       k = ConversionSpecifier::UArg;
     break;
