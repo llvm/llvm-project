@@ -191,6 +191,10 @@ struct OpenMPFIRPassPipelineOpts {
   /// all.
   Fortran::frontend::CodeGenOptions::DoConcurrentMappingKind
       doConcurrentMappingKind;
+
+  /// Whether to emit a device version of every pure procedure defined in the
+  /// module when `do concurrent` loops are mapped to the device.
+  bool doConcurrentDevicePureProcedures = false;
 };
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
