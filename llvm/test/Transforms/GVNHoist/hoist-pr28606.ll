@@ -21,10 +21,8 @@ define void @test(i1 %b) {
 ; CHECK-NEXT:    store ptr [[X]], ptr [[TMP0]], align 4
 ; CHECK-NEXT:    br i1 [[B:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARGMEM]], i32 0, i32 1
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       false:
-; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds [[STRUCT_S]], ptr [[ARGMEM]], i32 0, i32 1
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    call void @f(ptr inalloca(<{ [[STRUCT_S]] }>) [[ARGMEM]])
