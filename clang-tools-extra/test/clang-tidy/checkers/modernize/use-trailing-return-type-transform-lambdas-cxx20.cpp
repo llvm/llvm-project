@@ -25,7 +25,7 @@ void test_lambda_positive() {
     requires std::floating_point<T> && std::floating_point<U>
   { return x * y; };
   // CHECK-MESSAGES: :[[@LINE-3]]:13: warning: use a trailing return type for this lambda [modernize-use-trailing-return-type]
-  // CHECK-FIXES: auto l5 = []<typename T, typename U>(T x, U y) constexpr noexcept
-  // CHECK-FIXES:   -> auto requires std::floating_point<T> && std::floating_point<U>
+  // CHECK-FIXES: auto l5 = []<typename T, typename U>(T x, U y) constexpr noexcept -> auto
+  // CHECK-FIXES:   requires std::floating_point<T> && std::floating_point<U>
   // CHECK-FIXES: { return x * y; };
 }
