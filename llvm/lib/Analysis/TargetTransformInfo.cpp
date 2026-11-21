@@ -808,6 +808,10 @@ InstructionCost TargetTransformInfo::getFPOpCost(Type *Ty) const {
   return Cost;
 }
 
+// Prefer constant folding to use IEEE by default, and ignore the
+// denormal_fpenv function attribute. Targets may override this to return DM
+// unmodified to match denormal_fpenv where possible when folding, or may
+// provide custom rules for specific input types / operations.
 InstructionCost TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode,
                                                            unsigned Idx,
                                                            const APInt &Imm,
@@ -891,8 +895,8 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  return TTIImpl->shouldMaximizeVectorBandwidth(K);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  return TTIImpl->shouldMaximizeVectorBandwidth(K, ElementTy);
 }
 
 ElementCount TargetTransformInfo::getMinimumVF(unsigned ElemWidth,

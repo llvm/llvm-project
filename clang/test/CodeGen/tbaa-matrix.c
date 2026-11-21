@@ -70,16 +70,16 @@ void load_int_matrix(ix3x3_t *a, ix3x3_t *b) {
 // CHECK-NEXT:    [[D:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA13:![0-9]+]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]]) #[[ATTR2:[0-9]+]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[LOCAL]])
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[M_ADDR]], align 8, !tbaa [[ANYPTR_TBAA6]]
 // CHECK-NEXT:    [[TMP1:%.*]] = load <25 x double>, ptr [[TMP0]], align 8, !tbaa [[DOUBLE_TBAA8]]
 // CHECK-NEXT:    store <25 x double> [[TMP1]], ptr [[LOCAL]], align 8, !tbaa [[DOUBLE_TBAA8]]
-// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[D]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[S_ADDR]], align 8, !tbaa [[DOUBLEPTR_TBAA13]]
 // CHECK-NEXT:    [[TMP3:%.*]] = load double, ptr [[TMP2]], align 8, !tbaa [[DOUBLE_TBAA8]]
 // CHECK-NEXT:    store double [[TMP3]], ptr [[D]], align 8, !tbaa [[DOUBLE_TBAA8]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]]) #[[ATTR2]]
-// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]]) #[[ATTR2]]
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[D]])
+// CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[LOCAL]])
 // CHECK-NEXT:    ret void
 //
 void load_double_matrix_and_scalar(dx5x5_t *m, double *s) {

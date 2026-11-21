@@ -28,6 +28,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -491,7 +492,10 @@ public:
                                      BasicBlock *ToBB,
                                      Instruction *CtxI = nullptr);
 
-  ValueLatticeElement getValueAtUse(const Use &U);
+  ValueLatticeElement
+  getValueAtUse(const Use &U,
+                SmallVectorImpl<DbgVariableRecord *> *DebugUsers = nullptr,
+                bool AssumeFrozen = false);
 
   /// Complete flush all previously computed values
   void clear() {
@@ -1879,7 +1883,9 @@ getValueOnEdge(Value *V, BasicBlock *FromBB, BasicBlock *ToBB,
   return *Result;
 }
 
-ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
+ValueLatticeElement LazyValueInfoImpl::getValueAtUse(
+    const Use &U, SmallVectorImpl<DbgVariableRecord *> *DebugUsers,
+    bool AssumeFrozen) {
   Value *V = U.get();
   auto *CtxI = cast<Instruction>(U.getUser());
   ValueLatticeElement VL = getValueInBlock(V, CtxI->getParent(), CtxI);
@@ -1888,11 +1894,14 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
   // Check whether the only (possibly transitive) use of the value is in a
   // position where V can be constrained by a select or branch condition.
   const Use *CurrU = &U;
-  // TODO: Increase limit?
-  const unsigned MaxUsesToInspect = 3;
+  const unsigned MaxUsesToInspect = 6;
   for (unsigned I = 0; I < MaxUsesToInspect; ++I) {
     std::optional<ValueLatticeElement> CondVal;
     auto *CurrI = cast<Instruction>(CurrU->getUser());
+
+    // Collect debug users of this value that isn't the starting value
+    if (DebugUsers && CurrU != &U)
+      findDbgUsers(CurrU->get(), *DebugUsers);
 
     // All instructions on the one-use chain between the original use and CurrI
     // are speculatable and have a single user each, so they could be sunk to
@@ -1905,10 +1914,13 @@ ValueLatticeElement LazyValueInfoImpl::getValueAtUse(const Use &U) {
     }
 
     if (auto *SI = dyn_cast<SelectInst>(CurrI)) {
-      // If the value is undef, a different value may be chosen in
-      // the select condition and at use.
-      if (!isGuaranteedNotToBeUndef(SI->getCondition(), AC))
+      // If the value is undef, a different value may be chosen in the select
+      // condition and at use, so bail.
+      //
+      // Allow if AssumeFrozen (the caller is going to freeze V).
+      if (!AssumeFrozen && !isGuaranteedNotToBeUndef(SI->getCondition(), AC))
         break;
+
       if (CurrU->getOperandNo() == 1)
         CondVal =
             *getValueFromCondition(V, SI->getCondition(), /*IsTrueDest*/ true,
@@ -2058,9 +2070,11 @@ ConstantRange LazyValueInfo::getConstantRange(Value *V, Instruction *CtxI,
   return Result.asConstantRange(V->getType(), UndefAllowed);
 }
 
-ConstantRange LazyValueInfo::getConstantRangeAtUse(const Use &U,
-                                                   bool UndefAllowed) {
-  ValueLatticeElement Result = getOrCreateImpl().getValueAtUse(U);
+ConstantRange LazyValueInfo::getConstantRangeAtUse(
+    const Use &U, bool UndefAllowed,
+    SmallVectorImpl<DbgVariableRecord *> *DebugUsers, bool AssumeFrozen) {
+  ValueLatticeElement Result =
+      getOrCreateImpl().getValueAtUse(U, DebugUsers, AssumeFrozen);
   return Result.asConstantRange(U->getType(), UndefAllowed);
 }
 

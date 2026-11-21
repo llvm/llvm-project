@@ -62,7 +62,15 @@ public:
         .DefaultUnreachable("Unhandled type");
   }
 
-  void add(Type type) { add(cast<SPIRVType>(type)); }
+  void add(Type type) {
+    if (auto functionType = dyn_cast<FunctionType>(type)) {
+      for (Type t : llvm::concat<const Type>(functionType.getInputs(),
+                                             functionType.getResults()))
+        add(t);
+      return;
+    }
+    add(cast<SPIRVType>(type));
+  }
 
 private:
   // Types that add unique extensions.
@@ -122,7 +130,15 @@ public:
         .DefaultUnreachable("Unhandled type");
   }
 
-  void add(Type type) { add(cast<SPIRVType>(type)); }
+  void add(Type type) {
+    if (auto functionType = dyn_cast<FunctionType>(type)) {
+      for (Type t : llvm::concat<const Type>(functionType.getInputs(),
+                                             functionType.getResults()))
+        add(t);
+      return;
+    }
+    add(cast<SPIRVType>(type));
+  }
 
 private:
   // Types that add unique extensions.

@@ -63,6 +63,11 @@ void f(non_forward_iterator non_fwd,
     (void)std::copy(pol, it, it, non_output);   // expected-error@*:* {{static assertion failed: copy}}
   }
   {
+    (void)std::copy_if(pol, non_fwd, non_fwd, it, pred); // expected-error@*:* {{static assertion failed: copy_if}}
+    (void)std::copy_if(pol, it, it, non_fwd, pred);      // expected-error@*:* {{static assertion failed: copy_if}}
+    (void)std::copy_if(pol, it, it, non_output, pred);   // expected-error@*:* {{static assertion failed: copy_if}}
+  }
+  {
     (void)std::copy_n(pol, non_fwd, n, it);    // expected-error@*:* {{static assertion failed: copy_n}}
     (void)std::copy_n(pol, it, n, non_fwd);    // expected-error@*:* {{static assertion failed: copy_n}}
     (void)std::copy_n(pol, it, n, non_output); // expected-error@*:* {{static assertion failed: copy_n}}
@@ -156,6 +161,17 @@ void f(non_forward_iterator non_fwd,
     (void)std::includes(pol, non_fwd, non_fwd, it, it); // expected-error@*:* {{static assertion failed: includes}}
     (void)std::includes(
         pol, it, it, non_fwd, non_fwd, pred); // expected-error@*:* {{static assertion failed: includes}}
+  }
+
+  {
+    (void)std::exclusive_scan(
+        pol, non_fwd, non_fwd, it, val); // expected-error@*:* {{static assertion failed: exclusive_scan}}
+    (void)std::exclusive_scan(
+        pol, it, it, non_fwd, val); // expected-error@*:* {{static assertion failed: exclusive_scan}}
+    (void)std::exclusive_scan(
+        pol, non_fwd, non_fwd, it, val, func); // expected-error@*:* {{static assertion failed: exclusive_scan}}
+    (void)std::exclusive_scan(
+        pol, it, it, non_fwd, val, func); // expected-error@*:* {{static assertion failed: exclusive_scan}}
   }
 
   {
@@ -266,6 +282,20 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::remove_copy(
+        pol, non_fwd, non_fwd, out, val);                 // expected-error@*:* {{static assertion failed: remove_copy}}
+    (void)std::remove_copy(pol, it, it, non_fwd, val);    // expected-error@*:* {{static assertion failed: remove_copy}}
+    (void)std::remove_copy(pol, it, it, non_output, val); // expected-error@*:* {{static assertion failed: remove_copy}}
+
+    (void)std::remove_copy_if(
+        pol, non_fwd, non_fwd, out, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+    (void)std::remove_copy_if(
+        pol, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+    (void)std::remove_copy_if(
+        pol, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+  }
+
+  {
     (void)std::replace_if(
         pol, non_fwd, non_fwd, pred, val);               // expected-error@*:* {{static assertion failed: replace_if}}
     (void)std::replace(pol, non_fwd, non_fwd, val, val); // expected-error@*:* {{static assertion failed: replace}}
@@ -283,6 +313,10 @@ void f(non_forward_iterator non_fwd,
         pol, it, it, non_fwd, val, val); // expected-error@*:* {{static assertion failed: replace_copy}}
     (void)std::replace_copy(
         pol, it, it, non_output, val, val); // expected-error@*:* {{static assertion failed: replace_copy}}
+  }
+
+  {
+    (void)std::rotate(pol, non_fwd, non_fwd, non_fwd); // expected-error@*:* {{static assertion failed: rotate}}
   }
 
   {
@@ -394,6 +428,25 @@ void f(non_forward_iterator non_fwd,
     (void)std::transform(pol, it, it, it, non_fwd, func);  // expected-error@*:* {{static assertion failed: transform}}
     (void)std::transform(
         pol, it, it, it, non_output, func); // expected-error@*:* {{static assertion failed: transform}}
+  }
+
+  {
+    (void)std::transform_exclusive_scan(
+        pol,
+        non_fwd,
+        non_fwd,
+        it,
+        val,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_exclusive_scan}}
+    (void)std::transform_exclusive_scan(
+        pol,
+        it,
+        it,
+        non_fwd,
+        val,
+        func,
+        func); // expected-error@*:* {{static assertion failed: transform_exclusive_scan}}
   }
 
   {

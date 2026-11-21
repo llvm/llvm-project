@@ -192,9 +192,6 @@ void DAGTypeLegalizer::PerformExpensiveChecks() {
 /// traversal of the dag, legalizing types as it goes. Returns "true" if it made
 /// any changes.
 bool DAGTypeLegalizer::run() {
-  [[maybe_unused]] const SelectionDAGOptions &Opts =
-      DAG.getLibraryOptions().get<SelectionDAGOptions>();
-
   bool Changed = false;
 
   // Create a dummy node (which is not added to allnodes), that adds a reference
@@ -222,7 +219,7 @@ bool DAGTypeLegalizer::run() {
   // Now that we have a set of nodes to process, handle them all.
   while (!Worklist.empty()) {
 #ifndef EXPENSIVE_CHECKS
-    if (Opts.enable_legalize_types_checking)
+    if (DAG.getSelectionDAGOptions().enable_legalize_types_checking)
 #endif
       PerformExpensiveChecks();
 
@@ -424,7 +421,7 @@ NodeDone:
   }
 
 #ifndef EXPENSIVE_CHECKS
-  if (Opts.enable_legalize_types_checking)
+  if (DAG.getSelectionDAGOptions().enable_legalize_types_checking)
 #endif
     PerformExpensiveChecks();
 
@@ -567,7 +564,10 @@ void DAGTypeLegalizer::AnalyzeNewValue(SDValue &Val) {
 /// replace it by that value.
 void DAGTypeLegalizer::RemapValue(SDValue &V) {
   auto Id = getTableId(V);
-  V = getSDValue(Id);
+  SDValue Mapped = getSDValue(Id);
+  if (V && Mapped && V.getNode() != Mapped.getNode())
+    Mapped->intersectFlagsWith(V->getFlags());
+  V = Mapped;
 }
 
 void DAGTypeLegalizer::RemapId(TableId &Id) {
