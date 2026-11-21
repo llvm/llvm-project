@@ -21,3 +21,17 @@ empty_var:
 # rtdyld-check: decode_operand(adrp_empty, 1) = (empty_var[32:12] - adrp_empty[32:12])
 # rtdyld-check: decode_operand(add_empty, 2) = empty_var[11:0]
 # rtdyld-check: empty_var = section_addr(COFF_AArch64_empty_section.s.tmp.obj, .bss)
+
+// A non-empty discardable section is not loaded, so symbols in it resolve to
+// address zero. (Check this via a relocation; the checker treats a symbol
+// address of zero as not found.)
+  .data
+discard_ptr:
+  .quad discard_var
+
+  .section .discard,"Dr"
+  .globl discard_var
+discard_var:
+  .long 42
+
+# rtdyld-check: *{8}discard_ptr = 0
