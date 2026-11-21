@@ -1047,7 +1047,7 @@ void MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
   MCContext &Context = getContext();
   int64_t Value;
   bool Abs = F.getDwarfAddrDelta().evaluateAsAbsolute(Value, *this);
-  if (!Abs) {
+  if (!Abs || Value < 0) {
     reportError(F.getDwarfAddrDelta().getLoc(),
                 "invalid CFI advance_loc expression");
     F.setDwarfAddrDelta(MCConstantExpr::create(0, Context));
