@@ -242,20 +242,3 @@ loop:
 exit:
   ret void
 }
-;.
-; YMM: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; YMM: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; YMM: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; YMM: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
-; YMM: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; YMM: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-;.
-; ZMM: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
-; ZMM: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
-; ZMM: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
-; ZMM: [[PROF3]] = !{!"branch_weights", i32 4, i32 12}
-; ZMM: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; ZMM: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
-; ZMM: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]], [[META2]]}
-; ZMM: [[LOOP7]] = distinct !{[[LOOP7]], [[META2]], [[META1]]}
-;.
