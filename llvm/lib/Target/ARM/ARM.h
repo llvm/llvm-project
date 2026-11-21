@@ -36,6 +36,7 @@ Pass *createMVETailPredicationPass();
 FunctionPass *createARMLowOverheadLoopsPass();
 FunctionPass *createARMBlockPlacementPass();
 Pass *createARMParallelDSPPass();
+FunctionPass *createARMWinEHFramePass();
 FunctionPass *createARMISelDag(ARMBaseTargetMachine &TM,
                                CodeGenOptLevel OptLevel);
 FunctionPass *createA15SDOptimizerPass();
@@ -74,6 +75,7 @@ void initializeARMLowOverheadLoopsPass(PassRegistry &);
 void initializeARMParallelDSPPass(PassRegistry &);
 void initializeARMPreAllocLoadStoreOptLegacyPass(PassRegistry &);
 void initializeARMSLSHardeningPass(PassRegistry &);
+void initializeARMWinEHFramePass(PassRegistry &);
 void initializeMVEGatherScatterLoweringPass(PassRegistry &);
 void initializeMVELaneInterleavingPass(PassRegistry &);
 void initializeMVETPAndVPTOptimisationsPass(PassRegistry &);

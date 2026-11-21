@@ -6766,7 +6766,8 @@ let isPseudo = 1 in {
 }
 
 // C++ Exception / SEH Pseudo Instructions
-let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
+let isTerminator = 1, isReturn = 1, isBarrier = 1, isCodeGenOnly = 1,
+    hasNoSchedulingInfo = 1, isEHScopeReturn = 1 in {
   def CLEANUPRET : PseudoInst<(outs), (ins), NoItinerary, [(cleanupret bb)]>, Sched<[]>;
   def CATCHRET : PseudoInst<(outs), (ins arm_br_target:$dst, arm_br_target:$src), NoItinerary, [(catchret bb:$dst, bb:$src)]>, Sched<[]>;
 }

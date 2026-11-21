@@ -1,11 +1,34 @@
-; RUN: llc -mtriple thumbv7-windows-msvc -o - %s
-; XFAIL: *
+; RUN: llc -mtriple thumbv7-windows-msvc -o - %s | FileCheck %s
+; RUN: llc -mtriple thumbv7-windows-msvc -frame-pointer=all -o - %s | FileCheck %s --check-prefix=FP
 
-; FIXME: C++ EH is not supported on thumbv7-windows-msvc yet.
-
-; FIXME: Windows SEH for armv7 does not preserve the frame register R11 in
-; handlers. This may affect C++ EH when accessing arguments on the stack in
-; functions with stack realignment.
+; The catch funclet reaches the parent's stack arguments through r6, the
+; parent's frame base, and not through r11, which is the funclet's own when
+; there is a frame pointer (second RUN line).
+; FP-LABEL: "?f@@YAXUX@@P6AXXZP6AXPAH@Z@Z":
+; FP:       sub sp, #[[#FARGS:]]
+; FP:       push.w {r6, r7, r11, lr}
+; FP:       sub sp, #[[#FSUB:]]
+; FP-LABEL: "?catch$2@?0??f@@YAXUX@@P6AXXZP6AXPAH@Z@Z@4HA":
+; FP:       .seh_endprologue
+; FP-NEXT:  add.w r0, r6, #[[#FSUB + 16]]
+; FP-NEXT:  ldr.w r1, [r6, #[[#FSUB + 16 + FARGS + 388]]]
+; FP-NEXT:  adds r0, #44
+; FP-NEXT:  blx r1
+; CHECK-LABEL: "?f@@YAXUX@@P6AXXZP6AXPAH@Z@Z":
+; CHECK:       sub sp, #[[#ARGS:]]
+; CHECK:       push {r6, lr}
+; CHECK:       sub sp, #[[#SUB:]]
+; CHECK:       .seh_endprologue
+; CHECK-NEXT:  mov r6, sp
+; CHECK:       ldr.w r12, [r6, #[[#SUB + 8 + ARGS + 384]]]
+; CHECK:       blx r12
+; CHECK-LABEL: "?catch$2@?0??f@@YAXUX@@P6AXXZP6AXPAH@Z@Z@4HA":
+; CHECK:       .seh_endprologue
+; CHECK-NEXT:  add.w r0, r6, #[[#SUB + 8]]
+; CHECK-NEXT:  ldr.w r1, [r6, #[[#SUB + 8 + ARGS + 388]]]
+; CHECK-NEXT:  adds r0, #44
+; CHECK-NEXT:  blx r1
+; CHECK:       .long [[#%d,0 - SUB - 8 - ARGS]] @ UnwindHelp
 
 ; C++ source:
 ; struct X { int x[100]; };

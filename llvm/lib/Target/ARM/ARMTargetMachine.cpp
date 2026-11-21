@@ -96,6 +96,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeARMTarget() {
   initializeARMLoadStoreOptLegacyPass(Registry);
   initializeARMPreAllocLoadStoreOptLegacyPass(Registry);
   initializeARMParallelDSPPass(Registry);
+  initializeARMWinEHFramePass(Registry);
   initializeARMBranchTargetsPass(Registry);
   initializeARMConstantIslandsPass(Registry);
   initializeARMExpandPseudoPass(Registry);
@@ -428,6 +429,10 @@ void ARMPassConfig::addCodeGenPrepare() {
 }
 
 bool ARMPassConfig::addPreISel() {
+  // Must run after WinEHPrepare, which can add over-aligned allocas.
+  if (TM->getTargetTriple().isOSWindows())
+    addPass(createARMWinEHFramePass());
+
   if ((TM->getOptLevel() != CodeGenOptLevel::None &&
        EnableGlobalMerge == cl::boolOrDefault::BOU_UNSET) ||
       EnableGlobalMerge == cl::boolOrDefault::BOU_TRUE) {

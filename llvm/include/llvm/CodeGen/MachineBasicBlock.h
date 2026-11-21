@@ -986,10 +986,13 @@ public:
     return !empty() && back().isReturn();
   }
 
-  /// Convenience function that returns true if the bock ends in a EH scope
-  /// return instruction.
+  /// Convenience function that returns true if one of the block's terminators
+  /// is an EH scope return instruction. Other terminators can follow it, such
+  /// as the Windows unwind pseudos after a return on ARM.
   bool isEHScopeReturnBlock() const {
-    return !empty() && back().isEHScopeReturn();
+    return llvm::any_of(terminators(), [](const MachineInstr &MI) {
+      return MI.isEHScopeReturn();
+    });
   }
 
   /// Split a basic block into 2 pieces at \p SplitPoint. A new block will be

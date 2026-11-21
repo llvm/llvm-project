@@ -22695,6 +22695,10 @@ Register ARMTargetLowering::getExceptionSelectorRegister(
   return EH == ExceptionHandling::SjLj ? Register() : ARM::R1;
 }
 
+// Frames with C++ EH funclets are never realigned (see ARMWinEHFrame), so
+// catch objects can be ordinary stack objects.
+bool ARMTargetLowering::needsFixedCatchObjects() const { return false; }
+
 void ARMTargetLowering::initializeSplitCSR(MachineBasicBlock *Entry) const {
   // Update IsSplitCSR in ARMFunctionInfo.
   ARMFunctionInfo *AFI = Entry->getParent()->getInfo<ARMFunctionInfo>();
