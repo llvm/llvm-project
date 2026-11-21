@@ -112,6 +112,17 @@ bool OpenMPClauseEmitter::emitNumThreads(
   return false;
 }
 
+bool OpenMPClauseEmitter::emitNowait(mlir::omp::NowaitClauseOps &result) const {
+  for (const OMPClause *clause : clauses) {
+    if (!isa<OMPNowaitClause>(clause))
+      continue;
+
+    result.nowait = builder.getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
 bool OpenMPClauseEmitter::emitIf(mlir::omp::IfClauseOps &result,
                                  llvm::omp::Directive directiveName) const {
   for (const OMPClause *clause : clauses) {
