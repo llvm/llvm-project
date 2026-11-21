@@ -69,6 +69,8 @@ defm : BoolField<"enable-epilogue-vectorization", "true",
   "Enable vectorization of epilogue loops">;
 defm : BoolField<"enable-ind-var-reg-heur", "true",
   "Count the induction variable only once when interleaving">;
+defm : BoolField<"enable-interleave-cse", "false",
+  "Raise heuristic IC=1 to IC=2 when exact cross-part load redundancy predicts a downstream saving">;
 defm : BoolField<"enable-interleave-to-reduce-stalls", "false",
   "When interleaving choose the interleave count that will reduce the stall cycles due to instruction latency to zero">;
 defm : OptionalBoolField<"enable-interleaved-mem-accesses",
@@ -108,6 +110,8 @@ defm : OptionalValueField<"force-target-num-vector-regs", "unsigned",
   "A flag that overrides the target's number of vector registers">;
 defm : OptionalBoolField<"force-widen-divrem-via-masked-intrinsic",
   "Override cost based masked intrinsic widening for div/rem instructions">;
+defm : ValueField<"interleave-cse-min-pct", "unsigned", "5",
+  "Minimum predicted downstream load saving as a percentage of the modeled UF=2 vector loop body">;
 defm : BoolField<"interleave-loops", "true",
   "Enable loop interleaving in Loop vectorization passes">;
 defm : BoolField<"loop-vectorize-with-block-frequency", "true",
