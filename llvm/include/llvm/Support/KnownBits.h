@@ -394,6 +394,14 @@ public:
   LLVM_ABI static KnownBits usub_sat(const KnownBits &LHS,
                                      const KnownBits &RHS);
 
+  /// Compute knownbits resulting from llvm.sshl.sat(LHS, RHS)
+  LLVM_ABI static KnownBits sshl_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
+
+  /// Compute knownbits resulting from llvm.ushl.sat(LHS, RHS)
+  LLVM_ABI static KnownBits ushl_sat(const KnownBits &LHS,
+                                     const KnownBits &RHS);
+
   /// Compute knownbits resulting from APIntOps::avgFloorS
   LLVM_ABI static KnownBits avgFloorS(const KnownBits &LHS,
                                       const KnownBits &RHS);
