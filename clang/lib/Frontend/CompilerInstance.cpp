@@ -167,8 +167,14 @@ bool CompilerInstance::createTarget() {
   // created. This complexity should be lifted elsewhere.
   getTarget().adjust(getDiagnostics(), getLangOpts(), getAuxTarget());
 
-  if (auto *Aux = getAuxTarget())
+  if (auto *Aux = getAuxTarget()) {
     getTarget().setAuxTarget(Aux);
+
+    // The target has taken everything it takes from the auxiliary target by
+    // now, which TargetInfo::adjust() above is too early for.
+    if (!getTarget().checkAuxTargetCompatibility(getDiagnostics()))
+      return false;
+  }
 
   return true;
 }
