@@ -91,6 +91,7 @@ except ImportError:
 %feature("python:annotations", "0") lldb::SBDebugger::RunCommandInterpreter;
 %feature("python:annotations", "0") lldb::SBFile::Read;
 %feature("python:annotations", "0") lldb::SBFile::Write;
+%feature("python:annotations", "0") lldb::SBThread::GetStopReturnOrErrorValue;
 #else
 // Make sure `typing` is imported in all cases (Swig < 4.5.0).
 %pythoncode %{

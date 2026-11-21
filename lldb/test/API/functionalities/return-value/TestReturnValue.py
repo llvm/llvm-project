@@ -69,6 +69,11 @@ class ReturnValueTestCase(TestBase):
 
         error = lldb.SBError()
 
+        # Nothing has been returned yet since we stopped at a breakpoint.
+        return_or_error_value, is_error_value = thread.GetStopReturnOrErrorValue()
+        self.assertFalse(return_or_error_value.IsValid())
+        self.assertFalse(is_error_value)
+
         # inner_sint returns the variable value, so capture that here:
         in_int = thread.GetFrameAtIndex(0).FindVariable("value").GetValueAsSigned(error)
         self.assertSuccess(error)
@@ -90,6 +95,13 @@ class ReturnValueTestCase(TestBase):
         self.assertEqual(in_int, ret_int)
 
         self.assertFalse(thread.GetStopErrorValue().IsValid())
+
+        return_or_error_value, is_error_value = thread.GetStopReturnOrErrorValue()
+        self.assertTrue(return_or_error_value.IsValid())
+        self.assertFalse(is_error_value)
+        ret_int = return_or_error_value.GetValueAsSigned(error)
+        self.assertSuccess(error)
+        self.assertEqual(in_int, ret_int)
 
         # Run again and we will stop in inner_sint the second time outer_sint is called.
         # Then test stepping out two frames at once:
