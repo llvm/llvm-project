@@ -175,12 +175,14 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   }
 
   std::size_t byteSize;
-  // Guard against the possibility of the product of elementBytes and
-  // extents of all the ranks overflowing SIZE_MAX.
-  std::optional<std::size_t> byteSizewithOVF{
-      InlineAllocSizeWithOVF(elementBytes)};
-  if (byteSizewithOVF) {
-    byteSize = *byteSizewithOVF;
+  // To guard against the (remote) possibility of 64-bit multiplication
+  // overflow when computing the product of extents in all ranks, use:
+  //    InlineElementsScaled(elementBytes)
+  // and not:
+  //    elementBytes * InlineElements()
+  std::optional<std::size_t> elementsScaled{InlineElementsScaled(elementBytes)};
+  if (elementsScaled) {
+    byteSize = *elementsScaled;
   } else {
     return CFI_ERROR_MEM_ALLOCATION;
   }
