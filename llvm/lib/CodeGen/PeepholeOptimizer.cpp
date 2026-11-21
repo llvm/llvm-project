@@ -2168,8 +2168,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
   if (Def->getOperand(1).getSubReg())
     return ValueTrackerResult();
 
-  return ValueTrackerResult(Def->getOperand(1).getReg(),
-                            Def->getOperand(2).getImm());
+  return ValueTrackerResult(Def->getOperand(1).getReg(), 0);
 }
 
 /// Explore each PHI incoming operand and return its sources.
