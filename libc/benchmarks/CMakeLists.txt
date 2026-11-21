@@ -240,6 +240,9 @@ if(LIBC_BENCHMARKS_HAS_LLVM_SUPPORT)
   if(TARGET libc.src.string.memchr)
     add_libc_benchmark(memchr libc.src.string.memchr)
   endif()
+  if(TARGET libc.src.string.strlen)
+    add_libc_benchmark(strlen libc.src.string.strlen)
+  endif()
 endif()
 
 #==============================================================================
@@ -264,6 +267,7 @@ target_link_libraries(libc.benchmarks.memory_functions.opt_host
     libc.src.strings.bcmp_opt_host.__internal__
     libc.src.strings.bzero_opt_host.__internal__
     libc.src.string.memchr.__internal__
+    libc.src.string.strlen.__internal__
     benchmark_main
 )
 llvm_update_compile_flags(libc.benchmarks.memory_functions.opt_host)
