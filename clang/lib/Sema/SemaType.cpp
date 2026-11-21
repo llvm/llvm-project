@@ -142,6 +142,8 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_PreserveAll:                                             \
   case ParsedAttr::AT_M68kRTD:                                                 \
   case ParsedAttr::AT_PreserveNone:                                            \
+  case ParsedAttr::AT_HexagonHLXCall:                                          \
+  case ParsedAttr::AT_HexagonPreserveHLX:                                      \
   case ParsedAttr::AT_RISCVVectorCC:                                           \
   case ParsedAttr::AT_RISCVVLSCC
 
@@ -7900,6 +7902,10 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
     return createSimpleAttr<M68kRTDAttr>(Ctx, Attr);
   case ParsedAttr::AT_PreserveNone:
     return createSimpleAttr<PreserveNoneAttr>(Ctx, Attr);
+  case ParsedAttr::AT_HexagonHLXCall:
+    return createSimpleAttr<HexagonHLXCallAttr>(Ctx, Attr);
+  case ParsedAttr::AT_HexagonPreserveHLX:
+    return createSimpleAttr<HexagonPreserveHLXAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVectorCC:
     return createSimpleAttr<RISCVVectorCCAttr>(Ctx, Attr);
   case ParsedAttr::AT_RISCVVLSCC: {
