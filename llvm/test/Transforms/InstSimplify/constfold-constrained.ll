@@ -534,6 +534,82 @@ entry:
   ret i1 %result
 }
 
+; fpext is exact in every rounding mode, so it is folded.
+define double @fpext_01() #0 {
+; CHECK-LABEL: @fpext_01(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call double @llvm.experimental.constrained.fpext.f64.f32(float 1.000000e+01, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret double 1.000000e+01
+;
+entry:
+  %result = call double @llvm.experimental.constrained.fpext.f64.f32(float 1.0e+01, metadata !"fpexcept.strict") #0
+  ret double %result
+}
+
+define fp128 @fpext_02() #0 {
+; CHECK-LABEL: @fpext_02(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret fp128 1.000000e+01
+;
+entry:
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double 1.0e+01, metadata !"fpexcept.ignore") #0
+  ret fp128 %result
+}
+
+define x86_fp80 @fpext_03() #0 {
+; CHECK-LABEL: @fpext_03(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret x86_fp80 1.000000e+00
+;
+entry:
+  %result = call x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float 1.0, metadata !"fpexcept.ignore") #0
+  ret x86_fp80 %result
+}
+
+; fpext of QNAN is folded.
+define fp128 @fpext_nan_01() #0 {
+; CHECK-LABEL: @fpext_nan_01(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double +qnan, metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret fp128 +qnan
+;
+entry:
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double +qnan, metadata !"fpexcept.strict") #0
+  ret fp128 %result
+}
+
+; fpext of SNAN is NOT folded if the exception behavior mode is 'strict'.
+define fp128 @fpext_nan_02() #0 {
+; CHECK-LABEL: @fpext_nan_02(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[RESULT:%.*]] = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double +snan(0x4000000000000), metadata !"fpexcept.strict") #[[ATTR0]]
+; CHECK-NEXT:    ret fp128 [[RESULT]]
+;
+entry:
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double 0x7ff4000000000000, metadata !"fpexcept.strict") #0
+  ret fp128 %result
+}
+
+define fp128 @fpext_nan_03() #0 {
+; CHECK-LABEL: @fpext_nan_03(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret fp128 +nan(0x4000000000000000000000000000)
+;
+entry:
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double 0x7ff4000000000000, metadata !"fpexcept.ignore") #0
+  ret fp128 %result
+}
+
+define fp128 @fpext_nan_04() #0 {
+; CHECK-LABEL: @fpext_nan_04(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret fp128 +nan(0x4000000000000000000000000000)
+;
+entry:
+  %result = call fp128 @llvm.experimental.constrained.fpext.f128.f64(double 0x7ff4000000000000, metadata !"fpexcept.maytrap") #0
+  ret fp128 %result
+}
+
 
 attributes #0 = { strictfp }
 
@@ -556,4 +632,7 @@ declare double @llvm.experimental.constrained.fmuladd.f64(double, double, double
 declare i1 @llvm.experimental.constrained.fcmp.f64(double, double, metadata, metadata)
 declare <2 x i1> @llvm.experimental.constrained.fcmp.v2f64(<2 x double>, <2 x double>, metadata, metadata)
 declare i1 @llvm.experimental.constrained.fcmps.f64(double, double, metadata, metadata)
+declare double @llvm.experimental.constrained.fpext.f64.f32(float, metadata)
+declare fp128 @llvm.experimental.constrained.fpext.f128.f64(double, metadata)
+declare x86_fp80 @llvm.experimental.constrained.fpext.f80.f32(float, metadata)
 
