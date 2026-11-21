@@ -389,4 +389,63 @@ module {
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
 
+  cir.func @scope_with_return(%arg0: !s32i) -> !s32i {
+    cir.scope {
+      cir.return %arg0 : !s32i
+    }
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @scope_with_return(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:   cir.return %[[ZERO]] : !s32i
+  // CHECK-NEXT: }
+
+  cir.func @scope_with_unreachable() {
+    cir.scope {
+      cir.unreachable
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @scope_with_unreachable() {
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.unreachable
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @dead_scope_alloca_only() {
+    cir.scope {
+      %0 = cir.alloca "a" align(4) : !cir.ptr<!s32i>
+      cir.yield
+    }
+    cir.return
+  }
+  // CHECK:      cir.func{{.*}} @dead_scope_alloca_only() {
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
+
+  cir.func @nested_scope_with_return(%arg0: !s32i) -> !s32i {
+    cir.scope {
+      cir.scope {
+        cir.return %arg0 : !s32i
+      }
+      cir.yield
+    }
+    %0 = cir.const #cir.int<0> : !s32i
+    cir.return %0 : !s32i
+  }
+  // CHECK:      cir.func{{.*}} @nested_scope_with_return(%[[ARG0:.*]]: !s32i) -> !s32i {
+  // CHECK-NEXT:   cir.scope {
+  // CHECK-NEXT:     cir.scope {
+  // CHECK-NEXT:       cir.return %[[ARG0]] : !s32i
+  // CHECK-NEXT:     }
+  // CHECK-NEXT:   }
+  // CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:   cir.return %[[ZERO]] : !s32i
+  // CHECK-NEXT: }
+
 }
