@@ -5,6 +5,7 @@
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@rules_cc//cc:defs.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
+load(":libc_build_rules.bzl", "libc_support_library")
 
 package(
     default_visibility = ["//visibility:public"],
@@ -381,6 +382,41 @@ alias(
     actual = "//libc/src/fenv:feholdexcept",
 )
 
+########################### math support library ###############################
+
+libc_support_library(
+    name = "__support_math_static_rounding_expf",
+    hdrs = ["shared/math/static_rounding/expf.h"],
+    deps = [
+        ":shared_libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:expf_integer_eval",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_static_rounding_exp2f",
+    hdrs = ["shared/math/static_rounding/exp2f.h"],
+    deps = [
+        ":shared_libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:exp2f_integer_eval",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_static_rounding_exp10f",
+    hdrs = ["shared/math/static_rounding/exp10f.h"],
+    deps = [
+        ":shared_libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:exp10f_integer_eval",
+    ],
+)
+
 ############################### complex targets ################################
 
 alias(
@@ -578,6 +614,7 @@ alias(
         "isnanf80",
         "isnanl",
         "isnanf16",
+        "isnanbf16",
         "issignaling",
         "issignalingbf16",
         "issignalingf",

@@ -312,6 +312,7 @@
 #include "math/iscanonicall.h"
 // TODO: isnan is a macro in <math.h>
 // #include "math/isnan.h"
+#include "math/isnanbf16.h"
 #include "math/isnanf.h"
 #include "math/isnanf128.h"
 #include "math/isnanf16.h"
