@@ -48,6 +48,32 @@ enum STATIC_ROUNDING {
   NO_EXC = 8
 };
 
+/// AVX-512 VFPCLASS comparison categories for the immediate operand.
+enum class FPClass : uint8_t {
+  QNan = 1 << 0,
+  PosZero = 1 << 1,
+  NegZero = 1 << 2,
+  PosInf = 1 << 3,
+  NegInf = 1 << 4,
+  Denormal = 1 << 5,
+  Negative = 1 << 6,
+  SNan = 1 << 7,
+};
+
+inline constexpr FPClass operator|(FPClass LHS, FPClass RHS) {
+  return static_cast<FPClass>(static_cast<uint8_t>(LHS) |
+                              static_cast<uint8_t>(RHS));
+}
+
+inline constexpr FPClass operator&(FPClass LHS, FPClass RHS) {
+  return static_cast<FPClass>(static_cast<uint8_t>(LHS) &
+                              static_cast<uint8_t>(RHS));
+}
+
+inline constexpr FPClass operator~(FPClass Val) {
+  return static_cast<FPClass>(~static_cast<uint8_t>(Val));
+}
+
 /// The constants to describe instr prefixes if there are
 enum IPREFIXES {
   IP_NO_PREFIX = 0,
