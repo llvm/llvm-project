@@ -74,6 +74,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -1592,7 +1593,12 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
     AdditionallyUsedValue = CmpOp1;
   }
 
-  if (Predicate == CmpInst::ICMP_EQ)
+  // Do not propagate pointer equality when replacing one pointer with the
+  // other would change provenance: two pointers may compare equal without
+  // being interchangeable, and substituting one for the other can break
+  // noalias.
+  if (Predicate == CmpInst::ICMP_EQ &&
+      canReplacePointersIfEqual(I, FirstOp, DL))
     return ExprResult::some(createVariableOrConstant(FirstOp),
                             AdditionallyUsedValue, PI);
 
