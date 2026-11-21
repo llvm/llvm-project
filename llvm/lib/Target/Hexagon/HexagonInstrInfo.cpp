@@ -753,7 +753,8 @@ public:
 
   bool shouldIgnoreForPipelining(const MachineInstr *MI) const override {
     // Only ignore the terminator.
-    return MI == EndLoop;
+    return MI == EndLoop || TII->isHMXActivateInstr(*MI) ||
+           TII->isHMXWeightInstr(*MI);
   }
 
   std::optional<bool> createTripCountGreaterCondition(
@@ -2387,6 +2388,20 @@ bool HexagonInstrInfo::isDuplexPair(const MachineInstr &MIa,
   HexagonII::SubInstructionGroup MIaG = getDuplexCandidateGroup(MIa);
   HexagonII::SubInstructionGroup MIbG = getDuplexCandidateGroup(MIb);
   return (isDuplexPairMatch(MIaG, MIbG) || isDuplexPairMatch(MIbG, MIaG));
+}
+
+bool HexagonInstrInfo::isHMXActivateInstr(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isHMXActivatePos);
+}
+
+bool HexagonInstrInfo::isHMXWeightInstr(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isHMXWeightPos);
+}
+
+bool HexagonInstrInfo::isActivateWeightPair(const MachineInstr &MIa,
+                                            const MachineInstr &MIb) const {
+  return (isHMXActivateInstr(MIa) && isHMXWeightInstr(MIb)) ||
+         (isHMXWeightInstr(MIa) && isHMXActivateInstr(MIb));
 }
 
 bool HexagonInstrInfo::isEndLoopN(unsigned Opcode) const {

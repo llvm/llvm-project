@@ -22,6 +22,7 @@ add_object_library(
     libc.src.__support.error_or
     libc.src.__support.hash
     libc.src.__support.libc_assert
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

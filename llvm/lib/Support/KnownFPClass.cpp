@@ -624,6 +624,32 @@ KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
   return applyOutputDenormalMode(Known, Mode);
 }
 
+KnownFPClass KnownFPClass::fadd(const KnownFPClass &KnownLHS_,
+                                const APFloat &RHS, RoundingMode RM,
+                                DenormalMode Mode) {
+  const auto &Semantics = RHS.getSemantics();
+
+  // Only handle fcNormal constants, and bail out for PPCDoubleDouble.
+  if (!RHS.isNormal() || &Semantics == &APFloat::PPCDoubleDouble())
+    return fadd(KnownLHS_, KnownFPClass(RHS), RM, Mode);
+
+  KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
+  KnownFPClass Known =
+      fadd(KnownLHS, KnownFPClass(RHS), RM, DenormalMode::getIEEE());
+
+  int MinExp = APFloat::semanticsMinExponent(Semantics);
+  int Precision = static_cast<int>(APFloat::semanticsPrecision(Semantics));
+  int ThresholdExp = MinExp + Precision - 1;
+
+  // If |C| > T, X + C cannot be subnormal under any rounding mode.
+  int Exponent = ilogb(RHS);
+  if (Exponent > ThresholdExp ||
+      (Exponent == ThresholdExp && RHS.getExactLog2Abs() == INT_MIN))
+    Known.knownNot(fcSubnormal);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
 KnownFPClass KnownFPClass::fadd_self(const KnownFPClass &KnownSrc_,
                                      RoundingMode RM, DenormalMode Mode) {
   KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);

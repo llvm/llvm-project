@@ -3952,10 +3952,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_POISON: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleLZ);
-    Known.Zero.setBitsFrom(LowBits);
+    Known = Known2.ctlz(/*ZeroIsPoison=*/false).zextOrTrunc(BitWidth);
     break;
   }
   case ISD::CTLS: {
@@ -10428,10 +10425,16 @@ SDValue SelectionDAG::getMemcpy(
   // Then check to see if we should lower the memcpy with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemcpy(
         *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol,
-        AlwaysInline, DstPtrInfo, SrcPtrInfo);
-    if (Result.getNode())
+        AlwaysInline, IsTailCall, DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10565,10 +10568,16 @@ SDValue SelectionDAG::getMemmove(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memmove with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall = OverrideTailCall.value_or(isInTailCallPositionWrapper(
+                          CI, this, /*AllowReturnsFirstArg=*/false)) &&
+                      !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemmove(
-        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, DstPtrInfo,
-        SrcPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, DstAlign, SrcAlign, isVol, IsTailCall,
+        DstPtrInfo, SrcPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
@@ -10681,9 +10690,16 @@ SDValue SelectionDAG::getMemset(SDValue Chain, const SDLoc &dl, SDValue Dst,
   // Then check to see if we should lower the memset with target-specific
   // code. If the target chooses to do this, this is the next best.
   if (TSI) {
+    bool IsTailCall =
+        isInTailCallPositionWrapper(CI, this, /*AllowReturnsFirstArg=*/false) &&
+        !hasSwiftErrorArg();
+    [[maybe_unused]] SDValue OldRoot = getRoot();
     SDValue Result = TSI->EmitTargetCodeForMemset(
-        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline, DstPtrInfo);
-    if (Result.getNode())
+        *this, dl, Chain, Dst, Src, Size, Alignment, isVol, AlwaysInline,
+        IsTailCall, DstPtrInfo);
+    assert((Result.getNode() || !IsTailCall || getRoot() != OldRoot) &&
+           "target declined without clearing IsTailCall");
+    if (Result.getNode() || IsTailCall)
       return Result;
   }
 
