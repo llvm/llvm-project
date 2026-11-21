@@ -18,14 +18,14 @@ define <8 x bfloat> @test_int_x86_avx10_vminmaxbf16128(<8 x bfloat> %A, <8 x bfl
 
 define <8 x bfloat> @test_int_x86_avx10_mask_vminmaxbf16128(<8 x bfloat> %A, <8 x bfloat> %B, <8 x bfloat> %C, i8 %D) nounwind {
 ; X64-LABEL: test_int_x86_avx10_mask_vminmaxbf16128:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x09,0x52,0xd1,0x7f]
 ; X64-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_mask_vminmaxbf16128:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %xmm1, %xmm0, %xmm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x09,0x52,0xd1,0x7f]
 ; X86-NEXT:    vmovdqa %xmm2, %xmm0 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xc2]
@@ -41,13 +41,13 @@ declare <8 x bfloat> @llvm.x86.avx10.vminmaxbf16128(<8 x bfloat> %A, <8 x bfloat
 
 define <8 x bfloat> @test_int_x86_avx10_maskz_vminmaxbf16128(<8 x bfloat> %A, <8 x bfloat> %B, i8 %C) nounwind {
 ; X64-LABEL: test_int_x86_avx10_maskz_vminmaxbf16128:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0x89,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_maskz_vminmaxbf16128:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovb {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf9,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %xmm1, %xmm0, %xmm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0x89,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
@@ -60,12 +60,12 @@ entry:
 
 define <16 x bfloat> @test_int_x86_avx10_vminmaxbf16256(<16 x bfloat> %A, <16 x bfloat> %B) nounwind {
 ; X64-LABEL: test_int_x86_avx10_vminmaxbf16256:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7f,0x28,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_vminmaxbf16256:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm0 # encoding: [0x62,0xf3,0x7f,0x28,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]
 entry:
@@ -75,14 +75,14 @@ entry:
 
 define <16 x bfloat> @test_int_x86_avx10_mask_vminmaxbf16256(<16 x bfloat> %A, <16 x bfloat> %B, <16 x bfloat> %C, i16 %D) nounwind {
 ; X64-LABEL: test_int_x86_avx10_mask_vminmaxbf16256:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x29,0x52,0xd1,0x7f]
 ; X64-NEXT:    vmovdqa %ymm2, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_mask_vminmaxbf16256:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm2 {%k1} # encoding: [0x62,0xf3,0x7f,0x29,0x52,0xd1,0x7f]
 ; X86-NEXT:    vmovdqa %ymm2, %ymm0 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xc2]
@@ -98,13 +98,13 @@ declare <16 x bfloat> @llvm.x86.avx10.vminmaxbf16256(<16 x bfloat> %A, <16 x bfl
 
 define <16 x bfloat> @test_int_x86_avx10_maskz_vminmaxbf16256(<16 x bfloat> %A, <16 x bfloat> %B, i16 %C) nounwind {
 ; X64-LABEL: test_int_x86_avx10_maskz_vminmaxbf16256:
-; X64:       # %bb.0:
+; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
 ; X64-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xa9,0x52,0xc1,0x7f]
 ; X64-NEXT:    retq # encoding: [0xc3]
 ;
 ; X86-LABEL: test_int_x86_avx10_maskz_vminmaxbf16256:
-; X86:       # %bb.0:
+; X86:       # %bb.0: # %entry
 ; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vminmaxbf16 $127, %ymm1, %ymm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf3,0x7f,0xa9,0x52,0xc1,0x7f]
 ; X86-NEXT:    retl # encoding: [0xc3]

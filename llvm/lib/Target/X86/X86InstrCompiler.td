@@ -631,6 +631,17 @@ let usesCustomInserter = 1, hasNoSchedulingInfo = 1, Uses = [EFLAGS] in {
 def : Pat<(f128 (X86cmov VR128:$t, VR128:$f, timm:$cond, EFLAGS)),
           (CMOV_VR128 VR128:$t, VR128:$f, timm:$cond)>;
 
+let Predicates = [HasSSE2, NoAVX512] in {
+  def : Pat<(bf16 (X86cmov FR16:$t, FR16:$f, timm:$cond, EFLAGS)),
+            (CMOV_FR16 FR16:$t, FR16:$f, timm:$cond)>;
+  def : Pat<(bf16 fpimm0), (COPY_TO_REGCLASS (v4i32 (V_SET0)), FR16)>;
+}
+let Predicates = [HasAVX512] in {
+  def : Pat<(bf16 (X86cmov FR16X:$t, FR16X:$f, timm:$cond, EFLAGS)),
+            (CMOV_FR16X FR16X:$t, FR16X:$f, timm:$cond)>;
+  def : Pat<(bf16 fpimm0), (COPY_TO_REGCLASS (v4i32 (AVX512_128_SET0)), FR16X)>;
+}
+
 let Predicates = [NoVLX] in {
   def : Pat<(v16i8 (X86cmov VR128:$t, VR128:$f, timm:$cond, EFLAGS)),
             (CMOV_VR128 VR128:$t, VR128:$f, timm:$cond)>;
