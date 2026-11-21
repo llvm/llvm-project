@@ -15,9 +15,9 @@
 
 // void seed(result_type s = default_seed);
 
-#include <random>
 #include <cassert>
 #include <cstdint>
+#include <random>
 #include <type_traits>
 
 #include "test_macros.h"
