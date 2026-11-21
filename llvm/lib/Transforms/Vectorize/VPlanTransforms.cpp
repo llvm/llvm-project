@@ -6539,9 +6539,6 @@ void VPlanTransforms::convertToStridedAccesses(VPlan &Plan,
 
 void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                                             VFRange &Range) {
-  if (Range.Start.isScalar())
-    return;
-
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
@@ -6563,7 +6560,8 @@ void VPlanTransforms::expandMaskBeforeFirst(VPlan &Plan, VPCostContext &Ctx,
                Ctx.TTI.getIntrinsicInstrCost(CttzElts, Ctx.CostKind) +
                    Ctx.TTI.getIntrinsicInstrCost(ActiveLaneMask, Ctx.CostKind);
       };
-      if (LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
+      if (!Range.Start.isScalar() &&
+          LoopVectorizationPlanner::getDecisionAndClampRange(IsCheap, Range))
         continue;
 
       VPBuilder Builder(BeforeFirst);
