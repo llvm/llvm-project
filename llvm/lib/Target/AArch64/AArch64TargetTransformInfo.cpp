@@ -6576,7 +6576,8 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
       if (SizeWithUC > MaxSizeWithUC)
         break;
       unsigned LineRemainder = SizeWithUC % MaxInstsPerLine;
-      if (LineRemainder == 0 || BestLineRemainder < LineRemainder) {
+      if (LineRemainder == 0 ||
+          (BestLineRemainder != 0 && BestLineRemainder < LineRemainder)) {
         BestUC = UC;
         BestLineRemainder = LineRemainder;
       }
