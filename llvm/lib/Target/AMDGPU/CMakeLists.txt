@@ -63,8 +63,11 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUGlobalISelDivergenceLowering.cpp
   AMDGPUGlobalISelUtils.cpp
   AMDGPUHazardLatency.cpp
+  AMDGPUHotBlockRematerialize.cpp
   AMDGPUHSAMetadataStreamer.cpp
   AMDGPUHWEvents.cpp
+  AMDGPUMIRUtils.cpp
+  AMDGPUOccupancyAndLatencyHelper.cpp
   AMDGPUInsertDelayAlu.cpp
   AMDGPUInstCombineIntrinsic.cpp
   AMDGPUUniformIntrinsicCombine.cpp

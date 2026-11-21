@@ -1,0 +1,284 @@
+﻿# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-aggressive | FileCheck %s
+
+# Defs that do not touch $scc are sunk to their uses without any SCC
+# save/restore being introduced.
+# CHECK: bb.0:
+# CHECK-NOT: = S_MOV_B32 {{[0-9]}}
+# CHECK: bb.2:
+# CHECK: = S_MOV_B32 0
+# CHECK-NOT: COPY $scc
+
+--- |
+  define amdgpu_ps void @main() {
+    ret void
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+
+    %t0:sgpr_32 = S_MOV_B32 0
+    %t2:sgpr_32 = S_MOV_B32 1
+    %t4:sgpr_32 = S_MOV_B32 2
+    %t6:sgpr_32 = S_MOV_B32 3
+    %t8:sgpr_32 = S_MOV_B32 4
+    %t10:sgpr_32 = S_MOV_B32 5
+    %t12:sgpr_32 = S_MOV_B32 6
+    %t14:sgpr_32 = S_MOV_B32 7
+    %t16:sgpr_32 = S_MOV_B32 8
+    %t18:sgpr_32 = S_MOV_B32 9
+    %t20:sgpr_32 = S_MOV_B32 10
+    %t22:sgpr_32 = S_MOV_B32 11
+    %t24:sgpr_32 = S_MOV_B32 12
+    %t26:sgpr_32 = S_MOV_B32 13
+    %t28:sgpr_32 = S_MOV_B32 14
+    %t30:sgpr_32 = S_MOV_B32 15
+    %t32:sgpr_32 = S_MOV_B32 16
+    %t34:sgpr_32 = S_MOV_B32 17
+    %t36:sgpr_32 = S_MOV_B32 18
+    %t38:sgpr_32 = S_MOV_B32 19
+    %t40:sgpr_32 = S_MOV_B32 20
+    %t42:sgpr_32 = S_MOV_B32 21
+    %t44:sgpr_32 = S_MOV_B32 22
+    %t46:sgpr_32 = S_MOV_B32 23
+    %t48:sgpr_32 = S_MOV_B32 24
+    %t50:sgpr_32 = S_MOV_B32 25
+    %t52:sgpr_32 = S_MOV_B32 26
+    %t54:sgpr_32 = S_MOV_B32 27
+    %t56:sgpr_32 = S_MOV_B32 28
+    %t58:sgpr_32 = S_MOV_B32 29
+    %t60:sgpr_32 = S_MOV_B32 30
+    %t62:sgpr_32 = S_MOV_B32 31
+    %t64:sgpr_32 = S_MOV_B32 32
+    %t66:sgpr_32 = S_MOV_B32 33
+    %t68:sgpr_32 = S_MOV_B32 34
+    %t70:sgpr_32 = S_MOV_B32 35
+    %t72:sgpr_32 = S_MOV_B32 36
+    %t74:sgpr_32 = S_MOV_B32 37
+    %t76:sgpr_32 = S_MOV_B32 38
+    %t78:sgpr_32 = S_MOV_B32 39
+    %t80:sgpr_32 = S_MOV_B32 40
+    %t82:sgpr_32 = S_MOV_B32 41
+    %t84:sgpr_32 = S_MOV_B32 42
+    %t86:sgpr_32 = S_MOV_B32 43
+    %t88:sgpr_32 = S_MOV_B32 44
+    %t90:sgpr_32 = S_MOV_B32 45
+    %t92:sgpr_32 = S_MOV_B32 46
+    %t94:sgpr_32 = S_MOV_B32 47
+    %t96:sgpr_32 = S_MOV_B32 48
+    %t98:sgpr_32 = S_MOV_B32 49
+    %t100:sgpr_32 = S_MOV_B32 50
+    %t102:sgpr_32 = S_MOV_B32 51
+    %t104:sgpr_32 = S_MOV_B32 52
+    %t106:sgpr_32 = S_MOV_B32 53
+    %t108:sgpr_32 = S_MOV_B32 54
+    %t110:sgpr_32 = S_MOV_B32 55
+    %t112:sgpr_32 = S_MOV_B32 56
+    %t114:sgpr_32 = S_MOV_B32 57
+    %t116:sgpr_32 = S_MOV_B32 58
+    %t118:sgpr_32 = S_MOV_B32 59
+    %t120:sgpr_32 = S_MOV_B32 60
+    %t122:sgpr_32 = S_MOV_B32 61
+    %t124:sgpr_32 = S_MOV_B32 62
+    %t126:sgpr_32 = S_MOV_B32 63
+    %t128:sgpr_32 = S_MOV_B32 64
+    %t130:sgpr_32 = S_MOV_B32 65
+    %t132:sgpr_32 = S_MOV_B32 66
+    %t134:sgpr_32 = S_MOV_B32 67
+    %t136:sgpr_32 = S_MOV_B32 68
+    %t138:sgpr_32 = S_MOV_B32 69
+    %t140:sgpr_32 = S_MOV_B32 70
+    %t142:sgpr_32 = S_MOV_B32 71
+    %t144:sgpr_32 = S_MOV_B32 72
+    %t146:sgpr_32 = S_MOV_B32 73
+    %t148:sgpr_32 = S_MOV_B32 74
+    %t150:sgpr_32 = S_MOV_B32 75
+    %t152:sgpr_32 = S_MOV_B32 76
+    %t154:sgpr_32 = S_MOV_B32 77
+    %t156:sgpr_32 = S_MOV_B32 78
+    %t158:sgpr_32 = S_MOV_B32 79
+    %t160:sgpr_32 = S_MOV_B32 80
+    %t162:sgpr_32 = S_MOV_B32 81
+    %t164:sgpr_32 = S_MOV_B32 82
+    %t166:sgpr_32 = S_MOV_B32 83
+    %t168:sgpr_32 = S_MOV_B32 84
+    %t170:sgpr_32 = S_MOV_B32 85
+    %t172:sgpr_32 = S_MOV_B32 86
+    %t174:sgpr_32 = S_MOV_B32 87
+    %t176:sgpr_32 = S_MOV_B32 88
+    %t178:sgpr_32 = S_MOV_B32 89
+    %t180:sgpr_32 = S_MOV_B32 90
+    %t182:sgpr_32 = S_MOV_B32 91
+    %t184:sgpr_32 = S_MOV_B32 92
+    %t186:sgpr_32 = S_MOV_B32 93
+    %t188:sgpr_32 = S_MOV_B32 94
+    %t190:sgpr_32 = S_MOV_B32 95
+    %t192:sgpr_32 = S_MOV_B32 96
+    %t194:sgpr_32 = S_MOV_B32 97
+    %t196:sgpr_32 = S_MOV_B32 98
+    %t198:sgpr_32 = S_MOV_B32 99
+    %t200:sgpr_32 = S_MOV_B32 100
+    %t202:sgpr_32 = S_MOV_B32 101
+    %t204:sgpr_32 = S_MOV_B32 102
+    %t206:sgpr_32 = S_MOV_B32 103
+    %t208:sgpr_32 = S_MOV_B32 104
+    %t210:sgpr_32 = S_MOV_B32 105
+    %t212:sgpr_32 = S_MOV_B32 106
+    %t214:sgpr_32 = S_MOV_B32 107
+    %t216:sgpr_32 = S_MOV_B32 108
+    %t218:sgpr_32 = S_MOV_B32 109
+    %t220:sgpr_32 = S_MOV_B32 110
+    %t222:sgpr_32 = S_MOV_B32 111
+    %t224:sgpr_32 = S_MOV_B32 112
+    %t226:sgpr_32 = S_MOV_B32 113
+    %t228:sgpr_32 = S_MOV_B32 114
+    %t230:sgpr_32 = S_MOV_B32 115
+    %t232:sgpr_32 = S_MOV_B32 116
+    %t234:sgpr_32 = S_MOV_B32 117
+    %t236:sgpr_32 = S_MOV_B32 118
+    %t238:sgpr_32 = S_MOV_B32 119
+
+    %cmp:sreg_32_xm0 = V_CMP_GT_F32_e64 0, 0, 0, %v0.sub0, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %cmp:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    S_BRANCH %bb.2
+
+  bb.2:
+    KILL %t0
+    KILL %t2
+    KILL %t4
+    KILL %t6
+    KILL %t8
+    KILL %t10
+    KILL %t12
+    KILL %t14
+    KILL %t16
+    KILL %t18
+    KILL %t20
+    KILL %t22
+    KILL %t24
+    KILL %t26
+    KILL %t28
+    KILL %t30
+    KILL %t32
+    KILL %t34
+    KILL %t36
+    KILL %t38
+    KILL %t40
+    KILL %t42
+    KILL %t44
+    KILL %t46
+    KILL %t48
+    KILL %t50
+    KILL %t52
+    KILL %t54
+    KILL %t56
+    KILL %t58
+    KILL %t60
+    KILL %t62
+    KILL %t64
+    KILL %t66
+    KILL %t68
+    KILL %t70
+    KILL %t72
+    KILL %t74
+    KILL %t76
+    KILL %t78
+    KILL %t80
+    KILL %t82
+    KILL %t84
+    KILL %t86
+    KILL %t88
+    KILL %t90
+    KILL %t92
+    KILL %t94
+    KILL %t96
+    KILL %t98
+    KILL %t100
+    KILL %t102
+    KILL %t104
+    KILL %t106
+    KILL %t108
+    KILL %t110
+    KILL %t112
+    KILL %t114
+    KILL %t116
+    KILL %t118
+    KILL %t120
+    KILL %t122
+    KILL %t124
+    KILL %t126
+    KILL %t128
+    KILL %t130
+    KILL %t132
+    KILL %t134
+    KILL %t136
+    KILL %t138
+    KILL %t140
+    KILL %t142
+    KILL %t144
+    KILL %t146
+    KILL %t148
+    KILL %t150
+    KILL %t152
+    KILL %t154
+    KILL %t156
+    KILL %t158
+    KILL %t160
+    KILL %t162
+    KILL %t164
+    KILL %t166
+    KILL %t168
+    KILL %t170
+    KILL %t172
+    KILL %t174
+    KILL %t176
+    KILL %t178
+    KILL %t180
+    KILL %t182
+    KILL %t184
+    KILL %t186
+    KILL %t188
+    KILL %t190
+    KILL %t192
+    KILL %t194
+    KILL %t196
+    KILL %t198
+    KILL %t200
+    KILL %t202
+    KILL %t204
+    KILL %t206
+    KILL %t208
+    KILL %t210
+    KILL %t212
+    KILL %t214
+    KILL %t216
+    KILL %t218
+    KILL %t220
+    KILL %t222
+    KILL %t224
+    KILL %t226
+    KILL %t228
+    KILL %t230
+    KILL %t232
+    KILL %t234
+    KILL %t236
+    KILL %t238
+
+    KILL %v0
+    KILL %v1
+    KILL %v2
+    KILL %v3
+    S_ENDPGM 0
+...

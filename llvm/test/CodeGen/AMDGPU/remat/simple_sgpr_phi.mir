@@ -1,0 +1,55 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -mattr=+wavefrontsize32 -verify-machineinstrs %s -o - -run-pass=amdgpu-hot-block-remat -amdgpu-remat-aggressive | FileCheck %s
+
+# Values consumed by PHIs must not be rematerialized. This also checks the
+# downward RP tracker does not crash in the presence of PHIs.
+# CHECK: PHI
+# CHECK: S_ENDPGM
+
+--- |
+  define amdgpu_ps void @main() {
+    ret void
+  }
+...
+---
+name:            main
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    successors: %bb.1, %bb.2
+    %v0:vreg_1024 = IMPLICIT_DEF
+    %v1:vreg_1024 = IMPLICIT_DEF
+    %v2:vreg_1024 = IMPLICIT_DEF
+    %v3:vreg_1024 = IMPLICIT_DEF
+
+    %t0:sgpr_32 = S_NOT_B32 0, implicit-def $scc
+    %t2:sgpr_32 = S_NOT_B32 1, implicit-def $scc
+    %t4:sgpr_32 = S_NOT_B32 2, implicit-def $scc
+    %t6:sgpr_32 = S_NOT_B32 3, implicit-def $scc
+
+    %cmp:sreg_32_xm0 = V_CMP_GT_F32_e64 0, 0, 0, %v0.sub0, 0, implicit $exec, implicit $mode
+    $exec_lo = S_MOV_B32_term %cmp:sreg_32_xm0
+    S_CBRANCH_EXECZ %bb.2, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2
+    %s0:sgpr_32 = S_MOV_B32 0
+    S_BRANCH %bb.2
+
+  bb.2:
+    %phi0:sgpr_32 = PHI %t0, %bb.0, %s0, %bb.1
+    %phi2:sgpr_32 = PHI %t2, %bb.0, %s0, %bb.1
+    %phi4:sgpr_32 = PHI %t4, %bb.0, %s0, %bb.1
+    %phi6:sgpr_32 = PHI %t6, %bb.0, %s0, %bb.1
+
+    KILL %phi0
+    KILL %phi2
+    KILL %phi4
+    KILL %phi6
+
+    KILL %v0
+    KILL %v1
+    KILL %v2
+    KILL %v3
+    S_ENDPGM 0
+...
