@@ -1091,14 +1091,24 @@ public:
 
   /// Simplify a register use under \p DemandedBits and compute \p Known in
   /// the same walk. Partial-demand rewrites of shared values update only this
-  /// use.
+  /// use. With \p DoRewrite false, only check whether a simplification is
+  /// possible, without changing MIR.
   LLVM_ABI bool simplifyDemandedBits(MachineInstr &MI, unsigned OpNo,
                                      const APInt &DemandedBits,
-                                     KnownBits &Known,
-                                     unsigned Depth = 0) const;
+                                     KnownBits &Known, unsigned Depth = 0,
+                                     bool DoRewrite = true) const;
 
   /// Match demanded-bits simplification of a root's register use.
   LLVM_ABI bool matchSimplifyDemandedBits(MachineInstr &MI,
+                                          BuildFnTy &MatchInfo) const;
+
+  /// Start demanded-bits analysis at a target instruction with all result bits
+  /// demanded. Requires a single scalar result and value tracking. Target
+  /// combine rules select the instructions to try; the target hook supplies
+  /// operand demands. Probes without changing MIR and records the rewrite in
+  /// \p MatchInfo on success.
+  LLVM_ABI bool
+  matchSimplifyDemandedBitsForTargetInstr(MachineInstr &MI,
                                           BuildFnTy &MatchInfo) const;
 
 private:

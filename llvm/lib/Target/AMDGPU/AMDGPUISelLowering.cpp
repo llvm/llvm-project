@@ -20,7 +20,9 @@
 #include "AMDGPUSelectionDAGInfo.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -5860,6 +5862,42 @@ bool AMDGPUTargetLowering::SimplifyDemandedBitsForTargetNode(
   }
 
   return false;
+}
+
+APInt AMDGPUTargetLowering::getCvtPkF8VDstInBits(const MachineInstr &MI) {
+  return MI.getOperand(CvtPkF8WordSelMIIdx).getImm()
+             ? APInt::getLowBitsSet(32, 16)
+             : APInt::getHighBitsSet(32, 16);
+}
+
+bool AMDGPUTargetLowering::simplifyDemandedBitsForTargetInstr(
+    const CombinerHelper &Helper, MachineInstr &MI, const APInt &DemandedBits,
+    KnownBits &Known, unsigned Depth, bool DoRewrite) const {
+  auto *Intrin = dyn_cast<GIntrinsic>(&MI);
+  if (!Intrin)
+    return false;
+
+  switch (Intrin->getIntrinsicID()) {
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32:
+  case Intrinsic::amdgcn_cvt_pk_bf8_f32:
+  case Intrinsic::amdgcn_cvt_pk_fp8_f32_e5m3: {
+    // Packed FP8/BF8 conversions write one 16-bit half of their result and
+    // keep the other half from their tied destination input (vdst_in, the
+    // intrinsic's old operand).
+    APInt VDstInBits = getCvtPkF8VDstInBits(MI);
+    KnownBits KnownVDstIn(32);
+    bool Changed = Helper.simplifyDemandedBits(
+        MI, CvtPkF8VDstInMIIdx, DemandedBits & VDstInBits, KnownVDstIn,
+        Depth + 1, DoRewrite);
+    // Nothing is known about the half the conversion writes.
+    Known = KnownBits(32);
+    Known.Zero = KnownVDstIn.Zero & VDstInBits;
+    Known.One = KnownVDstIn.One & VDstInBits;
+    return Changed;
+  }
+  default:
+    return false;
+  }
 }
 
 //===----------------------------------------------------------------------===//
