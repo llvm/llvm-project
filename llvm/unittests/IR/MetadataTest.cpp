@@ -21,16 +21,12 @@
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Compiler.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <optional>
 #include <type_traits>
 using namespace llvm;
-
-namespace llvm {
-LLVM_ABI extern cl::opt<bool> PickMergedSourceLocations;
-} // namespace llvm
 
 namespace {
 
@@ -1459,7 +1455,9 @@ TEST_F(DILocationTest, Merge) {
   {
     // If PickMergedSourceLocation is enabled, when one source location is null
     // we should return the valid location.
-    PickMergedSourceLocations = true;
+    const char *Pick[] = {"prog", "-pick-merged-source-locations"};
+    ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), Pick,
+                                            "", &nulls()));
     auto *A = DILocation::get(Context, 2, 7, N);
     auto *M1 = DILocation::getMergedLocation(A, nullptr);
     ASSERT_NE(nullptr, M1);
@@ -1472,7 +1470,9 @@ TEST_F(DILocationTest, Merge) {
     EXPECT_EQ(2u, M2->getLine());
     EXPECT_EQ(7u, M2->getColumn());
     EXPECT_EQ(N, M2->getScope());
-    PickMergedSourceLocations = false;
+    const char *NoPick[] = {"prog", "-pick-merged-source-locations=false"};
+    ASSERT_TRUE(cl::parseCommandLineOptions(Context.getLibraryOptions(), NoPick,
+                                            "", &nulls()));
   }
 
 #define EXPECT_ATOM(Loc, Group, Rank)                                          \
@@ -5923,6 +5923,32 @@ TEST_F(MDNodeTest, MergedProfMetadata_CallInst) {
   ASSERT_EQ(Merged->getNumOperands(), 2u);
   ConstantInt *W = mdconst::extract<ConstantInt>(Merged->getOperand(1));
   EXPECT_EQ(W->getZExtValue(), 20u);
+}
+
+TEST_F(MDNodeTest, MergedPCSectionsMetadata) {
+  auto *I32 = Type::getInt32Ty(Context);
+  Metadata *S = MDString::get(Context, "s"), *T = MDString::get(Context, "t");
+  Metadata *X =
+      MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(I32, 1)));
+  Metadata *Y =
+      MDNode::get(Context, ConstantAsMetadata::get(ConstantInt::get(I32, 2)));
+  MDNode *A = MDNode::get(Context, {S, X});
+  MDNode *B = MDNode::get(Context, {S, Y});
+  MDNode *C = MDNode::get(Context, {T, Y, S, X});
+
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(nullptr, nullptr), nullptr);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, nullptr), A);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(nullptr, B), B);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, A), A);
+  // Requests of A, then those of B that A lacks.
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, B),
+            MDNode::get(Context, {S, X, S, Y}));
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(B, A),
+            MDNode::get(Context, {S, Y, S, X}));
+  // A request both make is not duplicated.
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(C, A), C);
+  EXPECT_EQ(MDNode::getMergedPCSectionsMetadata(A, C),
+            MDNode::get(Context, {S, X, T, Y}));
 }
 
 #if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG) && !defined(GTEST_HAS_SEH)

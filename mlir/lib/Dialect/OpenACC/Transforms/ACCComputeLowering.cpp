@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Dialect/OpenACC/Extensions/AllExtensions.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -75,7 +76,6 @@ using namespace mlir;
 using namespace mlir::acc;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -485,6 +485,11 @@ class ACCComputeLowering
 public:
   using ACCComputeLoweringBase::ACCComputeLoweringBase;
 
+  void getDependentDialects(DialectRegistry &registry) const override {
+    ACCComputeLoweringBase::getDependentDialects(registry);
+    acc::registerAllExtensions(registry);
+  }
+
   void runOnOperation() override {
     auto op = getOperation();
     auto *context = op.getContext();
@@ -515,5 +520,4 @@ public:
       return signalPassFailure();
   }
 };
-
 } // namespace

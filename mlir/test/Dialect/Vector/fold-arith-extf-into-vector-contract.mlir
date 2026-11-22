@@ -6,8 +6,8 @@
 // CHECK-DAG: #[[$map2:.*]] = affine_map<(d0, d1, d2) -> (d0, d1)>
 // CHECK-LABEL: func.func @fold_arith_extf_into_contract
 //  CHECK-SAME: (%[[ARG0:.*]]: vector<64x64xf16>, %[[ARG1:.*]]: vector<64x64xf16>, %[[ARG2:.*]]: vector<64x64xf32>)
-//  CHECK-NEXT:   %[[R:.+]] = vector.contract {indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
-//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+//  CHECK-NEXT:   %[[R:.+]] = vector.contract {fastmath = #arith.fastmath<nnan>, indexing_maps = [#[[$map0]], #[[$map1]], #[[$map2]]],
+//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>}
 //  CHECK-SAME:   %[[ARG0]], %[[ARG1]], %[[ARG2]] : vector<64x64xf16>, vector<64x64xf16> into vector<64x64xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<64x64xf32>
 func.func @fold_arith_extf_into_contract(
@@ -19,7 +19,7 @@ func.func @fold_arith_extf_into_contract(
     %result = vector.contract {
       indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
       iterator_types = ["parallel", "parallel", "reduction"],
-      kind = #vector.kind<add>}
+      kind = #vector.kind<maxnumf>, fastmath = #arith.fastmath<nnan>}
       %lhs_f32, %rhs_f32, %arg2 : vector<64x64xf32>, vector<64x64xf32> into vector<64x64xf32>
     return %result : vector<64x64xf32>
 }
@@ -69,4 +69,29 @@ func.func @fold_arith_extsi_into_contract(
       kind = #vector.kind<add>}
       %lhs_i32, %rhs_i32, %arg2 : vector<64x64xi32>, vector<64x64xi32> into vector<64x64xi32>
     return %result : vector<64x64xi32>
+}
+
+// -----
+
+// The contraction requires lhs and rhs to have the same element type, so the
+// extensions are only folded when they start from the same one.
+
+// CHECK-LABEL: func.func @negative_fold_arith_extf_from_different_types
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<64x64xf16>, %[[ARG1:.*]]: vector<64x64xbf16>, %[[ARG2:.*]]: vector<64x64xf32>)
+//       CHECK:   %[[LHS:.*]] = arith.extf %[[ARG0]] : vector<64x64xf16> to vector<64x64xf32>
+//       CHECK:   %[[RHS:.*]] = arith.extf %[[ARG1]] : vector<64x64xbf16> to vector<64x64xf32>
+//       CHECK:   vector.contract
+//  CHECK-SAME:   %[[LHS]], %[[RHS]], %[[ARG2]] : vector<64x64xf32>, vector<64x64xf32> into vector<64x64xf32>
+func.func @negative_fold_arith_extf_from_different_types(
+  %arg0: vector<64x64xf16>,
+  %arg1: vector<64x64xbf16>,
+  %arg2: vector<64x64xf32>) -> vector<64x64xf32> {
+    %lhs_f32 = arith.extf %arg0 : vector<64x64xf16> to vector<64x64xf32>
+    %rhs_f32 = arith.extf %arg1 : vector<64x64xbf16> to vector<64x64xf32>
+    %result = vector.contract {
+      indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
+      iterator_types = ["parallel", "parallel", "reduction"],
+      kind = #vector.kind<add>}
+      %lhs_f32, %rhs_f32, %arg2 : vector<64x64xf32>, vector<64x64xf32> into vector<64x64xf32>
+    return %result : vector<64x64xf32>
 }

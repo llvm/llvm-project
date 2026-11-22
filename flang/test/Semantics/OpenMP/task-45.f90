@@ -7,7 +7,7 @@
 subroutine f
   use omp_lib, only: omp_event_handle_kind
   integer(kind=omp_event_handle_kind) :: e
-  !ERROR: Clause MERGEABLE is not allowed if clause DETACH appears on the TASK directive
+  !ERROR: MERGEABLE and DETACH clauses are mutually exclusive
   !WARNING: DETACH clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
   !$omp task mergeable detach(e)
   !$omp end task

@@ -95,7 +95,6 @@ public:
 private:
   MachineRegisterInfo *MRI = nullptr;
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   const X86Subtarget *STI = nullptr;
   MachineLoopInfo *MLI = nullptr;
   TargetSchedModel TSchedModel;
@@ -158,7 +157,7 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // If the SelectOptimize pass is enabled, cmovs have already been optimized.
-  if (!getCGPassBuilderOption().DisableSelectOptimize)
+  if (!getCGPassBuilderOption(MF.getTarget()).DisableSelectOptimize)
     return false;
 
   LLVM_DEBUG(dbgs() << "********** " << DEBUG_TYPE << " : " << MF.getName()
@@ -167,7 +166,6 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   bool Changed = false;
   MRI = &MF.getRegInfo();
   TII = STI->getInstrInfo();
-  TRI = STI->getRegisterInfo();
   TSchedModel.init(STI);
 
   // Before we handle the more subtle cases of register-register CMOVs inside

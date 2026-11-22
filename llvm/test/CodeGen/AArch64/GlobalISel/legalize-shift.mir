@@ -4,8 +4,11 @@
 name:            test_shift
 body:             |
   bb.0.entry:
+    liveins: $x0, $x1
     ; CHECK-LABEL: name: test_shift
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $x0, $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[COPY1]](i64)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
@@ -44,8 +47,11 @@ body:             |
 name: test_shl_i64_i32
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_shl_i64_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY1]](i32)
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i64) = G_SHL [[COPY]], [[ZEXT]](i64)
@@ -60,8 +66,11 @@ body:             |
 name: test_ashr_i64_i32
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_ashr_i64_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY1]](i32)
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(i64) = G_ASHR [[COPY]], [[ZEXT]](i64)
@@ -76,8 +85,11 @@ body:             |
 name: test_lshr_i64_i32
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_i64_i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
     ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY1]](i32)
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i64) = G_LSHR [[COPY]], [[ZEXT]](i64)
@@ -93,8 +105,11 @@ body:             |
 name: test_shl_s128_s128
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_s128_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i64) = G_TRUNC [[COPY1]](i128)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -125,8 +140,11 @@ body:             |
 name: test_lshr_s128_s128
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_s128_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i64) = G_TRUNC [[COPY1]](i128)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -157,8 +175,11 @@ body:             |
 name: test_ashr_s128_s128
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_s128_s128
-    ; CHECK: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $q1
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i64) = G_TRUNC [[COPY1]](i128)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 64
@@ -191,8 +212,11 @@ body:             |
 name: test_ashr_v2i32
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v2i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $d1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<2 x i32>) = G_ASHR [[COPY]], [[COPY1]](<2 x i32>)
     ; CHECK-NEXT: $d0 = COPY [[ASHR]](<2 x i32>)
@@ -206,8 +230,11 @@ body:             |
 name: test_ashr_v4i32
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v4i32
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $q1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x i32>) = G_ASHR [[COPY]], [[COPY1]](<4 x i32>)
     ; CHECK-NEXT: $q0 = COPY [[ASHR]](<4 x i32>)
@@ -284,8 +311,11 @@ body:             |
 name: test_ashr_v16i8
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v16i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<16 x i8>) = G_ASHR [[COPY]], [[COPY1]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY [[ASHR]](<16 x i8>)
@@ -298,8 +328,11 @@ body:             |
 name: test_ashr_v8i16
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_ashr_v8i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<8 x i16>) = G_ASHR [[COPY]], [[COPY1]](<8 x i16>)
     ; CHECK-NEXT: $q0 = COPY [[ASHR]](<8 x i16>)
@@ -312,8 +345,11 @@ body:             |
 name: test_shl_v16i8
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_v16i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<16 x i8>) = G_SHL [[COPY]], [[COPY1]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY [[SHL]](<16 x i8>)
@@ -326,8 +362,11 @@ body:             |
 name: test_shl_v8i16
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_shl_v8i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<8 x i16>) = G_SHL [[COPY]], [[COPY1]](<8 x i16>)
     ; CHECK-NEXT: $q0 = COPY [[SHL]](<8 x i16>)
@@ -340,8 +379,11 @@ body:             |
 name: test_lshr_v16i8
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_v16i8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<16 x i8>) = G_LSHR [[COPY]], [[COPY1]](<16 x i8>)
     ; CHECK-NEXT: $q0 = COPY [[LSHR]](<16 x i8>)
@@ -354,8 +396,11 @@ body:             |
 name: test_lshr_v8i16
 body:             |
   bb.0:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_lshr_v8i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<8 x i16>) = G_LSHR [[COPY]], [[COPY1]](<8 x i16>)
     ; CHECK-NEXT: $q0 = COPY [[LSHR]](<8 x i16>)
@@ -368,8 +413,11 @@ body:             |
 name: test_shl_v4i16
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_shl_v4i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<4 x i16>) = G_SHL [[COPY]], [[COPY1]](<4 x i16>)
     ; CHECK-NEXT: $d0 = COPY [[SHL]](<4 x i16>)
@@ -382,8 +430,11 @@ body:             |
 name: test_lshr_v4i16
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_lshr_v4i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<4 x i16>) = G_LSHR [[COPY]], [[COPY1]](<4 x i16>)
     ; CHECK-NEXT: $d0 = COPY [[LSHR]](<4 x i16>)
@@ -396,8 +447,11 @@ body:             |
 name: test_ashr_v4i16
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v4i16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i16>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $d1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<4 x i16>) = G_ASHR [[COPY]], [[COPY1]](<4 x i16>)
     ; CHECK-NEXT: $d0 = COPY [[ASHR]](<4 x i16>)
@@ -427,8 +481,11 @@ body:             |
 name: test_shl_v8s8
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_shl_v8s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
     ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(<8 x i8>) = G_SHL [[COPY]], [[COPY1]](<8 x i8>)
     ; CHECK-NEXT: $d0 = COPY [[SHL]](<8 x i8>)
@@ -441,8 +498,11 @@ body:             |
 name: test_ashr_v8s8
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_ashr_v8s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
     ; CHECK-NEXT: [[ASHR:%[0-9]+]]:_(<8 x i8>) = G_ASHR [[COPY]], [[COPY1]](<8 x i8>)
     ; CHECK-NEXT: $d0 = COPY [[ASHR]](<8 x i8>)
@@ -456,8 +516,11 @@ body:             |
 name: test_lshr_v8s8
 body:             |
   bb.0:
+    liveins: $d0, $d1
     ; CHECK-LABEL: name: test_lshr_v8s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
+    ; CHECK: liveins: $d0, $d1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i8>) = COPY $d0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i8>) = COPY $d1
     ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<8 x i8>) = G_LSHR [[COPY]], [[COPY1]](<8 x i8>)
     ; CHECK-NEXT: $d0 = COPY [[LSHR]](<8 x i8>)
@@ -470,8 +533,11 @@ body:             |
 name: test_lshr_nonpow2
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_nonpow2
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %a:_(i32) = COPY $w1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES %a(i32), %a(i32)
@@ -502,8 +568,11 @@ body:             |
 name: test_lshr_nonpow2_wide
 body:             |
   bb.0:
+    liveins: $w1, $x0
     ; CHECK-LABEL: name: test_lshr_nonpow2_wide
-    ; CHECK: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
+    ; CHECK: liveins: $w1, $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $x0
     ; CHECK-NEXT: %a:_(i32) = COPY $w1
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i64) = G_MERGE_VALUES %a(i32), %a(i32)

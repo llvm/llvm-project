@@ -26,6 +26,8 @@ add_clang_unittest(ASTTests
   DeclTest.cpp
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
+  FunctionFeatureMapTest.cpp
+  LambdaDependencyTest.cpp
   NamedDeclPrinterTest.cpp
   ProfilingTest.cpp
   QualTypeNamesTest.cpp

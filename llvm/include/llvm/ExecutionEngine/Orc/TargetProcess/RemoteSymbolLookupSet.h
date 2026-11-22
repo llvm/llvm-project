@@ -6,17 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The executor-side representation of a symbol lookup set, and its SPS
-// serialization.
+// The executor-side representation of a symbol lookup set and its result, and
+// the lookup set's SPS serialization.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REMOTESYMBOLLOOKUPSET_H
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_REMOTESYMBOLLOOKUPSET_H
 
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -28,6 +30,14 @@ struct RemoteSymbolLookupSetElement {
 };
 
 using RemoteSymbolLookupSet = std::vector<RemoteSymbolLookupSetElement>;
+
+/// The result of looking up a RemoteSymbolLookupSet: one entry per element of
+/// the set, in the same order.
+///
+/// An empty optional indicates that a required symbol was not found. A missing
+/// weakly referenced symbol is reported as a present optional holding a null
+/// address.
+using RemoteSymbolLookupResult = std::vector<std::optional<ExecutorAddr>>;
 
 namespace shared {
 

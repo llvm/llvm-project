@@ -240,12 +240,10 @@ define <4 x i64> @smax_v4i64_as_smax_v4i16(<4 x i64> %a0) nounwind {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; SSE2-NEXT:    pcmpeqd %xmm4, %xmm4
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm0
-; SSE2-NEXT:    pand %xmm0, %xmm3
 ; SSE2-NEXT:    pxor %xmm4, %xmm0
 ; SSE2-NEXT:    por %xmm3, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; SSE2-NEXT:    pcmpgtd %xmm4, %xmm1
-; SSE2-NEXT:    pand %xmm1, %xmm2
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    por %xmm2, %xmm1
 ; SSE2-NEXT:    retq

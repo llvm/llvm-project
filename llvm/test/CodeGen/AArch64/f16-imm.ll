@@ -31,11 +31,16 @@ define half @Const1() {
 ; CHECK-FP16-NEXT:    fmov h0, #1.00000000
 ; CHECK-FP16-NEXT:    ret
 ;
-; CHECK-NOFP16-LABEL: Const1:
-; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI1_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI1_0]
-; CHECK-NOFP16-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: Const1:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NOFP16-SD-NEXT:    ldr h0, [x8, :lo12:.LCPI1_0]
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: Const1:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    movi v0.4h, #60, lsl #8
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   ret half 0xH3C00
 }
@@ -46,11 +51,16 @@ define half @Const2() {
 ; CHECK-FP16-NEXT:    fmov h0, #0.12500000
 ; CHECK-FP16-NEXT:    ret
 ;
-; CHECK-NOFP16-LABEL: Const2:
-; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI2_0]
-; CHECK-NOFP16-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: Const2:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NOFP16-SD-NEXT:    ldr h0, [x8, :lo12:.LCPI2_0]
+; CHECK-NOFP16-SD-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: Const2:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    movi v0.4h, #48, lsl #8
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   ret half 0xH3000
 }
@@ -180,23 +190,26 @@ define half @Const7() {
 ; CHECK-ZCZ-SD-NEXT:    fmov h0, w8
 ; CHECK-ZCZ-SD-NEXT:    ret
 ;
-; CHECK-NOFP16-LABEL: Const7:
-; CHECK-NOFP16:       // %bb.0: // %entry
-; CHECK-NOFP16-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NOFP16-NEXT:    ldr h0, [x8, :lo12:.LCPI8_0]
-; CHECK-NOFP16-NEXT:    ret
+; CHECK-NOFP16-SD-LABEL: Const7:
+; CHECK-NOFP16-SD:       // %bb.0: // %entry
+; CHECK-NOFP16-SD-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NOFP16-SD-NEXT:    ldr h0, [x8, :lo12:.LCPI8_0]
+; CHECK-NOFP16-SD-NEXT:    ret
 ;
 ; CHECK-NOZCZ-GI-LABEL: Const7:
 ; CHECK-NOZCZ-GI:       // %bb.0: // %entry
-; CHECK-NOZCZ-GI-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NOZCZ-GI-NEXT:    ldr h0, [x8, :lo12:.LCPI8_0]
+; CHECK-NOZCZ-GI-NEXT:    movi v0.4h, #80, lsl #8
 ; CHECK-NOZCZ-GI-NEXT:    ret
 ;
 ; CHECK-ZCZ-GI-LABEL: Const7:
 ; CHECK-ZCZ-GI:       // %bb.0: // %entry
-; CHECK-ZCZ-GI-NEXT:    adrp x8, .LCPI8_0
-; CHECK-ZCZ-GI-NEXT:    ldr h0, [x8, :lo12:.LCPI8_0]
+; CHECK-ZCZ-GI-NEXT:    movi v0.4h, #80, lsl #8
 ; CHECK-ZCZ-GI-NEXT:    ret
+;
+; CHECK-NOFP16-GI-LABEL: Const7:
+; CHECK-NOFP16-GI:       // %bb.0: // %entry
+; CHECK-NOFP16-GI-NEXT:    movi v0.4h, #80, lsl #8
+; CHECK-NOFP16-GI-NEXT:    ret
 entry:
   ret half 0xH5000
 }
@@ -222,14 +235,12 @@ define <4 x half> @vec_1p5() {
 ;
 ; CHECK-NOZCZ-GI-LABEL: vec_1p5:
 ; CHECK-NOZCZ-GI:       // %bb.0:
-; CHECK-NOZCZ-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NOZCZ-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI9_0]
+; CHECK-NOZCZ-GI-NEXT:    fmov v0.4h, #1.12500000
 ; CHECK-NOZCZ-GI-NEXT:    ret
 ;
 ; CHECK-ZCZ-GI-LABEL: vec_1p5:
 ; CHECK-ZCZ-GI:       // %bb.0:
-; CHECK-ZCZ-GI-NEXT:    adrp x8, .LCPI9_0
-; CHECK-ZCZ-GI-NEXT:    ldr d0, [x8, :lo12:.LCPI9_0]
+; CHECK-ZCZ-GI-NEXT:    fmov v0.4h, #1.12500000
 ; CHECK-ZCZ-GI-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: vec_1p5:
@@ -261,14 +272,12 @@ define <8 x half> @vec8_1p5() {
 ;
 ; CHECK-NOZCZ-GI-LABEL: vec8_1p5:
 ; CHECK-NOZCZ-GI:       // %bb.0:
-; CHECK-NOZCZ-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-NOZCZ-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; CHECK-NOZCZ-GI-NEXT:    fmov v0.8h, #1.12500000
 ; CHECK-NOZCZ-GI-NEXT:    ret
 ;
 ; CHECK-ZCZ-GI-LABEL: vec8_1p5:
 ; CHECK-ZCZ-GI:       // %bb.0:
-; CHECK-ZCZ-GI-NEXT:    adrp x8, .LCPI10_0
-; CHECK-ZCZ-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; CHECK-ZCZ-GI-NEXT:    fmov v0.8h, #1.12500000
 ; CHECK-ZCZ-GI-NEXT:    ret
 ;
 ; CHECK-NOFP16-GI-LABEL: vec8_1p5:

@@ -43,15 +43,15 @@ define i64 @callee_many_scalars(i8 %a, i16 %b, i32 %c, i64 %d, i128 %e, i64 %f, 
 ; CHECK-NEXT:    bstrpick.d $a1, $a1, 15, 0
 ; CHECK-NEXT:    bstrpick.d $a2, $a2, 31, 0
 ; CHECK-NEXT:    add.d $a0, $a0, $a1
-; CHECK-NEXT:    add.d $a0, $a0, $a2
-; CHECK-NEXT:    add.d $a0, $a0, $a3
+; CHECK-NEXT:    add.d $a1, $a2, $a3
+; CHECK-NEXT:    add.d $a0, $a0, $a1
 ; CHECK-NEXT:    xor $a1, $a5, $t1
 ; CHECK-NEXT:    xor $a2, $a4, $a7
 ; CHECK-NEXT:    or $a1, $a2, $a1
 ; CHECK-NEXT:    sltui $a1, $a1, 1
-; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    add.d $a0, $a0, $a6
 ; CHECK-NEXT:    add.d $a0, $a0, $t0
+; CHECK-NEXT:    add.d $a0, $a1, $a0
 ; CHECK-NEXT:    ret
   %a_ext = zext i8 %a to i64
   %b_ext = zext i16 %b to i64

@@ -1197,3 +1197,180 @@ define i8 @scmp_zero_of_sext_memcmp(ptr %x, ptr %y) {
 
 declare void @use64(i64 %value)
 declare i32 @memcmp(ptr, ptr, i64)
+
+define i8 @scmp_add_common_op(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_add_common_op(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nsw i32 %a, %n
+  %bn = add nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_addlike_common_op(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_addlike_common_op(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nsw i32 %n, %a
+  %bn = or disjoint i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: signed ordering cannot be preserved without nsw.
+define i8 @scmp_add_common_op_no_nsw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_add_common_op_no_nsw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = add i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = add i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add i32 %a, %n
+  %bn = add i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: nuw does not preserve signed ordering.
+define i8 @scmp_add_common_op_nuw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_add_common_op_nuw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = add nuw i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = add nuw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = add nuw i32 %a, %n
+  %bn = add nuw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_sub_common_rhs(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_sub_common_rhs(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sub nsw i32 %a, %n
+  %bn = sub nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_sub_common_lhs(i32 %n, i32 %a, i32 %b) {
+; CHECK-LABEL: define i8 @scmp_sub_common_lhs(
+; CHECK-SAME: i32 [[N:%.*]], i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %na = sub nsw i32 %n, %a
+  %nb = sub nsw i32 %n, %b
+  %r = call i8 @llvm.scmp(i32 %na, i32 %nb)
+  ret i8 %r
+}
+
+; Negative test: signed subtraction needs nsw on both operations.
+define i8 @scmp_sub_common_rhs_no_nsw(i32 %a, i32 %b, i32 %n) {
+; CHECK-LABEL: define i8 @scmp_sub_common_rhs_no_nsw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sub i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = sub nsw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sub i32 %a, %n
+  %bn = sub nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_mul_common_positive(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @scmp_mul_common_positive(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 10) [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[A]], i32 [[B]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 1, 10) %n) {
+  %an = mul nsw i32 %a, %n
+  %bn = mul nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_mul_common_negative(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @scmp_mul_common_negative(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 -10, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 -10, 0) %n) {
+  %an = mul nsw i32 %a, %n
+  %bn = mul nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_mul_common_negative_commuted(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @scmp_mul_common_negative_commuted(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 -10, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[B]], i32 [[A]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 -10, 0) %n) {
+  %an = mul nsw i32 %n, %a
+  %bn = mul nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: a nonzero multiplier with unknown sign may reverse ordering.
+define i8 @scmp_mul_common_unknown_sign(i32 %a, i32 %b,
+; CHECK-LABEL: define i8 @scmp_mul_common_unknown_sign(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 0) [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = mul nsw i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = mul nsw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 range(i32 1, 0) %n) {
+  %an = mul nsw i32 %a, %n
+  %bn = mul nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+; Negative test: signed multiplication needs nsw on both operations.
+define i8 @scmp_mul_common_positive_no_nsw(
+; CHECK-LABEL: define i8 @scmp_mul_common_positive_no_nsw(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 range(i32 1, 10) [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = mul i32 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = mul nsw i32 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i32(i32 [[AN]], i32 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  i32 %a, i32 %b, i32 range(i32 1, 10) %n) {
+  %an = mul i32 %a, %n
+  %bn = mul nsw i32 %b, %n
+  %r = call i8 @llvm.scmp(i32 %an, i32 %bn)
+  ret i8 %r
+}
+
+define <2 x i8> @scmp_add_common_op_vec(<2 x i32> %a, <2 x i32> %b,
+; CHECK-LABEL: define <2 x i8> @scmp_add_common_op_vec(
+; CHECK-SAME: <2 x i32> [[A:%.*]], <2 x i32> [[B:%.*]], <2 x i32> [[N:%.*]]) {
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.scmp.v2i8.v2i32(<2 x i32> [[A]], <2 x i32> [[B]])
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  <2 x i32> %n) {
+  %an = add nsw <2 x i32> %a, %n
+  %bn = add nsw <2 x i32> %b, %n
+  %r = call <2 x i8> @llvm.scmp(<2 x i32> %an, <2 x i32> %bn)
+  ret <2 x i8> %r
+}

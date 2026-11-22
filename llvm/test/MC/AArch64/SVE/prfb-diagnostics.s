@@ -29,12 +29,12 @@ prfb #pldl1keep, p0, [x0]
 // invalid scalar + scalar addressing modes
 
 prfb #0, p0, [x0, #-33, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfb #0, p0, [x0, #-33, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 prfb #0, p0, [x0, #32, mul vl]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be an integer in range [-32, 31].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be an integer in range [-32, 31].
 // CHECK-NEXT: prfb #0, p0, [x0, #32, mul vl]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -O3 %s -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-unknown -O3 %s -emit-llvm -o - | FileCheck %s %}
 
 int foo(int i) {
   int j = 0;

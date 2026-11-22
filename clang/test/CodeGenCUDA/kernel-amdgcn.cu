@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple amdgpu -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple spirv64-amd-amdhsa -fcuda-is-device -emit-llvm -x hip %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV %}
 #include "Inputs/cuda.h"
 
 // CHECK: define{{.*}} amdgpu_kernel void @_ZN1A6kernelEv

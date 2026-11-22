@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-apple-darwin -std=c++11 -emit-llvm -o - %s | FileCheck %s %}
 
 namespace PR11418 {
   struct NonPOD {

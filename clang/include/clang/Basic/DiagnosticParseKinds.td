@@ -24,7 +24,8 @@ defm label_followed_by_declaration : C23Compat<
   "label followed by a declaration is">;
 
 // C2y compatibility with C23 and earlier.
-defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are">;
+defm decl_statement : C2yCompat<"'%select{if|switch}0' declaration statements are",
+                                /*ext_warn=*/true>;
 defm generic_with_type_arg : C2yCompat<
   "passing a type argument as the first operand to '_Generic' is">;
 
@@ -284,6 +285,8 @@ def err_c2y_labeled_break_continue : Error<
 def err_c2y_first_condition_clause_is_not_declaration : Error<
   "first clause in condition must be a declaration">;
 def err_c2y_multiple_declarations : Error<"multiple declarations are not allowed">;
+def err_c_decl_in_while_statement : Error<
+  "ISO C does not allow a declaration in a 'while' statement">;
 
 // Generic errors.
 def err_expected_expression : Error<"expected expression">;
@@ -325,8 +328,7 @@ def warn_attribute_no_decl : Warning<
   "attribute %0 ignored, because it is not attached to a declaration">,
   InGroup<IgnoredAttributes>;
 def err_late_attribute_param_in_template : Error<
-  "%0 attribute in a template cannot name "
-  "%select{pointee function parameter|later parameter}1 %2">;
+  "%0 attribute in a template cannot name pointee function parameter %1">;
 def err_ms_attributes_not_enabled : Error<
   "'__declspec' attributes are not enabled; use '-fdeclspec' or "
   "'-fms-extensions' to enable support for __declspec attributes">;
@@ -1446,6 +1448,10 @@ def err_omp_unknown_adjust_args_op
     : Error<
           "incorrect 'adjust_args' type, expected 'need_device_ptr'%select{|, "
           "'need_device_addr',}0 or 'nothing'">;
+def err_omp_num_args_invalid_form
+    : Error<"'omp_num_args' %select{is only allowed as a bound of a parameter "
+            "range|may only be followed by '+' or '-' and a constant logical "
+            "offset}0">;
 def err_omp_declare_variant_wrong_clause : Error<
   "expected %select{'match'|'match', 'adjust_args', or 'append_args'}0 clause "
   "on 'omp declare variant' directive">;
@@ -1562,6 +1568,9 @@ def err_omp_expected_context_selector
     : Error<"expected valid context selector in %0">;
 def warn_omp_default_deprecated : Warning<"'default' clause for"
   " 'metadirective' is deprecated; use 'otherwise' instead">, InGroup<Deprecated>;
+def err_omp_metadirective_standalone_variant : Error<
+  "standalone directive variants are not supported in a 'metadirective' "
+  "with non-constant user conditions">;
 def err_omp_requires_out_inout_depend_type : Error<
   "reserved locator 'omp_all_memory' requires 'out' or 'inout' "
   "dependency types">;

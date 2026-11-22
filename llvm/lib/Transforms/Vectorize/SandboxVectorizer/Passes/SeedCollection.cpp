@@ -30,7 +30,7 @@ SeedCollection::SeedCollection(StringRef Pipeline, StringRef AuxArg)
 }
 
 bool SeedCollection::runOnFunction(Function &F, const Analyses &A) {
-  const VectorizeOptions &Opts = VectorizeOptions::Global;
+  const VectorizeOptions &Opts = getVectorizeOptions(F.getContext());
   bool Change = false;
   const auto &DL = F.getParent()->getDataLayout();
 

@@ -148,6 +148,14 @@ public:
     return nullptr;
   }
 
+  cir::GlobalViewAttr
+  getVTableAddressPointAttr(BaseSubobject base,
+                            const CXXRecordDecl *vtableClass) override {
+    cgm.errorNYI(vtableClass->getSourceRange(),
+                 "getVTableAddressPointAttr: MSVC ABI");
+    return {};
+  }
+
   mlir::Value getVTableAddressPointInStructor(
       CIRGenFunction &cgf, const CXXRecordDecl *vtableClass, BaseSubobject base,
       const CXXRecordDecl *nearestVBase) override {

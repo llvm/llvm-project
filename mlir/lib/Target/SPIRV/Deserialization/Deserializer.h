@@ -697,6 +697,10 @@ private:
   // Mapping from result <id> to undef value of a type.
   DenseMap<uint32_t, Type> undefMap;
 
+  // Constant and undef ops already materialized in a block of the current
+  // function or graph.
+  DenseMap<std::pair<Block *, uint32_t>, Value> blockConstantMap;
+
   // Result <id> to name mapping.
   DenseMap<uint32_t, StringRef> nameMap;
 
@@ -705,6 +709,11 @@ private:
 
   // Result <id> to decorations mapping.
   DenseMap<uint32_t, NamedAttrList> decorations;
+
+  // FuncParamAttr decorations awaiting an OpFunctionParameter or OpFunction.
+  // Keeping them separate prevents unsupported targets from acquiring
+  // discardable attributes that would be silently dropped during serialization.
+  DenseMap<uint32_t, ArrayAttr> functionParameterAttrs;
 
   // Decoration entries from OpDecorateId whose operand <id>s must be resolved
   // to MLIR symbols after all module ops have been deserialized.

@@ -16,15 +16,20 @@
 #define LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPREDUCTIONUTILS_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 
 namespace llvm {
+class BasicBlock;
 class DataLayout;
+class DominatorTree;
 class FastMathFlags;
 class IRBuilderBase;
 class Instruction;
+class LoopInfo;
 class PHINode;
+class ScalarEvolution;
 class Type;
 class Value;
 enum class RecurKind;
@@ -72,6 +77,21 @@ Instruction *getNonPhiOperand(Instruction *I, PHINode *Phi);
 /// vectorization.
 bool isReductionCandidate(Instruction *I);
 
+/// Checks if the reduction, rooted at \p Root, reduces the loop accumulators,
+/// whose updates are the same expressions \p Shape in the same block, loading
+/// from consecutive addresses at each position. Such a reduction vectorizes
+/// along its own reduced values without gathers, while a tree across several
+/// such reductions transposes them. The different update expressions may form
+/// the nodes, which the other reductions, sharing them, cannot reuse. An empty
+/// \p Shape is set to the expressions of \p Root, \p Accs collects the
+/// accumulators.
+bool isReductionOfConsecutiveAccumulators(Instruction *Root, const LoopInfo &LI,
+                                          const DataLayout &DL,
+                                          ScalarEvolution &SE,
+                                          unsigned MaxDepth,
+                                          SmallVectorImpl<unsigned> &Shape,
+                                          SmallPtrSetImpl<PHINode *> &Accs);
+
 /// Emits the booleanized logical and/or reduction of \p Vec with the i1 root
 /// \p Root as trunc+bitcast+cmp (all-ones comparison for And, zero for Or) if
 /// it is cheaper than the wide reduction plus the result trunc. \returns the
@@ -81,6 +101,15 @@ Value *tryEmitBoolReduxBitcastCmp(IRBuilderBase &Builder,
                                   RecurKind RdxKind, Value *Vec,
                                   const Value *Root, FastMathFlags FMF,
                                   TargetTransformInfo::TargetCostKind CostKind);
+
+/// Try to get a reduction instruction from phi node \p P in block \p ParentBB,
+/// considering incoming values from \p ParentBB or the containing loop latch.
+/// \returns a candidate reduction value, or nullptr if none.
+Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
+                               BasicBlock *ParentBB, LoopInfo *LI);
+
+/// Gets recurrence kind from the specified value.
+RecurKind getRdxKind(Value *V);
 
 } // namespace llvm::slpvectorizer
 

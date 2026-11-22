@@ -4,6 +4,7 @@
 
 ---
 name:            test
+tracksRegLiveness: false
 body:             |
   bb.0:
     $r2 = tMOVr $r0, 14, _

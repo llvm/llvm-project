@@ -1,7 +1,7 @@
 # RUN: llvm-mc --triple=loongarch64 --show-encoding %s | \
 # RUN:        FileCheck %s --check-prefixes=CHECK-ENCODING,CHECK-INST
 # RUN: llvm-mc --triple=loongarch64 --filetype=obj %s | \
-# RUN:        llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INST
+# RUN:        llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=CHECK-INST
 
 vsrlni.b.h $vr15, $vr25, 9
 # CHECK-INST: vsrlni.b.h $vr15, $vr25, 9

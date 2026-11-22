@@ -33,7 +33,7 @@ Keyword Schema Classification:
   2. Single-Value Keywords (1 value): e.g. `RESULT_VARIABLE`, `OUTPUT_VARIABLE`, `TARGET`, `WORKING_DIRECTORY`, `ALIAS`, `SUITE`, `CACHE`, `DEPFILE`.
      - After value is consumed, keyword closes and subsequent keywords/values align at top-level keyword indent (+2 spaces).
   3. Multi-Value List Keywords (1+ values): e.g. `SRCS`, `HDRS`, `DEPENDS`, `FULL_BUILD_DEPENDS`, `COMPILE_OPTIONS`, `LINK_LIBRARIES`, `LOADER_ARGS`, `ARGS`, `ENV`, `PROPERTIES`, `OBJECT`, `STATIC`, `SHARED`, `MODULE`.
-     - Keywords on the command header line (`cmd(KEYWORD...`) do NOT grant extra nesting to child lines (+2 spaces relative to call base).
+     - Keywords on the command header line (`cmd(KEYWORD...` or `cmd(arg KEYWORD...`) indent continuation items +4 spaces when sibling keywords can follow (so subsequent `+2` keywords don't collide), or +2 spaces when no remaining keywords exist (e.g. `set_target_properties(t PROPERTIES ...)`).
      - Keywords on their own separate line (`\n KEYWORD...`) indent child list items +4 spaces (+2 relative to keyword line).
   4. Dynamic Schema Learning:
      - Automatically parses `cmake_parse_arguments(...)` calls in `function(...)` / `macro(...)` AST blocks.
@@ -45,10 +45,10 @@ Formatting Rules Enforced:
   3. Quoted String Immutability: Quoted arguments (`"..."`) and bracket arguments (`[=[...]=]`) are single immutable AST tokens. Multi-line quoted strings are preserved 100% untouched.
   4. Empty Closures: `endif()`, `else()`, `endfunction()`, `endmacro()`, `endforeach()`, `endwhile()`. (Legacy CMake permitted repeating condition/block names in closing commands; modern CMake standardizes on empty parentheses).
   5. Schema-Aware Keyword Casing: Keywords in command schema upper-cased; positional args, function parameters & file paths untouched.
-  6. Multi-line Argument Layout: Keywords and positional args indented +2 spaces relative to call base; multi-value list items indented +4 spaces; closing `)` at +0 spaces.
+  6. Multi-line Argument Layout: Keywords and positional args indented +2 spaces relative to call base; multi-value list items indented +4 spaces (except header-line keywords with no sibling keywords, which indent +2 spaces); multi-line control-flow headers (`if`, `elseif`, `foreach`, `while`, `function`, `macro`) starting args on the opening `cmd(` line indent hanging lines +4 spaces; closing `)` at +0 spaces.
   7. Control Block Indentation: 2-space indentation inside `if`/`foreach`/`function`/`macro`.
   8. Comment Formatting: Line comments buffer and align with the indentation level of the code element immediately following them, unless separated by a blank line (standalone comments) or immediately preceding a closing parenthesis `)`.
-  9. Cleanliness: Trailing whitespace stripped, single trailing newline for non-empty files; empty files preserved 0-byte.
+  9. Cleanliness: Trailing whitespace and leading blank lines stripped, consecutive blank lines collapsed to a single blank line, single trailing newline for non-empty files; empty files preserved 0-byte.
 
 Usage:
   cmake_format.py [options] <file|directory>...
@@ -109,9 +109,11 @@ INDENT_WIDTH = 2
 INDENT_STR = " " * INDENT_WIDTH
 # Indent levels relative to a command's base_indent:
 #   +1 level = keyword line or positional arg line (+2 spaces)
-#   +2 levels = multi-value list item under a keyword on its own line (+4 spaces)
+#   +2 levels = multi-value list item (+4 spaces)
+#   +2 levels = hanging line in a control-flow header starting on the cmd( line (+4 spaces)
 KEYWORD_INDENT_LEVELS = 1
 LIST_ITEM_INDENT_LEVELS = 2
+HANGING_INDENT_LEVELS = 2
 
 
 @dataclass
@@ -721,6 +723,14 @@ def scan_dynamic_schemas(
         for m in regex.finditer(content):
             if not RE_CACHE.search(m.group(2)):
                 words = set(RE_IDENTIFIER_TOKENS.findall(m.group(2)))
+                if m.group(1).upper() in {
+                    "LLVM_LIBC_OPTIONAL_ARGS",
+                    "LLVM_LIBC_SINGLE_VALUE_ARGS",
+                    "LLVM_LIBC_MULTI_VALUE_ARGS",
+                }:
+                    words |= {f"OVERLAY_{w}" for w in words} | {
+                        f"FULL_BUILD_{w}" for w in words
+                    }
                 target_set.update(words)
                 if target_set is context.learned_multi_value:
                     context.list_keywords.update(words)
@@ -914,8 +924,10 @@ class CallState:
         schema: Resolved CommandSchema providing options/one_value/multi_value sets.
         active_kw: The currently open keyword (None if no keyword is active).
         active_kw_type: ONE_VALUE, MULTI_VALUE, or None — governs indent of child lines.
-        active_kw_on_cmd_line: True if active_kw was opened on the command line itself,
-            which suppresses extra nesting for its child list items.
+        active_kw_on_cmd_line: True if active_kw was opened on the command line itself.
+        can_have_substanzas: True if unused sibling keywords exist in the command's schema,
+            allowing header-opened keywords to indent child items +4.
+        seen_keywords: Uppercased keywords matched while processing tokens.
         one_value_count: Number of values consumed under the current ONE_VALUE keyword;
             the keyword closes after the first value is seen.
     """
@@ -929,6 +941,8 @@ class CallState:
     active_kw: str | None = None
     active_kw_type: KeywordType | None = None
     active_kw_on_cmd_line: bool = False
+    can_have_substanzas: bool = False
+    seen_keywords: set[str] = field(default_factory=set)
     one_value_count: int = 0
     last_line_was_keyword: bool = False
     in_call: bool = True
@@ -980,6 +994,7 @@ class CallState:
                     self.reset_kw()
                 elif self.is_keyword_token(clean_word):
                     kw = clean_word.upper()
+                    self.seen_keywords.add(kw)
                     formatted_tok = tok.value.replace(clean_word, kw, 1)
                     reconstructed_parts.append(formatted_tok)
                     if kw in self.schema.options:
@@ -1098,6 +1113,8 @@ def _process_call_continuation_line(
 
     # Determine whether the first meaningful token on this line is a keyword or
     # an argument-forwarding variable (${ARGN} etc.), as both affect indentation.
+    # Control-flow header continuations (if/elseif/foreach/while/function/macro)
+    # treat wrapped conditions/clauses as hanging lines rather than sub-stanzas.
     first_unquoted: str | None = None
     for tok in trimmed_line_toks:
         if tok.type in (
@@ -1108,9 +1125,10 @@ def _process_call_continuation_line(
             first_unquoted = tok.value
             break
 
+    is_control_header = cs.cmd_name in (CONTROL_START_BLOCKS | CONTROL_MIDDLE_BLOCKS)
     line_starts_new_keyword = False
     is_arg_var_line = False
-    if first_unquoted:
+    if first_unquoted and not is_control_header:
         clean_first = first_unquoted.rstrip("),;").lstrip("(")
         if RE_ARG_FORWARDING_VAR.match(clean_first):
             is_arg_var_line = True
@@ -1120,10 +1138,12 @@ def _process_call_continuation_line(
     cs.last_line_was_keyword = line_starts_new_keyword
 
     # Compute indentation level for this continuation line.
-    if line_starts_new_keyword or is_arg_var_line:
+    if is_control_header and not cs.first_arg_on_separate_line:
+        indent_str = INDENT_STR * (cs.base_indent + HANGING_INDENT_LEVELS)
+    elif line_starts_new_keyword or is_arg_var_line:
         indent_str = INDENT_STR * (cs.base_indent + KEYWORD_INDENT_LEVELS)
     elif cs.active_kw is not None:
-        if cs.active_kw_on_cmd_line:
+        if cs.active_kw_on_cmd_line and not cs.can_have_substanzas:
             indent_str = INDENT_STR * (cs.base_indent + KEYWORD_INDENT_LEVELS)
         else:
             indent_str = INDENT_STR * (cs.base_indent + LIST_ITEM_INDENT_LEVELS)
@@ -1198,14 +1218,15 @@ def _process_command_invocation_line(
     line_paren_balance = 1 + lparens - rparens
     is_single_line = line_paren_balance <= 0
 
-    # Compute indent for this line, adjusting block level for end/middle commands.
+    # Compute base indent for this command, adjusting block level for end/middle commands.
     if lower_cmd.startswith("end"):
         state.block_indent_level = max(0, state.block_indent_level - 1)
-        indent_str = INDENT_STR * state.block_indent_level
+        call_base_indent = state.block_indent_level
     elif lower_cmd in CONTROL_MIDDLE_BLOCKS:
-        indent_str = INDENT_STR * max(0, state.block_indent_level - 1)
+        call_base_indent = max(0, state.block_indent_level - 1)
     else:
-        indent_str = INDENT_STR * state.block_indent_level
+        call_base_indent = state.block_indent_level
+    indent_str = INDENT_STR * call_base_indent
 
     cmd_schema = get_schema_for_cmd(lower_cmd, ctx=file_ctx)
     rest_arg_count = sum(
@@ -1224,9 +1245,10 @@ def _process_command_invocation_line(
     state.formatted_lines.append(reconstructed)
 
     if not is_single_line:
+        can_have_substanzas = bool(cmd_schema.all_keywords - temp_state.seen_keywords)
         state.current_call_state = CallState(
             cmd_name=lower_cmd,
-            base_indent=state.block_indent_level,
+            base_indent=call_base_indent,
             paren_balance=line_paren_balance,
             schema=cmd_schema,
             arg_count=rest_arg_count,
@@ -1234,6 +1256,8 @@ def _process_command_invocation_line(
             active_kw=temp_state.active_kw,
             active_kw_type=temp_state.active_kw_type,
             active_kw_on_cmd_line=temp_state.active_kw_on_cmd_line,
+            can_have_substanzas=can_have_substanzas,
+            seen_keywords=temp_state.seen_keywords,
             one_value_count=temp_state.one_value_count,
         )
 
@@ -1245,11 +1269,12 @@ def format_cmake_content(content: str, ctx: FormatterContext | None = None) -> s
     """Formats CMake file content using AST token-stream parser.
 
     Applies lowercasing for built-in commands, proper indent nesting for control blocks,
-    schema-aware keyword upper-casing, multi-line argument indentation (+2 / +4 spaces),
-    and lookahead comment buffering alignment.
+    schema-aware keyword upper-casing, multi-line argument indentation (+2 / +4 spaces,
+    with +4 hanging indent for wrapped control-flow headers and header-line keywords
+    when sibling keywords exist), and lookahead comment buffering alignment.
 
     The function dispatches each source line to one of five handlers:
-      1. Empty line  — flush buffered comments and emit a blank line.
+      1. Empty line  — flush buffered comments and emit at most one blank line.
       2. Comment line — buffer the comment for lookahead alignment.
       3. Call continuation line — delegate to _process_call_continuation_line().
       4. Command invocation line — delegate to _process_command_invocation_line().
@@ -1283,13 +1308,14 @@ def format_cmake_content(content: str, ctx: FormatterContext | None = None) -> s
             state.current_call_state is not None and state.current_call_state.in_call
         )
 
-        # 1. Empty line — flush buffered comments and emit a blank line.
+        # 1. Empty line — flush buffered comments and emit at most one blank line.
         if not non_ws_toks:
             if state.pending_comments:
                 state.flush_comments(
                     INDENT_STR * (state.block_indent_level + (1 if in_call else 0))
                 )
-            state.formatted_lines.append("")
+            if state.formatted_lines and state.formatted_lines[-1] != "":
+                state.formatted_lines.append("")
             if (
                 state.current_call_state
                 and state.current_call_state.in_call

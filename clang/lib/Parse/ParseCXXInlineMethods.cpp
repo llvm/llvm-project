@@ -723,8 +723,8 @@ static void collectParamRefs(const ParsedAttributes &Attrs,
 }
 
 bool Parser::checkLateAttributeParamRefs(
-    const LateParsedAttribute &LPA, const Decl *D,
-    ArrayRef<const DeclRefExpr *> ParamRefs, bool ReenteredProtoParams) {
+    const LateParsedAttribute &LPA, ArrayRef<const DeclRefExpr *> ParamRefs,
+    bool ReenteredProtoParams) {
   auto IsPointeeParam = [&](const ParmVarDecl *PVD) {
     return ReenteredProtoParams && llvm::is_contained(LPA.ProtoParams, PVD);
   };
@@ -753,24 +753,17 @@ bool Parser::checkLateAttributeParamRefs(
 
   // A name binds the same way in a template, but instantiation cannot yet map a
   // pointee's parameters, which are instantiated with the declaration's type
-  // and not kept, nor a parameter declared after the one the attribute is on,
-  // which is instantiated after that parameter's attributes. Reject the
-  // attribute rather than instantiate it wrongly.
+  // and not kept. Reject the attribute rather than instantiate it wrongly.
   // FIXME: Map these parameters during template instantiation.
   if (Actions.CurContext->isDependentContext() ||
       getCurScope()->getTemplateParamParent() ||
       Actions.getCurGenericLambda()) {
-    const auto *DParam = dyn_cast_or_null<ParmVarDecl>(D);
     for (const DeclRefExpr *DRE : ParamRefs) {
       const auto *PVD = cast<ParmVarDecl>(DRE->getDecl());
-      bool Pointee = IsPointeeParam(PVD);
-      if (!Pointee &&
-          !(DParam &&
-            DParam->getFunctionScopeDepth() == PVD->getFunctionScopeDepth() &&
-            DParam->getFunctionScopeIndex() < PVD->getFunctionScopeIndex()))
+      if (!IsPointeeParam(PVD))
         continue;
       Diag(DRE->getLocation(), diag::err_late_attribute_param_in_template)
-          << &LPA.AttrName << !Pointee << PVD;
+          << &LPA.AttrName << PVD;
       return true;
     }
   }
@@ -831,7 +824,7 @@ void Parser::ParseLexedAttribute(LateParsedAttribute &LPA, bool EnterScope,
     SmallVector<const DeclRefExpr *, 4> ParamRefs;
     collectParamRefs(Parsed, ParamRefs);
     if (!ParamRefs.empty() &&
-        checkLateAttributeParamRefs(LPA, D, ParamRefs, HasProtoParams))
+        checkLateAttributeParamRefs(LPA, ParamRefs, HasProtoParams))
       Parsed.clear();
     Attrs.takeAllAppendingFrom(Parsed);
 
@@ -902,7 +895,6 @@ bool Parser::ConsumeAndStoreUntil(tok::TokenKind T1, tok::TokenKind T2,
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
-    case tok::annot_repl_input_end:
       // Ran out of tokens.
       return false;
 

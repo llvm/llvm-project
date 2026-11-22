@@ -47,12 +47,14 @@ enum AArch64MachineCombinerPattern : unsigned {
   MULSUBW_OP2,
   MULADDWI_OP1,
   MULSUBWI_OP1,
+  MULADDWS_OP1,
   MULADDX_OP1,
   MULADDX_OP2,
   MULSUBX_OP1,
   MULSUBX_OP2,
   MULADDXI_OP1,
   MULSUBXI_OP1,
+  MULADDXS_OP1,
   // NEON integers vectors
   MULADDv8i8_OP1,
   MULADDv8i8_OP2,
@@ -617,6 +619,11 @@ protected:
   isCopyLikeInstrImpl(const MachineInstr &MI) const override;
 
 private:
+  /// Returns the size of \p MI, excluding the LFI deferred LR guard that may
+  /// be flushed before a control-flow instruction (added by
+  /// getInstSizeInBytes).
+  unsigned getInstSizeInBytesNoGuard(const MachineInstr &MI) const;
+
   /// Sets the offsets on outlined instructions in \p MBB which use SP
   /// so that they will be valid post-outlining.
   ///

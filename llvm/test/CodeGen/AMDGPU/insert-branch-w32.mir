@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=amdgpu10.10 -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
-# RUN: llc -mtriple=amdgpu11.00 -verify-machineinstrs -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu10.10 -run-pass branch-folder -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgpu11.00 -run-pass branch-folder -o - %s | FileCheck %s
 
 # Designed to provoke calling SIInstrInfo::insertBranch in wave32 mode
 # The implicit $vcc operand should be $vcc_lo in this case
@@ -9,6 +9,7 @@
 # CHECK: S_CBRANCH_VCCNZ %bb.1, implicit $vcc_lo
 
 name:            _amdgpu_cs_main
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_MOV_B32_e32 1050, implicit $exec
@@ -30,6 +31,7 @@ body:             |
 # CHECK: S_CBRANCH_VCCNZ %bb.1, implicit undef $vcc_lo
 ---
 name:            _amdgpu_cs_main_undef
+tracksRegLiveness: false
 body:             |
   bb.0:
     $vgpr1 = V_MOV_B32_e32 1050, implicit $exec

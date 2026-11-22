@@ -23,6 +23,14 @@ These extensions require no flag.
 * An `!$acc routine` with no parallelism clause is treated as if the `seq`
   clause were present.
 * `!$acc end loop` does not trigger a parsing error and is silently ignored.
+* On `loop` and combined loop directives without `auto` or `device_type`
+  clauses, repeated or conflicting `seq` and `independent` clauses are accepted
+  with a warning. Repetitions of a single mode are ignored, retaining one copy
+  of that clause. If both modes appear, all occurrences of both clauses are
+  ignored, including repeated clauses, and the loop uses the same default
+  parallelism mode as a directive with neither clause. One warning is emitted
+  per affected directive, enabled by default (`-Wopenacc-usage`; suppress with
+  `-Wno-openacc-usage`).
 * The restriction on required clauses for `!$acc data` is emitted as a
   portability warning rather than an error, matching the behavior of other
   compilers.

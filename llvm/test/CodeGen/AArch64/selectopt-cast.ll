@@ -402,6 +402,8 @@ define void @test_add_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[P]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX1_I]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
+; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
 ; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
 ; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false.sink:
@@ -410,8 +412,6 @@ define void @test_add_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP0]], [[LOOP]] ], [ [[TMP1]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP5]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
-; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -787,6 +787,8 @@ define void @test_sub_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i64 [[P]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr [[ARRAYIDX1_I]], align 8
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i64 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
+; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
 ; CHECK-NEXT:    [[CMP3_FROZEN:%.*]] = freeze i1 [[CMP3]]
 ; CHECK-NEXT:    br i1 [[CMP3_FROZEN]], label [[SELECT_END1]], label [[SELECT_FALSE:%.*]]
 ; CHECK:       select.false.sink:
@@ -795,8 +797,6 @@ define void @test_sub_sext_not_and_regular_select2(ptr %dst, ptr %src, i64 %j.st
 ; CHECK:       select.end:
 ; CHECK-NEXT:    [[DOTSINK:%.*]] = phi ptr [ [[TMP0]], [[LOOP]] ], [ [[TMP1]], [[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[LOOP]] ], [ [[TMP5]], [[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[NOT_CMP3:%.*]] = xor i1 [[CMP3]], true
-; CHECK-NEXT:    [[DEC:%.*]] = sext i1 [[NOT_CMP3]] to i64
 ; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds ptr, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store ptr [[DOTSINK]], ptr [[TMP4]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
@@ -849,6 +849,7 @@ define void @test_add_lshr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[SHIFT:%.*]] = lshr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
 ; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
 ; CHECK:       select.true.sink:
@@ -861,7 +862,6 @@ define void @test_add_lshr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, 
 ; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
-; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[COND]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1
@@ -911,6 +911,7 @@ define void @test_add_ashr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, 
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[GEP_J]], align 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP1]], -1
 ; CHECK-NEXT:    [[SHIFT:%.*]] = ashr i64 [[TMP1]], 63
+; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
 ; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]]
 ; CHECK:       select.true.sink:
@@ -923,7 +924,6 @@ define void @test_add_ashr_add_regular_select(ptr %dst, ptr %src, i64 %i.start, 
 ; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[TMP3]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = phi i64 [ [[TMP2]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[J]], [[SELECT_TRUE_SINK]] ], [ [[I]], [[SELECT_FALSE_SINK]] ]
-; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
 ; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr i64, ptr [[DST:%.*]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[COND]], ptr [[GEP_DST]], align 8
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], -1

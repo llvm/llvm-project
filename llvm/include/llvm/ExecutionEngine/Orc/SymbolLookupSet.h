@@ -17,11 +17,13 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/Orc/CoreContainers.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolLookupSetSPS.h"
 #include "llvm/Support/Error.h"
 
 #include <initializer_list>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -273,6 +275,14 @@ public:
 private:
   UnderlyingVector Symbols;
 };
+
+/// The result of looking up a SymbolLookupSet in the executor: one entry per
+/// element of the set, in the same order.
+///
+/// An empty optional indicates that a required symbol was not found. A missing
+/// weakly referenced symbol is reported as a present optional holding a null
+/// address.
+using SymbolLookupResult = std::vector<std::optional<ExecutorAddr>>;
 
 } // namespace llvm::orc
 

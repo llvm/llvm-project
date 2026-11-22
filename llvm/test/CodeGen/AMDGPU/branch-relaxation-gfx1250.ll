@@ -190,7 +190,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_set_pc_i64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
@@ -219,7 +219,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-ADD-PC64-NEXT:  .Lpost_addpc2:
 ; GCN-ADD-PC64-NEXT:  .LBB2_1: ; %bb2
 ; GCN-ADD-PC64-NEXT:    ;;#ASMSTART
-; GCN-ADD-PC64-NEXT:     ; 32 bytes
+; GCN-ADD-PC64-NEXT:    ; 32 bytes
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    ;;#ASMEND
@@ -275,7 +275,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_set_pc_i64 s[2:3]
 ; GCN-NEXT:  .LBB3_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    ;;#ASMEND
@@ -309,7 +309,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-ADD-PC64-NEXT:  .Lpost_addpc3:
 ; GCN-ADD-PC64-NEXT:  .LBB3_1: ; %bb2
 ; GCN-ADD-PC64-NEXT:    ;;#ASMSTART
-; GCN-ADD-PC64-NEXT:     ; 32 bytes
+; GCN-ADD-PC64-NEXT:    ; 32 bytes
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    v_nop_e64
 ; GCN-ADD-PC64-NEXT:    ;;#ASMEND

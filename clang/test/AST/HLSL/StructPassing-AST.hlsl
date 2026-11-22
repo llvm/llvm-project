@@ -118,5 +118,77 @@ void case6(S s) {
   useP(s);
 }
 
+struct G {
+  int X;
+  void f() {}
+  void setX(int val) { X = val; }
+  int getX() const { return X; }
+};
+
+groupshared G g;
+  
+// CHECK: FunctionDecl {{.*}} case7 'void ()' external-linkage
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'void'
+// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .f
+// CHECK-NEXT: HLSLOutArgExpr {{.*}} 'G' lvalue inout
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: BinaryOperator {{.*}} 'G' lvalue '='
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+void case7() {
+  g.f();
+}
+
+// CHECK: FunctionDecl {{.*}} case8 'void (int)' external-linkage
+// CHECK-NEXT: ParmVarDecl {{.*}} used V 'int'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'void'
+// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .setX
+// CHECK-NEXT: HLSLOutArgExpr {{.*}} 'G' lvalue inout
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: BinaryOperator {{.*}} 'G' lvalue '='
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'G' <LValueToRValue>
+// CHECK-NEXT: OpaqueValueExpr {{.*}} 'G' lvalue
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'int' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'int' lvalue ParmVar {{.*}} 'V' 'int'
+void case8(int V) {
+  g.setX(V);
+}
+
+// CHECK: FunctionDecl {{.*}} case9 'void ()'
+// CHECK-NEXT: CompoundStmt
+// CHECK-NEXT: DeclStmt
+// CHECK-NEXT: VarDecl {{.*}} Y 'int' cinit
+// CHECK-NEXT: ExprWithCleanups {{.*}} 'int'
+// CHECK-NEXT: CXXMemberCallExpr {{.*}} 'int'
+// CHECK-NEXT: MemberExpr {{.*}} '<bound member function type>' .getX
+// CHECK-NEXT: MaterializeTemporaryExpr {{.*}} 'const G' lvalue
+// CHECK-NEXT: ImplicitCastExpr {{.*}} 'const G' <LValueToRValue>
+// CHECK-NEXT: DeclRefExpr {{.*}} 'groupshared G' lvalue Var {{.*}} 'g' 'groupshared G'
+void case9() {
+  int Y = g.getX();
+}
+
 // CHECK-NOT: CXXConstructExpr
 // CHECK-NOT: CXXOperatorCallExpr

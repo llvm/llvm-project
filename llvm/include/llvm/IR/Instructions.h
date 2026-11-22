@@ -257,6 +257,9 @@ public:
     setSubclassData<OrderingField>(Ordering);
   }
 
+  /// Return true if this load has an atomic ordering.
+  bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
+
   /// Returns the synchronization scope ID of this load instruction.
   SyncScope::ID getSyncScopeID() const {
     return SSID;
@@ -405,6 +408,9 @@ public:
   void setOrdering(AtomicOrdering Ordering) {
     setSubclassData<OrderingField>(Ordering);
   }
+
+  /// Return true if this store has an atomic ordering.
+  bool isAtomic() const { return getOrdering() != AtomicOrdering::NotAtomic; }
 
   /// Returns the synchronization scope ID of this store instruction.
   SyncScope::ID getSyncScopeID() const {
@@ -572,11 +578,6 @@ class AtomicCmpXchgInst : public Instruction {
   void Init(Value *Ptr, Value *Cmp, Value *NewVal, Align Align,
             AtomicOrdering SuccessOrdering, AtomicOrdering FailureOrdering,
             SyncScope::ID SSID);
-
-  template <unsigned Offset>
-  using AtomicOrderingBitfieldElement =
-      typename Bitfield::Element<AtomicOrdering, Offset, 3,
-                                 AtomicOrdering::LAST>;
 
   constexpr static IntrusiveOperandsAllocMarker AllocMarker{3};
 
@@ -859,11 +860,6 @@ public:
   };
 
 private:
-  template <unsigned Offset>
-  using AtomicOrderingBitfieldElement =
-      typename Bitfield::Element<AtomicOrdering, Offset, 3,
-                                 AtomicOrdering::LAST>;
-
   template <unsigned Offset>
   using BinOpBitfieldElement =
       typename Bitfield::Element<BinOp, Offset, 5, BinOp::LAST_BINOP>;
@@ -3506,7 +3502,7 @@ public:
   /// Returns true if the default branch must result in immediate undefined
   /// behavior, false otherwise.
   bool defaultDestUnreachable() const {
-    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIOrDbg());
+    return isa<UnreachableInst>(getDefaultDest()->getFirstNonPHIIt());
   }
 
   void setDefaultDest(BasicBlock *DefaultCase) {

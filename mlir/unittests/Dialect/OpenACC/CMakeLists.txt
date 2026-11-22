@@ -1,5 +1,8 @@
+add_subdirectory(Standalone)
+
 add_mlir_unittest(MLIROpenACCTests
   OpenACCCGOpsTest.cpp
+  OpenACCExtensionsTest.cpp
   OpenACCOpsTest.cpp
   OpenACCOpsInterfacesTest.cpp
   OpenACCRuntimeUtilsTest.cpp
@@ -26,7 +29,11 @@ mlir_target_link_libraries(MLIROpenACCTests
   MLIRArithValueBoundsOpInterfaceImpl
   MLIROpenACCAnalysis
   MLIROpenACCDialect
+  MLIROpenACCAllExtensions
   MLIROpenACCUtils
+  MLIROpenACCTransforms
+  MLIROpenACCToLLVM
+  MLIROpenACCToSCF
   MLIRSCFDialect
   MLIRControlFlowDialect
 )

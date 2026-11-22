@@ -10,10 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DirectXAsmPrinter.h"
 #include "TargetInfo/DirectXTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/GlobalVariable.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/SectionKind.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -55,4 +57,34 @@ void DXILAsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeDirectXAsmPrinter() {
   RegisterAsmPrinter<DXILAsmPrinter> X(getTheDirectXTarget());
+}
+
+PreservedAnalyses DXILAsmPrinterBeginPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  DXILAsmPrinter &AsmPrinter = static_cast<DXILAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+DXILAsmPrinterPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  DXILAsmPrinter &AsmPrinter = static_cast<DXILAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses DXILAsmPrinterEndPass::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  DXILAsmPrinter &AsmPrinter = static_cast<DXILAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

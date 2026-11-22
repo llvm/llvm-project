@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CAS/BuiltinObjectHasher.h"
-#include "llvm/Support/BLAKE3.h"
+#include "llvm/ADT/ScopeExit.h"
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -22,13 +22,12 @@ BuiltinObjectHasher<HasherT>::hashFile(StringRef FilePath) {
   if (Error E = sys::fs::openNativeFileForRead(FilePath).moveInto(FD))
     return E;
 
-  sys::fs::file_status Status;
-  std::error_code EC = sys::fs::status(FD, Status);
-  if (EC)
-    return createFileError(FilePath, EC);
-  // FIXME: Do we need to add a hash of the data size? If we remove that we can
-  // avoid needing to read the file size before reading the file contents.
-  H.updateSize(Status.getSize());
+  llvm::scope_exit CloseFile([&]() { sys::fs::closeFile(FD); });
+
+  ErrorOr<uint64_t> FileSize = sys::fs::file_size(FD);
+  if (!FileSize)
+    return createFileError(FilePath, FileSize.getError());
+  H.updateSize(*FileSize);
 
   size_t ChunkSize = sys::fs::DefaultReadChunkSize;
   SmallVector<char, 0> Buffer;

@@ -62,7 +62,7 @@ exit:
 define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: define void @test_scalarize_with_branch_cond(
 ; CHECK-SAME: ptr [[SRC:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[VECTOR_MEMCHECK:.*:]]
 ; CHECK-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
 ; CHECK-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]

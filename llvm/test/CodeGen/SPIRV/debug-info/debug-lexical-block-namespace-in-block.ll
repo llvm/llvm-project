@@ -1,25 +1,18 @@
 ; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o %t.spt
-; RUN: FileCheck %s --check-prefix=CHECK --input-file %t.spt
-; RUN: FileCheck %s --check-prefix=COUNT --input-file %t.spt
-; RUN: FileCheck %s --check-prefix=NO-COMPOSITE --input-file %t.spt
+; RUN: FileCheck %s --input-file %t.spt
 ; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; DINamespace parented by a function-body DILexicalBlock. Clang never emits this for C++;
-; the IR verifier allows it. Parent-before-child order holds within each kind, not
-; across kinds, so the namespace block and composite are skipped.
 
-; CHECK-DAG: [[EXT:%[0-9]+]] = OpExtInstImport "NonSemantic.Shader.DebugInfo.100"
-; CHECK-DAG: [[VOID:%[0-9]+]] = OpTypeVoid
 ; CHECK-DAG: [[FNNAME:%[0-9]+]] = OpString "fn"
+; CHECK-DAG: [[NSNAME:%[0-9]+]] = OpString "weird"
+; CHECK-DAG: [[SNAME:%[0-9]+]] = OpString "S"
 ; CHECK-DAG: [[MNAME:%[0-9]+]] = OpString "m"
-; CHECK-DAG: OpString "weird"
-; CHECK-DAG: [[DF:%[0-9]+]] = OpExtInst [[VOID]] [[EXT]] DebugFunction [[FNNAME]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLexicalBlock {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} [[DF]]
-; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugTypeMember [[MNAME]]
-
-; COUNT-COUNT-1: DebugLexicalBlock
-
-; NO-COMPOSITE-NOT: DebugTypeComposite
+; CHECK: [[DF:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugFunction [[FNNAME]]
+; CHECK: [[BLOCK:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLexicalBlock {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} [[DF]]{{$}}
+; CHECK: [[NS:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugLexicalBlock {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} [[BLOCK]] [[NSNAME]]
+; CHECK: [[M:%[0-9]+]] = OpExtInst {{%[0-9]+}} {{%[0-9]+}} DebugTypeMember [[MNAME]]
+; CHECK: DebugTypeComposite [[SNAME]] {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} [[NS]] {{%[0-9]+}} {{%[0-9]+}} {{%[0-9]+}} [[M]]
 
 target triple = "spirv64-unknown-unknown"
 
