@@ -495,7 +495,6 @@ define void @merge_chain_with_noalias_store(ptr %p, ptr noalias %q, i64 %x, i64 
 ; CHECK-NEXT:    [[KEEP_FIRST:%.*]] = and i64 [[OLD]], -281470681743361
 ; CHECK-NEXT:    [[INSERT_FIRST:%.*]] = and i64 [[X]], 281470681743360
 ; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i64 [[KEEP_FIRST]], [[INSERT_FIRST]]
-; CHECK-NEXT:    store i64 [[FIRST]], ptr [[P]], align 8
 ; CHECK-NEXT:    [[KEEP_LAST:%.*]] = and i64 [[FIRST]], 281474976710655
 ; CHECK-NEXT:    [[INSERT_LAST:%.*]] = and i64 [[Y]], -281474976710656
 ; CHECK-NEXT:    [[LAST:%.*]] = or disjoint i64 [[KEEP_LAST]], [[INSERT_LAST]]

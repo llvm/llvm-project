@@ -15,6 +15,7 @@
 #include "llvm/Transforms/AggressiveInstCombine/AggressiveInstCombine.h"
 #include "AggressiveInstCombineInternal.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -24,6 +25,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
+#include "llvm/Analysis/MemorySSA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -1862,41 +1864,51 @@ static std::optional<AccessRange> getAccessRange(Instruction &I,
   return AccessRange{Base, {Begin, End}};
 }
 
-/// Return the base-relative bit range of a proven contiguous masked update.
-/// ValueBeforeStore is the SSA value known for Access or nullptr if unknown.
-/// If the range cannot be established, return std::nullopt so the caller
-/// checks the store as an intervening access and records its value.
-static std::optional<BitRange> getStoreWriteRange(StoreInst &Store,
-                                                  Value *ValueBeforeStore,
-                                                  BitRange Access,
-                                                  const DataLayout &DL) {
+/// Match a contiguous masked update. Before adding the write to a chain, the
+/// caller must establish that the value matched by MatchOld is available.
+template <typename OldMatcher>
+static std::optional<StoreWriteRange>
+getStoreWriteRange(StoreInst &Store, const OldMatcher &MatchOld,
+                   BitRange Access, const DataLayout &DL) {
   const APInt *KeepMask;
   Value *Insert;
-  Value *Stored = Store.getValueOperand();
-  if (ValueBeforeStore &&
-      match(Stored, m_c_DisjointOr(m_c_And(m_Specific(ValueBeforeStore),
-                                           m_APInt(KeepMask)),
-                                   m_Value(Insert)))) {
-    unsigned Shift, Width;
-    if (MaskedValueIsZero(Insert, *KeepMask, SimplifyQuery(DL, &Store)) &&
-        (~*KeepMask).isShiftedMask(Shift, Width)) {
-      if (DL.isBigEndian())
-        Shift = KeepMask->getBitWidth() - Shift - Width;
-      return BitRange{Access.Begin + Shift, Access.Begin + Shift + Width};
-    }
-  }
-  return std::nullopt;
+  if (!match(Store.getValueOperand(),
+             m_c_DisjointOr(m_c_And(MatchOld, m_APInt(KeepMask)),
+                            m_Value(Insert))))
+    return std::nullopt;
+  const APInt UpdateMask = ~*KeepMask;
+  unsigned Shift, Width;
+  if (!UpdateMask.isShiftedMask(Shift, Width) ||
+      !MaskedValueIsZero(Insert, *KeepMask, SimplifyQuery(DL, &Store)))
+    return std::nullopt;
+
+  if (DL.isBigEndian())
+    Shift = KeepMask->getBitWidth() - Shift - Width;
+  const BitRange Update{Access.Begin + Shift, Access.Begin + Shift + Width};
+  return StoreWriteRange{&Store, Access, Update};
 }
 
-static std::optional<StoreChain> createStoreChain(StoreInst &Store,
-                                                  Value *ValueBeforeStore,
-                                                  const AccessRange &Access,
-                                                  const DataLayout &DL) {
-  if (std::optional<BitRange> Update =
-          getStoreWriteRange(Store, ValueBeforeStore, Access.Bits, DL))
-    return StoreChain{
-        Access.Base, Access.Bits, {{&Store, Access.Bits, *Update}}};
-  return std::nullopt;
+static std::optional<StoreChain>
+createStoreChain(StoreInst &Store, Value *ValueBeforeStore,
+                 const AccessRange &Access, const DataLayout &DL,
+                 function_ref<bool(LoadInst &, StoreInst &)> IsLoadAvailable) {
+  if (ValueBeforeStore)
+    if (auto Write = getStoreWriteRange(Store, m_Specific(ValueBeforeStore),
+                                        Access.Bits, DL))
+      return StoreChain{Access.Base, Access.Bits, {*Write}};
+
+  // The keep mask identifies the load. Query its availability only after
+  // matching the masked update.
+  Value *Old;
+  auto Write = getStoreWriteRange(
+      Store, m_Value(Old, m_LoadSimple(m_Specific(Store.getPointerOperand()))),
+      Access.Bits, DL);
+  if (!Write)
+    return std::nullopt;
+  auto *Load = cast<LoadInst>(Old);
+  if (Load->getParent() == Store.getParent() || !IsLoadAvailable(*Load, Store))
+    return std::nullopt;
+  return StoreChain{Access.Base, Access.Bits, {*Write}};
 }
 
 static void finalizeStoreChain(StoreChain &Chain,
@@ -2010,6 +2022,7 @@ static void updateCurrentStoreChains(StoreChain &CurrentChain,
 // not form a candidate.
 static void collectStoreChain(
     StoreInst &Store, const DataLayout &DL,
+    function_ref<bool(LoadInst &, StoreInst &)> IsLoadAvailable,
     SmallVectorImpl<StoreChain> &CurrentChains,
     SmallVectorImpl<PreservationCheckValue> &PreservationCheckValues,
     BatchAAResults &BatchAA, SmallVectorImpl<StoreChain> &Chains) {
@@ -2032,8 +2045,8 @@ static void collectStoreChain(
       break;
     }
   }
-  auto CurrentChain =
-      createStoreChain(Store, ValueBeforeStore, *CurrentAccess, DL);
+  auto CurrentChain = createStoreChain(Store, ValueBeforeStore, *CurrentAccess,
+                                       DL, IsLoadAvailable);
   if (!CurrentChain) {
     llvm::erase_if(CurrentChains, [&](StoreChain &Chain) {
       return finalizeInterferingStoreChain(Store, Chain, BatchAA, Chains);
@@ -2346,9 +2359,10 @@ static bool mergeStoreChain(const StoreChain &Chain, AliasAnalysis &AA,
 /// An adjacent word and tag can be packed into a wider store to return storage.
 ///
 /// Within each basic block, collect stores with a common base and overlapping
-/// accesses. Use prior memory values to identify the updated bits, and end
-/// chains at interfering accesses. Split candidates at overlapping updates in
-/// program order and at gaps in address order.
+/// accesses. Identify the updated bits using local memory values or a load in
+/// a predecessor proved available by MemorySSA. End chains at interfering
+/// accesses. Split candidates at overlapping updates in program order and at
+/// gaps in address order.
 static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
                             TargetTransformInfo &TTI) {
   const DataLayout &DL = F.getDataLayout();
@@ -2357,6 +2371,23 @@ static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
   SmallVector<WeakTrackingVH, 4> TagStores;
   const bool HasSRet = F.hasStructRetAttr();
   const unsigned MinMaskedStores = HasSRet ? 1 : 2;
+  std::unique_ptr<MemorySSA> MSSA;
+  auto IsLoadAvailable = [&](LoadInst &Load, StoreInst &Store) {
+    MemoryLocation Loc = MemoryLocation::get(&Load).getWithoutAATags();
+    // Start before Store's own definition. A clobber that dominates the load
+    // proves that the loaded word is still available at the store.
+    if (!MSSA)
+      MSSA = std::make_unique<MemorySSA>(F, &AA, &DT);
+    MemoryUseOrDef *LoadAccess = MSSA->getMemoryAccess(&Load);
+    auto *StoreAccess =
+        dyn_cast_or_null<MemoryDef>(MSSA->getMemoryAccess(&Store));
+    if (!LoadAccess || !StoreAccess)
+      return false;
+    MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
+        StoreAccess->getDefiningAccess(), Loc);
+    return MSSA->dominates(Clobber, LoadAccess);
+  };
+
   for (BasicBlock &BB : F) {
     if (!DT.isReachableFromEntry(&BB))
       continue;
@@ -2380,8 +2411,7 @@ static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
       CurrentChains.clear();
     };
     for (Instruction &I : BB) {
-      if (I.isAtomic() || I.maySynchronize() ||
-          !isGuaranteedToTransferExecutionToSuccessor(&I)) {
+      if (endsStoreChain(I)) {
         FinishChains();
         PreservationCheckValues.clear();
         continue;
@@ -2394,8 +2424,8 @@ static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
         if (HasSRet && Stored->getType()->isIntegerTy(8) &&
             match(Stored, m_DisjointOr(m_Value(), m_Value())))
           TagStores.emplace_back(Store);
-        collectStoreChain(*Store, DL, CurrentChains, PreservationCheckValues,
-                          BatchAA, Chains);
+        collectStoreChain(*Store, DL, IsLoadAvailable, CurrentChains,
+                          PreservationCheckValues, BatchAA, Chains);
       } else {
         processNonStoreAccess(I, DL, CurrentChains, PreservationCheckValues,
                               BatchAA, Chains);
@@ -2403,6 +2433,9 @@ static bool foldStoreChains(Function &F, AliasAnalysis &AA, DominatorTree &DT,
     }
     FinishChains();
   }
+
+  // Finish clobber queries before applying the store folds.
+  MSSA.reset();
 
   bool Changed = false;
   for (const StoreChain &Chain : splitStoreChainsByContiguity(Chains))
