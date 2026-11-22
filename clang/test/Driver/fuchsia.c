@@ -98,8 +98,10 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir_with_per_target_subdir \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB-NONE
 // CHECK-RTLIB-NONE: "-resource-dir" "[[RESOURCE_DIR:[^"]+]]"
+// CHECK-RTLIB-NONE: "{{.*}}ld.lld{{(.exe)?}}"
 // CHECK-RTLIB-NONE-NOT: "[[RESOURCE_DIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-fuchsia{{/|\\\\}}libclang_rt.builtins.a"
-// CHECK-RTLIB-NONE: "-lc"
+// CHECK-RTLIB-NONE-SAME: "-lc"
+// CHECK-RTLIB-NONE-NOT: "libclang_rt"
 
 // RUN: %clang -### %s --target=x86_64-unknown-fuchsia -static -fuse-ld=ld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STATIC
