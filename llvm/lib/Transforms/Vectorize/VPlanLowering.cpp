@@ -1055,8 +1055,8 @@ void VPlanTransforms::expandSCEVsToVPInstructions(VPlan &Plan,
                     ->getIRBasicBlock()
                     ->getTerminator()
                     ->getDebugLoc();
-  // The entry block executes before the minimum iteration check, so expansions
-  // there may run when the original loop does not. Use SafeUDivMode.
+  // SCEVs may come from loop code that does not always execute, so expanding
+  // them in the entry block must not introduce a division by zero.
   VPSCEVExpander Expander(Builder, SE, DL, /*HoistOutOf=*/nullptr,
                           /*SafeUDivMode=*/true);
 
