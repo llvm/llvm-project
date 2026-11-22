@@ -90,9 +90,8 @@ void LoongArchCodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) {
   Base::addMachineSSAOptimization(PMW);
 
-  if (getTM().getTargetTriple().isLoongArch64()) {
-    // TODO(boomanaiden154): Add LoongArchOptWInstrsPass
-  }
+  if (getTM().getTargetTriple().isLoongArch64())
+    addMachineFunctionPass(LoongArchOptWInstrsPass(), PMW);
 }
 
 void LoongArchCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {

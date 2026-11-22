@@ -39,7 +39,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchDeadRegisterDefinitionsPass(*PR);
   initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
-  initializeLoongArchOptWInstrsPass(*PR);
+  initializeLoongArchOptWInstrsLegacyPass(*PR);
   initializeLoongArchPreRAExpandPseudoPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
@@ -218,7 +218,7 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isLoongArch64()) {
-    addPass(createLoongArchOptWInstrsPass());
+    addPass(createLoongArchOptWInstrsLegacyPass());
   }
 }
 

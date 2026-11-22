@@ -18,4 +18,5 @@
 #endif
 MACHINE_FUNCTION_PASS("loongarch-isel",
                       LoongArchISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("loongarch-opt-w-instrs", LoongArchOptWInstrsPass())
 #undef MACHINE_FUNCTION_PASS

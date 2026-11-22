@@ -3,7 +3,7 @@
 ; RUN: llc -enable-new-pm -mtriple=loongarch32 -print-pipeline-passes=tree < %s 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=O2
 ; RUN: llc -enable-new-pm -mtriple=loongarch64 -print-pipeline-passes=tree < %s 2>&1 \
-; RUN:   | FileCheck %s --check-prefix=O2
+; RUN:   | FileCheck %s --check-prefix=O2,O2-64
 
 ; O0: require<MachineModuleAnalysis>
 ; O0-NEXT: require<profile-summary>
@@ -101,6 +101,7 @@
 ; O2-NEXT:     machine-sink
 ; O2-NEXT:     peephole-opt
 ; O2-NEXT:     dead-mi-elimination
+; O2-64-NEXT:  loongarch-opt-w-instrs
 ; O2-NEXT:     detect-dead-lanes
 ; O2-NEXT:     init-undef
 ; O2-NEXT:     process-implicit-defs
