@@ -4357,7 +4357,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       F.args(), [](const Argument &A) { return !A.getType()->isEmptyTy(); });
   for (const auto &[ParamI, Arg] : enumerate(NonEmptyArgs)) {
     const unsigned ArgNo = Arg.getArgNo();
-    auto ArgIns =
+    const auto ArgIns =
         AllIns.take_while([&](auto I) { return I.OrigArgIndex == ArgNo; });
     AllIns = AllIns.drop_front(ArgIns.size());
 
@@ -4417,7 +4417,7 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
       const Align ArgAlign = getPTXParamAlign(
           &F, Ty, Arg.getArgNo() + AttributeList::FirstArgIndex, DL);
 
-      unsigned I = 0;
+      unsigned I = 0, RegIndex = 0;
       const auto VI = VectorizePTXValueVTs(VTs, Offsets, ArgAlign);
       for (const unsigned NumElts : VI) {
         // i1 is loaded/stored as i8
@@ -4437,18 +4437,19 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
         if (VecVT.isFixedLengthVectorOf(MVT::i1)) {
           DAG.ExtractVectorElements(P, InVals);
-          ArgIns = ArgIns.drop_front(VecVT.getVectorNumElements());
+          RegIndex += VecVT.getVectorNumElements();
         } else {
           for (const unsigned J : llvm::seq(NumElts)) {
             SDValue Elt = getExtractVectorizedValue(P, J, LoadVT, dl, DAG);
-            Elt = correctParamType(Elt, ArgIns[J].VT, ArgIns[J].Flags, DAG, dl);
+            const auto &In = ArgIns[RegIndex + J];
+            Elt = correctParamType(Elt, In.VT, In.Flags, DAG, dl);
             InVals.push_back(Elt);
           }
-          ArgIns = ArgIns.drop_front(NumElts);
+          RegIndex += NumElts;
         }
         I += NumElts;
       }
-      assert(ArgIns.empty() && "Bad argument decomposition");
+      assert(RegIndex == ArgIns.size() && "Bad argument decomposition");
     }
   }
 
