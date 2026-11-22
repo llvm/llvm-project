@@ -9,11 +9,13 @@ define i32 @ctlz_i1024_avx512cd(i16 %x) {
 ; CHECK-NEXT:    vmovd %edi, %xmm0
 ; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; CHECK-NEXT:    valignq {{.*#+}} zmm0 = zmm1[1,2,3,4,5,6,7],zmm0[0]
+; CHECK-NEXT:    vplzcntq %zmm0, %zmm1
+; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm1, %zmm1 # [0,64,128,192,256,320,384,448]
 ; CHECK-NEXT:    vptestmq %zmm0, %zmm0, %k1
-; CHECK-NEXT:    vplzcntq %zmm0, %zmm0
-; CHECK-NEXT:    vpaddq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm0 # [0,64,128,192,256,320,384,448]
-; CHECK-NEXT:    vpcompressq %zmm0, %zmm0 {%k1} {z}
-; CHECK-NEXT:    vmovd %xmm0, %eax
+; CHECK-NEXT:    vpcompressq %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovd %xmm0, %ecx
+; CHECK-NEXT:    movl $512, %eax # imm = 0x200
+; CHECK-NEXT:    cmovnel %ecx, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %o = or i16 %x, 1
