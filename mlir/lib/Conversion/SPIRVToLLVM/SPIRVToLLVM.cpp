@@ -796,6 +796,54 @@ public:
   }
 };
 
+class CompositeConstructPattern
+    : public SPIRVToLLVMConversion<spirv::CompositeConstructOp> {
+public:
+  using SPIRVToLLVMConversion<
+      spirv::CompositeConstructOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::CompositeConstructOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value result = LLVM::PoisonOp::create(rewriter, loc, dstType);
+    if (!isa<VectorType>(dstType)) {
+      for (auto [index, constituent] :
+           llvm::enumerate(adaptor.getConstituents()))
+        result = LLVM::InsertValueOp::create(
+            rewriter, loc, result, constituent,
+            ArrayRef<int64_t>{static_cast<int64_t>(index)});
+      rewriter.replaceOp(op, result);
+      return success();
+    }
+
+    unsigned position = 0;
+    auto insert = [&](Value element) {
+      Value index = createI32ConstantOf(loc, rewriter, position++);
+      result = LLVM::InsertElementOp::create(rewriter, loc, dstType, result,
+                                             element, index);
+    };
+    for (Value constituent : adaptor.getConstituents()) {
+      auto vecType = dyn_cast<VectorType>(constituent.getType());
+      if (!vecType) {
+        insert(constituent);
+        continue;
+      }
+      for (unsigned i : llvm::seq<unsigned>(vecType.getNumElements())) {
+        Value index = createI32ConstantOf(loc, rewriter, i);
+        insert(LLVM::ExtractElementOp::create(
+            rewriter, loc, vecType.getElementType(), constituent, index));
+      }
+    }
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// Converts `spirv.getCompositeExtract` to `llvm.extractvalue` if the container
 /// type is an aggregate type (struct or array). Otherwise, converts to
 /// `llvm.extractelement` that operates on vectors.
@@ -2810,6 +2858,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       // Logical ops
       DirectConversionPattern<spirv::LogicalAndOp, LLVM::AndOp>,
       DirectConversionPattern<spirv::LogicalOrOp, LLVM::OrOp>,
+      DirectConversionPattern<spirv::AnyOp, LLVM::vector_reduce_or>,
+      DirectConversionPattern<spirv::AllOp, LLVM::vector_reduce_and>,
       IComparePattern<spirv::LogicalEqualOp, LLVM::ICmpPredicate::eq>,
       IComparePattern<spirv::LogicalNotEqualOp, LLVM::ICmpPredicate::ne>,
       NotPattern<spirv::LogicalNotOp>,
@@ -2827,7 +2877,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
       // Miscellaneous ops
-      CompositeExtractPattern, CompositeInsertPattern, CopyObjectPattern,
+      CompositeConstructPattern, CompositeExtractPattern,
+      CompositeInsertPattern, CopyObjectPattern,
       DirectConversionPattern<spirv::SelectOp, LLVM::SelectOp>,
       DirectConversionPattern<spirv::UndefOp, LLVM::UndefOp>,
       VectorShufflePattern,

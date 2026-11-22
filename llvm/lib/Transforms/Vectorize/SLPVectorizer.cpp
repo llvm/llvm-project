@@ -33774,7 +33774,7 @@ public:
           // extractelement instruction because of the vectorization and
           // exclude it, if it is not compatible with other values.
           auto *Inst = dyn_cast<ExtractElementInst>(RdxVal);
-          if (!Inst)
+          if (!Inst || V.isDeleted(Inst))
             continue;
           CommonCandidates.push_back(RdxVal);
           TrackedToOrig.push_back(RV);
