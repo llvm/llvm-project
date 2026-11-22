@@ -333,3 +333,28 @@ func.func @nested_unreachable(%cond: i1, %init: i32) {
   }
   return
 }
+
+// -----
+
+// CHECK-LABEL: func @keep_region_with_early_exit
+// CHECK-NEXT:    "test.any_cond"() ({
+// CHECK-NEXT:      test.early_exit
+// CHECK-NEXT:    }) : () -> ()
+// CHECK-NEXT:    return
+func.func @keep_region_with_early_exit() {
+  "test.any_cond"() ({
+    test.early_exit
+  }) : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @erase_region_with_return_like
+// CHECK-NEXT:    return
+func.func @erase_region_with_return_like() {
+  "test.any_cond"() ({
+    "test.return"() : () -> ()
+  }) : () -> ()
+  return
+}

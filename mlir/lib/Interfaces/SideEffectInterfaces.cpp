@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include <utility>
 
 using namespace mlir;
@@ -34,6 +35,12 @@ bool MemoryEffects::Effect::classof(const SideEffects::Effect *effect) {
 
 bool mlir::isOpTriviallyDead(Operation *op) {
   return op->use_empty() && wouldOpBeTriviallyDead(op);
+}
+
+static bool exitsParentRegionBranchOp(Operation *op) {
+  return op->hasTrait<OpTrait::IsTerminator>() &&
+         isa_and_nonnull<RegionBranchOpInterface>(op->getParentOp()) &&
+         !isa<RegionBranchTerminatorOpInterface, BranchOpInterface>(op);
 }
 
 /// Return true if the op's own memory effects do not prevent erasure. Allowed
@@ -109,7 +116,8 @@ static bool wouldOpBeTriviallyDeadImpl(
       }
     }
     bool recursive = op->hasTrait<OpTrait::HasRecursiveMemoryEffects>();
-    if (cachedAlive || !hasOnlyRemovableEffects(op, recursive)) {
+    if (cachedAlive || exitsParentRegionBranchOp(op) ||
+        !hasOnlyRemovableEffects(op, recursive)) {
       // One live effect keeps every ancestor up to the root live. The
       // remaining subtrees cannot change the answer.
       if (cache) {
@@ -396,7 +404,7 @@ bool mlir::isMemoryEffectFree(Operation *op) {
   // free.
   for (Region &region : op->getRegions())
     for (Operation &op : region.getOps())
-      if (!isMemoryEffectFree(&op))
+      if (exitsParentRegionBranchOp(&op) || !isMemoryEffectFree(&op))
         return false;
   return true;
 }
