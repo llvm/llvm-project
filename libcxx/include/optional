@@ -163,6 +163,8 @@ namespace std {
     constexpr const T &&value() const &&;
     template<class U = remove_cv_t<T>> constexpr T value_or(U &&) const &;
     template<class U = remove_cv_t<T>> constexpr T value_or(U &&) &&;
+    constexpr T* get_ptr() noexcept;                            // since C++29
+    constexpr const T* get_ptr() const noexcept;                // since C++29
 
     // [optional.monadic], monadic operations
     template<class F> constexpr auto and_then(F&& f) &;         // since C++23
@@ -234,6 +236,7 @@ namespace std {
     constexpr T&       value() const;                           // freestanding-deleted
     template<class U = remove_cv_t<T>>
       constexpr remove_cv_t<T> value_or(U&& u) const;
+    constexpr T* get_ptr() const noexcept;                      // since C++29
 
     // [optional.ref.monadic], monadic operations
     template<class F> constexpr auto and_then(F&& f) const;

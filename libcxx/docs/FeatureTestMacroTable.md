@@ -331,6 +331,7 @@ This file documents the feature test macros currently supported by libc++.
 | `__cpp_lib_expected`                                   | `202606L`       |
 | `__cpp_lib_map_lookup`                                 | *unimplemented* |
 | `__cpp_lib_mdspan_copy`                                | *unimplemented* |
+| `__cpp_lib_optional`                                   | `202611L`       |
 | `__cpp_lib_pointer_tag_pair`                           | *unimplemented* |
 | `__cpp_lib_simd_bitops`                                | *unimplemented* |
 | `__cpp_lib_simd_complex`                               | *unimplemented* |

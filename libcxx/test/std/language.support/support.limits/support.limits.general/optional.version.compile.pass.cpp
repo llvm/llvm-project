@@ -276,8 +276,8 @@
 #  ifndef __cpp_lib_optional
 #    error "__cpp_lib_optional should be defined in c++29"
 #  endif
-#  if __cpp_lib_optional != 202506L
-#    error "__cpp_lib_optional should have the value 202506L in c++29"
+#  if __cpp_lib_optional != 202611L
+#    error "__cpp_lib_optional should have the value 202611L in c++29"
 #  endif
 
 #  if !defined(_LIBCPP_VERSION) || _LIBCPP_HAS_EXPERIMENTAL_OPTIONAL_ITERATOR
