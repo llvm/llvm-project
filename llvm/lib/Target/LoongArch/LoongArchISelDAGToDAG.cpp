@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArchISelDAGToDAG.h"
+#include "LoongArch.h"
 #include "LoongArchISelLowering.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "MCTargetDesc/LoongArchMatInt.h"
+#include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -494,9 +497,14 @@ bool LoongArchDAGToDAGISel::selectVSplatUimmPow2(SDValue N,
   return false;
 }
 
+LoongArchISelDAGToDAGPass::LoongArchISelDAGToDAGPass(LoongArchTargetMachine &TM,
+                                                     CodeGenOptLevel OptLevel)
+    : SelectionDAGISelPass(
+          std::make_unique<LoongArchDAGToDAGISel>(TM, OptLevel)) {}
+
 // This pass converts a legalized DAG into a LoongArch-specific DAG, ready
 // for instruction scheduling.
-FunctionPass *llvm::createLoongArchISelDag(LoongArchTargetMachine &TM,
-                                           CodeGenOptLevel OptLevel) {
+FunctionPass *llvm::createLoongArchISelDagLegacyPass(LoongArchTargetMachine &TM,
+                                                     CodeGenOptLevel OptLevel) {
   return new LoongArchDAGToDAGISelLegacy(TM, OptLevel);
 }
