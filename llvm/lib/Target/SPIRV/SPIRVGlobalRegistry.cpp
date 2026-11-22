@@ -2064,7 +2064,7 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     const Type *BaseType, MachineIRBuilder &MIRBuilder,
-    SPIRV::StorageClass::StorageClass SC, bool ForceTyped) {
+    SPIRV::StorageClass::StorageClass SC, bool ForceTyped, bool EmitIR) {
   if (BaseType->isFunctionTy() &&
       !cast<SPIRVSubtarget>(MIRBuilder.getMF().getSubtarget())
            .canUseExtension(SPIRV::Extension::SPV_INTEL_function_pointers)) {
@@ -2075,10 +2075,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
                                   "SPV_INTEL_function_pointers extension",
                                   DebugLoc(), DS_Error));
   }
-  // TODO: Need to check if EmitIr should always be true.
   SPIRVTypeInst SpirvBaseType = getOrCreateSPIRVType(
       BaseType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite,
-      storageClassRequiresExplictLayout(SC), true);
+      storageClassRequiresExplictLayout(SC), EmitIR);
   assert(SpirvBaseType);
   return getOrCreateSPIRVPointerTypeInternal(SpirvBaseType, MIRBuilder, SC,
                                              ForceTyped);
@@ -2099,10 +2098,11 @@ SPIRVTypeInst SPIRVGlobalRegistry::changePointerStorageClass(
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRVTypeInst BaseType, MachineIRBuilder &MIRBuilder,
-    SPIRV::StorageClass::StorageClass SC) {
+    SPIRV::StorageClass::StorageClass SC, bool EmitIR) {
   const Type *LLVMType = getTypeForSPIRVType(BaseType);
   assert(!storageClassRequiresExplictLayout(SC));
-  SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC);
+  SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC, false,
+                                                EmitIR);
   assert(
       (R->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
        getPointeeType(R) == BaseType) &&

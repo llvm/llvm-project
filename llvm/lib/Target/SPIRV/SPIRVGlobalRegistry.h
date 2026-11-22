@@ -650,7 +650,8 @@ public:
   // See getOrCreateSPIRVPointerTypeInternal for ForceTyped.
   SPIRVTypeInst getOrCreateSPIRVPointerType(
       const Type *BaseType, MachineIRBuilder &MIRBuilder,
-      SPIRV::StorageClass::StorageClass SC, bool ForceTyped = false);
+      SPIRV::StorageClass::StorageClass SC, bool ForceTyped = false,
+      bool EmitIR = true);
   SPIRVTypeInst
   getOrCreateSPIRVPointerType(const Type *BaseType, MachineInstr &I,
                               SPIRV::StorageClass::StorageClass SC,
@@ -674,7 +675,8 @@ public:
   SPIRVTypeInst
   getOrCreateSPIRVPointerType(SPIRVTypeInst BaseType,
                               MachineIRBuilder &MIRBuilder,
-                              SPIRV::StorageClass::StorageClass SC);
+                              SPIRV::StorageClass::StorageClass SC,
+                              bool EmitIR = true);
 
   // Returns a pointer to a SPIR-V pointer type that is the same as `PtrType`
   // except the stroage class has been changed to `SC`. It is the responsibility
