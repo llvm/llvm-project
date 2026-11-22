@@ -10660,6 +10660,12 @@ SDValue DAGCombiner::visitXOR(SDNode *N) {
   SDValue LHS, RHS, CC;
   if (TLI.isConstTrueVal(N1) &&
       isSetCCEquivalent(N0, LHS, RHS, CC, /*MatchStrict*/ true) &&
+      // isConstTrueVal checks N1 against VT's boolean contents, but a
+      // (STRICT_F)SETCC's contents come from the compared type. They differ
+      // for FP compares on MIPS R6 (0/-1 vs 0/1), and there xor 1 is not a not.
+      (N0Opcode == ISD::SELECT_CC || VT.getScalarType() == MVT::i1 ||
+       TLI.getBooleanContents(LHS.getValueType()) ==
+           TLI.getBooleanContents(VT)) &&
       !(VT.isVector() && TLI.hasAndNot(SDValue(N, 0)) && N->hasOneUse() &&
         N->use_begin()->getUser()->getOpcode() == ISD::AND)) {
     ISD::CondCode NotCC = ISD::getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
