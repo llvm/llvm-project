@@ -422,10 +422,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
 
 bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
                                     Function *OriginalFunction) {
-  bool Changed = false;
-
   if (!expansionApplicableToFunction(M, OriginalFunction))
-    return Changed;
+    return false;
 
   [[maybe_unused]] const bool OriginalFunctionIsDeclaration =
       OriginalFunction->isDeclaration();
@@ -469,9 +467,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
     if (CallBase *CB = dyn_cast<CallBase>(U)) {
       Value *CalledOperand = CB->getCalledOperand();
       if (VariadicWrapper == CalledOperand)
-        Changed |=
-            expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
-                       FixedArityReplacement);
+        expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
+                   FixedArityReplacement);
     }
   }
 
@@ -506,7 +503,7 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
     eraseFunction(VariadicWrapper);
   }
 
-  return Changed;
+  return true;
 }
 
 Function *
