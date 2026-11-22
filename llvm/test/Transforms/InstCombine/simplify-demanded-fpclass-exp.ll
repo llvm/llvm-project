@@ -325,8 +325,7 @@ define nofpclass(inf nnorm nan zero sub) float @pnorm_result_implies_possible_0_
 define nofpclass(inf nnorm nan zero sub) float @pnorm_result_implies_possible_sub_source(float nofpclass(inf norm zero) %maybe.sub.or.nan) {
 ; CHECK-LABEL: define nofpclass(nan inf zero sub nnorm) float @pnorm_result_implies_possible_sub_source(
 ; CHECK-SAME: float nofpclass(inf zero norm) [[MAYBE_SUB_OR_NAN:%.*]]) {
-; CHECK-NEXT:    [[EXP:%.*]] = call nnan ninf float @llvm.exp2.f32(float [[MAYBE_SUB_OR_NAN]])
-; CHECK-NEXT:    ret float [[EXP]]
+; CHECK-NEXT:    ret float 1.000000e+00
 ;
   %exp = call float @llvm.exp2.f32(float %maybe.sub.or.nan)
   ret float %exp
@@ -617,6 +616,92 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   %select = select i1 %cond, float %snan, float %unknown
   %result = call float @llvm.exp.f32(float %select)
   ret float %result
+}
+
+define nofpclass(nzero) float @source_is_known_subnormal_exp(float nofpclass(inf nan norm zero) %must.be.subnormal) {
+; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_subnormal_exp(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[MUST_BE_SUBNORMAL:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %exp = call float @llvm.exp.f32(float %must.be.subnormal)
+  ret float %exp
+}
+
+define nofpclass(nzero) float @source_is_known_zero_or_subnormal_exp(float nofpclass(inf nan norm) %must.be.zero.or.subnormal) {
+; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_zero_or_subnormal_exp(
+; CHECK-SAME: float nofpclass(nan inf norm) [[MUST_BE_ZERO_OR_SUBNORMAL:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %exp = call float @llvm.exp.f32(float %must.be.zero.or.subnormal)
+  ret float %exp
+}
+
+define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp(float nofpclass(ninf norm) %must.be.zero.subnormal.posinf.or.nan) {
+; CHECK-LABEL: define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp(
+; CHECK-SAME: float nofpclass(ninf norm) [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN]], 1.000000e+00
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %exp = call float @llvm.exp.f32(float %must.be.zero.subnormal.posinf.or.nan)
+  ret float %exp
+}
+
+define nofpclass(pzero) float @source_is_known_zero_subnormal_anyinf_or_nan_exp(float nofpclass(norm) %must.be.zero.subnormal.anyinf.or.nan) {
+; CHECK-LABEL: define nofpclass(pzero) float @source_is_known_zero_subnormal_anyinf_or_nan_exp(
+; CHECK-SAME: float nofpclass(norm) [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %must.be.zero.subnormal.anyinf.or.nan)
+  ret float %exp
+}
+
+define nofpclass(psub) float @source_is_known_zero_subnormal_anyinf_or_nan_exp_psub(float nofpclass(norm) %must.be.zero.subnormal.anyinf.or.nan) {
+; CHECK-LABEL: define nofpclass(psub) float @source_is_known_zero_subnormal_anyinf_or_nan_exp_psub(
+; CHECK-SAME: float nofpclass(norm) [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[EXP:%.*]] = call float @llvm.exp.f32(float [[MUST_BE_ZERO_SUBNORMAL_ANYINF_OR_NAN]])
+; CHECK-NEXT:    ret float [[EXP]]
+;
+  %exp = call float @llvm.exp.f32(float %must.be.zero.subnormal.anyinf.or.nan)
+  ret float %exp
+}
+
+define nofpclass(nzero) float @source_is_known_subnormal_exp2(float nofpclass(inf nan norm zero) %must.be.subnormal) {
+; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_subnormal_exp2(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[MUST_BE_SUBNORMAL:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %exp = call float @llvm.exp2.f32(float %must.be.subnormal)
+  ret float %exp
+}
+
+define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp2(float nofpclass(ninf norm) %must.be.zero.subnormal.posinf.or.nan) {
+; CHECK-LABEL: define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp2(
+; CHECK-SAME: float nofpclass(ninf norm) [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN]], 1.000000e+00
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %exp = call float @llvm.exp2.f32(float %must.be.zero.subnormal.posinf.or.nan)
+  ret float %exp
+}
+
+define nofpclass(nzero) float @source_is_known_subnormal_exp10(float nofpclass(inf nan norm zero) %must.be.subnormal) {
+; CHECK-LABEL: define nofpclass(nzero) float @source_is_known_subnormal_exp10(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[MUST_BE_SUBNORMAL:%.*]]) {
+; CHECK-NEXT:    ret float 1.000000e+00
+;
+  %exp = call float @llvm.exp10.f32(float %must.be.subnormal)
+  ret float %exp
+}
+
+define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp10(float nofpclass(ninf norm) %must.be.zero.subnormal.posinf.or.nan) {
+; CHECK-LABEL: define nofpclass(pzero) float @source_is_known_zero_subnormal_posinf_or_nan_exp10(
+; CHECK-SAME: float nofpclass(ninf norm) [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd float [[MUST_BE_ZERO_SUBNORMAL_POSINF_OR_NAN]], 1.000000e+00
+; CHECK-NEXT:    ret float [[TMP1]]
+;
+  %exp = call float @llvm.exp10.f32(float %must.be.zero.subnormal.posinf.or.nan)
+  ret float %exp
 }
 
 !0 = !{!"function_entry_count", i64 1000}

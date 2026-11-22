@@ -312,9 +312,10 @@ class RegisterCoalescer : private LiveRangeEdit::Delegate {
   /// This method does the proper fixing of the live-ranges when the afore
   /// mentioned method returns true.
   void shrinkToUses(LiveInterval *LI,
-                    SmallVectorImpl<MachineInstr *> *Dead = nullptr) {
+                    SmallVectorImpl<MachineInstr *> *Dead = nullptr,
+                    LaneBitmask SubRangeMask = LaneBitmask::getAll()) {
     NumShrinkToUses++;
-    if (LIS->shrinkToUses(LI, Dead)) {
+    if (LIS->shrinkToUses(LI, Dead, SubRangeMask)) {
       /// Check whether or not \p LI is composed by multiple connected
       /// components and if that is the case, fix that.
       SmallVector<LiveInterval *, 8> SplitLIs;
@@ -2207,8 +2208,10 @@ RegisterCoalescer::JoinResult RegisterCoalescer::joinCopy(
   // CP.getSrcReg()'s live interval has been merged into CP.getDstReg's live
   // interval. Since CP.getSrcReg() is in ToBeUpdated set and its live interval
   // is not up-to-date, need to update the merged live interval here.
-  if (ShrinkMainRange || ToBeUpdated.count(CP.getSrcReg()))
+  if (ToBeUpdated.count(CP.getSrcReg()))
     shrinkToUses(&LIS->getInterval(CP.getDstReg()));
+  else if (ShrinkMainRange)
+    shrinkToUses(&LIS->getInterval(CP.getDstReg()), nullptr, ShrinkMask);
 
   // SrcReg is guaranteed to be the register whose live interval that is
   // being merged.
@@ -3239,10 +3242,12 @@ void JoinVals::pruneValues(JoinVals &Other,
       // Check if we're replacing an IMPLICIT_DEF value. The IMPLICIT_DEF
       // instructions are only inserted to provide a live-out value for PHI
       // predecessors, so the instruction should simply go away once its value
-      // has been replaced.
+      // has been replaced. If it still carries defined lanes, this def must
+      // preserve them.
       Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-      bool EraseImpDef =
-          OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
+      bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                         OtherV.Resolution == CR_Keep &&
+                         OtherV.ValidLanes.none();
       if (!Def.isBlock()) {
         if (changeInstrs) {
           // Remove <def,read-undef> flags. This def is now a partial redef.
@@ -3274,10 +3279,15 @@ void JoinVals::pruneValues(JoinVals &Other,
         // computeAssignment(), the value that was originally copied could have
         // been replaced.
         Val &OtherV = Other.Vals[Vals[i].OtherVNI->id];
-        bool EraseImpDef =
-            OtherV.ErasableImplicitDef && OtherV.Resolution == CR_Keep;
-        // If the source is an erasable IMPLICIT_DEF, the pruned endpoint is
-        // the next def boundary, not a real use — discard it.
+        // If the source is an erasable IMPLICIT_DEF without any defined lanes,
+        // the pruned endpoints only read undefined values, so discard them. A
+        // partial IMPLICIT_DEF without <read-undef> still carries the lanes of
+        // the value it redefines (its ValidLanes). Without lane information we
+        // cannot tell which endpoints read those lanes, so keep all of them and
+        // restore the live range.
+        bool EraseImpDef = OtherV.ErasableImplicitDef &&
+                           OtherV.Resolution == CR_Keep &&
+                           OtherV.ValidLanes.none();
         LIS->pruneValue(LR, Def, EraseImpDef ? nullptr : &EndPoints);
         LLVM_DEBUG(dbgs() << "\t\tpruned all of " << printReg(Reg) << " at "
                           << Def << ": " << LR << '\n');

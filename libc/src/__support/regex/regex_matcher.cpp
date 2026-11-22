@@ -42,34 +42,10 @@ uint8_t ctx_at(cpp::string_view input, size_t pos, int cflags, int eflags) {
 
 } // namespace
 
-bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
-  const Expr e = pool.get(id);
-  if (e.nullable || !e.has_anchors || anchor_ctx == 0)
-    return e.nullable;
-  switch (e.kind) {
-  case ExprKind::Anchor:
-    return (anchor_ctx & e.anchor_mask) == e.anchor_mask;
-  case ExprKind::Concat:
-    return nullable(e.bin.left, anchor_ctx, pool) &&
-           nullable(e.bin.right, anchor_ctx, pool);
-  case ExprKind::Alt:
-    return nullable(e.bin.left, anchor_ctx, pool) ||
-           nullable(e.bin.right, anchor_ctx, pool);
-  case ExprKind::Repeat:
-    return nullable(e.rep.body, anchor_ctx, pool);
-  case ExprKind::EmptySet:
-  case ExprKind::EmptyStr:
-  case ExprKind::Literal:
-  case ExprKind::ByteSet:
-  case ExprKind::Star:
-    break;
-  }
-  LIBC_ASSERT(false);
-  __builtin_unreachable();
-}
-
 ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
                            uint8_t ctx_before) {
+  if (!pool.is_valid_input(id))
+    return Error(REG_BADPAT);
   const Expr e = pool.get(id);
   switch (e.kind) {
   case ExprKind::EmptySet:
@@ -135,11 +111,14 @@ ErrorOr<ExprId> derivative(ExprId id, char c, ExprPool &pool,
     return pool.make_concat(*d_body, *tail);
   }
   }
+  LIBC_ASSERT(false);
   __builtin_unreachable();
 }
 
 MatchResult match(ExprPool &pool, const ExprId pattern, cpp::string_view input,
                   int cflags, int eflags) {
+  if (!pool.is_valid_input(pattern) || pattern == EMPTY_SET_ID)
+    return MatchResult::NoMatch;
   uint8_t ctx = ctx_at(input, 0, cflags, eflags);
   if (nullable(pattern, ctx, pool))
     return MatchResult::Match;

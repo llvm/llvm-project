@@ -143,6 +143,10 @@ infrastructure are described first, followed by tool-specific sections.
   `ImplementationFileExtensions` contains an invalid entry, such as one with a
   leading dot. The invalid option is now reported as a warning.
 
+- Added a new {program}`clang-tidy` command line option `-sarif-export=<file>`
+  in which clang-tidy diagnostics are exported in the [SARIF](https://sarifweb.azurewebsites.net/)
+  format.
+  
 #### New checks
 
 - New {doc}`bugprone-macro-condition
@@ -298,9 +302,13 @@ infrastructure are described first, followed by tool-specific sections.
     instantiations with real move semantics.
 
 - Improved {doc}`misc-include-cleaner
-  <clang-tidy/checks/misc/include-cleaner>` check by matching
-  {option}`IgnoreHeaders` patterns containing `/` against header paths on
-  Windows.
+  <clang-tidy/checks/misc/include-cleaner>` check:
+
+  - Match {option}`IgnoreHeaders` patterns containing `/` against header paths 
+    on Windows.
+
+  - Fix a crash when a `.clang-format` file contains invalid configuration, such 
+    as duplicate keys.
 
 - Fixed an infinite loop in {doc}`misc-multiple-inheritance
   <clang-tidy/checks/misc/multiple-inheritance>` when checking a class that
@@ -320,10 +328,14 @@ infrastructure are described first, followed by tool-specific sections.
   literals created for raw user-defined literal operators, such as `12_w`.
 
 - Improved {doc}`modernize-return-braced-init-list
-  <clang-tidy/checks/modernize/return-braced-init-list>` check to no longer
-  rewrite the return value when the constructed type has a
-  `std::initializer_list` constructor, as the braced form could select a
-  different constructor.
+  <clang-tidy/checks/modernize/return-braced-init-list>` check:
+
+  - No longer rewrites the return value when the constructed type has a
+    `std::initializer_list` constructor, as the braced form could select a
+    different constructor.
+
+  - Fixed a crash when a returned constructor call passes arguments through
+    an ellipsis.
 
 - Fixed a crash in {doc}`modernize-use-designated-initializers
   <clang-tidy/checks/modernize/use-designated-initializers>` when analyzing

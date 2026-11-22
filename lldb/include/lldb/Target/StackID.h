@@ -61,6 +61,8 @@ public:
   /// Returns true if this StackID corresponds to a frame younger (i.e. higher
   /// on the call stack) than `other`, and false otherwise (including when the
   /// frames are not comparable, in some cases where this can be detected).
+  /// \p process and then its language runtimes get the first say, see
+  /// Process::CompareCFAs() and LanguageRuntime::CompareCFAs().
   bool IsYoungerThan(const StackID &other, Process &process) const;
 
 protected:

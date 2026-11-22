@@ -251,7 +251,7 @@ static DecodeStatus decodeDpp8FI(MCInst &Inst, uint64_t Val, uint64_t Addr,
 static DecodeStatus decodeSrcOp(MCInst &Inst, unsigned EncSize,
                                 unsigned OpWidth, uint64_t Imm, uint64_t EncImm,
                                 const MCDisassembler *Decoder) {
-  assert(Imm < (1U << EncSize) && "Operand doesn't fit encoding!");
+  assert(Imm < (1ULL << EncSize) && "Operand doesn't fit encoding!");
   const auto *DAsm = static_cast<const AMDGPUDisassembler *>(Decoder);
   return addOperand(
       Inst, DAsm->decodeSrcOp(Inst, OpWidth, static_cast<unsigned>(EncImm)));

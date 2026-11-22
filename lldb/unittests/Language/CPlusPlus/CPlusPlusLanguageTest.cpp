@@ -645,3 +645,35 @@ TEST(CPlusPlusLanguage, ManglingSubstitutor_StructorAlias) {
     EXPECT_EQ(*subst_or_err, "_ZN2D12C1B2D1D2I2C1B2C12D1B2D1EE2C1B2C12D1B2D1");
   }
 }
+
+TEST(CPlusPlusLanguage, FormatterLanguages) {
+  CPlusPlusLanguage language;
+  std::vector<lldb::LanguageType> cplusplus = {lldb::eLanguageTypeC_plus_plus};
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC, lldb::eLanguageTypeC89, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC11, lldb::eLanguageTypeC_plus_plus,
+        lldb::eLanguageTypeC_plus_plus_03, lldb::eLanguageTypeC_plus_plus_11,
+        lldb::eLanguageTypeC_plus_plus_14})
+    EXPECT_EQ(language.GetFormatterLanguages(c_or_cplusplus), cplusplus);
+
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC).empty());
+  EXPECT_TRUE(language.GetFormatterLanguages(lldb::eLanguageTypeObjC_plus_plus)
+                  .empty());
+}
+
+TEST(CPlusPlusLanguage, IsCategoryApplicable) {
+  CPlusPlusLanguage language;
+  for (lldb::LanguageType c_or_cplusplus :
+       {lldb::eLanguageTypeC89, lldb::eLanguageTypeC, lldb::eLanguageTypeC99,
+        lldb::eLanguageTypeC_plus_plus})
+    EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                              c_or_cplusplus));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus,
+                                             lldb::eLanguageTypeObjC));
+
+  // A category for a specific version of C++ only applies to its own values.
+  EXPECT_TRUE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                            lldb::eLanguageTypeC_plus_plus_11));
+  EXPECT_FALSE(language.IsCategoryApplicable(lldb::eLanguageTypeC_plus_plus_11,
+                                             lldb::eLanguageTypeC_plus_plus));
+}

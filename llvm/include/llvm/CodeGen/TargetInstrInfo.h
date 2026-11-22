@@ -112,6 +112,9 @@ struct ExtAddrMode {
 ///
 /// TargetInstrInfo - Interface to description of machine instruction set
 ///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetInstrInfo : public MCInstrInfo {
 protected:
   const TargetRegisterInfo &TRI;

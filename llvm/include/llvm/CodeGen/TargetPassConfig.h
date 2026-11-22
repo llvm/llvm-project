@@ -131,7 +131,7 @@ protected:
 
   MachineVerifierMode VerifyMode = MachineVerifierMode::End;
 
-  /// Default setting for -enable-tail-merge on this target.
+  /// Default setting for -tail-merge on this target.
   bool EnableTailMerge = true;
 
   /// Enable sinking of instructions in MachineSink where a computation can be

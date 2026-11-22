@@ -28,7 +28,6 @@ entry:
   
   ; Dynamic index (stride 8)
   ; CHECK: %[[#idx_dyn:]] = OpLoad %[[#int32]]
-  ; CHECK: %[[#access_dyn10:]] = OpInBoundsAccessChain %[[#ptr_arr5]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#access_dyn:]] = OpInBoundsAccessChain %[[#ptr_vec]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#val_dyn:]] = OpLoad %[[#vec2]] %[[#access_dyn]]
   %gep_dyn = getelementptr inbounds nuw [8 x i8], ptr addrspace(10) @global_arr, i32 %idx
@@ -43,6 +42,7 @@ entry:
   store <2 x float> %val_const, ptr addrspace(10) @out_const
 
   ; Dynamic index (stride 10)
+  ; CHECK: %[[#access_dyn10:]] = OpInBoundsAccessChain %[[#ptr_arr5]] %[[#]] %[[#idx_dyn]]
   ; CHECK: %[[#val_dyn10:]] = OpLoad %[[#arr5]] %[[#access_dyn10]]
   %gep_dyn10 = getelementptr inbounds nuw [10 x i8], ptr addrspace(10) @global_arr_10, i32 %idx
   %val_dyn10 = load [5 x i16], ptr addrspace(10) %gep_dyn10

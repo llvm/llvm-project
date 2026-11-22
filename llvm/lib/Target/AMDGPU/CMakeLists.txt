@@ -86,6 +86,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPULowerExecSync.cpp
   AMDGPUSwLowerLDS.cpp
   AMDGPUMachineFunctionInfo.cpp
+  AMDGPUMachineInstrs.cpp
   AMDGPUMachineModuleInfo.cpp
   AMDGPUMacroFusion.cpp
   AMDGPUMCInstLower.cpp
@@ -169,6 +170,7 @@ add_llvm_target(AMDGPUCodeGen
   SIFoldOperands.cpp
   SIFormMemoryClauses.cpp
   SIFrameLowering.cpp
+  SIInsertAsyncBarrierArriveWorkaround.cpp
   SIInsertHardClauses.cpp
   SIInsertWaitcnts.cpp
   SIInstrInfo.cpp

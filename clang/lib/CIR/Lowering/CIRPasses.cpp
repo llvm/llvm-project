@@ -27,6 +27,11 @@ static CallConvTarget getCallConvTarget(const llvm::Triple &triple) {
   // Windows is not supported.  UEFI shares its convention.
   if (triple.getArch() == llvm::Triple::x86_64 && !triple.isOSWindowsOrUEFI())
     return CallConvTarget::X86_64;
+  if (triple.isAMDGPU())
+    return CallConvTarget::AMDGPU;
+  if (triple.isAArch64() && !triple.isOSWindows() &&
+      triple.getArch() != llvm::Triple::aarch64_32)
+    return CallConvTarget::AArch64;
   return CallConvTarget::None;
 }
 
@@ -71,7 +76,7 @@ getX86ABICompatInfo(const llvm::Triple &triple,
   // Match the classic CodeGen default of -msmall-int-abi-compat.
   assert(!cir::MissingFeatures::smallIntABICompatOption());
   abiCompat.SmallIntABICompat = triple.isOSDarwin() || triple.isPS()
-                                    ? llvm::abi::SmallIntABICompatKind::Clang
+                                    ? llvm::abi::SmallIntABICompatKind::Clang23
                                     : llvm::abi::SmallIntABICompatKind::Both;
   return abiCompat;
 }
@@ -130,8 +135,7 @@ runCIRToCIRPasses(mlir::ModuleOp theModule, mlir::MLIRContext &mlirContext,
   if (enableCallConvLowering) {
     // CallConvLowering rewrites signatures and call sites using the classifier,
     // so it must run after CXXABILowering has lowered C++ ABI types to plain
-    // records the classifier can handle.  Only the x86_64 System V classifier
-    // is implemented; other targets are left unchanged.
+    // records the classifier can handle.
     CallConvTarget target = getCallConvTarget(*triple);
     if (target != CallConvTarget::None) {
       // Source the ABI-compatibility version from the module's serialized
