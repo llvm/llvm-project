@@ -28,7 +28,6 @@
 #include <optional>
 #include <utility>
 
-#include "test_macros.h"
 
 constexpr bool test() {
   // [optional.observe]
@@ -45,12 +44,15 @@ constexpr bool test() {
   }
   {
     std::optional<int> opt{94};
+
     assert(*opt.get_ptr() == 94);
+
     assert(*std::as_const(opt).get_ptr() == 94);
   }
   // [optional.ref.observe]
   {
     std::optional<int&> opt;
+
     std::same_as<int*> decltype(auto) ptr = opt.get_ptr();
     static_assert(noexcept(opt.get_ptr()));
     assert(ptr == nullptr);
@@ -62,7 +64,9 @@ constexpr bool test() {
   {
     int i = 94;
     std::optional<int&> opt{i};
+
     assert(*opt.get_ptr() == 94);
+    
     assert(*std::as_const(opt).get_ptr() == 94);
   }
 
@@ -70,7 +74,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
   static_assert(test());
 
   return 0;
