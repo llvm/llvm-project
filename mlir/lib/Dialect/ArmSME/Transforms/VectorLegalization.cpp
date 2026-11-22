@@ -929,6 +929,11 @@ struct LowerColumnTransferReadToLoops
           readOp, "Expected the leading dim to be scalable and the trailing "
                   "dim to be fixed.");
 
+    // The loop loads every element, so it can't keep a mask.
+    if (readOp.getMask() || readOp.isMasked())
+      return rewriter.notifyMatchFailure(readOp,
+                                         "Masked reads are not supported");
+
     // Create new result type - similar to the original vector with the
     // trailing unit dim collapsed.
     int64_t numRows = resType.getShape()[0];

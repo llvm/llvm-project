@@ -697,3 +697,25 @@ func.func @negative_xfer_read_scalable_column_scalable_trailing_dim(%a: index, %
   %read = vector.transfer_read %src[%a, %b], %pad : memref<?x?xf32>, vector<4x[1]xf32>
   return %read : vector<4x[1]xf32>
 }
+
+// -----
+
+// The loop would load every element, so masked reads are not lowered.
+
+// CHECK-LABEL:   func.func @negative_xfer_read_scalable_column_mask_operand
+func.func @negative_xfer_read_scalable_column_mask_operand(%a: index, %b: index, %pad: f32, %src: memref<?x?xf32>, %mask: vector<[4]x1xi1>) -> (vector<[4]x1xf32>) {
+  // CHECK-NOT: scf.for
+  // CHECK-NOT: memref.load
+  %read = vector.transfer_read %src[%a, %b], %pad, %mask {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x1xf32>
+  return %read : vector<[4]x1xf32>
+}
+
+// -----
+
+// CHECK-LABEL:   func.func @negative_xfer_read_scalable_column_vector_mask
+func.func @negative_xfer_read_scalable_column_vector_mask(%a: index, %b: index, %pad: f32, %src: memref<?x?xf32>, %mask: vector<[4]x1xi1>) -> (vector<[4]x1xf32>) {
+  // CHECK-NOT: scf.for
+  // CHECK-NOT: memref.load
+  %read = vector.mask %mask { vector.transfer_read %src[%a, %b], %pad {in_bounds = [true, true]} : memref<?x?xf32>, vector<[4]x1xf32> } : vector<[4]x1xi1> -> vector<[4]x1xf32>
+  return %read : vector<[4]x1xf32>
+}
