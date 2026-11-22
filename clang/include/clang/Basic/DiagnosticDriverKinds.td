@@ -168,6 +168,10 @@ def warn_drv_unsupported_option_for_flang : Warning<
 def warn_drv_unsupported_diag_option_for_flang : Warning<
   "the warning option '-%0' is not supported">,
   InGroup<OptionIgnored>;
+def warn_drv_tsan_profile_update_single : Warning<
+  "'%0' with '-fsanitize=thread' may cause ThreadSanitizer to report data "
+  "races on profile counters">,
+  InGroup<DiagGroup<"tsan-profile-update">>;
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
@@ -450,9 +454,7 @@ def warn_drv_fraw_string_literals_in_cxx11 : Warning<
   InGroup<UnusedCommandLineArgument>;
 
 def err_drv_device_lib_not_found : Error<
-  "no %select{libclc|compiler-rt builtins bitcode}0 library '%1' found in the "
-  "clang resource directory%select{|; build compiler-rt with SPIR-V support or "
-  "pass '--no-offloadlib' to compile without it}0">;
+  "no %0 library '%1' found in the clang resource directory">;
 
 def err_drv_invalid_malign_branch_EQ : Error<
   "invalid argument '%0' to -malign-branch=; each element must be one of: %1">;
@@ -626,6 +628,8 @@ def err_drv_needs_hvx : Error<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">;
 def err_drv_needs_hvx_version : Error<
   "%0 is not supported on HVX %1">;
+def err_drv_needs_hlx : Error<
+  "%0 requires HLX, use -mhlx to enable it">;
 
 def err_drv_module_header_wrong_kind : Error<
   "header file '%0' input type '%1' does not match type of prior input "

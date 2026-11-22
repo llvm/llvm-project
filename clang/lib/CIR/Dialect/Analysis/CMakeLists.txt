@@ -3,7 +3,7 @@ add_clang_library(MLIRCIRAnalysis
   CIRBasicAliasAnalysis.cpp
 
   DEPENDS
-  MLIRPtrMemorySpaceInterfacesIncGen
+  mlir-headers
 
   LINK_LIBS PUBLIC
   MLIRCIR

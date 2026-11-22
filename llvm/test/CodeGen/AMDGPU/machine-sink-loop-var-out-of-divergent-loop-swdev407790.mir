@@ -42,7 +42,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
-  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[SI_IF1]], [[SI_IF]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK [[SI_IF1]], [[SI_IF]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -90,7 +90,7 @@ body:             |
   bb.4:
     INLINEASM &"", sideeffect attdialect
     %5:vgpr_32 = V_ADD_U32_e64 %0, %1, 0, implicit $exec
-    %6:sreg_32 = SI_IF_BREAK killed %4, %3, implicit-def dead $scc
+    %6:sreg_32 = SI_IF_BREAK %4, %3, implicit-def dead $scc
     SI_LOOP %6, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 
@@ -153,7 +153,7 @@ body:             |
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.5(0x40000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   INLINEASM &"", sideeffect attdialect
-  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK killed [[SI_IF1]], [[SI_IF]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_32 = SI_IF_BREAK [[SI_IF1]], [[SI_IF]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.5
   ; CHECK-NEXT: {{  $}}
@@ -201,7 +201,7 @@ body:             |
   bb.4:
     INLINEASM &"", sideeffect attdialect
     %5:sreg_32 = S_ADD_I32 %0, %1, implicit-def dead $scc
-    %6:sreg_32 = SI_IF_BREAK killed %4, %3, implicit-def dead $scc
+    %6:sreg_32 = SI_IF_BREAK %4, %3, implicit-def dead $scc
     SI_LOOP %6, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
     S_BRANCH %bb.5
 

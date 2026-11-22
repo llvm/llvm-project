@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // The destination of an atomic can name one element of a vector. Check that
 // the atomic gets the address of that element and not the address of the whole
 // vector. The tests call the builtins directly because the HLSL functions do

@@ -208,7 +208,7 @@ YAMLRemarkParser::parseRemark(yaml::Document &RemarkEntry) {
       else
         return MaybeStr.takeError();
     } else if (KeyName == "Hotness") {
-      if (Expected<unsigned> MaybeU = parseUnsigned(RemarkField))
+      if (Expected<uint64_t> MaybeU = parseUnsigned<uint64_t>(RemarkField))
         TheRemark.Hotness = *MaybeU;
       else
         return MaybeU.takeError();
@@ -257,43 +257,36 @@ Expected<Type> YAMLRemarkParser::parseType(yaml::MappingNode &Node) {
   return Type;
 }
 
+Expected<StringRef> YAMLRemarkParser::parseScalar(yaml::ScalarNode &Node) {
+  SmallString<32> Storage;
+  StringRef Result = Node.getValue(Storage);
+  if (Error E = error())
+    return std::move(E);
+  // The bitstream format cannot hold a null character in a string.
+  if (Result.contains('\0'))
+    return error("remark strings cannot contain null characters.", Node);
+  // getValue only fills Storage when it had to rewrite the value.
+  return Storage.empty() ? Result : Result.copy(Alloc);
+}
+
 Expected<StringRef> YAMLRemarkParser::parseKey(yaml::KeyValueNode &Node) {
   if (auto *Key = dyn_cast_if_present<yaml::ScalarNode>(Node.getKey()))
-    return Key->getRawValue();
+    return parseScalar(*Key);
 
   return error("key is not a string.", Node);
 }
 
 Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
-  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
-  yaml::BlockScalarNode *ValueBlock;
-  StringRef Result;
-  if (!Value) {
-    // Try to parse the value as a block node.
-    ValueBlock = dyn_cast_if_present<yaml::BlockScalarNode>(Node.getValue());
-    if (!ValueBlock)
-      return error("expected a value of scalar type.", Node);
-    // The block value lives in the YAML document, which next() frees before
-    // returning the remark.
-    Result = ValueBlock->getValue().copy(Alloc);
-  } else
-    Result = Value->getRawValue();
+  yaml::Node *Value = Node.getValue();
+  // A block value lives in the YAML document, which next() frees before
+  // returning the remark.
+  if (auto *Block = dyn_cast_if_present<yaml::BlockScalarNode>(Value))
+    return Block->getValue().copy(Alloc);
 
-  Result.consume_front("\'");
-  Result.consume_back("\'");
+  if (auto *Scalar = dyn_cast_if_present<yaml::ScalarNode>(Value))
+    return parseScalar(*Scalar);
 
-  return Result;
-}
-
-Expected<unsigned> YAMLRemarkParser::parseUnsigned(yaml::KeyValueNode &Node) {
-  SmallVector<char, 4> Tmp;
-  auto *Value = dyn_cast_if_present<yaml::ScalarNode>(Node.getValue());
-  if (!Value)
-    return error("expected a value of scalar type.", Node);
-  unsigned UnsignedValue = 0;
-  if (Value->getValue(Tmp).getAsInteger(10, UnsignedValue))
-    return error("expected a value of integer type.", *Value);
-  return UnsignedValue;
+  return error("expected a value of scalar type.", Node);
 }
 
 Expected<RemarkLocation>

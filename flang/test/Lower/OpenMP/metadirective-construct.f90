@@ -172,6 +172,41 @@ subroutine test_construct_after_target()
   !$omp end parallel
 end subroutine
 
+! Device weights also count only from the innermost TARGET. KIND is worth 2 here
+! and loses to the vendor score of 3.
+! CHECK-LABEL: func.func @_QPtest_device_weight_outside_target()
+! CHECK:         omp.parallel
+! CHECK:           omp.target
+! CHECK-NOT:         omp.taskyield
+! CHECK:             omp.taskwait
+! CHECK:         return
+subroutine test_device_weight_outside_target()
+  !$omp parallel
+    !$omp target
+      !$omp metadirective &
+      !$omp & when(device={kind(host)}: taskyield) &
+      !$omp & when(implementation={vendor(score(3): llvm)}: taskwait)
+    !$omp end target
+  !$omp end parallel
+end subroutine
+
+! With PARALLEL inside TARGET, KIND is worth 4 and wins.
+! CHECK-LABEL: func.func @_QPtest_device_weight_inside_target()
+! CHECK:         omp.target
+! CHECK:           omp.parallel
+! CHECK-NOT:         omp.taskwait
+! CHECK:             omp.taskyield
+! CHECK:         return
+subroutine test_device_weight_inside_target()
+  !$omp target
+    !$omp parallel
+      !$omp metadirective &
+      !$omp & when(device={kind(host)}: taskyield) &
+      !$omp & when(implementation={vendor(score(3): llvm)}: taskwait)
+    !$omp end parallel
+  !$omp end target
+end subroutine
+
 ! Both candidates score 8. The first selector is a strict subset of the second
 ! because the second repeats PARALLEL.
 ! CHECK-LABEL: func.func @_QPtest_repeated_construct_subset()
@@ -214,6 +249,34 @@ subroutine test_repeated_construct_superset_first()
     !$omp end parallel
   end do
   !$omp end parallel do
+end subroutine
+
+! All three candidates score 8. Neither of the first two is a subset of the
+! other, but both are strict subsets of the third.
+! CHECK-LABEL: func.func @_QPtest_repeated_construct_three_way_tie()
+! CHECK:         omp.parallel
+! CHECK:           omp.wsloop
+! CHECK:             omp.parallel
+! CHECK-NOT:           omp.taskyield
+! CHECK-NOT:           omp.taskwait
+! CHECK:               omp.barrier
+! CHECK:         return
+subroutine test_repeated_construct_three_way_tie()
+  integer :: i
+  !$omp parallel
+  !$omp do
+  do i = 1, 1
+    !$omp parallel
+      !$omp metadirective &
+      !$omp & when(construct={parallel do, parallel}: taskyield) &
+      !$omp & when(construct={parallel do}, &
+      !$omp &      implementation={vendor(score(4): llvm)}: taskwait) &
+      !$omp & when(construct={parallel do, parallel}, &
+      !$omp &      implementation={vendor(score(0): llvm)}: barrier)
+    !$omp end parallel
+  end do
+  !$omp end do
+  !$omp end parallel
 end subroutine
 
 ! The conditions differ, so neither selector is a subset and `a` is tested

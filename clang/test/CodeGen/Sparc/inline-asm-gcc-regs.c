@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple sparc-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 
 // Every inline assembly statement clobbers the Y register, since code written
 // for GCC can write it without listing it.

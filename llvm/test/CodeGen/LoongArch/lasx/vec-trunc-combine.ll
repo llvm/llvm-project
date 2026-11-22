@@ -5,18 +5,16 @@
 define void @test_trunc_v4i16_to_v4i8(ptr %src, ptr %dst) {
 ; LA32-LABEL: test_trunc_v4i16_to_v4i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_trunc_v4i16_to_v4i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vpickev.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vstelm.w $vr0, $a1, 0, 0
 ; LA64-NEXT:    ret

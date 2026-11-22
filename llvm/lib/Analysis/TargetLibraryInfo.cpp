@@ -14,8 +14,8 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringTable.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/SystemLibraries.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/TargetParser/Triple.h"
@@ -104,6 +104,23 @@ bool TargetLibraryInfoImpl::isCallingConvCCompatible(Function *F) {
   return ::isCallingConvCCompatible(F->getCallingConv(),
                                     F->getParent()->getTargetTriple(),
                                     F->getFunctionType());
+}
+
+void TargetLibraryInfo::initExtensionsForTriple(bool &ShouldExtI32Param,
+                                                bool &ShouldExtI32Return,
+                                                bool &ShouldSignExtI32Param,
+                                                bool &ShouldSignExtI32Return,
+                                                const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initExtensionsForTriple(
+      ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param,
+      ShouldSignExtI32Return, T);
+}
+
+void TargetLibraryInfo::initBoolExtensionsForTriple(bool &ShouldZExtBoolParam,
+                                                    bool &ShouldZExtBoolReturn,
+                                                    const Triple &T) {
+  RTLIB::RuntimeLibcallsInfo::initBoolExtensionsForTriple(
+      ShouldZExtBoolParam, ShouldZExtBoolReturn, T);
 }
 
 static void initializeBase(TargetLibraryInfoImpl &TLI, const Triple &T) {
@@ -1461,13 +1478,6 @@ TargetLibraryInfo TargetLibraryAnalysis::run(const Function &F,
   if (!BaselineInfoImpl)
     BaselineInfoImpl = TargetLibraryInfoImpl(F.getParent()->getTargetTriple());
   return TargetLibraryInfo(*BaselineInfoImpl, &F);
-}
-
-unsigned TargetLibraryInfoImpl::getWCharSize(const Module &M) const {
-  if (auto *ShortWChar = cast_or_null<ConstantAsMetadata>(
-      M.getModuleFlag("wchar_size")))
-    return cast<ConstantInt>(ShortWChar->getValue())->getZExtValue();
-  return Triple(M.getTargetTriple()).getDefaultWCharSize();
 }
 
 unsigned TargetLibraryInfoImpl::getSizeTSize(const Module &M) const {

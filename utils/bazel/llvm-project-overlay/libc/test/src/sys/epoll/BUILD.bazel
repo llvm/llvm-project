@@ -14,8 +14,8 @@ libc_test(
     name = "epoll_create_test",
     srcs = ["linux/epoll_create_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create",
+        "//libc/src/sys/epoll:epoll_create",
+        "//libc/src/unistd:close",
     ],
 )
 
@@ -23,9 +23,9 @@ libc_test(
     name = "epoll_create1_test",
     srcs = ["linux/epoll_create1_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create1",
-        "//libc:hdr_sys_epoll_macros",
+        "//libc/hdr:sys_epoll_macros",
+        "//libc/src/sys/epoll:epoll_create1",
+        "//libc/src/unistd:close",
     ],
 )
 
@@ -33,12 +33,12 @@ libc_test(
     name = "epoll_ctl_test",
     srcs = ["linux/epoll_ctl_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create1",
-        "//libc:epoll_ctl",
-        "//libc:hdr_sys_epoll_macros",
-        "//libc:pipe",
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr:sys_epoll_macros",
+        "//libc/hdr/types:struct_epoll_event",
+        "//libc/src/sys/epoll:epoll_create1",
+        "//libc/src/sys/epoll:epoll_ctl",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:pipe",
     ],
 )
 
@@ -46,13 +46,13 @@ libc_test(
     name = "epoll_wait_test",
     srcs = ["linux/epoll_wait_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create1",
-        "//libc:epoll_ctl",
-        "//libc:epoll_wait",
-        "//libc:hdr_sys_epoll_macros",
-        "//libc:pipe",
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr:sys_epoll_macros",
+        "//libc/hdr/types:struct_epoll_event",
+        "//libc/src/sys/epoll:epoll_create1",
+        "//libc/src/sys/epoll:epoll_ctl",
+        "//libc/src/sys/epoll:epoll_wait",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:pipe",
     ],
 )
 
@@ -60,13 +60,13 @@ libc_test(
     name = "epoll_pwait_test",
     srcs = ["linux/epoll_pwait_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create1",
-        "//libc:epoll_ctl",
-        "//libc:epoll_pwait",
-        "//libc:hdr_sys_epoll_macros",
-        "//libc:pipe",
-        "//libc:types_struct_epoll_event",
+        "//libc/hdr:sys_epoll_macros",
+        "//libc/hdr/types:struct_epoll_event",
+        "//libc/src/sys/epoll:epoll_create1",
+        "//libc/src/sys/epoll:epoll_ctl",
+        "//libc/src/sys/epoll:epoll_pwait",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:pipe",
     ],
 )
 
@@ -74,13 +74,13 @@ libc_test(
     name = "epoll_pwait2_test",
     srcs = ["linux/epoll_pwait2_test.cpp"],
     deps = [
-        "//libc:close",
-        "//libc:epoll_create1",
-        "//libc:epoll_ctl",
-        "//libc:epoll_pwait2",
-        "//libc:hdr_sys_epoll_macros",
-        "//libc:pipe",
-        "//libc:types_struct_epoll_event",
-        "//libc:types_struct_timespec",
+        "//libc/hdr:sys_epoll_macros",
+        "//libc/hdr/types:struct_epoll_event",
+        "//libc/hdr/types:struct_timespec",
+        "//libc/src/sys/epoll:epoll_create1",
+        "//libc/src/sys/epoll:epoll_ctl",
+        "//libc/src/sys/epoll:epoll_pwait2",
+        "//libc/src/unistd:close",
+        "//libc/src/unistd:pipe",
     ],
 )

@@ -13,6 +13,7 @@
 
 #include "llvm/Support/KnownBits.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -799,6 +800,17 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   return KnownAbs;
 }
 
+KnownBits KnownBits::ctlz(bool ZeroIsPoison) const {
+  unsigned BitWidth = getBitWidth();
+  unsigned MaxLZ = countMaxLeadingZeros();
+  if (ZeroIsPoison)
+    MaxLZ = std::min(MaxLZ, BitWidth - 1);
+
+  KnownBits Result(BitWidth);
+  Result.Zero.setBitsFrom(llvm::bit_width(MaxLZ));
+  return Result;
+}
+
 KnownBits KnownBits::reduceAdd(unsigned NumElts) const {
   if (NumElts == 0)
     return KnownBits(getBitWidth());
@@ -1270,11 +1282,16 @@ KnownBits KnownBits::udiv(const KnownBits &LHS, const KnownBits &RHS,
 
   // The quotient grows when the numerator grows and shrinks when the
   // denominator grows, and all four operand bounds are attainable, so the
-  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. Keep the common
-  // leading bits of the two bounds (as ConstantRange::toKnownBits does),
-  // which can include leading ones, not just leading zeros.
+  // result is in [MinNum / MaxDenom, MaxNum / MinDenom]. If the division is
+  // exact we tighten the bounds on minimum result, so we round up the lower
+  // bound to its ceiling. Keep the common leading bits of the two bounds (as
+  // ConstantRange::toKnownBits does), which can include leading ones, not
+  // just leading zeros.
+  APInt MaxDenom = RHS.getMaxValue();
   APInt MaxRes = LHS.getMaxValue().udiv(MinDenom);
-  APInt MinRes = LHS.getMinValue().udiv(RHS.getMaxValue());
+  APInt MinRes = Exact ? APIntOps::RoundingUDiv(LHS.getMinValue(), MaxDenom,
+                                                APInt::Rounding::UP)
+                       : LHS.getMinValue().udiv(MaxDenom);
 
   Known = KnownBits::makeConstant(MinRes);
   if (std::optional<unsigned> DifferentBit =

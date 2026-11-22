@@ -1,12 +1,9 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select %s -o - | FileCheck %s
 
 ---
 name:            select_cfb_vec512
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr, preferred-register: '', flags: [  ] }
-  - { id: 1, class: vecr, preferred-register: '', flags: [  ] }
 body:             |
   bb.0:
     liveins: $zmm0

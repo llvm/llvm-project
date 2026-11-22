@@ -12,12 +12,12 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  cir.func no_proto private @kandr(!cir.ptr<!s8i>) -> !s32i
+  cir.func no_proto private @kandr(!cir.ptr<!s8i>) -> !s32i requires_call_conv_lowering
 
   // A callee declared without a prototype takes more operands than it
   // declares, but those extra arguments are named rather than passed through
   // an ellipsis, so the variadic accounting does not apply to them.
-  cir.func @extra_args_no_proto(%arg0: !cir.ptr<!s8i>, %arg1: !s32i) {
+  cir.func @extra_args_no_proto(%arg0: !cir.ptr<!s8i>, %arg1: !s32i) requires_call_conv_lowering {
     %0 = cir.call @kandr(%arg0, %arg1) : (!cir.ptr<!s8i>, !s32i) -> !s32i
     cir.return
   }
@@ -42,7 +42,7 @@ module attributes {
   // A type the classifier rejects at the ellipsis is reported on the call.
   // The load keeps the i96 out of the enclosing function's signature.
   cir.func @indirect_nyi(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                         %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!i96>) {
+                         %arg1: !cir.ptr<!s8i>, %arg2: !cir.ptr<!i96>) requires_call_conv_lowering {
     %v = cir.load %arg2 : !cir.ptr<!i96>, !i96
     // CHECK: :[[@LINE+1]]:10: error: 'cir.call' op calling-convention lowering not yet implemented for type '!cir.int<s, 96>'
     %0 = cir.call %arg0(%arg1, %v)
@@ -71,7 +71,7 @@ module attributes {
   // classified like a cir.call, but rebuilding a cir.try_call is not yet
   // implemented.
   cir.func @indirect_try_call(%arg0: !cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>,
-                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) {
+                              %arg1: !cir.ptr<!s8i>, %arg2: !rec_Big) requires_call_conv_lowering {
     // CHECK: :[[@LINE+1]]:10: error: 'cir.try_call' op TryCallOp not yet implemented in CallConvLowering
     %0 = cir.try_call %arg0(%arg1, %arg2) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!cir.ptr<!s8i>, ...) -> !s32i>>, !cir.ptr<!s8i>, !rec_Big) -> !s32i
@@ -109,7 +109,7 @@ module attributes {
   // the ellipsis, so the declared parameter's coercion is what needs the
   // rewrite here, and rebuilding a cir.try_call is unimplemented.
   cir.func @variadic_try_call_no_ellipsis(
-      %arg0: !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, %arg1: !rec_Pair) {
+      %arg0: !cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, %arg1: !rec_Pair) requires_call_conv_lowering {
     %0 = cir.try_call %arg0(%arg1) ^bb1, ^bb2
         : (!cir.ptr<!cir.func<(!rec_Pair, ...) -> !s32i>>, !rec_Pair) -> !s32i
   ^bb1:
@@ -143,13 +143,13 @@ module attributes {
     #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
 } {
 
-  cir.func no_proto private @kandr_two(!rec_Pair, !rec_Pair) -> !s32i
+  cir.func no_proto private @kandr_two(!rec_Pair, !rec_Pair) -> !s32i requires_call_conv_lowering
 
   // no_proto turns off the verifier's argument-count check in both directions,
   // so a call can also pass fewer arguments than the callee declares.  The
   // classification has an entry per declared parameter with no operand to
   // pair it with.
-  cir.func @too_few_no_proto(%arg0: !rec_Pair) {
+  cir.func @too_few_no_proto(%arg0: !rec_Pair) requires_call_conv_lowering {
     %0 = cir.call @kandr_two(%arg0) : (!rec_Pair) -> !s32i
     cir.return
   }

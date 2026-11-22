@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -35,6 +36,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LowerMemIntrinsics.h"
@@ -408,7 +410,7 @@ static void lowerExpectAssume(IntrinsicInst *II) {
   // Otherwise we should lower the intrinsic to the corresponding SPIR-V
   // instruction.
   // For @llvm.assume we have OpAssumeTrueKHR.
-  // For @llvm.expect we have OpExpectKHR.
+  // For @llvm.expect and @llvm.expect.with.probability we have OpExpectKHR.
   //
   // We need to lower this into a builtin and then the builtin into a SPIR-V
   // instruction.
@@ -421,6 +423,18 @@ static void lowerExpectAssume(IntrinsicInst *II) {
         II->getModule(), Intrinsic::SPVIntrinsics::spv_expect,
         {II->getOperand(0)->getType()});
     II->setCalledFunction(F);
+  } else if (II->getIntrinsicID() == Intrinsic::expect_with_probability) {
+    // OpExpectKHR has no probability operand. Keep the hint only if the
+    // expected value is likely, as LowerExpectIntrinsic does for PHIs.
+    Value *Res = II->getArgOperand(0);
+    double Prob =
+        cast<ConstantFP>(II->getArgOperand(2))->getValueAPF().convertToDouble();
+    if (Prob > 0.5)
+      Res = IRBuilder<>(II).CreateIntrinsic(
+          Intrinsic::SPVIntrinsics::spv_expect, {II->getType()},
+          {II->getArgOperand(0), II->getArgOperand(1)});
+    BasicBlock::iterator BI = II->getIterator();
+    ReplaceInstWithValue(BI, Res);
   } else {
     llvm_unreachable("Unknown intrinsic");
   }
@@ -435,8 +449,13 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
     return true;
   }
 
+  auto *Alloca = dyn_cast<AllocaInst>(LifetimeArg0);
+  if (!Alloca || !Alloca->isStaticAlloca()) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
@@ -575,6 +594,7 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::assume:
       case Intrinsic::expect:
+      case Intrinsic::expect_with_probability:
         if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_expect_assume))
           lowerExpectAssume(II);
         Changed = true;
@@ -656,6 +676,17 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
 }
 
+// Drops attributes that are invalid on the i32 placeholders in the type of V.
+template <typename T> static void removeIncompatibleAttrs(T *V) {
+  FunctionType *FTy = V->getFunctionType();
+  AttributeList Attrs = V->getAttributes();
+  V->removeRetAttrs(AttributeFuncs::typeIncompatible(FTy->getReturnType(),
+                                                     Attrs.getRetAttrs()));
+  for (auto [I, Ty] : enumerate(FTy->params()))
+    V->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(Ty, Attrs.getParamAttrs(I)));
+}
+
 // Returns F if aggregate argument/return types are not present or cloned F
 // function with the types replaced by i32 types. The change in types is
 // noted in 'spv.cloned_funcs' metadata for later restoration.
@@ -708,14 +739,17 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
   NewF->setComdat(F->getComdat());
+  removeIncompatibleAttrs(NewF);
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
   for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F) {
       CB->mutateFunctionType(NewF->getFunctionType());
+      removeIncompatibleAttrs(CB);
+    }
   }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
@@ -915,6 +949,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
           CB, CB->getType());
     CB->mutateFunctionType(NewFTy);
+    removeIncompatibleAttrs(CB);
   }
 
   return true;

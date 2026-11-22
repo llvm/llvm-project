@@ -115,7 +115,6 @@ public:
 private:
   friend class NestedPatternContext;
   friend class NestedMatch;
-  friend struct State;
 
   /// Copies the list of nested patterns to the arena allocator associated with
   /// this pattern.

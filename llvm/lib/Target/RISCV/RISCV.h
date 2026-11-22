@@ -294,14 +294,35 @@ createRISCVInstructionSelector(const RISCVTargetMachine &,
                                const RISCVRegisterBankInfo &);
 void initializeRISCVDAGToDAGISelLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPostLegalizerCombiner();
-void initializeRISCVPostLegalizerCombinerPass(PassRegistry &);
+class RISCVPostLegalizerCombinerPass
+    : public RequiredPassInfoMixin<RISCVPostLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
 
-FunctionPass *createRISCVO0PreLegalizerCombiner();
-void initializeRISCVO0PreLegalizerCombinerPass(PassRegistry &);
+FunctionPass *createRISCVPostLegalizerCombinerLegacyPass();
+void initializeRISCVPostLegalizerCombinerLegacyPass(PassRegistry &);
 
-FunctionPass *createRISCVPreLegalizerCombiner();
-void initializeRISCVPreLegalizerCombinerPass(PassRegistry &);
+class RISCVO0PreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<RISCVO0PreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVO0PreLegalizerCombinerLegacyPass();
+void initializeRISCVO0PreLegalizerCombinerLegacyPass(PassRegistry &);
+
+class RISCVPreLegalizerCombinerPass
+    : public RequiredPassInfoMixin<RISCVPreLegalizerCombinerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createRISCVPreLegalizerCombinerLegacyPass();
+void initializeRISCVPreLegalizerCombinerLegacyPass(PassRegistry &);
 
 class RISCVPromoteConstantPass
     : public OptionalPassInfoMixin<RISCVPromoteConstantPass> {

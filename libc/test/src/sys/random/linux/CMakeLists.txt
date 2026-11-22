@@ -8,7 +8,6 @@ add_libc_test(
     getrandom_test.cpp
   DEPENDS
     libc.include.sys_random
-    libc.src.errno.errno
     libc.src.math.fabs
     libc.src.sys.random.getrandom
     libc.test.UnitTest.ErrnoCheckingTest
@@ -23,7 +22,6 @@ add_libc_test(
     getentropy_test.cpp
   DEPENDS
     libc.hdr.errno_macros
-    libc.src.errno.errno
     libc.src.sys.random.getentropy
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

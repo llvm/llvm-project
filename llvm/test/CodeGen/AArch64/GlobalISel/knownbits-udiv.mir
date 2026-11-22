@@ -45,6 +45,7 @@ body: |
 name: Unknown
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @Unknown
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -57,6 +58,7 @@ body: |
 name: EvenDivisor
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @EvenDivisor
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
@@ -73,6 +75,7 @@ body: |
 name: RangeKnownOnes
 body: |
   bb.0:
+    liveins: $b0, $b1
   ; CHECK-LABEL: name: @RangeKnownOnes
   ; CHECK-NEXT: %0:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0
   ; CHECK-NEXT: %1:_ KnownBits:???????? SignBits:1 IsKnownNeverZero:0

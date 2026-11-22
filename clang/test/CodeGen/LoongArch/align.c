@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 -triple loongarch32 -target-feature +lsx -target-feature \
 // RUN:   +lasx -emit-llvm %s -o - | FileCheck %s --check-prefix=LA32
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple loongarch32 -target-feature +lsx -target-feature   +lasx -emit-llvm %s -o - | FileCheck %s --check-prefix=LA32 %}
 // RUN: %clang_cc1 -triple loongarch64 -target-feature +lsx -target-feature \
 // RUN:   +lasx -emit-llvm %s -o - | FileCheck %s --check-prefix=LA64
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple loongarch64 -target-feature +lsx -target-feature   +lasx -emit-llvm %s -o - | FileCheck %s --check-prefix=LA64 %}
 
 #include <stddef.h>
 #include <stdint.h>

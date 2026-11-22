@@ -158,7 +158,6 @@ body:             |
     GLOBAL_STORE_DWORD %7, %26, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
     S_ENDPGM 0
 ...
----
 
 
 # CHECK-GX-JSON:      {

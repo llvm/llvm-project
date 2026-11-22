@@ -27,6 +27,8 @@ const char *NVPTXSelectionDAGInfo::getTargetNodeName(unsigned Opcode) const {
   switch (static_cast<NVPTXISD::NodeType>(Opcode)) {
     MAKE_CASE(NVPTXISD::ATOMIC_CMP_SWAP_B128)
     MAKE_CASE(NVPTXISD::ATOMIC_SWAP_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_LOAD_B128)
+    MAKE_CASE(NVPTXISD::ATOMIC_STORE_B128)
     MAKE_CASE(NVPTXISD::LoadV2)
     MAKE_CASE(NVPTXISD::LoadV4)
     MAKE_CASE(NVPTXISD::LoadV8)

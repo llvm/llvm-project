@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++23 -fexperimental-new-constant-interpreter -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++23 -fexperimental-new-constant-interpreter -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -std=c++23                                         -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -std=c++23                                         -triple x86_64-apple-darwin -emit-llvm -o - %s | FileCheck %s %}
 
 struct basic_filebuf {
   char __extbuf_;

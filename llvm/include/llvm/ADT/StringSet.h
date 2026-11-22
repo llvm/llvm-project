@@ -17,12 +17,14 @@
 #include "llvm/ADT/ADL.h"
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
 /// StringSet - A wrapper for StringMap that provides set-like functionality.
 template <class AllocatorTy = MallocAllocator>
-class StringSet : public StringMap<EmptyStringSetTag, AllocatorTy> {
+class LLVM_ATTRIBUTE_WARN_UNUSED StringSet
+    : public StringMap<EmptyStringSetTag, AllocatorTy> {
   using Base = StringMap<EmptyStringSetTag, AllocatorTy>;
 
 public:

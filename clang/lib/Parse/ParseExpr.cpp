@@ -1034,10 +1034,11 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
       Validator.WantRemainingKeywords = Tok.isNot(tok::r_paren);
     }
     Name.setIdentifier(&II, ILoc);
-    Res = Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc,
-                                    Name, Tok.is(tok::l_paren),
-                                    isAddressOfOperand, &Validator,
-                                    /*IsInlineAsmIdentifier=*/false);
+    Res =
+        Actions.ActOnIdExpression(getCurScope(), ScopeSpec, TemplateKWLoc, Name,
+                                  Tok.isOneOf(tok::l_paren, tok::lesslessless),
+                                  isAddressOfOperand, &Validator,
+                                  /*IsInlineAsmIdentifier=*/false);
     Res = tryParseCXXPackIndexingExpression(Res);
     if (!Res.isInvalid() && Tok.is(tok::less))
       checkPotentialAngleBracket(Res);
@@ -2524,35 +2525,7 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
                                   Expr2.get(), ConsumeParen());
     break;
   }
-  case tok::kw___builtin_astype: {
-    // The first argument is an expression to be converted, followed by a comma.
-    ExprResult Expr(ParseAssignmentExpression());
-    if (Expr.isInvalid()) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    if (ExpectAndConsume(tok::comma)) {
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    // Second argument is the type to bitcast to.
-    TypeResult DestTy = ParseTypeName();
-    if (DestTy.isInvalid())
-      return ExprError();
-
-    // Attempt to consume the r-paren.
-    if (Tok.isNot(tok::r_paren)) {
-      Diag(Tok, diag::err_expected) << tok::r_paren;
-      SkipUntil(tok::r_paren, StopAtSemi);
-      return ExprError();
-    }
-
-    Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
-                                  ConsumeParen());
-    break;
-  }
+  case tok::kw___builtin_astype:
   case tok::kw___builtin_convertvector: {
     // The first argument is an expression to be converted, followed by a comma.
     ExprResult Expr(ParseAssignmentExpression());
@@ -2578,8 +2551,12 @@ ExprResult Parser::ParseBuiltinPrimaryExpression() {
       return ExprError();
     }
 
-    Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
-                                         ConsumeParen());
+    if (T == tok::kw___builtin_astype)
+      Res = Actions.ActOnAsTypeExpr(Expr.get(), DestTy.get(), StartLoc,
+                                    ConsumeParen());
+    else
+      Res = Actions.ActOnConvertVectorExpr(Expr.get(), DestTy.get(), StartLoc,
+                                           ConsumeParen());
     break;
   }
   case tok::kw___builtin_COLUMN:
@@ -3024,7 +3001,8 @@ ExprResult Parser::ParseUnevaluatedStringLiteralExpression() {
 }
 
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
-                                                bool Unevaluated) {
+                                                bool Unevaluated,
+                                                ConversionAction CA) {
   assert(tokenIsLikeStringLiteral(Tok, getLangOpts()) &&
          "Not a string-literal-like token!");
 
@@ -3044,9 +3022,8 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
   }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.
-  return Actions.ActOnStringLiteral(StringToks,
-                                    AllowUserDefinedLiteral ? getCurScope()
-                                                            : nullptr);
+  return Actions.ActOnStringLiteral(
+      StringToks, AllowUserDefinedLiteral ? getCurScope() : nullptr, CA);
 }
 
 ExprResult Parser::ParseGenericSelectionExpression() {

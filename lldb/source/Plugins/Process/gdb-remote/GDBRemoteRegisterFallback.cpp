@@ -13,7 +13,7 @@ namespace process_gdb_remote {
 
 #define REG(name, size)                                                        \
   DynamicRegisterInfo::Register {                                              \
-    ConstString(#name), empty_alt_name, reg_set, size, LLDB_INVALID_INDEX32,   \
+    #name, "", reg_set, size, LLDB_INVALID_INDEX32,   \
         lldb::eEncodingUint, lldb::eFormatHex, LLDB_INVALID_REGNUM,            \
         LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, {}, {}  \
   }
@@ -22,8 +22,7 @@ namespace process_gdb_remote {
 #define R16(name) REG(name, 2)
 
 static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
-  ConstString empty_alt_name;
-  ConstString reg_set{"general purpose registers"};
+  const char *reg_set = "general purpose registers";
 
   std::vector<DynamicRegisterInfo::Register> registers{
       R64(x0),  R64(x1),  R64(x2),  R64(x3),  R64(x4),  R64(x5),   R64(x6),
@@ -37,8 +36,7 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_aarch64() {
 }
 
 static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
-  ConstString empty_alt_name;
-  ConstString reg_set{"general purpose registers"};
+  const char *reg_set = "general purpose registers";
 
   std::vector<DynamicRegisterInfo::Register> registers{
       R16(pc),  R16(sp),  R16(r2),  R16(r3), R16(fp),  R16(r5),
@@ -49,8 +47,7 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_msp430() {
 }
 
 static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86() {
-  ConstString empty_alt_name;
-  ConstString reg_set{"general purpose registers"};
+  const char *reg_set = "general purpose registers";
 
   std::vector<DynamicRegisterInfo::Register> registers{
       R32(eax), R32(ecx), R32(edx), R32(ebx),    R32(esp), R32(ebp),
@@ -62,8 +59,7 @@ static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86() {
 }
 
 static std::vector<DynamicRegisterInfo::Register> GetRegisters_x86_64() {
-  ConstString empty_alt_name;
-  ConstString reg_set{"general purpose registers"};
+  const char *reg_set = "general purpose registers";
 
   std::vector<DynamicRegisterInfo::Register> registers{
       R64(rax), R64(rbx), R64(rcx), R64(rdx), R64(rsi), R64(rdi),

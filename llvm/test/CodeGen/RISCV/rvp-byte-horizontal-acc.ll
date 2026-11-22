@@ -129,3 +129,54 @@ define <2 x i32> @pm4adda_shared_words(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b, 
   %r = add <2 x i32> %rd, %dot
   ret <2 x i32> %r
 }
+
+define <2 x i32> @pm4adda_acc(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: pm4adda_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm4adda.b a1, a3, a5
+; RV32-NEXT:    pm4adda.b a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pm4adda_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm4adda.b a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pm4adda.v2i32.v8i8(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b)
+  ret <2 x i32> %r
+}
+
+declare <2 x i32> @llvm.riscv.pm4adda.v2i32.v8i8(<2 x i32>, <8 x i8>, <8 x i8>)
+
+define <2 x i32> @pm4addau_acc(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: pm4addau_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm4addau.b a1, a3, a5
+; RV32-NEXT:    pm4addau.b a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pm4addau_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm4addau.b a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pm4addau.v2i32.v8i8(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b)
+  ret <2 x i32> %r
+}
+
+declare <2 x i32> @llvm.riscv.pm4addau.v2i32.v8i8(<2 x i32>, <8 x i8>, <8 x i8>)
+
+define <2 x i32> @pm4addasu_acc(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b) {
+; RV32-LABEL: pm4addasu_acc:
+; RV32:       # %bb.0:
+; RV32-NEXT:    pm4addasu.b a1, a3, a5
+; RV32-NEXT:    pm4addasu.b a0, a2, a4
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: pm4addasu_acc:
+; RV64:       # %bb.0:
+; RV64-NEXT:    pm4addasu.b a0, a1, a2
+; RV64-NEXT:    ret
+  %r = call <2 x i32> @llvm.riscv.pm4addasu.v2i32.v8i8(<2 x i32> %rd, <8 x i8> %a, <8 x i8> %b)
+  ret <2 x i32> %r
+}
+
+declare <2 x i32> @llvm.riscv.pm4addasu.v2i32.v8i8(<2 x i32>, <8 x i8>, <8 x i8>)

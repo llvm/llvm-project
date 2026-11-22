@@ -14,7 +14,6 @@
 #define MLIR_IR_OPIMPLEMENTATION_H
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpAsmSupport.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/Twine.h"

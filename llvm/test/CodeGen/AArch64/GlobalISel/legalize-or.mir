@@ -60,7 +60,6 @@ body: |
 ...
 ---
 name:            test_i318_or
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $x0
@@ -107,8 +106,11 @@ body:             |
 name:            test_vector_or_v16s16
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_or_v16s16
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x i16>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<8 x i16>) = COPY $q1
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<8 x i16>) = G_OR [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<8 x i16>) = G_OR [[COPY1]], [[COPY1]]
@@ -127,8 +129,11 @@ body:             |
 name:            test_vector_or_v32s8
 body:             |
   bb.0.entry:
+    liveins: $q0, $q1
     ; CHECK-LABEL: name: test_vector_or_v32s8
-    ; CHECK: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
+    ; CHECK: liveins: $q0, $q1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<16 x i8>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<16 x i8>) = COPY $q1
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(<16 x i8>) = G_OR [[COPY]], [[COPY]]
     ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(<16 x i8>) = G_OR [[COPY1]], [[COPY1]]
@@ -145,7 +150,6 @@ body:             |
 ...
 ---
 name:            or_v2s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -175,7 +179,6 @@ body:             |
 ...
 ---
 name:            or_v3s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $b0, $b1, $b2
@@ -213,7 +216,6 @@ body:             |
 ...
 ---
 name:            or_v4s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -243,7 +245,6 @@ body:             |
 ...
 ---
 name:            or_v8s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $d0, $d1, $d2, $d3
@@ -273,7 +274,6 @@ body:             |
 ...
 ---
 name:            or_v16s1
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $q0, $q1, $q2, $q3

@@ -79,6 +79,7 @@
 #include "llvm/Transforms/Instrumentation/AddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
 #include "llvm/Transforms/Instrumentation/BoundsChecking.h"
+#include "llvm/Transforms/Instrumentation/ConcurrencySanitizer.h"
 #include "llvm/Transforms/Instrumentation/CopyProf.h"
 #include "llvm/Transforms/Instrumentation/DataFlowSanitizer.h"
 #include "llvm/Transforms/Instrumentation/GCOVProfiler.h"
@@ -431,7 +432,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.TLSSize = CodeGenOpts.TLSSize;
   Options.EnableTLSDESC = CodeGenOpts.EnableTLSDESC;
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
-  Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
   Options.StackUsageFile = CodeGenOpts.StackUsageFile;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
@@ -485,6 +485,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.Crel = CodeGenOpts.Crel;
   Options.MCOptions.RelocSectionSym = CodeGenOpts.getRelocSectionSym();
   Options.MCOptions.ImplicitMapSyms = CodeGenOpts.ImplicitMapSyms;
+  Options.MCOptions.MachORelocatableDwarf = CodeGenOpts.MachORelocatableDwarf;
   Options.MCOptions.X86RelaxRelocations = CodeGenOpts.X86RelaxRelocations;
   Options.MCOptions.CompressDebugSections =
       CodeGenOpts.getCompressDebugSections();
@@ -706,6 +707,12 @@ static void addSanitizers(const Triple &TargetTriple,
       MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
     }
 
+    if (LangOpts.Sanitize.has(SanitizerKind::Concurrency)) {
+      MPM.addPass(ModuleConcurrencySanitizerPass());
+      MPM.addPass(
+          createModuleToFunctionPassAdaptor(ConcurrencySanitizerPass()));
+    }
+
     if (LangOpts.Sanitize.has(SanitizerKind::Type))
       MPM.addPass(TypeSanitizerPass());
 
@@ -903,7 +910,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
   if (TM)
     TM->setPGOOption(PGOOpt);
 
-  PipelineTuningOptions PTO(&LibraryOptions);
+  PipelineTuningOptions PTO;
   PTO.LoopUnrolling = CodeGenOpts.UnrollLoops;
   PTO.LoopInterchange = CodeGenOpts.InterchangeLoops;
   PTO.LoopFusion = CodeGenOpts.FuseLoops;
@@ -1267,24 +1274,28 @@ void EmitAssemblyHelper::RunCodegenPipeline(
   // this also adds codegenerator level optimization passes.
   CodeGenFileType CGFT = getCodeGenFileType(Action);
 
-  // Invoke pre-codegen callback from plugin, which might want to take over the
-  // entire code generation itself.
-  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
-    if (Plugin->invokePreCodeGenCallback(*TheModule, *TM, CGFT, *OS))
-      return;
-  }
-
   if (!CodeGenOpts.SplitDwarfOutput.empty()) {
     DwoOS = openOutputFile(CodeGenOpts.SplitDwarfOutput);
     if (!DwoOS)
       return;
   }
 
+  // Invoke pre-codegen callback from plugin, which might want to take over the
+  // entire code generation itself.
+  for (const std::unique_ptr<llvm::PassPlugin> &Plugin : CI.getPassPlugins()) {
+    if (Plugin->invokePreCodeGenCallback(
+            *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
+            !CodeGenOpts.VerifyModule, /*DisableSimplifyLibCalls=*/false,
+            /*MSI=*/nullptr, CI.getVirtualFileSystemPtr()))
+      return;
+  }
+
   TimeCodegenPasses([&]() {
-    Error CodeGenError = runCodeGenPipeline(
-        *TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr, CGFT,
-        !CodeGenOpts.VerifyModule,
-        /*DisableSimplifyLibCalls=*/false, CI.getVirtualFileSystemPtr());
+    Error CodeGenError =
+        runCodeGenPipeline(*TM, *TheModule, *OS, DwoOS ? &DwoOS->os() : nullptr,
+                           CGFT, !CodeGenOpts.VerifyModule,
+                           /*DisableSimplifyLibCalls=*/false, /*MSI=*/nullptr,
+                           CI.getVirtualFileSystemPtr());
     if (CodeGenError)
       Diags.Report(diag::err_fe_unable_to_interface_with_target);
   });
@@ -1380,7 +1391,6 @@ runThinLTOBackend(CompilerInstance &CI, ModuleSummaryIndex *CombinedIndex,
   Conf.SampleProfile = std::move(SampleProfile);
   const cl::LibraryOptionsContext &LibraryOptions =
       M->getContext().getLibraryOptions();
-  Conf.PTO = PipelineTuningOptions(&LibraryOptions);
   Conf.PTO.LoopUnrolling = CGOpts.UnrollLoops;
   Conf.PTO.LoopInterchange = CGOpts.InterchangeLoops;
   Conf.PTO.LoopFusion = CGOpts.FuseLoops;
@@ -1617,11 +1627,12 @@ void clang::emitBackendOutput(CompilerInstance &CI, CodeGenOptions &CGOpts,
   // module's ABI. This respects the target-abi module flag rather than assuming
   // the DataLayout is a fixed property of the target options.
   if (AsmHelper.TM) {
-    std::string DLDesc = M->getDataLayout().getStringRepresentation();
     std::string TDesc = M->getTargetTriple().computeDataLayout(
         AsmHelper.TM->getTargetABIName(*M));
-    if (DLDesc != TDesc)
-      Diags.Report(diag::err_data_layout_mismatch) << DLDesc << TDesc;
+    if (M->getDataLayout() != DataLayout(TDesc)) {
+      Diags.Report(diag::err_data_layout_mismatch)
+          << M->getDataLayout().getStringRepresentation() << TDesc;
+    }
   }
 }
 

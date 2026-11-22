@@ -22,12 +22,71 @@
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
+
+namespace clang::lifetimes {
+
+/// How an origin is used: by an expression, or implicitly at scope exit by a
+/// destructor or a cleanup callback that may read the borrows it holds.
+enum class UseKind { Explicit, Destructor, Cleanup };
+
+/// Where and how an origin is used, for diagnostics.
+class UseSite {
+  /// The use expression for an explicit use, or the variable destroyed or
+  /// cleaned up for an implicit one. Null for an explicit use known only by
+  /// its location.
+  llvm::PointerUnion<const Expr *, const VarDecl *> ExprOrVD;
+  /// Used when there is no expression.
+  SourceLocation Loc;
+  UseKind Kind = UseKind::Explicit;
+
+  UseSite(llvm::PointerUnion<const Expr *, const VarDecl *> ExprOrVD,
+          SourceLocation Loc, UseKind Kind)
+      : ExprOrVD(ExprOrVD), Loc(Loc), Kind(Kind) {}
+
+public:
+  static UseSite fromExpr(const Expr &E) {
+    return UseSite(&E, SourceLocation(), UseKind::Explicit);
+  }
+  static UseSite at(SourceLocation Loc) {
+    return UseSite(nullptr, Loc, UseKind::Explicit);
+  }
+  static UseSite scopeExit(SourceLocation Loc, const VarDecl &VD,
+                           UseKind Kind) {
+    assert((Kind == UseKind::Destructor || Kind == UseKind::Cleanup) &&
+           "scope-exit uses are destructor or cleanup uses");
+    return UseSite(&VD, Loc, Kind);
+  }
+
+  UseKind getKind() const { return Kind; }
+  /// Null for an implicit use or one known only by its location.
+  const Expr *getExpr() const {
+    return dyn_cast_if_present<const Expr *>(ExprOrVD);
+  }
+  /// The variable destroyed or cleaned up, for implicit uses.
+  const VarDecl *getScopeExitVD() const {
+    return dyn_cast_if_present<const VarDecl *>(ExprOrVD);
+  }
+  SourceLocation getLoc() const {
+    if (const Expr *E = getExpr())
+      return E->getExprLoc();
+    return Loc;
+  }
+  /// Empty unless there is a use expression.
+  SourceRange getRange() const {
+    if (const Expr *E = getExpr())
+      return E->getSourceRange();
+    return SourceRange();
+  }
+};
+
+} // namespace clang::lifetimes
 
 namespace clang::lifetimes::internal {
 
@@ -176,6 +235,7 @@ public:
     Global, /// Escapes via assignment to global storage.
     This,   /// Escapes via the enclosing object `this`, which outlives the
             /// method.
+    Param,  /// Escapes via storage reachable through a reference parameter.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -267,18 +327,46 @@ public:
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
 
+/// Represents an origin escaping through storage reachable from a reference
+/// parameter, which the caller can observe after the function returns.
+/// Example: `out = local_view;` for a parameter `std::string_view &out`.
+/// Emitted at function exit; only used to verify annotations, so it does not
+/// keep the origin live.
+class ParamEscapeFact : public OriginEscapesFact {
+  const ParmVarDecl *Param;
+
+public:
+  ParamEscapeFact(OriginID OID, const ParmVarDecl *Param)
+      : OriginEscapesFact(OID, EscapeKind::Param), Param(Param) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Param;
+  }
+  const ParmVarDecl *getParam() const { return Param; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
 class UseFact : public Fact {
-  const Expr *UseExpr;
+  UseSite Site;
   const OriginList *OList;
 
 public:
   static bool classof(const Fact *F) { return F->getKind() == Kind::Use; }
 
-  UseFact(const Expr *UseExpr, const OriginList *OList)
-      : Fact(Kind::Use), UseExpr(UseExpr), OList(OList) {}
+  UseFact(const Expr &UseExpr, const OriginList *OList)
+      : Fact(Kind::Use), Site(UseSite::fromExpr(UseExpr)), OList(OList) {}
+  UseFact(const UseSite &ImplicitSite, const OriginList *OList)
+      : Fact(Kind::Use), Site(ImplicitSite), OList(OList) {
+    assert(Site.getKind() != UseKind::Explicit);
+  }
 
   const OriginList *getUsedOrigins() const { return OList; }
-  const Expr *getUseExpr() const { return UseExpr; }
+  /// Null for an implicit use.
+  const Expr *getUseExpr() const { return Site.getExpr(); }
+  const UseSite &getUseSite() const { return Site; }
 
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
@@ -384,8 +472,7 @@ public:
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
-    void *Mem = FactAllocator.Allocate<FactType>();
-    FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
+    FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
     return Res;
   }

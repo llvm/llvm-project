@@ -231,8 +231,9 @@ llvm::Error BaseRequestHandler::LaunchProcess(
   launch_info.SetShellExpandArguments(arguments.shellExpandArguments);
 
   auto flags = launch_info.GetLaunchFlags();
-  flags =
-      SetLaunchFlag(flags, arguments.disableASLR, lldb::eLaunchFlagDisableASLR);
+  if (arguments.disableASLR)
+    flags = SetLaunchFlag(flags, *arguments.disableASLR,
+                          lldb::eLaunchFlagDisableASLR);
   flags = SetLaunchFlag(flags, arguments.disableSTDIO,
                         lldb::eLaunchFlagDisableSTDIO);
 #ifdef _WIN32

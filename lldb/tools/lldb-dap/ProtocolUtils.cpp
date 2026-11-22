@@ -152,6 +152,20 @@ std::optional<protocol::Module> CreateModule(const lldb::SBTarget &target,
   return p_module;
 }
 
+std::optional<llvm::json::Value>
+GetStructuredDataAsJSON(const lldb::SBStructuredData &data) {
+  lldb::SBStream stream;
+  if (!data || data.GetAsJSON(stream).Fail())
+    return std::nullopt;
+  llvm::Expected<llvm::json::Value> parsed =
+      llvm::json::parse(llvm::StringRef(stream.GetData(), stream.GetSize()));
+  if (!parsed) {
+    llvm::consumeError(parsed.takeError());
+    return std::nullopt;
+  }
+  return std::move(*parsed);
+}
+
 std::optional<protocol::Source> CreateSource(const lldb::SBFileSpec &file) {
   if (!file.IsValid())
     return std::nullopt;

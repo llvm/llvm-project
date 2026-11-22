@@ -76,4 +76,8 @@ let TargetPrefix = "bpf" in {  // All intrinsics start with "llvm.bpf."
                          ImmArg    <ArgIndex<5>>, // alignment
                          ImmArg    <ArgIndex<6>>, // inbounds
                         ]>;
+
+  // Start or carry on an unwind: leave the frame by unwinding, or branch to the
+  // landing pad when invoked.
+  def int_bpf_unwind_exit : Intrinsic<[], [], [Throws, IntrNoReturn]>;
 }
