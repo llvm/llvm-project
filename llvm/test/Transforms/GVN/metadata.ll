@@ -693,12 +693,35 @@ define i32 @load_of_select_range_dropped_store_side(ptr noalias %a, ptr noalias 
   ret i32 %r
 }
 
+; The false side is forwarded from a store whose value happens to be a load of
+; an unrelated address. That load is not a CSE of the replaced load, so its
+; metadata is left alone.
+define i32 @load_of_select_store_of_load_kept(ptr noalias %a, ptr noalias %b, ptr noalias %q, i1 %c) {
+; CHECK-LABEL: define i32 @load_of_select_store_of_load_kept
+; CHECK-SAME: (ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[Q:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[Q]], align 4, !range [[RNG16:![0-9]+]]
+; CHECK-NEXT:    store i32 [[X]], ptr [[B]], align 4
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[X]]
+; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], 1
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %l1 = load i32, ptr %a, align 4
+  %x = load i32, ptr %q, align 4, !range !18
+  store i32 %x, ptr %b, align 4
+  %p = select i1 %c, ptr %a, ptr %b
+  %r = load i32, ptr %p, align 4
+  %unused = add i32 %l1, 1
+  ret i32 %r
+}
+
 ; Access metadata on the reused loads is kept; only value metadata is weakened.
 define i32 @load_of_select_tbaa_kept_range_dropped(ptr %a, ptr %b, i1 %c) {
 ; CHECK-LABEL: define i32 @load_of_select_tbaa_kept_range_dropped
 ; CHECK-SAME: (ptr [[A:%.*]], ptr [[B:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[TBAA16:![0-9]+]]
-; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4, !tbaa [[TBAA16]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[TBAA17:![0-9]+]]
+; CHECK-NEXT:    [[L2:%.*]] = load i32, ptr [[B]], align 4, !tbaa [[TBAA17]]
 ; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[A]], ptr [[B]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i32 [[L1]], i32 [[L2]]
 ; CHECK-NEXT:    [[UNUSED:%.*]] = add i32 [[L1]], [[L2]]
@@ -755,7 +778,8 @@ define i32 @load_of_select_tbaa_kept_range_dropped(ptr %a, ptr %b, i1 %c) {
 ; CHECK: [[META13]] = !{i32 0, [[META14:![0-9]+]]}
 ; CHECK: [[META14]] = !{!"nvvm.prefetch_bytes", i32 128}
 ; CHECK: [[RNG15]] = !{i32 0, i32 10, i32 20, i32 30}
-; CHECK: [[TBAA16]] = !{[[META17:![0-9]+]], [[META17]], i64 0}
-; CHECK: [[META17]] = !{!"int", [[META18:![0-9]+]], i64 0}
-; CHECK: [[META18]] = !{!"tbaa root"}
+; CHECK: [[RNG16]] = !{i32 0, i32 10}
+; CHECK: [[TBAA17]] = !{[[META18:![0-9]+]], [[META18]], i64 0}
+; CHECK: [[META18]] = !{!"int", [[META19:![0-9]+]], i64 0}
+; CHECK: [[META19]] = !{!"tbaa root"}
 ;.
