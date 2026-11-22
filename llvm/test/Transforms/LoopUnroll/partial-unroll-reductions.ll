@@ -418,9 +418,9 @@ exit:
   ret i32 %rdx.next
 }
 
-; FIXME: The cloned calls keep the poison-generating range attributes even
-; though the parallel accumulators start from the reduction identity (INT_MAX),
-; which is outside the range.
+; The parallel accumulators start from the reduction identity (INT_MAX), which
+; is outside the range, so the unroller must drop the poison-generating range
+; attributes from the reduction calls.
 define i32 @test_smin_arg_range(ptr %src) {
 ; CHECK-LABEL: define i32 @test_smin_arg_range(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
@@ -435,19 +435,19 @@ define i32 @test_smin_arg_range(ptr %src) {
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[RDX_NEXT]] = call i32 @llvm.smin.i32(i32 range(i32 0, 1001) [[MIN]], i32 [[L]])
+; CHECK-NEXT:    [[RDX_NEXT]] = call i32 @llvm.smin.i32(i32 [[MIN]], i32 [[L]])
 ; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 range(i32 0, 1001) [[MIN_1]], i32 [[L_1]])
+; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[L_1]])
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_2]] = call i32 @llvm.smin.i32(i32 range(i32 0, 1001) [[MIN_2]], i32 [[L_2]])
+; CHECK-NEXT:    [[RDX_NEXT_2]] = call i32 @llvm.smin.i32(i32 [[MIN_2]], i32 [[L_2]])
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
 ; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = call i32 @llvm.smin.i32(i32 range(i32 0, 1001) [[MIN_3]], i32 [[L_3]])
+; CHECK-NEXT:    [[RDX_NEXT_3]] = call i32 @llvm.smin.i32(i32 [[MIN_3]], i32 [[L_3]])
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -474,8 +474,8 @@ exit:
   ret i32 %rdx.next
 }
 
-; FIXME: Same as test_smin_arg_range, but with the range attribute on the
-; call's return value.
+; Same as test_smin_arg_range, but with the range attribute on the call's
+; return value.
 define i32 @test_smin_ret_range(ptr %src) {
 ; CHECK-LABEL: define i32 @test_smin_ret_range(
 ; CHECK-SAME: ptr [[SRC:%.*]]) {
@@ -490,19 +490,19 @@ define i32 @test_smin_ret_range(ptr %src) {
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 1
-; CHECK-NEXT:    [[RDX_NEXT]] = call range(i32 0, 1001) i32 @llvm.smin.i32(i32 [[MIN]], i32 [[L]])
+; CHECK-NEXT:    [[RDX_NEXT]] = call i32 @llvm.smin.i32(i32 [[MIN]], i32 [[L]])
 ; CHECK-NEXT:    [[IV_NEXT_1:%.*]] = add nuw nsw i64 [[IV]], 2
 ; CHECK-NEXT:    [[GEP_SRC_1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT]]
 ; CHECK-NEXT:    [[L_1:%.*]] = load i32, ptr [[GEP_SRC_1]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_1]] = call range(i32 0, 1001) i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[L_1]])
+; CHECK-NEXT:    [[RDX_NEXT_1]] = call i32 @llvm.smin.i32(i32 [[MIN_1]], i32 [[L_1]])
 ; CHECK-NEXT:    [[IV_NEXT_2:%.*]] = add nuw nsw i64 [[IV]], 3
 ; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_1]]
 ; CHECK-NEXT:    [[L_2:%.*]] = load i32, ptr [[GEP_SRC_2]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_2]] = call range(i32 0, 1001) i32 @llvm.smin.i32(i32 [[MIN_2]], i32 [[L_2]])
+; CHECK-NEXT:    [[RDX_NEXT_2]] = call i32 @llvm.smin.i32(i32 [[MIN_2]], i32 [[L_2]])
 ; CHECK-NEXT:    [[IV_NEXT_3]] = add nuw nsw i64 [[IV]], 4
 ; CHECK-NEXT:    [[GEP_SRC_3:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV_NEXT_2]]
 ; CHECK-NEXT:    [[L_3:%.*]] = load i32, ptr [[GEP_SRC_3]], align 1
-; CHECK-NEXT:    [[RDX_NEXT_3]] = call range(i32 0, 1001) i32 @llvm.smin.i32(i32 [[MIN_3]], i32 [[L_3]])
+; CHECK-NEXT:    [[RDX_NEXT_3]] = call i32 @llvm.smin.i32(i32 [[MIN_3]], i32 [[L_3]])
 ; CHECK-NEXT:    [[EC_3:%.*]] = icmp ne i64 [[IV_NEXT_3]], 1000
 ; CHECK-NEXT:    br i1 [[EC_3]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
