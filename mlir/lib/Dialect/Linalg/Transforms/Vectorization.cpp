@@ -3071,7 +3071,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 
   Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, read, sliceOp.getDest(), writeIndices,
-      inputVectorSizes.empty(), writeMap);
+      /*useInBoundsInsteadOfMasking=*/false, writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));
