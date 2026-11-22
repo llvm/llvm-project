@@ -116,7 +116,6 @@ class AMDGPURegBankLegalizeCombiner {
   const SIRegisterInfo &TRI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
-  const RegisterBank *VccRB;
 
   static constexpr LLT S1 = LLT::scalar(1);
   static constexpr LLT S16 = LLT::scalar(16);
@@ -128,8 +127,7 @@ public:
                                 const RegisterBankInfo &RBI)
       : B(B), MRI(*B.getMRI()), TRI(TRI),
         SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
-        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
-        VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {};
+        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)) {};
 
   bool isLaneMask(Register Reg);
   std::pair<MachineInstr *, Register> tryMatch(Register Src, unsigned Opcode);
@@ -338,8 +336,9 @@ void AMDGPURegBankLegalizeCombiner::tryCombineCopy(MachineInstr &MI) {
 
     B.setInstr(MI);
     // Ensure that truncated bits in BoolSrc are 0.
-    auto One = B.buildConstant({SgprRB, S32}, 1);
-    auto BoolSrc = B.buildAnd({SgprRB, S32}, TruncS32Src, One);
+    LLT Ty = MRI.getType(TruncS32Src);
+    auto One = B.buildConstant({SgprRB, Ty}, 1);
+    auto BoolSrc = B.buildAnd({SgprRB, Ty}, TruncS32Src, One);
     B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {Dst}, {BoolSrc});
     eraseInstr(MI, MRI);
   }
@@ -371,7 +370,7 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
   B.setInstr(MI);
 
   if (DstTy == S32 && TruncSrcTy == S64) {
-    auto Unmerge = B.buildUnmerge({SgprRB, S32}, TruncSrc);
+    auto Unmerge = B.buildUnmerge({SgprRB, DstTy}, TruncSrc);
     MRI.replaceRegWith(Dst, Unmerge.getReg(0));
     eraseInstr(MI, MRI);
     return;
@@ -379,7 +378,7 @@ void AMDGPURegBankLegalizeCombiner::tryCombineS1AnyExt(MachineInstr &MI) {
 
   if (DstTy == S64 && TruncSrcTy == S32) {
     B.buildMergeLikeInstr(MI.getOperand(0).getReg(),
-                          {TruncSrc, B.buildUndef({SgprRB, S32})});
+                          {TruncSrc, B.buildUndef({SgprRB, TruncSrcTy})});
     eraseInstr(MI, MRI);
     return;
   }

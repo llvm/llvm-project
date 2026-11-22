@@ -197,8 +197,7 @@ public:
     Option(PassOptions &parent, StringRef arg, Args &&...args)
         : llvm::cl::opt<DataType, /*ExternalStorage=*/false, OptionParser>(
               arg, llvm::cl::sub(parent), std::forward<Args>(args)...) {
-      assert(!this->isPositional() && !this->isSink() &&
-             "sink and positional options are not supported");
+      assert(!this->isPositional() && "positional options are not supported");
       parent.options.push_back(this);
 
       // Set a callback to track if this option has a value.
@@ -245,8 +244,7 @@ public:
         : llvm::cl::list<DataType, /*StorageClass=*/bool, OptionParser>(
               arg, llvm::cl::sub(parent), std::forward<Args>(args)...),
           elementParser(*this) {
-      assert(!this->isPositional() && !this->isSink() &&
-             "sink and positional options are not supported");
+      assert(!this->isPositional() && "positional options are not supported");
       assert(!(this->getMiscFlags() & llvm::cl::MiscFlags::CommaSeparated) &&
              "ListOption is implicitly comma separated, specifying "
              "CommaSeparated is extraneous");

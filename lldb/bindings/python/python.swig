@@ -64,6 +64,11 @@ except ImportError:
 // Parameter types will be used in the autodoc string.
 %feature("autodoc", "1");
 
+// Match the documentation-link aliases in docs/doxygen.cfg.in, using Sphinx
+// references for the generated Python docstrings. The trailing space separates
+// the expansion from the text following the command.
+%feature("doxygen:alias:lldbformatting") ":doc:`/use/formatting` ";
+
 #if SWIG_VERSION >= 0x040500
 %feature("python:annotations", "typing");
 

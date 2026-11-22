@@ -1,0 +1,52 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+cir.func @implicit_void_return() {
+  cir.return implicit
+}
+
+// CHECK-LABEL: cir.func @implicit_void_return()
+// CHECK-NEXT:    cir.return implicit{{$}}
+
+cir.func @implicit_value_return(%arg0: !s32i) -> !s32i {
+  cir.return implicit %arg0 : !s32i
+}
+
+// CHECK-LABEL: cir.func @implicit_value_return(%arg0: !s32i) -> !s32i
+// CHECK-NEXT:    cir.return implicit %arg0 : !s32i
+
+cir.func @explicit_return(%arg0: !s32i) -> !s32i {
+  cir.return %arg0 : !s32i
+}
+
+// CHECK-LABEL: cir.func @explicit_return(%arg0: !s32i) -> !s32i
+// CHECK-NEXT:    cir.return %arg0 : !s32i
+
+cir.func @implicit_trap() -> !s32i {
+  cir.trap implicit
+}
+
+// CHECK-LABEL: cir.func @implicit_trap() -> !s32i
+// CHECK-NEXT:    cir.trap implicit{{$}}
+
+cir.func @explicit_trap() {
+  cir.trap
+}
+
+// CHECK-LABEL: cir.func @explicit_trap()
+// CHECK-NEXT:    cir.trap{{$}}
+
+cir.func @implicit_unreachable() -> !s32i {
+  cir.unreachable implicit
+}
+
+// CHECK-LABEL: cir.func @implicit_unreachable() -> !s32i
+// CHECK-NEXT:    cir.unreachable implicit{{$}}
+
+cir.func @explicit_unreachable() {
+  cir.unreachable
+}
+
+// CHECK-LABEL: cir.func @explicit_unreachable()
+// CHECK-NEXT:    cir.unreachable{{$}}

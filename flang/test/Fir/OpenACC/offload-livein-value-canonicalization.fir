@@ -180,7 +180,7 @@ func.func @test_address_of_through_declare_sink() {
   %c10 = arith.constant 10 : index
   %addr = fir.address_of(@global_for_declare) : !fir.ref<!fir.array<10xf32>>
   %shape = fir.shape %c10 : (index) -> !fir.shape<1>
-  %decl = fir.declare %addr(%shape) {uniq_name = "global"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  %decl = fir.declare %addr(%shape) uniq_name("global") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   acc.serial {
     fir.call @use_ref(%decl) : (!fir.ref<!fir.array<10xf32>>) -> ()
     acc.yield
@@ -203,7 +203,7 @@ func.func @test_2d_shape_sink() {
   %c1 = arith.constant 1 : index
   %0 = fir.alloca !fir.array<3x32xf32>
   %shape = fir.shape %c3, %c32 : (index, index) -> !fir.shape<2>
-  %decl = fir.declare %0(%shape) {uniq_name = "_QFEa"} : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<3x32xf32>>
+  %decl = fir.declare %0(%shape) uniq_name("_QFEa") : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>) -> !fir.ref<!fir.array<3x32xf32>>
   acc.serial {
     %coor = fir.array_coor %decl(%shape) %c1, %c1 : (!fir.ref<!fir.array<3x32xf32>>, !fir.shape<2>, index, index) -> !fir.ref<f32>
     acc.yield
@@ -397,7 +397,7 @@ func.func @test_convert_chain_and_direct(%arg0: !fir.boxchar<1>, %arg1: !fir.ref
   %c10 = arith.constant 10 : index
   %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
   %1 = fir.convert %0#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,10>>
-  %2 = fir.declare %1 typeparams %c10 {uniq_name = "scalar"} : (!fir.ref<!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
+  %2 = fir.declare %1 typeparams %c10 uniq_name("scalar") : (!fir.ref<!fir.char<1,10>>, index) -> !fir.ref<!fir.char<1,10>>
   %3 = fir.convert %arg1 : (!fir.ref<i32>) -> i64
   acc.parallel {
     fir.call @use_ref(%2) : (!fir.ref<!fir.char<1,10>>) -> ()
@@ -489,7 +489,7 @@ func.func private @use_ref(!fir.ref<i32>) -> ()
 func.func @test_dummy_scope_sink() {
   %addr = fir.address_of(@global_for_dummy_scope) : !fir.ref<i32>
   %scope = fir.dummy_scope : !fir.dscope
-  %decl = fir.declare %addr dummy_scope %scope {uniq_name = "global"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %decl = fir.declare %addr dummy_scope %scope uniq_name("global") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   acc.serial {
     fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
     acc.yield
@@ -503,7 +503,7 @@ func.func @test_dummy_scope_sink() {
 // CHECK: fir.dummy_scope
 // CHECK: acc.serial {
 // CHECK-DAG:   fir.address_of(@global_for_dummy_scope)
-// CHECK-DAG:   %[[DECL:.*]] = fir.declare %{{.*}} {uniq_name = "global"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK-DAG:   %[[DECL:.*]] = fir.declare %{{.*}} uniq_name("global") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:   fir.call @use_ref(%[[DECL]])
 
 // -----
@@ -522,7 +522,7 @@ func.func private @use_ref(!fir.ref<i32>) -> ()
 func.func @test_dummy_scope_rematerialize() {
   %addr = fir.address_of(@global_for_dummy_scope_remat) : !fir.ref<i32>
   %scope = fir.dummy_scope : !fir.dscope
-  %decl = fir.declare %addr dummy_scope %scope {uniq_name = "global"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %decl = fir.declare %addr dummy_scope %scope uniq_name("global") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
   fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
   acc.serial {
     fir.call @use_ref(%decl) : (!fir.ref<i32>) -> ()
@@ -533,11 +533,11 @@ func.func @test_dummy_scope_rematerialize() {
 
 // CHECK-LABEL: @test_dummy_scope_rematerialize
 // CHECK: %[[SCOPE:.*]] = fir.dummy_scope
-// CHECK: %[[DECL_OUTER:.*]] = fir.declare %{{.*}} dummy_scope %[[SCOPE]] {uniq_name = "global"}
+// CHECK: %[[DECL_OUTER:.*]] = fir.declare %{{.*}} dummy_scope %[[SCOPE]] uniq_name("global")
 // CHECK: fir.call @use_ref(%[[DECL_OUTER]])
 // CHECK: acc.serial {
 // CHECK-DAG:   fir.address_of(@global_for_dummy_scope_remat)
-// CHECK-DAG:   %[[DECL_INNER:.*]] = fir.declare %{{.*}} {uniq_name = "global"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK-DAG:   %[[DECL_INNER:.*]] = fir.declare %{{.*}} uniq_name("global") : (!fir.ref<i32>) -> !fir.ref<i32>
 // CHECK:   fir.call @use_ref(%[[DECL_INNER]])
 
 

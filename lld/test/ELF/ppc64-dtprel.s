@@ -108,11 +108,12 @@ i:
         .long   55
         .size   i, 4
 
+        .section        .tbss,"awT",@nobits
         .space 1024 * 1024 * 4
         .type k,@object
         .p2align 2
 k:
-       .long 128
+       .zero 4
        .size k,4
 
 // Verify the input has all the remaining DTPREL based relocations we want to
@@ -137,15 +138,15 @@ k:
 // OutputRelocs-NEXT: R_PPC64_DTPMOD64
 
 
-// The got entry for i is at .got+8*1 = 0x4209e0
+// The got entry for i is at .got+8*1 = 0x209e0
 // i@dtprel = 1024 - 0x8000 = -31744 = 0xffffffffffff8400
 // HEX-LE:      section '.got':
-// HEX-LE-NEXT: 4209e0 e0894200 00000000 00000000 00000000
-// HEX-LE-NEXT: 4209f0 00000000 00000000
+// HEX-LE-NEXT: 209d8 d8890200 00000000 00000000 00000000
+// HEX-LE-NEXT: 209e8 00000000 00000000
 
 // HEX-BE:      section '.got':
-// HEX-BE-NEXT: 4209e0 00000000 004289e0 00000000 00000000
-// HEX-BE-NEXT: 4209f0 00000000 00000000
+// HEX-BE-NEXT: 209d8 00000000 000289d8 00000000 00000000
+// HEX-BE-NEXT: 209e8 00000000 00000000
 
 // Dis:     <test>:
 // Dis:      addi 4, 3, -31744

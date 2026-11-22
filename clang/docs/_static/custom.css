@@ -14,6 +14,15 @@ body[data-theme="dark"] {
   --clang-code-comparison-good-border: #3fb950;
 }
 
+@media (prefers-color-scheme: dark) {
+  body[data-theme="auto"] {
+    --clang-code-comparison-bad-background: rgba(248, 81, 73, 0.16);
+    --clang-code-comparison-bad-border: #f85149;
+    --clang-code-comparison-good-background: rgba(63, 185, 80, 0.16);
+    --clang-code-comparison-good-border: #3fb950;
+  }
+}
+
 /* Use the full viewport on ordinary desktop displays, where Furo's fixed
    content width leaves little room after both sidebars. Once the content area
    reaches 90em (84em plus padding), grow symmetric outer margins instead. */

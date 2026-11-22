@@ -320,7 +320,9 @@ def execute_in_tmp_dir(run, lit_config):
 
 def print_histogram(tests, slowest_limit):
     test_times = [
-        (t.getFullName(), t.result.elapsed) for t in tests if t.result.elapsed
+        (t.getFullName(), t.result.elapsed)
+        for t in tests
+        if t.result.elapsed is not None
     ]
     if test_times:
         lit.util.printHistogram(test_times, slowest_limit, title="Tests")

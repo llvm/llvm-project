@@ -12,7 +12,7 @@ on:
 jobs:
   validate-tag:
     name: Validate Tag
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     if: github.repository == 'llvm/llvm-project'
     outputs:
       release-version: ${{ steps.validate-tag.outputs.release-version }}
@@ -26,7 +26,7 @@ jobs:
 
   release-create:
     name: Create a New Release
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     environment:
       name: release
       deployment: false
@@ -41,12 +41,12 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - id: app-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1  # v3.2.0
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510  # v3.3.0
         with:
           app-id: ${{ secrets.LLVM_TOKEN_GENERATOR_CLIENT_ID }}
           private-key: ${{ secrets.LLVM_TOKEN_GENERATOR_PRIVATE_KEY }}
@@ -82,7 +82,7 @@ jobs:
   # can't use them here.
   release-lit:
     name: Release Lit
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       id-token: write # Requred for pypi publishing
     needs:
@@ -91,7 +91,7 @@ jobs:
     environment: pypi
     steps:
       - name: Checkout LLVM
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           ref: "llvmorg-${{ needs.validate-tag.outputs.release-version }}"
@@ -122,14 +122,14 @@ jobs:
           sed -i 's/ + "dev"//g' lit/__init__.py
           python3 -m build
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: lit-${{ needs.validate-tag.outputs.release-version }}-release-binary
           path: |
             llvm/utils/lit/dist
 
       - name: Upload lit to pypi.org
-        uses: pypa/gh-action-pypi-publish@cef221092ed1bacb1cc03d23a2d87d1d172e277b # v1.14.0
+        uses: pypa/gh-action-pypi-publish@7245906fb61fa33a13554f9d5fb856fe61758086 # v1.14.3
         with:
           packages-dir: llvm/utils/lit/dist/
 
@@ -169,7 +169,7 @@ jobs:
 
   uncomment-download-links:
     name: Uncomment download links
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: write # For updating the release message.
     if: '!cancelled()'
@@ -184,7 +184,7 @@ jobs:
           sudo apt-get install python3-github
 
       - name: Checkout LLVM
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           sparse-checkout: llvm/utils/release/github-upload-release.py

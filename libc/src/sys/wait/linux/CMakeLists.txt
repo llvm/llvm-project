@@ -25,6 +25,22 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  waitid
+  SRCS
+    waitid.cpp
+  HDRS
+    ../waitid.h
+  DEPENDS
+    libc.hdr.types.id_t
+    libc.hdr.types.idtype_t
+    libc.hdr.types.siginfo_t
+    libc.src.__support.OSUtil.linux.syscall_wrappers.waitid
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.errno.errno
+)
+
+add_entrypoint_object(
   waitpid
   SRCS
     waitpid.cpp

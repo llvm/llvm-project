@@ -81,16 +81,7 @@ define <vscale x 1 x i32> @trunc_nxv1f16_to_ui32(<vscale x 1 x half> %x) {
 define <vscale x 1 x i64> @trunc_nxv1f16_to_si64(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: trunc_nxv1f16_to_si64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v9
@@ -103,16 +94,7 @@ define <vscale x 1 x i64> @trunc_nxv1f16_to_si64(<vscale x 1 x half> %x) {
 define <vscale x 1 x i64> @trunc_nxv1f16_to_ui64(<vscale x 1 x half> %x) {
 ; CHECK-LABEL: trunc_nxv1f16_to_ui64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.f.v v9, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v9
@@ -199,16 +181,7 @@ define <vscale x 4 x i32> @trunc_nxv4f16_to_ui32(<vscale x 4 x half> %x) {
 define <vscale x 4 x i64> @trunc_nxv4f16_to_si64(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: trunc_nxv4f16_to_si64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.rtz.x.f.v v8, v12
@@ -221,16 +194,7 @@ define <vscale x 4 x i64> @trunc_nxv4f16_to_si64(<vscale x 4 x half> %x) {
 define <vscale x 4 x i64> @trunc_nxv4f16_to_ui64(<vscale x 4 x half> %x) {
 ; CHECK-LABEL: trunc_nxv4f16_to_ui64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 25
-; CHECK-NEXT:    slli a0, a0, 10
-; CHECK-NEXT:    fmv.h.x fa5, a0
 ; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-NEXT:    vfabs.v v9, v8
-; CHECK-NEXT:    vmflt.vf v0, v9, fa5
-; CHECK-NEXT:    vfcvt.rtz.x.f.v v9, v8, v0.t
-; CHECK-NEXT:    vfcvt.f.x.v v9, v9, v0.t
-; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, mu
-; CHECK-NEXT:    vfsgnj.vv v8, v9, v8, v0.t
 ; CHECK-NEXT:    vfwcvt.f.f.v v12, v8
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwcvt.rtz.xu.f.v v8, v12

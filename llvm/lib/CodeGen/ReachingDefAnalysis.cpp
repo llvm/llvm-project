@@ -10,7 +10,6 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
-#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -367,8 +366,6 @@ void ReachingDefInfo::reset() {
 
 void ReachingDefInfo::init() {
   NumRegUnits = TRI->getNumRegUnits();
-  NumStackObjects = MF->getFrameInfo().getNumObjects();
-  ObjectIndexBegin = MF->getFrameInfo().getObjectIndexBegin();
   MBBReachingDefs.init(MF->getNumBlockIDs());
   // Initialize the MBBOutRegsInfos
   MBBOutRegsInfos.resize(MF->getNumBlockIDs());
@@ -397,7 +394,7 @@ void ReachingDefInfo::traverse() {
 }
 
 int ReachingDefInfo::getReachingDef(MachineInstr *MI, Register Reg) const {
-  assert(InstIds.count(MI) && "Unexpected machine instuction.");
+  assert(InstIds.count(MI) && "Unexpected machine instruction.");
   int InstId = InstIds.lookup(MI);
   int DefRes = ReachingDefDefaultVal;
   unsigned MBBNumber = MI->getParent()->getNumber();
@@ -470,7 +467,7 @@ MachineInstr *ReachingDefInfo::getInstFromId(MachineBasicBlock *MBB,
 }
 
 int ReachingDefInfo::getClearance(MachineInstr *MI, Register Reg) const {
-  assert(InstIds.count(MI) && "Unexpected machine instuction.");
+  assert(InstIds.count(MI) && "Unexpected machine instruction.");
   return InstIds.lookup(MI) - getReachingDef(MI, Reg);
 }
 

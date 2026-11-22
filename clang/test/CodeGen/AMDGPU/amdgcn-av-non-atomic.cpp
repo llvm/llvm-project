@@ -1,6 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 %s -emit-llvm -O0 -verify -o - \
-// RUN:   -triple=amdgcn-amd-amdhsa | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -O0 -verify -triple=amdgpu7.00-amd-amdhsa -o - | FileCheck %s
 
 // Test that [[clang::amdgpu_av("none")]] on non-atomic statements emits a
 // warning and does NOT produce !mmra metadata.

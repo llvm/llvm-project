@@ -11,4 +11,5 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/fmaximum_magbf16.h"
 
-LIST_FMAXIMUM_MAG_TESTS(bfloat16, LIBC_NAMESPACE::fmaximum_magbf16)
+LIST_FMAXIMUM_MAG_TESTS(FmaximumMagbf16, bfloat16,
+                        LIBC_NAMESPACE::fmaximum_magbf16)

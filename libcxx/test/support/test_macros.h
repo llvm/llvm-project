@@ -231,11 +231,7 @@
 #  define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
-#if defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_ALIGNED_ALLOCATION) && !_LIBCPP_HAS_ALIGNED_ALLOCATION
-#  define TEST_HAS_NO_ALIGNED_ALLOCATION
-#elif defined(_LIBCPP_VERSION) && defined(_LIBCPP_HAS_NO_ALIGNED_ALLOCATION) /* old libc++ version */
-#  define TEST_HAS_NO_ALIGNED_ALLOCATION
-#elif TEST_STD_VER < 17 && (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
+#if (!defined(__cpp_aligned_new) || __cpp_aligned_new < 201606L)
 #  define TEST_HAS_NO_ALIGNED_ALLOCATION
 #endif
 
@@ -574,6 +570,10 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 
 #if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 64
 #  define TEST_LONG_DOUBLE_IS_80_BIT
+#endif
+
+#if defined(__LDBL_MANT_DIG__) && __LDBL_MANT_DIG__ == 113
+#  define TEST_LONG_DOUBLE_IS_BINARY128
 #endif
 
 // Align benchmark functions and never inline them to reduce changes in performance in unrelated benchmarks

@@ -100,7 +100,7 @@ end subroutine
 ! CHECK:  %[[VAL_2:.*]]:2 = hlfir.declare %{{.*}}i"
 ! CHECK:  %[[VAL_3:.*]]:2 = hlfir.declare %{{.*}}j"
 ! CHECK:  %[[VAL_10:.*]] = arith.constant 5 : index
-! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_10]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = ".stringlit"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:  %[[VAL_11:.*]]:2 = hlfir.declare %{{.*}} typeparams %[[VAL_10]] uniq_name(".stringlit") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:  %[[VAL_12:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_13:.*]] = fir.load %[[VAL_3]]#0 : !fir.ref<i64>
 ! CHECK:  %[[VAL_14:.*]] = fir.convert %[[VAL_12]] : (i64) -> index

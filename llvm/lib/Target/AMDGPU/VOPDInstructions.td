@@ -189,17 +189,19 @@ defvar VOPDYOnlyPseudosGFX1250 = ["V_MAX_I32_e32", "V_MIN_I32_e32",
                                   "V_SUB_U32_e32", "V_LSHRREV_B32_e32",
                                   "V_ASHRREV_I32_e32"];
 
+defvar VOPDPseudosGFX1250 = !filter(x, VOPDPseudosCommon, !and(!ne(x, "V_DOT2C_F32_F16_e32"), !ne(x, "V_DOT2C_F32_BF16_e32")));
 defvar VOPDXPseudosGFX11 = VOPDPseudosCommon;
 defvar VOPDXPseudosGFX12 = VOPDPseudosCommon;
+defvar VOPDXPseudosGFX1250 = VOPDPseudosGFX1250;
 defvar VOPDYPseudosGFX11 = !listconcat(VOPDXPseudosGFX11, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
 defvar VOPDYPseudosGFX12 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX11_12);
-defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX12, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
+defvar VOPDYPseudosGFX1250 = !listconcat(VOPDXPseudosGFX1250, VOPDYOnlyPseudosCommon, VOPDYOnlyPseudosGFX1250);
 
 def GFX11GenD : GFXGenD<GFX11Not11_70Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX1170GenD : GFXGenD<GFX1170Gen, VOPDXPseudosGFX11, VOPDYPseudosGFX11>;
 def GFX12GenD : GFXGenD<GFX12Not12_50Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX12>;
-def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
-def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX12, VOPDYPseudosGFX1250>;
+def GFX1250GenD : GFXGenD<GFX1250Gen, VOPDXPseudosGFX1250, VOPDYPseudosGFX1250>;
+def GFX13GenD : GFXGenD<GFX13Gen, VOPDXPseudosGFX1250, VOPDYPseudosGFX1250>;
 
 
 def VOPDDstYOperand : RegisterOperand<VGPR_32, "printRegularOperand"> {
@@ -253,14 +255,15 @@ defvar VOPD3XPseudosExtraGFX13 = ["V_ADD_U32_e32", "V_LSHLREV_B32_e32", "V_FMA_F
 defvar VOPD3XPseudosExtraGFX1250 = ["V_FMA_F64_e64", "V_ADD_F64_pseudo_e32",
                                     "V_MUL_F64_pseudo_e32", "V_MAX_NUM_F64_e32", "V_MIN_NUM_F64_e32"];
 defvar VOPD3XPseudosGFX13 = !listconcat(
-                              !filter(x, VOPDXPseudosGFX12, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                 !eq(!find(x, "FMAMK"), -1))),
+                              !filter(x, VOPDXPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1), !eq(!find(x, "FMAMK"), -1))),
                               VOPD3XPseudosExtraGFX13);
-defvar VOPD3XPseudosGFX1250 = !listconcat(VOPD3XPseudosGFX13, VOPD3XPseudosExtraGFX1250);
+defvar VOPD3XPseudosGFX1250 = !listconcat(
+                              !filter(x, VOPDXPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
+                                                                   !eq(!find(x, "FMAMK"), -1))),
+                              VOPD3XPseudosExtraGFX13, VOPD3XPseudosExtraGFX1250);
 defvar VOPD3YPseudosExtra = ["V_BITOP3_B32_e64", "V_FMA_F32_e64"];
 defvar VOPD3YPseudosGFX1250 = !listconcat(
-                                !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1),
-                                                                     !eq(!find(x, "FMAMK"), -1))),
+                                !filter(x, VOPDYPseudosGFX1250, !and(!eq(!find(x, "FMAAK"), -1), !eq(!find(x, "FMAMK"), -1))),
                                 VOPD3YPseudosExtra);
 
 def GFX1250GenD3 : GFXGenD<GFX1250Gen, VOPD3XPseudosGFX1250, VOPD3YPseudosGFX1250> {

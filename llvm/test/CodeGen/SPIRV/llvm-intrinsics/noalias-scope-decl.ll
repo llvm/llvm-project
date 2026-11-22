@@ -19,4 +19,4 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{!1}
 !1 = distinct !{!1, !2, !"foo: %a"}
-!2 = distinct !{!2, !"foo"}
+!2 = distinct !{!2, i1 false, !"foo"}

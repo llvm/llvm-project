@@ -721,6 +721,25 @@ TEST_F(FormatTestTextProto, KeepsAmpersandsNextToKeys) {
                "}");
 }
 
+TEST_F(FormatTestTextProto, SupportsSemicolonSeparators) {
+  verifyFormat("field_a: OK; field_b: OK");
+  verifyFormat("field_a: OK;\n"
+               "field_b { field_c: OK };\n"
+               "field_d: OKOKOK;\n"
+               "field_e: OK");
+  verifyFormat("msg_field <\n"
+               "  field_a: OK;\n"
+               "  field_b: <>;\n"
+               "  field_c: OK\n"
+               ">");
+}
+
+TEST_F(FormatTestTextProto, DoesNotCrashOnUnmatchedClosingBrace) {
+  verifyNoCrash("field_a: 1 } field_b: 2");
+  verifyNoCrash("} field_a: 1");
+  verifyNoCrash("msg { field_a: 1 } } field_b: 2");
+}
+
 } // namespace
 } // namespace test
 } // namespace format

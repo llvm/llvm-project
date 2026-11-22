@@ -35,7 +35,7 @@ void test_virt_base_initializer() {
         
 // CIR: cir.func {{.*}} @_ZN11VirtDerivedC1Ev
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
-// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_VirtDerived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_VirtDerived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[ZERO]])
 // CIR:   cir.cleanup.scope {
@@ -51,7 +51,7 @@ void test_virt_base_initializer() {
 
 // CIR: cir.func {{.*}} @_ZN7DerivedC2Ev
 // CIR:   %[[THIS:.*]] = cir.load %{{.*}}
-// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
+// CIR:   %[[BASE_ADDR:.*]] = cir.base_class_addr nonnull %[[THIS]] [0] : !cir.ptr<!rec_Derived> -> !cir.ptr<!rec_Base>
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
 // CIR:   cir.call @_ZN4BaseC2Ei(%[[BASE_ADDR]], %[[ZERO]])
 // CIR:   cir.cleanup.scope {
@@ -100,7 +100,7 @@ void test_virt_base_initializer() {
 // OGCG: define {{.*}} void @_ZN11VirtDerivedC1Ev
 // OGCG:   %[[THIS:.*]] = load ptr, ptr %{{.*}}
 // OGCG:   call void @_ZN4BaseC2Ei(ptr {{.*}} %[[THIS]], i32 {{.*}} 0)
-// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) ({ [3 x ptr] }, ptr @_ZTV11VirtDerived, i32 0, i32 0, i32 3), ptr %[[THIS]]
+// OGCG:   store ptr getelementptr inbounds inrange(-24, 0) (i8, ptr @_ZTV11VirtDerived, i64 24), ptr %[[THIS]]
 // OGCG:   invoke void @_Z8mayThrowv()
 // OGCG:           to label %[[INVOKE_CONT:.*]] unwind label %[[LPAD:.*]]
 // OGCG: [[INVOKE_CONT:.*]]:

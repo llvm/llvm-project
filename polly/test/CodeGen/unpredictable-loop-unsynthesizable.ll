@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly-custom<scops>' -polly-print-scops -polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly -polly-stmt-granularity=bb '-passes=polly<no-default-opts>' -polly-invariant-load-hoisting=true -disable-output < %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly-custom<scops>' -plugin-arg=Polly,-polly-print-scops -plugin-arg=Polly,-polly-invariant-load-hoisting=true -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly -plugin-arg=Polly,-polly-stmt-granularity=bb '-passes=polly<no-default-opts>' -plugin-arg=Polly,-polly-invariant-load-hoisting=true -disable-output < %s
 
 ; The loop for.body is a scop with invariant load hoisting, but does not
 ; terminate predictably for ScalarEvolution. The scalar %1 therefore is not

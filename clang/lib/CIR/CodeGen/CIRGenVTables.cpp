@@ -48,7 +48,7 @@ static void setThunkProperties(CIRGenModule &cgm, const ThunkInfo &thunk,
   }
 
   if (cgm.supportsCOMDAT() && thunkFn.isWeakForLinker())
-    thunkFn.setComdat(true);
+    thunkFn.setSelfComdat();
 }
 
 mlir::Type CIRGenModule::getVTableComponentType() {
@@ -141,7 +141,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
     bool vtableHasLocalLinkage) {
   const VTableComponent &component = layout.vtable_components()[componentIndex];
 
-  CIRGenBuilderTy builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
@@ -174,7 +174,28 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
         cgm.getASTContext().getTargetInfo().emitVectorDeletingDtors(
             cgm.getASTContext().getLangOpts()));
 
-    assert(!cir::MissingFeatures::cudaSupport());
+    const bool isThunk =
+        nextVTableThunkIndex < layout.vtable_thunks().size() &&
+        layout.vtable_thunks()[nextVTableThunkIndex].first == componentIndex;
+
+    if (cgm.getLangOpts().CUDA) {
+      // Emit NULL for methods we can't codegen on this
+      // side. Otherwise we'd end up with vtable with unresolved
+      // references.
+      const CXXMethodDecl *md = cast<CXXMethodDecl>(gd.getDecl());
+      // OK on device side: functions w/ __device__ attribute
+      // OK on host side: anything except __device__-only functions.
+      bool canEmitMethod =
+          cgm.getLangOpts().CUDAIsDevice
+              ? md->hasAttr<CUDADeviceAttr>()
+              : (md->hasAttr<CUDAHostAttr>() || !md->hasAttr<CUDADeviceAttr>());
+      if (!canEmitMethod) {
+        if (isThunk)
+          nextVTableThunkIndex++;
+        return builder.getConstNullPtrAttr(builder.getUInt8PtrTy());
+      }
+      // Method is acceptable, continue processing as usual.
+    }
 
     auto getSpecialVirtFn = [&](StringRef name) -> cir::FuncOp {
       assert(!cir::MissingFeatures::vtableRelativeLayout());
@@ -187,8 +208,24 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       cir::FuncType fnTy =
           cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
       cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
+      fnPtr.setUnnamedAddr(true);
 
-      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      // The Microsoft ABI uses the same function name for pure and deleted
+      // virtual functions.
+      if (!fnPtr.isDeclaration())
+        return fnPtr;
+
+      // For device compilation, provide a weak definition that traps,
+      // otherwise linking ends up with unresolved references.
+      if (cgm.getLangOpts().isTargetDevice()) {
+        fnPtr.setLinkage(cir::GlobalLinkageKind::WeakAnyLinkage);
+        mlir::SymbolTable::setSymbolVisibility(
+            fnPtr, cgm.getMLIRVisibilityFromCIRLinkage(fnPtr.getLinkage()));
+        mlir::OpBuilder::InsertionGuard guard(builder);
+        builder.setInsertionPointToStart(fnPtr.addEntryBlock());
+        cir::TrapOp::create(builder, fnPtr.getLoc());
+      }
+
       return fnPtr;
     };
 
@@ -203,9 +240,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
         deletedVirtualFn =
             getSpecialVirtFn(cgm.getCXXABI().getDeletedVirtualCallName());
       fnPtr = deletedVirtualFn;
-    } else if (nextVTableThunkIndex < layout.vtable_thunks().size() &&
-               layout.vtable_thunks()[nextVTableThunkIndex].first ==
-                   componentIndex) {
+    } else if (isThunk) {
       const ThunkInfo &thunkInfo =
           layout.vtable_thunks()[nextVTableThunkIndex].second;
       nextVTableThunkIndex++;
@@ -261,7 +296,13 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
   cir::ConstRecordAttr record = cgm.getBuilder().getAnonConstRecord(members);
 
   // Create a VTableAttr
-  auto vtableAttr = cir::VTableAttr::get(record.getType(), record.getMembers());
+  SmallVector<mlir::Attribute> addressPointAttrs;
+  for (auto [vtableIndex, addressPoint] : llvm::enumerate(addressPoints))
+    addressPointAttrs.push_back(
+        cir::AddressPointAttr::get(mlirContext, vtableIndex, addressPoint));
+  auto vtableAttr = cir::VTableAttr::get(
+      record.getType(), record.getMembers(),
+      mlir::ArrayAttr::get(mlirContext, addressPointAttrs));
 
   // Add the vtable initializer to the vtable global op.
   cgm.setInitializer(vtableOp, vtableAttr);
@@ -306,8 +347,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cir::GlobalOp vtable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, name, vtType, linkage, CharUnits::fromQuantity(align));
 
-  // V-tables are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  // dynamic_cast relies on a unique vtable address, so the address only
+  // becomes insignificant without RTTI or when the vtable may be duplicated.
+  if (!cgm.shouldEmitRTTI() || cgm.mayVTableBeDuplicated(vtable.getLinkage()))
+    vtable.setUnnamedAddr(true);
 
   mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
       loc, cgm.getASTContext().getCanonicalTagType(base.getBase()));
@@ -319,6 +362,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   // Set properties only after the initializer has been set to ensure that the
   // GV is treated as definition and not declaration.
   assert(!vtable.isDeclaration() && "Shouldn't set properties on declaration");
+  // The global was created as a declaration, which MLIR requires to be private,
+  // so the visibility has to follow the linkage of the definition.
+  mlir::SymbolTable::setSymbolVisibility(
+      vtable, CIRGenModule::getMLIRVisibility(vtable));
   cgm.setGVProperties(vtable, rd);
 
   assert(!cir::MissingFeatures::vtableEmitMetadata());
@@ -437,6 +484,7 @@ cir::GlobalOp CIRGenVTables::getAddrOfVTT(const CXXRecordDecl *rd) {
   cir::GlobalOp vtt = cgm.createOrReplaceCXXRuntimeVariable(
       cgm.getLoc(rd->getSourceRange()), name, arrayType,
       cir::GlobalLinkageKind::ExternalLinkage, CharUnits::fromQuantity(align));
+  vtt.setUnnamedAddr(true);
   cgm.setGVProperties(vtt, rd);
   return vtt;
 }
@@ -499,8 +547,9 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
     };
 
     auto indicesAttr = mlir::ArrayAttr::get(mlirContext, indices);
-    cir::GlobalViewAttr init = cgm.getBuilder().getGlobalViewAttr(
-        cgm.getBuilder().getUInt8PtrTy(), vtable, indicesAttr);
+    CIRGenBuilderTy &bld = cgm.getBuilder();
+    auto init = bld.getGlobalViewAttr(bld.getUInt8PtrTy(), vtable, indicesAttr,
+                                      /*addressPoint=*/true);
 
     vttComponents.push_back(init);
   }
@@ -516,7 +565,7 @@ void CIRGenVTables::emitVTTDefinition(cir::GlobalOp vttOp,
       vttOp, CIRGenModule::getMLIRVisibility(vttOp));
 
   if (cgm.supportsCOMDAT() && vttOp.isWeakForLinker())
-    vttOp.setComdat(true);
+    vttOp.setSelfComdat();
 }
 
 uint64_t CIRGenVTables::getSubVTTIndex(const CXXRecordDecl *rd,
@@ -793,7 +842,10 @@ void CIRGenFunction::emitMustTailThunk(GlobalDecl gd,
   cir::FuncType calleeTy = callee.getFunctionType();
   mlir::Type retTy = calleeTy.getReturnType();
 
-  cir::CallOp call = builder.createCallOp(loc, callee, args);
+  assert(!cir::MissingFeatures::opCallAttrs());
+  cir::CallOp call =
+      builder.createCallOp(loc, callee, args, /*attrs=*/{}, /*argAttrs=*/{},
+                           /*resAttrs=*/{}, curFnInfo->getCallingConvention());
   call->setAttr(cir::CIRDialect::getMustTailAttrName(),
                 mlir::UnitAttr::get(builder.getContext()));
 
@@ -1062,4 +1114,10 @@ void CIRGenModule::emitVTablesOpportunistically() {
 
 bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
+}
+
+bool CIRGenModule::mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         cir::isWeakForLinker(linkage);
 }

@@ -1,8 +1,8 @@
 # Check that modifying X5 register is not a problem for machine outliner
 
-# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv32 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV32I-MO %s
-# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir -verify-machineinstrs < %s \
+# RUN: llc -mtriple=riscv64 -x mir -run-pass=machine-outliner -simplify-mir < %s \
 # RUN: | FileCheck -check-prefixes=CHECK,RV64I-MO %s
 
 --- |
@@ -12,16 +12,15 @@
 ...
 ---
 name:            outline_tail_1
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
     liveins: $x10, $x11, $x5
     ; RV32I-MO-LABEL: name: outline_tail_1
-    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     ;
     ; RV64I-MO-LABEL: name: outline_tail_1
-    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
     $x10 = ADD $x10, $x5
@@ -31,16 +30,15 @@ body:             |
 ...
 ---
 name:            outline_tail_2
-tracksRegLiveness: true
 isOutlined: false
 body:             |
   bb.0:
     liveins: $x10, $x11, $x5
     ; RV32I-MO-LABEL: name: outline_tail_2
-    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV32I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     ;
     ; RV64I-MO-LABEL: name: outline_tail_2
-    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit $x2, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
+    ; RV64I-MO:         PseudoTAIL target-flags(riscv-call) @OUTLINED_FUNCTION_0, implicit-def $x6, implicit-def $x7, implicit $x2, implicit-def $x6, implicit-def $x7, implicit-def $x10, implicit-def $x11, implicit-def $x12, implicit $x2, implicit $x5, implicit $x10, implicit $x11
     $x11 = ORI $x11, 1023
     $x12 = ADDI $x10, 17
     $x10 = ADD $x10, $x5

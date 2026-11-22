@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "IROptions.h"
 #include "LLVMContextImpl.h"
 #include "MetadataImpl.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
@@ -22,10 +24,10 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
 
 #include <numeric>
 #include <optional>
+#include <tuple>
 
 using namespace llvm;
 
@@ -34,12 +36,6 @@ namespace llvm {
 cl::opt<bool> EnableFSDiscriminator(
     "enable-fs-discriminator", cl::Hidden,
     cl::desc("Enable adding flow sensitive discriminators"));
-
-// When true, preserves line and column number by picking one of the merged
-// location info in a deterministic manner to assist sample based PGO.
-LLVM_ABI cl::opt<bool> PickMergedSourceLocations(
-    "pick-merged-source-locations", cl::init(false), cl::Hidden,
-    cl::desc("Preserve line and column number when merging locations."));
 } // namespace llvm
 
 uint32_t DIType::getAlignInBits() const {
@@ -60,15 +56,17 @@ DebugVariableAggregate::DebugVariableAggregate(const DbgVariableRecord *DVR)
 
 DILocation::DILocation(LLVMContext &C, StorageType Storage, unsigned Line,
                        unsigned Column, uint64_t AtomGroup, uint8_t AtomRank,
-                       ArrayRef<Metadata *> MDs, bool ImplicitCode)
+                       bool HasIRLayers, ArrayRef<Metadata *> MDs,
+                       bool ImplicitCode)
     : MDNode(C, DILocationKind, Storage, MDs), AtomGroup(AtomGroup),
-      AtomRank(AtomRank) {
+      AtomRank(AtomRank), HasIRLayers(HasIRLayers) {
   assert(AtomRank <= 7 && "AtomRank number should fit in 3 bits");
+  assert(AtomGroup < (1ULL << 60) && "AtomGroup number should fit in 60 bits");
   if (AtomGroup)
     C.updateDILocationAtomGroupWaterline(AtomGroup + 1);
 
-  assert((MDs.size() == 1 || MDs.size() == 2) &&
-         "Expected a scope and optional inlined-at");
+  assert(MDs.size() >= 1 && MDs.size() <= 3 &&
+         "Expected a scope and optional inlined-at + irlayers");
   // Set line and column.
   assert(Column < (1u << 16) && "Expected 16-bit column");
 
@@ -88,15 +86,20 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
                                 unsigned Column, Metadata *Scope,
                                 Metadata *InlinedAt, bool ImplicitCode,
                                 uint64_t AtomGroup, uint8_t AtomRank,
-                                StorageType Storage, bool ShouldCreate) {
+                                Metadata *IRLayers, StorageType Storage,
+                                bool ShouldCreate) {
   // Fixup column.
   adjustColumn(Column);
 
+  // Clamp rather than truncate, which would wrap into a different valid group.
+  if (AtomGroup >= (1ULL << 60))
+    AtomGroup = 0;
+
   if (Storage == Uniqued) {
-    if (auto *N = getUniqued(Context.pImpl->DILocations,
-                             DILocationInfo::KeyTy(Line, Column, Scope,
-                                                   InlinedAt, ImplicitCode,
-                                                   AtomGroup, AtomRank)))
+    if (auto *N = getUniqued(
+            Context.pImpl->DILocations,
+            DILocationInfo::KeyTy(Line, Column, Scope, InlinedAt, ImplicitCode,
+                                  AtomGroup, AtomRank, IRLayers)))
       return N;
     if (!ShouldCreate)
       return nullptr;
@@ -104,14 +107,60 @@ DILocation *DILocation::getImpl(LLVMContext &Context, unsigned Line,
     assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
   }
 
-  SmallVector<Metadata *, 2> Ops;
+  SmallVector<Metadata *, 3> Ops;
   Ops.push_back(Scope);
   if (InlinedAt)
     Ops.push_back(InlinedAt);
-  return storeImpl(new (Ops.size(), Storage)
-                       DILocation(Context, Storage, Line, Column, AtomGroup,
-                                  AtomRank, Ops, ImplicitCode),
+  if (IRLayers)
+    Ops.push_back(IRLayers);
+  return storeImpl(new (Ops.size(), Storage) DILocation(
+                       Context, Storage, Line, Column, AtomGroup, AtomRank,
+                       /*HasIRLayers=*/IRLayers != nullptr, Ops, ImplicitCode),
                    Storage, Context.pImpl->DILocations);
+}
+
+DILayerLoc *DILayerLoc::getImpl(LLVMContext &Context, MDString *Kind,
+                                Metadata *File, unsigned Line, unsigned Column,
+                                StorageType Storage, bool ShouldCreate) {
+  // Clamp an out-of-range column to 0 (the 16-bit SubclassData limit), as
+  // DILocation::getImpl does; the ctor otherwise asserts and release builds
+  // truncate.
+  adjustColumn(Column);
+  if (Storage == Uniqued) {
+    if (auto *N = getUniqued(Context.pImpl->DILayerLocs,
+                             DILayerLocInfo::KeyTy(Kind, File, Line, Column)))
+      return N;
+    if (!ShouldCreate)
+      return nullptr;
+  }
+  Metadata *Ops[] = {Kind, File};
+  return storeImpl(new (std::size(Ops), Storage)
+                       DILayerLoc(Context, Storage, Line, Column, Ops),
+                   Storage, Context.pImpl->DILayerLocs);
+}
+
+DILayerLocList *DILayerLocList::getImpl(LLVMContext &Context,
+                                        ArrayRef<Metadata *> Layers,
+                                        StorageType Storage,
+                                        bool ShouldCreate) {
+  unsigned Hash = 0;
+  if (Storage == Uniqued) {
+    DILayerLocListInfo::KeyTy Key(Layers);
+    if (auto *N = getUniqued(Context.pImpl->DILayerLocLists, Key))
+      return N;
+    if (!ShouldCreate)
+      return nullptr;
+    Hash = Key.getHash();
+  } else {
+    assert(ShouldCreate && "Expected non-uniqued nodes to always be created");
+  }
+  return storeImpl(new (Layers.size(), Storage)
+                       DILayerLocList(Context, Storage, Hash, Layers),
+                   Storage, Context.pImpl->DILayerLocLists);
+}
+
+void DILayerLocList::recalculateHash() {
+  setHash(DILayerLocListInfo::KeyTy::calculateHash(this));
 }
 
 DILocation *DILocation::getMergedLocations(ArrayRef<DILocation *> Locs) {
@@ -220,6 +269,39 @@ struct ScopeLocationsMatcher {
   }
 };
 
+// Returns a uniqued DILayerLocList holding the intersection of LocA's and
+// LocB's layer sets, or null if either has no layers or they share none.
+// Entries keep LocA's relative order: LLVM assigns no meaning to layer order,
+// but it is part of a list's identity and visible to consumers, so preserve
+// rather than sort.
+static Metadata *mergeIRLayers(LLVMContext &C, const DILocation *LocA,
+                               const DILocation *LocB) {
+  DILayerLocList *LA = LocA->getIRLayers();
+  DILayerLocList *LB = LocB->getIRLayers();
+  if (!LA || !LB)
+    return nullptr;
+  // Entries match on their fields rather than by pointer: DILayerLocs are
+  // uniqued, but `distinct` ones are legal and must not look disjoint. Keying
+  // on the fields also keeps the intersection linear in the two list lengths.
+  using LayerKey = std::tuple<Metadata *, Metadata *, unsigned, unsigned>;
+  auto keyOf = [](const DILayerLoc *L) {
+    return LayerKey(L->getRawKind(), L->getRawFile(), L->getLine(),
+                    L->getColumn());
+  };
+  SmallDenseSet<LayerKey, 2> BLayers;
+  for (const MDOperand &Op : LB->layers())
+    BLayers.insert(keyOf(cast<DILayerLoc>(Op.get())));
+  SmallVector<Metadata *, 2> Keep;
+  for (const MDOperand &Op : LA->layers()) {
+    auto *L = cast<DILayerLoc>(Op.get());
+    if (BLayers.contains(keyOf(L)))
+      Keep.push_back(L);
+  }
+  if (Keep.empty())
+    return nullptr;
+  return DILayerLocList::get(C, Keep);
+}
+
 DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   if (LocA == LocB)
     return LocA;
@@ -229,9 +311,10 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
   // rather than computing a merged location using line 0, which is typically
   // not useful for PGO. If one of them is null, then try to return one which is
   // valid.
-  if (PickMergedSourceLocations) {
+  DILocation *Loc = LocA ? LocA : LocB;
+  if (getIROptions(Loc->getContext()).pick_merged_source_locations) {
     if (!LocA || !LocB)
-      return LocA ? LocA : LocB;
+      return Loc;
 
     auto A = std::make_tuple(LocA->getLine(), LocA->getColumn(),
                              LocA->getDiscriminator(), LocA->getFilename(),
@@ -304,12 +387,17 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     if (L1 == L2)
       return DILocation::get(C, L1->getLine(), L1->getColumn(), L1->getScope(),
                              InlinedAt, L1->isImplicitCode(),
-                             L1->getAtomGroup(), L1->getAtomRank());
+                             L1->getAtomGroup(), L1->getAtomRank(),
+                             L1->getRawIRLayers());
 
     // If the locations originate from different subprograms we can't produce
     // a common location.
     if (L1->getScope()->getSubprogram() != L2->getScope()->getSubprogram())
       return nullptr;
+
+    // Each merged location keeps the intersection of the two inputs'
+    // intermediate-IR layer sets, so a layer common to both survives.
+    Metadata *MergedLayers = mergeIRLayers(C, L1, L2);
 
     // Find nearest common scope inside subprogram.
     DIScope *Scope = getNearestMatchingScope<EqualScopesMatcher>(L1, L2).first;
@@ -333,7 +421,9 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
       // from CommonLoc. Use it as merged location.
       if (Scope->getFile() != L1->getFile() || L1->getFile() != L2->getFile())
         return DILocation::get(C, CommonLoc.first, CommonLoc.second,
-                               CommonLocScope, InlinedAt);
+                               CommonLocScope, InlinedAt,
+                               /*ImplicitCode=*/false, /*AtomGroup=*/0,
+                               /*AtomRank=*/0, MergedLayers);
     }
 
     bool SameLine = L1->getLine() == L2->getLine();
@@ -346,7 +436,7 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
     // further to do if neither location has an atom number.
     if (!SameLine || !(L1->getAtomGroup() || L2->getAtomGroup()))
       return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
-                             /*AtomGroup*/ 0, /*AtomRank*/ 0);
+                             /*AtomGroup*/ 0, /*AtomRank*/ 0, MergedLayers);
 
     uint64_t Group = 0;
     uint64_t Rank = 0;
@@ -380,7 +470,7 @@ DILocation *DILocation::getMergedLocation(DILocation *LocA, DILocation *LocB) {
       Rank = 1;
     }
     return DILocation::get(C, Line, Col, Scope, InlinedAt, IsImplicitCode,
-                           Group, Rank);
+                           Group, Rank, MergedLayers);
   };
 
   DILocation *Result = ARIt != ALocs.rend() ? (*ARIt)->getInlinedAt() : nullptr;
@@ -954,15 +1044,15 @@ DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,
                                     Metadata *StringLengthExp,
                                     Metadata *StringLocationExp,
                                     Metadata *SizeInBits, uint32_t AlignInBits,
-                                    unsigned Encoding, StorageType Storage,
-                                    bool ShouldCreate) {
+                                    unsigned Encoding, Metadata *CharType,
+                                    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIStringType,
-                        (Tag, Name, StringLength, StringLengthExp,
-                         StringLocationExp, SizeInBits, AlignInBits, Encoding));
-  Metadata *Ops[] = {nullptr,         nullptr,          Name,
-                     SizeInBits,      nullptr,          StringLength,
-                     StringLengthExp, StringLocationExp};
+  DEFINE_GETIMPL_LOOKUP(DIStringType, (Tag, Name, StringLength, StringLengthExp,
+                                       StringLocationExp, SizeInBits,
+                                       AlignInBits, Encoding, CharType));
+  Metadata *Ops[] = {nullptr,         nullptr,           Name,
+                     SizeInBits,      nullptr,           StringLength,
+                     StringLengthExp, StringLocationExp, CharType};
   DEFINE_GETIMPL_STORE(DIStringType, (Tag, AlignInBits, Encoding), Ops);
 }
 DIType *DIDerivedType::getClassType() const {
@@ -1746,6 +1836,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_constu:
   case dwarf::DW_OP_consts:
   case dwarf::DW_OP_deref_size:
+  case dwarf::DW_OP_xderef_size:
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_LLVM_entry_value:
@@ -1798,15 +1889,19 @@ bool DIExpression::PlusUconstOp::classof(const ExprOperand *Op) {
   return Op->is(dwarf::DW_OP_plus_uconst);
 }
 
+bool DIExpression::isLitOp(uint64_t Op) {
+  return Op >= dwarf::DW_OP_lit0 && Op <= dwarf::DW_OP_lit31;
+}
+
 bool DIExpression::isValid() const {
   for (auto I = expr_op_begin(), E = expr_op_end(); I != E; ++I) {
     // Check that there's space for the operand.
-    if (I->get() + I->getSize() > E->get())
+    if (I->getSize() > static_cast<uint64_t>(E->get() - I->get()))
       return false;
 
     uint64_t Op = I->getOp();
     if ((Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31) ||
-        (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31))
+        (Op >= dwarf::DW_OP_breg0 && Op <= dwarf::DW_OP_breg31) || isLitOp(Op))
       continue;
 
     // Check that the operand is valid.
@@ -1851,6 +1946,12 @@ bool DIExpression::isValid() const {
         return false;
       break;
     }
+    case dwarf::DW_OP_deref_size:
+    case dwarf::DW_OP_xderef_size:
+      // The size operand is encoded as a single byte.
+      if (!isUInt<8>(I->getArg(0)))
+        return false;
+      break;
     case dwarf::DW_OP_LLVM_implicit_pointer:
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_arg:
@@ -1871,9 +1972,7 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_shr:
     case dwarf::DW_OP_shra:
     case dwarf::DW_OP_deref:
-    case dwarf::DW_OP_deref_size:
     case dwarf::DW_OP_xderef:
-    case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
     case dwarf::DW_OP_regx:
@@ -2202,27 +2301,38 @@ bool DIExpression::hasAllLocationOps(unsigned N) const {
 
 const DIExpression *DIExpression::extractAddressClass(const DIExpression *Expr,
                                                       unsigned &AddrClass) {
-  // FIXME: This seems fragile. Nothing that verifies that these elements
-  // actually map to ops and not operands.
+  if (!Expr->isValid())
+    return Expr;
   auto SingleLocEltsOpt = Expr->getSingleLocationExpressionElements();
   if (!SingleLocEltsOpt)
+    return Expr;
+  ArrayRef<uint64_t> SingleLocElts = *SingleLocEltsOpt;
+
+  // Walk the operations, rather than the raw elements, so that operands are
+  // never mistaken for opcodes.
+  SmallVector<ExprOperand, 8> Ops(expr_op_iterator(SingleLocElts.begin()),
+                                  expr_op_iterator(SingleLocElts.end()));
+  if (Ops.size() < 3)
+    return Expr;
+  const ExprOperand &AddrSpaceOp = Ops[Ops.size() - 3];
+  const ExprOperand &SwapOp = Ops[Ops.size() - 2];
+  const ExprOperand &XDerefOp = Ops[Ops.size() - 1];
+  if (!SwapOp.is(dwarf::DW_OP_swap) || !(XDerefOp.is(dwarf::DW_OP_xderef) ||
+                                         XDerefOp.is(dwarf::DW_OP_xderef_size)))
+    return Expr;
+
+  uint64_t Op = AddrSpaceOp.getOp();
+  if (Op == dwarf::DW_OP_constu)
+    AddrClass = AddrSpaceOp.getArg(0);
+  else if (isLitOp(Op))
+    AddrClass = Op - dwarf::DW_OP_lit0;
+  else
+    return Expr;
+
+  if (AddrSpaceOp.get() == SingleLocElts.begin())
     return nullptr;
-  auto SingleLocElts = *SingleLocEltsOpt;
-
-  const unsigned PatternSize = 4;
-  if (SingleLocElts.size() >= PatternSize &&
-      SingleLocElts[PatternSize - 4] == dwarf::DW_OP_constu &&
-      SingleLocElts[PatternSize - 2] == dwarf::DW_OP_swap &&
-      SingleLocElts[PatternSize - 1] == dwarf::DW_OP_xderef) {
-    AddrClass = SingleLocElts[PatternSize - 3];
-
-    if (SingleLocElts.size() == PatternSize)
-      return nullptr;
-    return DIExpression::get(
-        Expr->getContext(),
-        ArrayRef(&*SingleLocElts.begin(), SingleLocElts.size() - PatternSize));
-  }
-  return Expr;
+  return DIExpression::get(Expr->getContext(),
+                           ArrayRef(SingleLocElts.begin(), AddrSpaceOp.get()));
 }
 
 DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
@@ -2612,24 +2722,44 @@ DIExpression::isConstant() const {
   // An signed constants can be represented as DW_OP_consts C DW_OP_stack_value
   // (DW_OP_LLVM_fragment of Len).
   // An unsigned constant can be represented as
-  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
+  // DW_OP_constu C DW_OP_stack_value (DW_OP_LLVM_fragment of Len), or as
+  // DW_OP_lit<C> DW_OP_stack_value (DW_OP_LLVM_fragment of Len).
 
-  if ((getNumElements() != 2 && getNumElements() != 3 &&
-       getNumElements() != 6) ||
-      (getElement(0) != dwarf::DW_OP_consts &&
-       getElement(0) != dwarf::DW_OP_constu))
+  if (getNumElements() == 0)
+    return std::nullopt;
+  uint64_t Op = getElement(0);
+  if (Op != dwarf::DW_OP_consts && Op != dwarf::DW_OP_constu && !isLitOp(Op))
     return std::nullopt;
 
-  if (getNumElements() == 2 && getElement(0) == dwarf::DW_OP_consts)
+  // The number of elements used by the constant: DW_OP_lit<C> encodes its
+  // value in the opcode, while DW_OP_constu/DW_OP_consts take an operand.
+  unsigned ConstSize = expr_op_begin()->getSize();
+  unsigned NumElements = getNumElements();
+  // The constant may be followed by DW_OP_stack_value (1 element), and then
+  // by DW_OP_LLVM_fragment, offset, size (3 more elements).
+  if (NumElements != ConstSize && NumElements != ConstSize + 1 &&
+      NumElements != ConstSize + 4)
+    return std::nullopt;
+
+  if (NumElements == ConstSize && Op == dwarf::DW_OP_consts)
     return SignedOrUnsignedConstant::SignedConstant;
 
-  if ((getNumElements() == 3 && getElement(2) != dwarf::DW_OP_stack_value) ||
-      (getNumElements() == 6 && (getElement(2) != dwarf::DW_OP_stack_value ||
-                                 getElement(3) != dwarf::DW_OP_LLVM_fragment)))
+  if ((NumElements == ConstSize + 1 &&
+       getElement(ConstSize) != dwarf::DW_OP_stack_value) ||
+      (NumElements == ConstSize + 4 &&
+       (getElement(ConstSize) != dwarf::DW_OP_stack_value ||
+        getElement(ConstSize + 1) != dwarf::DW_OP_LLVM_fragment)))
     return std::nullopt;
-  return getElement(0) == dwarf::DW_OP_constu
-             ? SignedOrUnsignedConstant::UnsignedConstant
-             : SignedOrUnsignedConstant::SignedConstant;
+  return Op == dwarf::DW_OP_consts ? SignedOrUnsignedConstant::SignedConstant
+                                   : SignedOrUnsignedConstant::UnsignedConstant;
+}
+
+uint64_t DIExpression::getConstantValue() const {
+  assert(isConstant() && "Expression is not a constant");
+  uint64_t Op = getElement(0);
+  if (isLitOp(Op))
+    return Op - dwarf::DW_OP_lit0;
+  return getElement(1);
 }
 
 DIExpression::ExtOps DIExpression::getExtOps(unsigned FromSize, unsigned ToSize,
@@ -2775,5 +2905,5 @@ void DIArgList::dropAllReferences(bool Untrack) {
   if (Untrack)
     untrack();
   Args.clear();
-  ReplaceableMetadataImpl::resolveAllUses(/* ResolveUsers */ false);
+  ReplaceableUses::resolveAllUses(/* ResolveUsers */ false);
 }

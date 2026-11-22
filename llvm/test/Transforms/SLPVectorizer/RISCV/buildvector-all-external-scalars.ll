@@ -137,68 +137,68 @@ define void @test(ptr %__last.addr.011.i.i, ptr %call3) {
 ; CHECK-NEXT:    [[TMP87:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_19]], align 4
 ; CHECK-NEXT:    store float [[TMP87]], ptr [[INCDEC_PTR2_I_I_19]], align 4
 ; CHECK-NEXT:    store float [[TMP86]], ptr [[__LAST_ADDR_0_I_I_19]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_30:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_19]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_30:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_19]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_30:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_19]], i32 -4
 ; CHECK-NEXT:    [[TMP47:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_30]], align 4
 ; CHECK-NEXT:    [[TMP48:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_30]], align 4
 ; CHECK-NEXT:    store float [[TMP48]], ptr [[INCDEC_PTR2_I_I_30]], align 4
 ; CHECK-NEXT:    store float [[TMP47]], ptr [[__LAST_ADDR_0_I_I_30]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_21:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_30]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_21:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_30]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_21:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_30]], i32 -4
 ; CHECK-NEXT:    [[TMP49:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_21]], align 4
 ; CHECK-NEXT:    [[TMP50:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_21]], align 4
 ; CHECK-NEXT:    store float [[TMP50]], ptr [[INCDEC_PTR2_I_I_21]], align 4
 ; CHECK-NEXT:    store float [[TMP49]], ptr [[__LAST_ADDR_0_I_I_21]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_22:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_21]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_22:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_21]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_22:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_21]], i32 -4
 ; CHECK-NEXT:    [[TMP51:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_22]], align 4
 ; CHECK-NEXT:    [[TMP67:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_22]], align 4
 ; CHECK-NEXT:    store float [[TMP67]], ptr [[INCDEC_PTR2_I_I_22]], align 4
 ; CHECK-NEXT:    store float [[TMP51]], ptr [[__LAST_ADDR_0_I_I_22]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_23:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_22]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_23:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_22]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_23:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_22]], i32 -4
 ; CHECK-NEXT:    [[TMP70:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_23]], align 4
 ; CHECK-NEXT:    [[TMP54:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_23]], align 4
 ; CHECK-NEXT:    store float [[TMP54]], ptr [[INCDEC_PTR2_I_I_23]], align 4
 ; CHECK-NEXT:    store float [[TMP70]], ptr [[__LAST_ADDR_0_I_I_23]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_24:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_23]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_24:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_23]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_24:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_23]], i32 -4
 ; CHECK-NEXT:    [[TMP55:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_24]], align 4
 ; CHECK-NEXT:    [[TMP73:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_24]], align 4
 ; CHECK-NEXT:    store float [[TMP73]], ptr [[INCDEC_PTR2_I_I_24]], align 4
 ; CHECK-NEXT:    store float [[TMP55]], ptr [[__LAST_ADDR_0_I_I_24]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_25:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_24]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_25:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_24]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_25:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_24]], i32 -4
 ; CHECK-NEXT:    [[TMP79:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_25]], align 4
 ; CHECK-NEXT:    [[TMP58:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_25]], align 4
 ; CHECK-NEXT:    store float [[TMP58]], ptr [[INCDEC_PTR2_I_I_25]], align 4
 ; CHECK-NEXT:    store float [[TMP79]], ptr [[__LAST_ADDR_0_I_I_25]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_26:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_25]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_26:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_25]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_26:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_25]], i32 -4
 ; CHECK-NEXT:    [[TMP82:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_26]], align 4
 ; CHECK-NEXT:    [[TMP85:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_26]], align 4
 ; CHECK-NEXT:    store float [[TMP85]], ptr [[INCDEC_PTR2_I_I_26]], align 4
 ; CHECK-NEXT:    store float [[TMP82]], ptr [[__LAST_ADDR_0_I_I_26]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_27:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_26]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_27:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_26]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_27:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_26]], i32 -4
 ; CHECK-NEXT:    [[TMP61:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_27]], align 4
 ; CHECK-NEXT:    [[TMP88:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_27]], align 4
 ; CHECK-NEXT:    store float [[TMP88]], ptr [[INCDEC_PTR2_I_I_27]], align 4
 ; CHECK-NEXT:    store float [[TMP61]], ptr [[__LAST_ADDR_0_I_I_27]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_28:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_27]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_28:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_27]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_28:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_27]], i32 -4
 ; CHECK-NEXT:    [[TMP89:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_28]], align 4
 ; CHECK-NEXT:    [[TMP64:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_28]], align 4
 ; CHECK-NEXT:    store float [[TMP64]], ptr [[INCDEC_PTR2_I_I_28]], align 4
 ; CHECK-NEXT:    store float [[TMP89]], ptr [[__LAST_ADDR_0_I_I_28]], align 4
-; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_29:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_28]], i32 -4
 ; CHECK-NEXT:    [[INCDEC_PTR2_I_I_29:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_28]], i32 4
+; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_29:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_28]], i32 -4
 ; CHECK-NEXT:    [[TMP90:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_29]], align 4
 ; CHECK-NEXT:    [[TMP91:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_29]], align 4
 ; CHECK-NEXT:    store float [[TMP91]], ptr [[INCDEC_PTR2_I_I_29]], align 4
 ; CHECK-NEXT:    store float [[TMP90]], ptr [[__LAST_ADDR_0_I_I_29]], align 4
-; CHECK-NEXT:    [[INCDEC_PTR2_I_I_20:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_29]], i32 -4
 ; CHECK-NEXT:    [[__LAST_ADDR_0_I_I_20:%.*]] = getelementptr inbounds nuw i8, ptr [[INCDEC_PTR2_I_I_29]], i32 4
+; CHECK-NEXT:    [[INCDEC_PTR2_I_I_20:%.*]] = getelementptr inbounds i8, ptr [[__LAST_ADDR_0_I_I_29]], i32 -4
 ; CHECK-NEXT:    [[TMP102:%.*]] = load float, ptr [[__LAST_ADDR_0_I_I_20]], align 4
 ; CHECK-NEXT:    [[TMP101:%.*]] = load float, ptr [[INCDEC_PTR2_I_I_20]], align 4
 ; CHECK-NEXT:    store float [[TMP101]], ptr [[__LAST_ADDR_0_I_I_20]], align 4

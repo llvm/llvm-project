@@ -62,12 +62,15 @@ void ConvertSPIRVToLLVMPass::runOnOperation() {
 
   if (clientAPI != spirv::ClientAPI::OpenCL &&
       clientAPI != spirv::ClientAPI::Unknown)
-    getOperation()->emitWarning()
+    emitWarning(module.getLoc())
         << "address space mapping for client '"
         << spirv::stringifyClientAPI(clientAPI) << "' not implemented";
 
   // Set `ModuleOp` as legal for `spirv.module` conversion.
   target.addLegalOp<ModuleOp>();
-  if (failed(applyPartialConversion(module, target, std::move(patterns))))
+  ConversionConfig config;
+  config.allowPatternRollback = allowPatternRollback;
+  if (failed(
+          applyPartialConversion(module, target, std::move(patterns), config)))
     signalPassFailure();
 }

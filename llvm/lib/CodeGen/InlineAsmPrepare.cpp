@@ -173,7 +173,7 @@ static bool splitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
 static bool insertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
-  IRBuilder<> Builder(CBR->getContext());
+  IRBuilder<> Builder(*CBR->getModule());
 
   if (!CBR->getNumIndirectDests())
     return false;

@@ -484,13 +484,8 @@ def S_BUFFER_PREFETCH_DATA : SM_Prefetch_Pseudo <"s_buffer_prefetch_data", SReg_
 //===----------------------------------------------------------------------===//
 
 class SMRD_Real_si <bits<5> op, SM_Pseudo ps>
-  : SM_Real<ps>
-  , SIMCInstr<ps.PseudoInstr, SIEncodingFamily.SI>
+  : SM_Real<ps>, Select_gfx6_gfx7<ps.PseudoInstr>
   , Enc32 {
-
-  let AssemblerPredicate = isGFX6GFX7;
-  let DecoderNamespace = "GFX6GFX7";
-
   let Inst{7-0}   = !if(ps.has_offset, offset{7-0}, !if(ps.has_soffset, soffset, ?));
   let Inst{8}     = ps.has_offset;
   let Inst{14-9}  = !if(ps.has_sbase, sbase{6-1}, ?);
@@ -828,7 +823,13 @@ def S_DCACHE_INV_VOL_ci : SMRD_Real_ci <0x1d, S_DCACHE_INV_VOL>;
 // Scalar Memory Patterns
 //===----------------------------------------------------------------------===//
 
-class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{ return isUniformLoad(N);}]> {
+class SMRDLoadPat<PatFrag Op> : PatFrag <(ops node:$ptr), (Op node:$ptr), [{
+  return static_cast<const SITargetLowering *>(getTargetLowering())
+      ->isUniformLoad(cast<LoadSDNode>(N));
+}]> {
+  let IsLoad = 1;
+  let AddressSpaces = LoadAddress_global.AddrSpaces;
+
   let GISelPredicateCode = [{
     if (!MI.hasOneMemOperand())
       return false;
@@ -853,9 +854,14 @@ def smrd_extloadi16 : SMRDLoadPat<extloadi16>;
 def smrd_zextloadi16 : SMRDLoadPat<zextloadi16>;
 def smrd_sextloadi16 : SMRDLoadPat<sextloadi16>;
 
+// Unless a vector prefetch can be used, a divergent pointer is read from the
+// first active lane, since a prefetch is a hint and this is as valid a
+// refinement as dropping it.
 def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
                              (prefetch node:$ptr, node:$rw, node:$loc, node:$type),
-                             [{ return !N->getOperand(1)->isDivergent() && Subtarget->hasSafeSmemPrefetch();}]> {
+                             [{ return Subtarget->hasSafeSmemPrefetch() &&
+                                       (!N->getOperand(1)->isDivergent() || !Subtarget->hasVmemPrefInsts() ||
+                                        !N->getConstantOperandVal(4)); }]> {
   let GISelPredicateCode = [{
     return isInstrUniform(MI) && Subtarget->hasSafeSmemPrefetch();
   }];
@@ -1141,18 +1147,16 @@ multiclass SMPrefetchPat<string type, TImmLeaf cache_type> {
     (smrd_prefetch (i64 SReg_64:$sbase), timm, timm, cache_type),
     (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type) $sbase, 0, (i32 SGPR_NULL), (i8 0), 0)
   >;
-
-  def : GCNPat <
-    (smrd_prefetch (i32 SReg_32:$sbase), timm, timm, cache_type),
-    (!cast<SM_Prefetch_Pseudo>("S_PREFETCH_"#type)
-        (i64 (REG_SEQUENCE SReg_64, $sbase, sub0, (i32 (S_MOV_B32 (i32 0))), sub1)),
-        0, (i32 SGPR_NULL), (i8 0), 0)
-  >;
 }
 
 defm : SMPrefetchPat<"INST", i32imm_zero>;
 let AddedComplexity = 12 in // Prefer scalar prefetch over global for r/o case.
 defm : SMPrefetchPat<"DATA", i32imm_one>;
+
+// The length field holds only 5 bits.
+def as_prefetch_len : SDNodeXForm<timm, [{
+  return CurDAG->getTargetConstant(N->getZExtValue() & 0x1f, SDLoc(N), MVT::i8);
+}]>;
 
 let SubtargetPredicate = HasSmemPrefetchInsts in {
   def : GCNPat <
@@ -1167,12 +1171,12 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_DATA $sbase, $offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_data (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_DATA $sbase, 0, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
 
   >;
 
@@ -1183,7 +1187,7 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (SIsbuffer_prefetch v4i32:$sbase, (SMRDBufferImm i32:$offset), imm:$len),
-    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_BUFFER_PREFETCH_DATA SReg_128:$sbase, i32imm:$offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
@@ -1198,12 +1202,12 @@ let SubtargetPredicate = HasSmemPrefetchInsts in {
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (SMRDImm i64:$sbase, i32:$offset), imm:$len),
-    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_INST $sbase, $offset, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 
   def : GCNPat <
     (int_amdgcn_s_prefetch_inst (i64 SReg_64:$sbase), imm:$len),
-    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_i8timm $len), 0)
+    (S_PREFETCH_INST $sbase, 0, (i32 SGPR_NULL), (as_prefetch_len $len), 0)
   >;
 } // End let SubtargetPredicate = HasSmemPrefetchInsts
 
@@ -1399,11 +1403,12 @@ defm S_DCACHE_DISCARD_X2 : SM_Real_Discard_gfx10 <0x29>;
 
 def SMInfoTable : GenericTable {
   let FilterClass = "SM_Real";
+  let FilterClassField = "is_buffer";
   let CppTypeName = "SMInfo";
-  let Fields = ["Opcode", "is_buffer"];
+  let Fields = ["Opcode"];
 
   let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getSMEMOpcodeHelper";
+  let PrimaryKeyName = "isSMEMOpcodeHelper";
 }
 
 //===----------------------------------------------------------------------===//

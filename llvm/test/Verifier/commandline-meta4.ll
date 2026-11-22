@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as < %s -disable-output 2>&1 | FileCheck %s
 ; Verify that llvm.commandline is properly structured.
 ; llvm.commandline takes a list of metadata entries.
 ; Each metadata entry can contain one string only.

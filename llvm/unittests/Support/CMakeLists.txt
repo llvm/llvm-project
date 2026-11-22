@@ -75,6 +75,7 @@ add_llvm_unittest(SupportTests
   ParallelTest.cpp
   Path.cpp
   PerThreadBumpPtrAllocatorTest.cpp
+  PrefixMapperTest.cpp
   ProcessTest.cpp
   ProgramTest.cpp
   ProgramStackTest.cpp
@@ -162,3 +163,4 @@ if(NOT LLVM_INTEGRATED_CRT_ALLOC)
 endif()
 
 add_subdirectory(CommandLineInit)
+add_subdirectory(LLVMToolSession)

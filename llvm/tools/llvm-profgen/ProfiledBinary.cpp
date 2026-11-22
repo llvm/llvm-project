@@ -16,15 +16,11 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -72,7 +68,7 @@ static cl::opt<std::string>
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
-    cl::desc("List of functions to print disassembly for. Accept demangled "
+    cl::desc("List of functions to print disassembly for. Accept mangled "
              "names only. Only work with show-disassembly-only"),
     cl::cat(ProfGenCategory));
 
@@ -87,6 +83,16 @@ static cl::opt<bool>
                       cl::cat(ProfGenCategory));
 
 namespace sampleprof {
+
+// Internal suffixes which are not reflected in the source code.
+static constexpr StringRef CanonicalSuffixes[] = {
+    // Internal suffixes from CoroSplit pass
+    ".cleanup", ".destroy", ".resume",
+    // Internal suffixes from Bolt
+    ".cold", ".warm",
+    // Compiler/LTO internal
+    ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
+static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
 static const Target *getTarget(const ObjectFile *Obj) {
   Triple TheTriple = Obj->makeTriple();
@@ -172,9 +178,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
-      SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc,
-                                               FunctionId(CallerName));
+      SizeContext = SizeContext->getOrCreateChildContext(
+          CallsiteLoc, FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);
@@ -190,10 +195,12 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
   ProbeContext.pop_back();
 }
 
-ProfiledBinary::ProfiledBinary(const StringRef ExeBinPath,
+ProfiledBinary::ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
+                               const StringRef ExeBinPath,
                                const StringRef DebugBinPath)
-    : Path(ExeBinPath), DebugBinaryPath(DebugBinPath),
-      SymbolizerOpts(getSymbolizerOpts()), ProEpilogTracker(this),
+    : LibraryOptions(LibraryOptions), Path(ExeBinPath),
+      DebugBinaryPath(DebugBinPath), SymbolizerOpts(getSymbolizerOpts()),
+      ProEpilogTracker(this),
       Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
@@ -501,9 +508,11 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
         auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
-          FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(
-              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
+          if (FuncRange *Range = findFuncRangeForStartAddr(StartAddr))
+            GuidFilter.insert(
+                Function::getGUIDAssumingExternalLinkage(Range->getFuncName()));
+          else
+            GuidFilter.insert(GUID);
         }
       }
     }
@@ -741,6 +750,7 @@ void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
     exitWithError("no register info for target " + TheTriple.str(), FileName);
 
   MCTargetOptions MCOptions;
+  MCOptions.LibraryOptions = &LibraryOptions;
   AsmInfo.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
     exitWithError("no assembly info for target " + TheTriple.str(), FileName);
@@ -904,14 +914,6 @@ void ProfiledBinary::populateSymbolAddressList(const ObjectFile *Obj) {
 
 void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
   // Load binary functions from symbol table when Debug info is incomplete.
-  // Strip the internal suffixes which are not reflected in the DWARF info.
-  const SmallVector<StringRef, 10> Suffixes(
-      {// Internal suffixes from CoroSplit pass
-       ".cleanup", ".destroy", ".resume",
-       // Internal suffixes from Bolt
-       ".cold", ".warm",
-       // Compiler/LTO internal
-       ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."});
   StringRef FileName = Obj->getFileName();
 
   // COFF symtab does not have size field. Try to load size from PDB instead.
@@ -957,7 +959,7 @@ void ProfiledBinary::loadSymbolsFromSymtab(const ObjectFile *Obj) {
 
     const uint64_t EndAddr = StartAddr + Size;
     const StringRef SymName =
-        FunctionSamples::getCanonicalFnName(Name, Suffixes);
+        FunctionSamples::getCanonicalFnName(Name, CanonicalSuffixes);
     assert(StartAddr < EndAddr && StartAddr >= getPreferredBaseAddress() &&
            "Function range is invalid.");
 
@@ -1033,6 +1035,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
     if (!Name)
       continue;
 
+    auto CanonName = FunctionSamples::getCanonicalCoroFnName(Name);
     auto RangesOrError = Die.getAddressRanges();
     if (!RangesOrError)
       continue;
@@ -1043,7 +1046,7 @@ void ProfiledBinary::loadSymbolsFromDWARFUnit(DWARFUnit &CompilationUnit) {
 
     // Different DWARF symbols can have same function name, search or create
     // BinaryFunction indexed by the name.
-    auto Ret = BinaryFunctions.try_emplace(Name);
+    auto Ret = BinaryFunctions.try_emplace(CanonName);
     auto &Func = Ret.first->second;
     if (Ret.second)
       Func.FuncName = Ret.first->first();
@@ -1167,7 +1170,11 @@ SampleContextFrameVector ProfiledBinary::symbolize(const InstructionPointer &IP,
 
     StringRef FunctionName(CallerFrame.FunctionName);
     if (UseCanonicalFnName)
-      FunctionName = FunctionSamples::getCanonicalFnName(FunctionName);
+      FunctionName =
+          FunctionSamples::getCanonicalFnName(FunctionName, CanonicalSuffixes);
+    else
+      FunctionName =
+          FunctionSamples::getCanonicalFnName(FunctionName, CoroSuffixes);
 
     uint32_t Discriminator = CallerFrame.Discriminator;
     uint32_t LineOffset = (CallerFrame.Line - CallerFrame.StartLine) & 0xffff;

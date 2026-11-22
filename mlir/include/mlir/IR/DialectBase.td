@@ -55,11 +55,12 @@ class Dialect {
   // dialect declaration.
   code extraClassDeclaration = "";
 
-  // If this dialect should require declarative parsers for property-backed
-  // operations to bind every inherent attribute and property directly in the
-  // custom assembly format, or otherwise cover them with `prop-dict`. This
-  // stricter mode is disabled by default for now.
-  bit useStrictPropertiesInAssemblyFormat = 0;
+  // Require declarative parsers for property-backed operations to bind every
+  // inherent attribute and property directly in the custom assembly format,
+  // or otherwise cover them with `prop-dict`.
+  // Deprecated: setting this to 0 temporarily opts into legacy behavior that
+  // mixes inherent and discardable attributes in `attr-dict`.
+  bit useStrictPropertiesInAssemblyFormat = 1;
 
   // If this dialect overrides the hook for materializing constants.
   bit hasConstantMaterializer = 0;
@@ -98,6 +99,18 @@ class Dialect {
 
   // If this dialect can be extended at runtime with new operations or types.
   bit isExtensible = 0;
+}
+
+// A partition of the definitions of a dialect, for "logical sharding" of their
+// generated declarations and definitions. See `Op::partition`.
+class Partition<string name> {
+  // The name of the partition, a C++ identifier. Generators select a partition
+  // by this name, e.g. `-gen-op-decls` and `-gen-op-defs` with
+  // `-op-partition=...`.
+  string partitionName = name;
+
+  assert !match(partitionName, "^[A-Za-z_][A-Za-z0-9_]*$"),
+         "partition name '" # partitionName # "' is not a C++ identifier";
 }
 
 #endif // DIALECTBASE_TD

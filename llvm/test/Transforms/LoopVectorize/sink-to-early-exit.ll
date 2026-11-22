@@ -38,7 +38,7 @@ define i64 @sink_to_early_exit(i64 %offset) {
 ; CHECK-NEXT:    br label %[[LOOP_END:.*]]
 ; CHECK:       [[VECTOR_EARLY_EXIT]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP4]], i1 false)
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i64> [[TMP2]], i64 [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[LOOP_EARLY_EXIT:.*]]
 ; CHECK:       [[LOOP_EARLY_EXIT]]:

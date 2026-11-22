@@ -48,6 +48,9 @@ public:
   ///
   const SparcRegisterInfo &getRegisterInfo() const { return RI; }
 
+  const TargetRegisterClass *
+  getInlineAsmMemoryOperandRegClass(InlineAsm::ConstraintCode C) const override;
+
   /// isLoadFromStackSlot - If the specified machine instruction is a direct
   /// load from a stack slot, return the virtual or physical register number of
   /// the destination along with the FrameIndex of the loaded stack slot.  If
@@ -78,6 +81,11 @@ public:
                         MachineBasicBlock *FBB, ArrayRef<MachineOperand> Cond,
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
+
+  void insertIndirectBranch(MachineBasicBlock &MBB,
+                            MachineBasicBlock &NewDestBB,
+                            MachineBasicBlock &RestoreBB, const DebugLoc &DL,
+                            int64_t BrOffset, RegScavenger *RS) const override;
 
   bool
   reverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
@@ -114,6 +122,10 @@ public:
   bool optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
+
+  bool isSchedulingBoundary(const MachineInstr &MI,
+                            const MachineBasicBlock *MBB,
+                            const MachineFunction &MF) const override;
 
   // Lower pseudo instructions after register allocation.
   bool expandPostRAPseudo(MachineInstr &MI) const override;

@@ -516,7 +516,8 @@ enum class TemplateSubstitutionKind : char {
     /// given outermost scope.
     static void deleteScopes(LocalInstantiationScope *Scope,
                              LocalInstantiationScope *Outermost) {
-      while (Scope && Scope != Outermost) {
+      while (Scope != Outermost) {
+        assert(Scope && "scope does not extend the outermost scope");
         LocalInstantiationScope *Out = Scope->Outer;
         delete Scope;
         Scope = Out;
@@ -539,8 +540,6 @@ enum class TemplateSubstitutionKind : char {
     /// is helpful for on-demand declaration instantiation.
     llvm::PointerUnion<Decl *, DeclArgumentPack *> *
     getInstantiationOfIfExists(const Decl *D);
-
-    LocalInstantiationScope *getOuterScope() const { return Outer; }
 
     void InstantiatedLocal(const Decl *D, Decl *Inst);
     void InstantiatedLocalPackArg(const Decl *D, VarDecl *Inst);

@@ -130,8 +130,6 @@ class LLVM_ABI LVSymbolVisitor final : public SymbolVisitorCallbacks {
   LVSymbolVisitorDelegate *ObjDelegate;
   LVShared *Shared;
 
-  // Symbol offset when processing PDB streams.
-  uint32_t CurrentOffset = 0;
   // Current object name collected from S_OBJNAME.
   StringRef CurrentObjectName;
   // Last symbol processed by S_LOCAL.
@@ -312,9 +310,6 @@ public:
 
   LLVM_ABI void printTypeIndex(StringRef FieldName, TypeIndex TI,
                                uint32_t StreamIdx);
-  LLVM_ABI void printMemberAttributes(MemberAttributes Attrs);
-  LLVM_ABI void printMemberAttributes(MemberAccess Access, MethodKind Kind,
-                                      MethodOptions Options);
 
   LLVM_ABI LVElement *createElement(TypeLeafKind Kind);
   LLVM_ABI LVElement *createElement(SymbolKind Kind);

@@ -201,7 +201,6 @@ protected:
   Context &Ctx;
   // This is used by eraseFromParent().
   void clearValue() { Val = nullptr; }
-  template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
   LLVM_ABI Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
   /// Disable copies.
@@ -291,6 +290,20 @@ public:
 
   /// \Returns the LLVM IR name of the bottom-most LLVM value.
   StringRef getName() const { return Val->getName(); }
+
+  LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
+
+  LLVM_ABI Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false);
 
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.

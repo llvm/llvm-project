@@ -10,16 +10,18 @@
 #include "hdr/wchar_macros.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/File/file.h"
+#include "src/__support/File/file_mode.h"
 #include "src/__support/alloc-checker.h"
 #include "src/__support/error_or.h"
+#include "src/__support/macros/config.h"
 #include "test/UnitTest/MemoryMatcher.h"
 #include "test/UnitTest/Test.h"
 
-using ModeFlags = LIBC_NAMESPACE::File::ModeFlags;
 using MemoryView = LIBC_NAMESPACE::testing::MemoryView;
 using LIBC_NAMESPACE::ErrorOr;
 using LIBC_NAMESPACE::File;
 using LIBC_NAMESPACE::FileIOResult;
+using LIBC_NAMESPACE::FileMode;
 
 class StringFile : public File {
   static constexpr size_t SIZE = 512;
@@ -40,13 +42,12 @@ class StringFile : public File {
 
 public:
   explicit StringFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                      ModeFlags modeflags)
+                      FileMode mode)
       : LIBC_NAMESPACE::File(&str_write, &str_read, &str_seek, &str_close,
                              reinterpret_cast<uint8_t *>(buffer), buflen,
-                             bufmode, owned, modeflags),
+                             bufmode, owned, mode),
         pos(0), eof_marker(0), write_append(false) {
-    if (modeflags &
-        static_cast<ModeFlags>(LIBC_NAMESPACE::File::OpenMode::APPEND))
+    if (mode.is_append())
       write_append = true;
   }
 
@@ -97,21 +98,21 @@ ErrorOr<off_t> StringFile::str_seek(LIBC_NAMESPACE::File *f, off_t offset,
                                     int whence) {
   StringFile *sf = static_cast<StringFile *>(f);
   if (whence == SEEK_SET)
-    sf->pos = offset;
-  if (whence == SEEK_CUR)
+    sf->pos = static_cast<size_t>(offset);
+  else if (whence == SEEK_CUR)
     sf->pos += offset;
-  if (whence == SEEK_END)
-    sf->pos = SIZE + offset;
+  else if (whence == SEEK_END)
+    sf->pos = static_cast<size_t>(SIZE + offset);
   return sf->pos;
 }
 
 StringFile *new_string_file(char *buffer, size_t buflen, int bufmode,
                             bool owned, const char *mode) {
   LIBC_NAMESPACE::AllocChecker ac;
+  const FileMode file_mode(mode);
   // We will just assume the allocation succeeds. We cannot test anything
   // otherwise.
-  return new (ac) StringFile(buffer, buflen, bufmode, owned,
-                             LIBC_NAMESPACE::File::mode_flags(mode));
+  return new (ac) StringFile(buffer, buflen, bufmode, owned, file_mode);
 }
 
 TEST(LlvmLibcFileTest, WriteOnly) {
@@ -502,7 +503,7 @@ TEST(LlvmLibcFileTest, WriteSplit) {
       new_string_file(file_buffer, FILE_BUFFER_SIZE, _IOFBF, false, "w");
 
   static constexpr size_t AVAIL = 12;
-  f->seek(-AVAIL, SEEK_END);
+  f->seek(-static_cast<off_t>(AVAIL), SEEK_END);
 
   const char data[] = "hello";
   ASSERT_EQ(sizeof(data) - 1, f->write(data, sizeof(data) - 1).value);
@@ -814,11 +815,11 @@ class ShortWriteFile : public File {
                                    int whence) {
     ShortWriteFile *sf = static_cast<ShortWriteFile *>(f);
     if (whence == SEEK_SET)
-      sf->pos = offset;
-    if (whence == SEEK_CUR)
+      sf->pos = static_cast<size_t>(offset);
+    else if (whence == SEEK_CUR)
       sf->pos += offset;
-    if (whence == SEEK_END)
-      sf->pos = SIZE + offset;
+    else if (whence == SEEK_END)
+      sf->pos = static_cast<size_t>(SIZE + offset);
     return sf->pos;
   }
 
@@ -829,10 +830,10 @@ class ShortWriteFile : public File {
 
 public:
   explicit ShortWriteFile(char *buffer, size_t buflen, int bufmode, bool owned,
-                          ModeFlags modeflags, size_t max_write_bytes)
+                          FileMode mode, size_t max_write_bytes)
       : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
                              &short_close, reinterpret_cast<uint8_t *>(buffer),
-                             buflen, bufmode, owned, modeflags),
+                             buflen, bufmode, owned, mode),
         pos(0), max_write(max_write_bytes) {}
 
   void reset() { pos = 0; }
@@ -847,9 +848,9 @@ public:
 TEST(LlvmLibcFileTest, PartialWideCharWriteDetected) {
   LIBC_NAMESPACE::AllocChecker ac;
   // Unbuffered so writes go directly to platform_write, limited to 2 bytes.
-  ShortWriteFile *f = new (ac) ShortWriteFile(
-      nullptr, 0, _IONBF, true, LIBC_NAMESPACE::File::mode_flags("w"),
-      /*max_write_bytes=*/2);
+  ShortWriteFile *f =
+      new (ac) ShortWriteFile(nullptr, 0, _IONBF, true, FileMode("w"),
+                              /*max_write_bytes=*/2);
   ASSERT_FALSE(f == nullptr);
 
   // € (U+20AC) encodes to 3 UTF-8 bytes: 0xE2 0x82 0xAC.
@@ -879,5 +880,130 @@ TEST(LlvmLibcFileTest, FileLockRAII) {
   // After FileLock is destroyed, operations under lock still acquire and
   // release cleanly.
   ASSERT_EQ(f->write("def", 3).value, size_t(3));
+  ASSERT_EQ(f->close(), 0);
+}
+
+class ShortReadFile : public File {
+  const char *src;
+  size_t src_len;
+  size_t pos;
+  size_t max_read;
+
+  static FileIOResult short_write(LIBC_NAMESPACE::File *, const void *,
+                                  size_t) {
+    return 0;
+  }
+
+  static FileIOResult short_read(LIBC_NAMESPACE::File *f, void *data,
+                                 size_t len) {
+    ShortReadFile *sf = static_cast<ShortReadFile *>(f);
+    if (sf->pos >= sf->src_len)
+      return 0;
+    size_t avail = sf->src_len - sf->pos;
+    size_t to_read = len < sf->max_read ? len : sf->max_read;
+    if (to_read > avail)
+      to_read = avail;
+    for (size_t i = 0; i < to_read; ++i)
+      reinterpret_cast<char *>(data)[i] = sf->src[sf->pos + i];
+    sf->pos += to_read;
+    return to_read;
+  }
+
+  static ErrorOr<off_t> short_seek(LIBC_NAMESPACE::File *f, off_t offset,
+                                   int whence) {
+    ShortReadFile *sf = static_cast<ShortReadFile *>(f);
+    if (whence == SEEK_SET)
+      sf->pos = static_cast<size_t>(offset);
+    return sf->pos;
+  }
+
+  static int short_close(LIBC_NAMESPACE::File *f) {
+    delete reinterpret_cast<ShortReadFile *>(f);
+    return 0;
+  }
+
+public:
+  explicit ShortReadFile(char *buffer, size_t buflen, int bufmode,
+                         const char *data, size_t data_len,
+                         size_t max_read_bytes)
+      : LIBC_NAMESPACE::File(&short_write, &short_read, &short_seek,
+                             &short_close, reinterpret_cast<uint8_t *>(buffer),
+                             buflen, bufmode, false, FileMode("r")),
+        src(data), src_len(data_len), pos(0), max_read(max_read_bytes) {}
+};
+
+TEST(LlvmLibcFileTest, ShortReadsUntilLengthOrEOF) {
+  constexpr char DATA[] = "0123456789abcdef";
+  constexpr size_t DATA_LEN = sizeof(DATA) - 1;
+  LIBC_NAMESPACE::AllocChecker ac;
+
+  // Test buffered mode (_IOFBF) with both > bufsize and <= bufsize reads when
+  // platform_read returns at most 3 bytes per call (e.g. reading from a pipe).
+  char file_buf[8];
+  ShortReadFile *f_fbf =
+      new (ac) ShortReadFile(file_buf, sizeof(file_buf), _IOFBF, DATA, DATA_LEN,
+                             /*max_read_bytes=*/3);
+  ASSERT_NE(f_fbf, nullptr);
+
+  char out[32] = {0};
+  // Read 5 bytes (<= bufsize): requires two 3-byte platform_read calls,
+  // leaving 1 byte buffered and eof == false.
+  auto res1 = f_fbf->read(out, 5);
+  EXPECT_EQ(res1.value, size_t(5));
+  EXPECT_FALSE(f_fbf->iseof());
+  EXPECT_FALSE(f_fbf->error());
+
+  // Read remaining 11 bytes + try to read past end (> bufsize): loops until
+  // platform_read returns 0 and sets eof == true.
+  auto res2 = f_fbf->read(out + 5, 20);
+  EXPECT_EQ(res2.value, size_t(11));
+  EXPECT_TRUE(f_fbf->iseof());
+  EXPECT_FALSE(f_fbf->error());
+  EXPECT_STREQ(out, DATA);
+  ASSERT_EQ(f_fbf->close(), 0);
+
+  // Test unbuffered mode (_IONBF) with short reads.
+  ShortReadFile *f_nbf = new (ac)
+      ShortReadFile(nullptr, 0, _IONBF, DATA, DATA_LEN, /*max_read_bytes=*/3);
+  ASSERT_NE(f_nbf, nullptr);
+
+  char out_nbf[32] = {0};
+  auto res3 = f_nbf->read(out_nbf, 10);
+  EXPECT_EQ(res3.value, size_t(10));
+  EXPECT_FALSE(f_nbf->iseof());
+  auto res4 = f_nbf->read(out_nbf + 10, 10);
+  EXPECT_EQ(res4.value, size_t(6));
+  EXPECT_TRUE(f_nbf->iseof());
+  EXPECT_STREQ(out_nbf, DATA);
+  ASSERT_EQ(f_nbf->close(), 0);
+}
+
+TEST(LlvmLibcFileTest, RecursiveFileLock) {
+  char file_buf[16];
+  StringFile *f =
+      new_string_file(file_buf, sizeof(file_buf), _IOFBF, false, "w+");
+  ASSERT_NE(f, nullptr);
+
+  // Simulate flockfile(f) followed by locked operations (write, ungetc, error,
+  // iseof) on the same thread, plus nested lock()/unlock().
+  f->lock();
+  f->lock();
+  ASSERT_EQ(f->write("ab", 2).value, size_t(2));
+  ASSERT_EQ(f->flush(), 0);
+  ASSERT_EQ(f->seek(0, SEEK_SET).value(), 0);
+
+  char c = 0;
+  ASSERT_EQ(f->read_unlocked(&c, 1).value, size_t(1));
+  EXPECT_EQ(c, 'a');
+  EXPECT_EQ(f->ungetc('x'), int('x'));
+  EXPECT_FALSE(f->error());
+  EXPECT_FALSE(f->iseof());
+
+  char out[3] = {0};
+  ASSERT_EQ(f->read(out, 2).value, size_t(2));
+  EXPECT_STREQ(out, "xb");
+  f->unlock();
+  f->unlock();
+
   ASSERT_EQ(f->close(), 0);
 }

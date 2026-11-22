@@ -639,7 +639,7 @@ TEST_F(InstrProfTest, test_irpgo_function_name) {
 
   for (auto &[Name, Linkage, ExpectedIRPGOFuncName] : Data) {
     auto *F = M->getFunction(Name);
-    auto IRPGOFuncName = getIRPGOFuncName(*F);
+    auto IRPGOFuncName = getIRPGOObjectName(*F);
     EXPECT_EQ(IRPGOFuncName, ExpectedIRPGOFuncName);
 
     auto [Filename, ParsedIRPGOFuncName] = getParsedIRPGOName(IRPGOFuncName);
@@ -690,8 +690,8 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
   auto *ExternalBarF =
       Function::Create(FTy, Function::ExternalLinkage, "ExternalBar", M.get());
 
-  Writer.addRecord({getIRPGOFuncName(*InternalFooF), 0x1234, {1}}, Err);
-  Writer.addRecord({getIRPGOFuncName(*ExternalFooF), 0x5678, {1}}, Err);
+  Writer.addRecord({getIRPGOObjectName(*InternalFooF), 0x1234, {1}}, Err);
+  Writer.addRecord({getIRPGOObjectName(*ExternalFooF), 0x5678, {1}}, Err);
   // Write a record with a deprecated name
   Writer.addRecord({getPGOFuncName(*InternalBarF), 0x1111, {2}}, Err);
   Writer.addRecord({getPGOFuncName(*ExternalBarF), 0x2222, {2}}, Err);
@@ -700,22 +700,169 @@ TEST_F(InstrProfTest, test_irpgo_read_deprecated_names) {
   readProfile(std::move(Profile));
 
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalFooF), 0x1234,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*InternalFooF), 0x1234,
                                  getPGOFuncName(*InternalFooF)),
       Succeeded());
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalFooF), 0x5678,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*ExternalFooF), 0x5678,
                                  getPGOFuncName(*ExternalFooF)),
       Succeeded());
   // Ensure we can still read this old record name
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*InternalBarF), 0x1111,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*InternalBarF), 0x1111,
                                  getPGOFuncName(*InternalBarF)),
       Succeeded());
   EXPECT_THAT_EXPECTED(
-      Reader->getInstrProfRecord(getIRPGOFuncName(*ExternalBarF), 0x2222,
+      Reader->getInstrProfRecord(getIRPGOObjectName(*ExternalBarF), 0x2222,
                                  getPGOFuncName(*ExternalBarF)),
       Succeeded());
+}
+
+// Check that a function renamed by LTO after it was profiled can still be
+// found by its GUID. This used to need !PGOFuncName metadata.
+TEST_F(InstrProfTest, test_symtab_lookup_renamed_function_by_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+  auto *F =
+      Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
+
+  // Assign the GUID while the function still has its original name.
+  const std::string ProfiledName = getIRPGOObjectName(*F);
+  EXPECT_EQ(ProfiledName, "MyModule.cpp;InternalFoo");
+  const uint64_t GUID = Function::getGUIDAssumingExternalLinkage(ProfiledName);
+  F->setMetadata(LLVMContext::MD_guid,
+                 MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                      Type::getInt64Ty(Ctx), GUID))}));
+
+  // Promote and rename the function the way ThinLTO would.
+  F->setName("InternalFoo.llvm.9999");
+  F->setLinkage(Function::ExternalLinkage);
+  ASSERT_NE(getIRPGOObjectName(*F, /*InLTO=*/true), ProfiledName);
+
+  // The original name is gone from the IR, but the GUID still finds the
+  // function.
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+  EXPECT_EQ(Symtab.getFunction(GUID), F);
+}
+
+// Check that a function with a GUID can still be found by the hash of its
+// deprecated PGO name, which is what profiles from older compilers use.
+TEST_F(InstrProfTest, test_symtab_lookup_deprecated_name_with_assigned_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+  auto *F =
+      Function::Create(FTy, Function::InternalLinkage, "InternalFoo", M.get());
+  // Needs a body: declarations always have a GUID, even without !guid.
+  IRBuilder<> Builder(BasicBlock::Create(Ctx, "entry", F));
+  Builder.CreateRetVoid();
+
+  const uint64_t GUID =
+      Function::getGUIDAssumingExternalLinkage(getIRPGOObjectName(*F));
+  const uint64_t DeprecatedNameHash =
+      Function::getGUIDAssumingExternalLinkage(getPGOFuncName(*F));
+
+  InstrProfSymtab WithoutGUID;
+  EXPECT_THAT_ERROR(WithoutGUID.create(*M), Succeeded());
+  EXPECT_EQ(WithoutGUID.getFunction(GUID), F) << "IRPGO name lookup, no !guid";
+  EXPECT_EQ(WithoutGUID.getFunction(DeprecatedNameHash), F)
+      << "deprecated name lookup, no !guid";
+
+  F->setMetadata(LLVMContext::MD_guid,
+                 MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                      Type::getInt64Ty(Ctx), GUID))}));
+
+  InstrProfSymtab WithGUID;
+  EXPECT_THAT_ERROR(WithGUID.create(*M), Succeeded());
+  EXPECT_EQ(WithGUID.getFunction(GUID), F) << "IRPGO name lookup, with !guid";
+  EXPECT_EQ(WithGUID.getFunction(DeprecatedNameHash), F)
+      << "deprecated name lookup, with !guid";
+}
+
+// Check that a vtable renamed by LTO can be found by its GUID, and by the
+// hashes of its current and canonical names.
+TEST_F(InstrProfTest, test_symtab_lookup_vtable_with_assigned_guid) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *Int32Ty = Type::getInt32Ty(Ctx);
+  auto *GV = new GlobalVariable(
+      *M, Int32Ty, /*isConstant=*/true, GlobalValue::ExternalLinkage,
+      ConstantInt::get(Int32Ty, 0), "_ZTV3Foo.llvm.7");
+  // Only vtables with type metadata are added to the symtab.
+  GV->addTypeMetadata(16, MDString::get(Ctx, "_ZTS3Foo"));
+
+  // The GUID from before LTO promoted and renamed the vtable.
+  const uint64_t GUID =
+      GlobalValue::getGUIDAssumingExternalLinkage("MyModule.cpp;_ZTV3Foo");
+  GV->setMetadata(LLVMContext::MD_guid,
+                  MDNode::get(Ctx, {ConstantAsMetadata::get(ConstantInt::get(
+                                       Type::getInt64Ty(Ctx), GUID))}));
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M), Succeeded());
+  EXPECT_EQ(Symtab.getGlobalVariable(GUID), GV);
+  EXPECT_EQ(Symtab.getGlobalVariable(
+                GlobalValue::getGUIDAssumingExternalLinkage("_ZTV3Foo.llvm.7")),
+            GV);
+  EXPECT_EQ(Symtab.getGlobalVariable(
+                GlobalValue::getGUIDAssumingExternalLinkage("_ZTV3Foo")),
+            GV);
+}
+
+TEST_F(InstrProfTest, test_symtab_get_canonical_name) {
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.llvm.1234"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.part.1"), "foo");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi"), "foo");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999"),
+      "foo.__uniq.123");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName(
+                "foo.__uniq.123.llvm.13757e0fb71915e385efa4dc9d1e08fd.cfi"),
+            "foo.__uniq.123");
+  EXPECT_EQ(
+      InstrProfSymtab::getCanonicalName("foo.__uniq.123.part.1.llvm.9999.cfi"),
+      "foo.__uniq.123");
+  // Coroutine clone and non-canonical jump-table suffixes are preserved.
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("coro.llvm.1234.resume"),
+            "coro.llvm.1234.resume");
+  EXPECT_EQ(InstrProfSymtab::getCanonicalName("foo.cfi_jt"), "foo.cfi_jt");
+}
+
+TEST_F(InstrProfTest, test_symtab_def_precedence) {
+  LLVMContext Ctx;
+  auto M = std::make_unique<Module>("MyModule.cpp", Ctx);
+  auto *FTy = FunctionType::get(Type::getVoidTy(Ctx), /*isVarArg=*/false);
+
+  // Place declaration before the definition in module order.
+  Function::Create(FTy, Function::ExternalLinkage,
+                   "InternalLambda.__uniq.42.llvm.111", M.get());
+
+  auto *Def = Function::Create(FTy, Function::ExternalLinkage,
+                               "InternalLambda.__uniq.42.llvm.222", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", Def)).CreateRetVoid();
+
+  Function::Create(FTy, Function::ExternalLinkage, "CfiFunc", M.get());
+  auto *CfiDef =
+      Function::Create(FTy, Function::ExternalLinkage, "CfiFunc.cfi", M.get());
+  IRBuilder<>(BasicBlock::Create(Ctx, "entry", CfiDef)).CreateRetVoid();
+
+  auto *ExtOnly =
+      Function::Create(FTy, Function::ExternalLinkage, "ExtOnly", M.get());
+
+  InstrProfSymtab Symtab;
+  EXPECT_THAT_ERROR(Symtab.create(*M, /*InLTO=*/true), Succeeded());
+
+  const uint64_t CanonicalGUID =
+      Function::getGUIDAssumingExternalLinkage("InternalLambda.__uniq.42");
+  EXPECT_EQ(Symtab.getFunction(CanonicalGUID), Def);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("CfiFunc")),
+      CfiDef);
+  EXPECT_EQ(
+      Symtab.getFunction(Function::getGUIDAssumingExternalLinkage("ExtOnly")),
+      ExtOnly);
 }
 
 // callee1 to callee6 are from vtable1 to vtable6 respectively.
@@ -1758,7 +1905,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
   for (unsigned I = 0; I < std::size(Funcs); I++) {
     Function *F = M->getFunction(Funcs[I]);
 
-    std::string IRPGOName = getIRPGOFuncName(*F);
+    std::string IRPGOName = getIRPGOObjectName(*F);
     auto IRPGOFuncName =
         ProfSymtab.getFuncOrVarName(IndexedInstrProf::ComputeHash(IRPGOName));
     EXPECT_EQ(IRPGOName, IRPGOFuncName);
@@ -1777,7 +1924,7 @@ TEST(SymtabTest, instr_prof_symtab_module_test) {
         M->getGlobalVariable(VTableName, /* AllowInternal=*/true);
 
     // Test that ProfSymtab returns the expected name given a hash.
-    std::string IRPGOName = getPGOName(*GV);
+    std::string IRPGOName = getIRPGOObjectName(*GV);
     EXPECT_STREQ(IRPGOName.c_str(), PGOName);
     uint64_t GUID = IndexedInstrProf::ComputeHash(IRPGOName);
     EXPECT_EQ(IRPGOName, ProfSymtab.getFuncOrVarName(GUID));

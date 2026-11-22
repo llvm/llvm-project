@@ -352,7 +352,7 @@ computeOpaqueSize(const ASTContext &ASTCtx, const Pointer &Ptr,
     return TypeSize.getQuantity();
 
   // Check if we need to add the flexible array member size.
-  const VarDecl *Base = dyn_cast<VarDecl>(OP.Base);
+  const VarDecl *Base = OP.getBaseVarDecl();
   if (!Base)
     return TypeSize.getQuantity();
 
@@ -390,7 +390,7 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
   if (Ptr.isOpaquePointer()) {
     bool UseClosestSurroundingVariable = (Kind == 1) || (Kind == 3);
     const OpaquePointer &OP = Ptr.asOpaquePointer();
-    InvalidBase = OP.Base->getType()->isPointerType();
+    InvalidBase = OP.Base.getType()->isPointerType();
     bool DetermineForCompleteObject = pointsToCompleteObject(ASTCtx, Ptr);
     bool WritingOffTheEnd = isUserWritingOffTheEnd(ASTCtx, OP);
 
@@ -432,10 +432,6 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
     }
 
     if (!UseClosestSurroundingVariable || DetermineForCompleteObject) {
-      // Kind=3 wants a lower bound, so we can't fall back to this.
-      if (Kind == 3 && !DetermineForCompleteObject)
-        return std::nullopt;
-
       if (InvalidBase)
         return std::nullopt;
 
@@ -445,7 +441,8 @@ UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
         return std::nullopt;
     }
 
-    *Offset += Ptr.getByteOffset();
+    *Offset += (Ptr.getByteOffset() *
+                ASTCtx.getTypeSizeInChars(OP.getFieldType()).getQuantity());
 
     if (*Offset > *FullSize)
       return 0u;

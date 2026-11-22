@@ -160,7 +160,8 @@
 # CHECK-NEXT:  TranslationUnitDecl {{.*}} <undeserialized declarations>
 # CHECK-NEXT:  |-FunctionDecl {{.*}} main 'int (int, char **)'
 # CHECK-NEXT:  | |-ParmVarDecl {{.*}} argc 'int'
-# CHECK-NEXT:  | `-ParmVarDecl {{.*}} argv 'char **'
+# CHECK-NEXT:  | |-ParmVarDecl {{.*}} argv 'char **'
+# CHECK-NEXT:  | `-AsmLabelAttr {{.*}} Implicit "$__lldb_func::{{.*}}:main"
 # CHECK-NEXT:  |-NamespaceDecl {{.*}} Namespace1
 # CHECK-NEXT:  | `-FunctionDecl {{.*}} foo 'int (int)' inline
 # CHECK-NEXT:  |   `-ParmVarDecl {{.*}} x 'int'

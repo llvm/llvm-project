@@ -14,6 +14,7 @@
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
 #include <string>
 #include <utility>
@@ -23,10 +24,6 @@ namespace llvm {
 class MemoryBuffer;
 class StringRef;
 
-namespace vfs {
-class FileSystem;
-}
-
 /// This is a utility class used to parse user-provided text files with
 /// "special case lists" for code sanitizers. Such files are used to
 /// define an "ABI list" for DataFlowSanitizer and allow/exclusion lists for
@@ -34,9 +31,10 @@ class FileSystem;
 ///
 /// Empty lines and lines starting with "#" are ignored. Sections are defined
 /// using a '[section_name]' header and can be used to specify sanitizers the
-/// entries below it apply to. Section names are globs, and
+/// entries below it apply to. Section names are globs. Before version 6,
 /// entries without a section header match all sections (e.g. an '[*]' header
-/// is assumed.)
+/// is assumed). Starting with version 6, entries without a section header are
+/// an error.
 /// The remaining lines should have the form:
 ///   prefix:glob_pattern[=category]
 /// If category is not specified, it is assumed to be empty string.

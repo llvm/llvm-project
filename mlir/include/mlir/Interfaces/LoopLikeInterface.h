@@ -35,10 +35,13 @@ LogicalResult verifyLoopLikeOpInterface(Operation *op);
 //===----------------------------------------------------------------------===//
 
 namespace OpTrait {
-// A trait indicating that the single region contained in the operation has
-// parallel execution semantics. This may have implications in a certain pass.
-// For example, buffer hoisting is illegal in parallel loops, and local buffers
-// may be accessed by parallel threads simultaneously.
+// A trait indicating that the single region contained in the operation may have
+// parallel execution semantics. Whether it executes in parallel may depend on
+// the operation's attributes or enclosing context. Transformations must account
+// for possible parallel execution unless they can prove sequential execution.
+// For example, hoisting a buffer allocation out of the region may cause
+// parallel executions to share a buffer that was previously private.
+// TODO: Turn this trait into an op interface.
 template <typename ConcreteType>
 class HasParallelRegion : public TraitBase<ConcreteType, HasParallelRegion> {
 public:

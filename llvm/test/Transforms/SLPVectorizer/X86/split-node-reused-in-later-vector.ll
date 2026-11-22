@@ -9,7 +9,7 @@ define i1 @test() {
 ; CHECK-NEXT:    [[TMP21:%.*]] = select <8 x i1> zeroinitializer, <8 x i32> [[TMP20]], <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i32> poison, i32 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <8 x i32> [[TMP5]], <8 x i32> poison, <8 x i32> <i32 poison, i32 0, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> <i32 0, i32 undef, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <8 x i32> <i32 0, i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>, <8 x i32> [[TMP6]], <8 x i32> <i32 0, i32 9, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP22:%.*]] = mul <8 x i32> [[TMP11]], zeroinitializer
 ; CHECK-NEXT:    [[TMP23:%.*]] = urem <8 x i32> [[TMP22]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP25:%.*]] = add <8 x i32> [[TMP21]], [[TMP23]]

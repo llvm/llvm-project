@@ -94,6 +94,16 @@ public:
   /// loader often knows what the program entry point is. So the process and
   /// the dynamic loader can work together to detect this.
   virtual bool ProcessDidExec() { return false; }
+
+  /// Allow the dynamic loader to handle a request to update loaded modules.
+  ///
+  /// This is intended for dynamic loaders that rely on notifications from a
+  /// driver or debug service instead of a rendezvous breakpoint.
+  ///
+  /// \returns
+  ///   True if shared-library loading was handled, false otherwise.
+  virtual bool HandleStopReasonDynamicLoader() { return false; }
+
   /// Get whether the process should stop when images change.
   ///
   /// When images (executables and shared libraries) get loaded or unloaded,
@@ -262,6 +272,10 @@ public:
     /// to read a binary out of memory, and for unusual environments, there may
     /// be no symbols mapped in memory at all.
     bool allow_memory_image_last_resort = false;
+
+    /// Whether this is the process' main executable. It becomes the Target's
+    /// executable if the Target has none.
+    bool is_main_executable = false;
 
     /// The module found for the binary, or empty if it was not found.  It is
     /// not registered with the Target until LoadBinaryInTarget.

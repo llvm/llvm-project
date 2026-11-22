@@ -244,6 +244,37 @@ void RewriterBase::eraseBlock(Block *block) {
   block->erase();
 }
 
+void RewriterBase::eraseOperands(Operation *op, const BitVector &eraseIndices) {
+  assert(eraseIndices.size() == op->getNumOperands() &&
+         "expected one bit per operand");
+  if (eraseIndices.none())
+    return;
+
+  modifyOpInPlace(op, [&]() {
+    op->eraseOperands(eraseIndices);
+    if (!op->hasTrait<OpTrait::AttrSizedOperandSegments>())
+      return;
+
+    // TODO: Add an interface to update the operand segment-size property
+    // directly, without converting it to and from an attribute.
+    auto attrName = StringAttr::get(
+        op->getContext(),
+        OpTrait::AttrSizedOperandSegments<void>::getOperandSegmentSizeAttr());
+    auto sizes = op->getAttrOfType<DenseI32ArrayAttr>(attrName);
+    assert(sizes && "expected operand segment sizes attribute");
+    SmallVector<int32_t> newSizes(sizes.asArrayRef());
+    unsigned offset = 0;
+    for (int32_t &size : newSizes) {
+      // The attribute and bit vector still use the original operand indices.
+      unsigned end = offset + size;
+      for (; offset < end; ++offset)
+        size -= eraseIndices.test(offset);
+    }
+    op->setInherentAttr(attrName,
+                        DenseI32ArrayAttr::get(op->getContext(), newSizes));
+  });
+}
+
 Operation *RewriterBase::eraseOpResults(Operation *op,
                                         const BitVector &eraseIndices) {
   assert(op->getNumResults() == eraseIndices.size() &&
@@ -290,39 +321,46 @@ void RewriterBase::finalizeOpModification(Operation *op) {
 
 void RewriterBase::replaceAllUsesExcept(
     Value from, Value to, const SmallPtrSetImpl<Operation *> &preservedUsers) {
-  return replaceUsesWithIf(from, to, [&](OpOperand &use) {
+  replaceUsesWithIf(from, to, [&](OpOperand &use) {
     Operation *user = use.getOwner();
     return !preservedUsers.contains(user);
   });
 }
 
-void RewriterBase::replaceUsesWithIf(Value from, Value to,
+bool RewriterBase::replaceUsesWithIf(Value from, Value to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
+  bool replaced = false;
   bool allReplaced = true;
   for (OpOperand &operand : llvm::make_early_inc_range(from.getUses())) {
     bool replace = functor(operand);
-    if (replace)
+    if (replace) {
       modifyOpInPlace(operand.getOwner(), [&]() { operand.set(to); });
+      replaced = true;
+    }
     allReplaced &= replace;
   }
   if (allUsesReplaced)
     *allUsesReplaced = allReplaced;
+  return replaced;
 }
 
-void RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
+bool RewriterBase::replaceUsesWithIf(ValueRange from, ValueRange to,
                                      function_ref<bool(OpOperand &)> functor,
                                      bool *allUsesReplaced) {
   assert(from.size() == to.size() && "incorrect number of replacements");
+  bool replaced = false;
   bool allReplaced = true;
   for (auto it : llvm::zip_equal(from, to)) {
     bool r = true;
-    replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
-                      /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
+    replaced |=
+        replaceUsesWithIf(std::get<0>(it), std::get<1>(it), functor,
+                          /*allUsesReplaced=*/allUsesReplaced ? &r : nullptr);
     allReplaced &= r;
   }
   if (allUsesReplaced)
     *allUsesReplaced = allReplaced;
+  return replaced;
 }
 
 void RewriterBase::inlineBlockBefore(Block *source, Block *dest,

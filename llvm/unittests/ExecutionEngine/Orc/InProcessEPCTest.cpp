@@ -560,7 +560,7 @@ TEST(InProcessEPCTest, ReturnWrapperResultForInvalidCallIdIsReported) {
       << "Expected invalid-call-id report, got: " << CapturedErr;
 }
 
-TEST(InProcessEPCTest, JITDispatchSuccess) {
+TEST(InProcessEPCTest, CallControllerSuccess) {
   MockIPCA IPCA;
   MockBootstrapInfoAccess BIA;
   auto EPCExp = createIPEPC(IPCA, BIA);
@@ -573,12 +573,13 @@ TEST(InProcessEPCTest, JITDispatchSuccess) {
   cantFail(Fix.JD.define(
       absoluteSymbols({{Tag, {TagAddr, JITSymbolFlags::Exported}}})));
 
-  ExecutionSession::JITDispatchHandlerAssociationMap Assocs;
-  Assocs[Tag] = [](ExecutionSession::SendResultFunction SendResult,
-                   const char *ArgData, size_t ArgSize) {
-    SendResult(shared::WrapperFunctionBuffer::copyFrom(ArgData, ArgSize));
-  };
-  cantFail(Fix.ES.registerJITDispatchHandlers(Fix.JD, std::move(Assocs)));
+  cantFail(Fix.ES.registerCallControllerHandlers(
+      Fix.JD, ExecutionSession::CallControllerHandlerBinding(
+                  SymbolNameSpec::verbatim("echo_tag"),
+                  [](ExecutionSession::CallControllerReturnFn Return,
+                     shared::WrapperFunctionBuffer ArgBytes) {
+                    Return(std::move(ArgBytes));
+                  })));
 
   std::optional<std::string> Result;
   std::optional<uint64_t> RxCallId;
@@ -599,7 +600,7 @@ TEST(InProcessEPCTest, JITDispatchSuccess) {
   EXPECT_EQ(*RxCallId, *SentCallId);
 }
 
-TEST(InProcessEPCTest, JITDispatchUnknownHandler) {
+TEST(InProcessEPCTest, CallControllerUnknownHandler) {
   MockIPCA IPCA;
   MockBootstrapInfoAccess BIA;
   auto EPCExp = createIPEPC(IPCA, BIA);
@@ -623,7 +624,7 @@ TEST(InProcessEPCTest, JITDispatchUnknownHandler) {
       << "Expected ReturnJITDispatchResult to deliver an OOB error";
 }
 
-TEST(InProcessEPCTest, JITDispatchAfterDisconnectIsDropped) {
+TEST(InProcessEPCTest, CallControllerAfterDisconnectIsDropped) {
   MockIPCA IPCA;
   MockBootstrapInfoAccess BIA;
   auto EPCExp = createIPEPC(IPCA, BIA);

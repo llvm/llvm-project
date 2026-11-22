@@ -126,6 +126,9 @@ using namespace vector;
 /// In the future, these operations will expose a contract to constrain the
 /// search on vectorization patterns and sizes.
 ///
+/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
+/// the memref. The examples in this file leave the mask out.
+///
 /// Occurrence of super-vectorization in the compiler flow:
 /// =======================================================
 /// This is an active area of investigation. We start with 2 remarks to position
@@ -808,16 +811,14 @@ void VectorizationState::registerOpVectorReplacement(Operation *replaced,
 /// scalar version still exists after vectorization), like uniforms.
 ///
 /// Example:
-///   * 'replaced': block argument or operation outside of the vectorized loop.
+///   * 'replaced': block argument or operation result defined outside of the
+///     vectorized loop.
 ///   * 'replacement': %0 = vector.broadcast %1 : f32 to vector<128xf32>
 void VectorizationState::registerValueVectorReplacement(
     Value replaced, Operation *replacement) {
   assert(replacement->getNumResults() == 1 &&
          "Expected single-result replacement");
-  if (Operation *defOp = replaced.getDefiningOp())
-    registerOpVectorReplacement(defOp, replacement);
-  else
-    registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
+  registerValueVectorReplacementImpl(replaced, replacement->getResult(0));
 }
 
 /// Registers the vector replacement of a block argument (e.g., iter_args).
@@ -889,6 +890,16 @@ void VectorizationState::getScalarValueReplacementsFor(
 static void eraseLoopNest(AffineForOp forOp) {
   LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing:\n" << forOp << "\n");
   forOp.erase();
+}
+
+/// Recursively erases the users of the results of 'op'.
+static void eraseUsers(Operation *op) {
+  while (!op->use_empty()) {
+    Operation *user = *op->user_begin();
+    eraseUsers(user);
+    LLVM_DEBUG(dbgs() << "[early-vect]+++++ erasing user:\n" << *user << "\n");
+    user->erase();
+  }
 }
 
 /// Erases the scalar loop nest after its successful vectorization.
@@ -1267,7 +1278,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
 
   Value transferVal = createReadOrMaskedRead(
       state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
-      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/true, indices,
+      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/false, indices,
       permutationMap);
   Operation *transfer = transferVal.getDefiningOp();
 
@@ -1326,7 +1337,7 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   Operation *transfer = createWriteOrMaskedWrite(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
       SmallVector<Value>(indices.begin(), indices.end()),
-      /*useInBoundsInsteadOfMasking=*/true, permutationMap);
+      /*useInBoundsInsteadOfMasking=*/false, permutationMap);
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *transfer);
 
   // Register replacement for future uses in the scope.
@@ -1670,10 +1681,13 @@ vectorizeLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
   if (opVecResult.wasInterrupted()) {
     LLVM_DEBUG(dbgs() << "[early-vect]+++++ failed vectorization for: "
                       << rootLoop << "\n");
-    // Erase vector loop nest if it was created.
+    // Erase vector loop nest if it was created, and all its users.
     auto vecRootLoopIt = state.opVectorReplacement.find(rootLoop);
-    if (vecRootLoopIt != state.opVectorReplacement.end())
-      eraseLoopNest(cast<AffineForOp>(vecRootLoopIt->second));
+    if (vecRootLoopIt != state.opVectorReplacement.end()) {
+      auto vecRootLoop = cast<AffineForOp>(vecRootLoopIt->second);
+      eraseUsers(vecRootLoop);
+      eraseLoopNest(vecRootLoop);
+    }
 
     return failure();
   }

@@ -8,11 +8,6 @@
 
 # Fortran Preprocessing
 
-```{contents}
----
-local:
----
-```
 
 ## Behavior common to (nearly) all compilers:
 

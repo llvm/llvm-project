@@ -94,10 +94,7 @@ llvm::getStandardCSEConfigForOpt(CodeGenOptLevel Level) {
 /// -----------------------------------------
 
 /// -------- GISelCSEInfo -------------//
-void GISelCSEInfo::setMF(MachineFunction &MF) {
-  this->MF = &MF;
-  this->MRI = &MF.getRegInfo();
-}
+void GISelCSEInfo::setMF(MachineFunction &MF) { this->MRI = &MF.getRegInfo(); }
 
 GISelCSEInfo::~GISelCSEInfo() = default;
 
@@ -266,7 +263,6 @@ void GISelCSEInfo::releaseMemory() {
   TemporaryInsts.clear();
   CSEOpt.reset();
   MRI = nullptr;
-  MF = nullptr;
 #ifndef NDEBUG
   OpcodeHitTable.clear();
 #endif
@@ -452,7 +448,10 @@ GISelCSEAnalysis::Result
 GISelCSEAnalysis::run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM) {
   std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
-  Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
+  if (CSEConfigBase *Config = TM->createCSEConfig())
+    Info->setCSEConfig(std::unique_ptr<CSEConfigBase>(Config));
+  else
+    Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
   Info->analyze(MF);
   return Info;
 }

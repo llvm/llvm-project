@@ -12,10 +12,12 @@
 
 #include "orc-rt/support/sps/SimplePackedSerialization.h"
 
+#include "ErrorMatchers.h"
 #include "SimplePackedSerializationTestUtils.h"
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::test;
 
 TEST(SimplePackedSerializationTest, SPSOutputBuffer) {
   constexpr unsigned NumBytes = 8;
@@ -168,6 +170,25 @@ TEST(SimplePackedSerializationTest, ExecutorAddrRange) {
 TEST(SimplePackedSerializationTest, StringViewCharSequenceSerialization) {
   const char *HW = "Hello, world!";
   blobSerializationRoundTrip<SPSString, std::string_view>(std::string_view(HW));
+}
+
+TEST(SimplePackedSerializationTest, StringPoolPtrSerialization) {
+  // Interned strings serialize as their value, readable as a std::string.
+  StringPool SP;
+  auto P = SP.intern("Hello, world!");
+  StringPool::WeakPtr WP(P);
+
+  auto BP = spsSerialize<SPSArgList<SPSString>>(P);
+  ASSERT_TRUE(BP);
+  std::string S;
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSString>>(*BP, S));
+  EXPECT_EQ(S, "Hello, world!");
+
+  auto BWP = spsSerialize<SPSArgList<SPSString>>(WP);
+  ASSERT_TRUE(BWP);
+  S.clear();
+  ASSERT_TRUE(spsDeserialize<SPSArgList<SPSString>>(*BWP, S));
+  EXPECT_EQ(S, "Hello, world!");
 }
 
 TEST(SimplePackedSerializationTest, SpanSerialization) {
@@ -359,8 +380,7 @@ TEST(SimplePackedSerializationTest, SerializeErrorSuccess) {
     return;
   }
 
-  auto E = SE.toError();
-  EXPECT_FALSE(!!E); // Expect non-error, i.e. Error::success().
+  EXPECT_THAT_ERROR(SE.toError(), Succeeded());
 }
 
 TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
@@ -376,7 +396,7 @@ TEST(SimplePackedSerializationTest, SerializeErrorFailure) {
     return;
   }
 
-  EXPECT_EQ(toString(SE.toError()), std::string("test error message"));
+  EXPECT_THAT_ERROR(SE.toError(), FailedWithMessage("test error message"));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
@@ -392,11 +412,7 @@ TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaExpected) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    EXPECT_EQ(*E, 42U);
-  else
-    ADD_FAILURE() << "Unexpected failure value";
+  EXPECT_THAT_EXPECTED(SE.toExpected(), HasValue(42U));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
@@ -412,11 +428,7 @@ TEST(SimplePackedSerializationTest, SerializeExpectedSuccessViaValue) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    EXPECT_EQ(*E, 42U);
-  else
-    ADD_FAILURE() << "Unexpected failure value";
+  EXPECT_THAT_EXPECTED(SE.toExpected(), HasValue(42U));
 }
 
 TEST(SimplePackedSerializationTest, SerializeExpectedFailure) {
@@ -433,9 +445,6 @@ TEST(SimplePackedSerializationTest, SerializeExpectedFailure) {
     return;
   }
 
-  auto E = SE.toExpected();
-  if (E)
-    ADD_FAILURE() << "Unexpected failure value";
-  else
-    EXPECT_EQ(toString(E.takeError()), std::string("test error message"));
+  EXPECT_THAT_EXPECTED(SE.toExpected(),
+                       FailedWithMessage("test error message"));
 }

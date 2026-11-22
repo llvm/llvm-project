@@ -17,6 +17,23 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  getpwent_r
+  SRCS
+    getpwent_r.cpp
+  HDRS
+    getpwent_r.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_passwd
+    libc.src.__support.CPP.span
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.src.__support.macros.null_check
+    .pwd_utils
+)
+
+add_entrypoint_object(
   setpwent
   SRCS
     setpwent.cpp
@@ -127,6 +144,7 @@ add_object_library(
     libc.src.__support.File.file
     libc.src.__support.File.platform_file
     libc.src.__support.ctype_utils
+    libc.src.__support.dynamic_buffer
     libc.src.__support.error_or
     libc.src.__support.pwd.field_tokenizer
     libc.src.__support.pwd.flat_file_db

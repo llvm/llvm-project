@@ -600,9 +600,10 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v4, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_f64:
@@ -627,9 +628,10 @@ define amdgpu_ps double @fneg_fadd_0_f64(double inreg %tmp2, double inreg %tmp6,
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v3, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v4, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv double 1.000000e+00, %tmp6
@@ -667,9 +669,10 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_f64_nsz:
@@ -694,9 +697,10 @@ define amdgpu_ps double @fneg_fadd_0_f64_nsz(double inreg %tmp2, double inreg %t
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv double 1.000000e+00, %tmp6
@@ -731,9 +735,10 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; SI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
+; SI-NEXT:    v_mov_b32_e32 v0, 0
 ; SI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; SI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; SI-NEXT:    v_mov_b32_e32 v1, s0
 ; SI-NEXT:    ; return to shader part epilog
 ;
 ; VI-LABEL: fneg_fadd_0_nsz_f64:
@@ -752,9 +757,10 @@ define amdgpu_ps double @fneg_fadd_0_nsz_f64(double inreg %tmp2, double inreg %t
 ; VI-NEXT:    v_cndmask_b32_e32 v1, v1, v2, vcc
 ; VI-NEXT:    v_cndmask_b32_e32 v0, v0, v3, vcc
 ; VI-NEXT:    v_cmp_nlt_f64_e32 vcc, 0, v[0:1]
-; VI-NEXT:    s_and_b64 s[0:1], vcc, exec
-; VI-NEXT:    s_cselect_b32 s1, 0, 0x7ff80000
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    v_mov_b32_e32 v0, 0
+; VI-NEXT:    s_cmp_lg_u64 vcc, 0
+; VI-NEXT:    s_cselect_b32 s0, 0, 0x7ff80000
+; VI-NEXT:    v_mov_b32_e32 v1, s0
 ; VI-NEXT:    ; return to shader part epilog
 .entry:
   %tmp7 = fdiv afn double 1.000000e+00, %tmp6
@@ -4610,6 +4616,49 @@ bb:
   %i = fmul float %arg, 0.0
   %i1 = fsub nsz float 0.0, %i
   ret float %i1
+}
+
+define { float, float } @v_fneg_add_multi_use_add_f32_fneg_nsz(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_add_multi_use_add_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_add_f32_e32 v1, v0, v1
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    v_mul_f32_e32 v1, 4.0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %add = fadd float %a, %b
+  %fneg = fneg nsz float %add
+  %use1 = fmul float %add, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
+}
+
+define float @v_fneg_add_f32_fneg_nsz(float %a, float %b) #0 {
+; GCN-LABEL: v_fneg_add_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_sub_f32_e64 v0, -v0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %add = fadd float %a, %b
+  %fneg = fneg nsz float %add
+  ret float %fneg
+}
+
+define { float, float } @v_fneg_fma_multi_use_fma_f32_fneg_nsz(float %a, float %b, float %c) #0 {
+; GCN-LABEL: v_fneg_fma_multi_use_fma_f32_fneg_nsz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_fma_f32 v1, v0, v1, v2
+; GCN-NEXT:    v_xor_b32_e32 v0, 0x80000000, v1
+; GCN-NEXT:    v_mul_f32_e32 v1, 4.0, v1
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+  %fma = call float @llvm.fma.f32(float %a, float %b, float %c)
+  %fneg = fneg nsz float %fma
+  %use1 = fmul float %fma, 4.0
+  %insert.0 = insertvalue { float, float } poison, float %fneg, 0
+  %insert.1 = insertvalue { float, float } %insert.0, float %use1, 1
+  ret { float, float } %insert.1
 }
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1

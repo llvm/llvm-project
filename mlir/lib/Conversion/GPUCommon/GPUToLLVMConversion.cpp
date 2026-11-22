@@ -28,7 +28,12 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/Attributes.h"
@@ -549,12 +554,10 @@ void GpuToLLVMConversionPass::runOnOperation() {
 
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
-  for (Dialect *dialect : context->getLoadedDialects()) {
-    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
-    if (!iface)
-      continue;
+  std::vector<Dialect *> dialects = context->getLoadedDialects();
+  for (auto *iface :
+       llvm::make_isa_range<ConvertToLLVMPatternInterface>(dialects))
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);
-  }
 
   // Preserve GPU modules and binaries. Modules are preserved as they can be
   // converted later by `gpu-module-to-binary`.
@@ -799,7 +802,8 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   // Cast the runtime-returned pointer to the memref's address space if it
   // isn't there already, so it fits the descriptor's pointer slots.
-  unsigned dstAddrSpace = memRefType.getMemorySpaceAsInt();
+  unsigned dstAddrSpace =
+      *getTypeConverter()->getMemRefAddressSpace(memRefType);
   unsigned srcAddrSpace =
       cast<LLVM::LLVMPointerType>(allocatedPtr.getType()).getAddressSpace();
   if (dstAddrSpace != srcAddrSpace) {
@@ -839,6 +843,10 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Value pointer =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
+  // The runtime frees a pointer in the default address space.
+  if (pointer.getType() != llvmPointerType)
+    pointer =
+        LLVM::AddrSpaceCastOp::create(rewriter, loc, llvmPointerType, pointer);
   auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
   Value stream = adaptor.getAsyncDependencies().empty()
                      ? nullPtr
@@ -1223,14 +1231,6 @@ static Value genConstInt32From(OpBuilder &builder, Location loc, T tValue) {
   Type llvmInt32Type = builder.getIntegerType(32);
   return LLVM::ConstantOp::create(builder, loc, llvmInt32Type,
                                   static_cast<int32_t>(tValue));
-}
-
-template <typename T>
-static Value genConstFloat32From(OpBuilder &builder, Location loc, T tValue) {
-  Type llvmFloat32Type = builder.getF32Type();
-  return LLVM::ConstantOp::create(
-      builder, loc, llvmFloat32Type,
-      builder.getF32FloatAttr(static_cast<float>(tValue)));
 }
 
 LogicalResult ConvertCreateDnTensorOpToGpuRuntimeCallPattern::matchAndRewrite(

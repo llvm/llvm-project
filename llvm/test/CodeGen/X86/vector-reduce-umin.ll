@@ -1091,7 +1091,7 @@ define i64 @test_v16i64(<16 x i64> %a0) nounwind {
 ; X86-SSE41-NEXT:    pushl %ebp
 ; X86-SSE41-NEXT:    movl %esp, %ebp
 ; X86-SSE41-NEXT:    andl $-16, %esp
-; X86-SSE41-NEXT:    subl $48, %esp
+; X86-SSE41-NEXT:    subl $32, %esp
 ; X86-SSE41-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X86-SSE41-NEXT:    movdqa %xmm0, %xmm3
 ; X86-SSE41-NEXT:    movdqa 24(%ebp), %xmm6
@@ -1810,21 +1810,21 @@ define i32 @test_v16i32(<16 x i32> %a0) nounwind {
 ; X86-SSE2-NEXT:    pand %xmm4, %xmm0
 ; X86-SSE2-NEXT:    pandn %xmm2, %xmm4
 ; X86-SSE2-NEXT:    por %xmm0, %xmm4
-; X86-SSE2-NEXT:    movdqa %xmm4, %xmm2
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm4, %xmm6
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm6
 ; X86-SSE2-NEXT:    movdqa %xmm1, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm0
-; X86-SSE2-NEXT:    movdqa %xmm5, %xmm6
-; X86-SSE2-NEXT:    pxor %xmm3, %xmm6
-; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm6
-; X86-SSE2-NEXT:    pand %xmm6, %xmm1
-; X86-SSE2-NEXT:    pandn %xmm5, %xmm6
-; X86-SSE2-NEXT:    por %xmm1, %xmm6
-; X86-SSE2-NEXT:    movdqa %xmm6, %xmm0
+; X86-SSE2-NEXT:    movdqa %xmm5, %xmm2
+; X86-SSE2-NEXT:    pxor %xmm3, %xmm2
+; X86-SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
+; X86-SSE2-NEXT:    pand %xmm2, %xmm1
+; X86-SSE2-NEXT:    pandn %xmm5, %xmm2
+; X86-SSE2-NEXT:    por %xmm1, %xmm2
+; X86-SSE2-NEXT:    movdqa %xmm2, %xmm0
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm0
-; X86-SSE2-NEXT:    pcmpgtd %xmm2, %xmm0
+; X86-SSE2-NEXT:    pcmpgtd %xmm6, %xmm0
 ; X86-SSE2-NEXT:    pand %xmm0, %xmm4
-; X86-SSE2-NEXT:    pandn %xmm6, %xmm0
+; X86-SSE2-NEXT:    pandn %xmm2, %xmm0
 ; X86-SSE2-NEXT:    por %xmm4, %xmm0
 ; X86-SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; X86-SSE2-NEXT:    pxor %xmm3, %xmm1

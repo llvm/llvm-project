@@ -414,8 +414,8 @@ define signext i32 @add_i32_3(i32 signext %a) {
 
   ; R2-R6:      addiu   $2, $4, 3
 
-  ; MMR6:       addius5 $[[T0:[0-9]+]], 3
-  ; MMR6:       move    $2, $[[T0]]
+  ; MMR6:       move    $[[T0:[0-9]+]], $4
+  ; MMR6:       addius5 $[[T0]], 3
 
   %r = add i32 3, %a
   ret i32 %r

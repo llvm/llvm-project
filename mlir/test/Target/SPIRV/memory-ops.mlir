@@ -5,6 +5,21 @@
 // RUN: %if spirv-tools %{ mlir-translate --no-implicit-module --serialize-spirv --split-input-file --spirv-save-validation-files-with-prefix=%t/module %s %}
 // RUN: %if spirv-tools %{ spirv-val %t %}
 
+// Alignment decorations on function-local variables survive round-tripping,
+// including unsigned literals whose high bit is set.
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Addresses, Kernel, Linkage], []> {
+  // CHECK-LABEL: spirv.func @aligned_variables()
+  spirv.func @aligned_variables() "None" {
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    // CHECK-NEXT: %{{.*}} = spirv.Variable {alignment = -2147483648 : i32} : !spirv.ptr<f32, Function>
+    %aligned = spirv.Variable {alignment = 16 : i32} : !spirv.ptr<f32, Function>
+    %high_bit = spirv.Variable {alignment = 2147483648 : i32} : !spirv.ptr<f32, Function>
+    spirv.Return
+  }
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
   // CHECK-LABEL: spirv.func @load_store
   //  CHECK-SAME: ([[ARG1:%.*]]: !spirv.ptr<f32, Input>, [[ARG2:%.*]]: !spirv.ptr<f32, Output>)

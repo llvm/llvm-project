@@ -215,9 +215,9 @@ PlatformAppleSimulator::DebugProcess(ProcessLaunchInfo &launch_info,
         // been used where the secondary side was given as the file to open for
         // stdin/out/err after we have already opened the primary so we can
         // read/write stdin/out/err.
-        int pty_fd = launch_info.GetPTY().ReleasePrimaryFileDescriptor();
-        if (pty_fd != PseudoTerminal::invalid_fd) {
-          process_sp->SetSTDIOFileDescriptor(pty_fd);
+        if (launch_info.GetPTY().GetPrimaryFileDescriptor() !=
+            PseudoTerminal::invalid_fd) {
+          process_sp->SetSTDIOPseudoTerminal(launch_info.GetPTY());
         }
       }
     }
@@ -300,10 +300,9 @@ static std::string GetXcodeSDKDir(std::string preferred,
 }
 
 llvm::StringRef PlatformAppleSimulator::GetSDKFilepath() {
-  if (!m_have_searched_for_sdk) {
+  std::call_once(m_sdk_once_flag, [this]() {
     m_sdk = GetXcodeSDKDir(m_sdk_name_primary, m_sdk_name_secondary);
-    m_have_searched_for_sdk = true;
-  }
+  });
   return m_sdk;
 }
 

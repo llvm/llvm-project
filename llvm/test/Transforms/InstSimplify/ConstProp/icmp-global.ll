@@ -205,7 +205,8 @@ define i1 @null_gep_ult_global() {
 
 define i1 @null_gep_slt_global() {
 ; CHECK-LABEL: @null_gep_slt_global(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr getelementptr ([2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)), @g
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt ptr [[GEP]], @g
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %gep = getelementptr [2 x i32], ptr null, i64 ptrtoint (ptr @g2 to i64)

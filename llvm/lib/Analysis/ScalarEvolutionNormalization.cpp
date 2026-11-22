@@ -52,7 +52,7 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
             [&](SCEVUse Op) { return visit(Op.getPointer()); });
 
   if (!Pred(AR))
-    return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNone);
 
   // Normalization and denormalization are fancy names for decrementing and
   // incrementing a SCEV expression with respect to a set of loops.  Since
@@ -91,7 +91,7 @@ NormalizeDenormalizeRewriter::visitAddRecExpr(const SCEVAddRecExpr *AR) {
       Operands[i] = SE.getMinusSCEV(Operands[i], Operands[i + 1]);
   }
 
-  return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagAnyWrap);
+  return SE.getAddRecExpr(Operands, AR->getLoop(), SCEV::FlagNone);
 }
 
 const SCEV *llvm::normalizeForPostIncUse(const SCEV *S,

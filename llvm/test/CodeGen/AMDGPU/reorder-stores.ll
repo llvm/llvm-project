@@ -1,17 +1,20 @@
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI %s
-; RUN:  llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
+; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SI %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GCN,VI %s
 
 ; GCN-LABEL: {{^}}no_reorder_v2f64_global_load_store:
-; GCN: buffer_load_dwordx4
-; GCN: buffer_load_dwordx4
-; GCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx4
+; GCN: {{buffer|flat}}_load_dwordx4
+; GCN: {{buffer|flat}}_load_dwordx4
+; GCN: {{buffer|flat}}_store_dwordx4
+; GCN: {{buffer|flat}}_store_dwordx4
 ; GCN: s_endpgm
 define amdgpu_kernel void @no_reorder_v2f64_global_load_store(ptr addrspace(1) nocapture %x, ptr addrspace(1) nocapture %y) nounwind {
-  %tmp1 = load <2 x double>, ptr addrspace(1) %x, align 16
-  %tmp4 = load <2 x double>, ptr addrspace(1) %y, align 16
-  store <2 x double> %tmp4, ptr addrspace(1) %x, align 16
-  store <2 x double> %tmp1, ptr addrspace(1) %y, align 16
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %x.tid = getelementptr inbounds <2 x double>, ptr addrspace(1) %x, i32 %tid
+  %y.tid = getelementptr inbounds <2 x double>, ptr addrspace(1) %y, i32 %tid
+  %tmp1 = load <2 x double>, ptr addrspace(1) %x.tid, align 16
+  %tmp4 = load <2 x double>, ptr addrspace(1) %y.tid, align 16
+  store <2 x double> %tmp4, ptr addrspace(1) %x.tid, align 16
+  store <2 x double> %tmp1, ptr addrspace(1) %y.tid, align 16
   ret void
 }
 
@@ -32,22 +35,32 @@ define amdgpu_kernel void @no_reorder_scalarized_v2f64_local_load_store(ptr addr
 }
 
 ; GCN-LABEL: {{^}}no_reorder_split_v8i32_global_load_store:
-; GCN: buffer_load_dwordx4
-; GCN: buffer_load_dwordx4
-; GCN: buffer_load_dwordx4
-; GCN: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_load_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
+; SI: buffer_store_dwordx4
 
-
-; GCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx4
-; GCN: buffer_store_dwordx4
+; VI: flat_load_dwordx4
+; VI: flat_load_dwordx4
+; VI: flat_load_dwordx4
+; VI: flat_store_dwordx4
+; VI: flat_load_dwordx4
+; VI: flat_store_dwordx4
+; VI: flat_store_dwordx4
+; VI: flat_store_dwordx4
 ; GCN: s_endpgm
 define amdgpu_kernel void @no_reorder_split_v8i32_global_load_store(ptr addrspace(1) nocapture %x, ptr addrspace(1) nocapture %y) nounwind {
-  %tmp1 = load <8 x i32>, ptr addrspace(1) %x, align 32
-  %tmp4 = load <8 x i32>, ptr addrspace(1) %y, align 32
-  store <8 x i32> %tmp4, ptr addrspace(1) %x, align 32
-  store <8 x i32> %tmp1, ptr addrspace(1) %y, align 32
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %x.tid = getelementptr inbounds <8 x i32>, ptr addrspace(1) %x, i32 %tid
+  %y.tid = getelementptr inbounds <8 x i32>, ptr addrspace(1) %y, i32 %tid
+  %tmp1 = load <8 x i32>, ptr addrspace(1) %x.tid, align 32
+  %tmp4 = load <8 x i32>, ptr addrspace(1) %y.tid, align 32
+  store <8 x i32> %tmp4, ptr addrspace(1) %x.tid, align 32
+  store <8 x i32> %tmp1, ptr addrspace(1) %y.tid, align 32
   ret void
 }
 

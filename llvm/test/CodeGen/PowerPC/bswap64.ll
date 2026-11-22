@@ -6,7 +6,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -mcpu=pwr9 | FileCheck %s --check-prefix=POWER-9
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff \
-; RUN:   -mcpu=pwr9 -vec-extabi | FileCheck %s --check-prefix=POWER-9
+; RUN:   -mcpu=pwr9 -target-abi=vec-extabi | FileCheck %s --check-prefix=POWER-9
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64le-unknown-unknown \
 ; RUN:   -mcpu=pwr9 -mattr=-altivec | FileCheck %s --check-prefix=POWER-9-NO-ALTIVEC
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-ibm-aix-xcoff \

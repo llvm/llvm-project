@@ -53,10 +53,9 @@ static mlir::Type genRealType(mlir::MLIRContext *context, int kind) {
   llvm_unreachable("REAL type translation not implemented");
 }
 
-template <int KIND>
-int getIntegerBits() {
-  return Fortran::evaluate::Type<Fortran::common::TypeCategory::Integer,
-                                 KIND>::Scalar::bits;
+static int getIntegerBits(int kind) {
+  return Fortran::evaluate::Type<
+      Fortran::common::TypeCategory::Integer>::Scalar::bits(kind);
 }
 static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
                                  bool isUnsigned = false) {
@@ -66,18 +65,7 @@ static mlir::Type genIntegerType(mlir::MLIRContext *context, int kind,
         (isUnsigned ? mlir::IntegerType::SignednessSemantics::Unsigned
                     : mlir::IntegerType::SignednessSemantics::Signless);
 
-    switch (kind) {
-    case 1:
-      return mlir::IntegerType::get(context, getIntegerBits<1>(), signedness);
-    case 2:
-      return mlir::IntegerType::get(context, getIntegerBits<2>(), signedness);
-    case 4:
-      return mlir::IntegerType::get(context, getIntegerBits<4>(), signedness);
-    case 8:
-      return mlir::IntegerType::get(context, getIntegerBits<8>(), signedness);
-    case 16:
-      return mlir::IntegerType::get(context, getIntegerBits<16>(), signedness);
-    }
+    return mlir::IntegerType::get(context, getIntegerBits(kind), signedness);
   }
   llvm_unreachable("INTEGER or UNSIGNED kind not translated");
 }
@@ -294,10 +282,15 @@ struct TypeBuilderImpl {
     bool isPolymorphic = (Fortran::semantics::IsPolymorphic(symbol) ||
                           Fortran::semantics::IsUnlimitedPolymorphic(symbol)) &&
                          !isAssumedType;
+    if (Fortran::evaluate::IsCoarray(symbol) &&
+        symbol.attrs().test(Fortran::semantics::Attr::VOLATILE))
+      TODO(loc, "coarray: variable with VOLATILE attribute.");
+
     if (Fortran::semantics::IsPointer(symbol))
       return fir::wrapInClassOrBoxType(fir::PointerType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
-    if (Fortran::semantics::IsAllocatable(symbol))
+    if (Fortran::semantics::IsAllocatable(symbol) ||
+        Fortran::evaluate::IsCoarray(symbol))
       return fir::wrapInClassOrBoxType(fir::HeapType::get(ty), isPolymorphic,
                                        isAssumedType, symbol.Corank());
     // isPtr and isAlloc are variable that were promoted to be on the
@@ -493,15 +486,15 @@ struct TypeBuilderImpl {
   // To get the character length from a symbol, make an fold a designator for
   // the symbol to cover the case where the symbol is an assumed length named
   // constant and its length comes from its init expression length.
-  template <int Kind>
   fir::SequenceType::Extent
-  getCharacterLengthHelper(const Fortran::semantics::Symbol &symbol) {
+  getCharacterLengthHelper(int kind, const Fortran::semantics::Symbol &symbol) {
     using TC =
-        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character, Kind>;
+        Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>;
     auto designator = Fortran::evaluate::Fold(
         converter.getFoldingContext(),
-        Fortran::evaluate::Expr<TC>{Fortran::evaluate::Designator<TC>{symbol}});
-    if (auto len = toInt64(std::move(designator.LEN())))
+        Fortran::evaluate::Expr<TC>{
+            Fortran::evaluate::Designator<TC>{kind, symbol}});
+    if (auto len = toInt64(designator.LEN()))
       return *len;
     return fir::SequenceType::getUnknownExtent();
   }
@@ -524,20 +517,7 @@ struct TypeBuilderImpl {
       llvm::report_fatal_error("not a character symbol");
     int kind =
         toInt64(Fortran::common::Clone(type->AsIntrinsic()->kind())).value();
-    switch (kind) {
-    case 1:
-      return getCharacterLengthHelper<1>(symbol);
-    case 2:
-      return getCharacterLengthHelper<2>(symbol);
-    case 4:
-      return getCharacterLengthHelper<4>(symbol);
-    }
-    llvm_unreachable("unknown character kind");
-  }
-
-  template <typename A>
-  Fortran::lower::LenParameterTy getCharacterLength(const A &expr) {
-    return fir::SequenceType::getUnknownExtent();
+    return getCharacterLengthHelper(kind, symbol);
   }
 
   template <typename T>
@@ -553,8 +533,8 @@ struct TypeBuilderImpl {
     // Do not use dynamic type length here. We would miss constant
     // lengths opportunities because dynamic type only has the length
     // if it comes from a declaration.
-    if (const auto *charExpr = std::get_if<
-            Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
+    if (const auto *charExpr = std::get_if<Fortran::evaluate::Expr<
+            Fortran::evaluate::Type<Fortran::common::TypeCategory::Character>>>(
             &expr.u)) {
       if (auto constantLen = toInt64(charExpr->LEN()))
         return *constantLen;
@@ -564,7 +544,8 @@ struct TypeBuilderImpl {
       // CLASS(*), regardless of their actual type.
       // GetType() will recover the actual symbol type as the dynamic type, so
       // getCharacterLength may be reached even if expr is packaged as an
-      // Expr<SomeDerived> instead of an Expr<SomeChar>.
+      // Expr<Type<TypeCategory::Derived>> instead of an
+      // Expr<Type<TypeCategory::Character>>.
       // Just use the dynamic type here again to retrieve the length.
       if (auto constantLen = toInt64(dynamicType->GetCharLength()))
         return *constantLen;

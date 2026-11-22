@@ -187,9 +187,9 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v1, v0
-; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    s_cbranch_execnz .LBB3_2
 ; SI-NEXT:  ; %bb.3:
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
@@ -210,9 +210,9 @@ define amdgpu_ps float @loop(i32 %z, float %v, i32 inreg %bound, ptr %extern_fun
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v1, v0
-; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; SI-NEXT:    ; implicit-def: $vgpr0
+; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    s_cbranch_execnz .LBB3_6
 ; SI-NEXT:  ; %bb.7:
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
@@ -266,8 +266,8 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-NEXT:    s_mov_b64 s[0:1], s[12:13]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    ; implicit-def: $vgpr4_vgpr5
+; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    s_cbranch_execnz .LBB4_2
 ; SI-NEXT:  ; %bb.3:
 ; SI-NEXT:    s_mov_b32 exec_lo, s7
@@ -287,8 +287,8 @@ define amdgpu_ps float @loop_with_use(i32 %z, float %v, i32 inreg %bound, ptr %e
 ; SI-NEXT:    s_mov_b64 s[0:1], s[12:13]
 ; SI-NEXT:    s_mov_b64 s[2:3], s[14:15]
 ; SI-NEXT:    s_swappc_b64 s[30:31], s[4:5]
-; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    ; implicit-def: $vgpr2_vgpr3
+; SI-NEXT:    s_andn2_wrexec_b32 s8, s8
 ; SI-NEXT:    s_cbranch_execnz .LBB4_6
 ; SI-NEXT:  ; %bb.7:
 ; SI-NEXT:    s_mov_b32 exec_lo, s7

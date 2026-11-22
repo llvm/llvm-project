@@ -22,6 +22,7 @@ using clang::analyze_format_string::ArgType;
 using clang::analyze_format_string::ConversionSpecifier;
 using clang::analyze_format_string::FormatSpecifier;
 using clang::analyze_format_string::FormatStringHandler;
+using clang::analyze_format_string::FormatStringParser;
 using clang::analyze_format_string::LengthModifier;
 using clang::analyze_format_string::OptionalAmount;
 using namespace clang;
@@ -34,8 +35,8 @@ FormatStringHandler::~FormatStringHandler() {}
 // scanf format strings.
 //===----------------------------------------------------------------------===//
 
-OptionalAmount clang::analyze_format_string::ParseAmount(const char *&Beg,
-                                                         const char *E) {
+OptionalAmount FormatStringParser::parseAmount(const char *&Beg,
+                                               const char *E) const {
   const char *I = Beg;
   UpdateOnReturn<const char *> UpdateBeg(Beg, I);
 
@@ -60,8 +61,9 @@ OptionalAmount clang::analyze_format_string::ParseAmount(const char *&Beg,
   return OptionalAmount();
 }
 
-static bool ParseWidthModifier(const char *&I, const char *E,
-                               unsigned &BitWidth, unsigned &ModifierLength) {
+bool FormatStringParser::parseWidthModifier(const char *&I, const char *E,
+                                            unsigned &BitWidth,
+                                            unsigned &ModifierLength) const {
   StringRef W = StringRef(I, E - I).take_while(llvm::isDigit);
   if (W.empty() || W.front() == '0')
     return false;
@@ -75,22 +77,24 @@ static bool ParseWidthModifier(const char *&I, const char *E,
   return true;
 }
 
-OptionalAmount clang::analyze_format_string::ParseNonPositionAmount(
-    const char *&Beg, const char *E, unsigned &argIndex) {
+OptionalAmount
+FormatStringParser::parseNonPositionAmount(const char *&Beg, const char *E,
+                                           unsigned &argIndex) const {
   if (*Beg == '*') {
     ++Beg;
     return OptionalAmount(OptionalAmount::Arg, argIndex++, Beg, 0, false);
   }
 
-  return ParseAmount(Beg, E);
+  return parseAmount(Beg, E);
 }
 
-OptionalAmount clang::analyze_format_string::ParsePositionAmount(
-    FormatStringHandler &H, const char *Start, const char *&Beg, const char *E,
-    PositionContext p) {
+OptionalAmount
+FormatStringParser::parsePositionAmount(const char *Start, const char *&Beg,
+                                        const char *E,
+                                        PositionContext p) const {
   if (*Beg == '*') {
     const char *I = Beg + 1;
-    const OptionalAmount &Amt = ParseAmount(I, E);
+    const OptionalAmount &Amt = parseAmount(I, E);
 
     if (Amt.getHowSpecified() == OptionalAmount::NotSpecified) {
       H.HandleInvalidPosition(Beg, I - Beg, p);
@@ -125,18 +129,18 @@ OptionalAmount clang::analyze_format_string::ParsePositionAmount(
     return OptionalAmount(false);
   }
 
-  return ParseAmount(Beg, E);
+  return parseAmount(Beg, E);
 }
 
-bool clang::analyze_format_string::ParseFieldWidth(
-    FormatStringHandler &H, FormatSpecifier &CS, const char *Start,
-    const char *&Beg, const char *E, unsigned *argIndex) {
+bool FormatStringParser::parseFieldWidth(FormatSpecifier &CS, const char *Start,
+                                         const char *&Beg, const char *E,
+                                         unsigned *argIndex) const {
   // FIXME: Support negative field widths.
   if (argIndex) {
-    CS.setFieldWidth(ParseNonPositionAmount(Beg, E, *argIndex));
+    CS.setFieldWidth(parseNonPositionAmount(Beg, E, *argIndex));
   } else {
-    const OptionalAmount Amt = ParsePositionAmount(
-        H, Start, Beg, E, analyze_format_string::FieldWidthPos);
+    const OptionalAmount Amt = parsePositionAmount(
+        Start, Beg, E, analyze_format_string::FieldWidthPos);
 
     if (Amt.isInvalid())
       return true;
@@ -145,14 +149,12 @@ bool clang::analyze_format_string::ParseFieldWidth(
   return false;
 }
 
-bool clang::analyze_format_string::ParseArgPosition(FormatStringHandler &H,
-                                                    FormatSpecifier &FS,
-                                                    const char *Start,
-                                                    const char *&Beg,
-                                                    const char *E) {
+bool FormatStringParser::parseArgPosition(FormatSpecifier &FS,
+                                          const char *Start, const char *&Beg,
+                                          const char *E) const {
   const char *I = Beg;
 
-  const OptionalAmount &Amt = ParseAmount(I, E);
+  const OptionalAmount &Amt = parseAmount(I, E);
 
   if (I == E) {
     // No more characters left?
@@ -181,11 +183,9 @@ bool clang::analyze_format_string::ParseArgPosition(FormatStringHandler &H,
   return false;
 }
 
-bool clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
-                                                       FormatSpecifier &FS,
-                                                       const char *&I,
-                                                       const char *E,
-                                                       const LangOptions &LO) {
+bool FormatStringParser::parseVectorModifier(FormatSpecifier &FS,
+                                             const char *&I,
+                                             const char *E) const {
   if (!LO.OpenCL)
     return false;
 
@@ -198,7 +198,7 @@ bool clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
       return true;
     }
 
-    OptionalAmount NumElts = ParseAmount(I, E);
+    OptionalAmount NumElts = parseAmount(I, E);
     if (NumElts.getHowSpecified() != OptionalAmount::Constant) {
       H.HandleIncompleteSpecifier(Start, E - Start);
       return true;
@@ -210,11 +210,9 @@ bool clang::analyze_format_string::ParseVectorModifier(FormatStringHandler &H,
   return false;
 }
 
-bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
-                                                       const char *&I,
-                                                       const char *E,
-                                                       const LangOptions &LO,
-                                                       bool IsScanf) {
+bool FormatStringParser::parseLengthModifier(FormatSpecifier &FS,
+                                             const char *&I,
+                                             const char *E) const {
   LengthModifier::Kind lmKind = LengthModifier::None;
   const char *lmPosition = I;
   switch (*I) {
@@ -334,7 +332,7 @@ bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
         WidthKind = LengthModifier::AsFastIntN;
       }
 
-      if (ParseWidthModifier(WidthModifier, E, BitWidth, ModifierLength)) {
+      if (parseWidthModifier(WidthModifier, E, BitWidth, ModifierLength)) {
         I = WidthModifier;
         FS.setLengthModifier(
             LengthModifier(lmPosition, WidthKind, BitWidth, ModifierLength));
@@ -350,8 +348,9 @@ bool clang::analyze_format_string::ParseLengthModifier(FormatSpecifier &FS,
   return true;
 }
 
-bool clang::analyze_format_string::ParseUTF8InvalidSpecifier(
-    const char *SpecifierBegin, const char *FmtStrEnd, unsigned &Len) {
+bool FormatStringParser::parseUTF8InvalidSpecifier(const char *SpecifierBegin,
+                                                   const char *FmtStrEnd,
+                                                   unsigned &Len) const {
   if (SpecifierBegin + 1 >= FmtStrEnd)
     return false;
 

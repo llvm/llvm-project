@@ -65,8 +65,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE COMP_EVEX_NAME
 
-extern cl::opt<bool> X86EnableAPXForRelocation;
-
 namespace {
 // Including the generated EVEX compression tables.
 #define GET_X86_COMPRESS_EVEX_TABLE
@@ -667,7 +665,7 @@ static bool CompressEVEXImpl(MachineInstr &MI, MachineBasicBlock &MBB,
     // ADDrm/mr instructions with NDD + relocation had been transformed to the
     // instructions without NDD in X86SuppressAPXForRelocation pass. That is to
     // keep backward compatibility with linkers without APX support.
-    if (!X86EnableAPXForRelocation)
+    if (!ST.getCLOpts().enable_apx_for_relocation)
       assert(!isAddMemInstrWithRelocation(MI) &&
              "Unexpected NDD instruction with relocation!");
   } else if (Opc == X86::ADD32ri_ND || Opc == X86::ADD64ri32_ND ||

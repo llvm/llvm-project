@@ -309,7 +309,7 @@ define void @bad_postinc_nsw_a(i32 %n) {
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.inc, %loop ]
 ; CHECK-NEXT:    --> {0,+,7}<nuw><nsw><%loop> U: [0,-2147483648) S: [0,-2147483648) Exits: (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))) LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.inc = add nsw i32 %iv, 7
-; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))))<u nuw> LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {7,+,7}<nuw><%loop> U: [7,-3) S: [7,0) Exits: (7 + (7 * ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n)))<u nuw>)<u nuw> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @bad_postinc_nsw_a
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is ((((-1 * (1 umin %n))<nuw><nsw> + %n) /u 7) + (1 umin %n))
 ; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 613566756
@@ -396,7 +396,7 @@ define void @select_cond_poison_propagation(ptr %p, i32 %x) nounwind {
 ; CHECK-NEXT:    %iv.next = add nsw i32 %iv, 1
 ; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,-2147483648) S: [1,-2147483648) Exits: <<Unknown>> LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %sel = select i1 %cmp, i32 10, i32 20
-; CHECK-NEXT:    --> %sel U: [0,31) S: [0,31) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
+; CHECK-NEXT:    --> %sel U: [10,21) S: [10,21) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %cond = call i1 @cond()
 ; CHECK-NEXT:    --> %cond U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @select_cond_poison_propagation

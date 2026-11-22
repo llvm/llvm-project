@@ -36,6 +36,10 @@ void foo() {
     // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'WaveReadLaneAt' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
     float g = hlsl::WaveReadLaneAt(1.0f, 0u); // #WaveReadLaneAt
 
+    // expected-error@#WaveReadLaneFirst {{'WaveReadLaneFirst' is only available on Shader Model 6.0 or newer}}
+    // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'WaveReadLaneFirst' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
+    float first = hlsl::WaveReadLaneFirst(1.0f); // #WaveReadLaneFirst
+
     // Test that half overloads (which map to float without native half) also
     // have the correct SM 6.0 availability via the _HLSL_16BIT_AVAILABILITY
     // fallback path.
@@ -46,4 +50,8 @@ void foo() {
     // expected-error@#WaveReadLaneAt_half {{'WaveReadLaneAt' is only available on Shader Model 6.0 or newer}}
     // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'WaveReadLaneAt' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
     half i = hlsl::WaveReadLaneAt((half)1.0, 0u); // #WaveReadLaneAt_half
+
+    // expected-error@#WaveReadLaneFirst_half {{'WaveReadLaneFirst' is only available on Shader Model 6.0 or newer}}
+    // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'WaveReadLaneFirst' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
+    half j = hlsl::WaveReadLaneFirst((half)1.0); // #WaveReadLaneFirst_half
 }

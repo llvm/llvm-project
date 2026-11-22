@@ -9,6 +9,7 @@
 #include "Analysis/SPIRVConvergenceRegionAnalysis.h"
 #include "SPIRV.h"
 #include "SPIRVAsmPrinter.h"
+#include "SPIRVModuleAnalysis.h"
 #include "SPIRVTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchFoldingPass.h"
@@ -58,8 +59,13 @@ public:
                 PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
                 MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
                 BranchFolderPass, MachineBlockPlacementPass>();
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      Opt.DisableLSR = true;
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
   Error addIRTranslator(PassManagerWrapper &PMW) override;
@@ -72,10 +78,14 @@ public:
 
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
 
+  void addPreEmitPass2(PassManagerWrapper &PMW) override;
+
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -88,6 +98,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
     if (getOptLevel() != CodeGenOptLevel::None) {
       addModulePass(SPIRVFinalizeShaderLinkagePass(getTM()), PMW);
     }
+    addModulePass(SPIRVRemoveUnusedResourcesPass(), PMW);
   } else {
     // Variadic function calls aren't supported in shader code.
     // This needs to come before SPIRVPrepareFunctions because this
@@ -140,7 +151,7 @@ void SPIRVCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
   }
   addFunctionPass(StripConvergenceIntrinsicsPass(), PMW);
   flushFPMsToMPM(PMW);
-  addModulePass(SPIRVLegalizeImplicitBindingPass(), PMW);
+  addModulePass(SPIRVLegalizeResourceBindingPass(), PMW);
   addModulePass(SPIRVLegalizeZeroSizeArraysPass(getTM()), PMW);
   addModulePass(SPIRVCBufferAccessPass(), PMW);
   addModulePass(SPIRVPushConstantAccessPass(getTM()), PMW);
@@ -186,19 +197,27 @@ Error SPIRVCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
   return Error::success();
 }
 
+void SPIRVCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
+  addMachineFunctionPass(SPIRVPrepareModuleAnalysisPass(), PMW);
+}
+
 void SPIRVCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterBeginPass(), PMW);
+  addModulePass(SPIRVAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
+  // SPIRVModuleAnalysis needs every MachineFunction before printing starts.
+  if (CompletesPipeline) {
+    flushFPMsToMPM(PMW);
+    addModulePass(RequireAnalysisPass<SPIRVModuleAnalysis, Module>(), PMW,
+                  /*Force=*/true);
+  }
   addMachineFunctionPass(SPIRVAsmPrinterPass(), PMW);
 }
 
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  addModulePass(SPIRVAsmPrinterEndPass(), PMW);
+  addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SPIRVPassRegistry.def"

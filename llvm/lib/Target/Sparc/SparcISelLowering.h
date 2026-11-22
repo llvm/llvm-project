@@ -144,6 +144,9 @@ namespace llvm {
                         unsigned numArgs) const;
     SDValue LowerF128Compare(SDValue LHS, SDValue RHS, unsigned &SPCC,
                              const SDLoc &DL, SelectionDAG &DAG) const;
+    SDValue LowerF128StrictCompare(SDValue &Chain, SDValue LHS, SDValue RHS,
+                                   unsigned &SPCC, bool IsSignaling,
+                                   const SDLoc &DL, SelectionDAG &DAG) const;
 
     SDValue LowerBSWAP(SDValue Op, SelectionDAG &DAG) const;
 
@@ -170,8 +173,8 @@ namespace llvm {
 
     bool isFNegFree(EVT VT) const override;
 
-    bool isFPImmLegal(const APFloat &Imm, EVT VT,
-                      bool ForCodeSize) const override;
+    FPImmAction getFPImmAction(const APFloat &Imm, EVT VT,
+                               bool ForCodeSize) const override;
 
     bool isCtlzFast() const override;
 

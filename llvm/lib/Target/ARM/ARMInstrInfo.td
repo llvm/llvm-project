@@ -2418,7 +2418,7 @@ def BKPT : AInoP<(outs), (ins imm0_65535:$val), MiscFrm, NoItinerary,
 def : InstAlias<"bkpt", (BKPT 0), 0>, Requires<[IsARM]>;
 
 def HLT : AInoP<(outs), (ins imm0_65535:$val), MiscFrm, NoItinerary,
-                 "hlt", "\t$val", []>, Requires<[IsARM, HasV8]> {
+                 "hlt", "\t$val", []>, Requires<[IsARM, IsNotMClass]> {
   bits<16> val;
   let Inst{3-0} = val{3-0};
   let Inst{19-8} = val{15-4};
@@ -6132,9 +6132,9 @@ let Defs =
                                 Requires<[IsARM, NoVFP]>;
 }
 
-// This gets lowered to an instruction sequence of 16 bytes
+// This gets lowered to an instruction sequence of 16 or 20 bytes
 // FIXME: Non-IOS version(s)
-let isBarrier = 1, hasSideEffects = 1, isTerminator = 1, Size = 16,
+let isBarrier = 1, hasSideEffects = 1, isTerminator = 1,
     Defs = [ R7, LR, SP ] in {
 def Int_eh_sjlj_longjmp : PseudoInst<(outs), (ins GPR:$src, GPR:$scratch),
                              NoItinerary,

@@ -4,6 +4,7 @@ if ("AArch64" IN_LIST LLVM_TARGETS_TO_BUILD)
 endif()
 
 add_lldb_unittest(ExpressionTests
+  ClangASTSourceTest.cpp
   ClangParserTest.cpp
   ClangExpressionDeclMapTest.cpp
   DiagnosticManagerTest.cpp

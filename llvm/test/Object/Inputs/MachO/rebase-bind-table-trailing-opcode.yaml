@@ -5,6 +5,7 @@
 # `REBASE_OPCODE_SET_TYPE_IMM(1)` instead of a `REBASE_OPCODE_DONE` or an
 # actual rebase `REBASE_OPCODE_DO_REBASE_*`.
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

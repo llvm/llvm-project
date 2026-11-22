@@ -348,14 +348,14 @@ define dso_local x86_regcallcc float @test_argRetFloat(float %a)  {
 define dso_local x86_regcallcc float @test_CallargRetFloat(float %a)  {
 ; X32-LABEL: test_CallargRetFloat:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $28, %esp
+; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
 ; X32-NEXT:    vmovss {{.*#+}} xmm4 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
 ; X32-NEXT:    vaddss %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    calll _test_argRetFloat
 ; X32-NEXT:    vaddss %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
-; X32-NEXT:    addl $28, %esp
+; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargRetFloat:
@@ -420,14 +420,14 @@ define dso_local x86_regcallcc double @test_argRetDouble(double %a)  {
 define dso_local x86_regcallcc double @test_CallargRetDouble(double %a)  {
 ; X32-LABEL: test_CallargRetDouble:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $28, %esp
+; X32-NEXT:    subl $16, %esp
 ; X32-NEXT:    vmovups %xmm4, (%esp) # 16-byte Spill
 ; X32-NEXT:    vmovsd {{.*#+}} xmm4 = [1.0E+0,0.0E+0]
 ; X32-NEXT:    vaddsd %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    calll _test_argRetDouble
 ; X32-NEXT:    vaddsd %xmm4, %xmm0, %xmm0
 ; X32-NEXT:    vmovups (%esp), %xmm4 # 16-byte Reload
-; X32-NEXT:    addl $28, %esp
+; X32-NEXT:    addl $16, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargRetDouble:
@@ -688,7 +688,7 @@ define dso_local x86_regcallcc <4 x i32> @test_argRet128Vector(<4 x i1> %x, <4 x
 define dso_local x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i1> %x, <4 x i32> %a)  {
 ; X32-LABEL: test_CallargRet128Vector:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $44, %esp
+; X32-NEXT:    subl $20, %esp
 ; X32-NEXT:    vmovups %xmm4, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovdqa %xmm1, %xmm4
 ; X32-NEXT:    vpslld $31, %xmm0, %xmm1
@@ -700,7 +700,7 @@ define dso_local x86_regcallcc <4 x i32> @test_CallargRet128Vector(<4 x i1> %x, 
 ; X32-NEXT:    kmovw {{[-0-9]+}}(%e{{[sb]}}p), %k1 # 2-byte Reload
 ; X32-NEXT:    vmovdqa32 %xmm4, %xmm0 {%k1}
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm4 # 16-byte Reload
-; X32-NEXT:    addl $44, %esp
+; X32-NEXT:    addl $20, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargRet128Vector:
@@ -910,7 +910,7 @@ define dso_local x86_regcallcc <16 x i32> @test_CallargRet512Vector(<16 x i1> %x
 define dso_local x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x float> %b, <32 x float> %c) nounwind {
 ; X32-LABEL: testf32_inp:
 ; X32:       # %bb.0:
-; X32-NEXT:    subl $44, %esp
+; X32-NEXT:    subl $32, %esp
 ; X32-NEXT:    vmovups %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; X32-NEXT:    vmovups %xmm6, (%esp) # 16-byte Spill
 ; X32-NEXT:    vaddps %zmm2, %zmm0, %zmm6
@@ -923,7 +923,7 @@ define dso_local x86_regcallcc <32 x float> @testf32_inp(<32 x float> %a, <32 x 
 ; X32-NEXT:    vaddps %zmm5, %zmm1, %zmm1
 ; X32-NEXT:    vmovups (%esp), %xmm6 # 16-byte Reload
 ; X32-NEXT:    vmovups {{[-0-9]+}}(%e{{[sb]}}p), %xmm7 # 16-byte Reload
-; X32-NEXT:    addl $44, %esp
+; X32-NEXT:    addl $32, %esp
 ; X32-NEXT:    retl
 ;
 ; WIN64-LABEL: testf32_inp:

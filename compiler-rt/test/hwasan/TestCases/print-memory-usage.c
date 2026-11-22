@@ -1,6 +1,8 @@
 // Tests __hwasan_print_memory_usage.
 // Requires ulimit
 // UNSUPPORTED: system-windows
+// https://github.com/llvm/llvm-project/issues/236812
+// XFAIL: android-34
 // RUN: %clang_hwasan %s -o %t
 // RUN: ulimit -s 1000
 // RUN: %run %t 2>&1 | FileCheck %s

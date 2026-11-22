@@ -8,9 +8,9 @@ add_mlir_library(MLIRTestAliasAnalysis
 
   EXCLUDE_FROM_LIBMLIR
   PARTIAL_SOURCES_INTENDED
-
-  LINK_LIBS PUBLIC
-  MLIRAnalysis
+  )
+mlir_target_link_libraries(MLIRTestAliasAnalysis PUBLIC
+  MLIRAnalysisBase
   MLIRFunctionInterfaces
   MLIRIR
   MLIRPass
@@ -46,15 +46,10 @@ add_mlir_library(MLIRTestAnalysis
   )
 mlir_target_link_libraries(MLIRTestAnalysis PUBLIC
   MLIRAffineDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
+  MLIRAnalysisDataFlow
   MLIRArithDialect
   MLIRFunctionInterfaces
   MLIRMemRefDialect
   MLIRPass
-  )
-
-target_include_directories(MLIRTestAnalysis
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )

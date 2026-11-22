@@ -52,23 +52,29 @@ int f2(void) {
   // CHECK-NEXT:   [[CAUGHT:%.*]] = icmp eq i32 [[SETJMP]], 0
   // CHECK-NEXT:   br i1 [[CAUGHT]]
   @try {
-    // Landing pad.  Note that we elide the re-enter.
+    // Landing pad.
     // CHECK:      call void asm sideeffect "", "=*m,=*m"(ptr nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call ptr @objc_exception_extract
     // CHECK-NEXT: [[T1:%.*]] = load i32, ptr [[X]]
-    // CHECK-NEXT: [[T2:%.*]] = add nsw i32 [[T1]], -1
+    // CHECK-NEXT: [[DEC:%.*]] = add nsw i32 [[T1]], -1
 
-    // CHECK: store i32 6, ptr [[X]]
+    // A `longjmp` may re-enter at the setjmp above, so [[X]] can no longer be
+    // assumed unmodified across it: the increment below is a real
+    // load/add/store instead of being folded to a constant store.
+    // CHECK:      [[T2:%.*]] = load i32, ptr [[X]]
+    // CHECK-NEXT: [[INC:%.*]] = add nsw i32 [[T2]], 1
+    // CHECK-NEXT: store i32 [[INC]], ptr [[X]]
     x++;
     // CHECK-NEXT: call void asm sideeffect "", "*m,*m"(ptr nonnull elementtype(i32) [[X]]
     // CHECK-NEXT: call void @foo()
     // CHECK-NEXT: call void @objc_exception_try_exit
-    // CHECK-NEXT: [[T:%.*]] = load i32, ptr [[X]]
+    // CHECK-NEXT: [[T3:%.*]] = load i32, ptr [[X]]
     foo();
   } @catch (id) {
     x--;
   }
 
+  // CHECK: {{%.*}} = phi i32 [ [[DEC]], %{{.*}} ], [ [[T3]], %{{.*}} ]
   return x;
 }
 

@@ -79,12 +79,12 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
 
-  ! CHECK: %[[a0_0_decl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}{uniq_name = "_QMacompFref_scalar_real_aEa0_0"}
-  ! CHECK: %[[a0_1_decl:.*]]:2 = hlfir.declare %[[arg2]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_real_aEa0_1"}
-  ! CHECK: %[[a1_0_decl:.*]]:2 = hlfir.declare %[[arg1]]{{.*}}{uniq_name = "_QMacompFref_scalar_real_aEa1_0"}
-  ! CHECK: %[[a1_1_decl:.*]]:2 = hlfir.declare %[[arg3]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_real_aEa1_1"}
+  ! CHECK: %[[a0_0_decl:.*]]:2 = hlfir.declare %[[arg0]]{{.*}}uniq_name("_QMacompFref_scalar_real_aEa0_0")
+  ! CHECK: %[[a0_1_decl:.*]]:2 = hlfir.declare %[[arg2]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_real_aEa0_1")
+  ! CHECK: %[[a1_0_decl:.*]]:2 = hlfir.declare %[[arg1]]{{.*}}uniq_name("_QMacompFref_scalar_real_aEa1_0")
+  ! CHECK: %[[a1_1_decl:.*]]:2 = hlfir.declare %[[arg3]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_real_aEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0_decl]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0_decl]]#0{"p"}{{.*}}fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<f32>) -> !fir.ref<f32>
@@ -92,21 +92,21 @@ subroutine ref_scalar_real_a(a0_0, a1_0, a0_1, a1_1)
   call takes_real_scalar(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1_decl]]#0 (%{{.*}})  : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>>, index) -> !fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QMacompTreal_a0{p:!fir.box<!fir.heap<f32>>}>>) -> !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[load:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<f32>>>
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[load]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<f32>) -> !fir.ref<f32>
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[cast]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0_decl]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0_decl]]#0{"p"}{{.*}}fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[elem]]) {{.*}}: (!fir.ref<f32>) -> ()
   call takes_real_scalar(a1_0%p(7))
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1_decl]]#0 (%{{.*}})  : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable> : (!fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> !fir.ref<f32>
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[elem]]) {{.*}}: (!fir.ref<f32>) -> ()
@@ -115,9 +115,9 @@ end subroutine
 
 ! CHECK-LABEL: func @_QMacompPref_array_real_a(
 ! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>{{.*}}, %[[VAL_1:.*]]: !fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>{{.*}}) {
-! CHECK:         %[[a1_0_decl:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}}{uniq_name = "_QMacompFref_array_real_aEa1_0"}
-! CHECK:         %[[a1_1_decl:.*]]:2 = hlfir.declare %[[VAL_1]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_array_real_aEa1_1"}
-! CHECK:         %[[coor:.*]] = hlfir.designate %[[a1_0_decl]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+! CHECK:         %[[a1_0_decl:.*]]:2 = hlfir.declare %[[VAL_0]]{{.*}}uniq_name("_QMacompFref_array_real_aEa1_0")
+! CHECK:         %[[a1_1_decl:.*]]:2 = hlfir.declare %[[VAL_1]](%{{.*}}){{.*}}uniq_name("_QMacompFref_array_real_aEa1_1")
+! CHECK:         %[[coor:.*]] = hlfir.designate %[[a1_0_decl]]#0{"p"}{{.*}}fortran_attrs<allocatable>
 ! CHECK:         %[[box:.*]] = fir.load %[[coor]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
 ! CHECK:         %[[c20:.*]] = arith.constant 20 : index
 ! CHECK:         %[[c50:.*]] = arith.constant 50 : index
@@ -128,7 +128,7 @@ end subroutine
 ! CHECK:         %[[cast:.*]] = fir.convert %[[slice]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
 ! CHECK:         fir.call @_QPtakes_real_array(%[[cast]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:         %[[elem:.*]] = hlfir.designate %[[a1_1_decl]]#0 (%{{.*}})  : (!fir.ref<!fir.array<100x!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>>, index) -> !fir.ref<!fir.type<_QMacompTreal_a1{p:!fir.box<!fir.heap<!fir.array<?xf32>>>}>>
-! CHECK:         %[[coor2:.*]] = hlfir.designate %[[elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+! CHECK:         %[[coor2:.*]] = hlfir.designate %[[elem]]{"p"}{{.*}}fortran_attrs<allocatable>
 ! CHECK:         %[[box2:.*]] = fir.load %[[coor2]]
 ! CHECK:         %[[slice2:.*]] = hlfir.designate %[[box2]] (%{{.*}}:%{{.*}}:%{{.*}})  shape %{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index, index, index, !fir.shape<1>) -> !fir.box<!fir.array<16xf32>>
 ! CHECK:         %[[cast2:.*]] = fir.convert %[[slice2]] : (!fir.box<!fir.array<16xf32>>) -> !fir.box<!fir.array<?xf32>>
@@ -148,12 +148,12 @@ subroutine ref_scalar_cst_char_a(a0_0, a1_0, a0_1, a1_1)
   type(cst_char_a0) :: a0_0, a0_1(100)
   type(cst_char_a1) :: a1_0, a1_1(100)
 
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_cst_char_aEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_cst_char_aEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_cst_char_aEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_cst_char_aEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_cst_char_aEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_cst_char_aEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_cst_char_aEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_cst_char_aEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,10>>
@@ -162,7 +162,7 @@ subroutine ref_scalar_cst_char_a(a0_0, a1_0, a0_1, a1_1)
   call takes_char_scalar(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[cast:.*]] = fir.convert %[[addr]] : (!fir.heap<!fir.char<1,10>>) -> !fir.ref<!fir.char<1,10>>
@@ -171,7 +171,7 @@ subroutine ref_scalar_cst_char_a(a0_0, a1_0, a0_1, a1_1)
   call takes_char_scalar(a0_1(5)%p)
 
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  typeparams %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, index, index) -> !fir.ref<!fir.char<1,10>>
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[elem]], %c10{{.*}}
@@ -180,7 +180,7 @@ subroutine ref_scalar_cst_char_a(a0_0, a1_0, a0_1, a1_1)
 
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  typeparams %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,10>>>>, index, index) -> !fir.ref<!fir.char<1,10>>
   ! CHECK: %[[boxchar:.*]] = fir.emboxchar %[[elem]], %c10{{.*}}
@@ -195,12 +195,12 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
   type(def_char_a0) :: a0_0, a0_1(100)
   type(def_char_a1) :: a1_0, a1_1(100)
 
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_def_char_aEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_def_char_aEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_def_char_aEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_def_char_aEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_def_char_aEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_def_char_aEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_def_char_aEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_def_char_aEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[box2:.*]] = fir.load %[[coor]]
@@ -210,7 +210,7 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
   call takes_char_scalar(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[addr:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[box2:.*]] = fir.load %[[coor]]
@@ -220,7 +220,7 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
   call takes_char_scalar(a0_1(5)%p)
 
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  typeparams %[[len]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
@@ -229,7 +229,7 @@ subroutine ref_scalar_def_char_a(a0_0, a1_0, a0_1, a1_1)
 
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[len:.*]] = fir.box_elesize %[[box]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  typeparams %[[len]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>, index, index) -> !fir.boxchar<1>
@@ -244,12 +244,12 @@ subroutine ref_scalar_derived(a0_0, a1_0, a0_1, a1_1)
   type(derived_a0) :: a0_0, a0_1(100)
   type(derived_a1) :: a1_0, a1_1(100)
 
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_derivedEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_derivedEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFref_scalar_derivedEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFref_scalar_derivedEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_derivedEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_derivedEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFref_scalar_derivedEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFref_scalar_derivedEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[base:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[xcoor:.*]] = hlfir.designate %[[base]]{"x"}
@@ -257,14 +257,14 @@ subroutine ref_scalar_derived(a0_0, a1_0, a0_1, a1_1)
   call takes_real_scalar(a0_0%p%x)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[base:.*]] = fir.box_addr %[[box]]
   ! CHECK: %[[xcoor:.*]] = hlfir.designate %[[base]]{"x"}
   ! CHECK: fir.call @_QPtakes_real_scalar(%[[xcoor]])
   call takes_real_scalar(a0_1(5)%p%x)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMacompTt{x:f32,i:i32}>>>>, index) -> !fir.ref<!fir.type<_QMacompTt{x:f32,i:i32}>>
   ! CHECK: %[[xcoor:.*]] = hlfir.designate %[[elem]]{"x"}
@@ -272,7 +272,7 @@ subroutine ref_scalar_derived(a0_0, a1_0, a0_1, a1_1)
   call takes_real_scalar(a1_0%p(7)%x)
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: %[[elem:.*]] = hlfir.designate %[[box]] (%c7{{.*}})  : (!fir.box<!fir.heap<!fir.array<?x!fir.type<_QMacompTt{x:f32,i:i32}>>>>, index) -> !fir.ref<!fir.type<_QMacompTt{x:f32,i:i32}>>
   ! CHECK: %[[xcoor:.*]] = hlfir.designate %[[elem]]{"x"}
@@ -290,26 +290,26 @@ end subroutine
 subroutine pass_real_a(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFpass_real_aEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFpass_real_aEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFpass_real_aEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFpass_real_aEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFpass_real_aEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFpass_real_aEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFpass_real_aEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFpass_real_aEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.call @_QPtakes_real_scalar_pointer(%[[coor]])
   call takes_real_scalar_pointer(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.call @_QPtakes_real_scalar_pointer(%[[coor]])
   call takes_real_scalar_pointer(a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.call @_QPtakes_real_array_pointer(%[[coor]])
   call takes_real_array_pointer(a1_0%p)
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.call @_QPtakes_real_array_pointer(%[[coor]])
   call takes_real_array_pointer(a1_1(5)%p)
 end subroutine
@@ -323,29 +323,29 @@ end subroutine
 subroutine allocated_p(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(def_char_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFallocated_pEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocated_pEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFallocated_pEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocated_pEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFallocated_pEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocated_pEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFallocated_pEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocated_pEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(allocated(a0_0%p))
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(allocated(a0_1(5)%p))
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(allocated(a1_0%p))
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[box:.*]] = fir.load %[[coor]]
   ! CHECK: fir.box_addr %[[box]]
   call takes_logical(allocated(a1_1(5)%p))
@@ -360,26 +360,26 @@ end subroutine
 subroutine allocate_real(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_realEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_realEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_realEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_realEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFallocate_realEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_realEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFallocate_realEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_realEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a1_0%p(100))
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a1_1(5)%p(100))
 end subroutine
@@ -389,26 +389,26 @@ end subroutine
 subroutine allocate_cst_char(a0_0, a1_0, a0_1, a1_1)
   type(cst_char_a0) :: a0_0, a0_1(100)
   type(cst_char_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_cst_charEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_cst_charEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_cst_charEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_cst_charEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFallocate_cst_charEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_cst_charEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFallocate_cst_charEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_cst_charEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a1_0%p(100))
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}} typeparams %{{.*}} {fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}} typeparams %{{.*}} fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(a1_1(5)%p(100))
 end subroutine
@@ -418,26 +418,26 @@ end subroutine
 subroutine allocate_def_char(a0_0, a1_0, a0_1, a1_1)
   type(def_char_a0) :: a0_0, a0_1(100)
   type(def_char_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_def_charEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_def_charEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFallocate_def_charEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFallocate_def_charEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFallocate_def_charEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_def_charEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFallocate_def_charEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFallocate_def_charEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::a1_0%p(100))
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   allocate(character(18)::a1_1(5)%p(100))
 end subroutine
@@ -451,26 +451,26 @@ end subroutine
 subroutine deallocate_real(a0_0, a1_0, a0_1, a1_1)
   type(real_a0) :: a0_0, a0_1(100)
   type(real_a1) :: a1_0, a1_1(100)
-  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}{uniq_name = "_QMacompFdeallocate_realEa0_0"}
-  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFdeallocate_realEa0_1"}
-  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}{uniq_name = "_QMacompFdeallocate_realEa1_0"}
-  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}{uniq_name = "_QMacompFdeallocate_realEa1_1"}
+  ! CHECK: %[[a0_0:.*]]:2 = hlfir.declare %[[a0_0_arg]]{{.*}}uniq_name("_QMacompFdeallocate_realEa0_0")
+  ! CHECK: %[[a0_1:.*]]:2 = hlfir.declare %[[a0_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFdeallocate_realEa0_1")
+  ! CHECK: %[[a1_0:.*]]:2 = hlfir.declare %[[a1_0_arg]]{{.*}}uniq_name("_QMacompFdeallocate_realEa1_0")
+  ! CHECK: %[[a1_1:.*]]:2 = hlfir.declare %[[a1_1_arg]](%{{.*}}){{.*}}uniq_name("_QMacompFdeallocate_realEa1_1")
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   deallocate(a0_0%p)
 
   ! CHECK: %[[a0_1_elem:.*]] = hlfir.designate %[[a0_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a0_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   deallocate(a0_1(5)%p)
 
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_0]]#0{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   deallocate(a1_0%p)
 
   ! CHECK: %[[a1_1_elem:.*]] = hlfir.designate %[[a1_1]]#0 (%{{.*}})
-  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[coor:.*]] = hlfir.designate %[[a1_1_elem]]{"p"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: fir.store {{.*}} to %[[coor]]
   deallocate(a1_1(5)%p)
 end subroutine
@@ -488,14 +488,14 @@ subroutine test_recursive(x)
   end type
   type(t) :: x
 
-  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[xarg]]{{.*}}{uniq_name = "_QMacompFtest_recursiveEx"}
-  ! CHECK: %[[next1:.*]] = hlfir.designate %[[x]]#0{"next"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[x:.*]]:2 = hlfir.declare %[[xarg]]{{.*}}uniq_name("_QMacompFtest_recursiveEx")
+  ! CHECK: %[[next1:.*]] = hlfir.designate %[[x]]#0{"next"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[nextBox1:.*]] = fir.load %[[next1]]
   ! CHECK: %[[next1addr:.*]] = fir.box_addr %[[nextBox1]]
-  ! CHECK: %[[next2:.*]] = hlfir.designate %[[next1addr]]{"next"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[next2:.*]] = hlfir.designate %[[next1addr]]{"next"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[nextBox2:.*]] = fir.load %[[next2]]
   ! CHECK: %[[next2addr:.*]] = fir.box_addr %[[nextBox2]]
-  ! CHECK: %[[next3:.*]] = hlfir.designate %[[next2addr]]{"next"}{{.*}}{fortran_attrs = #fir.var_attrs<allocatable>}
+  ! CHECK: %[[next3:.*]] = hlfir.designate %[[next2addr]]{"next"}{{.*}}fortran_attrs<allocatable>
   ! CHECK: %[[nextBox3:.*]] = fir.load %[[next3]]
   ! CHECK: %[[next3addr:.*]] = fir.box_addr %[[nextBox3]]
   ! CHECK: %[[i:.*]] = hlfir.designate %[[next3addr]]{"i"}

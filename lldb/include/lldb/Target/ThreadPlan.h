@@ -11,6 +11,7 @@
 
 #include <mutex>
 #include <string>
+#include <vector>
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StopInfo.h"
@@ -19,6 +20,8 @@
 #include "lldb/Target/ThreadPlanTracer.h"
 #include "lldb/Utility/UserID.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/Support/Error.h"
 
 namespace lldb_private {
 
@@ -313,6 +316,7 @@ public:
     eKindStepThrough,
     eKindStepUntil,
     eKindSingleThreadTimeout,
+    eKindRunToBreakpoint
   };
 
   virtual ~ThreadPlan();
@@ -380,8 +384,8 @@ public:
   /// subsequently processed plans.
   ///
   /// When processing the thread plan stack, this function gives plans the
-  /// ability to continue - even when subsequent plans return true from
-  /// `ShouldStop`. \see Thread::ShouldStop
+  /// ability to continue. If it returns true, the `ShouldStop` of
+  /// subsequently processed plans is not consulted. \see Thread::ShouldStop
   virtual bool ShouldAutoContinue(Event *event_ptr) { return false; }
 
   // Whether a "stop class" event should be reported to the "outside world".
@@ -466,14 +470,14 @@ public:
       m_tracer_sp->Log();
   }
 
-  // If the completion of the thread plan stepped out of a function, the return
-  // value of the function might have been captured by the thread plan
-  // (currently only ThreadPlanStepOut does this.) If so, the ReturnValueObject
-  // can be retrieved from here.
-
-  virtual lldb::ValueObjectSP GetReturnValueObject() {
-    return lldb::ValueObjectSP();
-  }
+  /// If the completion of the thread plan stepped out of or called a function,
+  /// the value the function returned, or the error it threw, might have been
+  /// captured by the thread plan. If so, it can be retrieved from here.
+  ///
+  /// \return
+  ///     std::monostate if no value was captured, otherwise the ReturnedValue
+  ///     or ThrownError.
+  virtual ThreadPlanReturnValue GetReturnValue() { return {}; }
 
   // If the thread plan managing the evaluation of a user expression lives
   // longer than the command that instigated the expression (generally because
@@ -622,6 +626,15 @@ protected:
   ThreadPlanNull(const ThreadPlanNull &) = delete;
   const ThreadPlanNull &operator=(const ThreadPlanNull &) = delete;
 };
+
+/// Returns the load addresses of the line table entries for \p lines in
+/// \p file, and of \p addresses, that are in the scope of \p frame. A
+/// line without entries resolves to the nearest following line with
+/// entries. Fails if no address is left.
+llvm::Expected<std::vector<lldb::addr_t>>
+GetStepUntilAddresses(StackFrame &frame, const FileSpec &file,
+                      llvm::ArrayRef<uint32_t> lines,
+                      llvm::ArrayRef<lldb::addr_t> requested_addresses);
 
 } // namespace lldb_private
 

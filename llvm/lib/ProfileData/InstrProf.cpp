@@ -375,55 +375,24 @@ getIRPGONameForGlobalObject(const GlobalObject &GO,
   return GlobalValue::getGlobalIdentifier(GO.getName(), Linkage, FileName);
 }
 
-static std::optional<std::string> lookupPGONameFromMetadata(MDNode *MD) {
-  if (MD != nullptr) {
-    StringRef S = cast<MDString>(MD->getOperand(0))->getString();
-    return S.str();
-  }
-  return {};
-}
-
 // Returns the PGO object name. This function has some special handling
-// when called in LTO optimization. The following only applies when calling in
-// LTO passes (when \c InLTO is true): LTO's internalization privatizes many
-// global linkage symbols. This happens after value profile annotation, but
-// those internal linkage functions should not have a source prefix.
-// Additionally, for ThinLTO mode, exported internal functions are promoted
-// and renamed. We need to ensure that the original internal PGO name is
-// used when computing the GUID that is compared against the profiled GUIDs.
-// To differentiate compiler generated internal symbols from original ones,
-// PGOFuncName meta data are created and attached to the original internal
-// symbols in the value profile annotation step
-// (PGOUseFunc::annotateIndirectCallSites). If a symbol does not have the meta
-// data, its original linkage must be non-internal.
-static std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO,
-                                      MDNode *PGONameMetadata) {
+// when called in LTO optimization. In LTO mode (when InLTO is true),
+// LTO's internalization privatizes many global linkage symbols, so we assume
+// non-internal linkage without a source prefix.
+std::string getIRPGOObjectName(const GlobalObject &GO, bool InLTO) {
   if (!InLTO) {
     auto FileName = getStrippedSourceFileName(GO);
     return getIRPGONameForGlobalObject(GO, GO.getLinkage(), FileName);
   }
 
-  // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto IRPGOFuncName = lookupPGONameFromMetadata(PGONameMetadata))
-    return *IRPGOFuncName;
-
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
-  // internalized in LTO mode.
   return getIRPGONameForGlobalObject(GO, GlobalValue::ExternalLinkage, "");
 }
 
-// Returns the IRPGO function name and does special handling when called
-// in LTO optimization. See the comments of `getIRPGOObjectName` for details.
-std::string getIRPGOFuncName(const Function &F, bool InLTO) {
-  return getIRPGOObjectName(F, InLTO, getPGOFuncNameMetadata(F));
-}
-
-// Please use getIRPGOFuncName for LLVM IR instrumentation. This function is
+// Please use getIRPGOObjectName for LLVM IR instrumentation. This function is
 // for front-end (Clang, etc) instrumentation.
 // The implementation is kept for profile matching from older profiles.
-// This is similar to `getIRPGOFuncName` except that this function calls
-// 'getPGOFuncName' to get a name and `getIRPGOFuncName` calls
+// This is similar to `getIRPGOObjectName` except that this function calls
+// 'getPGOFuncName' to get a name and `getIRPGOObjectName` calls
 // 'getIRPGONameForGlobalObject'. See the difference between two callees in the
 // comments of `getIRPGONameForGlobalObject`.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
@@ -432,21 +401,7 @@ std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
     return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
   }
 
-  // In LTO mode (when InLTO is true), first check if there is a meta data.
-  if (auto PGOFuncName = lookupPGONameFromMetadata(getPGOFuncNameMetadata(F)))
-    return *PGOFuncName;
-
-  // If there is no meta data, the function must be a global before the value
-  // profile annotation pass. Its current linkage may be internal if it is
-  // internalized in LTO mode.
   return getPGOFuncName(F.getName(), GlobalValue::ExternalLinkage, "");
-}
-
-std::string getPGOName(const GlobalVariable &V, bool InLTO) {
-  // PGONameMetadata should be set by compiler at profile use time
-  // and read by symtab creation to look up symbols corresponding to
-  // a MD5 hash.
-  return getIRPGOObjectName(V, InLTO, V.getMetadata(getPGONameMetadataName()));
 }
 
 // See getIRPGOObjectName() for a discription of the format.
@@ -526,28 +481,38 @@ GlobalVariable *createPGOFuncNameVar(Function &F, StringRef PGOFuncName) {
   return createPGOFuncNameVar(*F.getParent(), F.getLinkage(), PGOFuncName);
 }
 
-Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
+Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical,
+                              bool KeyImportedAliasesByAliasGUID) {
   for (Function &F : M) {
     // Function may not have a name: like using asm("") to overwrite the name.
     // Ignore in this case.
     if (!F.hasName())
       continue;
-    auto IRPGOFuncName = getIRPGOFuncName(F, InLTO);
-    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical))
+    auto IRPGOFuncName = getIRPGOObjectName(F, InLTO);
+    if (Error E = addFuncWithName(F, IRPGOFuncName, AddCanonical,
+                                  KeyImportedAliasesByAliasGUID))
       return E;
     // Also use getPGOFuncName() so that we can find records from older profiles
     auto PGOFuncName = getPGOFuncName(F, InLTO);
     if (PGOFuncName != IRPGOFuncName)
-      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical))
+      if (Error E = addFuncWithName(F, PGOFuncName, AddCanonical,
+                                    KeyImportedAliasesByAliasGUID))
         return E;
   }
 
   for (GlobalVariable &G : M.globals()) {
     if (!G.hasName() || !G.hasMetadata(LLVMContext::MD_type))
       continue;
-    if (Error E = addVTableWithName(G, getPGOName(G, InLTO)))
+    if (Error E = addVTableWithName(G, getIRPGOObjectName(G, InLTO)))
       return E;
   }
+
+  // Place definitions before declarations so finalizeSymtab()'s stable_sort
+  // keeps definitions (e.g. @foo.cfi) ahead of jump-table declarations (@foo)
+  // when they share a canonical name or GUID.
+  std::stable_partition(
+      MD5FuncMap.begin(), MD5FuncMap.end(),
+      [](const auto &Entry) { return !Entry.second->isDeclaration(); });
 
   Sorted = false;
   finalizeSymtab();
@@ -556,6 +521,8 @@ Error InstrProfSymtab::create(Module &M, bool InLTO, bool AddCanonical) {
 
 Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
                                          StringRef VTablePGOName) {
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the vtable.
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addSymbolName(Name))
       return E;
@@ -569,6 +536,13 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
   };
   if (Error E = NameToGUIDMap(VTablePGOName))
     return E;
+
+  // Also key the vtable by its GUID, so it can still be found if LTO has
+  // renamed it. See addFuncWithName.
+  if (auto GUID = VTable.getGUIDIfAssigned();
+      GUID &&
+      *GUID != GlobalValue::getGUIDAssumingExternalLinkage(VTablePGOName))
+    MD5VTableMap.try_emplace(*GUID, &VTable);
 
   StringRef CanonicalName = getCanonicalName(VTablePGOName);
   if (!CanonicalName.empty() && CanonicalName != VTablePGOName)
@@ -649,8 +623,8 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   //
   // ".__uniq." suffix is used to differentiate internal linkage functions in
   // different modules and should be kept. This is the only suffix with the
-  // pattern ".xxx" which is kept before matching, other suffixes ".llvm." and
-  // ".part" will be stripped.
+  // pattern ".xxx" which is kept before matching; ".cfi", ".llvm.", and
+  // ".part." will be stripped.
   //
   // Leverage the common canonicalization logic from FunctionSamples. Instead of
   // removing all suffixes except ".__uniq.", explicitly specify the ones to be
@@ -661,12 +635,18 @@ StringRef InstrProfSymtab::getCanonicalName(StringRef PGOName) {
   // and its post-split clones (foo.resume, foo.cleanup) are all canonicalized
   // to "foo" otherwise, which can make the symtab lookup return unexpected
   // result.
-  const SmallVector<StringRef> SuffixesToRemove{".llvm.", ".part."};
+  const SmallVector<StringRef> SuffixesToRemove{FunctionSamples::CfiSuffix,
+                                                FunctionSamples::LLVMSuffix,
+                                                FunctionSamples::PartSuffix};
   return FunctionSamples::getCanonicalFnName(PGOName, SuffixesToRemove);
 }
 
 Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
-                                       bool AddCanonical) {
+                                       bool AddCanonical,
+                                       bool KeyImportedAliasesByAliasGUID) {
+  // Key each name by its own hash, so profiles that recorded that name can find
+  // the function. This is called once per name, e.g. a second time with the
+  // deprecated PGO name, for profiles from older compilers.
   auto NameToGUIDMap = [&](StringRef Name) -> Error {
     if (Error E = addFuncName(Name))
       return E;
@@ -675,6 +655,23 @@ Error InstrProfSymtab::addFuncWithName(Function &F, StringRef PGOFuncName,
   };
   if (Error E = NameToGUIDMap(PGOFuncName))
     return E;
+
+  // Also key the function by its GUID, if it has one. The GUID is the hash of
+  // the function's name when the GUID was assigned, so this still finds the
+  // function if LTO has renamed it since. This used to need !PGOFuncName.
+  // If requested, key an imported copy of an alias by the alias's GUID instead
+  // of the aliasee's GUID retained in its !guid metadata (see create()).
+  std::optional<GlobalValue::GUID> GUID;
+  MDNode *AliasGUIDMD = KeyImportedAliasesByAliasGUID
+                            ? F.getMetadata("thinlto_alias_guid")
+                            : nullptr;
+  if (AliasGUIDMD)
+    GUID = mdconst::extract<ConstantInt>(AliasGUIDMD->getOperand(0))
+               ->getZExtValue();
+  else
+    GUID = F.getGUIDIfAssigned();
+  if (GUID && *GUID != Function::getGUIDAssumingExternalLinkage(PGOFuncName))
+    MD5FuncMap.emplace_back(*GUID, &F);
 
   if (!AddCanonical)
     return Error::success();
@@ -772,7 +769,7 @@ Error collectVTableStrings(ArrayRef<GlobalVariable *> VTables,
                            std::string &Result, bool DoCompression) {
   std::vector<std::string> VTableNameStrs;
   for (auto *VTable : VTables)
-    VTableNameStrs.push_back(getPGOName(*VTable));
+    VTableNameStrs.push_back(getIRPGOObjectName(*VTable));
   return collectGlobalObjectNameStrings(
       VTableNameStrs, compression::zlib::isAvailable() && DoCompression,
       Result);
@@ -1544,34 +1541,6 @@ getValueProfDataFromInst(const Instruction &Inst, InstrProfValueKind ValueKind,
     ValueData.push_back(V);
   }
   return ValueData;
-}
-
-MDNode *getPGOFuncNameMetadata(const Function &F) {
-  return F.getMetadata(getPGOFuncNameMetadataName());
-}
-
-static void createPGONameMetadata(GlobalObject &GO, StringRef MetadataName,
-                                  StringRef PGOName) {
-  // Only for internal linkage functions or global variables. The name is not
-  // the same as PGO name for these global objects.
-  if (GO.getName() == PGOName)
-    return;
-
-  // Don't create duplicated metadata.
-  if (GO.getMetadata(MetadataName))
-    return;
-
-  LLVMContext &C = GO.getContext();
-  MDNode *N = MDNode::get(C, MDString::get(C, PGOName));
-  GO.setMetadata(MetadataName, N);
-}
-
-void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName) {
-  return createPGONameMetadata(F, getPGOFuncNameMetadataName(), PGOFuncName);
-}
-
-void createPGONameMetadata(GlobalObject &GO, StringRef PGOName) {
-  return createPGONameMetadata(GO, getPGONameMetadataName(), PGOName);
 }
 
 bool needsComdatForCounter(const GlobalObject &GO, const Module &M) {

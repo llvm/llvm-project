@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -lifetime-safety-max-cfg-blocks=3 -Wno-dangling -verify=bailout %s
 // RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=bailout -verify=nobailout %s
 
+template <typename... Ts> void use(const Ts &...);
+
 struct MyObj {
   int id;
   ~MyObj() {}  // Non-trivial destructor
@@ -29,7 +31,7 @@ void single_block_cfg() {
     MyObj s;
     p = &s;     // bailout-warning {{local variable 's' does not live long enough}}
   }             // bailout-note {{destroyed here}}
-  (void)*p;     // bailout-note {{later used here}}
+  use(*p);      // bailout-note {{later used here}}
 }
 
 void multiple_block_cfg() {

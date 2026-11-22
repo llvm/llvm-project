@@ -5,8 +5,7 @@
 define void @shuffle_any_ext_2i8_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_2i8_to_2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.h $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.h $vr0, $a0, 0
+; CHECK-NEXT:    vldrepl.h $vr0, $a0, 0
 ; CHECK-NEXT:    vextrins.b $vr0, $vr0, 129
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
@@ -20,8 +19,7 @@ define void @shuffle_any_ext_2i8_to_2i64(ptr %ptr, ptr %dst) nounwind {
 define void @shuffle_any_ext_2i16_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_2i16_to_2i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    vextrins.h $vr0, $vr0, 65
 ; CHECK-NEXT:    vst $vr0, $a1, 0
 ; CHECK-NEXT:    ret
@@ -35,17 +33,15 @@ define void @shuffle_any_ext_2i16_to_2i64(ptr %ptr, ptr %dst) nounwind {
 define void @shuffle_any_ext_2i32_to_2i64(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: shuffle_any_ext_2i32_to_2i64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 2
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 2
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: shuffle_any_ext_2i32_to_2i64:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vshuf4i.w $vr0, $vr0, 16
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -59,8 +55,7 @@ define void @shuffle_any_ext_2i32_to_2i64(ptr %ptr, ptr %dst) nounwind {
 define void @shuffle_any_ext_4i8_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; CHECK-LABEL: shuffle_any_ext_4i8_to_4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    ld.w $a0, $a0, 0
-; CHECK-NEXT:    vinsgr2vr.w $vr0, $a0, 0
+; CHECK-NEXT:    fld.s $fa0, $a0, 0
 ; CHECK-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; CHECK-NEXT:    vst $vr0, $a1, 0
@@ -75,18 +70,16 @@ define void @shuffle_any_ext_4i8_to_4i32(ptr %ptr, ptr %dst) nounwind {
 define void @shuffle_any_ext_4i16_to_4i32(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: shuffle_any_ext_4i16_to_4i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: shuffle_any_ext_4i16_to_4i32:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vilvl.h $vr0, $vr0, $vr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret
@@ -100,18 +93,16 @@ define void @shuffle_any_ext_4i16_to_4i32(ptr %ptr, ptr %dst) nounwind {
 define void @shuffle_any_ext_8i8_to_8i16(ptr %ptr, ptr %dst) nounwind {
 ; LA32-LABEL: shuffle_any_ext_8i8_to_8i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.w $a2, $a0, 0
-; LA32-NEXT:    ld.w $a0, $a0, 4
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 0
-; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 1
+; LA32-NEXT:    ld.w $a2, $a0, 4
+; LA32-NEXT:    fld.s $fa0, $a0, 0
+; LA32-NEXT:    vinsgr2vr.w $vr0, $a2, 1
 ; LA32-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; LA32-NEXT:    vst $vr0, $a1, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: shuffle_any_ext_8i8_to_8i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.d $a0, $a0, 0
-; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
+; LA64-NEXT:    fld.d $fa0, $a0, 0
 ; LA64-NEXT:    vilvl.b $vr0, $vr0, $vr0
 ; LA64-NEXT:    vst $vr0, $a1, 0
 ; LA64-NEXT:    ret

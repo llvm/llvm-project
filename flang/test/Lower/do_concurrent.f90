@@ -14,8 +14,8 @@ subroutine sub1(n)
    implicit none
    integer :: n, m, i, j, k
    integer, dimension(n) :: a
-!CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} {uniq_name = "_QFsub1En"}
-!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "_QFsub1Ea"}
+!CHECK: %[[N_DECL:.*]]:2 = hlfir.declare %{{.*}} dummy_scope %{{.*}} uniq_name("_QFsub1En")
+!CHECK: %[[A_DECL:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}}) uniq_name("_QFsub1Ea")
 
 !CHECK: %[[LB1:.*]] = arith.constant 1 : i32
 !CHECK: %[[LB1_CVT:.*]] = fir.convert %[[LB1]] : (i32) -> index
@@ -33,11 +33,11 @@ subroutine sub1(n)
 !CHECK: %[[UB3_CVT:.*]] = fir.convert %[[UB3]] : (i32) -> index
 
 !CHECK: fir.do_concurrent
-!CHECK:   %[[I:.*]] = fir.alloca i32 {bindc_name = "i"}
+!CHECK:   %[[I:.*]] = fir.alloca i32 <{bindc_name = "i"}>
 !CHECK:   %[[I_DECL:.*]]:2 = hlfir.declare %[[I]]
-!CHECK:   %[[J:.*]] = fir.alloca i32 {bindc_name = "j"}
+!CHECK:   %[[J:.*]] = fir.alloca i32 <{bindc_name = "j"}>
 !CHECK:   %[[J_DECL:.*]]:2 = hlfir.declare %[[J]]
-!CHECK:   %[[K:.*]] = fir.alloca i32 {bindc_name = "k"}
+!CHECK:   %[[K:.*]] = fir.alloca i32 <{bindc_name = "k"}>
 !CHECK:   %[[K_DECL:.*]]:2 = hlfir.declare %[[K]]
 
 !CHECK:   fir.do_concurrent.loop (%[[I_IV:.*]], %[[J_IV:.*]], %[[K_IV:.*]]) =

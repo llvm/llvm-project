@@ -22,16 +22,17 @@ TEST_P(olMemFreeAllocTypesTest, Success) {
   void *Alloc = nullptr;
   ol_alloc_type_t AllocType = getTestParam();
   if (AllocType == OL_ALLOC_TYPE_HOST) {
-    ASSERT_SUCCESS(olMemAllocHost(Device, 1024, &Alloc));
+    ASSERT_SUCCESS(olMemAllocHost(Context, Device, 1024, &Alloc));
   } else {
-    ASSERT_SUCCESS(olMemAlloc(Device, AllocType, 1024, &Alloc));
+    ASSERT_SUCCESS(olMemAlloc(Context, Device, AllocType, 1024, &Alloc));
   }
-  ASSERT_SUCCESS(olMemFree(Alloc));
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }
 
 TEST_P(olMemFreeTest, InvalidNullPtr) {
   void *Alloc = nullptr;
-  ASSERT_SUCCESS(olMemAlloc(Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
-  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olMemFree(nullptr));
-  ASSERT_SUCCESS(olMemFree(Alloc));
+  ASSERT_SUCCESS(
+      olMemAlloc(Context, Device, OL_ALLOC_TYPE_DEVICE, 1024, &Alloc));
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER, olMemFree(Context, nullptr));
+  ASSERT_SUCCESS(olMemFree(Context, Alloc));
 }

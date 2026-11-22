@@ -632,7 +632,7 @@ namespace example3 {
 struct Base {
 private:
   static const int i = 10; // #cwg138-ex3-Base-i
-  
+
 public:
   struct Data;
   // Elaborated type specifier is not the sole constituent of declaration,
@@ -646,7 +646,7 @@ public:
   };
 };
 struct Data {
-  void f() {  
+  void f() {
     int i2 = Base::i;
     // expected-error@-1 {{'i' is a private member of 'cwg138::example3::Base'}}
     //   expected-note@#cwg138-ex3-Base-i {{declared private here}}
@@ -1005,10 +1005,9 @@ namespace cwg165 { // cwg165: no
     struct A { friend struct B; };
     void f() { void g(); }
   }
-  // FIXME: cwg1477 says this is ok, cwg165 says it's ill-formed
   struct N::B {};
-  // FIXME: cwg165 says this is ill-formed, but the argument in cwg1477 says it's ok
   void N::g() {}
+  // FIXME-error@-1 {{'g' is not nominable in 'N'}}
 } // namespace cwg165
 
 namespace cwg166 { // cwg166: 2.9
@@ -1415,9 +1414,9 @@ namespace cwg194 { // cwg194: 2.7
 namespace cwg195 { // cwg195: 2.7
   void f();
   int *p = (int*)&f;
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
   void (*q)() = (void(*)())&p;
-  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is an extension}}
+  // cxx98-error@-1 {{cast between pointer-to-function and pointer-to-object is a C++11 extension}}
 } // namespace cwg195
 
 namespace cwg197 { // cwg197: 2.7

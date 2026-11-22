@@ -34,26 +34,31 @@
 
 #include "llvm/Analysis/LoopAnalysisManager.h"
 #include "llvm/IR/PassManager.h"
-#include "llvm/Support/CommandLine.h"
+#include <optional>
 
 namespace llvm {
 
 class LPMUpdater;
 class Loop;
 class LoopNest;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
-extern LLVM_ABI cl::opt<unsigned> SetLicmMssaOptCap;
-extern LLVM_ABI cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap;
+/// Return -licm-mssa-optimization-cap.
+LLVM_ABI unsigned
+getLicmMssaOptCap(const cl::LibraryOptionsContext &LibraryOptions);
+/// Return -licm-mssa-max-acc-promotion.
+LLVM_ABI unsigned getLicmMssaNoAccForPromotionCap(
+    const cl::LibraryOptionsContext &LibraryOptions);
 
 struct LICMOptions {
-  unsigned MssaOptCap;
-  unsigned MssaNoAccForPromotionCap;
+  // Unset means the -licm-mssa-* value of the loop's LLVMContext.
+  std::optional<unsigned> MssaOptCap;
+  std::optional<unsigned> MssaNoAccForPromotionCap;
   bool AllowSpeculation;
 
-  LICMOptions()
-      : MssaOptCap(SetLicmMssaOptCap),
-        MssaNoAccForPromotionCap(SetLicmMssaNoAccForPromotionCap),
-        AllowSpeculation(true) {}
+  LICMOptions() : AllowSpeculation(true) {}
 
   LICMOptions(unsigned MssaOptCap, unsigned MssaNoAccForPromotionCap,
               bool AllowSpeculation)

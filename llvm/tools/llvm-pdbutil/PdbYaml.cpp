@@ -8,14 +8,7 @@
 
 #include "PdbYaml.h"
 
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
-#include "llvm/DebugInfo/PDB/Native/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
-#include "llvm/DebugInfo/PDB/Native/TpiHashing.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
-#include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
 
 using namespace llvm;
 using namespace llvm::pdb;

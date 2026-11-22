@@ -7,7 +7,7 @@ subroutine acc_host_data()
   real, dimension(10) :: a
   logical :: ifCondition = .TRUE.
 
-! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> {bindc_name = "a", uniq_name = "_QFacc_host_dataEa"}
+! CHECK: %[[A:.*]] = fir.alloca !fir.array<10xf32> <{bindc_name = "a", uniq_name = "_QFacc_host_dataEa"}>
 ! CHECK: %[[DECLA:.*]]:2 = hlfir.declare %[[A]]
 ! CHECK: %[[IFCOND:.*]] = fir.address_of(@_QFacc_host_dataEifcondition) : !fir.ref<!fir.logical<4>>
 ! CHECK: %[[DECLIFCOND:.*]]:2 = hlfir.declare %[[IFCOND]]

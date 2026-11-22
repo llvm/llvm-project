@@ -16,9 +16,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseSet.h"
@@ -42,42 +42,12 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "early-ifcvt"
-
-// Absolute maximum number of instructions allowed per speculated block.
-// This bypasses all other heuristics, so it should be set fairly high.
-static cl::opt<unsigned>
-BlockInstrLimit("early-ifcvt-limit", cl::init(30), cl::Hidden,
-  cl::desc("Maximum number of instructions per speculated block."));
-
-// Stress testing mode - disable heuristics.
-static cl::opt<bool> Stress("stress-early-ifcvt", cl::Hidden,
-  cl::desc("Turn all knobs to 11"));
-
-// Enable analysis of data dependent branches (conditions derived from loads).
-static cl::opt<bool> EnableDataDependentBranchAnalysis(
-    "enable-early-ifcvt-data-dependent", cl::Hidden, cl::init(false),
-    cl::desc("Enable hard-to-predict branch analysis for if-conversion"));
-
-// Limit the number steps we take when searching conditions that depend on
-// values recently loaded from memory.
-static cl::opt<unsigned>
-    MaxNumSteps("early-ifcvt-max-steps", cl::Hidden, cl::init(16),
-                cl::desc("Limit the number of steps taken when searching for a "
-                         "recently loaded value"));
-
-// Limit the work done when looking for calls between a load and the condition
-// it feeds.
-static cl::opt<unsigned> MaxRegionInstrs(
-    "early-ifcvt-max-region-instrs", cl::Hidden, cl::init(64),
-    cl::desc("Limit the number of blocks and instructions examined when "
-             "searching for calls between a load and the condition it feeds"));
 
 STATISTIC(NumDiamondsSeen,  "Number of diamonds");
 STATISTIC(NumDiamondsConv,  "Number of diamonds converted");
@@ -86,6 +56,8 @@ STATISTIC(NumTrianglesConv, "Number of triangles converted");
 STATISTIC(NumDataDependant,
           "Number of data dependent conditional branches encountered");
 STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
+STATISTIC(NumStronglyBiased,
+          "Number of branches with reduced critical-path budget");
 
 //===----------------------------------------------------------------------===//
 //                                 SSAIfConv
@@ -110,6 +82,7 @@ STATISTIC(NumLikelyBiased, "Number of branches with a hot path encountered");
 //
 namespace {
 class SSAIfConv {
+  const CodeGenOptions *Opts;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
@@ -141,8 +114,8 @@ public:
   struct PHIInfo {
     MachineInstr *PHI;
     Register TReg, FReg;
-    // Latencies from Cond+Branch, TReg, and FReg to DstReg.
-    int CondCycles = 0, TCycles = 0, FCycles = 0;
+    /// Description of the select that will replace this phi.
+    TargetInstrInfo::SelectExpansion Select;
 
     PHIInfo(MachineInstr *phi) : PHI(phi) {}
   };
@@ -192,14 +165,10 @@ private:
   /// Insert selects and rewrite PHI operands to use them.
   void rewritePHIOperands();
 
-  /// If virtual register has "killed" flag in TBB and FBB basic blocks, remove
-  /// the flag in TBB instruction.
-  void clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
-                                     MachineBasicBlock *FBB);
-
 public:
   /// init - Initialize per-function data structures.
   void init(MachineFunction &MF) {
+    Opts = &getCodeGenOptions(MF);
     TII = MF.getSubtarget().getInstrInfo();
     TRI = MF.getSubtarget().getRegisterInfo();
     MRI = &MF.getRegInfo();
@@ -247,9 +216,9 @@ bool SSAIfConv::canSpeculateInstrs(MachineBasicBlock *MBB) {
     if (MI.isDebugInstr())
       continue;
 
-    if (++InstrCount > BlockInstrLimit && !Stress) {
+    if (++InstrCount > Opts->early_ifcvt_limit && !Opts->stress_early_ifcvt) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+                        << Opts->early_ifcvt_limit << " instructions.\n");
       return false;
     }
 
@@ -342,9 +311,9 @@ bool SSAIfConv::canPredicateInstrs(MachineBasicBlock *MBB) {
     if (I->isDebugInstr())
       continue;
 
-    if (++InstrCount > BlockInstrLimit && !Stress) {
+    if (++InstrCount > Opts->early_ifcvt_limit && !Opts->stress_early_ifcvt) {
       LLVM_DEBUG(dbgs() << printMBBReference(*MBB) << " has more than "
-                        << BlockInstrLimit << " instructions.\n");
+                        << Opts->early_ifcvt_limit << " instructions.\n");
       return false;
     }
 
@@ -561,8 +530,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
-                              PI.TReg, PI.FReg, PI.CondCycles, PI.TCycles,
-                              PI.FCycles)) {
+                              PI.TReg, PI.FReg, PI.Select)) {
       LLVM_DEBUG(dbgs() << "Can't convert: " << *PI.PHI);
       return false;
     }
@@ -709,31 +677,6 @@ void SSAIfConv::rewritePHIOperands() {
   }
 }
 
-void SSAIfConv::clearRepeatedKillFlagsFromTBB(MachineBasicBlock *TBB,
-                                              MachineBasicBlock *FBB) {
-  assert(TBB != FBB);
-
-  // Collect virtual registers killed in FBB.
-  SmallDenseSet<Register> FBBKilledRegs;
-  for (MachineInstr &MI : FBB->instrs()) {
-    for (MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isKill() && MO.getReg().isVirtual())
-        FBBKilledRegs.insert(MO.getReg());
-    }
-  }
-
-  if (FBBKilledRegs.empty())
-    return;
-
-  // Find the same killed registers in TBB and clear kill flags for them.
-  for (MachineInstr &MI : TBB->instrs()) {
-    for (MachineOperand &MO : MI.operands()) {
-      if (MO.isReg() && MO.isKill() && FBBKilledRegs.contains(MO.getReg()))
-        MO.setIsKill(false);
-    }
-  }
-}
-
 /// convertIf - Execute the if conversion after canConvertIf has determined the
 /// feasibility.
 ///
@@ -748,13 +691,6 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
     ++NumTrianglesConv;
   else
     ++NumDiamondsConv;
-
-  // If both blocks are going to be merged into Head, remove "killed" flag in
-  // TBB for registers, which are killed in TBB and FBB. Otherwise, register
-  // will be killed twice in Head after splice. Register killed twice is an
-  // incorrect MIR.
-  if (TBB != Tail && FBB != Tail)
-    clearRepeatedKillFlagsFromTBB(TBB, FBB);
 
   // Move all instructions into Head, except for the terminators.
   if (TBB != Tail) {
@@ -828,15 +764,15 @@ void SSAIfConv::convertIf(SmallVectorImpl<MachineBasicBlock *> &RemoveBlocks,
 
 namespace {
 class EarlyIfConverter {
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   const TargetSubtargetInfo *STI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineLoopInfo *Loops = nullptr;
   MachineTraceMetrics *Traces = nullptr;
   MachineTraceMetrics::Ensemble *MinInstr = nullptr;
-  MachineBranchProbabilityInfo *MBPI = nullptr;
+  MachineBranchProbabilityInfo &MBPI;
   SSAIfConv IfConv;
 
   /// Cache of basic blocks verified to contain no call instructions, mapping
@@ -844,9 +780,10 @@ class EarlyIfConverter {
   DenseMap<const MachineBasicBlock *, unsigned> NoCallBlocksCache;
 
 public:
-  EarlyIfConverter(MachineDominatorTree &DT, MachineLoopInfo &LI,
-                   MachineTraceMetrics &MTM, MachineBranchProbabilityInfo *MBPI)
-      : DomTree(&DT), Loops(&LI), Traces(&MTM), MBPI(MBPI) {}
+  EarlyIfConverter(const CodeGenOptions &Opts, MachineDominatorTree &DT,
+                   MachineLoopInfo &LI, MachineTraceMetrics &MTM,
+                   MachineBranchProbabilityInfo &MBPI)
+      : Opts(Opts), DomTree(&DT), Loops(&LI), Traces(&MTM), MBPI(MBPI) {}
   EarlyIfConverter() = delete;
 
   bool run(MachineFunction &MF);
@@ -960,10 +897,11 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
   unsigned NumScanned = 0;
   auto HitSearchLimit = [&](unsigned N) {
     NumScanned += N;
-    if (NumScanned <= MaxRegionInstrs)
+    if (NumScanned <= Opts.early_ifcvt_max_region_instrs)
       return false;
     LLVM_DEBUG(dbgs() << "  hasCallOrLoopInRange scanned more than "
-                      << MaxRegionInstrs << " instructions\n");
+                      << Opts.early_ifcvt_max_region_instrs
+                      << " instructions\n");
     return true;
   };
   auto FoundCall = [](const MachineInstr &MI) {
@@ -980,20 +918,23 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
 
   // If From and To are in the same block, just check (From, To).
   if (FromBB == ToBB) {
-    for (const MachineInstr &MI :
-         make_range(std::next(From->getIterator()), To->getIterator()))
+    for (const MachineInstr &MI : instructionsWithoutDebug(
+             std::next(From->getIterator()), To->getIterator(),
+             /*SkipPseudoOp=*/false))
       if (IsCallOrHitSearchLimit(MI))
         return true;
     return false;
   }
 
   // Check (From, end of From's block] and [start of To's block, To).
-  for (const MachineInstr &MI :
-       make_range(std::next(From->getIterator()), FromBB->instr_end()))
+  for (const MachineInstr &MI : instructionsWithoutDebug(
+           std::next(From->getIterator()), FromBB->instr_end(),
+           /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
   for (const MachineInstr &MI :
-       make_range(ToBB->instr_begin(), To->getIterator()))
+       instructionsWithoutDebug(ToBB->instr_begin(), To->getIterator(),
+                                /*SkipPseudoOp=*/false))
     if (IsCallOrHitSearchLimit(MI))
       return true;
 
@@ -1029,10 +970,15 @@ bool EarlyIfConverter::hasCallOrLoopInRange(const MachineInstr *From,
       if (HitSearchLimit(CacheIt->second))
         return true;
     } else {
-      for (const MachineInstr &MI : *BB)
+      unsigned NumBlockInstrs = 0;
+      for (const MachineInstr &MI :
+           instructionsWithoutDebug(BB->instr_begin(), BB->instr_end(),
+                                    /*SkipPseudoOp=*/false)) {
+        ++NumBlockInstrs;
         if (IsCallOrHitSearchLimit(MI))
           return true;
-      NoCallBlocksCache[BB] = BB->size();
+      }
+      NoCallBlocksCache[BB] = NumBlockInstrs;
     }
 
     for (const MachineBasicBlock *Pred : BB->predecessors())
@@ -1074,7 +1020,8 @@ bool EarlyIfConverter::doOperandsComeFromMemory(
 
   Worklist.push_back(DefMI);
 
-  while (!Worklist.empty() && VisitedInstrs.size() < MaxNumSteps) {
+  while (!Worklist.empty() &&
+         VisitedInstrs.size() < Opts.early_ifcvt_max_steps) {
     const MachineInstr *MI = Worklist.pop_back_val();
     if (!VisitedInstrs.insert(MI).second)
       continue;
@@ -1138,8 +1085,8 @@ bool EarlyIfConverter::isConditionDataDependent() {
   // If the branch is biased (not 50/50), don't consider it data dependent.
   // This is to prevent converting unprofitable checks such as
   // `x[i] != 0;`
-  auto TBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.TBB);
-  auto FBBProb = MBPI->getEdgeProbability(IfConv.Head, IfConv.FBB);
+  auto TBBProb = MBPI.getEdgeProbability(IfConv.Head, IfConv.TBB);
+  auto FBBProb = MBPI.getEdgeProbability(IfConv.Head, IfConv.FBB);
   if (TBBProb != FBBProb) {
     ++NumLikelyBiased;
     return false;
@@ -1179,7 +1126,7 @@ template <typename Remark> Remark &operator<<(Remark &R, Cycles C) {
 ///
 bool EarlyIfConverter::shouldConvertIf() {
   // Stress testing mode disables all cost considerations.
-  if (Stress)
+  if (Opts.stress_early_ifcvt)
     return true;
 
   // Do not try to if-convert if the condition has a high chance of being
@@ -1224,17 +1171,46 @@ bool EarlyIfConverter::shouldConvertIf() {
                               FBBTrace.getCriticalPath());
 
   // Set a somewhat arbitrary limit on the critical path extension we accept.
-  // When hard-to-predict analysis is enabled, use full MispredictPenalty for
-  // hard-to-predict branches, half for others. Otherwise use half for all.
+  // Use the full misprediction penalty for data-dependent branches and half
+  // for others. A branch with a cold edge below ColdEdgeThreshold gets no
+  // extending the critical path: it is unlikely to mispredict often enough
+  // to recover the extra latency from if-conversion.
   bool DataDependent = false;
-  if (EnableDataDependentBranchAnalysis)
+  if (Opts.enable_early_ifcvt_data_dependent)
     DataDependent = isConditionDataDependent();
 
-  unsigned CritLimit = DataDependent ? STI->getMispredictionPenalty()
-                                     : STI->getMispredictionPenalty() / 2;
+  const unsigned MispredictPenalty = STI->getMispredictionPenalty();
+  unsigned CritLimit =
+      DataDependent ? MispredictPenalty : MispredictPenalty / 2;
+  const BranchProbability ColdProb =
+      std::min(MBPI.getEdgeProbability(IfConv.Head, IfConv.TBB),
+               MBPI.getEdgeProbability(IfConv.Head, IfConv.FBB));
+  const unsigned ColdEdgePercent =
+      std::min(Opts.early_ifcvt_cold_edge_threshold, 50U);
+  const bool StronglyBiased =
+      ColdProb < BranchProbability(ColdEdgePercent, 100);
+  if (StronglyBiased) {
+    CritLimit = 0;
+    ++NumStronglyBiased;
+  }
 
   MachineBasicBlock &MBB = *IfConv.Head;
   MachineOptimizationRemarkEmitter MORE(*MBB.getParent(), nullptr);
+
+  LLVM_DEBUG(dbgs() << "Cold edge probability: " << ColdProb
+                    << ", critical-path budget: " << CritLimit << " cycles\n");
+  if (StronglyBiased) {
+    MORE.emit([&]() {
+      return MachineOptimizationRemarkAnalysis(DEBUG_TYPE,
+                                               "StronglyBiasedBranch",
+                                               MBB.back().getDebugLoc(), &MBB)
+             << "branch has a cold edge below "
+             << ore::NV("ColdEdgeThreshold", ColdEdgePercent)
+             << "%, using a critical-path "
+                "extension budget of "
+             << ore::NV("CritLimit", CritLimit) << " cycles";
+    });
+  }
 
   // Emit analysis remark about data-dependent condition.
   if (DataDependent) {
@@ -1298,7 +1274,7 @@ bool EarlyIfConverter::shouldConvertIf() {
     LLVM_DEBUG(dbgs() << "Slack " << Slack << ":\t" << *PI.PHI);
 
     // The condition is pulled into the critical path.
-    unsigned CondDepth = adjCycles(BranchDepth, PI.CondCycles);
+    unsigned CondDepth = adjCycles(BranchDepth, PI.Select.CondCycles);
     if (CondDepth > MaxDepth) {
       unsigned Extra = CondDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "Condition adds " << Extra << " cycles.\n");
@@ -1311,7 +1287,8 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The TBB value is pulled into the critical path.
-    unsigned TDepth = adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.TCycles);
+    unsigned TDepth =
+        adjCycles(TBBTrace.getPHIDepth(*PI.PHI), PI.Select.TrueCycles);
     if (TDepth > MaxDepth) {
       unsigned Extra = TDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "TBB data adds " << Extra << " cycles.\n");
@@ -1324,7 +1301,8 @@ bool EarlyIfConverter::shouldConvertIf() {
     }
 
     // The FBB value is pulled into the critical path.
-    unsigned FDepth = adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.FCycles);
+    unsigned FDepth =
+        adjCycles(FBBTrace.getPHIDepth(*PI.PHI), PI.Select.FalseCycles);
     if (FDepth > MaxDepth) {
       unsigned Extra = FDepth - MaxDepth;
       LLVM_DEBUG(dbgs() << "FBB data adds " << Extra << " cycles.\n");
@@ -1420,7 +1398,6 @@ bool EarlyIfConverter::run(MachineFunction &MF) {
     return false;
 
   TII = STI->getInstrInfo();
-  TRI = STI->getRegisterInfo();
   MRI = &MF.getRegInfo();
   MinInstr = nullptr;
 
@@ -1444,11 +1421,10 @@ EarlyIfConverterPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   MachineLoopInfo &LI = MFAM.getResult<MachineLoopAnalysis>(MF);
   MachineTraceMetrics &MTM = MFAM.getResult<MachineTraceMetricsAnalysis>(MF);
-  MachineBranchProbabilityInfo *MBPI = nullptr;
-  if (EnableDataDependentBranchAnalysis)
-    MBPI = &MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
+  MachineBranchProbabilityInfo &MBPI =
+      MFAM.getResult<MachineBranchProbabilityAnalysis>(MF);
 
-  EarlyIfConverter Impl(MDT, LI, MTM, MBPI);
+  EarlyIfConverter Impl(getCodeGenOptions(MF), MDT, LI, MTM, MBPI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
@@ -1469,11 +1445,10 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
   MachineLoopInfo &LI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
   MachineTraceMetrics &MTM =
       getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
-  MachineBranchProbabilityInfo *MBPI = nullptr;
-  if (EnableDataDependentBranchAnalysis)
-    MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
+  MachineBranchProbabilityInfo &MBPI =
+      getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
-  return EarlyIfConverter(MDT, LI, MTM, MBPI).run(MF);
+  return EarlyIfConverter(getCodeGenOptions(MF), MDT, LI, MTM, MBPI).run(MF);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1483,9 +1458,7 @@ bool EarlyIfConverterLegacy::runOnMachineFunction(MachineFunction &MF) {
 namespace {
 class EarlyIfPredicator : public MachineFunctionPass {
   const TargetInstrInfo *TII = nullptr;
-  const TargetRegisterInfo *TRI = nullptr;
   TargetSchedModel SchedModel;
-  MachineRegisterInfo *MRI = nullptr;
   MachineDominatorTree *DomTree = nullptr;
   MachineBranchProbabilityInfo *MBPI = nullptr;
   MachineLoopInfo *Loops = nullptr;
@@ -1590,8 +1563,6 @@ bool EarlyIfPredicator::runOnMachineFunction(MachineFunction &MF) {
 
   const TargetSubtargetInfo &STI = MF.getSubtarget();
   TII = STI.getInstrInfo();
-  TRI = STI.getRegisterInfo();
-  MRI = &MF.getRegInfo();
   SchedModel.init(&STI);
   DomTree = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   Loops = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();

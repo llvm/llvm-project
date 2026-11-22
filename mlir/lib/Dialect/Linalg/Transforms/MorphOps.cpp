@@ -21,6 +21,7 @@
 
 namespace mlir {
 #define GEN_PASS_DEF_LINALGMORPHOPSPASS
+#define GEN_PASS_DEF_LINALGCATEGORIZEOPSPASS
 #include "mlir/Dialect/Linalg/Passes.h.inc"
 } // namespace mlir
 
@@ -45,14 +46,34 @@ void LinalgMorphOpsPass::runOnOperation() {
 
   // Lowering paths (named -> category -> generic)
   if (namedToGeneric || categoryToGeneric)
-    populateLinalgNamedOpsGeneralizationPatterns(patterns);
+    populateLinalgNamedOpsGeneralizationPatterns(patterns, false);
 
   // Lifting paths (named <- category <- generic)
-  if (genericToNamed || genericToCategory) {
-    GenericOpSpecializationOptions opts;
-    opts.emitCategoryOps = genericToCategory;
-    populateLinalgGenericOpsSpecializationPatterns(patterns, opts);
-  }
+  if (genericToNamed || categoryToNamed)
+    populateLinalgGenericOpsSpecializationPatterns(patterns, false);
+
+  // Category paths (named -> category <- generic)
+  if (genericToCategory)
+    populateLinalgGenericOpsSpecializationPatterns(patterns, true);
+  if (namedToCategory)
+    populateLinalgNamedOpsGeneralizationPatterns(patterns, true);
+
+  if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+    signalPassFailure();
+}
+
+struct LinalgCategorizeOpsPass
+    : public impl::LinalgCategorizeOpsPassBase<LinalgCategorizeOpsPass> {
+
+  using impl::LinalgCategorizeOpsPassBase<
+      LinalgCategorizeOpsPass>::LinalgCategorizeOpsPassBase;
+
+  void runOnOperation() override;
+};
+
+void LinalgCategorizeOpsPass::runOnOperation() {
+  RewritePatternSet patterns(&getContext());
+  patterns.add<LinalgCategorizationPattern>(&getContext());
 
   if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
     signalPassFailure();

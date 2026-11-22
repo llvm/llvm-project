@@ -32,11 +32,11 @@ end
 ! CHECK-SAME:                                          %[[VAL_1:.*]]: !fir.ref<!fir.array<?x?xi32>> {fir.bindc_name = "a"}) {
 ! CHECK-DAG:     %[[FALSE:.*]] = arith.constant false
 ! CHECK-DAG:     %[[ABSENT:.*]] = fir.absent !fir.box<none>
-! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "x1", uniq_name = "_QFtest_allocatable_2d_arrayEx1"}
+! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "x1", uniq_name = "_QFtest_allocatable_2d_arrayEx1"}>
 ! CHECK-DAG:     %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {{.*}}
-! CHECK-DAG:     %[[X2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "x2", uniq_name = "_QFtest_allocatable_2d_arrayEx2"}
+! CHECK-DAG:     %[[X2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "x2", uniq_name = "_QFtest_allocatable_2d_arrayEx2"}>
 ! CHECK-DAG:     %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] {{.*}}
-! CHECK-DAG:     %[[X3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> {bindc_name = "x3", uniq_name = "_QFtest_allocatable_2d_arrayEx3"}
+! CHECK-DAG:     %[[X3:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x?xi32>>> <{bindc_name = "x3", uniq_name = "_QFtest_allocatable_2d_arrayEx3"}>
 ! CHECK-DAG:     %[[X3_DECL:.*]]:2 = hlfir.declare %[[X3]] {{.*}}
 ! CHECK-DAG:     %[[A_DECL:.*]]:2 = hlfir.declare %[[VAL_1]](%{{.*}}) {{.*}}
 ! CHECK:         fir.embox %[[A_DECL]]#1
@@ -64,9 +64,9 @@ end
 ! CHECK-SAME:                                                %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                                %[[VAL_1:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"},
 ! CHECK-SAME:                                                %[[VAL_2:.*]]: !fir.ref<i32> {fir.bindc_name = "m"}) {
-! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "x1", uniq_name = "_QFtest_allocatable_with_shapespecEx1"}
+! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "x1", uniq_name = "_QFtest_allocatable_with_shapespecEx1"}>
 ! CHECK-DAG:     %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {{.*}}
-! CHECK-DAG:     %[[X2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "x2", uniq_name = "_QFtest_allocatable_with_shapespecEx2"}
+! CHECK-DAG:     %[[X2:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "x2", uniq_name = "_QFtest_allocatable_with_shapespecEx2"}>
 ! CHECK-DAG:     %[[X2_DECL:.*]]:2 = hlfir.declare %[[X2]] {{.*}}
 ! CHECK-DAG:     %[[A_DECL:.*]]:2 = hlfir.declare %[[VAL_1]](%{{.*}}) {{.*}}
 ! CHECK:         fir.embox %[[A_DECL]]#1
@@ -88,7 +88,7 @@ end
 ! CHECK-LABEL: func.func @_QPtest_allocatable_from_const(
 ! CHECK-SAME:                                            %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                            %[[VAL_1:.*]]: !fir.ref<!fir.array<?xi32>> {fir.bindc_name = "a"}) {
-! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> {bindc_name = "x1", uniq_name = "_QFtest_allocatable_from_constEx1"}
+! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>> <{bindc_name = "x1", uniq_name = "_QFtest_allocatable_from_constEx1"}>
 ! CHECK-DAG:     %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {{.*}}
 ! CHECK-DAG:     %[[CONST:.*]] = fir.address_of(@_QQro.5xi4.0) : !fir.ref<!fir.array<5xi32>>
 ! CHECK-DAG:     %[[CONST_DECL:.*]]:2 = hlfir.declare %[[CONST]](%{{.*}}) {{.*}}
@@ -110,7 +110,7 @@ end
 ! CHECK-LABEL: func.func @_QPtest_allocatable_chararray(
 ! CHECK-SAME:                                           %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                           %[[VAL_1:.*]]: !fir.boxchar<1> {fir.bindc_name = "a"}) {
-! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,4>>>> {bindc_name = "x1", uniq_name = "_QFtest_allocatable_chararrayEx1"}
+! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,4>>>> <{bindc_name = "x1", uniq_name = "_QFtest_allocatable_chararrayEx1"}>
 ! CHECK-DAG:     %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {{.*}}
 ! CHECK-DAG:     %[[UNBOX:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-DAG:     %[[A_CAST:.*]] = fir.convert %[[UNBOX]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
@@ -132,7 +132,7 @@ end
 ! CHECK-LABEL: func.func @_QPtest_allocatable_char(
 ! CHECK-SAME:                                      %[[VAL_0:.*]]: !fir.ref<i32> {fir.bindc_name = "n"},
 ! CHECK-SAME:                                      %[[VAL_1:.*]]: !fir.boxchar<1> {fir.bindc_name = "a"}) {
-! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> {bindc_name = "x1", uniq_name = "_QFtest_allocatable_charEx1"}
+! CHECK-DAG:     %[[X1:.*]] = fir.alloca !fir.box<!fir.heap<!fir.char<1,?>>> <{bindc_name = "x1", uniq_name = "_QFtest_allocatable_charEx1"}>
 ! CHECK-DAG:     %[[UNBOX:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK-DAG:     %[[A_DECL:.*]]:2 = hlfir.declare %[[UNBOX]]#0 typeparams %[[UNBOX]]#1 {{.*}}
 ! CHECK-DAG:     %[[X1_DECL:.*]]:2 = hlfir.declare %[[X1]] {{.*}}
@@ -152,7 +152,7 @@ end
 
 ! CHECK-LABEL: func.func @_QPtest_allocatable_derived_type(
 ! CHECK-SAME:                                              %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>>> {fir.bindc_name = "y"}) {
-! CHECK-DAG:     %[[Z:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>> {bindc_name = "z", uniq_name = "_QFtest_allocatable_derived_typeEz"}
+! CHECK-DAG:     %[[Z:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.type<_QFtest_allocatable_derived_typeTt{x:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>>> <{bindc_name = "z", uniq_name = "_QFtest_allocatable_derived_typeEz"}>
 ! CHECK-DAG:     %[[Z_DECL:.*]]:2 = hlfir.declare %[[Z]] {{.*}}
 ! CHECK-DAG:     %[[Y_DECL:.*]]:2 = hlfir.declare %[[VAL_0]] {{.*}}
 ! CHECK:         fir.load %[[Y_DECL]]#0

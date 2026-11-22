@@ -61,11 +61,18 @@ def ApplyGPUToROCDLConversionPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that convert GPU dialect ops to ROCDL dialect ops. These
     patterns require an "LLVMTypeConverter".
+
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx942", "gfx942:xnack+", "gfx9-4-generic"), a triple
+    ("amdgpu9.42-amd-amdhsa"), or a full target ID
+    ("amdgpu9.0a-amd-amdhsa--gfx90a:sramecc+:xnack-").
+
+    `wavesize` pins the wavefront size on targets that run at either; omitting
+    it uses the architecture's own default.
   }];
-  let arguments = (ins StrAttr:$chipset);
-  let assemblyFormat = [{
-    `chipset` `=` $chipset attr-dict
-  }];
+  let arguments = (ins StrAttr:$arch,
+                       OptionalAttr<I32Attr>:$wavesize);
+  let assemblyFormat = "prop-dict attr-dict";
 }
 
 //===----------------------------------------------------------------------===//
@@ -82,29 +89,6 @@ def ApplyGPURewritePatternsOp : Op<Transform_Dialect,
       3. GpuShuffleRewriter patterns
   }];
   let assemblyFormat = "attr-dict";
-}
-
-def ApplyUnrollVectorsSubgroupMmaOp : Op<Transform_Dialect,
-    "apply_patterns.gpu.unroll_vectors_subgroup_mma",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Unrolls contractions to the target `m`, `n`, and `k` native vector size,
-    along with other vector operations based on expected usage. `transfer_read`
-    ops unroll based on the extract slice shape introduced by unrolling the
-    contractions, while elementwise and `transfer_write` ops unroll to the shape of
-    the C matrix (`m x n`).
-
-    This operation applies to pure vector operations and should be applied before
-    lowering to subgroup_mma ops.
-  }];
-
-  let arguments = (ins I64Attr:$m,
-                       I64Attr:$n,
-                       I64Attr:$k);
-
-  let assemblyFormat = [{
-    `[` $m `,` $n `,` $k `]` attr-dict
-  }];
 }
 
 def EliminateBarriersOp :
@@ -328,11 +312,15 @@ def ApplyGPUPromoteShuffleToAMDGPUPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collects patterns that are tryin to promote `gpu.shuffle`s to specialized
     AMDGPU intrinsics.
+
+    `arch` names the target the way Clang does: a GPU name with optional
+    target-ID modifiers ("gfx950", "gfx950:xnack+"), a triple
+    ("amdgpu9.50-amd-amdhsa"), or a full target ID. Omitting it collects only
+    the patterns that hold on every target.
   }];
-  let arguments = (ins OptionalAttr<StrAttr>:$chipset);
-  let assemblyFormat = [{
-    (`chipset` `=` $chipset^)? attr-dict
-  }];
+  let arguments = (ins OptionalAttr<StrAttr>:$arch);
+  let assemblyFormat = "prop-dict attr-dict";
+  let hasVerifier = 1;
 }
 
 

@@ -1,5 +1,5 @@
-; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -debug-only=irtranslator \
-; RUN:     -stop-after=irtranslator %s -o - 2>&1 | FileCheck %s
+; RUN: llc -O0 -mtriple=aarch64-apple-ios -global-isel -debug-only=ir-translator \
+; RUN:     -stop-after=ir-translator %s -o - 2>&1 | FileCheck %s
 
 ; REQUIRES: asserts
 

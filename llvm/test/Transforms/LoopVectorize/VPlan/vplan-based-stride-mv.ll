@@ -2850,11 +2850,11 @@ define void @basic_masked(ptr noalias %p.out, ptr %p, i64 %stride, i64 %x) {
 ; CHECK-NEXT:    Successor(s): if
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    if:
-; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>, ir<%c> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      EMIT ir<%gep.ld> = getelementptr ir<%p>, ir<%idx>
-; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.ld>, ir<%c> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
-; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>, ir<%c> (!vplan.execution.frequency 4611686018427387904 (50%, estimated))
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>, ir<%c> (!vplan.execution.frequency 9223372036854775807 (50%, estimated))
 ; CHECK-NEXT:    Successor(s): latch
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    latch:

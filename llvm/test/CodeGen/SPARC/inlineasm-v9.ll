@@ -67,3 +67,22 @@ define i64 @test_twinword(){
   %1 = tail call i64 asm sideeffect "rd %asr5, ${0:L} \0A\09 srlx ${0:L}, 32, ${0:H}", "={i0}"()
   ret i64 %1
 }
+
+;; The integer constant constraints and the 'r' modifier with 64-bit operands.
+; CHECK-LABEL: test_constraint_K_N_i64:
+; CHECK: sethi %hi(305418240), %i0
+; CHECK: sethi %hi(4294966272), %i0
+define void @test_constraint_K_N_i64() {
+entry:
+  tail call void asm sideeffect "sethi %hi($0), %i0", "K"(i64 305418240)
+  tail call void asm sideeffect "sethi %hi($0), %i0", "N"(i64 4294966272)
+  ret void
+}
+
+; CHECK-LABEL: test_modifier_r_zero_i64:
+; CHECK: addcc %g0, %i0, %i0
+define i64 @test_modifier_r_zero_i64(i64 %a) {
+entry:
+  %0 = tail call i64 asm sideeffect "addcc ${1:r}, $2, $0", "=r,rJ,rI"(i64 0, i64 %a)
+  ret i64 %0
+}

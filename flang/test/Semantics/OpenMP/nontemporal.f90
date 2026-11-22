@@ -25,7 +25,6 @@ program omp_simd
   end do
   !$omp end parallel do simd
 
-  !ERROR: NONTEMPORAL clause is not allowed on DO SIMD directive
   !$omp do simd nontemporal(a)
   do i = 1, 10
     a(i) = i

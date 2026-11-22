@@ -60,16 +60,14 @@ ScriptedHookPythonInterface::CreatePluginObject(
                                                      target_sp, args_sp);
 }
 
-void ScriptedHookPythonInterface::HandleModuleLoaded(
-    lldb::StreamSP &output_sp) {
-  Status error;
-  Dispatch("handle_module_loaded", error, output_sp);
+llvm::Error
+ScriptedHookPythonInterface::HandleModuleLoaded(lldb::StreamSP &output_sp) {
+  return DispatchToOptional("handle_module_loaded", output_sp).takeError();
 }
 
-void ScriptedHookPythonInterface::HandleModuleUnloaded(
-    lldb::StreamSP &output_sp) {
-  Status error;
-  Dispatch("handle_module_unloaded", error, output_sp);
+llvm::Error
+ScriptedHookPythonInterface::HandleModuleUnloaded(lldb::StreamSP &output_sp) {
+  return DispatchToOptional("handle_module_unloaded", output_sp).takeError();
 }
 
 llvm::Expected<bool>
@@ -77,16 +75,16 @@ ScriptedHookPythonInterface::HandleStop(ExecutionContext &exe_ctx,
                                         lldb::StreamSP &output_sp) {
   ExecutionContextRefSP exe_ctx_ref_sp =
       std::make_shared<ExecutionContextRef>(exe_ctx);
-  Status error;
-  StructuredData::ObjectSP obj =
-      Dispatch("handle_stop", error, exe_ctx_ref_sp, output_sp);
+  llvm::Expected<StructuredData::ObjectSP> obj_or_err =
+      Dispatch("handle_stop", exe_ctx_ref_sp, output_sp);
+  if (!obj_or_err)
+    return obj_or_err.takeError();
 
-  if (!ScriptedInterface::CheckStructuredDataObject(LLVM_PRETTY_FUNCTION, obj,
-                                                    error)) {
-    if (!obj)
-      return true;
-    return error.ToError();
-  }
+  // `handle_stop` is required, so a null object here means the hook returned
+  // None: it expressed no preference, so stay stopped.
+  StructuredData::ObjectSP obj = *obj_or_err;
+  if (!obj || !obj->IsValid())
+    return true;
 
   return obj->GetBooleanValue();
 }

@@ -1,4 +1,5 @@
 set(LLVM_LINK_COMPONENTS
+  BinaryFormat
   DebugInfoDWARF
   Object
   ${LLVM_TARGETS_TO_BUILD}
