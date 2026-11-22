@@ -475,7 +475,7 @@ void MCELFStreamer::finishImpl() {
   this->MCObjectStreamer::finishImpl();
 }
 
-void MCELFStreamer::setAttributeItem(unsigned Attribute, unsigned Value,
+void MCELFStreamer::setAttributeItem(unsigned Attribute, uint64_t Value,
                                      bool OverwriteExisting) {
   // Look for existing attribute item
   if (AttributeItem *Item = getAttributeItem(Attribute)) {
@@ -509,7 +509,7 @@ void MCELFStreamer::setAttributeItem(unsigned Attribute, StringRef Value,
   Contents.push_back(Item);
 }
 
-void MCELFStreamer::setAttributeItems(unsigned Attribute, unsigned IntValue,
+void MCELFStreamer::setAttributeItems(unsigned Attribute, uint64_t IntValue,
                                       StringRef StringValue,
                                       bool OverwriteExisting) {
   // Look for existing attribute item

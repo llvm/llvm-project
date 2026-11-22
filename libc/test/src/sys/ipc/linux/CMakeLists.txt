@@ -9,7 +9,6 @@ add_libc_test(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.include.sys_ipc
-    libc.src.errno.errno
     libc.src.fcntl.open
     libc.src.sys.ipc.ftok
     libc.src.unistd.close

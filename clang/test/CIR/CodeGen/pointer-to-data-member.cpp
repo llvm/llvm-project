@@ -111,15 +111,15 @@ int Diamond::*p_vbase_sibling_direct = &Diamond::d;
 
 // Checks for test1()
 
-// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> attributes {{{.*}}nothrow, optnone} {
-// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE: cir.func {{.*}} @_Z5test1v() -> !cir.data_member<!s32i in !rec_Point> requires_call_conv_lowering attributes {{{.*}}nothrow, optnone} {
+// CIR-BEFORE:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[MEMBER:.*]] = cir.const #cir.data_member<[1]> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[MEMBER]], %[[RETVAL]] : !cir.data_member<!s32i in !rec_Point>, !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>, !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.return %[[RET]] : !cir.data_member<!s32i in !rec_Point>
 
 // CIR-AFTER: cir.func {{.*}} @_Z5test1v() -> !s64i attributes {{{.*}}nothrow, optnone} {
-// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s64i>
+// CIR-AFTER:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s64i>
 // CIR-AFTER:   %[[OFFSET:.*]] = cir.const #cir.int<4> : !s64i
 // CIR-AFTER:   cir.store %[[OFFSET]], %[[RETVAL]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:   %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s64i>, !s64i
@@ -146,7 +146,7 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test2RK5PointMS_i(
 // CIR-BEFORE-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init const
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
@@ -162,7 +162,7 @@ int test2(const Point &pt, int Point::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test2RK5PointMS_i(
 // CIR-AFTER-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-AFTER-SAME:        %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Point>>
 // CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[PT_ARG]], %[[PT_ADDR]] : !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>
@@ -209,7 +209,7 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test3PK5PointMS_i(
 // CIR-BEFORE-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Point>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR-BEFORE:         %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
 // CIR-BEFORE:         cir.store %[[PT_ARG]], %[[PT_ADDR]]
@@ -225,7 +225,7 @@ int test3(const Point *pt, int Point::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test3PK5PointMS_i(
 // CIR-AFTER-SAME:        %[[PT_ARG:.*]]: !cir.ptr<!rec_Point>
 // CIR-AFTER-SAME:        %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-AFTER:        %[[PT_ADDR:.*]] = cir.alloca "pt" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Point>>
 // CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[PT_ARG]], %[[PT_ADDR]] : !cir.ptr<!rec_Point>, !cir.ptr<!cir.ptr<!rec_Point>>
@@ -273,7 +273,7 @@ auto test4(int Incomplete::*member) -> int Incomplete::* {
 
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test4M10Incompletei(
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
 // CIR-BEFORE:         cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]]
 // CIR-BEFORE:         %[[MEMBER:.*]] = cir.load{{.*}} %[[MEMBER_ADDR]]
@@ -283,7 +283,7 @@ auto test4(int Incomplete::*member) -> int Incomplete::* {
 
 // CIR-AFTER:      cir.func {{.*}} @_Z5test4M10Incompletei(
 // CIR-AFTER-SAME:       %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s64i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s64i>
 // CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[MEMBER_ARG]], %[[MEMBER_ADDR]] : !s64i, !cir.ptr<!s64i>
 // CIR-AFTER:        %[[MEMBER:.*]] = cir.load{{.*}} %[[MEMBER_ADDR]] : !cir.ptr<!s64i>, !s64i
@@ -313,7 +313,7 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-BEFORE:       cir.func {{.*}} @_Z5test5P10IncompleteMS_i(
 // CIR-BEFORE-SAME:        %[[IC_ARG:.*]]: !cir.ptr<!rec_Incomplete>
 // CIR-BEFORE-SAME:        %[[MEMBER_ARG:.*]]: !cir.data_member<!s32i in !rec_Incomplete>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval"
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR-BEFORE:         %[[IC_ADDR:.*]] = cir.alloca "ic" {{.*}} init
 // CIR-BEFORE:         %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init
 // CIR-BEFORE:         cir.store %[[IC_ARG]], %[[IC_ADDR]]
@@ -329,7 +329,7 @@ int test5(Incomplete *ic, int Incomplete::*member) {
 // CIR-AFTER:      cir.func {{.*}} @_Z5test5P10IncompleteMS_i(
 // CIR-AFTER-SAME:       %[[IC_ARG:.*]]: !cir.ptr<!rec_Incomplete>
 // CIR-AFTER-SAME:       %[[MEMBER_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-AFTER:        %[[IC_ADDR:.*]] = cir.alloca "ic" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Incomplete>>
 // CIR-AFTER:        %[[MEMBER_ADDR:.*]] = cir.alloca "member" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[IC_ARG]], %[[IC_ADDR]] : !cir.ptr<!rec_Incomplete>, !cir.ptr<!cir.ptr<!rec_Incomplete>>
@@ -374,7 +374,7 @@ auto test_null() -> int Point::* {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z9test_nullv() -> !cir.data_member<!s32i in !rec_Point>
-// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
+// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.data_member<!s32i in !rec_Point>>
 // CIR-BEFORE:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Point>
 // CIR-BEFORE:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
@@ -394,7 +394,7 @@ auto test_null_incomplete() -> int Incomplete::* {
 }
 
 // CIR-BEFORE: cir.func {{.*}} @_Z20test_null_incompletev() -> !cir.data_member<!s32i in !rec_Incomplete>
-// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>
+// CIR-BEFORE:   %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.data_member<!s32i in !rec_Incomplete>>
 // CIR-BEFORE:   %[[CONST_NULL:.*]] = cir.const #cir.data_member<null> : !cir.data_member<!s32i in !rec_Incomplete>
 // CIR-BEFORE:   cir.store %[[CONST_NULL]], %[[RETVAL_ADDR]]
 // CIR-BEFORE:   %[[RET:.*]] = cir.load %[[RETVAL_ADDR]]
@@ -497,7 +497,7 @@ Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
 // CIR-BEFORE-LABEL: cir.func {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
 // CIR-BEFORE-SAME:         %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
 // CIR-BEFORE-SAME:         %[[P_ARG:.*]]: !cir.data_member<!rec_Inner in !rec_Outer>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Inner>
 // CIR-BEFORE:         %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
 // CIR-BEFORE:         %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.data_member<!rec_Inner in !rec_Outer>>
 // CIR-BEFORE:         cir.store %[[O_ARG]], %[[O_ADDR]]
@@ -511,7 +511,7 @@ Inner test_agg_dot(const Outer &o, Inner Outer::*p) {
 // CIR-AFTER-LABEL: cir.func {{.*}} @_Z12test_agg_dotRK5OuterMS_5Inner(
 // CIR-AFTER-SAME:        %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
 // CIR-AFTER-SAME:        %[[P_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Inner>
 // CIR-AFTER:        %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_Outer>>
 // CIR-AFTER:        %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[O_ARG]], %[[O_ADDR]] : !cir.ptr<!rec_Outer>, !cir.ptr<!cir.ptr<!rec_Outer>>
@@ -557,7 +557,7 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // CIR-BEFORE-LABEL: cir.func {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
 // CIR-BEFORE-SAME:         %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
 // CIR-BEFORE-SAME:         %[[P_ARG:.*]]: !cir.data_member<!rec_Inner in !rec_Outer>
-// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-BEFORE:         %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Inner>
 // CIR-BEFORE:         %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Outer>>
 // CIR-BEFORE:         %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!cir.data_member<!rec_Inner in !rec_Outer>>
 // CIR-BEFORE:         cir.store %[[O_ARG]], %[[O_ADDR]]
@@ -571,7 +571,7 @@ Inner test_agg_arrow(const Outer *o, Inner Outer::*p) {
 // CIR-AFTER-LABEL: cir.func {{.*}} @_Z14test_agg_arrowPK5OuterMS_5Inner(
 // CIR-AFTER-SAME:        %[[O_ARG:.*]]: !cir.ptr<!rec_Outer>
 // CIR-AFTER-SAME:        %[[P_ARG:.*]]: !s64i
-// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Inner>
+// CIR-AFTER:        %[[RETVAL_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Inner>
 // CIR-AFTER:        %[[O_ADDR:.*]] = cir.alloca "o" {{.*}} init : !cir.ptr<!cir.ptr<!rec_Outer>>
 // CIR-AFTER:        %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s64i>
 // CIR-AFTER:        cir.store %[[O_ARG]], %[[O_ADDR]] : !cir.ptr<!rec_Outer>, !cir.ptr<!cir.ptr<!rec_Outer>>

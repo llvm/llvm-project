@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wlifetime-safety-annotation-placement -Wlifetime-safety-experimental-field-origin-escape -Wno-dangling -verify=expected,escape %s
 // RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
 
 #include "Inputs/lifetime-analysis.h"
@@ -40,7 +40,8 @@ struct CtorSetInLoop {
 
 struct CtorInitLifetimeBound {
   std::string_view view;  // expected-note {{this field dangles}}
-  CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
+  CtorInitLifetimeBound(std::string s) : view(construct_view(s)) {} // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}} \
+                                                                    // expected-note {{result of call to 'construct_view' aliases the storage of parameter 's'}}
 };
 
 struct CtorInitButMoved {
@@ -90,7 +91,8 @@ struct CtorRefField {
 
 struct CtorPointerField {
   const char* ptr; // expected-note {{this field dangles}}
-  CtorPointerField(std::string s) : ptr(s.data()) {}  // expected-warning {{stack memory associated with parameter 's' escapes to the field 'ptr' which will dangle}}
+  CtorPointerField(std::string s) : ptr(s.data()) {}  // expected-warning {{stack memory associated with parameter 's' escapes to the field 'ptr' which will dangle}} \
+                                                      // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
   CtorPointerField(Dummy<1> ok, const std::string& s) : ptr(s.data()) {}
   CtorPointerField(Dummy<2> ok, std::string_view view) : ptr(view.data()) {}
 };
@@ -101,12 +103,14 @@ struct MemberSetters {
 
   void setWithParam(std::string s) {
     view = s;     // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
   }
 
   void setWithParamAndReturn(std::string s) {
     view = s;     // expected-warning {{stack memory associated with parameter 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with parameter 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of parameter 's'}}
     return;
   }
 
@@ -124,13 +128,15 @@ struct MemberSetters {
   void setWithLocal() {
     std::string s;
     view = s;     // expected-warning {{stack memory associated with local variable 's' escapes to the field 'view' which will dangle}}
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
   }
   
   void setWithLocalButMoved() {
     std::string s;
     view = s;                 // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'view' which will dangle. {{.*}} may have been moved}}
-    p = s.data();             // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'p' which will dangle. {{.*}} may have been moved}}
+    p = s.data();             // expected-warning-re {{stack memory associated with local variable 's' may escape to the field 'p' which will dangle. {{.*}} may have been moved}} \
+                              // expected-note {{result of call to 'data' aliases the storage of local variable 's'}}
     takeString(std::move(s)); // expected-note 2 {{potentially moved here}}
   }
 
@@ -154,14 +160,16 @@ struct MemberSetters {
 
     std::string local;
     view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
-    p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
+    p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}} \
+                      // expected-note {{result of call to 'data' aliases the storage of local variable 'local'}}
   }
 
   void escape_to_field() {
     {
       std::string local;
       view = local;     // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'view' which will dangle}}
-      p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}}
+      p = local.data(); // expected-warning {{stack memory associated with local variable 'local' escapes to the field 'p' which will dangle}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 'local'}}
     }
     (void)view;         // Discarding the value is not a use.
     (void)p;
@@ -235,7 +243,8 @@ struct IndirectEscape2 {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -262,7 +271,8 @@ struct NestedAnonStructEscape {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -274,7 +284,8 @@ struct MultiFieldAnonStructEscapesOnlyWrittenField {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -286,7 +297,8 @@ struct AnonUnionEscapesOnlyWrittenField {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -300,8 +312,10 @@ struct AnonUnionAliasingWarnsPerMember {
 
   void foo() {
     std::string s;
-    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
-    q = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'q' which will dangle}}
+    p = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
+    q = s.data(); // expected-warning {{stack memory associated with local variable 's' escapes to the field 'q' which will dangle}} \
+                  // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
   }
 };
 
@@ -316,7 +330,8 @@ struct AnonUnionSafeOverwriteStillWarns {
 
   void foo() {
     std::string s;
-    p = s.data();       // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}}
+    p = s.data();       // expected-warning {{stack memory associated with local variable 's' escapes to the field 'p' which will dangle}} \
+                        // expected-note {{result of call to 'data' aliases the storage of local variable 's' because the implicit object parameter is inferred as lifetimebound}}
     q = kGlobal.data(); // safe overwrite of the shared storage; `p` is still (wrongly) reported
   }
 };
@@ -357,7 +372,8 @@ struct HasUniquePtrField {
   std::unique_ptr<LifetimeBoundCtor> field; // tu-note {{this field dangles}}
 
   void setWithParam(MyObj obj) {
-    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{stack memory associated with parameter 'obj' escapes to the field 'field' which will dangle}}
+    field = std::make_unique<LifetimeBoundCtor>(obj); // tu-warning {{stack memory associated with parameter 'obj' escapes to the field 'field' which will dangle}} \
+                                                      // tu-note {{result of call to 'make_unique<MakeUnique::LifetimeBoundCtor, MakeUnique::MyObj &>' aliases the storage of parameter 'obj'}}
   }
 };
 } // namespace MakeUnique
@@ -402,3 +418,27 @@ struct HasField {
   }
 };
 } // namespace LambdaCaptureReset
+
+// Methods instantiated eagerly are analyzed while their class is being defined.
+namespace GH236616 {
+template <class T> struct NoFields {
+  __attribute__((used)) constexpr int get() const { return 0; }
+};
+NoFields<int> no_fields;
+
+// Taking the address of a method with a deduced return type instantiates it.
+template <class T> struct DeducedReturn {
+  constexpr auto get() const { return 0; }
+  using R = decltype(&DeducedReturn::get);
+};
+DeducedReturn<int> deduced_return;
+
+template <class T> struct WithField {
+  const int *p;                                            // escape-note {{if field 'p' is owned by the class}}
+  __attribute__((used)) constexpr const int *get() const { // escape-warning {{depends on the object referenced by field 'p'}}
+    return p;                                              // escape-note {{returned here}}
+  }
+};
+WithField<int> with_field; // escape-note {{in instantiation of member function}} \
+                           // escape-note {{in instantiation of template class}}
+} // namespace GH236616

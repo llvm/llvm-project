@@ -20,7 +20,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Program.h"
 
@@ -199,9 +198,9 @@ generateUnconstrainedCodeTemplates(const InstructionTemplate &Variant,
 
 std::mt19937 &randomGenerator() {
   static std::random_device RandomDevice;
-  unsigned RandomSeed = RandomGeneratorSeed.getNumOccurrences()
-                            ? RandomGeneratorSeed
-                            : RandomDevice();
+  static unsigned RandomSeed = RandomGeneratorSeed.getNumOccurrences()
+                                   ? RandomGeneratorSeed
+                                   : RandomDevice();
   LLVM_DEBUG(dbgs() << "Using random seed " << RandomSeed << ".\n");
   static std::mt19937 RandomGenerator(RandomSeed);
   return RandomGenerator;

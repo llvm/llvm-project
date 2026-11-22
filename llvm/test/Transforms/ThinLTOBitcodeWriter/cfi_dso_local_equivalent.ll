@@ -9,15 +9,15 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-; M0: @vtable.{{[0-9a-f]+}} = external hidden constant [1 x ptr]
-; M0: @f.{{[0-9a-f]+}} = hidden alias void (), ptr @f
+; M0: @vtable.llvm.{{[0-9a-f]+}} = external hidden constant [1 x ptr]
+; M0: @f.llvm.{{[0-9a-f]+}} = hidden alias void (), ptr @f
 ; M0: define internal void @f()
 ; M0: define ptr @use()
-; M0-NEXT: ret ptr @vtable.{{[0-9a-f]+}}
+; M0-NEXT: ret ptr @vtable.llvm.{{[0-9a-f]+}}
 
-; M1: @vtable = internal constant [1 x ptr] [ptr dso_local_equivalent @f.{{[0-9a-f]+}}]
-; M1: @vtable.{{[0-9a-f]+}} = hidden alias [1 x ptr], ptr @vtable
-; M1: declare !guid !{{[0-9]+}} hidden void @f.{{[0-9a-f]+}}()
+; M1: @vtable = internal constant [1 x ptr] [ptr dso_local_equivalent @f.llvm.{{[0-9a-f]+}}]
+; M1: @vtable.llvm.{{[0-9a-f]+}} = hidden alias [1 x ptr], ptr @vtable
+; M1: declare !guid !{{[0-9]+}} hidden void @f.llvm.{{[0-9a-f]+}}()
 @vtable = internal constant [1 x ptr] [
   ptr dso_local_equivalent @f
 ], !type !0

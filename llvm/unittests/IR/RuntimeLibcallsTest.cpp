@@ -46,21 +46,15 @@ TEST(RuntimeLibcallsTest, LibcallImplByName) {
   {
     auto SquirtleSquad =
         RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("sqrtl");
-    ASSERT_EQ(size(SquirtleSquad), 3);
-    auto I = SquirtleSquad.begin();
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_f128);
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_f80);
-    EXPECT_EQ(*I++, RTLIB::impl_sqrtl_ppcf128);
+    ASSERT_EQ(size(SquirtleSquad), 1);
+    EXPECT_EQ(*SquirtleSquad.begin(), RTLIB::impl_sqrtl);
   }
 
   // Last libcall
   {
     auto Truncs = RTLIB::RuntimeLibcallsInfo::lookupLibcallImplName("truncl");
-    ASSERT_EQ(size(Truncs), 3);
-    auto I = Truncs.begin();
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_f128);
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_f80);
-    EXPECT_EQ(*I++, RTLIB::impl_truncl_ppcf128);
+    ASSERT_EQ(size(Truncs), 1);
+    EXPECT_EQ(*Truncs.begin(), RTLIB::impl_truncl);
   }
 }
 

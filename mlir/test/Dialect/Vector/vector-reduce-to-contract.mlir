@@ -117,8 +117,8 @@ func.func @multidimreduction_contract_fastmath_strict_reduction(
 // CHECK-LABEL: contract_transpose
 //  CHECK-SAME: (%[[ARG0:.+]]: vector<32x16x8xf32>,
 //  CHECK-NEXT:   %[[C0:.+]] = arith.constant dense<0.000000e+00> : vector<8x32xf32>
-//  CHECK-NEXT:   %[[R:.+]] = vector.contract {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]],
-//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+//  CHECK-NEXT:   %[[R:.+]] = vector.contract {fastmath = #arith.fastmath<nnan>, indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]],
+//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>}
 //  CHECK-SAME:   %[[ARG0]], %{{.*}}, %[[C0]] : vector<32x16x8xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x32xf32>
 func.func @contract_transpose(
@@ -127,7 +127,7 @@ func.func @contract_transpose(
   %0 = vector.transpose %arg0, [2, 0, 1] : vector<32x16x8xf32> to vector<8x32x16xf32>
   %1 = vector.contract {indexing_maps = [#map0, #map0, #map1],
     iterator_types = ["parallel", "parallel", "reduction"],
-    kind = #vector.kind<add>} %0, %arg1, %cst : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
+    kind = #vector.kind<maxnumf>, fastmath = #arith.fastmath<nnan>} %0, %arg1, %cst : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
   return %1 : vector<8x32xf32>
 }
 
@@ -147,8 +147,8 @@ func.func @contract_transpose(
 // CHECK-LABEL: contract_broadcast
 //  CHECK-SAME: (%[[ARG0:.+]]: vector<32x16xf32>,
 //  CHECK-NEXT:   %[[C0:.+]] = arith.constant dense<0.000000e+00> : vector<8x32xf32>
-//  CHECK-NEXT:   %[[R:.+]] = vector.contract {indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]],
-//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>}
+//  CHECK-NEXT:   %[[R:.+]] = vector.contract {fastmath = #arith.fastmath<nnan>, indexing_maps = [#[[$MAP0]], #[[$MAP1]], #[[$MAP2]]],
+//  CHECK-SAME:   iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>}
 //  CHECK-SAME:   %[[ARG0]], %{{.*}}, %[[C0]] : vector<32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
 //  CHECK-NEXT:   return %[[R]] : vector<8x32xf32>
 func.func @contract_broadcast(
@@ -157,7 +157,7 @@ func.func @contract_broadcast(
   %0 = vector.broadcast %arg0 : vector<32x16xf32> to vector<8x32x16xf32>
   %1 = vector.contract {indexing_maps = [#map0, #map0, #map1],
     iterator_types = ["parallel", "parallel", "reduction"],
-    kind = #vector.kind<add>} %0, %arg1, %cst : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
+    kind = #vector.kind<maxnumf>, fastmath = #arith.fastmath<nnan>} %0, %arg1, %cst : vector<8x32x16xf32>, vector<8x32x16xf32> into vector<8x32xf32>
   return %1 : vector<8x32xf32>
 }
 
@@ -557,6 +557,38 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
   return %result : vector<1xf32>
 }
 
+// -----
+
+// Test that CombineContractBroadcast is not combining this case, as that would
+// result in the reduction iterators of the other operand becoming unpaired and
+// produce an invalid scalar-result vector.contract.
+
+#map0 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> ()>
+
+// CHECK-DAG: #[[$MAP0:.*]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0, d1, d2) -> ()>
+
+// CHECK-LABEL: negative_contract_broadcast_one_sided_unit_dim_reduction
+//  CHECK-SAME: (%[[ARG0:.+]]: vector<2xbf16>, %[[ARG1:.+]]: bf16)
+//  CHECK: %[[CST:.+]] = arith.constant 0.0{{.*}}: bf16
+//  CHECK: %[[LHS:.+]] = vector.shape_cast %[[ARG0]] : vector<2xbf16> to vector<1x1x2xbf16>
+//  CHECK: %[[RHS:.+]] = vector.broadcast %[[ARG1]] : bf16 to vector<1x1x2xbf16>
+//  CHECK: vector.contract
+//  CHECK-SAME: indexing_maps = [#[[$MAP0]], #[[$MAP0]], #[[$MAP1]]]
+//  CHECK-SAME: iterator_types = ["reduction", "reduction", "reduction"]
+//  CHECK-SAME: %[[LHS]], %[[RHS]], %[[CST]] : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+func.func @negative_contract_broadcast_one_sided_unit_dim_reduction(%arg0 : vector<2xbf16>, %arg1 : bf16) -> bf16 {
+  %zero = arith.constant 0.0 : bf16
+  %lhs = vector.shape_cast %arg0 : vector<2xbf16> to vector<1x1x2xbf16>
+  %rhs = vector.broadcast %arg1 : bf16 to vector<1x1x2xbf16>
+  %result = vector.contract {
+    indexing_maps = [#map0, #map0, #map1],
+    iterator_types = ["reduction", "reduction", "reduction"],
+    kind = #vector.kind<add>
+  } %lhs, %rhs, %zero : vector<1x1x2xbf16>, vector<1x1x2xbf16> into bf16
+  return %result : bf16
+}
 
 // -----
 
@@ -571,9 +603,10 @@ func.func @contract_broadcast_would_have_no_reduction_dim_pair(%arg0 : vector<1x
 // CHECK-LABEL: func.func @contract_result_transpose
 //  CHECK-SAME: (%[[LHS:.+]]: vector<2x4x4xf32>, %[[RHS:.+]]: vector<4x8xf32>, %[[ACC:.+]]: vector<2x8x4xf32>)
 //       CHECK:   %[[CONTRACT:.+]] = vector.contract
+//  CHECK-SAME:     fastmath = #arith.fastmath<nnan>
 //  CHECK-SAME:     indexing_maps = [#[[$LHS_MAP]], #[[$RHS_MAP]], #[[$ACC_MAP]]]
 //  CHECK-SAME:     iterator_types = ["parallel", "parallel", "parallel", "reduction"]
-//  CHECK-SAME:     kind = #vector.kind<add>
+//  CHECK-SAME:     kind = #vector.kind<maxnumf>
 //  CHECK-SAME:     %[[LHS]], %[[RHS]], %[[ACC]]
 //       CHECK:   return %[[CONTRACT]]
 func.func @contract_result_transpose(%lhs : vector<2x4x4xf32>, %rhs: vector<4x8xf32>, %acc: vector<2x8x4xf32>) -> vector<2x8x4xf32> {
@@ -585,7 +618,8 @@ func.func @contract_result_transpose(%lhs : vector<2x4x4xf32>, %rhs: vector<4x8x
       affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
     ],
     iterator_types = ["parallel", "parallel", "parallel", "reduction"],
-    kind = #vector.kind<add>
+    kind = #vector.kind<maxnumf>,
+    fastmath = #arith.fastmath<nnan>
   } %lhs, %rhs, %accT : vector<2x4x4xf32>, vector<4x8xf32> into vector<2x4x8xf32>
   %resT = vector.transpose %contract, [0, 2, 1] : vector<2x4x8xf32> to vector<2x8x4xf32>
   return %resT : vector<2x8x4xf32>

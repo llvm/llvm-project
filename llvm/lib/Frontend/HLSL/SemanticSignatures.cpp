@@ -199,6 +199,11 @@ hlsl::getAvailableStages(dxbc::PSV::SemanticKind SemanticKind) {
         {Triple::Vertex, IOType::In, SemanticInterpretation::SV}};
     return Stages;
   }
+  case dxbc::PSV::SemanticKind::PrimitiveID: {
+    static constexpr SemanticStageInfo Stages[] = {
+        {Triple::Pixel, IOType::In, SemanticInterpretation::SGV}};
+    return Stages;
+  }
   case dxbc::PSV::SemanticKind::IsFrontFace: {
     static constexpr SemanticStageInfo Stages[] = {
         {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},

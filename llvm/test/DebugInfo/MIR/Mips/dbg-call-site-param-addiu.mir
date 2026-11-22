@@ -88,6 +88,7 @@
 ---
 name:            fn2
 alignment:       4
+tracksRegLiveness: false
 liveins:
   - { reg: '$r4', virtual-reg: '' }
 stack:
@@ -130,3 +131,4 @@ body:             |
     PseudoReturn undef $r31, implicit $r2, debug-location !18 {
       $r29 = ADDiu $r29, 24
     }
+...

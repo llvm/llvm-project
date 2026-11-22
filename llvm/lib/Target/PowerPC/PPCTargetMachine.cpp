@@ -518,14 +518,8 @@ void PPCPassConfig::addPreRegAlloc() {
   }
 
   // FIXME: We probably don't need to run these for -fPIE.
-  if (getPPCTargetMachine().isPositionIndependent()) {
-    // FIXME: LiveVariables should not be necessary here!
-    // PPCTLSDynamicCallPass uses LiveIntervals which previously dependent on
-    // LiveVariables. This (unnecessary) dependency has been removed now,
-    // however a stage-2 clang build fails without LiveVariables computed here.
-    addPass(&LiveVariablesID);
+  if (getPPCTargetMachine().isPositionIndependent())
     addPass(createPPCTLSDynamicCallPass());
-  }
   if (EnableExtraTOCRegDeps)
     addPass(createPPCTOCRegDepsPass());
 }

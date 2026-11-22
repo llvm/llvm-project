@@ -4,14 +4,14 @@
 @g2 = extern_weak global i32
 
 define i64 @test_cast() {
-; CHECK-LABEL: define i64 @test_cast() {
+; CHECK-LABEL: define i64 @test_cast() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: ret i64 %constexpr
   ret i64 ptrtoint (ptr @g to i64)
 }
 
 define i1 @test_icmp() {
-; CHECK-LABEL: define i1 @test_icmp() {
+; CHECK-LABEL: define i1 @test_icmp() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = icmp ne i64 %constexpr, 0
 ; CHECK-NEXT: ret i1 %constexpr1
@@ -19,7 +19,7 @@ define i1 @test_icmp() {
 }
 
 define i32 @test_select() {
-; CHECK-LABEL: define i32 @test_select() {
+; CHECK-LABEL: define i32 @test_select() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = icmp ne i64 %constexpr, 0
 ; CHECK-NEXT: %constexpr2 = select i1 %constexpr1, i32 1, i32 2
@@ -28,7 +28,7 @@ define i32 @test_select() {
 }
 
 define i8 @test_extractelement() {
-; CHECK-LABEL: define i8 @test_extractelement() {
+; CHECK-LABEL: define i8 @test_extractelement() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = icmp ne i64 %constexpr, 0
 ; CHECK-NEXT: %constexpr2 = select i1 %constexpr1, <2 x i8> zeroinitializer, <2 x i8> <i8 0, i8 1>
@@ -38,7 +38,7 @@ define i8 @test_extractelement() {
 }
 
 define <2 x i8> @test_insertelement() {
-; CHECK-LABEL: define <2 x i8> @test_insertelement() {
+; CHECK-LABEL: define <2 x i8> @test_insertelement() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i32
 ; CHECK-NEXT: %constexpr1 = insertelement <2 x i8> poison, i8 42, i32 %constexpr
 ; CHECK-NEXT: ret <2 x i8> %constexpr1
@@ -46,7 +46,7 @@ define <2 x i8> @test_insertelement() {
 }
 
 define double @test_fneg() {
-; CHECK-LABEL: define double @test_fneg() {
+; CHECK-LABEL: define double @test_fneg() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = bitcast i64 %constexpr to double
 ; CHECK-NEXT: %constexpr2 = fneg double %constexpr1
@@ -54,7 +54,7 @@ define double @test_fneg() {
 }
 
 define i64 @test_flags() {
-; CHECK-LABEL: define i64 @test_flags() {
+; CHECK-LABEL: define i64 @test_flags() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = add nuw i64 %constexpr, 1
 ; CHECK-NEXT: ret i64 %constexpr1
@@ -62,7 +62,7 @@ define i64 @test_flags() {
 }
 
 define <3 x i64> @test_vector() {
-; CHECK-LABEL: define <3 x i64> @test_vector() {
+; CHECK-LABEL: define <3 x i64> @test_vector() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr.ins = insertelement <3 x i64> poison, i64 5, i32 0
 ; CHECK-NEXT: %constexpr.ins1 = insertelement <3 x i64> %constexpr.ins, i64 %constexpr, i32 1
@@ -71,7 +71,7 @@ define <3 x i64> @test_vector() {
 }
 
 define [3 x i64] @test_array() {
-; CHECK-LABEL: define [3 x i64] @test_array() {
+; CHECK-LABEL: define [3 x i64] @test_array() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr.ins = insertvalue [3 x i64] poison, i64 5, 0
 ; CHECK-NEXT: %constexpr.ins1 = insertvalue [3 x i64] %constexpr.ins, i64 %constexpr, 1
@@ -80,7 +80,7 @@ define [3 x i64] @test_array() {
 }
 
 define { i64, i64, i64 } @test_struct() {
-; CHECK-LABEL: define { i64, i64, i64 } @test_struct() {
+; CHECK-LABEL: define { i64, i64, i64 } @test_struct() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr.ins = insertvalue { i64, i64, i64 } poison, i64 5, 0
 ; CHECK-NEXT: %constexpr.ins1 = insertvalue { i64, i64, i64 } %constexpr.ins, i64 %constexpr, 1
@@ -89,7 +89,7 @@ define { i64, i64, i64 } @test_struct() {
 }
 
 define i64 @test_reused_expr() {
-; CHECK-LABEL: define i64 @test_reused_expr() {
+; CHECK-LABEL: define i64 @test_reused_expr() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = add i64 %constexpr, %constexpr
 ; CHECK-NEXT: ret i64 %constexpr1
@@ -97,7 +97,7 @@ define i64 @test_reused_expr() {
 }
 
 define i64 @test_multiple_expanded_operands() {
-; CHECK-LABEL: define i64 @test_multiple_expanded_operands() {
+; CHECK-LABEL: define i64 @test_multiple_expanded_operands() !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %constexpr1 = ptrtoint ptr @g2 to i64
 ; CHECK-NEXT: %constexpr2 = add i64 %constexpr, %constexpr1
@@ -106,7 +106,7 @@ define i64 @test_multiple_expanded_operands() {
 }
 
 define i64 @test_mid_block(i64 %arg) {
-; CHECK-LABEL: define i64 @test_mid_block(i64 %arg) {
+; CHECK-LABEL: define i64 @test_mid_block(i64 %arg) !guid !{{[0-9]+}} {
 ; CHECK-NEXT: %x = mul i64 %arg, 3
 ; CHECK-NEXT: %constexpr = ptrtoint ptr @g to i64
 ; CHECK-NEXT: %add = add i64 %x, %constexpr
@@ -117,7 +117,7 @@ define i64 @test_mid_block(i64 %arg) {
 }
 
 define i64 @test_phi_non_critical_edge_block_before(i1 %c) {
-; CHECK-LABEL: define i64 @test_phi_non_critical_edge_block_before(i1 %c) {
+; CHECK-LABEL: define i64 @test_phi_non_critical_edge_block_before(i1 %c) !guid !{{[0-9]+}} {
 ; CHECK: entry:
 ; CHECK-NEXT: br i1 %c, label %if, label %join
 ; CHECK: if:
@@ -140,7 +140,7 @@ join:
 }
 
 define i64 @test_phi_non_critical_edge_block_after(i1 %c) {
-; CHECK-LABEL: define i64 @test_phi_non_critical_edge_block_after(i1 %c) {
+; CHECK-LABEL: define i64 @test_phi_non_critical_edge_block_after(i1 %c) !guid !{{[0-9]+}} {
 ; CHECK: entry:
 ; CHECK-NEXT: br i1 %c, label %if, label %join
 ; CHECK: phi.constexpr:
@@ -163,7 +163,7 @@ if:
 }
 
 define i64 @test_phi_critical_edge(i1 %c) {
-; CHECK-LABEL: define i64 @test_phi_critical_edge(i1 %c) {
+; CHECK-LABEL: define i64 @test_phi_critical_edge(i1 %c) !guid !{{[0-9]+}} {
 ; CHECK: entry:
 ; CHECK-NEXT: br i1 %c, label %if, label %phi.constexpr
 ; CHECK: if:
@@ -186,7 +186,7 @@ join:
 }
 
 define i64 @test_phi_multiple_nodes(i1 %c) {
-; CHECK-LABEL: define i64 @test_phi_multiple_nodes(i1 %c) {
+; CHECK-LABEL: define i64 @test_phi_multiple_nodes(i1 %c) !guid !{{[0-9]+}} {
 ; CHECK: entry:
 ; CHECK-NEXT: br i1 %c, label %if, label %join
 ; CHECK: if:
@@ -213,7 +213,7 @@ join:
 
 
 define i64 @test_phi_multiple_identical_predecessors(i32 %x) {
-; CHECK-LABEL: define i64 @test_phi_multiple_identical_predecessors(i32 %x) {
+; CHECK-LABEL: define i64 @test_phi_multiple_identical_predecessors(i32 %x) !guid !{{[0-9]+}} {
 ; CHECK: entry:
 ; CHECK-NEXT: switch i32 %x, label %default [
 ; CHECK-NEXT:   i32 0, label %phi.constexpr

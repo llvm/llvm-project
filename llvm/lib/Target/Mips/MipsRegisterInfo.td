@@ -97,6 +97,18 @@ class ACCReg<bits<16> Enc, string n, list<Register> subregs>
 // Mips Hardware Registers
 class HWR<bits<16> Enc, string n> : MipsReg<Enc, n>;
 
+class MipsCP0Reg<bits<5> reg, bits<5> sel, string name>
+    : MipsReg<!or(!shl(reg, 5), sel), name>;
+
+multiclass CP0Registers<int reg, list<string> names = []> {
+  foreach sel = 0-7 in {
+    defvar regName = !if(!lt(sel, !size(names)), names[sel], "");
+    def NAME # !if(!eq(sel, 0), "", "_" # sel)
+        : MipsCP0Reg<reg, sel,
+            !if(!empty(regName), "cop0_" # reg # "_" # sel, regName)>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 //  Registers
 //===----------------------------------------------------------------------===//
@@ -224,9 +236,54 @@ let Namespace = "Mips" in {
   foreach I = 0-7 in
   def FCC#I : MipsReg<I, "fcc"#I>;
 
-  // COP0 registers.
-  foreach I = 0-31 in
-  def COP0#I : MipsReg<I, ""#I>;
+  // Each COP0 register is identified by its register number and selector.
+  defm COP00  : CP0Registers<0, ["index", "mvpcontrol", "mvpconf0", "mvpconf1",
+                                "vpcontrol"]>;
+  defm COP01  : CP0Registers<1, ["random", "vpecontrol", "vpeconf0", "vpeconf1",
+                                "yqmask", "vpeschedule", "vpeschefback", "vpeopt"]>;
+  defm COP02  : CP0Registers<2, ["entrylo0", "tcstatus", "tcbind", "tcrestart",
+                                "tchalt", "tccontext", "tcschedule", "tcschefback"]>;
+  defm COP03  : CP0Registers<3, ["entrylo1", "globalnumber", "", "", "", "",
+                                "", "tcopt"]>;
+  defm COP04  : CP0Registers<4, ["context", "contextconfig", "userlocal",
+                                "xcontext_config", "debugcontextid", "memorymapid"]>;
+  defm COP05  : CP0Registers<5, ["pagemask", "pagegrain", "segctl0", "segctl1",
+                                "segctl2", "pwbase", "pwfield", "pwsize"]>;
+  defm COP06  : CP0Registers<6, ["wired", "srsconf0", "srsconf1", "srsconf2",
+                                "srsconf3", "srsconf4", "pwctl"]>;
+  defm COP07  : CP0Registers<7, ["hwrena"]>;
+  defm COP08  : CP0Registers<8, ["badvaddr", "badinstr", "badinstrp"]>;
+  defm COP09  : CP0Registers<9, ["count"]>;
+  defm COP010 : CP0Registers<10, ["entryhi", "", "", "", "guestctl1", "guestctl2",
+                                 "guestctl3"]>;
+  defm COP011 : CP0Registers<11, ["compare", "", "", "", "guestctl0ext"]>;
+  defm COP012 : CP0Registers<12, ["status", "intctl", "srsctl", "srsmap", "view_ipl",
+                                 "srsmap2", "guestctl0", "gtoffset"]>;
+  defm COP013 : CP0Registers<13, ["cause", "", "", "", "view_ripl", "nestedexc"]>;
+  defm COP014 : CP0Registers<14, ["epc", "", "nestedepc"]>;
+  defm COP015 : CP0Registers<15, ["prid", "ebase", "cdmmbase", "cmgcrbase",
+                                 "bevva"]>;
+  defm COP016 : CP0Registers<16, ["config", "config1", "config2", "config3",
+                                 "config4", "config5", "config6", "config7"]>;
+  defm COP017 : CP0Registers<17, ["lladdr", "maar", "maari"]>;
+  defm COP018 : CP0Registers<18, !foreach(I, !range(8), "watchlo" # I)>;
+  defm COP019 : CP0Registers<19, !foreach(I, !range(8), "watchhi" # I)>;
+  defm COP020 : CP0Registers<20, ["xcontext"]>;
+  defm COP021 : CP0Registers<21>;
+  defm COP022 : CP0Registers<22>;
+  defm COP023 : CP0Registers<23, ["debug", "tracecontrol", "tracecontrol2",
+                                 "usertracedata1", "traceibpc", "tracedbpc",
+                                 "debug2"]>;
+  defm COP024 : CP0Registers<24, ["depc", "", "tracecontrol3", "usertracedata2"]>;
+  defm COP025 : CP0Registers<25, ["perfctl0", "perfcnt0", "perfctl1", "perfcnt1",
+                                 "perfctl2", "perfcnt2", "perfctl3", "perfcnt3"]>;
+  defm COP026 : CP0Registers<26, ["errctl"]>;
+  defm COP027 : CP0Registers<27, ["cacheerr"]>;
+  defm COP028 : CP0Registers<28, ["taglo", "datalo"]>;
+  defm COP029 : CP0Registers<29, ["taghi", "datahi"]>;
+  defm COP030 : CP0Registers<30, ["errorepc"]>;
+  defm COP031 : CP0Registers<31, ["desave", "", "kscratch1", "kscratch2",
+                                 "kscratch3", "kscratch4", "kscratch5", "kscratch6"]>;
 
   // COP2 registers.
   foreach I = 0-31 in
@@ -375,6 +432,65 @@ def GPRMM16MovePPairSecond : RegisterClass<"Mips", [i32], 32, (add
   // Callee save
   R21, R22)>;
 
+def GPRNMRA : RegisterClass<"Mips", [i32], 32, (add R31)>, Unallocatable;
+
+def GPRNM32_TAIL : RegisterClass<"Mips", [i32], 32, (add
+  // Not preserved across procedure calls: $t4, $t5
+  R2, R3,
+  // Return Values and Arguments: $a0...$a7
+  R4, R5, R6, R7, R8, R9, R10, R11,
+  // Not preserved across procedure calls: $t0...$t3
+  R12, R13, R14, R15,
+  // Not preserved across procedure calls: $t8, $t9
+  R24, R25)>;
+
+// nanoMIPS "gpr3" register encoding type.
+def GPRNM3 : RegisterClass<"Mips", [i32], 32, (add
+  // Callee save: $s0...$s3
+  R16, R17, R18, R19,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
+
+// nanoMIPS "gpr3.zero" register encoding type.
+def GPRNM3Z : RegisterClass<"Mips", [i32], 32, (add
+  // Reserved: $zero
+  R0,
+  // Callee save: $s1...$s3
+  R17, R18, R19,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
+
+// nanoMIPS "gpr4x4" register encoding type.
+def GPRNM4 : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments: $a4...$a7, $a0...$a3
+  R8, R9, R10, R11, R4, R5, R6, R7,
+  // Callee save: $s0...$s7
+  R16, R17, R18, R19, R20, R21, R22, R23)>;
+
+// nanoMIPS "gpr4x4.zero" register encoding type.
+def GPRNM4Z : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments: $a4...$a6
+  R8, R9, R10,
+  // Reserved: $zero
+  R0,
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7,
+  // Callee save: $s0...$s7
+  R16, R17, R18, R19, R20, R21, R22, R23)>;
+
+// nanoMIPS "gpr2.reg1" & "gpr2.reg2" register encoding types.
+def GPRNM2R1 : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments: $a0...$a3
+  R4, R5, R6, R7)>;
+
+def GPRNM2R2 : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments: $a1...$a4
+  R5, R6, R7, R8)>;
+
+def GPRNM1R1 : RegisterClass<"Mips", [i32], 32, (add
+  // Return Values and Arguments: $a0, $a1
+  R4, R5)>;
+
 def GPR64 : RegisterClass<"Mips", [i64], 64, (add
   // Reserved
   R0_64, R1_64,
@@ -494,8 +610,13 @@ def ACC64DSP : RegisterClass<"Mips", [untyped], 64, (sequence "AC%u", 0, 3)> {
 def DSPCC : RegisterClass<"Mips", [v4i8, v2i16], 32, (add DSPCCond)>;
 
 // Coprocessor 0 registers.
-def COP0 : RegisterClass<"Mips", [i32], 32, (sequence "COP0%u", 0, 31)>,
-           Unallocatable;
+// Ordered by selector, then register number; see MIPS_MC::getCOP0Register.
+def COP0 : RegisterClass<"Mips", [i32], 32, (add
+    (sequence "COP0%u", 0, 31),
+    (sequence "COP0%u_1", 0, 31), (sequence "COP0%u_2", 0, 31),
+    (sequence "COP0%u_3", 0, 31), (sequence "COP0%u_4", 0, 31),
+    (sequence "COP0%u_5", 0, 31), (sequence "COP0%u_6", 0, 31),
+    (sequence "COP0%u_7", 0, 31))>, Unallocatable;
 
 // Coprocessor 2 registers.
 def COP2 : RegisterClass<"Mips", [i32], 32, (sequence "COP2%u", 0, 31)>,
@@ -567,6 +688,14 @@ def GPRMM16AsmOperandMovePPairFirst : MipsAsmRegOperand {
 def GPRMM16AsmOperandMovePPairSecond : MipsAsmRegOperand {
   let Name = "GPRMM16AsmRegMovePPairSecond";
   let PredicateMethod = "isMM16AsmRegMovePPairSecond";
+}
+
+class GPRNMAsmOperandClass<string Cname, string RegClass,
+                           list<AsmOperandClass> Supers = []>
+  : MipsAsmRegOperand {
+  let Name = "GPRNM" # Cname;
+  let PredicateMethod = "isGPRNMAsmReg<Mips::" # RegClass # ">";
+  let SuperClasses = Supers;
 }
 
 def ACC64DSPAsmOperand : MipsAsmRegOperand {
@@ -663,6 +792,85 @@ def GPRMM16OpndMovePPairSecond : RegisterOperand<GPRMM16MovePPairSecond> {
   let ParserMatchClass = GPRMM16AsmOperandMovePPairSecond;
 }
 
+// In the following nanoMIPS operand definitions, the SuperClasses list passed
+// to GPRNMAsmOperandClass indirectly controls mnemonic-matching priority by
+// dictating the order in which instructions appear in the MatchTable.
+def GPRNM48Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"48Reg5", "GPR32RegClassID", []>;
+}
+
+def GPRNM32NZOpnd : RegisterOperand<GPR32NONZERO> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5NZ",
+                                              "GPR32NONZERORegClassID",
+                                              [GPRNM48Opnd.ParserMatchClass]>;
+}
+
+def GPRNM32Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"32Reg5", "GPR32RegClassID",
+                                              [GPRNM32NZOpnd.ParserMatchClass]>;
+}
+
+def GPRNM4Opnd : RegisterOperand<GPRNM4> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4", "GPRNM4RegClassID",
+                                              [GPRNM32Opnd.ParserMatchClass]>;
+}
+
+def GPRNM4ZOpnd : RegisterOperand<GPRNM4Z> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg4x4Z", "GPRNM4ZRegClassID",
+                                              [GPRNM32Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R5Opnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5", "GPR32RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R5NZOpnd : RegisterOperand<GPR32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg5NZ",
+                                              "GPR32NONZERORegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R3Opnd : RegisterOperand<GPRNM3> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg3", "GPRNM3RegClassID",
+                                              [GPRNM16R5Opnd.ParserMatchClass]>;
+}
+
+def GPRNM16R3ZOpnd : RegisterOperand<GPRNM3Z> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"16Reg3Z", "GPRNM3ZRegClassID",
+                                              [GPRNM16R5Opnd.ParserMatchClass]>;
+}
+
+def GPRNMSPOpnd : RegisterOperand<SP32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegSP", "SP32RegClassID",
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNMGPOpnd : RegisterOperand<GP32> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegGP", "GP32RegClassID",
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNMRAOpnd : RegisterOperand<GPRNMRA> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"RegRA", "GPRNMRARegClassID",
+                                              [GPRNM16R3Opnd.ParserMatchClass]>;
+}
+
+def GPRNM2R1Opnd : RegisterOperand<GPRNM2R1> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"2Reg1", "GPRNM2R1RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM2R2Opnd : RegisterOperand<GPRNM2R2> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"2Reg2", "GPRNM2R2RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
+def GPRNM1R1Opnd : RegisterOperand<GPRNM1R1> {
+  let ParserMatchClass = GPRNMAsmOperandClass<"1Reg1", "GPRNM1R1RegClassID",
+                                              [GPRNM4Opnd.ParserMatchClass]>;
+}
+
 def GPR64Opnd : RegisterOperand<GPR64> {
   let ParserMatchClass = GPR64AsmOperand;
 }
@@ -681,6 +889,7 @@ def HWRegsAsmOperand : MipsAsmRegOperand {
 
 def COP0AsmOperand : MipsAsmRegOperand {
   let Name = "COP0AsmReg";
+  let ParserMethod = "parseCOP0Register";
 }
 
 def COP2AsmOperand : MipsAsmRegOperand {
@@ -737,6 +946,7 @@ def ACC64DSPOpnd : RegisterOperand<ACC64DSP> {
 
 def COP0Opnd : RegisterOperand<COP0> {
   let ParserMatchClass = COP0AsmOperand;
+  let PrintMethod = "printCOP0Operand";
 }
 
 def COP2Opnd : RegisterOperand<COP2> {

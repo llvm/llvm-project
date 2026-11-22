@@ -524,6 +524,7 @@ void MappingTraits<COFF::header>::mapping(IO &IO, COFF::header &H) {
                                                             H.Characteristics);
 
   IO.mapRequired("Machine", NM->Machine);
+  IO.mapOptional("TimeDateStamp", H.TimeDateStamp);
   IO.mapOptional("Characteristics", NC->Characteristics);
   IO.setContext(static_cast<void *>(&H));
 }
@@ -710,7 +711,7 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
 
   IO.mapOptional("StructuredData", Sec.StructuredData);
 
-  if (!Sec.StructuredData.empty() && Sec.SectionData.binary_size()) {
+  if (!Sec.StructuredData.empty() && Sec.SectionData) {
     IO.setError("StructuredData and SectionData can't be used together");
     return;
   }
@@ -724,9 +725,8 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
 
   // Entries describes the whole BBAddrMap section content and derives
   // SizeOfRawData.
-  if (Sec.BBAddrMapEntries &&
-      (Sec.SectionData.binary_size() || !Sec.StructuredData.empty() ||
-       Sec.Header.SizeOfRawData)) {
+  if (Sec.BBAddrMapEntries && (Sec.SectionData || !Sec.StructuredData.empty() ||
+                               Sec.Header.SizeOfRawData)) {
     IO.setError("Entries can't be used with SectionData, StructuredData or "
                 "SizeOfRawData");
     return;

@@ -3,13 +3,13 @@
 main:
   .functype main () -> ()
 
-  # CHECK: :[[@LINE+1]]:16: error: memory ordering requires relaxed-atomics feature: acqrel
+  # CHECK: :[[@LINE+1]]:16: error: memory ordering requires acquire-release-atomics feature: acqrel
   atomic.fence acqrel
 
-  # CHECK: :[[@LINE+1]]:19: error: memory ordering requires relaxed-atomics feature: acqrel
+  # CHECK: :[[@LINE+1]]:19: error: memory ordering requires acquire-release-atomics feature: acqrel
   i32.atomic.load acqrel 0
 
-  # CHECK: :[[@LINE+1]]:22: error: memory ordering requires relaxed-atomics feature: seqcst
+  # CHECK: :[[@LINE+1]]:22: error: memory ordering requires acquire-release-atomics feature: seqcst
   i32.atomic.rmw.add seqcst 0
 
   end_function

@@ -1300,11 +1300,16 @@ void CheckHelper::CheckObjectEntity(
             parser::ToUpperCaseLetters(common::EnumToString(attr)));
       }
     }
-    if (subpDetails /* not a module variable */ && IsSaved(symbol) &&
-        !inDeviceSubprogram && !IsAllocatable(symbol) &&
-        attr == common::CUDADataAttr::Device) {
+    // Managed objects are only rejected for an explicit SAVE attribute; a
+    // blanket SAVE statement or -fno-automatic does not make them an error.
+    if (subpDetails /* not a module variable */ && !inDeviceSubprogram &&
+        !IsAllocatable(symbol) &&
+        ((attr == common::CUDADataAttr::Device &&
+             symbol.attrs().test(Attr::SAVE)) ||
+            (attr == common::CUDADataAttr::Managed &&
+                symbol.attrs().test(Attr::SAVE)))) {
       messages_.Say(
-          "Saved object '%s' in host code may not have ATTRIBUTES(DEVICE) unless allocatable"_err_en_US,
+          "Saved object '%s' in host code may not have ATTRIBUTES(%s) unless allocatable"_err_en_US,
           symbol.name(),
           parser::ToUpperCaseLetters(common::EnumToString(attr)));
     }

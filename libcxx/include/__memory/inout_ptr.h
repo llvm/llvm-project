@@ -38,7 +38,7 @@ class inout_ptr_t {
   static_assert(!__is_specialization_v<_Smart, shared_ptr>, "std::shared_ptr<> is not supported with std::inout_ptr.");
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit inout_ptr_t(_Smart& __smart, _Args... __args)
+  explicit inout_ptr_t(_Smart& __smart, _Args... __args)
       : __s_(__smart), __a_(std::forward<_Args>(__args)...), __p_([&__smart] {
           if constexpr (is_pointer_v<_Smart>) {
             return __smart;
@@ -53,9 +53,9 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI inout_ptr_t(const inout_ptr_t&) = delete;
+  inout_ptr_t(const inout_ptr_t&) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI ~inout_ptr_t() {
+  ~inout_ptr_t() {
     // LWG-3897 inout_ptr will not update raw pointer to null
     if constexpr (!is_pointer_v<_Smart>) {
       if (!__p_) {
@@ -78,9 +78,9 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI operator _Pointer*() const noexcept { return std::addressof(const_cast<_Pointer&>(__p_)); }
+  operator _Pointer*() const noexcept { return std::addressof(const_cast<_Pointer&>(__p_)); }
 
-  _LIBCPP_HIDE_FROM_ABI operator void**() const noexcept
+  operator void**() const noexcept
     requires(!is_same_v<_Pointer, void*>)
   {
     static_assert(is_pointer_v<_Pointer>, "The conversion to void** requires _Pointer to be a raw pointer.");
@@ -95,7 +95,7 @@ private:
 };
 
 template <class _Pointer = void, class _Smart, class... _Args>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI auto inout_ptr(_Smart& __s, _Args&&... __args) {
+[[nodiscard]] auto inout_ptr(_Smart& __s, _Args&&... __args) {
   using _Ptr = conditional_t<is_void_v<_Pointer>, __pointer_of_t<_Smart>, _Pointer>;
   return std::inout_ptr_t<_Smart, _Ptr, _Args&&...>(__s, std::forward<_Args>(__args)...);
 }

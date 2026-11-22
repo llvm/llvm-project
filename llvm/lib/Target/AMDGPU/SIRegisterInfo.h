@@ -83,7 +83,7 @@ public:
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
-  static unsigned getSubRegFromChannel(unsigned Channel, unsigned NumRegs = 1);
+  static unsigned getSubRegFromChannel(uint64_t Channel, uint64_t NumRegs = 1);
 
   bool spillSGPRToVGPR() const {
     return SpillSGPRToVGPR;
@@ -313,15 +313,6 @@ public:
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
 
-  /// Returns a register class which is compatible with \p SuperRC, such that a
-  /// subregister exists with class \p SubRC with subregister index \p
-  /// SubIdx. If this is impossible (e.g., an unaligned subregister index within
-  /// a register tuple), return null.
-  const TargetRegisterClass *
-  getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
-                           const TargetRegisterClass *SubRC,
-                           unsigned SubIdx) const;
-
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
   bool opCanUseLiteralConstant(unsigned OpType) const;
@@ -388,7 +379,7 @@ public:
   MCRegister getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
+  getRegClassForSizeOnBank(uint64_t Size, const RegisterBank &Bank) const;
 
   const TargetRegisterClass *
   getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
@@ -444,7 +435,7 @@ public:
   }
 
   // For a given 16 bit \p Reg \returns a 32 bit register holding it.
-  // \returns \p Reg otherwise.
+  // \returns NoRegister otherwise.
   MCRegister get32BitRegister(MCRegister Reg) const;
 
   // Returns true if a given register class is properly aligned for

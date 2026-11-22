@@ -59,6 +59,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         self.finish_test()
 
     @no_debug_info_test
+    @skipIfWasm  # instruction steps overshoot the next breakpoint
     def test_single_step(self):
         """Test that single step stops at the second breakpoint."""
         self.prepare_test()
@@ -96,6 +97,7 @@ class ConsecutiveBreakpointsTestCase(TestBase):
         archs=["x86_64"],
         bugnumber="github.com/llvm/llvm-project/issues/138083",
     )
+    @skipIfWasm  # instruction steps overshoot the next breakpoint
     def test_single_step_thread_specific(self):
         """Test that single step stops, even though the second breakpoint is not valid."""
         self.prepare_test()

@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_CPP_UNIQUE_PTR_H
 
 #include "hdr/types/size_t.h"
+#include "src/__support/CPP/cstddef/nullptr_t.h"
 #include "src/__support/CPP/new.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/CPP/utility.h"
@@ -66,7 +67,7 @@ public:
   using pointer = T *;
 
   LIBC_INLINE constexpr unique_ptr() = default;
-  LIBC_INLINE constexpr unique_ptr(decltype(nullptr)) : ptr(nullptr) {}
+  LIBC_INLINE constexpr unique_ptr(nullptr_t) : ptr(nullptr) {}
   LIBC_INLINE constexpr explicit unique_ptr(pointer p) : ptr(p) {}
 
   LIBC_INLINE constexpr unique_ptr(pointer p, const deleter_type &d)
@@ -156,7 +157,7 @@ public:
   using pointer = T *;
 
   LIBC_INLINE constexpr unique_ptr() = default;
-  LIBC_INLINE constexpr unique_ptr(decltype(nullptr)) : ptr(nullptr) {}
+  LIBC_INLINE constexpr unique_ptr(nullptr_t) : ptr(nullptr) {}
   LIBC_INLINE constexpr explicit unique_ptr(pointer p) : ptr(p) {}
 
   LIBC_INLINE constexpr unique_ptr(pointer p, const deleter_type &d)

@@ -6,8 +6,10 @@
 //
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s \
 // RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-HOST %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-linux-gnu -emit-llvm -o - %s     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-HOST %s %}
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -o - %s \
 // RUN:     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -fcuda-is-device -emit-llvm -o - %s     | FileCheck -check-prefix=CHECK-BOTH -check-prefix=CHECK-DEVICE %s %}
 
 #include "Inputs/cuda.h"
 

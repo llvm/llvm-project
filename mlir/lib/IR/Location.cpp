@@ -110,6 +110,10 @@ struct FileLineColRangeAttrStorage final
 };
 } // namespace mlir::detail
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void Location::dump() const { impl.dump(); }
+#endif
+
 //===----------------------------------------------------------------------===//
 /// Tablegen Attribute Definitions
 //===----------------------------------------------------------------------===//

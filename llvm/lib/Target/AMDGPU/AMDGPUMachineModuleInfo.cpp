@@ -14,7 +14,6 @@
 
 #include "AMDGPUMachineModuleInfo.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/AtomicScope.h"
 
 using namespace llvm;

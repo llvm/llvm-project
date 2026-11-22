@@ -140,13 +140,13 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
 
   // Atomic operations which must be lowered to rtlib calls
   for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::ATOMIC_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, Expand);
+    setOperationAction(ISD::ATOMIC_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, LibCall);
   }
 
   // Division/remainder
@@ -831,7 +831,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
 SDValue AVRTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -849,7 +849,7 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   SDValue TrueV = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc dl(Op);
 
   SDValue TargetCC;
@@ -863,7 +863,7 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDLoc DL(Op);
 
   SDValue TargetCC;

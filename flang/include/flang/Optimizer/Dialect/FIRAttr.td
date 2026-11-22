@@ -18,7 +18,9 @@ include "mlir/Dialect/OpenACC/OpenACCAttributes.td"
 include "mlir/IR/CommonAttrConstraints.td"
 include "mlir/IR/EnumAttr.td"
 
-class fir_Attr<string name> : AttrDef<FIROpsDialect, name>;
+class fir_Attr<string name> : AttrDef<FIROpsDialect, name> {
+  let cppIncludes = ["flang/Optimizer/Dialect/FIRAttr.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // Linkage
@@ -277,12 +279,14 @@ def fir_OpenMPSafeTempArrayCopyAttr : fir_Attr<"OpenMPSafeTempArrayCopy"> {
 def LocalitySpecTypeLocal : I32EnumAttrCase<"Local", 0, "local">;
 def LocalitySpecTypeLocalInit
     : I32EnumAttrCase<"LocalInit", 1, "local_init">;
+def LocalitySpecTypeShared : I32EnumAttrCase<"Shared", 2, "shared">;
 
 def LocalitySpecifierType : I32EnumAttr<
     "LocalitySpecifierType",
     "Type of a locality specifier", [
       LocalitySpecTypeLocal,
-      LocalitySpecTypeLocalInit
+      LocalitySpecTypeLocalInit,
+      LocalitySpecTypeShared
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::fir";

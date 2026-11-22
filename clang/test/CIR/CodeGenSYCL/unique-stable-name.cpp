@@ -37,21 +37,21 @@ void use(const char *);
 // A global initializer is constant-folded to a string literal.
 const char *global_name = __builtin_sycl_unique_stable_name(int);
 
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[GLOBAL_STR:[^ ]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[GLOBAL_STR:[^ ]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
 // CIR-HOST: cir.global external @global_name = #cir.global_view<@[[GLOBAL_STR]]> : !cir.ptr<!s8i> align(8)
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[LAMBDA:__usn_str]] = #cir.const_array<"_ZTSZ9host_onlyvEUlvE_" : !cir.array<!s8i x 22>, trailing_zeros> : !cir.array<!s8i x 23> align(1)
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[INT:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[CONSTEXPR_STR:[^ ]+]] = #cir.const_array<"_ZTSl" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[TPL_INT:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
-// CIR-HOST: cir.global "private" constant cir_private dso_local @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSZ9host_onlyvEUlvE_" : !cir.array<!s8i x 22>, trailing_zeros> : !cir.array<!s8i x 23> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[LAMBDA:__usn_str]] = #cir.const_array<"_ZTSZ9host_onlyvEUlvE_" : !cir.array<!s8i x 22>, trailing_zeros> : !cir.array<!s8i x 23> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[INT:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[CONSTEXPR_STR:[^ ]+]] = #cir.const_array<"_ZTSl" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[TPL_INT:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSi" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
+// CIR-HOST: cir.global "private" constant cir_private dso_local unnamed_addr @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = #cir.const_array<"_ZTSZ9host_onlyvEUlvE_" : !cir.array<!s8i x 22>, trailing_zeros> : !cir.array<!s8i x 23> align(1)
 
-// CIR-LLVM-HOST: @[[GLOBAL_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @[[GLOBAL_STR:[^ ]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
 // CIR-LLVM-HOST: @global_name = global ptr @[[GLOBAL_STR]], align 8
-// CIR-LLVM-HOST: @[[LAMBDA:__usn_str]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
-// CIR-LLVM-HOST: @[[INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
-// CIR-LLVM-HOST: @[[CONSTEXPR_STR:[^ ]+]] = private constant [6 x i8] c"_ZTSl\00", align 1
-// CIR-LLVM-HOST: @[[TPL_INT:__usn_str\.[0-9]+]] = private constant [6 x i8] c"_ZTSi\00", align 1
-// CIR-LLVM-HOST: @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = private constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
+// CIR-LLVM-HOST: @[[LAMBDA:__usn_str]] = private unnamed_addr constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
+// CIR-LLVM-HOST: @[[INT:__usn_str\.[0-9]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @[[CONSTEXPR_STR:[^ ]+]] = private unnamed_addr constant [6 x i8] c"_ZTSl\00", align 1
+// CIR-LLVM-HOST: @[[TPL_INT:__usn_str\.[0-9]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
+// CIR-LLVM-HOST: @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = private unnamed_addr constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
 
 // OGCG-HOST: @[[GLOBAL_STR:[^ ]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
 // OGCG-HOST: @global_name = global ptr @[[GLOBAL_STR]], align 8
@@ -61,11 +61,11 @@ const char *global_name = __builtin_sycl_unique_stable_name(int);
 // OGCG-HOST: @[[TPL_INT:__usn_str\.[0-9]+]] = private unnamed_addr constant [6 x i8] c"_ZTSi\00", align 1
 // OGCG-HOST: @[[TPL_LAMBDA:__usn_str\.[0-9]+]] = private unnamed_addr constant [23 x i8] c"_ZTSZ9host_onlyvEUlvE_\00", align 1
 
-// CIR-DEV: cir.global "private" constant cir_private dso_local target_address_space(1) @[[KERNEL_LAMBDA:__usn_str]] = #cir.const_array<"_ZTSZZ4mainENKUlvE_clEvEUlvE_" : !cir.array<!s8i x 29>, trailing_zeros> : !cir.array<!s8i x 30> align(1)
-// CIR-DEV: cir.global "private" constant cir_private dso_local target_address_space(1) @[[KERNEL_CONSTEXPR:[^ ]+]] = #cir.const_array<"_ZTSc" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
+// CIR-DEV: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(1) @[[KERNEL_LAMBDA:__usn_str]] = #cir.const_array<"_ZTSZZ4mainENKUlvE_clEvEUlvE_" : !cir.array<!s8i x 29>, trailing_zeros> : !cir.array<!s8i x 30> align(1)
+// CIR-DEV: cir.global "private" constant cir_private dso_local unnamed_addr target_address_space(1) @[[KERNEL_CONSTEXPR:[^ ]+]] = #cir.const_array<"_ZTSc" : !cir.array<!s8i x 5>, trailing_zeros> : !cir.array<!s8i x 6> align(1)
 
-// CIR-LLVM-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
-// CIR-LLVM-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1
+// CIR-LLVM-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private unnamed_addr addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
+// CIR-LLVM-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private unnamed_addr addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1
 
 // OGCG-DEV: @[[KERNEL_LAMBDA:__usn_str]] = private unnamed_addr addrspace(1) constant [30 x i8] c"_ZTSZZ4mainENKUlvE_clEvEUlvE_\00", align 1
 // OGCG-DEV: @[[KERNEL_CONSTEXPR:[^ ]+]] = private unnamed_addr addrspace(1) constant [6 x i8] c"_ZTSc\00", align 1

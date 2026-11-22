@@ -355,17 +355,22 @@ SPIR-V Dialect op            | LLVM Dialect op
 
 ### Composite ops
 
-Currently, conversion supports rewrite patterns for `spirv.CompositeExtract` and
-`spirv.CompositeInsert`. We distinguish two cases for these operations: when the
-composite object is a vector, and when the composite object is of a non-vector
-type (*i.e.* struct, array or runtime array).
+Currently, conversion supports rewrite patterns for `spirv.CompositeConstruct`,
+`spirv.CompositeExtract` and `spirv.CompositeInsert`. We distinguish two cases
+for these operations: when the composite object is a vector, and when the
+composite object is of a non-vector type (*i.e.* struct, array or runtime
+array).
 
 Composite type | SPIR-V Dialect op      | LLVM Dialect op
 :------------: | :--------------------: | :-------------------:
+vector         | `spirv.CompositeConstruct` | `llvm.insertelement`
 vector         | `spirv.CompositeExtract` | `llvm.extractelement`
 vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
+non-vector     | `spirv.CompositeConstruct` | `llvm.insertvalue`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
+
+`spirv.CopyObject` is replaced with its converted operand.
 
 ### `spirv.EntryPoint` and `spirv.ExecutionMode`
 
@@ -422,6 +427,13 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
+`spirv.Any` and `spirv.All` reduce a vector of `i1` to a scalar `i1`:
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------:
+`spirv.Any`       | `llvm.intr.vector.reduce.or`
+`spirv.All`       | `llvm.intr.vector.reduce.and`
+
 The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
 intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
 component and returns `i1` or a vector of `i1`, exactly like the SPIR-V ops.
@@ -442,11 +454,13 @@ SPIR-V Dialect op | LLVM Dialect op
 This section describes the conversion patterns for SPIR-V dialect operations
 that concern memory.
 
-#### `spirv.AccessChain`
+#### `spirv.AccessChain` and `spirv.InBoundsAccessChain`
 
 `spirv.AccessChain` is mapped to `llvm.getelementptr` op. In order to create a
 valid LLVM op, we also add a 0 index to the `spirv.AccessChain`'s indices list in
-order to go through the pointer.
+order to go through the pointer. `spirv.InBoundsAccessChain` is lowered the same
+way and additionally sets the `inbounds` flag on the resulting
+`llvm.getelementptr`.
 
 ```mlir
 // Access the 1st element of the array
@@ -460,6 +474,32 @@ order to go through the pointer.
 %0   = llvm.mlir.constant(0 : i32) : i32
 %el  = llvm.getelementptr %var[%0, %i, %i] : (!llvm.ptr, i32, i32, i32), !llvm.struct<packed (f32, array<4 x f32>)>
 ```
+
+#### `spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain`
+
+`spirv.PtrAccessChain` and `spirv.InBoundsPtrAccessChain` are also mapped to
+`llvm.getelementptr`. These ops treat the base pointer as pointing into an
+array of its pointee type and take an additional `element` operand that selects
+the array element. This matches the semantics of the first GEP index, so the
+`element` operand is used as the first index instead of the constant 0 that is
+prepended for `spirv.AccessChain`, and the remaining indices follow unchanged.
+`spirv.InBoundsPtrAccessChain` additionally sets the `inbounds` flag on the
+resulting `llvm.getelementptr`.
+
+```mlir
+// Access member 1 of the 2nd struct after the one %ptr points to
+%el  = spirv.PtrAccessChain %ptr[%elem %i] : !spirv.ptr<!spirv.struct<(f32, i32)>, CrossWorkgroup>, i64, i32 -> !spirv.ptr<i32, CrossWorkgroup>
+
+// Corresponding LLVM dialect code
+%el  = llvm.getelementptr %ptr[%elem, 1] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.struct<packed (f32, i32)>
+```
+
+The element stride is the size of the converted pointee type. The SPIR-V
+specification lets an `ArrayStride` decoration on the base pointer override the
+stride for the Uniform, StorageBuffer, PhysicalStorageBuffer and PushConstant
+storage classes. Since the SPIR-V dialect does not model this decoration on
+pointer types, conversion of these two ops rejects base pointers in those
+storage classes rather than assuming a natural stride.
 
 #### `spirv.CopyMemory`
 
@@ -564,9 +604,7 @@ in a pointer to it, which can be used with `spirv.Load` and `spirv.Store`. It is
 also a function-level variable.
 
 `spirv.Variable` is modelled as `llvm.alloca` op. If initialized, an additional
-store instruction is used. Note that there is no initialization for arrays and
-structs since constants of these types are not supported in LLVM dialect (TODO).
-Also, at the moment initialization is only possible via `spirv.Constant`.
+store instruction is used. Initialization from a spec constant is not supported.
 
 ```mlir
 // Conversion of VariableOp without initialization
@@ -623,8 +661,10 @@ bitwidth. This leads to the following conversions:
 
 ### `spirv.Constant`
 
-At the moment `spirv.Constant` conversion supports scalar and vector constants
-**only**.
+`spirv.Constant` conversion supports scalar, vector, array and struct constants.
+`#spirv.null` is only supported as a constituent. Arrays of scalars map to a
+single `llvm.mlir.constant`, other arrays and structs are built with
+`llvm.insertvalue`.
 
 #### Mapping
 
@@ -662,7 +702,6 @@ There is no support of the following ops:
 
 As well as:
 
-*   spirv.CompositeConstruct
 *   spirv.ControlBarrier
 *   spirv.FMod
 *   spirv.GL.Acos
@@ -689,6 +728,9 @@ As well as:
 corresponding `branch_weights` attribute of `llvm.cond_br`. When translated to
 proper LLVM, `branch_weights` are converted into LLVM metadata associated with
 the conditional branch.
+
+`spirv.Switch` is mapped to `llvm.switch`. Case literals are rebuilt with the
+signless selector type.
 
 ### `spirv.FunctionCall`
 

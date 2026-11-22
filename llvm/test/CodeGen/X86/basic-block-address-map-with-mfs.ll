@@ -58,7 +58,7 @@ declare i32 @qux()
 ; CHECK-LABEL:  .Lfunc_end0:
 
 ; CHECK:                .section        .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text.hot.foo
-; CHECK-NEXT:   .byte   5               # version
+; CHECK-NEXT:   .byte   6               # version
 ; BASIC-NEXT:   .short  40              # feature
 ; PGO-NEXT:     .short  47              # feature
 ; CHECK-NEXT:   .byte   2               # number of basic block ranges

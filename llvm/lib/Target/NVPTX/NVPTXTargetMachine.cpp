@@ -22,8 +22,8 @@
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
@@ -38,31 +38,11 @@
 
 using namespace llvm;
 
-// LSV is still relatively new; this switch lets us turn it off in case we
-// encounter (or suspect) a bug.
-cl::opt<bool>
-    DisableLoadStoreVectorizer("disable-nvptx-load-store-vectorizer",
-                               cl::desc("Disable load/store vectorizer"),
-                               cl::init(false), cl::Hidden);
-
-// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
-// we encounter some issues.
-cl::opt<bool> DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
-                                     cl::desc("Disable NVPTX IR Peephole"),
-                                     cl::init(false), cl::Hidden);
-
-// TODO: Remove this flag when we are confident with no regressions.
-static cl::opt<bool> DisableRequireStructuredCFG(
-    "disable-nvptx-require-structured-cfg",
-    cl::desc("Transitional flag to turn off NVPTX's requirement on preserving "
-             "structured CFG. The requirement should be disabled only when "
-             "unexpected regressions happen."),
-    cl::init(false), cl::Hidden);
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   // Register the target.
   RegisterTargetMachine<NVPTXTargetMachine> X(getTheNVPTXTarget32());
   RegisterTargetMachine<NVPTXTargetMachine> Y(getTheNVPTXTarget64());
+  static opt::RegisterLibraryOptions<NVPTXOptions> O;
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
   // FIXME: This pass is really intended to be invoked during IR optimization,
@@ -74,6 +54,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXAsmPrinterPass(PR);
   initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PR);
   initializeNVPTXAtomicLowerLegacyPassPass(PR);
+  initializeNVPTXCanonicalizeDynamicSharedLegacyPassPass(PR);
   initializeNVPTXLowerArgsLegacyPassPass(PR);
   initializeNVPTXPromoteParamAlignLegacyPassPass(PR);
   initializeNVPTXMarkKernelPtrsGlobalLegacyPassPass(PR);
@@ -103,9 +84,11 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
     // specified, as it is the only relocation model currently supported.
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options, Reloc::PIC_,
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<NVPTXOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, CPU, FS, *this) {
-  if (!DisableRequireStructuredCFG)
+  if (!CLOpts.disable_nvptx_require_structured_cfg)
     setRequiresStructuredCFG(true);
   // NVPTX does not produce verifier-clean MIR yet; see isMachineVerifierClean()
   // for the legacy pass manager equivalent.
@@ -121,9 +104,11 @@ namespace {
 /// in NVPTXCodeGenPassBuilder.cpp; the two must be kept in sync until this path
 /// is removed.
 class NVPTXPassConfig : public TargetPassConfig {
+  const NVPTXOptions &CLOpts;
+
 public:
   NVPTXPassConfig(NVPTXTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM) {}
+      : TargetPassConfig(TM, PM), CLOpts(TM.getCLOpts()) {}
 
   NVPTXTargetMachine &getNVPTXTargetMachine() const {
     return getTM<NVPTXTargetMachine>();
@@ -257,6 +242,11 @@ void NVPTXPassConfig::addIRPasses() {
   disablePass(&ShrinkWrapID);
   disablePass(&RemoveLoadsIntoFakeUsesID);
 
+  // Leave block placement to ptxas. Its CFG transformations can invalidate
+  // layout decisions made at the PTX level, and block placement here can
+  // interfere with ptxas analyses.
+  disablePass(&MachineBlockPlacementID);
+
   addPass(createNVPTXAAWrapperPass());
   addPass(createNVPTXExternalAAWrapperPass());
 
@@ -266,6 +256,7 @@ void NVPTXPassConfig::addIRPasses() {
   // call addEarlyAsPossiblePasses.
   const NVPTXSubtarget &ST = *getTM<NVPTXTargetMachine>().getSubtargetImpl();
   addPass(createNVVMReflectPass(ST.getSmVersion()));
+  addPass(createNVPTXCanonicalizeDynamicSharedLegacyPass());
 
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(createNVPTXImageOptimizerLegacyPass());
@@ -308,12 +299,12 @@ void NVPTXPassConfig::addIRPasses() {
   // but EarlyCSE can do neither of them.
   if (getOptLevel() != CodeGenOptLevel::None) {
     addEarlyCSEOrGVNPass();
-    if (!DisableLoadStoreVectorizer)
+    if (!CLOpts.disable_nvptx_load_store_vectorizer)
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass(/*PreserveCFG=*/true,
                            /*AggregateToVector=*/true));
     addPass(createNVPTXTagInvariantLoadsPass());
-    if (!DisableNVPTXIRPeephole)
+    if (!CLOpts.disable_nvptx_ir_peephole)
       addPass(createNVPTXIRPeepholePass());
   }
 
