@@ -61,6 +61,18 @@ bool X86SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
   return SelectionDAGGenTargetInfo::isTargetMemoryOpcode(Opcode);
 }
 
+bool X86SelectionDAGInfo::mayRaiseFPException(unsigned Opcode) const {
+  // These only load, so folding one into a non-strict FP instruction mustn't
+  // make that instruction look like it may raise.
+  switch (Opcode) {
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD:
+  case X86ISD::VZEXT_LOAD:
+    return false;
+  }
+  return SelectionDAGGenTargetInfo::mayRaiseFPException(Opcode);
+}
+
 void X86SelectionDAGInfo::verifyTargetNode(const SelectionDAG &DAG,
                                            const SDNode *N) const {
   SelectionDAGGenTargetInfo::verifyTargetNode(DAG, N);

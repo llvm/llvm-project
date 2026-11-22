@@ -51245,36 +51245,29 @@ static SDValue getFPReciprocalQuotient(SDValue X, SDValue Y, SelectionDAG &DAG,
   unsigned ChunkElts = Subtarget.useAVX512Regs() ? 16
                        : Subtarget.hasAVX()      ? 8
                                                  : 4;
-  // The estimate is a target node, so it has to be built on legal types.
+  // The estimate is a target node and this runs before type legalization, so
+  // build it on legal chunks of y. The multiplies are legalized as usual.
   unsigned WideElts = std::max<unsigned>(PowerOf2Ceil(NumElts), 4);
   ChunkElts = std::min(ChunkElts, WideElts);
   EVT WideVT = EVT::getVectorVT(*DAG.getContext(), MVT::f32, WideElts);
-  if (WideVT != FPVT) {
-    X = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideVT), X, 0);
+  if (WideVT != FPVT)
     Y = DAG.getInsertSubvector(DL, DAG.getUNDEF(WideVT), Y, 0);
-  }
 
   MVT ChunkVT = MVT::getVectorVT(MVT::f32, ChunkElts);
   unsigned RcpOpc =
       (ChunkElts == 16 || Subtarget.hasVLX()) ? X86ISD::RCP14 : X86ISD::FRCP;
-  SDValue Scale = DAG.getConstantFP(1.0 + 0x1p-11, DL, ChunkVT);
-  // Only non-strictfp code gets here. Without the flag, a folded broadcast load
-  // of Scale makes isel assume the multiply may raise, and MachineLICM then
-  // won't hoist it for a loop invariant y.
-  SDNodeFlags Flags;
-  Flags.setNoFPExcept(true);
-  SmallVector<SDValue, 4> Quots;
+  SmallVector<SDValue, 4> Rcps;
   for (unsigned I = 0; I != WideElts; I += ChunkElts) {
-    SDValue XC = DAG.getExtractSubvector(DL, ChunkVT, X, I);
     SDValue YC = DAG.getExtractSubvector(DL, ChunkVT, Y, SplatY ? 0 : I);
-    SDValue Rcp = DAG.getNode(RcpOpc, DL, ChunkVT, YC);
-    Rcp = DAG.getNode(ISD::FMUL, DL, ChunkVT, Rcp, Scale, Flags);
-    Quots.push_back(DAG.getNode(ISD::FMUL, DL, ChunkVT, XC, Rcp));
+    Rcps.push_back(DAG.getNode(RcpOpc, DL, ChunkVT, YC));
   }
-  SDValue Quot = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Quots);
+  SDValue Rcp = DAG.getNode(ISD::CONCAT_VECTORS, DL, WideVT, Rcps);
   if (WideVT != FPVT)
-    Quot = DAG.getExtractSubvector(DL, FPVT, Quot, 0);
-  return Quot;
+    Rcp = DAG.getExtractSubvector(DL, FPVT, Rcp, 0);
+
+  Rcp = DAG.getNode(ISD::FMUL, DL, FPVT, Rcp,
+                    DAG.getConstantFP(1.0 + 0x1p-11, DL, FPVT));
+  return DAG.getNode(ISD::FMUL, DL, FPVT, X, Rcp);
 }
 
 // The operands fit the float mantissa exactly so one float divide recovers
