@@ -1630,11 +1630,12 @@ public:
 
   AccessAnalysis(const AnalysisOptions &Opts, const Loop *TheLoop,
                  AAResults *AA, const LoopInfo *LI, DominatorTree &DT,
+                 const TargetTransformInfo *TTI,
                  MemoryDepChecker::DepCandidates &DA,
                  PredicatedScalarEvolution &PSE,
                  SmallPtrSetImpl<MDNode *> &LoopAliasScopes)
       : Opts(Opts), TheLoop(TheLoop), EEA(DT, LI), BAA(*AA, &EEA), AST(BAA),
-        LI(LI), DT(DT), DepCands(DA), PSE(PSE),
+        LI(LI), DT(DT), TTI(TTI), DepCands(DA), PSE(PSE),
         LoopAliasScopes(LoopAliasScopes) {
     // We're analyzing dependences across loop iterations.
     BAA.enableCrossIterationMode();
@@ -1765,6 +1766,9 @@ private:
 
   /// The dominator tree of the function.
   DominatorTree &DT;
+
+  /// Target transform info, may be null.
+  const TargetTransformInfo *TTI;
 
   /// Sets of potentially dependent accesses - members of one set share an
   /// underlying pointer. The set "CheckDeps" identfies which sets really need a
@@ -2199,6 +2203,28 @@ bool AccessAnalysis::createCheckForAccess(RuntimePointerChecking &RtCheck,
   return true;
 }
 
+/// Returns true if the address of a pointer in \p AS identifies the accessed
+/// memory location, i.e. the pointer has no non-address bits and its
+/// representation is stable and has no external state.
+static bool addressIdentifiesLocation(unsigned AS, const DataLayout &DL) {
+  return DL.getPointerSizeInBits(AS) == DL.getAddressSizeInBits(AS) &&
+         !DL.hasUnstableRepresentation(AS) && !DL.hasExternalState(AS);
+}
+
+/// Returns true if pointers in \p AS0 and \p AS1 can be compared in runtime
+/// checks, i.e. casts between them are no-ops and both are integral with the
+/// same pointer size.
+static bool areAddrSpacesComparable(unsigned AS0, unsigned AS1,
+                                    const DataLayout &DL,
+                                    const TargetTransformInfo *TTI) {
+  return AS0 == AS1 ||
+         (TTI && TTI->isNoopAddrSpaceCast(AS0, AS1) &&
+          TTI->isNoopAddrSpaceCast(AS1, AS0) &&
+          addressIdentifiesLocation(AS0, DL) &&
+          addressIdentifiesLocation(AS1, DL) &&
+          DL.getPointerSizeInBits(AS0) == DL.getPointerSizeInBits(AS1));
+}
+
 bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
                                      Loop *TheLoop,
                                      const SymbolicStrideMap &StridesMap,
@@ -2356,11 +2382,9 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
     ++ASId;
   }
 
-  // If the pointers that we would use for the bounds comparison have different
-  // address spaces, assume the values aren't directly comparable, so we can't
-  // use them for the runtime check. We also have to assume they could
-  // overlap. In the future there should be metadata for whether address spaces
-  // are disjoint.
+  // Pointers in different address spaces may alias, so give up if their bounds
+  // cannot be compared.
+  const DataLayout &DL = TheLoop->getHeader()->getDataLayout();
   unsigned NumPointers = RtCheck.Pointers.size();
   for (unsigned i = 0; i < NumPointers; ++i) {
     for (unsigned j = i + 1; j < NumPointers; ++j) {
@@ -2377,10 +2401,10 @@ bool AccessAnalysis::canCheckPtrAtRT(RuntimePointerChecking &RtCheck,
 
       unsigned ASi = PtrI->getType()->getPointerAddressSpace();
       unsigned ASj = PtrJ->getType()->getPointerAddressSpace();
-      if (ASi != ASj) {
+      if (!areAddrSpacesComparable(ASi, ASj, DL, TTI)) {
         LLVM_DEBUG(
             dbgs() << "LAA: Runtime check would require comparison between"
-                      " different address spaces\n");
+                      " address spaces that cannot be compared\n");
         return false;
       }
     }
@@ -3383,9 +3407,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
             mergeInStatus(Dependence::isSafeForVectorization(Type));
 
             // Gather dependences unless we accumulated -max-dependences
-            // dependences.  In that case return as soon as we find the first
-            // unsafe dependence.  This puts a limit on this quadratic
-            // algorithm.
+            // dependences. After that, keep checking without recording until a
+            // dependence is Unsafe.
             if (RecordDependences) {
               if (Type != Dependence::NoDep)
                 Dependences.emplace_back(A.second, B.second, Type);
@@ -3397,7 +3420,8 @@ bool MemoryDepChecker::areDepsSafe(const DepCandidates &DepCands,
                            << "Too many dependences, stopped recording\n");
               }
             }
-            if (!RecordDependences && !isSafeForVectorization())
+            if (!RecordDependences &&
+                Status == VectorizationSafetyStatus::Unsafe)
               return false;
           }
         ++OI;
@@ -3481,6 +3505,7 @@ bool LoopAccessInfo::canAnalyzeLoop() {
 }
 
 bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
+                                 const TargetTransformInfo *TTI,
                                  const TargetLibraryInfo *TLI,
                                  DominatorTree *DT) {
   // Holds the Load and Store instructions.
@@ -3628,7 +3653,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
   }
 
   MemoryDepChecker::DepCandidates DepCands;
-  AccessAnalysis Accesses(Opts, TheLoop, AA, LI, *DT, DepCands, *PSE,
+  AccessAnalysis Accesses(Opts, TheLoop, AA, LI, *DT, TTI, DepCands, *PSE,
                           LoopAliasScopes);
 
   // Holds the analyzed pointers. We don't want to call getUnderlyingObjects
@@ -4010,7 +4035,13 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   if (!StrideExpr)
     return;
 
-  if (match(StrideExpr, m_scev_UndefOrPoison()))
+  const SCEV *StrideOp = StrideExpr;
+  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideOp))
+    StrideOp = C->getOperand();
+  const auto *StrideBase = cast<SCEVUnknown>(StrideOp);
+  // Don't version undef/poison strides: users of the map replace uses of the
+  // stride value, but undef/poison don't have use-lists.
+  if (match(StrideBase, m_scev_UndefOrPoison()))
     return;
 
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that is a candidate for "
@@ -4063,14 +4094,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   }
   LLVM_DEBUG(dbgs() << "LAA: Found a strided access that we can version.\n");
 
-  // Strip back off the integer cast, and check that our result is a
-  // SCEVUnknown as we expect.
-  const SCEV *StrideBase = StrideExpr;
-  if (const auto *C = dyn_cast<SCEVIntegralCastExpr>(StrideBase))
-    StrideBase = C->getOperand();
   assert(SE->isLoopInvariant(StrideBase, TheLoop) &&
          "users of the map rely on the stride being loop invariant");
-  SymbolicStrides[Ptr] = cast<SCEVUnknown>(StrideBase);
+  SymbolicStrides[Ptr] = StrideBase;
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
@@ -4095,7 +4121,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
   PtrRtChecking =
       std::make_unique<RuntimePointerChecking>(*DepChecker, SE, LoopGuards);
   if (canAnalyzeLoop())
-    CanVecMem = analyzeLoop(AA, LI, TLI, DT);
+    CanVecMem = analyzeLoop(AA, LI, TTI, TLI, DT);
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {

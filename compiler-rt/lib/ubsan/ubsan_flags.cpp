@@ -46,6 +46,11 @@ void RegisterUbsanFlags(FlagParser *parser, Flags *f) {
 }
 
 void InitializeFlags() {
+  static bool initialized = false;
+  if (initialized)
+    return;
+  initialized = true;
+
   SetCommonFlagsDefaults();
   {
     CommonFlags cf;

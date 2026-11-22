@@ -124,6 +124,9 @@ public:
   size_type capacity() const { return Vector.capacity(); }
   void reserve(size_type Cap) { Vector.reserve(Cap); }
 
+  // Modifiers
+  void clear() { Vector.clear(); }
+
   // Element Access & Lookups
 
   template <typename K> const_iterator find(const K &Key) const {

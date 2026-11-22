@@ -15409,6 +15409,46 @@ ASTContext::filterFunctionTargetAttrs(const TargetAttr *TD) const {
   return ParsedAttr;
 }
 
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(const FunctionDecl *FD) const {
+  return getFunctionFeatureMap(GlobalDecl().getWithDecl(FD));
+}
+
+const llvm::StringMap<bool> &
+ASTContext::getFunctionFeatureMap(GlobalDecl GD) const {
+  const auto *FD = GD.getDecl() ? GD.getDecl()->getAsFunction() : nullptr;
+  if (!FD || !FD->hasAttrs())
+    return Target->getTargetOpts().FeatureMap;
+
+  const Attr *FeatureAttr;
+  StringRef FeatureText;
+  if (const auto *TargetAttribute = FD->getAttr<TargetAttr>()) {
+    FeatureAttr = TargetAttribute;
+    FeatureText = TargetAttribute->getFeaturesStr();
+  } else if (const auto *Specific = FD->getAttr<CPUSpecificAttr>()) {
+    FeatureAttr = Specific;
+    FeatureText = Specific->getCPUName(GD.getMultiVersionIndex())->getName();
+  } else if (const auto *Clones = FD->getAttr<TargetClonesAttr>()) {
+    FeatureAttr = Clones;
+    FeatureText = Clones->getFeatureStr(GD.getMultiVersionIndex());
+  } else if (const auto *Version = FD->getAttr<TargetVersionAttr>()) {
+    FeatureAttr = Version;
+    FeatureText = Version->getName();
+  } else {
+    return Target->getTargetOpts().FeatureMap;
+  }
+
+  auto Key = std::make_pair(FeatureText, unsigned(FeatureAttr->getKind()));
+  auto It = FunctionFeatureMaps.find(Key);
+  if (It != FunctionFeatureMaps.end())
+    return *It->second;
+
+  auto FeatureMap = std::make_unique<llvm::StringMap<bool>>();
+  getFunctionFeatureMap(*FeatureMap, GD);
+  return *FunctionFeatureMaps.try_emplace(Key, std::move(FeatureMap))
+              .first->second;
+}
+
 void ASTContext::getFunctionFeatureMap(llvm::StringMap<bool> &FeatureMap,
                                        const FunctionDecl *FD) const {
   if (FD)

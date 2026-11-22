@@ -2206,11 +2206,13 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
   m_fetched_external_modules = true;
   DWARFDebugInfo &debug_info = DebugInfo();
 
-  // Follow DWO skeleton unit breadcrumbs.
-  const uint32_t num_compile_units = GetNumCompileUnits();
-  for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+  // Follow DWO skeleton unit breadcrumbs. Count the DWARF units, not the
+  // lldb compile units. A file with .debug_line and no .debug_info has
+  // compile units made from its line tables and no DWARF unit behind them.
+  const size_t num_units = debug_info.GetNumUnits();
+  for (size_t unit_idx = 0; unit_idx < num_units; ++unit_idx) {
     auto *dwarf_cu =
-        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(cu_idx));
+        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(unit_idx));
     if (!dwarf_cu)
       continue;
 

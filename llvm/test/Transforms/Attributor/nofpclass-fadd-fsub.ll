@@ -631,7 +631,219 @@ define float @fadd_known_positive_normal_dapz(float nofpclass(ninf nnorm nzero) 
   ret float %add
 }
 
+define float @fadd_p2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_p2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], 2.000000e+00
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, 2.0
+  ret float %add
+}
 
+define float @fadd_n2(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_n2(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -2.000000e+00
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, -2.0
+  ret float %add
+}
+
+; Smallest positive float subnormal: 2^-149.
+define float @fadd_psub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_psub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], 1.401300e-45
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x00000001
+  ret float %add
+}
+
+; Positive subnormal + largest positive subnormal >= smallest positive normal.
+define float @fadd_psub_max(float nofpclass(nan inf zero nsub norm) %arg) {
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fadd_psub_max(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x007FFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x007FFFFF
+  ret float %add
+}
+
+; Smallest negative float subnormal by magnitude: -2^-149.
+define float @fadd_nsub(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nsub(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -1.401300e-45
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x80000001
+  ret float %add
+}
+
+define float @fadd_pinf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fadd_pinf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], +inf
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, +inf
+  ret float %add
+}
+
+define float @fadd_ninf(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(zero sub) float @fadd_ninf(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], -inf
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, -inf
+  ret float %add
+}
+
+define ppc_fp128 @fadd_ppc_fp128_bailout(ppc_fp128 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) ppc_fp128 @fadd_ppc_fp128_bailout(
+; CHECK-SAME: ppc_fp128 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd ppc_fp128 [[ARG]], 2.000000e+00
+; CHECK-NEXT:    ret ppc_fp128 [[ADD]]
+;
+  %add = fadd ppc_fp128 %arg, 2.0
+  ret ppc_fp128 %add
+}
+
+; For float, the threshold T is 2^-103.
+define float @fadd_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C000000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C000000
+  ret float %add
+}
+
+define float @fadd_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C000000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C000000
+  ret float %add
+}
+
+; 2 * T.
+define float @fadd_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C800000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C800000
+  ret float %add
+}
+
+; -2 * T.
+define float @fadd_neg_twice_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_neg_twice_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C800000
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C800000
+  ret float %add
+}
+
+; nextup(T) in float precision.
+define float @fadd_nextup_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_nextup_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0C000001
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0C000001
+  ret float %add
+}
+
+; nextdown(T) in float precision.
+define float @fadd_nextdown_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nextdown_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x0BFFFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x0BFFFFFF
+  ret float %add
+}
+
+; nextup(-T) in float precision.
+define float @fadd_nextup_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) float @fadd_nextup_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8BFFFFFF
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8BFFFFFF
+  ret float %add
+}
+
+; nextdown(-T) in float precision.
+define float @fadd_nextdown_neg_threshold(float noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) float @fadd_nextdown_neg_threshold(
+; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG]], f0x8C000001
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %arg, f0x8C000001
+  ret float %add
+}
+
+; For half, the threshold T is 2^-4.
+define half @fadd_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) half @fadd_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[ARG]], 6.250000e-02
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %arg, f0x2C00
+  ret half %add
+}
+
+; nextup(T) in half precision.
+define half @fadd_nextup_threshold_half(half noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) half @fadd_nextup_threshold_half(
+; CHECK-SAME: half noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd half [[ARG]], 6.256100e-02
+; CHECK-NEXT:    ret half [[ADD]]
+;
+  %add = fadd half %arg, f0x2C01
+  ret half %add
+}
+
+; For x86_fp80, the threshold T is 2^-16319.
+define x86_fp80 @fadd_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero) x86_fp80 @fadd_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd x86_fp80 [[ARG]], f0x00408000000000000000
+; CHECK-NEXT:    ret x86_fp80 [[ADD]]
+;
+  %add = fadd x86_fp80 %arg, f0x00408000000000000000
+  ret x86_fp80 %add
+}
+
+; nextup(T) in x86_fp80 precision.
+define x86_fp80 @fadd_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
+; CHECK-LABEL: define noundef nofpclass(nzero sub) x86_fp80 @fadd_nextup_threshold_x86_fp80(
+; CHECK-SAME: x86_fp80 noundef [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd x86_fp80 [[ARG]], f0x00408000000000000001
+; CHECK-NEXT:    ret x86_fp80 [[ADD]]
+;
+  %add = fadd x86_fp80 %arg, f0x00408000000000000001
+  ret x86_fp80 %add
+}
 
 define float @fadd_self(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @fadd_self(
@@ -1074,7 +1286,7 @@ define float @fadd_known_negative_pzero_rhs(float nofpclass(pinf psub pnorm) %ar
 }
 
 define float @fadd_known_negative_pzero(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) {
-; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero(
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @fadd_known_negative_pzero(
 ; CHECK-SAME: float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1084,7 +1296,7 @@ define float @fadd_known_negative_pzero(float nofpclass(pinf psub pnorm pzero) %
 }
 
 define float @fadd_known_negative_pzero_ftz_daz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #0 {
-; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_ftz_daz(
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @fadd_known_negative_pzero_ftz_daz(
 ; CHECK-SAME: float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1094,7 +1306,7 @@ define float @fadd_known_negative_pzero_ftz_daz(float nofpclass(pinf psub pnorm 
 }
 
 define float @fadd_known_negative_pzero_ftz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #1 {
-; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_ftz(
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @fadd_known_negative_pzero_ftz(
 ; CHECK-SAME: float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR6]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1104,7 +1316,7 @@ define float @fadd_known_negative_pzero_ftz(float nofpclass(pinf psub pnorm pzer
 }
 
 define float @fadd_known_negative_pzero_daz(float nofpclass(pinf psub pnorm pzero) %arg0, float nofpclass(pinf psub pnorm pzero) %arg1) #2 {
-; CHECK-LABEL: define nofpclass(pinf psub pnorm) float @fadd_known_negative_pzero_daz(
+; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @fadd_known_negative_pzero_daz(
 ; CHECK-SAME: float nofpclass(pinf pzero psub pnorm) [[ARG0:%.*]], float nofpclass(pinf pzero psub pnorm) [[ARG1:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[ARG0]], [[ARG1]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1325,7 +1537,7 @@ define half @known_negative_normal_or_inf__fadd__known_negative_or_nan(half nofp
 }
 
 define float @fsub__lhs_nzero__rhs_psub(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero psub pnorm) float @fsub__lhs_nzero__rhs_psub(
+; CHECK-LABEL: define nofpclass(nan inf zero psub norm) float @fsub__lhs_nzero__rhs_psub(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1336,7 +1548,7 @@ define float @fsub__lhs_nzero__rhs_psub(float nofpclass(nan inf pzero sub norm) 
 
 ; We shall not rule out negative zero: -0.0 - dapz(psub) == -0.0 - +0.0 == -0.0
 define float @fsub__lhs_nzero__rhs_psub__mode_ieee_dapz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #5 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @fsub__lhs_nzero__rhs_psub__mode_ieee_dapz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub__lhs_nzero__rhs_psub__mode_ieee_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR7]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1347,7 +1559,7 @@ define float @fsub__lhs_nzero__rhs_psub__mode_ieee_dapz(float nofpclass(nan inf 
 
 ; We shall not rule out negative zero: -0.0 - daz(psub) == -0.0 - +0.0 == -0.0
 define float @fsub__lhs_nzero__rhs_psub__mode_ieee_daz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #2 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @fsub__lhs_nzero__rhs_psub__mode_ieee_daz(
+; CHECK-LABEL: define nofpclass(nan inf pzero psub norm) float @fsub__lhs_nzero__rhs_psub__mode_ieee_daz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR4]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1357,7 +1569,7 @@ define float @fsub__lhs_nzero__rhs_psub__mode_ieee_daz(float nofpclass(nan inf p
 }
 
 define float @fsub__lhs_nzero__rhs_psub__mode_ftpz_dapz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #3 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @fsub__lhs_nzero__rhs_psub__mode_ftpz_dapz(
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @fsub__lhs_nzero__rhs_psub__mode_ftpz_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR2]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1367,7 +1579,7 @@ define float @fsub__lhs_nzero__rhs_psub__mode_ftpz_dapz(float nofpclass(nan inf 
 }
 
 define float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dapz(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #7 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dapz(
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dapz(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR10:[0-9]+]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1377,7 +1589,7 @@ define float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dapz(float nofpclass(nan i
 }
 
 define float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dynamic(float nofpclass(nan inf pzero sub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) #6 {
-; CHECK-LABEL: define nofpclass(nan inf psub pnorm) float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dynamic(
+; CHECK-LABEL: define nofpclass(nan inf psub norm) float @fsub__lhs_nzero__rhs_psub__mode_dynamic_dynamic(
 ; CHECK-SAME: float nofpclass(nan inf pzero sub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR3]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[SUB]]
@@ -1609,7 +1821,7 @@ define float @fadd__no_psub_pnorm__no_zero_sub_pnorm(float nofpclass(psub pnorm)
 }
 
 define float @fadd__no_zero_psub_pnorm__no_psub_pnorm(float nofpclass(zero psub pnorm) %lhs, float nofpclass(psub pnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nzero psub pnorm) float @fadd__no_zero_psub_pnorm__no_psub_pnorm(
+; CHECK-LABEL: define nofpclass(zero psub pnorm) float @fadd__no_zero_psub_pnorm__no_psub_pnorm(
 ; CHECK-SAME: float nofpclass(zero psub pnorm) [[LHS:%.*]], float nofpclass(psub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1619,7 +1831,7 @@ define float @fadd__no_zero_psub_pnorm__no_psub_pnorm(float nofpclass(zero psub 
 }
 
 define float @fadd__no_psub_pnorm__no_zero_psub_pnorm(float nofpclass(psub pnorm) %lhs, float nofpclass(zero psub pnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nzero psub pnorm) float @fadd__no_psub_pnorm__no_zero_psub_pnorm(
+; CHECK-LABEL: define nofpclass(zero psub pnorm) float @fadd__no_psub_pnorm__no_zero_psub_pnorm(
 ; CHECK-SAME: float nofpclass(psub pnorm) [[LHS:%.*]], float nofpclass(zero psub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1629,7 +1841,7 @@ define float @fadd__no_psub_pnorm__no_zero_psub_pnorm(float nofpclass(psub pnorm
 }
 
 define float @fadd__no_psub_pnorm__no_pnorm(float nofpclass(psub pnorm) %lhs, float nofpclass(pnorm) %rhs) {
-; CHECK-LABEL: define float @fadd__no_psub_pnorm__no_pnorm(
+; CHECK-LABEL: define nofpclass(pnorm) float @fadd__no_psub_pnorm__no_pnorm(
 ; CHECK-SAME: float nofpclass(psub pnorm) [[LHS:%.*]], float nofpclass(pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1639,7 +1851,7 @@ define float @fadd__no_psub_pnorm__no_pnorm(float nofpclass(psub pnorm) %lhs, fl
 }
 
 define float @fadd__no_pnorm__no_psub_pnorm(float nofpclass(pnorm) %lhs, float nofpclass(psub pnorm) %rhs) {
-; CHECK-LABEL: define float @fadd__no_pnorm__no_psub_pnorm(
+; CHECK-LABEL: define nofpclass(pnorm) float @fadd__no_pnorm__no_psub_pnorm(
 ; CHECK-SAME: float nofpclass(pnorm) [[LHS:%.*]], float nofpclass(psub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1679,7 +1891,7 @@ define float @fadd__no_nsub_nnorm__no_zero_sub_nnorm(float nofpclass(nsub nnorm)
 }
 
 define float @fadd__no_zero_nsub_nnorm__no_nsub_nnorm(float nofpclass(zero nsub nnorm) %lhs, float nofpclass(nsub nnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @fadd__no_zero_nsub_nnorm__no_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(zero nsub nnorm) float @fadd__no_zero_nsub_nnorm__no_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(zero nsub nnorm) [[LHS:%.*]], float nofpclass(nsub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1689,7 +1901,7 @@ define float @fadd__no_zero_nsub_nnorm__no_nsub_nnorm(float nofpclass(zero nsub 
 }
 
 define float @fadd__no_nsub_nnorm__no_zero_nsub_nnorm(float nofpclass(nsub nnorm) %lhs, float nofpclass(zero nsub nnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nzero nsub nnorm) float @fadd__no_nsub_nnorm__no_zero_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(zero nsub nnorm) float @fadd__no_nsub_nnorm__no_zero_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[LHS:%.*]], float nofpclass(zero nsub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1699,7 +1911,7 @@ define float @fadd__no_nsub_nnorm__no_zero_nsub_nnorm(float nofpclass(nsub nnorm
 }
 
 define float @fadd__no_nsub_nnorm__no_nnorm(float nofpclass(nsub nnorm) %lhs, float nofpclass(nnorm) %rhs) {
-; CHECK-LABEL: define float @fadd__no_nsub_nnorm__no_nnorm(
+; CHECK-LABEL: define nofpclass(nnorm) float @fadd__no_nsub_nnorm__no_nnorm(
 ; CHECK-SAME: float nofpclass(nsub nnorm) [[LHS:%.*]], float nofpclass(nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1709,7 +1921,7 @@ define float @fadd__no_nsub_nnorm__no_nnorm(float nofpclass(nsub nnorm) %lhs, fl
 }
 
 define float @fadd__no_nnorm__no_nsub_nnorm(float nofpclass(nnorm) %lhs, float nofpclass(nsub nnorm) %rhs) {
-; CHECK-LABEL: define float @fadd__no_nnorm__no_nsub_nnorm(
+; CHECK-LABEL: define nofpclass(nnorm) float @fadd__no_nnorm__no_nsub_nnorm(
 ; CHECK-SAME: float nofpclass(nnorm) [[LHS:%.*]], float nofpclass(nsub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1719,7 +1931,7 @@ define float @fadd__no_nnorm__no_nsub_nnorm(float nofpclass(nnorm) %lhs, float n
 }
 
 define float @fadd__no_sub_nnorm__no_sub_nnorm(float nofpclass(sub nnorm) %lhs, float nofpclass(sub nnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nsub nnorm) float @fadd__no_sub_nnorm__no_sub_nnorm(
+; CHECK-LABEL: define nofpclass(sub nnorm) float @fadd__no_sub_nnorm__no_sub_nnorm(
 ; CHECK-SAME: float nofpclass(sub nnorm) [[LHS:%.*]], float nofpclass(sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1749,7 +1961,7 @@ define float @fadd__no_sub_nnorm__no_sub_pnorm(float nofpclass(sub nnorm) %lhs, 
 }
 
 define float @fadd__no_sub_pnorm__no_sub_pnorm(float nofpclass(sub pnorm) %lhs, float nofpclass(sub pnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(psub pnorm) float @fadd__no_sub_pnorm__no_sub_pnorm(
+; CHECK-LABEL: define nofpclass(sub pnorm) float @fadd__no_sub_pnorm__no_sub_pnorm(
 ; CHECK-SAME: float nofpclass(sub pnorm) [[LHS:%.*]], float nofpclass(sub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1809,7 +2021,7 @@ define float @fadd__psub__pnorm(float nofpclass(nan inf zero nsub norm) %lhs, fl
 }
 
 define float @fadd__psub__nnorm(float nofpclass(nan inf zero nsub norm) %lhs, float nofpclass(nan inf zero sub pnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__psub__nnorm(
+; CHECK-LABEL: define nofpclass(nan inf zero psub pnorm) float @fadd__psub__nnorm(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1819,7 +2031,7 @@ define float @fadd__psub__nnorm(float nofpclass(nan inf zero nsub norm) %lhs, fl
 }
 
 define float @fadd__nsub__pnorm(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero sub nnorm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__nsub__pnorm(
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fadd__nsub__pnorm(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero sub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1849,7 +2061,7 @@ define float @fadd__pnorm__psub(float nofpclass(nan inf zero sub nnorm) %lhs, fl
 }
 
 define float @fadd__pnorm__nsub(float nofpclass(nan inf zero sub nnorm) %lhs, float nofpclass(nan inf zero psub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__pnorm__nsub(
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fadd__pnorm__nsub(
 ; CHECK-SAME: float nofpclass(nan inf zero sub nnorm) [[LHS:%.*]], float nofpclass(nan inf zero psub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1859,7 +2071,7 @@ define float @fadd__pnorm__nsub(float nofpclass(nan inf zero sub nnorm) %lhs, fl
 }
 
 define float @fadd__nnorm__psub(float nofpclass(nan inf zero sub pnorm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__nnorm__psub(
+; CHECK-LABEL: define nofpclass(nan inf zero psub pnorm) float @fadd__nnorm__psub(
 ; CHECK-SAME: float nofpclass(nan inf zero sub pnorm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1879,7 +2091,7 @@ define float @fadd__nnorm__nsub(float nofpclass(nan inf zero sub pnorm) %lhs, fl
 }
 
 define float @fadd__psub__psub(float nofpclass(nan inf zero nsub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @fadd__psub__psub(
+; CHECK-LABEL: define nofpclass(nan inf zero nsub nnorm) float @fadd__psub__psub(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1889,7 +2101,7 @@ define float @fadd__psub__psub(float nofpclass(nan inf zero nsub norm) %lhs, flo
 }
 
 define float @fadd__psub__nsub(float nofpclass(nan inf zero nsub norm) %lhs, float nofpclass(nan inf zero psub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__psub__nsub(
+; CHECK-LABEL: define nofpclass(nan inf nzero norm) float @fadd__psub__nsub(
 ; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[LHS:%.*]], float nofpclass(nan inf zero psub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1899,7 +2111,7 @@ define float @fadd__psub__nsub(float nofpclass(nan inf zero nsub norm) %lhs, flo
 }
 
 define float @fadd__nsub__psub(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero nsub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero) float @fadd__nsub__psub(
+; CHECK-LABEL: define nofpclass(nan inf nzero norm) float @fadd__nsub__psub(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero nsub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
@@ -1909,13 +2121,217 @@ define float @fadd__nsub__psub(float nofpclass(nan inf zero psub norm) %lhs, flo
 }
 
 define float @fadd__nsub__nsub(float nofpclass(nan inf zero psub norm) %lhs, float nofpclass(nan inf zero psub norm) %rhs) {
-; CHECK-LABEL: define nofpclass(nan inf nzero psub pnorm) float @fadd__nsub__nsub(
+; CHECK-LABEL: define nofpclass(nan inf zero psub pnorm) float @fadd__nsub__nsub(
 ; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[LHS:%.*]], float nofpclass(nan inf zero psub norm) [[RHS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
 ; CHECK-NEXT:    ret float [[ADD]]
 ;
   %add = fadd float %lhs, %rhs
   ret float %add
+}
+
+;-------------------------------------------------------------------------------
+; Rule out zero.
+;-------------------------------------------------------------------------------
+
+define float @fadd__no_zero_nsub_pnorm__no_psub_nnorm(float nofpclass(zero nsub pnorm) %lhs, float nofpclass(psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd__no_zero_nsub_pnorm__no_psub_nnorm(
+; CHECK-SAME: float nofpclass(zero nsub pnorm) [[LHS:%.*]], float nofpclass(psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_zero_psub_nnorm__no_nsub_pnorm(float nofpclass(zero psub nnorm) %lhs, float nofpclass(nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd__no_zero_psub_nnorm__no_nsub_pnorm(
+; CHECK-SAME: float nofpclass(zero psub nnorm) [[LHS:%.*]], float nofpclass(nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_zero_nsub_pnorm__no_nsub_pnorm(float nofpclass(zero nsub pnorm) %lhs, float nofpclass(nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fadd__no_zero_nsub_pnorm__no_nsub_pnorm(
+; CHECK-SAME: float nofpclass(zero nsub pnorm) [[LHS:%.*]], float nofpclass(nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_zero_psub_nnorm__no_psub_nnorm(float nofpclass(zero psub nnorm) %lhs, float nofpclass(psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fadd__no_zero_psub_nnorm__no_psub_nnorm(
+; CHECK-SAME: float nofpclass(zero psub nnorm) [[LHS:%.*]], float nofpclass(psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_nsub_pnorm__no_zero_psub_nnorm(float nofpclass(nsub pnorm) %lhs, float nofpclass(zero psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd__no_nsub_pnorm__no_zero_psub_nnorm(
+; CHECK-SAME: float nofpclass(nsub pnorm) [[LHS:%.*]], float nofpclass(zero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_psub_nnorm__no_zero_nsub_pnorm(float nofpclass(psub nnorm) %lhs, float nofpclass(zero nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fadd__no_psub_nnorm__no_zero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(psub nnorm) [[LHS:%.*]], float nofpclass(zero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_nsub_pnorm__no_zero_nsub_pnorm(float nofpclass(nsub pnorm) %lhs, float nofpclass(zero nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fadd__no_nsub_pnorm__no_zero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(nsub pnorm) [[LHS:%.*]], float nofpclass(zero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_psub_nnorm__no_zero_psub_nnorm(float nofpclass(psub nnorm) %lhs, float nofpclass(zero psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fadd__no_psub_nnorm__no_zero_psub_nnorm(
+; CHECK-SAME: float nofpclass(psub nnorm) [[LHS:%.*]], float nofpclass(zero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fsub__no_zero_nsub_pnorm__no_psub_nnorm(float nofpclass(zero nsub pnorm) %lhs, float nofpclass(psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fsub__no_zero_nsub_pnorm__no_psub_nnorm(
+; CHECK-SAME: float nofpclass(zero nsub pnorm) [[LHS:%.*]], float nofpclass(psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_zero_psub_nnorm__no_nsub_pnorm(float nofpclass(zero psub nnorm) %lhs, float nofpclass(nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fsub__no_zero_psub_nnorm__no_nsub_pnorm(
+; CHECK-SAME: float nofpclass(zero psub nnorm) [[LHS:%.*]], float nofpclass(nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_zero_nsub_pnorm__no_nsub_pnorm(float nofpclass(zero nsub pnorm) %lhs, float nofpclass(nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fsub__no_zero_nsub_pnorm__no_nsub_pnorm(
+; CHECK-SAME: float nofpclass(zero nsub pnorm) [[LHS:%.*]], float nofpclass(nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_zero_psub_nnorm__no_psub_nnorm(float nofpclass(zero psub nnorm) %lhs, float nofpclass(psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fsub__no_zero_psub_nnorm__no_psub_nnorm(
+; CHECK-SAME: float nofpclass(zero psub nnorm) [[LHS:%.*]], float nofpclass(psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_nsub_pnorm__no_zero_psub_nnorm(float nofpclass(nsub pnorm) %lhs, float nofpclass(zero psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fsub__no_nsub_pnorm__no_zero_psub_nnorm(
+; CHECK-SAME: float nofpclass(nsub pnorm) [[LHS:%.*]], float nofpclass(zero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_psub_nnorm__no_zero_nsub_pnorm(float nofpclass(psub nnorm) %lhs, float nofpclass(zero nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(zero) float @fsub__no_psub_nnorm__no_zero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(psub nnorm) [[LHS:%.*]], float nofpclass(zero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_nsub_pnorm__no_zero_nsub_pnorm(float nofpclass(nsub pnorm) %lhs, float nofpclass(zero nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fsub__no_nsub_pnorm__no_zero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(nsub pnorm) [[LHS:%.*]], float nofpclass(zero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_psub_nnorm__no_zero_psub_nnorm(float nofpclass(psub nnorm) %lhs, float nofpclass(zero psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(nzero) float @fsub__no_psub_nnorm__no_zero_psub_nnorm(
+; CHECK-SAME: float nofpclass(psub nnorm) [[LHS:%.*]], float nofpclass(zero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fadd__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(float nofpclass(pzero nsub pnorm) %lhs, float nofpclass(pzero nsub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd__no_pzero_nsub_pnorm__no_pzero_nsub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub pnorm) [[LHS:%.*]], float nofpclass(pzero nsub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fadd__no_pzero_psub_nnorm__no_pzero_psub_nnorm(float nofpclass(pzero psub nnorm) %lhs, float nofpclass(pzero psub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(pzero) float @fadd__no_pzero_psub_nnorm__no_pzero_psub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub nnorm) [[LHS:%.*]], float nofpclass(pzero psub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[ADD]]
+;
+  %add = fadd float %lhs, %rhs
+  ret float %add
+}
+
+define float @fsub__no_pzero_psub_pnorm__no_nzero_nsub_nnorm(float nofpclass(pzero psub pnorm) %lhs, float nofpclass(nzero nsub nnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(pzero psub pnorm) float @fsub__no_pzero_psub_pnorm__no_nzero_nsub_nnorm(
+; CHECK-SAME: float nofpclass(pzero psub pnorm) [[LHS:%.*]], float nofpclass(nzero nsub nnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
+}
+
+define float @fsub__no_pzero_nsub_nnorm__no_nzero_psub_pnorm(float nofpclass(pzero nsub nnorm) %lhs, float nofpclass(nzero psub pnorm) %rhs) {
+; CHECK-LABEL: define nofpclass(pzero nsub nnorm) float @fsub__no_pzero_nsub_nnorm__no_nzero_psub_pnorm(
+; CHECK-SAME: float nofpclass(pzero nsub nnorm) [[LHS:%.*]], float nofpclass(nzero psub pnorm) [[RHS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[LHS]], [[RHS]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float %lhs, %rhs
+  ret float %sub
 }
 
 ;-------------------------------------------------------------------------------

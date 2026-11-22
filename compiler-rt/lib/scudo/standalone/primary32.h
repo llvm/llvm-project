@@ -79,6 +79,8 @@ public:
 
   void init(s32 ReleaseToOsInterval) NO_THREAD_SAFETY_ANALYSIS;
 
+  void zeroFreeBlocks();
+
   void unmapTestOnly();
 
   // When all blocks are freed, it has to be the same size as `AllocatedUser`.
@@ -286,6 +288,25 @@ template <typename Config> void SizeClassAllocator32<Config>::unmapTestOnly() {
     if (PossibleRegions[I])
       unmap(reinterpret_cast<void *>(I * RegionSize), RegionSize);
   PossibleRegions.unmapTestOnly();
+}
+
+template <typename Config> void SizeClassAllocator32<Config>::zeroFreeBlocks() {
+  for (uptr ClassId = 0; ClassId < NumClasses; ++ClassId) {
+    if (ClassId == SizeClassMap::BatchClassId)
+      continue;
+
+    SizeClassInfo *Sci = getSizeClassInfo(ClassId);
+    ScopedLock L1(Sci->Mutex);
+    const uptr BlockSize = getSizeByClassId(ClassId);
+    for (BatchGroupT &BG : Sci->FreeListInfo.BlockList) {
+      for (const auto &It : BG.Batches) {
+        for (u16 I = 0; I < It.getCount(); ++I) {
+          void *BlockBegin = decompactPtr(ClassId, It.get(I));
+          memset(BlockBegin, 0, BlockSize);
+        }
+      }
+    }
+  }
 }
 
 template <typename Config>

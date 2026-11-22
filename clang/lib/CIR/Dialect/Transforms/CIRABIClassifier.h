@@ -24,6 +24,7 @@
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
+#include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
 #include "llvm/ABI/FunctionInfo.h"
@@ -117,7 +118,7 @@ public:
 
 protected:
   CIRABIClassifierCommon(const mlir::DataLayout &dl, mlir::ModuleOp modOp)
-      : dl(dl), modOp(modOp), typeMapper(dl) {}
+      : dl(dl), modOp(modOp), cirDataLayout(modOp), typeMapper(dl) {}
 
   /// The library classifier for a function whose recorded target features
   /// may refine the ABI rules.
@@ -132,6 +133,7 @@ protected:
 
   const mlir::DataLayout &dl;
   mlir::ModuleOp modOp;
+  cir::CIRDataLayout cirDataLayout;
   mlir::abi::ABITypeMapper typeMapper;
 
 private:
@@ -175,6 +177,12 @@ createAMDGPUABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 /// The SPIR-V classifier.
 std::unique_ptr<CIRABIClassifier>
 createSPIRVABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
+
+/// The AArch64 classifier, covering AAPCS64 and DarwinPCS.  The ABI variant,
+/// endianness, data model, and source language come from \p modOp's
+/// attributes.
+std::unique_ptr<CIRABIClassifier>
+createAArch64ABIClassifier(const mlir::DataLayout &dl, mlir::ModuleOp modOp);
 
 /// Map a CIR calling convention to the llvm::CallingConv the ABI classifier
 /// uses.  Conventions the classifier does not distinguish fall back to C.
