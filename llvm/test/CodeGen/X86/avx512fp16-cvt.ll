@@ -1078,9 +1078,9 @@ define <8 x i32> @fptosi_sat_v8i32_v8f16(<8 x half> %f) nounwind {
 define <8 x i32> @fptoui_sat_v8i32_v8f16(<8 x half> %f) nounwind {
 ; CHECK-LABEL: fptoui_sat_v8i32_v8f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $215, %xmm0, %k0 # k0 = isQuietNaN(xmm0) | isPositiveZero(xmm0) | isNegativeZero(xmm0) | isNegativeInfinity(xmm0) | isNegative(xmm0) | isSignalingNaN(xmm0)
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vcvttph2udq %xmm0, %ymm0 {%k1} {z}
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmaxph %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vcvttph2udq %xmm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f16(<8 x half> %f)
   ret <8 x i32> %x
@@ -1111,9 +1111,9 @@ define <16 x i32> @fptosi_sat_v16i32_v16f16(<16 x half> %f) nounwind {
 define <16 x i32> @fptoui_sat_v16i32_v16f16(<16 x half> %f) nounwind {
 ; CHECK-LABEL: fptoui_sat_v16i32_v16f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmaxph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f16(<16 x half> %f)
   ret <16 x i32> %x
@@ -1142,13 +1142,12 @@ define <32 x i32> @fptosi_sat_v32i32_v32f16(<32 x half> %f) nounwind {
 define <32 x i32> @fptoui_sat_v32i32_v32f16(<32 x half> %f) nounwind {
 ; CHECK-LABEL: fptoui_sat_v32i32_v32f16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm2 {%k1} {z}
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmaxph %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vcvttph2udq %ymm2, %zmm2
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; CHECK-NEXT:    vfpclassph $215, %ymm0, %k0 # k0 = isQuietNaN(ymm0) | isPositiveZero(ymm0) | isNegativeZero(ymm0) | isNegativeInfinity(ymm0) | isNegative(ymm0) | isSignalingNaN(ymm0)
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm1 {%k1} {z}
+; CHECK-NEXT:    vmaxph %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vcvttph2udq %ymm0, %zmm1
 ; CHECK-NEXT:    vmovaps %zmm2, %zmm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %x = call <32 x i32> @llvm.fptoui.sat.v32i32.v32f16(<32 x half> %f)

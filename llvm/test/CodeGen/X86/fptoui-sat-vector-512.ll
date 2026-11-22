@@ -721,19 +721,12 @@ define <16 x i16> @test_unsigned_v16i16_v16f32(<16 x float> %f) nounwind {
 }
 
 define <16 x i32> @test_unsigned_v16i32_v16f32(<16 x float> %f) nounwind {
-; AVX512F-LABEL: test_unsigned_v16i32_v16f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vcvttps2udq %zmm0, %zmm0
-; AVX512F-NEXT:    retq
-;
-; AVX512-LABEL: test_unsigned_v16i32_v16f32:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfpclassps $215, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveZero(zmm0) | isNegativeZero(zmm0) | isNegativeInfinity(zmm0) | isNegative(zmm0) | isSignalingNaN(zmm0)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_unsigned_v16i32_v16f32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttps2udq %zmm0, %zmm0
+; CHECK-NEXT:    retq
   %x = call <16 x i32> @llvm.fptoui.sat.v16i32.v16f32(<16 x float> %f)
   ret <16 x i32> %x
 }
@@ -1929,19 +1922,12 @@ define <8 x i16> @test_unsigned_v8i16_v8f64(<8 x double> %f) nounwind {
 }
 
 define <8 x i32> @test_unsigned_v8i32_v8f64(<8 x double> %f) nounwind {
-; AVX512F-LABEL: test_unsigned_v8i32_v8f64:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX512F-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
-; AVX512F-NEXT:    vcvttpd2udq %zmm0, %ymm0
-; AVX512F-NEXT:    retq
-;
-; AVX512-LABEL: test_unsigned_v8i32_v8f64:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vfpclasspd $215, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveZero(zmm0) | isNegativeZero(zmm0) | isNegativeInfinity(zmm0) | isNegative(zmm0) | isSignalingNaN(zmm0)
-; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vcvttpd2udq %zmm0, %ymm0 {%k1} {z}
-; AVX512-NEXT:    retq
+; CHECK-LABEL: test_unsigned_v8i32_v8f64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vmaxpd %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vcvttpd2udq %zmm0, %ymm0
+; CHECK-NEXT:    retq
   %x = call <8 x i32> @llvm.fptoui.sat.v8i32.v8f64(<8 x double> %f)
   ret <8 x i32> %x
 }
@@ -3459,15 +3445,14 @@ define <32 x i32> @test_unsigned_v32i32_v32f16(<32 x half> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v32i32_v32f16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vcvtph2ps %ymm0, %zmm1
-; AVX512-NEXT:    vfpclassps $215, %zmm1, %k0 # k0 = isQuietNaN(zmm1) | isPositiveZero(zmm1) | isNegativeZero(zmm1) | isNegativeInfinity(zmm1) | isNegative(zmm1) | isSignalingNaN(zmm1)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttps2udq %zmm1, %zmm2 {%k1} {z}
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vcvtph2ps %ymm0, %zmm2
+; AVX512-NEXT:    vmaxps %zmm1, %zmm2, %zmm2
+; AVX512-NEXT:    vcvttps2udq %zmm2, %zmm2
 ; AVX512-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; AVX512-NEXT:    vcvtph2ps %ymm0, %zmm0
-; AVX512-NEXT:    vfpclassps $215, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveZero(zmm0) | isNegativeZero(zmm0) | isNegativeInfinity(zmm0) | isNegative(zmm0) | isSignalingNaN(zmm0)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm1 {%k1} {z}
+; AVX512-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm1
 ; AVX512-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %x = call <32 x i32> @llvm.fptoui.sat.v32i32.v32f16(<32 x half> %f)
@@ -5361,17 +5346,16 @@ define <32 x i32> @test_unsigned_v32i32_v32bf16(<32 x bfloat> %f) nounwind {
 ;
 ; AVX512-LABEL: test_unsigned_v32i32_v32bf16:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512-NEXT:    vpslld $16, %zmm1, %zmm1
-; AVX512-NEXT:    vfpclassps $215, %zmm1, %k0 # k0 = isQuietNaN(zmm1) | isPositiveZero(zmm1) | isNegativeZero(zmm1) | isNegativeInfinity(zmm1) | isNegative(zmm1) | isSignalingNaN(zmm1)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttps2udq %zmm1, %zmm2 {%k1} {z}
+; AVX512-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; AVX512-NEXT:    vpslld $16, %zmm2, %zmm2
+; AVX512-NEXT:    vmaxps %zmm1, %zmm2, %zmm2
+; AVX512-NEXT:    vcvttps2udq %zmm2, %zmm2
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512-NEXT:    vpslld $16, %zmm0, %zmm0
-; AVX512-NEXT:    vfpclassps $215, %zmm0, %k0 # k0 = isQuietNaN(zmm0) | isPositiveZero(zmm0) | isNegativeZero(zmm0) | isNegativeInfinity(zmm0) | isNegative(zmm0) | isSignalingNaN(zmm0)
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm1 {%k1} {z}
+; AVX512-NEXT:    vmaxps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvttps2udq %zmm0, %zmm1
 ; AVX512-NEXT:    vmovaps %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %x = call <32 x i32> @llvm.fptoui.sat.v32i32.v32bf16(<32 x bfloat> %f)
