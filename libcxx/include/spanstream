@@ -152,7 +152,7 @@ public:
     if (__mode_ & ios_base::out) {
       this->setp(__s.data(), __s.data() + __s.size());
       if (__mode_ & ios_base::ate) {
-        this->pbump(__s.size());
+        this->__pbump(__s.size());
       }
     }
 
@@ -229,7 +229,7 @@ protected:
       this->setg(this->eback(), this->eback() + __newoff, this->egptr());
     if (__which & ios_base::out) {
       this->setp(this->pbase(), this->epptr());
-      this->pbump(__newoff);
+      this->__pbump(__newoff);
     }
 
     return static_cast<pos_type>(__newoff);
