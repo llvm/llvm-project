@@ -180,8 +180,7 @@ AnyValue Library::executeMemTransfer(ArrayRef<AnyValue> Args,
 
 AnyValue Library::executeMemset(ArrayRef<AnyValue> Args) {
   const AnyValue &Dest = Args[0];
-  Executor.executeMemSet(Dest, Args[1], Args[2], Intrinsic::memset,
-                         /*IsLibCall=*/true);
+  Executor.executeMemSet(Dest, Args[1], Args[2]);
   return Dest;
 }
 

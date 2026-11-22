@@ -2053,7 +2053,7 @@ public:
       return AnyValue();
     case Intrinsic::memset:
     case Intrinsic::memset_inline:
-      executeMemSet(Args[0], Args[1], Args[2], IID, /*IsLibCall=*/false);
+      executeMemSet(Args[0], Args[1], Args[2]);
       return AnyValue();
     case Intrinsic::speculative_load:
       assert(!getSpeculativeLoadOracle(CB) &&

@@ -179,7 +179,7 @@ void ExecutorBase::executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
     return;
   }
   const uint64_t Len = *LenOpt;
-  if (Len == 0 && !IsLibCall)
+  if (Len == 0)
     return;
 
   if (Dest.isPoison()) {
@@ -195,25 +195,15 @@ void ExecutorBase::executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
   const Pointer &DstPtr = Dest.asPointer();
   const Pointer &SrcPtr = Src.asPointer();
 
-  // Unlike the intrinsic, the C function does not access memory for a
-  // zero-length operation, but its pointer arguments still need to be valid.
-  // Require at least one dereferenceable byte for libcalls so that pointers to
-  // zero-sized objects, such as functions, are rejected.
-  const uint64_t CheckSize = Len == 0 && IsLibCall ? 1 : Len;
-  const bool IsStore = Len != 0;
-
   // Alignment attributes have already been handled at the call site.
   auto [SrcMO, SrcOffset] =
-      verifyMemAccess(SrcPtr, CheckSize, Align(1), /*IsStore=*/false);
+      verifyMemAccess(SrcPtr, Len, Align(1), /*IsStore=*/false);
   if (!SrcMO)
     return;
 
   auto [DstMO, DstOffset] =
-      verifyMemAccess(DstPtr, CheckSize, Align(1), IsStore);
+      verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
   if (!DstMO)
-    return;
-
-  if (Len == 0)
     return;
 
   if (!IsMemMove && SrcMO == DstMO) {
@@ -234,10 +224,7 @@ void ExecutorBase::executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
 }
 
 void ExecutorBase::executeMemSet(const AnyValue &Dest, const AnyValue &Val,
-                                 const AnyValue &Length, Intrinsic::ID IID,
-                                 bool IsLibCall) {
-  assert((IID == Intrinsic::memset || IID == Intrinsic::memset_inline) &&
-         "Unexpected memset intrinsic");
+                                 const AnyValue &Length) {
   if (Length.isPoison()) {
     reportImmediateUB() << "memset called with poison length.";
     return;
@@ -249,7 +236,7 @@ void ExecutorBase::executeMemSet(const AnyValue &Dest, const AnyValue &Val,
     return;
   }
   const uint64_t Len = *LenOpt;
-  if (Len == 0 && !IsLibCall)
+  if (Len == 0)
     return;
 
   if (Dest.isPoison()) {
@@ -259,17 +246,10 @@ void ExecutorBase::executeMemSet(const AnyValue &Dest, const AnyValue &Val,
 
   const Pointer &DstPtr = Dest.asPointer();
 
-  // Require at least one dereferenceable byte for libcalls even for a
-  // zero-length operation, so that pointers to zero-sized objects are rejected.
-  const uint64_t CheckSize = Len == 0 && IsLibCall ? 1 : Len;
-
   // Alignment attributes have already been handled at the call site.
   auto [DstMO, DstOffset] =
-      verifyMemAccess(DstPtr, CheckSize, Align(1), /*IsStore=*/Len != 0);
+      verifyMemAccess(DstPtr, Len, Align(1), /*IsStore=*/true);
   if (!DstMO)
-    return;
-
-  if (Len == 0)
     return;
 
   Byte FillByte = Val.isPoison()

@@ -121,10 +121,9 @@ public:
                           const AnyValue &Length, Intrinsic::ID IID,
                           bool IsLibCall);
 
-  /// Fill `Length` bytes at `Dest` with `Val` according to the intrinsic `IID`.
-  /// If `IsLibCall` is true, the C library semantics are used instead.
+  /// Fill `Length` bytes at `Dest` with `Val`.
   void executeMemSet(const AnyValue &Dest, const AnyValue &Val,
-                     const AnyValue &Length, Intrinsic::ID IID, bool IsLibCall);
+                     const AnyValue &Length);
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);
