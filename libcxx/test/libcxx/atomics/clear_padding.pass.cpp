@@ -31,6 +31,10 @@
 // (see https://llvm.org/PR212002)
 // ADDITIONAL_COMPILE_FLAGS: -fno-stack-protector
 
+// Older Clang computes _BitInt padding incorrectly on big-endian targets
+// (see https://github.com/llvm/llvm-project/pull/215809)
+// XFAIL: clang-23 && target={{.+}}-aix{{.*}}
+
 #include <atomic>
 #include <cassert>
 #include <cstring>
