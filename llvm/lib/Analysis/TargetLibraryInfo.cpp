@@ -917,6 +917,11 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   if (T.isOSAIX())
     TLI.setUnavailable(LibFunc_memrchr);
 
+  if (T.getOS() != Triple::CheriotRTOS) {
+    TLI.setUnavailable(LibFunc_cheriot_heap_allocate);
+    TLI.setUnavailable(LibFunc_cheriot_heap_free);
+  }
+
   TLI.addVectorizableFunctionsFromVecLib(VecLib, T);
 }
 

@@ -6741,6 +6741,9 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
 
       for (CallBase *FreeCall : AI.PotentialFreeCalls) {
         LLVM_DEBUG(dbgs() << "H2S: Removing free call: " << *FreeCall << "\n");
+        if (!FreeCall->use_empty())
+          A.changeAfterManifest(IRPosition::callsite_returned(*FreeCall),
+                                *getElidedFreeResult(FreeCall));
         A.deleteAfterManifest(*FreeCall);
         HasChanged = ChangeStatus::CHANGED;
       }
