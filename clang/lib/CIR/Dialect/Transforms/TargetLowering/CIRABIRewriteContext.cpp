@@ -2841,6 +2841,24 @@ mlir::LogicalResult replaceVAArgResult(CIRBaseBuilderTy &b, cir::VAArgOp op,
   return mlir::success();
 }
 
+class AMDGPUABIRewriteContext final : public CIRABIRewriteContext {
+public:
+  using CIRABIRewriteContext::CIRABIRewriteContext;
+
+protected:
+  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
+                                  CIRBaseBuilderTy &builder) override;
+};
+
+class X86_64ABIRewriteContext final : public CIRABIRewriteContext {
+public:
+  using CIRABIRewriteContext::CIRABIRewriteContext;
+
+protected:
+  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
+                                  CIRBaseBuilderTy &builder) override;
+};
+
 } // namespace
 
 mlir::LogicalResult
@@ -2861,21 +2879,16 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
     return mlir::success();
   }
 
-  switch (target) {
-  case cir::CallConvTarget::X86_64:
-    return rewriteVAArgX86_64(op, ac, builder);
-  case cir::CallConvTarget::AMDGPU:
-    return rewriteVAArgAMDGPU(op, ac, builder);
-  case cir::CallConvTarget::None:
-  case cir::CallConvTarget::Test:
-  case cir::CallConvTarget::SPIRV:
-  case cir::CallConvTarget::AArch64:
-    break;
-  }
+  return expandVAArg(op, ac, builder);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::expandVAArg(cir::VAArgOp op,
+                                                      const ArgClassification &,
+                                                      CIRBaseBuilderTy &) {
   return reportVAArgNYI(op, "a type on this target");
 }
 
-mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
+mlir::LogicalResult AMDGPUABIRewriteContext::expandVAArg(
     cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
   assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
          "AMDGPU reads every variadic argument in place from its slots");
@@ -2886,7 +2899,7 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
   return replaceVAArgResult(builder, op, addr, slotSize, dl);
 }
 
-mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
+mlir::LogicalResult X86_64ABIRewriteContext::expandVAArg(
     cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
   mlir::Location loc = op.getLoc();
   mlir::Type resultTy = op.getType();
@@ -3005,4 +3018,20 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
   // Every path above places the result at least this well aligned.
   return replaceVAArgResult(builder, op, addr,
                             argumentAreaAlign(resultTy, module), dl);
+}
+
+std::unique_ptr<CIRABIRewriteContext>
+cir::createX86_64ABIRewriteContext(mlir::ModuleOp module,
+                                   const mlir::DataLayout &dl,
+                                   bool enableNoundefAttrs) {
+  return std::make_unique<X86_64ABIRewriteContext>(module, dl,
+                                                   enableNoundefAttrs);
+}
+
+std::unique_ptr<CIRABIRewriteContext>
+cir::createAMDGPUABIRewriteContext(mlir::ModuleOp module,
+                                   const mlir::DataLayout &dl,
+                                   bool enableNoundefAttrs) {
+  return std::make_unique<AMDGPUABIRewriteContext>(module, dl,
+                                                   enableNoundefAttrs);
 }
