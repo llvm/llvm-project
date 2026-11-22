@@ -153,6 +153,7 @@ func.func @f1ext(%a: vector<5xi8>) -> vector<8xi16> {
   // CHECK-DAG: %[[MASK1:.*]] = arith.constant dense<[0, 3, 0, 15, 1, 0, 7, 0]> : vector<8xi8>
   // CHECK-DAG: %[[SHR0_CST:.*]] = arith.constant dense<[0, 5, 2, 7, 4, 1, 6, 3]> : vector<8xi8>
   // CHECK-DAG: %[[SHL1_CST:.*]] = arith.constant dense<[5, 3, 5, 1, 4, 5, 2, 5]> : vector<8xi8>
+  // CHECK-DAG: %[[SIGN_SHIFT:.*]] = arith.constant dense<3> : vector<8xi8>
   // CHECK: %[[V0:.*]] = vector.shuffle %[[A]], %[[A]] [0, 0, 1, 1, 2, 3, 3, 4] : vector<5xi8>, vector<5xi8>
   // CHECK: %[[A0:.*]] = arith.andi %[[V0]], %[[MASK0]] : vector<8xi8>
   // CHECK: %[[SHR0:.*]] = arith.shrui %[[A0]], %[[SHR0_CST]] : vector<8xi8>
@@ -160,7 +161,9 @@ func.func @f1ext(%a: vector<5xi8>) -> vector<8xi16> {
   // CHECK: %[[A1:.*]] = arith.andi %[[V1]], %[[MASK1]] : vector<8xi8>
   // CHECK: %[[SHL1:.*]] = arith.shli %[[A1]], %[[SHL1_CST]] : vector<8xi8>
   // CHECK: %[[O1:.*]] = arith.ori %[[SHR0]], %[[SHL1]] : vector<8xi8>
-  // CHECK: %[[RES:.*]] = arith.extsi %[[O1]] : vector<8xi8> to vector<8xi16>
+  // CHECK: %[[SHL2:.*]] = arith.shli %[[O1]], %[[SIGN_SHIFT]] : vector<8xi8>
+  // CHECK: %[[SHR2:.*]] = arith.shrsi %[[SHL2]], %[[SIGN_SHIFT]] : vector<8xi8>
+  // CHECK: %[[RES:.*]] = arith.extsi %[[SHR2]] : vector<8xi8> to vector<8xi16>
   // return %[[RES]] : vector<8xi16>
 
   %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
@@ -191,6 +194,26 @@ func.func @f3ext(%a: vector<5xi8>) -> vector<8xi17> {
   %0 = vector.bitcast %a : vector<5xi8> to vector<8xi5>
   %1 = arith.extsi %0 : vector<8xi5> to vector<8xi17>
   return %1 : vector<8xi17>
+}
+
+// Regression test for issue #243823: extsi i8 -> i32 of a bitcast.
+// CHECK-LABEL: func.func @f4ext(
+//  CHECK-SAME: %[[A:[0-9a-z]*]]: vector<1xi32>) -> vector<4xi32> {
+func.func @f4ext(%a: vector<1xi32>) -> vector<4xi32> {
+  // CHECK-DAG: %[[MASK:.*]] = arith.constant dense<[255, 65280, 16711680, -16777216]> : vector<4xi32>
+  // CHECK-DAG: %[[SHR_CST:.*]] = arith.constant dense<[0, 8, 16, 24]> : vector<4xi32>
+  // CHECK-DAG: %[[SIGN_SHIFT:.*]] = arith.constant dense<24> : vector<4xi32>
+  // CHECK: %[[V:.*]] = vector.shuffle %[[A]], %[[A]] [0, 0, 0, 0] : vector<1xi32>, vector<1xi32>
+  // CHECK: %[[AND:.*]] = arith.andi %[[V]], %[[MASK]] : vector<4xi32>
+  // CHECK: %[[SHR:.*]] = arith.shrui %[[AND]], %[[SHR_CST]] : vector<4xi32>
+  // CHECK: %[[SHL:.*]] = arith.shli %[[SHR]], %[[SIGN_SHIFT]] : vector<4xi32>
+  // CHECK: %[[SEXT:.*]] = arith.shrsi %[[SHL]], %[[SIGN_SHIFT]] : vector<4xi32>
+  // CHECK-NOT: arith.extsi
+  // return %[[SEXT]] : vector<4xi32>
+
+  %0 = vector.bitcast %a : vector<1xi32> to vector<4xi8>
+  %1 = arith.extsi %0 : vector<4xi8> to vector<4xi32>
+  return %1 : vector<4xi32>
 }
 
 // CHECK-LABEL: func.func @i4_transpose(
