@@ -12,10 +12,10 @@
 #include <sycl/sycl.hpp>
 
 int main() {
-  sycl::queue q;
+  sycl::queue Q;
 
-  q.submit([&](sycl::handler &cgh) {
-    cgh.parallel_for<class HandlerNDRangeInvalidArgType>(
+  Q.submit([&](sycl::handler &CGH) {
+    CGH.parallel_for<class HandlerNDRangeInvalidArgType>(
         sycl::nd_range<1>{sycl::range<1>{4}, sycl::range<1>{2}},
         [=](sycl::item<1>) {}); // expected-error@* {{must be sycl::nd_item or
                                 // be convertible from sycl::nd_item}}

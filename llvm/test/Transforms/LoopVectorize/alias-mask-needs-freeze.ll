@@ -6,9 +6,9 @@ define void @alias_mask_forked_pointer_needs_freeze(ptr %base1, ptr %base2,
 ; CHECK-LABEL: define void @alias_mask_forked_pointer_needs_freeze(
 ; CHECK-SAME: ptr [[BASE1:%.*]], ptr [[BASE2:%.*]], ptr [[DEST:%.*]], ptr [[PREDICATES:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST]] to i64
 ; CHECK-NEXT:    [[BASE12:%.*]] = ptrtoaddr ptr [[BASE1]] to i64
 ; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2]] to i64
+; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST]] to i64
 ; CHECK-NEXT:    [[PREDICATES4:%.*]] = ptrtoaddr ptr [[PREDICATES]] to i64
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:

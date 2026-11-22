@@ -243,7 +243,7 @@ define void @test2(ptr %A, ptr %B) nounwind {
 ; X86-NEXT:    movl %esp, %ebp
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    andl $-8, %esp
-; X86-NEXT:    subl $16, %esp
+; X86-NEXT:    subl $8, %esp
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero

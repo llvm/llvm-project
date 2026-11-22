@@ -14,9 +14,6 @@
 ...
 ---
 name:            test_fneg_f32
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1:
     liveins:
@@ -25,15 +22,12 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -2147483648
     ; CHECK: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[DEF]], [[C]]
     ; CHECK: $edi = COPY [[XOR]](s32)
-    %0(s32) = IMPLICIT_DEF
-    %1(s32) = G_FNEG %0
+    %0:_(s32) = IMPLICIT_DEF
+    %1:_(s32) = G_FNEG %0
     $edi = COPY %1
 ...
 ---
 name:            test_fneg_f64
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1:
     liveins:
@@ -42,7 +36,7 @@ body:             |
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 -9223372036854775808
     ; CHECK: [[XOR:%[0-9]+]]:_(s64) = G_XOR [[DEF]], [[C]]
     ; CHECK: $rdi = COPY [[XOR]](s64)
-    %0(s64) = G_IMPLICIT_DEF
-    %1(s64) = G_FNEG %0
+    %0:_(s64) = G_IMPLICIT_DEF
+    %1:_(s64) = G_FNEG %0
     $rdi = COPY %1
 ...

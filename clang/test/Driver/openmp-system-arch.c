@@ -1,5 +1,9 @@
 // Needs chmod
 // UNSUPPORTED: system-windows
+// On macOS CI, running the fake arch tools can take longer than
+// CLANG_TOOLCHAIN_PROGRAM_TIMEOUT, see
+// https://github.com/llvm/llvm-project/issues/238903.
+// UNSUPPORTED: system-darwin
 // XFAIL: target={{.*}}-zos{{.*}}
 
 // RUN: mkdir -p %t

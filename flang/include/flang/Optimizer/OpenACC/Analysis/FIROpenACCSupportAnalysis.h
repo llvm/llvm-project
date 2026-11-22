@@ -51,7 +51,8 @@ public:
   bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
                         mlir::Operation **definingOpPtr);
 
-  bool isValidValueUse(mlir::Value v, mlir::Region &region);
+  bool isValidValueUse(mlir::Value v, mlir::Region &region,
+                       mlir::SymbolTableCollection *symbolTables);
 
   std::optional<mlir::acc::TypeSizeAndAlignment>
   getTypeSizeAndAlignment(mlir::Type ty, mlir::ModuleOp module,

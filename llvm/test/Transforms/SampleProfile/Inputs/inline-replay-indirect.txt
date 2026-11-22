@@ -1,0 +1,1 @@
+t.c:5:7: 'callee' inlined into 'caller' at callsite caller:2:7;

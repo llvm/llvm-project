@@ -9,10 +9,10 @@ function test_real4(x, n)
   integer :: n
 
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
-  ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_real4En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 uniq_name("_QFtest_real4En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! ALL: %[[res_alloc:.*]] = fir.alloca f32 <{bindc_name = "test_real4", uniq_name = "_QFtest_real4Etest_real4"}>
-  ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] {uniq_name = "_QFtest_real4Etest_real4"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
-  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_real4Ex"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] uniq_name("_QFtest_real4Etest_real4") : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 uniq_name("_QFtest_real4Ex") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! ALL-DAG: %[[n:.*]] = fir.load %[[n_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[x:.*]] = fir.load %[[x_decl]]#0 : !fir.ref<f32>
   ! ALL: fir.call @ynf(%[[n]], %[[x]]) {{.*}} : (i32, f32) -> f32
@@ -26,10 +26,10 @@ function test_real8(x, n)
   integer :: n
 
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
-  ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_real8En"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[n_decl:.*]]:2 = hlfir.declare %[[argn]] dummy_scope %[[scope]] arg 2 uniq_name("_QFtest_real8En") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
   ! ALL: %[[res_alloc:.*]] = fir.alloca f64 <{bindc_name = "test_real8", uniq_name = "_QFtest_real8Etest_real8"}>
-  ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] {uniq_name = "_QFtest_real8Etest_real8"} : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
-  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_real8Ex"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[res_decl:.*]]:2 = hlfir.declare %[[res_alloc]] uniq_name("_QFtest_real8Etest_real8") : (!fir.ref<f64>) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 uniq_name("_QFtest_real8Ex") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
   ! ALL-DAG: %[[n:.*]] = fir.load %[[n_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[x:.*]] = fir.load %[[x_decl]]#0 : !fir.ref<f64>
   ! ALL: fir.call @yn(%[[n]], %[[x]]) {{.*}} : (i32, f64) -> f64
@@ -45,10 +45,10 @@ subroutine test_transformational_real4(x, n1, n2, r)
 
   ! ALL: %[[temp:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>>
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
-  ! ALL: %[[n1_decl:.*]]:2 = hlfir.declare %[[argn1]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_transformational_real4En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[n2_decl:.*]]:2 = hlfir.declare %[[argn2]] dummy_scope %[[scope]] arg 3 {uniq_name = "_QFtest_transformational_real4En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[argr]] dummy_scope %[[scope]] arg 4 {uniq_name = "_QFtest_transformational_real4Er"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
-  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_transformational_real4Ex"} : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
+  ! ALL: %[[n1_decl:.*]]:2 = hlfir.declare %[[argn1]] dummy_scope %[[scope]] arg 2 uniq_name("_QFtest_transformational_real4En1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[n2_decl:.*]]:2 = hlfir.declare %[[argn2]] dummy_scope %[[scope]] arg 3 uniq_name("_QFtest_transformational_real4En2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[argr]] dummy_scope %[[scope]] arg 4 uniq_name("_QFtest_transformational_real4Er") : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> (!fir.box<!fir.array<?xf32>>, !fir.box<!fir.array<?xf32>>)
+  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 uniq_name("_QFtest_transformational_real4Ex") : (!fir.ref<f32>, !fir.dscope) -> (!fir.ref<f32>, !fir.ref<f32>)
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[n1_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[n2_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[x:.*]] = fir.load %[[x_decl]]#0 : !fir.ref<f32>
@@ -90,10 +90,10 @@ subroutine test_transformational_real8(x, n1, n2, r)
 
   ! ALL: %[[temp:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf64>>>
   ! ALL: %[[scope:.*]] = fir.dummy_scope : !fir.dscope
-  ! ALL: %[[n1_decl:.*]]:2 = hlfir.declare %[[argn1]] dummy_scope %[[scope]] arg 2 {uniq_name = "_QFtest_transformational_real8En1"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[n2_decl:.*]]:2 = hlfir.declare %[[argn2]] dummy_scope %[[scope]] arg 3 {uniq_name = "_QFtest_transformational_real8En2"} : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
-  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[argr]] dummy_scope %[[scope]] arg 4 {uniq_name = "_QFtest_transformational_real8Er"} : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
-  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 {uniq_name = "_QFtest_transformational_real8Ex"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[n1_decl:.*]]:2 = hlfir.declare %[[argn1]] dummy_scope %[[scope]] arg 2 uniq_name("_QFtest_transformational_real8En1") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[n2_decl:.*]]:2 = hlfir.declare %[[argn2]] dummy_scope %[[scope]] arg 3 uniq_name("_QFtest_transformational_real8En2") : (!fir.ref<i32>, !fir.dscope) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[argr]] dummy_scope %[[scope]] arg 4 uniq_name("_QFtest_transformational_real8Er") : (!fir.box<!fir.array<?xf64>>, !fir.dscope) -> (!fir.box<!fir.array<?xf64>>, !fir.box<!fir.array<?xf64>>)
+  ! ALL: %[[x_decl:.*]]:2 = hlfir.declare %[[argx]] dummy_scope %[[scope]] arg 1 uniq_name("_QFtest_transformational_real8Ex") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
   ! ALL-DAG: %[[n1:.*]] = fir.load %[[n1_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[n2:.*]] = fir.load %[[n2_decl]]#0 : !fir.ref<i32>
   ! ALL-DAG: %[[x:.*]] = fir.load %[[x_decl]]#0 : !fir.ref<f64>

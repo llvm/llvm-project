@@ -1,10 +1,10 @@
-; RUN: llc -O2 -experimental-debug-variable-locations %s -stop-after=livedebugvalues -mtriple=arm64-apple-macosx15.0.0 -o - | FileCheck %s
+; RUN: llc -O2 -experimental-debug-variable-locations %s -stop-after=live-debug-values -mtriple=arm64-apple-macosx15.0.0 -o - | FileCheck %s
 
 ; CHECK: $w{{[0-9]+}} = ORRWrs $wzr, killed $w{{[0-9]+}}, 0
 ; CHECK-NEXT: DBG_INSTR_REF !{{[0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref({{[0-9]+}}, 0), debug-location !{{[0-9]+}}
 
-; This test makes sure that instruction referenced livedebugvalues pass doesn't crash when an ORRWrr is present before 
-; aarch64-isel and is converted to an ORRWrs with a shift amount immediate value of 0 before livedebugvalues, in this 
+; This test makes sure that instruction referenced live-debug-values pass doesn't crash when an ORRWrr is present before
+; aarch64-isel and is converted to an ORRWrs with a shift amount immediate value of 0 before live-debug-values, in this
 ; test case the MIR before both passes is shown below:
 
 ; Before aarch64-isel
@@ -12,11 +12,11 @@
 ; %0:gpr64all = SUBREG_TO_REG killed %11:gpr32, %subreg.sub_32, debug-location !5; :0
 ; DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), %0:gpr64all, debug-location !11; :0 @[ :0 ] line no:0
 
-; Before livedebugvalues
+; Before live-debug-values
 ; $w0 = ORRWrs $wzr, killed $w3, 0
 ; DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(3, 0), debug-location !11; :0 @[ :0 ] line no:0
 
-; The livedebugvalues pass will consider the ORRWrs variant as a copy, therefore the aarch64-isel call to 
+; The live-debug-values pass will consider the ORRWrs variant as a copy, therefore the aarch64-isel call to
 ; salvageCopySSA should do the same.
 
 %"class.llvm::iterator_range.53" = type { %"class.llvm::opt::arg_iterator.54", %"class.llvm::opt::arg_iterator.54" }

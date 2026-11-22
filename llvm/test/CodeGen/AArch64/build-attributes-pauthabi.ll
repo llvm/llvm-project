@@ -17,8 +17,8 @@ target triple = "aarch64-unknown-none-elf"
 
 !llvm.module.flags = !{!1, !2}
 
-!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 2}
-!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 31}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i64 2}
+!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i64 31}
 
 
 ;--- platform-2-version-0.ll
@@ -38,8 +38,8 @@ target triple = "aarch64-unknown-none-elf"
 
 !llvm.module.flags = !{!1, !2}
 
-!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 2}
-!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i64 2}
+!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i64 0}
 
 
 ;--- platform-llvm_linux-version-31.ll
@@ -58,8 +58,8 @@ target triple = "aarch64-unknown-none-elf"
 
 !llvm.module.flags = !{!1, !2}
 
-!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 31}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i64 268435458}
+!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i64 31}
 
 
 ;--- platform-llvm_linux-version-0.ll
@@ -78,5 +78,28 @@ target triple = "aarch64-unknown-none-elf"
 
 !llvm.module.flags = !{!1, !2}
 
-!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i32 268435458}
-!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i32 0}
+!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i64 268435458}
+!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i64 0}
+
+;--- platform-bare-metal-8589934592.ll
+
+; For bare-metal platform the signing schema may go above 32-bits
+; Make sure 64-bit attributes are supported.
+
+target triple = "aarch64-unknown-none-elf"
+
+!llvm.module.flags = !{!1, !2}
+
+!1 = !{i32 1, !"aarch64-elf-pauthabi-platform", i64 1}
+!2 = !{i32 1, !"aarch64-elf-pauthabi-version", i64 8589934592}
+
+; RUN: llc < platform-bare-metal-8589934592.ll | FileCheck %s --check-prefix=ASM-BARE-METAL-8589934592
+; RUN: llc platform-bare-metal-8589934592.ll -filetype=obj -o - | llvm-readelf --hex-dump=.ARM.attributes - | FileCheck %s --check-prefix=ELF-BARE-METAL-8589934592
+
+; ASM-BARE-METAL-8589934592: .aeabi_subsection       aeabi_pauthabi, required, uleb128
+; ASM-BARE-METAL-8589934592-NEXT: .aeabi_attribute        1, 1    // Tag_PAuth_Platform
+; ASM-BARE-METAL-8589934592-NEXT: .aeabi_attribute        2, 8589934592   // Tag_PAuth_Schema
+
+; ELF-BARE-METAL-8589934592: Hex dump of section '.ARM.attributes':
+; ELF-BARE-METAL-8589934592-NEXT: 0x00000000 411d0000 00616561 62695f70 61757468 A....aeabi_pauth
+; ELF-BARE-METAL-8589934592-NEXT: 0x00000010 61626900 00000101 02808080 8020     abi..........

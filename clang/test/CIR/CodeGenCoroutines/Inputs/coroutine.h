@@ -63,6 +63,26 @@ struct optional {
   T &value() &;
   T &&value() &&;
 };
+
+template <typename... T>
+struct coroutine_traits<void, T...> {
+  struct promise_type {
+    void get_return_object() {}
+
+    std::suspend_never initial_suspend() noexcept {
+      return {};
+    }
+
+    std::suspend_never final_suspend() noexcept {
+      return {};
+    }
+
+    void return_void() noexcept {}
+
+    void unhandled_exception() {}
+  };
+};
+
 } // namespace std
 
 namespace folly {

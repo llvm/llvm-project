@@ -364,6 +364,14 @@ PrologEpilogInserterPass::run(MachineFunction &MF,
   if (!PEIImpl(&ORE).run(MF))
     return PreservedAnalyses::all();
 
+  // Segmented-stack and HiPE prologues insert new basic blocks, so the CFG is
+  // not preserved for such functions.
+  // TODO: We should propagate this info directly once we are done with NewPM
+  // transition.
+  if (MF.shouldSplitStack() ||
+      MF.getFunction().getCallingConv() == CallingConv::HiPE)
+    return getMachineFunctionPassPreservedAnalyses();
+
   return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }
 
@@ -1424,6 +1432,16 @@ bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
       // location expression. Also after doing this we change the DBG_VALUE
       // to be direct.
       if (MI.isIndirectDebugValue() && DIExpr->isImplicit()) {
+        // DW_OP_deref_size may not read more than the size of an address.
+        if (Size > MF.getDataLayout().getPointerSize()) {
+          LLVM_DEBUG(dbgs() << "Dropping location of object larger than an "
+                               "address: "
+                            << MI);
+          MI.setDebugValueUndef();
+          return true;
+        }
+        assert(isUInt<8>(Size) &&
+               "DW_OP_deref_size operand must fit in a byte");
         SmallVector<uint64_t, 2> Ops = {dwarf::DW_OP_deref_size, Size};
         bool WithStackValue = true;
         DIExpr = DIExpression::prependOpcodes(DIExpr, Ops, WithStackValue);

@@ -58,10 +58,7 @@ struct IndexedMemProfData {
 
 private:
   // Return a hash value based on the contents of the frame. Here we use a
-  // cryptographic hash function to minimize the chance of hash collisions.  We
-  // do persist FrameIds as part of memprof formats up to Version 2, inclusive.
-  // However, the deserializer never calls this function; it uses FrameIds
-  // merely as keys to look up Frames proper.
+  // cryptographic hash function to minimize the chance of hash collisions.
   FrameId hashFrame(const Frame &F) const {
     llvm::HashBuilder<llvm::TruncatedBLAKE3<8>, llvm::endianness::little>
         HashBuilder;

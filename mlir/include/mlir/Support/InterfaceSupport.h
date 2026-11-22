@@ -171,17 +171,9 @@ class InterfaceMap {
 
 public:
   InterfaceMap() = default;
-  InterfaceMap(InterfaceMap &&) = default;
-  InterfaceMap &operator=(InterfaceMap &&rhs) {
-    for (auto &it : interfaces)
-      free(it.second);
-    interfaces = std::move(rhs.interfaces);
-    return *this;
-  }
-  ~InterfaceMap() {
-    for (auto &it : interfaces)
-      free(it.second);
-  }
+  InterfaceMap(InterfaceMap &&);
+  InterfaceMap &operator=(InterfaceMap &&rhs);
+  ~InterfaceMap();
 
   /// Construct an InterfaceMap with the given set of template types. For
   /// convenience given that object trait lists may contain other non-interface
@@ -195,7 +187,11 @@ public:
       return InterfaceMap();
     } else {
       InterfaceMap map;
-      map.insertPotentialInterfaces<Types...>();
+      // A comma fold registers interfaces in source order. All non-interface
+      // traits share the same no-op specialization.
+      (map.insertPotentialInterface<std::conditional_t<
+           detect_get_interface_id<Types>::value, Types, void>>(),
+       ...);
       return map;
     }
   }
@@ -217,13 +213,6 @@ public:
   }
 
 private:
-  /// Insert the given interface types in source order. A comma fold is
-  /// sequenced left to right in C++17.
-  template <typename... Types>
-  void insertPotentialInterfaces() {
-    (insertPotentialInterface<Types>(), ...);
-  }
-
   /// Insert the given interface type into the map, ignoring it if it doesn't
   /// actually represent an interface.
   template <typename T>

@@ -13,13 +13,13 @@ subroutine eligible_self_update3(x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_self_update3
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ea"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Eb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ec"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ed"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ee"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ef"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ex"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ea")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Eb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ec")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ed")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ee")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ef")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ex")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -37,13 +37,13 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_self_update3
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ea"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Eb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ec"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ed"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ee"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ef"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update3Ex"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ea")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Eb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ec")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ed")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ee")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ef")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update3Ex")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -67,15 +67,15 @@ subroutine eligible_self_update4(x,a,b,c,d,e,f,g,h)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_self_update4
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ea"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ec"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ed"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ee"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ef"}
-! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eg"}
-! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eh"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ex"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ea")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ec")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ed")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ee")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ef")
+! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eg")
+! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eh")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ex")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -97,15 +97,15 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_self_update4
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ea"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ec"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ed"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ee"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ef"}
-! DEFAULT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eg"}
-! DEFAULT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Eh"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_self_update4Ex"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ea")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ec")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ed")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ee")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ef")
+! DEFAULT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eg")
+! DEFAULT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Eh")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_self_update4Ex")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -133,15 +133,15 @@ subroutine eligible_out_of_place4(y,a,b,c,d,e,f,g,h)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_out_of_place4
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ea"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ec"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ed"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ee"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ef"}
-! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eg"}
-! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eh"}
-! SPLIT-DAG: %[[Y:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ey"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ea")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ec")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ed")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ee")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ef")
+! SPLIT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eg")
+! SPLIT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eh")
+! SPLIT-DAG: %[[Y:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ey")
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
 ! SPLIT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
@@ -161,15 +161,15 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[Y]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_out_of_place4
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ea"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ec"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ed"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ee"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ef"}
-! DEFAULT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eg"}
-! DEFAULT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Eh"}
-! DEFAULT-DAG: %[[Y:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_out_of_place4Ey"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ea")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ec")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ed")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ee")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ef")
+! DEFAULT-DAG: %[[G:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eg")
+! DEFAULT-DAG: %[[H:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Eh")
+! DEFAULT-DAG: %[[Y:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_out_of_place4Ey")
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
 ! DEFAULT: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
@@ -195,12 +195,12 @@ subroutine eligible_scalar_term(x,a,b,c,d,e)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_scalar_term
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEd"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEe"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEd")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEe")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -216,12 +216,12 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_scalar_term
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEd"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEe"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_scalar_termEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEd")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEe")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_scalar_termEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -243,13 +243,13 @@ subroutine eligible_parenthesized_subtractions(x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_parenthesized_subtractions
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEd"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEe"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEf"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEd")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEe")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEf")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -269,13 +269,13 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_parenthesized_subtractions
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEd"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEe"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEf"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_subtractionsEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEd")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEe")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEf")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_subtractionsEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -304,13 +304,13 @@ subroutine eligible_parenthesized_add(x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_parenthesized_add
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEd"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEe"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEf"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEd")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEe")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEf")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -328,13 +328,13 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_parenthesized_add
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEd"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEe"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEf"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_parenthesized_addEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEd")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEe")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEf")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_parenthesized_addEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -360,13 +360,13 @@ subroutine guard_whole_rhs_parentheses(x,a,b,c,d,e,f)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_whole_rhs_parentheses
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEc"}
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEd"}
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEe"}
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEf"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_whole_rhs_parenthesesEx"}
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEe")
+! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEf")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_whole_rhs_parenthesesEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
@@ -393,13 +393,13 @@ subroutine eligible_signed_subtract(x,a,b,c,d,e,f)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_signed_subtract
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEd"}
-! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEe"}
-! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEf"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEd")
+! SPLIT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEe")
+! SPLIT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEf")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -416,13 +416,13 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_signed_subtract
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEd"}
-! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEe"}
-! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEf"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_signed_subtractEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEd")
+! DEFAULT-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEe")
+! DEFAULT-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEf")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_signed_subtractEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[BV:.*]] = fir.load %[[B]]#0
@@ -448,10 +448,10 @@ subroutine eligible_leading_negative_tail(x,a,b,c)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_leading_negative_tail
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEc"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEc")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -462,10 +462,10 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_leading_negative_tail
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEc"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_leading_negative_tailEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEc")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_leading_negative_tailEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -484,10 +484,10 @@ subroutine eligible_trailing_negative_tail(x,a,b,c)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_trailing_negative_tail
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEc"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEc")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -498,10 +498,10 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_trailing_negative_tail
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEc"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_trailing_negative_tailEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEc")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_trailing_negative_tailEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -521,10 +521,10 @@ subroutine eligible_consecutive_subtraction(x,a,b,c)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_consecutive_subtraction
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEc"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEc")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.subf %[[XV]], %[[AV]]
@@ -535,10 +535,10 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_consecutive_subtraction
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEc"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_consecutive_subtractionEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEc")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_consecutive_subtractionEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.subf %[[XV]], %[[AV]]
@@ -557,11 +557,11 @@ subroutine eligible_nested_unparenthesized_subtraction(x,a,b,c,d)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_nested_unparenthesized_subtraction
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEd"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEd")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.subf %[[XV]], %[[AV]]
@@ -574,11 +574,11 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_nested_unparenthesized_subtraction
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEd"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_nested_unparenthesized_subtractionEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEd")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_nested_unparenthesized_subtractionEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.subf %[[XV]], %[[AV]]
@@ -600,11 +600,11 @@ subroutine eligible_complex_signed_parenthesized(x,a,b,c,d)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_complex_signed_parenthesized
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEd"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEd")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = fir.subc %[[XV]], %[[AV]] {{.*}} : complex<f32>
@@ -618,11 +618,11 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_complex_signed_parenthesized
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEd"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_signed_parenthesizedEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEd")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_signed_parenthesizedEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = fir.subc %[[XV]], %[[AV]] {{.*}} : complex<f32>
@@ -644,10 +644,10 @@ subroutine eligible_complex_kind8(x,a,b,c)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_complex_kind8
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ea"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Eb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ec"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_complex_kind8Ex"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_kind8Ea")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_kind8Eb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_kind8Ec")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_complex_kind8Ex")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = fir.addc %[[XV]], %[[AV]] {{.*}} : complex<f64>
@@ -665,10 +665,10 @@ subroutine guard_integer(x,a,b,c)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_integer
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEc"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_integerEx"}
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_integerEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_integerEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_integerEc")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_integerEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[XA:.*]] = arith.addi %[[XV]], %[[AV]]
@@ -688,11 +688,11 @@ subroutine eligible_subtract_parenthesized_term(x,a,b,c,d)
 end
 
 ! SPLIT-LABEL: func.func @_QPeligible_subtract_parenthesized_term
-! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEa"}
-! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEb"}
-! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEc"}
-! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEd"}
-! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEx"}
+! SPLIT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEa")
+! SPLIT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEb")
+! SPLIT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEc")
+! SPLIT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEd")
+! SPLIT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEx")
 ! SPLIT: %[[XV:.*]] = fir.load %[[X]]#0
 ! SPLIT: %[[AV:.*]] = fir.load %[[A]]#0
 ! SPLIT: %[[HEAD:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -706,11 +706,11 @@ end
 ! SPLIT: hlfir.assign %[[RES]] to %[[X]]#0
 
 ! DEFAULT-LABEL: func.func @_QPeligible_subtract_parenthesized_term
-! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEa"}
-! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEb"}
-! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEc"}
-! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEd"}
-! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFeligible_subtract_parenthesized_termEx"}
+! DEFAULT-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEa")
+! DEFAULT-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEb")
+! DEFAULT-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEc")
+! DEFAULT-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEd")
+! DEFAULT-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFeligible_subtract_parenthesized_termEx")
 ! DEFAULT: %[[XV:.*]] = fir.load %[[X]]#0
 ! DEFAULT: %[[AV:.*]] = fir.load %[[A]]#0
 ! DEFAULT: %[[XA:.*]] = arith.addf %[[XV]], %[[AV]]
@@ -734,12 +734,12 @@ subroutine guard_call(x,a,b,c,d,e)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_call
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEc"}
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEd"}
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEe"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_callEx"}
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEe")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_callEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[FOO:.*]] = fir.call @_QPfoo(%[[A]]#0)
 ! NO-REWRITE: %[[XFOO:.*]] = arith.addf %[[XV]], %[[FOO]]
@@ -1031,13 +1031,13 @@ subroutine guard_array(n,x,a,b,c,d,e,f)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_array
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEb"}
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEc"}
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEd"}
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEe"}
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEf"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_arrayEx"}
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEe")
+! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEf")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_arrayEx")
 ! NO-REWRITE: %[[AB:.*]] = hlfir.elemental
 ! NO-REWRITE: fir.load
 ! NO-REWRITE: fir.load
@@ -1077,9 +1077,9 @@ subroutine guard_short_sum(x,a,b)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_short_sum
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_short_sumEa"}
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_short_sumEb"}
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFguard_short_sumEx"}
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_short_sumEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_short_sumEb")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}} uniq_name("_QFguard_short_sumEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
@@ -1242,13 +1242,13 @@ subroutine guard_volatile(x,a,b,c,d,e,f)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_volatile
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEa"
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEb"
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEc"
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEd"
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEe"
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEf"
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatileEx"
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEe")
+! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEf")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatileEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
@@ -1271,13 +1271,13 @@ subroutine guard_volatile_lhs_only(x,a,b,c,d,e,f)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_volatile_lhs_only
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEa"
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEb"
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEc"
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEd"
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEe"
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEf"
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_volatile_lhs_onlyEx"
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEe")
+! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEf")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_volatile_lhs_onlyEx")
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0
 ! NO-REWRITE: %[[AB:.*]] = arith.mulf %[[AV]], %[[BV]]
@@ -1298,13 +1298,13 @@ subroutine guard_asynchronous(x,a,b,c,d,e,f)
 end
 
 ! NO-REWRITE-LABEL: func.func @_QPguard_asynchronous
-! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEa"
-! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEb"
-! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEc"
-! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEd"
-! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEe"
-! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEf"
-! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name = "_QFguard_asynchronousEx"
+! NO-REWRITE-DAG: %[[A:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEa")
+! NO-REWRITE-DAG: %[[B:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEb")
+! NO-REWRITE-DAG: %[[C:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEc")
+! NO-REWRITE-DAG: %[[D:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEd")
+! NO-REWRITE-DAG: %[[E:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEe")
+! NO-REWRITE-DAG: %[[F:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEf")
+! NO-REWRITE-DAG: %[[X:.*]]:2 = hlfir.declare {{.*}}uniq_name("_QFguard_asynchronousEx")
 ! NO-REWRITE: %[[XV:.*]] = fir.load %[[X]]#0
 ! NO-REWRITE: %[[AV:.*]] = fir.load %[[A]]#0
 ! NO-REWRITE: %[[BV:.*]] = fir.load %[[B]]#0

@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
+// RUN: FileCheck --input-file=%t.cir %s --check-prefixes=CIR,EXT-CIR,EXT-CIR-NOEH
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O2 -fclangir -emit-llvm -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=LLVM,EXT-LLVM,EXT-LLVM-NOEH
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-o0.cir
 // RUN: FileCheck --input-file=%t-o0.cir %s --implicit-check-not "cir.lifetime"
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-cir %s -o %t-eh.cir
-// RUN: FileCheck --input-file=%t-eh.cir %s --check-prefix=CIR-EH
+// RUN: FileCheck --input-file=%t-eh.cir %s --check-prefixes=CIR-EH,EXT-CIR,EXT-CIR-EH
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -O1 -fcxx-exceptions -fexceptions -fclangir -emit-llvm -disable-llvm-passes %s -o %t-eh.ll
-// RUN: FileCheck --input-file=%t-eh.ll %s --check-prefixes=LLVM-EH
+// RUN: FileCheck --input-file=%t-eh.ll %s --check-prefixes=LLVM-EH,EXT-LLVM,EXT-LLVM-EH
 
 void use(int);
 
@@ -125,6 +125,7 @@ void if_body(int n) {
 // CIR:         cir.call @_Z3usei
 
 // LLVM-LABEL: define{{.*}} void @_Z7if_bodyi
+// LLVM:         %[[N:.*]] = alloca i32
 // LLVM:         %[[X:.*]] = alloca i32
 // LLVM:         br i1 %{{.*}}, label %[[IF_BODY:[0-9]+]], label %[[IF_END:[0-9]+]]
 // LLVM:       [[IF_BODY]]:
@@ -274,6 +275,79 @@ void while_record_condvar() {
 // LLVM-EH-NEXT:      cleanup
 // LLVM-EH:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[C]])
 // LLVM-EH:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+LoopCond makeLoopCond();
+
+// Destroy the extended temporary before ending the reference's lifetime.
+// CIR does not emit lifetime markers for the temporary yet and are
+// therefore not checked here.
+void while_extended_condvar() {
+  while (const LoopCond &c = makeLoopCond()) {}
+}
+
+// EXT-CIR-LABEL: cir.func{{.*}} @_Z22while_extended_condvarv
+// EXT-CIR:           %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LoopCond>
+// EXT-CIR:           %[[C:.*]] = cir.alloca "c" {{.*}} : !cir.ptr<!cir.ptr<!rec_LoopCond>>
+// EXT-CIR:           cir.while {
+// EXT-CIR-NEXT:        cir.lifetime.start %[[C]] : !cir.ptr<!cir.ptr<!rec_LoopCond>>
+// EXT-CIR:             cir.call @_Z12makeLoopCondv(%[[TMP]])
+// EXT-CIR:           } do {
+// EXT-CIR-NOEH:      } cleanup normal {
+// EXT-CIR-EH:        } cleanup all {
+// EXT-CIR:             cir.if %{{.*}} {
+// EXT-CIR-NEXT:          cir.call @_ZN8LoopCondD1Ev(%[[TMP]]){{.*}}
+// EXT-CIR-NEXT:        }
+// EXT-CIR-NEXT:        cir.lifetime.end %[[C]] : !cir.ptr<!cir.ptr<!rec_LoopCond>>
+// EXT-CIR-NEXT:        cir.yield
+
+// EXT-LLVM-LABEL: define{{.*}} void @_Z22while_extended_condvarv
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[C:.*]])
+// EXT-LLVM-NOEH:    call void @_Z12makeLoopCondv(ptr {{.*}} %[[TMP:[^)]*]])
+// EXT-LLVM-EH:      invoke void @_Z12makeLoopCondv(ptr {{.*}} %[[TMP:[^)]*]])
+// EXT-LLVM:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP]])
+// EXT-LLVM:         call void @llvm.lifetime.end.p0(ptr %[[C]])
+// EXT-LLVM-EH:      landingpad { ptr, i32 }
+// EXT-LLVM-EH-NEXT:        cleanup
+// EXT-LLVM-EH:      call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP]])
+// EXT-LLVM-EH:      call void @llvm.lifetime.end.p0(ptr %[[C]])
+
+struct LoopCondHolder {
+  const LoopCond &c;
+  ~LoopCondHolder();
+  operator bool() const;
+};
+
+// Destroy the record, then its extended temporary, then end its lifetime.
+void while_extended_record_condvar() {
+  while (LoopCondHolder h{makeLoopCond()}) {}
+}
+
+// EXT-CIR-LABEL: cir.func{{.*}} @_Z29while_extended_record_condvarv
+// EXT-CIR:           %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_LoopCond>
+// EXT-CIR:           %[[H:.*]] = cir.alloca "h" {{.*}} : !cir.ptr<!rec_LoopCondHolder>
+// EXT-CIR:           cir.while {
+// EXT-CIR-NEXT:        cir.lifetime.start %[[H]] : !cir.ptr<!rec_LoopCondHolder>
+// EXT-CIR-NOEH:      } cleanup normal {
+// EXT-CIR-EH:        } cleanup all {
+// EXT-CIR:             cir.if %{{.*}} {
+// EXT-CIR-NEXT:          cir.call @_ZN14LoopCondHolderD1Ev(%[[H]]){{.*}}
+// EXT-CIR-NEXT:        }
+// EXT-CIR:             cir.if %{{.*}} {
+// EXT-CIR-NEXT:          cir.call @_ZN8LoopCondD1Ev(%[[TMP]]){{.*}}
+// EXT-CIR-NEXT:        }
+// EXT-CIR-NEXT:        cir.lifetime.end %[[H]] : !cir.ptr<!rec_LoopCondHolder>
+// EXT-CIR-NEXT:        cir.yield
+
+// EXT-LLVM-LABEL: define{{.*}} void @_Z29while_extended_record_condvarv
+// EXT-LLVM:         call void @llvm.lifetime.start.p0(ptr %[[H:.*]])
+// EXT-LLVM:         call void @_ZN14LoopCondHolderD1Ev(ptr {{.*}} %[[H]])
+// EXT-LLVM:         call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP:[^)]*]])
+// EXT-LLVM:         call void @llvm.lifetime.end.p0(ptr %[[H]])
+// EXT-LLVM-EH:      landingpad { ptr, i32 }
+// EXT-LLVM-EH-NEXT:        cleanup
+// EXT-LLVM-EH:      call void @_ZN14LoopCondHolderD1Ev(ptr {{.*}} %[[H]])
+// EXT-LLVM-EH:      call void @_ZN8LoopCondD1Ev(ptr {{.*}} %[[TMP]])
+// EXT-LLVM-EH:      call void @llvm.lifetime.end.p0(ptr %[[H]])
 
 #ifdef __EXCEPTIONS
 

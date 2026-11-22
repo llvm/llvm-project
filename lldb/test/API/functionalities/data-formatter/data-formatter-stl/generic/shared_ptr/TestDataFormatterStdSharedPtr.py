@@ -9,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    TEST_WITH_PDB_DEBUG_INFO = True
     SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
@@ -115,7 +114,6 @@ class TestCase(TestBase):
         self.expect_var_path("*si.pointer", type="int", value="47")
         self.expect_var_path("si.object", type="int", value="47")
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("ptr_node->value", value="1")
         self.expect_var_path("ptr_node->next->value", value="2")
         self.expect_var_path("(*ptr_node).value", value="1")

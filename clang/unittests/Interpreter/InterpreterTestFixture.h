@@ -9,9 +9,11 @@
 #ifndef LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 #define LLVM_CLANG_UNITTESTS_INTERPRETER_INTERPRETERTESTBASE_H
 
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/PreprocessorOptions.h"
+
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
 #include "gtest/gtest.h"
@@ -21,6 +23,15 @@
 #endif
 
 namespace clang {
+
+// The builder stores the main-file buffer as a raw pointer, which a
+// FrontendAction takes ownership of in InitializeFileRemapping(). Free it here
+// only if no action ran, otherwise it is freed twice.
+inline void cleanupRemappedFileBuffers(CompilerInstance &CI) {
+  for (const auto &RB : CI.getPreprocessorOpts().RemappedFileBuffers)
+    delete RB.second;
+  CI.getPreprocessorOpts().clearRemappedFiles();
+}
 
 class InterpreterTestBase : public ::testing::Test {
 protected:
@@ -54,8 +65,6 @@ protected:
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
   }
-
-  static void TearDownTestSuite() { llvm::llvm_shutdown(); }
 };
 
 } // namespace clang

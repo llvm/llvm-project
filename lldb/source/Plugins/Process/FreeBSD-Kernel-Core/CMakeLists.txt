@@ -25,7 +25,10 @@ if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
       Support
     LINK_LIBS
       lldbCore
+      lldbHost
       lldbTarget
+      lldbPluginObjectFileELF
+      lldbPluginRegisterCore
       kvm
     )
 

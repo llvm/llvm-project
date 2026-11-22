@@ -12,6 +12,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -24,8 +25,7 @@ namespace llvm {
 ///
 /// NOTE: This container doesn't allow you to store a null pointer into it.
 ///
-template <typename EltTy>
-class TinyPtrVector {
+template <typename EltTy> class LLVM_ATTRIBUTE_WARN_UNUSED TinyPtrVector {
 public:
   using VecTy = SmallVector<EltTy, 4>;
   using value_type = typename VecTy::value_type;

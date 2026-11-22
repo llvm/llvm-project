@@ -166,3 +166,36 @@ struct Outer nd3 = {
 // CHECK-FIXES-NEXT:   .x = {.v = 1},
 // CHECK-FIXES-NEXT:   .y = {.v = 2},
 // CHECK-FIXES-NEXT: };
+
+union Big {
+  unsigned long long u64[2];
+  unsigned char u8[16];
+};
+
+union Big big1 = {
+  .u64[0] = 0x0000000000000002,
+  .u64[1] = 0x0100000000000000,
+};
+
+union Big big2 = {
+  .u64[0] = 0x0000000000000002,
+  .u64[1] = 0x0100000000000000
+};
+// CHECK-MESSAGES: :[[@LINE-2]]:31: warning: initializer list should have a trailing comma
+// CHECK-FIXES: union Big big2 = {
+// CHECK-FIXES-NEXT:   .u64[0] = 0x0000000000000002,
+// CHECK-FIXES-NEXT:   .u64[1] = 0x0100000000000000,
+// CHECK-FIXES-NEXT: };
+
+struct Addr { int family; };
+
+typedef union {
+  struct Addr *a;
+} AddrArg __attribute__((__transparent_union__));
+
+int bindAddr(AddrArg addr, int len);
+
+void transparentUnionArg(void) {
+  struct Addr a;
+  bindAddr(&a, 0);
+}

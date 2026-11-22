@@ -12,7 +12,7 @@ define double @test_fma_2_3_4_rm_d() {
 ; CHECK-LABEL: define double @test_fma_2_3_4_rm_d() {
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 2.0, double 3.0, double 4.0)
+  %res = call double @llvm.nvvm.fma.f64(double 2.0, double 3.0, double 4.0, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -20,7 +20,7 @@ define double @test_fma_2_3_4_rn_d() {
 ; CHECK-LABEL: define double @test_fma_2_3_4_rn_d() {
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 2.0, double 3.0, double 4.0)
+  %res = call double @llvm.nvvm.fma.f64(double 2.0, double 3.0, double 4.0, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -28,7 +28,7 @@ define double @test_fma_2_3_4_rp_d() {
 ; CHECK-LABEL: define double @test_fma_2_3_4_rp_d() {
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 2.0, double 3.0, double 4.0)
+  %res = call double @llvm.nvvm.fma.f64(double 2.0, double 3.0, double 4.0, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -36,7 +36,7 @@ define double @test_fma_2_3_4_rz_d() {
 ; CHECK-LABEL: define double @test_fma_2_3_4_rz_d() {
 ; CHECK-NEXT:    ret double 1.000000e+01
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 2.0, double 3.0, double 4.0)
+  %res = call double @llvm.nvvm.fma.f64(double 2.0, double 3.0, double 4.0, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -44,7 +44,7 @@ define float @test_fma_2_3_4_rm_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rm_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.f32(float 2.0, float 3.0, float 4.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -52,7 +52,7 @@ define float @test_fma_2_3_4_rn_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rn_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.f32(float 2.0, float 3.0, float 4.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -60,7 +60,7 @@ define float @test_fma_2_3_4_rp_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rp_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.f32(float 2.0, float 3.0, float 4.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -68,7 +68,7 @@ define float @test_fma_2_3_4_rz_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.f32(float 2.0, float 3.0, float 4.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -76,7 +76,7 @@ define float @test_fma_2_3_4_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rm_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 2.0, float 3.0, float 4.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -84,7 +84,7 @@ define float @test_fma_2_3_4_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rn_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 2.0, float 3.0, float 4.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -92,7 +92,7 @@ define float @test_fma_2_3_4_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rp_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 2.0, float 3.0, float 4.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -100,7 +100,7 @@ define float @test_fma_2_3_4_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_2_3_4_rz_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+01
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 2.0, float 3.0, float 4.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 2.0, float 3.0, float 4.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -116,7 +116,7 @@ define double @test_fma_subnorm_to_norm_rm_d() {
 ; CHECK-LABEL: define double @test_fma_subnorm_to_norm_rm_d() {
 ; CHECK-NEXT:    ret double f0x0010000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 0x0008000000000000, double 2.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x0008000000000000, double 2.0, double 0.0, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -124,7 +124,7 @@ define double @test_fma_subnorm_to_norm_rn_d() {
 ; CHECK-LABEL: define double @test_fma_subnorm_to_norm_rn_d() {
 ; CHECK-NEXT:    ret double f0x0010000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 0x0008000000000000, double 2.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x0008000000000000, double 2.0, double 0.0, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -132,7 +132,7 @@ define double @test_fma_subnorm_to_norm_rp_d() {
 ; CHECK-LABEL: define double @test_fma_subnorm_to_norm_rp_d() {
 ; CHECK-NEXT:    ret double f0x0010000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 0x0008000000000000, double 2.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x0008000000000000, double 2.0, double 0.0, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -140,7 +140,7 @@ define double @test_fma_subnorm_to_norm_rz_d() {
 ; CHECK-LABEL: define double @test_fma_subnorm_to_norm_rz_d() {
 ; CHECK-NEXT:    ret double f0x0010000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 0x0008000000000000, double 2.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x0008000000000000, double 2.0, double 0.0, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -148,7 +148,7 @@ define float @test_fma_subnorm_to_norm_rm_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rm_f() {
 ; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -156,7 +156,7 @@ define float @test_fma_subnorm_to_norm_rn_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rn_f() {
 ; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -164,7 +164,7 @@ define float @test_fma_subnorm_to_norm_rp_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rp_f() {
 ; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -172,7 +172,7 @@ define float @test_fma_subnorm_to_norm_rz_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rz_f() {
 ; CHECK-NEXT:    ret float f0x00800000
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -180,7 +180,7 @@ define float @test_fma_subnorm_to_norm_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rm_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -188,7 +188,7 @@ define float @test_fma_subnorm_to_norm_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rn_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -196,7 +196,7 @@ define float @test_fma_subnorm_to_norm_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rp_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -204,7 +204,7 @@ define float @test_fma_subnorm_to_norm_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_subnorm_to_norm_rz_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 0x3800000000000000, float 2.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3800000000000000, float 2.0, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -220,7 +220,7 @@ define double @test_fma_norm_to_subnorm_rm_d() {
 ; CHECK-LABEL: define double @test_fma_norm_to_subnorm_rm_d() {
 ; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 0x10000000000000, double 0.5, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x10000000000000, double 0.5, double 0.0, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -228,7 +228,7 @@ define double @test_fma_norm_to_subnorm_rn_d() {
 ; CHECK-LABEL: define double @test_fma_norm_to_subnorm_rn_d() {
 ; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 0x10000000000000, double 0.5, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x10000000000000, double 0.5, double 0.0, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -236,7 +236,7 @@ define double @test_fma_norm_to_subnorm_rp_d() {
 ; CHECK-LABEL: define double @test_fma_norm_to_subnorm_rp_d() {
 ; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 0x10000000000000, double 0.5, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x10000000000000, double 0.5, double 0.0, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -244,7 +244,7 @@ define double @test_fma_norm_to_subnorm_rz_d() {
 ; CHECK-LABEL: define double @test_fma_norm_to_subnorm_rz_d() {
 ; CHECK-NEXT:    ret double f0x0008000000000000
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 0x10000000000000, double 0.5, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double 0x10000000000000, double 0.5, double 0.0, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -252,7 +252,7 @@ define float @test_fma_norm_to_subnorm_rm_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rm_f() {
 ; CHECK-NEXT:    ret float f0x00400000
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -260,7 +260,7 @@ define float @test_fma_norm_to_subnorm_rn_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rn_f() {
 ; CHECK-NEXT:    ret float f0x00400000
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -268,7 +268,7 @@ define float @test_fma_norm_to_subnorm_rp_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rp_f() {
 ; CHECK-NEXT:    ret float f0x00400000
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -276,7 +276,7 @@ define float @test_fma_norm_to_subnorm_rz_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rz_f() {
 ; CHECK-NEXT:    ret float f0x00400000
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -284,7 +284,7 @@ define float @test_fma_norm_to_subnorm_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rm_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -292,7 +292,7 @@ define float @test_fma_norm_to_subnorm_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rn_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -300,7 +300,7 @@ define float @test_fma_norm_to_subnorm_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rp_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -308,7 +308,7 @@ define float @test_fma_norm_to_subnorm_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_norm_to_subnorm_rz_ftz_f() {
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 0x3810000000000000, float 0.5, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x3810000000000000, float 0.5, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -320,109 +320,109 @@ define float @test_fma_norm_to_subnorm_rz_ftz_f() {
 
 define double @test_fma_nan_rm_d() {
 ; CHECK-LABEL: define double @test_fma_nan_rm_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rm.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.f64(double +qnan, double 1.000000e+00, double 0.000000e+00, /* rnd=rm */ i32 3)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double +qnan, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double +qnan, double 1.0, double 0.0, /* rnd=rm */ i32 3)
   ret double %res
 }
 
 define double @test_fma_nan_rn_d() {
 ; CHECK-LABEL: define double @test_fma_nan_rn_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rn.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.f64(double +qnan, double 1.000000e+00, double 0.000000e+00, /* rnd=rn */ i32 1)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double +qnan, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double +qnan, double 1.0, double 0.0, /* rnd=rn */ i32 1)
   ret double %res
 }
 
 define double @test_fma_nan_rp_d() {
 ; CHECK-LABEL: define double @test_fma_nan_rp_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rp.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.f64(double +qnan, double 1.000000e+00, double 0.000000e+00, /* rnd=rp */ i32 2)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double +qnan, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double +qnan, double 1.0, double 0.0, /* rnd=rp */ i32 2)
   ret double %res
 }
 
 define double @test_fma_nan_rz_d() {
 ; CHECK-LABEL: define double @test_fma_nan_rz_d() {
-; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.rz.d(double +qnan, double 1.000000e+00, double 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call double @llvm.nvvm.fma.f64(double +qnan, double 1.000000e+00, double 0.000000e+00, /* rnd=rz */ i32 0)
 ; CHECK-NEXT:    ret double [[RES]]
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double +qnan, double 1.0, double 0.0)
+  %res = call double @llvm.nvvm.fma.f64(double +qnan, double 1.0, double 0.0, /* rnd=rz */ i32 0)
   ret double %res
 }
 
 define float @test_fma_nan_rm_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rm_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rm.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rm */ i32 3)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
 define float @test_fma_nan_rn_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rn_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rn.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rn */ i32 1)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
 define float @test_fma_nan_rp_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rp_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rp.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rp */ i32 2)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
 define float @test_fma_nan_rz_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rz.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rz */ i32 0)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
 define float @test_fma_nan_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rm_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rm.ftz.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.ftz.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rm */ i32 3)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rm */ i32 3)
   ret float %res
 }
 
 define float @test_fma_nan_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rn_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rn.ftz.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.ftz.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rn */ i32 1)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rn */ i32 1)
   ret float %res
 }
 
 define float @test_fma_nan_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rp_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rp.ftz.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.ftz.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rp */ i32 2)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rp */ i32 2)
   ret float %res
 }
 
 define float @test_fma_nan_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_nan_rz_ftz_f() {
-; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.rz.ftz.f(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00)
+; CHECK-NEXT:    [[RES:%.*]] = call float @llvm.nvvm.fma.ftz.f32(float +nan(0x200000), float 1.000000e+00, float 0.000000e+00, /* rnd=rz */ i32 0)
 ; CHECK-NEXT:    ret float [[RES]]
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 0x7FFC000000000000, float 1.0, float 0.0)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 0x7FFC000000000000, float 1.0, float 0.0, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -437,7 +437,7 @@ define float @test_fma_1_plus_ulp_rm_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rm_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -445,7 +445,7 @@ define float @test_fma_1_plus_ulp_rn_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rn_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -453,7 +453,7 @@ define float @test_fma_1_plus_ulp_rp_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rp_f() {
 ; CHECK-NEXT:    ret float f0x3F800001
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -461,7 +461,7 @@ define float @test_fma_1_plus_ulp_rz_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -469,7 +469,7 @@ define float @test_fma_1_plus_ulp_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rm_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -477,7 +477,7 @@ define float @test_fma_1_plus_ulp_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rn_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -485,7 +485,7 @@ define float @test_fma_1_plus_ulp_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rp_ftz_f() {
 ; CHECK-NEXT:    ret float f0x3F800001
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -493,7 +493,7 @@ define float @test_fma_1_plus_ulp_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_plus_ulp_rz_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 1.0, float 1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0x3E60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -509,7 +509,7 @@ define double @test_fma_1_plus_ulp_rm_d() {
 ; CHECK-LABEL: define double @test_fma_1_plus_ulp_rm_d() {
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 1.0, double 1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0x3C90000000000000, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -517,7 +517,7 @@ define double @test_fma_1_plus_ulp_rn_d() {
 ; CHECK-LABEL: define double @test_fma_1_plus_ulp_rn_d() {
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 1.0, double 1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0x3C90000000000000, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -525,7 +525,7 @@ define double @test_fma_1_plus_ulp_rp_d() {
 ; CHECK-LABEL: define double @test_fma_1_plus_ulp_rp_d() {
 ; CHECK-NEXT:    ret double f0x3FF0000000000001
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 1.0, double 1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0x3C90000000000000, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -533,7 +533,7 @@ define double @test_fma_1_plus_ulp_rz_d() {
 ; CHECK-LABEL: define double @test_fma_1_plus_ulp_rz_d() {
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 1.0, double 1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0x3C90000000000000, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -549,7 +549,7 @@ define float @test_fma_neg_1_plus_ulp_rm_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rm_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -557,7 +557,7 @@ define float @test_fma_neg_1_plus_ulp_rn_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rn_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -565,7 +565,7 @@ define float @test_fma_neg_1_plus_ulp_rp_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rp_f() {
 ; CHECK-NEXT:    ret float f0xBF7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -573,7 +573,7 @@ define float @test_fma_neg_1_plus_ulp_rz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rz_f() {
 ; CHECK-NEXT:    ret float f0xBF7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -581,7 +581,7 @@ define float @test_fma_neg_1_plus_ulp_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rm_ftz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -589,7 +589,7 @@ define float @test_fma_neg_1_plus_ulp_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rn_ftz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -597,7 +597,7 @@ define float @test_fma_neg_1_plus_ulp_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rp_ftz_f() {
 ; CHECK-NEXT:    ret float f0xBF7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -605,7 +605,7 @@ define float @test_fma_neg_1_plus_ulp_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_plus_ulp_rz_ftz_f() {
 ; CHECK-NEXT:    ret float f0xBF7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 1.0, float -1.0, float 0x3E60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0x3E60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -621,7 +621,7 @@ define double @test_fma_neg_1_plus_ulp_rm_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_plus_ulp_rm_d() {
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 1.0, double -1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0x3C90000000000000, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -629,7 +629,7 @@ define double @test_fma_neg_1_plus_ulp_rn_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_plus_ulp_rn_d() {
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 1.0, double -1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0x3C90000000000000, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -637,7 +637,7 @@ define double @test_fma_neg_1_plus_ulp_rp_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_plus_ulp_rp_d() {
 ; CHECK-NEXT:    ret double f0xBFEFFFFFFFFFFFFF
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 1.0, double -1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0x3C90000000000000, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -645,7 +645,7 @@ define double @test_fma_neg_1_plus_ulp_rz_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_plus_ulp_rz_d() {
 ; CHECK-NEXT:    ret double f0xBFEFFFFFFFFFFFFF
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 1.0, double -1.0, double 0x3C90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0x3C90000000000000, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -661,7 +661,7 @@ define float @test_fma_1_minus_ulp_rm_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rm_f() {
 ; CHECK-NEXT:    ret float f0x3F7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -669,7 +669,7 @@ define float @test_fma_1_minus_ulp_rn_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rn_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -677,7 +677,7 @@ define float @test_fma_1_minus_ulp_rp_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rp_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -685,7 +685,7 @@ define float @test_fma_1_minus_ulp_rz_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rz_f() {
 ; CHECK-NEXT:    ret float f0x3F7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -693,7 +693,7 @@ define float @test_fma_1_minus_ulp_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rm_ftz_f() {
 ; CHECK-NEXT:    ret float f0x3F7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -701,7 +701,7 @@ define float @test_fma_1_minus_ulp_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rn_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -709,7 +709,7 @@ define float @test_fma_1_minus_ulp_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rp_ftz_f() {
 ; CHECK-NEXT:    ret float 1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -717,7 +717,7 @@ define float @test_fma_1_minus_ulp_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_1_minus_ulp_rz_ftz_f() {
 ; CHECK-NEXT:    ret float f0x3F7FFFFF
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 1.0, float 1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float 1.0, float 0xBE60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -733,7 +733,7 @@ define double @test_fma_1_minus_ulp_rm_d() {
 ; CHECK-LABEL: define double @test_fma_1_minus_ulp_rm_d() {
 ; CHECK-NEXT:    ret double f0x3FEFFFFFFFFFFFFF
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 1.0, double 1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0xBC90000000000000, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -741,7 +741,7 @@ define double @test_fma_1_minus_ulp_rn_d() {
 ; CHECK-LABEL: define double @test_fma_1_minus_ulp_rn_d() {
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 1.0, double 1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0xBC90000000000000, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -749,7 +749,7 @@ define double @test_fma_1_minus_ulp_rp_d() {
 ; CHECK-LABEL: define double @test_fma_1_minus_ulp_rp_d() {
 ; CHECK-NEXT:    ret double 1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 1.0, double 1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0xBC90000000000000, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -757,7 +757,7 @@ define double @test_fma_1_minus_ulp_rz_d() {
 ; CHECK-LABEL: define double @test_fma_1_minus_ulp_rz_d() {
 ; CHECK-NEXT:    ret double f0x3FEFFFFFFFFFFFFF
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 1.0, double 1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double 1.0, double 0xBC90000000000000, /* rnd=rz */ i32 0)
   ret double %res
 }
 
@@ -773,7 +773,7 @@ define float @test_fma_neg_1_minus_ulp_rm_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rm_f() {
 ; CHECK-NEXT:    ret float f0xBF800001
 ;
-  %res = call float @llvm.nvvm.fma.rm.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -781,7 +781,7 @@ define float @test_fma_neg_1_minus_ulp_rn_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rn_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -789,7 +789,7 @@ define float @test_fma_neg_1_minus_ulp_rp_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rp_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -797,7 +797,7 @@ define float @test_fma_neg_1_minus_ulp_rz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -805,7 +805,7 @@ define float @test_fma_neg_1_minus_ulp_rm_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rm_ftz_f() {
 ; CHECK-NEXT:    ret float f0xBF800001
 ;
-  %res = call float @llvm.nvvm.fma.rm.ftz.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rm */ i32 3)
   ret float %res
 }
 
@@ -813,7 +813,7 @@ define float @test_fma_neg_1_minus_ulp_rn_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rn_ftz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rn.ftz.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rn */ i32 1)
   ret float %res
 }
 
@@ -821,7 +821,7 @@ define float @test_fma_neg_1_minus_ulp_rp_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rp_ftz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rp.ftz.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rp */ i32 2)
   ret float %res
 }
 
@@ -829,7 +829,7 @@ define float @test_fma_neg_1_minus_ulp_rz_ftz_f() {
 ; CHECK-LABEL: define float @test_fma_neg_1_minus_ulp_rz_ftz_f() {
 ; CHECK-NEXT:    ret float -1.000000e+00
 ;
-  %res = call float @llvm.nvvm.fma.rz.ftz.f(float 1.0, float -1.0, float 0xBE60000000000000)
+  %res = call float @llvm.nvvm.fma.ftz.f32(float 1.0, float -1.0, float 0xBE60000000000000, /* rnd=rz */ i32 0)
   ret float %res
 }
 
@@ -845,7 +845,7 @@ define double @test_fma_neg_1_minus_ulp_rm_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_minus_ulp_rm_d() {
 ; CHECK-NEXT:    ret double f0xBFF0000000000001
 ;
-  %res = call double @llvm.nvvm.fma.rm.d(double 1.0, double -1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0xBC90000000000000, /* rnd=rm */ i32 3)
   ret double %res
 }
 
@@ -853,7 +853,7 @@ define double @test_fma_neg_1_minus_ulp_rn_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_minus_ulp_rn_d() {
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rn.d(double 1.0, double -1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0xBC90000000000000, /* rnd=rn */ i32 1)
   ret double %res
 }
 
@@ -861,7 +861,7 @@ define double @test_fma_neg_1_minus_ulp_rp_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_minus_ulp_rp_d() {
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rp.d(double 1.0, double -1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0xBC90000000000000, /* rnd=rp */ i32 2)
   ret double %res
 }
 
@@ -869,6 +869,134 @@ define double @test_fma_neg_1_minus_ulp_rz_d() {
 ; CHECK-LABEL: define double @test_fma_neg_1_minus_ulp_rz_d() {
 ; CHECK-NEXT:    ret double -1.000000e+00
 ;
-  %res = call double @llvm.nvvm.fma.rz.d(double 1.0, double -1.0, double 0xBC90000000000000)
+  %res = call double @llvm.nvvm.fma.f64(double 1.0, double -1.0, double 0xBC90000000000000, /* rnd=rz */ i32 0)
   ret double %res
+}
+
+;###############################################################
+;#              FMA(2.0, 3.0, 4.0) - f16/bf16                  #
+;###############################################################
+; Tests FMA with regular numbers that produce a precise result
+
+define half @test_fma_2_3_4_rn_f16() {
+; CHECK-LABEL: define half @test_fma_2_3_4_rn_f16() {
+; CHECK-NEXT:    ret half 1.000000e+01
+;
+  %res = call half @llvm.nvvm.fma.f16(half 2.0, half 3.0, half 4.0, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define half @test_fma_2_3_4_rn_ftz_f16() {
+; CHECK-LABEL: define half @test_fma_2_3_4_rn_ftz_f16() {
+; CHECK-NEXT:    ret half 1.000000e+01
+;
+  %res = call half @llvm.nvvm.fma.ftz.f16(half 2.0, half 3.0, half 4.0, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define bfloat @test_fma_2_3_4_rn_bf16() {
+; CHECK-LABEL: define bfloat @test_fma_2_3_4_rn_bf16() {
+; CHECK-NEXT:    ret bfloat 1.000000e+01
+;
+  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 2.0, bfloat 3.0, bfloat 4.0, /* rnd=rn */ i32 1)
+  ret bfloat %res
+}
+
+;###############################################################
+;#                 FMA(NaN, 1.0, 0.0) - f16/bf16               #
+;###############################################################
+; Tests FMA with NaN input to verify that the instruction is preserved
+
+define half @test_fma_nan_rn_f16() {
+; CHECK-LABEL: define half @test_fma_nan_rn_f16() {
+; CHECK-NEXT:    [[RES:%.*]] = call half @llvm.nvvm.fma.f16(half +qnan, half 1.000000e+00, half 0.000000e+00, /* rnd=rn */ i32 1)
+; CHECK-NEXT:    ret half [[RES]]
+;
+  %res = call half @llvm.nvvm.fma.f16(half 0x7FF8000000000000, half 1.0, half 0.0, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define bfloat @test_fma_nan_rn_bf16() {
+; CHECK-LABEL: define bfloat @test_fma_nan_rn_bf16() {
+; CHECK-NEXT:    [[RES:%.*]] = call bfloat @llvm.nvvm.fma.bf16(bfloat +qnan, bfloat 1.000000e+00, bfloat 0.000000e+00, /* rnd=rn */ i32 1)
+; CHECK-NEXT:    ret bfloat [[RES]]
+;
+  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 0x7FF8000000000000, bfloat 1.0, bfloat 0.0, /* rnd=rn */ i32 1)
+  ret bfloat %res
+}
+
+;###############################################################
+;#                 FMA(1.0, 1.0, 2^(-12)) - f16                #
+;###############################################################
+; Tests f16 FMA with 1.0 and 2^(-12) where different rounding modes produce
+; different results.
+
+define half @test_fma_1_plus_ulp_rn_f16() {
+; CHECK-LABEL: define half @test_fma_1_plus_ulp_rn_f16() {
+; CHECK-NEXT:    ret half 1.000000e+00
+;
+  %res = call half @llvm.nvvm.fma.f16(half 1.0, half 1.0, half 0xH1000, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+;###############################################################
+;#                 FMA(1.0, -1.0, -2^(-12)) - f16              #
+;###############################################################
+; Tests f16 FMA producing a negative result just below -1.0.
+
+define half @test_fma_neg_1_minus_ulp_rn_f16() {
+; CHECK-LABEL: define half @test_fma_neg_1_minus_ulp_rn_f16() {
+; CHECK-NEXT:    ret half -1.000000e+00
+;
+  %res = call half @llvm.nvvm.fma.f16(half 1.0, half -1.0, half 0xH9000, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+;###############################################################
+;#                 FMA(1.0, 1.0, 2^(-9)) - bf16                #
+;###############################################################
+; Tests bf16 FMA with 1.0 and 2^(-9) where different rounding modes produce
+; different results.
+
+define bfloat @test_fma_1_plus_ulp_rn_bf16() {
+; CHECK-LABEL: define bfloat @test_fma_1_plus_ulp_rn_bf16() {
+; CHECK-NEXT:    ret bfloat 1.000000e+00
+;
+  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat 1.0, bfloat 0xR3B00, /* rnd=rn */ i32 1)
+  ret bfloat %res
+}
+
+;###############################################################
+;#                 FMA(1.0, -1.0, -2^(-9)) - bf16              #
+;###############################################################
+; Tests bf16 FMA producing a negative result just below -1.0.
+
+define bfloat @test_fma_neg_1_minus_ulp_rn_bf16() {
+; CHECK-LABEL: define bfloat @test_fma_neg_1_minus_ulp_rn_bf16() {
+; CHECK-NEXT:    ret bfloat -1.000000e+00
+;
+  %res = call bfloat @llvm.nvvm.fma.bf16(bfloat 1.0, bfloat -1.0, bfloat 0xRBB00, /* rnd=rn */ i32 1)
+  ret bfloat %res
+}
+
+;###############################################################
+;#          FMA(Subnormal, 2.0, Normal) - f16 FTZ              #
+;###############################################################
+; Tests that FTZ flushes a subnormal f16 input to zero before the operation.
+; 0xH0200 is a subnormal f16 value (2^-19).
+
+define half @test_fma_subnorm_input_rn_f16() {
+; CHECK-LABEL: define half @test_fma_subnorm_input_rn_f16() {
+; CHECK-NEXT:    ret half 1.000000e+00
+;
+  %res = call half @llvm.nvvm.fma.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rn */ i32 1)
+  ret half %res
+}
+
+define half @test_fma_subnorm_input_rn_ftz_f16() {
+; CHECK-LABEL: define half @test_fma_subnorm_input_rn_ftz_f16() {
+; CHECK-NEXT:    ret half 1.000000e+00
+;
+  %res = call half @llvm.nvvm.fma.ftz.f16(half 0xH0200, half 2.0, half 1.0, /* rnd=rn */ i32 1)
+  ret half %res
 }

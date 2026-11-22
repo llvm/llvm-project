@@ -5,12 +5,12 @@ program p
   use ieee_arithmetic
 
   ! CHECK:     %[[V_0:[0-9]+]] = fir.alloca i32 <{bindc_name = "i", uniq_name = "_QFEi"}>
-  ! CHECK:     %[[V_1:[0-9]+]] = fir.declare %[[V_0]] {uniq_name = "_QFEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  ! CHECK:     %[[V_1:[0-9]+]] = fir.declare %[[V_0]] uniq_name("_QFEi") : (!fir.ref<i32>) -> !fir.ref<i32>
   ! CHECK:     %[[V_58:[0-9]+]] = fir.alloca i32 <{bindc_name = "j", uniq_name = "_QFEj"}>
-  ! CHECK:     %[[V_59:[0-9]+]] = fir.declare %[[V_58]] {uniq_name = "_QFEj"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  ! CHECK:     %[[V_59:[0-9]+]] = fir.declare %[[V_58]] uniq_name("_QFEj") : (!fir.ref<i32>) -> !fir.ref<i32>
   ! CHECK:     %[[V_60:[0-9]+]] = fir.address_of(@_QFEx) : !fir.ref<!fir.array<10xf32>>
   ! CHECK:     %[[V_61:[0-9]+]] = fir.shape %c10{{.*}} : (index) -> !fir.shape<1>
-  ! CHECK:     %[[V_62:[0-9]+]] = fir.declare %[[V_60]](%[[V_61]]) {uniq_name = "_QFEx"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
+  ! CHECK:     %[[V_62:[0-9]+]] = fir.declare %[[V_60]](%[[V_61]]) uniq_name("_QFEx") : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<10xf32>>
   real(4) :: x(10)
 
   x( 1) = ieee_value(x(1), ieee_signaling_nan)

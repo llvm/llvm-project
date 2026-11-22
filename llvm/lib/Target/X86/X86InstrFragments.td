@@ -87,7 +87,10 @@ def SDT_X86CallSeqStart : SDCallSeqStart<[SDTCisVT<0, i32>,
 def SDT_X86CallSeqEnd   : SDCallSeqEnd<[SDTCisVT<0, i32>,
                                         SDTCisVT<1, i32>]>;
 
-def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
+// The call target is an integer, not necessarily a pointer: on the
+// x32 ABI it is a 64-bit zero-extension of a 32-bit pointer, since calls
+// still execute in 64-bit mode even though pointers are 32-bit.
+def SDT_X86Call   : SDTypeProfile<0, -1, [SDTCisInt<0>]>;
 
 def SDT_X86NtBrind : SDTypeProfile<0, -1, [SDTCisVT<0, iPTR>]>;
 
@@ -120,7 +123,10 @@ def SDT_X86PROBED_ALLOCA : SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisVT<1, i
 
 def SDT_X86EHRET : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
-def SDT_X86TCRET : SDTypeProfile<0, 2, [SDTCisPtrTy<0>, SDTCisVT<1, i32>]>;
+// The tail-call target is an integer, not necessarily a pointer: on the
+// x32 ABI it is a 64-bit zero-extension of a 32-bit pointer, since calls
+// still execute in 64-bit mode even though pointers are 32-bit.
+def SDT_X86TCRET : SDTypeProfile<0, 2, [SDTCisInt<0>, SDTCisVT<1, i32>]>;
 
 def SDT_X86ENQCMD : SDTypeProfile<1, 2, [SDTCisVT<0, i32>,
                                          SDTCisPtrTy<1>, SDTCisSameAs<1, 2>]>;
@@ -671,7 +677,7 @@ def loadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
+  if (ExtType == ISD::EXTLOAD && Subtarget->getCLOpts().promote_anyext_load)
     return LD->getAlign() >= 2 && LD->isSimple();
   return false;
 }]> {
@@ -690,7 +696,7 @@ def loadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   ISD::LoadExtType ExtType = LD->getExtensionType();
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
-  if (ExtType == ISD::EXTLOAD && EnablePromoteAnyextLoad)
+  if (ExtType == ISD::EXTLOAD && Subtarget->getCLOpts().promote_anyext_load)
     return LD->getAlign() >= 4 && LD->isSimple();
   return false;
 }]> {

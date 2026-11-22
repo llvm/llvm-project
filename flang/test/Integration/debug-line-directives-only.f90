@@ -2,6 +2,8 @@
 
 ! RUN: %flang_fc1 -debug-info-kind=line-directives-only -emit-llvm -o - %s \
 ! RUN:   | FileCheck %s
+! RUN: %flang_fc1 -debug-info-kind=line-directives-only -gpubnames \
+! RUN:   -emit-llvm -o - %s | FileCheck %s
 
 ! CHECK: !DICompileUnit({{.*}}emissionKind: DebugDirectivesOnly
 ! CHECK-SAME: nameTableKind: None

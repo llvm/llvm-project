@@ -34,7 +34,6 @@ define i64 @bswap_i16_to_i64_anyext(i16 %a) {
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    rev w8, w0
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    and x8, x8, #0xffff
 ; CHECK-GI-NEXT:    lsl x0, x8, #48
 ; CHECK-GI-NEXT:    ret
     %3 = call i16 @llvm.bswap.i16(i16 %a)
@@ -60,7 +59,6 @@ define i128 @bswap_i16_to_i128_anyext(i16 %a) {
 ; CHECK-GI-NEXT:    mov x0, xzr
 ; CHECK-GI-NEXT:    rev w8, w8
 ; CHECK-GI-NEXT:    lsr w8, w8, #16
-; CHECK-GI-NEXT:    and x8, x8, #0xffff
 ; CHECK-GI-NEXT:    lsl x1, x8, #48
 ; CHECK-GI-NEXT:    ret
     %3 = call i16 @llvm.bswap.i16(i16 %a)

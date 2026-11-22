@@ -326,7 +326,12 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
       }
       target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
       debugger.GetTargetList().RegisterInProcessTarget(target_sp);
-      target_sp->SetExecutableModule(exe_module_sp, load_dependent_files);
+      // Prime the target before loading its executable: the executable's dSYM
+      // script can add stop hooks and breakpoints, and priming would replace
+      // them with the dummy target's.
+      target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
+      target_sp->RebuildModuleListWithExecutable(exe_module_sp,
+                                                 load_dependent_files);
       if (user_exe_path_is_bundle)
         exe_module_sp->GetFileSpec().GetPath(resolved_bundle_exe_path,
                                              sizeof(resolved_bundle_exe_path));
@@ -338,6 +343,7 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     // valid arch was specified
     target_sp.reset(new Target(debugger, arch, platform_sp, is_dummy_target));
     debugger.GetTargetList().RegisterInProcessTarget(target_sp);
+    target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
   }
 
   if (!target_sp)
@@ -361,9 +367,6 @@ Status TargetList::CreateTargetInternal(Debugger &debugger,
     file_dir.SetDirectory(file.GetDirectory());
     target_sp->AppendExecutableSearchPaths(file_dir);
   }
-
-  // Now prime this from the dummy target:
-  target_sp->PrimeFromDummyTarget(debugger.GetDummyTarget());
 
   return error;
 }

@@ -32,9 +32,9 @@ getAllPossibleAMDGPUTargetIDFeatures(const llvm::Triple &T,
     return Ret;
   const llvm::AMDGPU::AMDGPUFeatureBitset &Features =
       llvm::AMDGPU::getFeatureBitset(ProcKind);
-  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_SUPPORT))
+  // Only allow features in target IDs if the processor supports on/off modes.
+  if (Features.test(llvm::AMDGPU::FEAT_SRAMECC_ON_OFF_MODES))
     Ret.push_back("sramecc");
-  // Only allow xnack in target ID if the processor supports on/off modes.
   if (Features.test(llvm::AMDGPU::FEAT_XNACK_ON_OFF_MODES))
     Ret.push_back("xnack");
   return Ret;
@@ -152,6 +152,16 @@ std::string getCanonicalTargetID(llvm::StringRef Processor,
   for (const auto &F : OrderedMap)
     TargetID = TargetID + ':' + F.first.str() + (F.second ? "+" : "-");
   return TargetID;
+}
+
+std::optional<std::string> getCanonicalTargetID(const llvm::Triple &T,
+                                                llvm::StringRef TargetID) {
+  llvm::StringMap<bool> Features;
+  std::optional<llvm::StringRef> Processor =
+      parseTargetID(T, TargetID, &Features);
+  if (!Processor)
+    return std::nullopt;
+  return getCanonicalTargetID(*Processor, Features);
 }
 
 // For a specific processor, a feature either shows up in all target IDs, or

@@ -336,6 +336,22 @@ const int &reference_to_vec_element = vi4(1).x;
 // PR12649
 typedef bool bad __attribute__((__vector_size__(16)));  // expected-error {{invalid vector element type 'bool'}}
 
+namespace GH225037 {
+enum E { A };
+
+#if __cplusplus >= 201103L
+enum class ScopedE { A };
+typedef ScopedE ScopedEnumVector __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'ScopedE'}}
+typedef ScopedE ScopedEnumSizeVector __attribute__((vector_size(16))); // expected-error {{invalid vector element type 'ScopedE'}}
+#endif
+
+template <typename T> struct Vector {
+  typedef T type __attribute__((ext_vector_type(4))); // expected-error {{invalid vector element type 'GH225037::E'}}
+};
+Vector<E> enum_vector; // expected-note {{in instantiation of template class 'GH225037::Vector<GH225037::E>' requested here}}
+Vector<int> int_vector;
+} // namespace GH225037
+
 namespace Templates {
 template <typename Elt, unsigned long long Size>
 struct TemplateVectorType {
@@ -529,6 +545,7 @@ namespace PR48540 {
 // The below used to cause an OOM error, or an assert, make sure it is still
 //  valid.
 int (__attribute__((vector_size(16))) a);
+int (parenthesized_vector) __attribute__((vector_size(16)));
 
 template <typename T, int I>
 struct S {

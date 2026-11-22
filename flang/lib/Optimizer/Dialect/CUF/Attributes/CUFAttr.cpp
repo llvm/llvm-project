@@ -12,11 +12,8 @@
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/CUF/CUFDialect.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFEnumAttr.cpp.inc"
 #define GET_ATTRDEF_CLASSES
@@ -26,7 +23,7 @@ namespace cuf {
 
 void CUFDialect::registerAttributes() {
   addAttributes<ClusterDimsAttr, DataAttributeAttr, DataTransferKindAttr,
-                LaunchBoundsAttr, ProcAttributeAttr>();
+                LaunchBoundsAttr, LaunchConfigAttr, ProcAttributeAttr>();
 }
 
 cuf::DataAttributeAttr getDataAttr(mlir::Operation *op) {

@@ -16,7 +16,6 @@
 #include "DirectXIRPasses/PointerTypeAnalysis.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
-#include "llvm/Bitcode/BitcodeCommon.h"
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Bitstream/BitCodes.h"
@@ -280,6 +279,14 @@ private:
     // FIXME: translate DIAssignID to debug info DXIL supports.
     //   See https://github.com/llvm/llvm-project/issues/58989
     llvm_unreachable("DXIL cannot contain DIAssignID Nodes");
+  }
+  void writeDILayerLoc(const DILayerLoc *N, SmallVectorImpl<uint64_t> &Record,
+                       unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLoc Nodes");
+  }
+  void writeDILayerLocList(const DILayerLocList *N,
+                           SmallVectorImpl<uint64_t> &Record, unsigned Abbrev) {
+    llvm_unreachable("DXIL cannot contain DILayerLocList Nodes");
   }
   void writeDIModule(const DIModule *N, SmallVectorImpl<uint64_t> &Record,
                      unsigned Abbrev);

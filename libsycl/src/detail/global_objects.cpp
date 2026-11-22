@@ -12,10 +12,6 @@
 #include <detail/program_manager.hpp>
 #include <detail/queue_impl.hpp>
 
-#ifdef _WIN32
-#  include <windows.h>
-#endif
-
 #include <cassert>
 #include <tuple>
 #include <utility>
@@ -23,6 +19,8 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
+
+namespace {
 // libsycl follows SYCL 2020 specification that doesn't declare any
 // init/shutdown methods that can help to avoid usage of static variables.
 // liboffload uses static variables too. In the first call of get_platforms
@@ -43,12 +41,14 @@ struct StaticVarShutdownHandler {
   }
 };
 
+} // namespace
+
 void registerStaticVarShutdownHandler() {
   // Touch the program manager singleton first: static objects are destroyed in
   // reverse order of construction, so this guarantees it is still alive when
   // ~StaticVarShutdownHandler() calls releaseResources() on it.
   std::ignore = ProgramAndKernelManager::getInstance();
-  static StaticVarShutdownHandler handler{};
+  static StaticVarShutdownHandler ShutdownHandler{};
 }
 
 std::array<detail::OffloadTopology, OL_PLATFORM_BACKEND_LAST> &
@@ -104,8 +104,8 @@ void flushAsyncExceptions() {
     }
 
     if (std::shared_ptr<ContextImpl> Context = WeakContext.lock();
-        Context && Context->get_async_handler()) {
-      Context->get_async_handler()(std::move(Exceptions));
+        Context && Context->getAsyncHandler()) {
+      Context->getAsyncHandler()(std::move(Exceptions));
       continue;
     }
 

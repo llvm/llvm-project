@@ -1091,7 +1091,7 @@ int bar(int n){
 // CHECK1-NEXT:    [[ADD10:%.*]] = add nsw i32 [[ADD9]], [[TMP14]]
 // CHECK1-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP32]]
 // CHECK1-NEXT:    [[IDXPROM:%.*]] = sext i32 [[TMP15]] to i64
-// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
+// CHECK1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i64 0, i64 [[IDXPROM]]
 // CHECK1-NEXT:    [[TMP16:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP32]]
 // CHECK1-NEXT:    [[IDXPROM11:%.*]] = sext i32 [[TMP16]] to i64
 // CHECK1-NEXT:    [[ARRAYIDX12:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i64 0, i64 [[IDXPROM11]]
@@ -2127,7 +2127,7 @@ int bar(int n){
 // CHECK2-NEXT:    [[TMP14:%.*]] = load i32, ptr [[K]], align 4, !llvm.access.group [[ACC_GRP32]]
 // CHECK2-NEXT:    [[ADD8:%.*]] = add nsw i32 [[ADD7]], [[TMP14]]
 // CHECK2-NEXT:    [[TMP15:%.*]] = load i32, ptr [[I]], align 4, !llvm.access.group [[ACC_GRP32]]
-// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP15]]
+// CHECK2-NEXT:    [[ARRAYIDX:%.*]] = getelementptr [10 x [10 x i32]], ptr [[TMP0]], i32 0, i32 [[TMP15]]
 // CHECK2-NEXT:    [[TMP16:%.*]] = load i32, ptr [[J]], align 4, !llvm.access.group [[ACC_GRP32]]
 // CHECK2-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [10 x i32], ptr [[ARRAYIDX]], i32 0, i32 [[TMP16]]
 // CHECK2-NEXT:    store i32 [[ADD8]], ptr [[ARRAYIDX9]], align 4, !llvm.access.group [[ACC_GRP32]]

@@ -512,10 +512,13 @@ void NVPTXInstPrinter::printRegisterOrSinkSymbol(const MCInst *MI, int OpNum,
     printOperand(MI, OpNum, STI, O);
 }
 
-void NVPTXInstPrinter::printHexu32imm(const MCInst *MI, int OpNum,
-                                      const MCSubtargetInfo &, raw_ostream &O) {
-  int64_t Imm = MI->getOperand(OpNum).getImm();
-  O << formatHex(Imm) << "U";
+void NVPTXInstPrinter::printRegOrHexImm(const MCInst *MI, int OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNum).isImm())
+    printHexUImm<32>(MI, OpNum, STI, O);
+  else
+    printOperand(MI, OpNum, STI, O);
 }
 
 void NVPTXInstPrinter::printPrmtMode(const MCInst *MI, int OpNum,

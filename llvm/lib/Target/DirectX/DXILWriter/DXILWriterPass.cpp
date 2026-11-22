@@ -12,9 +12,12 @@
 
 #include "DXILWriterPass.h"
 #include "DXILBitcodeWriter.h"
+#include "DirectX.h"
+#include "MCTargetDesc/DirectXContainerObjectWriter.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -34,31 +37,23 @@
 using namespace llvm;
 using namespace llvm::dxil;
 
-extern cl::opt<bool> EmbedDebug;
-extern cl::opt<bool> StripDebug;
-cl::opt<std::string> PdbDebugPath(
-    "dx-pdb-path",
-    cl::desc("Write debug information to the given file, or automatically "
-             "named file in directory when ending in '/'"),
-    cl::value_desc("filename"));
-cl::opt<bool> SourceInDebugModule(
+cl::opt<bool> dxil::SourceInDebugModule(
     "dx-source-in-debug-module",
     cl::desc("Embed source code into debug module on DirectX target"),
     cl::init(false));
-extern cl::opt<bool> SlimDebug;
 
 namespace {
-class WriteDXILPass : public llvm::ModulePass {
+class DXILWriterLegacy : public llvm::ModulePass {
   raw_ostream &OS; // raw_ostream to print on
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  WriteDXILPass() : ModulePass(ID), OS(dbgs()) {
-    initializeWriteDXILPassPass(*PassRegistry::getPassRegistry());
+  DXILWriterLegacy() : ModulePass(ID), OS(dbgs()) {
+    initializeDXILWriterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
-  explicit WriteDXILPass(raw_ostream &o) : ModulePass(ID), OS(o) {
-    initializeWriteDXILPassPass(*PassRegistry::getPassRegistry());
+  explicit DXILWriterLegacy(raw_ostream &o) : ModulePass(ID), OS(o) {
+    initializeDXILWriterLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "Bitcode Writer"; }
@@ -161,129 +156,16 @@ static void replaceNamedMetadataArray(Module &M, StringRef Name,
       MDTuple::get(M.getContext(), NewOps));
 }
 
-class EmbedDXILPass : public llvm::ModulePass {
-  std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
-    std::string Data;
-    llvm::raw_string_ostream OS(Data);
-
-    if (HasDebugInfo) {
-      if (WriteDebug) {
-        if (!SourceInDebugModule) {
-          // Replace dx.source metadata nodes with stubs.
-          LLVMContext &Ctx = M.getContext();
-          MDString *EmptyString = MDString::get(Ctx, "");
-          replaceNamedMetadataArray(M, "dx.source.contents",
-                                    {EmptyString, EmptyString});
-          replaceNamedMetadataArray(M, "dx.source.defines", {});
-          replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
-          replaceNamedMetadataArray(M, "dx.source.args", {});
-        }
-      } else {
-        // If we have an ILDB part, strip DXIL from all debug info.
-        StripDebugInfo(M);
-
-        // Also, manually remove debug version flags and dx.source nodes.
-        if (NamedMDNode *Flags = M.getModuleFlagsMetadata()) {
-          SmallVector<llvm::Module::ModuleFlagEntry, 4> FlagEntries;
-          M.getModuleFlagsMetadata(FlagEntries);
-          Flags->eraseFromParent();
-          for (llvm::Module::ModuleFlagEntry &Entry : FlagEntries) {
-            if (Entry.Key->getString() == "Dwarf Version" ||
-                Entry.Key->getString() == "Debug Info Version") {
-              continue;
-            }
-            M.addModuleFlag(Entry.Behavior, Entry.Key->getString(), Entry.Val);
-          }
-        }
-        for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata()))
-          if (NMD.getName().starts_with("dx.source"))
-            NMD.eraseFromParent();
-      }
-    } else {
-#ifdef EXPENSIVE_CHECKS
-      assert(
-          StripDebugInfo(M) == false &&
-          "The module must not contain any debug info here."
-          "Shader modules with debug info must have !DICompileUnit metadata.");
-#endif
-    }
-    WriteDXILToFile(M, OS);
-    return Data;
-  }
-
-  GlobalVariable *createSectionGlobal(Module &M, StringRef Data,
-                                      StringRef GlobalName,
-                                      StringRef SectionName) {
-    Constant *ModuleConstant =
-        ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
-    auto *GV = new llvm::GlobalVariable(M, ModuleConstant->getType(), true,
-                                        GlobalValue::PrivateLinkage,
-                                        ModuleConstant, GlobalName);
-    GV->setSection(SectionName);
-    GV->setAlignment(Align(4));
-    return GV;
-  }
-
+class DXILEmbedderLegacy : public llvm::ModulePass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  EmbedDXILPass() : ModulePass(ID) {
-    initializeEmbedDXILPassPass(*PassRegistry::getPassRegistry());
+  DXILEmbedderLegacy() : ModulePass(ID) {
+    initializeDXILEmbedderLegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "DXIL Embedder"; }
 
-  bool runOnModule(Module &M) override {
-    // Perform late legalization of lifetime intrinsics that would otherwise
-    // fail the Module Verifier if performed in an earlier pass
-    legalizeLifetimeIntrinsics(M);
-
-    bool HasDebugInfo = !M.debug_compile_units().empty();
-
-    if (SlimDebug && EmbedDebug)
-      reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
-
-    // If both StripDebug and EmbedDebug are specified, StripDebug is ignored.
-    if (StripDebug && EmbedDebug)
-      StripDebug = false;
-    // Enable EmbedDebug if there is debug info, but it is not being stripped
-    // or written to a PDB file.
-    if (HasDebugInfo && !StripDebug && !SlimDebug && PdbDebugPath.empty())
-      EmbedDebug = true;
-    if (!HasDebugInfo && EmbedDebug)
-      reportFatalUsageError(
-          "Missing debug info for embedding into the container");
-    if (!HasDebugInfo && !PdbDebugPath.empty())
-      reportFatalUsageError("Missing debug info for writing to the PDB file");
-
-    std::string ILDBData;
-    if (HasDebugInfo) {
-      // Write DXIL with debug info to ILDB part.
-      // Clone the module to avoid alternating it with DebugInfoPass
-      // before stripping the debug info later.
-      ILDBData =
-          writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/true);
-    }
-
-    // Clone the module to save dx.source metadata nodes from stripping, as they
-    // are needed for DXILMetadataAnalysisWrapperPass.
-    std::string DXILData =
-        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false);
-
-    // We no longer need lifetime intrinsics after bitcode serialization, so we
-    // simply remove them to keep the Module Verifier happy after our
-    // not-so-legal legalizations
-    removeLifetimeIntrinsics(M);
-
-    SmallVector<GlobalValue *, 2> Globals;
-    if (HasDebugInfo) {
-      // Create a GV after both parts are written, otherwise it gets
-      // added to DXIL when `writeModule` is called the second time.
-      Globals.emplace_back(createSectionGlobal(M, ILDBData, "dx.ildb", "ILDB"));
-    }
-    Globals.emplace_back(createSectionGlobal(M, DXILData, "dx.dxil", "DXIL"));
-    appendToCompilerUsed(M, Globals);
-    return true;
-  }
+  bool runOnModule(Module &M) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -291,18 +173,140 @@ public:
 };
 } // namespace
 
-char WriteDXILPass::ID = 0;
-INITIALIZE_PASS_BEGIN(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
-INITIALIZE_PASS_END(WriteDXILPass, "dxil-write-bitcode", "Write Bitcode", false,
-                    true)
+static std::string writeModule(Module &M, bool HasDebugInfo, bool WriteDebug) {
+  std::string Data;
+  llvm::raw_string_ostream OS(Data);
 
-ModulePass *llvm::createDXILWriterPass(raw_ostream &Str) {
-  return new WriteDXILPass(Str);
+  if (HasDebugInfo) {
+    if (WriteDebug) {
+      if (!SourceInDebugModule) {
+        // Replace dx.source metadata nodes with stubs.
+        LLVMContext &Ctx = M.getContext();
+        MDString *EmptyString = MDString::get(Ctx, "");
+        replaceNamedMetadataArray(M, "dx.source.contents",
+                                  {EmptyString, EmptyString});
+        replaceNamedMetadataArray(M, "dx.source.defines", {});
+        replaceNamedMetadataArray(M, "dx.source.mainFileName", {EmptyString});
+        replaceNamedMetadataArray(M, "dx.source.args", {});
+      }
+    } else {
+      // If we have an ILDB part, strip DXIL from all debug info.
+      StripDebugInfo(M);
+
+      // Also, manually remove debug version flags and dx.source nodes.
+      if (NamedMDNode *Flags = M.getModuleFlagsMetadata()) {
+        SmallVector<llvm::Module::ModuleFlagEntry, 4> FlagEntries;
+        M.getModuleFlagsMetadata(FlagEntries);
+        Flags->eraseFromParent();
+        for (llvm::Module::ModuleFlagEntry &Entry : FlagEntries) {
+          if (Entry.Key->getString() == "Dwarf Version" ||
+              Entry.Key->getString() == "Debug Info Version") {
+            continue;
+          }
+          M.addModuleFlag(Entry.Behavior, Entry.Key->getString(), Entry.Val);
+        }
+      }
+      for (NamedMDNode &NMD : llvm::make_early_inc_range(M.named_metadata()))
+        if (NMD.getName().starts_with("dx.source"))
+          NMD.eraseFromParent();
+    }
+  } else {
+#ifdef EXPENSIVE_CHECKS
+    assert(StripDebugInfo(M) == false &&
+           "The module must not contain any debug info here."
+           "Shader modules with debug info must have !DICompileUnit metadata.");
+#endif
+  }
+  WriteDXILToFile(M, OS);
+  return Data;
 }
 
-char EmbedDXILPass::ID = 0;
-INITIALIZE_PASS(EmbedDXILPass, "dxil-embed", "Embed DXIL", false, true)
+static GlobalVariable *createSectionGlobal(Module &M, StringRef Data,
+                                           StringRef GlobalName,
+                                           StringRef SectionName) {
+  Constant *ModuleConstant =
+      ConstantDataArray::get(M.getContext(), arrayRefFromStringRef(Data));
+  auto *GV = new llvm::GlobalVariable(M, ModuleConstant->getType(), true,
+                                      GlobalValue::PrivateLinkage,
+                                      ModuleConstant, GlobalName);
+  GV->setSection(SectionName);
+  GV->setAlignment(Align(4));
+  return GV;
+}
 
-ModulePass *llvm::createDXILEmbedderPass() { return new EmbedDXILPass(); }
+static bool runEmbedderOnModule(Module &M) {
+  // Perform late legalization of lifetime intrinsics that would otherwise
+  // fail the Module Verifier if performed in an earlier pass
+  legalizeLifetimeIntrinsics(M);
+
+  bool HasDebugInfo = !M.debug_compile_units().empty();
+
+  if (SlimDebug && EmbedDebug)
+    reportFatalUsageError("/Qembed_debug is not compatible with /Zs");
+  if (!HasDebugInfo && EmbedDebug)
+    reportFatalUsageError(
+        "Missing debug info for embedding into the container");
+  if (!HasDebugInfo && !PdbDebugPath.empty())
+    reportFatalUsageError("Missing debug info for writing to the PDB file");
+
+  std::string ILDBData;
+  if (HasDebugInfo) {
+    // Write DXIL with debug info to ILDB part.
+    // Clone the module to avoid alternating it with DebugInfoPass
+    // before stripping the debug info later.
+    ILDBData =
+        writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/true);
+  }
+
+  // Clone the module to save dx.source metadata nodes from stripping, as they
+  // are needed for DXILMetadataAnalysisWrapperPass.
+  std::string DXILData =
+      writeModule(*llvm::CloneModule(M), HasDebugInfo, /*WriteDebug=*/false);
+
+  // We no longer need lifetime intrinsics after bitcode serialization, so we
+  // simply remove them to keep the Module Verifier happy after our
+  // not-so-legal legalizations
+  removeLifetimeIntrinsics(M);
+
+  SmallVector<GlobalValue *, 2> Globals;
+  if (HasDebugInfo) {
+    // Create a GV after both parts are written, otherwise it gets
+    // added to DXIL when `writeModule` is called the second time.
+    Globals.emplace_back(createSectionGlobal(M, ILDBData, "dx.ildb", "ILDB"));
+  }
+  Globals.emplace_back(createSectionGlobal(M, DXILData, "dx.dxil", "DXIL"));
+  appendToCompilerUsed(M, Globals);
+  return true;
+}
+
+bool DXILEmbedderLegacy::runOnModule(Module &M) {
+  return runEmbedderOnModule(M);
+}
+
+PreservedAnalyses DXILEmbedderPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  runEmbedderOnModule(M);
+  return PreservedAnalyses::all();
+}
+
+char DXILWriterLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
+                      true)
+INITIALIZE_PASS_DEPENDENCY(ModuleSummaryIndexWrapperPass)
+INITIALIZE_PASS_END(DXILWriterLegacy, "dxil-writer", "Write Bitcode", false,
+                    true)
+
+ModulePass *llvm::createDXILWriterLegacyPass(raw_ostream &Str) {
+  return new DXILWriterLegacy(Str);
+}
+
+char DXILEmbedderLegacy::ID = 0;
+INITIALIZE_PASS(DXILEmbedderLegacy, "dxil-embedder", "Embed DXIL", false, true)
+
+ModulePass *llvm::createDXILEmbedderLegacyPass() {
+  return new DXILEmbedderLegacy();
+}
+
+PreservedAnalyses DXILWriterPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  WriteDXILToFile(M, OS);
+  return PreservedAnalyses::all();
+}

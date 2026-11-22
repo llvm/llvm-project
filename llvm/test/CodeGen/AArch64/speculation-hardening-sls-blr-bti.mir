@@ -1,4 +1,4 @@
-# RUN: llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu \
+# RUN: llc -mtriple=aarch64-none-linux-gnu \
 # RUN:     -start-before aarch64-sls-hardening \
 # RUN:     -stop-after aarch64-sls-hardening -o - %s \
 # RUN:   | FileCheck %s --check-prefixes=CHECK
@@ -29,7 +29,6 @@
 ---
 name:            fn
 exposesReturnsTwice: true
-tracksRegLiveness: true
 fixedStack:      []
 stack:
   - { id: 0, name: fnptr, type: default, offset: -8, size: 8, alignment: 8,

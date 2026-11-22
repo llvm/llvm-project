@@ -299,6 +299,10 @@ unsigned OptTable::internalFindNearest(
       std::tie(NormalizedName, RHS) = Option.split(Last);
       if (Option.find(Last) == NormalizedName.size())
         NormalizedName += Last;
+    } else if (CandidateInfo.Kind == opt::Option::FlagOrEqClass ||
+               CandidateInfo.Kind == opt::Option::SeparateOrEqClass) {
+      NormalizedName = Option.split('=').first;
+      RHS = Option.drop_front(NormalizedName.size());
     } else
       NormalizedName = Option;
 
@@ -629,6 +633,15 @@ static std::string getOptionHelpName(const OptTable &Opts, OptSpecifier Id) {
     break;
 
   case Option::FlagClass:
+  case Option::FlagOrEqClass:
+    break;
+
+  case Option::SeparateOrEqClass:
+    Name += '=';
+    if (StringRef MetaVarName = Opts.getOptionMetaVar(Id); !MetaVarName.empty())
+      Name += MetaVarName;
+    else
+      Name += "<value>";
     break;
 
   case Option::ValuesClass:

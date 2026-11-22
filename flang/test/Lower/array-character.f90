@@ -15,12 +15,12 @@ end subroutine
 ! CHECK:           %[[VAL_5:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_7:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_7]]) typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFissueEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
+! CHECK:           %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_4]](%[[VAL_7]]) typeparams %[[VAL_5]] dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFissueEc1") : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
 ! CHECK:           %[[VAL_9:.*]]:2 = fir.unboxchar %[[VAL_1]] : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
 ! CHECK:           %[[VAL_10:.*]] = fir.convert %[[VAL_9]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.array<3x!fir.char<1,?>>>
 ! CHECK:           %[[VAL_11:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_12:.*]] = fir.shape %[[VAL_11]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_12]]) typeparams %[[VAL_9]]#1 dummy_scope %[[VAL_2]] arg {{[0-9]+}} {uniq_name = "_QFissueEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,?>>>)
+! CHECK:           %[[VAL_13:.*]]:2 = hlfir.declare %[[VAL_10]](%[[VAL_12]]) typeparams %[[VAL_9]]#1 dummy_scope %[[VAL_2]] arg {{[0-9]+}} uniq_name("_QFissueEc2") : (!fir.ref<!fir.array<3x!fir.char<1,?>>>, !fir.shape<1>, index, !fir.dscope) -> (!fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,?>>>)
 ! CHECK:           hlfir.assign %[[VAL_13]]#0 to %[[VAL_8]]#0 : !fir.box<!fir.array<3x!fir.char<1,?>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>
 
 program p
@@ -37,12 +37,12 @@ end program p
 ! CHECK:           %[[VAL_1:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca !fir.array<3x!fir.char<1,4>> <{bindc_name = "c1", uniq_name = "_QFEc1"}>
 ! CHECK:           %[[VAL_3:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_3]]) typeparams %[[VAL_0]] {uniq_name = "_QFEc1"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
+! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_2]](%[[VAL_3]]) typeparams %[[VAL_0]] uniq_name("_QFEc1") : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
 ! CHECK:           %[[VAL_5:.*]] = fir.address_of(@_QFEc2) : !fir.ref<!fir.array<3x!fir.char<1,4>>>
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_6]] {uniq_name = "_QFEc2"} : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_6]] uniq_name("_QFEc2") : (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<3x!fir.char<1,4>>>, !fir.ref<!fir.array<3x!fir.char<1,4>>>)
 ! CHECK:           %[[VAL_10:.*]] = arith.constant 6 : i32
 ! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAioBeginExternalListOutput(%[[VAL_10]], %{{.*}}, %{{.*}}) fastmath<contract> : (i32, !fir.ref<i8>, i32) -> !fir.ref<i8>
 ! CHECK:           %[[VAL_15:.*]] = fir.shape %[[VAL_7]] : (index) -> !fir.shape<1>
@@ -76,7 +76,7 @@ end
 ! CHECK:           %[[VAL_6:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_7:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_8:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_9:.*]]:2 = hlfir.declare %[[VAL_5]](%[[VAL_8]]) typeparams %[[VAL_7]] uniq_name("_QQro.4x3xc1.0") fortran_attrs<parameter> : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_10:.*]] = fir.shape %[[VAL_6]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_11:.*]] = fir.embox %[[VAL_9]]#0(%[[VAL_10]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
@@ -88,7 +88,7 @@ end
 ! CHECK:           %[[VAL_21:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_22:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_23:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_20]](%[[VAL_23]]) typeparams %[[VAL_22]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_24:.*]]:2 = hlfir.declare %[[VAL_20]](%[[VAL_23]]) typeparams %[[VAL_22]] uniq_name("_QQro.4x3xc1.0") fortran_attrs<parameter> : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_25:.*]] = fir.shape %[[VAL_21]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_26:.*]] = fir.embox %[[VAL_24]]#0(%[[VAL_25]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_27:.*]] = fir.convert %[[VAL_26]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>
@@ -100,7 +100,7 @@ end
 ! CHECK:           %[[VAL_36:.*]] = arith.constant 4 : index
 ! CHECK:           %[[VAL_37:.*]] = arith.constant 3 : index
 ! CHECK:           %[[VAL_38:.*]] = fir.shape %[[VAL_36]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_39:.*]]:2 = hlfir.declare %[[VAL_35]](%[[VAL_38]]) typeparams %[[VAL_37]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQro.4x3xc1.0"} : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
+! CHECK:           %[[VAL_39:.*]]:2 = hlfir.declare %[[VAL_35]](%[[VAL_38]]) typeparams %[[VAL_37]] uniq_name("_QQro.4x3xc1.0") fortran_attrs<parameter> : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.ref<!fir.array<4x!fir.char<1,3>>>)
 ! CHECK:           %[[VAL_40:.*]] = fir.shape %[[VAL_36]] : (index) -> !fir.shape<1>
 ! CHECK:           %[[VAL_41:.*]] = fir.embox %[[VAL_39]]#0(%[[VAL_40]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.array<4x!fir.char<1,3>>>
 ! CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (!fir.box<!fir.array<4x!fir.char<1,3>>>) -> !fir.box<none>

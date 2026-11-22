@@ -150,6 +150,13 @@ llvm.func @kernel_func_waves_per_eu()
   llvm.return
 }
 
+llvm.func @kernel_func_waves_per_eu_range()
+    attributes {rocdl.kernel, rocdl.waves_per_eu = "1,1"} {
+  // CHECK-LABEL: amdgpu_kernel void @kernel_func_waves_per_eu_range()
+  // CHECK: #[[$KERNEL_WAVES_PER_EU_RANGE_ATTR:[0-9]+]]
+  llvm.return
+}
+
 llvm.func @kernel_func_unsafe_fp_atomics()
     attributes {rocdl.kernel, rocdl.unsafe_fp_atomics = true} {
   // CHECK-LABEL: amdgpu_kernel void @kernel_func_unsafe_fp_atomics()
@@ -392,15 +399,19 @@ llvm.func @rocdl.s.wait.tensorcnt() {
 
 llvm.func @rocdl.asyncmark() {
   // CHECK-LABEL: rocdl.asyncmark
-  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark()
+  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark(i32 0)
+  // CHECK-NEXT: call void @llvm.amdgcn.asyncmark(i32 5)
   rocdl.asyncmark
+  rocdl.asyncmark stages = tensor|global_load_async_to_lds_mcast
   llvm.return
 }
 
 llvm.func @rocdl.wait.asyncmark() {
   // CHECK-LABEL: rocdl.wait.asyncmark
-  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0)
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 0, i32 0)
+  // CHECK-NEXT: call void @llvm.amdgcn.wait.asyncmark(i16 2, i32 40)
   rocdl.wait.asyncmark 0
+  rocdl.wait.asyncmark 2 stages = global_store_async_from_lds|buffer_global_load
   llvm.return
 }
 
@@ -2252,4 +2263,5 @@ llvm.func @rocdl_dot_fp8_family(%i32: i32, %f32: f32) -> f32 {
 // CHECK-DAG: ![[$REQD_WORK_GROUP_SIZE]] = !{i32 16, i32 4, i32 2}
 // CHECK-DAG: ![[$REQD_BLOCK_SIZE]] = !{i32 8, i32 4, i32 2}
 // CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "uniform-work-group-size" }
+// CHECK-DAG: attributes #[[$KERNEL_WAVES_PER_EU_RANGE_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="1,1" "uniform-work-group-size" }
 // CHECK-DAG: attributes #[[$KERNEL_UNSAFE_FP_ATOMICS_ATTR]] = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-unsafe-fp-atomics"="true" "uniform-work-group-size" }

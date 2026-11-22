@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -ffreestanding -triple x86_64-unknown-unknown -emit-llvm -target-feature +waitpkg -Wall -pedantic -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple x86_64-unknown-unknown -emit-llvm -target-feature +waitpkg -Wall -pedantic -o - | FileCheck %s %}
 // RUN: %clang_cc1 %s -ffreestanding -triple i386-unknown-unknown -emit-llvm -target-feature +waitpkg -Wall -pedantic -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -ffreestanding -triple i386-unknown-unknown -emit-llvm -target-feature +waitpkg -Wall -pedantic -o - | FileCheck %s %}
 
 #include <immintrin.h>
 

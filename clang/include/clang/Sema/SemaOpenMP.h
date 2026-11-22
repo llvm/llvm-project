@@ -211,11 +211,13 @@ public:
   /// \param Init First part of the for loop.
   void ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init);
 
-  /// Called on well-formed '\#pragma omp metadirective' after parsing
-  /// of the  associated statement.
-  StmtResult ActOnOpenMPMetaDirective(ArrayRef<OMPClause *> Clauses,
-                                      Stmt *AStmt, SourceLocation StartLoc,
-                                      SourceLocation EndLoc);
+  /// Called for metadirectives with user conditions that require runtime
+  /// selection. \p Variants holds one complete directive (or the plain
+  /// associated statement) per entry of \p TraitInfos.
+  StmtResult ActOnOpenMPMetaDirective(SourceLocation StartLoc,
+                                      SourceLocation EndLoc,
+                                      ArrayRef<OMPTraitInfo *> TraitInfos,
+                                      ArrayRef<Stmt *> Variants);
 
   // OpenMP directives and clauses.
   /// Called on correct id-expression from the '#pragma omp
@@ -259,6 +261,12 @@ public:
   /// Called on well-formed '#pragma omp requires'.
   DeclGroupPtrTy ActOnOpenMPRequiresDirective(SourceLocation Loc,
                                               ArrayRef<OMPClause *> ClauseList);
+
+  /// Registers a 'requires' directive deserialized from an AST file.
+  void addRequiresDecl(OMPRequiresDecl *D);
+
+  /// The 'requires' directives seen so far in this translation unit.
+  ArrayRef<const OMPRequiresDecl *> getRequiresDecls() const;
   /// Check restrictions on Requires directive
   OMPRequiresDecl *CheckOMPRequiresDecl(SourceLocation Loc,
                                         ArrayRef<OMPClause *> Clauses);
@@ -659,6 +667,11 @@ public:
   StmtResult ActOnOpenMPTargetParallelGenericLoopDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
+  /// Called on well-formed '\#pragma omp target loop' after parsing of the
+  /// associated statement.
+  StmtResult ActOnOpenMPTargetGenericLoopDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc, VarsWithInheritedDSAType &VarsWithImplicitDSA);
   /// Called on well-formed '\#pragma omp cancellation point'.
   StmtResult
   ActOnOpenMPCancellationPointDirective(SourceLocation StartLoc,
@@ -858,6 +871,14 @@ public:
                                     OMPTraitInfo &TI, unsigned NumAppendArgs,
                                     SourceRange SR);
 
+  /// Called on well-formed 'adjust_args' clause of a '\#pragma omp declare
+  /// variant' directive. Returns nullptr if the clause is invalid.
+  OMPAdjustArgsDescriptor *
+  ActOnOpenMPAdjustArgsClause(OpenMPAdjustArgsOpKind AdjustOp,
+                              OpenMPNeedDevicePtrModifier NeedDevicePtrModifier,
+                              ArrayRef<OMPAdjustArgsItem> Items,
+                              SourceLocation Loc);
+
   /// Called on well-formed '\#pragma omp declare variant' after parsing of
   /// the associated method/function.
   /// \param FD Function declaration to which declare variant directive is
@@ -865,17 +886,14 @@ public:
   /// \param VariantRef Expression that references the variant function, which
   /// must be used instead of the original one, specified in \p DG.
   /// \param TI The context traits associated with the function variant.
-  /// \param AdjustArgsNothing The list of 'nothing' arguments.
-  /// \param AdjustArgsNeedDevicePtr The list of 'need_device_ptr' arguments.
+  /// \param AdjustArgs The list of 'adjust_args' clauses.
   /// \param AppendArgs The list of 'append_args' arguments.
   /// \param AdjustArgsLoc The Location of an 'adjust_args' clause.
   /// \param AppendArgsLoc The Location of an 'append_args' clause.
   /// \param SR The SourceRange of the 'declare variant' directive.
   void ActOnOpenMPDeclareVariantDirective(
       FunctionDecl *FD, Expr *VariantRef, OMPTraitInfo &TI,
-      ArrayRef<Expr *> AdjustArgsNothing,
-      ArrayRef<Expr *> AdjustArgsNeedDevicePtr,
-      ArrayRef<Expr *> AdjustArgsNeedDeviceAddr,
+      ArrayRef<OMPAdjustArgsDescriptor *> AdjustArgs,
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
@@ -990,10 +1008,6 @@ public:
                                      SourceLocation StartLoc,
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc);
-  /// Called on well-formed 'when' clause.
-  OMPClause *ActOnOpenMPWhenClause(OMPTraitInfo &TI, SourceLocation StartLoc,
-                                   SourceLocation LParenLoc,
-                                   SourceLocation EndLoc);
   /// Called on well-formed 'default' clause.
   OMPClause *
   ActOnOpenMPDefaultClause(llvm::omp::DefaultKind M, SourceLocation MLoc,
@@ -1562,12 +1576,15 @@ private:
   /// \param OriginalInits [out] Collection of statements and declarations that
   ///                      must have been executed/declared before entering the
   ///                      loop.
+  /// \param NestedFinals  [out] If non-null, per loop, the Finals of a nested
+  ///                      loop transformation consumed by this one.
   ///
   /// \return Whether there was any error.
   bool checkTransformableLoopNest(
       OpenMPDirectiveKind Kind, Stmt *AStmt, int NumLoops,
       SmallVectorImpl<OMPLoopBasedDirective::HelperExprs> &LoopHelpers,
-      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits);
+      Stmt *&Body, SmallVectorImpl<SmallVector<Stmt *>> &OriginalInits,
+      SmallVectorImpl<Stmt *> *NestedFinals = nullptr);
 
   /// Holds the result of the analysis of a (possibly canonical) loop.
   struct LoopAnalysis {
@@ -1582,6 +1599,10 @@ private:
     SmallVector<Stmt *> OriginalInits;
     /// Initialization statements required after transformation of this loop.
     SmallVector<Stmt *> TransformsPreInits;
+    /// Finals from a nested loop-transformation (e.g. `omp reverse`); must
+    /// run right after this loop when it is not consumed by an enclosing
+    /// transformation.
+    Stmt *TransformFinals = nullptr;
 
     explicit LoopAnalysis(Stmt *S) : AStmt(S) {}
 
@@ -1624,11 +1645,15 @@ private:
   /// \param SeqAnalysis    [out] Result of the analysis of \p LoopSeqStmt
   /// \param Context
   /// \param Kind           The loop transformation directive kind.
+  /// \param IsGeneratedSequence Whether \p LoopSeqStmt was generated by a
+  ///                       loop-sequence-generating transformation (e.g.
+  ///                       looprange fuse) rather than written by the user.
   /// \return Whether the original statement is both syntactically and
   /// semantically correct according to OpenMP 6.0 canonical loop
   /// sequence definition.
   bool analyzeLoopSequence(Stmt *LoopSeqStmt, LoopSequenceAnalysis &SeqAnalysis,
-                           ASTContext &Context, OpenMPDirectiveKind Kind);
+                           ASTContext &Context, OpenMPDirectiveKind Kind,
+                           bool IsGeneratedSequence = false);
 
   /// Validates and checks whether a loop sequence can be transformed according
   /// to the given directive, providing necessary setup and initialization

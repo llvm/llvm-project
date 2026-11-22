@@ -56,6 +56,10 @@ class Symbol;
 class CommonBlockMap;
 using CommonBlockList = std::vector<std::pair<SymbolRef, std::size_t>>;
 
+namespace omp {
+struct SemanticOverrides;
+}
+
 using ConstructNode = std::variant<const parser::AssociateConstruct *,
     const parser::BlockConstruct *, const parser::CaseConstruct *,
     const parser::ChangeTeamConstruct *, const parser::CriticalConstruct *,
@@ -411,6 +415,8 @@ public:
     return branchTargets_.find(statementPosition) != branchTargets_.end();
   }
 
+  omp::SemanticOverrides &GetOmpSemanticOverrides();
+
 private:
   struct ScopeIndexComparator {
     bool operator()(parser::CharBlock, parser::CharBlock) const;
@@ -472,6 +478,7 @@ private:
   UnorderedSymbolSet isUsed_;
   std::set<const parser::AccObject *> accObjectDuplicates_;
   bool anyOpenACCDataMapping_{false};
+  std::unique_ptr<omp::SemanticOverrides> ompOverrides_;
   std::list<ProgramTree> programTrees_;
 };
 

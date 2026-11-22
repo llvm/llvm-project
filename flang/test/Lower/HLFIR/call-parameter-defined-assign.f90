@@ -34,7 +34,7 @@ end module
 ! CHECK-LABEL: func.func @_QPdefined_assign_scalar_parameter
 ! CHECK: hlfir.region_assign {
 ! CHECK: %[[RHS:.*]] = fir.address_of(@_QQro._QMmdaTt.0)
-! CHECK: %[[RHSD:.*]]:2 = hlfir.declare %[[RHS]] {fortran_attrs = #fir.var_attrs<parameter>
+! CHECK: %[[RHSD:.*]]:2 = hlfir.declare %[[RHS]] uniq_name({{.*}}) fortran_attrs<parameter>
 ! CHECK: hlfir.yield %[[RHSD]]#0
 ! CHECK: } to {
 ! CHECK: } user_defined_assign (%[[ARG0:.*]]: !fir.ref<!fir.type<_QMmdaTt{val:i32}>>) to (%[[ARG1:.*]]: !fir.ref<!fir.type<_QMmdaTt{val:i32}>>) {
@@ -50,7 +50,7 @@ end subroutine
 ! CHECK-LABEL: func.func @_QPdefined_assign_array_parameter
 ! CHECK: hlfir.region_assign {
 ! CHECK: %[[ARHS:.*]] = fir.address_of(@_QQro.2x_QMmdaTt.1)
-! CHECK: %[[ARHSD:.*]]:2 = hlfir.declare %[[ARHS]](%{{.*}}) {fortran_attrs = #fir.var_attrs<parameter>
+! CHECK: %[[ARHSD:.*]]:2 = hlfir.declare %[[ARHS]](%{{.*}}) uniq_name({{.*}}) fortran_attrs<parameter>
 ! CHECK: hlfir.yield %[[ARHSD]]#0
 ! CHECK: } to {
 ! CHECK: } user_defined_assign (%[[AARG0:.*]]: !fir.ref<!fir.array<2x!fir.type<_QMmdaTt{val:i32}>>>) to (%[[AARG1:.*]]: !fir.ref<!fir.array<2x!fir.type<_QMmdaTt{val:i32}>>>) {

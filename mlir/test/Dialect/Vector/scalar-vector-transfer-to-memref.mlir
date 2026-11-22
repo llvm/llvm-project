@@ -30,6 +30,36 @@ func.func @transfer_read_1d(%m: memref<?x?x?xf32>, %idx: index, %idx2: index) ->
 
 // -----
 
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_read_1d_with_mask(
+//       CHECK:   %[[r:.*]] = vector.transfer_read
+//       CHECK:   vector.extract %[[r]]
+//   CHECK-NOT:   memref.load
+func.func @negative_transfer_read_1d_with_mask(%m: memref<?x?x?xf32>, %idx: index, %idx2: index, %mask: vector<5xi1>) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.transfer_read %m[%idx, %idx, %idx], %cst, %mask {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
+  return %1 : f32
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_read_1d_masked(
+//       CHECK:   %[[r:.*]] = vector.mask %{{.*}} { vector.transfer_read
+//       CHECK:   vector.extract %[[r]]
+//   CHECK-NOT:   memref.load
+func.func @negative_transfer_read_1d_masked(%m: memref<?x?x?xf32>, %idx: index, %idx2: index, %mask: vector<5xi1>) -> f32 {
+  %cst = arith.constant 0.0 : f32
+  %0 = vector.mask %mask { vector.transfer_read %m[%idx, %idx, %idx], %cst {in_bounds = [true]} : memref<?x?x?xf32>, vector<5xf32> } : vector<5xi1> -> vector<5xf32>
+  %1 = vector.extract %0[%idx2] : f32 from vector<5xf32>
+  return %1 : f32
+}
+
+// -----
+
 // CHECK-LABEL: func @tensor_transfer_read_0d(
 //  CHECK-SAME:     %[[t:.*]]: tensor<?x?x?xf32>, %[[idx:.*]]: index
 //       CHECK:   %[[r:.*]] = tensor.extract %[[t]][%[[idx]], %[[idx]], %[[idx]]]
@@ -60,6 +90,32 @@ func.func @transfer_write_0d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
 func.func @transfer_write_1d(%m: memref<?x?x?xf32>, %idx: index, %f: f32) {
   %0 = vector.broadcast %f : f32 to vector<1xf32>
   vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<1xf32>, memref<?x?x?xf32>
+  return
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_write_1d_with_mask(
+//       CHECK:   vector.transfer_write
+//   CHECK-NOT:   memref.store
+func.func @negative_transfer_write_1d_with_mask(%m: memref<?x?x?xf32>, %idx: index, %f: f32, %mask: vector<1xi1>) {
+  %0 = vector.broadcast %f : f32 to vector<1xf32>
+  vector.transfer_write %0, %m[%idx, %idx, %idx], %mask : vector<1xf32>, memref<?x?x?xf32>
+  return
+}
+
+// -----
+
+// Scalarizing masked transfers is not supported yet.
+
+// CHECK-LABEL: func @negative_transfer_write_1d_masked(
+//       CHECK:   vector.mask %{{.*}} { vector.transfer_write
+//   CHECK-NOT:   memref.store
+func.func @negative_transfer_write_1d_masked(%m: memref<?x?x?xf32>, %idx: index, %f: f32, %mask: vector<1xi1>) {
+  %0 = vector.broadcast %f : f32 to vector<1xf32>
+  vector.mask %mask { vector.transfer_write %0, %m[%idx, %idx, %idx] : vector<1xf32>, memref<?x?x?xf32> } : vector<1xi1>
   return
 }
 

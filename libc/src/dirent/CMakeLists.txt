@@ -77,3 +77,18 @@ add_entrypoint_object(
     libc.src.string.string_utils
 )
 
+add_entrypoint_object(
+  scandir
+  SRCS
+    scandir.cpp
+  HDRS
+    scandir.h
+  DEPENDS
+    libc.hdr.types.struct_dirent
+    libc.src.__support.File.dir
+    libc.src.__support.File.platform_dir
+    libc.src.__support.libc_errno
+    libc.src.__support.macros.null_check
+    libc.src.__support.macros.optimization
+    libc.src.errno.errno
+)

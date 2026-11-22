@@ -6,9 +6,9 @@
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<f64>{{.*}}, %[[arg1:.*]]: !fir.ref<f64>{{.*}}, %[[arg2:.*]]: !fir.ref<f64>{{.*}}) {
 subroutine modulo_testr(r, a, p)
   real(8) :: r, a, p
-  ! ALL: %[[a_decl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} {uniq_name = "_QFmodulo_testrEa"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
-  ! ALL: %[[p_decl:.*]]:2 = hlfir.declare %[[arg2]] {{.*}} {uniq_name = "_QFmodulo_testrEp"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
-  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFmodulo_testrEr"} : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[a_decl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} uniq_name("_QFmodulo_testrEa") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[p_decl:.*]]:2 = hlfir.declare %[[arg2]] {{.*}} uniq_name("_QFmodulo_testrEp") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
+  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFmodulo_testrEr") : (!fir.ref<f64>, !fir.dscope) -> (!fir.ref<f64>, !fir.ref<f64>)
   ! ALL-DAG: %[[a:.*]] = fir.load %[[a_decl]]#0 : !fir.ref<f64>
   ! ALL-DAG: %[[p:.*]] = fir.load %[[p_decl]]#0 : !fir.ref<f64>
   ! HONORINF: %[[res:.*]] = fir.call @_FortranAModuloReal8(%[[a]], %[[p]]
@@ -30,9 +30,9 @@ end subroutine
 ! ALL-SAME: %[[arg0:.*]]: !fir.ref<i64>{{.*}}, %[[arg1:.*]]: !fir.ref<i64>{{.*}}, %[[arg2:.*]]: !fir.ref<i64>{{.*}}) {
 subroutine modulo_testi(r, a, p)
   integer(8) :: r, a, p
-  ! ALL: %[[a_decl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} {uniq_name = "_QFmodulo_testiEa"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-  ! ALL: %[[p_decl:.*]]:2 = hlfir.declare %[[arg2]] {{.*}} {uniq_name = "_QFmodulo_testiEp"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
-  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} {uniq_name = "_QFmodulo_testiEr"} : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! ALL: %[[a_decl:.*]]:2 = hlfir.declare %[[arg1]] {{.*}} uniq_name("_QFmodulo_testiEa") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! ALL: %[[p_decl:.*]]:2 = hlfir.declare %[[arg2]] {{.*}} uniq_name("_QFmodulo_testiEp") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
+  ! ALL: %[[r_decl:.*]]:2 = hlfir.declare %[[arg0]] {{.*}} uniq_name("_QFmodulo_testiEr") : (!fir.ref<i64>, !fir.dscope) -> (!fir.ref<i64>, !fir.ref<i64>)
   ! ALL-DAG: %[[a:.*]] = fir.load %[[a_decl]]#0 : !fir.ref<i64>
   ! ALL-DAG: %[[p:.*]] = fir.load %[[p_decl]]#0 : !fir.ref<i64>
   ! CHECK-MOD-ZERO: arith.cmpi eq, %{{.*}}, %c0{{.*}} : i64

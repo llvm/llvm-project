@@ -160,9 +160,9 @@ class SelectionDAGBuilder {
   /// We defer handling these until we do see it.
   MapVector<const Value*, DanglingDebugInfoVector> DanglingDebugInfoMap;
 
-  /// Cache the module flag for whether we should use debug-info assignment
-  /// tracking.
-  bool AssignmentTrackingEnabled = false;
+  /// Cache whether a debug value can name the address of a global directly,
+  /// rather than holding out for a register with it.
+  bool CanDescribeGlobalAddressInLocationList = false;
 
 public:
   /// Loads are not emitted to the program immediately.  We bunch them up and

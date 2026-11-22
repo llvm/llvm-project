@@ -26,7 +26,6 @@
 namespace clang {
 
 class HLSLResourceBindingAttr;
-class HLSLRVkBindingAttr;
 
 namespace hlsl {
 
@@ -165,6 +164,11 @@ public:
 private:
   void pushName(llvm::StringRef N, llvm::StringRef Delim);
 };
+
+inline bool isStructOrArrayOfWithResources(QualType Ty) {
+  return Ty->isHLSLIntangibleType() && !Ty->isHLSLResourceRecord() &&
+         !Ty->isHLSLResourceRecordArray();
+}
 
 } // namespace hlsl
 

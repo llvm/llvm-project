@@ -13,7 +13,7 @@
 // template <class ExecutionPolicy,
 //           class ForwardIterator,
 //           class Size>
-//   void uninitialized_value_construct_n(ExecutionPolicy&& exec, ForwardIterator first, Size n);
+//   ForwardIterator uninitialized_value_construct_n(ExecutionPolicy&& exec, ForwardIterator first, Size n);
 
 #include <atomic>
 #include <algorithm>
@@ -67,8 +67,9 @@ struct TestCounted {
 
       runway_sample(std::size(counters) + 1, [&](size_t size) {
         // Default-construct the Counted objects in range [0, size).
-        std::uninitialized_value_construct_n(policy, Iter(pool), size);
-        ASSERT_SAME_TYPE(decltype(std::uninitialized_value_construct_n(policy, Iter(pool), size)), void);
+        auto res = std::uninitialized_value_construct_n(policy, Iter(pool), size);
+        static_assert(std::is_same_v<decltype(res), Iter>);
+        assert(res == Iter(pool + size));
 
         // Verify that inside this range the counters are all 1 and outside the range they are all 0.
         assert(std::all_of(std::begin(counters), std::begin(counters) + size, [](auto& x) { return x == 1; }));

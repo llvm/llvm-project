@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple sparc-unknown-none -O1 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple sparc-unknown-linux-gnu -O1 -emit-llvm -o - %s | FileCheck %s --check-prefix=LINUX
+// RUN: %clang_cc1 -triple sparc-unknown-netbsd -O1 -emit-llvm -o - %s | FileCheck %s
 
 void sink(long double);
 void vararg(int, ...);

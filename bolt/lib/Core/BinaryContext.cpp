@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryContext.h"
+#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/BinaryEmitter.h"
 #include "bolt/Core/BinaryFunction.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -34,6 +35,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -241,8 +243,13 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
         Twine("BOLT-ERROR: no register info for target ", TripleName));
 
   // Set up disassembler. The MCAsmInfo holds a reference to MCTargetOptions, so
-  // make it static to outlive the AsmInfo.
-  static const MCTargetOptions MCOptions;
+  // make it static to outlive the AsmInfo. Point it at the library options
+  // parsed from the command line (e.g. -x86-align-branch*).
+  static const MCTargetOptions MCOptions = [] {
+    MCTargetOptions Options;
+    Options.LibraryOptions = &opts::LibraryOptionsCtx;
+    return Options;
+  }();
   std::unique_ptr<MCAsmInfo> AsmInfo(
       TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!AsmInfo)
@@ -318,8 +325,8 @@ Expected<std::unique_ptr<BinaryContext>> BinaryContext::createBinaryContext(
   else if (opts::LargeCodeModel.getNumOccurrences())
     BC->UseLargeCodeModel = opts::LargeCodeModel;
 
-  BC->MAB = std::unique_ptr<MCAsmBackend>(
-      BC->TheTarget->createMCAsmBackend(*BC->STI, *BC->MRI, MCTargetOptions()));
+  BC->MAB = std::unique_ptr<MCAsmBackend>(BC->TheTarget->createMCAsmBackend(
+      *BC->STI, *BC->MRI, BC->Ctx->getTargetOptions()));
 
   BC->setFilename(InputFileName);
 
@@ -1318,6 +1325,9 @@ MCSymbol *BinaryContext::registerNameAtAddress(StringRef Name, uint64_t Address,
     }
   }
 
+  if (BD->isVTable())
+    VTableMap.try_emplace(Address, BD);
+
   return Symbol;
 }
 
@@ -1339,6 +1349,17 @@ BinaryContext::getBinaryDataContainingAddressImpl(uint64_t Address) const {
     }
   }
   return nullptr;
+}
+
+const BinaryData *
+BinaryContext::getVTableContainingAddress(uint64_t Address) const {
+  // Vtables do not overlap, so only the last one starting at or before
+  // Address can contain it.
+  auto VI = VTableMap.upper_bound(Address);
+  if (VI == VTableMap.begin())
+    return nullptr;
+  const BinaryData *VTable = std::prev(VI)->second;
+  return VTable->containsAddress(Address) ? VTable : nullptr;
 }
 
 BinaryData *BinaryContext::getGOTSymbol() {
@@ -2293,6 +2314,10 @@ void BinaryContext::collectDebugScopeBoundaries() {
   }
 }
 
+bool BinaryContext::shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const {
+  return (AlignBlocks || PreserveBlocksAlignment) && BB.getAlignment() > 1;
+}
+
 bool BinaryContext::shouldEmit(const BinaryFunction &Function) const {
   if (Function.isPseudo())
     return false;
@@ -2966,7 +2991,7 @@ BinaryContext::calculateEmittedSize(BinaryFunction &BF, bool FixBranches) {
   IndependentCodeEmitter MCEInstance = createIndependentMCCodeEmitter();
   MCContext *LocalCtx = MCEInstance.LocalCtx.get();
   MCAsmBackend *MAB =
-      TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+      TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
 
   SmallString<256> Code;
   raw_svector_ostream VecOS(Code);

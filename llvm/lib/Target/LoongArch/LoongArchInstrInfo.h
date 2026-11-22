@@ -15,6 +15,7 @@
 
 #include "LoongArchRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include <optional>
 
 #define GET_INSTRINFO_HEADER
 #include "LoongArchGenInstrInfo.inc"
@@ -71,6 +72,8 @@ public:
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
+  int getJumpTableIndex(const MachineInstr &MI) const override;
+
   MachineBasicBlock *getBranchDestBlock(const MachineInstr &MI) const override;
 
   bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
@@ -118,6 +121,13 @@ public:
                            ExtAddrMode &AM) const override;
   MachineInstr *emitLdStWithAddr(MachineInstr &MemI,
                                  const ExtAddrMode &AM) const override;
+
+  bool useMachineCombiner() const override { return true; }
+
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
+
+  std::optional<unsigned> getInverseOpcode(unsigned Opcode) const override;
 
 protected:
   const LoongArchSubtarget &STI;

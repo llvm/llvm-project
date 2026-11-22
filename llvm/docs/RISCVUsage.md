@@ -72,8 +72,10 @@ ISA naming string. Currently supported profiles:
 - `rva22s64`
 - `rva23u64`
 - `rva23s64`
+- `rva23p1s64`
 - `rvb23u64`
 - `rvb23s64`
+- `rvb23p1s64`
 
 Note that you can also append additional extension names to be enabled, e.g.
 `rva20u64_zicond` will enable the `zicond` extension in addition to those
@@ -83,18 +85,16 @@ Profiles that are not yet ratified cannot be used unless
 `-menable-experimental-extensions` (or equivalent for other tools) is
 specified. This applies to the following profiles:
 
-- `rva23p1s64`
-- `rvb23p1s64`
 - `rvm23u32`
 
 The `rva23p1s64` and `rvb23p1s64` profiles enable the same mandatory extensions
 as `rva23s64` and `rvb23s64`, respectively. Their additional optional extensions
 must be requested explicitly, for example
-`-march=rva23p1s64_ssctr -menable-experimental-extensions`.
+`-march=rva23p1s64_ssctr`.
 
 (riscv-extensions)=
 
-## Extensions
+## Ratified Extensions
 
 The following table provides a status summary for extensions which have been
 ratified and thus have finalized specifications. When relevant, detailed notes
@@ -499,6 +499,10 @@ The current vendor extensions supported are:
 
 : LLVM implements [version 1.0.0 of the Matrix Multiply Accumulate Instruction Extension Specification](https://sifive.cdn.prismic.io/sifive/c391d53e-ffcf-4091-82f6-c37bf3e883ed_xsfvfwmaccqqq-spec.pdf) by SiFive. All instructions are prefixed with `sf.` as described in the specification linked above.
 
+`Xsfvfofp4min`
+
+: LLVM implements the [0.1 draft specification](https://www.sifive.com/document-file/ofp4-conversion-instruction-xsfvfofp4min-extension) by SiFive.
+
 `XCVbitmanip`
 
 : LLVM implements [version 1.0.0 of the CORE-V Bit Manipulation custom instructions specification](https://github.com/openhwgroup/cv32e40p/blob/62bec66b36182215e18c9cf10f723567e23878e9/docs/source/instruction_set_extensions.rst) by OpenHW Group. All instructions are prefixed with `cv.` as described in the specification.
@@ -728,6 +732,10 @@ Clang's `-msmall-data-limit=` option controls what the threshold size is (in byt
 The small data limit threshold is also used to separate small constants into sections with names starting with `.srodata`. LLD does not place these with the `.sdata` and `.sbss` sections as `.srodata` sections are read only and the other two are writable. Instead the `.srodata` sections are placed adjacent to `.rodata`.
 
 Data suggests that these options can produce significant improvements across a range of benchmarks.
+
+## Save/Restore Support
+
+In some circumstances, LLVM may not emit `__riscv_restore_<N>` tail calls when it has used `__riscv_save_<N>` to save GPRs. This is done intentionally -- specifically when the `__riscv_restore_<N>` call does not support functionality that can be emitted inline before or after a `__riscv_save<N>` call. We still emit the `__riscv_save_<N>` call so that the code size impact of inlining the restore sequence is not as severe as if we also inlined the save sequence.
 
 ## Sanitizers
 

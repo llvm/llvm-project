@@ -227,7 +227,11 @@
 // (and hence their vtable symbol) changes too. Note that the vtable and RTTI are not marked with
 // [[gnu::visibility("hidden")]], since the vtable and RTTI should still be deduplicated across dylibs with the same
 // instatiations.
-#define _LIBCPP_HIDE_STRUCT_FROM_ABI [[__gnu__::__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))]]
+#ifndef _LIBCPP_NO_ABI_TAG
+#  define _LIBCPP_HIDE_STRUCT_FROM_ABI [[__gnu__::__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))]]
+#else
+#  define _LIBCPP_HIDE_STRUCT_FROM_ABI
+#endif
 
 // Optional attributes
 // -------------------
@@ -265,8 +269,7 @@
 #  define _LIBCPP_DIAGNOSE_WARNING(...)
 #endif
 
-#if __has_attribute(__diagnose_if__) && !defined(_LIBCPP_APPLE_CLANG_VER) &&                                           \
-    (!defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2001)
+#if __has_attribute(__diagnose_if__)
 #  define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
 #else
 #  define _LIBCPP_DIAGNOSE_IF(...)

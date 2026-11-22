@@ -22,6 +22,9 @@
 #include "llvm/Target/TargetMachine.h"
 #include <string>
 
+#define OPTIONS_STRUCT_DECL
+#include "XCoreOptions.inc"
+
 #define GET_SUBTARGETINFO_HEADER
 #include "XCoreGenSubtargetInfo.inc"
 

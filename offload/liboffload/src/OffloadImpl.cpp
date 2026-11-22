@@ -14,7 +14,7 @@
 #include "OffloadImpl.hpp"
 #include "Helpers.hpp"
 #include "OffloadPrint.hpp"
-#include "PluginManager.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <mutex>
 
-using namespace llvm::omp::target;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload;
+using namespace llvm::offload::plugin;
 using namespace error;
 
 struct ol_platform_impl_t {
@@ -50,6 +50,12 @@ struct ol_platform_impl_t {
     return llvm::ArrayRef(Devices);
   }
 
+  /// Whether the platform has been initialized and has at least one device.
+  /// Does not trigger initialization.
+  bool isActive() const {
+    return Plugin && Plugin->is_initialized() && Plugin->getNumDevices() > 0;
+  }
+
   /// Direct access to the plugin, may be uninitialized if accessed here.
   std::unique_ptr<GenericPluginTy> Plugin;
 
@@ -70,6 +76,9 @@ struct ol_device_impl_t {
                    ol_platform_impl_t &Platform, InfoTreeNode &&DevInfo)
       : DeviceNum(DeviceNum), Device(Device), Platform(Platform),
         Info(std::forward<InfoTreeNode>(DevInfo)) {}
+
+  ol_device_impl_t(const ol_device_impl_t &) = delete;
+  ol_device_impl_t &operator=(const ol_device_impl_t &) = delete;
 
   int DeviceNum;
   GenericDeviceTy *Device;
@@ -173,12 +182,18 @@ struct ol_symbol_impl_t {
   ol_symbol_impl_t(GenericKernelTy *Kernel)
       : PluginImpl(Kernel), Kind(OL_SYMBOL_KIND_KERNEL),
         Name(Kernel->getName()) {}
-  ol_symbol_impl_t(GlobalTy &&Global)
+  /// Global variable symbol. \p Global holds the device address and size;
+  /// \p HostAddress is the address within the host-side program image, or
+  /// null if the image has no contents for the variable (e.g. `.bss`).
+  ol_symbol_impl_t(GlobalTy &&Global, void *HostAddress)
       : PluginImpl(std::move(Global)), Kind(OL_SYMBOL_KIND_GLOBAL_VARIABLE),
-        Name(std::get<GlobalTy>(PluginImpl).getName()) {}
+        Name(std::get<GlobalTy>(PluginImpl).getName()),
+        HostAddress(HostAddress) {}
+
   std::variant<GenericKernelTy *, GlobalTy> PluginImpl;
   ol_symbol_kind_t Kind;
   llvm::StringRef Name;
+  void *HostAddress = nullptr;
 };
 
 struct ol_context_impl_t {
@@ -207,11 +222,21 @@ struct ol_context_impl_t {
   }
 
   llvm::Expected<void *> allocate(ol_device_handle_t Device, int64_t Size,
-                                  TargetAllocTy Kind, size_t Alignment) {
+                                  ol_alloc_type_t Kind, size_t Alignment) {
     if (auto Err = requireDevice(Device))
       return std::move(Err);
-    return PluginCtx->allocate(*Device->Device, Size, /*HostPtr=*/nullptr, Kind,
-                               Alignment);
+    auto AllocOrErr =
+        PluginCtx->allocate(*Device->Device, Size, Kind, Alignment);
+    if (!AllocOrErr)
+      return AllocOrErr.takeError();
+
+    // Check max alignment only when no explicit alignment was requested.
+    if (Alignment == 0)
+      assert(reinterpret_cast<uintptr_t>(*AllocOrErr) %
+                     alignof(std::max_align_t) ==
+                 0 &&
+             "allocation does not meet max_align_t alignment");
+    return *AllocOrErr;
   }
 
   llvm::Error deallocate(void *Ptr) { return PluginCtx->deallocate(Ptr); }
@@ -263,9 +288,12 @@ struct ol_context_impl_t {
     llvm::Error Result = Plugin::success();
     for (auto &Bucket : OutstandingQueues) {
       auto *Device = Bucket.first;
-      for (auto *AI : Bucket.second)
+      for (auto &AI : Bucket.second) {
         if (auto Err = Device->Device->synchronize(AI, /*Release=*/true))
           Result = llvm::joinErrors(std::move(Result), std::move(Err));
+        delete AI;
+        AI = nullptr;
+      }
     }
     OutstandingQueues.clear();
     return Result;
@@ -273,12 +301,12 @@ struct ol_context_impl_t {
 
   /// Drain outstanding queues and tear down the plugin-side context.
   llvm::Error destroy() {
-    if (auto Err = drainOutstandingQueues())
-      return Err;
-    if (PluginCtx)
-      if (auto Err = PluginCtx->deinit())
-        return Err;
-    return llvm::Error::success();
+    llvm::Error Result = drainOutstandingQueues();
+    if (PluginCtx) {
+      PluginCtx->releaseMemoryManagers();
+      Result = llvm::joinErrors(std::move(Result), PluginCtx->deinit());
+    }
+    return Result;
   }
 
   ~ol_context_impl_t() {
@@ -295,9 +323,12 @@ struct OffloadContext;
 // This pointer is non-null if and only if the context is valid and fully
 // initialized
 static std::atomic<OffloadContext *> OffloadContextVal;
-std::mutex OffloadContextValMutex;
+static std::mutex &getOffloadContextMutex() {
+  static std::mutex Mutex;
+  return Mutex;
+}
 // Set once the vendor runtimes may have been torn down at process exit.
-// Guarded by OffloadContextValMutex.
+// Guarded by getOffloadContextMutex().
 static bool ShutDownAtExit = false;
 struct OffloadContext {
   OffloadContext(OffloadContext &) = delete;
@@ -309,6 +340,11 @@ struct OffloadContext {
   bool ValidationEnabled = true;
   SmallVector<std::unique_ptr<ol_platform_impl_t>, 4> Platforms{};
   size_t RefCount;
+
+  // Cleanup routines to run, in reverse order, before the platforms are
+  // deinitialized.
+  std::mutex ShutdownCallbacksMutex;
+  SmallVector<std::pair<ol_shutdown_cb_t, void *>> ShutdownCallbacks;
 
   static OffloadContext &get() {
     assert(OffloadContextVal);
@@ -344,7 +380,7 @@ ol_platform_backend_t pluginNameToBackend(StringRef Name) {
 
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
-#include "Shared/Targets.def"
+#include "Targets.def"
 
 Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
   SmallSet<ol_platform_backend_t, 0> Requested;
@@ -363,7 +399,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
           std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), Backend));  \
     }                                                                          \
   } while (false);
-#include "Shared/Targets.def"
+#include "Targets.def"
 
   Context.TracingEnabled = std::getenv("OFFLOAD_TRACE");
   Context.ValidationEnabled = !std::getenv("OFFLOAD_DISABLE_VALIDATION");
@@ -372,7 +408,7 @@ Error initPlugins(OffloadContext &Context, const ol_init_args_t *InitArgs) {
 }
 
 Error olInit_impl(const ol_init_args_t *InitArgs) {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   if (ShutDownAtExit)
     return createOffloadError(ErrorCode::UNINITIALIZED,
@@ -402,6 +438,21 @@ Error olInit_impl(const ol_init_args_t *InitArgs) {
   return InitResult;
 }
 
+// Run the registered cleanup routines. The context is still published here so
+// callbacks can use the API. Callbacks may register further callbacks.
+static void runShutdownCallbacks(OffloadContext &Context) {
+  while (true) {
+    std::pair<ol_shutdown_cb_t, void *> Entry;
+    {
+      std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+      if (Context.ShutdownCallbacks.empty())
+        return;
+      Entry = Context.ShutdownCallbacks.pop_back_val();
+    }
+    Entry.first(Entry.second);
+  }
+}
+
 static Error destroyContext(OffloadContext *Context) {
   Error Result = Error::success();
   for (auto &Platform : Context->Platforms)
@@ -413,7 +464,7 @@ static Error destroyContext(OffloadContext *Context) {
 }
 
 Error olShutDown_impl() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
 
   // The context may already have been released at process exit, calls that
   // balance an earlier olInit are still valid.
@@ -427,17 +478,29 @@ Error olShutDown_impl() {
   if (--OffloadContext::get().RefCount != 0)
     return Error::success();
 
+  runShutdownCallbacks(OffloadContext::get());
   return destroyContext(OffloadContextVal.exchange(nullptr));
+}
+
+Error olRegisterShutdownCallback_impl(ol_shutdown_cb_t Callback,
+                                      void *UserData) {
+  OffloadContext &Context = OffloadContext::get();
+  std::lock_guard<std::mutex> Lock(Context.ShutdownCallbacksMutex);
+  Context.ShutdownCallbacks.emplace_back(Callback, UserData);
+  return Error::success();
 }
 
 // Vendor libraries have specific teardown orders but can be initialized lazily.
 // In these cases we register a specific handler to shut it down with the proper
 // ordering. If this is necessary than the shutdown implementation is skipped.
 static void shutDownAtExit() {
-  std::lock_guard<std::mutex> Lock(OffloadContextValMutex);
+  std::lock_guard<std::mutex> Lock(getOffloadContextMutex());
   ShutDownAtExit = true;
-  if (OffloadContext *Context = OffloadContextVal.exchange(nullptr))
+  if (OffloadContext *Context = OffloadContextVal.load()) {
+    runShutdownCallbacks(*Context);
+    OffloadContextVal.store(nullptr);
     consumeError(destroyContext(Context));
+  }
 }
 
 Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
@@ -461,6 +524,8 @@ Error olGetPlatformInfoImplDetail(ol_platform_handle_t Platform,
   case OL_PLATFORM_INFO_BACKEND: {
     return Info.write<ol_platform_backend_t>(Platform->BackendType);
   }
+  case OL_PLATFORM_INFO_ACTIVE:
+    return Info.write<bool>(Platform->isActive());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "getPlatformInfo enum '%i' is invalid", PropName);
@@ -547,6 +612,46 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
   case OL_DEVICE_INFO_DRIVER_ID:
     return Info.write<uint32_t>(Device->Device->getDriverId());
+
+  case OL_DEVICE_INFO_COMPUTE_UNIT_KIND:
+    return Info.writeString(Device->Device->getComputeUnitKind());
+
+  case OL_DEVICE_INFO_TIMESTAMP_FREQUENCY:
+    return Info.write<uint64_t>(Device->Device->getClockFrequency());
+
+  case OL_DEVICE_INFO_HARDWARE_PARALLELISM:
+    return Info.write<uint64_t>(Device->Device->getHardwareParallelism());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_WORK_GROUP_SIZE:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumThreads());
+
+  case OL_DEVICE_INFO_LAUNCH_DEFAULT_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getDefaultNumBlocks());
+
+  case OL_DEVICE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+  case OL_DEVICE_INFO_LAUNCH_MAX_NUM_WORK_GROUPS:
+    return Info.write<uint32_t>(Device->Device->getMaxNumBlocks());
+
+  case OL_DEVICE_INFO_LAUNCH_MAX_GRID_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxGridSize());
+
+  case OL_DEVICE_INFO_NATIVE_PLATFORM_HANDLE: {
+    auto HandleOrErr = Device->Device->getNativePlatformHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
+
+  case OL_DEVICE_INFO_PREFERRED_LOCATION_HOST:
+    return Info.write<bool>(Device->Device->useAutoZeroCopy());
+
+  case OL_DEVICE_INFO_MAX_DIRECT_WRITE_SIZE:
+    return Info.write<uint64_t>(Device->Device->getMaxDirectWriteSize());
 
   default:
     break;
@@ -673,9 +778,32 @@ Error olIterateDevices_impl(ol_device_iterate_cb_t Callback, void *UserData) {
     if (!DevicesOrErr)
       return DevicesOrErr.takeError();
     for (auto &Device : *DevicesOrErr) {
-      if (!Callback(Device.get(), UserData)) {
+      if (!Callback(Device.get(), UserData))
         return Error::success();
-      }
+    }
+  }
+
+  return Error::success();
+}
+
+Error olIterateCompatibleDevices_impl(const void *ProgData, size_t ProgDataSize,
+                                      ol_device_iterate_cb_t Callback,
+                                      void *UserData) {
+  StringRef Buffer(reinterpret_cast<const char *>(ProgData), ProgDataSize);
+
+  for (auto &Platform : OffloadContext::get().Platforms) {
+    if (!Platform->Plugin || !Platform->Plugin->isPluginCompatible(Buffer))
+      continue;
+    auto DevicesOrErr = Platform->getDevices();
+    if (!DevicesOrErr)
+      return DevicesOrErr.takeError();
+    for (auto &Device : *DevicesOrErr) {
+      if (!Device->Platform.Plugin->isDeviceCompatible(Device->DeviceNum,
+                                                       Buffer))
+        continue;
+
+      if (!Callback(Device.get(), UserData))
+        return Error::success();
     }
   }
 
@@ -735,6 +863,12 @@ Error olGetContextInfoImplDetail(ol_context_handle_t Context,
     return Info.writeArray(Context->Devices.data(), Context->Devices.size());
   case OL_CONTEXT_INFO_PLATFORM:
     return Info.write<ol_platform_handle_t>(Context->Platform);
+  case OL_CONTEXT_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr = Context->PluginCtx->getNativeHandle();
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
+  }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetContextInfo enum '%i' is invalid",
@@ -755,39 +889,13 @@ Error olGetContextInfoSize_impl(ol_context_handle_t Context,
   return olGetContextInfoImplDetail(Context, PropName, 0, nullptr, PropSizeRet);
 }
 
-TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
-  switch (Type) {
-  case OL_ALLOC_TYPE_DEVICE:
-    return TARGET_ALLOC_DEVICE;
-  case OL_ALLOC_TYPE_HOST:
-    return TARGET_ALLOC_HOST;
-  case OL_ALLOC_TYPE_MANAGED:
-  default:
-    return TARGET_ALLOC_SHARED;
-  }
-}
-
-ol_alloc_type_t convertPluginToOlAllocTy(TargetAllocTy Kind) {
-  switch (Kind) {
-  case TARGET_ALLOC_HOST:
-    return OL_ALLOC_TYPE_HOST;
-  case TARGET_ALLOC_SHARED:
-    return OL_ALLOC_TYPE_MANAGED;
-  case TARGET_ALLOC_DEVICE:
-  case TARGET_ALLOC_DEFAULT:
-    return OL_ALLOC_TYPE_DEVICE;
-  }
-  llvm_unreachable("unhandled TargetAllocTy");
-}
-
 Error olMemAlloc_impl(ol_context_handle_t Context, ol_device_handle_t Device,
                       ol_alloc_type_t Type, size_t Size, void **AllocationOut) {
   if (Type == OL_ALLOC_TYPE_HOST)
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "use olMemAllocHost for host allocations");
-  auto AllocOrErr =
-      Context->allocate(Device, static_cast<int64_t>(Size),
-                        convertOlToPluginAllocTy(Type), /*Alignment=*/0);
+  auto AllocOrErr = Context->allocate(Device, static_cast<int64_t>(Size), Type,
+                                      /*Alignment=*/0);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   *AllocationOut = *AllocOrErr;
@@ -798,7 +906,7 @@ Error olMemAllocHost_impl(ol_context_handle_t Context,
                           ol_device_handle_t Device, size_t Size,
                           void **AllocationOut) {
   auto AllocOrErr = Context->allocate(Device, static_cast<int64_t>(Size),
-                                      TARGET_ALLOC_HOST, /*Alignment=*/0);
+                                      OL_ALLOC_TYPE_HOST, /*Alignment=*/0);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   *AllocationOut = *AllocOrErr;
@@ -813,8 +921,7 @@ Error olMemAllocAligned_impl(ol_context_handle_t Context,
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "use olMemAllocAlignedHost for host allocations");
   auto AllocOrErr =
-      Context->allocate(Device, static_cast<int64_t>(Size),
-                        convertOlToPluginAllocTy(Type), Alignment);
+      Context->allocate(Device, static_cast<int64_t>(Size), Type, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   *AllocationOut = *AllocOrErr;
@@ -825,7 +932,7 @@ Error olMemAllocAlignedHost_impl(ol_context_handle_t Context,
                                  ol_device_handle_t Device, size_t Size,
                                  size_t Alignment, void **AllocationOut) {
   auto AllocOrErr = Context->allocate(Device, static_cast<int64_t>(Size),
-                                      TARGET_ALLOC_HOST, Alignment);
+                                      OL_ALLOC_TYPE_HOST, Alignment);
   if (!AllocOrErr)
     return AllocOrErr.takeError();
   *AllocationOut = *AllocOrErr;
@@ -852,7 +959,7 @@ Error olGetMemInfoImplDetail(ol_context_handle_t Context, const void *Ptr,
     // allocation has no per-device affinity. This does not affect the
     // size-only query (PropValue == nullptr): the answer is always
     // sizeof(ol_device_handle_t).
-    if (PropValue && Alloc.Kind == TARGET_ALLOC_HOST)
+    if (PropValue && Alloc.Kind == OL_ALLOC_TYPE_HOST)
       return createOffloadError(
           ErrorCode::INVALID_ARGUMENT,
           "OL_MEM_INFO_DEVICE is not valid for host allocations");
@@ -870,7 +977,7 @@ Error olGetMemInfoImplDetail(ol_context_handle_t Context, const void *Ptr,
   case OL_MEM_INFO_SIZE:
     return Info.write<size_t>(Alloc.Size);
   case OL_MEM_INFO_TYPE:
-    return Info.write<ol_alloc_type_t>(convertPluginToOlAllocTy(Alloc.Kind));
+    return Info.write<ol_alloc_type_t>(Alloc.Kind);
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetMemInfo enum '%i' is invalid", PropName);
@@ -903,8 +1010,11 @@ Error olCreateQueue_impl(ol_context_handle_t Context, ol_device_handle_t Device,
     // The queue is empty, but we still need to sync it to release any temporary
     // memory allocations or do other cleanup.
     if (auto Err =
-            Device->Device->synchronize(OutstandingQueue, /*Release=*/false))
-      return Err;
+            Device->Device->synchronize(OutstandingQueue, /*Release=*/false)) {
+      // This only fails after a fatal device error on the destroyed queue.
+      return createOffloadError(ErrorCode::UNKNOWN, std::move(Err),
+                                "failed to reuse a destroyed queue");
+    }
     CreatedQueue->AsyncInfo = OutstandingQueue;
   } else if (auto Err = Context->PluginCtx->initAsyncInfo(
                  *Device->Device, &(CreatedQueue->AsyncInfo))) {
@@ -990,6 +1100,13 @@ Error olGetQueueInfoImplDetail(ol_queue_handle_t Queue,
     if (auto Err = Pending.takeError())
       return Err;
     return Info.write<bool>(!*Pending);
+  }
+  case OL_QUEUE_INFO_NATIVE_HANDLE: {
+    auto HandleOrErr =
+        Queue->Device->Device->getNativeQueueHandle(Queue->AsyncInfo);
+    if (!HandleOrErr)
+      return HandleOrErr.takeError();
+    return Info.write<void *>(*HandleOrErr);
   }
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
@@ -1119,8 +1236,11 @@ Error olCreateEvent_impl(ol_queue_handle_t Queue, ol_event_flags_t Flags,
 Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
                     ol_device_handle_t DstDevice, const void *SrcPtr,
                     ol_device_handle_t SrcDevice, size_t Size) {
-  bool IsDstHost = DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
-  bool IsSrcHost = SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  // A null device handle means the pointer belongs to the host.
+  bool IsDstHost =
+      !DstDevice || DstDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
+  bool IsSrcHost =
+      !SrcDevice || SrcDevice->Platform.BackendType == OL_PLATFORM_BACKEND_HOST;
 
   if (IsDstHost && IsSrcHost) {
     if (!Queue) {
@@ -1215,14 +1335,19 @@ Error olIsValidBinary_impl(ol_device_handle_t Device, const void *ProgData,
 
 Error olDestroyProgram_impl(ol_program_handle_t Program) {
   auto &Device = Program->Image->getDevice();
-  if (auto Err = Device.unloadBinary(Program->Image))
-    return Err;
+  auto *Image = Program->Image;
 
+  // Unregister the image first: unloading frees it, and deinit must not run
+  // its destructors a second time if something below fails. A failed unload
+  // therefore leaks the image instead of retrying it at deinit.
   auto &LoadedImages = Device.LoadedImages;
-  LoadedImages.erase(
-      std::find(LoadedImages.begin(), LoadedImages.end(), Program->Image));
+  auto It = std::find(LoadedImages.begin(), LoadedImages.end(), Image);
+  if (It != LoadedImages.end())
+    LoadedImages.erase(It);
 
-  return olDestroy(Program);
+  Error Result = Device.callGlobalDestructors(Device.Plugin, *Image);
+  Result = joinErrors(std::move(Result), Device.unloadBinary(Image));
+  return joinErrors(std::move(Result), olDestroy(Program));
 }
 
 Error olCalculateOptimalOccupancy_impl(ol_device_handle_t Device,
@@ -1301,8 +1426,6 @@ Error olLaunchKernel_impl(ol_queue_handle_t Queue, ol_device_handle_t Device,
   LaunchArgs.UserThreadLimit[1] = LaunchSizeArgs->GroupSize.y;
   LaunchArgs.UserThreadLimit[2] = LaunchSizeArgs->GroupSize.z;
   LaunchArgs.DynCGroupMem = LaunchSizeArgs->DynSharedMemory;
-  LaunchArgs.Flags.StrictBlocks = true;
-  LaunchArgs.Flags.StrictThreads = true;
 
   while (Properties && Properties->type != OL_KERNEL_LAUNCH_PROP_TYPE_NONE) {
     switch (Properties->type) {
@@ -1343,8 +1466,11 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
       if (!KernelImpl)
         return KernelImpl.takeError();
 
-      if (auto Err = KernelImpl->init(Device, *Program->Image))
+      if (auto Err = KernelImpl->init(Device, *Program->Image)) {
+        Device.Plugin.free(&*KernelImpl);
+        Program->KernelSymbols.erase(Name);
         return Err;
+      }
 
       Kernel = std::make_unique<ol_symbol_impl_t>(&*KernelImpl);
     }
@@ -1354,13 +1480,54 @@ Expected<ol_symbol_handle_t> getSymbolImplDetail(ol_program_handle_t Program,
   case OL_SYMBOL_KIND_GLOBAL_VARIABLE: {
     auto &Global = Program->GlobalSymbols[Name];
     if (!Global) {
-      GlobalTy GlobalObj{Name};
-      if (auto Res =
-              Device.Plugin.getGlobalHandler().getGlobalMetadataFromDevice(
-                  Device, *Program->Image, GlobalObj))
-        return Res;
+      auto &GlobalHandler = Device.Plugin.getGlobalHandler();
 
-      Global = std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj));
+      GlobalTy GlobalObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromDevice(
+              Device, *Program->Image, GlobalObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      // The host address is null for variables without contents in the image
+      // (e.g. `.bss`).
+      GlobalTy ImageObj{Name};
+      if (auto Err = GlobalHandler.getGlobalMetadataFromImage(
+              Device, *Program->Image, ImageObj)) {
+        Program->GlobalSymbols.erase(Name);
+        return std::move(Err);
+      }
+
+      void *HostAddress = ImageObj.getPtr();
+      if (HostAddress) {
+        // The address is a host pointer; make sure it lies inside the image.
+        uintptr_t Start = uintptr_t(Program->Image->getStart());
+        uintptr_t End = Start + Program->Image->getSize();
+        uintptr_t Ptr = (uintptr_t)HostAddress;
+        if (Ptr < Start || Ptr > End || ImageObj.getSize() > End - Ptr) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' lies outside of the program image",
+              Name.str().c_str());
+        }
+
+        // Some plugins only report the address from the device; a zero device
+        // size means unknown, so only check it when it was reported.
+        if (!GlobalObj.getSize())
+          GlobalObj.setSize(ImageObj.getSize());
+        else if (GlobalObj.getSize() != ImageObj.getSize()) {
+          Program->GlobalSymbols.erase(Name);
+          return createOffloadError(
+              ErrorCode::INVALID_BINARY,
+              "global variable '%s' has inconsistent sizes: %u (device) vs %u "
+              "(image)",
+              Name.str().c_str(), GlobalObj.getSize(), ImageObj.getSize());
+        }
+      }
+
+      Global =
+          std::make_unique<ol_symbol_impl_t>(std::move(GlobalObj), HostAddress);
     }
 
     return Global.get();
@@ -1420,12 +1587,15 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
                                 void *PropValue, size_t *PropSizeRet) {
   InfoWriter Info(PropSize, PropValue, PropSizeRet);
 
-  auto CheckKind = [&](ol_symbol_kind_t Required) {
-    if (Symbol->Kind != Required) {
+  auto CheckKind = [&](std::initializer_list<ol_symbol_kind_t> Allowed) {
+    if (!llvm::is_contained(Allowed, Symbol->Kind)) {
       std::string ErrBuffer;
-      raw_string_ostream(ErrBuffer)
-          << PropName << ": Expected a symbol of Kind " << Required
-          << " but given a symbol of Kind " << Symbol->Kind;
+      raw_string_ostream OS(ErrBuffer);
+      OS << PropName << ": Expected a symbol of Kind ";
+      ListSeparator LS(" or ");
+      for (ol_symbol_kind_t Kind : Allowed)
+        OS << LS << Kind;
+      OS << " but given a symbol of Kind " << Symbol->Kind;
       return Plugin::error(ErrorCode::SYMBOL_KIND, ErrBuffer.c_str());
     }
     return Plugin::success();
@@ -1437,13 +1607,27 @@ Error olGetSymbolInfoImplDetail(ol_symbol_handle_t Symbol,
   case OL_SYMBOL_INFO_NAME:
     return Info.writeString(Symbol->Name);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_ADDRESS:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<void *>(std::get<GlobalTy>(Symbol->PluginImpl).getPtr());
+  case OL_SYMBOL_INFO_GLOBAL_VARIABLE_HOST_ADDRESS:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
+      return Err;
+    return Info.write<void *>(Symbol->HostAddress);
   case OL_SYMBOL_INFO_GLOBAL_VARIABLE_SIZE:
-    if (auto Err = CheckKind(OL_SYMBOL_KIND_GLOBAL_VARIABLE))
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_GLOBAL_VARIABLE}))
       return Err;
     return Info.write<size_t>(std::get<GlobalTy>(Symbol->PluginImpl).getSize());
+  case OL_SYMBOL_INFO_KERNEL_STATIC_BLOCK_MEM_SIZE:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
+      return Err;
+    return Info.write<uint32_t>(std::get<GenericKernelTy *>(Symbol->PluginImpl)
+                                    ->getStaticBlockMemSize());
+  case OL_SYMBOL_INFO_KERNEL_MAX_THREADS:
+    if (auto Err = CheckKind({OL_SYMBOL_KIND_KERNEL}))
+      return Err;
+    return Info.write<uint32_t>(
+        std::get<GenericKernelTy *>(Symbol->PluginImpl)->getMaxThreads());
   default:
     return createOffloadError(ErrorCode::INVALID_ENUMERATION,
                               "olGetSymbolInfo enum '%i' is invalid", PropName);
@@ -1462,6 +1646,36 @@ Error olGetSymbolInfo_impl(ol_symbol_handle_t Symbol, ol_symbol_info_t PropName,
 Error olGetSymbolInfoSize_impl(ol_symbol_handle_t Symbol,
                                ol_symbol_info_t PropName, size_t *PropSizeRet) {
   return olGetSymbolInfoImplDetail(Symbol, PropName, 0, nullptr, PropSizeRet);
+}
+
+Error olGetProgramInfoImplDetail(ol_program_handle_t Program,
+                                 ol_program_info_t PropName, size_t PropSize,
+                                 void *PropValue, size_t *PropSizeRet) {
+  InfoWriter Info(PropSize, PropValue, PropSizeRet);
+
+  switch (PropName) {
+  case OL_PROGRAM_INFO_IMAGE_BASE:
+    return Info.write<void *>(const_cast<void *>(Program->Image->getStart()));
+  case OL_PROGRAM_INFO_IMAGE_SIZE:
+    return Info.write<size_t>(Program->Image->getSize());
+  default:
+    return createOffloadError(ErrorCode::INVALID_ENUMERATION,
+                              "olGetProgramInfo enum '%i' is invalid",
+                              PropName);
+  }
+}
+
+Error olGetProgramInfo_impl(ol_program_handle_t Program,
+                            ol_program_info_t PropName, size_t PropSize,
+                            void *PropValue) {
+  return olGetProgramInfoImplDetail(Program, PropName, PropSize, PropValue,
+                                    nullptr);
+}
+
+Error olGetProgramInfoSize_impl(ol_program_handle_t Program,
+                                ol_program_info_t PropName,
+                                size_t *PropSizeRet) {
+  return olGetProgramInfoImplDetail(Program, PropName, 0, nullptr, PropSizeRet);
 }
 
 Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
@@ -1489,6 +1703,40 @@ Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr,
       Ptr, Flags & OL_MEMORY_REGISTER_FLAG_UNLOCK_MEMORY);
 }
 
+Error olMemIsAccessible_impl(ol_context_handle_t Context,
+                             ol_device_handle_t Device, const void *Ptr,
+                             size_t Size, bool *IsAccessible) {
+  if (Context) {
+    if (auto Err = Context->requireDevice(Device))
+      return Err;
+
+    // Allocations made in a user context are not tracked by the device, so
+    // look them up in the context first.
+    auto AllocOrErr = Context->getAllocInfo(Ptr);
+    if (AllocOrErr) {
+      uintptr_t Begin = reinterpret_cast<uintptr_t>(Ptr);
+      uintptr_t AllocBegin = reinterpret_cast<uintptr_t>(AllocOrErr->Base);
+      size_t Offset = Begin - AllocBegin;
+      bool InRange = Begin >= AllocBegin && Offset <= AllocOrErr->Size &&
+                     Size <= AllocOrErr->Size - Offset;
+      if (InRange && (AllocOrErr->Kind != OL_ALLOC_TYPE_DEVICE ||
+                      AllocOrErr->Device == Device->Device)) {
+        *IsAccessible = true;
+        return Error::success();
+      }
+    } else if (auto Err = error::consumeErrorIfCode(AllocOrErr.takeError(),
+                                                    ErrorCode::NOT_FOUND))
+      return Err;
+  }
+
+  auto AccessibleOrErr = Device->Device->isAccessiblePtr(Ptr, Size);
+  if (!AccessibleOrErr)
+    return AccessibleOrErr.takeError();
+
+  *IsAccessible = *AccessibleOrErr;
+  return Error::success();
+}
+
 Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
   if (Queue->AsyncInfo->Queue) {
     if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
@@ -1502,10 +1750,22 @@ Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
 }
 
 namespace tmp {
-// Temporary helpers to help transition of libomptarget to liboffload
-GenericPluginTy *__ol_tgt_GetPluginFromPlatform(ol_platform_handle_t Platform) {
-  return Platform->Plugin.get();
+// Helpers for virtual address management that are only used RecordReplay until
+// it transitions to a new code.
+void *__ol_tgt_GetSuggestedVirtualAddress(ol_device_handle_t Device) {
+  return Device->Device->getSuggestedVirtualAddress();
 }
+
+Expected<void *> __ol_tgt_AllocWithVirtualAddress(ol_device_handle_t Device,
+                                                  uint64_t Size, void *VAddr) {
+  return Device->Device->allocateWithVirtualAddress(Size, VAddr);
+}
+
+Error __ol_tgt_DeallocWithVirtualAddress(ol_device_handle_t Device, void *VAddr,
+                                         uint64_t Size) {
+  return Device->Device->deallocateWithVirtualAddress(VAddr, Size);
+}
+
 } // namespace tmp
 
 } // namespace offload

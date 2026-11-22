@@ -61,10 +61,12 @@ struct ParsedTargetAttr {
   StringRef CPU;
   StringRef Tune;
   StringRef BranchProtection;
+  StringRef SignReturnAddrHardening;
   StringRef Duplicate;
   bool operator ==(const ParsedTargetAttr &Other) const {
     return Duplicate == Other.Duplicate && CPU == Other.CPU &&
            Tune == Other.Tune && BranchProtection == Other.BranchProtection &&
+           SignReturnAddrHardening == Other.SignReturnAddrHardening &&
            Features == Other.Features;
   }
 };
@@ -1037,7 +1039,7 @@ public:
   /// Returns target-specific min and max values VScale_Range.
   virtual std::optional<std::pair<unsigned, unsigned>>
   getVScaleRange(const LangOptions &LangOpts, ArmStreamingKind Mode,
-                 llvm::StringMap<bool> *FeatureMap = nullptr) const {
+                 const llvm::StringMap<bool> *FeatureMap = nullptr) const {
     return std::nullopt;
   }
   /// The __builtin_clz* and __builtin_ctz* built-in
@@ -1245,6 +1247,13 @@ public:
                                               unsigned RegSize,
                                               bool &HasSizeMismatch) const {
     HasSizeMismatch = false;
+    return true;
+  }
+
+  /// Returns whether the register RegName (a canonical GCC register name) can
+  /// hold a local register variable, i.e. it is not a status or pseudo register
+  /// that is only valid in a clobber list.
+  virtual bool validateLocalRegisterVariable(StringRef RegName) const {
     return true;
   }
 
@@ -1471,6 +1480,7 @@ public:
   public:
     LangOptions::SignReturnAddressScopeKind SignReturnAddr;
     LangOptions::SignReturnAddressKeyKind SignKey;
+    LangOptions::SignReturnAddressHardeningKind SignReturnAddressHardening;
     bool BranchTargetEnforcement;
     bool BranchProtectionPAuthLR;
     bool GuardedControlStack;
@@ -1497,9 +1507,21 @@ public:
       llvm_unreachable("Unexpected SignReturnAddressKeyKind");
     }
 
+    const char *getSignReturnAddressHardeningStr() const {
+      switch (SignReturnAddressHardening) {
+      case LangOptions::SignReturnAddressHardeningKind::None:
+        return "none";
+      case LangOptions::SignReturnAddressHardeningKind::LoadReturnAddress:
+        return "load-return-address";
+      }
+      llvm_unreachable("Unexpected SignReturnAddressHardeningKind");
+    }
+
     BranchProtectionInfo()
         : SignReturnAddr(LangOptions::SignReturnAddressScopeKind::None),
           SignKey(LangOptions::SignReturnAddressKeyKind::AKey),
+          SignReturnAddressHardening(
+              LangOptions::SignReturnAddressHardeningKind::None),
           BranchTargetEnforcement(false), BranchProtectionPAuthLR(false),
           GuardedControlStack(false) {}
 
@@ -1513,6 +1535,7 @@ public:
       SignKey = LangOpts.isSignReturnAddressWithAKey()
                     ? LangOptions::SignReturnAddressKeyKind::AKey
                     : LangOptions::SignReturnAddressKeyKind::BKey;
+      SignReturnAddressHardening = LangOpts.getSignReturnAddressHardening();
       BranchTargetEnforcement = LangOpts.BranchTargetEnforcement;
       BranchProtectionPAuthLR = LangOpts.BranchProtectionPAuthLR;
       GuardedControlStack = LangOpts.GuardedControlStack;
@@ -1525,14 +1548,21 @@ public:
     return false;
   }
 
-  /// Determine if this TargetInfo supports the given branch protection
-  /// specification
-  virtual bool validateBranchProtection(StringRef Spec, StringRef Arch,
+  /// Determines whether this TargetInfo supports the given branch protection
+  /// specification. BPI is modified based on the input arguments. Returns
+  /// whether the specification is valid.
+  virtual bool validateBranchProtection(const ParsedTargetAttr &Attr,
                                         BranchProtectionInfo &BPI,
                                         const LangOptions &LO,
                                         StringRef &Err) const {
     Err = "";
     return false;
+  }
+
+  /// Parse the Return Address Authentication Hardening specification.
+  virtual std::optional<LangOptions::SignReturnAddressHardeningKind>
+  parseSignReturnAddressHardening(StringRef Spec) const {
+    return std::nullopt;
   }
 
   /// Perform initialization based on the user configured

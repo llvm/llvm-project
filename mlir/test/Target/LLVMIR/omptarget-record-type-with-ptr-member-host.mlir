@@ -81,10 +81,14 @@ module attributes {omp.is_target_device = false, omp.target_triples = ["amdgcn-a
 // CHECK: %[[ARR_SECT_SIZE:.*]] = mul i64 %[[ARR_SECT_SIZE1]], 4
 // CHECK: %[[ARR_SECT_SIZE_ZERO_CMP:.*]] = icmp eq i64 %[[ARR_SECT_SIZE]], 0
 // CHECK: %[[ARR_SECT_SIZE_ADJUSTED:.*]] = select i1 %[[ARR_SECT_SIZE_ZERO_CMP]], i64 1, i64 %[[ARR_SECT_SIZE]]
+// CHECK: %[[FULL_ARR_OFFSET1:.*]] = mul i64 0, %{{.*}}
+// CHECK: %[[FULL_ARR_OFFSET:.*]] = add i64 0, %[[FULL_ARR_OFFSET1]]
 // CHECK: %[[LFULL_ARR:.*]] = load ptr, ptr @full_arr, align 8
-// CHECK: %[[FULL_ARR_PTR:.*]] = getelementptr inbounds float, ptr %[[LFULL_ARR]], i64 0
+// CHECK: %[[FULL_ARR_PTR:.*]] = getelementptr inbounds i8, ptr %[[LFULL_ARR]], i64 %[[FULL_ARR_OFFSET]]
+// CHECK: %[[ARR_SECT_OFFSET1:.*]] = mul i64 %[[ARR_SECT_OFFSET2]], %{{.*}}
+// CHECK: %[[ARR_SECT_OFFSET:.*]] = add i64 0, %[[ARR_SECT_OFFSET1]]
 // CHECK: %[[LARR_SECT:.*]] = load ptr, ptr @sect_arr, align 8
-// CHECK: %[[ARR_SECT_PTR:.*]] = getelementptr inbounds i32, ptr %[[LARR_SECT]], i64 %[[ARR_SECT_OFFSET2]]
+// CHECK: %[[ARR_SECT_PTR:.*]] = getelementptr inbounds i8, ptr %[[LARR_SECT]], i64 %[[ARR_SECT_OFFSET]]
 // CHECK: %[[SCALAR_PTR_LOAD:.*]] = load ptr, ptr %[[SCALAR_BASE]], align 8
 // CHECK: %[[NULL_CMP:.*]] = icmp eq ptr %[[FULL_ARR_PTR]], null
 // CHECK: %[[IS_NULL:.*]] = select i1 %[[NULL_CMP]], i64 0, i64 %[[FULL_ARR_SIZE_ADJUSTED]]

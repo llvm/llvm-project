@@ -52,8 +52,7 @@ define amdgpu_kernel void @break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB0_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_1 Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
@@ -131,8 +130,7 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB1_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
@@ -225,8 +223,7 @@ define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB2_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB2_1 Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
@@ -316,8 +313,7 @@ define amdgpu_kernel void @true_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB3_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB3_1 Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
@@ -406,8 +402,7 @@ define amdgpu_kernel void @false_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB4_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB4_1 Depth=1
 ; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
@@ -500,8 +495,7 @@ define amdgpu_kernel void @invert_true_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], vcc
 ; GCN-NEXT:  .LBB5_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB5_1 Depth=1
 ; GCN-NEXT:    s_xor_b64 s[8:9], s[4:5], -1

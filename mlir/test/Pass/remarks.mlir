@@ -28,9 +28,8 @@ module @foo {
 // CHECK-ALL1-NOT: remark: [Failure]
 // CHECK-ALL1-NOT: remark: [Analysis]
 
-// Test remark linking via query-based API with PolicyFinal: the passed remark
-// finds the analysis remark by searching postponedRemarks. Related (child)
-// remarks are grouped after their parent.
+// Test explicit remark ID linking with PolicyFinal: the passed remark uses
+// the analysis remark's ID. Related remarks are grouped after their parent.
 // CHECK-LINK: remark: [Passed]{{.*}}Category:category-link |{{.*}}RelatedTo=
 // CHECK-LINK-SAME: Remark="Optimization enabled by analysis"
 // CHECK-LINK-SAME: RemarkId=

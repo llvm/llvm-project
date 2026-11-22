@@ -97,6 +97,13 @@ enum class TimeTraceEventType {
   AsyncEvent
 };
 
+/// Compression mode for time trace output.
+enum class TimeTraceCompression {
+  Infer,
+  None,
+  Zstd,
+};
+
 struct TimeTraceMetadata {
   std::string Detail;
   // Source file and line number information for the event.
@@ -113,12 +120,17 @@ LLVM_ABI bool isTimeTraceVerbose();
 
 struct TimeTraceProfilerEntry;
 
+/// Infer the time trace compression format from \p Path based on its file
+/// extension (.zst/.zstd -> Zstd, otherwise None).
+LLVM_ABI TimeTraceCompression inferTimeTraceCompressionFromPath(StringRef Path);
+
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
-LLVM_ABI void timeTraceProfilerInitialize(unsigned TimeTraceGranularity,
-                                          StringRef ProcName,
-                                          bool TimeTraceVerbose = false);
+LLVM_ABI void timeTraceProfilerInitialize(
+    unsigned TimeTraceGranularity, StringRef ProcName,
+    bool TimeTraceVerbose = false,
+    TimeTraceCompression TimeTraceCompress = TimeTraceCompression::Infer);
 
 /// Cleanup the time trace profiler, if it was initialized.
 LLVM_ABI void timeTraceProfilerCleanup();
@@ -179,7 +191,7 @@ LLVM_ABI void timeTraceProfilerEnd(TimeTraceProfilerEntry *E);
 /// of the time trace profiler.  When the object is constructed, it begins
 /// the section; and when it is destroyed, it stops it. If the time profiler
 /// is not initialized, the overhead is a single branch.
-class TimeTraceScope {
+class [[nodiscard]] TimeTraceScope {
 public:
   TimeTraceScope() = delete;
   TimeTraceScope(const TimeTraceScope &) = delete;

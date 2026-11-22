@@ -1517,13 +1517,7 @@ unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(const unordered_ma
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(unordered_map&& __u, const allocator_type& __a)
-    : __table_(std::move(__u.__table_), typename __table::allocator_type(__a)) {
-  if (__a != __u.get_allocator()) {
-    iterator __i = __u.begin();
-    while (__u.size() != 0)
-      __table_.__insert_unique_from_orphaned_node(std::move(__u.__table_.remove((__i++).__i_)->__get_value()));
-  }
-}
+    : __table_(std::move(__u.__table_), typename __table::allocator_type(__a)) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(initializer_list<value_type> __il) {
@@ -2259,13 +2253,7 @@ unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(
     unordered_multimap&& __u, const allocator_type& __a)
-    : __table_(std::move(__u.__table_), typename __table::allocator_type(__a)) {
-  if (__a != __u.get_allocator()) {
-    iterator __i = __u.begin();
-    while (__u.size() != 0)
-      __table_.__insert_multi_from_orphaned_node(std::move(__u.__table_.remove((__i++).__i_)->__get_value()));
-  }
-}
+    : __table_(std::move(__u.__table_), typename __table::allocator_type(__a)) {}
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(initializer_list<value_type> __il) {

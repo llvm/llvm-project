@@ -430,6 +430,7 @@ TypeSpecifierType BuiltinTypeLoc::getWrittenTypeSpec() const {
   case BuiltinType::ArraySection:
   case BuiltinType::OMPArrayShaping:
   case BuiltinType::OMPIterator:
+  case BuiltinType::MetaInfo:
     return TST_unspecified;
   }
 
@@ -711,7 +712,6 @@ void TemplateSpecializationTypeLoc::initializeLocal(ASTContext &Context,
     QualifierLoc = Builder.getWithLocInContext(Context);
   }
 
-  TemplateArgumentListInfo TAL(Loc, Loc);
   set(ElaboratedKeywordLoc, QualifierLoc,
       /*TemplateKeywordLoc=*/HasTemplateKeyword ? Loc : SourceLocation(),
       /*NameLoc=*/Loc, /*LAngleLoc=*/Loc, /*RAngleLoc=*/Loc);

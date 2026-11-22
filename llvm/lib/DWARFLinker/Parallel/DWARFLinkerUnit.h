@@ -171,6 +171,10 @@ public:
 
   /// @}
 
+  /// \returns \p Path, a path from the input debug info of this unit, with
+  /// the prefix mapping of the input file undone.
+  virtual std::string remapPath(StringRef Path) const { return Path.str(); }
+
   /// Returns index(inside .debug_str_offsets) of specified string.
   virtual uint64_t getDebugStrIndex(const StringEntry *String) {
     return DebugStringIndexMap.getValueIndex(String);

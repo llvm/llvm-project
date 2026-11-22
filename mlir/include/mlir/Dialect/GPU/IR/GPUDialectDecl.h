@@ -9,10 +9,7 @@
 #ifndef MLIR_DIALECT_GPU_IR_GPUDIALECTDECL_H
 #define MLIR_DIALECT_GPU_IR_GPUDIALECTDECL_H
 
-#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Dialect.h"
-#include "mlir/IR/Operation.h"
 
 // Pull in enum definitions used by the generated dialect declaration.
 #include "mlir/Dialect/GPU/IR/GPUOpsEnums.h.inc"

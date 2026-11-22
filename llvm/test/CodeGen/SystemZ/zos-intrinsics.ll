@@ -24,15 +24,36 @@ entry:
   ret fp128 %res
 }
 
+define float @atan2_ieee(float %x, float %y) {
+entry:
+  %res = call float @llvm.atan2.f32(float %x, float %y)
+  ret float %res
+}
+
+define double @tanh_ieee(double %x) {
+entry:
+  %res = call double @llvm.tanh.f64(double %x)
+  ret double %res
+}
+
+define fp128 @asin_ieee(fp128 %x) {
+entry:
+  %res = call fp128 @llvm.asin.f128(fp128 %x)
+  ret fp128 %res
+}
+
 declare float @llvm.sqrt.f32(float)
 declare float @llvm.cos.f32(float)
 declare double @llvm.sin.f64(double)
 declare fp128 @llvm.exp2.f128(fp128)
+declare float @llvm.atan2.f32(float, float)
+declare double @llvm.tanh.f64(double)
+declare fp128 @llvm.asin.f128(fp128)
 
 ; Check the calls in the ADA.
 ; CHECK: stdin#C CSECT
-; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,NOTEXECUTABLE,RMODE(64),PART(stdi
-; CHECK-NEXT:                in#S)
+; CHECK: C_WSA64 CATTR ALIGN(4),FILL(0),DEFLOAD,RENT,NOTEXECUTABLE,RMODE(64),PAR
+; CHECK-NEXT:                T(stdin#S)
 ; CHECK: stdin#S XATTR LINKAGE(XPLINK),REFERENCE(DATA),SCOPE(SECTION)
 
 ; Check that there is no call to sqrt.
@@ -46,3 +67,9 @@ declare fp128 @llvm.exp2.f128(fp128)
 ; CHECK-NEXT: DC   VD(@@SSIN@B)
 ; CHECK:      DC   RD(@@LXP2@B)
 ; CHECK-NEXT: DC   VD(@@LXP2@B)
+; CHECK:      DC   RD(@@FAT2@B)
+; CHECK-NEXT: DC   VD(@@FAT2@B)
+; CHECK:      DC   RD(@@STNH@B)
+; CHECK-NEXT: DC   VD(@@STNH@B)
+; CHECK:      DC   RD(@@LASN@B)
+; CHECK-NEXT: DC   VD(@@LASN@B)

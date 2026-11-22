@@ -779,9 +779,8 @@ Instruction *InstCombinerImpl::foldPHIArgLoadIntoPHI(PHINode &PN) {
 Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (Instruction *TI = Phi.getParent()->getTerminator())
-    if (TI->isEHPad())
-      return nullptr;
+  if (Phi.getParent()->getTerminator()->isEHPad())
+    return nullptr;
 
   // Early exit for the common case of a phi with two operands. These are
   // handled elsewhere. See the comment below where we check the count of zexts
@@ -860,9 +859,8 @@ Instruction *InstCombinerImpl::foldPHIArgZextsIntoPHI(PHINode &Phi) {
 Instruction *InstCombinerImpl::foldPHIArgOpIntoPHI(PHINode &PN) {
   // We cannot create a new instruction after the PHI if the terminator is an
   // EHPad because there is no valid insertion point.
-  if (Instruction *TI = PN.getParent()->getTerminator())
-    if (TI->isEHPad())
-      return nullptr;
+  if (PN.getParent()->getTerminator()->isEHPad())
+    return nullptr;
 
   Instruction *FirstInst = cast<Instruction>(PN.getIncomingValue(0));
 
@@ -1335,7 +1333,7 @@ static Value *simplifyUsingControlFlow(InstCombiner &Self, PHINode &PN,
   // sinking.
   auto InsertPt = BB->getFirstInsertionPt();
   if (InsertPt != BB->end()) {
-    Self.Builder.SetInsertPoint(&*BB, InsertPt);
+    Self.Builder.SetInsertPoint(InsertPt);
     return Self.Builder.CreateNot(Cond);
   }
 
@@ -1381,7 +1379,7 @@ static Value *foldDependentIVs(PHINode &PN, IRBuilderBase &Builder) {
   if (Iv2Start != Identity)
     return nullptr;
 
-  Builder.SetInsertPoint(&*BB, BB->getFirstInsertionPt());
+  Builder.SetInsertPoint(BB->getFirstInsertionPt());
   if (!BO) {
     auto *GEP = cast<GEPOperator>(IvNext);
     return Builder.CreateGEP(GEP->getSourceElementType(), Start, Iv2, "",
