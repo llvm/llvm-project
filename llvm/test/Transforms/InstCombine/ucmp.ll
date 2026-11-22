@@ -950,9 +950,7 @@ define <2 x i8> @ucmp_add_common_op_vec(<2 x i32> %a, <2 x i32> %b,
 define i8 @ucmp_shl_nuw_common(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_shl_nuw_common(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = shl nuw i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = shl nuw i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = shl nuw i8 %a, %n
@@ -964,9 +962,7 @@ define i8 @ucmp_shl_nuw_common(i8 %a, i8 %b, i8 %n) {
 define i8 @ucmp_shl_nsw_common(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_shl_nsw_common(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = shl nsw i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = shl nsw i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = shl nsw i8 %a, %n
@@ -993,9 +989,7 @@ define i8 @ucmp_shl_common_no_nuw_nor_nsw(i8 %a, i8 %b, i8 %n) {
 define i8 @ucmp_lshr_exact_common(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_lshr_exact_common(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = lshr exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = lshr exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = lshr exact i8 %a, %n
@@ -1022,9 +1016,7 @@ define i8 @ucmp_lshr_common_no_exact(i8 %a, i8 %b, i8 %n) {
 define i8 @ucmp_ashr_exact_common(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_ashr_exact_common(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = ashr exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = ashr exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = ashr exact i8 %a, %n
@@ -1051,9 +1043,7 @@ define i8 @ucmp_ashr_common_no_exact(i8 %a, i8 %b, i8 %n) {
 define i8 @ucmp_udiv_exact_common(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_udiv_exact_common(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = udiv exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = udiv exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = udiv exact i8 %a, %n
@@ -1082,9 +1072,7 @@ define i8 @ucmp_sdiv_exact_common_positive_divisor(i8 %a, i8 %b, i8 %n) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
 ; CHECK-NEXT:    [[N_POS:%.*]] = icmp sgt i8 [[N]], 0
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[N_POS]])
-; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %n_pos = icmp sgt i8 %n, 0
