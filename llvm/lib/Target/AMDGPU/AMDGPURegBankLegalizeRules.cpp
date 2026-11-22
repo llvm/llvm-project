@@ -2470,7 +2470,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForIOpcs(
       {amdgcn_global_load_lds, amdgcn_load_to_lds, amdgcn_load_async_to_lds})
-      .Any({{}, {{}, {IntrId, VgprP1, SgprB32_M0}}});
+      .Any({{}, {{}, {IntrId, VgprPtr64, SgprB32_M0}}});
 
   addRulesForIOpcs({amdgcn_global_load_async_to_lds_b8,
                     amdgcn_global_load_async_to_lds_b32,
