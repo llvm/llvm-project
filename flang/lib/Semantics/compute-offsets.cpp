@@ -363,7 +363,9 @@ void ComputeOffsetsHelper::DoCommonBlock(Symbol &commonBlock) {
             symbol.name(), commonBlock.name(), base.name());
       } else {
         eqIter = equivalenceBlock_.find(base);
-        base.get<ObjectEntityDetails>().set_commonBlock(commonBlock);
+        if (auto *baseDetails{base.detailsIf<ObjectEntityDetails>()}) {
+          baseDetails->set_commonBlock(commonBlock);
+        }
         base.set_offset(symbol.offset() - dep.offset);
         previous.emplace(base);
       }
