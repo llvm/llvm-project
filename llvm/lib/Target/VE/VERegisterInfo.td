@@ -53,7 +53,6 @@ let Namespace = "VE" in {
   def sub_odd     : SubRegIndex<64, 64>;        // Low 64 bit (64..127)
   def sub_vm_even : SubRegIndex<256>;           // High 256 bit (0..255)
   def sub_vm_odd  : SubRegIndex<256, 256>;      // Low 256 bit (256..511)
-  def AsmName     : RegAltNameIndex;
 }
 
 //-----------------------------------------------------------------------------
@@ -98,73 +97,72 @@ def VLS : RegisterClass<"VE", [i32], 64, (add VL)>;
 // Generic Registers
 //-----------------------------------------------------------------------------
 
-let RegAltNameIndices = [AsmName] in {
-
 // Generic integer registers - 32 bits wide
+// Put SW/SF/Q after SX in enum order so MatchRegisterName returns SX* for
+// shared "s*" names.
+let PositionOrder = 1 in {
 foreach I = 0-63 in
-  def SW#I : VEReg<I, "sw"#I, [], ["s"#I]>, DwarfRegNum<[I]>;
+  def SW#I : VEReg<I, "s"#I>, DwarfRegNum<[I]>;
 
 // Generic floating point registers - 32 bits wide
 //   NOTE: Mark SF#I as alias of SW#I temporary to avoid register allocation
 //         problem.
 foreach I = 0-63 in
-  def SF#I : VEReg<I, "sf"#I, [], ["s"#I], [!cast<VEReg>("SW"#I)]>,
+  def SF#I : VEReg<I, "s"#I, [], [], [!cast<VEReg>("SW"#I)]>,
                    DwarfRegNum<[I]>;
+} // PositionOrder = 1
 
 // Generic integer registers - 64 bits wide
 let SubRegIndices = [sub_i32, sub_f32], CoveredBySubRegs = 1 in {
   // Several registers have specific names, so add them to one of aliases.
-  def SX8 : VEReg<8, "s8", [SW8, SF8], ["s8", "sl"]>, DwarfRegNum<[8]>;
-  def SX9 : VEReg<9, "s9", [SW9, SF9], ["s9", "fp"]>, DwarfRegNum<[9]>;
-  def SX10 : VEReg<10, "s10", [SW10, SF10], ["s10", "lr"]>, DwarfRegNum<[10]>;
-  def SX11 : VEReg<11, "s11", [SW11, SF11], ["s11", "sp"]>, DwarfRegNum<[11]>;
-  def SX14 : VEReg<14, "s14", [SW14, SF14], ["s14", "tp"]>, DwarfRegNum<[14]>;
-  def SX15 : VEReg<15, "s15", [SW15, SF15], ["s15", "got"]>, DwarfRegNum<[15]>;
-  def SX16 : VEReg<16, "s16", [SW16, SF16], ["s16", "plt"]>, DwarfRegNum<[16]>;
+  def SX8 : VEReg<8, "s8", [SW8, SF8], ["sl"]>, DwarfRegNum<[8]>;
+  def SX9 : VEReg<9, "s9", [SW9, SF9], ["fp"]>, DwarfRegNum<[9]>;
+  def SX10 : VEReg<10, "s10", [SW10, SF10], ["lr"]>, DwarfRegNum<[10]>;
+  def SX11 : VEReg<11, "s11", [SW11, SF11], ["sp"]>, DwarfRegNum<[11]>;
+  def SX14 : VEReg<14, "s14", [SW14, SF14], ["tp"]>, DwarfRegNum<[14]>;
+  def SX15 : VEReg<15, "s15", [SW15, SF15], ["got"]>, DwarfRegNum<[15]>;
+  def SX16 : VEReg<16, "s16", [SW16, SF16], ["plt"]>, DwarfRegNum<[16]>;
 
   // Other generic registers.
   foreach I = { 0-7, 12-13, 17-63 } in
-    def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)],
-                     ["s"#I]>, DwarfRegNum<[I]>;
+    def SX#I : VEReg<I, "s"#I, [!cast<VEReg>("SW"#I), !cast<VEReg>("SF"#I)]>,
+                     DwarfRegNum<[I]>;
 }
 
 // Aliases of the S* registers used to hold 128-bit for values (long doubles).
 // Following foreach represents something like:
-//   def Q0 : VEReg<0, "q0", [SX0, SX1], ["s0"]>;
-//   def Q1 : VEReg<2, "q2", [SX2, SX3], ["s2"]>;
+//   def Q0 : VEReg<0, "s0", [SX0, SX1]>;
+//   def Q1 : VEReg<2, "s2", [SX2, SX3]>;
 //   ...
-let SubRegIndices = [sub_even, sub_odd], CoveredBySubRegs = 1 in
+let SubRegIndices = [sub_even, sub_odd], CoveredBySubRegs = 1,
+    PositionOrder = 1 in
 foreach I = 0-31 in
-  def Q#I : VEReg<!shl(I,1), "q"#I,
+  def Q#I : VEReg<!shl(I,1), "s"#!shl(I,1),
                   [!cast<VEReg>("SX"#!shl(I,1)),
-                   !cast<VEReg>("SX"#!add(!shl(I,1),1))],
-                  ["s"#!shl(I,1)]>;
+                   !cast<VEReg>("SX"#!add(!shl(I,1),1))]>;
 
 // Vector registers - 64 bits wide 256 elements
 foreach I = 0-63 in
-  def V#I : VEVecReg<I, "v"#I, [], ["v"#I]>, DwarfRegNum<[!add(64,I)]>;
+  def V#I : VEVecReg<I, "v"#I>, DwarfRegNum<[!add(64,I)]>;
 
 // Vector Index Register
-def VIX : VEVecReg<255, "vix", [], ["vix"]>;
+def VIX : VEVecReg<255, "vix">;
 
 // Vector mask registers - 256 bits wide
 let isConstant = true in
-def VM0 : VEMaskReg<0, "vm0", [], ["vm0"]>, DwarfRegNum<[128]>;
+def VM0 : VEMaskReg<0, "vm0">, DwarfRegNum<[128]>;
 foreach I = 1-15 in
-  def VM#I : VEMaskReg<I, "vm"#I, [], ["vm"#I]>, DwarfRegNum<[!add(128,I)]>;
+  def VM#I : VEMaskReg<I, "vm"#I>, DwarfRegNum<[!add(128,I)]>;
 
 // Aliases of VMs to use as a pair of two VM for packed instructions
 let isConstant = true in
-def VMP0 : VEMaskReg<0, "vm0", [], ["vm0"]>;
+def VMP0 : VEMaskReg<0, "vm0">;
 
 let SubRegIndices = [sub_vm_even, sub_vm_odd], CoveredBySubRegs = 1 in
 foreach I = 1-7 in
-  def VMP#I : VEMaskReg<!shl(I,1), "vmp"#I,
+  def VMP#I : VEMaskReg<!shl(I,1), "vm"#!shl(I,1),
                         [!cast<VEMaskReg>("VM"#!shl(I,1)),
-                         !cast<VEMaskReg>("VM"#!add(!shl(I,1),1))],
-                        ["vm"#!shl(I,1)]>;
-
-} // RegAltNameIndices = [AsmName]
+                         !cast<VEMaskReg>("VM"#!add(!shl(I,1),1))]>;
 
 // Register classes.
 //

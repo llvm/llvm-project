@@ -35,8 +35,7 @@ public:
                        const MCSubtargetInfo &, raw_ostream &);
   void printInstruction(const MCInst *, uint64_t, const MCSubtargetInfo &,
                         raw_ostream &);
-  static const char *getRegisterName(MCRegister Reg,
-                                     unsigned AltIdx = VE::NoRegAltName);
+  static const char *getRegisterName(MCRegister Reg);
 
   void printOperand(const MCInst *MI, int OpNum, const MCSubtargetInfo &STI,
                     raw_ostream &OS);
