@@ -3,8 +3,10 @@
 
 @vt = private constant [3 x ptr] [ptr @f0, ptr @f1, ptr @alias], !type !0
 @vt.internal = internal constant [1 x ptr] [ptr @f0], !type !0
-; a vtable where the !type starts only later into the allocation.
+; A vtable where the !type starts only later into the allocation.
 @vt.with_offset = private constant [3 x ptr] [ptr @f0, ptr @f1, ptr @alias], !type !1
+; A vtable of a shape that C++ generates.
+@vt.cxx = hidden constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr null, ptr @f0, ptr @f1] }, !type !2
 ; vtables that are not constant or otherwise invalid to fold.
 @vt.weak = weak constant [1 x ptr] [ptr @f0], !type !0
 @vt.extinit = externally_initialized constant [1 x ptr] [ptr @f0], !type !0
@@ -39,6 +41,15 @@ define { ptr, i1 } @internal() {
   %r = call { ptr, i1 } @llvm.type.checked.load(ptr @vt.internal, i32 0, metadata !"T")
   ret { ptr, i1 } %r
 }
+
+define { ptr, i1 } @cxx() {
+; CHECK-LABEL: define { ptr, i1 } @cxx() {
+; CHECK-NEXT:    ret { ptr, i1 } { ptr @f1, i1 true }
+;
+  %r = tail call { ptr, i1 } @llvm.type.checked.load(ptr nonnull getelementptr inbounds nuw inrange(-16, 16) (i8, ptr @vt.cxx, i64 16), i32 8, metadata !"C")
+  ret { ptr, i1 } %r
+}
+
 
 ; Nothing we can do if the vtable is not a constant.
 define { ptr, i1 } @variable_base(ptr %p) {
@@ -120,3 +131,4 @@ define { ptr, i1 } @null_slot() {
 
 !0 = !{i64 0, !"T"}
 !1 = !{i64 16, !"O"}
+!2 = !{i64 16, !"C"}
