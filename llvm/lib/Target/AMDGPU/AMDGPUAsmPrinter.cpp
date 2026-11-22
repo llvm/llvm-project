@@ -616,38 +616,6 @@ void AMDGPUAsmPrinter::validateMCResourceInfo(Function &F) {
   }
 }
 
-static void appendTypeEncoding(std::string &Enc, Type *Ty, const DataLayout &DL,
-                               bool IsReturnType) {
-  if (Ty->isVoidTy()) {
-    Enc += 'v';
-    return;
-  }
-  uint64_t Bits = DL.getTypeSizeInBits(Ty);
-  // Zero-sized non-void types (e.g. `{}` or `[0 x i8]`) consume no ABI
-  // registers. For returns, emit the same no-result marker as void so the
-  // parameter encoding still has an explicit return-type prefix.
-  if (Bits == 0) {
-    if (IsReturnType)
-      Enc += 'v';
-    return;
-  }
-  if (Bits <= 32)
-    Enc += 'i';
-  else if (Bits <= 64)
-    Enc += 'l';
-  else
-    Enc.append(divideCeil(Bits, 32), 'i');
-}
-
-static std::string computeTypeId(const FunctionType *FTy,
-                                 const DataLayout &DL) {
-  std::string Enc;
-  appendTypeEncoding(Enc, FTy->getReturnType(), DL, /*IsReturnType=*/true);
-  for (Type *ParamTy : FTy->params())
-    appendTypeEncoding(Enc, ParamTy, DL, /*IsReturnType=*/false);
-  return Enc;
-}
-
 void AMDGPUAsmPrinter::collectCallEdge(const MachineInstr &MI) {
   if (!AMDGPUTargetMachine::EnableObjectLinking)
     return;
@@ -683,7 +651,7 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
                                        /*IgnoreAssumeLikeCalls=*/true,
                                        /*IgnoreLLVMUsed=*/true)) {
       AddrTakenTypeIds[&F] =
-          computeTypeId(F.getFunctionType(), M.getDataLayout());
+          AMDGPU::getFunctionTypeId(F.getFunctionType(), M.getDataLayout());
     }
 
     if (F.isDeclaration())
@@ -696,7 +664,7 @@ void AMDGPUAsmPrinter::emitAMDGPUInfo(Module &M) {
         if (!CB || !CB->isIndirectCall())
           continue;
         std::string TId =
-            computeTypeId(CB->getFunctionType(), M.getDataLayout());
+            AMDGPU::getFunctionTypeId(CB->getFunctionType(), M.getDataLayout());
         if (SeenTypeIds.insert(TId).second)
           IndirectCalls.push_back({&F, std::move(TId)});
       }

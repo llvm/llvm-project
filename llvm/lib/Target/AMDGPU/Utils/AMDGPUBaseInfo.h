@@ -34,7 +34,9 @@ namespace llvm {
 
 struct Align;
 class Argument;
+class DataLayout;
 class Function;
+class FunctionType;
 class GlobalValue;
 class MachineInstr;
 class MCInstrInfo;
@@ -1399,6 +1401,14 @@ bool getHasDepthExport(const Function &F);
 // Returns the value of the "amdgpu-dynamic-vgpr-block-size" attribute, or 0 if
 // the attribute is missing or its value is invalid.
 unsigned getDynamicVGPRBlockSize(const Function &F);
+
+/// \returns The type ID of the function type \p FTy, which the .amdgpu.info
+/// section and the call type IDs in the module summary use. It encodes the
+/// return type, then each parameter type, by size: 'v' for a void or zero-size
+/// return type, 'i' for at most 32 bits, 'l' for at most 64 bits, and one 'i'
+/// for each 32 bits of a larger type. Zero-size parameter types are not
+/// encoded.
+std::string getFunctionTypeId(const FunctionType *FTy, const DataLayout &DL);
 
 LLVM_READNONE
 constexpr bool isShader(CallingConv::ID CC) {
