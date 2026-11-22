@@ -53,6 +53,15 @@ using namespace llvm;
 #define OPTIONS_STRUCT_DEFS
 #include "MipsMCOptions.inc"
 
+MCRegister MIPS_MC::getCOP0Register(const MCRegisterInfo &MRI,
+                                    unsigned Encoding) {
+  unsigned Reg = getCOP0RegNum(Encoding);
+  unsigned Sel = getCOP0Sel(Encoding);
+  assert(Reg < 32 && Sel < 8 && "Invalid COP0 register encoding");
+  // COP0's register class is ordered by selector, then register number.
+  return MRI.getRegClass(Mips::COP0RegClassID).getRegister(Sel * 32 + Reg);
+}
+
 MCRegister MIPS_MC::matchRegisterName(StringRef Name, const MCRegisterInfo &MRI,
                                       unsigned RegClassID, unsigned AltIdx) {
   MCRegister Reg = MatchRegisterAltName(Name, AltIdx);
@@ -217,7 +226,9 @@ StringRef MIPS_MC::selectMipsCPU(const Triple &TT, StringRef CPU) {
       else
         CPU = "mips64r6";
     } else {
-      if (TT.isMIPS32())
+      if (TT.isNanoMips())
+        CPU = "nanomips";
+      else if (TT.isMIPS32())
         CPU = "mips32";
       else
         CPU = "mips64";
@@ -338,8 +349,9 @@ static MCInstrAnalysis *createMipsMCInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
   static opt::RegisterLibraryOptions<MipsMCOptions> O;
-  for (Target *T : {&getTheMipsTarget(), &getTheMipselTarget(),
-                    &getTheMips64Target(), &getTheMips64elTarget()}) {
+  for (Target *T :
+       {&getTheMipsTarget(), &getTheMipselTarget(), &getTheMips64Target(),
+        &getTheMips64elTarget(), &getTheNanoMipsTarget()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMipsMCAsmInfo);
 
@@ -380,6 +392,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeMipsTargetMC() {
   for (Target *T : {&getTheMipsTarget(), &getTheMips64Target()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEB);
 
-  for (Target *T : {&getTheMipselTarget(), &getTheMips64elTarget()})
+  for (Target *T : {&getTheMipselTarget(), &getTheMips64elTarget(),
+                    &getTheNanoMipsTarget()})
     TargetRegistry::RegisterMCCodeEmitter(*T, createMipsMCCodeEmitterEL);
 }

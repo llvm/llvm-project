@@ -308,7 +308,7 @@ static Instruction *convertNvvmIntrinsicToLlvm(InstCombiner &IC,
     // FIXME: Broken for f64
     DenormalMode Mode = II->getFunction()->getDenormalMode(
         Action.IsHalfTy ? APFloat::IEEEhalf() : APFloat::IEEEsingle());
-    bool FtzEnabled = Mode.Output == DenormalMode::PreserveSign;
+    bool FtzEnabled = Mode.Input == DenormalMode::PreserveSign;
 
     if (FtzEnabled != (Action.FtzRequirement == FTZ_MustBeOn))
       return nullptr;

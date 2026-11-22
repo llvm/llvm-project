@@ -1212,6 +1212,11 @@ ModuleUnitKind clang::scanInputForCXX20ModuleUnit(StringRef Source) {
 }
 
 bool clang::isPreprocessedModuleFile(StringRef Source) {
+  // Fast path: a file without "__preprocessed_" has neither directive.
+  // Skipping the line-by-line walk speeds up the scan.
+  if (!Source.contains("__preprocessed_"))
+    return false;
+
   const char *First = Source.begin();
   const char *const End = Source.end();
 

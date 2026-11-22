@@ -1,6 +1,7 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -O1 -no-integrated-as \
 // RUN:     -S -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-unknown -O1 -no-integrated-as     -S -o - %s | FileCheck %s %}
 
 typedef long long int64_t;
 typedef unsigned char uint8_t;

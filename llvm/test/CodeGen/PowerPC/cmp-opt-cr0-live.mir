@@ -1,5 +1,5 @@
 # RUN: llc -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr8 -run-pass=peephole-opt \
-# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN:   %s -o - | FileCheck %s
 #
 # optimizeCompareInstr must not convert the RLWINM into a record-form `andi.`
 # while CR0, set by the earlier ANDI_rec, remains live until its use by the

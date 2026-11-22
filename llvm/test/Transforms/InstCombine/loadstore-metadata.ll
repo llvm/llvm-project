@@ -409,6 +409,21 @@ entry:
   ret i32 %c
 }
 
+define i32 @test_load_cast_combine_mmra(ptr %ptr) {
+; Ensure (cast (load (...))) -> (load (cast (...))) preserves mmra
+; metadata.
+; CHECK-LABEL: define i32 @test_load_cast_combine_mmra(
+; CHECK-SAME: ptr [[PTR:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[L1:%.*]] = load i32, ptr [[PTR]], align 4, !mmra [[META20:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[L1]]
+;
+entry:
+  %l = load float, ptr %ptr, !mmra !19
+  %c = bitcast float %l to i32
+  ret i32 %c
+}
+
 !0 = !{!1, !1, i64 0}
 !1 = !{!"scalar type", !2}
 !2 = !{!"root"}
@@ -428,6 +443,7 @@ entry:
 !16 = distinct !{!16, i1 false}
 !17 = !{ i32 0, !18 }
 !18 = !{ !"nvvm.l1_eviction", !"first" }
+!19 = !{ !"foo", !"bar" }
 
 ;.
 ; CHECK: [[SCALAR_TYPE_TBAA0]] = !{[[LOOP1]], [[LOOP1]], i64 0}
@@ -450,4 +466,5 @@ entry:
 ; CHECK: [[META17]] = !{i32 3}
 ; CHECK: [[META18]] = !{i32 0, [[META19:![0-9]+]]}
 ; CHECK: [[META19]] = !{!"nvvm.l1_eviction", !"first"}
+; CHECK: [[META20]] = !{!"foo", !"bar"}
 ;.

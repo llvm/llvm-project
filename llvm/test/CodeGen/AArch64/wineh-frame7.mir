@@ -84,9 +84,7 @@ legalized:       true
 regBankSelected: true
 selected:        true
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
-registers:
 liveins:
 frameInfo:
   isFrameAddressTaken: false

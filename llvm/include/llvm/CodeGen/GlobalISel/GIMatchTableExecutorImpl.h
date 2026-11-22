@@ -769,13 +769,37 @@ bool GIMatchTableExecutor::executeMatchTable(
       }
       break;
     }
-    case GIM_CheckPointerToAny: {
+    case GIM_RootCheckTypeByHwMode:
+    case GIM_CheckTypeByHwMode: {
+      uint64_t InsnID =
+          (MatcherOpcode == GIM_RootCheckTypeByHwMode) ? 0 : readULEB();
+      uint64_t OpIdx = readULEB();
+      unsigned HwModeIdx = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckTypeByHwMode(MIs["
+                             << InsnID << "]->getOperand(" << OpIdx
+                             << "), Idx=" << HwModeIdx << ")\n");
+      assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      if (!MO.isReg() ||
+          MRI.getType(MO.getReg()) != getLLTForHwMode(HwModeIdx)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+      break;
+    }
+    case GIM_CheckPointerToAny:
+    case GIM_CheckPointerToAnyByHwMode: {
       uint64_t InsnID = readULEB();
       uint64_t OpIdx = readULEB();
-      uint64_t SizeInBits = readULEB();
+      bool IsByHwMode = MatcherOpcode == GIM_CheckPointerToAnyByHwMode;
+      uint64_t SizeInBits =
+          IsByHwMode ? getLLTForHwMode(MatchTable[CurrentIdx++]).getSizeInBits()
+                     : readULEB();
 
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
-                      dbgs() << CurrentIdx << ": GIM_CheckPointerToAny(MIs["
+                      dbgs() << CurrentIdx << ": GIM_CheckPointerToAny"
+                             << (IsByHwMode ? "ByHwMode" : "") << "(MIs["
                              << InsnID << "]->getOperand(" << OpIdx
                              << "), SizeInBits=" << SizeInBits << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
@@ -1579,6 +1603,18 @@ bool GIMatchTableExecutor::executeMatchTable(
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
                              << "] = GIR_MakeTempReg(" << TypeID << ")\n");
+      break;
+    }
+    case GIR_MakeTempRegByHwMode: {
+      uint64_t TempRegID = readULEB();
+      unsigned HwModeIdx = MatchTable[CurrentIdx++];
+
+      State.TempRegisters[TempRegID] =
+          MRI.createGenericVirtualRegister(getLLTForHwMode(HwModeIdx));
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": TempRegs[" << TempRegID
+                             << "] = GIR_MakeTempRegByHwMode(" << HwModeIdx
+                             << ")\n");
       break;
     }
     case GIR_ReplaceReg: {

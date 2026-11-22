@@ -135,6 +135,7 @@ TEST_F(ObjectFileMachOTest, ZeroCmdSize) {
   // Reaching the assertion below is the regression check.
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -163,6 +164,7 @@ LoadCommands:
 TEST_F(ObjectFileMachOTest, ParseSymtabSharedCacheMissingLinkedit) {
   const char *yamldata = R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -209,6 +211,7 @@ LoadCommands:
 TEST_F(ObjectFileMachOTest, ParseSymtabHugeSymbolCountIsBounded) {
   const char *yamldata = R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

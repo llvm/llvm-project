@@ -172,56 +172,34 @@ inline void AnalysisManager<IRUnitT, ExtraArgTs...>::invalidate(
   if (PA.allAnalysesInSetPreserved<AllAnalysesOn<IRUnitT>>())
     return;
 
-  // Track whether each analysis's result is invalidated in
-  // IsResultInvalidated.
-  SmallDenseMap<AnalysisKey *, bool, 32> IsResultInvalidated;
-  Invalidator Inv(IsResultInvalidated, AnalysisResults);
   auto ResultsListI = AnalysisResultLists.find(&IR);
   if (ResultsListI == AnalysisResultLists.end())
     return;
   AnalysisResultListT &ResultsList = ResultsListI->second;
+
+  // Track whether each result is invalidated, by its index in ResultsList. The
+  // Invalidator lets results recursively query their dependencies.
+  using ResultState = typename Invalidator::ResultState;
+  SmallVector<ResultState, 32> States(ResultsList.size(), ResultState::Unknown);
+  Invalidator Inv(IR, ResultsList, States);
   bool AnyInvalidated = false;
-  for (auto &AnalysisResultPair : ResultsList) {
-    // This is basically the same thing as Invalidator::invalidate, but we
-    // can't call it here because we're operating on the type-erased result.
-    // Moreover if we instead called invalidate() directly, it would do an
-    // unnecessary look up in ResultsList.
-    AnalysisKey *ID = AnalysisResultPair.first;
-    auto &Result = *AnalysisResultPair.second;
-
-    auto IMapI = IsResultInvalidated.find(ID);
-    if (IMapI != IsResultInvalidated.end()) {
-      // This result was already handled via the Invalidator.
-      AnyInvalidated |= IMapI->second;
-      continue;
-    }
-
-    // Try to invalidate the result, giving it the Invalidator so it can
-    // recursively query for any dependencies it has and record the result.
-    // Note that we cannot reuse 'IMapI' here or pre-insert the ID, as
-    // Result.invalidate may insert things into the map, invalidating our
-    // iterator.
-    bool Invalidated = Result.invalidate(IR, PA, Inv);
-    AnyInvalidated |= Invalidated;
-    [[maybe_unused]] bool Inserted =
-        IsResultInvalidated.insert({ID, Invalidated}).second;
-    assert(Inserted && "Should never have already inserted this ID, likely "
-                       "indicates a cycle!");
-  }
+  for (size_t Idx = 0, E = ResultsList.size(); Idx != E; ++Idx)
+    AnyInvalidated |= Inv.invalidateResult(Idx, PA);
 
   // Now erase the results that were marked above as invalidated.
   if (AnyInvalidated) {
+    auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR);
     size_t WriteIdx = 0;
     for (size_t ReadIdx = 0, E = ResultsList.size(); ReadIdx < E; ++ReadIdx) {
-      AnalysisKey *ID = ResultsList[ReadIdx].first;
-      if (!IsResultInvalidated.lookup(ID)) {
+      if (States[ReadIdx] != ResultState::Invalid) {
         if (WriteIdx != ReadIdx)
           ResultsList[WriteIdx] = std::move(ResultsList[ReadIdx]);
         ++WriteIdx;
         continue;
       }
 
-      if (auto *PI = getCachedResult<PassInstrumentationAnalysis>(IR))
+      AnalysisKey *ID = ResultsList[ReadIdx].first;
+      if (PI)
         PI->runAnalysisInvalidated(this->lookUpPass(ID), IR);
 
       AnalysisResults.erase({ID, &IR});

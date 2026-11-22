@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "RegisterInfoFreeBSD_x86_64.h"
-#include "RegisterInfoFreeBSD_i386.h"
 #include "Register/Arch/RegisterContext_x86.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "RegisterInfoFreeBSD_i386.h"
 #include "lldb/lldb-defines.h"
 #include "llvm/Support/Threading.h"
 #include <vector>

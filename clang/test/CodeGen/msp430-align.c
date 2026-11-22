@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple msp430-elf -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple msp430-elf -emit-llvm %s -o - | FileCheck %s %}
 
 // MSP430 target prefers chars to be aligned to 8 bit and other types to 16 bit.
 

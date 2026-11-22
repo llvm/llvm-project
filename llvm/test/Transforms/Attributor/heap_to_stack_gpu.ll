@@ -633,7 +633,7 @@ define void @test17() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 4, align 1, addrspace(5)
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9:[0-9]+]]
+; CHECK-NEXT:    call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9:[0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 bb:
@@ -665,7 +665,7 @@ define void @move_alloca() {
 ; CHECK-NEXT:    br label [[NOT_ENTRY:%.*]]
 ; CHECK:       not_entry:
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
+; CHECK-NEXT:    call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -725,7 +725,7 @@ define void @convert_large_kmpc_alloc_shared() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I_H2S:%.*]] = alloca i8, i64 256, align 1, addrspace(5)
 ; CHECK-NEXT:    [[MALLOC_CAST:%.*]] = addrspacecast ptr addrspace(5) [[I_H2S]] to ptr
-; CHECK-NEXT:    tail call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
+; CHECK-NEXT:    call void @usei8(ptr noalias nofree captures(none) [[MALLOC_CAST]]) #[[ATTR9]]
 ; CHECK-NEXT:    ret void
 ;
 bb:

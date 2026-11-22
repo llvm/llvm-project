@@ -595,10 +595,24 @@ class COP1_4R_DESC_BASE<string instr_asm, RegisterOperand FGROpnd> {
   string Constraints = "$fd_in = $fd";
 }
 
-class MADDF_S_DESC  : COP1_4R_DESC_BASE<"maddf.s", FGR32Opnd>;
-class MADDF_D_DESC  : COP1_4R_DESC_BASE<"maddf.d", FGR64Opnd>;
-class MSUBF_S_DESC  : COP1_4R_DESC_BASE<"msubf.s", FGR32Opnd>;
-class MSUBF_D_DESC  : COP1_4R_DESC_BASE<"msubf.d", FGR64Opnd>;
+class MADDF_S_DESC : COP1_4R_DESC_BASE<"maddf.s", FGR32Opnd> {
+  let Pattern = [(set FGR32Opnd:$fd,
+                      (any_fma FGR32Opnd:$fs, FGR32Opnd:$ft, FGR32Opnd:$fd_in))];
+}
+class MADDF_D_DESC : COP1_4R_DESC_BASE<"maddf.d", FGR64Opnd> {
+  let Pattern = [(set FGR64Opnd:$fd,
+                      (any_fma FGR64Opnd:$fs, FGR64Opnd:$ft, FGR64Opnd:$fd_in))];
+}
+class MSUBF_S_DESC : COP1_4R_DESC_BASE<"msubf.s", FGR32Opnd> {
+  let Pattern = [(set FGR32Opnd:$fd,
+                      (any_fma (fneg FGR32Opnd:$fs), FGR32Opnd:$ft,
+                               FGR32Opnd:$fd_in))];
+}
+class MSUBF_D_DESC : COP1_4R_DESC_BASE<"msubf.d", FGR64Opnd> {
+  let Pattern = [(set FGR64Opnd:$fd,
+                      (any_fma (fneg FGR64Opnd:$fs), FGR64Opnd:$ft,
+                               FGR64Opnd:$fd_in))];
+}
 
 class MAX_MIN_DESC_BASE<string instr_asm, RegisterOperand FGROpnd> {
   dag OutOperandList = (outs FGROpnd:$fd);

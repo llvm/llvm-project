@@ -1,0 +1,10 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s64i = !cir.int<s, 64>
+
+// CHECK-LABEL: cir.func @get_offset
+cir.func @get_offset(%arg0: !cir.vptr) -> !s64i {
+  // CHECK: cir.vtable.get_offset %arg0[-3] : !cir.vptr -> !s64i
+  %0 = cir.vtable.get_offset %arg0[-3] : !cir.vptr -> !s64i
+  cir.return %0 : !s64i
+}

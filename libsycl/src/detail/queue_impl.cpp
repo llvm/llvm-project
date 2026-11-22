@@ -8,6 +8,8 @@
 
 #include <detail/queue_impl.hpp>
 
+#include <sycl/__impl/properties/queue_properties.hpp>
+
 #include <detail/context_impl.hpp>
 #include <detail/device_impl.hpp>
 #include <detail/event_impl.hpp>
@@ -54,9 +56,27 @@ private:
 QueueImpl::QueueImpl(const std::shared_ptr<ContextImpl> &Context,
                      DeviceImpl &Device, const async_handler &AsyncHandler,
                      const property_list &PropList, PrivateTag)
-    : MIsInOrder(false), MAsyncHandler(AsyncHandler), MPropList(PropList),
-      MDevice(Device), MContext(Context) {
+    : MIsInOrder(PropList.has_property<property::queue::in_order>()),
+      MAsyncHandler(AsyncHandler), MPropList(PropList), MDevice(Device),
+      MContext(Context) {
   assert(MContext && "Context impl ptr can't be nullptr");
+
+  checkPropertyList<queue>(PropList);
+  // TODO: add passing in-order queue flag to liboffload and though backend.
+
+  if (PropList.has_property<property::queue::enable_profiling>()) {
+    if (!MDevice.has(aspect::queue_profiling))
+      throw sycl::exception(
+          createSyclObjFromImpl<context>(*MContext),
+          make_error_code(errc::feature_not_supported),
+          "The device associated with this queue does not support profiling.");
+
+    // TODO: Remove this once the queue captures profiling information and
+    // event::get_profiling_info can report it.
+    throw sycl::exception(createSyclObjFromImpl<context>(*MContext),
+                          make_error_code(errc::feature_not_supported),
+                          "Queue profiling is not implemented yet.");
+  }
 
   ol_result_t Err = callNoCheck(olCreateQueue, MContext->getOLHandleRef(),
                                 MDevice.getOLHandle(), &MOffloadQueue);

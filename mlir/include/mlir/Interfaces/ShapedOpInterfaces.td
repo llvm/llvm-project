@@ -27,6 +27,7 @@ def ShapedDimOpInterface : OpInterface<"ShapedDimOpInterface"> {
     the dimension.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ShapedOpInterfaces.h"];
 
   let methods = [
     InterfaceMethod<

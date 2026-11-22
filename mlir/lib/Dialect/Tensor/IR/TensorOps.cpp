@@ -164,7 +164,7 @@ bool tensor::isSameTypeWithoutEncoding(Type tp1, Type tp2) {
 static llvm::SmallBitVector getDroppedDims(ArrayRef<int64_t> reducedShape,
                                            ArrayRef<OpFoldResult> mixedSizes) {
   llvm::SmallBitVector droppedDims(mixedSizes.size());
-  int64_t shapePos = reducedShape.size() - 1;
+  int64_t shapePos = static_cast<int64_t>(reducedShape.size()) - 1;
 
   for (const auto &size : enumerate(llvm::reverse(mixedSizes))) {
     size_t idx = mixedSizes.size() - size.index() - 1;
@@ -4130,6 +4130,44 @@ OpFoldResult SplatOp::fold(FoldAdaptor adaptor) {
   // SplatElementsAttr::get treats single value for second arg as being a
   // splat.
   return SplatElementsAttr::get(getType(), {constOperand});
+}
+
+namespace {
+/// Change the type of the result of a `tensor.splat` by making the result
+/// type statically sized along dimensions that in the original operation were
+/// defined as dynamic, but the size was defined using a `constant` op. For
+/// example
+///
+///  %c4 = arith.constant 4 : index
+///  %0 = tensor.splat %arg0[%c4] : tensor<?xf32>
+///
+///  to
+///
+///  %0 = tensor.splat %arg0 : tensor<4xf32>
+struct ReplaceSplatStaticShapeDims : OpRewritePattern<SplatOp> {
+  using OpRewritePattern<SplatOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(SplatOp op,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> foldedDynamicSizes;
+    RankedTensorType foldedTensorType = foldDynamicToStaticDimSizes(
+        op.getType(), op.getDynamicSizes(), foldedDynamicSizes);
+
+    // Stop here if no dynamic size was promoted to static.
+    if (foldedTensorType == op.getType())
+      return failure();
+
+    auto newOp = SplatOp::create(rewriter, op.getLoc(), op.getInput(),
+                                 foldedTensorType, foldedDynamicSizes);
+    rewriter.replaceOpWithNewOp<tensor::CastOp>(op, op.getType(), newOp);
+    return success();
+  }
+};
+} // namespace
+
+void SplatOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                          MLIRContext *context) {
+  results.add<ReplaceSplatStaticShapeDims>(context);
 }
 
 //===----------------------------------------------------------------------===//

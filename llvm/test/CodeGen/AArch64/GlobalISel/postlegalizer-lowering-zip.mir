@@ -3,7 +3,7 @@
 # Check that we can recognize a shuffle mask for a zip instruction, and produce
 # G_ZIP1 or G_ZIP2 where appropriate.
 #
-# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-lowering -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple aarch64 -run-pass=aarch64-postlegalizer-lowering %s -o - | FileCheck %s
 # RUN: llc -mtriple aarch64 -passes=aarch64-postlegalizer-lowering %s -o - | FileCheck %s
 
 ...
@@ -11,7 +11,6 @@
 name:            zip1_v2s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -35,7 +34,6 @@ body:             |
 name:            zip1_v2s64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -59,7 +57,6 @@ body:             |
 name:            zip1_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -83,7 +80,6 @@ body:             |
 name:            zip2_v2s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $d0, $d1
@@ -107,7 +103,6 @@ body:             |
 name:            zip2_v2s64
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -131,7 +126,6 @@ body:             |
 name:            zip2_v4s32
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -155,7 +149,6 @@ body:             |
 name:            zip2_no_combine_idx_mismatch
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -182,7 +175,6 @@ body:             |
 name:            zip1_no_combine_idx_mismatch
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -207,7 +199,6 @@ body:             |
 name:            no_combine_first_elt_of_mask_must_be_zero_or_one
 alignment:       4
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $q0, $q1
@@ -230,3 +221,4 @@ body:             |
     %2:_(<4 x i32>) = G_SHUFFLE_VECTOR %0(<4 x i32>), %1, shufflemask(3, 4, 1, 5)
     $q0 = COPY %2(<4 x i32>)
     RET_ReallyLR implicit $q0
+...

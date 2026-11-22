@@ -120,7 +120,7 @@ static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
 
   // Add controller interfaces for calling functions, reading/writing memory,
   // registering metadata, etc.
-  if (auto Err = sps_ci::addAll(BI.symbols()))
+  if (auto Err = sps::ci::addAll(BI.symbols()))
     return Err;
 
   // Add SimpleNativeMemoryMap service to manage JIT'd memory. Acting as a

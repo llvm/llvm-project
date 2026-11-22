@@ -26,7 +26,9 @@ class LLVM_LIBRARY_VISIBILITY SparcTargetInfo : public TargetInfo {
 
 public:
   SparcTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
-      : TargetInfo(Triple), SoftFloat(false) {}
+      : TargetInfo(Triple), SoftFloat(false) {
+    HasStrictFP = true;
+  }
 
   int getEHDataRegisterNumber(unsigned RegNo) const override {
     if (RegNo == 0)

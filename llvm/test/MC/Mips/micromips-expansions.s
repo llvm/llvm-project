@@ -16,21 +16,21 @@
 # CHECK: lui   $7, 1                 # encoding: [0xa7,0x41,0x01,0x00]
 # CHECK: ori   $7, $7, 2             # encoding: [0xe7,0x50,0x02,0x00]
 # CHECK: addu  $7, $7, $8            # encoding: [0x07,0x01,0x50,0x39]
-# CHECK: lui   $10, %hi(symbol)      # encoding: [0xaa'A',0x41'A',0x00,0x00]
+# CHECK: lui   $10, %hi(symbol)      # encoding: [0xaa,0x41,A,A]
 # CHECK:                             # fixup A - offset: 0,
 # CHECK:                               value: %hi(symbol),
 # CHECK:                               kind: fixup_MICROMIPS_HI16
 # CHECK: addu  $10, $10, $4          # encoding: [0x8a,0x00,0x50,0x51]
-# CHECK: lw    $10, %lo(symbol)($10) # encoding: [0x4a'A',0xfd'A',0x00,0x00]
+# CHECK: lw    $10, %lo(symbol)($10) # encoding: [0x4a,0xfd,A,A]
 # CHECK:                             # fixup A - offset: 0,
 # CHECK:                               value: %lo(symbol),
 # CHECK:                               kind: fixup_MICROMIPS_LO16
-# CHECK: lui   $1, %hi(symbol)       # encoding: [0xa1'A',0x41'A',0x00,0x00]
+# CHECK: lui   $1, %hi(symbol)       # encoding: [0xa1,0x41,A,A]
 # CHECK:                             # fixup A - offset: 0,
 # CHECK:                               value: %hi(symbol),
 # CHECK:                               kind: fixup_MICROMIPS_HI16
 # CHECK: addu  $1, $1, $9            # encoding: [0x21,0x01,0x50,0x09]
-# CHECK: sw    $10, %lo(symbol)($1)  # encoding: [0x41'A',0xf9'A',0x00,0x00]
+# CHECK: sw    $10, %lo(symbol)($1)  # encoding: [0x41,0xf9,A,A]
 # CHECK:                             # fixup A - offset: 0,
 # CHECK:                               value: %lo(symbol),
 # CHECK:                               kind: fixup_MICROMIPS_LO16

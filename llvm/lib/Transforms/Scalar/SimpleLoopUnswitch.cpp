@@ -546,7 +546,10 @@ static bool unswitchTrivialBranch(const ScalarOptions &Opts, Loop &L,
   std::optional<int> LatchIdx = std::nullopt;
   auto *LoopLatch = L.getLoopLatch();
   auto *ULExit = LI.getUniqueLatchExitBlock(L);
-  if (SE && FullUnswitch && ULExit) {
+  if (SE && FullUnswitch && ULExit &&
+      // Make sure we do not unswitch a branch when both of its successors are
+      // the loop latch. The branch is actually unconditional.
+      BI.getSuccessor(0) != BI.getSuccessor(1)) {
     if (BI.getSuccessor(0) == LoopLatch && L.contains(BI.getSuccessor(1)))
       LatchIdx = 0;
     else if (BI.getSuccessor(1) == LoopLatch && L.contains(BI.getSuccessor(0)))
@@ -1150,7 +1153,7 @@ static bool unswitchAllTrivialConditions(const ScalarOptions &Opts, Loop &L,
           if (const auto *CB = dyn_cast<CallBase>(&I))
             if (CB->isConvergent())
               return true;
-          return I.mayHaveSideEffects();
+          return I.mayHaveSideEffects() && !I.isDroppable();
         }))
       return Changed;
 

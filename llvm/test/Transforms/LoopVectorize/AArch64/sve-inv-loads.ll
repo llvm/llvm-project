@@ -1,7 +1,7 @@
 ; RUN: opt -S -passes=loop-vectorize -mattr=+sve -mtriple aarch64-linux-gnu \
 ; RUN:   -tail-folding-policy=dont-fold-tail < %s | FileCheck %s
 
-define void @invariant_load(i64 %n, ptr noalias nocapture %a, ptr nocapture readonly %b) {
+define void @invariant_load(i64 %n, ptr noalias nocapture %a, ptr nocapture readonly %b) vscale_range(1,16) {
 ; CHECK-LABEL: @invariant_load
 ; CHECK: %[[GEP:.*]] = getelementptr inbounds i32, ptr %b, i64 42
 ; CHECK: vector.body:

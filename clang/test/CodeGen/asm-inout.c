@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s %}
 // PR3800
 int *foo(void);
 
@@ -51,7 +52,7 @@ __m64 test5(__m64 __A, __m64 __B) {
 int test6(void) {
   typedef unsigned char __attribute__((vector_size(8))) _m64u8;
   _m64u8 __attribute__((aligned(16))) Mu8_0, __attribute__((aligned(16))) Mu8_1;
-  // CHECK: call <8 x i8> asm "nop", "=y,0,~{dirflag},~{fpsr},~{flags}"(<8 x i8> %0)
+  // CHECK: call <8 x i8> asm "nop", "=y,0,~{dirflag},~{fpsr},~{flags}"(<8 x i8> %{{[0-9]+}})
   asm ("nop" : "=y"(Mu8_1 ) : "0"(Mu8_0 ));
   return 0;
 }

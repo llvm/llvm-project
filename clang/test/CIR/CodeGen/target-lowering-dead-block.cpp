@@ -14,8 +14,8 @@ __attribute__((device)) int test(int input) {
 
 // CIR-LABEL: cir.func {{.*}}@_Z4testi
 
-// CIR-PRE:       %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i, lang_address_space(offload_private)>
-// CIR-POST:      %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i, target_address_space(5)>
+// CIR-PRE:       %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i, lang_address_space(offload_private)>
+// CIR-POST:      %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i, target_address_space(5)>
 
 // CIR-PRE:       %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i, lang_address_space(offload_private)>
 // CIR-POST:       %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i, target_address_space(5)>

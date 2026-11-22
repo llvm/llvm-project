@@ -1785,6 +1785,7 @@ More information can be found [here](Modules.md).
 | `#embed`                                      | \_\_cpp_pp_embed                   | C++26         | C++03         |
 |``auto()`` cast                                | \_\_cpp_auto_cast                  | C++26         | C++03         |
 | Pack Indexing for Template Names              | \_\_cpp_pack_indexing >= 202606L   | C++2d         | C++03         |
+| Defaulted postfix `++` and `--` operators     |                                    | C++2d         | C++03         |
 | Designated initializers (N494)                |                                    | C99           | C89           |
 | `_Complex` (N693)                             |                                    | C99           | C89, C++      |
 | `_Bool` (N815)                                |                                    | C99           | C89           |
@@ -2261,6 +2262,45 @@ Query for this feature with `__has_extension(gnu_asm_constexpr_strings)`.
 ```c++
 int foo() {
    asm((std::string_view("nop")) ::: (std::string_view("memory")));
+}
+```
+
+### String literal encoding in ASM statements
+
+On z/OS, where the system default encoding is IBM-1047 rather than UTF-8:
+
+* A string literal used as the template string in an
+  extended asm statement, as the instruction string in a basic asm statement,
+  or as the string specifying the assembler name or register in an asm label or
+  a global/local register variable declaration (such as `asm("...")` or
+  `__asm__("...")`) is parsed and interpreted using the target system's default
+  encoding (such as IBM-1047 on z/OS) rather than the literal encoding
+  specified by `-fexec-charset=`. This ensures that escape sequences (such as
+  octal or hexadecimal byte escapes) are interpreted as system/assembler code
+  points. This does **not** apply to parenthesized
+  constant expressions (see
+  [Constexpr strings in GNU ASM statements](#constexpr-strings-in-gnu-asm-statements)),
+  in which string literals are encoded according to the literal encoding
+  specified by `-fexec-charset=`.
+
+For example, on z/OS compiled with `-fexec-charset=UTF-8`:
+
+```c++
+constexpr std::string_view takeStringAndReturnEmptyStringView(const char *str) {
+  return std::string_view();
+}
+
+int main(void) {
+  // Template strings in asm statements are interpreted in the system encoding
+  // (IBM-1047 on z/OS).
+  asm("\t\x95\x96\x97"); // This generates a "nop" in IBM-1047
+
+  // String literals within the constexpr expression are encoded in the
+  // execution character set specified by -fexec-charset=.
+  // With -fexec-charset=IBM-1047, the string below is diagnosed as invalid
+  // because U+0130 cannot be represented in IBM-1047.
+  // With -fexec-charset=UTF-8, the string below is valid.
+  asm((takeStringAndReturnEmptyStringView("\N{LATIN CAPITAL LETTER I WITH DOT ABOVE}")));
 }
 ```
 
@@ -5497,28 +5537,37 @@ returns the bit at the position of the current lane. It is almost equivalent to
 `(mask & (1 << lane_id)) != 0`, except that its behavior is only defined if
 the given mask has the same value for all active lanes of the current wave.
 
-#### \_\_builtin_amdgcn_av\_{load,store}\_b128
+#### \_\_builtin_amdgcn_av\_{load,store}\_{b8,b16,b32,b64,b128}
 
 Signature:
 
 ```c
+typedef __attribute__((__vector_size__(2 * sizeof(unsigned int)))) unsigned int v2u;
 typedef __attribute__((__vector_size__(4 * sizeof(unsigned int)))) unsigned int v4u;
 
+unsigned char __builtin_amdgcn_av_load_b8(unsigned char *src, int scope);
+unsigned short __builtin_amdgcn_av_load_b16(unsigned short *src, int scope);
+unsigned int __builtin_amdgcn_av_load_b32(unsigned int *src, int scope);
+v2u __builtin_amdgcn_av_load_b64(v2u *src, int scope);
 v4u __builtin_amdgcn_av_load_b128(v4u *src, int scope);
 
+void __builtin_amdgcn_av_store_b8(unsigned char *dst, unsigned char data, int scope);
+void __builtin_amdgcn_av_store_b16(unsigned short *dst, unsigned short data, int scope);
+void __builtin_amdgcn_av_store_b32(unsigned int *dst, unsigned int data, int scope);
+void __builtin_amdgcn_av_store_b64(v2u *dst, v2u data, int scope);
 void __builtin_amdgcn_av_store_b128(v4u *dst, v4u data, int scope);
 ```
 
-Load or store a vector of 4 unsigned integers from or to memory with cache
-behavior specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros
-defined for {ref}`scoped atomic builtins <langext-c11-atomic>`.
+Load or store 8, 16, 32, 64 or 128 bits from or to memory with cache behavior
+specified by `scope`, which is one of the `__MEMORY_SCOPE_*` macros defined for
+{ref}`scoped atomic builtins <langext-c11-atomic>`.
 
 The pointer argument must point to the global or generic address space.
 
 These builtins are supported on gfx9, gfx10, gfx11, and gfx12 targets.
 
-They map to the LLVM intrinsics `llvm.amdgcn.av.load.b128` and
-`llvm.amdgcn.av.store.b128` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
+They map to the LLVM intrinsics `llvm.amdgcn.av.load.b{8,16,32,64,128}` and
+`llvm.amdgcn.av.store.b{8,16,32,64,128}` documented in [User Guide for AMDGPU Backend](https://llvm.org/docs/AMDGPUUsage.html).
 
 ### ARM/AArch64 Language Extensions
 
@@ -5650,6 +5699,14 @@ The builtins return 0 if the values are equal, or 1 if they are unequal.
 - `int __cdsg(void *oldptr, void *curptr, void *newword)`
 
   Generates a 16-byte compare-and-swap using the CDSG instruction.
+
+#### ASM string literal encoding
+
+On z/OS, the system default encoding is IBM-1047, which has implications for
+ASM strings. See
+[String literal encoding in ASM statements](#string-literal-encoding-in-asm-statements)
+for details.
+
 
 ## Extensions for Static Analysis
 

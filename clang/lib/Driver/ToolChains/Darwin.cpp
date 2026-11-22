@@ -456,6 +456,12 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
     CmdArgs.push_back("-disable-atexit-based-global-dtor-lowering");
   }
 
+  if (useMachORelocatableDwarf(getToolChain().getTriple(),
+                               getDwarfVersion(getToolChain(), Args))) {
+    CmdArgs.push_back("-mllvm");
+    CmdArgs.push_back("-macho-relocatable-dwarf");
+  }
+
   Args.AddLastArg(CmdArgs, options::OPT_prebind);
   Args.AddLastArg(CmdArgs, options::OPT_noprebind);
   Args.AddLastArg(CmdArgs, options::OPT_nofixprebinding);
@@ -496,6 +502,9 @@ void darwin::Linker::AddLinkArgs(Compilation &C, const ArgList &Args,
   Args.AddAllArgs(CmdArgs, options::OPT_dylinker__install__name);
   Args.AddLastArg(CmdArgs, options::OPT_dylinker);
   Args.AddLastArg(CmdArgs, options::OPT_Mach);
+
+  if (Version >= VersionTuple(900))
+    Args.AddLastArg(CmdArgs, options::OPT_O_Group);
 
   if (LinkerIsLLD) {
     if (auto *CSPGOGenerateArg = getLastCSProfileGenerateArg(Args)) {

@@ -23,6 +23,10 @@
    backslashes. */
 #cmakedefine01 LLVM_WINDOWS_PREFER_FORWARD_SLASH
 
+/* Define to 1 to use only APIs available in restricted Windows environments
+   (no shell32), and to 0 otherwise. */
+#cmakedefine01 LLVM_WINDOWS_RESTRICTED_APIS
+
 /* Define to 1 if you have the `backtrace' function. */
 #cmakedefine HAVE_BACKTRACE ${HAVE_BACKTRACE}
 

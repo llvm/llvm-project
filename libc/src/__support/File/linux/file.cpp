@@ -296,9 +296,26 @@ int LinuxFile::reopen_unlocked(const char *path, const char *mode) {
   return 0;
 }
 
-int get_fileno(File *f) {
+bool is_linux_file(const File *f) {
+  // Any LinuxFile (including subtypes like the popen stream, which only swaps
+  // the close callback) registers at least one of these linux_file_* callbacks,
+  // and no non-Linux File (CookieFile/MemoryFile) uses any of them. So a match
+  // on any single callback positively identifies a LinuxFile that has an fd.
+  return f->get_read_func() == &linux_file_read ||
+         f->get_write_func() == &linux_file_write ||
+         f->get_seek_func() == &linux_file_seek ||
+         f->get_close_func() == &linux_file_close;
+}
+
+ErrorOr<int> get_fileno(File *f) {
+  if (!is_linux_file(f))
+    return Error(EBADF);
   auto *lf = reinterpret_cast<LinuxFile *>(f);
-  return lf->get_fd();
+  int fd = lf->get_fd();
+  // freopen can fail and leave an otherwise-normal LinuxFile with fd == -1.
+  if (fd == -1)
+    return Error(EBADF);
+  return fd;
 }
 
 int reopenfile(File *f, const char *path, const char *mode) {

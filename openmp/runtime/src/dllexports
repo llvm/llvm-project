@@ -221,6 +221,7 @@
 #    __kmpc_end_taskq                        128
 #    __kmpc_end_taskq_task                   129
     __kmpc_flush                            130
+    __kmpc_flush_explicit
     __kmpc_for_static_fini                  135
     __kmpc_for_static_init_4                136
     __kmpc_for_static_init_8                137
@@ -569,6 +570,10 @@ kmp_set_disp_num_buffers                    890
     omp_get_submemspace                     821
     omp_get_device_from_uid                 822
     omp_get_uid_from_device                 823
+    omp_get_dyn_gprivate_ptr                845
+    omp_get_dyn_gprivate_nofb_ptr           846
+    omp_get_dyn_gprivate_size               847
+    omp_get_dyn_gprivate_memspace           848
     %ifndef stub
         __kmpc_set_default_allocator
         __kmpc_get_default_allocator

@@ -11,6 +11,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Flags.h"
 #include "lldb/Utility/Scalar.h"
@@ -113,12 +114,34 @@ bool ValueObjectChild::UpdateValue() {
       m_value.SetValueType(parent->GetValue().GetValueType());
 
       Flags parent_type_flags(parent_type.GetTypeInfo());
+      // If instances of both the parent's type and the base class are pointers,
+      // as with a Swift class and its Swift base class, the base class child's
+      // value is the parent's pointer. An Objective-C base class of a Swift
+      // class is instead stored at the address that the pointer points to.
       const bool is_instance_ptr_base =
-          ((m_is_base_class) &&
-           (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer)));
+          m_is_base_class &&
+          parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer) &&
+          Flags(GetCompilerType().GetTypeInfo())
+              .AnySet(lldb::eTypeInstanceIsPointer);
 
       if (parent->GetCompilerType().ShouldTreatScalarValueAsAddress()) {
-        m_value.GetScalar() = parent->GetPointerValue().address;
+        lldb::addr_t addr = parent->GetPointerValue().address;
+        // The language runtime knows how a pointer that is an instance of the
+        // parent's type refers to the instance.
+        if (parent_type_flags.AnySet(lldb::eTypeInstanceIsPointer))
+          if (lldb::ProcessSP process_sp = GetProcessSP())
+            if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(
+                    parent_type.GetMinimumLanguage())) {
+              if (llvm::Expected<lldb::addr_t> instance_addr =
+                      runtime->FixupPointerValue(addr, parent_type)) {
+                addr = *instance_addr;
+                // The runtime returns an address in the target.
+                parent->SetAddressTypeOfChildren(eAddressTypeLoad);
+              } else {
+                m_error = Status::FromError(instance_addr.takeError());
+              }
+            }
+        m_value.GetScalar() = addr;
 
         switch (parent->GetAddressTypeOfChildren()) {
         case eAddressTypeFile: {

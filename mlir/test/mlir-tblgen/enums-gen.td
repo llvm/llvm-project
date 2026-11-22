@@ -175,6 +175,26 @@ def MyCommaSeparatedBitEnum
   let separator = ", ";
 }
 
+def MySpaceSeparatedBitEnum
+  : I32BitEnum<"MySpaceSeparatedBitEnum", "Space-separated bit enum",
+    [None, Bit0, Bit1]> {
+  let separator = " ";
+}
+
+// DEF-LABEL: ::std::optional<MySpaceSeparatedBitEnum> symbolizeMySpaceSeparatedBitEnum(::llvm::StringRef str) {
+// DEF:   str.split(symbols, ' ', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
+
+// DEF-LABEL: FailureOr<::MySpaceSeparatedBitEnum> FieldParser<::MySpaceSeparatedBitEnum, ::MySpaceSeparatedBitEnum>::parse(AsmParser &parser) {
+// DEF:   FailureOr<std::optional<::MySpaceSeparatedBitEnum>> flags =
+// DEF-NEXT:       FieldParser<std::optional<::MySpaceSeparatedBitEnum>>::parse(parser);
+// DEF:   if (!*flags)
+// DEF-NEXT:     return parser.emitError(loc, "expected one of [none, tagged, Bit1] for Space-separated bit enum");
+// DEF: FieldParser<std::optional<::MySpaceSeparatedBitEnum>, std::optional<::MySpaceSeparatedBitEnum>>::parse(AsmParser &parser) {
+// DEF:   std::optional<::MySpaceSeparatedBitEnum> flags;
+// DEF:   while (::mlir::succeeded(parser.parseOptionalKeyword(&enumKeyword, {"none", "tagged", "Bit1"})))
+// DEF-NEXT:     flags = flags.value_or(::MySpaceSeparatedBitEnum{}) | *::symbolizeEnum<::MySpaceSeparatedBitEnum>(enumKeyword);
+// DEF-NEXT:   return flags;
+
 // DECL: inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, ::MyNonQuotedPrintBitEnum value) {
 // DECL:   auto valueStr = stringifyEnum(value);
 // DECL-NEXT:   return p << valueStr;
