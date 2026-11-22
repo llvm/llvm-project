@@ -856,14 +856,14 @@ static StringRef getOutputSectionName(StringRef name, bool isMinGW) {
 void Writer::sortBySectionOrder(
     std::vector<Chunk *> &chunks,
     function_ref<int(const SectionChunk *)> priority) {
-  auto getPriority = [&](const Chunk *c) {
+  auto getPriority = [=](const Chunk *c) {
     if (auto *sec = dyn_cast<SectionChunk>(c))
       if (sec->sym)
         return priority(sec);
     return 0;
   };
 
-  llvm::stable_sort(chunks, [&](const Chunk *a, const Chunk *b) {
+  llvm::stable_sort(chunks, [=](const Chunk *a, const Chunk *b) {
     return getPriority(a) < getPriority(b);
   });
 }
