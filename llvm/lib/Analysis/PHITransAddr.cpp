@@ -249,6 +249,8 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
         if (GEPI->getType() == GEP->getType() &&
             GEPI->getSourceElementType() == GEP->getSourceElementType() &&
             GEPI->getNumOperands() == GEPOps.size() &&
+            (GEPI->getNoWrapFlags() & GEP->getNoWrapFlags()) ==
+                GEPI->getNoWrapFlags() &&
             GEPI->getParent()->getParent() == CurBB->getParent() &&
             (!DT || DT->dominates(GEPI->getParent(), PredBB))) {
           if (std::equal(GEPOps.begin(), GEPOps.end(), GEPI->op_begin()))
