@@ -2462,7 +2462,7 @@ CallInst *VPWidenIntrinsicRecipe::createVectorCall(VPTransformState &State) {
   // Add return type if intrinsic is overloaded on it.
   if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
                                              State.TTI)) {
-    Type *RetTy = toVectorizedTy(getScalarType(), State.VF);
+    Type *RetTy = getWideType(State.VF);
     ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
     for (auto [Idx, Ty] : enumerate(ContainedTys)) {
       if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID,
@@ -2536,7 +2536,7 @@ InstructionCost VPWidenIntrinsicRecipe::computeCallCost(
     Arguments.push_back(V);
   }
 
-  Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
+  Type *RetTy = R.getWideType(VF);
   SmallVector<Type *> ParamTys = map_to_vector(
       Operands, [&](const VPValue *Op) { return Op->getWideType(VF); });
 

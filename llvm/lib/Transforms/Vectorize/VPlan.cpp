@@ -151,7 +151,7 @@ Type *VPValue::getScalarType() const {
 }
 
 Type *VPValue::getWideType(ElementCount VF) const {
-  return toVectorTy(getScalarType(), VF);
+  return toVectorizedTy(getScalarType(), VF);
 }
 
 VPRecipeValue::~VPRecipeValue() {
@@ -1884,7 +1884,7 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          cast<VPReplicateRecipe>(Op)->getOpcode() == Instruction::Load) ||
         !UniqueOperands.insert(Op).second)
       continue;
-    Tys.push_back(toVectorizedTy(Op->getScalarType(), VF));
+    Tys.push_back(Op->getWideType(VF));
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
