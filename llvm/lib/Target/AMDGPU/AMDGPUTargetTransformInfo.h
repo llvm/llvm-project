@@ -272,6 +272,9 @@ public:
   bool areInlineCompatible(const Function *Caller,
                            const Function *Callee) const override;
 
+  std::optional<uint64_t> getCallTypeId(FunctionType *FTy,
+                                        CallingConv::ID CC) const override;
+
   int getInliningLastCallToStaticBonus() const override;
   unsigned getInliningThresholdMultiplier() const override { return 11; }
   unsigned adjustInliningThreshold(const CallBase *CB) const override;
