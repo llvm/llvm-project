@@ -84,6 +84,10 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles ``new std::initializer_list<T>{...}``
+  expressions under the Itanium C++ ABI. Previous versions emitted a duplicate
+  initializer-list marker in the mangled name. (#GH232531)
+
 - Clang now correctly mangles C++20 parenthesized aggregate initialization
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.

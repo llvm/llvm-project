@@ -602,7 +602,7 @@ module attributes {
   // Returning it takes the sret path, and the caller's buffer replaces the
   // return slot the body allocated.
   cir.func @ret_o() -> !rec_O requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_O>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_O>
     %1 = cir.const #cir.zero : !rec_O
     cir.store %1, %0 : !rec_O, !cir.ptr<!rec_O>
     %2 = cir.load %0 : !cir.ptr<!rec_O>, !rec_O
@@ -749,7 +749,7 @@ module attributes {
   // itself rather than surviving as a stale one-element res_attrs on a
   // function that now returns void.
   cir.func @ret_b200() -> (!b200i {llvm.noundef}) requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!b200i>
     %1 = cir.const #cir.int<5> : !b200i
     cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
     %2 = cir.load %0 : !cir.ptr<!b200i>, !b200i
@@ -775,7 +775,7 @@ module attributes {
   // A call site rewriting to the sret shape drops the pre-existing
   // llvm.noundef the same way the callee's own definition does.
   cir.func @call_ret_b200() -> (!b200i {llvm.noundef}) requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!b200i>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!b200i>
     %1 = cir.call @ret_b200() : () -> !b200i
     cir.store %1, %0 : !b200i, !cir.ptr<!b200i>
     %2 = cir.load %0 : !cir.ptr<!b200i>, !b200i

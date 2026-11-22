@@ -120,6 +120,20 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
 // -----
 
 //===----------------------------------------------------------------------===//
+// Function pointer type
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  // CHECK-LABEL: @function_pointer_type
+  // CHECK-SAME: !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, {{%.*}}: !spirv.ptr<() -> (), Function>
+  spirv.func @function_pointer_type(%arg0 : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %arg1 : !spirv.ptr<() -> (), Function>) "None" {
+    spirv.Return
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 

@@ -5387,6 +5387,10 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
                                         VPReductionPHIRecipe *RdxPhi) {
   VPWidenRecipe *WidenRecipe = Link.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
+  assert(is_contained({Instruction::Add, Instruction::Sub, Instruction::FAdd,
+                       Instruction::FSub},
+                      WidenRecipe->getOpcode()) &&
+         "Partial reductions can only be formed from add and sub links");
 
   VPValue *Accumulator = WidenRecipe->getOperand(Link.AccumulatorOpIdx);
   auto *ExtendedOp = cast<VPSingleDefRecipe>(
@@ -5660,8 +5664,16 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
-  SmallVector<PartialReductionDescriptor> Chain;
+  // Each link is lowered to a partial add reduction, so only recurrences made
+  // up of add and sub links can be handled.
   RecurKind RK = RedPhiR->getRecurrenceKind();
+  if (!is_contained({RecurKind::Add, RecurKind::Sub,
+                     RecurKind::AddChainWithSubs, RecurKind::FAdd,
+                     RecurKind::FSub, RecurKind::FAddChainWithSubs},
+                    RK))
+    return std::nullopt;
+
+  SmallVector<PartialReductionDescriptor> Chain;
   Type *PhiType = RedPhiR->getScalarType();
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
@@ -5683,7 +5695,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
-    if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
+    if (!UpdateR)
       return std::nullopt;
 
     VPValue *Op = UpdateR->getOperand(1);

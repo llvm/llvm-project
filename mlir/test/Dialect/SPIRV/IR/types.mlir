@@ -114,6 +114,12 @@ func.func private @scalar_ptr_type(!spirv.ptr<f32, Uniform>) -> ()
 // CHECK: @vector_ptr_type(!spirv.ptr<vector<4xi32>, PushConstant>)
 func.func private @vector_ptr_type(!spirv.ptr<vector<4xi32>,PushConstant>) -> ()
 
+// CHECK: @function_ptr_type(!spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>)
+func.func private @function_ptr_type(!spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>) -> ()
+
+// CHECK: @void_function_ptr_type(!spirv.ptr<() -> (), Function>)
+func.func private @void_function_ptr_type(!spirv.ptr<() -> (), Function>) -> ()
+
 // -----
 
 // expected-error @+1 {{expected '<'}}
@@ -143,6 +149,16 @@ func.func private @invalid_ptr_to_vector_one_element(!spirv.ptr<vector<1xi32>, S
 
 // expected-error @+1 {{vector element type must be a SPIR-V scalar type}}
 func.func private @invalid_ptr_to_vector_index(!spirv.ptr<vector<2xindex>, SomeStorageClass>) -> ()
+
+// -----
+
+// expected-error @+1 {{function type must have at most one result}}
+func.func private @function_ptr_multiple_results(!spirv.ptr<() -> (i32, i32), Function>) -> ()
+
+// -----
+
+// expected-error @+1 {{cannot use 'index' to compose SPIR-V types}}
+func.func private @function_ptr_invalid_input(!spirv.ptr<(index) -> (), Function>) -> ()
 
 // -----
 

@@ -41,7 +41,6 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   friend BaseT;
 
   const AMDGPUOptions &CLOpts;
-  Triple TargetTriple;
 
   const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
