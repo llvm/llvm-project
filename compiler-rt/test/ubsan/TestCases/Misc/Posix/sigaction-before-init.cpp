@@ -1,7 +1,7 @@
 // Test that calling sigaction() before UBSan initializes still installs
 // deadly signal handlers requested via UBSAN_OPTIONS.
 //
-// RUN: %clangxx -fsanitize=undefined -shared-libsan %s -o %t
+// RUN: %clangxx -fsanitize=undefined %s -o %t
 // RUN: %env_ubsan_opts=handle_sigill=1 not %run %t 2>&1 | FileCheck %s
 //
 // REQUIRES: target={{.*linux.*}}, ubsan-standalone
