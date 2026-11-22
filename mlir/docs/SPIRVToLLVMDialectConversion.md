@@ -355,15 +355,18 @@ SPIR-V Dialect op            | LLVM Dialect op
 
 ### Composite ops
 
-Currently, conversion supports rewrite patterns for `spirv.CompositeExtract` and
-`spirv.CompositeInsert`. We distinguish two cases for these operations: when the
-composite object is a vector, and when the composite object is of a non-vector
-type (*i.e.* struct, array or runtime array).
+Currently, conversion supports rewrite patterns for `spirv.CompositeConstruct`,
+`spirv.CompositeExtract` and `spirv.CompositeInsert`. We distinguish two cases
+for these operations: when the composite object is a vector, and when the
+composite object is of a non-vector type (*i.e.* struct, array or runtime
+array).
 
 Composite type | SPIR-V Dialect op      | LLVM Dialect op
 :------------: | :--------------------: | :-------------------:
+vector         | `spirv.CompositeConstruct` | `llvm.insertelement`
 vector         | `spirv.CompositeExtract` | `llvm.extractelement`
 vector         | `spirv.CompositeInsert`  | `llvm.insertelement`
+non-vector     | `spirv.CompositeConstruct` | `llvm.insertvalue`
 non-vector     | `spirv.CompositeExtract` | `llvm.extractvalue`
 non-vector     | `spirv.CompositeInsert`  | `llvm.insertvalue`
 
@@ -699,7 +702,6 @@ There is no support of the following ops:
 
 As well as:
 
-*   spirv.CompositeConstruct
 *   spirv.ControlBarrier
 *   spirv.FMod
 *   spirv.GL.Acos
