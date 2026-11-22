@@ -20,17 +20,17 @@ define i32 @f() {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_SPLIT1]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
 ; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]
 ; CHECK:       [[INNER_SPLIT]]:
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[INNER_EXIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 2
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 1
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[CST_LCSSA:%.*]] = phi i32 [ 42, %[[INNER_SPLIT]] ]
@@ -86,18 +86,18 @@ define i32 @g() {
 ; CHECK:       [[INNER_LATCH1]]:
 ; CHECK-NEXT:    [[X:%.*]] = phi i32 [ 42, %[[INNER_LATCH]] ]
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_NEXT]], 2
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[J]], 1
 ; CHECK-NEXT:    br label %[[INNER_EXIT:.*]]
 ; CHECK:       [[INNER_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[X_LCSSA:%.*]] = phi i32 [ [[X]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    [[TMP1]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[TMP1]], 2
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[J]], 1
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[EXIT:.*]], label %[[INNER_HEADER]]
 ; CHECK:       [[INNER_EXIT]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 2
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I]], 1
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_LATCH_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[X_FINAL:%.*]] = phi i32 [ [[X_LCSSA]], %[[INNER_LATCH_SPLIT]] ]

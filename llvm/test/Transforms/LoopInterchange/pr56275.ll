@@ -27,6 +27,7 @@ define void @test1(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    br label %[[LOOP1_HEADER:.*]]
 ; CHECK:       [[LOOP1_HEADER]]:
 ; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I2_INC:%.*]], %[[LOOP1_LATCH:.*]] ], [ 1, %[[LOOP1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP1_LATCH]] ], [ 0, %[[LOOP1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I2_ST:%.*]] = add i64 [[I2]], 1
 ; CHECK-NEXT:    [[I2_LD:%.*]] = add i64 [[I2]], 0
 ; CHECK-NEXT:    br label %[[LOOP2_HEADER_SPLIT1:.*]]
@@ -34,6 +35,7 @@ define void @test1(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    br label %[[LOOP2_HEADER:.*]]
 ; CHECK:       [[LOOP2_HEADER]]:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP2_HEADER_SPLIT:.*]] ], [ 1, %[[LOOP2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP2_HEADER_SPLIT]] ], [ 0, %[[LOOP2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP1_HEADER_PREHEADER]]
 ; CHECK:       [[LOOP2_HEADER_SPLIT1]]:
 ; CHECK-NEXT:    [[I1_ST:%.*]] = add i64 [[I1]], 0
@@ -47,15 +49,18 @@ define void @test1(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    [[A_VAL:%.*]] = load i32, ptr [[A_LD]], align 4
 ; CHECK-NEXT:    store i32 [[A_VAL]], ptr [[C_ST]], align 4
 ; CHECK-NEXT:    [[I1_INC:%.*]] = add nuw nsw i64 [[I1]], 1
-; CHECK-NEXT:    [[LOOP2_EXITCOND_NOT:%.*]] = icmp eq i64 [[I1_INC]], 63
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 61
 ; CHECK-NEXT:    br label %[[LOOP1_LATCH]]
 ; CHECK:       [[LOOP2_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[I1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 61
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP2_HEADER]]
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    [[I2_INC]] = add nuw nsw i64 [[I2]], 1
-; CHECK-NEXT:    [[LOOP1_EXITCOND_NOT:%.*]] = icmp eq i64 [[I2_INC]], 63
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[LOOP1_EXITCOND_NOT:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 61
 ; CHECK-NEXT:    br i1 [[LOOP1_EXITCOND_NOT]], label %[[LOOP2_HEADER_SPLIT]], label %[[LOOP1_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
@@ -109,6 +114,7 @@ define void @test2(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    br label %[[LOOP1_HEADER:.*]]
 ; CHECK:       [[LOOP1_HEADER]]:
 ; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ [[I2_INC:%.*]], %[[LOOP1_LATCH:.*]] ], [ 1, %[[LOOP1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[LOOP1_LATCH]] ], [ 0, %[[LOOP1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[I2_ST:%.*]] = add i64 [[I2]], 1
 ; CHECK-NEXT:    [[I2_LD:%.*]] = add i64 [[I2]], 0
 ; CHECK-NEXT:    br label %[[LOOP2_HEADER_SPLIT1:.*]]
@@ -116,6 +122,7 @@ define void @test2(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    br label %[[LOOP2_HEADER:.*]]
 ; CHECK:       [[LOOP2_HEADER]]:
 ; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ [[TMP0:%.*]], %[[LOOP2_HEADER_SPLIT:.*]] ], [ 1, %[[LOOP2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[LOOP2_HEADER_SPLIT]] ], [ 0, %[[LOOP2_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[LOOP1_HEADER_PREHEADER]]
 ; CHECK:       [[LOOP2_HEADER_SPLIT1]]:
 ; CHECK-NEXT:    [[I1_ST:%.*]] = add i64 [[I1]], 0
@@ -129,15 +136,18 @@ define void @test2(ptr noalias noundef %a, ptr noalias noundef %b, ptr noalias n
 ; CHECK-NEXT:    store i32 [[B_VAL]], ptr [[A_ST]], align 4
 ; CHECK-NEXT:    store i32 [[A_VAL]], ptr [[C_ST]], align 4
 ; CHECK-NEXT:    [[I1_INC:%.*]] = add nuw nsw i64 [[I1]], 1
-; CHECK-NEXT:    [[LOOP2_EXITCOND_NOT:%.*]] = icmp eq i64 [[I1_INC]], 63
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 61
 ; CHECK-NEXT:    br label %[[LOOP1_LATCH]]
 ; CHECK:       [[LOOP2_HEADER_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[I1]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 63
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 61
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[LOOP2_HEADER]]
 ; CHECK:       [[LOOP1_LATCH]]:
 ; CHECK-NEXT:    [[I2_INC]] = add nuw nsw i64 [[I2]], 1
-; CHECK-NEXT:    [[LOOP1_EXITCOND_NOT:%.*]] = icmp eq i64 [[I2_INC]], 63
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[LOOP1_EXITCOND_NOT:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 61
 ; CHECK-NEXT:    br i1 [[LOOP1_EXITCOND_NOT]], label %[[LOOP2_HEADER_SPLIT]], label %[[LOOP1_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

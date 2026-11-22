@@ -16,11 +16,13 @@ define void @multi_entry_phi(ptr noalias %A, i1 %c) {
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTER_LATCH]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br i1 [[C]], label %[[INNER_SPLIT1:.*]], label %[[INNER_SPLIT1]]
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[INNER_PH]] ], [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PH]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_SPLIT1]]:
 ; CHECK-NEXT:    [[IDX:%.*]] = mul i64 [[J]], 10
@@ -28,15 +30,18 @@ define void @multi_entry_phi(ptr noalias %A, i1 %c) {
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[OFF]]
 ; CHECK-NEXT:    store i32 0, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[INNER_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 10
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 9
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 10
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 9
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[INNER_SPLIT]], label %[[OUTER_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

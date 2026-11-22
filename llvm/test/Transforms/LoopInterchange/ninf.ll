@@ -23,12 +23,14 @@ define noundef float @reduction_reassoc_ninf(ptr %A) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_J:%.*]] = phi float [ [[SUM_J_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ [[SUM_I:%.*]], %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    [[SUM_I]] = phi float [ [[SUM_I_NEXT:%.*]], %[[FOR_J_SPLIT]] ], [ 0.000000e+00, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
@@ -36,16 +38,19 @@ define noundef float @reduction_reassoc_ninf(ptr %A) {
 ; CHECK-NEXT:    [[VAL:%.*]] = load float, ptr [[GEP]], align 4
 ; CHECK-NEXT:    [[SUM_J_NEXT]] = fadd reassoc float [[SUM_J]], [[VAL]]
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
 ; CHECK-NEXT:    [[SUM_I_NEXT]] = phi float [ [[SUM_J_NEXT]], %[[FOR_I_LATCH]] ]
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT]], label %[[FOR_I_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[SUM_I_NEXT_LCSSA:%.*]] = phi float [ [[SUM_I_NEXT]], %[[FOR_J_SPLIT]] ]
@@ -96,11 +101,13 @@ define void @non_reduction_ninf(ptr %A, ptr %B, ptr noalias %C) {
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER:.*]]
 ; CHECK:       [[FOR_I_HEADER]]:
 ; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_INC:%.*]], %[[FOR_I_LATCH:.*]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR_I_LATCH]] ], [ 0, %[[FOR_I_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_J_SPLIT1:.*]]
 ; CHECK:       [[FOR_J_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR_J:.*]]
 ; CHECK:       [[FOR_J]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR_J_SPLIT:.*]] ], [ 0, %[[FOR_J_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR_J_SPLIT]] ], [ 0, %[[FOR_J_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR_I_HEADER_PREHEADER]]
 ; CHECK:       [[FOR_J_SPLIT1]]:
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr [2 x float], ptr [[A]], i64 [[I]], i64 [[J]]
@@ -111,15 +118,18 @@ define void @non_reduction_ninf(ptr %A, ptr %B, ptr noalias %C) {
 ; CHECK-NEXT:    [[GEP_C:%.*]] = getelementptr [2 x float], ptr [[C]], i64 [[I]], i64 [[J]]
 ; CHECK-NEXT:    store float [[SUM]], ptr [[GEP_C]], align 4
 ; CHECK-NEXT:    [[J_INC:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[EC_J:%.*]] = icmp eq i64 [[J_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br label %[[FOR_I_LATCH]]
 ; CHECK:       [[FOR_J_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[TMP0]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[EXIT:.*]], label %[[FOR_J]]
 ; CHECK:       [[FOR_I_LATCH]]:
 ; CHECK-NEXT:    [[I_INC]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_INC]], 2
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 1
 ; CHECK-NEXT:    br i1 [[EC_I]], label %[[FOR_J_SPLIT]], label %[[FOR_I_HEADER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

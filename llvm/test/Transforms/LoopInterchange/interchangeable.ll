@@ -20,11 +20,13 @@ define void @interchange_01(i64 %k, i64 %N) {
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
 ; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR2_SPLIT1:.*]]
 ; CHECK:       [[FOR2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR2:.*]]
 ; CHECK:       [[FOR2]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT:.*]] ], [ 0, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
 ; CHECK:       [[FOR2_SPLIT1]]:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J23]]
@@ -32,15 +34,18 @@ define void @interchange_01(i64 %k, i64 %N) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[LV]], [[K]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
 ; CHECK-NEXT:    br label %[[FOR1_INC10]]
 ; CHECK:       [[FOR2_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_END12:.*]], label %[[FOR2]]
 ; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label %[[FOR2_SPLIT]], label %[[FOR1_HEADER]]
 ; CHECK:       [[FOR_END12]]:
 ; CHECK-NEXT:    ret void
@@ -84,11 +89,13 @@ define void @interchange_02(i64 %k) {
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
 ; CHECK-NEXT:    [[J19:%.*]] = phi i64 [ [[J_NEXT20:%.*]], %[[FOR1_INC10:.*]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR3_SPLIT1:.*]]
 ; CHECK:       [[FOR3_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR3:.*]]
 ; CHECK:       [[FOR3]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP1:%.*]], %[[FOR3_SPLIT:.*]] ], [ 100, %[[FOR3_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP3:%.*]], %[[FOR3_SPLIT]] ], [ 0, %[[FOR3_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
 ; CHECK:       [[FOR3_SPLIT1]]:
 ; CHECK-NEXT:    [[ARRAYIDX5:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J19]]
@@ -96,15 +103,18 @@ define void @interchange_02(i64 %k) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[TMP0]], [[K]]
 ; CHECK-NEXT:    store i64 [[ADD]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nsw i64 [[J]], -1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[J]], 0
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 100
 ; CHECK-NEXT:    br label %[[FOR1_INC10]]
 ; CHECK:       [[FOR3_SPLIT]]:
+; CHECK-NEXT:    [[TMP3]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP1]] = add nsw i64 [[J]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i64 [[J]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[INTERCHANGE_IV1]], 100
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[FOR3]], label %[[FOR_END11:.*]]
 ; CHECK:       [[FOR1_INC10]]:
 ; CHECK-NEXT:    [[J_NEXT20]] = add nuw nsw i64 [[J19]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J_NEXT20]], 100
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR3_SPLIT]], label %[[FOR1_HEADER]]
 ; CHECK:       [[FOR_END11]]:
 ; CHECK-NEXT:    ret void
@@ -152,12 +162,14 @@ define void @interchange_10() {
 ; CHECK-NEXT:    br label %[[FOR1_HEADER:.*]]
 ; CHECK:       [[FOR1_HEADER]]:
 ; CHECK-NEXT:    [[J23:%.*]] = phi i64 [ [[J_NEXT24:%.*]], %[[FOR1_INC10:.*]] ], [ 1, %[[FOR1_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[FOR1_INC10]] ], [ 0, %[[FOR1_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    [[J_NEXT24]] = add nuw nsw i64 [[J23]], 1
 ; CHECK-NEXT:    br label %[[FOR2_SPLIT1:.*]]
 ; CHECK:       [[FOR2_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[FOR2:.*]]
 ; CHECK:       [[FOR2]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP0:%.*]], %[[FOR2_SPLIT:.*]] ], [ 1, %[[FOR2_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP2:%.*]], %[[FOR2_SPLIT]] ], [ 0, %[[FOR2_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[FOR1_HEADER_PREHEADER]]
 ; CHECK:       [[FOR2_SPLIT1]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add nuw nsw i64 [[J]], 1
@@ -165,14 +177,17 @@ define void @interchange_10() {
 ; CHECK-NEXT:    store i64 [[J]], ptr [[ARRAYIDX5]], align 8
 ; CHECK-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 [[J]], i64 [[J_NEXT24]]
 ; CHECK-NEXT:    store i64 [[J23]], ptr [[ARRAYIDX10]], align 8
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 98
 ; CHECK-NEXT:    br label %[[FOR1_INC10]]
 ; CHECK:       [[FOR2_SPLIT]]:
+; CHECK-NEXT:    [[TMP2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP0]] = add nuw nsw i64 [[J]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[J]], 99
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 98
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FOR_END12:.*]], label %[[FOR2]]
 ; CHECK:       [[FOR1_INC10]]:
-; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[J23]], 98
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
+; CHECK-NEXT:    [[EXITCOND26:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 97
 ; CHECK-NEXT:    br i1 [[EXITCOND26]], label %[[FOR2_SPLIT]], label %[[FOR1_HEADER]]
 ; CHECK:       [[FOR_END12]]:
 ; CHECK-NEXT:    ret void

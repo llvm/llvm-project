@@ -17,12 +17,13 @@ define i16 @main(ptr %a) {
 ; CHECK:       [[OUTER_HEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 1, %[[OUTER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ], [ 0, %[[OUTER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[INNER_HEADER_SPLIT:.*]]
 ; CHECK:       [[INNER_HEADER_PREHEADER]]:
 ; CHECK-NEXT:    br label %[[INNER_HEADER:.*]]
 ; CHECK:       [[INNER_HEADER]]:
 ; CHECK-NEXT:    [[J:%.*]] = phi i16 [ [[TMP1:%.*]], %[[INNER_LATCH_SPLIT:.*]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i16 [ [[TMP3:%.*]], %[[INNER_LATCH_SPLIT]] ], [ 0, %[[INNER_HEADER_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[OUTER_HEADER_PREHEADER]]
 ; CHECK:       [[INNER_HEADER_SPLIT]]:
 ; CHECK-NEXT:    [[ARRAYIDX_US_US:%.*]] = getelementptr i16, ptr [[A]], i16 [[J]]
@@ -31,18 +32,20 @@ define i16 @main(ptr %a) {
 ; CHECK-NEXT:    br label %[[INNER_LATCH:.*]]
 ; CHECK:       [[INNER_LATCH]]:
 ; CHECK-NEXT:    [[J_NEXT:%.*]] = add i16 [[J]], 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i16 [[J]], 42
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i16 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 42
 ; CHECK-NEXT:    br label %[[OUTER_BODY:.*]]
 ; CHECK:       [[INNER_LATCH_SPLIT]]:
 ; CHECK-NEXT:    [[NEW_COND_LCSSA:%.*]] = phi i16 [ [[COND]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP3]] = add i16 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[TMP1]] = add i16 [[J]], 1
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i16 [[J]], 42
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i16 [[INTERCHANGE_IV1]], 42
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[INNER_HEADER]], label %[[EXIT:.*]]
 ; CHECK:       [[OUTER_BODY]]:
 ; CHECK-NEXT:    br label %[[OUTER_LATCH]]
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
-; CHECK-NEXT:    [[CMP286_US:%.*]] = icmp ugt i64 [[I]], 0
+; CHECK-NEXT:    [[CMP286_US:%.*]] = icmp ne i64 [[I]], -1
 ; CHECK-NEXT:    br i1 [[CMP286_US]], label %[[OUTER_HEADER]], label %[[INNER_LATCH_SPLIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[OLD_COND_LCSSA_LCSSA:%.*]] = phi i16 [ [[NEW_COND_LCSSA]], %[[INNER_LATCH_SPLIT]] ]
