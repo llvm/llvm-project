@@ -25,7 +25,7 @@ define void @trunc_congruent_wide_at_smax() {
 ; CHECK-NEXT:    store i32 42, ptr @g, align 4
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[W_NEXT]] = add nuw nsw i16 [[W]], 1
+; CHECK-NEXT:    [[W_NEXT]] = add nuw i16 [[W]], 1
 ; CHECK-NEXT:    [[N_NEXT]] = add nuw nsw i32 [[N]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[N_NEXT]], 2
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]
@@ -74,7 +74,7 @@ define void @trunc_congruent_step_mismatch() {
 ; CHECK-NEXT:    store i32 42, ptr @g, align 4
 ; CHECK-NEXT:    br label %[[LATCH]]
 ; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[W_NEXT]] = add nuw nsw i16 [[W]], 513
+; CHECK-NEXT:    [[W_NEXT]] = add nuw i16 [[W]], 513
 ; CHECK-NEXT:    [[N_NEXT]] = add nuw nsw i32 [[N]], 1
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[N_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[C]], label %[[EXIT:.*]], label %[[LOOP]]

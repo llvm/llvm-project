@@ -1799,20 +1799,29 @@ void SCEVExpander::replaceCongruentIVInc(
   auto *OBOIncV = dyn_cast<OverflowingBinaryOperator>(OrigInc);
   auto *OBOIsomorphic = dyn_cast<OverflowingBinaryOperator>(IsomorphicInc);
   if (OBOIncV && OBOIsomorphic) {
-    BothHaveNUW =
-        OBOIncV->hasNoUnsignedWrap() && OBOIsomorphic->hasNoUnsignedWrap();
-    BothHaveNSW =
-        OBOIncV->hasNoSignedWrap() && OBOIsomorphic->hasNoSignedWrap();
+    const SCEV *OrigSCEV = SE.getSCEV(OrigInc);
+    const SCEV *IsoSCEV = SE.getSCEV(IsomorphicInc);
+    Type *OrigTy = OrigInc->getType();
+    BothHaveNUW = OBOIncV->hasNoUnsignedWrap() &&
+                  OBOIsomorphic->hasNoUnsignedWrap() &&
+                  OrigSCEV == SE.getNoopOrZeroExtend(IsoSCEV, OrigTy);
+    BothHaveNSW = OBOIncV->hasNoSignedWrap() &&
+                  OBOIsomorphic->hasNoSignedWrap() &&
+                  OrigSCEV == SE.getNoopOrSignExtend(IsoSCEV, OrigTy);
   }
 
   if (!hoistIVInc(OrigInc, IsomorphicInc,
                   /*RecomputePoisonFlags*/ true))
     return;
 
-  // We are replacing with a wider increment. If both OrigInc and IsomorphicInc
-  // are NUW/NSW, then we can preserve them on the wider increment; the narrower
-  // IsomorphicInc would wrap before the wider OrigInc, so the replacement won't
-  // make IsomorphicInc's uses more poisonous.
+  // We are replacing with a wider increment. hoistIVInc recomputed OrigInc's
+  // flags for its new uses. If both OrigInc and IsomorphicInc are NUW/NSW and
+  // the wider OrigInc is the zero-/sign-extension of the narrower
+  // IsomorphicInc, then we can preserve the flags on the wider increment; the
+  // narrower IsomorphicInc would wrap before the wider OrigInc, so the
+  // replacement won't make IsomorphicInc's uses more poisonous. Congruence
+  // through truncation alone is not sufficient: the wider increment may wrap
+  // first, e.g. if it starts at its own signed maximum.
   assert(OrigInc->getType()->getScalarSizeInBits() >=
              IsomorphicInc->getType()->getScalarSizeInBits() &&
          "Should only replace an increment with a wider one.");
