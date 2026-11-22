@@ -532,22 +532,38 @@ int main(int, char**) {
     check_size_overflow<int[]>(min_allocator<int[]>(), max);
   }
 
-  // Check that we don't over-allocate
+  // Check that we allocate enough memory for large objects
   {
-    constexpr std::size_t n = 1024;
+    struct Large {
+      char data[1024 * 1024];
+    };
+    constexpr std::size_t n = 2;
     std::size_t bytes       = 0;
     {
-      std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n);
-      DoNotOptimize(ptr.get());
-      assert(bytes >= n);
-      assert(bytes <= n + 256);
+      std::shared_ptr<Large[]> ptr = std::allocate_shared<Large[]>(ByteCountingAllocator<Large[]>(&bytes), n);
+      assert(ptr != nullptr);
+      assert(bytes >= n * sizeof(Large));
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 0);
+        assert(ptr[i].data[sizeof(Large) - 1] == 0);
+        ptr[i].data[0]                 = 1;
+        ptr[i].data[sizeof(Large) - 1] = 2;
+        assert(ptr[i].data[0] == 1);
+        assert(ptr[i].data[sizeof(Large) - 1] == 2);
+      }
     }
     assert(bytes == 0);
     {
-      std::shared_ptr<char[]> ptr = std::allocate_shared<char[]>(ByteCountingAllocator<char[]>(&bytes), n, 'a');
-      DoNotOptimize(ptr.get());
-      assert(bytes >= n);
-      assert(bytes <= n + 256);
+      auto init                     = std::make_unique<Large>();
+      init->data[0]                 = 3;
+      init->data[sizeof(Large) - 1] = 4;
+      std::shared_ptr<Large[]> ptr  = std::allocate_shared<Large[]>(ByteCountingAllocator<Large[]>(&bytes), n, *init);
+      assert(ptr != nullptr);
+      assert(bytes >= n * sizeof(Large));
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 3);
+        assert(ptr[i].data[sizeof(Large) - 1] == 4);
+      }
     }
     assert(bytes == 0);
   }

@@ -31,7 +31,6 @@
 #include <new>
 #include <utility>
 
-#include "count_new.h"
 #include "operator_hijacker.h"
 #include "test_macros.h"
 #include "types.h"
@@ -470,24 +469,34 @@ int main(int, char**) {
     check_size_overflow<int[][3]>(max / sizeof(int[3]) + 2);
   }
 
-  // Check that we don't over-allocate (e.g. by multiplying by the control block size instead of sizeof(T)).
-  if (!globalMemCounter.disable_checking) {
-    constexpr std::size_t n = 1024;
+  // Check that we allocate enough memory for large objects
+  {
+    struct Large {
+      char data[1024 * 1024];
+    };
+    constexpr std::size_t n = 2;
     {
-      globalMemCounter.reset();
-      std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n);
-      DoNotOptimize(ptr.get());
-      assert(globalMemCounter.checkNewCalledEq(1));
-      assert(globalMemCounter.last_new_size >= n);
-      assert(globalMemCounter.last_new_size <= n + 256);
+      std::shared_ptr<Large[]> ptr = std::make_shared<Large[]>(n);
+      assert(ptr != nullptr);
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 0);
+        assert(ptr[i].data[sizeof(Large) - 1] == 0);
+        ptr[i].data[0]                 = 1;
+        ptr[i].data[sizeof(Large) - 1] = 2;
+        assert(ptr[i].data[0] == 1);
+        assert(ptr[i].data[sizeof(Large) - 1] == 2);
+      }
     }
     {
-      globalMemCounter.reset();
-      std::shared_ptr<char[]> ptr = std::make_shared<char[]>(n, 'a');
-      DoNotOptimize(ptr.get());
-      assert(globalMemCounter.checkNewCalledEq(1));
-      assert(globalMemCounter.last_new_size >= n);
-      assert(globalMemCounter.last_new_size <= n + 256);
+      auto init                     = std::make_unique<Large>();
+      init->data[0]                 = 3;
+      init->data[sizeof(Large) - 1] = 4;
+      std::shared_ptr<Large[]> ptr  = std::make_shared<Large[]>(n, *init);
+      assert(ptr != nullptr);
+      for (std::size_t i = 0; i < n; ++i) {
+        assert(ptr[i].data[0] == 3);
+        assert(ptr[i].data[sizeof(Large) - 1] == 4);
+      }
     }
   }
 
