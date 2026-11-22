@@ -121,6 +121,50 @@ contains
     !$omp end target
   end subroutine test_set_match_nested_teams
 
+  pure integer function chunk(n)
+    integer, intent(in) :: n
+    !$omp declare variant (teams_chunk) match (construct={teams})
+    !$omp declare variant (parallel_chunk) match (construct={parallel})
+    chunk = n
+  end function chunk
+  pure integer function teams_chunk(n)
+    integer, intent(in) :: n
+    teams_chunk = n
+  end function teams_chunk
+  pure integer function parallel_chunk(n)
+    integer, intent(in) :: n
+    parallel_chunk = n
+  end function parallel_chunk
+
+  ! DIST_SCHEDULE applies to DISTRIBUTE, which encloses PARALLEL in a composite
+  ! construct, so its expression sees TEAMS but not PARALLEL.
+
+  ! CHECK-LABEL: func.func @_QMmPtest_composite_dist_schedule(
+  ! CHECK: omp.teams
+  ! CHECK: fir.call @_QMmPteams_chunk(
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  subroutine test_composite_dist_schedule(n, a)
+    integer :: n, a(n), i
+    !$omp teams distribute parallel do dist_schedule(static, chunk(n))
+    do i = 1, n
+      a(i) = i
+    end do
+  end subroutine test_composite_dist_schedule
+
+  ! CHECK-LABEL: func.func @_QMmPtest_composite_simd_dist_schedule(
+  ! CHECK: omp.teams
+  ! CHECK: fir.call @_QMmPteams_chunk(
+  ! CHECK: omp.parallel
+  ! CHECK: omp.distribute
+  subroutine test_composite_simd_dist_schedule(n, a)
+    integer :: n, a(n), i
+    !$omp teams distribute parallel do simd dist_schedule(static, chunk(n))
+    do i = 1, n
+      a(i) = i
+    end do
+  end subroutine test_composite_simd_dist_schedule
+
   ! Inside target>parallel both variants apply; the more specific
   ! {target, parallel} selector outranks {parallel}.
 
