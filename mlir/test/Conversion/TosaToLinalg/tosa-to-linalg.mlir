@@ -1196,6 +1196,50 @@ func.func @reduce_float_dyn_multiple(%arg0: tensor<?x?xf32>) -> () {
 
 // -----
 
+// Check that a result type that is more dynamic than the input still lowers:
+// the expand_shape must target the statically-known shape and a trailing
+// tensor.cast converts to the declared result type.
+
+// CHECK-LABEL: @reduce_all_dyn_result
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<2x3x?x?xi1>
+func.func @reduce_all_dyn_result(%arg0: tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1> {
+  // CHECK: %[[INIT:.+]] = tensor.empty({{.*}}) : tensor<2x?x?xi1>
+  // CHECK: %[[CST:.+]] = arith.constant true
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
+  // CHECK: %[[REDUCE:.+]] = linalg.reduce ins(%[[ARG0]] : tensor<2x3x?x?xi1>) outs(%[[FILL]] : tensor<2x?x?xi1>) dimensions = [1]
+  // CHECK:  (%[[ARG1:.*]]: i1, %[[ARG2:.*]]: i1) {
+  // CHECK:   %[[RES:.+]] = arith.andi %[[ARG1]], %[[ARG2]] : i1
+  // CHECK:   linalg.yield %[[RES]] : i1
+  // CHECK:  }
+  // CHECK: tensor.expand_shape %[[REDUCE]] {{\[}}[0], [1, 2], [3]] output_shape [2, 1, %{{.+}}, %{{.+}}] : tensor<2x?x?xi1> into tensor<2x1x?x?xi1>
+  // CHECK: %[[CAST:.+]] = tensor.cast %{{.+}} : tensor<2x1x?x?xi1> to tensor<?x?x?x?xi1>
+  // CHECK: return %[[CAST]] : tensor<?x?x?x?xi1>
+  %0 = tosa.reduce_all %arg0 axis(1) : (tensor<2x3x?x?xi1>) -> tensor<?x?x?x?xi1>
+  return %0 : tensor<?x?x?x?xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @reduce_sum_dyn_result
+// CHECK-SAME: %[[ARG0:[0-9a-zA-Z_]*]]: tensor<?x?xf32>
+func.func @reduce_sum_dyn_result(%arg0: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK: %[[INIT:.+]] = tensor.empty({{.*}}) : tensor<?xf32>
+  // CHECK: %[[CST:.+]] = arith.constant 0.0
+  // CHECK: %[[FILL:.+]] = linalg.fill ins(%[[CST]]{{.*}}outs(%[[INIT]]
+  // CHECK: %[[REDUCE:.+]] = linalg.reduce ins(%[[ARG0]] : tensor<?x?xf32>) outs(%[[FILL]] : tensor<?xf32>) dimensions = [1]
+  // CHECK:  (%[[ARG1:.*]]: f32, %[[ARG2:.*]]: f32) {
+  // CHECK:   %[[RES:.+]] = arith.addf %[[ARG1]], %[[ARG2]] : f32
+  // CHECK:   linalg.yield %[[RES]] : f32
+  // CHECK:  }
+  // CHECK: tensor.expand_shape %[[REDUCE]] {{\[}}[0, 1]] output_shape [%{{.+}}, 1] : tensor<?xf32> into tensor<?x1xf32>
+  // CHECK: %[[CAST:.+]] = tensor.cast %{{.+}} : tensor<?x1xf32> to tensor<?x?xf32>
+  // CHECK: return %[[CAST]] : tensor<?x?xf32>
+  %0 = tosa.reduce_sum %arg0 axis(1) : (tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @reduce_int
 // CHECK-SAME: [[ARG0:%.+]]: tensor<5x4xi32>
 func.func @reduce_int(%arg0: tensor<5x4xi32>) -> () {
