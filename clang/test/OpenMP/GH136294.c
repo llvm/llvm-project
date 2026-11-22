@@ -31,6 +31,14 @@
 // A row of the shaped array is contiguous: 4 doubles, TO.
 // CHECK-DAG: [[ROW_SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 32]
 // CHECK-DAG: [[ROW_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 1]
+// Shaped pointers that are a member, a global and an array element: one entry
+// with the three descriptor dimensions each.
+// CHECK-DAG: [[MEMBER_SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
+// CHECK-DAG: [[MEMBER_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 17592186044418]
+// CHECK-DAG: [[GLOBAL_SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
+// CHECK-DAG: [[GLOBAL_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 17592186044418]
+// CHECK-DAG: [[ELEMENT_SIZES:@.+]] = private unnamed_addr constant [1 x i64] [i64 3]
+// CHECK-DAG: [[ELEMENT_TYPES:@.+]] = private unnamed_addr constant [1 x i64] [i64 17592186044417]
 
 void exch_data(double *a, int nx, int ny);
 
@@ -47,7 +55,8 @@ void array_ing(double *a, int nx, int ny) {
 
     // The base pointer is the value of 'a'; the dimensions of the shape are
     // evaluated like the sizes of a variable length array.
-    // CHECK:      [[BP:%.+]] = load ptr, ptr [[A_ADDR]],
+    // CHECK:      load ptr, ptr [[A_ADDR]],
+    // CHECK-NEXT: [[BP:%.+]] = load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[NX:%.+]] = load i32, ptr [[NX_ADDR]],
     // CHECK-NEXT: [[NX_64:%.+]] = zext i32 [[NX]] to i64
     // CHECK-NEXT: [[NY:%.+]] = load i32, ptr [[NY_ADDR]],
@@ -69,6 +78,7 @@ void array_ing(double *a, int nx, int ny) {
 
     // The second list item, &a[0][ny] of the shaped array; its own shaping
     // expression evaluates the dimensions again.
+    // CHECK-NEXT: load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[BP2:%.+]] = load ptr, ptr [[A_ADDR]],
     // CHECK-NEXT: [[NY_C:%.+]] = load i32, ptr [[NY_ADDR]],
     // CHECK-NEXT: [[NY_IDX:%.+]] = sext i32 [[NY_C]] to i64
@@ -198,7 +208,8 @@ void vla_control(int nx, int ny) {
 // CHECK:       store ptr %p, ptr [[P_ADDR:%.+]],
 void const_dims(double *p) {
   // &p[0][1] of the shaped double[3][4].
-  // CHECK:      [[CBP:%.+]] = load ptr, ptr [[P_ADDR]],
+  // CHECK:      load ptr, ptr [[P_ADDR]],
+  // CHECK-NEXT: [[CBP:%.+]] = load ptr, ptr [[P_ADDR]],
   // CHECK-NEXT: [[CP:%.+]] = load ptr, ptr [[P_ADDR]],
   // CHECK-NEXT: [[CROW0:%.+]] = getelementptr inbounds nuw [4 x double], ptr [[CP]], i64 0
   // CHECK-NEXT: [[CDECAY:%.+]] = getelementptr inbounds [4 x double], ptr [[CROW0]], i64 0, i64 0
@@ -250,16 +261,31 @@ struct S {
 };
 double *g;
 
-// Other bases of the shaped pointer: a data member and a global variable; the
-// shaped pointer stays the base pointer of the entry.
+// Other bases of the shaped pointer: a data member, a global variable and an
+// element of an array of pointers. The shaped pointer value is the base
+// pointer of the entry, and only the sections of the shaped array are
+// dimensions of the descriptor.
 // CHECK-LABEL: define {{.*}}void @other_bases(
-void other_bases(struct S s, int n, int m) {
-  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 {{[0-9]+}}, ptr %{{.+}}, ptr %{{.+}}, ptr {{.+}}, ptr {{.+}}, ptr null, ptr null)
-#pragma omp target update to((([n])s.p)[1:n - 2])
+void other_bases(struct S s, double **pp, int n, int m) {
+  // CHECK:      [[SP:%.+]] = load ptr, ptr [[SP_ADDR:%.+]],
+  // CHECK:      store ptr [[SP]], ptr
+  // CHECK:      getelementptr inbounds [3 x %struct.descriptor_dim{{.*}}], ptr %{{.+}}, i64 0, i64 0
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr [[MEMBER_SIZES]], ptr [[MEMBER_TYPES]], ptr null, ptr null)
+#pragma omp target update from((([n][m])s.p)[0:n][1])
   // CHECK:      [[G:%.+]] = load ptr, ptr @g,
   // CHECK:      store ptr [[G]], ptr
-  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr [[GLOBAL_SIZES]], ptr [[GLOBAL_TYPES]], ptr null, ptr null)
 #pragma omp target update from((([n][m])g)[0:n][1])
+  // CHECK:      [[PP3_ADDR:%.+]] = getelementptr inbounds ptr, ptr %{{.+}}, i64 3
+  // CHECK-NEXT: [[PP3:%.+]] = load ptr, ptr [[PP3_ADDR]],
+  // CHECK:      store ptr [[PP3]], ptr
+  // CHECK:      getelementptr inbounds [3 x %struct.descriptor_dim{{.*}}], ptr %{{.+}}, i64 0, i64 0
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr [[ELEMENT_SIZES]], ptr [[ELEMENT_TYPES]], ptr null, ptr null)
+#pragma omp target update to((([n][m])pp[3])[0:n][1])
+  // A contiguous section keeps the pointer-attachment path: the member is the
+  // base pointer there as well.
+  // CHECK:      call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 1, ptr %{{.+}}, ptr %{{.+}}, ptr %{{.+}}, ptr @{{.+}}, ptr null, ptr null)
+#pragma omp target update to((([n])s.p)[1:n - 2])
 }
 
 // Other clauses of the directive, and the other clauses that allow array

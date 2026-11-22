@@ -24508,25 +24508,25 @@ static bool checkArrayExpressionRefersToWholeSize(Sema &SemaRef,
                                                   const ArraySectionExpr *OASE,
                                                   QualType BaseQTy) {
   ASTContext &Ctx = SemaRef.getASTContext();
-  auto EvaluatesTo = [&Ctx](const Expr *E, int64_t Value) {
+  auto EvaluatesTo = [&Ctx](const Expr *E, const llvm::APSInt &Value) {
     Expr::EvalResult Result;
     return !E->isValueDependent() && E->EvaluateAsInt(Result, Ctx) &&
-           Result.Val.getInt().getSExtValue() == Value;
+           llvm::APSInt::isSameValue(Result.Val.getInt(), Value);
   };
 
   if (OASE->getColonLocFirst().isInvalid()) {
     const auto *CATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr());
-    return CATy && CATy->getSExtSize() == 1;
+    return CATy && CATy->getSize().isOne();
   }
 
   const Expr *Stride = OASE->getStride();
-  if (Stride && !EvaluatesTo(Stride, 1))
+  if (Stride && !EvaluatesTo(Stride, llvm::APSInt::get(1)))
     return false;
   const Expr *LowerBound = OASE->getLowerBound();
-  if (LowerBound && !EvaluatesTo(LowerBound, 0))
+  if (LowerBound && !EvaluatesTo(LowerBound, llvm::APSInt::get(0)))
     return false;
 
-  if (BaseQTy->isPointerType())
+  if (!BaseQTy->isConstantArrayType() && !BaseQTy->isVariableArrayType())
     return false;
 
   // Without a length the section covers the rest of the dimension.
@@ -24534,19 +24534,11 @@ static bool checkArrayExpressionRefersToWholeSize(Sema &SemaRef,
   if (!Length)
     return true;
 
-  if (const auto *CATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr()))
-    return EvaluatesTo(Length, CATy->getSExtSize());
-
-  // For a variable length array the length has to be the size expression of
-  // the dimension, e.g. c[0:n] for double c[n][m].
-  const auto *VATy = dyn_cast<VariableArrayType>(BaseQTy.getTypePtr());
-  if (!VATy || !VATy->getSizeExpr() || Length->HasSideEffects(Ctx))
-    return false;
-  llvm::FoldingSetNodeID LengthID, SizeID;
-  Length->IgnoreParenImpCasts()->Profile(LengthID, Ctx, /*Canonical=*/true);
-  VATy->getSizeExpr()->IgnoreParenImpCasts()->Profile(SizeID, Ctx,
-                                                      /*Canonical=*/true);
-  return LengthID == SizeID;
+  // The size expression of a variable length array may have changed since the
+  // declaration, so only a constant size can be compared with the length.
+  const auto *CATy = dyn_cast<ConstantArrayType>(BaseQTy.getTypePtr());
+  return CATy && EvaluatesTo(Length, llvm::APSInt(CATy->getSize(),
+                                                  /*isUnsigned=*/true));
 }
 
 // The base of elements of list in a map clause have to be either:
@@ -25114,9 +25106,6 @@ static bool checkMapConflicts(
                          SI->getAssociatedExpression())) {
             const Expr *E = OASE->getBase()->IgnoreParenImpCasts();
             Type = ArraySectionExpr::getBaseOriginalType(E).getCanonicalType();
-          } else if (const auto *OASE = dyn_cast<OMPArrayShapingExpr>(
-                         SI->getAssociatedExpression())) {
-            Type = OASE->getBase()->getType()->getPointeeType();
           }
           if (Type.isNull() || Type->isAnyPointerType() ||
               checkArrayExpressionDoesNotReferToWholeSize(
@@ -25149,15 +25138,20 @@ static bool checkMapConflicts(
           return false;
         }
 
-        QualType DerivedType =
-            std::prev(CI)->getAssociatedDeclaration()->getType();
+        // The last matching component has no declaration when both
+        // expressions section the same array (OpenMP 5.0 motion clauses).
+        QualType DerivedType;
+        if (const ValueDecl *DerivedDecl =
+                std::prev(CI)->getAssociatedDeclaration())
+          DerivedType = DerivedDecl->getType();
         SourceLocation DerivedLoc =
             std::prev(CI)->getAssociatedExpression()->getExprLoc();
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C++, p.1]
         //  If the type of a list item is a reference to a type T then the type
         //  will be considered to be T for all purposes of this clause.
-        DerivedType = DerivedType.getNonReferenceType();
+        if (!DerivedType.isNull())
+          DerivedType = DerivedType.getNonReferenceType();
 
         // OpenMP 4.5 [2.15.5.1, map Clause, Restrictions, C/C++, p.1]
         //  A variable for which the type is pointer and an array section
@@ -25170,7 +25164,7 @@ static bool checkMapConflicts(
         //  storage in the device data environment, all of the original storage
         //  must have corresponding storage in the device data environment.
         //
-        if (DerivedType->isAnyPointerType()) {
+        if (!DerivedType.isNull() && DerivedType->isAnyPointerType()) {
           if (CI == CE || SI == SE) {
             SemaRef.Diag(
                 DerivedLoc,
@@ -28603,7 +28597,8 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
                                        RParenLoc, Dims, Brackets);
   if (!BaseTy->isPointerType() ||
       (!Base->isTypeDependent() &&
-       BaseTy->getPointeeType()->isIncompleteType()))
+       (BaseTy->getPointeeType()->isIncompleteType() ||
+        BaseTy->getPointeeType()->isFunctionType())))
     return ExprError(Diag(Base->getExprLoc(),
                           diag::err_omp_non_pointer_type_array_shaping_base)
                      << Base->getSourceRange());
@@ -28657,7 +28652,8 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
   // OpenMP 5.0 [2.1.4, Array Shaping]: the result has n-dimensional array type
   // s1 x ... x sn of T; build it like the type of a declared array.
   QualType ShapedTy = BaseTy->getPointeeType();
-  for (Expr *Dim : llvm::reverse(NewDims)) {
+  for (size_t I = NewDims.size(); I > 0; --I) {
+    Expr *Dim = NewDims[I - 1];
     if (Dim->isTypeDependent() || Dim->isValueDependent()) {
       ShapedTy = Context.getDependentSizedArrayType(
           ShapedTy, Dim, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
@@ -28667,13 +28663,17 @@ ExprResult SemaOpenMP::ActOnOMPArrayShapingExpr(
     // An array of variable length arrays is itself a variable length array.
     if (ShapedTy->isDependentType() || ShapedTy->isConstantSizeType())
       Size = Dim->getIntegerConstantExpr(Context);
-    if (Size)
+    if (Size) {
+      if (SemaRef.checkArrayTooLarge(ShapedTy, *Size, Dim->getExprLoc(),
+                                     Brackets[I - 1]))
+        return ExprError();
       ShapedTy = Context.getConstantArrayType(ShapedTy, *Size, Dim,
                                               ArraySizeModifier::Normal,
                                               /*IndexTypeQuals=*/0);
-    else
+    } else {
       ShapedTy = Context.getVariableArrayType(
           ShapedTy, Dim, ArraySizeModifier::Normal, /*IndexTypeQuals=*/0);
+    }
   }
   return OMPArrayShapingExpr::Create(Context, Context.OMPArrayShapingTy,
                                      ShapedTy, Base, LParenLoc, RParenLoc,

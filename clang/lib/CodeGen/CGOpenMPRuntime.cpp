@@ -8456,6 +8456,20 @@ private:
           dyn_cast<OMPArrayShapingExpr>(I->getAssociatedExpression());
       const auto *UO = dyn_cast<UnaryOperator>(I->getAssociatedExpression());
       const auto *BO = dyn_cast<BinaryOperator>(I->getAssociatedExpression());
+      // A non-contiguous section of a shaped array is transferred on its own:
+      // the shaped pointer is its base pointer, whatever expression (member,
+      // subscript, global) yields it.
+      if (OAShE && Next != CE && IsNonContiguous) {
+        BP = Address(
+            CGF.EmitScalarExpr(OAShE->getBase()),
+            CGF.ConvertTypeForMem(
+                OAShE->getBase()->getType()->getPointeeType()),
+            CGF.getContext().getTypeAlignInChars(OAShE->getBase()->getType()));
+        EncounteredME = nullptr;
+        ShouldBeMemberOf = false;
+        FirstPointerInComplexData = false;
+        continue;
+      }
       // An array shaping expression maps the shaped storage only as the whole
       // list item; as the base of array sections it just reinterprets the
       // pointer.
@@ -8757,9 +8771,18 @@ private:
     MapValuesArrayTy DimSizes{llvm::ConstantInt::get(CGF.CGM.Int64Ty, 1)};
     uint64_t ElementTypeSize;
 
+    // Components past an array shaping expression belong to the shaped pointer
+    // base, not to dimensions of the shaped array.
+    auto ArrayDimsEnd = llvm::find_if(
+        Components,
+        [](const OMPClauseMappableExprCommon::MappableComponent &Component) {
+          return isa<OMPArrayShapingExpr>(Component.getAssociatedExpression());
+        });
+    auto ArrayDimComponents =
+        llvm::make_range(Components.begin(), ArrayDimsEnd);
     // Only array sections and subscripts add a dimension.
     unsigned NumArrayDims = llvm::count_if(
-        Components,
+        ArrayDimComponents,
         [](const OMPClauseMappableExprCommon::MappableComponent &Component) {
           return isa<ArraySectionExpr, ArraySubscriptExpr>(
               Component.getAssociatedExpression());
@@ -8769,7 +8792,7 @@ private:
     // the first Stride. For example, for `int arr[10][10]`, the DimSizes
     // should be [10, 10] and the first stride is 4 btyes.
     for (const OMPClauseMappableExprCommon::MappableComponent &Component :
-         Components) {
+         ArrayDimComponents) {
       const Expr *AssocExpr = Component.getAssociatedExpression();
       const auto *OASE = dyn_cast<ArraySectionExpr>(AssocExpr);
 
@@ -8849,7 +8872,7 @@ private:
     // count, and stride are the same as the number of non-contiguous
     // declaration in target update to/from clause.
     for (const OMPClauseMappableExprCommon::MappableComponent &Component :
-         Components) {
+         ArrayDimComponents) {
       const Expr *AssocExpr = Component.getAssociatedExpression();
 
       if (const auto *AE = dyn_cast<ArraySubscriptExpr>(AssocExpr)) {
