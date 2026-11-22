@@ -182,7 +182,10 @@ static bool isInitializingVariableImmutable(
 
 static bool isVariableUnused(const VarDecl &Var, const Stmt &BlockStmt,
                              ASTContext &Context) {
-  return allDeclRefExprs(Var, BlockStmt, Context).empty();
+  // A variable marked `[[maybe_unused]]` should not be treated as unused.
+  // Suggest a const reference instead.
+  return !Var.hasAttr<UnusedAttr>() &&
+         allDeclRefExprs(Var, BlockStmt, Context).empty();
 }
 
 static const SubstTemplateTypeParmType *
