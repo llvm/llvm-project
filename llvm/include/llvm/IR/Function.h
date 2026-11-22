@@ -88,6 +88,8 @@ private:
   mutable Argument *Arguments = nullptr;  ///< The formal arguments
   uint32_t NumArgs;
   MaybeAlign PreferredAlign;
+  /// Epoch of instruction numbers.
+  uint16_t InstNumEpoch = 0;
   std::unique_ptr<ValueSymbolTable>
       SymTab;                             ///< Symbol table of args/instructions
   AttributeList AttributeSets;            ///< Parameter attributes
@@ -825,6 +827,14 @@ public:
   /// that other data structures and analyses (e.g., DominatorTree) may depend
   /// on the value numbers and need to be updated or invalidated.
   void renumberBlocks();
+
+  /// Number all instructions from 0 in layout order for
+  /// Instruction::getOrder(), making numbers from an earlier call stale.
+  /// Return the number of instructions.
+  LLVM_ABI unsigned numberInstructions();
+
+  /// Like getBlockNumberEpoch, for numberInstructions.
+  unsigned getInstructionNumberEpoch() const { return InstNumEpoch; }
 
   /// Return the "epoch" of current block numbers. This will return a different
   /// value after every renumbering. The intention is: if something (e.g., an

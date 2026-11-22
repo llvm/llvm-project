@@ -9,6 +9,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm-c/Core.h"
 #include "llvm/AsmParser/Parser.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
@@ -576,6 +577,54 @@ TEST(FunctionTest, BasicBlockNumbers) {
   EXPECT_EQ(BB3->getNumber(), 5u);
   EXPECT_EQ(BB6->getNumber(), 6u);
   EXPECT_EQ(Func->getMaxBlockNumber(), 7u);
+}
+
+TEST(FunctionTest, NumberInstructions) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define i32 @f(i32 %a) {
+    entry:
+      %x = add i32 %a, 1
+      br label %exit
+    exit:
+      %y = mul i32 %x, 2
+      ret i32 %y
+    }
+    define void @g() {
+      ret void
+    }
+  )");
+  Function *F = M->getFunction("f");
+  unsigned Epoch = F->getInstructionNumberEpoch();
+  EXPECT_EQ(F->numberInstructions(), 4u);
+  EXPECT_NE(F->getInstructionNumberEpoch(), Epoch);
+  unsigned Order = 0;
+  for (Instruction &I : instructions(*F))
+    EXPECT_EQ(I.getOrder(), Order++);
+
+  // comesBefore uses the numbers without renumbering the block.
+  BasicBlock *Exit = getBBWithName(F, "exit");
+  EXPECT_TRUE(Exit->front().comesBefore(Exit->getTerminator()));
+  EXPECT_EQ(Exit->getTerminator()->getOrder(), 3u);
+
+  // After an insertion, comesBefore renumbers the block from 0, so its numbers
+  // are no longer function-wide.
+  Instruction *Y = &Exit->front();
+  Y->clone()->insertBefore(Y->getIterator());
+  EXPECT_FALSE(Exit->isInstrOrderValid());
+  EXPECT_FALSE(Exit->isFunctionOrderValid());
+  EXPECT_TRUE(Exit->front().comesBefore(Y));
+  EXPECT_TRUE(Exit->isInstrOrderValid());
+  EXPECT_FALSE(Exit->isFunctionOrderValid());
+  // Other blocks keep their numbers.
+  EXPECT_TRUE(F->getEntryBlock().isFunctionOrderValid());
+
+  // A block moved to another function loses its numbers.
+  BasicBlock *Entry = &F->getEntryBlock();
+  Function *G = M->getFunction("g");
+  G->splice(G->end(), F, Entry->getIterator());
+  EXPECT_FALSE(Entry->isFunctionOrderValid());
+  F->splice(F->begin(), G, Entry->getIterator());
 }
 
 TEST(FunctionTest, UWTable) {

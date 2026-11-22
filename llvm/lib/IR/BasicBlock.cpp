@@ -197,8 +197,10 @@ BasicBlock::~BasicBlock() {
 
 void BasicBlock::setParent(Function *parent) {
   // Set Parent=parent, updating instruction symtab entries as appropriate.
-  if (Parent != parent)
+  if (Parent != parent) {
     Number = parent ? parent->NextBlockNum++ : -1u;
+    SubclassOptionalData &= ~FunctionOrderValid;
+  }
   InstList.setSymTabObject(&Parent, parent);
 }
 
@@ -611,15 +613,17 @@ std::optional<uint64_t> BasicBlock::getIrrLoopHeaderWeight() const {
   return std::nullopt;
 }
 
-void BasicBlock::renumberInstructions() {
-  unsigned Order = 0;
+unsigned BasicBlock::renumberInstructions(unsigned Start) {
+  unsigned Order = Start;
   for (Instruction &I : *this)
     I.Order = Order++;
 
-  // Set the bit to indicate that the instruction order valid and cached.
-  SubclassOptionalData |= InstrOrderValid;
+  // The order is now valid for comesBefore but invalid for function-wide use.
+  SubclassOptionalData =
+      (SubclassOptionalData & ~FunctionOrderValid) | InstrOrderValid;
 
   NumInstrRenumberings++;
+  return Order;
 }
 
 void BasicBlock::flushTerminatorDbgRecords() {

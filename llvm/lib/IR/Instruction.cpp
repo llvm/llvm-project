@@ -342,6 +342,10 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   return Order < Other->Order;
 }
 
+bool Instruction::hasValidOrder() const {
+  return getParent() && getParent()->isFunctionOrderValid();
+}
+
 std::optional<BasicBlock::iterator> Instruction::getInsertionPointAfterDef() {
   assert(!getType()->isVoidTy() && "Instruction must define result");
   BasicBlock *InsertBB;
