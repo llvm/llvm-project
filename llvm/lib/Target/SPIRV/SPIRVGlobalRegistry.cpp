@@ -2101,8 +2101,8 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateSPIRVPointerType(
     SPIRV::StorageClass::StorageClass SC, bool EmitIR) {
   const Type *LLVMType = getTypeForSPIRVType(BaseType);
   assert(!storageClassRequiresExplictLayout(SC));
-  SPIRVTypeInst R = getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC, false,
-                                                EmitIR);
+  SPIRVTypeInst R =
+      getOrCreateSPIRVPointerType(LLVMType, MIRBuilder, SC, false, EmitIR);
   assert(
       (R->getOpcode() == SPIRV::OpTypeUntypedPointerKHR ||
        getPointeeType(R) == BaseType) &&
