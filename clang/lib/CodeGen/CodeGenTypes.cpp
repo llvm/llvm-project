@@ -141,8 +141,6 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
     }
     return llvm::ArrayType::get(IRElemTy, MT->getNumElementsFlattened());
   }
-  if (const CooperativeMatrixType *CMT = T->getAs<CooperativeMatrixType>())
-    return ConvertTypeForCoopMat(CMT);
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.

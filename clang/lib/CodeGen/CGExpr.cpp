@@ -7707,37 +7707,3 @@ CodeGenFunction::EmitCoopMatBuiltinCall(llvm::StringRef BuiltinName,
 
   return Builder.CreateCall(Builtin, Args, "coopmat.result");
 }
-
-llvm::Value *CodeGenFunction::EmitCoopMatBinaryOp(BinaryOperatorKind Opcode,
-                                                  llvm::Value *LHS,
-                                                  llvm::Value *RHS,
-                                                  QualType ResultTy) {
-  switch (Opcode) {
-  case BO_Add:
-    return EmitCoopMatBuiltinCall("coop_mat_binary_add", {LHS, RHS}, ResultTy);
-
-  case BO_Sub:
-    return EmitCoopMatBuiltinCall("coop_mat_binary_sub", {LHS, RHS}, ResultTy);
-
-  case BO_Mul:
-    // Matrix * scalar.
-    if (!RHS->getType()->isVectorTy()) {
-      return EmitCoopMatBuiltinCall("coop_mat_scalar_mul", {LHS, RHS},
-                                    ResultTy);
-    }
-
-    // Matrix * matrix.
-    return EmitCoopMatBuiltinCall("coop_mat_binary_mul", {LHS, RHS}, ResultTy);
-
-  case BO_Div:
-    return EmitCoopMatBuiltinCall("coop_mat_binary_div", {LHS, RHS}, ResultTy);
-
-  default:
-    llvm_unreachable("Unsupported cooperative matrix binary operation");
-  }
-}
-
-llvm::Value *CodeGenFunction::EmitCoopMatNeg(llvm::Value *Operand,
-                                             QualType ResultTy) {
-  return EmitCoopMatBuiltinCall("coop_mat_scalar_neg", {Operand}, ResultTy);
-}

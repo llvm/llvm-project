@@ -16864,10 +16864,9 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   bool ConvertHalfVec = false;
   if (getLangOpts().OpenCL) {
     QualType Ty = InputExpr->getType();
-    if (Opc == UO_Minus && Ty->isCooperativeMatrixType()) {
+    if (Opc == UO_Minus && Ty->isCooperativeMatrixType())
       return BuildBuiltinCallExpr(OpLoc, Builtin::BIcoop_mat_scalar_neg,
                                   {InputExpr});
-    }
     // The address operator cannot be applied to a cooperative matrix.
     if (Opc == UO_AddrOf && Ty->isCooperativeMatrixType())
       return ExprError(Diag(OpLoc, diag::err_invalid_coopmat_address_of)
