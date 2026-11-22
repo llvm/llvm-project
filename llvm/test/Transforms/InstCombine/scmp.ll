@@ -1374,3 +1374,108 @@ define <2 x i8> @scmp_add_common_op_vec(<2 x i32> %a, <2 x i32> %b,
   %r = call <2 x i8> @llvm.scmp(<2 x i32> %an, <2 x i32> %bn)
   ret <2 x i8> %r
 }
+
+define i8 @scmp_shl_nsw_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_nsw_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = shl nsw i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl nsw i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl nsw i8 %a, %n
+  %bn = shl nsw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: left shift needs nsw on both operations.
+define i8 @scmp_shl_common_no_nsw(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_common_no_nsw(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = shl i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl i8 %a, %n
+  %bn = shl i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: nuw is not enough for canceling left shift for scmp.
+define i8 @scmp_shl_common_nuw_not_enough(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_shl_common_nuw_not_enough(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = shl nuw i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl nuw i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = shl nuw i8 %a, %n
+  %bn = shl nuw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_ashr_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_ashr_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = ashr exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = ashr exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = ashr exact i8 %a, %n
+  %bn = ashr exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: ashr needs exact on both
+define i8 @scmp_ashr_common_no_exact(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_ashr_common_no_exact(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = ashr i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = ashr exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = ashr i8 %a, %n
+  %bn = ashr exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_sdiv_exact_common_positive_divisor(i8 %a, i8 %b, i8 range(i8 1, 10) %n) {
+; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_positive_divisor(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 range(i8 1, 10) [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = sdiv exact i8 %a, %n
+  %bn = sdiv exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+define i8 @scmp_sdiv_exact_common_negative_divisor(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_negative_divisor(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[N_NEG:%.*]] = icmp slt i8 [[N]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NEG]])
+; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %n_neg = icmp slt i8 %n, 0
+  call void @llvm.assume(i1 %n_neg)
+  %an = sdiv exact i8 %a, %n
+  %bn = sdiv exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
