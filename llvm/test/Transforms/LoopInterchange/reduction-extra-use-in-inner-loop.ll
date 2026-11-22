@@ -179,61 +179,41 @@ exit:
 define i8 @extra_reduction_use_in_inner2(ptr noalias %A, ptr noalias %B) {
 ; CHECK-LABEL: define i8 @extra_reduction_use_in_inner2(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
-; CHECK:       [[OUTER_HEADER]]:
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
-; CHECK-NEXT:    [[SUM_OUTER:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[SUM_OUTER_LCSSA:%.*]], %[[OUTER_LATCH]] ]
-; CHECK-NEXT:    br label %[[MIDDLE_HEADER_PREHEADER:.*]]
-; CHECK:       [[MIDDLE_HEADER_PREHEADER]]:
-; CHECK-NEXT:    br label %[[MIDDLE_HEADER:.*]]
-; CHECK:       [[MIDDLE_HEADER]]:
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[TMP2:%.*]], %[[MIDDLE_LATCH_SPLIT:.*]] ], [ 0, %[[MIDDLE_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV8:%.*]] = phi i64 [ 0, %[[MIDDLE_HEADER_PREHEADER]] ], [ [[TMP4:%.*]], %[[MIDDLE_LATCH_SPLIT]] ]
-; CHECK-NEXT:    [[SUM_MIDDLE:%.*]] = phi i8 [ [[SUM_MIDDLE_LCSSA:%.*]], %[[MIDDLE_LATCH_SPLIT]] ], [ [[SUM_OUTER]], %[[MIDDLE_HEADER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[INNER_PREHEADER:.*]]
-; CHECK:       [[MIDDLE_HEADER_SPLIT:.*]]:
+; CHECK-NEXT:  [[MIDDLE_HEADER_SPLIT:.*]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
-; CHECK:       [[INNER_PREHEADER]]:
+; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[MIDDLE_HEADER_SPLIT]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[SUM_OUTER:%.*]] = phi i8 [ 0, %[[MIDDLE_HEADER_SPLIT]] ], [ [[SUM_OUTER_LCSSA:%.*]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    br label %[[INNER_SPLIT1:.*]]
 ; CHECK:       [[INNER_SPLIT1]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[TMP0:%.*]], %[[INNER_SPLIT:.*]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP5:%.*]], %[[INNER_SPLIT]] ], [ 0, %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV5:%.*]] = phi i64 [ 0, %[[INNER_PREHEADER]] ], [ [[INTERCHANGE_IV_NEXT6:%.*]], %[[INNER_SPLIT]] ]
-; CHECK-NEXT:    [[SUM_INNER:%.*]] = phi i8 [ [[SUM_INNER_NEXT:%.*]], %[[INNER_SPLIT]] ], [ [[SUM_MIDDLE]], %[[INNER_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[MIDDLE_HEADER_SPLIT]]
-; CHECK:       [[INNER]]:
+; CHECK-NEXT:    [[SUM_MIDDLE:%.*]] = phi i8 [ [[SUM_OUTER]], %[[INNER]] ], [ [[SUM_MIDDLE_LCSSA:%.*]], %[[MIDDLE_LATCH:.*]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV6:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT7:%.*]], %[[MIDDLE_LATCH]] ], [ 0, %[[INNER]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[MIDDLE_LATCH]] ], [ 0, %[[INNER]] ]
+; CHECK-NEXT:    br label %[[INNER1:.*]]
+; CHECK:       [[INNER1]]:
+; CHECK-NEXT:    [[SUM_INNER:%.*]] = phi i8 [ [[SUM_MIDDLE]], %[[INNER_SPLIT1]] ], [ [[SUM_INNER_NEXT:%.*]], %[[INNER1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV9:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT10:%.*]], %[[INNER1]] ], [ 0, %[[INNER_SPLIT1]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ [[K_NEXT:%.*]], %[[INNER1]] ], [ 0, %[[INNER_SPLIT1]] ]
 ; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr [2 x [2 x i8]], ptr [[A]], i64 [[K]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    [[A:%.*]] = load i8, ptr [[GEP_A]], align 1
 ; CHECK-NEXT:    [[SUM_INNER_NEXT]] = add i8 [[SUM_INNER]], [[A]]
 ; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr [2 x [2 x i8]], ptr [[B]], i64 [[K]], i64 [[J]], i64 [[I]]
 ; CHECK-NEXT:    store i8 [[SUM_OUTER]], ptr [[GEP_B]], align 1
-; CHECK-NEXT:    [[K_NEXT:%.*]] = add i64 [[K]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    br label %[[MIDDLE_LATCH:.*]]
-; CHECK:       [[INNER_SPLIT]]:
-; CHECK-NEXT:    [[TMP5]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[TMP0]] = add i64 [[K]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT6]] = add i64 [[INTERCHANGE_IV5]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV5]], 1
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[MIDDLE_LATCH_SPLIT]], label %[[INNER_SPLIT1]]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT10]] = add i64 [[INTERCHANGE_IV9]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV9]], 1
+; CHECK-NEXT:    [[K_NEXT]] = add nuw nsw i64 [[K]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[MIDDLE_LATCH]], label %[[INNER1]]
 ; CHECK:       [[MIDDLE_LATCH]]:
-; CHECK-NEXT:    [[J_NEXT:%.*]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT9:%.*]] = add i64 [[INTERCHANGE_IV8]], 1
-; CHECK-NEXT:    [[INTERCHANGE_EXITCOND10:%.*]] = icmp eq i64 [[INTERCHANGE_IV8]], 1
-; CHECK-NEXT:    br label %[[INNER_SPLIT]]
-; CHECK:       [[MIDDLE_LATCH_SPLIT]]:
-; CHECK-NEXT:    [[SUM_MIDDLE_LCSSA]] = phi i8 [ [[SUM_INNER_NEXT]], %[[INNER_SPLIT]] ]
-; CHECK-NEXT:    [[TMP4]] = add i64 [[INTERCHANGE_IV8]], 1
-; CHECK-NEXT:    [[TMP2]] = add i64 [[J]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INTERCHANGE_IV8]], 1
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH]], label %[[MIDDLE_HEADER]]
+; CHECK-NEXT:    [[SUM_MIDDLE_LCSSA]] = phi i8 [ [[SUM_INNER_NEXT]], %[[INNER1]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT7]] = add i64 [[INTERCHANGE_IV6]], 1
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND8:%.*]] = icmp eq i64 [[INTERCHANGE_IV6]], 1
+; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND8]], label %[[OUTER_LATCH]], label %[[INNER_SPLIT1]]
 ; CHECK:       [[OUTER_LATCH]]:
-; CHECK-NEXT:    [[SUM_OUTER_LCSSA]] = phi i8 [ [[SUM_MIDDLE_LCSSA]], %[[MIDDLE_LATCH_SPLIT]] ]
+; CHECK-NEXT:    [[SUM_OUTER_LCSSA]] = phi i8 [ [[SUM_MIDDLE_LCSSA]], %[[MIDDLE_LATCH]] ]
 ; CHECK-NEXT:    [[I_NEXT]] = add i64 [[I]], 1
 ; CHECK-NEXT:    [[EC_I:%.*]] = icmp eq i64 [[I_NEXT]], 2
-; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[OUTER_HEADER]]
+; CHECK-NEXT:    br i1 [[EC_I]], label %[[EXIT:.*]], label %[[INNER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[RES:%.*]] = phi i8 [ [[SUM_OUTER_LCSSA]], %[[OUTER_LATCH]] ]
 ; CHECK-NEXT:    ret i8 [[RES]]

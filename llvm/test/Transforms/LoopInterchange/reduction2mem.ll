@@ -12,26 +12,19 @@
 define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
 ; CHECK-LABEL: define void @func(
 ; CHECK-SAME: ptr noalias readonly [[A:%.*]], ptr noalias readonly [[B:%.*]], ptr noalias writeonly [[S:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[INNERLOOP_PREHEADER:.*]]
-; CHECK:       [[OUTERLOOPHEADER_PREHEADER:.*]]:
+; CHECK:       [[INNERLOOP_PREHEADER]]:
+; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ], [ 0, %[[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ [[INDEX_J_NEXT:%.*]], %[[OUTERLOOP_LATCH]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER:.*]]
 ; CHECK:       [[OUTERLOOP_HEADER]]:
-; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ [[I_NEXT:%.*]], %[[OUTERLOOP_LATCH:.*]] ], [ 0, %[[OUTERLOOPHEADER_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT:%.*]], %[[OUTERLOOP_LATCH]] ], [ 0, %[[OUTERLOOPHEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[INTERCHANGE_IV_NEXT2:%.*]], %[[OUTERLOOP_HEADER]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[INDEX_I:%.*]] = phi i64 [ [[INDEX_I_NEXT:%.*]], %[[OUTERLOOP_HEADER]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[ADDR_S:%.*]] = getelementptr inbounds nuw double, ptr [[S]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    [[ADDR_A:%.*]] = getelementptr inbounds nuw double, ptr [[A]], i64 [[INDEX_I]]
 ; CHECK-NEXT:    [[ADDR_B:%.*]] = getelementptr inbounds nuw double, ptr [[B]], i64 [[INDEX_I]]
-; CHECK-NEXT:    br label %[[INNERLOOP_SPLIT1:.*]]
-; CHECK:       [[INNERLOOP_PREHEADER]]:
-; CHECK-NEXT:    br label %[[INNERLOOP:.*]]
-; CHECK:       [[INNERLOOP]]:
-; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[INNERLOOP_SPLIT:.*]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[REDUCTION:%.*]] = phi double [ [[ADD_LCSSA:%.*]], %[[INNERLOOP_SPLIT]] ], [ 0.000000e+00, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[INTERCHANGE_IV1:%.*]] = phi i64 [ [[TMP3:%.*]], %[[INNERLOOP_SPLIT]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[FIRSTITER:%.*]] = phi i1 [ false, %[[INNERLOOP_SPLIT]] ], [ true, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    br label %[[OUTERLOOPHEADER_PREHEADER]]
-; CHECK:       [[INNERLOOP_SPLIT1]]:
+; CHECK-NEXT:    [[FIRSTITER:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 0
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double 0.000000e+00, double [[TMP0]]
 ; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[ADDR_A]], i64 [[INDEX_J]]
@@ -41,22 +34,15 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[B_J_I]], [[A_J_I]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd reassoc nnan nsz arcp contract afn double [[MUL]], [[NEW_VAR]]
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADDR_S]], align 8
-; CHECK-NEXT:    [[DEAD_J_NEXT:%.*]] = add nuw nsw i64 [[INDEX_J]], 1
-; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2:%.*]] = add i64 [[INTERCHANGE_IV1]], 1
+; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT2]] = add i64 [[INTERCHANGE_IV1]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_EXITCOND3:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br label %[[OUTERLOOP_LATCH]]
-; CHECK:       [[INNERLOOP_SPLIT]]:
-; CHECK-NEXT:    [[ADD_LCSSA]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
-; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
-; CHECK-NEXT:    [[TMP3]] = add i64 [[INTERCHANGE_IV1]], 1
-; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[INDEX_J]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[INTERCHANGE_IV1]], 99
-; CHECK-NEXT:    br i1 [[CMP1]], label %[[EXIT_LOOPEXIT:.*]], label %[[INNERLOOP]]
+; CHECK-NEXT:    [[INDEX_I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND3]], label %[[OUTERLOOP_LATCH]], label %[[OUTERLOOP_HEADER]]
 ; CHECK:       [[OUTERLOOP_LATCH]]:
-; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
 ; CHECK-NEXT:    [[INTERCHANGE_IV_NEXT]] = add i64 [[INTERCHANGE_IV]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
-; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNERLOOP_SPLIT]], label %[[OUTERLOOP_HEADER]]
+; CHECK-NEXT:    [[INTERCHANGE_EXITCOND:%.*]] = icmp eq i64 [[INTERCHANGE_IV]], 99
+; CHECK-NEXT:    [[INDEX_J_NEXT]] = add nuw nsw i64 [[INDEX_J]], 1
+; CHECK-NEXT:    br i1 [[INTERCHANGE_EXITCOND]], label %[[EXIT_LOOPEXIT:.*]], label %[[INNERLOOP_PREHEADER]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
 ; CHECK-NEXT:    ret void
 ;
