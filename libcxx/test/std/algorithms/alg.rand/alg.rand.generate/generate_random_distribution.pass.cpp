@@ -8,6 +8,9 @@
 
 // REQUIRES: std-at-least-c++26
 
+// binomial_distribution needs lgamma_r
+// XFAIL: LLVM-LIBC-FIXME
+
 // <random>
 
 // template<class R, class G, class D>
