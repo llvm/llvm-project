@@ -15,6 +15,7 @@
 #include "SuperHMCTargetDesc.h"
 #include "SuperHInstPrinter.h"
 #include "SuperHMCAsmInfo.h"
+#include "SuperHMCOptions.h"
 #include "SuperHTargetStreamer.h"
 #include "TargetInfo/SuperHTargetInfo.h"
 
@@ -29,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
+#include "llvm/Option/LibraryOptions.h"
 
 using namespace llvm;
 
@@ -41,6 +43,9 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "SuperHGenRegisterInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "SuperHMCOptions.inc"
 
 static MCInstrInfo *createSuperHMCInstrInfo() {
   MCInstrInfo *X = new MCInstrInfo();

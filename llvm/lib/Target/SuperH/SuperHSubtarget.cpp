@@ -15,6 +15,7 @@
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Target/TargetMachine.h"
 #include "SuperHTargetMachine.h"
 
@@ -25,6 +26,9 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "SuperHGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "SuperHOptions.inc"
 
 SuperHSubtarget::SuperHSubtarget(const StringRef &CPU, const StringRef &FS,
                                  const SuperHTargetMachine &TM)
