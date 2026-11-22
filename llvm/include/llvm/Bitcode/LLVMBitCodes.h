@@ -348,6 +348,12 @@ enum GlobalValueSummarySymtabCodes {
   //  nummib x alloc type,
   //  numver x version]
   FS_COMBINED_ALLOC_INFO_NO_CONTEXT = 33,
+  // The call type IDs of a function, emitted before the corresponding function
+  // summary record: the ID of the function (0 if none), the flags, then the
+  // distinct IDs of its indirect calls. Flag bit 0 is set if the function has a
+  // call with an unknown callee that has no call type ID.
+  // [call_type_id, flags, n x indirect_call_type_id]
+  FS_CALL_TYPE_IDS = 34,
 };
 
 enum MetadataCodes {

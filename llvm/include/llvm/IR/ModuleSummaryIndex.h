@@ -893,6 +893,25 @@ public:
         TypeCheckedLoadConstVCalls;
   };
 
+  /// The call type IDs of a function and of its calls with an unknown callee
+  /// (see TargetTransformInfo::getCallTypeId). An indirect call can reach a
+  /// function only if both have the same call type ID. Only the summaries of
+  /// targets that use call type IDs have this information.
+  struct CallTypeIdInfo {
+    /// The call type ID of this function, or 0 if no indirect call can reach
+    /// it: the calling convention of the function does not permit calls, or
+    /// the function has local linkage and its address is not taken.
+    uint64_t CallTypeId = 0;
+
+    /// The distinct call type IDs of the indirect calls in this function.
+    std::vector<uint64_t> IndirectCallTypeIds;
+
+    /// True if this function has a call with an unknown callee that has no
+    /// call type ID, for example a call to inline assembly or to a constant
+    /// address.
+    bool HasCallWithoutTypeId = false;
+  };
+
   /// Flags specific to function summaries.
   struct FFlags {
     // Function attribute flags. Used to track if a function accesses memory,
@@ -1034,6 +1053,8 @@ private:
   SmallVector<EdgeTy, 0> CallGraphEdgeList;
 
   std::unique_ptr<TypeIdInfo> TIdInfo;
+
+  std::unique_ptr<CallTypeIdInfo> CTIdInfo;
 
   /// Uses for every parameter to this function.
   using ParamAccessesTy = std::vector<ParamAccess>;
@@ -1182,6 +1203,17 @@ public:
   }
 
   const TypeIdInfo *getTypeIdInfo() const { return TIdInfo.get(); };
+
+  /// Returns the call type IDs, or null if the summary has none. A summary
+  /// has none if its target does not use call type IDs, or if an older
+  /// compiler made it. Then the function can have any call type ID, and so
+  /// can each of its calls with an unknown callee.
+  const CallTypeIdInfo *getCallTypeIdInfo() const { return CTIdInfo.get(); }
+
+  /// Sets the call type IDs of this function and of its calls.
+  void setCallTypeIdInfo(CallTypeIdInfo Info) {
+    CTIdInfo = std::make_unique<CallTypeIdInfo>(std::move(Info));
+  }
 
   ArrayRef<CallsiteInfo> callsites() const {
     if (Callsites)

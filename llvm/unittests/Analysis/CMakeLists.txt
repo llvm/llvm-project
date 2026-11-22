@@ -1,6 +1,8 @@
 set(LLVM_LINK_COMPONENTS
   Analysis
   AsmParser
+  BitReader
+  BitWriter
   CodeGen
   Core
   Instrumentation
@@ -46,6 +48,7 @@ set(ANALYSIS_TEST_SOURCES
   MemorySSATest.cpp
   MLGOUtilsTest.cpp
   MLModelRunnerTest.cpp
+  ModuleSummaryAnalysisTest.cpp
   PhiValuesTest.cpp
   PluginInlineAdvisorAnalysisTest.cpp
   PluginInlineOrderAnalysisTest.cpp

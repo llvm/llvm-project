@@ -433,6 +433,8 @@ namespace llvm {
     bool parseOptionalCalls(SmallVectorImpl<FunctionSummary::EdgeTy> &Calls);
     bool parseHotness(CalleeInfo::HotnessType &Hotness);
     bool parseOptionalTypeIdInfo(FunctionSummary::TypeIdInfo &TypeIdInfo);
+    bool parseOptionalCallTypeIdInfo(
+        FunctionSummary::CallTypeIdInfo &CallTypeIdInfo);
     bool parseTypeTests(std::vector<GlobalValue::GUID> &TypeTests);
     bool parseVFuncIdList(lltok::Kind Kind,
                           std::vector<FunctionSummary::VFuncId> &VFuncIdList);
