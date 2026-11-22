@@ -1572,10 +1572,6 @@ public:
       insertStoresInLoopExitBlocks();
   }
 
-  void replaceLoadWithValue(LoadInst *LI, Value *V) const override {
-    Deps.SafetyInfo.removeUsersOf(LI);
-  }
-
   void instructionDeleted(Instruction *I) const override {
     Deps.SafetyInfo.removeInstruction(I);
     Deps.MSSAU.removeMemoryAccess(I);

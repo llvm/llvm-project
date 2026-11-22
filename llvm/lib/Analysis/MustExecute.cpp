@@ -102,11 +102,6 @@ void ICFLoopSafetyInfo::removeInstruction(const Instruction *Inst) {
   MW.removeInstruction(Inst);
 }
 
-void ICFLoopSafetyInfo::removeUsersOf(const Instruction *Inst) {
-  ICF.removeUsersOf(Inst);
-  MW.removeUsersOf(Inst);
-}
-
 void LoopSafetyInfo::computeBlockColors() const {
   if (BlockColors)
     return;
