@@ -297,6 +297,15 @@ namespace CallingConv {
     /// stateless compartment.
     CHERIoT_LibraryCall = 127,
 
+    /// Call-only convention used for AArch64 out-of-line atomic helper calls
+    /// (`__aarch64_*_preservemost`). Argument passing and return values follow
+    /// the target's standard C calling convention, while the callee preserves
+    /// all general-purpose, SIMD/FP, and SVE vector/predicate registers except
+    /// X0-X4, X15-X17, and NZCV, is SME streaming-compatible, and does not
+    /// modify ZA or ZT0. On non-ELF targets without `STO_AARCH64_VARIANT_PCS`,
+    /// callers assume static/hidden or eager symbol binding.
+    AArch64_Outline_Atomics_PreserveMost = 128,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

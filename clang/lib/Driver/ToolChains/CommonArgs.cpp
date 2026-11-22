@@ -3071,6 +3071,26 @@ void tools::addOutlineAtomicsArgs(const Driver &D, const ToolChain &TC,
     CmdArgs.push_back("-target-feature");
     CmdArgs.push_back("+outline-atomics");
   }
+
+  // Forward -m[no-]outline-atomics-preserve-most to CC1 as a target feature on
+  // native AArch64 targets. Reject non-AArch64 architectures as well as
+  // Arm64EC, where outline-atomic calls may pass through emulation thunks that
+  // clobber registers preserved by the convention.
+  if (Arg *A =
+          Args.getLastArg(options::OPT_moutline_atomics_preserve_most,
+                          options::OPT_mno_outline_atomics_preserve_most)) {
+    if (!Triple.isAArch64() || Triple.isWindowsArm64EC()) {
+      D.Diag(diag::warn_drv_moutline_atomics_unsupported_opt)
+          << Triple.getArchName() << A->getOption().getName();
+    } else if (A->getOption().matches(
+                   options::OPT_moutline_atomics_preserve_most)) {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("+outline-atomics-preserve-most");
+    } else {
+      CmdArgs.push_back("-target-feature");
+      CmdArgs.push_back("-outline-atomics-preserve-most");
+    }
+  }
 }
 
 void tools::addOffloadCompressArgs(const llvm::opt::ArgList &TCArgs,

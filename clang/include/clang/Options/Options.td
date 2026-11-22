@@ -6454,6 +6454,24 @@ def moutline_atomics : Flag<["-"], "moutline-atomics">, Group<f_clang_Group>,
 def mno_outline_atomics : Flag<["-"], "mno-outline-atomics">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Don't generate local calls to out-of-line atomic operations">;
+// Driver-only flags (shared with Flang via tools::addOutlineAtomicsArgs)
+// forwarded to CC1 as +/-outline-atomics-preserve-most target features on
+// AArch64 (excluding Arm64EC) without implicitly enabling -moutline-atomics.
+// Kept opt-in because runtimes other than compiler-rt (such as libgcc, whose
+// __aarch64_cas16_* clobbers x13-x14) may not provide the
+// __aarch64_*_preservemost entry points.
+def moutline_atomics_preserve_most
+    : Flag<["-"], "moutline-atomics-preserve-most">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<"Use a preserve-most calling convention for out-of-line atomic "
+               "helper calls on AArch64">;
+def mno_outline_atomics_preserve_most
+    : Flag<["-"], "mno-outline-atomics-preserve-most">,
+      Group<f_clang_Group>,
+      Visibility<[ClangOption, FlangOption]>,
+      HelpText<"Don't use a preserve-most calling convention for out-of-line "
+               "atomic helper calls on AArch64">;
 def mno_implicit_float : Flag<["-"], "mno-implicit-float">, Group<m_Group>,
   HelpText<"Don't generate implicit floating point or vector instructions">;
 def mimplicit_float : Flag<["-"], "mimplicit-float">, Group<m_Group>,

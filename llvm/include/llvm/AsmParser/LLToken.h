@@ -152,6 +152,7 @@ enum Kind {
   kw_aarch64_sme_preservemost_from_x0,
   kw_aarch64_sme_preservemost_from_x1,
   kw_aarch64_sme_preservemost_from_x2,
+  kw_aarch64_outline_atomics_preservemost,
   kw_msp430_intrcc,
   kw_avr_intrcc,
   kw_avr_signalcc,
