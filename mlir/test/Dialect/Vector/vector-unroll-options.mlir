@@ -1021,3 +1021,23 @@ func.func @vector_contract_to_scalar_f32_from_1d(%a: vector<4xf32>, %b: vector<4
 // CHECK:         %[[B1:.*]] = vector.extract_strided_slice %[[B]] offsets = [2], sizes = [2], strides = [1] : vector<4xf32> to vector<2xf32>
 // CHECK:         %[[R1:.*]] = vector.contract {{.*}} %[[A1]], %[[B1]], %[[R0]] : vector<2xf32>, vector<2xf32> into f32
 // CHECK:         return %[[R1]] : f32
+
+// -----
+
+#map = affine_map<(d0) -> (d0)>
+#acc = affine_map<(d0) -> ()>
+
+func.func @vector_contract_to_scalar_f16(%a: vector<8xf16>, %b: vector<8xf16>, %acc: f16) -> f16 {
+  %r = vector.contract {indexing_maps = [#map, #map, #acc], iterator_types = ["reduction"], kind = #vector.kind<add>} %a, %b, %acc : vector<8xf16>, vector<8xf16> into f16
+  return %r : f16
+}
+
+// CHECK-LABEL: func @vector_contract_to_scalar_f16(
+// CHECK-SAME:    %[[A:.*]]: vector<8xf16>, %[[B:.*]]: vector<8xf16>, %[[ACC:.*]]: f16) -> f16 {
+// CHECK:         %[[A0:.*]] = vector.extract_strided_slice %[[A]] offsets = [0], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[B0:.*]] = vector.extract_strided_slice %[[B]] offsets = [0], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[R0:.*]] = vector.contract {{.*}} %[[A0]], %[[B0]], %[[ACC]] : vector<4xf16>, vector<4xf16> into f16
+// CHECK:         %[[A1:.*]] = vector.extract_strided_slice %[[A]] offsets = [4], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[B1:.*]] = vector.extract_strided_slice %[[B]] offsets = [4], sizes = [4], strides = [1] : vector<8xf16> to vector<4xf16>
+// CHECK:         %[[R1:.*]] = vector.contract {{.*}} %[[A1]], %[[B1]], %[[R0]] : vector<4xf16>, vector<4xf16> into f16
+// CHECK:         return %[[R1]] : f16
