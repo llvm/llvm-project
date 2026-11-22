@@ -188,6 +188,8 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
                                 GV->getName().starts_with("__start_") ||
                                 GV->getName().starts_with("__stop_")))
       return true;
+    // Check the size before getKindForGlobal() below, which may walk the
+    // global's entire initializer.
     const DataLayout &DL = GV->getDataLayout();
     if (!isLargeDataSize(GV->getGlobalSize(DL)))
       return false;
