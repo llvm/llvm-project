@@ -552,6 +552,8 @@ bool AArch64Subtarget::useScalarIncVL() const {
 }
 
 bool AArch64Subtarget::useOutlineAtomicsPreserveMost() const {
+  // Arm64EC calls may traverse x64 emulation thunks that do not preserve the
+  // extra caller-saved registers guaranteed by this convention.
   if (isWindowsArm64EC())
     return false;
   return valueOr(CLOpts.outline_atomics_preserve_most,
@@ -563,6 +565,11 @@ void AArch64Subtarget::initLibcallLoweringInfo(
   if (!useOutlineAtomicsPreserveMost())
     return;
 
+  // Remap each outline-atomic libcall (1/2/4/8/16-byte CAS and 1/2/4/8-byte
+  // SWP/LDADD/LDSET/LDCLR/LDEOR across relax/acq/rel/acq_rel orderings) from
+  // its default AAPCS64 `__aarch64_*` implementation to the corresponding
+  // `__aarch64_*_preservemost` implementation registered with
+  // AArch64_Outline_Atomics_PreserveMost in RuntimeLibcalls.td.
   struct LibcallPair {
     RTLIB::Libcall LC;
     RTLIB::LibcallImpl Impl;

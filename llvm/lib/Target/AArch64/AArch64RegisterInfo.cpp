@@ -167,7 +167,9 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
         "and is not intended to be used beyond that scope.");
 
   case CallingConv::AArch64_Outline_Atomics_PreserveMost:
-    report_fatal_error(
+    // Outline-atomic helpers are implemented in assembly (e.g., compiler-rt's
+    // lse.S); LLVM only lowers calls to them and never compiles definitions.
+    reportFatalUsageError(
         "Calling convention AArch64_Outline_Atomics_PreserveMost is only "
         "supported for calls to out-of-line atomic helper routines.");
 
@@ -690,6 +692,7 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::Swift:
   case CallingConv::SwiftTail:
   case CallingConv::Tail:
+  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
     if (STI.isTargetWindowsOrUEFI()) {
       if (IsVarArg)
         return HasReg(CC_AArch64_Win64_VarArg_ArgRegs, Reg);
@@ -736,7 +739,6 @@ bool AArch64RegisterInfo::isArgumentRegister(const MachineFunction &MF,
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1:
   case CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X2:
-  case CallingConv::AArch64_Outline_Atomics_PreserveMost:
     if (STI.isTargetWindowsOrUEFI())
       return HasReg(CC_AArch64_Win64PCS_ArgRegs, Reg);
     return HasReg(CC_AArch64_AAPCS_ArgRegs, Reg);

@@ -5,6 +5,7 @@
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -O0 -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=O0
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -O0 -global-isel=0 -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=O0
 ; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+outline-atomics,+outline-atomics-preserve-most -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CSRMASK
+; RUN: llc -mtriple=aarch64-unknown-linux-gnu -mattr=+outline-atomics,+outline-atomics-preserve-most -global-isel -global-isel-abort=1 -stop-after=finalize-isel < %s | FileCheck %s --check-prefix=CSRMASK
 ; RUN: llc -mtriple=aarch64-unknown-fuchsia -mattr=+outline-atomics -verify-machineinstrs < %s | FileCheck %s --check-prefix=DEFAULT
 ; RUN: llc -mtriple=aarch64-unknown-fuchsia -mattr=+outline-atomics,+outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=PRESERVE
 ; RUN: llc -mtriple=aarch64-unknown-fuchsia -mattr=+outline-atomics --aarch64-outline-atomics-preserve-most -verify-machineinstrs < %s | FileCheck %s --check-prefix=PRESERVE
@@ -148,8 +149,8 @@ define i64 @exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary(ptr %p, i32 %v, i64 %x
 ; O0:       bl __aarch64_ldclr4_relax_preservemost
 ;
 ; NOX5X14-LABEL: exact_x4_x5_x14_x15_x16_x17_and_nzcv_boundary:
-; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*}}x5{{[,\]\n]|$}}
-; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*}}x14{{[,\]\n]|$}}
+; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*[xw]5([^0-9]|$)}}
+; NOX5X14-NOT:   {{mov|str|stp|ldr|ldp}} {{.*[xw]14([^0-9]|$)}}
 ; NOX5X14:       ret
   %cmp = icmp eq i64 %x, %y
   %r4 = call i64 asm sideeffect "", "={x4}"()

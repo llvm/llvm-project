@@ -221,6 +221,8 @@ defm : BoolField<"aarch64-macho-enable-nonlazybind", "false",
   "Call nonlazybind functions via direct GOT load for Mach-O">;
 defm : ValueField<"aarch64-min-jump-table-entries", "std::optional<unsigned>", "std::nullopt",
   "Set minimum number of entries to use a jump table on AArch64">;
+defm : OptionalBoolField<"aarch64-outline-atomics-preserve-most",
+  "Use a preserve-most calling convention for out-of-line atomic helper calls">;
 defm : ValueField<"aarch64-streaming-hazard-size",
   "std::optional<unsigned>", "std::nullopt",
   "Hazard size for streaming mode memory accesses. 0 = disabled">;
@@ -232,8 +234,6 @@ defm : BoolField<"aarch64-use-tbi", "false",
   "Assume that top byte of an address is ignored">;
 defm : OptionalBoolField<"sve-use-scalar-inc-vl",
   "Prefer add+cnt over addvl/inc/dec">;
-defm : OptionalBoolField<"aarch64-outline-atomics-preserve-most",
-  "Use a preserve-most calling convention for out-of-line atomic helper calls">;
 defm : ValueField<"sve-vscale-for-tuning", "std::optional<unsigned>", "std::nullopt",
   "Force a vscale for tuning factor for SVE">;
 

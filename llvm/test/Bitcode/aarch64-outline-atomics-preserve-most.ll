@@ -1,3 +1,5 @@
+; Verify LLVM IR assembly and bitcode round-tripping for the
+; aarch64_outline_atomics_preservemost calling convention.
 ; RUN: llvm-as %s -o - -f | llvm-dis | FileCheck %s
 ; RUN: llvm-as %s -o - -f | verify-uselistorder
 

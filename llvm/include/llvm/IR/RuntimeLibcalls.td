@@ -15,6 +15,8 @@ include "llvm/IR/RuntimeLibcallsImpl.td"
 class DuplicateLibcallImplWithPrefix<RuntimeLibcallImpl Impl, string prefix>
     : RuntimeLibcallImpl<Impl.Provides, prefix#Impl.LibCallFuncName>;
 
+/// Define a RuntimeLibcallImpl providing the same RuntimeLibcall as \p Impl
+/// with \p suffix appended to its symbol name.
 class DuplicateLibcallImplWithSuffix<RuntimeLibcallImpl Impl, string suffix>
     : RuntimeLibcallImpl<Impl.Provides, Impl.LibCallFuncName#suffix>;
 
@@ -3564,6 +3566,11 @@ defset list<RuntimeLibcallImpl> AArch64OutlineAtomicImpls = {
   }
 } // End AArch64OutlineAtomicImpls
 
+// Alternate entry points for AArch64 outline atomics using
+// AArch64_Outline_Atomics_PreserveMost. Distinct `*_preservemost` symbol names
+// prevent silent ABI mismatches if linked against a runtime (such as libgcc,
+// whose `__aarch64_cas16_*` clobbers X13-X14) that only provides standard
+// AAPCS64 helpers, and allow mixed-flag translation units to coexist.
 defset list<RuntimeLibcallImpl> AArch64OutlineAtomicPreserveMostImpls = {
   foreach libcall = AArch64OutlineAtomicImpls in {
     def libcall#_preservemost
@@ -3632,7 +3639,10 @@ def AArch64Libm : LibcallLibrary<"libm",
        LibcallImpls<(add exp10l), isLongDoubleF128NotDarwin>),
   isAArch64_ExceptArm64EC>;
 
-// AArch64 outline atomics and streaming-mode mem* helpers.
+// AArch64 outline atomics and streaming-mode mem* helpers. Both the default
+// AAPCS64 and `*_preservemost` implementations are registered so LTO symbol
+// resolution and subtarget-specific lowering can select between them per
+// function.
 def AArch64OutlineAtomics : LibcallLibrary<"compiler-rt",
   (add AArch64LibcallImpls,
        LibcallsWithCC<(add AArch64OutlineAtomicPreserveMostImpls),
