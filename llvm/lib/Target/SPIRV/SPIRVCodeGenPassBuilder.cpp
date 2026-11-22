@@ -85,6 +85,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
 
@@ -216,8 +218,6 @@ void SPIRVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void SPIRVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(SPIRVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SPIRVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SPIRVPassRegistry.def"

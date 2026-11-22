@@ -19,7 +19,7 @@ class PluginPythonOSPlugin(TestBase):
         self.run_python_os_funcionality()
 
     @skipIfWindowsAndNoLLDBServer  # This is flaky on Windows
-    @expectedFailureWindowsAndLLDBServer(
+    @skipIfWindowsAndLLDBServer(
         archs=["aarch64"],
         bugnumber="https://github.com/llvm/llvm-project/issues/240868",
     )

@@ -24033,7 +24033,10 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     }
     if (!GatherShuffles.empty()) {
       unsigned SliceSize = getPartNumElems(VF, NumParts);
-      if (Mask.size() == E->Scalars.size())
+      // Single shuffle of the same entry covers the whole vector.
+      if (GatherShuffles.size() == 1)
+        SliceSize = Mask.size();
+      else if (Mask.size() == E->Scalars.size())
         SliceSize = getPartNumElems(
             E->Scalars.size(),
             getNumberOfParts(VecTy, ScalarTy, E->Scalars.size()));
@@ -33771,7 +33774,7 @@ public:
           // extractelement instruction because of the vectorization and
           // exclude it, if it is not compatible with other values.
           auto *Inst = dyn_cast<ExtractElementInst>(RdxVal);
-          if (!Inst)
+          if (!Inst || V.isDeleted(Inst))
             continue;
           CommonCandidates.push_back(RdxVal);
           TrackedToOrig.push_back(RV);

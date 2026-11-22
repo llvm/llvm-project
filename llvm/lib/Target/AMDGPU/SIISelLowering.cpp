@@ -9578,7 +9578,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, FlatScratchBaseLo);
       }
 
-      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Src, DAG, TM, SrcAS))
         return Ptr;
 
       unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
@@ -9631,7 +9631,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
       }
 
-      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Src, DAG, TM, SrcAS))
         return CvtPtr;
 
       unsigned NullVal = AMDGPU::getNullPointerValue(SrcAS);
