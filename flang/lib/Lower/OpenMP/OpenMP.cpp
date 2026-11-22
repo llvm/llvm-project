@@ -1951,6 +1951,13 @@ static void createBodyOfOp(mlir::Operation &op, const OpWithBodyGenInfo &info,
     return {};
   }();
 
+  // A loop body uses the collapsed DO evaluation, but its context belongs to
+  // the owning directive. This also covers intervening code between loops.
+  auto &contextEval =
+      info.outerCollapseEval ? *info.outerCollapseEval : info.eval;
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      info.converter.getStateStack(), contextEval, info.dir};
+
   // Mark the earliest insertion point.
   mlir::Operation *marker = insertMarker(firOpBuilder);
 
@@ -2198,6 +2205,8 @@ static void genBodyOfTargetOp(
 
   mlir::Region &region = targetOp.getRegion();
   genEntryBlock(firOpBuilder, args.asEntryBlockArgs(), region);
+  mlir::SaveStateStack<OpenMPContextFrame> context{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_target};
   bindEntryBlockArgs(converter, targetOp, args);
   if (HostEvalInfo *hostEvalInfo = getHostEvalInfoStackTop(converter))
     hostEvalInfo->bindOperands(argIface.getHostEvalBlockArgs());
@@ -5435,6 +5444,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDo(
       genParallelOp(converter, symTable, semaCtx, eval, loc, queue,
                     parallelItem, parallelClauseOps, parallelArgs, &dsp,
                     /*isComposite=*/true);
+  // The composite omp.parallel body is not lowered by genParallelOp, so enter
+  // its context here.
+  mlir::SaveStateStack<OpenMPContextFrame> parallelContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
   mlir::omp::DistributeOperands distributeClauseOps;
@@ -5516,6 +5529,10 @@ static mlir::omp::DistributeOp genCompositeDistributeParallelDoSimd(
   mlir::omp::ParallelOp parallelOp = genParallelOp(
       converter, symTable, semaCtx, eval, loc, queue, parallelItem,
       parallelClauseOps, parallelArgs, &parallelItemDSP, /*isComposite=*/true);
+  // The composite omp.parallel body is not lowered by genParallelOp, so enter
+  // its context here.
+  mlir::SaveStateStack<OpenMPContextFrame> parallelContext{
+      converter.getStateStack(), eval, llvm::omp::Directive::OMPD_parallel};
 
   // Clause processing.
   // Use a shared cache so that both wsloop and simd produce the same SSA
@@ -7689,8 +7706,7 @@ static void genMetadirective(lower::AbstractConverter &converter,
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
   llvm::SmallVector<llvm::omp::TraitProperty, 8> constructTraits;
-  collectEnclosingConstructTraits(builder.getInsertionBlock()->getParentOp(),
-                                  constructTraits);
+  collectEnclosingConstructTraits(converter, &eval, constructTraits);
   semantics::omp::OmpVariantMatchContext ompCtx =
       makeVariantMatchContext(builder.getModule(), constructTraits);
 
@@ -7897,6 +7913,9 @@ static void genMetadirective(lower::AbstractConverter &converter,
       if (marking == MetadirectiveLoopIVMarking::ThreadprivateIV)
         TODO(variantLoc, "THREADPRIVATE loop iteration variable in "
                          "loop-associated METADIRECTIVE variant");
+      mlir::SaveStateStack<OpenMPContextFrame> context{
+          converter.getStateStack(), eval, spec->DirId(),
+          /*isReplacement=*/true};
       genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                      queue.begin(), dsaGuard.getMarkedSymbols());
       return;
@@ -7910,6 +7929,11 @@ static void genMetadirective(lower::AbstractConverter &converter,
       TODO(variantLoc,
            "METADIRECTIVE with both block- and loop-associated variants");
 
+    // A replacement that consumes the body encloses its nested evaluations.
+    std::optional<mlir::SaveStateStack<OpenMPContextFrame>> context;
+    if (consumesBody)
+      context.emplace(converter.getStateStack(), eval, spec->DirId(),
+                      /*isReplacement=*/true);
     genOMPDispatch(converter, symTable, semaCtx, eval, variantLoc, queue,
                    queue.begin());
     // A standalone variant (Association::None, e.g. barrier/taskwait/nothing)

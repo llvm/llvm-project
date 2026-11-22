@@ -3061,6 +3061,18 @@ OmpVariantMatchContext::OmpVariantMatchContext(const SemanticsContext &context,
               : context.langOptions().OMPTargetTriples.front(),
           context.targetFeatures(), constructTraits) {}
 
+void AppendDirectiveContextTraits(llvm::omp::Directive directive,
+    llvm::SmallVectorImpl<llvm::omp::TraitProperty> &constructTraits) {
+  for (llvm::omp::TraitProperty trait :
+      llvm::omp::getConstructTraits(directive)) {
+    // TODO: Constructs that cannot be named in a construct selector, such as
+    // TASK, also belong to the construct trait set and count toward scores.
+    if (trait != llvm::omp::TraitProperty::invalid) {
+      constructTraits.push_back(trait);
+    }
+  }
+}
+
 bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   // The target feature list is a comma-separated string such as
   // "+sse,+avx2,-foo"; an ISA trait matches when its "+" form is present.
