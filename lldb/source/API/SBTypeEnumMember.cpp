@@ -15,6 +15,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 #include <memory>
 
@@ -57,7 +58,7 @@ const char *SBTypeEnumMember::GetName() {
   LLDB_INSTRUMENT_VA(this);
 
   if (m_opaque_sp.get())
-    return m_opaque_sp->GetName().GetCString();
+    return StringPool::GetSystemPool().Intern(m_opaque_sp->GetName());
   return nullptr;
 }
 
