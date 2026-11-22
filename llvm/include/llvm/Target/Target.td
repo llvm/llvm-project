@@ -1761,7 +1761,9 @@ class AsmParser {
   // should be generated even if there are duplicate register names. For
   // duplicate names, these functions return the first matching register in
   // enum order. The target is responsible for coercing aliased registers as
-  // necessary (e.g. via CoerceFromRegClass or in validateTargetOperandClass).
+  // necessary (e.g. via CoerceFromRegClass or a RegisterClass RenderMethod).
+  // validateTargetOperandClass can only accept or reject the parsed register;
+  // it cannot coerce it.
   bit AllowDuplicateRegisterNames = false;
 
   // HasMnemonicFirst - Set to false if target instructions don't always

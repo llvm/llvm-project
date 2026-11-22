@@ -64,7 +64,7 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
   }
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
   bool parseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) override;
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
@@ -603,9 +603,9 @@ bool M68kOperand::isFPCReg() const {
                                        /*FPDR=*/false, /*FPCR=*/true);
 }
 
-unsigned M68kAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
+unsigned M68kAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                                    unsigned Kind) {
-  M68kOperand &Operand = (M68kOperand &)Op;
+  const M68kOperand &Operand = static_cast<const M68kOperand &>(Op);
 
   switch (Kind) {
   case MCK_XR16:

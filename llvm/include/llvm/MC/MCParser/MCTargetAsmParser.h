@@ -479,7 +479,7 @@ public:
   /// tblgen doesn't/can't handle effectively. For example, literal
   /// immediates on ARM. TableGen expects a token operand, but the parser
   /// will recognize them as immediates.
-  virtual unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  virtual unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                               unsigned Kind) {
     return Match_InvalidOperand;
   }

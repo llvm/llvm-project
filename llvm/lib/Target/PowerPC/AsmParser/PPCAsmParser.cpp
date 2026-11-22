@@ -155,7 +155,7 @@ public:
 
   bool ParseDirective(AsmToken DirectiveID) override;
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   const MCExpr *applySpecifier(const MCExpr *E, uint32_t,
@@ -1830,7 +1830,7 @@ LLVMInitializePowerPCAsmParser() {
 
 // Define this matcher function after the auto-generated include so we
 // have the match class enum definitions.
-unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+unsigned PPCAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
                                                   unsigned Kind) {
   // If the kind is a token for a literal immediate, check if our asm
   // operand matches. This is for InstAliases which have a fixed-value
@@ -1848,7 +1848,7 @@ unsigned PPCAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
     default: return Match_InvalidOperand;
   }
 
-  PPCOperand &Op = static_cast<PPCOperand &>(AsmOp);
+  const PPCOperand &Op = static_cast<const PPCOperand &>(AsmOp);
   if (Op.isUImm<3>() && Op.getImm() == ImmVal)
     return Match_Success;
 

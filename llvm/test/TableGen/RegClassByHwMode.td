@@ -154,7 +154,7 @@ include "Common/RegClassByHwModeCommon.td"
 // ASMMATCHER-NEXT:   return static_cast<MatchClassKind>(Kind);
 // ASMMATCHER-NEXT: }
 
-// ASMMATCHER: static unsigned validateOperandClass(MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
+// ASMMATCHER: static unsigned validateOperandClass(const MCParsedAsmOperand &GOp, MatchClassKind Kind, const MCSubtargetInfo &STI) {
 // ASMMATCHER: if (Kind <= MCK_LAST_TOKEN) {
 
 // ASMMATCHER: switch (Kind) {

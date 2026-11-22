@@ -339,7 +339,7 @@ public:
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
   bool ParseDirective(AsmToken DirectiveID) override;
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   static bool classifySymbolRef(const MCExpr *Expr, AArch64::Specifier &ELFSpec,
@@ -8528,9 +8528,10 @@ LLVMInitializeAArch64AsmParser() {
 
 // Define this matcher function after the auto-generated include so we
 // have the match class enum definitions.
-unsigned AArch64AsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                      unsigned Kind) {
-  AArch64Operand &Op = static_cast<AArch64Operand &>(AsmOp);
+unsigned
+AArch64AsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
+                                             unsigned Kind) {
+  const AArch64Operand &Op = static_cast<const AArch64Operand &>(AsmOp);
 
   auto MatchesOpImmediate = [&](int64_t ExpectedVal) -> MatchResultTy {
     if (!Op.isImm())

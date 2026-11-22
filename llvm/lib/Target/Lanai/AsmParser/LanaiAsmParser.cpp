@@ -204,7 +204,7 @@ public:
 
   bool isToken() const override { return Kind == TOKEN; }
 
-  bool isBrImm() {
+  bool isBrImm() const {
     if (!isImm())
       return false;
 
@@ -217,11 +217,11 @@ public:
     return isShiftedUInt<23, 2>(static_cast<int32_t>(Value));
   }
 
-  bool isBrTarget() { return isBrImm() || isToken(); }
+  bool isBrTarget() const { return isBrImm() || isToken(); }
 
-  bool isCallTarget() { return isImm() || isToken(); }
+  bool isCallTarget() const { return isImm() || isToken(); }
 
-  bool isHiImm16() {
+  bool isHiImm16() const {
     if (!isImm())
       return false;
 
@@ -244,7 +244,7 @@ public:
     return false;
   }
 
-  bool isHiImm16And() {
+  bool isHiImm16And() const {
     if (!isImm())
       return false;
 
@@ -257,7 +257,7 @@ public:
     return false;
   }
 
-  bool isLoImm16() {
+  bool isLoImm16() const {
     if (!isImm())
       return false;
 
@@ -281,7 +281,7 @@ public:
     return false;
   }
 
-  bool isLoImm16Signed() {
+  bool isLoImm16Signed() const {
     if (!isImm())
       return false;
 
@@ -305,7 +305,7 @@ public:
     return false;
   }
 
-  bool isLoImm16And() {
+  bool isLoImm16And() const {
     if (!isImm())
       return false;
 
@@ -318,7 +318,7 @@ public:
     return false;
   }
 
-  bool isImmShift() {
+  bool isImmShift() const {
     if (!isImm())
       return false;
 
@@ -329,7 +329,7 @@ public:
     return (Value >= -31) && (Value <= 31);
   }
 
-  bool isLoImm21() {
+  bool isLoImm21() const {
     if (!isImm())
       return false;
 
@@ -360,7 +360,7 @@ public:
     return false;
   }
 
-  bool isImm10() {
+  bool isImm10() const {
     if (!isImm())
       return false;
 
@@ -371,7 +371,7 @@ public:
     return isInt<10>(Value);
   }
 
-  bool isCondCode() {
+  bool isCondCode() const {
     if (!isImm())
       return false;
 

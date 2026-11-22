@@ -62,7 +62,7 @@ class VEAsmParser : public MCTargetAsmParser {
                         SMLoc NameLoc, OperandVector &Operands) override;
   ParseStatus parseDirective(AsmToken DirectiveID) override;
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   // Custom parse functions for VE specific operands.
@@ -190,7 +190,7 @@ public:
   bool isMEMzi() const { return Kind == k_MemoryZeroImm; }
   bool isCCOp() const { return Kind == k_CCOp; }
   bool isRDOp() const { return Kind == k_RDOp; }
-  bool isZero() {
+  bool isZero() const {
     if (!isImm())
       return false;
 
@@ -201,7 +201,7 @@ public:
     }
     return false;
   }
-  bool isUImm0to2() {
+  bool isUImm0to2() const {
     if (!isImm())
       return false;
 
@@ -212,7 +212,7 @@ public:
     }
     return false;
   }
-  bool isUImm1() {
+  bool isUImm1() const {
     if (!isImm())
       return false;
 
@@ -223,7 +223,7 @@ public:
     }
     return false;
   }
-  bool isUImm2() {
+  bool isUImm2() const {
     if (!isImm())
       return false;
 
@@ -234,7 +234,7 @@ public:
     }
     return false;
   }
-  bool isUImm3() {
+  bool isUImm3() const {
     if (!isImm())
       return false;
 
@@ -245,7 +245,7 @@ public:
     }
     return false;
   }
-  bool isUImm4() {
+  bool isUImm4() const {
     if (!isImm())
       return false;
 
@@ -256,7 +256,7 @@ public:
     }
     return false;
   }
-  bool isUImm6() {
+  bool isUImm6() const {
     if (!isImm())
       return false;
 
@@ -267,7 +267,7 @@ public:
     }
     return false;
   }
-  bool isUImm7() {
+  bool isUImm7() const {
     if (!isImm())
       return false;
 
@@ -278,7 +278,7 @@ public:
     }
     return false;
   }
-  bool isSImm7() {
+  bool isSImm7() const {
     if (!isImm())
       return false;
 
@@ -1471,9 +1471,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeVEAsmParser() {
 #define GET_MATCHER_IMPLEMENTATION
 #include "VEGenAsmMatcher.inc"
 
-unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
+unsigned VEAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &GOp,
                                                  unsigned Kind) {
-  VEOperand &Op = (VEOperand &)GOp;
+  const VEOperand &Op = static_cast<const VEOperand &>(GOp);
 
   if (Kind == MCK_MISC && Op.isImm() && Op.getMISCReg())
     return MCTargetAsmParser::Match_Success;

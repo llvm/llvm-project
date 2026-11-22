@@ -79,7 +79,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool tryParseRelocExpression(OperandVector &Operands);
   void eatComma();
 
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
 
   bool emit(MCInst &Instruction, SMLoc Loc, MCStreamer &Out) const;
@@ -748,9 +748,9 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAVRAsmParser() {
 #include "AVRGenAsmMatcher.inc"
 
 // Uses enums defined in AVRGenAsmMatcher.inc
-unsigned AVRAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
+unsigned AVRAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &AsmOp,
                                                   unsigned ExpectedKind) {
-  AVROperand &Op = static_cast<AVROperand &>(AsmOp);
+  const AVROperand &Op = static_cast<const AVROperand &>(AsmOp);
   MatchClassKind Expected = static_cast<MatchClassKind>(ExpectedKind);
   if (Expected <= MCK_LAST_TOKEN || Expected > MCK_LAST_REGISTER)
     return Match_InvalidOperand;

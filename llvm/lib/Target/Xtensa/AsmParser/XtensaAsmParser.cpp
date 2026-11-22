@@ -55,8 +55,6 @@ class XtensaAsmParser : public MCTargetAsmParser {
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
-                                      unsigned Kind) override;
 
   bool processInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                           const MCSubtargetInfo *STI);
@@ -419,11 +417,6 @@ public:
 #define GET_REGISTER_MATCHER
 #define GET_MATCHER_IMPLEMENTATION
 #include "XtensaGenAsmMatcher.inc"
-
-unsigned XtensaAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
-                                                     unsigned Kind) {
-  return Match_InvalidOperand;
-}
 
 static SMLoc RefineErrorLoc(const SMLoc Loc, const OperandVector &Operands,
                             uint64_t ErrorInfo) {

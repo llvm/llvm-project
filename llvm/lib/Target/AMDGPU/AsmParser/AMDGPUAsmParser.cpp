@@ -1440,7 +1440,7 @@ public:
   ParseStatus tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
                                SMLoc &EndLoc) override;
   unsigned checkTargetMatchPredicate(MCInst &Inst) override;
-  unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
+  unsigned validateTargetOperandClass(const MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
   bool matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
@@ -10837,13 +10837,14 @@ ParseStatus AMDGPUAsmParser::parseCustomOperand(OperandVector &Operands,
 
 // This function should be defined after auto-generated include so that we have
 // MatchClassKind enum defined
-unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
-                                                     unsigned Kind) {
+unsigned
+AMDGPUAsmParser::validateTargetOperandClass(const MCParsedAsmOperand &Op,
+                                            unsigned Kind) {
   // Tokens like "glc" would be parsed as immediate operands in ParseOperand().
   // But MatchInstructionImpl() expects to meet token and fails to validate
   // operand. This method checks if we are given immediate operand but expect to
   // get corresponding token.
-  AMDGPUOperand &Operand = (AMDGPUOperand &)Op;
+  const AMDGPUOperand &Operand = static_cast<const AMDGPUOperand &>(Op);
   switch (Kind) {
   case MCK_addr64:
     return Operand.isAddr64() ? Match_Success : Match_InvalidOperand;

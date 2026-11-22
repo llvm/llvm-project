@@ -2940,10 +2940,11 @@ static void emitRegClassByHwModeMatchTable(const CodeGenTarget &Target,
 /// emitValidateOperandClass - Emit the function to validate an operand class.
 static void emitValidateOperandClass(const CodeGenTarget &Target,
                                      AsmMatcherInfo &Info, raw_ostream &OS) {
-  OS << "static unsigned validateOperandClass(MCParsedAsmOperand &GOp, "
+  OS << "static unsigned validateOperandClass(const MCParsedAsmOperand &GOp, "
      << "MatchClassKind Kind, const MCSubtargetInfo &STI) {\n";
-  OS << "  " << Info.Target.getName() << "Operand &Operand = ("
-     << Info.Target.getName() << "Operand &)GOp;\n";
+  OS << "  const " << Info.Target.getName()
+     << "Operand &Operand = static_cast<const " << Info.Target.getName()
+     << "Operand &>(GOp);\n";
 
   // The InvalidMatchClass is not to match any operand.
   OS << "  if (Kind == InvalidMatchClass)\n";
@@ -4336,7 +4337,7 @@ void AsmMatcherEmitter::run(raw_ostream &OS) {
     OS << "        break;\n";
   }
   OS << "      }\n";
-  OS << "      MCParsedAsmOperand &Actual = *Operands[ActualIdx];\n";
+  OS << "      const MCParsedAsmOperand &Actual = *Operands[ActualIdx];\n";
   OS << "      unsigned Diag = validateOperandClass(Actual, Formal, *STI);\n";
   OS << "      if (Diag == Match_Success) {\n";
   OS << "        DEBUG_WITH_TYPE(\"asm-matcher\",\n";
