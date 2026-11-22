@@ -1171,6 +1171,10 @@ static LogicalResult verifyBase(BaseOp op) {
         "global memref must have global address space attribute.");
 
   Type elementType = ldsType.getElementType();
+  if (!elementType.isIntOrFloat())
+    return op.emitOpError("element type must be an integer or float type, "
+                          "but got ")
+           << elementType << ".";
   unsigned width = elementType.getIntOrFloatBitWidth();
 
   if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
@@ -1189,14 +1193,18 @@ LogicalResult MakeDmaBaseOp::verify() { return verifyBase(*this); }
 LogicalResult
 TDMGatherBaseType::verify(function_ref<InFlightDiagnostic()> emitError,
                           Type elementType, Type indexType) {
+  if (!elementType.isIntOrFloat())
+    return emitError() << "'amdgpu.tdm_gather_base' element type must be an "
+                          "integer or float type, but got "
+                       << elementType << ".";
   unsigned width = elementType.getIntOrFloatBitWidth();
   if (!llvm::is_contained({8u, 16u, 32u, 64u}, width))
     return emitError()
            << "element type must be 1, 2, 4, or 8 bytes wide but type "
            << elementType << " is " << width / 8 << " bytes wide.";
   MLIRContext *ctx = elementType.getContext();
-  Type i16 = IntegerType::get(ctx, 32);
-  Type i32 = IntegerType::get(ctx, 16);
+  Type i16 = IntegerType::get(ctx, 16);
+  Type i32 = IntegerType::get(ctx, 32);
   if (!llvm::is_contained({i16, i32}, indexType))
     return emitError() << "index type must be i16 or i32 but index type is "
                        << indexType << ".";
