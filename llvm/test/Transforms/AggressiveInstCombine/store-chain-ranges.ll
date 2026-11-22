@@ -473,3 +473,96 @@ define void @mixed_width_gap_with_noncontiguous_mask(ptr %p, i8 noundef %x, i16 
   store i8 %narrow, ptr %p, align 1
   ret void
 }
+
+; A load in a predecessor supplies the two halfword updates.
+; The intervening store writes a disjoint location.
+define void @merge_chain_with_noalias_store(ptr %p, ptr noalias %q, i64 %x, i64 %y, i1 %go) {
+; CHECK-LABEL: define void @merge_chain_with_noalias_store(
+; CHECK-SAME: ptr [[P:%.*]], ptr noalias [[Q:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[GO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OLD:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    br i1 [[GO]], label %[[PREPARE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[PREPARE]]:
+; CHECK-NEXT:    store i64 [[X]], ptr [[Q]], align 8
+; CHECK-NEXT:    br label %[[WRITE:.*]]
+; CHECK:       [[WRITE]]:
+; CHECK-NEXT:    [[KEEP_FIRST:%.*]] = and i64 [[OLD]], -281470681743361
+; CHECK-NEXT:    [[INSERT_FIRST:%.*]] = and i64 [[X]], 281470681743360
+; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i64 [[KEEP_FIRST]], [[INSERT_FIRST]]
+; CHECK-NEXT:    store i64 [[FIRST]], ptr [[P]], align 8
+; CHECK-NEXT:    [[KEEP_LAST:%.*]] = and i64 [[FIRST]], 281474976710655
+; CHECK-NEXT:    [[INSERT_LAST:%.*]] = and i64 [[Y]], -281474976710656
+; CHECK-NEXT:    [[LAST:%.*]] = or disjoint i64 [[KEEP_LAST]], [[INSERT_LAST]]
+; CHECK-NEXT:    store i64 [[LAST]], ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %old = load i64, ptr %p, align 8
+  br i1 %go, label %prepare, label %exit
+
+prepare:
+  store i64 %x, ptr %q, align 8
+  br label %write
+
+write:
+  %keep.first = and i64 %old, -281470681743361
+  %insert.first = and i64 %x, 281470681743360
+  %first = or disjoint i64 %keep.first, %insert.first
+  store i64 %first, ptr %p, align 8
+  %keep.last = and i64 %first, 281474976710655
+  %insert.last = and i64 %y, -281474976710656
+  %last = or disjoint i64 %keep.last, %insert.last
+  store i64 %last, ptr %p, align 8
+  br label %exit
+
+exit:
+  ret void
+}
+
+; An intervening write may clobber the word read in the predecessor.
+define void @chain_with_mayalias_store(ptr %p, ptr %q, i64 %x, i64 %y, i1 %go) {
+; CHECK-LABEL: define void @chain_with_mayalias_store(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i64 [[X:%.*]], i64 [[Y:%.*]], i1 [[GO:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[OLD:%.*]] = load i64, ptr [[P]], align 8
+; CHECK-NEXT:    br i1 [[GO]], label %[[PREPARE:.*]], label %[[EXIT:.*]]
+; CHECK:       [[PREPARE]]:
+; CHECK-NEXT:    store i64 [[X]], ptr [[Q]], align 8
+; CHECK-NEXT:    br label %[[WRITE:.*]]
+; CHECK:       [[WRITE]]:
+; CHECK-NEXT:    [[KEEP_FIRST:%.*]] = and i64 [[OLD]], -281470681743361
+; CHECK-NEXT:    [[INSERT_FIRST:%.*]] = and i64 [[X]], 281470681743360
+; CHECK-NEXT:    [[FIRST:%.*]] = or disjoint i64 [[KEEP_FIRST]], [[INSERT_FIRST]]
+; CHECK-NEXT:    store i64 [[FIRST]], ptr [[P]], align 8
+; CHECK-NEXT:    [[KEEP_LAST:%.*]] = and i64 [[FIRST]], 281474976710655
+; CHECK-NEXT:    [[INSERT_LAST:%.*]] = and i64 [[Y]], -281474976710656
+; CHECK-NEXT:    [[LAST:%.*]] = or disjoint i64 [[KEEP_LAST]], [[INSERT_LAST]]
+; CHECK-NEXT:    store i64 [[LAST]], ptr [[P]], align 8
+; CHECK-NEXT:    br label %[[EXIT]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %old = load i64, ptr %p, align 8
+  br i1 %go, label %prepare, label %exit
+
+prepare:
+  store i64 %x, ptr %q, align 8
+  br label %write
+
+write:
+  %keep.first = and i64 %old, -281470681743361
+  %insert.first = and i64 %x, 281470681743360
+  %first = or disjoint i64 %keep.first, %insert.first
+  store i64 %first, ptr %p, align 8
+  %keep.last = and i64 %first, 281474976710655
+  %insert.last = and i64 %y, -281474976710656
+  %last = or disjoint i64 %keep.last, %insert.last
+  store i64 %last, ptr %p, align 8
+  br label %exit
+
+exit:
+  ret void
+}
