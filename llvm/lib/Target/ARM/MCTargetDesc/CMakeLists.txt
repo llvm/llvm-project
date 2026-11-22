@@ -21,6 +21,7 @@ add_llvm_component_library(LLVMARMDesc
   MC
   MCDisassembler
   Object
+  Option
   Support
   TargetParser
 

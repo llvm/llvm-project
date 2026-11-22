@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+lob,+mve.fp -disable-arm-loloops=true %s -o - | FileCheck %s --check-prefix=DISABLED
+; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+lob,+mve.fp -arm-loloops=false %s -o - | FileCheck %s --check-prefix=DISABLED
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+lob,+mve.fp %s -o - | FileCheck %s
 
 ; DISABLED-NOT: dls lr,

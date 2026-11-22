@@ -14,14 +14,8 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-
-static cl::opt<int> DataBankMask("arm-data-bank-mask", cl::init(-1),
-                                 cl::Hidden);
-static cl::opt<bool> AssumeITCMConflict("arm-assume-itcm-bankconflict",
-                                        cl::init(false), cl::Hidden);
 
 static bool hasRAWHazard(MachineInstr *DefMI, MachineInstr *MI,
                          const TargetRegisterInfo &TRI) {
@@ -163,13 +157,9 @@ static bool getBaseOffset(const MachineInstr &MI, const MachineOperand *&BaseOp,
 }
 
 ARMBankConflictHazardRecognizer::ARMBankConflictHazardRecognizer(
-    const ScheduleDAG *DAG, int64_t CPUBankMask, bool CPUAssumeITCMConflict)
-    : MF(DAG->MF), DL(DAG->MF.getDataLayout()),
-      DataMask(DataBankMask.getNumOccurrences() ? int64_t(DataBankMask)
-                                                : CPUBankMask),
-      AssumeITCMBankConflict(AssumeITCMConflict.getNumOccurrences()
-                                 ? AssumeITCMConflict
-                                 : CPUAssumeITCMConflict) {
+    const ScheduleDAG *DAG, int64_t DataMask, bool AssumeITCMBankConflict)
+    : MF(DAG->MF), DL(DAG->MF.getDataLayout()), DataMask(DataMask),
+      AssumeITCMBankConflict(AssumeITCMBankConflict) {
   MaxLookAhead = 1;
 }
 

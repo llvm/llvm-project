@@ -70,10 +70,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "mve-laneinterleave"
 
-static cl::opt<bool> EnableInterleave(
-    "enable-mve-interleave", cl::Hidden, cl::init(true),
-    cl::desc("Enable interleave MVE vector operation lowering"));
-
 namespace {
 
 class MVELaneInterleaving : public FunctionPass {
@@ -396,12 +392,10 @@ static bool isAddReduction(Instruction &I) {
 }
 
 bool MVELaneInterleaving::runOnFunction(Function &F) {
-  if (!EnableInterleave)
-    return false;
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<TargetMachine>();
   auto *ST = &TM.getSubtarget<ARMSubtarget>(F);
-  if (!ST->hasMVEIntegerOps())
+  if (!ST->getCLOpts().mve_interleave || !ST->hasMVEIntegerOps())
     return false;
 
   bool Changed = false;

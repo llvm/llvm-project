@@ -30,7 +30,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrDesc.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -49,13 +48,6 @@ using namespace llvm;
 STATISTIC(NumNarrows,  "Number of 32-bit instrs reduced to 16-bit ones");
 STATISTIC(Num2Addrs,   "Number of 32-bit instrs reduced to 2addr 16-bit ones");
 STATISTIC(NumLdSts,    "Number of 32-bit load / store reduced to 16-bit ones");
-
-static cl::opt<int> ReduceLimit("t2-reduce-limit",
-                                cl::init(-1), cl::Hidden);
-static cl::opt<int> ReduceLimit2Addr("t2-reduce-limit2",
-                                     cl::init(-1), cl::Hidden);
-static cl::opt<int> ReduceLimitLdSt("t2-reduce-limit3",
-                                     cl::init(-1), cl::Hidden);
 
 namespace {
 
@@ -402,6 +394,7 @@ static bool VerifyLowRegs(const MachineInstr *MI) {
 bool
 Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
                                   const ReduceEntry &Entry) {
+  int ReduceLimitLdSt = STI->getCLOpts().t2_reduce_limit3;
   if (ReduceLimitLdSt != -1 && ((int)NumLdSts >= ReduceLimitLdSt))
     return false;
 
@@ -744,6 +737,7 @@ bool
 Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
                                 const ReduceEntry &Entry,
                                 bool LiveCPSR, bool IsSelfLoop) {
+  int ReduceLimit2Addr = STI->getCLOpts().t2_reduce_limit2;
   if (ReduceLimit2Addr != -1 && ((int)Num2Addrs >= ReduceLimit2Addr))
     return false;
 
@@ -862,6 +856,7 @@ bool
 Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
                                  const ReduceEntry &Entry,
                                  bool LiveCPSR, bool IsSelfLoop) {
+  int ReduceLimit = STI->getCLOpts().t2_reduce_limit;
   if (ReduceLimit != -1 && ((int)NumNarrows >= ReduceLimit))
     return false;
 

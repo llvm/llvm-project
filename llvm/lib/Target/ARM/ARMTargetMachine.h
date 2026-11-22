@@ -28,6 +28,8 @@
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
+  const ARMOptions &CLOpts;
+
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
@@ -58,6 +60,8 @@ public:
                        std::optional<Reloc::Model> RM,
                        std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~ARMBaseTargetMachine() override;
+
+  const ARMOptions &getCLOpts() const { return CLOpts; }
 
   const ARMSubtarget *getSubtargetImpl(const Function &F) const override;
   // DO NOT IMPLEMENT: There is no such thing as a valid default subtarget,
