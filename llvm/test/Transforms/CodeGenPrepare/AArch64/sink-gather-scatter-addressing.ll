@@ -50,7 +50,7 @@ entry:
   br i1 %cond, label %cond.block, label %exit
 
 cond.block:
-  %load = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32(<vscale x 4 x ptr> align 4 %field.ptrs, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
+  %load = tail call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 %field.ptrs, <vscale x 4 x i1> %mask, <vscale x 4 x float> poison)
   br label %exit
 
 exit:
