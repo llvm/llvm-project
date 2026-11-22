@@ -225,7 +225,7 @@ bool AMDGPUPostLegalizerCombinerImpl::matchUCharToFloat(
 
     assert(SrcSize == 16 || SrcSize == 32 || SrcSize == 64);
 
-    if (SrcSize == 16 && Ty.isFloat(16))
+    if (SrcSize == 16 && Ty.getSizeInBits() == 16)
       return false;
 
     const APInt Mask = APInt::getHighBitsSet(SrcSize, SrcSize - 8);
