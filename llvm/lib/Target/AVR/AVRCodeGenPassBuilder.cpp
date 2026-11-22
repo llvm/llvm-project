@@ -32,6 +32,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
@@ -40,6 +41,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void AVRCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Expand instructions like
@@ -79,8 +82,6 @@ void AVRCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void AVRCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(AVRAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void AVRTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "AVRPassRegistry.def"

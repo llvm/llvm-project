@@ -187,10 +187,12 @@ void NORETURN reportDeleteSizeMismatch(const void *Ptr, uptr Size,
                                        uptr ExpectedSize,
                                        uptr ExpectedUsableSize) {
   ScopedErrorReport Report;
-  Report.append("invalid sized delete when deallocating address %p (%zu vs %zu",
-                Ptr, Size, ExpectedSize);
-  if (ExpectedUsableSize != 0)
-    Report.append(" or %zu", ExpectedUsableSize);
+  Report.append("invalid sized delete when deallocating address %p (%zu vs ",
+                Ptr, Size);
+  if (ExpectedUsableSize == 0)
+    Report.append("%zu", ExpectedSize);
+  else
+    Report.append("[%zu,%zu]", ExpectedSize, ExpectedUsableSize);
   Report.append(")\n");
 }
 

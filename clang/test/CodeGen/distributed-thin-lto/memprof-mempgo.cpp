@@ -56,8 +56,8 @@ HeapProfileRecords:
 
 //--- src.cpp
 // CHECK-LABEL: define{{.*}} ptr @_Z3foov()
-// DEFAULT:    call {{.*}} ptr @_Znam12__hot_cold_t(i64 10, i8 -128)
-// ALLOCTOKEN: call {{.*}} ptr @__alloc_token__Znam12__hot_cold_t(i64 10, i8 -128, i64 12){{.*}} !alloc_token
+// DEFAULT:    call {{.*}} ptr @_Znam12__hot_cold_t(i64 noundef 10, i8 -128)
+// ALLOCTOKEN: call {{.*}} ptr @__alloc_token__Znam12__hot_cold_t(i64 noundef 10, i8 -128, i64 12){{.*}} !alloc_token
 char *foo() {
   return new char[10];
 }

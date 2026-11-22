@@ -1,0 +1,130 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=amdgpu | FileCheck %s
+
+// AMDGPU reads each va_arg in place from 4-byte slots of one buffer. The
+// cursor moves by the alloc size rounded up to 4 and is never realigned.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!s64i = !cir.int<s, 64>
+!rec_Char = !cir.struct<"Char" {data !s8i}>
+!rec_Triple = !cir.struct<"Triple" {data !s32i, data !s32i, data !s32i}>
+!rec_Big = !cir.struct<"Big" {data !cir.array<!s32i x 20>}>
+
+module attributes {
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>,
+    #dlti.dl_entry<"dlti.alloca_memory_space", 5 : ui64>>
+} {
+
+  // An int fills one slot. The cursor moves by 4 and the int is read at the
+  // old cursor.
+  cir.func @va_int(%arg0: !cir.ptr<!cir.ptr<!s8i>>) -> !s32i requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // CHECK-LABEL: cir.func @va_int(
+  // CHECK-SAME:    %[[AP:.*]]: !cir.ptr<!cir.ptr<!s8i>>) -> !s32i {
+  // CHECK-NEXT:    %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<4> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s32i>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.load align(4) %[[ARG_PTR]] : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT:    cir.return %[[ARG]] : !s32i
+
+  // A double fills two slots. The cursor moves by 8 but is not realigned, so
+  // the double is read with align 4, not its own 8.
+  cir.func @va_double(%arg0: !cir.ptr<!cir.ptr<!s8i>>) -> !cir.double requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !cir.double
+    cir.return %0 : !cir.double
+  }
+
+  // CHECK-LABEL: cir.func @va_double(
+  // CHECK-SAME:    %[[AP:.*]]: !cir.ptr<!cir.ptr<!s8i>>) -> !cir.double {
+  // CHECK:         %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<8> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!cir.double>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.load align(4) %[[ARG_PTR]] : !cir.ptr<!cir.double>, !cir.double
+  // CHECK-NEXT:    cir.return %[[ARG]] : !cir.double
+
+  cir.func @va_long(%arg0: !cir.ptr<!cir.ptr<!s8i>>) -> !s64i requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !s64i
+    cir.return %0 : !s64i
+  }
+
+  // CHECK-LABEL: cir.func @va_long(
+  // CHECK-SAME:    %[[AP:.*]]: !cir.ptr<!cir.ptr<!s8i>>) -> !s64i {
+  // CHECK:         %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<8> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
+  // CHECK-NEXT:    %[[ARG:.*]] = cir.load align(4) %[[ARG_PTR]] : !cir.ptr<!s64i>, !s64i
+  // CHECK-NEXT:    cir.return %[[ARG]] : !s64i
+
+  // A one-byte record still takes a whole slot.
+  cir.func @va_char_struct(%arg0: !cir.ptr<!cir.ptr<!s8i>>, %arg1: !cir.ptr<!rec_Char>) requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !rec_Char
+    cir.store %0, %arg1 : !rec_Char, !cir.ptr<!rec_Char>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @va_char_struct(
+  // CHECK-SAME:    %[[AP:[^:]*]]: !cir.ptr<!cir.ptr<!s8i>>, %[[OUT:.*]]: !cir.ptr<!rec_Char>) {
+  // CHECK:         %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<4> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Char>
+  // CHECK-NEXT:    cir.copy %[[ARG_PTR]] align(4) to %[[OUT]] align(1) : !cir.ptr<!rec_Char>
+
+  // A 12-byte record fills three slots. The store of the fetched value becomes
+  // a copy straight from the old cursor.
+  cir.func @va_triple(%arg0: !cir.ptr<!cir.ptr<!s8i>>, %arg1: !cir.ptr<!rec_Triple>) requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !rec_Triple
+    cir.store %0, %arg1 : !rec_Triple, !cir.ptr<!rec_Triple>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @va_triple(
+  // CHECK-SAME:    %[[AP:[^:]*]]: !cir.ptr<!cir.ptr<!s8i>>, %[[OUT:.*]]: !cir.ptr<!rec_Triple>) {
+  // CHECK:         %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<12> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Triple>
+  // CHECK-NEXT:    cir.copy %[[ARG_PTR]] align(4) to %[[OUT]] align(4) : !cir.ptr<!rec_Triple>
+
+  // A record past the register budget is still read in place, not through a
+  // pointer.
+  cir.func @va_big(%arg0: !cir.ptr<!cir.ptr<!s8i>>, %arg1: !cir.ptr<!rec_Big>) requires_call_conv_lowering {
+    %0 = cir.va_arg %arg0 : (!cir.ptr<!cir.ptr<!s8i>>) -> !rec_Big
+    cir.store %0, %arg1 : !rec_Big, !cir.ptr<!rec_Big>
+    cir.return
+  }
+
+  // CHECK-LABEL: cir.func @va_big(
+  // CHECK-SAME:    %[[AP:[^:]*]]: !cir.ptr<!cir.ptr<!s8i>>, %[[OUT:.*]]: !cir.ptr<!rec_Big>) {
+  // CHECK:         %[[CUR:.*]] = cir.load %[[AP]] : !cir.ptr<!cir.ptr<!s8i>>, !cir.ptr<!s8i>
+  // CHECK-NEXT:    %[[CUR_U8:.*]] = cir.cast bitcast %[[CUR]] : !cir.ptr<!s8i> -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[STRIDE:.*]] = cir.const #cir.int<80> : !s32i
+  // CHECK-NEXT:    %[[NEXT_U8:.*]] = cir.ptr_stride %[[CUR_U8]], %[[STRIDE]] : (!cir.ptr<!u8i>, !s32i) -> !cir.ptr<!u8i>
+  // CHECK-NEXT:    %[[NEXT:.*]] = cir.cast bitcast %[[NEXT_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!s8i>
+  // CHECK-NEXT:    cir.store %[[NEXT]], %[[AP]] : !cir.ptr<!s8i>, !cir.ptr<!cir.ptr<!s8i>>
+  // CHECK-NEXT:    %[[ARG_PTR:.*]] = cir.cast bitcast %[[CUR_U8]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_Big>
+  // CHECK-NEXT:    cir.copy %[[ARG_PTR]] align(4) to %[[OUT]] align(4) : !cir.ptr<!rec_Big>
+}

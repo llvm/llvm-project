@@ -4,6 +4,7 @@ import gc
 import os
 import tempfile
 from mlir.ir import *
+from mlir._mlir_libs._mlirPythonTestNanobind import emit_linked_remarks
 
 
 def run(f):
@@ -134,6 +135,7 @@ def testRemarkInvalidatedAfterCallback():
         "function_name",
         "location",
         "remark_id",
+        "related_ids",
         "args",
         "message",
     ):
@@ -149,10 +151,41 @@ def testRemarkInvalidatedAfterCallback():
     # CHECK: function_name -> Remark is invalid (used outside of callback)
     # CHECK: location -> Remark is invalid (used outside of callback)
     # CHECK: remark_id -> Remark is invalid (used outside of callback)
+    # CHECK: related_ids -> Remark is invalid (used outside of callback)
     # CHECK: args -> Remark is invalid (used outside of callback)
     # CHECK: message -> Remark is invalid (used outside of callback)
     # CHECK: str: <Invalid Remark>
     print("str:", str(remark))
+
+
+# CHECK-LABEL: TEST: testRelatedIds
+@run
+def testRelatedIds():
+    for policy in (RemarkPolicy.ALL, RemarkPolicy.FINAL):
+        ctx = Context()
+        records = {}
+
+        def callback(r):
+            records[r.remark_name] = (r.remark_id, r.related_ids, r.args)
+
+        ctx.enable_remarks(policy=policy, all_filter="Test", callback=callback)
+        emit_linked_remarks(Location.unknown(context=ctx))
+        ctx.finalize_remarks()
+
+        first, second, consumer = (
+            records[name] for name in ("First", "Second", "Consumer")
+        )
+        assert first[1] == second[1] == []
+        assert consumer[1] == [first[0], second[0]]
+        assert [value for key, value in consumer[2] if key == "RelatedTo"] == [
+            str(first[0]),
+            str(second[0]),
+            "999",
+        ]
+        # The copied IDs remain usable after callbacks and finalization.
+        # CHECK: RemarkPolicy.ALL [1, 2]
+        # CHECK: RemarkPolicy.FINAL [1, 2]
+        print(policy, consumer[1])
 
 
 # CHECK-LABEL: TEST: testFilters

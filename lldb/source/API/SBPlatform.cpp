@@ -151,7 +151,8 @@ void SBPlatformConnectOptions::DisableRsync() {
 const char *SBPlatformConnectOptions::GetLocalCacheDirectory() {
   LLDB_INSTRUMENT_VA(this);
 
-  return m_opaque_ptr->m_local_cache_directory.GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_ptr->m_local_cache_directory);
 }
 
 void SBPlatformConnectOptions::SetLocalCacheDirectory(const char *path) {

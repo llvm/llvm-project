@@ -29,6 +29,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -6826,6 +6827,91 @@ MDNode *llvm::UpgradeTBAAStructNode(MDNode &MD) {
   return Changed ? MDNode::get(MD.getContext(), Elts) : &MD;
 }
 
+/// Rebuild the alias scope or domain \p Old with \p Ops, keeping its identity:
+/// a self reference has to point at the replacement, and a distinct node must
+/// not be uniqued. The first operand of both a scope and a domain is its name,
+/// which is either a string or a self reference.
+static MDNode *rebuildScopeOrDomainNode(MDNode *Old,
+                                        SmallVectorImpl<Metadata *> &Ops) {
+  LLVMContext &Context = Old->getContext();
+  if (Ops[0] != Old)
+    return Old->isDistinct() ? MDNode::getDistinct(Context, Ops)
+                             : MDNode::get(Context, Ops);
+
+  Ops[0] = nullptr;
+  MDNode *New = MDNode::getDistinct(Context, Ops);
+  New->replaceOperandWith(0, New);
+  return New;
+}
+
+static MDNode *upgradeAliasScopeDomain(MDNode *Domain,
+                                       DenseMap<MDNode *, MDNode *> &Upgraded) {
+  unsigned NumOperands = Domain->getNumOperands();
+  bool HadDescription = NumOperands == 2;
+  // Already upgraded, or invalid and left to the verifier.
+  if (NumOperands == 0 || NumOperands > 2 ||
+      (HadDescription && mdconst::hasa<ConstantInt>(Domain->getOperand(1))))
+    return Domain;
+
+  MDNode *&Upgrade = Upgraded[Domain];
+  if (Upgrade)
+    return Upgrade;
+
+  LLVMContext &Context = Domain->getContext();
+  SmallVector<Metadata *, 3> Ops = {
+      Domain->getOperand(0),
+      ConstantAsMetadata::get(ConstantInt::getFalse(Context))};
+  if (HadDescription)
+    Ops.push_back(Domain->getOperand(1));
+
+  Upgrade = rebuildScopeOrDomainNode(Domain, Ops);
+  return Upgrade;
+}
+
+static MDNode *upgradeAliasScope(MDNode *Scope,
+                                 DenseMap<MDNode *, MDNode *> &Upgraded) {
+  if (MDNode *Upgrade = Upgraded.lookup(Scope))
+    return Upgrade;
+
+  // Extract domain, or leave invalid scope to the verifier.
+  if (Scope->getNumOperands() < 2 || !isa<MDNode>(Scope->getOperand(1)))
+    return Scope;
+  auto *Domain = cast<MDNode>(Scope->getOperand(1));
+
+  MDNode *UpgradedDomain = upgradeAliasScopeDomain(Domain, Upgraded);
+  if (UpgradedDomain == Domain)
+    return Scope;
+
+  SmallVector<Metadata *, 3> Ops(Scope->op_begin(), Scope->op_end());
+  Ops[1] = UpgradedDomain;
+  MDNode *Upgrade = rebuildScopeOrDomainNode(Scope, Ops);
+  Upgraded[Scope] = Upgrade;
+  return Upgrade;
+}
+
+MDNode *
+llvm::UpgradeAliasScopeList(MDNode &ScopeList,
+                            DenseMap<MDNode *, MDNode *> &UpgradedAliasScopes) {
+  if (MDNode *Upgrade = UpgradedAliasScopes.lookup(&ScopeList))
+    return Upgrade;
+
+  SmallVector<Metadata *, 4> Ops;
+  bool Changed = false;
+  for (const MDOperand &Op : ScopeList.operands()) {
+    Metadata *Scope = Op;
+    if (auto *ScopeNode = dyn_cast<MDNode>(Op))
+      Scope = upgradeAliasScope(ScopeNode, UpgradedAliasScopes);
+    Changed |= Scope != Op.get();
+    Ops.push_back(Scope);
+  }
+  if (!Changed)
+    return &ScopeList;
+
+  MDNode *Upgrade = MDNode::get(ScopeList.getContext(), Ops);
+  UpgradedAliasScopes[&ScopeList] = Upgrade;
+  return Upgrade;
+}
+
 Instruction *llvm::UpgradeBitCastInst(unsigned Opc, Value *V, Type *DestTy,
                                       Instruction *&Temp) {
   if (Opc != Instruction::BitCast)
@@ -7575,6 +7661,33 @@ void llvm::UpgradeSectionAttributes(Module &M) {
   }
 }
 
+void llvm::UpgradeInstructionMetadata(Module &M) {
+  DenseMap<MDNode *, MDNode *> UpgradedAliasScopes;
+
+  for (Function &F : M)
+    for (Instruction &I : instructions(F)) {
+      for (auto Kind : {LLVMContext::MD_alias_scope, LLVMContext::MD_noalias}) {
+        if (MDNode *Old = I.getMetadata(Kind)) {
+          MDNode *New = UpgradeAliasScopeList(*Old, UpgradedAliasScopes);
+          if (New != Old)
+            I.setMetadata(Kind, New);
+        }
+      }
+      if (auto *Decl = dyn_cast<NoAliasScopeDeclInst>(&I)) {
+        unsigned ArgNo = Intrinsic::NoAliasScopeDeclScopeArg;
+        if (Decl->getNumOperands() > ArgNo)
+          if (auto *ListAsValue =
+                  dyn_cast<MetadataAsValue>(Decl->getOperand(ArgNo)))
+            if (auto *List = dyn_cast<MDNode>(ListAsValue->getMetadata())) {
+              MDNode *New = UpgradeAliasScopeList(*List, UpgradedAliasScopes);
+              if (New != List)
+                Decl->setOperand(ArgNo,
+                                 MetadataAsValue::get(Decl->getContext(), New));
+            }
+      }
+    }
+}
+
 namespace {
 // Prior to LLVM 10.0, the strictfp attribute could be used on individual
 // callsites within a function that did not also have the strictfp attribute.
@@ -8020,9 +8133,10 @@ std::string llvm::UpgradeDataLayoutString(StringRef DL, StringRef TT) {
         Res.append("-p9:192:256:256:32");
 
       // Add sizing for address space 10 through 15.
-      // AS 10-14 are reserved and defaulted to 32:32
-      // AS 15 is in use and is 32:32.
-      for (StringRef AS : {"p10", "p11", "p12", "p13", "p14", "p15"}) {
+      // AS 10, 11 and 14 are reserved and defaulted to 32:32
+      // AS 12 is reserved for downstream and keeps the default (64-bit) size.
+      // AS 13 and 15 are in use and are 32:32.
+      for (StringRef AS : {"p10", "p11", "p13", "p14", "p15"}) {
         if (!DL.contains(("-" + AS).str()) && !DL.starts_with(AS))
           Res.append(("-" + AS + ":32:32").str());
       }

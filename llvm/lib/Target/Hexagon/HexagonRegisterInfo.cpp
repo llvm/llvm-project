@@ -288,8 +288,12 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // Select the base pointer (BP) and calculate the actual offset from BP
   // to the beginning of the object at index FI.
   int Offset = HFI.getFrameIndexReference(MF, FI, BP).getFixed();
+  unsigned Opc = MI.getOpcode();
+  bool IsBaseOnlyHLX =
+      Opc == Hexagon::LX_L16b_pseudo || Opc == Hexagon::LX_S16b_pseudo;
   // Add the offset from the instruction.
-  int RealOffset = Offset + MI.getOperand(FIOp+1).getImm();
+  int RealOffset =
+      Offset + (IsBaseOnlyHLX ? 0 : MI.getOperand(FIOp + 1).getImm());
 
   if (BP == Hexagon::VSP) {
     auto &MRI = MF.getRegInfo();
@@ -297,9 +301,20 @@ bool HexagonRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_tfrcrr), VSPCopy)
         .addReg(BP);
     BP = VSPCopy;
+
+    // HLX memory operations take a complete scalar address and do not have an
+    // immediate offset operand. Materialize the VTCM address before replacing
+    // their frame index.
+    if (IsBaseOnlyHLX) {
+      Register Addr = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+      BuildMI(MB, II, MI.getDebugLoc(), HII.get(Hexagon::A2_addi), Addr)
+          .addReg(BP)
+          .addImm(RealOffset);
+      MI.getOperand(FIOp).ChangeToRegister(Addr, false, false, true);
+      return false;
+    }
   }
 
-  unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::PS_fia:
       MI.setDesc(HII.get(Hexagon::A2_addi));

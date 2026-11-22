@@ -18,12 +18,9 @@ define i64 @load(ptr %a) nounwind {
 ;
 ; WITHD-LABEL: load:
 ; WITHD:       # %bb.0:
-; WITHD-NEXT:    addi sp, sp, -16
-; WITHD-NEXT:    fld fa5, 80(a0)
-; WITHD-NEXT:    fld fa4, 0(a0)
-; WITHD-NEXT:    fsd fa5, 8(sp)
-; WITHD-NEXT:    ld a0, 8(sp)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    mv a2, a0
+; WITHD-NEXT:    ld a0, 80(a0)
+; WITHD-NEXT:    ld zero, 0(a2)
 ; WITHD-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 10
   %2 = load i64, ptr %1
@@ -71,13 +68,10 @@ define void @store(ptr %a, i64 %b) nounwind {
 ;
 ; WITHD-LABEL: store:
 ; WITHD:       # %bb.0:
-; WITHD-NEXT:    addi sp, sp, -16
-; WITHD-NEXT:    sw a1, 8(sp)
-; WITHD-NEXT:    sw a2, 12(sp)
-; WITHD-NEXT:    fld fa5, 8(sp)
-; WITHD-NEXT:    fsd fa5, 0(a0)
-; WITHD-NEXT:    fsd fa5, 88(a0)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    mv a4, a1
+; WITHD-NEXT:    mv a5, a2
+; WITHD-NEXT:    sd a4, 0(a0)
+; WITHD-NEXT:    sd a4, 88(a0)
 ; WITHD-NEXT:    ret
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i32 11
@@ -284,12 +278,8 @@ define i64 @load_g() nounwind {
 ;
 ; WITHD-LABEL: load_g:
 ; WITHD:       # %bb.0: # %entry
-; WITHD-NEXT:    addi sp, sp, -16
 ; WITHD-NEXT:    lui a0, %hi(g)
-; WITHD-NEXT:    fld fa5, %lo(g)(a0)
-; WITHD-NEXT:    fsd fa5, 8(sp)
-; WITHD-NEXT:    ld a0, 8(sp)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    ld a0, %lo(g)(a0)
 ; WITHD-NEXT:    ret
 entry:
   %0 = load i64, ptr @g
@@ -307,13 +297,10 @@ define void @store_g() nounwind {
 ;
 ; WITHD-LABEL: store_g:
 ; WITHD:       # %bb.0: # %entyr
-; WITHD-NEXT:    addi sp, sp, -16
-; WITHD-NEXT:    sw zero, 8(sp)
-; WITHD-NEXT:    sw zero, 12(sp)
-; WITHD-NEXT:    fld fa5, 8(sp)
-; WITHD-NEXT:    lui a0, %hi(g)
-; WITHD-NEXT:    fsd fa5, %lo(g)(a0)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    li a0, 0
+; WITHD-NEXT:    lui a2, %hi(g)
+; WITHD-NEXT:    li a1, 0
+; WITHD-NEXT:    sd a0, %lo(g)(a2)
 ; WITHD-NEXT:    ret
 entyr:
   store i64 0, ptr @g
@@ -334,19 +321,13 @@ define void @large_offset(ptr nocapture %p, i64 %d) nounwind {
 ;
 ; WITHD-LABEL: large_offset:
 ; WITHD:       # %bb.0: # %entry
-; WITHD-NEXT:    addi sp, sp, -16
 ; WITHD-NEXT:    lui a1, 4
 ; WITHD-NEXT:    add a0, a0, a1
-; WITHD-NEXT:    fld fa5, -384(a0)
-; WITHD-NEXT:    fsd fa5, 8(sp)
-; WITHD-NEXT:    ld a2, 8(sp)
+; WITHD-NEXT:    ld a2, -384(a0)
 ; WITHD-NEXT:    addi a2, a2, 1
 ; WITHD-NEXT:    seqz a1, a2
 ; WITHD-NEXT:    add a3, a3, a1
-; WITHD-NEXT:    sd a2, 8(sp)
-; WITHD-NEXT:    fld fa5, 8(sp)
-; WITHD-NEXT:    fsd fa5, -384(a0)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    sd a2, -384(a0)
 ; WITHD-NEXT:    ret
 entry:
   %add.ptr = getelementptr inbounds i64, ptr %p, i64 2000
@@ -548,20 +529,19 @@ define void @no_coalesce() #0 {
 ;
 ; WITHD-LABEL: no_coalesce:
 ; WITHD:       # %bb.0: # %entry
-; WITHD-NEXT:    addi sp, sp, -32
-; WITHD-NEXT:    .cfi_def_cfa_offset 32
-; WITHD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; WITHD-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
+; WITHD-NEXT:    addi sp, sp, -16
+; WITHD-NEXT:    .cfi_def_cfa_offset 16
+; WITHD-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; WITHD-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; WITHD-NEXT:    .cfi_offset ra, -4
-; WITHD-NEXT:    .cfi_offset fs0, -16
+; WITHD-NEXT:    .cfi_offset s0, -16
+; WITHD-NEXT:    .cfi_offset s1, -12
 ; WITHD-NEXT:    .cfi_remember_state
-; WITHD-NEXT:    li a0, 1
-; WITHD-NEXT:    sw a0, 8(sp)
-; WITHD-NEXT:    sw zero, 12(sp)
-; WITHD-NEXT:    fld fs0, 8(sp)
+; WITHD-NEXT:    li s0, 1
+; WITHD-NEXT:    li s1, 0
 ; WITHD-NEXT:    j .LBB12_2
 ; WITHD-NEXT:  # %bb.1: # %crash
-; WITHD-NEXT:    fsd fs0, 0(zero)
+; WITHD-NEXT:    sd s0, 0(zero)
 ; WITHD-NEXT:    li a2, 12
 ; WITHD-NEXT:    li a0, 0
 ; WITHD-NEXT:    li a1, 0
@@ -573,11 +553,12 @@ define void @no_coalesce() #0 {
 ; WITHD-NEXT:    # in Loop: Header=BB12_2 Depth=1
 ; WITHD-NEXT:    j .LBB12_2
 ; WITHD-NEXT:  # %bb.4: # %exit
-; WITHD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; WITHD-NEXT:    fld fs0, 16(sp) # 8-byte Folded Reload
+; WITHD-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; WITHD-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; WITHD-NEXT:    .cfi_restore ra
-; WITHD-NEXT:    .cfi_restore fs0
-; WITHD-NEXT:    addi sp, sp, 32
+; WITHD-NEXT:    .cfi_restore s0
+; WITHD-NEXT:    .cfi_restore s1
+; WITHD-NEXT:    addi sp, sp, 16
 ; WITHD-NEXT:    .cfi_def_cfa_offset 0
 ; WITHD-NEXT:    ret
 entry:
@@ -616,21 +597,19 @@ define i64 @select_i64(i1 %c, i64 %a, i64 %b) nounwind {
 ;
 ; WITHD-LABEL: select_i64:
 ; WITHD:       # %bb.0:
-; WITHD-NEXT:    addi sp, sp, -16
-; WITHD-NEXT:    mv a7, a2
-; WITHD-NEXT:    sw a1, 8(sp)
-; WITHD-NEXT:    sw a7, 12(sp)
-; WITHD-NEXT:    fld fa5, 8(sp)
 ; WITHD-NEXT:    andi a0, a0, 1
-; WITHD-NEXT:    sw a3, 8(sp)
-; WITHD-NEXT:    sw a4, 12(sp)
 ; WITHD-NEXT:    bnez a0, .LBB13_2
 ; WITHD-NEXT:  # %bb.1:
-; WITHD-NEXT:    fld fa5, 8(sp)
+; WITHD-NEXT:    mv t1, a3
+; WITHD-NEXT:    mv t2, a4
+; WITHD-NEXT:    mv a0, t1
+; WITHD-NEXT:    mv a1, t2
+; WITHD-NEXT:    ret
 ; WITHD-NEXT:  .LBB13_2:
-; WITHD-NEXT:    fsd fa5, 8(sp)
-; WITHD-NEXT:    ld a0, 8(sp)
-; WITHD-NEXT:    addi sp, sp, 16
+; WITHD-NEXT:    mv a6, a1
+; WITHD-NEXT:    mv a7, a2
+; WITHD-NEXT:    mv a0, a6
+; WITHD-NEXT:    mv a1, a7
 ; WITHD-NEXT:    ret
   %r = select i1 %c, i64 %a, i64 %b
   ret i64 %r
@@ -757,13 +736,13 @@ define i64 @mixed_i64_f64(ptr %p) nounwind {
 ; WITHD-NEXT:    lui a1, 261888
 ; WITHD-NEXT:    sw zero, 8(sp)
 ; WITHD-NEXT:    sw a1, 12(sp)
+; WITHD-NEXT:    ld a2, 0(a0)
 ; WITHD-NEXT:    fld fa5, 8(sp)
-; WITHD-NEXT:    fld fa4, 0(a0)
+; WITHD-NEXT:    sd a2, 8(sp)
+; WITHD-NEXT:    fld fa4, 8(sp)
 ; WITHD-NEXT:    fadd.d fa5, fa4, fa5
 ; WITHD-NEXT:    fsd fa5, 8(sp)
 ; WITHD-NEXT:    ld a0, 8(sp)
-; WITHD-NEXT:    fsd fa4, 8(sp)
-; WITHD-NEXT:    ld a2, 8(sp)
 ; WITHD-NEXT:    add a0, a0, a2
 ; WITHD-NEXT:    sltu a2, a0, a2
 ; WITHD-NEXT:    add a1, a1, a3

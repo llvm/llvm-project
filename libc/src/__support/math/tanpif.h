@@ -76,8 +76,8 @@ LIBC_INLINE float tanpif(float x) {
   // Odd multiples of 1/4 have exact results of +1 or -1.
   double xd = static_cast<double>(x);
   if (LIBC_UNLIKELY(fputil::is_odd_integer(4.0 * xd)))
-    return fputil::is_odd_integer(fputil::multiply_add(2.0, xd, -0.5)) ? -1.0f
-                                                                       : 1.0f;
+    return fputil::is_odd_integer(fputil::multiply_sub(2.0, xd, 0.5)) ? -1.0f
+                                                                      : 1.0f;
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Handle exceptional values.
@@ -119,7 +119,7 @@ LIBC_INLINE float tanpif(float x) {
   using fputil::multiply_add;
   return fputil::cast<float>(
       multiply_add(sin_y, cos_k, multiply_add(cosm1_y, sin_k, sin_k)) /
-      multiply_add(sin_y, -sin_k, multiply_add(cosm1_y, cos_k, cos_k)));
+      fputil::sub_multiply(multiply_add(cosm1_y, cos_k, cos_k), sin_y, sin_k));
 }
 
 } // namespace math

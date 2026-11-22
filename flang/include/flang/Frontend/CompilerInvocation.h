@@ -24,12 +24,9 @@
 #include "mlir/Support/Timing.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
 #include <memory>
-
-namespace llvm {
-class TargetMachine;
-} // namespace llvm
 
 namespace Fortran::frontend {
 
@@ -175,7 +172,7 @@ public:
   /// Creates and configures semantics context based on the compilation flags.
   std::unique_ptr<Fortran::semantics::SemanticsContext>
   getSemanticsCtx(Fortran::parser::AllCookedSources &allCookedSources,
-                  const llvm::TargetMachine &);
+                  llvm::StringRef targetFeatures);
 
   std::string &getModuleDir() { return moduleDir; }
   const std::string &getModuleDir() const { return moduleDir; }

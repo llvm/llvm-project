@@ -88,8 +88,6 @@
 
 using namespace llvm;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 #define DEBUG_TYPE "lli"
 
 namespace {
@@ -488,12 +486,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   std::string ErrorMsg;
   EngineBuilder builder(std::move(Owner));
-  builder.setMArch(codegen::getMArch());
-  builder.setMCPU(codegen::getCPUStr());
-  builder.setMAttrs(codegen::getFeatureList());
-  if (auto RM = codegen::getExplicitRelocModel())
+  builder.setMArch(codegen::getMArch(LibraryOptions));
+  builder.setMCPU(codegen::getCPUStr(LibraryOptions));
+  builder.setMAttrs(codegen::getFeatureList(LibraryOptions));
+  if (auto RM = codegen::getExplicitRelocModel(LibraryOptions))
     builder.setRelocationModel(*RM);
-  if (auto CM = codegen::getExplicitCodeModel())
+  if (auto CM = codegen::getExplicitCodeModel(LibraryOptions))
     builder.setCodeModel(*CM);
   builder.setErrorStr(&ErrorMsg);
   builder.setEngineKind(ForceInterpreter
@@ -527,7 +525,7 @@ int main(int argc, char **argv, char * const *envp) {
   TargetOptions Options =
       codegen::getTargetOptions(LibraryOptions, Triple(TargetTriple));
 
-  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls();
+  if (FloatABI::ABIType ABI = codegen::getFloatABIForCalls(LibraryOptions);
       ABI != FloatABI::Default && !Mod->getModuleFlag("float-abi")) {
     Mod->addModuleFlag(Module::Error, "float-abi",
                        MDString::get(Context, FloatABI::getABITypeName(ABI)));
@@ -969,17 +967,17 @@ static int runOrcJIT(const cl::LibraryOptionsContext &LibraryOptions,
   if (DL)
     Builder.setDataLayout(DL);
 
-  if (!codegen::getMArch().empty())
+  if (!codegen::getMArch(LibraryOptions).empty())
     Builder.getJITTargetMachineBuilder()->getTargetTriple().setArchName(
-        codegen::getMArch());
+        codegen::getMArch(LibraryOptions));
 
   Builder.getJITTargetMachineBuilder()
-      ->setCPU(codegen::getCPUStr())
-      .addFeatures(codegen::getFeatureList())
-      .setRelocationModel(codegen::getExplicitRelocModel())
-      .setCodeModel(codegen::getExplicitCodeModel());
+      ->setCPU(codegen::getCPUStr(LibraryOptions))
+      .addFeatures(codegen::getFeatureList(LibraryOptions))
+      .setRelocationModel(codegen::getExplicitRelocModel(LibraryOptions))
+      .setCodeModel(codegen::getExplicitCodeModel(LibraryOptions));
 
-  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS())
+  if (auto EmulatedTLS = codegen::getExplicitEmulatedTLS(LibraryOptions))
     Builder.getJITTargetMachineBuilder()->getOptions().EmulatedTLS =
         *EmulatedTLS;
 

@@ -72,6 +72,41 @@ exit:
   ret void
 }
 
+; Vectorization is not profitable. Computing the exit value of %v via SCEV
+; reuses %s.
+; FIXME: %s should keep its nsw flag, as the loop is not vectorized.
+define i64 @exit_value_reuse_value_with_flags(i64 %a, i64 %b, i64 %n) {
+; CHECK-LABEL: define i64 @exit_value_reuse_value_with_flags(
+; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[S:%.*]] = add i64 [[A]], [[B]]
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[V:%.*]] = add i64 [[IV]], [[S]]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[V_LCSSA:%.*]] = phi i64 [ [[V]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[V_LCSSA]]
+;
+entry:
+  %s = add nsw i64 %a, %b
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %v = add i64 %iv, %s
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  %v.lcssa = phi i64 [ %v, %loop ]
+  ret i64 %v.lcssa
+}
+
 attributes #0 = { "target-features"="+avx2" }
 !0 = !{!"branch_weights", i32 89478484, i32 1879048192}
 ;.

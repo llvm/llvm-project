@@ -123,3 +123,33 @@ subroutine do_simd_lastprivate_firstprivate()
   end do
   !$omp end do simd
 end subroutine do_simd_lastprivate_firstprivate
+
+! Check that flang lowers clauses in accordance with the OpenMP spec.
+! !$omp do simd lastprivate(a) firstprivate(a) should become:
+! !$omp do firstprivate(a) lastprivate(a)
+!   !$omp simd lastprivate(a)
+
+! CHECK-LABEL: func.func @_QPdo_simd_lastprivate_firstprivate_decomp(
+! CHECK: %[[ORIGINAL:.*]]:2 = hlfir.declare
+
+! Ensure wsloop has a firstprivate clause through a '_firstprivate_i32' suffix.
+! CHECK: omp.wsloop private(@{{[^ ]+}}_firstprivate_i32 %[[ORIGINAL]]#0 -> %[[DO_PRIVATE:.*]] : !fir.ref<i32>)
+
+! Ensure simd has a (non-first) private clause.
+! CHECK-NEXT: omp.simd
+! CHECK-SAME: private(@{{[^ ]+}}_private_i32 %[[DO_PRIVATE]] -> %[[SIMD_PRIVATE:.*]] : !fir.ref<i32>)
+! CHECK: %[[SIMD:.*]]:2 = hlfir.declare %[[SIMD_PRIVATE]] uniq_name(
+
+! Make sure there is lastprivate copyback.
+! CHECK: fir.if %{{.*}} {
+! CHECK:   %[[VALUE:.*]] = fir.load %[[SIMD]]#0
+! CHECK:   hlfir.assign %[[VALUE]] to %[[ORIGINAL]]#0
+! CHECK: }
+subroutine do_simd_lastprivate_firstprivate_decomp()
+  integer :: a
+  !$omp do simd lastprivate(a) firstprivate(a)
+  do i = 1, 10
+    a = a + 1
+  end do
+  !$omp end do simd
+end subroutine

@@ -264,7 +264,8 @@ void CIRGenFunction::emitAndUpdateRetAlloca(QualType type, mlir::Location loc,
                                             CharUnits alignment) {
   if (!type->isVoidType()) {
     Address allocaAddr = Address::invalid();
-    returnValue = createMemTemp(type, alignment, loc, "__retval", &allocaAddr);
+    returnValue = createMemTemp(type, alignment, loc, "", &allocaAddr);
+    mlir::cast<cir::AllocaOp>(allocaAddr.getDefiningOp()).setReturnSlot(true);
     fnRetAlloca = allocaAddr.getPointer();
   }
 }
@@ -381,7 +382,7 @@ cir::ReturnOp CIRGenFunction::LexicalScope::emitReturn(mlir::Location loc) {
   assert(fn && "emitReturn from non-function");
 
   if (!fn.getFunctionType().hasVoidReturn()) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
+    // Load the value from the return slot and return it via `cir.return`.
     auto value = cir::LoadOp::create(
         builder, loc, fn.getFunctionType().getReturnType(), *cgf.fnRetAlloca);
     return cir::ReturnOp::create(builder, loc,
@@ -669,8 +670,13 @@ void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
         }
       }
       for (auto *fd : md->getParent()->fields()) {
-        if (fd->hasCapturedVLAType())
-          cgm.errorNYI(loc, "lambda captured VLA type");
+        if (fd->hasCapturedVLAType()) {
+          mlir::Value exprArg =
+              emitLoadOfLValue(emitLValueForLambdaField(fd), SourceLocation())
+                  .getValue();
+          const VariableArrayType *vat = fd->getCapturedVLAType();
+          vlaSizeMap[vat->getSizeExpr()] = exprArg;
+        }
       }
     } else if (md->isImplicitObjectMemberFunction()) {
       // Not in a lambda; just use 'this' from the method.
@@ -1104,7 +1110,7 @@ clang::QualType CIRGenFunction::buildFunctionArgList(clang::GlobalDecl gd,
   const auto *md = dyn_cast<CXXMethodDecl>(fd);
   if (md && md->isImplicitObjectMemberFunction()) {
     if (cgm.getCXXABI().hasThisReturn(gd))
-      cgm.errorNYI(fd->getSourceRange(), "this return");
+      retTy = md->getThisType();
     else if (cgm.getCXXABI().hasMostDerivedReturn(gd))
       cgm.errorNYI(fd->getSourceRange(), "most derived return");
     cgm.getCXXABI().buildThisParam(*this, args);

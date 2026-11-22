@@ -60,28 +60,6 @@
 name:            atf_tc_fail_nonfatal
 alignment:       4
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: gprc }
-  - { id: 1, class: gprc }
-  - { id: 2, class: gprc }
-  - { id: 3, class: gprc }
-  - { id: 4, class: gprc }
-  - { id: 5, class: gprc }
-  - { id: 6, class: gprc }
-  - { id: 7, class: gprc }
-  - { id: 8, class: f8rc }
-  - { id: 9, class: f8rc }
-  - { id: 10, class: f8rc }
-  - { id: 11, class: f8rc }
-  - { id: 12, class: f8rc }
-  - { id: 13, class: f8rc }
-  - { id: 14, class: f8rc }
-  - { id: 15, class: f8rc }
-  - { id: 16, class: crbitrc }
-  - { id: 17, class: gprc }
-  - { id: 18, class: gprc }
-  - { id: 19, class: gprc }
-  - { id: 20, class: gprc }
 liveins:
   - { reg: '$r3', virtual-reg: '%0' }
   - { reg: '$r4', virtual-reg: '%1' }

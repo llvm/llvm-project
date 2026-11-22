@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -55,6 +56,8 @@ using namespace SCEVPatternMatch;
 #define DEBUG_TYPE "constraint-elimination"
 
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
+STATISTIC(NumDoesHoldDepthLimitHit,
+          "Number of doesHold queries cut off by the nesting depth limit");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
 
@@ -360,15 +363,30 @@ class ConstraintInfo {
 
   const DataLayout &DL;
 
+public:
+  /// Maximum nesting of doesHold queries. Deeper queries conservatively return
+  /// false.
+  static constexpr unsigned MaxDoesHoldDepth = 2;
+
+private:
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+  /// Current nesting depth of doesHold.
+  unsigned DoesHoldDepth = 0;
+
+  /// Number of doesHold queries that have been cut off by MaxDoesHoldDepth so
+  /// far.
+  unsigned NumDepthLimitHits = 0;
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
   getDecomposeCache() {
     return DecomposeCache;
   }
+
+  unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
 
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
@@ -419,12 +437,10 @@ public:
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
 
-  /// Returns the sign of \p V, if known. The result is false if \p V is known
-  /// to be non-negative. Otherwise it is true if \p V is known to be negative
-  /// (if \p StrictlyNegative), or non-positive (if not \p StrictlyNegative).
-  /// Returns std::nullopt if neither ValueTracking, nor the signed system can
-  /// prove either fact.
-  std::optional<bool> getKnownSign(Value *V, bool StrictlyNegative);
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if neither the signed system nor
+  /// ValueTracking can prove it.
+  std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -630,16 +646,6 @@ static bool isKnownNoWrap(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
       return true;
   }
 
-  // A signed sum of operands with opposite signs cannot wrap.
-  if (Signed && Opcode == Instruction::Add) {
-    std::optional<bool> Op0Sign =
-        Info.getKnownSign(Op0, /*StrictlyNegative=*/false);
-    std::optional<bool> Op1Sign =
-        Info.getKnownSign(Op1, /*StrictlyNegative=*/false);
-    if (Op0Sign && Op1Sign && *Op0Sign != *Op1Sign)
-      return true;
-  }
-
   if (!Signed && (NoWrapFlags & OBO::NoSignedWrap) &&
       (Opcode == Instruction::Shl || Info.isKnownNonNegative(Op1)) &&
       Info.isKnownNonNegative(Op0))
@@ -779,8 +785,12 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
   if (It != Cache.end())
     return It->second;
 
+  unsigned HitsBefore = Info.getNumDepthLimitHits();
   Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
-  Info.getDecomposeCache().insert({Key, Result});
+  // If a doesHold query was cut off while decomposing, the result may be less
+  // precise than what a shallower query could compute, so don't cache it.
+  if (Info.getNumDepthLimitHits() == HitsBefore)
+    Info.getDecomposeCache().insert({Key, Result});
   return Result;
 }
 
@@ -1150,6 +1160,15 @@ ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
 }
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
+  // Decomposing A and B may itself call doesHold, once per level of a chain of
+  // operations. Cut off deep nesting to bound stack usage and compile time.
+  if (DoesHoldDepth >= MaxDoesHoldDepth) {
+    ++NumDoesHoldDepthLimitHit;
+    ++NumDepthLimitHits;
+    return false;
+  }
+  SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
+
   auto R = getConstraintForSolving(Pred, A, B);
   if (R.empty())
     return false;
@@ -1177,18 +1196,16 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
 }
 
-std::optional<bool> ConstraintInfo::getKnownSign(Value *V,
-                                                 bool StrictlyNegative) {
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
   KnownBits Known = computeKnownBits(V, DL);
   if (Known.isNonNegative())
     return false;
-  if (StrictlyNegative ? Known.isNegative() : Known.isNonPositive())
+  if (Known.isNegative())
     return true;
   Constant *Zero = ConstantInt::get(V->getType(), 0);
   if (doesHold(CmpInst::ICMP_SGE, V, Zero))
     return false;
-  auto NegativePred = StrictlyNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SLE;
-  if (doesHold(NegativePred, V, Zero))
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
     return true;
   return std::nullopt;
 }
@@ -2674,10 +2691,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
           // The operands also have the same sign: if one of them is known to
           // be non-negative (or negative), so is the other.
           if (A->getType()->isIntegerTy()) {
-            std::optional<bool> ASign =
-                Info.getKnownSign(A, /*StrictlyNegative=*/true);
-            std::optional<bool> BSign =
-                Info.getKnownSign(B, /*StrictlyNegative=*/true);
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
             if (ASign.has_value() != BSign.has_value()) {
               bool IsNegative = ASign ? *ASign : *BSign;
               Value *OtherOp = ASign ? B : A;

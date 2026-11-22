@@ -113,7 +113,7 @@ void store_args(Arg *a, int i, const Arg *p) { a[i] = ret_arg(p); }
 Value ret_value(const Value *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @_Z9ret_valuePK5Value(%arg0: !cir.ptr<!rec_Value> {llvm.noundef} loc({{[^)]+}})) -> !rec_anon_struct
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_Value>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_Value>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_Value>
 // CIR:   %[[RETVIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_Value> -> !cir.ptr<!rec_anon_struct>
 // CIR:   %[[RET:.+]] = cir.load align(16) %[[RETVIEW]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -150,7 +150,7 @@ Value pass_value(Value v) { return v; }
 // CIR:   %[[HIP:.+]] = cir.get_member %[[SLOT]][1] {name = ""} : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!u64i>
 // CIR:   cir.store %arg1, %[[HIP]] : !u64i, !cir.ptr<!u64i>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Value>
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_Value>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_Value>
 // CIR:   %[[V:.+]] = cir.alloca "v" align(16) init : !cir.ptr<!rec_Value>
 // CIR:   cir.copy %[[VIEW]] align(16) to %[[V]] align(16) : !cir.ptr<!rec_Value>
 // CIR:   cir.copy %[[V]] align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_Value>
@@ -205,7 +205,7 @@ Value call_ret_ptr(Value (*f)(const Value *), const Value *p) { return f(p); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12call_ret_ptrPF5ValuePKS_ES1_(
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_anon_struct>
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_Value>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_Value>
 // CIR:   %[[RES:.+]] = cir.call %{{[^(]+}}(%{{[^,)]+}}) : (!cir.ptr<!cir.func<(!cir.ptr<!rec_Value>) -> !rec_anon_struct>>, !cir.ptr<!rec_Value> {llvm.noundef}) -> !rec_anon_struct
 // CIR:   cir.store %[[RES]], %[[SLOT]] : !rec_anon_struct, !cir.ptr<!rec_anon_struct>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_anon_struct> -> !cir.ptr<!rec_Value>
@@ -236,7 +236,7 @@ void store_values(Value *a, int i, const Value *p) { a[i] = ret_value(p); }
 WideInt ret_wide(const WideInt *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8ret_widePK7WideInt(%arg0: !cir.ptr<!rec_WideInt> {llvm.noundef} loc({{[^)]+}})) -> !s128i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_WideInt>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_WideInt>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_WideInt>
 // CIR:   %[[RETVIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_WideInt> -> !cir.ptr<!s128i>
 // CIR:   %[[RET:.+]] = cir.load align(16) %[[RETVIEW]] : !cir.ptr<!s128i>, !s128i
@@ -375,7 +375,7 @@ X87U make_x87u();
 X87U ret_x87u(const X87U *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @_Z8ret_x87uPK4X87U(%arg0: !cir.ptr<!rec_X87U> {llvm.noundef} loc({{[^)]+}})) -> !cir.f80
-// CIR:   %[[RV:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_X87U>
+// CIR:   %[[RV:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_X87U>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[RV]] align(16) : !cir.ptr<!rec_X87U>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[RV]] : !cir.ptr<!rec_X87U> -> !cir.ptr<!cir.f80>
 // CIR:   %[[LD:.+]] = cir.load align(16) %[[VIEW]] : !cir.ptr<!cir.f80>, !cir.f80
