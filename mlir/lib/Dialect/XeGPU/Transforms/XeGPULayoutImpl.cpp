@@ -2629,6 +2629,17 @@ xegpu::completeDpasMxLaneLayoutFromInstData(
 ///          Copy its effective sg_layout=[8] onto dim 0 and assign the
 ///          remaining four subgroups to dim 1.
 
+/// Whether each subgroup can hold the reduced dims whole: its tile, with
+/// `sgData` on the other dims, stays within 16K elements.
+static bool canCopyReducedDims(ArrayRef<int64_t> srcShape,
+                               ArrayRef<int64_t> sgData,
+                               ArrayRef<int64_t> reductionDims) {
+  int64_t elems = 1;
+  for (auto [dim, size] : llvm::enumerate(srcShape))
+    elems *= llvm::is_contained(reductionDims, dim) ? size : sgData[dim];
+  return elems <= 16 * 1024;
+}
+
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
     DistributeLayoutAttr consumerLayout, SmallVector<int64_t> reductionDims,
@@ -2650,11 +2661,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       SmallVector<int64_t> sgLayoutFromConsumer =
           srcLayout.getEffectiveSgLayoutAsInt();
       auto srcSgData = computeShapeRatio(srcShape, sgLayoutFromConsumer);
+      // A reduced dim larger than numSg is kept whole per subgroup, so each
+      // reduces locally, if the subgroup's tile stays small enough.
+      bool canCopy = canCopyReducedDims(
+          srcShape, srcLayout.getEffectiveSgDataAsInt(), reductionDims);
       if (srcSgData)
         for (int dim = 0; dim < srcRank; dim++) {
           if (llvm::is_contained(reductionDims, dim))
-            srcLayout =
-                srcLayout.setDimData(dim, srcSgData.value()[dim], -1, -1);
+            srcLayout = srcLayout.setDimData(dim,
+                                             canCopy && srcShape[dim] > numSg
+                                                 ? srcShape[dim]
+                                                 : srcSgData.value()[dim],
+                                             -1, -1);
         }
     } else {
       SmallVector<int64_t> consumerSgLayout =
@@ -2685,9 +2703,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       }
 
       // Second pass: distribute remaining subgroups across the reduction dims.
-      // The reduction-to-scalar case is handled only by this loop.
+      // The reduction-to-scalar case is handled only by this loop. A reduced
+      // dim larger than numSg is kept whole per subgroup (copies that reduce
+      // locally) if the subgroup's tile stays small enough.
+      bool canCopy = canCopyReducedDims(srcShape, sgData, reductionDims);
       for (int i = 0; i < srcRank; i++) {
         if (llvm::is_contained(reductionDims, i)) {
+          if (canCopy && srcShape[i] > numSg) {
+            sgLayout[i] = remainingSgCount;
+            sgData[i] = srcShape[i];
+            remainingSgCount = 1;
+            continue;
+          }
           sgLayout[i] =
               std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
           assert((srcShape[i] % sgLayout[i] == 0) &&
