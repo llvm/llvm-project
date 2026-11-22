@@ -342,7 +342,8 @@ Sema::BuildCXXNamedCast(SourceLocation OpLoc, tok::TokenKind Kind,
                         SourceRange AngleBrackets, SourceRange Parens) {
   ExprResult Ex = E;
   QualType DestType = DestTInfo->getType();
-  if (!CheckVariablyModifiedTypeUse(DestType,
+  if (DestType.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(DestType,
                                     DestTInfo->getTypeLoc().getBeginLoc()))
     return ExprError();
 
@@ -3496,7 +3497,8 @@ ExprResult Sema::BuildCStyleCastExpr(SourceLocation LPLoc,
                                      TypeSourceInfo *CastTypeInfo,
                                      SourceLocation RPLoc,
                                      Expr *CastExpr) {
-  if (!CheckVariablyModifiedTypeUse(CastTypeInfo->getType(),
+  if (CastTypeInfo->getType().getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(CastTypeInfo->getType(),
                                     CastTypeInfo->getTypeLoc().getBeginLoc()))
     return ExprError();
 
@@ -3530,7 +3532,8 @@ ExprResult Sema::BuildCXXFunctionalCastExpr(TypeSourceInfo *CastTypeInfo,
                                             Expr *CastExpr,
                                             SourceLocation RPLoc) {
   assert(LPLoc.isValid() && "List-initialization shouldn't get here.");
-  if (!CheckVariablyModifiedTypeUse(Type,
+  if (Type.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(Type,
                                     CastTypeInfo->getTypeLoc().getBeginLoc()))
     return ExprError();
 

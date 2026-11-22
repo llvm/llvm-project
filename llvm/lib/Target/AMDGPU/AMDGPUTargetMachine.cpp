@@ -223,6 +223,8 @@ public:
       : RegisterRegAllocBase(N, D, C) {}
 };
 
+} // anonymous namespace
+
 static bool onlyAllocateSGPRs(const TargetRegisterInfo &TRI,
                               const MachineRegisterInfo &MRI,
                               const Register Reg) {
@@ -426,7 +428,6 @@ static bool isLTOPreLink(ThinOrFullLTOPhase Phase) {
   return Phase == ThinOrFullLTOPhase::FullLTOPreLink ||
          Phase == ThinOrFullLTOPhase::ThinLTOPreLink;
 }
-} // anonymous namespace
 
 static cl::opt<bool, true> EnableObjectLinking(
     "amdgpu-enable-object-linking",

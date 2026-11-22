@@ -686,7 +686,6 @@ class LowerTypeTestsModule {
   const ModuleSummaryIndex *ImportSummary;
 
   Triple::ArchType Arch;
-  Triple::OSType OS;
   Triple::ObjectFormatType ObjectFormat;
 
   // Determines which kind of Thumb jump table we generate. If arch is
@@ -2293,7 +2292,6 @@ LowerTypeTestsModule::LowerTypeTestsModule(
         CanUseThumbBWJumpTable = true;
     }
   }
-  OS = TargetTriple.getOS();
   ObjectFormat = TargetTriple.getObjectFormat();
 
   // Function annotation describes or applies to function itself, and
