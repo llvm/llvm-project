@@ -227,7 +227,6 @@ define <4 x float> @sitofp_v2i32_v2f32(ptr) nounwind {
 ; X86-NEXT:    movq (%eax), %mm0
 ; X86-NEXT:    paddd %mm0, %mm0
 ; X86-NEXT:    movq2dq %mm0, %xmm0
-; X86-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X86-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -236,7 +235,6 @@ define <4 x float> @sitofp_v2i32_v2f32(ptr) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    paddd %mm0, %mm0
 ; X64-NEXT:    movq2dq %mm0, %xmm0
-; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %2 = load <1 x i64>, ptr %0, align 8
@@ -269,7 +267,6 @@ define <4 x float> @cvt_v2i32_v2f32(ptr) nounwind {
 ; X64-NEXT:    movq (%rdi), %mm0
 ; X64-NEXT:    paddd %mm0, %mm0
 ; X64-NEXT:    movq2dq %mm0, %xmm0
-; X64-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; X64-NEXT:    cvtdq2ps %xmm0, %xmm0
 ; X64-NEXT:    retq
   %2 = load <1 x i64>, ptr %0, align 8

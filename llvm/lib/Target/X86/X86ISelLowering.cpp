@@ -47062,6 +47062,13 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     break;
   }
+  case X86ISD::MOVQ2DQ: {
+    // Move from MMX to XMM. Upper half of XMM are known zero.
+    assert(Op.getValueType().is128BitVector() && "Unknown vector type");
+    if (DemandedElts.countr_zero() >= (NumElts / 2))
+      return true;
+    break;
+  }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, Kind, Depth);
