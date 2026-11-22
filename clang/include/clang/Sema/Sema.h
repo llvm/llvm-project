@@ -5092,7 +5092,7 @@ public:
   void addSynthesizedTopLevelDecl(Decl *D) {
     SynthesizedTopLevelDecls.push_back(D);
   }
-  SmallVectorImpl<Decl *> &getSynthesizedTopLevelDecls() {
+  ArrayRef<Decl *> getSynthesizedTopLevelDecls() {
     return SynthesizedTopLevelDecls;
   }
 

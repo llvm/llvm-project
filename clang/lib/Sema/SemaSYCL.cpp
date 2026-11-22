@@ -623,10 +623,10 @@ void BuildSYCLKernelInfoClassSpecializationDefn(Sema &SemaRef, QualType KNT) {
 /// BuildSYCLKernelLaunchIdExpr performs lookup for a 'sycl_kernel_launch'
 /// template with 'KIT' used as an explicit type template argument. If
 /// lookup fails, a diagnostic is issued and an error expression returned.
-/// Otherwise, an UnresolvedLookupExpr, UnresolvedMemberExpr, DeclRefExpr,
-/// or MemberExpr will be returned. The resulting expression is intended
-/// to be passed as the 'IdExpr' argument to BuildSYCLKernelLaunchCallStmt()
-/// after the function body has been parsed.
+/// Otherwise, an expression for the (probably unresolved) lookup result is
+/// returned. The resulting expression is intended to be passed as the
+/// 'IdExpr' argument to BuildSYCLKernelLaunchCallStmt() after the function
+/// body has been parsed.
 ///
 /// 'FD' must be a function declared with a valid sycl_kernel_entry_point
 /// attribute and the current Sema context must match 'FD' so that scopes
