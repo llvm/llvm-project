@@ -30,7 +30,6 @@ class SILateBranchLowering {
 private:
   const GCNSubtarget &ST;
   const SIInstrInfo *TII;
-  const SIRegisterInfo *TRI;
   MachineDominatorTree *MDT;
   MachineLoopInfo *MLI;
   const AMDGPU::LaneMaskConstants &LMC;
@@ -42,8 +41,8 @@ private:
 public:
   SILateBranchLowering(const GCNSubtarget &ST, MachineDominatorTree *MDT,
                        MachineLoopInfo *MLI)
-      : ST(ST), TII(ST.getInstrInfo()), TRI(&TII->getRegisterInfo()), MDT(MDT),
-        MLI(MLI), LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
+      : ST(ST), TII(ST.getInstrInfo()), MDT(MDT), MLI(MLI),
+        LMC(AMDGPU::LaneMaskConstants::get(ST)) {}
 
   bool run(MachineFunction &MF);
 };
