@@ -30,14 +30,16 @@ public:
   int64_t getImplicitAddend(const uint8_t *buf, RelType type) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                         uint64_t val) const override;
-  template <class ELFT, class RelTy>
+
+  template <class RelTy>
   void scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                        unsigned shard);
+
   void scanSection(InputSectionBase &sec, unsigned shard) override {
     if (ctx.arg.ekind == ELF32BEKind)
-      elf::scanSection1<SuperH, ELF32BE>(*this, sec, shard);
+      elf::scanSection1<ELF32BE, SuperH>(*this, sec, shard);
     else
-      elf::scanSection1<SuperH, ELF32LE>(*this, sec, shard);
+      elf::scanSection1<ELF32LE, SuperH>(*this, sec, shard);
   }
 };
 } // namespace
@@ -97,7 +99,7 @@ int64_t SuperH::getImplicitAddend(const uint8_t *buf, RelType type) const {
   }
 }
 
-template <class ELFT, class RelTy>
+template <class RelTy>
 void SuperH::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
                               unsigned shard) {
   RelocScan rs(ctx, &sec, shard);
@@ -110,11 +112,11 @@ void SuperH::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels,
 
     uint32_t symIdx = rel.getSymbol(false);
     uint64_t offset = rel.r_offset;
-    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
+    Symbol &sym = sec.file->getSymbol(symIdx);
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-    int64_t addend = rs.getAddend<ELFT>(rel, type);
+    int64_t addend = rs.getAddend(rel, type);
 
     RelExpr expr;
     switch (type) {
