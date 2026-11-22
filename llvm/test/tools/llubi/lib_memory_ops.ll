@@ -17,7 +17,6 @@ define void @main() {
   %set.ret = call ptr @memset(ptr %src, i32 4660, i64 8)
   %set.val = load i8, ptr %src, align 1
 
-  ; Unlike the intrinsic, the C memcpy does not require aligned pointers.
   %dst.off = getelementptr i8, ptr %dst, i64 1
   %cpy.ret = call ptr @memcpy(ptr %dst.off, ptr %src, i64 4)
   %cpy.val = load i8, ptr %dst.off, align 1
