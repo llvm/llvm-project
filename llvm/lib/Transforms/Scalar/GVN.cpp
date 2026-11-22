@@ -1484,6 +1484,9 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
     // Introduce a new value select for a load from an eligible pointer select.
     SelectInst *Sel = getSelectInstr();
     assert(V1 && V2 && "both value operands of the select must be present");
+    for (Value *V : {V1, V2})
+      if (auto *LI = dyn_cast<LoadInst>(V))
+        combineMetadataForCSE(LI, Load, /*DoesKMove=*/false);
     Res = SelectInst::Create(Sel->getCondition(), V1, V2, "",
                              InsertPt->getIterator(),
                              ProfcheckDisableMetadataFixes ? nullptr : Sel);
