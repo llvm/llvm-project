@@ -32,6 +32,7 @@ extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 extern void *memchr(const void *, int, size_t);
 extern size_t strlen(const char *);
+extern int strcmp(const char *, const char *);
 
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -99,6 +100,9 @@ using BenchmarkSetup = SearchSetup;
 #elif defined(LIBC_BENCHMARK_FUNCTION_STRLEN)
 #define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_STRLEN
 using BenchmarkSetup = SearchSetup;
+#elif defined(LIBC_BENCHMARK_FUNCTION_STRCMP)
+#define LIBC_BENCHMARK_FUNCTION LIBC_BENCHMARK_FUNCTION_STRCMP
+using BenchmarkSetup = ComparisonSetup;
 #else
 #error "Missing LIBC_BENCHMARK_FUNCTION_XXX definition"
 #endif

@@ -13,6 +13,7 @@ extern int memcmp(const void *, const void *, size_t);
 extern int bcmp(const void *, const void *, size_t);
 extern void *memchr(const void *, int, size_t);
 extern size_t strlen(const char *);
+extern int strcmp(const char *, const char *);
 
 } // namespace LIBC_NAMESPACE_DECL
 
@@ -24,6 +25,7 @@ using llvm::libc_benchmarks::MemcmpOrBcmpConfiguration;
 using llvm::libc_benchmarks::MemcpyConfiguration;
 using llvm::libc_benchmarks::MemmoveConfiguration;
 using llvm::libc_benchmarks::MemsetConfiguration;
+using llvm::libc_benchmarks::StrcmpConfiguration;
 using llvm::libc_benchmarks::StrlenConfiguration;
 
 llvm::ArrayRef<MemcpyConfiguration> getMemcpyConfigurations() {
@@ -65,4 +67,9 @@ llvm::ArrayRef<StrlenConfiguration> getStrlenConfigurations() {
   static constexpr StrlenConfiguration kStrlenConfigurations[] = {
       {LIBC_NAMESPACE::strlen, "LIBC_NAMESPACE::strlen"}};
   return llvm::ArrayRef(kStrlenConfigurations);
+}
+llvm::ArrayRef<StrcmpConfiguration> getStrcmpConfigurations() {
+  static constexpr StrcmpConfiguration kStrcmpConfigurations[] = {
+      {LIBC_NAMESPACE::strcmp, "LIBC_NAMESPACE::strcmp"}};
+  return llvm::ArrayRef(kStrcmpConfigurations);
 }

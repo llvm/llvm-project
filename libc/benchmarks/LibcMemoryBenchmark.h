@@ -275,6 +275,11 @@ struct ComparisonSetup : public ParameterBatch {
                                parameter.size_bytes);
   }
 
+  inline int call(ParameterType parameter, StrcmpFunction strcmp_func) {
+    return strcmp_func(lhs_buffer + buffer_size - 1 - parameter.size_bytes,
+                       rhs_buffer + buffer_size - 1 - parameter.size_bytes);
+  }
+
 private:
   AlignedBuffer lhs_buffer;
   AlignedBuffer rhs_buffer;
