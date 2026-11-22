@@ -5158,7 +5158,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat: {
     // The custom vXi32 lowering is unreachable when type legalization unrolls
-    // the conversion (e.g. vXf64 on SSE, v8f16 on SSE, v2f16 on AVX512).
+    // the conversion (e.g. vXf64 on SSE, v8f16 on SSE, v2f16 on AVX512), and
+    // without F16C the f16 to f32 extension is unrolled into libcalls.
     auto *VTy = dyn_cast<FixedVectorType>(RetTy);
     if (!VTy || ICA.getArgTypes().empty())
       break;
@@ -5174,14 +5175,18 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     LLVMContext &Ctx = VTy->getContext();
     bool CanVectorize =
         SrcLTVT.isVector() && SrcElts >= 4 &&
+        (SrcLTVT.getScalarType() != MVT::f16 || ST->hasF16C()) &&
         (VTy->getNumElements() < RetElts
              ? SrcElts == RetElts
              : (SrcElts <= RetElts ||
                 TLI->isTypeLegal(
                     EVT::getVectorVT(Ctx, SrcLTVT.getScalarType(), RetElts)) ||
                 TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, SrcElts))));
-    if (CanVectorize)
+    if (CanVectorize) {
+      if (SrcCost > RetCost)
+        return SrcCost * 2;
       break;
+    }
     unsigned NumElts = VTy->getNumElements();
     IntrinsicCostAttributes ScalarAttrs(IID, VTy->getElementType(),
                                         {SrcTy->getScalarType()});
