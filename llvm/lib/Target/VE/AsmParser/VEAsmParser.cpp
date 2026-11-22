@@ -21,6 +21,7 @@
 #include "llvm/MC/MCParser/MCAsmParser.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
+#include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
@@ -91,39 +92,6 @@ public:
 };
 
 } // end anonymous namespace
-
-static const MCPhysReg I32Regs[64] = {
-    VE::SW0,  VE::SW1,  VE::SW2,  VE::SW3,  VE::SW4,  VE::SW5,  VE::SW6,
-    VE::SW7,  VE::SW8,  VE::SW9,  VE::SW10, VE::SW11, VE::SW12, VE::SW13,
-    VE::SW14, VE::SW15, VE::SW16, VE::SW17, VE::SW18, VE::SW19, VE::SW20,
-    VE::SW21, VE::SW22, VE::SW23, VE::SW24, VE::SW25, VE::SW26, VE::SW27,
-    VE::SW28, VE::SW29, VE::SW30, VE::SW31, VE::SW32, VE::SW33, VE::SW34,
-    VE::SW35, VE::SW36, VE::SW37, VE::SW38, VE::SW39, VE::SW40, VE::SW41,
-    VE::SW42, VE::SW43, VE::SW44, VE::SW45, VE::SW46, VE::SW47, VE::SW48,
-    VE::SW49, VE::SW50, VE::SW51, VE::SW52, VE::SW53, VE::SW54, VE::SW55,
-    VE::SW56, VE::SW57, VE::SW58, VE::SW59, VE::SW60, VE::SW61, VE::SW62,
-    VE::SW63};
-
-static const MCPhysReg F32Regs[64] = {
-    VE::SF0,  VE::SF1,  VE::SF2,  VE::SF3,  VE::SF4,  VE::SF5,  VE::SF6,
-    VE::SF7,  VE::SF8,  VE::SF9,  VE::SF10, VE::SF11, VE::SF12, VE::SF13,
-    VE::SF14, VE::SF15, VE::SF16, VE::SF17, VE::SF18, VE::SF19, VE::SF20,
-    VE::SF21, VE::SF22, VE::SF23, VE::SF24, VE::SF25, VE::SF26, VE::SF27,
-    VE::SF28, VE::SF29, VE::SF30, VE::SF31, VE::SF32, VE::SF33, VE::SF34,
-    VE::SF35, VE::SF36, VE::SF37, VE::SF38, VE::SF39, VE::SF40, VE::SF41,
-    VE::SF42, VE::SF43, VE::SF44, VE::SF45, VE::SF46, VE::SF47, VE::SF48,
-    VE::SF49, VE::SF50, VE::SF51, VE::SF52, VE::SF53, VE::SF54, VE::SF55,
-    VE::SF56, VE::SF57, VE::SF58, VE::SF59, VE::SF60, VE::SF61, VE::SF62,
-    VE::SF63};
-
-static const MCPhysReg F128Regs[32] = {
-    VE::Q0,  VE::Q1,  VE::Q2,  VE::Q3,  VE::Q4,  VE::Q5,  VE::Q6,  VE::Q7,
-    VE::Q8,  VE::Q9,  VE::Q10, VE::Q11, VE::Q12, VE::Q13, VE::Q14, VE::Q15,
-    VE::Q16, VE::Q17, VE::Q18, VE::Q19, VE::Q20, VE::Q21, VE::Q22, VE::Q23,
-    VE::Q24, VE::Q25, VE::Q26, VE::Q27, VE::Q28, VE::Q29, VE::Q30, VE::Q31};
-
-static const MCPhysReg VM512Regs[8] = {VE::VMP0, VE::VMP1, VE::VMP2, VE::VMP3,
-                                       VE::VMP4, VE::VMP5, VE::VMP6, VE::VMP7};
 
 static const MCPhysReg MISCRegs[31] = {
     VE::USRCC,      VE::PSW,        VE::SAR,        VE::NoRegister,
@@ -476,6 +444,13 @@ public:
     Inst.addOperand(MCOperand::createReg(getReg()));
   }
 
+  void addMISCRegOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    MCRegister R = isImm() ? getMISCReg() : getReg();
+    assert(R && "Invalid MISC register operand!");
+    Inst.addOperand(MCOperand::createReg(R));
+  }
+
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     const MCExpr *Expr = getImm();
@@ -651,52 +626,15 @@ public:
     return Op;
   }
 
-  static bool MorphToI32Reg(VEOperand &Op) {
-    MCRegister Reg = Op.getReg();
-    unsigned regIdx = Reg - VE::SX0;
-    if (regIdx > 63)
-      return false;
-    Op.Reg.Reg = I32Regs[regIdx];
-    return true;
-  }
-
-  static bool MorphToF32Reg(VEOperand &Op) {
-    MCRegister Reg = Op.getReg();
-    unsigned regIdx = Reg - VE::SX0;
-    if (regIdx > 63)
-      return false;
-    Op.Reg.Reg = F32Regs[regIdx];
-    return true;
-  }
-
-  static bool MorphToF128Reg(VEOperand &Op) {
-    MCRegister Reg = Op.getReg();
-    unsigned regIdx = Reg - VE::SX0;
-    if (regIdx % 2 || regIdx > 63)
-      return false;
-    Op.Reg.Reg = F128Regs[regIdx / 2];
-    return true;
-  }
-
-  static bool MorphToVM512Reg(VEOperand &Op) {
-    MCRegister Reg = Op.getReg();
-    unsigned regIdx = Reg - VE::VM0;
-    if (regIdx % 2 || regIdx > 15)
-      return false;
-    Op.Reg.Reg = VM512Regs[regIdx / 2];
-    return true;
-  }
-
-  static bool MorphToMISCReg(VEOperand &Op) {
-    const auto *ConstExpr = dyn_cast<MCConstantExpr>(Op.getImm());
+  MCRegister getMISCReg() const {
+    assert(isImm());
+    const auto *ConstExpr = dyn_cast<MCConstantExpr>(getImm());
     if (!ConstExpr)
-      return false;
-    unsigned regIdx = ConstExpr->getValue();
-    if (regIdx >= std::size(MISCRegs) || MISCRegs[regIdx] == VE::NoRegister)
-      return false;
-    Op.Kind = k_Register;
-    Op.Reg.Reg = MISCRegs[regIdx];
-    return true;
+      return VE::NoRegister;
+    uint64_t regIdx = ConstExpr->getValue();
+    if (regIdx >= std::size(MISCRegs))
+      return VE::NoRegister;
+    return MISCRegs[regIdx];
   }
 
   static std::unique_ptr<VEOperand>
@@ -1537,32 +1475,7 @@ unsigned VEAsmParser::validateTargetOperandClass(MCParsedAsmOperand &GOp,
                                                  unsigned Kind) {
   VEOperand &Op = (VEOperand &)GOp;
 
-  // VE uses identical register name for all registers like both
-  // F32 and I32 uses "%s23".  Need to convert the name of them
-  // for validation.
-  switch (Kind) {
-  default:
-    break;
-  case MCK_F32:
-    if (Op.isReg() && VEOperand::MorphToF32Reg(Op))
-      return MCTargetAsmParser::Match_Success;
-    break;
-  case MCK_I32:
-    if (Op.isReg() && VEOperand::MorphToI32Reg(Op))
-      return MCTargetAsmParser::Match_Success;
-    break;
-  case MCK_F128:
-    if (Op.isReg() && VEOperand::MorphToF128Reg(Op))
-      return MCTargetAsmParser::Match_Success;
-    break;
-  case MCK_VM512:
-    if (Op.isReg() && VEOperand::MorphToVM512Reg(Op))
-      return MCTargetAsmParser::Match_Success;
-    break;
-  case MCK_MISC:
-    if (Op.isImm() && VEOperand::MorphToMISCReg(Op))
-      return MCTargetAsmParser::Match_Success;
-    break;
-  }
+  if (Kind == MCK_MISC && Op.isImm() && Op.getMISCReg())
+    return MCTargetAsmParser::Match_Success;
   return Match_InvalidOperand;
 }
