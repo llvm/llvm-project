@@ -482,6 +482,12 @@ public:
     return createNaryOp(Instruction::Freeze, Op, DL, Name);
   }
 
+  VPInstruction *createArgument(Type *ResultTy, const Twine &Name = "") {
+    return tryInsertInstruction(
+        new VPInstruction(VPInstruction::Argument, {}, {}, {},
+                          DebugLoc::getUnknown(), Name, ResultTy));
+  }
+
   VPWidenCastRecipe *createWidenCast(Instruction::CastOps Opcode, VPValue *Op,
                                      Type *ResultTy) {
     assert(Op->getScalarType() != ResultTy &&

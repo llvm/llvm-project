@@ -519,7 +519,8 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
-          VPConditionalInductionPHIRecipe>(VPV))
+          VPSpeculativeLoadOracleRecipe, VPConditionalInductionPHIRecipe>(
+          VPV))
     return true;
   if (auto *Expr = dyn_cast<VPExpressionRecipe>(VPV))
     return Expr->isVectorToScalar();
@@ -681,6 +682,16 @@ VPValue *vputils::findIncomingAliasMask(const VPlan &Plan) {
     if (match(&R, m_VPInstruction<VPInstruction::IncomingAliasMask>()))
       return cast<VPInstruction>(&R);
   return nullptr;
+}
+
+VPSpeculativeLoadOracleRecipe *vputils::findSpeculativeLoadOracle(VPlan &Plan) {
+  VPBasicBlock &Preheader = *Plan.getVectorPreheader();
+  assert(count_if(Preheader, IsaPred<VPSpeculativeLoadOracleRecipe>) <= 1 &&
+         "expected at most one oracle");
+  return find_singleton<VPSpeculativeLoadOracleRecipe>(
+      Preheader, [](VPRecipeBase &R, bool) {
+        return dyn_cast<VPSpeculativeLoadOracleRecipe>(&R);
+      });
 }
 
 SmallVector<std::pair<VPBasicBlock *, VPIRBasicBlock *>>
