@@ -514,7 +514,7 @@ TEST(TinyPtrVectorTest, PolymorphicPointers) {
 }
 
 TEST(TinyPtrVectorTest, NullPointer) {
-  TinyPtrVector<int*> V;
+  TinyPtrVector<int *> V;
   V.push_back(nullptr);
   EXPECT_TRUE(!V.empty() && V.size() == 1);
   V.pop_back();

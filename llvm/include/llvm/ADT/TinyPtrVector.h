@@ -40,15 +40,9 @@ public:
 private:
   static constexpr VecTy *EmptyVal = nullptr;
 
-  bool isEmptyForm() const {
-    return isa<VecTy *>(Val) && !cast<VecTy *>(Val);
-  }
-  bool isSingleElementForm() const {
-    return isa<EltTy>(Val);
-  }
-  bool isMultiElementForm() const {
-    return dyn_cast<VecTy *>(Val);
-  }
+  bool isEmptyForm() const { return isa<VecTy *>(Val) && !cast<VecTy *>(Val); }
+  bool isSingleElementForm() const { return isa<EltTy>(Val); }
+  bool isMultiElementForm() const { return dyn_cast<VecTy *>(Val); }
 
   PtrUnion Val;
 
@@ -94,9 +88,7 @@ public:
     return *this;
   }
 
-  TinyPtrVector(TinyPtrVector &&RHS) : Val(RHS.Val) {
-    RHS.Val = EmptyVal;
-  }
+  TinyPtrVector(TinyPtrVector &&RHS) : Val(RHS.Val) { RHS.Val = EmptyVal; }
 
   TinyPtrVector &operator=(TinyPtrVector &&RHS) {
     if (this == &RHS)
