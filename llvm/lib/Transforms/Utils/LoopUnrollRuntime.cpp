@@ -1088,31 +1088,32 @@ bool llvm::UnrollRuntimeLoopRemainder(
     BasicBlock *RemainderLatch = remainderLoop->getLoopLatch();
     assert(RemainderLatch);
     SmallVector<BasicBlock *> RemainderBlocks(remainderLoop->getBlocks());
-    breakLoopBackedge(remainderLoop, *DT, *SE, *LI, nullptr);
-    remainderLoop = nullptr;
+    if (breakLoopBackedge(remainderLoop, *DT, *SE, *LI, nullptr)) {
+      remainderLoop = nullptr;
 
-    // Simplify loop values after breaking the backedge
-    const DataLayout &DL = L->getHeader()->getDataLayout();
-    SmallVector<WeakTrackingVH, 16> DeadInsts;
-    for (BasicBlock *BB : RemainderBlocks) {
-      for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
-        if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
-          if (LI->replacementPreservesLCSSAForm(&Inst, V))
-            Inst.replaceAllUsesWith(V);
-        if (isInstructionTriviallyDead(&Inst))
-          DeadInsts.emplace_back(&Inst);
+      // Simplify loop values after breaking the backedge
+      const DataLayout &DL = L->getHeader()->getDataLayout();
+      SmallVector<WeakTrackingVH, 16> DeadInsts;
+      for (BasicBlock *BB : RemainderBlocks) {
+        for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
+          if (Value *V = simplifyInstruction(&Inst, {DL, nullptr, DT, AC}))
+            if (LI->replacementPreservesLCSSAForm(&Inst, V))
+              Inst.replaceAllUsesWith(V);
+          if (isInstructionTriviallyDead(&Inst))
+            DeadInsts.emplace_back(&Inst);
+        }
+        // We can't do recursive deletion until we're done iterating, as we might
+        // have a phi which (potentially indirectly) uses instructions later in
+        // the block we're iterating through.
+        RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
       }
-      // We can't do recursive deletion until we're done iterating, as we might
-      // have a phi which (potentially indirectly) uses instructions later in
-      // the block we're iterating through.
-      RecursivelyDeleteTriviallyDeadInstructions(DeadInsts);
-    }
 
-    // Merge latch into exit block.
-    auto *ExitBB = RemainderLatch->getSingleSuccessor();
-    assert(ExitBB && "required after breaking cond br backedge");
-    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
-    MergeBlockIntoPredecessor(ExitBB, &DTU, LI);
+      // Merge latch into exit block.
+      auto *ExitBB = RemainderLatch->getSingleSuccessor();
+      assert(ExitBB && "required after breaking cond br backedge");
+      DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+      MergeBlockIntoPredecessor(ExitBB, &DTU, LI);
+    }
   }
 
   // Canonicalize to LoopSimplifyForm both original and remainder loops. We
