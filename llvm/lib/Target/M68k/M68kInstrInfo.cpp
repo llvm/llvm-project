@@ -385,8 +385,6 @@ bool M68kInstrInfo::ExpandMOVI(MachineInstrBuilder &MIB, MVT MVTSize) const {
 
   if (Imm == 0) {
     buildClearRegister(Reg, MBB, MIB, DL);
-    MachineInstr &NewMI = *std::prev((MachineBasicBlock::iterator)MIB);
-    LLVM_DEBUG(dbgs() << NewMI << "\n");
     MIB->removeFromParent();
 
     // Sign extension doesn't matter if we only use the bottom 8 bits.
