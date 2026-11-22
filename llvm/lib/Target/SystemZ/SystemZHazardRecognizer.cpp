@@ -295,8 +295,7 @@ EmitInstruction(SUnit *SU) {
     if ((CurrCounter > CLOpts.procres_cost_lim) &&
         (CriticalResourceIdx == UINT_MAX ||
          (PI->ProcResourceIdx != CriticalResourceIdx &&
-          CurrCounter >
-          ProcResourceCounters[CriticalResourceIdx]))) {
+          CurrCounter > ProcResourceCounters[CriticalResourceIdx]))) {
       LLVM_DEBUG(
           dbgs() << "++ New critical resource: "
                  << SchedModel->getProcResource(PI->ProcResourceIdx)->Name

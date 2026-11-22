@@ -279,13 +279,12 @@ void SystemZPostRASchedStrategy::leaveMBB() {
   advanceTo(MBB->getFirstTerminator());
 }
 
-SystemZPostRASchedStrategy::
-SystemZPostRASchedStrategy(const MachineSchedContext *C)
-  : MLI(C->MLI),
-    TII(static_cast<const SystemZInstrInfo *>
-        (C->MF->getSubtarget().getInstrInfo())),
-    CLOpts(C->MF->getSubtarget<SystemZSubtarget>().getCLOpts()),
-    MBB(nullptr), HazardRec(nullptr) {
+SystemZPostRASchedStrategy::SystemZPostRASchedStrategy(
+    const MachineSchedContext *C)
+    : MLI(C->MLI), TII(static_cast<const SystemZInstrInfo *>(
+                       C->MF->getSubtarget().getInstrInfo())),
+      CLOpts(C->MF->getSubtarget<SystemZSubtarget>().getCLOpts()), MBB(nullptr),
+      HazardRec(nullptr) {
   const TargetSubtargetInfo *ST = &C->MF->getSubtarget();
   SchedModel.init(ST);
 }
