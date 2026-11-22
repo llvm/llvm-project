@@ -2076,10 +2076,10 @@ exit:
 define void @guard_truncated_i1_condition(i64 %n) {
 ; CHECK-LABEL: 'guard_truncated_i1_condition'
 ; CHECK-NEXT:  Classifying expressions for: @guard_truncated_i1_condition
+; CHECK-NEXT:    %limit = and i64 %n, 1
+; CHECK-NEXT:    --> (zext i1 (trunc i64 %n to i1) to i64) U: [0,2) S: [0,2)
 ; CHECK-NEXT:    %cond = trunc i64 %n to i1
 ; CHECK-NEXT:    --> (trunc i64 %n to i1) U: full-set S: full-set
-; CHECK-NEXT:    %limit = zext i1 %cond to i64
-; CHECK-NEXT:    --> (zext i1 (trunc i64 %n to i1) to i64) U: [0,2) S: [0,2)
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
@@ -2091,8 +2091,8 @@ define void @guard_truncated_i1_condition(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
+  %limit = and i64 %n, 1
   %cond = trunc i64 %n to i1
-  %limit = zext i1 %cond to i64
   br i1 %cond, label %loop, label %exit
 
 loop:
@@ -2108,12 +2108,12 @@ exit:
 define void @guard_truncated_i1_condition_false(i64 %n) {
 ; CHECK-LABEL: 'guard_truncated_i1_condition_false'
 ; CHECK-NEXT:  Classifying expressions for: @guard_truncated_i1_condition_false
-; CHECK-NEXT:    %cond = trunc i64 %n to i1
-; CHECK-NEXT:    --> (trunc i64 %n to i1) U: full-set S: full-set
-; CHECK-NEXT:    %limit = zext i1 %cond to i64
+; CHECK-NEXT:    %limit = and i64 %n, 1
 ; CHECK-NEXT:    --> (zext i1 (trunc i64 %n to i1) to i64) U: [0,2) S: [0,2)
 ; CHECK-NEXT:    %bound = add nuw i64 %limit, 1
 ; CHECK-NEXT:    --> (1 + (zext i1 (trunc i64 %n to i1) to i64))<nuw><nsw> U: [1,3) S: [1,3)
+; CHECK-NEXT:    %cond = trunc i64 %n to i1
+; CHECK-NEXT:    --> (trunc i64 %n to i1) U: full-set S: full-set
 ; CHECK-NEXT:    %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
 ; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,1) S: [0,1) Exits: 0 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:    %iv.next = add nuw i64 %iv, 1
@@ -2125,9 +2125,9 @@ define void @guard_truncated_i1_condition_false(i64 %n) {
 ; CHECK-NEXT:  Loop %loop: Trip multiple is 1
 ;
 entry:
-  %cond = trunc i64 %n to i1
-  %limit = zext i1 %cond to i64
+  %limit = and i64 %n, 1
   %bound = add nuw i64 %limit, 1
+  %cond = trunc i64 %n to i1
   br i1 %cond, label %exit, label %loop
 
 loop:
