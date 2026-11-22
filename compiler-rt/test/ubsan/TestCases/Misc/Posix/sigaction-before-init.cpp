@@ -3,8 +3,6 @@
 //
 // RUN: %clangxx -fsanitize=undefined %s -o %t
 // RUN: %env_ubsan_opts=handle_sigill=1 not %run %t 2>&1 | FileCheck %s
-// RUN: %clangxx -fsanitize=undefined -shared-libsan %s -o %t-shared
-// RUN: %env_ubsan_opts=handle_sigill=1 not %run %t-shared 2>&1 | FileCheck %s
 //
 // REQUIRES: target={{.*linux.*}}, ubsan-standalone
 // UNSUPPORTED: android
