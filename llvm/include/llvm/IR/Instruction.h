@@ -116,6 +116,9 @@ private:
   /// debugging information present.
   DbgMarker *DebugMarker = nullptr;
 
+  /// See getNumber().
+  unsigned Number = ~0u;
+
 public:
   DbgMarker *getDbgMarker() const { return DebugMarker; }
 
@@ -332,6 +335,15 @@ public:
   /// results are cached, so in common cases when the block remains unmodified,
   /// it takes constant time.
   LLVM_ABI bool comesBefore(const Instruction *Other) const;
+
+  /// Return the number of this instruction, unique within the parent function
+  /// and below Function::getMaxInstructionNumber(). Moving the instruction
+  /// within the function keeps the number. Inserting it (including after
+  /// removeFromParent) or moving it to another function assigns a new one.
+  unsigned getNumber() const {
+    assert(getParent() && getFunction() && "instruction is not in a function");
+    return Number;
+  }
 
   /// Get the first insertion point at which the result of this instruction
   /// is defined. This is *not* the directly following instruction in a number
@@ -1095,6 +1107,7 @@ private:
   friend class SymbolTableListTraits<Instruction, ilist_iterator_bits<true>,
                                      ilist_parent<BasicBlock>>;
   friend class BasicBlock; // For renumbering and DebugMarker.
+  friend class Function;   // For renumbering.
   friend class DbgMarker;  // For DebugMarker.
 
   // Shadow Value::setValueSubclassData with a private forwarding method so that

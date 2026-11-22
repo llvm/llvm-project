@@ -578,6 +578,65 @@ TEST(FunctionTest, BasicBlockNumbers) {
   EXPECT_EQ(Func->getMaxBlockNumber(), 7u);
 }
 
+TEST(FunctionTest, InstructionNumbers) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"(
+    define void @f() {
+    entry:
+      %x = add i32 0, 1
+      br label %exit
+    exit:
+      %y = add i32 %x, 1
+      ret void
+    }
+    define void @g() {
+      ret void
+    }
+  )");
+  Function *F = M->getFunction("f");
+  Function *G = M->getFunction("g");
+  BasicBlock *Entry = &F->getEntryBlock();
+  BasicBlock *Exit = getBBWithName(F, "exit");
+  Instruction *X = &Entry->front();
+  Instruction *Y = &Exit->front();
+  EXPECT_EQ(X->getNumber(), 0u);
+  EXPECT_EQ(Y->getNumber(), 2u);
+  EXPECT_EQ(F->getMaxInstructionNumber(), 4u);
+
+  // Moving an instruction within the function keeps its number.
+  Y->moveBefore(Entry->getTerminator()->getIterator());
+  EXPECT_EQ(Y->getNumber(), 2u);
+
+  // Inserting assigns the next number, even to a removed instruction.
+  Y->removeFromParent();
+  Y->insertBefore(Exit->getTerminator()->getIterator());
+  EXPECT_EQ(Y->getNumber(), 4u);
+  EXPECT_EQ(F->getMaxInstructionNumber(), 5u);
+
+  // Moving instructions to another function assigns its numbers, whether the
+  // instructions or their block move.
+  BasicBlock &GEntry = G->getEntryBlock();
+  GEntry.splice(GEntry.begin(), Exit, Y->getIterator());
+  EXPECT_EQ(Y->getNumber(), 1u);
+  G->splice(G->end(), F, Exit->getIterator());
+  EXPECT_EQ(Exit->getTerminator()->getNumber(), 2u);
+
+  // Renumbering makes the numbers dense and changes the epoch.
+  unsigned Epoch = G->getInstructionNumberEpoch();
+  G->renumberInstructions();
+  EXPECT_NE(G->getInstructionNumberEpoch(), Epoch);
+  EXPECT_EQ(G->getMaxInstructionNumber(), 3u);
+  EXPECT_EQ(Y->getNumber(), 0u);
+  EXPECT_EQ(GEntry.getTerminator()->getNumber(), 1u);
+  EXPECT_EQ(Exit->getTerminator()->getNumber(), 2u);
+
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
+  Y->removeFromParent();
+  EXPECT_DEATH((void)Y->getNumber(), "instruction is not in a function");
+  Y->deleteValue();
+#endif
+}
+
 TEST(FunctionTest, UWTable) {
   LLVMContext Ctx;
   std::unique_ptr<Module> M = parseIR(Ctx, R"(

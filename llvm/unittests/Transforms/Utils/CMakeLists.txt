@@ -22,6 +22,7 @@ add_llvm_unittest(UtilsTests
   DebugSSAUpdaterTest.cpp
   DynamicDebuggingTest.cpp
   FunctionComparatorTest.cpp
+  InstructionWorklistTest.cpp
   IntegerDivisionTest.cpp
   LocalTest.cpp
   LoopRotationUtilsTest.cpp

@@ -13,6 +13,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Config/abi-breaking.h"
+#include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -24,11 +26,33 @@ namespace llvm {
 /// InstCombine and other simplification passes.
 class InstructionWorklist {
   SmallVector<Instruction *, 256> Worklist;
-  DenseMap<Instruction *, unsigned> WorklistMap;
+  // 1 + index into Worklist, indexed by Instruction::getNumber(); 0 if absent.
+  // An instruction must not be removed and reinserted, which assigns a new
+  // number, while in the worklist.
+  SmallVector<unsigned, 0> WorklistMap;
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // The function and number epoch of the instructions in WorklistMap.
+  const Function *NumberedFn = nullptr;
+  unsigned NumberEpoch = 0;
+#endif
   /// These instructions will be added in reverse order after the current
   /// combine has finished. This means that these instructions will be visited
   /// in the order they have been added.
   SmallSetVector<Instruction *, 16> Deferred;
+
+  unsigned getIndex(const Instruction *I) {
+    unsigned N = I->getNumber();
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    const Function *F = I->getFunction();
+    if (!NumberedFn) {
+      NumberedFn = F;
+      NumberEpoch = F->getInstructionNumberEpoch();
+    }
+    assert(F == NumberedFn && F->getInstructionNumberEpoch() == NumberEpoch &&
+           "instruction renumbered while in the worklist");
+#endif
+    return N;
+  }
 
 public:
   InstructionWorklist() = default;
@@ -59,9 +83,13 @@ public:
     assert(I);
     assert(I->getParent() && "Instruction not inserted yet?");
 
-    if (WorklistMap.insert(std::make_pair(I, Worklist.size())).second) {
+    unsigned N = getIndex(I);
+    if (N >= WorklistMap.size())
+      WorklistMap.resize(N + 1);
+    if (!WorklistMap[N]) {
       LLVM_DEBUG(dbgs() << "ADD: " << *I << '\n');
       Worklist.push_back(I);
+      WorklistMap[N] = Worklist.size();
     }
   }
 
@@ -78,17 +106,22 @@ public:
 
   void reserve(size_t Size) {
     Worklist.reserve(Size + 16);
-    WorklistMap.reserve(Size);
   }
 
   /// Remove I from the worklist if it exists.
   void remove(Instruction *I) {
-    auto It = WorklistMap.find(I);
-    if (It != WorklistMap.end()) {
+    unsigned N = getIndex(I);
+    if (N < WorklistMap.size() && WorklistMap[N]) {
+      assert(Worklist[WorklistMap[N] - 1] == I &&
+             "instruction renumbered while in the worklist");
       // Don't bother moving everything down, just null out the slot.
-      Worklist[It->second] = nullptr;
-      WorklistMap.erase(It);
+      Worklist[WorklistMap[N] - 1] = nullptr;
+      WorklistMap[N] = 0;
     }
+#ifdef EXPENSIVE_CHECKS
+    assert(!is_contained(Worklist, I) &&
+           "instruction renumbered while in the worklist");
+#endif
 
     Deferred.remove(I);
   }
@@ -97,7 +130,13 @@ public:
     if (Worklist.empty())
       return nullptr;
     Instruction *I = Worklist.pop_back_val();
-    WorklistMap.erase(I);
+    if (I) {
+      unsigned N = getIndex(I);
+      assert(N < WorklistMap.size() && WorklistMap[N] == Worklist.size() + 1 &&
+             "instruction renumbered while in the worklist");
+      if (N < WorklistMap.size())
+        WorklistMap[N] = 0;
+    }
     return I;
   }
 
@@ -121,11 +160,15 @@ public:
 
   /// Check that the worklist is empty and nuke the backing store for the map.
   void zap() {
-    assert(WorklistMap.empty() && "Worklist empty, but map not?");
+    assert(Worklist.empty() && "Worklist not empty?");
+    assert(all_of(WorklistMap, [](unsigned Slot) { return Slot == 0; }) &&
+           "Worklist empty, but map not?");
     assert(Deferred.empty() && "Deferred instructions left over");
 
-    // Do an explicit clear, this shrinks the map if needed.
     WorklistMap.clear();
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+    NumberedFn = nullptr;
+#endif
   }
 };
 
