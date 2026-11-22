@@ -2458,9 +2458,10 @@ public:
           reportImmediateUB()
               << "The value " << V << " violates dereferenceable("
               << DereferenceableBytes << ") attribute.";
-      } else if (uint64_t DereferenceableOrNullBytes =
-                     std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
-                              AttrsAtCallee.getDereferenceableOrNullBytes())) {
+      }
+      if (uint64_t DereferenceableOrNullBytes =
+              std::max(AttrsAtCallSite.getDereferenceableOrNullBytes(),
+                       AttrsAtCallee.getDereferenceableOrNullBytes())) {
         if (violatesDereferenceableBytesAttr(V, DereferenceableOrNullBytes,
                                              /*OrNull=*/true, AS, Ctx))
           reportImmediateUB() << "The value " << V
