@@ -559,9 +559,7 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 29
-  constexpr add_pointer_t<_Tp> get_ptr() noexcept {
-    return this->has_value() ? std::addressof(this->__val_) : nullptr;
-  }
+  constexpr add_pointer_t<_Tp> get_ptr() noexcept { return this->has_value() ? std::addressof(this->__val_) : nullptr; }
   constexpr add_pointer_t<_Tp const> get_ptr() const noexcept {
     return this->has_value() ? std::addressof(this->__val_) : nullptr;
   }
