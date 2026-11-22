@@ -2284,13 +2284,11 @@ define <8 x i16> @cvt_4f32_to_8i16_zero(<4 x float> %a0) nounwind {
 ; F16C-LABEL: cvt_4f32_to_8i16_zero:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: cvt_4f32_to_8i16_zero:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>
@@ -2756,15 +2754,13 @@ define void @store_cvt_4f32_to_8i16_zero(<4 x float> %a0, ptr %a1) nounwind {
 ; F16C-LABEL: store_cvt_4f32_to_8i16_zero:
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; F16C-NEXT:    vmovdqa %xmm0, (%rdi)
+; F16C-NEXT:    vmovaps %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; AVX512-LABEL: store_cvt_4f32_to_8i16_zero:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; AVX512-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
-; AVX512-NEXT:    vmovdqa %xmm0, (%rdi)
+; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
   %1 = fptrunc <4 x float> %a0 to <4 x half>
   %2 = bitcast <4 x half> %1 to <4 x i16>

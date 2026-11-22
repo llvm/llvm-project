@@ -47069,6 +47069,36 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       return true;
     break;
   }
+  case X86ISD::VTRUNC:
+  case X86ISD::VTRUNCS:
+  case X86ISD::VTRUNCUS:
+  case X86ISD::CVTSI2P:
+  case X86ISD::CVTUI2P:
+  case X86ISD::CVTP2SI:
+  case X86ISD::CVTP2UI:
+  case X86ISD::MCVTP2SI:
+  case X86ISD::MCVTP2UI:
+  case X86ISD::CVTTP2SI:
+  case X86ISD::CVTTP2UI:
+  case X86ISD::MCVTTP2SI:
+  case X86ISD::MCVTTP2UI:
+  case X86ISD::MCVTSI2P:
+  case X86ISD::MCVTUI2P:
+  case X86ISD::VFPROUND:
+  case X86ISD::VMFPROUND:
+  case X86ISD::CVTPS2PH:
+  case X86ISD::MCVTPS2PH:
+  case X86ISD::MCVTTP2SIS:
+  case X86ISD::MCVTTP2UIS: {
+    // Truncations/Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(0).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts && DemandedElts.countr_zero() >= NumSrcElts)
+        return true;
+    }
+    break;
+  }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, Kind, Depth);
