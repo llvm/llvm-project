@@ -45,6 +45,10 @@
  * bytes; when sizeof(__llvm_profile_data) is not a multiple of 16 the 16-byte
  * $Z sentinel leaves a gap after the 8-byte-aligned $M records, which
  * __llvm_profile_get_num_data rounds up into a phantom data record. */
+
+// FIXME: The runtime assumes the profile data records form a contiguous
+// array. If the linker inserts padding between records, walking this range
+// by sizeof(__llvm_profile_data) cannot reliably locate the next record.
 COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
 __llvm_profile_data COMPILER_RT_SECTION(".lprfd$A") DataStart = {0};
 COMPILER_RT_ALIGNAS(INSTR_PROF_DATA_ALIGNMENT)
