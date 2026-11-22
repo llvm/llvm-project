@@ -28,7 +28,6 @@
 #include <optional>
 #include <utility>
 
-
 constexpr bool test() {
   // [optional.observe]
   {
@@ -66,7 +65,7 @@ constexpr bool test() {
     std::optional<int&> opt{i};
 
     assert(*opt.get_ptr() == 94);
-    
+
     assert(*std::as_const(opt).get_ptr() == 94);
   }
 
