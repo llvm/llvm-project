@@ -328,6 +328,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
 
   mlir::Value srcVal = src.getValue();
   Address dstAddr = dst.getExtVectorAddress();
+  mlir::Location loc = dst.getExtVectorPointer().getLoc();
   if (getScalarSizeInBits(dstAddr.getElementType()) >
       getScalarSizeInBits(srcVal.getType())) {
     cgm.errorNYI(
@@ -337,6 +338,12 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
   }
 
   if (getLangOpts().HLSL) {
+    mlir::Type destAddrTy = dstAddr.getElementType();
+    if (!mlir::isa<cir::MatrixType, cir::VectorType>(destAddrTy)) {
+      builder.createStore(loc, srcVal, dstAddr);
+      return;
+    }
+
     cgm.errorNYI(dst.getPointer().getLoc(),
                  "emitStoreThroughExtVectorComponentLValue: HLSL");
     return;
@@ -344,10 +351,7 @@ void CIRGenFunction::emitStoreThroughExtVectorComponentLValue(RValue src,
 
   // This access turns into a read/modify/write of the vector.  Load the input
   // value now.
-  mlir::Location loc = dst.getExtVectorPointer().getLoc();
-
   mlir::ArrayAttr elts = dst.getExtVectorElts();
-
   mlir::Value vec = builder.createLoad(loc, dstAddr, dst.isVolatile());
   if (const auto *vecTy = dst.getType()->getAs<clang::VectorType>()) {
     unsigned numSrcElts = vecTy->getNumElements();
