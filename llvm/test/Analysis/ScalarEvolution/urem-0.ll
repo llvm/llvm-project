@@ -150,7 +150,7 @@ define i64 @urem_const_by_vscale_mul() vscale_range(1, 16) {
 ; CHECK-NEXT:    %step = shl nuw nsw i64 %vs, 5
 ; CHECK-NEXT:    --> (32 * vscale)<nuw><nsw> U: [32,513) S: [32,513)
 ; CHECK-NEXT:    %r = urem i64 1024, %step
-; CHECK-NEXT:    --> (1024 + (-32 * vscale * (1024 /u (32 * vscale)<nuw><nsw>)))<nsw> U: [0,-31) S: [-15360,961)
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_const_by_vscale_mul
 ;
   %vs = call i64 @llvm.vscale.i64()
@@ -169,7 +169,7 @@ define i64 @urem_shl_by_vscale_mul(i64 %n) vscale_range(1, 16) {
 ; CHECK-NEXT:    %x = shl i64 %n, 10
 ; CHECK-NEXT:    --> (1024 * %n) U: [0,-1023) S: [-9223372036854775808,9223372036854774785)
 ; CHECK-NEXT:    %r = urem i64 %x, %step
-; CHECK-NEXT:    --> ((1024 * %n) + (-32 * vscale * ((1024 * %n) /u (32 * vscale)<nuw><nsw>))) U: [0,-31) S: [-9223372036854775808,9223372036854775777)
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_shl_by_vscale_mul
 ;
   %vs = call i64 @llvm.vscale.i64()
@@ -187,7 +187,7 @@ define i64 @urem_shl_by_vscale(i64 %n) vscale_range(1, 16) {
 ; CHECK-NEXT:    %x = shl i64 %n, 4
 ; CHECK-NEXT:    --> (16 * %n) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %r = urem i64 %x, %vs
-; CHECK-NEXT:    --> ((16 * %n) + (-1 * vscale * ((16 * %n) /u vscale))) U: full-set S: full-set
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_shl_by_vscale
 ;
   %vs = call i64 @llvm.vscale.i64()

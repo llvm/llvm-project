@@ -3353,6 +3353,19 @@ const SCEV *ScalarEvolution::getURemExpr(SCEVUse LHS, SCEVUse RHS) {
     }
   }
 
+  // vscale is a power of 2, so X urem (C * vscale) is 0 if X is a multiple of
+  // C * max(vscale).
+  const APInt *C = nullptr;
+  if (isa<SCEVVScale>(RHS) ||
+      match(RHS, m_scev_Mul(m_scev_APInt(C), m_SCEVVScale()))) {
+    APInt MaxVScale = getUnsignedRangeMax(getVScale(RHS->getType()));
+    bool Overflow = false;
+    APInt MaxRHS = C ? C->umul_ov(MaxVScale, Overflow) : MaxVScale;
+    if (MaxVScale.isPowerOf2() && !Overflow &&
+        getConstantMultiple(LHS).urem(MaxRHS) == 0)
+      return getZero(LHS->getType());
+  }
+
   // Fallback to %a == %x urem %y == %x -<nuw> ((%x udiv %y) *<nuw> %y)
   const SCEV *UDiv = getUDivExpr(LHS, RHS);
   const SCEV *Mult = getMulExpr(UDiv, RHS, SCEV::FlagNUW);
