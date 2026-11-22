@@ -34,19 +34,6 @@ using namespace SH;
 #define DEBUG_TYPE "sh-expand-pseudo"
 #define SH_EXPAND_PSEUDO_NAME "SH pseudo instruction expansion pass"
 
-static cl::opt<int64_t>
-    CFPMaxAdd("sh-fp-max-add", cl::Hidden, cl::init(16),
-                cl::desc("Maximum amount of add instructions to generate for heap fp load/stores."));
-
-#ifndef NDEBUG
-static cl::opt<bool>
-    CNoExpand("sh-no-expand", cl::Hidden, cl::init(false),
-              cl::desc("Force the backend to not expand instructions."));
-static cl::opt<bool>
-    CKeepPseudo("sh-keep-pseudo", cl::Hidden, cl::init(false),
-                cl::desc("Force the backend to keep pseudos around."));
-#endif
-
 namespace {
 class SuperHExpandPseudo : public MachineFunctionPass {
 public:
@@ -62,6 +49,7 @@ private:
   using Block = MachineBasicBlock;
   using BlockIt = Block::iterator;
 
+  const SuperHOptions *CLOpts;
   const SuperHSubtarget *STI;
   const SuperHRegisterInfo *TRI;
   const SuperHInstrInfo *TII;
@@ -99,7 +87,10 @@ private:
 static bool eraseMI(MachineInstr &MI) {
 
 #ifndef NDEBUG
-  if (CKeepPseudo)
+  auto CLOpts = MI.getParent()->getParent()->
+    getSubtarget<SuperHSubtarget>().getCLOpts();
+  
+  if (CLOpts.pseudo_keep)
     return false;
 #endif
 
@@ -287,7 +278,7 @@ bool SuperHExpandPseudo::emitPtrLoad(Block &MBB, BlockIt MBBI, MVT Type,
       } else {
         BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
           .addImm(0);
-        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CFPMaxAdd);
+        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CLOpts->pseudo_fp_max_add);
       }
 
       BuildMI(MBB, MBBI, DL, TII->get(Opc), Dst)
@@ -392,7 +383,7 @@ bool SuperHExpandPseudo::emitPtrStore(Block &MBB, BlockIt MBBI, MVT Type,
       } else {
         BuildMI(MBB, MBBI, DL, TII->get(SH::MOVI), SH::R0)
           .addImm(0);
-        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CFPMaxAdd);
+        TII->emitAddressAdjust(SH::R0, MBB, MBBI, Offset, CLOpts->pseudo_fp_max_add);
       }
 
       BuildMI(MBB, MBBI, DL, TII->get(Opc))
@@ -1311,15 +1302,16 @@ bool SuperHExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "\n********** SuperHExpandPseudo **********\n");
   bool Modified = false;
 
-#ifndef NDEBUG
-  if (CNoExpand)
-    return false;
-#endif
-
   STI = &MF.getSubtarget<SuperHSubtarget>();
   TRI = STI->getRegisterInfo();
   TII = STI->getInstrInfo();
   MFI = MF.getInfo<SuperHMachineFunctionInfo>();
+  CLOpts = &STI->getCLOpts();
+
+#ifndef NDEBUG
+  if (CLOpts->pseudo_no_expand)
+    return false;
+#endif
 
   for (Block &MBB : MF) {
     bool ContinueExpanding = true;

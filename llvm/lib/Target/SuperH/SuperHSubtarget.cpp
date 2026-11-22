@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Target/TargetMachine.h"
+#include "SuperHTargetMachine.h"
 
 using namespace llvm;
 
@@ -26,8 +27,9 @@ using namespace llvm;
 #include "SuperHGenSubtargetInfo.inc"
 
 SuperHSubtarget::SuperHSubtarget(const StringRef &CPU, const StringRef &FS,
-                                 const TargetMachine &TM)
+                                 const SuperHTargetMachine &TM)
     : SuperHGenSubtargetInfo(TM.getTargetTriple(), CPU, CPU, FS), TM(TM),
+      CLOpts(TM.getCLOpts()), MCCLOpts(TM.getMCCLOpts()),
       InstrInfo(*this), TLInfo(TM, initializeSubtargetDependencies(CPU, FS)),
       TSInfo(), FrameLowering(*this) {
 
@@ -46,6 +48,17 @@ const SuperHSubtarget &
 SuperHSubtarget::initializeSubtargetDependencies(StringRef CPU, StringRef FS) {
   ParseSubtargetFeatures(CPU, CPU, FS);
   return *this;
+}
+
+const Triple&
+SuperHSubtarget::getTargetTriple() const {
+  return TM.getTargetTriple();
+}
+
+
+bool 
+SuperHSubtarget::isPositionIndependent() const {
+  return TM.isPositionIndependent();
 }
 
 

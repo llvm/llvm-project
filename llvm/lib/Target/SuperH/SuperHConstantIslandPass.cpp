@@ -26,10 +26,6 @@ using namespace llvm;
 #define SH_CP_ISLANDS_OPT_NAME                                                 \
   "SH constant island placement and branch shortening pass"
 
-static cl::opt<unsigned>
-    CPMaxIteration("sh-constant-island-max-iteration", cl::Hidden, cl::init(30),
-                   cl::desc("The max number of iteration for converge"));
-
 namespace {
 
 /// SuperHConstantIslands - Due to limited PC-relative displacements, SH
@@ -394,6 +390,9 @@ bool SuperHConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
   MCP = MF->getConstantPool();
   BBUtils = std::make_unique<SuperHBasicBlockUtils>(mf);
+  const SuperHOptions &CLOpts =
+      mf.getSubtarget<SuperHSubtarget>().getCLOpts();
+  unsigned CPMaxIteration = CLOpts.constant_island_max_iteration;
 
   LLVM_DEBUG(dbgs() << "***** SuperHConstantIslands: "
                     << MCP->getConstants().size() << " CP entries, aligned to "

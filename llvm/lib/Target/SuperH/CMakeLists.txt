@@ -14,6 +14,12 @@ llvm_tablegen(SuperHGenSDNodeInfo.inc         -gen-sd-node-info -sdnode-namespac
 llvm_tablegen(SuperHGenSearchableTables.inc   -gen-searchable-tables)
 llvm_tablegen(SuperHGenSubtargetInfo.inc      -gen-subtarget)
 
+set(LLVM_TARGET_DEFINITIONS SuperHOptions.td)
+llvm_tablegen(SuperHOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/SuperHMCOptions.td)
+llvm_tablegen(SuperHMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(SuperHCommonTableGen)
 
 add_llvm_target(SuperHCodeGen

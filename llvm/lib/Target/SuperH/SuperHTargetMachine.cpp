@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
@@ -28,6 +29,8 @@
 using namespace llvm;
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSuperHTarget() {
+  static opt::RegisterLibraryOptions<SuperHOptions> O;
+
   RegisterTargetMachine<SuperHTargetMachine> SH(getTheSuperHTarget());
   RegisterTargetMachine<SuperHTargetMachine> SHLE(getTheSuperHLETarget());
 
@@ -52,6 +55,7 @@ public:
 
   bool addInstSelector() override;
   void addPostRegAlloc() override;
+  void addPreEmitPass() override;
   void addPreEmitPass2() override;
   SuperHTargetMachine &getSuperHTargetMachine() const {
     return getTM<SuperHTargetMachine>();
@@ -65,6 +69,10 @@ bool SuperHPassConfig::addInstSelector() {
 
 void SuperHPassConfig::addPostRegAlloc() {
   addPass(createSuperHFrameFixupPass());
+}
+
+void SuperHPassConfig::addPreEmitPass() {  
+  // addPass(&BranchRelaxationPassID);
 }
 
 void SuperHPassConfig::addPreEmitPass2() {
@@ -121,6 +129,9 @@ SuperHTargetMachine::SuperHTargetMachine(const Target &T, const Triple &TT,
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                RM.value_or(Reloc::Static),
                                getEffectiveCodeModel(CM, CodeModel::Small), OL),
+      CLOpts(cl::LibraryOptionsContext::get<SuperHOptions>(
+          Options.MCOptions.LibraryOptions)),
+      MCCLOpts(SUPERH_MC::getCLOpts(Options.MCOptions)),
       TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
       ST(std::make_unique<SuperHSubtarget>(std::string(getCPU(CPU, TT)), std::string(FS), *this)) {
   initAsmInfo();

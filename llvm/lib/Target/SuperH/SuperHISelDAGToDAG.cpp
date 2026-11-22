@@ -32,10 +32,6 @@
 #define DEBUG_TYPE "sh-isel"
 #define PASS_NAME "SH DAG->DAG Instruction Selection"
 
-static cl::opt<bool> CForceDelaySlot(
-    "sh-cbranch-force-delay-slot", cl::Hidden, cl::init(false),
-    cl::desc("Force the usage of delay slots for conditional branches."));
-
 using namespace llvm;
 
 namespace {
@@ -459,6 +455,7 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::SETCC>(SDNode *N) {
 }
 
 template <> bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
+  bool ForceDelaySlot = Subtarget->getCLOpts().force_delay_slot;
   SDValue Chain = N->getOperand(0);
   SDValue Dest = N->getOperand(1);
   SHCC::CondCode CC = (SHCC::CondCode)dyn_cast<ConstantSDNode>(N->getOperand(2))
@@ -467,7 +464,7 @@ template <> bool SuperHDAGToDAGISel::trySelect<SHISD::BRCOND>(SDNode *N) {
   SDLoc DL(N);
 
   SDValue Ops[] = {Dest, CurDAG->getTargetConstant(CC, DL, MVT::i8), Cmp};
-  MachineSDNode *Res = CurDAG->getMachineNode(CForceDelaySlot ? SH::BRSCC : SH::BRCC, 
+  MachineSDNode *Res = CurDAG->getMachineNode(ForceDelaySlot ? SH::BRSCC : SH::BRCC, 
                                               DL, MVT::Other, Ops);
 
   if (Res) {

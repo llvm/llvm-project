@@ -41,14 +41,6 @@
 
 #define DEBUG_TYPE "sh-framelowering"
 
-static cl::opt<bool> AccumOutgoingArgs(
-    "sh-accumulate-outgoing-args", cl::Hidden, cl::init(false),
-    cl::desc("Reserve space for outgoing arguments in the function prologue."));
-
-static cl::opt<int64_t> MaxSPAdd(
-    "sh-max-sp-add", cl::Hidden, cl::init(10),
-    cl::desc("How many add instructions are deemed low enough cost to generate for sp adjust."));
-
 using namespace llvm;
 
 
@@ -63,7 +55,8 @@ void SuperHFrameLowering::emitFrameAdjust(Register Base, Block &MBB, BlockIt MBB
                                           int32_t AdjValue, 
                                           MachineInstr::MIFlag MIFlag) const {
   const SuperHInstrInfo &TII = *STI.getInstrInfo();
-  TII.emitAddressAdjust(Base, MBB, MBBI, AdjValue, MaxSPAdd, MIFlag);
+  const SuperHOptions &CLOpts = STI.getCLOpts();
+  TII.emitAddressAdjust(Base, MBB, MBBI, AdjValue, CLOpts.max_sp_add, MIFlag);
 }
 
 StackOffset

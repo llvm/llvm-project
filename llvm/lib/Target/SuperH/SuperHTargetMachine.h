@@ -22,6 +22,8 @@
 namespace llvm {
 
 class SuperHTargetMachine : public CodeGenTargetMachineImpl {
+  const SuperHOptions &CLOpts;
+  const SuperHMCOptions &MCCLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable std::unique_ptr<SuperHSubtarget> ST;
 
@@ -37,6 +39,8 @@ public:
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
                             const TargetSubtargetInfo *STI) const override;
 
+  const SuperHOptions &getCLOpts() const { return CLOpts; }
+  const SuperHMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const SuperHSubtarget *getSubtargetImpl() const;
   const SuperHSubtarget *getSubtargetImpl(const Function &) const override;
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;

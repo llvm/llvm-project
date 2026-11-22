@@ -14,6 +14,7 @@
 #define LLVM_LIB_TARGET_SUPERH_SUPERHSUBTARGET_H
 
 #include "MCTargetDesc/SuperHMCTargetDesc.h"
+#include "MCTargetDesc/SuperHMCOptions.h"
 #include "SuperHFrameLowering.h"
 #include "SuperHISelLowering.h"
 #include "SuperHInstrInfo.h"
@@ -27,13 +28,19 @@
 #define GET_SUBTARGETINFO_HEADER
 #include "SuperHGenSubtargetInfo.inc"
 
+#define OPTIONS_STRUCT_DECL
+#include "SuperHOptions.inc"
+
 namespace llvm {
+class SuperHTargetMachine;
 class StringRef;
 
 typedef unsigned char SHRefClass;
 
 class SuperHSubtarget : public SuperHGenSubtargetInfo {
-  const TargetMachine &TM;
+  const SuperHOptions &CLOpts;
+  const SuperHMCOptions &MCCLOpts;
+  const SuperHTargetMachine &TM;
   SuperHInstrInfo InstrInfo;
   SuperHTargetLowering TLInfo;
   SuperHSelectionDAGInfo TSInfo;
@@ -45,11 +52,13 @@ class SuperHSubtarget : public SuperHGenSubtargetInfo {
 
 public:
   SuperHSubtarget(const StringRef &CPU, const StringRef &FS,
-                  const TargetMachine &TM);
+                  const SuperHTargetMachine &TM);
 
   ~SuperHSubtarget() override;
 
-  const Triple &getTargetTriple() const { return TM.getTargetTriple(); }
+
+  const SuperHOptions &getCLOpts() const { return CLOpts; }
+  const SuperHMCOptions &getMCCLOpts() const { return MCCLOpts; }
   const SuperHInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;
@@ -66,7 +75,9 @@ public:
 
   bool isLittleEndian() const { return getTargetTriple().isLittleEndian(); }
   bool isTargetELF() const { return getTargetTriple().isOSBinFormatELF(); }
-  bool isPositionIndependent() const { return TM.isPositionIndependent(); }
+
+  const Triple &getTargetTriple() const;
+  bool isPositionIndependent() const;
 
   // Classification functions
   SHRefClass classifyLocalReference(const GlobalValue *GV) const;
