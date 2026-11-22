@@ -80,6 +80,35 @@ private:
   MaybeCount RequiredParams;
   Mode MatchAs;
 
+  template <typename T> friend class CallDescriptionMap;
+
+  /// The properties of a call that are needed for matching it. They are
+  /// computed once when a call is matched against many CallDescriptions.
+  class Callee {
+    /// The callee-dependent data of CheckerContext::isCLibraryFunction.
+    struct CLibraryInfo {
+      std::string BuiltinName; // Empty if not a builtin.
+      bool IsPredefinedLibFunction;
+      bool IsCLibraryDecl;
+    };
+    /// Computed on first use, as only C library entries need it.
+    mutable std::optional<CLibraryInfo> CLib;
+
+    const CLibraryInfo &getCLibraryInfo() const;
+
+  public:
+    const FunctionDecl *FD = nullptr;
+    size_t ArgCount = 0;
+    size_t ParamCount = 0;
+    bool IsMethod = false;
+
+    explicit Callee(const CallEvent &Call);
+    explicit Callee(const CallExpr &CE);
+
+    /// Equivalent to CheckerContext::isCLibraryFunction(FD, Name).
+    bool isCLibraryFunction(StringRef Name) const;
+  };
+
 public:
   /// Constructs a CallDescription object.
   ///
@@ -182,8 +211,7 @@ public:
   /// @}
 
 private:
-  bool matchesImpl(const FunctionDecl *Callee, size_t ArgCount,
-                   size_t ParamCount) const;
+  bool matchesImpl(const Callee &C) const;
 
   bool matchNameOnly(const NamedDecl *ND) const;
   bool matchQualifiedNameParts(const Decl *D) const;
@@ -220,13 +248,7 @@ public:
   CallDescriptionMap &operator=(CallDescriptionMap &&) = default;
 
   [[nodiscard]] const T *lookup(const CallEvent &Call) const {
-    // Slow path: linear lookup.
-    // TODO: Implement some sort of fast path.
-    for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matches(Call))
-        return &I.second;
-
-    return nullptr;
+    return lookupImpl(CallDescription::Callee(Call));
   }
 
   /// When available, always prefer lookup with a CallEvent! This function
@@ -242,10 +264,18 @@ public:
   /// CallEvent::getNumArgs), the called function if it was called through a
   /// function pointer, and other information not available syntactically.
   [[nodiscard]] const T *lookupAsWritten(const CallExpr &Call) const {
+    return lookupImpl(CallDescription::Callee(Call));
+  }
+
+private:
+  const T *lookupImpl(const CallDescription::Callee &C) const {
+    if (!C.FD)
+      return nullptr;
+
     // Slow path: linear lookup.
     // TODO: Implement some sort of fast path.
     for (const std::pair<CallDescription, T> &I : LinearMap)
-      if (I.first.matchesAsWritten(Call))
+      if (I.first.matchesImpl(C))
         return &I.second;
 
     return nullptr;

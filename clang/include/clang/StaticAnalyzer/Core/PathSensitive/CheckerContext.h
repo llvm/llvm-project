@@ -435,6 +435,33 @@ public:
   std::string getMacroNameOrSpelling(SourceLocation &Loc);
 
 private:
+  // CallDescription matches a function against many names, so it computes the
+  // callee-dependent parts of isCLibraryFunction only once.
+  friend class CallDescription;
+
+  /// Equivalent to isCLibraryFunction(FD, Name), for callers that match the
+  /// same function against many names: with BId = FD->getBuiltinID(),
+  /// \p BuiltinName must be getBuiltinName(FD, BId), \p IsPredefinedLibFunction
+  /// must be isPredefinedLibFunction(FD, BId) and \p IsCLibraryDecl must be
+  /// isCLibraryDecl(FD).
+  static bool isCLibraryFunction(const FunctionDecl *FD, StringRef Name,
+                                 StringRef BuiltinName,
+                                 bool IsPredefinedLibFunction,
+                                 bool IsCLibraryDecl);
+
+  /// Returns the name of the builtin \p BId of \p FD, or an empty string if
+  /// \p BId is 0.
+  static std::string getBuiltinName(const FunctionDecl *FD, unsigned BId);
+
+  /// Returns true if \p BId is a builtin that is a predefined library function
+  /// (e.g. getlogin_r), for which no fuzzy name matching is done.
+  static bool isPredefinedLibFunction(const FunctionDecl *FD, unsigned BId);
+
+  /// Returns true if \p FD is declared like a C library function: it has an
+  /// identifier, it is in the top-level or the \c std namespace, and it is
+  /// externally visible or inline.
+  static bool isCLibraryDecl(const FunctionDecl *FD);
+
   ExplodedNode *addTransitionImpl(const ProgramStateRef &State, bool MarkAsSink,
                                   ExplodedNode *P, const ProgramPointTag *Tag) {
     Changed = true;

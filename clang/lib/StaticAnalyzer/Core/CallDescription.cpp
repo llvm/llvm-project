@@ -47,24 +47,55 @@ ento::CallDescription::CallDescription(Mode MatchAs,
                   [](StringRef From) { return From.str(); });
 }
 
-bool ento::CallDescription::matches(const CallEvent &Call) const {
+ento::CallDescription::Callee::Callee(const CallEvent &Call) {
   // FIXME: Add ObjC Message support.
   if (Call.getKind() == CE_ObjCMessage)
-    return false;
+    return;
 
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD)
-    return false;
+    return;
 
-  return matchesImpl(FD, Call.getNumArgs(), Call.parameters().size());
+  ArgCount = Call.getNumArgs();
+  // Same as Call.parameters().size() for calls of FunctionDecls.
+  ParamCount = FD->param_size();
+  IsMethod = isa<CXXMethodDecl>(FD);
+}
+
+ento::CallDescription::Callee::Callee(const CallExpr &CE) {
+  FD = dyn_cast_or_null<FunctionDecl>(CE.getCalleeDecl());
+  if (!FD)
+    return;
+
+  ArgCount = CE.getNumArgs();
+  ParamCount = FD->param_size();
+  IsMethod = isa<CXXMethodDecl>(FD);
+}
+
+const ento::CallDescription::Callee::CLibraryInfo &
+ento::CallDescription::Callee::getCLibraryInfo() const {
+  if (!CLib) {
+    unsigned BId = FD->getBuiltinID();
+    CLib = CLibraryInfo{CheckerContext::getBuiltinName(FD, BId),
+                        CheckerContext::isPredefinedLibFunction(FD, BId),
+                        CheckerContext::isCLibraryDecl(FD)};
+  }
+  return *CLib;
+}
+
+bool ento::CallDescription::Callee::isCLibraryFunction(StringRef Name) const {
+  const CLibraryInfo &Info = getCLibraryInfo();
+  return CheckerContext::isCLibraryFunction(FD, Name, Info.BuiltinName,
+                                            Info.IsPredefinedLibFunction,
+                                            Info.IsCLibraryDecl);
+}
+
+bool ento::CallDescription::matches(const CallEvent &Call) const {
+  return matchesImpl(Callee(Call));
 }
 
 bool ento::CallDescription::matchesAsWritten(const CallExpr &CE) const {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(CE.getCalleeDecl());
-  if (!FD)
-    return false;
-
-  return matchesImpl(FD, CE.getNumArgs(), FD->param_size());
+  return matchesImpl(Callee(CE));
 }
 
 bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
@@ -139,24 +170,25 @@ bool ento::CallDescription::matchQualifiedNameParts(const Decl *D) const {
   return QualifierPartsIt == QualifierPartsEndIt;
 }
 
-bool ento::CallDescription::matchesImpl(const FunctionDecl *FD, size_t ArgCount,
-                                        size_t ParamCount) const {
+bool ento::CallDescription::matchesImpl(const Callee &C) const {
+  const FunctionDecl *FD = C.FD;
   if (!FD)
     return false;
 
-  const bool isMethod = isa<CXXMethodDecl>(FD);
-
-  if (MatchAs == Mode::SimpleFunc && isMethod)
+  if (MatchAs == Mode::SimpleFunc && C.IsMethod)
     return false;
 
-  if (MatchAs == Mode::CXXMethod && !isMethod)
+  if (MatchAs == Mode::CXXMethod && !C.IsMethod)
     return false;
+
+  const size_t ArgCount = C.ArgCount;
+  const size_t ParamCount = C.ParamCount;
 
   if (MatchAs == Mode::CLibraryMaybeHardened) {
     // In addition to accepting FOO() with CLibrary rules, we also want to
     // accept calls to __FOO_chk() and __builtin___FOO_chk().
-    if (CheckerContext::isCLibraryFunction(FD) &&
-        CheckerContext::isHardenedVariantOf(FD, getFunctionName())) {
+    if (CheckerContext::isHardenedVariantOf(FD, getFunctionName()) &&
+        C.isCLibraryFunction(StringRef())) {
       // Check that the actual argument/parameter counts are greater or equal
       // to the required counts. (Setting a requirement to std::nullopt matches
       // anything, so in that case value_or ensures that the value is compared
@@ -171,7 +203,7 @@ bool ento::CallDescription::matchesImpl(const FunctionDecl *FD, size_t ArgCount,
     return false;
 
   if (MatchAs == Mode::CLibrary || MatchAs == Mode::CLibraryMaybeHardened)
-    return CheckerContext::isCLibraryFunction(FD, getFunctionName());
+    return C.isCLibraryFunction(getFunctionName());
 
   if (!matchNameOnly(FD))
     return false;
