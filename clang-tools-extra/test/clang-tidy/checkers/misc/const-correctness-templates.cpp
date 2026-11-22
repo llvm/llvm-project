@@ -99,3 +99,17 @@ void f() {
 }
 
 } // namespace gh60895
+
+namespace gh235460{
+  template<class... Ts>
+  auto f(unsigned char x, Ts const&... xs) -> decltype(sizeof(x)) {
+    auto n = sizeof(x);
+    ((n += sizeof(xs)), ...);
+    return n;
+  }
+
+  void instantiate() {
+    (void)f(0);     // empty pack
+    (void)f(0, 1);  // non-empty pack
+  }
+} // namespace gh235460
