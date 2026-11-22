@@ -113,10 +113,6 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   bool IsConstant = false;
   bool IsIRGlobalValue = false;
 
-  // Tagged provenances related to this memory object.
-  // It is used to erasing the tags after the memory object is freed.
-  SmallVector<APInt> AssociatedTags;
-
   friend class Context;
 
 public:

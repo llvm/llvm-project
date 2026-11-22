@@ -21,10 +21,9 @@ define void @main() {
 ; CHECK-NEXT:   %p = call ptr @malloc(i64 2) => ptr 0x20 [p]
 ; CHECK-NEXT:   store ptr %p, ptr %slot, align 8
 ; CHECK-NEXT:   call void @free(ptr %p)
-; CHECK-NEXT:   %q = load ptr, ptr %slot, align 8 => ptr 0x20 [nullary]
-; CHECK-NEXT:   %r = getelementptr inbounds i8, ptr %q, i64 1 => poison
-; CHECK-NEXT:   %c = icmp eq ptr %r, %r => poison
-; CHECK-NEXT: Stacktrace:
-; CHECK-NEXT: #0   call void @llvm.assume(i1 %c) at @main <stdin>:16
-; CHECK-NEXT: Immediate UB detected: The value poison violates noundef attribute.
-; CHECK-NEXT: error: Execution of function 'main' failed.
+; CHECK-NEXT:   %q = load ptr, ptr %slot, align 8 => ptr 0x20 [p (dangling)]
+; CHECK-NEXT:   %r = getelementptr inbounds i8, ptr %q, i64 1 => ptr 0x21 [p + 1 (dangling)]
+; CHECK-NEXT:   %c = icmp eq ptr %r, %r => T
+; CHECK-NEXT:   call void @llvm.assume(i1 %c)
+; CHECK-NEXT:   ret void
+; CHECK-NEXT: Exiting function: main

@@ -19,8 +19,8 @@ define void @main() {
 ; CHECK-NEXT:   %p = call ptr @malloc(i64 2) => ptr 0x20 [p]
 ; CHECK-NEXT:   store ptr %p, ptr %slot, align 8
 ; CHECK-NEXT:   call void @free(ptr %p)
-; CHECK-NEXT:   %q = load ptr, ptr %slot, align 8 => ptr 0x20 [nullary]
+; CHECK-NEXT:   %q = load ptr, ptr %slot, align 8 => ptr 0x20 [p (dangling)]
 ; CHECK-NEXT: Stacktrace:
 ; CHECK-NEXT: #0   store i8 0, ptr %q, align 1 at @main <stdin>:14
-; CHECK-NEXT: Immediate UB detected: Invalid memory access via a pointer with nullary provenance.
+; CHECK-NEXT: Immediate UB detected: Try to access a dead memory object at address 0x20.
 ; CHECK-NEXT: error: Execution of function 'main' failed.
