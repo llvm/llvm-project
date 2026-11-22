@@ -23,6 +23,9 @@ Potential macros for replacement must meet the following constraints:
   Parenthesized expressions are also recognized. This recognizes
   most valid expressions. In particular, expressions with the
   `sizeof` operator are not recognized.
+- Every observed expansion in the translation unit must form a complete
+  expression. Macros supplying call parentheses or argument lists are
+  excluded, even if their replacement tokens are otherwise eligible.
 - Macros must be defined on sequential source file lines, or with
   only comment lines in between macro definitions.
 - Macros must all be defined in the same source file.
@@ -30,10 +33,32 @@ Potential macros for replacement must meet the following constraints:
   (Conditional include guards are exempt from this constraint.)
 - Macros must not be defined adjacent to other preprocessor directives.
 - Macros must not be used in any conditional preprocessing directive.
-- Macros must not be used as arguments to other macros.
-- Macros must not be undefined.
-- Macros must be defined at the top-level, not inside any declaration or
-  definition.
+- Macros passed as arguments to other macros must form complete
+  expressions in every substituted copy. Expanded arguments used to
+  construct strings or tokens are excluded.
+- Macros must not be referenced in the body of a function-like macro.
+- Macros must not be undefined or redefined.
+- Macros must be defined at namespace or translation-unit scope, not
+  inside a function or class. For a macro defined inside a namespace,
+  every observed use must be within that namespace or a nested namespace.
+  Reopened namespace blocks count as the same namespace. Language linkage
+  blocks, such as `extern "C"`, do not introduce a scope and are allowed.
+
+For example, this macro remains unchanged:
+
+```c++
+#define CALL_ARGS (1, 2)
+
+void consume(int, int);
+void example() {
+  consume CALL_ARGS;
+}
+```
+
+Here, `CALL_ARGS` supplies the function call's argument list. Each argument
+is an expression, but the complete expansion is not. Replacing the macro
+with an enumerator would remove the call parentheses. In C++, the same
+replacement text used as a complete comma expression can still be eligible.
 
 Each cluster of macros meeting the above constraints is presumed to
 be a set of values suitable for replacement by an anonymous enum.

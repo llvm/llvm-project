@@ -1,0 +1,8 @@
+#ifndef LINKAGE_LOCAL_H
+#define LINKAGE_LOCAL_H
+
+#define LINKAGE_HEADER_LOCAL 9
+// CHECK-MESSAGES-NOT: warning:
+// CHECK-FIXES: #define LINKAGE_HEADER_LOCAL 9
+
+#endif

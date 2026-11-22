@@ -13,6 +13,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include <cassert>
 #include <cctype>
@@ -83,6 +84,21 @@ struct EnumMacro {
 
   Token Name;
   const MacroDirective *Directive;
+};
+
+struct MacroExpansion {
+  const MacroInfo *Info;
+  SourceLocation End;
+  bool Complete = true;
+  bool Consumed = false;
+};
+
+struct MacroState {
+  unsigned UnmatchedExpansions = 0;
+  const NamespaceDecl *DefinitionNamespace = nullptr;
+  // The innermost namespace enclosing every matched use.
+  const NamespaceDecl *CommonUseNamespace = nullptr;
+  bool HasUses = false;
 };
 
 using MacroList = SmallVector<EnumMacro>;
@@ -174,10 +190,18 @@ public:
   void PragmaDirective(SourceLocation Loc,
                        PragmaIntroducerKind Introducer) override;
 
+  void MacroExpands(const Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override;
+
   // After we've seen everything, issue warnings and fix-its.
   void EndOfMainFile() override;
 
   void invalidateRange(SourceRange Range);
+
+  void validateExpansionRange(SourceRange Range,
+                              const NamespaceDecl *UseNamespace);
+
+  void recordNamespace(const NamespaceDecl *Namespace);
 
 private:
   void newEnum() {
@@ -207,6 +231,9 @@ private:
   void rememberExpressionName(const Token &Tok);
   void rememberExpressionTokens(ArrayRef<Token> MacroTokens);
   void invalidateExpressionNames();
+  void collectArgumentExpansions();
+  void validateExpansion(MacroExpansion &Expansion,
+                         const NamespaceDecl *UseNamespace);
   void issueDiagnostics();
   void warnMacroEnum(const EnumMacro &Macro) const;
   void fixEnumMacro(const MacroList &MacroList) const;
@@ -216,6 +243,12 @@ private:
   const LangOptions &LangOpts;
   const SourceManager &SM;
   SmallVector<MacroList> Enums;
+  llvm::DenseMap<const MacroInfo *, MacroState> MacroStates;
+  llvm::DenseMap<SourceLocation, MacroExpansion> Expansions;
+  llvm::DenseMap<unsigned, MacroExpansion> ArgumentExpansions;
+  bool ArgumentExpansionsCollected = false;
+  SmallVector<const MacroInfo *> CandidateDefinitions;
+  bool DefinitionsSorted = false;
   SmallVector<FileState> Files;
   std::vector<std::string> ExpressionNames;
   FileState *CurrentFile = nullptr;
@@ -325,6 +358,10 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
     return;
   }
 
+  // An earlier definition would still expand the generated enumerator name.
+  if (MD->getPrevious())
+    checkName(MacroNameTok);
+
   if (insideConditional())
     return;
 
@@ -346,6 +383,9 @@ void MacroToEnumCallbacks::MacroDefined(const Token &MacroNameTok,
   if (!isConsecutiveMacro(MD))
     newEnum();
   Enums.back().emplace_back(MacroNameTok, MD);
+  MacroStates.try_emplace(Info);
+  CandidateDefinitions.push_back(Info);
+  DefinitionsSorted = false;
   rememberLastMacroLocation(MD);
 }
 
@@ -416,6 +456,25 @@ void MacroToEnumCallbacks::PragmaDirective(SourceLocation Loc,
     CurrentFile->GuardScanner = IncludeGuard::IfGuard;
 }
 
+void MacroToEnumCallbacks::MacroExpands(const Token &MacroNameTok,
+                                        const MacroDefinition &MD,
+                                        SourceRange Range,
+                                        const MacroArgs *Args) {
+  // Ignore function-like macro expansions.
+  if (Args != nullptr)
+    return;
+
+  const MacroInfo *Info = MD.getMacroInfo();
+  const auto Candidate = MacroStates.find(Info);
+  if (Candidate == MacroStates.end())
+    return;
+
+  if (Expansions
+          .try_emplace(Range.getBegin(), MacroExpansion{Info, Range.getEnd()})
+          .second)
+    ++Candidate->second.UnmatchedExpansions;
+}
+
 void MacroToEnumCallbacks::invalidateExpressionNames() {
   for (const std::string &Id : ExpressionNames) {
     llvm::erase_if(Enums, [Id](const MacroList &MacroList) {
@@ -426,18 +485,249 @@ void MacroToEnumCallbacks::invalidateExpressionNames() {
   }
 }
 
+static const NamespaceDecl *getNamespaceContext(const DeclContext *Context) {
+  for (; Context; Context = Context->getParent())
+    if (const auto *Namespace = dyn_cast<NamespaceDecl>(Context))
+      return Namespace->getCanonicalDecl();
+  return nullptr;
+}
+
+static const NamespaceDecl *getEnclosingNamespace(const Decl *Declaration) {
+  return getNamespaceContext(Declaration->getDeclContext());
+}
+
+static const NamespaceDecl *getUseNamespace(const Decl *Use,
+                                            SourceLocation Location,
+                                            const SourceManager &SM) {
+  for (const Decl *Declaration = Use; Declaration;) {
+    const DeclContext *Context = Declaration->getDeclContext();
+    const DeclContext *Lexical = Declaration->getLexicalDeclContext();
+    if (Context != Lexical) {
+      // A qualified declaration's leading type is still in its lexical scope.
+      bool InSemanticScope = false;
+      if (const auto *Function = dyn_cast<FunctionDecl>(Declaration)) {
+        const SourceLocation NameEnd = Function->getNameInfo().getEndLoc();
+        SourceLocation ScopeBegin = NameEnd;
+        if (const auto *Arguments =
+                Function->getTemplateSpecializationArgsAsWritten())
+          ScopeBegin = Arguments->getRAngleLoc();
+        InSemanticScope = NameEnd.isValid() && ScopeBegin.isValid() &&
+                          !SM.isBeforeInTranslationUnit(ScopeBegin, NameEnd) &&
+                          !SM.isBeforeInTranslationUnit(Location, ScopeBegin);
+      } else {
+        SourceRange ScopeRange;
+        if (const auto *Record = dyn_cast<RecordDecl>(Declaration)) {
+          ScopeRange = Record->getBraceRange();
+        } else if (const auto *Variable = dyn_cast<VarDecl>(Declaration)) {
+          if (const Expr *Initializer = Variable->getInit())
+            ScopeRange = Initializer->getSourceRange();
+        }
+        InSemanticScope = ScopeRange.isValid() &&
+                          SM.isPointWithin(Location, ScopeRange.getBegin(),
+                                           ScopeRange.getEnd());
+      }
+      if (!InSemanticScope)
+        return getNamespaceContext(Lexical);
+    }
+    Declaration = Context ? Decl::castFromDeclContext(Context) : nullptr;
+  }
+  return getEnclosingNamespace(Use);
+}
+
+static bool isWithinNamespace(const NamespaceDecl *UseNamespace,
+                              const NamespaceDecl *DefinitionNamespace) {
+  if (!DefinitionNamespace)
+    return true;
+  for (const NamespaceDecl *Namespace = UseNamespace; Namespace;
+       Namespace = getEnclosingNamespace(Namespace)) {
+    if (Namespace == DefinitionNamespace)
+      return true;
+  }
+  return false;
+}
+
+static const NamespaceDecl *getCommonNamespace(const NamespaceDecl *Left,
+                                               const NamespaceDecl *Right) {
+  if (!Left || !Right)
+    return nullptr;
+  for (const NamespaceDecl *Namespace = Left; Namespace;
+       Namespace = getEnclosingNamespace(Namespace)) {
+    if (isWithinNamespace(Right, Namespace))
+      return Namespace;
+  }
+  return nullptr;
+}
+
+void MacroToEnumCallbacks::recordNamespace(const NamespaceDecl *Namespace) {
+  if (Namespace->getBeginLoc().isInvalid() ||
+      Namespace->getEndLoc().isInvalid())
+    return;
+
+  if (!DefinitionsSorted) {
+    llvm::sort(CandidateDefinitions,
+               [this](const MacroInfo *Left, const MacroInfo *Right) {
+                 return SM.isBeforeInTranslationUnit(Left->getDefinitionLoc(),
+                                                     Right->getDefinitionLoc());
+               });
+    DefinitionsSorted = true;
+  }
+
+  const SourceRange Range =
+      SM.getExpansionRange(Namespace->getSourceRange()).getAsRange();
+  const auto *It = llvm::lower_bound(
+      CandidateDefinitions, Range.getBegin(),
+      [this](const MacroInfo *Info, SourceLocation Location) {
+        return SM.isBeforeInTranslationUnit(Info->getDefinitionLoc(), Location);
+      });
+  const NamespaceDecl *Canonical = Namespace->getCanonicalDecl();
+  for (; It != CandidateDefinitions.end() &&
+         SM.isPointWithin((*It)->getDefinitionLoc(), Range.getBegin(),
+                          Range.getEnd());
+       ++It) {
+    MacroState &State = MacroStates.find(*It)->second;
+    // Nested namespaces can share source ranges, as in namespace A::B {}.
+    if (isWithinNamespace(Canonical, State.DefinitionNamespace))
+      State.DefinitionNamespace = Canonical;
+  }
+}
+
 void MacroToEnumCallbacks::EndOfMainFile() {
   invalidateExpressionNames();
+  llvm::erase_if(Enums, [this](const MacroList &Macros) {
+    return llvm::any_of(Macros, [this](const EnumMacro &Macro) {
+      const MacroState &State =
+          MacroStates.find(Macro.Directive->getMacroInfo())->second;
+      return State.UnmatchedExpansions != 0 ||
+             (State.HasUses && !isWithinNamespace(State.CommonUseNamespace,
+                                                  State.DefinitionNamespace));
+    });
+  });
   issueDiagnostics();
 }
 
 void MacroToEnumCallbacks::invalidateRange(SourceRange Range) {
-  llvm::erase_if(Enums, [Range](const MacroList &MacroList) {
-    return llvm::any_of(MacroList, [Range](const EnumMacro &Macro) {
-      return Macro.Directive->getLocation() >= Range.getBegin() &&
-             Macro.Directive->getLocation() <= Range.getEnd();
+  // A declaration can end in a macro expansion. Compare file locations so it
+  // does not also invalidate unrelated macros defined after the declaration.
+  Range = SM.getExpansionRange(Range).getAsRange();
+  llvm::erase_if(Enums, [this, Range](const MacroList &MacroList) {
+    return llvm::any_of(MacroList, [this, Range](const EnumMacro &Macro) {
+      return SM.isPointWithin(Macro.Directive->getLocation(), Range.getBegin(),
+                              Range.getEnd());
     });
   });
+}
+
+void MacroToEnumCallbacks::collectArgumentExpansions() {
+  if (ArgumentExpansionsCollected)
+    return;
+  ArgumentExpansionsCollected = true;
+
+  // Argument prescanning expands a candidate once, but each substituted copy
+  // must be validated independently. Source entries are created parent first.
+  for (unsigned I = 1, Size = SM.local_sloc_entry_size(); I < Size; ++I) {
+    const auto &Entry = SM.getLocalSLocEntry(I);
+    if (!Entry.isExpansion() || !Entry.getExpansion().isMacroArgExpansion())
+      continue;
+
+    const SourceLocation Spelling = Entry.getExpansion().getSpellingLoc();
+    if (!Spelling.isMacroID())
+      continue;
+
+    const unsigned NextOffset = I + 1 == Size
+                                    ? SM.getNextLocalOffset()
+                                    : SM.getLocalSLocEntry(I + 1).getOffset();
+    const unsigned Length = NextOffset - Entry.getOffset() - 1;
+    const SourceLocation SpellingEnd = Spelling.getLocWithOffset(Length);
+    const FileID SpellingFile = SM.getFileID(Spelling);
+    MacroExpansion *Parent = nullptr;
+    bool Complete = false;
+    if (SM.isMacroArgExpansion(Spelling)) {
+      const auto Argument =
+          ArgumentExpansions.find(SM.getSLocEntry(SpellingFile).getOffset());
+      if (Argument == ArgumentExpansions.end())
+        continue;
+      Parent = &Argument->second;
+      Complete = Parent->Complete && SM.getFileOffset(Spelling) == 0 &&
+                 Length == SM.getFileIDSize(SpellingFile);
+    } else {
+      const SourceRange Range =
+          SM.getImmediateExpansionRange(Spelling).getAsRange();
+      const auto Expansion = Expansions.find(Range.getBegin());
+      if (Expansion == Expansions.end() ||
+          Expansion->second.End != Range.getEnd())
+        continue;
+      Parent = &Expansion->second;
+      Complete = SM.isAtStartOfImmediateMacroExpansion(Spelling) &&
+                 SM.isInFileID(SpellingEnd, SpellingFile) &&
+                 SM.isAtEndOfImmediateMacroExpansion(SpellingEnd);
+    }
+
+    const MacroInfo *Info = Parent->Info;
+    MacroState &State = MacroStates.find(Info)->second;
+    // Forwarding replaces the parent's obligation with one for each child.
+    if (!Parent->Consumed) {
+      assert(State.UnmatchedExpansions != 0);
+      --State.UnmatchedExpansions;
+      Parent->Consumed = true;
+    }
+    ArgumentExpansions.try_emplace(Entry.getOffset(),
+                                   MacroExpansion{Info, SpellingEnd, Complete});
+    ++State.UnmatchedExpansions;
+  }
+}
+
+void MacroToEnumCallbacks::validateExpansion(
+    MacroExpansion &Expansion, const NamespaceDecl *UseNamespace) {
+  if (Expansion.Consumed || !Expansion.Complete)
+    return;
+
+  MacroState &State = MacroStates.find(Expansion.Info)->second;
+  assert(State.UnmatchedExpansions != 0);
+  --State.UnmatchedExpansions;
+  State.CommonUseNamespace =
+      State.HasUses ? getCommonNamespace(State.CommonUseNamespace, UseNamespace)
+                    : UseNamespace;
+  State.HasUses = true;
+  // A template instantiation can revisit this expression's source range.
+  Expansion.Consumed = true;
+}
+
+void MacroToEnumCallbacks::validateExpansionRange(
+    SourceRange Range, const NamespaceDecl *UseNamespace) {
+  collectArgumentExpansions();
+  SourceLocation Begin = Range.getBegin();
+  SourceLocation End = Range.getEnd();
+  while (Begin.isMacroID() && End.isMacroID() &&
+         SM.getFileID(Begin) == SM.getFileID(End)) {
+    const unsigned Length =
+        Lexer::MeasureTokenLength(SM.getSpellingLoc(End), SM, LangOpts);
+    const SourceLocation TokenEnd = End.getLocWithOffset(Length);
+    if (Length == 0 || !SM.isInFileID(TokenEnd, SM.getFileID(End)))
+      return;
+
+    if (SM.isMacroArgExpansion(Begin)) {
+      const auto Argument = ArgumentExpansions.find(
+          SM.getSLocEntry(SM.getFileID(Begin)).getOffset());
+      if (Argument != ArgumentExpansions.end() &&
+          SM.getFileOffset(Begin) == 0 &&
+          SM.getImmediateSpellingLoc(TokenEnd) == Argument->second.End)
+        validateExpansion(Argument->second, UseNamespace);
+      return;
+    }
+
+    // An inner expression can be complete without consuming its enclosing
+    // object-like macro expansion.
+    SourceLocation ExpansionBegin, ExpansionEnd;
+    if (!SM.isAtStartOfImmediateMacroExpansion(Begin, &ExpansionBegin) ||
+        !SM.isAtEndOfImmediateMacroExpansion(TokenEnd, &ExpansionEnd))
+      return;
+
+    const auto Expansion = Expansions.find(ExpansionBegin);
+    if (Expansion != Expansions.end() && Expansion->second.End == ExpansionEnd)
+      validateExpansion(Expansion->second, UseNamespace);
+    Begin = ExpansionBegin;
+    End = ExpansionEnd;
+  }
 }
 
 void MacroToEnumCallbacks::issueDiagnostics() {
@@ -513,8 +803,16 @@ void MacroToEnumCheck::registerPPCallbacks(const SourceManager &SM,
 
 void MacroToEnumCheck::registerMatchers(ast_matchers::MatchFinder *Finder) {
   using namespace ast_matchers;
-  const auto TopLevelDecl = hasParent(translationUnitDecl());
-  Finder->addMatcher(decl(TopLevelDecl).bind("top"), this);
+  // Inspect declarations inside namespace and linkage containers. Namespace
+  // ownership is checked separately against each expansion's context.
+  const auto TopLevelDecl = hasParent(
+      decl(anyOf(translationUnitDecl(), linkageSpecDecl(), namespaceDecl())));
+  Finder->addMatcher(
+      decl(TopLevelDecl, unless(anyOf(linkageSpecDecl(), namespaceDecl())))
+          .bind("top"),
+      this);
+  Finder->addMatcher(namespaceDecl().bind("namespace"), this);
+  Finder->addMatcher(expr(hasAncestor(decl().bind("use"))).bind("expr"), this);
 }
 
 static bool isValid(SourceRange Range) {
@@ -527,6 +825,19 @@ static bool empty(SourceRange Range) {
 
 void MacroToEnumCheck::check(
     const ast_matchers::MatchFinder::MatchResult &Result) {
+  if (const auto *Namespace =
+          Result.Nodes.getNodeAs<NamespaceDecl>("namespace"))
+    PPCallback->recordNamespace(Namespace);
+
+  if (const auto *E = Result.Nodes.getNodeAs<Expr>("expr");
+      E && E->getBeginLoc().isMacroID() && E->getEndLoc().isMacroID()) {
+    const auto *Use = Result.Nodes.getNodeAs<Decl>("use");
+    assert(Use);
+    PPCallback->validateExpansionRange(
+        E->getSourceRange(),
+        getUseNamespace(Use, E->getBeginLoc(), *Result.SourceManager));
+  }
+
   auto *TLDecl = Result.Nodes.getNodeAs<Decl>("top");
   if (TLDecl == nullptr)
     return;

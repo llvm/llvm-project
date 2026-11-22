@@ -1,0 +1,8 @@
+#ifndef EXPANSION_LOCAL_H
+#define EXPANSION_LOCAL_H
+
+#define HEADER_LOCAL 41
+// CHECK-MESSAGES-NOT: warning:
+// CHECK-FIXES: #define HEADER_LOCAL 41
+
+#endif
