@@ -46981,6 +46981,21 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::SETCC:
   case X86ISD::SETCC_CARRY:
     return true;
+  case X86ISD::VSRAI: {
+    // If Op can't create undef/poison and none of its operands are
+    // undef/poison then Op is never undef/poison. A difference from the default
+    // check, outside the switch, is that we handle elementwise operations for
+    // which the DemandedElts mask is valid for all operands here.
+    // TODO: Handle other opcodes when we have test coverage.
+    return !DAG.canCreateUndefOrPoison(Op, DemandedElts, Kind,
+                                       /*ConsiderFlags*/ true, Depth) &&
+           all_of(Op->ops(), [&](SDValue V) {
+             if (V.getValueType().isVector())
+               return DAG.isGuaranteedNotToBeUndefOrPoison(V, DemandedElts,
+                                                           Kind, Depth + 1);
+             return DAG.isGuaranteedNotToBeUndefOrPoison(V, Kind, Depth + 1);
+           });
+  }
   case X86ISD::PACKSS:
   case X86ISD::PACKUS: {
     APInt DemandedLHS, DemandedRHS;

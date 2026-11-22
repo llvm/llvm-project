@@ -342,7 +342,6 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE-NEXT:    andpd %xmm2, %xmm0
 ; SSE-NEXT:    orpd %xmm1, %xmm0
-; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptoui_2f64_to_4i32:
@@ -353,7 +352,6 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; VEX-NEXT:    vcvttpd2dq %xmm0, %xmm0
 ; VEX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; VEX-NEXT:    vorpd %xmm0, %xmm1, %xmm0
-; VEX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: fptoui_2f64_to_4i32:
@@ -448,7 +446,6 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE-NEXT:    andpd %xmm2, %xmm0
 ; SSE-NEXT:    orpd %xmm1, %xmm0
-; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: fptoui_4f64_to_2i32:
