@@ -39,7 +39,7 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // an active flag. B(1) is constructed first, so its cleanup scope is the outer
 // one and B(2) is destroyed first.
 // CIR: cir.func{{.*}} @_Z12test_temp_orv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
@@ -137,7 +137,7 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // evaluated right-hand side, so its destructor is guarded by an active flag
 // and lives in the inner scope, which runs first.
 // CIR: cir.func{{.*}} @_Z13test_temp_andv()
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.bool>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.bool>
 // CIR:   %[[REF_TMP0:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[REF_TMP1:.*]] = cir.alloca "ref.tmp1" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[CLEANUP_COND:.*]] = cir.alloca "cleanup.cond" {{.*}} : !cir.ptr<!cir.bool>
@@ -319,7 +319,7 @@ int test_temp_in_condition(G &obj) {
 }
 
 // CIR: cir.func {{.*}} @_Z22test_temp_in_conditionR1G(%[[ARG0:.*]]: !cir.ptr<!rec_G> {{.*}}) -> (!s32i {{.*}}) {{.*}} {
-// CIR:   %[[RET_ADDR:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[OBJ:.*]] = cir.alloca "obj" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_G>>
 // CIR:   cir.store %[[ARG0]], %[[OBJ]]
 // CIR:   cir.scope {
