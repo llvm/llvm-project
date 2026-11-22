@@ -3418,6 +3418,8 @@ define <2 x i64> @test_mm256_cvtepi64_epi8(<4 x i64> %__A) {
 ; CHECK-LABEL: test_mm256_cvtepi64_epi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpmovqb %ymm0, %xmm0
+; CHECK-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -3431,6 +3433,7 @@ define <2 x i64> @test_mm256_cvtepi64_epi16(<4 x i64> %__A) {
 ; CHECK-LABEL: test_mm256_cvtepi64_epi16:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpmovqw %ymm0, %xmm0
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:
@@ -3444,6 +3447,7 @@ define <2 x i64> @test_mm256_cvtepi32_epi8(<4 x i64> %__A) {
 ; CHECK-LABEL: test_mm256_cvtepi32_epi8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vpmovdb %ymm0, %xmm0
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
 entry:

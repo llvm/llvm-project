@@ -5216,8 +5216,8 @@ define void @vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2(ptr %
 ;
 ; AVX512F-SLOW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
 ; AVX512F-SLOW:       # %bb.0:
-; AVX512F-SLOW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512F-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0],xmm0[1,2,3,4,5,6,7]
+; AVX512F-SLOW-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; AVX512F-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512F-SLOW-NEXT:    vpaddb 32(%rsi), %ymm0, %ymm1
 ; AVX512F-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512F-SLOW-NEXT:    vmovdqa %ymm0, (%rdx)
@@ -5238,8 +5238,8 @@ define void @vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2(ptr %
 ;
 ; AVX512DQ-SLOW-LABEL: vec512_i16_widen_to_i256_factor16_broadcast_to_v2i256_factor2:
 ; AVX512DQ-SLOW:       # %bb.0:
-; AVX512DQ-SLOW-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX512DQ-SLOW-NEXT:    vpblendw {{.*#+}} xmm0 = mem[0],xmm0[1,2,3,4,5,6,7]
+; AVX512DQ-SLOW-NEXT:    vpmovzxwq {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero
+; AVX512DQ-SLOW-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512DQ-SLOW-NEXT:    vpaddb 32(%rsi), %ymm0, %ymm1
 ; AVX512DQ-SLOW-NEXT:    vpaddb (%rsi), %ymm0, %ymm0
 ; AVX512DQ-SLOW-NEXT:    vmovdqa %ymm0, (%rdx)

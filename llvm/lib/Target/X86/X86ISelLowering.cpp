@@ -45710,10 +45710,13 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
   }
   case X86ISD::VZEXT_MOVL: {
     // If upper demanded elements are already zero then we have nothing to do.
+    // KnownBits doesn't handle POISON/UNDEF values so check the source value.
     SDValue Src = Op.getOperand(0);
     APInt DemandedUpperElts = DemandedElts;
     DemandedUpperElts.clearLowBits(1);
-    if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1))
+    if (TLO.DAG.MaskedVectorIsZero(Src, DemandedUpperElts, Depth + 1) &&
+        TLO.DAG.isGuaranteedNotToBeUndefOrPoison(
+            Src, DemandedUpperElts, UndefPoisonKind::UndefOrPoison, Depth + 1))
       return TLO.CombineTo(Op, Src);
     break;
   }

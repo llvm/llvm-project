@@ -78,11 +78,13 @@ define <4 x i32> @fptosi_2f64_to_4i32(<2 x double> %a) {
 ; SSE-LABEL: fptosi_2f64_to_4i32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: fptosi_2f64_to_4i32:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-NEXT:    retq
   %cvt = fptosi <2 x double> %a to <2 x i32>
   %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -342,6 +344,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE-NEXT:    andpd %xmm2, %xmm0
 ; SSE-NEXT:    orpd %xmm1, %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptoui_2f64_to_4i32:
@@ -352,6 +355,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; VEX-NEXT:    vcvttpd2dq %xmm0, %xmm0
 ; VEX-NEXT:    vandpd %xmm2, %xmm0, %xmm0
 ; VEX-NEXT:    vorpd %xmm0, %xmm1, %xmm0
+; VEX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; VEX-NEXT:    retq
 ;
 ; AVX512F-LABEL: fptoui_2f64_to_4i32:
@@ -365,6 +369,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; AVX512VL-LABEL: fptoui_2f64_to_4i32:
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512VL-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512VL-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: fptoui_2f64_to_4i32:
@@ -378,6 +383,7 @@ define <4 x i32> @fptoui_2f64_to_4i32(<2 x double> %a) {
 ; AVX512VLDQ-LABEL: fptoui_2f64_to_4i32:
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vcvttpd2udq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX512VLDQ-NEXT:    retq
   %cvt = fptoui <2 x double> %a to <2 x i32>
   %ext = shufflevector <2 x i32> %cvt, <2 x i32> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -446,6 +452,7 @@ define <4 x i32> @fptoui_4f64_to_2i32(<2 x double> %a) {
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE-NEXT:    andpd %xmm2, %xmm0
 ; SSE-NEXT:    orpd %xmm1, %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: fptoui_4f64_to_2i32:
