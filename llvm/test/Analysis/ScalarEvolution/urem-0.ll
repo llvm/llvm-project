@@ -311,7 +311,7 @@ define i64 @urem_shl_by_vscale_squared(i64 %n) vscale_range(1, 16) {
 ; CHECK-NEXT:    %x = shl i64 %n, 8
 ; CHECK-NEXT:    --> (256 * %n) U: [0,-255) S: [-9223372036854775808,9223372036854775553)
 ; CHECK-NEXT:    %r = urem i64 %x, %step
-; CHECK-NEXT:    --> ((256 * %n) + (-1 * vscale * vscale * ((256 * %n) /u (vscale * vscale)<nuw><nsw>))) U: full-set S: full-set
+; CHECK-NEXT:    --> 0 U: [0,1) S: [0,1)
 ; CHECK-NEXT:  Determining loop execution counts for: @urem_shl_by_vscale_squared
 ;
   %vs = call i64 @llvm.vscale.i64()
