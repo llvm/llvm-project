@@ -668,8 +668,7 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
           ResultTy ? ResultTy
                    : computeScalarTypeForInstruction(Opcode, Operands),
           Flags, DL),
-      VPIRMetadata(MD), VPIRAttributes(Attrs), Opcode(Opcode),
-      Name(Name.str()),
+      VPIRMetadata(MD), VPIRAttributes(Attrs), Opcode(Opcode), Name(Name.str()),
       GeneratesSingleScalar(
           GeneratesSingleScalar.value_or(alwaysGeneratesSingleScalar(Opcode))) {
   assert(
