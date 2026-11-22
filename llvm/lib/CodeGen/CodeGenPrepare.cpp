@@ -188,7 +188,7 @@ class CodeGenPrepare {
 
   /// Keeps track of non-local addresses that have been sunk into a block.
   /// This allows us to avoid inserting duplicate code for blocks with
-  /// multiple load/stores of the same address. The usage of WeakTrackingVH
+  /// multiple memory accesses of the same address. The usage of WeakTrackingVH
   /// enables SunkAddrs to be treated as a cache whose entries can be
   /// invalidated if a sunken address computation has been erased.
   ValueMap<Value *, WeakTrackingVH> SunkAddrs;
@@ -6048,9 +6048,15 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// vector. The 2 operands to the GEP must have a scalar pointer and a vector
 /// index.
 ///
+/// If the GEP is in another basic block, e.g. because LICM hoisted it out of a
+/// loop, sink it next to the gather/scatter and reuse it for the other
+/// gathers/scatters of the same GEP in the block.
+///
 /// If the existing GEP has a vector base pointer that is splat, we can look
-/// through the splat to find the scalar pointer. If we can't find a scalar
-/// pointer there's nothing we can do.
+/// through the splat to find the scalar pointer. If the vector base pointer is
+/// a GEP with a scalar or splat base pointer, and the existing GEP only adds a
+/// uniform offset to it, we can add that offset to the scalar pointer instead.
+/// If we can't find a scalar pointer there's nothing we can do.
 ///
 /// If we have a GEP with more than 2 indices where the middle indices are all
 /// zeroes, we can replace it with 2 GEPs where the second has 2 operands.
@@ -6061,26 +6067,54 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
 /// zero index.
 bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
                                                Value *Ptr) {
+  BasicBlock *BB = MemoryInst->getParent();
   Value *NewAddr;
 
-  if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
+  // Reuse the address sunk into this block for an earlier gather/scatter, if
+  // any. The block may be visited again, so it can also be after this one.
+  auto *SunkAddr = dyn_cast_or_null<Instruction>(SunkAddrs.lookup(Ptr));
+  if (SunkAddr && SunkAddr->getParent() == BB &&
+      SunkAddr->comesBefore(MemoryInst)) {
+    NewAddr = SunkAddr;
+  } else if (const auto *GEP = dyn_cast<GetElementPtrInst>(Ptr)) {
     // Don't optimize GEPs that don't have indices.
     if (!GEP->hasIndices())
       return false;
 
-    // If the GEP and the gather/scatter aren't in the same BB, don't optimize.
-    // FIXME: We should support this by sinking the GEP.
-    if (MemoryInst->getParent() != GEP->getParent())
-      return false;
+    bool SinkGEP = GEP->getParent() != BB;
 
     SmallVector<Value *, 2> Ops(GEP->operands());
+    Type *SourceTy = GEP->getSourceElementType();
 
-    bool RewriteGEP = false;
+    Type *OffsetTy = nullptr;
+    SmallVector<Value *, 1> OffsetIdxs;
+
+    bool RewriteGEP = SinkGEP;
 
     if (Ops[0]->getType()->isVectorTy()) {
-      Ops[0] = getSplatValue(Ops[0]);
-      if (!Ops[0])
-        return false;
+      if (Value *Splat = getSplatValue(Ops[0])) {
+        Ops[0] = Splat;
+      } else {
+        auto *BaseGEP = dyn_cast<GetElementPtrInst>(Ops[0]);
+        if (!BaseGEP || !BaseGEP->hasIndices())
+          return false;
+        Value *Base = BaseGEP->getPointerOperand();
+        if (Base->getType()->isVectorTy())
+          Base = getSplatValue(Base);
+        if (!Base)
+          return false;
+        for (Value *Idx : drop_begin(Ops)) {
+          if (Idx->getType()->isVectorTy())
+            Idx = getSplatValue(Idx);
+          if (!Idx)
+            return false;
+          OffsetIdxs.push_back(Idx);
+        }
+        OffsetTy = SourceTy;
+        SourceTy = BaseGEP->getSourceElementType();
+        Ops.assign(BaseGEP->op_begin(), BaseGEP->op_end());
+        Ops[0] = Base;
+      }
       RewriteGEP = true;
     }
 
@@ -6124,7 +6158,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
     IRBuilder<> Builder(MemoryInst);
     Builder.disableGEPCanonicalization();
 
-    Type *SourceTy = GEP->getSourceElementType();
+    if (OffsetTy)
+      Ops[0] = Builder.CreateGEP(OffsetTy, Ops[0], OffsetIdxs);
+
     Type *ScalarIndexTy = DL->getIndexType(Ops[0]->getType()->getScalarType());
 
     // If the final index isn't a vector, emit a scalar GEP containing all ops
@@ -6153,6 +6189,9 @@ bool CodeGenPrepare::optimizeGatherScatterInst(Instruction *MemoryInst,
       // Now create the GEP with scalar pointer and vector index.
       NewAddr = Builder.CreateGEP(SourceTy, Base, Index);
     }
+
+    if (SinkGEP)
+      SunkAddrs[Ptr] = WeakTrackingVH(NewAddr);
   } else if (!isa<Constant>(Ptr)) {
     // Not a GEP, maybe its a splat and we can create a GEP to enable
     // SelectionDAGBuilder to use it as a uniform base.
