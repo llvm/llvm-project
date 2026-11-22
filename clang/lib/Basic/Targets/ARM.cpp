@@ -647,6 +647,7 @@ bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
 }
 
 void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
