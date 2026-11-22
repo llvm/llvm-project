@@ -11378,7 +11378,7 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   // v = (f32)v
   // v = bitcast<i32>(v)
   // v = v >> 23
-  // v = 158 - v
+  // v = 32 - 1 - (v + 127)
   // v = min(v, 32)
 
   SDLoc dl(Node);
@@ -11395,21 +11395,30 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   unsigned MantissaBits = APFloat::semanticsPrecision(Sem);
   unsigned ExponentBias = APFloat::semanticsMaxExponent(Sem);
 
+  // We don't want the fp conversion to round up our int, so clear some bits
+  // while keeping 8 MSB untouched.
   // v = v & ~(v >> 8)
   SDValue ShiftOp =
       DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getShiftAmountConstant(8, VT, dl));
   SDValue Tmp = DAG.getNode(ISD::AND, dl, VT, Op, DAG.getNOT(dl, ShiftOp, VT));
 
+  // Converting int to fp gives us the highest set bit pos in exponent
   SDValue Float = DAG.getNode(ISD::SINT_TO_FP, dl, FloatVT, Tmp);
   SDValue Int = DAG.getBitcast(VT, Float);
 
+  // Shift off Mantissa bits
   SDValue ShiftExp =
       DAG.getNode(ISD::SRL, dl, VT, Int,
                   DAG.getShiftAmountConstant(MantissaBits - 1, VT, dl));
+
+  // Undo the bias and subtract it from BitWidth to get the clz, saturate to 0
+  // if the sign bit of float was set
+  // 32 - 1 - (v - 127)
   SDValue UndoBias = DAG.getNode(
       ISD::USUBSAT, dl, VT,
       DAG.getConstant(BitWidth - 1 + ExponentBias, dl, VT), ShiftExp);
 
+  // In case our int was 0 to begin with, we need to clamp to 32
   return DAG.getNode(ISD::SMIN, dl, VT, UndoBias,
                      DAG.getConstant(BitWidth, dl, VT));
 }
