@@ -11378,7 +11378,7 @@ SDValue TargetLowering::expandCTLZWithFP(SDNode *Node,
   // v = (f32)v
   // v = bitcast<i32>(v)
   // v = v >> 23
-  // v = 32 - 1 - (v + 127)
+  // v = 32 - 1 - (v - 127)
   // v = min(v, 32)
 
   SDLoc dl(Node);
