@@ -2585,6 +2585,17 @@ public:
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
 
+    if (const MDNode *Callees = CB.getMetadata(LLVMContext::MD_callees)) {
+      if (all_of(Callees->operands(), [Callee](const MDOperand &Op) {
+            return mdconst::extract_or_null<Function>(Op) != Callee;
+          })) {
+        reportImmediateUB()
+            << "The callee @" << Callee->getName()
+            << " is not listed in the !callees metadata " << *Callees;
+        return;
+      }
+    }
+
     // Handle parameter attributes (Attributes from resolved callee should be
     // applied if available).
     for (auto [I, Arg] : enumerate(CB.args())) {
