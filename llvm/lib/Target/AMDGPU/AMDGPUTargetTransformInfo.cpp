@@ -56,7 +56,6 @@ static bool dependsOnLocalPhi(const Loop *L, const Value *Cond,
 
 AMDGPUTTIImpl::AMDGPUTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()), CLOpts(TM->getCLOpts()),
-      TargetTriple(F.getParent()->getTargetTriple()),
       ST(static_cast<const GCNSubtarget *>(TM->getSubtargetImpl(F))),
       TLI(ST->getTargetLowering()) {}
 
@@ -1835,8 +1834,8 @@ bool GCNTTIImpl::isProfitableToSinkOperands(Instruction *I,
       continue;
     }
 
-    // Check for zero-cost multiple use InsertElement/ExtractElement
-    // instructions
+    // Check for zero-cost multiple use InsertElement instructions.
+    // ExtractElement never matches here because its result is a scalar.
     if (Instruction *OpInst = dyn_cast<Instruction>(Op.get())) {
       if (OpInst->getType()->isVectorTy() && OpInst->getNumOperands() > 1) {
         Instruction *VecOpInst = dyn_cast<Instruction>(OpInst->getOperand(0));

@@ -194,6 +194,13 @@ Language::GetPossibleFormattersMatches(ValueObject &valobj,
   return {};
 }
 
+std::vector<LanguageType>
+Language::GetFormatterLanguages(LanguageType language) const {
+  if (language == GetLanguageType())
+    return {language};
+  return {};
+}
+
 struct language_name_pair {
   const char *name;
   LanguageType type;

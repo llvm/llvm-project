@@ -75,6 +75,7 @@ public:
       disablePass<RegisterCoalescerPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
 
@@ -95,6 +96,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Add signatures to prototype-less function declarations
@@ -303,8 +306,6 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"

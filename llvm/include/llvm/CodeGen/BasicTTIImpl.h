@@ -572,6 +572,8 @@ public:
   }
 
   unsigned getRegUsageForType(Type *Ty) const override {
+    if (!getTypeLegalizationCost(Ty).first.isValid())
+      return 0;
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
