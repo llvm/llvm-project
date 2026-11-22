@@ -1102,7 +1102,7 @@ void VPlanTransforms::createInLoopReductionRecipes(VPlan &Plan,
     bool IsFPRecurrence =
         RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
     FastMathFlags FMFs =
-        IsFPRecurrence ? FastMathFlags::getFast() : FastMathFlags();
+        IsFPRecurrence ? PhiR->getFastMathFlagsOrNone() : FastMathFlags();
 
     // Collect the chain of "link" recipes for the reduction starting at PhiR.
     SetVector<VPSingleDefRecipe *> Worklist;
