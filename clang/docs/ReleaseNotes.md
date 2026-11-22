@@ -1545,9 +1545,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (`__cudaRegisterLinkedBinary`).
 
 - Removed the `-Wcuda-compat` warning about a parenthesized argument to
-  `#pragma unroll` in CUDA and HIP. `nvcc` accepts both `#pragma unroll N` and
-  `#pragma unroll (N)` with identical results, and the CUDA C++ Programming
-  Guide documents the parenthesized form, so the warning was incorrect.
+  `#pragma unroll` in CUDA and HIP. The warning matched `nvcc` before CUDA 8.0,
+  when the unroll factor had to be a literal; CUDA 8.0 added support for
+  integral constant expressions, and both `#pragma unroll N` and
+  `#pragma unroll (N)` are now documented and generate identical code. The
+  warning is therefore obsolete.
 
 - Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
