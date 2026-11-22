@@ -2,11 +2,13 @@
 ; REQUIRES: amdgpu-registered-target
 
 ; Moving the shared allocation in @foo to the stack should not invalidate
-; TargetLibraryInfo or TargetTransformInfo.
+; TargetLibraryInfo or TargetTransformInfo. The analyses of the deleted @dead
+; should be cleared.
 
 ; CHECK: Running pass: OpenMPOptPass on [module]{{$}}
 ; CHECK-NEXT: Running analysis: LoopAnalysis on foo{{$}}
 ; CHECK-NEXT: Running analysis: OptimizationRemarkEmitterAnalysis on foo{{$}}
+; CHECK-NEXT: Clearing all analysis results for: dead{{$}}
 ; CHECK-NEXT: Invalidating analysis: DominatorTreeAnalysis on foo{{$}}
 ; CHECK-NEXT: Invalidating analysis: LoopAnalysis on foo{{$}}
 ; CHECK-NEXT: Invalidating analysis: DominatorTreeAnalysis on other{{$}}
@@ -21,6 +23,10 @@
 ; CHECK-NEXT: Running pass: VerifierPass on [module]{{$}}
 
 target triple = "amdgpu9-amd-amdhsa"
+
+define internal void @dead() {
+  ret void
+}
 
 define void @foo() {
   %x = call ptr @__kmpc_alloc_shared(i64 4)
