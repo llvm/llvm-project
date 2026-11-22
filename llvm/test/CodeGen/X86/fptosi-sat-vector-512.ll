@@ -723,12 +723,11 @@ define <16 x i16> @test_signed_v16i16_v16f32(<16 x float> %f) nounwind {
 define <16 x i32> @test_signed_v16i32_v16f32(<16 x float> %f) nounwind {
 ; CHECK-LABEL: test_signed_v16i32_v16f32:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpordps %zmm0, %zmm0, %k1
+; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm1 {%k1} {z}
 ; CHECK-NEXT:    vcmpgeps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %k1
-; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm1
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm1 {%k1} = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
-; CHECK-NEXT:    vcmpunordps %zmm0, %zmm0, %k0
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm0 {%k1} {z}
+; CHECK-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %x = call <16 x i32> @llvm.fptosi.sat.v16i32.v16f32(<16 x float> %f)
   ret <16 x i32> %x
@@ -2036,18 +2035,17 @@ define <8 x i24> @test_signed_v8i24_v8f64(<8 x double> %f) nounwind {
 ; AVX512F-NEXT:    vmaxpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
 ; AVX512F-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
 ; AVX512F-NEXT:    vcvttpd2dq %zmm1, %ymm1
-; AVX512F-NEXT:    vcmpunordpd %zmm0, %zmm0, %k1
+; AVX512F-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
-; AVX512F-NEXT:    vpandn %ymm1, %ymm0, %ymm0
+; AVX512F-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512-LABEL: test_signed_v8i24_v8f64:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vmaxpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm1
-; AVX512-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm1, %zmm1
-; AVX512-NEXT:    vcmpunordpd %zmm0, %zmm0, %k0
-; AVX512-NEXT:    knotb %k0, %k1
-; AVX512-NEXT:    vcvttpd2dq %zmm1, %ymm0 {%k1} {z}
+; AVX512-NEXT:    vcmpordpd %zmm0, %zmm0, %k1
+; AVX512-NEXT:    vmaxpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vminpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %zmm0, %zmm0
+; AVX512-NEXT:    vcvttpd2dq %zmm0, %ymm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %x = call <8 x i24> @llvm.fptosi.sat.v8i24.v8f64(<8 x double> %f)
   ret <8 x i24> %x
@@ -4217,20 +4215,16 @@ define <32 x i32> @test_signed_v32i32_v32f16(<32 x half> %f) nounwind {
 ; CHECK-NEXT:    vcvtph2ps %ymm0, %zmm1
 ; CHECK-NEXT:    vbroadcastss {{.*#+}} zmm3 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; CHECK-NEXT:    vcmpleps %zmm1, %zmm3, %k1
-; CHECK-NEXT:    vcvttps2dq %zmm1, %zmm2
+; CHECK-NEXT:    vcmpordps %zmm1, %zmm1, %k2
+; CHECK-NEXT:    vcvttps2dq %zmm1, %zmm2 {%k2} {z}
 ; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm4 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    vmovdqa32 %zmm4, %zmm2 {%k1}
-; CHECK-NEXT:    vcmpunordps %zmm1, %zmm1, %k0
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm2, %zmm2 {%k1} {z}
 ; CHECK-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
 ; CHECK-NEXT:    vcvtph2ps %ymm0, %zmm0
 ; CHECK-NEXT:    vcmpleps %zmm0, %zmm3, %k1
-; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm1
+; CHECK-NEXT:    vcmpordps %zmm0, %zmm0, %k2
+; CHECK-NEXT:    vcvttps2dq %zmm0, %zmm1 {%k2} {z}
 ; CHECK-NEXT:    vmovdqa32 %zmm4, %zmm1 {%k1}
-; CHECK-NEXT:    vcmpunordps %zmm0, %zmm0, %k0
-; CHECK-NEXT:    knotw %k0, %k1
-; CHECK-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
 ; CHECK-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %x = call <32 x i32> @llvm.fptosi.sat.v32i32.v32f16(<32 x half> %f)
@@ -6429,13 +6423,13 @@ define <32 x i32> @test_signed_v32i32_v32bf16(<32 x bfloat> %f) nounwind {
 ; AVX512F-NEXT:    vpslld $16, %ymm6, %ymm6
 ; AVX512F-NEXT:    vcmpleps %ymm6, %ymm4, %ymm7
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm5, %zmm7, %zmm5
-; AVX512F-NEXT:    vcmpunordps %ymm6, %ymm6, %ymm6
-; AVX512F-NEXT:    vcmpunordps %ymm2, %ymm2, %ymm2
+; AVX512F-NEXT:    vcmpordps %ymm6, %ymm6, %ymm6
+; AVX512F-NEXT:    vcmpordps %ymm2, %ymm2, %ymm2
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm2, %zmm6, %zmm6
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpslld $16, %zmm2, %zmm2
 ; AVX512F-NEXT:    vcvttps2dq %zmm2, %zmm2
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = ~zmm6 & (zmm2 ^ zmm5)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm2 = zmm6 & (zmm2 ^ zmm5)
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
 ; AVX512F-NEXT:    vpslld $16, %ymm3, %ymm3
 ; AVX512F-NEXT:    vcmpleps %ymm3, %ymm4, %ymm5
@@ -6443,38 +6437,34 @@ define <32 x i32> @test_signed_v32i32_v32bf16(<32 x bfloat> %f) nounwind {
 ; AVX512F-NEXT:    vpslld $16, %ymm1, %ymm1
 ; AVX512F-NEXT:    vcmpleps %ymm1, %ymm4, %ymm4
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm5, %zmm4, %zmm4
-; AVX512F-NEXT:    vcmpunordps %ymm1, %ymm1, %ymm1
-; AVX512F-NEXT:    vcmpunordps %ymm3, %ymm3, %ymm3
+; AVX512F-NEXT:    vcmpordps %ymm1, %ymm1, %ymm1
+; AVX512F-NEXT:    vcmpordps %ymm3, %ymm3, %ymm3
 ; AVX512F-NEXT:    vinsertf64x4 $1, %ymm3, %zmm1, %zmm3
 ; AVX512F-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpslld $16, %zmm0, %zmm0
 ; AVX512F-NEXT:    vcvttps2dq %zmm0, %zmm1
-; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = ~zmm3 & (zmm1 ^ zmm4)
+; AVX512F-NEXT:    vpternlogd {{.*#+}} zmm1 = zmm3 & (zmm1 ^ zmm4)
 ; AVX512F-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512-LABEL: test_signed_v32i32_v32bf16:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm3 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX512-NEXT:    vpslld $16, %zmm1, %zmm1
+; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm3 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
 ; AVX512-NEXT:    vcmpleps %zmm1, %zmm3, %k1
-; AVX512-NEXT:    vcvttps2dq %zmm1, %zmm2
+; AVX512-NEXT:    vcmpordps %zmm1, %zmm1, %k2
+; AVX512-NEXT:    vcvttps2dq %zmm1, %zmm2 {%k2} {z}
 ; AVX512-NEXT:    vpbroadcastd {{.*#+}} zmm4 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; AVX512-NEXT:    vmovdqa32 %zmm4, %zmm2 {%k1}
-; AVX512-NEXT:    vcmpunordps %zmm1, %zmm1, %k0
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm2, %zmm2 {%k1} {z}
 ; AVX512-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
 ; AVX512-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512-NEXT:    vpslld $16, %zmm0, %zmm0
 ; AVX512-NEXT:    vcmpleps %zmm0, %zmm3, %k1
-; AVX512-NEXT:    vcvttps2dq %zmm0, %zmm1
+; AVX512-NEXT:    vcmpordps %zmm0, %zmm0, %k2
+; AVX512-NEXT:    vcvttps2dq %zmm0, %zmm1 {%k2} {z}
 ; AVX512-NEXT:    vmovdqa32 %zmm4, %zmm1 {%k1}
-; AVX512-NEXT:    vcmpunordps %zmm0, %zmm0, %k0
-; AVX512-NEXT:    knotw %k0, %k1
-; AVX512-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
 ; AVX512-NEXT:    vmovdqa64 %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %x = call <32 x i32> @llvm.fptosi.sat.v32i32.v32bf16(<32 x bfloat> %f)

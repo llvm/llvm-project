@@ -230,8 +230,8 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) nounwind {
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm2
 ; SSE-NEXT:    xorps %xmm1, %xmm2
-; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    cmpordps %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: stest_f32i32:
@@ -240,8 +240,8 @@ define <4 x i32> @stest_f32i32(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
 ; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: stest_f32i32:
@@ -589,13 +589,12 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) nounwind {
 ; AVX2-LABEL: stest_f16i32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
-; AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vandnps %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vcmpordps %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2699,8 +2698,8 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) nounwind {
 ; SSE-NEXT:    cmpleps %xmm0, %xmm1
 ; SSE-NEXT:    cvttps2dq %xmm0, %xmm2
 ; SSE-NEXT:    xorps %xmm1, %xmm2
-; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    cmpordps %xmm0, %xmm0
+; SSE-NEXT:    andps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: stest_f32i32_mm:
@@ -2709,8 +2708,8 @@ define <4 x i32> @stest_f32i32_mm(<4 x float> %x) nounwind {
 ; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
 ; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
-; AVX2-NEXT:    vcmpunordps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vandnps %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vcmpordps %xmm0, %xmm0, %xmm0
+; AVX2-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: stest_f32i32_mm:
@@ -3053,13 +3052,12 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) nounwind {
 ; AVX2-LABEL: stest_f16i32_mm:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vcvtph2ps %xmm0, %ymm0
-; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
-; AVX2-NEXT:    vcmpleps %ymm0, %ymm1, %ymm1
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2.14748365E+9,2.14748365E+9,2.14748365E+9,2.14748365E+9]
+; AVX2-NEXT:    vcmpleps %xmm0, %xmm1, %xmm1
 ; AVX2-NEXT:    vcvttps2dq %xmm0, %xmm2
-; AVX2-NEXT:    vxorps %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vcmpunordps %ymm0, %ymm0, %ymm0
-; AVX2-NEXT:    vandnps %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX2-NEXT:    vxorps %xmm1, %xmm2, %xmm1
+; AVX2-NEXT:    vcmpordps %ymm0, %ymm0, %ymm0
+; AVX2-NEXT:    vandps %xmm0, %xmm1, %xmm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

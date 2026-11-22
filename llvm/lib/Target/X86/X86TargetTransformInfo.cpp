@@ -5153,15 +5153,30 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat: {
-    // The custom vXi32 lowering is unreachable for sources legalized to fewer
-    // lanes than v4i32 (vXf64 on SSE), the type legalizer unrolls those.
+    // The custom vXi32 lowering is unreachable when type legalization unrolls
+    // the conversion (e.g. vXf64 on SSE, v8f16 on SSE, v2f16 on AVX512).
     auto *VTy = dyn_cast<FixedVectorType>(RetTy);
     if (!VTy || ICA.getArgTypes().empty())
       break;
     Type *SrcTy = ICA.getArgTypes()[0];
-    MVT SrcLTVT = getTypeLegalizationCost(SrcTy).second;
-    if (getTypeLegalizationCost(RetTy).second.getScalarType() != MVT::i32 ||
-        (SrcLTVT.isVector() && SrcLTVT.getVectorNumElements() >= 4))
+    auto [RetCost, RetLTVT] = getTypeLegalizationCost(RetTy);
+    auto [SrcCost, SrcLTVT] = getTypeLegalizationCost(SrcTy);
+    if (!RetCost.isValid() || !SrcCost.isValid() ||
+        RetLTVT.getScalarType() != MVT::i32 ||
+        (ST->hasAVX10_2() && SrcLTVT == MVT::v2f64))
+      break;
+    unsigned RetElts = RetLTVT.isVector() ? RetLTVT.getVectorNumElements() : 1;
+    unsigned SrcElts = SrcLTVT.isVector() ? SrcLTVT.getVectorNumElements() : 1;
+    LLVMContext &Ctx = VTy->getContext();
+    bool CanVectorize =
+        SrcLTVT.isVector() && SrcElts >= 4 &&
+        (VTy->getNumElements() < RetElts
+             ? SrcElts == RetElts
+             : (SrcElts <= RetElts ||
+                TLI->isTypeLegal(
+                    EVT::getVectorVT(Ctx, SrcLTVT.getScalarType(), RetElts)) ||
+                TLI->isTypeLegal(EVT::getVectorVT(Ctx, MVT::i32, SrcElts))));
+    if (CanVectorize)
       break;
     unsigned NumElts = VTy->getNumElements();
     IntrinsicCostAttributes ScalarAttrs(IID, VTy->getElementType(),
