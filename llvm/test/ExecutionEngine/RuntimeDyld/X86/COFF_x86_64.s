@@ -94,3 +94,10 @@ discard_var:
         .long 42
 
 # rtdyld-check: *{8}discard_ptr = 0
+
+# Check the @IMGREL relocation; the calculation of image base needs to
+# exclude the discarded section.
+        .data
+imgrel:
+        .long discard_ptr@IMGREL
+# rtdyld-check: *{4}imgrel = discard_ptr - 0x1000
