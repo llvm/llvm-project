@@ -28,6 +28,30 @@
 #define _TG_ATTRSp __attribute__((__overloadable__))
 #define _TG_ATTRS __attribute__((__overloadable__, __always_inline__))
 
+// https://github.com/llvm/llvm-project/issues/45552
+// workaround for MS UCRT's <complex.h>
+#if defined(_VCRUNTIME_H) && defined(_C_COMPLEX_T)
+#define __CLANG_TGMATH_H_USES_UCRT_COMPLEX_H 1
+#else
+#define __CLANG_TGMATH_H_USES_UCRT_COMPLEX_H 0
+#endif
+
+#if __CLANG_TGMATH_H_USES_UCRT_COMPLEX_H
+#define _TG_FROM_FCOMPLEX(__z) __builtin_bit_cast(float _Complex, (__z))
+#define _TG_FROM_DCOMPLEX(__z) __builtin_bit_cast(double _Complex, (__z))
+#define _TG_FROM_LCOMPLEX(__z) __builtin_bit_cast(long double _Complex, (__z))
+#define _TG_TO_FCOMPLEX(__z) __builtin_bit_cast(_Fcomplex, (__z))
+#define _TG_TO_DCOMPLEX(__z) __builtin_bit_cast(_Dcomplex, (__z))
+#define _TG_TO_LCOMPLEX(__z) __builtin_bit_cast(_Lcomplex, (__z))
+#else
+#define _TG_FROM_FCOMPLEX(__z) (__z)
+#define _TG_FROM_DCOMPLEX(__z) (__z)
+#define _TG_FROM_LCOMPLEX(__z) (__z)
+#define _TG_TO_FCOMPLEX(__z) (__z)
+#define _TG_TO_DCOMPLEX(__z) (__z)
+#define _TG_TO_LCOMPLEX(__z) (__z)
+#endif
+
 // promotion
 
 typedef void _Argument_type_is_not_arithmetic;
@@ -67,17 +91,17 @@ static long double
     _TG_ATTRS
     __tg_acos(long double __x) {return acosl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_acos(float _Complex __x) {return cacosf(__x);}
+static float _Complex _TG_ATTRS __tg_acos(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(cacosf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_acos(double _Complex __x) {return cacos(__x);}
+static double _Complex _TG_ATTRS __tg_acos(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(cacos(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_acos(long double _Complex __x) {return cacosl(__x);}
+static long double _Complex _TG_ATTRS __tg_acos(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(cacosl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef acos
 #define acos(__x) __tg_acos(__tg_promote1((__x))(__x))
@@ -96,17 +120,17 @@ static long double
     _TG_ATTRS
     __tg_asin(long double __x) {return asinl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_asin(float _Complex __x) {return casinf(__x);}
+static float _Complex _TG_ATTRS __tg_asin(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(casinf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_asin(double _Complex __x) {return casin(__x);}
+static double _Complex _TG_ATTRS __tg_asin(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(casin(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_asin(long double _Complex __x) {return casinl(__x);}
+static long double _Complex _TG_ATTRS __tg_asin(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(casinl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef asin
 #define asin(__x) __tg_asin(__tg_promote1((__x))(__x))
@@ -125,17 +149,17 @@ static long double
     _TG_ATTRS
     __tg_atan(long double __x) {return atanl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_atan(float _Complex __x) {return catanf(__x);}
+static float _Complex _TG_ATTRS __tg_atan(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(catanf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_atan(double _Complex __x) {return catan(__x);}
+static double _Complex _TG_ATTRS __tg_atan(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(catan(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_atan(long double _Complex __x) {return catanl(__x);}
+static long double _Complex _TG_ATTRS __tg_atan(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(catanl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef atan
 #define atan(__x) __tg_atan(__tg_promote1((__x))(__x))
@@ -154,17 +178,17 @@ static long double
     _TG_ATTRS
     __tg_acosh(long double __x) {return acoshl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_acosh(float _Complex __x) {return cacoshf(__x);}
+static float _Complex _TG_ATTRS __tg_acosh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(cacoshf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_acosh(double _Complex __x) {return cacosh(__x);}
+static double _Complex _TG_ATTRS __tg_acosh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(cacosh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_acosh(long double _Complex __x) {return cacoshl(__x);}
+static long double _Complex _TG_ATTRS __tg_acosh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(cacoshl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef acosh
 #define acosh(__x) __tg_acosh(__tg_promote1((__x))(__x))
@@ -183,17 +207,17 @@ static long double
     _TG_ATTRS
     __tg_asinh(long double __x) {return asinhl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_asinh(float _Complex __x) {return casinhf(__x);}
+static float _Complex _TG_ATTRS __tg_asinh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(casinhf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_asinh(double _Complex __x) {return casinh(__x);}
+static double _Complex _TG_ATTRS __tg_asinh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(casinh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_asinh(long double _Complex __x) {return casinhl(__x);}
+static long double _Complex _TG_ATTRS __tg_asinh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(casinhl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef asinh
 #define asinh(__x) __tg_asinh(__tg_promote1((__x))(__x))
@@ -212,17 +236,17 @@ static long double
     _TG_ATTRS
     __tg_atanh(long double __x) {return atanhl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_atanh(float _Complex __x) {return catanhf(__x);}
+static float _Complex _TG_ATTRS __tg_atanh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(catanhf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_atanh(double _Complex __x) {return catanh(__x);}
+static double _Complex _TG_ATTRS __tg_atanh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(catanh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_atanh(long double _Complex __x) {return catanhl(__x);}
+static long double _Complex _TG_ATTRS __tg_atanh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(catanhl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef atanh
 #define atanh(__x) __tg_atanh(__tg_promote1((__x))(__x))
@@ -241,17 +265,17 @@ static long double
     _TG_ATTRS
     __tg_cos(long double __x) {return cosl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_cos(float _Complex __x) {return ccosf(__x);}
+static float _Complex _TG_ATTRS __tg_cos(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(ccosf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_cos(double _Complex __x) {return ccos(__x);}
+static double _Complex _TG_ATTRS __tg_cos(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(ccos(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_cos(long double _Complex __x) {return ccosl(__x);}
+static long double _Complex _TG_ATTRS __tg_cos(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(ccosl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef cos
 #define cos(__x) __tg_cos(__tg_promote1((__x))(__x))
@@ -270,17 +294,17 @@ static long double
     _TG_ATTRS
     __tg_sin(long double __x) {return sinl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_sin(float _Complex __x) {return csinf(__x);}
+static float _Complex _TG_ATTRS __tg_sin(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(csinf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_sin(double _Complex __x) {return csin(__x);}
+static double _Complex _TG_ATTRS __tg_sin(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(csin(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_sin(long double _Complex __x) {return csinl(__x);}
+static long double _Complex _TG_ATTRS __tg_sin(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(csinl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef sin
 #define sin(__x) __tg_sin(__tg_promote1((__x))(__x))
@@ -299,17 +323,17 @@ static long double
     _TG_ATTRS
     __tg_tan(long double __x) {return tanl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_tan(float _Complex __x) {return ctanf(__x);}
+static float _Complex _TG_ATTRS __tg_tan(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(ctanf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_tan(double _Complex __x) {return ctan(__x);}
+static double _Complex _TG_ATTRS __tg_tan(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(ctan(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_tan(long double _Complex __x) {return ctanl(__x);}
+static long double _Complex _TG_ATTRS __tg_tan(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(ctanl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef tan
 #define tan(__x) __tg_tan(__tg_promote1((__x))(__x))
@@ -328,17 +352,17 @@ static long double
     _TG_ATTRS
     __tg_cosh(long double __x) {return coshl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_cosh(float _Complex __x) {return ccoshf(__x);}
+static float _Complex _TG_ATTRS __tg_cosh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(ccoshf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_cosh(double _Complex __x) {return ccosh(__x);}
+static double _Complex _TG_ATTRS __tg_cosh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(ccosh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_cosh(long double _Complex __x) {return ccoshl(__x);}
+static long double _Complex _TG_ATTRS __tg_cosh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(ccoshl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef cosh
 #define cosh(__x) __tg_cosh(__tg_promote1((__x))(__x))
@@ -357,17 +381,17 @@ static long double
     _TG_ATTRS
     __tg_sinh(long double __x) {return sinhl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_sinh(float _Complex __x) {return csinhf(__x);}
+static float _Complex _TG_ATTRS __tg_sinh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(csinhf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_sinh(double _Complex __x) {return csinh(__x);}
+static double _Complex _TG_ATTRS __tg_sinh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(csinh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_sinh(long double _Complex __x) {return csinhl(__x);}
+static long double _Complex _TG_ATTRS __tg_sinh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(csinhl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef sinh
 #define sinh(__x) __tg_sinh(__tg_promote1((__x))(__x))
@@ -386,17 +410,17 @@ static long double
     _TG_ATTRS
     __tg_tanh(long double __x) {return tanhl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_tanh(float _Complex __x) {return ctanhf(__x);}
+static float _Complex _TG_ATTRS __tg_tanh(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(ctanhf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_tanh(double _Complex __x) {return ctanh(__x);}
+static double _Complex _TG_ATTRS __tg_tanh(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(ctanh(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_tanh(long double _Complex __x) {return ctanhl(__x);}
+static long double _Complex _TG_ATTRS __tg_tanh(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(ctanhl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef tanh
 #define tanh(__x) __tg_tanh(__tg_promote1((__x))(__x))
@@ -415,17 +439,17 @@ static long double
     _TG_ATTRS
     __tg_exp(long double __x) {return expl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_exp(float _Complex __x) {return cexpf(__x);}
+static float _Complex _TG_ATTRS __tg_exp(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(cexpf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_exp(double _Complex __x) {return cexp(__x);}
+static double _Complex _TG_ATTRS __tg_exp(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(cexp(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_exp(long double _Complex __x) {return cexpl(__x);}
+static long double _Complex _TG_ATTRS __tg_exp(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(cexpl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef exp
 #define exp(__x) __tg_exp(__tg_promote1((__x))(__x))
@@ -444,17 +468,17 @@ static long double
     _TG_ATTRS
     __tg_log(long double __x) {return logl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_log(float _Complex __x) {return clogf(__x);}
+static float _Complex _TG_ATTRS __tg_log(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(clogf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_log(double _Complex __x) {return clog(__x);}
+static double _Complex _TG_ATTRS __tg_log(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(clog(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_log(long double _Complex __x) {return clogl(__x);}
+static long double _Complex _TG_ATTRS __tg_log(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(clogl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef log
 #define log(__x) __tg_log(__tg_promote1((__x))(__x))
@@ -473,18 +497,20 @@ static long double
     _TG_ATTRS
     __tg_pow(long double __x, long double __y) {return powl(__x, __y);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_pow(float _Complex __x, float _Complex __y) {return cpowf(__x, __y);}
+static float _Complex _TG_ATTRS __tg_pow(float _Complex __x,
+                                         float _Complex __y) {
+  return _TG_FROM_FCOMPLEX(cpowf(_TG_TO_FCOMPLEX(__x), _TG_TO_FCOMPLEX(__y)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_pow(double _Complex __x, double _Complex __y) {return cpow(__x, __y);}
+static double _Complex _TG_ATTRS __tg_pow(double _Complex __x,
+                                          double _Complex __y) {
+  return _TG_FROM_DCOMPLEX(cpow(_TG_TO_DCOMPLEX(__x), _TG_TO_DCOMPLEX(__y)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_pow(long double _Complex __x, long double _Complex __y)
-    {return cpowl(__x, __y);}
+static long double _Complex _TG_ATTRS __tg_pow(long double _Complex __x,
+                                               long double _Complex __y) {
+  return _TG_FROM_LCOMPLEX(cpowl(_TG_TO_LCOMPLEX(__x), _TG_TO_LCOMPLEX(__y)));
+}
 
 #undef pow
 #define pow(__x, __y) __tg_pow(__tg_promote2((__x), (__y))(__x), \
@@ -504,17 +530,17 @@ static long double
     _TG_ATTRS
     __tg_sqrt(long double __x) {return sqrtl(__x);}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_sqrt(float _Complex __x) {return csqrtf(__x);}
+static float _Complex _TG_ATTRS __tg_sqrt(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(csqrtf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_sqrt(double _Complex __x) {return csqrt(__x);}
+static double _Complex _TG_ATTRS __tg_sqrt(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(csqrt(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_sqrt(long double _Complex __x) {return csqrtl(__x);}
+static long double _Complex _TG_ATTRS __tg_sqrt(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(csqrtl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef sqrt
 #define sqrt(__x) __tg_sqrt(__tg_promote1((__x))(__x))
@@ -533,17 +559,17 @@ static long double
     _TG_ATTRS
     __tg_fabs(long double __x) {return fabsl(__x);}
 
-static float
-    _TG_ATTRS
-    __tg_fabs(float _Complex __x) {return cabsf(__x);}
+static float _TG_ATTRS __tg_fabs(float _Complex __x) {
+  return cabsf(_TG_TO_FCOMPLEX(__x));
+}
 
-static double
-    _TG_ATTRS
-    __tg_fabs(double _Complex __x) {return cabs(__x);}
+static double _TG_ATTRS __tg_fabs(double _Complex __x) {
+  return cabs(_TG_TO_DCOMPLEX(__x));
+}
 
-static long double
-    _TG_ATTRS
-    __tg_fabs(long double _Complex __x) {return cabsl(__x);}
+static long double _TG_ATTRS __tg_fabs(long double _Complex __x) {
+  return cabsl(_TG_TO_LCOMPLEX(__x));
+}
 
 #undef fabs
 #define fabs(__x) __tg_fabs(__tg_promote1((__x))(__x))
@@ -1229,17 +1255,17 @@ static long double
     _TG_ATTRS
     __tg_carg(long double __x) {return atan2l(0.L, __x);}
 
-static float
-    _TG_ATTRS
-    __tg_carg(float _Complex __x) {return cargf(__x);}
+static float _TG_ATTRS __tg_carg(float _Complex __x) {
+  return cargf(_TG_TO_FCOMPLEX(__x));
+}
 
-static double
-    _TG_ATTRS
-    __tg_carg(double _Complex __x) {return carg(__x);}
+static double _TG_ATTRS __tg_carg(double _Complex __x) {
+  return carg(_TG_TO_DCOMPLEX(__x));
+}
 
-static long double
-    _TG_ATTRS
-    __tg_carg(long double _Complex __x) {return cargl(__x);}
+static long double _TG_ATTRS __tg_carg(long double _Complex __x) {
+  return cargl(_TG_TO_LCOMPLEX(__x));
+}
 
 #undef carg
 #define carg(__x) __tg_carg(__tg_promote1((__x))(__x))
@@ -1258,17 +1284,17 @@ static long double
     _TG_ATTRS
     __tg_cimag(long double __x) {return 0;}
 
-static float
-    _TG_ATTRS
-    __tg_cimag(float _Complex __x) {return cimagf(__x);}
+static float _TG_ATTRS __tg_cimag(float _Complex __x) {
+  return cimagf(_TG_TO_FCOMPLEX(__x));
+}
 
-static double
-    _TG_ATTRS
-    __tg_cimag(double _Complex __x) {return cimag(__x);}
+static double _TG_ATTRS __tg_cimag(double _Complex __x) {
+  return cimag(_TG_TO_DCOMPLEX(__x));
+}
 
-static long double
-    _TG_ATTRS
-    __tg_cimag(long double _Complex __x) {return cimagl(__x);}
+static long double _TG_ATTRS __tg_cimag(long double _Complex __x) {
+  return cimagl(_TG_TO_LCOMPLEX(__x));
+}
 
 #undef cimag
 #define cimag(__x) __tg_cimag(__tg_promote1((__x))(__x))
@@ -1287,46 +1313,46 @@ static long double _Complex
     _TG_ATTRS
     __tg_conj(long double __x) {return __x;}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_conj(float _Complex __x) {return conjf(__x);}
+static float _Complex _TG_ATTRS __tg_conj(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(conjf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_conj(double _Complex __x) {return conj(__x);}
+static double _Complex _TG_ATTRS __tg_conj(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(conj(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_conj(long double _Complex __x) {return conjl(__x);}
+static long double _Complex _TG_ATTRS __tg_conj(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(conjl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef conj
 #define conj(__x) __tg_conj(__tg_promote1((__x))(__x))
 
 // cproj
 
-static float _Complex
-    _TG_ATTRS
-    __tg_cproj(float __x) {return cprojf(__x);}
+static float _Complex _TG_ATTRS __tg_cproj(float __x) {
+  return _TG_FROM_FCOMPLEX(cprojf(_TG_TO_FCOMPLEX((float _Complex)__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_cproj(double __x) {return cproj(__x);}
+static double _Complex _TG_ATTRS __tg_cproj(double __x) {
+  return _TG_FROM_DCOMPLEX(cproj(_TG_TO_DCOMPLEX((double _Complex)__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_cproj(long double __x) {return cprojl(__x);}
+static long double _Complex _TG_ATTRS __tg_cproj(long double __x) {
+  return _TG_FROM_LCOMPLEX(cprojl(_TG_TO_LCOMPLEX((long double _Complex)__x)));
+}
 
-static float _Complex
-    _TG_ATTRS
-    __tg_cproj(float _Complex __x) {return cprojf(__x);}
+static float _Complex _TG_ATTRS __tg_cproj(float _Complex __x) {
+  return _TG_FROM_FCOMPLEX(cprojf(_TG_TO_FCOMPLEX(__x)));
+}
 
-static double _Complex
-    _TG_ATTRS
-    __tg_cproj(double _Complex __x) {return cproj(__x);}
+static double _Complex _TG_ATTRS __tg_cproj(double _Complex __x) {
+  return _TG_FROM_DCOMPLEX(cproj(_TG_TO_DCOMPLEX(__x)));
+}
 
-static long double _Complex
-    _TG_ATTRS
-    __tg_cproj(long double _Complex __x) {return cprojl(__x);}
+static long double _Complex _TG_ATTRS __tg_cproj(long double _Complex __x) {
+  return _TG_FROM_LCOMPLEX(cprojl(_TG_TO_LCOMPLEX(__x)));
+}
 
 #undef cproj
 #define cproj(__x) __tg_cproj(__tg_promote1((__x))(__x))
@@ -1345,20 +1371,31 @@ static long double
     _TG_ATTRS
     __tg_creal(long double __x) {return __x;}
 
-static float
-    _TG_ATTRS
-    __tg_creal(float _Complex __x) {return crealf(__x);}
+static float _TG_ATTRS __tg_creal(float _Complex __x) {
+  return crealf(_TG_TO_FCOMPLEX(__x));
+}
 
-static double
-    _TG_ATTRS
-    __tg_creal(double _Complex __x) {return creal(__x);}
+static double _TG_ATTRS __tg_creal(double _Complex __x) {
+  return creal(_TG_TO_DCOMPLEX(__x));
+}
 
-static long double
-    _TG_ATTRS
-    __tg_creal(long double _Complex __x) {return creall(__x);}
+static long double _TG_ATTRS __tg_creal(long double _Complex __x) {
+  return creall(_TG_TO_LCOMPLEX(__x));
+}
 
 #undef creal
 #define creal(__x) __tg_creal(__tg_promote1((__x))(__x))
+
+// https://github.com/llvm/llvm-project/issues/45552
+// workaround for MS UCRT's <complex.h>
+#undef _TG_TO_LCOMPLEX
+#undef _TG_TO_DCOMPLEX
+#undef _TG_TO_FCOMPLEX
+#undef _TG_FROM_LCOMPLEX
+#undef _TG_FROM_DCOMPLEX
+#undef _TG_FROM_FCOMPLEX
+
+#undef __CLANG_TGMATH_H_USES_UCRT_COMPLEX_H
 
 #undef _TG_ATTRSp
 #undef _TG_ATTRS
