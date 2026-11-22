@@ -4880,6 +4880,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
   case Instruction::Call:
     return getVectorCallCost(cast<CallInst>(I), VF);
   case Instruction::ExtractValue:
+  case Instruction::BitInsert:
+  case Instruction::BitExtract:
     return TTI.getInstructionCost(I, Config.CostKind);
   case Instruction::Alloca:
     // We cannot easily widen alloca to a scalable alloca, as
@@ -5905,6 +5907,8 @@ VPRecipeWithIRFlags *VPRecipeBuilder::tryToWiden(VPInstruction *VPI) {
   case Instruction::Xor:
   case Instruction::Freeze:
   case Instruction::ExtractValue:
+  case Instruction::BitInsert:
+  case Instruction::BitExtract:
     return new VPWidenRecipe(*I, VPI->operandsWithoutMask(), *VPI, *VPI,
                              VPI->getDebugLoc());
   };
