@@ -27,7 +27,7 @@
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
-#include "clang/CIR/Dialect/Passes.h"
+#include "clang/CIR/Dialect/Transforms/CallConvTarget.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <utility>

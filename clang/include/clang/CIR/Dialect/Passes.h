@@ -14,14 +14,8 @@
 #define CLANG_CIR_DIALECT_PASSES_H
 
 #include "mlir/Pass/Pass.h"
+#include "clang/CIR/Dialect/Transforms/CallConvTarget.h"
 #include "llvm/ABI/TargetInfo.h"
-
-namespace cir {
-/// The ABI target whose calling-convention rules drive CallConvLowering.
-/// None is the unset state used when the pass runs in classification-attr
-/// mode instead of selecting a target.
-enum class CallConvTarget { None, Test, X86_64, AMDGPU, SPIRV, AArch64 };
-} // namespace cir
 
 namespace mlir {
 

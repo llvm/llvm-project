@@ -11,7 +11,6 @@ add_clang_library(MLIRCIRTargetLowering
 
   DEPENDS
   clangBasic
-  MLIRCIRPassIncGen
   mlir-headers
 
   LINK_COMPONENTS
