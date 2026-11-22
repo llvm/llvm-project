@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++20
 
 // <compare>, <iterator>, <ranges>
 
@@ -21,5 +21,12 @@ namespace rend {}
 namespace crbegin {}
 namespace crend {}
 namespace size {}
+namespace ssize {}
+namespace reserve_hint {}
+namespace empty {}
+namespace data {}
+namespace cdata {}
+namespace iter_swap {}
+namespace iter_move {}
 
 #include <ranges>
