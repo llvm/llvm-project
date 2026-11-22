@@ -48,6 +48,7 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include <cassert>
 #include <cstdint>
 #include <utility>
@@ -437,6 +438,8 @@ public:
   /// loops for now.
   bool isLoopStructureUnderstood();
 
+  bool isLoopControlAvailableInOuterPreheader();
+
   bool currentLimitations();
 
   const SmallPtrSetImpl<PHINode *> &getOuterInnerReductions() const {
@@ -520,6 +523,9 @@ private:
 
   /// Set of inner loop induction PHIs
   SmallVector<PHINode *, 8> InnerLoopInductions;
+
+  /// Set of outer loop induction PHIs
+  SmallVector<PHINode *, 8> OuterLoopInductions;
 
   /// Hold instructions that have nuw/nsw flags and involved in reductions,
   /// like integer addition/multiplication. Those flags must be dropped when
@@ -996,29 +1002,7 @@ bool LoopInterchangeLegality::tightlyNested(Loop *OuterLoop, Loop *InnerLoop) {
 }
 
 bool LoopInterchangeLegality::isLoopStructureUnderstood() {
-  BasicBlock *InnerLoopPreheader = InnerLoop->getLoopPreheader();
-  for (PHINode *InnerInduction : InnerLoopInductions) {
-    unsigned Num = InnerInduction->getNumOperands();
-    for (unsigned i = 0; i < Num; ++i) {
-      Value *Val = InnerInduction->getOperand(i);
-      if (isa<Constant>(Val))
-        continue;
-      Instruction *I = dyn_cast<Instruction>(Val);
-      if (!I)
-        return false;
-      // TODO: Handle triangular loops.
-      // e.g. for(int i=0;i<N;i++)
-      //        for(int j=i;j<N;j++)
-      unsigned IncomBlockIndx = PHINode::getIncomingValueNumForOperand(i);
-      if (InnerInduction->getIncomingBlock(IncomBlockIndx) ==
-              InnerLoopPreheader &&
-          !OuterLoop->isLoopInvariant(I)) {
-        return false;
-      }
-    }
-  }
-
-  // TODO: Handle triangular loops of another form.
+  // TODO: Handle triangular loops.
   // e.g. for(int i=0;i<N;i++)
   //        for(int j=0;j<i;j++)
   // or,
@@ -1084,6 +1068,40 @@ bool LoopInterchangeLegality::isLoopStructureUnderstood() {
   const SCEV *S = SE->getSCEV(Right);
   if (!SE->isLoopInvariant(S, OuterLoop))
     return false;
+
+  return true;
+}
+
+/// Check if the backedge-taken counts of both loops and the start and step
+/// values of their induction variables are available in the preheader of the
+/// outer loop. In particular, this rejects loops whose iteration space depends
+/// on the outer loop.
+///
+/// TODO: Handle triangular loops.
+/// e.g. for(int i=0;i<N;i++)
+///        for(int j=i;j<N;j++)
+bool LoopInterchangeLegality::isLoopControlAvailableInOuterPreheader() {
+  SCEVExpander Expander(*SE, "loop-interchange");
+  auto IsAvailable = [&](const SCEV *S) {
+    return SE->isAvailableAtLoopEntry(S, OuterLoop) &&
+           Expander.isSafeToExpand(S);
+  };
+
+  for (Loop *L : {OuterLoop, InnerLoop}) {
+    const SCEV *BTC = SE->getBackedgeTakenCount(L);
+    if (isa<SCEVCouldNotCompute>(BTC) || !IsAvailable(BTC))
+      return false;
+  }
+
+  for (PHINode *PHI :
+       concat<PHINode *>(OuterLoopInductions, InnerLoopInductions)) {
+    const auto *AR = cast<SCEVAddRecExpr>(SE->getSCEV(PHI));
+    Value *Start =
+        PHI->getIncomingValueForBlock(AR->getLoop()->getLoopPreheader());
+    if (!OuterLoop->isLoopInvariant(Start) ||
+        !IsAvailable(AR->getStepRecurrence(*SE)))
+      return false;
+  }
 
   return true;
 }
@@ -1362,11 +1380,10 @@ bool LoopInterchangeLegality::checkInductionsAndReductions(Loop *OuterLoop) {
     for (PHINode &PHI : CurLoop->getHeader()->phis()) {
       InductionDescriptor ID;
       if (InductionDescriptor::isInductionPHI(&PHI, CurLoop, SE, ID)) {
-        if (CurLoop == InnerLoop) {
-          const SCEV *Step = ID.getStep();
-          if (!SE->isLoopInvariant(Step, OuterLoop))
-            return false;
-          InnerLoopInductions.push_back(&PHI);
+        if (CurLoop == OuterLoop || CurLoop == InnerLoop) {
+          auto &Inductions =
+              CurLoop == OuterLoop ? OuterLoopInductions : InnerLoopInductions;
+          Inductions.push_back(&PHI);
         }
         continue;
       }
@@ -1517,6 +1534,19 @@ bool LoopInterchangeLegality::currentLimitations() {
   for (BasicBlock *Succ : successors(InnerLoop->getHeader()))
     if (!InnerLoopHeaderSuccs.insert(Succ).second)
       return true;
+
+  if (!isLoopControlAvailableInOuterPreheader()) {
+    LLVM_DEBUG(dbgs() << "Loop control values are not available in the outer "
+                         "loop preheader.\n");
+    ORE->emit([&]() {
+      return OptimizationRemarkMissed(DEBUG_TYPE, "UnsupportedLoopControl",
+                                      InnerLoop->getStartLoc(),
+                                      InnerLoop->getHeader())
+             << "Values that control the iterations of the loops are not "
+                "available before the outer loop.";
+    });
+    return true;
+  }
 
   return false;
 }
