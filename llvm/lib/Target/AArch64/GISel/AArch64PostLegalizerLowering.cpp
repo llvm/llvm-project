@@ -1512,8 +1512,8 @@ void applyMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI,
 
 /// \returns true if \p MaskReg is a 128-bit constant vector whose low lanes are
 /// all ones up to \p KeptBits bits, and whose other lanes are all zeros.
-bool isLowBitsMask(Register MaskReg, unsigned KeptBits,
-                   const MachineRegisterInfo &MRI) {
+static bool isVectorLowLaneMask(Register MaskReg, unsigned KeptBits,
+                                const MachineRegisterInfo &MRI) {
   LLT Ty = MRI.getType(MaskReg);
   if (!Ty.isFixedVector() || Ty.getSizeInBits() != 128)
     return false;
