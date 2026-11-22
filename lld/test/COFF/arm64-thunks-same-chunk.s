@@ -1,5 +1,6 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows %s -o %t.obj
+// RUN: llvm-objdump -r %t.obj | FileCheck -check-prefix=RELOC %s
 // RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.exe --start-address=0x140001000 --stop-address=0x140001008 | FileCheck %s
 
@@ -7,6 +8,10 @@
 // thunk. The one to near, in its own chunk, stays direct; the one to far gets
 // the one thunk. near is declared as a function: llvm-mc resolves a branch to a
 // plain label in the same section itself, so lld would never see that branch.
+// RELOC checks that both branches keep their relocation.
+
+// RELOC:      0000000000000000 IMAGE_REL_ARM64_BRANCH14 near
+// RELOC-NEXT: 0000000000000004 IMAGE_REL_ARM64_BRANCH14 far
 
 // VERBOSE: Added 1 thunks with margin {{.*}} in 1 passes
 

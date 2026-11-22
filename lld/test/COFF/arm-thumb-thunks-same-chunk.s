@@ -1,5 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=thumbv7-windows %s -o %t.obj
+// RUN: llvm-objdump -r %t.obj | FileCheck -check-prefix=RELOC %s
 // RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.exe --start-address=0x401000 --stop-address=0x401008 | FileCheck --check-prefix=MAIN %s
 
@@ -8,6 +9,10 @@
 // would clobber r12. far_target is out of range and gets the one thunk.
 // local_target is declared as a function: llvm-mc resolves a branch to a plain
 // label in the same section itself, so lld would never see that branch.
+// RELOC checks that both branches keep their relocation.
+
+// RELOC:      00000000 IMAGE_REL_ARM_BRANCH20T local_target
+// RELOC-NEXT: 00000004 IMAGE_REL_ARM_BRANCH20T far_target
 
 // VERBOSE: Added 1 thunks with margin {{.*}} in 1 passes
 
