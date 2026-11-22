@@ -424,6 +424,13 @@ modelled with `xor` operation with a mask with all bits set.
 %0 = spirv.LogicalNot %op : i1  =>  %0    = llvm.xor %op, %mask : i1
 ```
 
+`spirv.Any` and `spirv.All` reduce a vector of `i1` to a scalar `i1`:
+
+SPIR-V Dialect op | LLVM Dialect op
+:---------------: | :---------------------------:
+`spirv.Any`       | `llvm.intr.vector.reduce.or`
+`spirv.All`       | `llvm.intr.vector.reduce.and`
+
 The floating-point classification ops are mapped to the `llvm.intr.is.fpclass`
 intrinsic with the corresponding `FPClassTest` mask. The intrinsic operates per
 component and returns `i1` or a vector of `i1`, exactly like the SPIR-V ops.
