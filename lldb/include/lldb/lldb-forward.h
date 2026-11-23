@@ -139,6 +139,7 @@ class ObjectFileJITDelegate;
 class OperatingSystem;
 class OperatingSystemInterface;
 class OptionGroup;
+class OptionGroupLanguageExpression;
 class OptionGroupOptions;
 class OptionGroupPlatform;
 class OptionValue;
