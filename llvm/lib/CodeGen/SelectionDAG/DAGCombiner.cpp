@@ -15551,6 +15551,14 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
   // All legal types, and illegal non-vector types, are handled elsewhere.
   // This combine is controlled by TargetLowering::isVectorLoadExtDesirable.
   //
+  // Look through a freeze if present between the extend and the load. The
+  // freeze is preserved on the split result.
+  SDValue Freeze;
+  if (N0.getOpcode() == ISD::FREEZE && N0.hasOneUse()) {
+    Freeze = N0;
+    N0 = N0.getOperand(0);
+  }
+
   if (N0->getOpcode() != ISD::LOAD)
     return SDValue();
 
@@ -15563,7 +15571,8 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
     return SDValue();
 
   SmallVector<SDNode *, 4> SetCCs;
-  if (!ExtendUsesToFormExtLoad(DstVT, N, N0, N->getOpcode(), SetCCs, TLI))
+  if (!ExtendUsesToFormExtLoad(DstVT, N, Freeze ? Freeze : N0, N->getOpcode(),
+                               SetCCs, TLI))
     return SDValue();
 
   ISD::LoadExtType ExtType =
@@ -15610,6 +15619,8 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
 
   SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
   SDValue NewValue = DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Loads);
+  if (Freeze)
+    NewValue = DAG.getFreeze(NewValue);
 
   // Simplify TF.
   AddToWorklist(NewChain.getNode());
