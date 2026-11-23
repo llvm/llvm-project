@@ -1140,6 +1140,19 @@ func.func @kill() {
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.DemoteToHelperInvocation
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @demote_to_helper_invocation
+func.func @demote_to_helper_invocation() {
+  // CHECK: spirv.DemoteToHelperInvocation
+  spirv.DemoteToHelperInvocation
+  return
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.LifetimeStart / spirv.LifetimeStop
 //===----------------------------------------------------------------------===//
 
