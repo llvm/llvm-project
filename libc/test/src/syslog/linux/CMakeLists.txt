@@ -1,0 +1,72 @@
+if(LIBC_CONF_PRINTF_DISABLE_STRERROR)
+  libc_add_definition(syslog_internal_test_copts
+    "LIBC_COPT_PRINTF_DISABLE_STRERROR")
+endif()
+
+add_libc_test(
+  syslog_internal_test
+  SUITE
+    libc-syslog-tests
+  SRCS
+    syslog_internal_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.syslog_macros
+    libc.hdr.types.pid_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.__support.CPP.string_view
+    libc.src.__support.arg_list
+    libc.src.__support.libc_errno
+    libc.src.__support.printf_core.core_structs
+    libc.src.__support.printf_core.writer
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.syslog.linux.syslog_internal
+  COMPILE_OPTIONS
+    ${syslog_internal_test_copts}
+)
+
+add_libc_test(
+  setlogmask_test
+  SUITE
+    libc-syslog-tests
+  SRCS
+    setlogmask_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.syslog_macros
+    libc.src.__support.libc_errno
+    libc.src.syslog.setlogmask
+)
+
+add_libc_test(
+  openlog_syslog_closelog_test
+  SUITE
+    libc-syslog-tests
+  SRCS
+    openlog_syslog_closelog_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.syslog_macros
+    libc.src.__support.libc_errno
+    libc.src.syslog.closelog
+    libc.src.syslog.openlog
+    libc.src.syslog.setlogmask
+    libc.src.syslog.syslog
+)
+
+add_libc_test(
+  vsyslog_test
+  SUITE
+    libc-syslog-tests
+  SRCS
+    vsyslog_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.syslog_macros
+    libc.src.__support.libc_errno
+    libc.src.syslog.closelog
+    libc.src.syslog.openlog
+    libc.src.syslog.setlogmask
+    libc.src.syslog.vsyslog
+)

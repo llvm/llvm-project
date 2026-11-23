@@ -1239,6 +1239,11 @@ alias(
 )
 
 alias(
+    name = "strtof128",
+    actual = "//libc/src/stdlib:strtof128",
+)
+
+alias(
     name = "strtod",
     actual = "//libc/src/stdlib:strtod",
 )

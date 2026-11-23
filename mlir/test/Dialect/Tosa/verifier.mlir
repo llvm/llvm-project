@@ -2543,3 +2543,12 @@ func.func @test_legacy_block_scaled_const_invalid_num_scales() -> tensor<2x32x!m
   %0 = "tosa.const"() <{values = dense<tensor<2x32x!mxint8_scale> : 0 : i8>}> : () -> tensor<2x32x!mxint8>
   return %0 : tensor<2x32x!mxint8>
 }
+
+// -----
+
+func.func @test_reduce_sum_invalid_scalar_output(%arg0: tensor<5x4xf32>) {
+  // expected-error @+1 {{non tensor type 'f32' is not allowed}}
+  %0 = "tosa.reduce_sum"(%arg0) {axis = 0 : i32}
+      : (tensor<5x4xf32>) -> f32
+  return
+}

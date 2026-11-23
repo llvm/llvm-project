@@ -970,10 +970,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BlockAddrDiffAttr blockAddrDiff) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstArrayAttr attr) {
   mlir::Type convertedTy = converter->convertType(attr.getType());
   mlir::DataLayout dataLayout(parentModule);
-  mlir::Type llvmTy =
-      adjustGlobalTypeForInit(convertedTy, attr, *converter, dataLayout);
-  if (!llvmTy)
+  mlir::Type failedType = attr.getType();
+  mlir::Type llvmTy = adjustGlobalTypeForInit(convertedTy, attr, *converter,
+                                              dataLayout, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentLoc, failedType);
     return {};
+  }
   mlir::Value result;
 
   // When the array can be represented as a single constant attribute, emit one
@@ -1046,10 +1049,13 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::ConstRecordAttr constRecord) {
   mlir::Type llvmTy = converter->convertType(constRecord.getType());
   mlir::DataLayout dataLayout(parentModule);
   llvm::SmallVector<unsigned> paddingAddedIndexes;
+  mlir::Type failedType = constRecord.getType();
   llvmTy = adjustGlobalTypeForInit(llvmTy, constRecord, *converter, dataLayout,
-                                   paddingAddedIndexes);
-  if (!llvmTy)
+                                   paddingAddedIndexes, &failedType);
+  if (!llvmTy) {
+    emitTypeConversionError(parentLoc, failedType);
     return {};
+  }
   mlir::Value result = mlir::LLVM::UndefOp::create(rewriter, parentLoc, llvmTy);
 
   uint64_t insertIdx = 0;
@@ -1613,8 +1619,8 @@ mlir::LogicalResult CIRToLLVMAtomicXchgOpLowering::matchAndRewrite(
   // replace below erases immediately.
   auto xchg = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), mlir::LLVM::AtomicBinOp::xchg, adaptor.getPtr(),
-      adaptor.getVal(), llvmOrder, llvmSyncScope, /*alignment=*/0,
-      op.getIsVolatile());
+      adaptor.getVal(), llvmOrder, llvmSyncScope,
+      adaptor.getAlignment().value_or(0), op.getIsVolatile());
   forwardAMDGPUAtomicOptionMarkers(op, xchg);
   forwardAMDGPUNoPrivateAddrSpace(op, xchg, adaptor.getPtr());
   rewriter.replaceOp(op, xchg);
@@ -1819,7 +1825,8 @@ mlir::LogicalResult CIRToLLVMAtomicFetchOpLowering::matchAndRewrite(
       getLLVMAtomicBinOp(op.getBinop(), isInt, isSignedInt);
   auto rmwVal = mlir::LLVM::AtomicRMWOp::create(
       rewriter, op.getLoc(), llvmBinOp, adaptor.getPtr(), adaptor.getVal(),
-      llvmOrder, llvmSyncScope, /*alignment=*/0, op.getIsVolatile());
+      llvmOrder, llvmSyncScope, adaptor.getAlignment().value_or(0),
+      op.getIsVolatile());
 
   forwardAMDGPUAtomicOptionMarkers(op, rmwVal);
   forwardAMDGPUNoPrivateAddrSpace(op, rmwVal, adaptor.getPtr());
@@ -3470,11 +3477,14 @@ CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
 
   // Keep the global's type in sync with the value built by CIRAttrToValue: a
   // flexible array member initializer requires an oversized anonymous struct.
+  mlir::Type failedType = op.getSymType();
   if (std::optional<mlir::Attribute> init = op.getInitialValue())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
-  if (!llvmType)
+                                       dataLayout, &failedType);
+  if (!llvmType) {
+    emitTypeConversionError(op, failedType);
     return {};
+  }
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops. This duplicates code
@@ -3608,11 +3618,12 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // A flexible array member initializer makes the constant larger than the
   // record's declared type, so the global must use an oversized anonymous
   // struct instead.
+  mlir::Type failedType = cirSymType;
   if (init.has_value())
     llvmType = adjustGlobalTypeForInit(llvmType, *init, *getTypeConverter(),
-                                       dataLayout);
+                                       dataLayout, &failedType);
   if (!llvmType)
-    return mlir::failure();
+    return emitTypeConversionError(op, failedType);
 
   // FIXME: These default values are placeholders until the the equivalent
   //        attributes are available on cir.global ops.
@@ -5277,16 +5288,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     return;
   }
 
-  // Drop CIR-native data-layout entries. They drove pointer-width and
-  // _BitInt alignment queries up to this point, but the LLVM IR exporter
-  // rejects CIR types.
+  // Drop CIR-native data-layout entries.
   if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
           module->getAttr(mlir::DLTIDialect::kDataLayoutAttrName))) {
     llvm::SmallVector<mlir::DataLayoutEntryInterface> kept;
     for (mlir::DataLayoutEntryInterface entry : dlSpec.getEntries()) {
       if (entry.isTypeEntry()) {
         mlir::Type key = mlir::cast<mlir::Type>(entry.getKey());
-        if (mlir::isa<cir::PointerType, cir::IntType>(key))
+        if (mlir::isa<cir::PointerType, cir::IntType, cir::VectorType>(key))
           continue;
       }
       kept.push_back(entry);
@@ -5742,17 +5751,41 @@ mlir::LogicalResult CIRToLLVMVTableGetVPtrOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Read the pointer that is stored in the vtable \p vptr as the 32-bit offset
+/// of the entry at \p byteOffset, relative to the address of that entry. The
+/// width of the integer \p byteOffset selects the form of the intrinsic.
+static mlir::Value
+createVTableLoadRelative(mlir::ConversionPatternRewriter &rewriter,
+                         mlir::Location loc, mlir::Value vptr,
+                         mlir::Value byteOffset) {
+  unsigned offsetWidth =
+      mlir::cast<mlir::IntegerType>(byteOffset.getType()).getWidth();
+  return createCallLLVMIntrinsicOp(
+             rewriter, loc, "llvm.load.relative.i" + llvm::Twine(offsetWidth),
+             mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+             mlir::ValueRange{vptr, byteOffset})
+      .getResult(0);
+}
+
 mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
     cir::VTableGetVirtualFnOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
-  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
-    return op.emitError(
-        "NYI: virtual function lookup in a relative layout vtable");
-
   mlir::Type resultType = getTypeConverter()->convertType(op.getType());
   if (!resultType)
     return emitTypeConversionError(op, op.getType());
+
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  if (usesRelativeVTables(mod)) {
+    // The entry is a function pointer relative to the address point.
+    int64_t byteOffset =
+        op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
+    rewriter.replaceOp(op, createVTableLoadRelative(
+                               rewriter, op.getLoc(), adaptor.getVptr(),
+                               mlir::LLVM::ConstantOp::create(
+                                   rewriter, op.getLoc(), rewriter.getI32Type(),
+                                   rewriter.getI32IntegerAttr(byteOffset))));
+    return mlir::success();
+  }
 
   // The entry is the function pointer itself: load it from its slot.
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
@@ -5767,23 +5800,66 @@ mlir::LogicalResult CIRToLLVMVTableGetVirtualFnOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult
+CIRToLLVMVTableGetVirtualFnByOffsetOpLowering::matchAndRewrite(
+    cir::VTableGetVirtualFnByOffsetOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType)
+    return emitTypeConversionError(op, op.getType());
+
+  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>())) {
+    // The entry is a function pointer relative to the address point.
+    rewriter.replaceOp(op, createVTableLoadRelative(rewriter, op.getLoc(),
+                                                    adaptor.getVptr(),
+                                                    adaptor.getOffset()));
+    return mlir::success();
+  }
+
+  // The entry is the function pointer itself: load it from its slot, addressed
+  // by its byte offset.
+  auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Value slot = mlir::LLVM::GEPOp::create(
+      rewriter, op.getLoc(), ptrTy, rewriter.getI8Type(), adaptor.getVptr(),
+      llvm::ArrayRef<mlir::LLVM::GEPArg>{adaptor.getOffset()});
+  rewriter.replaceOpWithNewOp<mlir::LLVM::LoadOp>(
+      op, resultType, slot, dataLayout.getTypeABIAlignment(ptrTy));
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
     cir::VTableGetOffsetOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
-  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
-    return op.emitError("NYI: offset lookup in a relative layout vtable");
-
   mlir::Type resultType = getTypeConverter()->convertType(op.getType());
   if (!resultType)
     return emitTypeConversionError(op, op.getType());
 
   // The entry is the offset itself: load it from its slot, addressed by its
   // byte offset.
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  int64_t byteOffset = op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
+
+  if (usesRelativeVTables(mod)) {
+    // The offset is stored as a plain 32-bit integer, unlike the entries that
+    // refer to other symbols.
+    mlir::Type entryTy =
+        rewriter.getIntegerType(cir::getVTableEntrySize(mod, dataLayout) * 8);
+    mlir::Value byteOffsetVal = mlir::LLVM::ConstantOp::create(
+        rewriter, op.getLoc(), rewriter.getI64Type(),
+        rewriter.getI64IntegerAttr(byteOffset));
+    mlir::Value slot = mlir::LLVM::GEPOp::create(
+        rewriter, op.getLoc(),
+        mlir::LLVM::LLVMPointerType::get(rewriter.getContext()),
+        rewriter.getI8Type(), adaptor.getVptr(),
+        llvm::ArrayRef<mlir::LLVM::GEPArg>{byteOffsetVal});
+    mlir::Value offset =
+        mlir::LLVM::LoadOp::create(rewriter, op.getLoc(), entryTy, slot,
+                                   dataLayout.getTypeABIAlignment(entryTy));
+    rewriter.replaceOpWithNewOp<mlir::LLVM::SExtOp>(op, resultType, offset);
+    return mlir::success();
+  }
+
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
-  int64_t byteOffset =
-      op.getIndex() * cir::getVTableEntrySize(
-                          op->getParentOfType<mlir::ModuleOp>(), dataLayout);
   mlir::Value byteOffsetVal = mlir::LLVM::ConstantOp::create(
       rewriter, op.getLoc(), rewriter.getI64Type(),
       rewriter.getI64IntegerAttr(byteOffset));
@@ -5798,14 +5874,22 @@ mlir::LogicalResult CIRToLLVMVTableGetOffsetOpLowering::matchAndRewrite(
 mlir::LogicalResult CIRToLLVMVTableGetEntryOpLowering::matchAndRewrite(
     cir::VTableGetEntryOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
-  assert(!cir::MissingFeatures::vtableRelativeLayout());
-  if (usesRelativeVTables(op->getParentOfType<mlir::ModuleOp>()))
-    return op.emitError(
-        "NYI: pointer entry lookup in a relative layout vtable");
-
   mlir::Type resultType = getTypeConverter()->convertType(op.getType());
   if (!resultType)
     return emitTypeConversionError(op, op.getType());
+
+  mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>();
+  if (usesRelativeVTables(mod)) {
+    // The entry is a pointer relative to the address point.
+    int64_t byteOffset =
+        op.getIndex() * cir::getVTableEntrySize(mod, dataLayout);
+    rewriter.replaceOp(op, createVTableLoadRelative(
+                               rewriter, op.getLoc(), adaptor.getVptr(),
+                               mlir::LLVM::ConstantOp::create(
+                                   rewriter, op.getLoc(), rewriter.getI32Type(),
+                                   rewriter.getI32IntegerAttr(byteOffset))));
+    return mlir::success();
+  }
 
   // The entry is the pointer itself: load it from its slot.
   auto ptrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
@@ -5894,21 +5978,6 @@ mlir::LogicalResult CIRToLLVMVecCmpOpLowering::matchAndRewrite(
         rewriter, op.getLoc(),
         convertCmpKindToICmpPredicate(op.getKind(), /*isSigned=*/false),
         adaptor.getLhs(), adaptor.getRhs());
-  } else if (mlir::isa<cir::FPTypeInterface>(elementType)) {
-    if (cir::FenvAttr fenv = op.getFenvAttr()) {
-      llvm::ElementCount size = op.getLhs().getType().getSize();
-      auto i1VecTy = mlir::VectorType::get(
-          size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-      bitResult = createConstrainedFCmpCall(
-                      rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-                      op.getKind(), isSignalingConstrainedFCmp(op.getKind()),
-                      fenv, i1VecTy)
-                      .getResult(0);
-    } else {
-      bitResult = mlir::LLVM::FCmpOp::create(
-          rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
-          adaptor.getLhs(), adaptor.getRhs());
-    }
   } else {
     return op.emitError() << "unsupported type for VecCmpOp: " << elementType;
   }

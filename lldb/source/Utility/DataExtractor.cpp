@@ -612,7 +612,7 @@ DataExtractor::CopyByteOrderedData(offset_t src_offset, offset_t src_len,
                                    ByteOrder dst_byte_order) const {
   // Validate the source info
   if (!ValidOffsetForDataOfSize(src_offset, src_len))
-    assert(ValidOffsetForDataOfSize(src_offset, src_len));
+    return 0;
   assert(src_len > 0);
   assert(m_byte_order == eByteOrderBig || m_byte_order == eByteOrderLittle);
 
