@@ -1,13 +1,14 @@
-# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts,live-debug-values %s -o - \
-# RUN:   | FileCheck %s
+# RUN: llc -mtriple=x86_64-- -run-pass x86-fixup-bw-insts %s -o - | FileCheck %s
 #
 # The DBG_INSTR_REF refers to instruction 2, which no longer exists, so the
 # variable has no location. The fixup pass rewrites the MOV16rm with a new
 # number; that number must not be 2, or the reference would resolve to the
 # rewritten load.
 
-# CHECK:      DBG_INSTR_REF {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0)
-# CHECK-NEXT: DBG_VALUE_LIST {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), $noreg,
+# CHECK:      debugValueSubstitutions:
+# CHECK-NEXT: - { srcinst: 1, srcop: 0, dstinst: 3, dstop: 0, subreg: {{[0-9]+}} }
+# CHECK:      $eax = MOVZX32rm16 {{.*}}, debug-instr-number 3,
+# CHECK-NEXT: DBG_INSTR_REF {{![0-9]+}}, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0)
 --- |
   define i16 @test(ptr %p) !dbg !5 {
     ret i16 0, !dbg !10
