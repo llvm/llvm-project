@@ -3705,7 +3705,7 @@ static bool isFreeConcat(ArrayRef<InstLane> Item, TTI::TargetCostKind CostKind,
   // to a power2.
   if (!isPowerOf2_32(NumSlices))
     return false;
-  for (size_t Slice = 0; Slice < NumSlices; ++Slice) {
+  for (unsigned Slice = 0; Slice < NumSlices; ++Slice) {
     Value *SliceV = Item[Slice * NumElts].first;
     if (!SliceV || SliceV->getType() != Ty)
       return false;
