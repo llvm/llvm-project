@@ -2792,7 +2792,7 @@ def CIR_FCmpOp : CIR_Op<"fcmp",
     !listconcat([SameTypeOperands], CIR_FenvOpTraits)> {
   let summary = "Compare two floating point values and produce a boolean result";
   let description = [{
-    The `cir.cmp` operation compares two operands of the same floating type and
+    The `cir.fcmp` operation compares two operands of the same floating type and
     produces a `!cir.bool` result.
 
     The following comparison predicates are available:
@@ -2855,7 +2855,6 @@ def CIR_FCmpOp : CIR_Op<"fcmp",
         cir::FenvAttr{});
     }]>
   ];
-
 }
 
 //===----------------------------------------------------------------------===//
