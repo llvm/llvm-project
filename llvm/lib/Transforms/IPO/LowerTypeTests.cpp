@@ -3067,6 +3067,9 @@ PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
   bool ShouldDropAll = Kind == DropTestKind::All;
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  // Dropping all type tests erases the checked load declarations. Since the
+  // proxy is preserved, their analyses need to be cleared before they are
+  // deleted.
   if (ShouldDropAll) {
     for (Intrinsic::ID ID : {Intrinsic::type_checked_load,
                              Intrinsic::type_checked_load_relative}) {
