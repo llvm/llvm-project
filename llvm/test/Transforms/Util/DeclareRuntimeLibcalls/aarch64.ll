@@ -124,9 +124,9 @@
 ; LINUX-NEXT: declare aarch64_sme_preservemost_from_x1 void @__arm_sme_save(ptr) [[SME_ATTRS]]
 ; LINUX-NEXT: declare aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() [[SME_ATTRS]]
 ; LINUX-NEXT: declare aarch64_sme_preservemost_from_x1 i64 @__arm_sme_state_size() [[SME_ATTRS]]
-; LINUX-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_IN_ZA_ATTRS:#[0-9]+]]
+; LINUX-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_ATTRS]]
 ; LINUX-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save() [[SME_ATTRS]]
-; LINUX-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_IN_ZA_ATTRS]]
+; LINUX-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_ATTRS]]
 ; LINUX-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
 ; LINUX-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -602,7 +602,6 @@
 ; LINUX-NEXT: attributes [[SC_ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) "aarch64_pstate_sm_compatible" }
 ; LINUX-NEXT: attributes [[SC_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "aarch64_pstate_sm_compatible" }
 ; LINUX-NEXT: attributes [[SC_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "aarch64_pstate_sm_compatible" }
-; LINUX-NEXT: attributes [[SME_IN_ZA_ATTRS]] = { nounwind "aarch64_in_za" "aarch64_pstate_sm_compatible" }
 ; LINUX-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; LINUX-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; LINUX-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -732,9 +731,9 @@
 ; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x1 void @__arm_sme_save(ptr) [[SME_ATTRS]]
 ; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() [[SME_ATTRS]]
 ; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x1 i64 @__arm_sme_state_size() [[SME_ATTRS]]
-; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_IN_ZA_ATTRS:#[0-9]+]]
+; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_ATTRS]]
 ; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save() [[SME_ATTRS]]
-; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_IN_ZA_ATTRS]]
+; DARWIN-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_ATTRS]]
 ; DARWIN-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
 ; DARWIN-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -1153,7 +1152,6 @@
 ; DARWIN-NEXT: attributes [[SC_ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) "aarch64_pstate_sm_compatible" }
 ; DARWIN-NEXT: attributes [[SC_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "aarch64_pstate_sm_compatible" }
 ; DARWIN-NEXT: attributes [[SC_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "aarch64_pstate_sm_compatible" }
-; DARWIN-NEXT: attributes [[SME_IN_ZA_ATTRS]] = { nounwind "aarch64_in_za" "aarch64_pstate_sm_compatible" }
 ; DARWIN-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; DARWIN-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; DARWIN-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1284,9 +1282,9 @@
 ; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x1 void @__arm_sme_save(ptr) [[SME_ATTRS]]
 ; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() [[SME_ATTRS]]
 ; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x1 i64 @__arm_sme_state_size() [[SME_ATTRS]]
-; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_IN_ZA_ATTRS:#[0-9]+]]
+; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_ATTRS]]
 ; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save() [[SME_ATTRS]]
-; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_IN_ZA_ATTRS]]
+; WINMSVC-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_ATTRS]]
 ; WINMSVC-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
 ; WINMSVC-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -1699,7 +1697,6 @@
 ; WINMSVC-NEXT: attributes [[SC_ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) "aarch64_pstate_sm_compatible" }
 ; WINMSVC-NEXT: attributes [[SC_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "aarch64_pstate_sm_compatible" }
 ; WINMSVC-NEXT: attributes [[SC_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "aarch64_pstate_sm_compatible" }
-; WINMSVC-NEXT: attributes [[SME_IN_ZA_ATTRS]] = { nounwind "aarch64_in_za" "aarch64_pstate_sm_compatible" }
 ; WINMSVC-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; WINMSVC-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; WINMSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -1829,9 +1826,9 @@
 ; MINGW-NEXT: declare aarch64_sme_preservemost_from_x1 void @__arm_sme_save(ptr) [[SME_ATTRS]]
 ; MINGW-NEXT: declare aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() [[SME_ATTRS]]
 ; MINGW-NEXT: declare aarch64_sme_preservemost_from_x1 i64 @__arm_sme_state_size() [[SME_ATTRS]]
-; MINGW-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_IN_ZA_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_ATTRS]]
 ; MINGW-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save() [[SME_ATTRS]]
-; MINGW-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_IN_ZA_ATTRS]]
+; MINGW-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_ATTRS]]
 ; MINGW-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -2248,7 +2245,6 @@
 ; MINGW-NEXT: attributes [[SC_ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) "aarch64_pstate_sm_compatible" }
 ; MINGW-NEXT: attributes [[SC_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "aarch64_pstate_sm_compatible" }
 ; MINGW-NEXT: attributes [[SC_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "aarch64_pstate_sm_compatible" }
-; MINGW-NEXT: attributes [[SME_IN_ZA_ATTRS]] = { nounwind "aarch64_in_za" "aarch64_pstate_sm_compatible" }
 ; MINGW-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; MINGW-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; MINGW-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
@@ -2378,9 +2374,9 @@
 ; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x1 void @__arm_sme_save(ptr) [[SME_ATTRS]]
 ; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x2 { i64, i64 } @__arm_sme_state() [[SME_ATTRS]]
 ; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x1 i64 @__arm_sme_state_size() [[SME_ATTRS]]
-; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_IN_ZA_ATTRS:#[0-9]+]]
+; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_restore(ptr) [[SME_ATTRS]]
 ; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_tpidr2_save() [[SME_ATTRS]]
-; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_IN_ZA_ATTRS]]
+; ANDROID-NEXT: declare aarch64_sme_preservemost_from_x0 void @__arm_za_disable() [[SME_ATTRS]]
 ; ANDROID-NEXT: declare i64 @__ashldi3(i64, i32) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare signext i16 @__ashlhi3(i16 signext, i32) [[NOMEM_ATTRS]]
 ; ANDROID-NEXT: declare i32 @__ashlsi3(i32, i32) [[NOMEM_ATTRS]]
@@ -2857,7 +2853,6 @@
 ; ANDROID-NEXT: attributes [[SC_ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) "aarch64_pstate_sm_compatible" }
 ; ANDROID-NEXT: attributes [[SC_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) "aarch64_pstate_sm_compatible" }
 ; ANDROID-NEXT: attributes [[SC_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) "aarch64_pstate_sm_compatible" }
-; ANDROID-NEXT: attributes [[SME_IN_ZA_ATTRS]] = { nounwind "aarch64_in_za" "aarch64_pstate_sm_compatible" }
 ; ANDROID-NEXT: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
 ; ANDROID-NEXT: attributes [[ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; ANDROID-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }

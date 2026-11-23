@@ -1098,7 +1098,6 @@ multiclass LibmLibcallImpls<string libcall_basename = !toupper(NAME),
 
 // AArch64 calls
 defvar SMCompatible = StringFnAttr<"aarch64_pstate_sm_compatible">;
-defvar InZA = StringFnAttr<"aarch64_in_za">;
 defvar SCFnAttrs = !listconcat([]<Attr>, CommonFnAttrs, [SMCompatible]);
 
 def SC_MEMCPY : RuntimeLibcall<Ptr, [Ptr, Ptr, SizeT]> {
@@ -1126,17 +1125,16 @@ def SC_MEMCHR : RuntimeLibcall<Ptr, [Ptr, Int, SizeT]> {
 }
 
 // AArch64 SME ABI calls
-class SMEABILibcall<FuncArgType RetType, list<FuncArgType> ArgTypes = [],
-                    list<Attr> ExtraAttrs = []>
+class SMEABILibcall<FuncArgType RetType, list<FuncArgType> ArgTypes = []>
     : RuntimeLibcall<RetType, ArgTypes> {
-  let FnAttrs = !listconcat([NoUnwind, SMCompatible]<Attr>, ExtraAttrs);
+  let FnAttrs = [NoUnwind, SMCompatible];
 }
 
 def SMEState : StructFuncArgType<[UInt64, UInt64]>;
 def SMEABI_SME_STATE : SMEABILibcall<SMEState>;
 def SMEABI_TPIDR2_SAVE : SMEABILibcall<Void>;
-def SMEABI_ZA_DISABLE : SMEABILibcall<Void, [], [InZA]>;
-def SMEABI_TPIDR2_RESTORE : SMEABILibcall<Void, [Ptr], [InZA]>;
+def SMEABI_ZA_DISABLE : SMEABILibcall<Void>;
+def SMEABI_TPIDR2_RESTORE : SMEABILibcall<Void, [Ptr]>;
 def SMEABI_GET_CURRENT_VG : SMEABILibcall<UInt64>;
 def SMEABI_SME_STATE_SIZE : SMEABILibcall<UInt64>;
 def SMEABI_SME_SAVE : SMEABILibcall<Void, [Ptr]>;
