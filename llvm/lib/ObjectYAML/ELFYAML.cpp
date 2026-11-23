@@ -1344,6 +1344,12 @@ static void sectionHeaderTableMapping(IO &IO,
   IO.mapOptional("NoHeaders", SHT.NoHeaders);
 }
 
+static void programHeaderTableMapping(IO &IO,
+                                      ELFYAML::ProgramHeaderTable &PHT) {
+  IO.mapOptional("Name", PHT.Name, StringRef());
+  IO.mapOptional("Offset", PHT.Offset);
+}
+
 static void sectionMapping(IO &IO, ELFYAML::LinkerOptionsSection &Section) {
   commonSectionMapping(IO, Section);
   IO.mapOptional("Options", Section.Options);
@@ -1414,6 +1420,8 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
       Type = S->Type;
     else if (auto *SHT = dyn_cast<ELFYAML::SectionHeaderTable>(Section.get()))
       TypeStr = SHT->TypeStr;
+    else if (auto *PHT = dyn_cast<ELFYAML::ProgramHeaderTable>(Section.get()))
+      TypeStr = PHT->TypeStr;
   } else {
     // When the Type string does not have a "SHT_" prefix, we know it is not a
     // description of a regular ELF output section.
@@ -1437,6 +1445,17 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
 
     sectionHeaderTableMapping(
         IO, *cast<ELFYAML::SectionHeaderTable>(Section.get()));
+    return;
+  }
+
+  if (TypeStr == ELFYAML::ProgramHeaderTable::TypeStr) {
+    if (IO.outputting())
+      setStringValue(IO, "Type", TypeStr);
+    else
+      Section.reset(new ELFYAML::ProgramHeaderTable());
+
+    programHeaderTableMapping(
+        IO, *cast<ELFYAML::ProgramHeaderTable>(Section.get()));
     return;
   }
 
@@ -1578,6 +1597,9 @@ std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
       return "NoHeaders can't be used together with Offset/Sections/Excluded";
     return "";
   }
+
+  if (isa<ELFYAML::ProgramHeaderTable>(C.get()))
+    return "";
 
   const ELFYAML::Section &Sec = *cast<ELFYAML::Section>(C.get());
   if (Sec.Size && Sec.Content &&

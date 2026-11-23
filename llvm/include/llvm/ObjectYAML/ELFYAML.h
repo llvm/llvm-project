@@ -196,6 +196,7 @@ struct LLVM_ABI Chunk {
     SpecialChunksStart,
     Fill = SpecialChunksStart,
     SectionHeaderTable,
+    ProgramHeaderTable,
   };
 
   ChunkKind Kind;
@@ -300,6 +301,21 @@ struct SectionHeaderTable : Chunk {
   bool isDefault() const { return !Sections && !Excluded && !NoHeaders; }
 
   static constexpr StringRef TypeStr = "SectionHeaderTable";
+};
+
+// The program header table. By default the program headers are written right
+// after the ELF header; this chunk places them at its position in the list of
+// sections instead. It has no section header, but can be included in segments
+// like a Fill.
+struct ProgramHeaderTable : Chunk {
+  ProgramHeaderTable()
+      : Chunk(ChunkKind::ProgramHeaderTable, /*Implicit=*/false) {}
+
+  static bool classof(const Chunk *S) {
+    return S->Kind == ChunkKind::ProgramHeaderTable;
+  }
+
+  static constexpr StringRef TypeStr = "ProgramHeaderTable";
 };
 
 struct BBAddrMapSection : Section {
@@ -711,6 +727,13 @@ struct Object {
       if (auto *S = dyn_cast<ELFYAML::SectionHeaderTable>(C.get()))
         return *S;
     llvm_unreachable("the section header table chunk must always be present");
+  }
+
+  const ProgramHeaderTable *getProgramHeaderTable() const {
+    for (const std::unique_ptr<Chunk> &C : Chunks)
+      if (auto *P = dyn_cast<ELFYAML::ProgramHeaderTable>(C.get()))
+        return P;
+    return nullptr;
   }
 
   LLVM_ABI ELF_ELFOSABI getOSAbi() const;
