@@ -674,7 +674,7 @@ class CGFunctionInfo final
 
   /// Indices of CUDA grid-constant arguments. These affect ABI classification
   /// but are not part of the source function type.
-  size_t NumGridConstantArgs;
+  unsigned NumGridConstantArgs;
 
   ArgInfo *getArgsBuffer() {
     return getTrailingObjects<ArgInfo>();
@@ -885,7 +885,8 @@ public:
       for (auto paramInfo : paramInfos)
         ID.AddInteger(paramInfo.getOpaqueValue());
     }
-    ID.AddInteger(gridConstantArgs.size());
+    // Match the width used when profiling the stored node.
+    ID.AddInteger(static_cast<unsigned>(gridConstantArgs.size()));
     for (unsigned argIndex : gridConstantArgs)
       ID.AddInteger(argIndex);
     resultType.Profile(ID);

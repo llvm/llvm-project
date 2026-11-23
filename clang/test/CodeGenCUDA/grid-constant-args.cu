@@ -138,6 +138,15 @@ extern "C" __global__ void large_bitint(
   escape(&arg);
 }
 
+// CUDA built-in texture and surface parameters retain their direct device
+// handle ABI even when marked grid-constant.
+// DEVICE-LABEL: define{{.*}} ptx_kernel void @builtin_handles(
+// DEVICE-SAME: i64 "nvvm.grid_constant" %tex,
+// DEVICE-SAME: i64 "nvvm.grid_constant" %surf)
+extern "C" __global__ void builtin_handles(
+    const __grid_constant__ texture<int> tex,
+    const __grid_constant__ surface<void, 2> surf) {}
+
 struct DeviceObject {
   int value;
   __device__ DeviceObject(int);

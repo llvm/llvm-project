@@ -34,7 +34,7 @@ public:
       : ABIInfo(CGT), CGInfo(Info) {}
 
   ABIArgInfo classifyReturnType(QualType RetTy) const;
-  ABIArgInfo classifyArgumentType(QualType Ty) const;
+  ABIArgInfo classifyArgumentType(QualType Ty, bool IsGridConstant) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
   RValue EmitVAArg(CodeGenFunction &CGF, Address VAListAddr, QualType Ty,
@@ -180,13 +180,12 @@ ABIArgInfo NVPTXABIInfo::classifyReturnType(QualType RetTy) const {
                                                : ABIArgInfo::getDirect());
 }
 
-ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
-  // Treat an enum type as its underlying type.
-  if (const auto *ED = Ty->getAsEnumDecl())
-    Ty = ED->getIntegerType();
-
-  // Return aggregates type as indirect by value
-  if (isAggregateTypeForABI(Ty)) {
+ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty,
+                                              bool IsGridConstant) const {
+  // Grid-constant kernel parameters must keep their parameter-space address.
+  // Pass them as byval pointers to avoid a local copy, even for scalars and
+  // vectors.
+  if (isAggregateTypeForABI(Ty) || IsGridConstant) {
     // Under CUDA device compilation, tex/surf builtin types are replaced with
     // object types and passed directly.
     if (getContext().getLangOpts().CUDAIsDevice) {
@@ -201,6 +200,10 @@ ABIArgInfo NVPTXABIInfo::classifyArgumentType(QualType Ty) const {
         Ty, /* AddrSpace */ getDataLayout().getAllocaAddrSpace(),
         /* byval */ true);
   }
+
+  // Treat an enum type as its underlying type.
+  if (const auto *ED = Ty->getAsEnumDecl())
+    Ty = ED->getIntegerType();
 
   if (const auto *EIT = Ty->getAs<BitIntType>()) {
     if ((EIT->getNumBits() > 128) ||
@@ -219,17 +222,11 @@ void NVPTXABIInfo::computeInfo(CGFunctionInfo &FI) const {
   if (!getCXXABI().classifyReturnType(FI))
     FI.getReturnInfo() = classifyReturnType(FI.getReturnType());
 
-  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments())) {
-    if (FI.isGridConstantArg(ArgumentsCount))
-      // NVVM represents grid-constant parameter objects as byval pointers,
-      // even when their source type is a scalar or vector.
-      I.info = getNaturalAlignIndirect(
-          I.type, getDataLayout().getAllocaAddrSpace(), /*byval=*/true);
-    else
-      I.info = ArgumentsCount < FI.getNumRequiredArgs()
-                   ? classifyArgumentType(I.type)
-                   : ABIArgInfo::getDirect();
-  }
+  for (auto &&[ArgumentsCount, I] : llvm::enumerate(FI.arguments()))
+    I.info =
+        ArgumentsCount < FI.getNumRequiredArgs()
+            ? classifyArgumentType(I.type, FI.isGridConstantArg(ArgumentsCount))
+            : ABIArgInfo::getDirect();
 
   // Always honor user-specified calling convention.
   if (FI.getCallingConvention() != llvm::CallingConv::C)
