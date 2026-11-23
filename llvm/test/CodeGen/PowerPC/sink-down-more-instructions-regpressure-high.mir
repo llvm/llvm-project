@@ -256,150 +256,6 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: g8rc }
-  - { id: 2, class: g8rc }
-  - { id: 3, class: g8rc_and_g8rc_nox0 }
-  - { id: 4, class: g8rc_and_g8rc_nox0 }
-  - { id: 5, class: gprc }
-  - { id: 6, class: g8rc_and_g8rc_nox0 }
-  - { id: 7, class: g8rc_and_g8rc_nox0 }
-  - { id: 8, class: g8rc_and_g8rc_nox0 }
-  - { id: 9, class: g8rc }
-  - { id: 10, class: g8rc_and_g8rc_nox0 }
-  - { id: 11, class: g8rc }
-  - { id: 12, class: g8rc_and_g8rc_nox0 }
-  - { id: 13, class: g8rc }
-  - { id: 14, class: gprc_and_gprc_nor0 }
-  - { id: 15, class: gprc }
-  - { id: 16, class: gprc }
-  - { id: 17, class: gprc }
-  - { id: 18, class: gprc }
-  - { id: 19, class: gprc }
-  - { id: 20, class: g8rc }
-  - { id: 21, class: g8rc }
-  - { id: 22, class: g8rc }
-  - { id: 23, class: g8rc }
-  - { id: 24, class: g8rc_and_g8rc_nox0 }
-  - { id: 25, class: g8rc_and_g8rc_nox0 }
-  - { id: 26, class: g8rc }
-  - { id: 27, class: g8rc_and_g8rc_nox0 }
-  - { id: 28, class: g8rc_and_g8rc_nox0 }
-  - { id: 29, class: g8rc_and_g8rc_nox0 }
-  - { id: 30, class: gprc }
-  - { id: 31, class: gprc }
-  - { id: 32, class: g8rc_and_g8rc_nox0 }
-  - { id: 33, class: g8rc_and_g8rc_nox0 }
-  - { id: 34, class: g8rc_and_g8rc_nox0 }
-  - { id: 35, class: g8rc_and_g8rc_nox0 }
-  - { id: 36, class: g8rc_and_g8rc_nox0 }
-  - { id: 37, class: g8rc_and_g8rc_nox0 }
-  - { id: 38, class: g8rc_and_g8rc_nox0 }
-  - { id: 39, class: g8rc_and_g8rc_nox0 }
-  - { id: 40, class: g8rc_and_g8rc_nox0 }
-  - { id: 41, class: g8rc_and_g8rc_nox0 }
-  - { id: 42, class: g8rc_and_g8rc_nox0 }
-  - { id: 43, class: g8rc_and_g8rc_nox0 }
-  - { id: 44, class: g8rc_and_g8rc_nox0 }
-  - { id: 45, class: g8rc_and_g8rc_nox0 }
-  - { id: 46, class: g8rc_and_g8rc_nox0 }
-  - { id: 47, class: g8rc_and_g8rc_nox0 }
-  - { id: 48, class: g8rc_and_g8rc_nox0 }
-  - { id: 49, class: g8rc_and_g8rc_nox0 }
-  - { id: 50, class: g8rc_and_g8rc_nox0 }
-  - { id: 51, class: g8rc_and_g8rc_nox0 }
-  - { id: 52, class: g8rc_and_g8rc_nox0 }
-  - { id: 53, class: g8rc_and_g8rc_nox0 }
-  - { id: 54, class: g8rc_and_g8rc_nox0 }
-  - { id: 55, class: g8rc_and_g8rc_nox0 }
-  - { id: 56, class: g8rc_and_g8rc_nox0 }
-  - { id: 57, class: g8rc_and_g8rc_nox0 }
-  - { id: 58, class: g8rc_and_g8rc_nox0 }
-  - { id: 59, class: g8rc_and_g8rc_nox0 }
-  - { id: 60, class: g8rc_and_g8rc_nox0 }
-  - { id: 61, class: crrc }
-  - { id: 62, class: g8rc }
-  - { id: 63, class: gprc }
-  - { id: 64, class: g8rc }
-  - { id: 65, class: g8rc }
-  - { id: 66, class: g8rc }
-  - { id: 67, class: gprc }
-  - { id: 68, class: g8rc_and_g8rc_nox0 }
-  - { id: 69, class: gprc }
-  - { id: 70, class: gprc }
-  - { id: 71, class: gprc }
-  - { id: 72, class: gprc }
-  - { id: 73, class: gprc }
-  - { id: 74, class: crrc }
-  - { id: 75, class: crrc }
-  - { id: 76, class: gprc }
-  - { id: 77, class: gprc }
-  - { id: 78, class: gprc }
-  - { id: 79, class: gprc }
-  - { id: 80, class: gprc }
-  - { id: 81, class: gprc }
-  - { id: 82, class: gprc }
-  - { id: 83, class: gprc }
-  - { id: 84, class: gprc }
-  - { id: 85, class: gprc }
-  - { id: 86, class: gprc }
-  - { id: 87, class: gprc }
-  - { id: 88, class: gprc }
-  - { id: 89, class: gprc }
-  - { id: 90, class: gprc }
-  - { id: 91, class: gprc }
-  - { id: 92, class: gprc }
-  - { id: 93, class: gprc }
-  - { id: 94, class: gprc }
-  - { id: 95, class: gprc }
-  - { id: 96, class: gprc }
-  - { id: 97, class: gprc }
-  - { id: 98, class: gprc }
-  - { id: 99, class: gprc }
-  - { id: 100, class: gprc }
-  - { id: 101, class: gprc }
-  - { id: 102, class: gprc }
-  - { id: 103, class: gprc }
-  - { id: 104, class: gprc }
-  - { id: 105, class: gprc }
-  - { id: 106, class: gprc }
-  - { id: 107, class: gprc }
-  - { id: 108, class: gprc }
-  - { id: 109, class: gprc }
-  - { id: 110, class: gprc }
-  - { id: 111, class: gprc }
-  - { id: 112, class: gprc }
-  - { id: 113, class: gprc }
-  - { id: 114, class: gprc }
-  - { id: 115, class: gprc }
-  - { id: 116, class: gprc }
-  - { id: 117, class: gprc }
-  - { id: 118, class: gprc }
-  - { id: 119, class: gprc }
-  - { id: 120, class: gprc }
-  - { id: 121, class: gprc }
-  - { id: 122, class: gprc }
-  - { id: 123, class: gprc }
-  - { id: 124, class: gprc }
-  - { id: 125, class: gprc }
-  - { id: 126, class: gprc }
-  - { id: 127, class: gprc }
-  - { id: 128, class: gprc }
-  - { id: 129, class: gprc }
-  - { id: 130, class: gprc }
-  - { id: 131, class: gprc }
-  - { id: 132, class: gprc }
-  - { id: 133, class: gprc }
-  - { id: 134, class: gprc }
-  - { id: 135, class: gprc }
-  - { id: 136, class: gprc }
-  - { id: 137, class: gprc }
-  - { id: 138, class: gprc }
-  - { id: 139, class: gprc }
-  - { id: 140, class: gprc }
-  - { id: 141, class: gprc }
-  - { id: 142, class: g8rc }
 liveins:
   - { reg: '$x3', virtual-reg: '%22' }
   - { reg: '$x5', virtual-reg: '%24' }
@@ -444,179 +300,195 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0 (%ir-block.37):
-  ; CHECK:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
-  ; CHECK:   liveins: $x3, $x5, $x6, $x7, $x8, $x9, $x10
-  ; CHECK:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x10
-  ; CHECK:   [[COPY1:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x9
-  ; CHECK:   [[COPY2:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x8
-  ; CHECK:   [[COPY3:%[0-9]+]]:g8rc = COPY $x7
-  ; CHECK:   [[COPY4:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x6
-  ; CHECK:   [[COPY5:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x5
-  ; CHECK:   [[COPY6:%[0-9]+]]:g8rc = COPY $x3
-  ; CHECK:   [[COPY7:%[0-9]+]]:gprc = COPY [[COPY3]].sub_32
-  ; CHECK:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY7]], 1
-  ; CHECK:   BCC 12, [[CMPWI]], %bb.2
-  ; CHECK:   B %bb.1
-  ; CHECK: bb.1 (%ir-block.39):
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   [[COPY8:%[0-9]+]]:gprc = COPY [[COPY6]].sub_32
-  ; CHECK:   [[LD:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.28 :: (load (s64) from %fixed-stack.28, align 16)
-  ; CHECK:   [[LD1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.27 :: (load (s64) from %fixed-stack.27)
-  ; CHECK:   [[LD2:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.26 :: (load (s64) from %fixed-stack.26, align 16)
-  ; CHECK:   [[LD3:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.25 :: (load (s64) from %fixed-stack.25)
-  ; CHECK:   [[LD4:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.24 :: (load (s64) from %fixed-stack.24, align 16)
-  ; CHECK:   [[LD5:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.23 :: (load (s64) from %fixed-stack.23)
-  ; CHECK:   [[LD6:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.22 :: (load (s64) from %fixed-stack.22, align 16)
-  ; CHECK:   [[LD7:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.21 :: (load (s64) from %fixed-stack.21)
-  ; CHECK:   [[LD8:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.20 :: (load (s64) from %fixed-stack.20, align 16)
-  ; CHECK:   [[LD9:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.19 :: (load (s64) from %fixed-stack.19)
-  ; CHECK:   [[LD10:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.18 :: (load (s64) from %fixed-stack.18, align 16)
-  ; CHECK:   [[LD11:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.17 :: (load (s64) from %fixed-stack.17)
-  ; CHECK:   [[LD12:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.16 :: (load (s64) from %fixed-stack.16, align 16)
-  ; CHECK:   [[LD13:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.15 :: (load (s64) from %fixed-stack.15)
-  ; CHECK:   [[LD14:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.14 :: (load (s64) from %fixed-stack.14, align 16)
-  ; CHECK:   [[LD15:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.13 :: (load (s64) from %fixed-stack.13)
-  ; CHECK:   [[LD16:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.12 :: (load (s64) from %fixed-stack.12, align 16)
-  ; CHECK:   [[LD17:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.11 :: (load (s64) from %fixed-stack.11)
-  ; CHECK:   [[LD18:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.10 :: (load (s64) from %fixed-stack.10, align 16)
-  ; CHECK:   [[LD19:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.9 :: (load (s64) from %fixed-stack.9)
-  ; CHECK:   [[LD20:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.8 :: (load (s64) from %fixed-stack.8, align 16)
-  ; CHECK:   [[LD21:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.7 :: (load (s64) from %fixed-stack.7)
-  ; CHECK:   [[LD22:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.6 :: (load (s64) from %fixed-stack.6, align 16)
-  ; CHECK:   [[LD23:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.5 :: (load (s64) from %fixed-stack.5)
-  ; CHECK:   [[LD24:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.4 :: (load (s64) from %fixed-stack.4, align 16)
-  ; CHECK:   [[LD25:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.3 :: (load (s64) from %fixed-stack.3)
-  ; CHECK:   [[LD26:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.2 :: (load (s64) from %fixed-stack.2, align 16)
-  ; CHECK:   [[LD27:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.1 :: (load (s64) from %fixed-stack.1)
-  ; CHECK:   [[LD28:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0, align 16)
-  ; CHECK:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
-  ; CHECK:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[COPY7]], %subreg.sub_32
-  ; CHECK:   [[RLDICL:%[0-9]+]]:g8rc = RLDICL [[INSERT_SUBREG]], 0, 32
-  ; CHECK:   [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 [[COPY5]], -4
-  ; CHECK:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 [[COPY2]], -4
-  ; CHECK:   [[ADDI8_2:%[0-9]+]]:g8rc = ADDI8 [[COPY1]], -4
-  ; CHECK:   MTCTR8loop [[RLDICL]], implicit-def dead $ctr8
-  ; CHECK:   [[LI:%[0-9]+]]:gprc = LI 0
-  ; CHECK:   [[LI8_:%[0-9]+]]:g8rc = LI8 0
-  ; CHECK:   [[LIS:%[0-9]+]]:gprc = LIS 34952
-  ; CHECK:   [[ORI:%[0-9]+]]:gprc = ORI [[LIS]], 34953
-  ; CHECK:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI [[COPY8]], 3
-  ; CHECK:   [[CMPLWI1:%[0-9]+]]:crrc = CMPLWI [[COPY8]], 1
-  ; CHECK:   B %bb.3
-  ; CHECK: bb.2 (%ir-block.41):
-  ; CHECK:   [[LI8_1:%[0-9]+]]:g8rc = LI8 0
-  ; CHECK:   $x3 = COPY [[LI8_1]]
-  ; CHECK:   BLR8 implicit $lr8, implicit $rm, implicit $x3
-  ; CHECK: bb.3 (%ir-block.42):
-  ; CHECK:   successors: %bb.6(0x2aaaaaab), %bb.4(0x55555555)
-  ; CHECK:   [[PHI:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[LI8_]], %bb.1, %21, %bb.8
-  ; CHECK:   [[PHI1:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[LI8_]], %bb.1, %20, %bb.8
-  ; CHECK:   [[PHI2:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, %16, %bb.8
-  ; CHECK:   [[PHI3:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_]], %bb.1, %13, %bb.8
-  ; CHECK:   [[PHI4:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_1]], %bb.1, %11, %bb.8
-  ; CHECK:   [[PHI5:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_2]], %bb.1, %9, %bb.8
-  ; CHECK:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 4, [[PHI3]] :: (load (s32) from %ir.53, !tbaa !2)
-  ; CHECK:   [[COPY9:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[PHI1]].sub_32
-  ; CHECK:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 [[LWZU]], [[PHI2]]
-  ; CHECK:   BCC 76, [[CMPLWI]], %bb.6
-  ; CHECK:   B %bb.4
-  ; CHECK: bb.4 (%ir-block.42):
-  ; CHECK:   successors: %bb.5(0x40000001), %bb.7(0x3fffffff)
-  ; CHECK:   BCC 68, [[CMPLWI1]], %bb.7
-  ; CHECK:   B %bb.5
-  ; CHECK: bb.5 (%ir-block.59):
-  ; CHECK:   successors: %bb.8(0x80000000)
-  ; CHECK:   [[COPY10:%[0-9]+]]:gprc = COPY [[PHI1]].sub_32
-  ; CHECK:   [[RLWINM:%[0-9]+]]:gprc = RLWINM [[COPY10]], 1, 0, 30
-  ; CHECK:   B %bb.8
-  ; CHECK: bb.6 (%ir-block.62):
-  ; CHECK:   successors: %bb.8(0x80000000)
-  ; CHECK:   [[ADDI:%[0-9]+]]:gprc = nuw nsw ADDI [[COPY9]], 100
-  ; CHECK:   B %bb.8
-  ; CHECK: bb.7 (%ir-block.64):
-  ; CHECK:   successors: %bb.8(0x80000000)
-  ; CHECK:   [[MULHWU:%[0-9]+]]:gprc = MULHWU [[COPY9]], [[ORI]]
-  ; CHECK:   [[RLWINM1:%[0-9]+]]:gprc = RLWINM [[MULHWU]], 28, 4, 31
-  ; CHECK:   [[MULLI:%[0-9]+]]:gprc = nuw nsw MULLI [[RLWINM1]], 30
-  ; CHECK:   [[SUBF:%[0-9]+]]:gprc = SUBF [[MULLI]], [[COPY9]]
-  ; CHECK: bb.8 (%ir-block.65):
-  ; CHECK:   successors: %bb.3(0x7c000000), %bb.2(0x04000000)
-  ; CHECK:   [[PHI6:%[0-9]+]]:gprc = PHI [[ADDI]], %bb.6, [[RLWINM]], %bb.5, [[SUBF]], %bb.7
-  ; CHECK:   [[ADDI8_3:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI5]], 4
-  ; CHECK:   [[COPY11:%[0-9]+]]:g8rc = COPY [[ADDI8_3]]
-  ; CHECK:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI4]], 4
-  ; CHECK:   [[COPY12:%[0-9]+]]:g8rc = COPY [[ADDI8_4]]
-  ; CHECK:   [[COPY13:%[0-9]+]]:g8rc = COPY [[LWZU1]]
-  ; CHECK:   [[ADD4_1:%[0-9]+]]:gprc = nsw ADD4 [[PHI6]], [[ADD4_]]
-  ; CHECK:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[ADDI8_4]] :: (load (s32) from %ir.51, !tbaa !2)
-  ; CHECK:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_1]], [[LWZ]]
-  ; CHECK:   [[LWZ1:%[0-9]+]]:gprc = LWZ 0, [[ADDI8_3]] :: (load (s32) from %ir.49, !tbaa !2)
-  ; CHECK:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_2]], [[LWZ1]]
-  ; CHECK:   [[LWZX:%[0-9]+]]:gprc = LWZX [[COPY]], [[PHI]] :: (load (s32) from %ir.uglygep6061, !tbaa !2)
-  ; CHECK:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_3]], [[LWZX]]
-  ; CHECK:   [[LWZX1:%[0-9]+]]:gprc = LWZX [[LD28]], [[PHI]] :: (load (s32) from %ir.uglygep5859, !tbaa !2)
-  ; CHECK:   [[ADD4_5:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_4]], [[LWZX1]]
-  ; CHECK:   [[LWZX2:%[0-9]+]]:gprc = LWZX [[LD27]], [[PHI]] :: (load (s32) from %ir.uglygep5657, !tbaa !2)
-  ; CHECK:   [[ADD4_6:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_5]], [[LWZX2]]
-  ; CHECK:   [[LWZX3:%[0-9]+]]:gprc = LWZX [[LD26]], [[PHI]] :: (load (s32) from %ir.uglygep5455, !tbaa !2)
-  ; CHECK:   [[ADD4_7:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_6]], [[LWZX3]]
-  ; CHECK:   [[LWZX4:%[0-9]+]]:gprc = LWZX [[LD25]], [[PHI]] :: (load (s32) from %ir.uglygep5253, !tbaa !2)
-  ; CHECK:   [[ADD4_8:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_7]], [[LWZX4]]
-  ; CHECK:   [[LWZX5:%[0-9]+]]:gprc = LWZX [[LD24]], [[PHI]] :: (load (s32) from %ir.uglygep5051, !tbaa !2)
-  ; CHECK:   [[ADD4_9:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_8]], [[LWZX5]]
-  ; CHECK:   [[LWZX6:%[0-9]+]]:gprc = LWZX [[LD23]], [[PHI]] :: (load (s32) from %ir.uglygep4849, !tbaa !2)
-  ; CHECK:   [[ADD4_10:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_9]], [[LWZX6]]
-  ; CHECK:   [[LWZX7:%[0-9]+]]:gprc = LWZX [[LD22]], [[PHI]] :: (load (s32) from %ir.uglygep4647, !tbaa !2)
-  ; CHECK:   [[ADD4_11:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_10]], [[LWZX7]]
-  ; CHECK:   [[LWZX8:%[0-9]+]]:gprc = LWZX [[LD21]], [[PHI]] :: (load (s32) from %ir.uglygep4445, !tbaa !2)
-  ; CHECK:   [[ADD4_12:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_11]], [[LWZX8]]
-  ; CHECK:   [[LWZX9:%[0-9]+]]:gprc = LWZX [[LD20]], [[PHI]] :: (load (s32) from %ir.uglygep4243, !tbaa !2)
-  ; CHECK:   [[ADD4_13:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_12]], [[LWZX9]]
-  ; CHECK:   [[LWZX10:%[0-9]+]]:gprc = LWZX [[LD19]], [[PHI]] :: (load (s32) from %ir.uglygep4041, !tbaa !2)
-  ; CHECK:   [[ADD4_14:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_13]], [[LWZX10]]
-  ; CHECK:   [[LWZX11:%[0-9]+]]:gprc = LWZX [[LD18]], [[PHI]] :: (load (s32) from %ir.uglygep3839, !tbaa !2)
-  ; CHECK:   [[ADD4_15:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_14]], [[LWZX11]]
-  ; CHECK:   [[LWZX12:%[0-9]+]]:gprc = LWZX [[LD17]], [[PHI]] :: (load (s32) from %ir.uglygep3637, !tbaa !2)
-  ; CHECK:   [[ADD4_16:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_15]], [[LWZX12]]
-  ; CHECK:   [[LWZX13:%[0-9]+]]:gprc = LWZX [[LD16]], [[PHI]] :: (load (s32) from %ir.uglygep3435, !tbaa !2)
-  ; CHECK:   [[ADD4_17:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_16]], [[LWZX13]]
-  ; CHECK:   [[LWZX14:%[0-9]+]]:gprc = LWZX [[LD15]], [[PHI]] :: (load (s32) from %ir.uglygep3233, !tbaa !2)
-  ; CHECK:   [[ADD4_18:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_17]], [[LWZX14]]
-  ; CHECK:   [[LWZX15:%[0-9]+]]:gprc = LWZX [[LD14]], [[PHI]] :: (load (s32) from %ir.uglygep3031, !tbaa !2)
-  ; CHECK:   [[ADD4_19:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_18]], [[LWZX15]]
-  ; CHECK:   [[LWZX16:%[0-9]+]]:gprc = LWZX [[LD13]], [[PHI]] :: (load (s32) from %ir.uglygep2829, !tbaa !2)
-  ; CHECK:   [[ADD4_20:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_19]], [[LWZX16]]
-  ; CHECK:   [[LWZX17:%[0-9]+]]:gprc = LWZX [[LD12]], [[PHI]] :: (load (s32) from %ir.uglygep2627, !tbaa !2)
-  ; CHECK:   [[ADD4_21:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_20]], [[LWZX17]]
-  ; CHECK:   [[LWZX18:%[0-9]+]]:gprc = LWZX [[LD11]], [[PHI]] :: (load (s32) from %ir.uglygep2425, !tbaa !2)
-  ; CHECK:   [[ADD4_22:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_21]], [[LWZX18]]
-  ; CHECK:   [[LWZX19:%[0-9]+]]:gprc = LWZX [[LD10]], [[PHI]] :: (load (s32) from %ir.uglygep2223, !tbaa !2)
-  ; CHECK:   [[ADD4_23:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_22]], [[LWZX19]]
-  ; CHECK:   [[LWZX20:%[0-9]+]]:gprc = LWZX [[LD9]], [[PHI]] :: (load (s32) from %ir.uglygep2021, !tbaa !2)
-  ; CHECK:   [[ADD4_24:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_23]], [[LWZX20]]
-  ; CHECK:   [[LWZX21:%[0-9]+]]:gprc = LWZX [[LD8]], [[PHI]] :: (load (s32) from %ir.uglygep1819, !tbaa !2)
-  ; CHECK:   [[ADD4_25:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_24]], [[LWZX21]]
-  ; CHECK:   [[LWZX22:%[0-9]+]]:gprc = LWZX [[LD7]], [[PHI]] :: (load (s32) from %ir.uglygep1617, !tbaa !2)
-  ; CHECK:   [[ADD4_26:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_25]], [[LWZX22]]
-  ; CHECK:   [[LWZX23:%[0-9]+]]:gprc = LWZX [[LD6]], [[PHI]] :: (load (s32) from %ir.uglygep1415, !tbaa !2)
-  ; CHECK:   [[ADD4_27:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_26]], [[LWZX23]]
-  ; CHECK:   [[LWZX24:%[0-9]+]]:gprc = LWZX [[LD5]], [[PHI]] :: (load (s32) from %ir.uglygep1213, !tbaa !2)
-  ; CHECK:   [[ADD4_28:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_27]], [[LWZX24]]
-  ; CHECK:   [[LWZX25:%[0-9]+]]:gprc = LWZX [[LD4]], [[PHI]] :: (load (s32) from %ir.uglygep1011, !tbaa !2)
-  ; CHECK:   [[ADD4_29:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_28]], [[LWZX25]]
-  ; CHECK:   [[LWZX26:%[0-9]+]]:gprc = LWZX [[LD3]], [[PHI]] :: (load (s32) from %ir.uglygep89, !tbaa !2)
-  ; CHECK:   [[ADD4_30:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_29]], [[LWZX26]]
-  ; CHECK:   [[LWZX27:%[0-9]+]]:gprc = LWZX [[LD2]], [[PHI]] :: (load (s32) from %ir.uglygep67, !tbaa !2)
-  ; CHECK:   [[ADD4_31:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_30]], [[LWZX27]]
-  ; CHECK:   [[LWZX28:%[0-9]+]]:gprc = LWZX [[LD1]], [[PHI]] :: (load (s32) from %ir.uglygep45, !tbaa !2)
-  ; CHECK:   [[ADD4_32:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_31]], [[LWZX28]]
-  ; CHECK:   [[LWZX29:%[0-9]+]]:gprc = LWZX [[LD]], [[PHI]] :: (load (s32) from %ir.uglygep23, !tbaa !2)
-  ; CHECK:   [[ADD4_33:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_32]], [[LWZX29]]
-  ; CHECK:   STWX [[ADD4_33]], [[COPY4]], [[PHI]] :: (store (s32) into %ir.uglygep1, !tbaa !2)
-  ; CHECK:   [[ADDI8_5:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI1]], 1
-  ; CHECK:   [[ADDI8_6:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI]], 4
-  ; CHECK:   BDNZ8 %bb.3, implicit-def dead $ctr8, implicit $ctr8
-  ; CHECK:   B %bb.2
+  ; CHECK-NEXT:   successors: %bb.1(0x50000000), %bb.2(0x30000000)
+  ; CHECK-NEXT:   liveins: $x3, $x5, $x6, $x7, $x8, $x9, $x10
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x10
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x9
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x8
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:g8rc = COPY $x7
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x6
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:g8rc_and_g8rc_nox0 = COPY $x5
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:g8rc = COPY $x3
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gprc = COPY [[COPY3]].sub_32
+  ; CHECK-NEXT:   [[CMPWI:%[0-9]+]]:crrc = CMPWI [[COPY7]], 1
+  ; CHECK-NEXT:   BCC 12, [[CMPWI]], %bb.2
+  ; CHECK-NEXT:   B %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (%ir-block.39):
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:gprc = COPY [[COPY6]].sub_32
+  ; CHECK-NEXT:   [[LD:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.28 :: (load (s64) from %fixed-stack.28, align 16)
+  ; CHECK-NEXT:   [[LD1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.27 :: (load (s64) from %fixed-stack.27)
+  ; CHECK-NEXT:   [[LD2:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.26 :: (load (s64) from %fixed-stack.26, align 16)
+  ; CHECK-NEXT:   [[LD3:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.25 :: (load (s64) from %fixed-stack.25)
+  ; CHECK-NEXT:   [[LD4:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.24 :: (load (s64) from %fixed-stack.24, align 16)
+  ; CHECK-NEXT:   [[LD5:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.23 :: (load (s64) from %fixed-stack.23)
+  ; CHECK-NEXT:   [[LD6:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.22 :: (load (s64) from %fixed-stack.22, align 16)
+  ; CHECK-NEXT:   [[LD7:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.21 :: (load (s64) from %fixed-stack.21)
+  ; CHECK-NEXT:   [[LD8:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.20 :: (load (s64) from %fixed-stack.20, align 16)
+  ; CHECK-NEXT:   [[LD9:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.19 :: (load (s64) from %fixed-stack.19)
+  ; CHECK-NEXT:   [[LD10:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.18 :: (load (s64) from %fixed-stack.18, align 16)
+  ; CHECK-NEXT:   [[LD11:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.17 :: (load (s64) from %fixed-stack.17)
+  ; CHECK-NEXT:   [[LD12:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.16 :: (load (s64) from %fixed-stack.16, align 16)
+  ; CHECK-NEXT:   [[LD13:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.15 :: (load (s64) from %fixed-stack.15)
+  ; CHECK-NEXT:   [[LD14:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.14 :: (load (s64) from %fixed-stack.14, align 16)
+  ; CHECK-NEXT:   [[LD15:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.13 :: (load (s64) from %fixed-stack.13)
+  ; CHECK-NEXT:   [[LD16:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.12 :: (load (s64) from %fixed-stack.12, align 16)
+  ; CHECK-NEXT:   [[LD17:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.11 :: (load (s64) from %fixed-stack.11)
+  ; CHECK-NEXT:   [[LD18:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.10 :: (load (s64) from %fixed-stack.10, align 16)
+  ; CHECK-NEXT:   [[LD19:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.9 :: (load (s64) from %fixed-stack.9)
+  ; CHECK-NEXT:   [[LD20:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.8 :: (load (s64) from %fixed-stack.8, align 16)
+  ; CHECK-NEXT:   [[LD21:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.7 :: (load (s64) from %fixed-stack.7)
+  ; CHECK-NEXT:   [[LD22:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.6 :: (load (s64) from %fixed-stack.6, align 16)
+  ; CHECK-NEXT:   [[LD23:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.5 :: (load (s64) from %fixed-stack.5)
+  ; CHECK-NEXT:   [[LD24:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.4 :: (load (s64) from %fixed-stack.4, align 16)
+  ; CHECK-NEXT:   [[LD25:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.3 :: (load (s64) from %fixed-stack.3)
+  ; CHECK-NEXT:   [[LD26:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.2 :: (load (s64) from %fixed-stack.2, align 16)
+  ; CHECK-NEXT:   [[LD27:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.1 :: (load (s64) from %fixed-stack.1)
+  ; CHECK-NEXT:   [[LD28:%[0-9]+]]:g8rc_and_g8rc_nox0 = LD 0, %fixed-stack.0 :: (load (s64) from %fixed-stack.0, align 16)
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:g8rc = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[INSERT_SUBREG:%[0-9]+]]:g8rc = INSERT_SUBREG [[DEF]], [[COPY7]], %subreg.sub_32
+  ; CHECK-NEXT:   [[RLDICL:%[0-9]+]]:g8rc = RLDICL [[INSERT_SUBREG]], 0, 32
+  ; CHECK-NEXT:   [[ADDI8_:%[0-9]+]]:g8rc = ADDI8 [[COPY5]], -4
+  ; CHECK-NEXT:   [[ADDI8_1:%[0-9]+]]:g8rc = ADDI8 [[COPY2]], -4
+  ; CHECK-NEXT:   [[ADDI8_2:%[0-9]+]]:g8rc = ADDI8 [[COPY1]], -4
+  ; CHECK-NEXT:   MTCTR8loop [[RLDICL]], implicit-def dead $ctr8
+  ; CHECK-NEXT:   [[LI:%[0-9]+]]:gprc = LI 0
+  ; CHECK-NEXT:   [[LI8_:%[0-9]+]]:g8rc = LI8 0
+  ; CHECK-NEXT:   [[LIS:%[0-9]+]]:gprc = LIS 34952
+  ; CHECK-NEXT:   [[ORI:%[0-9]+]]:gprc = ORI [[LIS]], 34953
+  ; CHECK-NEXT:   [[CMPLWI:%[0-9]+]]:crrc = CMPLWI [[COPY8]], 3
+  ; CHECK-NEXT:   [[CMPLWI1:%[0-9]+]]:crrc = CMPLWI [[COPY8]], 1
+  ; CHECK-NEXT:   B %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2 (%ir-block.41):
+  ; CHECK-NEXT:   [[LI8_1:%[0-9]+]]:g8rc = LI8 0
+  ; CHECK-NEXT:   $x3 = COPY [[LI8_1]]
+  ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm, implicit $x3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3 (%ir-block.42):
+  ; CHECK-NEXT:   successors: %bb.6(0x2aaaaaab), %bb.4(0x55555555)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[LI8_]], %bb.1, %53, %bb.8
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[LI8_]], %bb.1, %55, %bb.8
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:gprc = PHI [[LI]], %bb.1, %57, %bb.8
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_]], %bb.1, %59, %bb.8
+  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_1]], %bb.1, %61, %bb.8
+  ; CHECK-NEXT:   [[PHI5:%[0-9]+]]:g8rc_and_g8rc_nox0 = PHI [[ADDI8_2]], %bb.1, %63, %bb.8
+  ; CHECK-NEXT:   [[LWZU:%[0-9]+]]:gprc, [[LWZU1:%[0-9]+]]:g8rc_and_g8rc_nox0 = LWZU 4, [[PHI3]] :: (load (s32) from %ir.53, !tbaa !2)
+  ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:gprc_and_gprc_nor0 = COPY [[PHI1]].sub_32
+  ; CHECK-NEXT:   [[ADD4_:%[0-9]+]]:gprc = nsw ADD4 [[LWZU]], [[PHI2]]
+  ; CHECK-NEXT:   BCC 76, [[CMPLWI]], %bb.6
+  ; CHECK-NEXT:   B %bb.4
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.4 (%ir-block.42):
+  ; CHECK-NEXT:   successors: %bb.5(0x40000001), %bb.7(0x3fffffff)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   BCC 68, [[CMPLWI1]], %bb.7
+  ; CHECK-NEXT:   B %bb.5
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.5 (%ir-block.59):
+  ; CHECK-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:gprc = COPY [[PHI1]].sub_32
+  ; CHECK-NEXT:   [[RLWINM:%[0-9]+]]:gprc = RLWINM [[COPY10]], 1, 0, 30
+  ; CHECK-NEXT:   B %bb.8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.6 (%ir-block.62):
+  ; CHECK-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[ADDI:%[0-9]+]]:gprc = nuw nsw ADDI [[COPY9]], 100
+  ; CHECK-NEXT:   B %bb.8
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.7 (%ir-block.64):
+  ; CHECK-NEXT:   successors: %bb.8(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[MULHWU:%[0-9]+]]:gprc = MULHWU [[COPY9]], [[ORI]]
+  ; CHECK-NEXT:   [[RLWINM1:%[0-9]+]]:gprc = RLWINM [[MULHWU]], 28, 4, 31
+  ; CHECK-NEXT:   [[MULLI:%[0-9]+]]:gprc = nuw nsw MULLI [[RLWINM1]], 30
+  ; CHECK-NEXT:   [[SUBF:%[0-9]+]]:gprc = SUBF [[MULLI]], [[COPY9]]
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.8 (%ir-block.65):
+  ; CHECK-NEXT:   successors: %bb.3(0x7c000000), %bb.2(0x04000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[PHI6:%[0-9]+]]:gprc = PHI [[ADDI]], %bb.6, [[RLWINM]], %bb.5, [[SUBF]], %bb.7
+  ; CHECK-NEXT:   [[ADDI8_3:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI5]], 4
+  ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:g8rc = COPY [[ADDI8_3]]
+  ; CHECK-NEXT:   [[ADDI8_4:%[0-9]+]]:g8rc_and_g8rc_nox0 = ADDI8 [[PHI4]], 4
+  ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:g8rc = COPY [[ADDI8_4]]
+  ; CHECK-NEXT:   [[COPY13:%[0-9]+]]:g8rc = COPY [[LWZU1]]
+  ; CHECK-NEXT:   [[ADD4_1:%[0-9]+]]:gprc = nsw ADD4 [[PHI6]], [[ADD4_]]
+  ; CHECK-NEXT:   [[LWZ:%[0-9]+]]:gprc = LWZ 0, [[ADDI8_4]] :: (load (s32) from %ir.51, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_2:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_1]], [[LWZ]]
+  ; CHECK-NEXT:   [[LWZ1:%[0-9]+]]:gprc = LWZ 0, [[ADDI8_3]] :: (load (s32) from %ir.49, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_3:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_2]], [[LWZ1]]
+  ; CHECK-NEXT:   [[LWZX:%[0-9]+]]:gprc = LWZX [[COPY]], [[PHI]] :: (load (s32) from %ir.uglygep6061, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_4:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_3]], [[LWZX]]
+  ; CHECK-NEXT:   [[LWZX1:%[0-9]+]]:gprc = LWZX [[LD28]], [[PHI]] :: (load (s32) from %ir.uglygep5859, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_5:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_4]], [[LWZX1]]
+  ; CHECK-NEXT:   [[LWZX2:%[0-9]+]]:gprc = LWZX [[LD27]], [[PHI]] :: (load (s32) from %ir.uglygep5657, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_6:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_5]], [[LWZX2]]
+  ; CHECK-NEXT:   [[LWZX3:%[0-9]+]]:gprc = LWZX [[LD26]], [[PHI]] :: (load (s32) from %ir.uglygep5455, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_7:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_6]], [[LWZX3]]
+  ; CHECK-NEXT:   [[LWZX4:%[0-9]+]]:gprc = LWZX [[LD25]], [[PHI]] :: (load (s32) from %ir.uglygep5253, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_8:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_7]], [[LWZX4]]
+  ; CHECK-NEXT:   [[LWZX5:%[0-9]+]]:gprc = LWZX [[LD24]], [[PHI]] :: (load (s32) from %ir.uglygep5051, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_9:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_8]], [[LWZX5]]
+  ; CHECK-NEXT:   [[LWZX6:%[0-9]+]]:gprc = LWZX [[LD23]], [[PHI]] :: (load (s32) from %ir.uglygep4849, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_10:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_9]], [[LWZX6]]
+  ; CHECK-NEXT:   [[LWZX7:%[0-9]+]]:gprc = LWZX [[LD22]], [[PHI]] :: (load (s32) from %ir.uglygep4647, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_11:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_10]], [[LWZX7]]
+  ; CHECK-NEXT:   [[LWZX8:%[0-9]+]]:gprc = LWZX [[LD21]], [[PHI]] :: (load (s32) from %ir.uglygep4445, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_12:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_11]], [[LWZX8]]
+  ; CHECK-NEXT:   [[LWZX9:%[0-9]+]]:gprc = LWZX [[LD20]], [[PHI]] :: (load (s32) from %ir.uglygep4243, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_13:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_12]], [[LWZX9]]
+  ; CHECK-NEXT:   [[LWZX10:%[0-9]+]]:gprc = LWZX [[LD19]], [[PHI]] :: (load (s32) from %ir.uglygep4041, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_14:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_13]], [[LWZX10]]
+  ; CHECK-NEXT:   [[LWZX11:%[0-9]+]]:gprc = LWZX [[LD18]], [[PHI]] :: (load (s32) from %ir.uglygep3839, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_15:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_14]], [[LWZX11]]
+  ; CHECK-NEXT:   [[LWZX12:%[0-9]+]]:gprc = LWZX [[LD17]], [[PHI]] :: (load (s32) from %ir.uglygep3637, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_16:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_15]], [[LWZX12]]
+  ; CHECK-NEXT:   [[LWZX13:%[0-9]+]]:gprc = LWZX [[LD16]], [[PHI]] :: (load (s32) from %ir.uglygep3435, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_17:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_16]], [[LWZX13]]
+  ; CHECK-NEXT:   [[LWZX14:%[0-9]+]]:gprc = LWZX [[LD15]], [[PHI]] :: (load (s32) from %ir.uglygep3233, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_18:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_17]], [[LWZX14]]
+  ; CHECK-NEXT:   [[LWZX15:%[0-9]+]]:gprc = LWZX [[LD14]], [[PHI]] :: (load (s32) from %ir.uglygep3031, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_19:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_18]], [[LWZX15]]
+  ; CHECK-NEXT:   [[LWZX16:%[0-9]+]]:gprc = LWZX [[LD13]], [[PHI]] :: (load (s32) from %ir.uglygep2829, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_20:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_19]], [[LWZX16]]
+  ; CHECK-NEXT:   [[LWZX17:%[0-9]+]]:gprc = LWZX [[LD12]], [[PHI]] :: (load (s32) from %ir.uglygep2627, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_21:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_20]], [[LWZX17]]
+  ; CHECK-NEXT:   [[LWZX18:%[0-9]+]]:gprc = LWZX [[LD11]], [[PHI]] :: (load (s32) from %ir.uglygep2425, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_22:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_21]], [[LWZX18]]
+  ; CHECK-NEXT:   [[LWZX19:%[0-9]+]]:gprc = LWZX [[LD10]], [[PHI]] :: (load (s32) from %ir.uglygep2223, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_23:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_22]], [[LWZX19]]
+  ; CHECK-NEXT:   [[LWZX20:%[0-9]+]]:gprc = LWZX [[LD9]], [[PHI]] :: (load (s32) from %ir.uglygep2021, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_24:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_23]], [[LWZX20]]
+  ; CHECK-NEXT:   [[LWZX21:%[0-9]+]]:gprc = LWZX [[LD8]], [[PHI]] :: (load (s32) from %ir.uglygep1819, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_25:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_24]], [[LWZX21]]
+  ; CHECK-NEXT:   [[LWZX22:%[0-9]+]]:gprc = LWZX [[LD7]], [[PHI]] :: (load (s32) from %ir.uglygep1617, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_26:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_25]], [[LWZX22]]
+  ; CHECK-NEXT:   [[LWZX23:%[0-9]+]]:gprc = LWZX [[LD6]], [[PHI]] :: (load (s32) from %ir.uglygep1415, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_27:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_26]], [[LWZX23]]
+  ; CHECK-NEXT:   [[LWZX24:%[0-9]+]]:gprc = LWZX [[LD5]], [[PHI]] :: (load (s32) from %ir.uglygep1213, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_28:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_27]], [[LWZX24]]
+  ; CHECK-NEXT:   [[LWZX25:%[0-9]+]]:gprc = LWZX [[LD4]], [[PHI]] :: (load (s32) from %ir.uglygep1011, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_29:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_28]], [[LWZX25]]
+  ; CHECK-NEXT:   [[LWZX26:%[0-9]+]]:gprc = LWZX [[LD3]], [[PHI]] :: (load (s32) from %ir.uglygep89, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_30:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_29]], [[LWZX26]]
+  ; CHECK-NEXT:   [[LWZX27:%[0-9]+]]:gprc = LWZX [[LD2]], [[PHI]] :: (load (s32) from %ir.uglygep67, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_31:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_30]], [[LWZX27]]
+  ; CHECK-NEXT:   [[LWZX28:%[0-9]+]]:gprc = LWZX [[LD1]], [[PHI]] :: (load (s32) from %ir.uglygep45, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_32:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_31]], [[LWZX28]]
+  ; CHECK-NEXT:   [[LWZX29:%[0-9]+]]:gprc = LWZX [[LD]], [[PHI]] :: (load (s32) from %ir.uglygep23, !tbaa !2)
+  ; CHECK-NEXT:   [[ADD4_33:%[0-9]+]]:gprc = nsw ADD4 [[ADD4_32]], [[LWZX29]]
+  ; CHECK-NEXT:   STWX [[ADD4_33]], [[COPY4]], [[PHI]] :: (store (s32) into %ir.uglygep1, !tbaa !2)
+  ; CHECK-NEXT:   [[ADDI8_5:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI1]], 1
+  ; CHECK-NEXT:   [[ADDI8_6:%[0-9]+]]:g8rc = nuw nsw ADDI8 [[PHI]], 4
+  ; CHECK-NEXT:   BDNZ8 %bb.3, implicit-def dead $ctr8, implicit $ctr8
+  ; CHECK-NEXT:   B %bb.2
   bb.0 (%ir-block.37):
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $x3, $x5, $x6, $x7, $x8, $x9, $x10

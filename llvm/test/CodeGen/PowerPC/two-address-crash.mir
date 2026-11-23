@@ -27,19 +27,6 @@ selected:        false
 failedISel:      false
 tracksRegLiveness: true
 hasWinCFI:       false
-registers:
-  - { id: 0, class: gprc, preferred-register: '' }
-  - { id: 1, class: gprc, preferred-register: '' }
-  - { id: 2, class: gprc, preferred-register: '' }
-  - { id: 3, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 4, class: gprc, preferred-register: '' }
-  - { id: 5, class: crrc, preferred-register: '' }
-  - { id: 6, class: crbitrc, preferred-register: '' }
-  - { id: 7, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 8, class: gprc_and_gprc_nor0, preferred-register: '' }
-  - { id: 9, class: gprc, preferred-register: '' }
-  - { id: 10, class: gprc, preferred-register: '' }
-  - { id: 11, class: gprc, preferred-register: '' }
 liveins:
   - { reg: '$r3', virtual-reg: '%0' }
   - { reg: '$r4', virtual-reg: '%1' }

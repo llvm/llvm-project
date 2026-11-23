@@ -12,15 +12,12 @@
 ---
 name: test
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: gpr64 }
 body: |
   bb.0:
    ; CHECK-LABEL: bb.0
    ; CHECK-NEXT:   %1:gpr64(s64) = G_CONSTANT i64 0
    ; CHECK-NEXT:   RET %1(s64)
-   DBG_VALUE %0, $noreg, $noreg, $noreg, $noreg
-   %1(s64) = G_CONSTANT i64 0
+   DBG_VALUE %0:_, $noreg, $noreg, $noreg, $noreg
+   %1:gpr64(s64) = G_CONSTANT i64 0
    RET %1
 ...

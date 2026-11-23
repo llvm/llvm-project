@@ -41,6 +41,11 @@ function(add_compiler_rt_windows_version_resource_file OUT_VAR RESOURCE_VAR name
 endfunction()
 
 function(set_compiler_rt_windows_version_resource_properties name resource_file)
+  cmake_parse_arguments(ARG "" "FILE_DESCRIPTION" "" ${ARGN})
+  if(NOT DEFINED ARG_FILE_DESCRIPTION OR "${ARG_FILE_DESCRIPTION}" STREQUAL "")
+    set(ARG_FILE_DESCRIPTION "compiler-rt runtime")
+  endif()
+
   if(DEFINED PACKAGE_VERSION AND NOT "${PACKAGE_VERSION}" STREQUAL "")
     set(version_string "${PACKAGE_VERSION}")
   else()
@@ -58,6 +63,9 @@ function(set_compiler_rt_windows_version_resource_properties name resource_file)
                "RC_VERSION_FIELD_4=0"
                "RC_FILE_VERSION=\"${version_string}\""
                "RC_INTERNAL_NAME=\"${name}\""
+               "RC_FILE_DESCRIPTION=\"${ARG_FILE_DESCRIPTION}\""
+               "RC_COPYRIGHT=\"Copyright (c) LLVM contributors.\""
+               "RC_ORIGINAL_FILENAME=\"$<TARGET_FILE_NAME:${name}>\""
                "RC_PRODUCT_NAME=\"compiler-rt\""
                "RC_PRODUCT_VERSION=\"${version_string}\"")
 endfunction()
@@ -205,7 +213,8 @@ endmacro()
 #                         PARENT_TARGET <convenience parent target>
 #                         ADDITIONAL_HEADERS <header files>
 #                         C_STANDARD <version>
-#                         CXX_STANDARD <version>)
+#                         CXX_STANDARD <version>
+#                         FILE_DESCRIPTION <description>)
 function(add_compiler_rt_runtime name type)
   if(NOT type MATCHES "^(OBJECT|STATIC|SHARED|MODULE)$")
     message(FATAL_ERROR
@@ -214,7 +223,7 @@ function(add_compiler_rt_runtime name type)
   endif()
   cmake_parse_arguments(LIB
     ""
-    "PARENT_TARGET;C_STANDARD;CXX_STANDARD"
+    "PARENT_TARGET;C_STANDARD;CXX_STANDARD;FILE_DESCRIPTION"
     "OS;ARCHS;SOURCES;CFLAGS;LINK_FLAGS;DEFS;DEPS;LINK_LIBS;OBJECT_LIBS;ADDITIONAL_HEADERS"
     ${ARGN})
   set(libnames)
@@ -409,7 +418,7 @@ function(add_compiler_rt_runtime name type)
       add_library(${libname} ${type} ${sources_${libname}})
       if(windows_resource_file)
         set_compiler_rt_windows_version_resource_properties(${libname}
-          ${windows_resource_file})
+          ${windows_resource_file} FILE_DESCRIPTION "${LIB_FILE_DESCRIPTION}")
       endif()
       set_target_compile_flags(${libname} ${extra_cflags_${libname}})
       set_target_link_flags(${libname} ${extra_link_flags_${libname}})
@@ -454,7 +463,8 @@ function(add_compiler_rt_runtime name type)
         endif()
       endif()
       find_program(CODESIGN codesign)
-      if (APPLE AND NOT CMAKE_LINKER MATCHES ".*lld.*" AND CODESIGN)
+      get_filename_component(CLANG_LINKER_NAME "${CMAKE_LINKER}" NAME)
+      if (APPLE AND NOT CLANG_LINKER_NAME MATCHES "lld" AND CODESIGN)
         # Apple's linker signs the resulting dylib with an ad-hoc code signature in
         # most situations, except:
         # 1. Versions of ld64 prior to ld64-609 in Xcode 12 predate this behavior.
@@ -485,6 +495,7 @@ function(add_compiler_rt_runtime name type)
           COMMAND_EXPAND_LISTS
         )
       endif()
+      unset(CLANG_LINKER_NAME)
     endif()
 
     set(parent_target_arg)

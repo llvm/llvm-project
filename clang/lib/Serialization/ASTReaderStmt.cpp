@@ -2978,6 +2978,11 @@ void ASTStmtReader::VisitOMPTargetParallelGenericLoopDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPTargetGenericLoopDirective(
+    OMPTargetGenericLoopDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // OpenACC Constructs/Directives.
 //===----------------------------------------------------------------------===//
@@ -4244,6 +4249,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPTargetParallelGenericLoopDirective::CreateEmpty(
           Context, NumClauses, CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TARGET_GENERIC_LOOP_DIRECTIVE: {
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields];
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTargetGenericLoopDirective::CreateEmpty(Context, NumClauses,
+                                                     CollapsedNum, Empty);
       break;
     }
 

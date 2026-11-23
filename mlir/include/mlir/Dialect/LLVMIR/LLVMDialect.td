@@ -57,6 +57,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNestAttrName() { return "llvm.nest"; }
     static StringRef getNoAliasAttrName() { return "llvm.noalias"; }
     static StringRef getNoCaptureAttrName() { return "llvm.nocapture"; }
+    static StringRef getNoExtAttrName() { return "llvm.noext"; }
     static StringRef getNoFreeAttrName() { return "llvm.nofree"; }
     static StringRef getNoFreeObjAttrName() { return "llvm.nofreeobj"; }
     static StringRef getNonNullAttrName() { return "llvm.nonnull"; }

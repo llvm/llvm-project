@@ -5629,16 +5629,35 @@ Value *llvm::simplifyExtractElementInst(Value *Vec, Value *Idx,
 /// type SrcTy is poison.
 static bool isPoisonBitRange(Value *Offset, Type *Ty, Type *SrcTy,
                              const SimplifyQuery &Q) {
+  Constant *C = dyn_cast<Constant>(Offset);
+  if (!C)
+    return false;
+
   // A poison offset makes the result poison. An undef offset can be chosen to
   // be out of range, which also makes the result poison.
-  if (isa<PoisonValue>(Offset) || Q.isUndefValue(Offset))
+  if (isa<PoisonValue>(C) || Q.isUndefValue(C))
     return true;
 
-  // Accessing bits past the end of the value is poison.
+  // Accessing bits past the end of the value is poison. This covers scalars and
+  // fixed/scalable vectors with splat constants.
   uint64_t Off;
-  return match(Offset, m_ConstantInt(Off)) &&
-         Off + Q.DL.getTypeSizeInBits(Ty).getFixedValue() >
-             Q.DL.getTypeSizeInBits(SrcTy).getFixedValue();
+  if (match(C, m_ConstantInt(Off)) &&
+      Off + Q.DL.getTypeSizeInBits(Ty->getScalarType()).getFixedValue() >
+          Q.DL.getTypeSizeInBits(SrcTy->getScalarType()).getFixedValue())
+    return true;
+
+  // Try harder for fixed-length vectors:
+  // If every lane's offset is out of range or poison, the result is poison.
+  if (isa<ConstantVector, ConstantDataVector>(C)) {
+    for (unsigned I = 0,
+                  E = cast<FixedVectorType>(C->getType())->getNumElements();
+         I != E; ++I)
+      if (!isPoisonBitRange(C->getAggregateElement(I), Ty, SrcTy, Q))
+        return false;
+    return true;
+  }
+
+  return false;
 }
 
 /// Given operands for a BitInsertInst, see if we can fold the result.
@@ -7044,6 +7063,15 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
                                       const SimplifyQuery &Q) {
   unsigned BitWidth = ReturnType->getScalarSizeInBits();
   switch (IID) {
+  case Intrinsic::vector_shuffle:
+    // A poison mask selects poison in every lane.
+    if (isa<PoisonValue>(Op1))
+      return PoisonValue::get(ReturnType);
+    // The only in-range index into a one-element vector is 0, and other
+    // indices select poison, so the shuffle is its source.
+    if (cast<VectorType>(ReturnType)->getElementCount().isScalar())
+      return Op0;
+    break;
   case Intrinsic::get_active_lane_mask: {
     if (match(Op1, m_Zero()))
       return ConstantInt::getFalse(ReturnType);
@@ -7300,6 +7328,26 @@ static Value *simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // X - 0 -> X
     if (match(Op1, m_Zero()))
       return Op0;
+    break;
+  case Intrinsic::ushl_sat:
+  case Intrinsic::sshl_sat:
+    if (isPoisonShift(Op1, Q))
+      return PoisonValue::get(ReturnType);
+    // X << 0 -> X
+    if (match(Op1, m_Zero()))
+      return Op0;
+    // 0 << Y -> 0
+    if (match(Op0, m_Zero()))
+      return Op0;
+    if (IID == Intrinsic::ushl_sat) {
+      // -1 u<< Y -> -1
+      if (match(Op0, m_AllOnes()))
+        return Op0;
+    } else {
+      // SINT_MAX s<< Y -> SINT_MAX, SINT_MIN s<< Y -> SINT_MIN
+      if (match(Op0, m_MaxSignedValue()) || match(Op0, m_SignMask()))
+        return Op0;
+    }
     break;
   case Intrinsic::load_relative:
     if (auto *C0 = dyn_cast<Constant>(Op0))
@@ -7742,9 +7790,11 @@ static Value *simplifyIntrinsic(CallBase *Call, ArrayRef<Value *> Args,
 static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
                                   const SimplifyQuery &Q) {
   auto *F = Call->getCalledFunction();
-  if (!F || !canConstantFoldCallTo(Call, F, Q.TLI))
+  if (!F)
     return nullptr;
 
+  // Check for constant arguments before querying canConstantFoldCallTo.
+  // Checking arguments is cheaper than TLI classification and attribute checks.
   SmallVector<Constant *, 4> ConstantArgs;
   ConstantArgs.reserve(Args.size());
   for (Value *Arg : Args) {
@@ -7756,6 +7806,10 @@ static Value *tryConstantFoldCall(CallBase *Call, ArrayRef<Value *> Args,
     }
     ConstantArgs.push_back(C);
   }
+
+  // Check if this is a known library function that we know how to fold.
+  if (!canConstantFoldCallTo(Call, F, Q.TLI))
+    return nullptr;
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
 }

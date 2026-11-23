@@ -64,6 +64,8 @@ public:
   bool SelectGlobalAddress(SDValue &N, SDValue &R, bool UseGP, Align Alignment);
   bool SelectAddrFI(SDValue &N, SDValue &R);
   bool DetectUseSxtw(SDValue &N, SDValue &R);
+  bool DetectUseSxth(SDValue &N, SDValue &R);
+  bool DetectUseZxth(SDValue &N, SDValue &R);
 
   inline bool SelectAnyImm0(SDValue &N, SDValue &R);
   inline bool SelectAnyImm1(SDValue &N, SDValue &R);

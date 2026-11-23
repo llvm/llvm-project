@@ -1,6 +1,14 @@
-// If there is no `-fspv-extension`, enable all extensions.
-// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s 2>&1 | FileCheck %s -check-prefix=ALL
+// If there is no `-fspv-extension`, enable the extensions DXC implements, and
+// not SPV_KHR_fma, SPV_KHR_float_controls2 or SPV_EXT_long_vector.
+// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s 2>&1 | FileCheck %s -check-prefix=DEFAULT --implicit-check-not=SPV_KHR_fma --implicit-check-not=SPV_KHR_float_controls2 --implicit-check-not=SPV_EXT_long_vector --implicit-check-not=-spirv-ext=all
+// DEFAULT: "-spirv-ext={{(\+SPV_[a-zA-Z0-9_]+,?)+}}"
+
+// `-fspv-extension=all` enables every extension the backend supports.
+// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=all 2>&1 | FileCheck %s -check-prefix=ALL
 // ALL: "-spirv-ext=all"
+
+// RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=all -fspv-extension=SPV_TEST1 2>&1 | FileCheck %s -check-prefix=ALL2
+// ALL2: "-spirv-ext=all,+SPV_TEST1"
 
 // Convert the `-fspv-extension` into `spirv-ext`.
 // RUN: %clang_dxc -spirv -Tlib_6_7 -### %s -fspv-extension=SPV_TEST1 2>&1 | FileCheck %s -check-prefix=TEST1

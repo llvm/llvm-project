@@ -25,7 +25,7 @@ S s;
 void h() { throw 1; }
 
 // CIR: cir.func private @__cxa_guard_acquire({{.*}}) -> !s32i attributes {runtime_func}
-// CIR: cir.func internal private @__cxx_global_var_init() {
+// CIR: cir.func internal private @__cxx_global_var_init(){{.*}} {
 
 // Classic codegen gives some runtime functions nounwind, which CIR does not
 // do yet.
@@ -44,4 +44,7 @@ void h() { throw 1; }
 
 // LLVM-DAG: attributes #[[USER]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
 // LLVM-DAG: attributes #[[DECL]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
-// LLVM-DAG: attributes #[[INIT]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"
+// CIR gives the init functions the same attributes as the declaration of `f`,
+// so they share one attribute group, which the check above for DECL covers;
+// a DAG check cannot match that line twice.
+// OGCG-DAG: attributes #[[INIT]] = { {{.*}}"no-trapping-math"="true" "stack-protector-buffer-size"="8"

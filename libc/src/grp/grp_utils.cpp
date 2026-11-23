@@ -26,12 +26,12 @@
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/setgroups.h"
 #include "src/__support/ctype_utils.h"
+#include "src/__support/dynamic_buffer.h"
 #include "src/__support/error_or.h"
 #include "src/__support/libc_assert.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/pwd/dynamic_buffer.h"
 #include "src/__support/pwd/field_tokenizer.h"
 #include "src/__support/pwd/flat_file_db.h"
 #include "src/__support/str_to_integer.h"
@@ -181,7 +181,7 @@ LIBC_CONSTINIT pwd::FlatFileDatabase<struct group>
 // record read so far, and is reused without shrinking. endgrent() closes the
 // file stream without freeing the buffer so that pointers returned before
 // endgrent() remain valid until the next non-reentrant call.
-LIBC_CONSTINIT pwd::DynamicBuffer line_buffer;
+LIBC_CONSTINIT DynamicBuffer line_buffer;
 LIBC_CONSTINIT struct group grp_entry = {};
 
 // The lookups are shared between the caller-supplied fixed buffer used by the
@@ -282,7 +282,7 @@ ErrorOr<void> populate_gid_list(cpp::string_view user, gid_t group,
 
   pwd::ScopedFlatFileDatabase<struct group> local_db(path ? path
                                                           : group_file_path);
-  pwd::ScopedDynamicBuffer buffer;
+  ScopedDynamicBuffer buffer;
   struct group entry = {};
 
   const auto open_res = local_db.setdb();

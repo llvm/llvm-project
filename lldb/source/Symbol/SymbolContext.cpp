@@ -832,6 +832,7 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
           case eSymbolTypeInstrumentation:
           case eSymbolTypeUndefined:
           case eSymbolTypeResolver:
+          case eSymbolTypeASTFile:
             break;
           }
         }

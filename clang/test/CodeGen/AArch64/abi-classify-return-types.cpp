@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --implicit-check-not="not yet implemented"
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -emit-llvm -o - %s | FileCheck %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fexperimental-abi-lowering -emit-llvm -o - %s 2>&1 | FileCheck %s --implicit-check-not="not yet implemented"
+// RUN: %if cir-enabled %{ %clang_cc1 -triple arm64-apple-ios7.0 -target-abi darwinpcs -std=c++20 -fclangir -emit-llvm -o - %s | FileCheck %s %}
+// RUN: %if cir-enabled %{ %clang_cc1 -triple aarch64-linux-gnu -std=c++20 -fclangir -emit-llvm -o - %s | FileCheck %s %}
 
 // Verify C++ homogeneous floating-point aggregate return classification matches
 // between classic CodeGen and the LLVM ABI library.

@@ -14,11 +14,8 @@
 #define MLIR_DIALECT_X86_X86DIALECT_H_
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
 
 /// Include the generated interface declarations.
 #include "mlir/Dialect/X86/X86Interfaces.h.inc"

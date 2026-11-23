@@ -143,7 +143,7 @@ static std::string computeM68kDataLayout(const Triple &TT) {
 }
 
 namespace {
-enum class MipsABI { O32, N32, N64 };
+enum class MipsABI { O32, N32, N64, P32 };
 }
 
 // FIXME: This duplicates MipsABIInfo::computeTargetABI, but duplicating this is
@@ -155,12 +155,16 @@ static MipsABI getMipsABI(const Triple &TT, StringRef ABIName) {
     return MipsABI::O32;
   if (ABIName.starts_with("n32"))
     return MipsABI::N32;
+  if (ABIName.starts_with("p32"))
+    return MipsABI::P32;
   if (ABIName.starts_with("n64"))
     return MipsABI::N64;
   if (TT.isABIN32())
     return MipsABI::N32;
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
+  if (TT.isNanoMips())
+    return MipsABI::P32;
   if (TT.isMIPS64())
     return MipsABI::N64;
   return MipsABI::O32;
@@ -187,6 +191,8 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   case MipsABI::N64:
     Ret += "-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
     break;
+  case MipsABI::P32:
+    Ret += "-m:e-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S128";
   }
 
   return Ret;
@@ -229,7 +235,9 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   // Specify the vector alignment explicitly. For v256i1 and v512i1, the
   // calculated alignment would be 256*alignment(i1) and 512*alignment(i1),
   // which is 256 and 512 bytes - way over aligned.
-  if (is64Bit && (T.isOSAIX() || T.isOSLinux()))
+  // FreeBSD uses the ELFv2 ABI and has the same 16-byte stack alignment as
+  // Linux.
+  if (is64Bit && (T.isOSAIX() || T.isOSLinux() || T.isOSFreeBSD()))
     Ret += "-S128-v256:256:256-v512:512:512";
 
   return Ret;
@@ -245,10 +253,11 @@ static std::string computeAMDDataLayout(const Triple &TT) {
   // buffer descriptor and a 32-bit offset, which are indexed by 32-bit values
   // (address space 7), and 128-bit non-integral buffer resourcees (address
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
-  // like getelementptr.
+  // like getelementptr. Address space 12 is reserved for downstream, where it
+  // is  used for 64-bit pointers, so it is left at the default pointer size.
   return "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
          "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-p10:32:32"
-         "-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32"
+         "-p11:32:32-p13:32:32-p14:32:32-p15:32:32"
          "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256"
          "-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
@@ -503,6 +512,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::mipsel:
   case Triple::mips64:
   case Triple::mips64el:
+  case Triple::nanomips:
     return computeMipsDataLayout(*this, ABIName);
   case Triple::msp430:
     return "e-m:e-p:16:16-i32:16-i64:16-f32:16-f64:16-a:8-n8:16-S16";

@@ -17,6 +17,7 @@
 #include "DXILSignatureAnalysis.h"
 #include "DXILWriter/DXILWriterPass.h"
 #include "DirectX.h"
+#include "DirectXAsmPrinter.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
 #include "TargetInfo/DirectXTargetInfo.h"
@@ -56,8 +57,8 @@ LLVMInitializeDirectXTarget() {
   initializeScalarizerLegacyPassPass(*PR);
   initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModuleLegacyPass(*PR);
-  initializeEmbedDXILPassPass(*PR);
-  initializeWriteDXILPassPass(*PR);
+  initializeDXILEmbedderLegacyPass(*PR);
+  initializeDXILWriterLegacyPass(*PR);
   initializeDXILContainerGlobalsLegacyPass(*PR);
   initializeDXILContainerPDBLegacyPass(*PR);
   initializeGlobalDCELegacyPassPass(*PR);
@@ -179,7 +180,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
     break;
   case CodeGenFileType::ObjectFile:
     if (PassConfig->willCompleteCodeGenPipeline()) {
-      PM.add(createDXILEmbedderPass());
+      PM.add(createDXILEmbedderLegacyPass());
       // We embed the other DXContainer globals after embedding DXIL so that the
       // globals don't pollute the DXIL.
       PM.add(createDXILContainerGlobalsLegacyPass());
@@ -189,7 +190,7 @@ bool DirectXTargetMachine::addPassesToEmitFile(
                         MMIWP->getMMI().getContext()))
         return true;
     } else
-      PM.add(createDXILWriterPass(Out));
+      PM.add(createDXILWriterLegacyPass(Out));
     break;
   case CodeGenFileType::Null:
     break;
