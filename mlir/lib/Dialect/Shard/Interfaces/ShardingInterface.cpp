@@ -73,9 +73,6 @@ checkOperandAffineExprRecursively(AffineExpr expr,
     seenIds[position] = true;
     return success();
   }
-  case AffineExprKind::Constant:
-    // A constant indexing expression does not reference a loop dimension.
-    return success();
   default:
     return failure();
   }
@@ -83,6 +80,9 @@ checkOperandAffineExprRecursively(AffineExpr expr,
 
 static FailureOr<llvm::SmallSet<unsigned, 2>>
 checkOperandAffineExpr(AffineExpr expr, unsigned numDims) {
+  // A constant result (e.g. a broadcast dimension) references no loop.
+  if (isa<AffineConstantExpr>(expr))
+    return llvm::SmallSet<unsigned, 2>();
   SmallVector<bool> seenIds(numDims, false);
   if (failed(checkOperandAffineExprRecursively(expr, seenIds)))
     return failure();
@@ -328,18 +328,22 @@ shard::detail::defaultGetShardingOption(Operation *op,
       ArrayRef<GridAxis> axes = std::get<1>(exprAndAxes).asArrayRef();
       FailureOr<llvm::SmallSet<unsigned, 2>> loopIndices =
           checkOperandAffineExpr(expr, numDims);
-      if (failed(loopIndices))
-        return op->emitOpError()
-               << "operand's affine expression is restricted to const_i * "
-                  "dim_i + const_j + dim_j + ...";
+      if (failed(loopIndices)) {
+        LLVM_DEBUG(
+            DBGS() << "operand's affine expression is restricted to a constant "
+                      "or a sum of distinct dimensions with constant "
+                      "coefficients\n");
+        return failure();
+      }
       // A constant expression selects the same element for every loop
       // iteration. It can represent replication, but cannot carry split axes.
       if (loopIndices->empty()) {
-        if (!axes.empty())
-          return op->emitOpError()
-                 << "cannot shard operand " << shardingIt.index()
-                 << " dimension " << dim + 1
-                 << ": its indexing expression is constant";
+        if (!axes.empty()) {
+          LLVM_DEBUG(DBGS() << "cannot shard operand " << shardingIt.index()
+                            << " dimension " << dim + 1
+                            << ": its indexing expression is constant\n");
+          return failure();
+        }
         continue;
       }
       if (loopIndices->size() == 1) {
@@ -360,12 +364,14 @@ shard::detail::defaultGetShardingOption(Operation *op,
             break;
           }
         }
-        if (!seenLoopIndices)
-          return op->emitOpError()
-                 << "the operand " << shardingIt.index()
-                 << " has multiple loop indices in a dimension, but none of "
-                    "them could be found in the exactly specified annotation "
-                    "of op results or operands.";
+        if (!seenLoopIndices) {
+          LLVM_DEBUG(DBGS()
+                     << "the operand " << shardingIt.index()
+                     << " has multiple loop indices in a dimension, but none "
+                        "of them could be found in the exactly specified "
+                        "annotation of op results or operands.\n");
+          return failure();
+        }
       }
     }
   }
