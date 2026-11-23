@@ -478,13 +478,12 @@ mlir::Value Fortran::lower::genAllocateCoarray(
     uniqName = converter.mangleName(sym);
   mif::AllocCoarrayOp::create(builder, loc, addr, uniqName, lcobounds,
                               ucobounds, stat, errmsg);
-
   if (const auto *details =
           sym.GetUltimate()
               .detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
-    Fortran::lower::SymMap symMap;
-    Fortran::lower::StatementContext stmtCtx;
     if (details->init()) {
+      Fortran::lower::SymMap symMap;
+      Fortran::lower::StatementContext stmtCtx;
       hlfir::Entity initVal = Fortran::lower::convertExprToHLFIR(
           loc, converter, *details->init(), symMap, stmtCtx);
       hlfir::Entity base{addr};
