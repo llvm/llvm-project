@@ -104,7 +104,7 @@ module attributes {
   // CHECK-SAME: llvm.byval = !cir.int<s, 65, bitint>
 
   cir.func @ret_bi65(%arg0: !cir.ptr<!bi65>) -> !bi65 cc(spir_function) requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!bi65>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!bi65>
     %1 = cir.load %arg0 : !cir.ptr<!bi65>, !bi65
     cir.store %1, %0 : !bi65, !cir.ptr<!bi65>
     %2 = cir.load %0 : !cir.ptr<!bi65>, !bi65

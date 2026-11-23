@@ -38,15 +38,13 @@ constexpr allocator_arg_t allocator_arg = allocator_arg_t();
 // allocator construction
 
 template <class _Tp, class _Alloc, class... _Args>
-struct __uses_alloc_ctor_imp {
-  using _RawAlloc _LIBCPP_NODEBUG = __remove_cvref_t<_Alloc>;
-  static const bool __ua          = uses_allocator<_Tp, _RawAlloc>::value;
-  static const bool __ic          = is_constructible<_Tp, allocator_arg_t, _Alloc, _Args...>::value;
-  static const int value          = __ua ? 2 - __ic : 0;
-};
+inline const int __uses_alloc_ctor_v =
+    uses_allocator<_Tp, __remove_cvref_t<_Alloc>>::value
+        ? 2 - is_constructible<_Tp, allocator_arg_t, _Alloc, _Args...>::value
+        : 0;
 
 template <class _Tp, class _Alloc, class... _Args>
-struct __uses_alloc_ctor : integral_constant<int, __uses_alloc_ctor_imp<_Tp, _Alloc, _Args...>::value> {};
+using __uses_alloc_ctor = integral_constant<int, __uses_alloc_ctor_v<_Tp, _Alloc, _Args...>>;
 
 template <class _Tp, class _Allocator, class... _Args>
 inline void

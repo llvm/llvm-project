@@ -4,9 +4,9 @@
 ; CHECK: @__safestack_unsafe_stack_ptr = external thread_local(initialexec) global ptr
 ; CHECK-NEXT: @__stack_chk_guard = external global ptr
 ; CHECK-NEXT: declare signext i32 @_Unwind_SjLj_RaiseException(ptr)
-; CHECK-NEXT: declare void @_Unwind_SjLj_Register(ptr)
+; CHECK-NEXT: declare void @_Unwind_SjLj_Register(ptr) [[NOUNWIND_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare void @_Unwind_SjLj_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
-; CHECK-NEXT: declare void @_Unwind_SjLj_Unregister(ptr)
+; CHECK-NEXT: declare void @_Unwind_SjLj_Unregister(ptr) [[NOUNWIND_ATTRS]]
 ; CHECK-NEXT: declare double @__adddf3(double, double) [[NOMEM_ATTRS:#[0-9]+]]
 ; CHECK-NEXT: declare float @__addsf3(float, float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @__addtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -475,6 +475,7 @@
 ; CHECK-NEXT: declare double @trunc(double) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare float @truncf(float) [[NOMEM_ATTRS]]
 ; CHECK-NEXT: declare fp128 @truncl(fp128) [[NOMEM_ATTRS]]
+; CHECK-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; CHECK-NEXT: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CHECK-NEXT: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK-NEXT: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
