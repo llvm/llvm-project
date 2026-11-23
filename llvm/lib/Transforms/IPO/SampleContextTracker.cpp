@@ -102,25 +102,6 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
   return NewNode;
 }
 
-void SampleContextTracker::invalidateContextNodesInMap(ContextTrieNode &Node) {
-  std::queue<ContextTrieNode *> NodeToInvalidate;
-  NodeToInvalidate.push(&Node);
-  while (!NodeToInvalidate.empty()) {
-    ContextTrieNode *N = NodeToInvalidate.front();
-    NodeToInvalidate.pop();
-    if (FunctionSamples *FSamples = N->getFunctionSamples()) {
-      auto I = ProfileToNodeMap.find(FSamples);
-      // Only drop the mapping if it still points at the node being destroyed.
-      // A relocated profile already had its mapping repointed to the live copy
-      // by moveContextSamples/mergeContextNode and must be preserved.
-      if (I != ProfileToNodeMap.end() && I->second == N)
-        ProfileToNodeMap.erase(I);
-    }
-    for (auto &It : N->getAllChildContext())
-      NodeToInvalidate.push(&It.second);
-  }
-}
-
 void ContextTrieNode::removeChildContext(const LineLocation &CallSite,
                                          FunctionId CalleeName) {
   uint64_t Hash = FunctionSamples::getCallSiteHash(CalleeName, CallSite);
@@ -359,13 +340,7 @@ FunctionSamples *SampleContextTracker::getBaseSamplesFor(FunctionId Name,
         continue;
 
       ContextTrieNode *FromNode = getContextNodeForProfile(CSamples);
-      // A previous promotion in this loop may have merged and freed this
-      // context's node (e.g. a self-recursive context nested under one already
-      // promoted). Its map entry is cleared when the node is destroyed, so a
-      // null result here means the node is gone; skip it to avoid a
-      // use-after-free. Distinct callee contexts merely relocated under another
-      // function's base stay live and are still promoted.
-      if (!FromNode || FromNode == Node)
+      if (FromNode == Node)
         continue;
 
       ContextTrieNode &ToNode = promoteMergeContextSamplesTree(*FromNode);
@@ -443,6 +418,16 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
 
   assert(!FromSamples->getContext().hasState(InlinedContext) &&
          "Shouldn't promote inlined context profile");
+
+  // Take the node out of the trie before the merge. With recursion, the node
+  // can be in the subtree of its own base profile, e.g. [foo:1 @ foo] under
+  // [foo]. If the node stayed in the trie, the merge would write into the
+  // subtree that it reads from. extract() keeps the node at the same address,
+  // and the node is freed when Detached goes out of scope.
+  auto Detached = NodeToPromo.getParentContext()->getAllChildContext().extract(
+      FunctionSamples::getCallSiteHash(NodeToPromo.getFuncName(),
+                                       NodeToPromo.getCallSiteLoc()));
+  assert(&Detached.mapped() == &NodeToPromo && "Expect to detach the node");
   return promoteMergeContextSamplesTree(NodeToPromo, RootContext);
 }
 
@@ -600,7 +585,6 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
   // Ignore call site location if destination is top level under root
   LineLocation NewCallSiteLoc = LineLocation(0, 0);
   LineLocation OldCallSiteLoc = FromNode.getCallSiteLoc();
-  ContextTrieNode &FromNodeParent = *FromNode.getParentContext();
   ContextTrieNode *ToNode = nullptr;
   bool MoveToRoot = (&ToNodeParent == &RootContext);
   if (!MoveToRoot) {
@@ -633,17 +617,8 @@ ContextTrieNode &SampleContextTracker::promoteMergeContextSamplesTree(
       promoteMergeContextSamplesTree(FromChildNode, *ToNode);
     }
 
-    // Remove children once they're all merged. Drop their map entries first so
-    // no FunctionSamples keeps pointing at a node that clear() destroys.
-    for (auto &It : FromNode.getAllChildContext())
-      invalidateContextNodesInMap(It.second);
+    // Remove children once they're all merged
     FromNode.getAllChildContext().clear();
-  }
-
-  // For root of subtree, remove itself from old parent too
-  if (MoveToRoot) {
-    invalidateContextNodesInMap(FromNode);
-    FromNodeParent.removeChildContext(OldCallSiteLoc, ToNode->getFuncName());
   }
 
   return *ToNode;

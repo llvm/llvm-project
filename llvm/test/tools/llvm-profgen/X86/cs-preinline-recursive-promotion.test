@@ -1,0 +1,39 @@
+; Test that the pre-inliner keeps all samples when it merges a recursive
+; context into its base profile.
+; RUN: split-file %s %t
+; RUN: llvm-profgen --format=text --llvm-sample-profile=%t/recursive.prof --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --gen-cs-nested-profile=0 --output=%t/out
+; RUN: FileCheck %s --input-file=%t/out
+
+;; fa calls itself at probe 8 and calls fb at probe 7. The pre-inliner merges
+;; the contexts of fa into the base profile [fa]. [fa:8 @ fa] is in the subtree
+;; of [fa], so the merge of its subtree writes into that same subtree:
+;; [fa:8 @ fa:8 @ fa] maps to [fa:8 @ fa]. All 2050 samples must stay, with
+;; 1050 in [fa] and 1000 in [fa:7 @ fb].
+
+; CHECK:      [fa]:1050:30
+; CHECK-NEXT:  1: 30
+; CHECK-NEXT:  7: 1000 fb:1000
+; CHECK-NEXT:  8: 20 fa:20
+; CHECK-NEXT:  !CFGChecksum: 563070469352221
+; CHECK-NEXT: [fa:7 @ fb]:1000:1000
+; CHECK-NEXT:  1: 1000
+; CHECK-NEXT:  !CFGChecksum: 563022570642068
+; CHECK-NEXT:  !Attributes: 2
+; CHECK-NOT:  [
+
+;--- recursive.prof
+[fa]:20:10
+ 1: 10
+ 8: 10 fa:10
+ !CFGChecksum: 563070469352221
+[fa:8 @ fa]:20:10
+ 1: 10
+ 8: 10 fa:10
+ !CFGChecksum: 563070469352221
+[fa:8 @ fa:8 @ fa]:1010:10
+ 1: 10
+ 7: 1000 fb:1000
+ !CFGChecksum: 563070469352221
+[fa:8 @ fa:8 @ fa:7 @ fb]:1000:1000
+ 1: 1000
+ !CFGChecksum: 563022570642068

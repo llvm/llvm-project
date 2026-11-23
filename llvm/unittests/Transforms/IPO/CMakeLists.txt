@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   AsmParser
   Core
   IPO
-  ProfileData
   Support
   TargetParser
   TransformUtils
@@ -16,5 +15,4 @@ add_llvm_unittest(IPOTests
   FunctionSpecializationTest.cpp
   ImportIDTableTests.cpp
   MergeFunctionsTest.cpp
-  SampleContextTrackerTest.cpp
   )
