@@ -6168,8 +6168,8 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
 
   // Rewritten live-ins must be expanded in the vector preheader to remain under
   // stide check guard to avoid introducing UB.
-  VPBuilder LiveInExpanderBuilder(VectorPreheader->getFirstNonPhi());
-  VPSCEVExpander LiveInExpander(LiveInExpanderBuilder, *SE, DL);
+  VPBuilder VecPreHeaderExpanderBuilder(VectorPreheader->getFirstNonPhi());
+  VPSCEVExpander VecPreHeaderExpander(VecPreHeaderExpanderBuilder, *SE, DL);
 
   for (VPInstruction *VPI : MemOps) {
     bool IsLoad = VPI->getOpcode() == Instruction::Load;
@@ -6295,7 +6295,7 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
       if (RewrittenS == S || isa<SCEVCouldNotCompute>(RewrittenS))
         continue;
 
-      VPValue *RewrittenLiveIn = LiveInExpander.expand(RewrittenS);
+      VPValue *RewrittenLiveIn = VecPreHeaderExpander.expand(RewrittenS);
       LiveIn->replaceUsesWithIf(RewrittenLiveIn, [&](VPUser *U) {
         auto *R = cast<VPRecipeBase>(U);
         return R->getRegion() || R->getParent() == VectorPreheader;
@@ -6316,32 +6316,39 @@ void VPlanTransforms::multiversionForUnitStridedMemOps(
   assert(Pred && "Must be expandable!");
   StridesCheckVPBB->getTerminator()->setOperand(0, Pred);
 
-  // For now we only "speculate" stride but don't multiversion by handling two
-  // different paths of vector execution. As such, rewriting
-  // `VPExpandSCEVRecipe`s in the `Entry` is fine for now - at worst we'd
-  // "incorrectly" reach stride speculation check and jump to scalar loop from
-  // there. These recipes aren't passed to scalar loop if vector loop isn't
-  // entered. This rewrite is necessary to mimic current LAA's behavior.
-  VPBuilder Builder(Entry->begin());
+  // Rewriting an entry recipe is only safe for users dominated by the stride
+  // check. Leave any unguarded users on the original expression.
+  VPBasicBlock *Middle = Plan.getMiddleBlock();
+
+  auto IsGuardedUser = [&,
+                        AllowMiddle = Middle->getSinglePredecessor() ==
+                                      Plan.getVectorLoopRegion()](VPUser *U) {
+    auto *UserR = dyn_cast<VPRecipeBase>(U);
+    return UserR &&
+           (UserR->getRegion() || UserR->getParent() == VectorPreheader ||
+            (UserR->getParent() == Middle && AllowMiddle));
+  };
+
   for (auto &R : make_early_inc_range(*Entry)) {
     auto *ExpandSCEV = dyn_cast<VPExpandSCEVRecipe>(&R);
     if (!ExpandSCEV)
       continue;
 
+    if (!any_of(ExpandSCEV->users(), IsGuardedUser))
+      continue;
+
     const SCEV *S = ExpandSCEV->getSCEV();
-    Builder.setInsertPoint(ExpandSCEV);
     const SCEV *NewS =
         SE->rewriteUsingPredicate(S, CostCtx.L, StridePredicates);
     if (NewS == S)
       continue;
-    auto *NewR = Builder.createExpandSCEV(NewS);
-    ExpandSCEV->replaceAllUsesWith(NewR);
 
-    // If this recipe is a trip count then we need to reset it explicitly.
-    if (ExpandSCEV == Plan.getTripCount())
-      Plan.resetTripCount(NewR);
+    VPValue *NewV = VecPreHeaderExpander.expand(NewS);
+    ExpandSCEV->replaceUsesWithIf(NewV, IsGuardedUser);
 
-    ExpandSCEV->eraseFromParent();
+    // Keep the original recipe if it has remaining uses.
+    if (ExpandSCEV != Plan.getTripCount() && ExpandSCEV->user_empty())
+      ExpandSCEV->eraseFromParent();
   }
 }
 

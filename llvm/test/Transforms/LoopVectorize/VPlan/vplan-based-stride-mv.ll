@@ -1739,11 +1739,10 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %n = mul i64 %m, %stride
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 smax %m)
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 smax (%stride * %m))
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
@@ -1752,10 +1751,11 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP6:%[0-9]+]]> = call i64 @llvm.smax(ir<%m>, ir<1>)
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
@@ -1766,15 +1766,15 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:      EMIT ir<%gep.st> = getelementptr ir<%p.out>, ir<%iv>
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.st>
 ; CHECK-NEXT:      EMIT ir<%exitcond> = icmp sge ir<%iv.next>, ir<%m>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP6]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -1782,7 +1782,7 @@ define void @stride_btc_checks_order(ptr noalias %p.out, ptr %p, i64 %stride, i6
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<header>
 ;
 entry:
@@ -1815,11 +1815,10 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %n = add i64 %stride, 3
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV 4
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 smax (3 + %stride))
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
@@ -1850,7 +1849,7 @@ define void @stride_dependent_btc_non_preventive(ptr noalias %p.out, ptr %p, i64
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -1923,12 +1922,11 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %p.out = getelementptr i8, ptr %p2, i64 %out.offset
 ; CHECK-NEXT:    IR   %n = add i64 %stride, 3
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV 4
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 smax (3 + %stride))
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
@@ -1962,7 +1960,7 @@ define void @stride_btc_independent_memdep_triple_check(ptr %p, ptr noalias %p2,
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
 ; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<4>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -3325,43 +3323,41 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %start.ext = zext i32 %start to i64
-; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV 1
-; CHECK-NEXT:    EMIT vp<[[VP4]]> = EXPAND SCEV 99
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (100 + (-1 * (zext i32 %start to i64))<nsw>)<nsw>
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
-; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = icmp ne ir<%start>, ir<1>
-; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP5]]>
+; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = icmp ne ir<%start>, ir<1>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP4]]>
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP7:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv.0> = WIDEN-INDUCTION ir<1>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      ir<%iv.1> = WIDEN-INDUCTION ir<0>, vp<[[VP3]]>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv.1> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv.1>
 ; CHECK-NEXT:      EMIT store ir<0.000000e+00>, ir<%gep.dst>
-; CHECK-NEXT:      EMIT ir<%iv.1.next> = add ir<%iv.1>, vp<[[VP3]]>
+; CHECK-NEXT:      EMIT ir<%iv.1.next> = add ir<%iv.1>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%iv.0.next> = add ir<%iv.0>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.0.next>, ir<100>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP7]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv.0>
-; CHECK-NEXT:    EMIT vp<[[VP10:%[0-9]+]]> = exiting-iv-value ir<%iv.1>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP4]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv.0>
+; CHECK-NEXT:    EMIT vp<[[VP9:%[0-9]+]]> = exiting-iv-value ir<%iv.1>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<99>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -3369,8 +3365,8 @@ define void @test_rewrite_iv_scevs(i32 %start, ptr %dst) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP9]]>, middle.block ], [ ir<%start.ext>, ir-bb<entry> ], [ ir<%start.ext>, strides.check ]
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP10]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<%start.ext>, ir-bb<entry> ], [ ir<%start.ext>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val>.1 = phi [ vp<[[VP9]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
@@ -3891,11 +3887,9 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
 ; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
-; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
-; FIXME: Can trigger UB, must be guarded.
-; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 umax (%n /u (1 + %y)))
+; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (1 umax (%n /u (%stride + %y)))
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  strides.check:
@@ -3904,10 +3898,13 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = add ir<%y>, ir<1>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = udiv ir<%n>, vp<[[VP6]]>
+; CHECK-NEXT:    EMIT-SCALAR vp<[[VP8:%[0-9]+]]> = call i64 @llvm.umax(vp<[[VP7]]>, ir<1>)
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  <x1> vector loop: {
-; CHECK-NEXT:  vp<[[VP6:%[0-9]+]]> = CANONICAL-IV
+; CHECK-NEXT:  vp<[[VP9:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
 ; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
@@ -3920,15 +3917,15 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.dst>
 ; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
 ; CHECK-NEXT:      EMIT ir<%ec> = icmp uge ir<%iv.next>, ir<%bound>
-; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP6]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP9]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  middle.block:
-; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = exiting-iv-value ir<%iv>
-; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP11:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP8]]>, vp<[[VP2]]>
 ; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
 ; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
@@ -3936,7 +3933,7 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP8]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP11]]>, middle.block ], [ ir<0>, ir-bb<entry> ], [ ir<0>, strides.check ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
