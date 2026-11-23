@@ -429,8 +429,7 @@ void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
     OS << "\n";
     FunctionCoverageSummary Totals("TOTAL");
     for (const auto &F : Functions) {
-      if (Options.SourceExclusions &&
-          Options.SourceExclusions->isFunctionExcluded(F, Filename))
+      if (Options.SourceExclusions.isFunctionExcluded(F, Filename))
         continue;
       auto Function =
           FunctionCoverageSummary::get(Coverage, F, Options.SourceExclusions);
@@ -456,8 +455,7 @@ void CoverageReport::prepareSingleFileReport(const StringRef Filename,
   for (const auto &Group : Coverage->getInstantiationGroups(Filename)) {
     std::vector<FunctionCoverageSummary> InstantiationSummaries;
     for (const coverage::FunctionRecord *F : Group.getInstantiations()) {
-      if (Options.SourceExclusions &&
-          Options.SourceExclusions->isFunctionExcluded(*F, Filename))
+      if (Options.SourceExclusions.isFunctionExcluded(*F, Filename))
         continue;
       if (!Filters->matches(*Coverage, *F, Options.SourceExclusions))
         continue;

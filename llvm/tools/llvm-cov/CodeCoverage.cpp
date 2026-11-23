@@ -154,7 +154,6 @@ private:
   CoverageViewOptions ViewOpts;
   CoverageFiltersMatchAll Filters;
   CoverageFilters FilenameFilters;
-  CoverageExclusions SourceExclusions;
   bool FiltersRequireSourceExclusions = false;
 
   /// True if InputSourceFiles are provided.
@@ -310,6 +309,8 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
   return *LoadedSourceFiles.back().second;
 }
 
+// Populate the exclusion ranges before the tool queries coverage. Source
+// buffers use the same path remapping and cache as the source views.
 bool CodeCoverageTool::loadSourceExclusions(
     const CoverageMapping &Coverage, ArrayRef<std::string> SelectedSourceFiles,
     SourceExclusionScope Scope) {
@@ -323,6 +324,8 @@ bool CodeCoverageTool::loadSourceExclusions(
       Files.push_back(Filename);
   };
 
+  // JSON function exports can include records from outside the selected
+  // files. Other outputs may only need selected files and their expansions.
   if (Scope == SourceExclusionScope::AllFiles) {
     for (StringRef Filename : Coverage.getUniqueSourceFiles())
       AddFile(Filename);
@@ -336,6 +339,8 @@ bool CodeCoverageTool::loadSourceExclusions(
         AddFile(Filename);
     }
 
+    // Include files referenced by functions in the selected files, such as
+    // headers that define macros expanded there.
     if (Scope == SourceExclusionScope::SelectedFilesAndReferences) {
       size_t NumSelectedFiles = Files.size();
       for (size_t I = 0; I != NumSelectedFiles; ++I) {
@@ -351,12 +356,12 @@ bool CodeCoverageTool::loadSourceExclusions(
     auto SourceBuffer = getSourceFile(Filename);
     if (!SourceBuffer)
       return false;
-    if (Error E = SourceExclusions.parse(Filename, SourceBuffer->getBuffer())) {
+    if (Error E = ViewOpts.SourceExclusions.parse(Filename,
+                                                  SourceBuffer->getBuffer())) {
       error(toString(std::move(E)), Filename);
       return false;
     }
   }
-  ViewOpts.SourceExclusions = &SourceExclusions;
   return true;
 }
 
@@ -366,8 +371,8 @@ void CodeCoverageTool::attachExpansionSubViews(
   if (!ViewOpts.ShowExpandedRegions)
     return;
   for (const auto &Expansion : Expansions) {
-    auto ExpansionCoverage = applyCoverageExclusions(
-        ViewOpts.SourceExclusions, Coverage.getCoverageForExpansion(Expansion));
+    auto ExpansionCoverage =
+        ViewOpts.SourceExclusions.getCoverageForExpansion(Coverage, Expansion);
     if (ExpansionCoverage.empty())
       continue;
     auto SourceBuffer = getSourceFile(ExpansionCoverage.getFilename());
@@ -428,8 +433,8 @@ void CodeCoverageTool::attachMCDCSubViews(SourceCoverageView &View,
 std::unique_ptr<SourceCoverageView>
 CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
                                      const CoverageMapping &Coverage) {
-  auto FunctionCoverage = applyCoverageExclusions(
-      ViewOpts.SourceExclusions, Coverage.getCoverageForFunction(Function));
+  auto FunctionCoverage =
+      ViewOpts.SourceExclusions.getCoverageForFunction(Coverage, Function);
   if (FunctionCoverage.empty())
     return nullptr;
   auto SourceBuffer = getSourceFile(FunctionCoverage.getFilename());
@@ -455,8 +460,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   auto SourceBuffer = getSourceFile(SourceFile);
   if (!SourceBuffer)
     return nullptr;
-  auto FileCoverage = applyCoverageExclusions(
-      ViewOpts.SourceExclusions, Coverage.getCoverageForFile(SourceFile));
+  auto FileCoverage =
+      ViewOpts.SourceExclusions.getCoverageForFile(Coverage, SourceFile);
   if (FileCoverage.empty())
     return nullptr;
 
@@ -477,8 +482,7 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
       continue;
 
     for (const FunctionRecord *Function : Group.getInstantiations()) {
-      if (ViewOpts.SourceExclusions &&
-          ViewOpts.SourceExclusions->isFunctionExcluded(*Function, SourceFile))
+      if (ViewOpts.SourceExclusions.isFunctionExcluded(*Function, SourceFile))
         continue;
 
       std::unique_ptr<SourceCoverageView> SubView{nullptr};
@@ -486,9 +490,8 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
       StringRef Funcname = DC.demangle(Function->Name);
 
       if (Function->ExecutionCount > 0) {
-        auto SubViewCoverage =
-            applyCoverageExclusions(ViewOpts.SourceExclusions,
-                                    Coverage.getCoverageForFunction(*Function));
+        auto SubViewCoverage = ViewOpts.SourceExclusions.getCoverageForFunction(
+            Coverage, *Function);
         auto SubViewExpansions = SubViewCoverage.getExpansions();
         auto SubViewBranches = SubViewCoverage.getBranches();
         auto SubViewMCDCRecords = SubViewCoverage.getMCDCRecords();
@@ -1279,9 +1282,8 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
         FilenameFunctionMap;
     for (const auto &SourceFile : SourceFiles)
       for (const auto &Function : Coverage->getCoveredFunctions(SourceFile))
-        if ((!ViewOpts.SourceExclusions ||
-             !ViewOpts.SourceExclusions->isFunctionExcluded(Function,
-                                                            SourceFile)) &&
+        if (!ViewOpts.SourceExclusions.isFunctionExcluded(Function,
+                                                          SourceFile) &&
             Filters.matches(*Coverage, Function, ViewOpts.SourceExclusions))
           FilenameFunctionMap[SourceFile].push_back(&Function);
 

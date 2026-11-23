@@ -1,8 +1,16 @@
 // Test visualization of MC/DC constructs for branches in macro expansions.
+// NOTE: Do not autogenerate. Check both folded and live macro branches.
 
 // RUN: llvm-profdata merge %S/Inputs/mcdc-macro.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s
 // RUN: llvm-cov show --show-expansions --show-branches=count --show-mcdc --show-mcdc-non-executed-vectors %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s -check-prefix=ALL
+
+// The first expansion contains only a constant-folded branch. The next
+// expansion has live branches that must still be exported.
+// RUN: llvm-cov export %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs | FileCheck %s --check-prefix=JSON
+// RUN: llvm-cov export %S/Inputs/mcdc-macro.o -instr-profile %t.profdata --compilation-dir=%S/Inputs --respect-coverage-exclusion-markers=false | FileCheck %s --check-prefix=JSON
+// JSON: "branches":[],"source_region":[9,12,9,13,1,0,1,1]
+// JSON-SAME: "branches":{{\[\[}}3,11,3,19,1,0,2,0,6],[3,23,3,30,1,0,2,0,6]],"source_region":[9,17,9,18,1,0,2,1]
 
 // CHECK:  |  |  |  Branch (2:11): [Folded - Ignored]
 // CHECK:  |  |  |  Branch (3:11): [True: 1, False: 0]

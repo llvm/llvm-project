@@ -233,7 +233,8 @@ struct CoverageDataSummary {
 
   CoverageDataSummary() = default;
   CoverageDataSummary(const coverage::CoverageData &CD,
-                      ArrayRef<coverage::CountedRegion> CodeRegions);
+                      const coverage::FunctionRecord &Function,
+                      const CoverageExclusions &Exclusions);
 
   auto &operator+=(const CoverageDataSummary &RHS) {
     RegionCoverage += RHS.RegionCoverage;
@@ -254,10 +255,9 @@ struct FunctionCoverageSummary : CoverageDataSummary {
 
   /// Compute the code coverage summary for the given function coverage
   /// mapping record.
-  static FunctionCoverageSummary
-  get(const coverage::CoverageMapping &CM,
-      const coverage::FunctionRecord &Function,
-      const CoverageExclusions *Exclusions = nullptr);
+  static FunctionCoverageSummary get(const coverage::CoverageMapping &CM,
+                                     const coverage::FunctionRecord &Function,
+                                     const CoverageExclusions &Exclusions);
 
   /// Compute the code coverage summary for an instantiation group \p Group,
   /// given a list of summaries for each instantiation in \p Summaries.

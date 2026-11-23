@@ -34,7 +34,7 @@ public:
   /// Return true if the function passes the requirements of this filter.
   virtual bool matches(const coverage::CoverageMapping &CM,
                        const coverage::FunctionRecord &Function,
-                       const CoverageExclusions *Exclusions = nullptr) const {
+                       const CoverageExclusions &Exclusions) const {
     return true;
   }
 
@@ -53,7 +53,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 };
 
 /// Matches functions whose name matches a certain regular expression.
@@ -75,7 +75,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 
   bool matchesFilename(StringRef Filename) const override;
 };
@@ -91,7 +91,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 };
 
 /// Matches numbers that pass a certain threshold.
@@ -129,7 +129,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 };
 
 /// Matches functions whose line coverage percentage
@@ -142,7 +142,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 };
 
 /// A collection of filters.
@@ -160,7 +160,7 @@ public:
 
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 
   bool matchesFilename(StringRef Filename) const override;
 };
@@ -172,7 +172,7 @@ class CoverageFiltersMatchAll : public CoverageFilters {
 public:
   bool matches(const coverage::CoverageMapping &CM,
                const coverage::FunctionRecord &Function,
-               const CoverageExclusions *Exclusions = nullptr) const override;
+               const CoverageExclusions &Exclusions) const override;
 };
 
 } // namespace llvm

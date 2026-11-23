@@ -78,15 +78,13 @@ void renderFunctions(
     const iterator_range<coverage::FunctionRecordIterator> &Functions,
     StringRef Filename, const CoverageViewOptions &Options) {
   for (const auto &F : Functions) {
-    if (Options.SourceExclusions &&
-        Options.SourceExclusions->isFunctionExcluded(F, Filename))
+    if (Options.SourceExclusions.isFunctionExcluded(F, Filename))
       continue;
     auto StartLine = F.CountedRegions.front().LineStart;
     OS << "FN:" << StartLine << ',' << F.Name << '\n';
   }
   for (const auto &F : Functions) {
-    if (Options.SourceExclusions &&
-        Options.SourceExclusions->isFunctionExcluded(F, Filename))
+    if (Options.SourceExclusions.isFunctionExcluded(F, Filename))
       continue;
     OS << "FNDA:" << F.ExecutionCount << ',' << F.Name << '\n';
   }
@@ -112,8 +110,8 @@ collectNestedBranches(const coverage::CoverageMapping &Coverage,
                       const CoverageViewOptions &Options) {
   std::vector<NestedCountedRegion> Branches;
   for (const auto &Expansion : Expansions) {
-    auto ExpansionCoverage = applyCoverageExclusions(
-        Options.SourceExclusions, Coverage.getCoverageForExpansion(Expansion));
+    auto ExpansionCoverage =
+        Options.SourceExclusions.getCoverageForExpansion(Coverage, Expansion);
 
     // Track the path to the nested expansions.
     NestedPath.push_back(Expansion.Region.startLoc());
@@ -275,8 +273,8 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
 
   if (!ExportSummaryOnly) {
     // Calculate and render detailed coverage information for given file.
-    auto FileCoverage = applyCoverageExclusions(
-        Options.SourceExclusions, Coverage.getCoverageForFile(Filename));
+    auto FileCoverage =
+        Options.SourceExclusions.getCoverageForFile(Coverage, Filename);
     renderLineExecutionCounts(OS, FileCoverage);
     if (!SkipBranches)
       renderBranchExecutionCounts(OS, Coverage, FileCoverage, UnifyInstances,

@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Reads LCOV exclusion markers and applies the resulting line ranges to
+/// llvm-cov coverage data and function records at report time.
+///
+//===----------------------------------------------------------------------===//
 
 #include "CoverageExclusions.h"
 #include "llvm/ADT/STLExtras.h"
@@ -25,10 +31,12 @@ constexpr StringLiteral ExcludeLineMarker = "LCOV_EXCL_LINE";
 constexpr StringLiteral ExcludeStartMarker = "LCOV_EXCL_START";
 constexpr StringLiteral ExcludeStopMarker = "LCOV_EXCL_STOP";
 
+// Marker names must be complete tokens.
 bool isMarkerBoundary(char C) {
   return !std::isalnum(static_cast<unsigned char>(C)) && C != '_';
 }
 
+// Search the whole line, skipping occurrences embedded in longer names.
 bool containsMarker(StringRef Line, StringRef Marker) {
   size_t Pos = 0;
   while ((Pos = Line.find(Marker, Pos)) != StringRef::npos) {
@@ -42,6 +50,7 @@ bool containsMarker(StringRef Line, StringRef Marker) {
   return false;
 }
 
+// Find the one possible containing range in a sorted, disjoint list.
 const CoverageExclusions::LineRange *
 findContainingRange(ArrayRef<CoverageExclusions::LineRange> Ranges,
                     unsigned Line) {
@@ -54,6 +63,7 @@ findContainingRange(ArrayRef<CoverageExclusions::LineRange> Ranges,
   return &*std::prev(It);
 }
 
+// Coalesce overlaps and adjacent ranges before applying exclusions.
 std::vector<CoverageExclusions::LineRange>
 mergeLineRanges(std::vector<CoverageExclusions::LineRange> Ranges) {
   llvm::sort(Ranges);
@@ -67,6 +77,8 @@ mergeLineRanges(std::vector<CoverageExclusions::LineRange> Ranges) {
   return Merged;
 }
 
+// Read single-line markers and non-nested blocks. A block includes its start
+// marker line and ends immediately before its stop marker line.
 Expected<std::vector<CoverageExclusions::LineRange>>
 parseLineRanges(StringRef Source) {
   std::vector<CoverageExclusions::LineRange> Ranges;
@@ -110,6 +122,7 @@ parseLineRanges(StringRef Source) {
   return mergeLineRanges(std::move(Ranges));
 }
 
+/// Applies the ranges for one source file to an extracted coverage view.
 class CoverageDataExclusionFilter : public CoverageData {
 public:
   CoverageDataExclusionFilter(CoverageData &&Data,
@@ -117,9 +130,6 @@ public:
       : CoverageData(std::move(Data)), Ranges(Ranges) {}
 
   CoverageData apply() {
-    if (Ranges.empty())
-      return std::move(*this);
-
     filterSegments();
     filterRecords();
     return std::move(*this);
@@ -143,6 +153,8 @@ private:
     return findContainingRange(Ranges, Line) != nullptr;
   }
 
+  // End active coverage at the first excluded line and restore the preceding
+  // count after the range unless a segment there already supplies a count.
   void addRangeBoundaries(const CoverageExclusions::LineRange &Range,
                           std::vector<CoverageSegment> &OriginalSegments,
                           std::vector<OrderedSegment> &FilteredSegments) const {
@@ -191,6 +203,7 @@ private:
          SegmentPriority::Resume});
   }
 
+  // Drop the segments in excluded lines and install the boundary segments.
   void filterSegments() {
     std::vector<CoverageSegment> OriginalSegments = std::move(Segments);
     std::vector<OrderedSegment> FilteredSegments;
@@ -215,6 +228,7 @@ private:
       Segments.push_back(Entry.Segment);
   }
 
+  // Remove expansion sites, branches and decisions anchored on excluded lines.
   void filterRecords() {
     std::vector<ExpansionRecord> FilteredExpansions;
     FilteredExpansions.reserve(Expansions.size());
@@ -266,6 +280,9 @@ bool CoverageExclusions::isRegionExcluded(
 
 bool CoverageExclusions::isFunctionExcluded(const FunctionRecord &Function,
                                             StringRef Filename) const {
+  if (ExcludedLineRanges.empty())
+    return false;
+
   bool HasCodeRegion = false;
   for (const CountedRegion &Region : Function.CountedRegions) {
     if (Region.Kind != CounterMappingRegion::CodeRegion ||
@@ -281,12 +298,23 @@ bool CoverageExclusions::isFunctionExcluded(const FunctionRecord &Function,
 
 CoverageData CoverageExclusions::apply(CoverageData Coverage) const {
   ArrayRef<LineRange> Ranges = getRanges(Coverage.getFilename());
+  if (Ranges.empty())
+    return Coverage;
   return CoverageDataExclusionFilter(std::move(Coverage), Ranges).apply();
 }
 
-CoverageData llvm::applyCoverageExclusions(const CoverageExclusions *Exclusions,
-                                           CoverageData Coverage) {
-  if (Exclusions)
-    return Exclusions->apply(std::move(Coverage));
-  return Coverage;
+CoverageData
+CoverageExclusions::getCoverageForFile(const CoverageMapping &Mapping,
+                                       StringRef Filename) const {
+  return apply(Mapping.getCoverageForFile(Filename));
+}
+
+CoverageData CoverageExclusions::getCoverageForFunction(
+    const CoverageMapping &Mapping, const FunctionRecord &Function) const {
+  return apply(Mapping.getCoverageForFunction(Function));
+}
+
+CoverageData CoverageExclusions::getCoverageForExpansion(
+    const CoverageMapping &Mapping, const ExpansionRecord &Expansion) const {
+  return apply(Mapping.getCoverageForExpansion(Expansion));
 }

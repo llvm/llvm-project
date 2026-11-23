@@ -9,13 +9,12 @@
 #ifndef LLVM_COV_COVERAGEVIEWOPTIONS_H
 #define LLVM_COV_COVERAGEVIEWOPTIONS_H
 
+#include "CoverageExclusions.h"
 #include "RenderingSupport.h"
 #include "llvm/Config/llvm-config.h"
 #include <vector>
 
 namespace llvm {
-
-class CoverageExclusions;
 
 /// The options for displaying the code coverage information.
 struct CoverageViewOptions {
@@ -63,7 +62,7 @@ struct CoverageViewOptions {
   std::string CompilationDirectory;
   float HighCovWatermark;
   float LowCovWatermark;
-  const CoverageExclusions *SourceExclusions = nullptr;
+  CoverageExclusions SourceExclusions;
 
   /// Change the output's stream color if the colors are enabled.
   ColoredRawOstream colored_ostream(raw_ostream &OS,

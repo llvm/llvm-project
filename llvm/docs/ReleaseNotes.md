@@ -608,8 +608,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 * llvm-cov now excludes coverage associated with `LCOV_EXCL_LINE` and
   `LCOV_EXCL_START`/`LCOV_EXCL_STOP` source markers. The markers apply to all
-  llvm-cov report formats, including text and HTML views, summaries, and JSON
-  and LCOV exports. Use `--respect-coverage-exclusion-markers=false` to ignore
+  llvm-cov report metrics and formats, including text and HTML views,
+  summaries, and JSON and LCOV exports. Use `--respect-coverage-exclusion-markers=false` to ignore
   markers and report all instrumented coverage, including when source files
   are unavailable.
 

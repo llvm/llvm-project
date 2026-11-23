@@ -19,14 +19,14 @@ using namespace llvm;
 
 bool NameCoverageFilter::matches(const coverage::CoverageMapping &,
                                  const coverage::FunctionRecord &Function,
-                                 const CoverageExclusions *) const {
+                                 const CoverageExclusions &) const {
   StringRef FuncName = Function.Name;
   return FuncName.contains(Name);
 }
 
 bool NameRegexCoverageFilter::matches(const coverage::CoverageMapping &,
                                       const coverage::FunctionRecord &Function,
-                                      const CoverageExclusions *) const {
+                                      const CoverageExclusions &) const {
   return llvm::Regex(Regex).match(Function.Name);
 }
 
@@ -37,20 +37,20 @@ bool NameRegexCoverageFilter::matchesFilename(StringRef Filename) const {
 
 bool NameAllowlistCoverageFilter::matches(
     const coverage::CoverageMapping &, const coverage::FunctionRecord &Function,
-    const CoverageExclusions *) const {
+    const CoverageExclusions &) const {
   return Allowlist.inSection("llvmcov", "allowlist_fun", Function.Name);
 }
 
 bool RegionCoverageFilter::matches(const coverage::CoverageMapping &CM,
                                    const coverage::FunctionRecord &Function,
-                                   const CoverageExclusions *Exclusions) const {
+                                   const CoverageExclusions &Exclusions) const {
   return PassesThreshold(FunctionCoverageSummary::get(CM, Function, Exclusions)
                              .RegionCoverage.getPercentCovered());
 }
 
 bool LineCoverageFilter::matches(const coverage::CoverageMapping &CM,
                                  const coverage::FunctionRecord &Function,
-                                 const CoverageExclusions *Exclusions) const {
+                                 const CoverageExclusions &Exclusions) const {
   return PassesThreshold(FunctionCoverageSummary::get(CM, Function, Exclusions)
                              .LineCoverage.getPercentCovered());
 }
@@ -61,7 +61,7 @@ void CoverageFilters::push_back(std::unique_ptr<CoverageFilter> Filter) {
 
 bool CoverageFilters::matches(const coverage::CoverageMapping &CM,
                               const coverage::FunctionRecord &Function,
-                              const CoverageExclusions *Exclusions) const {
+                              const CoverageExclusions &Exclusions) const {
   for (const auto &Filter : Filters) {
     if (Filter->matches(CM, Function, Exclusions))
       return true;
@@ -80,7 +80,7 @@ bool CoverageFilters::matchesFilename(StringRef Filename) const {
 bool CoverageFiltersMatchAll::matches(
     const coverage::CoverageMapping &CM,
     const coverage::FunctionRecord &Function,
-    const CoverageExclusions *Exclusions) const {
+    const CoverageExclusions &Exclusions) const {
   for (const auto &Filter : Filters) {
     if (!Filter->matches(CM, Function, Exclusions))
       return false;
