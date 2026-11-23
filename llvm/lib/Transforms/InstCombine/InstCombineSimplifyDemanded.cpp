@@ -1985,6 +1985,23 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
       PoisonElts = PoisonElts2 & PoisonElts3;
       break;
     }
+    case Intrinsic::vector_shuffle: {
+      // Result element i only depends on mask element i, so the elements
+      // required from the mask are the same as the demanded result elements.
+      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
+      // Only those source elements are required which are indexed by the
+      // demanded elements of the mask. So source elements that are not in the
+      // range specified by the following are not required.
+      ConstantRange KnownRange = computeConstantRangeIncludingKnownBits(
+          II->getArgOperand(1), /*ForSigned=*/false, SQ.getWithInstruction(II));
+      // Indexes >= VWidth produce poison, so they don't require any source
+      // elements.
+      unsigned Lo = KnownRange.getUnsignedMin().getLimitedValue(VWidth);
+      unsigned Hi = KnownRange.getUnsignedMax().getLimitedValue(VWidth - 1) + 1;
+      APInt DemandedSrc = APInt::getBitsSet(VWidth, Lo, Hi);
+      simplifyAndSetOp(II, 0, DemandedSrc, PoisonElts3);
+      break;
+    }
     default: {
       // Handle target specific intrinsics
       std::optional<Value *> V = targetSimplifyDemandedVectorEltsIntrinsic(
@@ -2989,13 +3006,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      if ((DemandedMask & fcNegative) == DemandedMask) {
+      if ((DemandedMask & fcNegative) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         // Roundabout way of replacing with fneg(fabs)
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
       }
 
-      if ((DemandedMask & fcPositive) == DemandedMask) {
+      if ((DemandedMask & fcPositive) == DemandedMask &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         // Roundabout way of replacing with fabs
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
@@ -3017,13 +3036,15 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (FMF.noNaNs())
         KnownSign.knownNot(fcNan);
 
-      if (KnownSign.getSignBit() == false) {
+      if (KnownSign.getSignBit() == false &&
+          CI->getArgOperand(1) != ConstantFP::getZero(VTy)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
 
-      if (KnownSign.getSignBit() == true) {
+      if (KnownSign.getSignBit() == true &&
+          CI->getArgOperand(1) != ConstantFP::get(VTy, -1.0)) {
         CI->dropUBImplyingAttrsAndMetadata();
         CI->setOperand(1, ConstantFP::get(VTy, -1.0));
         return I;
@@ -3203,8 +3224,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                   Depth + 1))
         return I;
 
-      // exp(+/-0) = 1
-      if (KnownSrc.isKnownAlways(fcZero))
+      // exp(+/-0 | subnormal) = 1
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal))
         return ConstantFP::get(VTy, 1.0);
 
       // Only perform nan propagation.
@@ -3212,12 +3233,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       if (KnownSrc.isKnownAlways(fcNan))
         return CI->getArgOperand(0);
 
-      // exp(0 | nan) => x == 0.0 ? 1.0 : x
-      if (KnownSrc.isKnownAlways(fcZero | fcNan)) {
+      // exp(0 | subnormal | +inf | nan) => x + 1.0
+      if (KnownSrc.isKnownAlways(fcZero | fcSubnormal | fcPosInf | fcNan)) {
         IRBuilderBase::InsertPointGuard Guard(Builder);
         Builder.SetInsertPoint(CI);
 
         // fadd +/-0, 1.0 => 1.0
+        // fadd subnormal, 1.0 => 1.0
+        // fadd +inf, 1.0 => +inf
         // fadd nan, 1.0 => nan
         return Builder.CreateFAddFMF(CI->getArgOperand(0),
                                      ConstantFP::get(VTy, 1.0), FMF);

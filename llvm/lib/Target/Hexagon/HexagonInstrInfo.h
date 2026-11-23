@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class AAResults;
 class HexagonSubtarget;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
@@ -319,6 +320,12 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
+  /// Return true if the memory accesses of \p MIa and \p MIb may depend on
+  /// each other. Uses \p AA, if not null, for accesses that are not
+  /// trivially disjoint.
+  bool areMemAccessesDependent(AAResults *AA, const MachineInstr *MIa,
+                               const MachineInstr *MIb) const;
+
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
   bool getBaseAndOffsetPosition(const MachineInstr &MI, unsigned &BasePos,
@@ -392,6 +399,10 @@ public:
   bool isDotCurInst(const MachineInstr &MI) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isHMXActivateInstr(const MachineInstr &MI) const;
+  bool isHMXWeightInstr(const MachineInstr &MI) const;
+  bool isActivateWeightPair(const MachineInstr &MIa,
+                            const MachineInstr &MIb) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;

@@ -75,9 +75,6 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// determineCalleeSaves().
   bool HasStackFrame = false;
 
-  /// SEH_StartProc/SEH_EndProc pseudos own the function's unwind boundaries.
-  bool HasExplicitWinCFIRanges = false;
-
   /// Amount of stack frame size, not including callee-saved registers.
   uint64_t LocalStackSize = 0;
 
@@ -324,11 +321,6 @@ public:
 
   bool hasStackFrame() const { return HasStackFrame; }
   void setHasStackFrame(bool s) { HasStackFrame = s; }
-
-  bool hasExplicitWinCFIRanges() const { return HasExplicitWinCFIRanges; }
-  void setHasExplicitWinCFIRanges(bool Value) {
-    HasExplicitWinCFIRanges = Value;
-  }
 
   bool isStackRealigned() const { return StackRealigned; }
   void setStackRealigned(bool s) { StackRealigned = s; }
@@ -653,7 +645,6 @@ struct AArch64FunctionInfo final : public yaml::MachineFunctionInfo {
   std::optional<uint64_t> StackSizePPR;
   std::optional<bool> HasStackFrame;
   std::optional<bool> HasStreamingModeChanges;
-  bool HasExplicitWinCFIRanges = false;
 
   AArch64FunctionInfo() = default;
   AArch64FunctionInfo(const llvm::AArch64FunctionInfo &MFI);
@@ -669,8 +660,6 @@ template <> struct MappingTraits<AArch64FunctionInfo> {
     YamlIO.mapOptional("stackSizePPR", MFI.StackSizePPR);
     YamlIO.mapOptional("hasStackFrame", MFI.HasStackFrame);
     YamlIO.mapOptional("hasStreamingModeChanges", MFI.HasStreamingModeChanges);
-    YamlIO.mapOptional("hasExplicitWinCFIRanges", MFI.HasExplicitWinCFIRanges,
-                       false);
   }
 };
 

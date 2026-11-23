@@ -84,6 +84,10 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles ``new std::initializer_list<T>{...}``
+  expressions under the Itanium C++ ABI. Previous versions emitted a duplicate
+  initializer-list marker in the mangled name. (#GH232531)
+
 - Clang now correctly mangles C++20 parenthesized aggregate initialization
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.
@@ -565,6 +569,18 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `__builtin___vsprintf_chk`, or `__builtin_sprintf` is called with a format
   string whose output exceeds the destination buffer size.
 
+- `-Wfortify-source` now diagnoses when `memccpy`, `memset_explicit`, or
+  `explicit_bzero` is called with a size argument larger than the destination
+  buffer.
+
+- `-Wfortify-source` now diagnoses calls to `fread_unlocked`,
+  `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
+  corresponding buffer (or is negative for `fgets_unlocked`).
+
+- `-Wfortify-source` now diagnoses when `getlogin_r`, `ttyname_r`, `ptsname_r`,
+  or `confstr` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -580,6 +596,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   before C23. They stay in `-Wc23-extensions` and are still reported under
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
+
+- `-Wuninitialized` no longer warns about an uninitialized variable passed to
+  `__builtin_classify_type`, `__builtin_constant_p`,
+  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
+  none of which depends on its arguments' values.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
@@ -1093,6 +1114,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
 
+- Fixed a stack overflow when parsing deeply nested template arguments such
+  as ``S<S<S<...>>>``. Parsing now goes through the existing stack guard, which
+  continues on a fresh stack instead of crashing when the parser's stack is
+  nearly exhausted. (#GH224114)
+
 - Fixed a CTAD bug when combining with concepts. (#GH124715)
 
 - Fixed a regression where an internal-linkage function (e.g. a `static` or
@@ -1439,11 +1465,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
+- `__ARM_SIZEOF_WCHAR_T` now matches the size of `wchar_t`. It was 4 on Arm and
+  AArch64 Windows, where `wchar_t` is 2 bytes.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
+  Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
 
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing
@@ -1611,6 +1643,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
 
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
@@ -1661,9 +1698,6 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   normalize `cfi-icall` and `kcfi` function type metadata, leaving C++ class
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
-- `-fsanitize=alloc-token` now also infers the allocated type from a placement
-  `new` into the result of an untyped allocation call, e.g. `new (malloc(n)) T`
-  or `void *p = malloc(n); new (p) T;`.
 
 ### Python Binding Changes
 
@@ -1755,6 +1789,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modifications to the bindings will not be reflected in the original variable.
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
+- Fixed a crash when a variable with `#pragma omp allocate` is declared in unreachable code; jumping into its scope is now an error. (#GH140336)
 
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
@@ -1767,6 +1802,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   captured by copy when a nested construct has `default(firstprivate)` or
   `default(private)`, which could silently lose writes such as the result of
   a reduction on the nested construct.
+- Fixed a crash when analyzing an OpenMP `ordered` directive with a `depend` or
+  `doacross` clause inside a loop whose `ordered` clause argument has a
+  bit-width other than 32 bits (such as `int` on 16-bit targets or `long long`).
+  (#GH235971)
+
+- Optimization remarks for a loop associated with an OpenMP loop directive now
+  point at the loop instead of the `#pragma omp` line.
 
 ### SYCL Support
 

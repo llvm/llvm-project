@@ -100,8 +100,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void cir::CIRDialect::initialize() {
-  registerTypes();
-  registerAttributes();
   registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);
@@ -328,6 +326,19 @@ cir::CIRDialect::verifyOperationAttribute(mlir::Operation *op,
     return cir::ConstArrayAttr::verify([&] { return op->emitOpError(); },
                                        arrayTy, bytes,
                                        /*trailingZerosNum=*/0);
+  }
+
+  if (attrName == getCUDAOffloadEntriesAttrName()) {
+    if (!mlir::isa<mlir::ModuleOp>(op))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' attribute to be attached to '"
+                               << mlir::ModuleOp::getOperationName() << "'";
+    auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attr.getValue());
+    if (!entries ||
+        !llvm::all_of(entries, llvm::IsaPred<cir::CUDAOffloadEntryAttr>))
+      return op->emitOpError() << "expects '" << getCUDAOffloadEntriesAttrName()
+                               << "' to be an array of #cir.cu.offload_entry";
+    return success();
   }
 
   if (attrName == getTripleAttrName()) {

@@ -7180,7 +7180,7 @@ The memory space properties are:
   - private
   - scratch
   - 32
-  - 0x00000000
+  - 0xFFFFFFFF
 * - Local
   - group
   - LDS
