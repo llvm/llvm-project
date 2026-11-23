@@ -36,6 +36,8 @@
 #include <cstring>
 #include <new>
 
+#include "test_macros.h"
+
 template <size_t A1, size_t A2, class T>
 struct alignas(A1) BasicWithPadding {
   T x;
@@ -272,6 +274,9 @@ void primitiveTests() {
     assert(memcmp(&d1, &d2, sizeof(long double)) == 0);
   }
 
+  // https://llvm.org/PR215809
+  // TODO: Remove this guard when Clang 23 is no longer supported.
+#if !defined(_AIX) || (defined(TEST_CLANG_VER) && TEST_CLANG_VER >= 2400)
   // _BitInt
   {
     using T = _BitInt(97);
@@ -285,6 +290,7 @@ void primitiveTests() {
     assert(i1 == 37);
     assert(memcmp(&i1, &i2, sizeof(T)) == 0);
   }
+#endif
 
   // _Complex
   {
