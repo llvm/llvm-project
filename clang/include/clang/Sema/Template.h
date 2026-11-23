@@ -423,10 +423,12 @@ enum class TemplateSubstitutionKind : char {
     /// lookup will search our outer scope.
     bool CombineWithOuterScope;
 
-    /// Whether this scope is being used to instantiate a lambda or block
-    /// expression, in which case it should be reused for instantiating the
-    /// lambda's FunctionProtoType.
-    bool InstantiatingLambdaOrBlock = false;
+    /// Whether the parameters of a function prototype substituted in this
+    /// scope are mapped in it, so that they outlast the substitution, rather
+    /// than in a scope of their own (see
+    /// TemplateInstantiator::TransformFunctionProtoType). A lambda or block
+    /// expression needs them for its body, a declarator for its attributes.
+    bool MapsPrototypeParams = false;
 
     /// If non-NULL, the template parameter pack that has been
     /// partially substituted per C++0x [temp.arg.explicit]p9.
@@ -443,10 +445,10 @@ enum class TemplateSubstitutionKind : char {
 
   public:
     LocalInstantiationScope(Sema &SemaRef, bool CombineWithOuterScope = false,
-                            bool InstantiatingLambdaOrBlock = false)
+                            bool MapsPrototypeParams = false)
         : SemaRef(SemaRef), Outer(SemaRef.CurrentInstantiationScope),
           CombineWithOuterScope(CombineWithOuterScope),
-          InstantiatingLambdaOrBlock(InstantiatingLambdaOrBlock) {
+          MapsPrototypeParams(MapsPrototypeParams) {
       SemaRef.CurrentInstantiationScope = this;
     }
 
@@ -580,8 +582,9 @@ enum class TemplateSubstitutionKind : char {
     /// Determine whether D is a pack expansion created in this scope.
     bool isLocalPackExpansion(const Decl *D);
 
-    /// Determine whether this scope is for instantiating a lambda or block.
-    bool isLambdaOrBlock() const { return InstantiatingLambdaOrBlock; }
+    /// Determine whether the parameters of a prototype substituted in this
+    /// scope are mapped in it rather than in a scope of their own.
+    bool mapsPrototypeParams() const { return MapsPrototypeParams; }
   };
 
   class TemplateDeclInstantiator
