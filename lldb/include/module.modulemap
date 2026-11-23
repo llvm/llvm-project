@@ -54,6 +54,7 @@ module lldb_Host {
   module ThreadLauncher { header "lldb/Host/ThreadLauncher.h" export * }
   module Time { header "lldb/Host/Time.h" export * }
   module XML { header "lldb/Host/XML.h" export * }
+  module XMLParser { header "lldb/Host/XMLParser.h" export * }
 
   module common {
     umbrella "lldb/Host/common"
