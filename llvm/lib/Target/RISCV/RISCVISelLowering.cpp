@@ -11839,17 +11839,15 @@ SDValue RISCVTargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,
           IsSlide = false;
           break;
         }
-      if (IsSlide)
-        SlideSrc = Shuffle->getOperand(0);
-    }
-    if (SlideSrc) {
-      MVT SlideVT = getContainerForFixedLengthVector(VecVT);
-      SlideSrc = convertToScalableVector(SlideVT, SlideSrc, DAG, Subtarget);
-      auto [Mask, VL] = getDefaultVLOps(VecVT, SlideVT, DL, DAG, Subtarget);
-      SDValue Result =
-          DAG.getNode(RISCVISD::VFSLIDE1UP_VL, DL, SlideVT,
-                      DAG.getUNDEF(SlideVT), SlideSrc, Val, Mask, VL);
-      return convertFromScalableVector(VecVT, Result, DAG, Subtarget);
+      if (IsSlide) {
+        SDValue SlideSrc = Shuffle->getOperand(0);
+        MVT SlideVT = getContainerForFixedLengthVector(VecVT);
+        SlideSrc = convertToScalableVector(SlideVT, SlideSrc, DAG, Subtarget);
+        auto [Mask, VL] = getDefaultVLOps(VecVT, SlideVT, DL, DAG, Subtarget);
+        SDValue Result = DAG.getNode(RISCVISD::VFSLIDE1UP_VL, DL, SlideVT,
+                        DAG.getUNDEF(SlideVT), SlideSrc, Val, Mask, VL);
+        return convertFromScalableVector(VecVT, Result, DAG, Subtarget);
+      }
     }
   }
 
