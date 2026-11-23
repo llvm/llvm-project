@@ -32,3 +32,24 @@
 // RUN:   | FileCheck %s --check-prefix=GNU
 
 // GNU: error: unable to find library -link
+
+// The long forms of the GNU library options are also hidden for a Windows MSVC
+// host and forwarded verbatim.
+// RUN: clang-linker-wrapper --host-triple=x86_64-pc-windows-msvc --dry-run \
+// RUN:   --linker-path=/usr/bin/lld-link %t.o --library=foo --library bar \
+// RUN:   --library-path=%t.dir --library-path %t.dir -out:%t.exe 2>&1 \
+// RUN:   | FileCheck %s --check-prefix=MSVC-LONG
+
+// MSVC-LONG-NOT: error
+// MSVC-LONG: "/usr/bin/lld-link" {{.*}}.o --library=foo --library bar --library-path={{.*}} --library-path {{.*}} -out:{{.*}}.exe
+
+// GNU-style host linkers still treat the long forms as library options.
+// RUN: not clang-linker-wrapper --host-triple=x86_64-w64-windows-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld %t.o --library-path=%t.dir --library=foo \
+// RUN:   -o %t.exe 2>&1 | FileCheck %s --check-prefix=GNU-LONG-EQ
+// RUN: not clang-linker-wrapper --host-triple=x86_64-w64-windows-gnu --dry-run \
+// RUN:   --linker-path=/usr/bin/ld.lld %t.o --library-path %t.dir --library bar \
+// RUN:   -o %t.exe 2>&1 | FileCheck %s --check-prefix=GNU-LONG-S
+
+// GNU-LONG-EQ: error: unable to find library -lfoo
+// GNU-LONG-S: error: unable to find library -lbar

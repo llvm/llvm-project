@@ -201,24 +201,28 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   exit(EXIT_FAILURE);
 }
 
+/// Return true if the host uses an MSVC-style linker such as link.exe. The
+/// host triple decides which options we parse, so read it before parsing.
+bool isMSVCHost(ArrayRef<const char *> ArgStrings) {
+  StringRef HostTriple;
+  for (StringRef Arg : ArgStrings)
+    if (Arg.consume_front("--host-triple="))
+      HostTriple = Arg;
+  return llvm::Triple(HostTriple.empty() ? sys::getDefaultTargetTriple()
+                                         : HostTriple.str())
+      .isWindowsMSVCEnvironment();
+}
+
 /// Parse the wrapper's command line. Expanded response file strings are owned
 /// by \p Saver, which must outlive the returned list.
 InputArgList parseWrapperArgs(int Argc, char **Argv, StringSaver &Saver) {
   SmallVector<const char *, 0> ArgStrings;
   cl::expandResponseFiles(Argc, Argv, /*EnvVar=*/nullptr, Saver, ArgStrings);
 
-  // link.exe does not accept GNU -l or -L. The Clang driver already
-  // rewrites -lfoo as foo.lib and -L<dir> as -libpath:<dir>. Parsing those
-  // options here would read -link as library "ink" and split -LTCG into "-L"
-  // and "TCG". The host triple selects the visible options, so it is read
-  // before parsing.
-  std::string HostTriple = sys::getDefaultTargetTriple();
-  for (StringRef Arg : ArgStrings) {
-    if (Arg.consume_front("--host-triple="))
-      HostTriple = Arg.str();
-  }
+  // MSVC linkers have no -l or -L. Hide those options so that MSVC options
+  // such as -link and -LTCG are not misread as "-l ink" and "-L TCG".
   unsigned VisibilityMask = DefaultVis;
-  if (!llvm::Triple(HostTriple).isWindowsMSVCEnvironment())
+  if (!isMSVCHost(ArgStrings))
     VisibilityMask |= GNULinkerVis;
 
   unsigned MissingArgIndex, MissingArgCount;
