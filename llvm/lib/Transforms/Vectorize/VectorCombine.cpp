@@ -6250,7 +6250,7 @@ static SmallVector<Value *, 8> getInstrOperandsAtIdx(ArrayRef<Value *> Members,
 /// can be rebuilt at the interleaved width.
 static bool canWidenDeinterleavedOperations(
     const VectorizeOptions &Opts, ArrayRef<Value *> Members,
-    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &OutstandingUsers) {
+    DenseSet<Value *> &Visited, SmallPtrSetImpl<User *> &UndroppableUsers) {
   unsigned Factor = Members.size();
   if (getCommonDeinterleavedSource(Members))
     return true;
@@ -6261,11 +6261,11 @@ static bool canWidenDeinterleavedOperations(
   if (Visited.size() + Factor > Opts.vector_combine_max_scan_instrs)
     return false;
 
-  auto addUnDroppableUsers = [&](Value *V) {
+  auto addUndroppableUsers = [&](Value *V) {
     for (User *U : V->users()) {
       if (U->isDroppable())
         continue;
-      OutstandingUsers.insert(U);
+      UndroppableUsers.insert(U);
     }
   };
 
@@ -6273,7 +6273,7 @@ static bool canWidenDeinterleavedOperations(
   if (!FirstInst || !isSupportedElementwise(FirstInst))
     return false;
   if (Visited.insert(FirstInst).second && !FirstInst->getSingleUndroppableUse())
-    addUnDroppableUsers(FirstInst);
+    addUndroppableUsers(FirstInst);
 
   for (Value *Member : Members.drop_front()) {
     auto *Inst = dyn_cast<Instruction>(Member);
@@ -6281,7 +6281,7 @@ static bool canWidenDeinterleavedOperations(
         !FirstInst->isSameOperationAs(Inst, Instruction::CompareCallTargets))
       return false;
     if (Visited.insert(Inst).second && !Inst->getSingleUndroppableUse())
-      addUnDroppableUsers(Inst);
+      addUndroppableUsers(Inst);
   }
 
   // Scalars operands should be equal among all members.
@@ -6290,7 +6290,7 @@ static bool canWidenDeinterleavedOperations(
     SmallVector<Value *, 8> Operands = getInstrOperandsAtIdx(Members, Op);
     if (!getCommonSplatValue(Operands) &&
         !canWidenDeinterleavedOperations(Opts, Operands, Visited,
-                                         OutstandingUsers))
+                                         UndroppableUsers))
       return false;
   }
   return true;
@@ -6414,19 +6414,18 @@ bool VectorCombine::foldInterleaveOfDeinterleaveChains(Instruction &I) {
     return false;
 
   SmallVector<Value *, 8> RootMembers(Interleave->args());
-  // OutstandingUsers is used to track and catch users that are not in the tree.
-  SmallPtrSet<User *, 4> OutstandingUsers;
+  SmallPtrSet<User *, 4> UndroppableUsers;
   DenseSet<Value *> Visited;
   if (!canWidenDeinterleavedOperations(Opts, RootMembers, Visited,
-                                       OutstandingUsers))
+                                       UndroppableUsers))
     return false;
-  if (!set_is_subset(OutstandingUsers, Visited))
+  // Every users should be in the tree.
+  if (!set_is_subset(UndroppableUsers, Visited))
     return false;
 
   ElementCount WideEC = cast<VectorType>(I.getType())->getElementCount();
   Builder.SetInsertPoint(Interleave);
-  // Mapping from `<Factor x Value *>` (original operand value on the same
-  // operand index) to the new wide value. This avoids emitting redundant
+  // Mapping from members to the new wide value. This avoids emitting redundant
   // instructions when a new operand value has more than one use.
   DenseMap<SmallVector<Value *, 8>, Value *> WideValueCache;
   Value *WideValue = widenDeinterleavedOperations(RootMembers, WideEC, Builder,
