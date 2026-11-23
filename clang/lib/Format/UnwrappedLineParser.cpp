@@ -2934,8 +2934,10 @@ static bool containsPPDirective(const UnwrappedLine &Line) {
       [](const UnwrappedLineNode &Node) { return Node.Tok->FirstAfterPPLine; });
 }
 
-// Returns whether an `else` in a skipped preprocessor branch may follow.
+// Returns whether an `else` in a skipped preprocessor branch may follow. Braces
+// inserted while it is skipped can't be withdrawn by the run that parses it.
 bool UnwrappedLineParser::isFollowedByConditionalElse() const {
+  // Find the last token of the if statement, including already emitted lines.
   const FormatToken *Last = nullptr;
   if (!Line->Tokens.empty()) {
     Last = Line->Tokens.back().Tok;
@@ -2950,6 +2952,7 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
   if (!Last)
     return false;
 
+  // AllTokens also holds the tokens of branches that this run doesn't parse.
   const auto *It =
       llvm::lower_bound(AllTokens, Last->Tok.getLocation(),
                         [](const FormatToken *Tok, SourceLocation Loc) {
@@ -2960,6 +2963,7 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
 
   // Whether a branch is always taken, for each conditional entered since Last.
   SmallVector<bool, 4> Conditionals;
+  // Depth of the conditional making this branch unreachable, or 0 if none.
   size_t UnreachableDepth = 0;
   bool IsFirstOnLine = false;
   bool IsFirstAfterDirective = false;
@@ -2979,6 +2983,8 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
       }
       if (!Directive.empty()) {
         const auto &Keyword = *Directive.front();
+        // Only a condition that is a single literal is decided, as an
+        // expression such as `0 || A` still depends on the configuration.
         const auto IsLiteral = [&](bool Value) {
           if (Keyword.isNoneOf(tok::pp_if, tok::pp_elif) ||
               Directive.size() != 2) {
@@ -3003,6 +3009,7 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
                                    tok::pp_elifndef)) {
           if (Conditionals.size() == UnreachableDepth)
             UnreachableDepth = 0;
+          // An alternative of a conditional that was entered before Last.
           if (Conditionals.empty())
             Conditionals.push_back(false);
           if (UnreachableDepth == 0 &&
@@ -3019,8 +3026,10 @@ bool UnwrappedLineParser::isFollowedByConditionalElse() const {
     IsFirstOnLine = false;
     if (UnreachableDepth > 0)
       continue;
+    // An `else` later in a branch belongs to an `if` in that same branch.
     if (IsFirstAfterDirective && Tok.is(tok::kw_else))
       return true;
+    // Stop at ordinary code outside the conditionals tracked by this scan.
     if (Conditionals.empty())
       return false;
     IsFirstAfterDirective = false;
