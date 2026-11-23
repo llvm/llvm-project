@@ -3784,6 +3784,9 @@ llvm_target_lib_list = [lib for lib in [
                 "lib/Target/SystemZ/SystemZGenSDNodeInfo.inc",
             ),
         ],
+        "tbl_deps": [
+            ":SystemZOptionsTableGen",
+        ],
     },
     {
         "name": "VE",
@@ -4323,6 +4326,15 @@ gentbl_cc_library(
     tbl_outs = {"lib/Target/Sparc/SparcOptions.inc": ["-gen-opt-parser-defs"]},
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/Sparc/SparcOptions.td",
+    deps = [":OptParserTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "SystemZOptionsTableGen",
+    strip_include_prefix = "lib/Target/SystemZ",
+    tbl_outs = {"lib/Target/SystemZ/SystemZOptions.inc": ["-gen-opt-parser-defs"]},
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/SystemZ/SystemZOptions.td",
     deps = [":OptParserTdFiles"],
 )
 
@@ -5451,6 +5463,7 @@ cc_library(
         ":CodeGen",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfo",
         ":DebugInfoDWARF",
@@ -5952,6 +5965,7 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":CodeGenTypes",
         ":DWARFLinker",
+        ":DWARFLinkerBase",
         ":DWARFLinkerParallel",
         ":DebugInfoDWARF",
         ":DebugInfoDWARFLowLevel",

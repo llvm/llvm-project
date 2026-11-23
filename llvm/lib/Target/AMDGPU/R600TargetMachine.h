@@ -16,6 +16,7 @@
 
 #include "AMDGPUTargetMachine.h"
 #include "R600Subtarget.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include <optional>
 
@@ -28,6 +29,18 @@ namespace llvm {
 class R600TargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<R600Subtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute GPU, FS;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return GPU == RHS.GPU && FS == RHS.FS;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<R600Subtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,

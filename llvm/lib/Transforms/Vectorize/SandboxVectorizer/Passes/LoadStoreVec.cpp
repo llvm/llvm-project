@@ -80,12 +80,12 @@ LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   return VecL;
 }
 
-bool ScalarConstReinterpret::canReinterpret(Type *SrcTy, Type *DestTy,
-                                            const DataLayout &DL) {
+bool SameSizeReinterpret::canReinterpret(Type *SrcTy, Type *DestTy,
+                                         const DataLayout &DL) {
   return !isNonIntegralPtr(SrcTy, DL) && !isNonIntegralPtr(DestTy, DL);
 }
 
-Type *ScalarConstReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
+Type *SameSizeReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
   Context &Ctx = Ty->getContext();
   if (auto *VecTy = dyn_cast<FixedVectorType>(Ty)) {
     auto *ElmIntTy =
@@ -95,9 +95,9 @@ Type *ScalarConstReinterpret::getIntTypeFor(Type *Ty, const DataLayout &DL) {
   return IntegerType::get(Ctx, Utils::getNumBits(Ty, DL));
 }
 
-SmallVector<ScalarConstReinterpret::CastStep, 3>
-ScalarConstReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
-                                     const DataLayout &DL) {
+SmallVector<SameSizeReinterpret::CastStep, 3>
+SameSizeReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
+                                  const DataLayout &DL) {
   assert(canReinterpret(SrcTy, DestTy, DL) &&
          "Cannot reinterpret a non-integral pointer!");
   assert(Utils::getNumBits(SrcTy, DL) == Utils::getNumBits(DestTy, DL) &&
@@ -122,8 +122,8 @@ ScalarConstReinterpret::getCastChain(Type *SrcTy, Type *DestTy,
   return Chain;
 }
 
-Constant *ScalarConstReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
-                                                      const DataLayout &DL) {
+Constant *SameSizeReinterpret::reinterpretConstant(Constant *C, Type *DestTy,
+                                                   const DataLayout &DL) {
   if (!canReinterpret(C->getType(), DestTy, DL))
     return nullptr;
   Constant *NewC = C;
@@ -215,8 +215,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   for (Constant *C : ConstantElements) {
     unsigned Bits = Utils::getNumBits(C, *DL);
     if (Bits == LaneBits) {
-      Constant *Lane =
-          ScalarConstReinterpret::reinterpretConstant(C, LaneTy, *DL);
+      Constant *Lane = SameSizeReinterpret::reinterpretConstant(C, LaneTy, *DL);
       if (Lane == nullptr)
         return nullptr;
       LaneTyConstants.push_back(Lane);
@@ -243,7 +242,7 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
         Constant *SliceCInt = ConstantInt::get(
             *Ctx, Val.extractBits(LaneBits, EndianAwareSlice * LaneBits));
         Constant *SliceC =
-            ScalarConstReinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
+            SameSizeReinterpret::reinterpretConstant(SliceCInt, LaneTy, *DL);
         if (SliceC == nullptr)
           return nullptr;
         LaneTyConstants.push_back(SliceC);
@@ -388,9 +387,10 @@ bool LoadStoreVec::runOnRegion(Region &Rgn, const Analyses &RegionAnalyses) {
     llvm_unreachable("Expected Load or Store");
   }
 
-  Legality = std::make_unique<LegalityAnalysis>(
-      A->getAA(), A->getScalarEvolution(), F.getParent()->getDataLayout(),
-      A->getTTI(), F.getContext(), IMaps, Dir);
+  LegalityAnalysis L(A->getAA(), A->getScalarEvolution(),
+                     F.getParent()->getDataLayout(), A->getTTI(),
+                     F.getContext(), IMaps, Dir);
+  Legality = &L;
 
   bool Changed = false;
   switch (Opc) {

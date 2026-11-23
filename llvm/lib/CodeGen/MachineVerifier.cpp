@@ -2731,6 +2731,13 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
       if (MI->findTiedOperandIdx(OtherIdx) != MONum)
         report("Inconsistent tie links", MO, MONum);
 
+      if (MO->isUse() && Reg.isVirtual() && OtherMO.isReg() &&
+          OtherMO.getReg() == Reg && OtherMO.getSubReg() != MO->getSubReg()) {
+        report("Tied use and def of the same virtual register must use the "
+               "same subregister index",
+               MO, MONum);
+      }
+
       // See IsUndef in MachineOperand.h.
       if (MO->isUse() && MO->isUndef() && Reg.isVirtual() &&
           OtherMO.getReg() != Reg &&

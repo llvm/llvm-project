@@ -14,6 +14,8 @@ types:
     extension: linux
   struct in6_addr:
     in-latest-posix: ''
+  struct in6_pktinfo:
+    extension: linux
   struct in_addr:
     in-latest-posix: ''
   struct ip_mreq:
@@ -126,13 +128,21 @@ macros:
     extension: linux
   IPV6_MTU_DISCOVER:
     extension: linux
+  IPV6_PKTINFO:
+    extension: linux
   IPV6_RECVERR:
     extension: linux
+  IPV6_RECVHOPLIMIT:
+    extension: linux
   IPV6_RECVPKTINFO:
+    extension: linux
+  IPV6_RECVTCLASS:
     extension: linux
   IPV6_ROUTER_ALERT:
     extension: linux
   IPV6_RTHDR:
+    extension: linux
+  IPV6_TCLASS:
     extension: linux
   IP_ADD_MEMBERSHIP:
     extension: linux

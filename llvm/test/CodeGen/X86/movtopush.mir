@@ -80,13 +80,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr32, preferred-register: '' }
-  - { id: 3, class: gr32, preferred-register: '' }
-  - { id: 4, class: gr32, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
 liveins:
 frameInfo:
   isFrameAddressTaken: false
@@ -123,7 +116,7 @@ constants:
 body:             |
   bb.0.entry:
     ADJCALLSTACKDOWN32 16, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-    %0 = COPY $esp
+    %0:gr32 = COPY $esp
     MOV32mi %0, 1, $noreg, 12, $noreg, 4 :: (store (s32) into stack + 12)
     MOV32mi %0, 1, $noreg, 8, $noreg, 3 :: (store (s32) into stack + 8)
     MOV32mi %0, 1, $noreg, 4, $noreg, 2 :: (store (s32) into stack + 4)
@@ -131,14 +124,14 @@ body:             |
     CALLpcrel32 @good, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp
     ADJCALLSTACKUP32 16, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
     ADJCALLSTACKDOWN32 20, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-    %1 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2.s, align 8)
-    %2 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load (s32) from %stack.2.s + 4)
-    %3 = COPY $esp
+    %1:gr32 = MOV32rm %stack.2.s, 1, $noreg, 0, $noreg :: (load (s32) from %stack.2.s, align 8)
+    %2:gr32 = MOV32rm %stack.2.s, 1, $noreg, 4, $noreg :: (load (s32) from %stack.2.s + 4)
+    %3:gr32 = COPY $esp
     MOV32mr %3, 1, $noreg, 4, $noreg, %2 :: (store (s32))
     MOV32mr %3, 1, $noreg, 0, $noreg, %1 :: (store (s32))
-    %4 = LEA32r %stack.0.p, 1, $noreg, 0, $noreg
+    %4:gr32 = LEA32r %stack.0.p, 1, $noreg, 0, $noreg
     MOV32mr %3, 1, $noreg, 16, $noreg, %4 :: (store (s32) into stack + 16)
-    %5 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
+    %5:gr32 = LEA32r %stack.1.q, 1, $noreg, 0, $noreg
     MOV32mr %3, 1, $noreg, 12, $noreg, %5 :: (store (s32) into stack + 12)
     MOV32mi %3, 1, $noreg, 8, $noreg, 6 :: (store (s32) into stack + 8)
     CALLpcrel32 @struct, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp,
@@ -160,12 +153,10 @@ body:             |
 # CHECK-NEXT: RET 0
 name: debug_after_call
 alignment: 1
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
 body: |
   bb.0.entry:
     ADJCALLSTACKDOWN32 8, 0, 0, implicit-def dead $esp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $esp, implicit $ssp
-    %0 = COPY $esp
+    %0:gr32 = COPY $esp
     MOV32mi %0, 1, $noreg, 4, $noreg, 2 :: (store (s32) into stack + 4)
     MOV32mi %0, 1, $noreg, 0, $noreg, 1 :: (store (s32) into stack)
     CALLpcrel32 @two, csr_32, implicit $esp, implicit $ssp, implicit-def $esp, implicit-def $ssp

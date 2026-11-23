@@ -253,10 +253,11 @@ static std::string computeAMDDataLayout(const Triple &TT) {
   // buffer descriptor and a 32-bit offset, which are indexed by 32-bit values
   // (address space 7), and 128-bit non-integral buffer resourcees (address
   // space 8) which cannot be non-trivilally accessed by LLVM memory operations
-  // like getelementptr.
+  // like getelementptr. Address space 12 is reserved for downstream, where it
+  // is  used for 64-bit pointers, so it is left at the default pointer size.
   return "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32"
          "-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-p10:32:32"
-         "-p11:32:32-p12:32:32-p13:32:32-p14:32:32-p15:32:32"
+         "-p11:32:32-p13:32:32-p14:32:32-p15:32:32"
          "-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256"
          "-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9";
 }
@@ -418,16 +419,13 @@ static std::string computeNVPTXDataLayout(const Triple &T, StringRef ABIName) {
 
 static std::string computeSPIRVDataLayout(const Triple &TT) {
   const auto Arch = TT.getArch();
-  // TODO: this probably needs to be revisited:
-  // Logical SPIR-V has no pointer size, so any fixed pointer size would be
-  // wrong. The choice to default to 32 or 64 is just motivated by another
-  // memory model used for graphics: PhysicalStorageBuffer64. But it shouldn't
-  // mean anything.
   if (Arch == Triple::spirv32)
     return "e-p:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-"
            "v256:256-v512:512-v1024:1024-n8:16:32:64-G1";
+  // Logical SPIR-V pointers have no size. 32 bits makes the GEP index type
+  // i32, which avoids declaring the Int64 capability.
   if (Arch == Triple::spirv)
-    return "e-ve-i64:64-n8:16:32:64-G10";
+    return "e-p:32:32-ve-i64:64-n8:16:32:64-G10";
   if (TT.getVendor() == Triple::VendorType::AMD &&
       TT.getOS() == Triple::OSType::AMDHSA)
     return "e-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-"
