@@ -3887,8 +3887,8 @@ bool AMDGPUDAGToDAGISel::SelectVOP3PMods(SDValue In, SDValue &Src,
         unsigned NumRegs = VecSize / 64;
         const SDValue Ops[] = {
             CurDAG->getTargetConstant(RC->getID(), SL, MVT::i32), Elts[0],
-            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs),
-                                      SL, MVT::i32),
+            CurDAG->getTargetConstant(TRI->getSubRegFromChannel(0, NumRegs), SL,
+                                      MVT::i32),
             Elts[1],
             CurDAG->getTargetConstant(
                 TRI->getSubRegFromChannel(NumRegs, NumRegs), SL, MVT::i32)};
