@@ -290,3 +290,4 @@ body:             |
     $d2 = COPY %dst3(p0)
     $d3 = COPY %dst4(p0)
     RET_ReallyLR implicit $d0, implicit $d1, implicit $d2, implicit $d3
+...

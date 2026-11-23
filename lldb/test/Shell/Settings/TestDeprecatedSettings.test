@@ -1,0 +1,122 @@
+# REQUIRES: asserts
+#
+# Deprecated settings can be set and shown by name, but setting them warns, and
+# they are tagged as deprecated wherever they are shown. Unless explicitly
+# requested, they are hidden from "settings list", and from "settings show" and
+# "settings write" while they have their default value. The deprecated setting
+# used here only exists in builds with asserts.
+
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.deprecated-setting true' \
+# RUN:   -o 'settings show testing.deprecated-setting' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=SET
+# SET-NOT: error:
+# SET: warning: setting 'testing.deprecated-setting' is deprecated and may be removed in a future release; there is no replacement for this setting
+# SET-NOT: error:
+# SET: testing.deprecated-setting (deprecated) (boolean) = true
+
+# Clearing a deprecated setting moves away from it, so it doesn't warn.
+# RUN: %lldb -x -b -o 'settings clear testing.deprecated-setting' \
+# RUN:   -o 'settings set -f testing.deprecated-setting' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CLEAR
+# CLEAR-NOT: warning:
+# CLEAR: (lldb) settings set -f testing.deprecated-setting
+# CLEAR-NOT: warning:
+
+# A setting that moved out of an experimental collection can still be reached
+# through its old experimental path, so that path must warn and be tagged too.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.experimental.deprecated-setting true' \
+# RUN:   -o 'settings show testing.experimental.deprecated-setting' \
+# RUN:   2>&1 | FileCheck %s --check-prefix=EXPERIMENTAL
+# EXPERIMENTAL-NOT: error:
+# EXPERIMENTAL: warning: setting 'testing.experimental.deprecated-setting' is deprecated and may be removed in a future release; there is no replacement for this setting
+# EXPERIMENTAL-NOT: error:
+# EXPERIMENTAL: testing.experimental.deprecated-setting (deprecated) (boolean) = true
+
+# RUN: %lldb -x -b -o 'settings show' -o 'settings show testing' \
+# RUN:   -o 'settings show -d' -o 'settings show -c' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=HIDDEN
+# RUN: %lldb -x -b -o 'settings list' -o 'settings list testing' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=HIDDEN
+# HIDDEN-NOT: deprecated-setting --
+# HIDDEN-NOT: (deprecated)
+
+# Changed deprecated settings are always shown, because the user is still
+# relying on them.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.deprecated-setting true' \
+# RUN:   -o 'settings show' -o 'settings show testing' \
+# RUN:   -o 'settings show -c' -o 'settings show -c testing' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=CHANGED
+# CHANGED: (lldb) settings show
+# CHANGED: testing.deprecated-setting (deprecated) (boolean) = true
+# CHANGED: (lldb) settings show testing
+# CHANGED: testing.deprecated-setting (deprecated) (boolean) = true
+# CHANGED: (lldb) settings show -c
+# CHANGED: testing.deprecated-setting (deprecated) (boolean) = true (default: false)
+# CHANGED: (lldb) settings show -c testing
+# CHANGED: testing.deprecated-setting (deprecated) (boolean) = true (default: false)
+
+# RUN: %lldb -x -b -o 'settings show -D' -o 'settings show -D testing' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SHOW-ALL
+# SHOW-ALL: (lldb) settings show -D
+# SHOW-ALL: testing.deprecated-setting (deprecated) (boolean) = false
+# SHOW-ALL: (lldb) settings show -D testing
+# SHOW-ALL: testing.deprecated-setting (deprecated) (boolean) = false
+
+# RUN: %lldb -x -b -o 'settings show testing.deprecated-setting' \
+# RUN:   -o 'settings show -D testing.deprecated-setting' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=SHOW-ONE
+# SHOW-ONE: (lldb) settings show testing.deprecated-setting
+# SHOW-ONE-NEXT: testing.deprecated-setting (deprecated) (boolean) = false
+# SHOW-ONE: (lldb) settings show -D testing.deprecated-setting
+# SHOW-ONE-NEXT: testing.deprecated-setting (deprecated) (boolean) = false
+
+# RUN: %lldb -x -b -o 'settings list -D' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=LIST-ALL
+# LIST-ALL: 'testing' variables:
+# LIST-ALL: deprecated-setting{{ *}}-- (deprecated) Used for testing LLDB only.
+
+# RUN: %lldb -x -b -o 'settings list -D testing' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=LIST-ALL
+
+# RUN: %lldb -x -b -o 'settings list testing.deprecated-setting' \
+# RUN:   -o 'settings list -D testing.deprecated-setting' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=LIST-ONE
+# LIST-ONE: (lldb) settings list testing.deprecated-setting
+# LIST-ONE-NEXT: testing.deprecated-setting -- (deprecated) Used for testing LLDB only.
+# LIST-ONE: (lldb) settings list -D testing.deprecated-setting
+# LIST-ONE-NEXT: testing.deprecated-setting -- (deprecated) Used for testing LLDB only.
+
+# apropos is a search, so it always includes deprecated settings.
+# RUN: %lldb -x -b -o 'apropos deprecated-setting' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=APROPOS
+# APROPOS: The following settings variables may relate to 'deprecated-setting':
+# APROPOS: testing.deprecated-setting -- (deprecated) Used for testing LLDB only.
+
+# Unchanged deprecated settings aren't written, so that the file can still be
+# read after the setting is removed.
+# RUN: %lldb -x -b -o 'settings write -f %t.default.settings'
+# RUN: FileCheck %s --check-prefix=WRITE-DEFAULT < %t.default.settings
+# WRITE-DEFAULT-NOT: deprecated-setting
+# WRITE-DEFAULT: settings set -f target.
+# WRITE-DEFAULT-NOT: deprecated-setting
+
+# Changed deprecated settings are written, so they survive a write/read round
+# trip. Reading them back warns.
+# RUN: %lldb -x -b \
+# RUN:   -o 'settings set testing.deprecated-setting true' \
+# RUN:   -o 'settings write -f %t.settings'
+# RUN: FileCheck %s --check-prefix=WRITE < %t.settings
+# WRITE-NOT: (deprecated)
+# WRITE: settings set -f testing.deprecated-setting true
+# WRITE-NOT: (deprecated)
+
+# RUN: %lldb -x -b -o 'settings read -f %t.settings' \
+# RUN:   -o 'settings show testing.deprecated-setting' 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=READ
+# READ-NOT: error:
+# READ: warning: setting 'testing.deprecated-setting' is deprecated
+# READ-NOT: error:
+# READ: testing.deprecated-setting (deprecated) (boolean) = true

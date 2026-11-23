@@ -5,13 +5,6 @@
 name:            h
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: g8rc }
-  - { id: 2, class: g8rc_and_g8rc_nox0 }
-  - { id: 3, class: crrc }
-  - { id: 4, class: g8rc_and_g8rc_nox0 }
-  - { id: 5, class: g8rc }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// This does exist only for fp32
-#if __CLC_FPSIZE == 32
+// This does not exist for fp16
+#if __CLC_FPSIZE > 16
 #ifndef __CLC_SCALAR
 
 __CLC_FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_GENTYPE, __private);

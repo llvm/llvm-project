@@ -95,6 +95,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
+  LLT::setUseExtended(true);
   setGlobalISel(true);
   setFastISel(false);
   setO0WantsFastISel(false);
@@ -106,7 +107,12 @@ namespace {
 class SPIRVPassConfig : public TargetPassConfig {
 public:
   SPIRVPassConfig(SPIRVTargetMachine &TM, PassManagerBase &PM)
-      : TargetPassConfig(TM, PM), TM(TM) {}
+      : TargetPassConfig(TM, PM), TM(TM) {
+    // Logical SPIR-V cannot express the pointer induction variables that loop
+    // strength reduction creates.
+    if (TM.getSubtargetImpl()->isLogicalSPIRV())
+      EnableLoopStrengthReduce = false;
+  }
 
   void addMachineSSAOptimization() override;
   void addIRPasses() override;
@@ -118,7 +124,6 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
   void addFastRegAlloc() override {}
   void addOptimizedRegAlloc() override {}
 
@@ -130,30 +135,14 @@ private:
 };
 } // namespace
 
-// We do not use physical registers, and maintain virtual registers throughout
-// the entire pipeline, so return nullptr to disable register allocation.
-FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr;
-}
-
 // A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 }
 
-// Disable passes that break from assuming no virtual registers exist.
 void SPIRVPassConfig::addPostRegAlloc() {
-  // Do not work with vregs instead of physical regs.
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
+  // Does not work with vregs instead of physical regs.
   disablePass(&LiveDebugValuesID);
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);

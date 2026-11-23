@@ -526,7 +526,6 @@ void HWAddressSanitizer::initializeModule() {
   Mapping.init(Opts, TargetTriple, InstrumentWithCalls, CompileKernel);
 
   C = &(M.getContext());
-  IRBuilder<> IRB(M);
 
   HwasanCtorFunction = nullptr;
 
@@ -587,7 +586,6 @@ void HWAddressSanitizer::initializeModule() {
 }
 
 void HWAddressSanitizer::initializeCallbacks(Module &M) {
-  IRBuilder<> IRB(M);
   const std::string MatchAllStr = UseMatchAllCallback ? "_match_all" : "";
   FunctionType *HwasanMemoryAccessCallbackSizedFnTy,
       *HwasanMemoryAccessCallbackFnTy, *HwasanMemTransferFnTy,

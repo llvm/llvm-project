@@ -24,33 +24,23 @@
 ...
 ---
 name:            foo
-registers:
-  - { id: 0, class: gprnopc }
-  - { id: 1, class: rgpr }
-  - { id: 2, class: rgpr }
-  - { id: 3, class: rgpr }
-  - { id: 4, class: rgpr }
-  - { id: 5, class: rgpr }
-  - { id: 6, class: rgpr }
-  - { id: 7, class: rgpr }
-  - { id: 8, class: rgpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 body:             |
   bb.0 (%ir-block.0):
     liveins: $r0
-    %0 = COPY $r0
-    %1 = t2MOVi32imm -25733
-    %2 = t2SUBrr %0, %1, 14, $noreg, $noreg
+    %0:gprnopc = COPY $r0
+    %1:rgpr = t2MOVi32imm -25733
+    %2:rgpr = t2SUBrr %0, %1, 14, $noreg, $noreg
 
-    %3 = t2MOVi32imm 25733
-    %4 = t2SUBrr %0, %3, 14, $noreg, $noreg
+    %3:rgpr = t2MOVi32imm 25733
+    %4:rgpr = t2SUBrr %0, %3, 14, $noreg, $noreg
 
-    %5 = t2MOVi32imm -25733
-    %6= t2ADDrr %0, %5, 14, $noreg, $noreg
+    %5:rgpr = t2MOVi32imm -25733
+    %6:rgpr= t2ADDrr %0, %5, 14, $noreg, $noreg
 
-    %7 = t2MOVi32imm 25733
-    %8 = t2ADDrr %0, %7, 14, $noreg, $noreg
+    %7:rgpr = t2MOVi32imm 25733
+    %8:rgpr = t2ADDrr %0, %7, 14, $noreg, $noreg
 
     $r0 = COPY %8
     tBX_RET 14, $noreg, implicit $r0

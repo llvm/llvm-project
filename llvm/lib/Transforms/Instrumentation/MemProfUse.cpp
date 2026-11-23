@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 //
 // This file implements the MemProfUsePass which reads memory profiling data
-// and uses it to add metadata to instructions to guide optimization.
+// and uses it to add metadata to instructions to guide profile-guided memory
+// optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 

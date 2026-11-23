@@ -17,9 +17,9 @@ body:             |
     ; CHECK-NEXT: [[FCVT_W_H:%[0-9]+]]:gpr = nofpexcept FCVT_W_H [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[FCVT_W_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %1:gprb(s64) = G_FCVT_W_RV64 %0(s16), 1
-    $x10 = COPY %1(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %1:gprb(i64) = G_FCVT_W_RV64 %0(f16), 1
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -38,9 +38,9 @@ body:             |
     ; CHECK-NEXT: [[FCVT_WU_H:%[0-9]+]]:gpr = nofpexcept FCVT_WU_H [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[FCVT_WU_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %1:gprb(s64) = G_FCVT_WU_RV64 %0(s16), 1
-    $x10 = COPY %1(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %1:gprb(i64) = G_FCVT_WU_RV64 %0(f16), 1
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -59,9 +59,9 @@ body:             |
     ; CHECK-NEXT: [[FCVT_L_H:%[0-9]+]]:gpr = nofpexcept FCVT_L_H [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[FCVT_L_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %1:gprb(s64) = G_FPTOSI %0(s16)
-    $x10 = COPY %1(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %1:gprb(i64) = G_FPTOSI %0(f16)
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...
@@ -80,9 +80,9 @@ body:             |
     ; CHECK-NEXT: [[FCVT_LU_H:%[0-9]+]]:gpr = nofpexcept FCVT_LU_H [[COPY]], 1
     ; CHECK-NEXT: $x10 = COPY [[FCVT_LU_H]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %1:gprb(s64) = G_FPTOUI %0(s16)
-    $x10 = COPY %1(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %1:gprb(i64) = G_FPTOUI %0(f16)
+    $x10 = COPY %1(i64)
     PseudoRET implicit $x10
 
 ...

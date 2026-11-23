@@ -287,7 +287,7 @@ func.func @fold_vector_transfer_write_with_inner_rank_reduced_subview(
 
 // -----
 
-func.func @fold_masked_vector_transfer_read_with_subview(
+func.func @fold_vector_transfer_read_with_subview_with_mask(
     %arg0 : memref<?x?xf32, strided<[?, ?], offset: ?>>,
     %arg1: index, %arg2 : index, %arg3 : index, %arg4: index, %arg5 : index,
     %arg6 : index, %mask : vector<4xi1>) -> vector<4xf32> {
@@ -300,7 +300,7 @@ func.func @fold_masked_vector_transfer_read_with_subview(
   return %1 : vector<4xf32>
 }
 //   CHECK-DAG: #[[MAP1:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
-//       CHECK: func @fold_masked_vector_transfer_read_with_subview
+//       CHECK: func @fold_vector_transfer_read_with_subview_with_mask
 //  CHECK-SAME:    %[[ARG0:[a-zA-Z0-9]+]]: memref<?x?xf32, strided<[?, ?], offset: ?>>
 //  CHECK-SAME:    %[[ARG1:[a-zA-Z0-9]+]]: index
 //  CHECK-SAME:    %[[ARG2:[a-zA-Z0-9]+]]: index

@@ -92,3 +92,4 @@ body:             |
     ; CHECK: tBL 14 /* CC::al */, $noreg, @OUTLINED_FUNCTION_0, implicit-def $lr, implicit $sp, implicit-def $r1, implicit-def $lr, implicit $noreg, implicit $sp
     $r1 = t2MOVi16 target-flags(arm-lo16) @__stack_chk_guard, 14 /* CC::al */, $noreg
     $r1 = t2MOVTi16 killed $r1, target-flags(arm-hi16) @__stack_chk_guard, 14 /* CC::al */, $noreg
+...

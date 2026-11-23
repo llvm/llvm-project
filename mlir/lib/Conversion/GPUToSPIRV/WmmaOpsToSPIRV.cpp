@@ -128,9 +128,12 @@ bool allOperandsHaveSameCoopMatrixType(ValueRange operands) {
   return isa<spirv::CooperativeMatrixType>(operands.front().getType());
 }
 
-static bool hasSignedIntegerElementType(spirv::CooperativeMatrixType type) {
+// gpu.subgroup_mma_compute (GPUOps.td) specifies that integer A/B types carry
+// signedness and the signless accumulator implies a signed integer. Treat
+// signless C/Result as signed when selecting the SignedComponentsKHR flags.
+static bool hasSignedGpuMmaIntegerSemantics(spirv::CooperativeMatrixType type) {
   auto elementType = dyn_cast<IntegerType>(type.getElementType());
-  return elementType && elementType.isSigned();
+  return elementType && !elementType.isUnsigned();
 }
 
 static spirv::CooperativeMatrixOperandsKHR
@@ -141,13 +144,13 @@ getSignedCoopMatrixOperands(spirv::CooperativeMatrixType aType,
   using Operands = spirv::CooperativeMatrixOperandsKHR;
 
   Operands operands = Operands::None;
-  if (hasSignedIntegerElementType(aType))
+  if (hasSignedGpuMmaIntegerSemantics(aType))
     operands |= Operands::ASigned;
-  if (hasSignedIntegerElementType(bType))
+  if (hasSignedGpuMmaIntegerSemantics(bType))
     operands |= Operands::BSigned;
-  if (hasSignedIntegerElementType(cType))
+  if (hasSignedGpuMmaIntegerSemantics(cType))
     operands |= Operands::CSigned;
-  if (hasSignedIntegerElementType(resultType))
+  if (hasSignedGpuMmaIntegerSemantics(resultType))
     operands |= Operands::ResultSigned;
   return operands;
 }

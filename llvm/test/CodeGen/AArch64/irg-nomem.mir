@@ -26,7 +26,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$x0', virtual-reg: '' }
 frameInfo:

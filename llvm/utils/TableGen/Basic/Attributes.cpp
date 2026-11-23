@@ -76,11 +76,13 @@ void Attributes::emitFnAttrCompatCheck(raw_ostream &OS, bool IsStringAttr) {
 
   OS << "static inline bool hasCompatibleFnAttrs(const Function &Caller,\n"
      << "                                        const Function &Callee) {\n";
+  OS << "  AttributeSet CallerAttrs = Caller.getAttributes().getFnAttrs();\n";
+  OS << "  AttributeSet CalleeAttrs = Callee.getAttributes().getFnAttrs();\n";
   OS << "  bool Ret = true;\n\n";
 
   for (const Record *Rule : Records.getAllDerivedDefinitions("CompatRule")) {
     StringRef FuncName = Rule->getValueAsString("CompatFunc");
-    OS << "  Ret &= " << FuncName << "(Caller, Callee";
+    OS << "  Ret &= " << FuncName << "(CallerAttrs, CalleeAttrs";
     StringRef AttrName = Rule->getValueAsString("AttrName");
     if (!AttrName.empty())
       OS << ", \"" << AttrName << "\"";
