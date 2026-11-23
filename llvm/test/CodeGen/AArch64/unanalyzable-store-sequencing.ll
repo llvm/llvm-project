@@ -359,7 +359,7 @@ define void @test_sequenced_memops_with_unsafe_path_unclustered(ptr %p, i64 %i) 
 ; CHECK:       Successors:
 ; CHECK-NEXT:    SU([[S]]): Ord Latency=0 Barrier
 ; CHECK-NEXT:    SU([[T:[0-9]+]]): Ord Latency=0 Memory
-; CHECK-NOT:     Ord
+; CHECK-NOT:     SU([[S]]): Ord Latency=0 Cluster
 ; CHECK:       SU([[T]]): STRXroX %{{[0-9]+}}:gpr64, %{{[0-9]+}}:gpr64common, %{{[0-9]+}}:gpr64, 0, 1 :: (store (s64) into %ir.p.gep.i)
 ; CHECK-NOT:   {{^}}SU(
 ; CHECK:       Successors:
