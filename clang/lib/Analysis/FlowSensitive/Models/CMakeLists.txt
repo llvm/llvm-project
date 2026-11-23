@@ -12,3 +12,5 @@ add_clang_library(clangAnalysisFlowSensitiveModels
   clangASTMatchers
   clangBasic
   )
+
+add_subdirectory(Nullability)
