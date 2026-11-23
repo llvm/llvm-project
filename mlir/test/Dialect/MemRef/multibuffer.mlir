@@ -375,6 +375,30 @@ func.func @multi_buffer_view(%src: memref<192xi8>) {
 
 // -----
 
+// The view is outside the copy's loop. Inserting the slot in the inner loop
+// would not dominate the view, so the alloc is left unchanged.
+// CHECK-LABEL: func @multi_buffer_view_nested
+func.func @multi_buffer_view_nested(%src: memref<192xi8>) {
+// CHECK-NOT: memref<960xi8>
+//     CHECK: %[[A:.*]] = memref.alloc() : memref<192xi8>
+  %0 = memref.alloc() : memref<192xi8>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c128 = arith.constant 128 : index
+  scf.for %i = %c0 to %c4 step %c1 {
+//     CHECK: %[[V:.*]] = memref.view %[[A]][%{{.*}}][] : memref<192xi8> to memref<16xf32>
+    %v = memref.view %0[%c128][] : memref<192xi8> to memref<16xf32>
+    scf.for %j = %c0 to %c4 step %c1 {
+      memref.copy %src, %0 : memref<192xi8> to memref<192xi8>
+      "some_use"(%v) : (memref<16xf32>) -> ()
+    }
+  }
+  return
+}
+
+// -----
+
 // A dynamic viewed alloc has no constant slot size. Leave it unchanged instead
 // of expanding it to a ranked memref that memref.view cannot use.
 // CHECK-LABEL: func @multi_buffer_view_dynamic

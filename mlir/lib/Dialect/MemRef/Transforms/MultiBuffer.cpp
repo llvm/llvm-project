@@ -39,6 +39,12 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   return copyOp.getTarget() == buffer;
 }
 
+/// Return true when `op` is in `loop`'s body, including nested regions.
+static bool isInsideLoop(Operation *op, LoopLikeOpInterface loop) {
+  Operation *loopOp = loop;
+  return op->getParentOp() == loopOp || loopOp->isProperAncestor(op);
+}
+
 /// Return true when `overwrite` dominates every read reachable through `user`.
 /// `memref.view` does not read the buffer, so it may be created before the
 /// overwrite as long as every user of that view is dominated by `overwrite`.
@@ -270,9 +276,14 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
         continue;
       }
       // If this user doesn't dominate all the other reads keep looking.
-      // A view may be created earlier; only its reads have to be dominated.
+      // A view may be created earlier in this loop; only its reads have to be
+      // dominated. A view outside this loop is rejected, matching the case
+      // where the copy does not dominate the view op.
       if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
-            return !dominatesBufferRead(dom, user, otherUser);
+            if (!dominatesBufferRead(dom, user, otherUser))
+              return true;
+            return isa<memref::ViewOp>(otherUser) &&
+                   !isInsideLoop(otherUser, parentLoop);
           })) {
         LLVM_DEBUG(
             DBGS() << "--Skip user: does not dominate all other users\n");
