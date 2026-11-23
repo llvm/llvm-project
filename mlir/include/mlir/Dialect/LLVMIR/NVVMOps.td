@@ -4630,13 +4630,11 @@ def NVVM_CpAsyncBulkTensorPrefetchOp :
 
   let hasVerifier = 1;
 }
-} // let partition = NVVM_AsyncCopyPartition
 
 //===----------------------------------------------------------------------===//
 // NVVM Reduction Ops
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkTensorReduceOp :
   NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
   let arguments = (ins
@@ -5459,9 +5457,7 @@ def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift",
     createIntrinsicCall(builder, id, {$taddr});
   }];
 }
-} // let partition = NVVM_Tcgen05Partition
 
-let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
@@ -5572,13 +5568,11 @@ def NVVM_Tcgen05MmaSmemDescOp : NVVM_Op<"tcgen05.mma_smem_desc", []> {
     NVVM::Tcgen05MmaSmemDescOp::createSmemDescriptor(*op, moduleTranslation, builder);
   }];
 }
-} // let partition = NVVM_Tcgen05Partition
 
 //===----------------------------------------------------------------------===//
 // NVVM tcgen05.ld Op
 //===----------------------------------------------------------------------===//
 
-let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
@@ -6207,9 +6201,7 @@ def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
     createIntrinsicCall(builder, ID, args);
   }];
 }
-} // let partition = NVVM_Tcgen05Partition
 
-let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
@@ -6365,9 +6357,7 @@ def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
     createIntrinsicCall(builder, ID, args);
   }];
 }
-} // let partition = NVVM_Tcgen05Partition
 
-let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
