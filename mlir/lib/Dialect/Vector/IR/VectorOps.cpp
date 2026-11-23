@@ -8348,10 +8348,11 @@ LogicalResult MaskOp::verify() {
   if (transferOp && transferOp.getMask())
     return emitOpError(
         "doesn't expect a mask operand for the masked transfer operation");
-        
+
   if (transferOp &&
       isa<VectorType>(transferOp.getShapedType().getElementType()))
-    return emitOpError("does not support masking a transfer operation on a source with vector element type");
+    return emitOpError("does not support masking a transfer operation on a "
+                       "source with vector element type");
 
   // Mask checks.
   Type expectedMaskType = maskableOp.getExpectedMaskType();
