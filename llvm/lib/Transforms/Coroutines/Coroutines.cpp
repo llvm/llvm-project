@@ -106,15 +106,21 @@ bool coro::declaresAnyIntrinsic(const Module &M) {
 
 // Checks whether the module declares any of the listed intrinsics.
 bool coro::declaresIntrinsics(const Module &M, ArrayRef<Intrinsic::ID> List) {
-#ifndef NDEBUG
-  for (Intrinsic::ID ID : List)
-    assert(!Intrinsic::isOverloaded(ID) &&
-           "Only non-overloaded intrinsics supported");
-#endif
-
-  for (Intrinsic::ID ID : List)
-    if (Intrinsic::getDeclarationIfExists(&M, ID))
+  bool HasOverloaded = false;
+  for (Intrinsic::ID ID : List) {
+    if (Intrinsic::isOverloaded(ID)) {
+      HasOverloaded = true;
+    } else if (Intrinsic::getDeclarationIfExists(&M, ID)) {
       return true;
+    }
+  }
+  if (!HasOverloaded)
+    return false;
+  for (const Function &F : M) {
+    Intrinsic::ID ID = F.getIntrinsicID();
+    if (ID != Intrinsic::not_intrinsic && is_contained(List, ID))
+      return true;
+  }
   return false;
 }
 
@@ -130,9 +136,9 @@ void coro::elideCoroFree(Value *FramePtr) {
       CoroDeads.push_back(CD);
   }
 
-  Value *Replacement =
-      ConstantPointerNull::get(PointerType::get(FramePtr->getContext(), 0));
   for (CoroFreeInst *CF : CoroFrees) {
+    Value *Replacement =
+        ConstantPointerNull::get(cast<PointerType>(CF->getType()));
     CF->replaceAllUsesWith(Replacement);
     CF->eraseFromParent();
   }
