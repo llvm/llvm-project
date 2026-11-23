@@ -6,6 +6,8 @@
 set(ORC_RT_HEADERS
     orc-rt-c/bedrock/ControllerHandlerTag.h
     orc-rt-c/bedrock/Session.h
+    orc-rt-c/bedrock/sys/posix/DlfcnLoaderAdapter.h
+    orc-rt-c/bedrock/sys/posix/dlfcn-types.h
     orc-rt-c/support/Compiler.h
     orc-rt-c/support/CoreTypes.h
     orc-rt-c/support/Error.h
@@ -31,6 +33,7 @@ set(ORC_RT_HEADERS
     orc-rt/bedrock/sps/MemoryAccessSPSCI.h
     orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h
     orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h
+    orc-rt/bedrock/sys/posix/DlfcnLoaderAdapter.h
     orc-rt/connect-socket/SocketConnector.h
     orc-rt/connect-socket/SocketHandle.h
     orc-rt/connect-socket/sps/SimpleRemoteCAOverSocket.h
