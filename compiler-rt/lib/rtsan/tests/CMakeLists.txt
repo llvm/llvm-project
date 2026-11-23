@@ -28,6 +28,10 @@ set(RTSAN_NOINST_TEST_SOURCES
 set(RTSAN_UNITTEST_HEADERS
     rtsan_test_utilities.h)
 
+foreach (header ${RTSAN_HEADERS})
+  list(APPEND RTSAN_UNITTEST_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/../${header})
+endforeach()
+
 add_custom_target(RtsanUnitTests)
 set_target_properties(RtsanUnitTests PROPERTIES FOLDER "compiler-rt Tests")
 
