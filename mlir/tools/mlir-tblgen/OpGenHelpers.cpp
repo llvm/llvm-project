@@ -41,6 +41,12 @@ static cl::opt<std::string> opPartition(
     cl::desc("Only consider the ops in this op partition (see `Op::partition`) "
              "and emit the registration hooks of the partition"),
     cl::cat(opDefGenCat));
+static cl::opt<std::string> opRegistrationName(
+    "op-registration-name",
+    cl::desc("Name the op registration hooks 'register<name>Operations...' "
+             "instead of using the dialect class name. Required to generate "
+             "ops of a dialect in more than one file"),
+    cl::cat(opDefGenCat));
 
 static std::string getOperationName(const Record &def) {
   auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
@@ -50,11 +56,7 @@ static std::string getOperationName(const Record &def) {
   return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
-std::string mlir::tblgen::getOpRegistrationHookName(const Dialect &dialect,
-                                                    StringRef partition) {
-  return "register" + dialect.getCppClassName() + "Operations" +
-         getPartitionFunctionSuffix(partition);
-}
+StringRef mlir::tblgen::getOpRegistrationName() { return opRegistrationName; }
 
 std::vector<const Record *> mlir::tblgen::getRequestedOpDefinitions(
     const RecordKeeper &records,
@@ -124,5 +126,7 @@ void mlir::tblgen::shardOpDefinitions(
     start += size;
   }
 }
+
+unsigned mlir::tblgen::getOpShardCount() { return opShardCount; }
 
 StringRef mlir::tblgen::getSpecifiedOpPartition() { return opPartition; }

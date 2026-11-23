@@ -31,6 +31,7 @@ def EmitC_Dialect : Dialect {
   let hasConstantMaterializer = 1;
   let hasTypes = 1;
   let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCBASE

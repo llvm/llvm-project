@@ -38,7 +38,6 @@ def Test_Dialect : Dialect {
     void registerAttributes();
     void registerInterfaces();
     void registerTypes();
-    void registerOpsSyntax();
 
     // Provides a custom printing/parsing for some operations.
     ::std::optional<ParseOpHook>

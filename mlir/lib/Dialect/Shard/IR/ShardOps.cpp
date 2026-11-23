@@ -117,13 +117,7 @@ struct ShardInlinerinterface : public DialectInlinerInterface {
 // Shard dialect
 //===----------------------------------------------------------------------===//
 
-void ShardDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Shard/IR/ShardOps.cpp.inc"
-      >();
-  addInterface<ShardInlinerinterface>();
-}
+void ShardDialect::initialize() { addInterface<ShardInlinerinterface>(); }
 
 Operation *ShardDialect::materializeConstant(OpBuilder &builder,
                                              Attribute value, Type type,

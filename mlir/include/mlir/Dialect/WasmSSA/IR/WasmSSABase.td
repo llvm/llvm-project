@@ -20,6 +20,7 @@ def WasmSSA_Dialect : Dialect {
     modules in SSA form for easier manipulation.
   }];
   let hasTypes = 1;
+  let hasInitializer = 0;
 }
 
 #endif //WasmSSA_BASE

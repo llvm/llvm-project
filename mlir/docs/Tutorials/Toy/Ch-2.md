@@ -402,6 +402,12 @@ Depending on the selected action, this will print either the `ConstantOp` class
 declaration or its implementation. Comparing this output to the hand-crafted
 implementation is incredibly useful when getting started with TableGen.
 
+Unlike our hand-written `ConstantOp`, operations defined in ODS do not need to
+be added with `addOperations`: the generated dialect constructor registers all
+of them by default. As registering the operations is all our dialect needs, it 
+sets `hasInitializer` to `0` in its definition, so that it does not need to 
+define `ToyDialect::initialize`.
+
 #### Defining Arguments and Results
 
 With the shell of the operation defined, we can now provide the

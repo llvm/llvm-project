@@ -36,6 +36,7 @@ def Ptr_Dialect : Dialect {
   let cppNamespace = "::mlir::ptr";
   let hasTypes = 1;
   let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//

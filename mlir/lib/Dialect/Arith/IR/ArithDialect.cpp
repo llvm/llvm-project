@@ -38,10 +38,6 @@ struct ArithInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void arith::ArithDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Arith/IR/ArithOps.cpp.inc"
-      >();
   addInterfaces<ArithInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, ArithDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ArithDialect>();

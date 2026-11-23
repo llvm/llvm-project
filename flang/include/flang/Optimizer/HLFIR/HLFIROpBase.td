@@ -40,6 +40,7 @@ def hlfir_Dialect : Dialect {
   }];
 
   let hasTypes = 1;
+  let hasInitializer = 0;
   let cppNamespace = "hlfir";
   let dependentDialects = ["fir::FIROpsDialect"];
 }

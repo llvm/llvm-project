@@ -62,6 +62,11 @@ def Linalg_Dialect : Dialect {
   }];
 }
 
+// The op partitions of the dialect, generated from LinalgAllOps.td.
+def Linalg_CorePartition : Partition<"Core">;
+def Linalg_StructuredPartition : Partition<"Structured">;
+def Linalg_RelayoutPartition : Partition<"Relayout">;
+
 // Define the attribute enums matching elementwise op kind (e.g., add).
 def ElementwiseKindAttr : EnumAttr<Linalg_Dialect,
                                    ElementwiseKind, "elementwise_kind">;

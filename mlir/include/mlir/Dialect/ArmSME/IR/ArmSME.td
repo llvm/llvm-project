@@ -36,7 +36,12 @@ def ArmSME_Dialect : Dialect {
   let dependentDialects = ["scf::SCFDialect", "vector::VectorDialect",
                            "memref::MemRefDialect"];
   let hasAttributes = 1;
+  let hasInitializer = 0;
 }
+
+// The op partitions of the dialect, generated from ArmSMEAllOps.td.
+def ArmSME_CorePartition : Partition<"Core">;
+def ArmSME_IntrinsicPartition : Partition<"Intrinsic">;
 
 //===----------------------------------------------------------------------===//
 // ArmSME type definitions

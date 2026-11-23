@@ -25,6 +25,7 @@ def Standalone_Dialect : Dialect {
     }];
     let cppNamespace = "::mlir::standalone";
     let hasTypes = 1;
+    let hasInitializer = 0;
 }
 
 //===----------------------------------------------------------------------===//

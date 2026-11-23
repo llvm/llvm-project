@@ -82,6 +82,12 @@ class Dialect {
   // If this dialect overrides the hook for op interface fallback.
   bit hasOperationInterfaceFallback = 0;
 
+  // If this dialect has an `initialize` method, which the generated dialect
+  // constructor calls after registering the attributes, types and operations.
+  // Dialects without further initialization can set this to 0, in which case
+  // `initialize` is neither declared nor called.
+  bit hasInitializer = 1;
+
   // If this dialect has attributes defined in ODS. Provides the default of
   // `useDefaultAttributeRegistration` and `useDefaultAttributePrinterParser`.
   bit hasAttributes = 0;
@@ -101,6 +107,13 @@ class Dialect {
   // The definition is usually provided by the type definitions generator
   // (`-gen-typedef-defs`).
   bit useDefaultTypeRegistration = hasTypes;
+
+  // If the generated dialect constructor should register the operations
+  // defined in ODS by calling `register<DialectClass>Operations`.
+  // The definition is provided by the op definitions generator
+  // (`-gen-op-defs`), which only generates the registration hooks if this is
+  // set. Dialects without operations defined in ODS must set this to 0.
+  bit useDefaultOperationRegistration = 1;
 
   // If this dialect should use default generated attribute parser boilerplate.
   // When set, ODS will generate declarations for the attribute parsing and

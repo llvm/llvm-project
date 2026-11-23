@@ -76,6 +76,7 @@ def DLTI_Dialect : Dialect {
   }];
 
   let hasAttributes = 1;
+  let useDefaultOperationRegistration = 0;
 }
 
 def HasDefaultDLTIDataLayout : NativeOpTrait<"HasDefaultDLTIDataLayout"> {

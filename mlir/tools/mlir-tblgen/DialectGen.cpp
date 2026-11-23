@@ -12,6 +12,7 @@
 
 #include "CppGenUtilities.h"
 #include "DialectGenUtilities.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/CodeGenHelpers.h"
 #include "mlir/TableGen/Format.h"
@@ -80,13 +81,99 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
   return *dialectIt;
 }
 
-std::string tblgen::getAttrOrTypeRegistrationHookName(
-    const Dialect &dialect, StringRef valueType, StringRef registrationName) {
-  return llvm::formatv("register{0}{1}s",
+/// Returns the name of `kind` as used in the registration hook names.
+static StringRef getRegistrationKindName(RegistrationKind kind) {
+  switch (kind) {
+  case RegistrationKind::Operation:
+    return "Operation";
+  case RegistrationKind::Attribute:
+    return "Attribute";
+  case RegistrationKind::Type:
+    return "Type";
+  }
+  llvm_unreachable("unknown registration kind");
+}
+
+/// Returns the class whose `insert` method registers a definition of `kind`.
+static StringRef getRegistrar(RegistrationKind kind) {
+  switch (kind) {
+  case RegistrationKind::Operation:
+    return "::mlir::RegisteredOperationName";
+  case RegistrationKind::Attribute:
+    return "::mlir::AbstractAttribute";
+  case RegistrationKind::Type:
+    return "::mlir::AbstractType";
+  }
+  llvm_unreachable("unknown registration kind");
+}
+
+std::string tblgen::getRegistrationHookName(const Dialect &dialect,
+                                            RegistrationKind kind,
+                                            StringRef registrationName,
+                                            StringRef part) {
+  return llvm::formatv("register{0}{1}s{2}",
                        registrationName.empty() ? dialect.getCppClassName()
                                                 : registrationName.str(),
-                       valueType)
+                       getRegistrationKindName(kind),
+                       getPartitionFunctionSuffix(part))
       .str();
+}
+
+void tblgen::emitRegistrationHookDecls(raw_ostream &os, const Dialect &dialect,
+                                       RegistrationKind kind,
+                                       StringRef registrationName,
+                                       ArrayRef<std::string> parts,
+                                       StringRef partsDescription) {
+  std::string dialectClass = dialect.getCppClassName();
+  std::string kindName = getRegistrationKindName(kind).lower();
+  os << "class " << dialectClass << ";\n";
+  if (parts.empty())
+    os << llvm::formatv(
+        "/// Registers the {0}s defined in this file with `dialect`.\n",
+        kindName);
+  else
+    os << llvm::formatv("/// Registers the {0}s of all {1} with `dialect`.\n",
+                        kindName, partsDescription);
+  auto emitDecl = [&](StringRef part) {
+    os << llvm::formatv(
+        "void {0}({1} *dialect);\n",
+        getRegistrationHookName(dialect, kind, registrationName, part),
+        dialectClass);
+  };
+  emitDecl("");
+  for (StringRef part : parts)
+    emitDecl(part);
+}
+
+void tblgen::emitRegistrationHookDefs(
+    raw_ostream &os, const Dialect &dialect, RegistrationKind kind,
+    StringRef registrationNameSuffix, StringRef part,
+    ArrayRef<std::string> parts, ArrayRef<std::string> classNamesToRegister) {
+  std::string dialectClass = dialect.getCppClassName();
+  const char *const hookDef = "void {0}({1} *dialect) {{\n";
+  if (!parts.empty() && parts.front() == part) {
+    os << llvm::formatv(
+        hookDef, getRegistrationHookName(dialect, kind, registrationNameSuffix),
+        dialectClass);
+    for (StringRef otherPart : parts)
+      os << "  "
+         << getRegistrationHookName(dialect, kind, registrationNameSuffix,
+                                    otherPart)
+         << "(dialect);\n";
+    os << "}\n";
+  }
+
+  // Register each class with a separate call instead of a variadic one like
+  // `addOperations<...>()`, whose single instantiation over all classes takes
+  // noticeably longer to compile.
+  os << llvm::formatv(
+      hookDef,
+      getRegistrationHookName(dialect, kind, registrationNameSuffix, part),
+      dialectClass);
+  for (StringRef className : classNamesToRegister)
+    os << "  " << getRegistrar(kind) << "::insert<" << className
+       << ">(*dialect);\n";
+  os << "}\n";
 }
 
 //===----------------------------------------------------------------------===//
@@ -98,11 +185,11 @@ std::string tblgen::getAttrOrTypeRegistrationHookName(
 /// {0}: The name of the dialect class.
 /// {1}: The dialect namespace.
 /// {2}: The dialect parent class.
+/// {3}: The declaration of initialize(), if the dialect has an initializer.
 static const char *const dialectDeclBeginStr = R"(
 class {0} : public ::mlir::{2} {
   explicit {0}(::mlir::MLIRContext *context);
-
-  void initialize();
+{3}
   friend class ::mlir::MLIRContext;
 public:
   ~{0}() override;
@@ -239,8 +326,9 @@ static void emitDialectDecl(Dialect &dialect, raw_ostream &os) {
     tblgen::emitSummaryAndDescComments(os, dialect.getSummary(),
                                        dialect.getDescription(),
                                        /*terminateCmment=*/false);
-    os << llvm::formatv(dialectDeclBeginStr, cppName, dialect.getName(),
-                        superClassName);
+    os << llvm::formatv(
+        dialectDeclBeginStr, cppName, dialect.getName(), superClassName,
+        dialect.hasInitializer() ? "\n  void initialize();" : "");
 
     // If the dialect requested the default attribute printer and parser, emit
     // the declarations for the hooks.
@@ -331,9 +419,9 @@ static bool emitDialectDecls(const RecordKeeper &records, raw_ostream &os) {
 /// The code block to generate a dialect constructor definition.
 ///
 /// {0}: The name of the dialect class.
-/// {1}: Initialization code that is emitted in the ctor body before calling
-///      initialize(), such as dependent dialect registration and the
-///      registration of the attributes and types generated by ODS.
+/// {1}: Initialization code that is emitted in the ctor body, such as
+///      dependent dialect registration, the registration of the attributes,
+///      types and operations generated by ODS and the call to initialize().
 /// {2}: The dialect parent class.
 /// {3}: Extra members to initialize
 static const char *const dialectConstructorStr = R"(
@@ -342,7 +430,6 @@ static const char *const dialectConstructorStr = R"(
     {3}
      {{
   {1}
-  initialize();
 }
 )";
 
@@ -367,13 +454,17 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   DialectNamespaceEmitter nsEmitter(os, dialect);
 
   // Build the initialization code: the registration of the dependent dialects
-  // and of the attributes and types generated by ODS, whose registration hooks
-  // are defined alongside the generated attribute and type definitions.
+  // and of the attributes, types and operations generated by ODS, whose
+  // registration hooks are defined alongside the generated definitions.
   SmallVector<std::string> hooks;
   if (dialect.useDefaultAttributeRegistration())
-    hooks.push_back(getAttrOrTypeRegistrationHookName(dialect, "Attribute"));
+    hooks.push_back(
+        getRegistrationHookName(dialect, RegistrationKind::Attribute));
   if (dialect.useDefaultTypeRegistration())
-    hooks.push_back(getAttrOrTypeRegistrationHookName(dialect, "Type"));
+    hooks.push_back(getRegistrationHookName(dialect, RegistrationKind::Type));
+  if (dialect.useDefaultOperationRegistration())
+    hooks.push_back(
+        getRegistrationHookName(dialect, RegistrationKind::Operation));
   for (const std::string &hook : hooks)
     os << llvm::formatv("void {0}({1} *dialect);\n", hook, cppClassName);
 
@@ -385,6 +476,8 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
            << llvm::formatv(dialectRegistrationTemplate, dependentDialect);
   for (const std::string &hook : hooks)
     initOs << sep << hook << "(this);";
+  if (dialect.hasInitializer())
+    initOs << sep << "initialize();";
 
   // Emit the constructor and destructor.
   StringRef superClassName =

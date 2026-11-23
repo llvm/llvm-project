@@ -31,7 +31,8 @@ def FenceOp : Test_Op<"fence">;
 // Only the ops of the specified partition are declared. The ops of the other
 // partitions are forward declared, so that declarations can refer to them.
 // The registration hooks of all partitions are declared, as well as the hook
-// that registers the ops of all partitions.
+// that registers the ops of all partitions. The dialect class is forward
+// declared for them.
 // DECLS: namespace test {
 // DECLS-EMPTY:
 // DECLS-NEXT: class AddOp;
@@ -48,14 +49,23 @@ def FenceOp : Test_Op<"fence">;
 // DECLS: #endif // GET_OP_CLASSES
 // DECLS: namespace test {
 // DECLS-EMPTY:
-// DECLS-NEXT: void registerTestDialectOperations(test::TestDialect *dialect);
-// DECLS-NEXT: void registerTestDialectOperationsArith(test::TestDialect *dialect);
-// DECLS-NEXT: void registerTestDialectOperationsMemory(test::TestDialect *dialect);
+// DECLS-NEXT: class TestDialect;
+// DECLS-NEXT: /// Registers the operations of all partitions with `dialect`.
+// DECLS-NEXT: void registerTestDialectOperations(TestDialect *dialect);
+// DECLS-NEXT: void registerTestDialectOperationsArith(TestDialect *dialect);
+// DECLS-NEXT: void registerTestDialectOperationsMemory(TestDialect *dialect);
 // DECLS-EMPTY:
 // DECLS-NEXT: } // namespace test
 
-// The registration hook of the partition replaces the op list.
-// DEFS-NOT: GET_OP_LIST
+// The op list contains the ops of the partition.
+// DEFS-NOT: register
+// DEFS-LABEL: #ifdef GET_OP_LIST
+// DEFS-NEXT: #undef GET_OP_LIST
+// DEFS-EMPTY:
+// DEFS-NEXT: test::FenceOp,
+// DEFS-NEXT: test::LoadOp,
+// DEFS-NEXT: test::StoreOp
+// DEFS-NEXT: #endif // GET_OP_LIST
 // DEFS-LABEL: #ifdef GET_OP_CLASSES
 // DEFS: static ::llvm::LogicalResult __mlir_ods_local_type_constraint_6memory_op2Dpartitions{{[0-9]+}}(
 // DEFS-NOT: AddOp
@@ -63,28 +73,33 @@ def FenceOp : Test_Op<"fence">;
 // DEFS: StoreOpAdaptor
 // DEFS-NOT: AddOp
 // DEFS-NOT: registerTestDialectOperations(
-// DEFS: void test::registerTestDialectOperationsMemory(test::TestDialect *dialect) {
-// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::FenceOp>(*dialect);
-// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::LoadOp>(*dialect);
-// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<test::StoreOp>(*dialect);
+// DEFS: void registerTestDialectOperationsMemory(TestDialect *dialect) {
+// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<::test::FenceOp>(*dialect);
+// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<::test::LoadOp>(*dialect);
+// DEFS-NEXT:   ::mlir::RegisteredOperationName::insert<::test::StoreOp>(*dialect);
 // DEFS-NEXT: }
+// DEFS-EMPTY:
+// DEFS-NEXT: } // namespace test
 // DEFS-EMPTY:
 // DEFS-NEXT: #endif // GET_OP_CLASSES
 
 // The first partition by name also defines the hook that registers the ops of
 // all partitions.
 // FIRST-LABEL: #ifdef GET_OP_CLASSES
-// FIRST: void test::registerTestDialectOperations(test::TestDialect *dialect) {
-// FIRST-NEXT:   test::registerTestDialectOperationsArith(dialect);
-// FIRST-NEXT:   test::registerTestDialectOperationsMemory(dialect);
+// FIRST: void registerTestDialectOperations(TestDialect *dialect) {
+// FIRST-NEXT:   registerTestDialectOperationsArith(dialect);
+// FIRST-NEXT:   registerTestDialectOperationsMemory(dialect);
 // FIRST-NEXT: }
-// FIRST: void test::registerTestDialectOperationsArith(test::TestDialect *dialect) {
-// FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<test::AddOp>(*dialect);
-// FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<test::MulOp>(*dialect);
+// FIRST: void registerTestDialectOperationsArith(TestDialect *dialect) {
+// FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<::test::AddOp>(*dialect);
+// FIRST-NEXT:   ::mlir::RegisteredOperationName::insert<::test::MulOp>(*dialect);
 // FIRST-NEXT: }
 
-// Without -op-partition, partitions are ignored.
-// ALL-DECLS-NOT: register
+// Without -op-partition, partitions are ignored: a single hook registers all
+// ops.
+// ALL-DECLS-NOT: registerTestDialectOperations{{[A-Za-z]}}
+// ALL-DECLS: void registerTestDialectOperations(TestDialect *dialect);
+// ALL-DECLS-NOT: registerTestDialectOperations{{[A-Za-z]}}
 // ALL-DEFS-NOT: register
 // ALL-DEFS-LABEL: #ifdef GET_OP_LIST
 // ALL-DEFS: test::AddOp,
@@ -92,4 +107,8 @@ def FenceOp : Test_Op<"fence">;
 // ALL-DEFS: test::LoadOp,
 // ALL-DEFS: test::MulOp,
 // ALL-DEFS: test::StoreOp
-// ALL-DEFS-NOT: register
+// ALL-DEFS-NOT: registerTestDialectOperations{{[A-Za-z]}}
+// ALL-DEFS: void registerTestDialectOperations(TestDialect *dialect) {
+// ALL-DEFS-COUNT-5: ::mlir::RegisteredOperationName::insert
+// ALL-DEFS-NEXT: }
+// ALL-DEFS-NOT: registerTestDialectOperations{{[A-Za-z]}}

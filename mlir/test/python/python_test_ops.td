@@ -19,6 +19,7 @@ def Python_Test_Dialect : Dialect {
 
   let hasTypes = 1;
   let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 class TestType<string name, string typeMnemonic>

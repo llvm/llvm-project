@@ -305,10 +305,6 @@ static std::string generateLoopNestingName(StringRef prefix,
 }
 
 void OpenMPDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/OpenMP/OpenMPOps.cpp.inc"
-      >();
   declarePromisedInterface<ConvertToLLVMPatternInterface, OpenMPDialect>();
 
   MemRefType::attachInterface<MemRefPointerLikeModel>(*getContext());

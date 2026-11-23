@@ -36,6 +36,7 @@ def XeGPU_Dialect : Dialect {
 
     let hasTypes = 1;
     let hasAttributes = 1;
+    let hasInitializer = 0;
 
     let extraClassDeclaration = [{
       /// Checks if the given memref type represents shared local memory (SLM).
