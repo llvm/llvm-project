@@ -479,6 +479,15 @@ public:
     return T;
   }
 
+  /// Returns the tree of the elements of \p T for which \p Pred holds. \p Pred
+  /// is called on the elements in order and must not use this factory.
+  /// Subtrees that keep all of their elements are shared rather than rebuilt.
+  template <typename PredFn> TreeTy *filterTree(TreeTy *T, PredFn Pred) {
+    T = filter_internal(T, Pred);
+    recoverNodes(T);
+    return T;
+  }
+
   TreeTy* getEmptyTree() const { return nullptr; }
 
 protected:
@@ -785,6 +794,22 @@ protected:
     }
     return balanceTree(removeMinBinding(getLeft(T), Noderemoved),
                        getValue(T), getRight(T));
+  }
+
+  template <typename PredFn> TreeTy *filter_internal(TreeTy *T, PredFn &Pred) {
+    if (isEmpty(T))
+      return T;
+    TreeTy *L = filter_internal(getLeft(T), Pred);
+    bool Keep = Pred(getValue(T));
+    TreeTy *R = filter_internal(getRight(T), Pred);
+    if (Keep)
+      return L == getLeft(T) && R == getRight(T) ? T
+                                                 : joinTrees(L, getValue(T), R);
+    if (isEmpty(R))
+      return L;
+    TreeTy *Min;
+    R = removeMinBinding(R, Min);
+    return joinTrees(L, getValue(Min), R);
   }
 
 public:
