@@ -262,6 +262,43 @@ void SPIRVGlobalRegistry::invalidateMachineInstr(MachineInstr *MI) {
   erase(MI);
 }
 
+static SmallVector<const MachineInstr *>
+getTypeDecls(const MachineFunction &MF) {
+  const SPIRVInstrInfo &TII = *MF.getSubtarget<SPIRVSubtarget>().getInstrInfo();
+  SmallVector<const MachineInstr *> Res;
+  for (const MachineBasicBlock &MBB : MF)
+    for (const MachineInstr &MI : MBB)
+      if (MI.getNumDefs() && TII.isTypeDeclInstr(MI))
+        Res.push_back(&MI);
+  return Res;
+}
+
+void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
+  for (const MachineInstr *MI : getTypeDecls(MF))
+    assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
+}
+
+SmallVector<std::pair<Register, Register>>
+SPIRVGlobalRegistry::getVRegTypeIDs(const MachineFunction &MF) const {
+  SmallVector<std::pair<Register, Register>> Res;
+  auto TypesIt = VRegToTypeMap.find(&MF);
+  if (TypesIt == VRegToTypeMap.end())
+    return Res;
+  // The map may hold erased instructions, so only compare pointers.
+  SmallPtrSet<const MachineInstr *, 16> TypeInstrs;
+  TypeInstrs.insert_range(getTypeDecls(MF));
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (auto [Reg, Ty] : TypesIt->second) {
+    if (!TypeInstrs.contains(Ty))
+      continue;
+    Register TypeReg = getSPIRVTypeID(Ty);
+    if (TypeReg != Reg && !MRI.reg_empty(Reg))
+      Res.emplace_back(Reg, TypeReg);
+  }
+  llvm::sort(Res);
+  return Res;
+}
+
 const MachineInstr *SPIRVGlobalRegistry::createConstOrTypeAtFunctionEntry(
     MachineIRBuilder &MIRBuilder,
     std::function<MachineInstr *(MachineIRBuilder &)> Op) {
