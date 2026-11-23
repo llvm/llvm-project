@@ -2,14 +2,12 @@
 ; RUN: opt -passes=hoist-zero-cost-conditional-values -mtriple=amdgpu9.42 -verify-each -S %s | FileCheck %s --check-prefix=OPT
 ; RUN: opt -passes='function(hoist-zero-cost-conditional-values),always-inline,function(instcombine,simplifycfg)' -mtriple=amdgpu9.42 -verify-each -S %s | FileCheck %s --check-prefix=FOLD
 
-declare float @llvm.fabs.f32(float)
-
 ; With %c = true and %x = poison, this returns 42 without executing the call.
 ; Hoisting fabs(noundef %x) would introduce UB on that defined bypass path.
 ; Reject before moving the call or filling the poison operand.
 define float @noundef_argument(i1 %c, float %x) alwaysinline {
 ; OPT-LABEL: define float @noundef_argument(
-; OPT-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; OPT-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*]]:
 ; OPT-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[FLOW:.*]]
 ; OPT:       [[THEN]]:
@@ -26,7 +24,7 @@ define float @noundef_argument(i1 %c, float %x) alwaysinline {
 ; OPT-NEXT:    ret float [[R]]
 ;
 ; FOLD-LABEL: define float @noundef_argument(
-; FOLD-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR1:[0-9]+]] {
+; FOLD-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR0:[0-9]+]] {
 ; FOLD-NEXT:  [[ENTRY:.*:]]
 ; FOLD-NEXT:    [[E:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; FOLD-NEXT:    [[R:%.*]] = select i1 [[C]], float 4.200000e+01, float [[E]]
@@ -67,7 +65,7 @@ entry:
 ; poison on a path that originally skipped the call.
 define float @noundef_return(i1 %c, float %x) alwaysinline {
 ; OPT-LABEL: define float @noundef_return(
-; OPT-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; OPT-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; OPT-NEXT:  [[ENTRY:.*]]:
 ; OPT-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[FLOW:.*]]
 ; OPT:       [[THEN]]:
@@ -84,7 +82,7 @@ define float @noundef_return(i1 %c, float %x) alwaysinline {
 ; OPT-NEXT:    ret float [[R]]
 ;
 ; FOLD-LABEL: define float @noundef_return(
-; FOLD-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR1]] {
+; FOLD-SAME: i1 [[C:%.*]], float [[X:%.*]]) #[[ATTR0]] {
 ; FOLD-NEXT:  [[ENTRY:.*:]]
 ; FOLD-NEXT:    [[E:%.*]] = call float @llvm.fabs.f32(float [[X]])
 ; FOLD-NEXT:    [[R:%.*]] = select i1 [[C]], float 4.200000e+01, float [[E]]
