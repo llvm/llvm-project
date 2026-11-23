@@ -277,7 +277,7 @@ int main(int, char**) {
   }
 #endif
 
-  // LWG 2982: Making size_type consistent in associative container deduction guides
+  // [unord.multiset.overview]/5: Use the container's size_type in deduction guides
   {
     using Iter      = const int*;
     using Hash      = std::hash<int>;
