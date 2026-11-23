@@ -4226,17 +4226,41 @@ void TokenAnnotator::calculateFormattingInformation(AnnotatedLine &Line) const {
         }
       }
     } else if (ClosingParen) {
+      const auto ParamListLevel = ClosingParen->MatchingParen->NestingLevel;
+      bool InExpression = false;
       for (auto *Tok = ClosingParen->Next; Tok; Tok = Tok->Next) {
         if (Tok->is(TT_CtorInitializerColon))
           break;
         // A binary operator at the level of the parameter list, e.g. `<<` in
-        // `MACRO foo() << a->b;`, can't precede a trailing return arrow. `&`
+        // `MACRO foo() << a->b;`, means that the rest of the line is an
+        // expression rather than the trailer of a function declaration. `&`
         // and `&&` are exempt as a ref-qualifier may be annotated as a binary
         // operator, e.g. in `auto f() const & NOEXCEPT -> int;`.
         if (Tok->is(TT_BinaryOperator) &&
             Tok->isNoneOf(tok::amp, tok::ampamp) &&
-            Tok->NestingLevel == ClosingParen->MatchingParen->NestingLevel) {
-          break;
+            Tok->NestingLevel == ParamListLevel) {
+          InExpression = true;
+          continue;
+        }
+        if (InExpression) {
+          // In an expression, only a function type spelled with `auto` can
+          // have a trailing return arrow, e.g. the cast in
+          // `MACRO foo() << (auto (*)() -> int)(a);`.
+          if (Tok->isNot(tok::kw_auto) || Tok->NestingLevel == ParamListLevel)
+            continue;
+          // Skip the optional parenthesized declarator and the parameter list.
+          auto *Next = Tok->Next;
+          for (int I = 0; I < 2; ++I) {
+            if (!Next || Next->isNot(tok::l_paren) || !Next->MatchingParen)
+              break;
+            Next = Next->MatchingParen->Next;
+          }
+          if (Next && Next->is(tok::arrow) &&
+              Next->Previous->is(tok::r_paren)) {
+            Next->overwriteFixedType(TT_TrailingReturnArrow);
+            break;
+          }
+          continue;
         }
         if (Tok->is(tok::arrow)) {
           Tok->overwriteFixedType(TT_TrailingReturnArrow);
