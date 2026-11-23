@@ -2323,10 +2323,10 @@ LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
     return failure();
 
   // The merged block takes the source's place in the region. Keep a region
-  // exit (cir.yield, cir.condition) where it is, in the last block, which CFG
-  // flattening and the cir.await verifier expect.
-  if (isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()) &&
-      src->getNextNode() != dst)
+  // exit in the last block, where CFG flattening and the cir.await verifier
+  // expect it.
+  if (src->getNextNode() != dst && dst == &dst->getParent()->back() &&
+      isa<RegionBranchTerminatorOpInterface>(dst->getTerminator()))
     return failure();
 
   // An operand that is an argument of the destination itself (possible in an
