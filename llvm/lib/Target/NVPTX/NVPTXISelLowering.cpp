@@ -1126,6 +1126,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction(ISD::CopyFromReg, MVT::i128, Custom);
 
   setOperationAction(ISD::FEXP, MVT::f32, Custom);
+  setOperationAction(ISD::FEXP, {MVT::f16, MVT::bf16}, Promote);
 
   // FEXP2 support:
   // - f32
