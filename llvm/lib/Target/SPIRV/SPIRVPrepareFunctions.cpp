@@ -84,14 +84,6 @@ public:
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
 };
-
-static cl::list<std::string> SPVAllowUnknownIntrinsics(
-    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
-    cl::desc("Emit unknown intrinsics as calls to external functions. A "
-             "comma-separated input list of intrinsic prefixes must be "
-             "provided, and only intrinsics carrying a listed prefix get "
-             "emitted as described."),
-    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
@@ -641,11 +633,13 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           break;
         }
         if (STI.getTargetTriple().getVendor() == Triple::AMD ||
-            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
-              if (Prefix.empty())
-                return false;
-              return II->getCalledFunction()->getName().starts_with(Prefix);
-            }))
+            any_of(STI.getCLOpts().allow_unknown_intrinsics,
+                   [II](StringRef Prefix) {
+                     if (Prefix.empty())
+                       return false;
+                     return II->getCalledFunction()->getName().starts_with(
+                         Prefix);
+                   }))
           Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }

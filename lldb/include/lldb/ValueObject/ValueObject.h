@@ -356,6 +356,11 @@ public:
 
   virtual bool CanProvideValue();
 
+  /// Returns whether objects of the type of this value occupy no memory, so
+  /// that the value has no data and needs no location. A value whose size is
+  /// unknown is assumed to occupy memory.
+  bool HasNoStorage();
+
   // Subclasses must implement the functions below.
   virtual llvm::Expected<uint64_t> GetByteSize() = 0;
 
