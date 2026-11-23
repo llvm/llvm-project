@@ -197,7 +197,6 @@ public:
   Instruction *visitLandingPadInst(LandingPadInst &LI);
   Instruction *visitVAEndInst(VAEndInst &I);
   Value *pushFreezeToPreventPoisonFromPropagating(FreezeInst &FI);
-  bool freezeOtherUses(FreezeInst &FI);
   Instruction *foldFreezeIntoRecurrence(FreezeInst &I, PHINode *PN);
   Instruction *visitFreeze(FreezeInst &I);
 
@@ -743,10 +742,8 @@ public:
   Instruction *foldSelectICmp(CmpPredicate Pred, SelectInst *SI, Value *RHS,
                               const ICmpInst &I);
   bool foldAllocaCmp(AllocaInst *Alloca);
-  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI,
-                                            GetElementPtrInst *GEP,
-                                            CmpPredicate Pred, Constant *RHSC,
-                                            Instruction &CtxI,
+  Instruction *foldCmpLoadFromIndexedGlobal(LoadInst *LI, CmpPredicate Pred,
+                                            Constant *RHSC, Instruction &CtxI,
                                             ConstantInt *AndCst = nullptr);
   Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
                                     Constant *RHSC);

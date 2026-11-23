@@ -47,7 +47,6 @@ TEST(LibraryOptionsContextTest, CAPI) {
   EXPECT_EQ(printRet(CXX), "  ret void");
 
   cl::getCAPILibraryOptions() = cl::LibraryOptionsContext();
-  cl::ResetAllOptionOccurrences();
 
   const char *Bad[] = {"prog", "-print-inst-addrs=x"};
   char *Msg;
@@ -59,5 +58,4 @@ TEST(LibraryOptionsContextTest, CAPI) {
   C = LLVMContextCreate();
   EXPECT_EQ(printRet(*unwrap(C)), "  ret void");
   LLVMContextDispose(C);
-  cl::ResetAllOptionOccurrences();
 }

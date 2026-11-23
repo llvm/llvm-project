@@ -85,12 +85,12 @@ func.func @invariant_code_inside_affine_if() {
   }
 
   // CHECK: memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[CST:.*]] = arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addf %[[CST]], %[[CST]] : f32
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.apply
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[ADD]]
   // CHECK-NEXT: }
 
 
@@ -114,9 +114,9 @@ func.func @invariant_affine_if() {
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 20 {
   // CHECK-NEXT: }
+  // CHECK-NEXT: arith.addf %[[CST]], %[[CST]] : f32
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if #set(%[[ARG]], %[[ARG]]) {
-  // CHECK-NEXT: arith.addf %[[CST]], %[[CST]] : f32
   // CHECK-NEXT: }
 
   return
@@ -173,8 +173,13 @@ func.func @hoist_variant_affine_if_failure(%lb: index, %ub: index, %step: index)
   // CHECK-NEXT: arith.constant 0 : i32
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 42 : i32
   // CHECK-NEXT: arith.constant 7 : index
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addi %[[CST]], %[[CST]] : i32
+  // CHECK-NEXT: %[[POISON:.*]] = ub.poison : i32
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: %[[IF:.*]] = affine.if
+  // CHECK-NEXT: affine.yield %[[ADD]]
+  // CHECK-NEXT: } else {
+  // CHECK-NEXT: affine.yield %[[POISON]]
   // CHECK: arith.addi %{{.*}}, %[[IF]]
 
   return %sum_result : i32
@@ -285,11 +290,11 @@ func.func @invariant_affine_if2() {
 
   // CHECK: memref.alloc
   // CHECK-NEXT: arith.constant
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addf
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[ADD]]
   // CHECK-NEXT: }
   // CHECK-NEXT: }
 
@@ -316,11 +321,11 @@ func.func @invariant_affine_nested_if() {
   // CHECK-NEXT: arith.constant
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: }
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addf
+  // CHECK-NEXT: arith.addf %[[ADD]], %[[ADD]]
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
   // CHECK-NEXT: }
   // CHECK-NEXT: }
 
@@ -349,15 +354,15 @@ func.func @invariant_affine_nested_if_else() {
 
   // CHECK: memref.alloc
   // CHECK-NEXT: arith.constant
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addf
+  // CHECK-NEXT: arith.addf %[[ADD]], %[[ADD]]
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.for
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[ADD]]
   // CHECK-NEXT: affine.if
-  // CHECK-NEXT: arith.addf
   // CHECK-NEXT: } else {
-  // CHECK-NEXT: affine.store
+  // CHECK-NEXT: affine.store %[[ADD]]
   // CHECK-NEXT: }
   // CHECK-NEXT: }
   // CHECK-NEXT: }
@@ -493,10 +498,14 @@ func.func @hoist_variant_scf_if_failure(%lb: index, %ub: index, %step: index) ->
   // CHECK-NEXT: arith.constant 0 : i32
   // CHECK-NEXT: %[[CST_42:.*]] = arith.constant 42 : i32
   // CHECK-NEXT: %[[CST_7:.*]] = arith.constant 7 : index
+  // CHECK-NEXT: %[[ADD:.*]] = arith.addi %[[CST_42]], %[[CST_42]] : i32
+  // CHECK-NEXT: %[[POISON:.*]] = ub.poison : i32
   // CHECK-NEXT: scf.for %[[IV:.*]] = %{{.*}} to %{{.*}}
   // CHECK-NEXT: %[[CMP:.*]] = arith.cmpi ult, %[[IV]], %[[CST_7]]
   // CHECK-NEXT: %[[IF:.*]] = scf.if %[[CMP]]
-  // CHECK-NEXT: arith.addi %[[CST_42]], %[[CST_42]] : i32
+  // CHECK-NEXT: scf.yield %[[ADD]]
+  // CHECK-NEXT: } else {
+  // CHECK-NEXT: scf.yield %[[POISON]]
   // CHECK: arith.addi %{{.*}}, %[[IF]]
 
   return %sum_result : i32
@@ -1582,3 +1591,249 @@ func.func @do_not_hoist_vector_transfer_ops_memref(
   }
   func.return %final : vector<4x4xf32>
 }
+
+// -----
+
+// Invariant ops are hoisted out of regions of ops that stay in the loop.
+
+// CHECK-LABEL: func @hoist_from_scf_if(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32,
+//       CHECK:   %[[MUL:.*]] = arith.muli %[[A]], %[[B]]
+//       CHECK:   scf.for
+//       CHECK:     scf.if
+//       CHECK:       memref.store %[[MUL]]
+func.func @hoist_from_scf_if(%a: i32, %b: i32, %buf: memref<?xi32>,
+                             %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %cond = arith.cmpi sgt, %i, %lb : index
+    scf.if %cond {
+      %m = arith.muli %a, %b : i32
+      memref.store %m, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func @hoist_from_execute_region(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32,
+//       CHECK:   %[[MUL:.*]] = arith.muli %[[A]], %[[B]]
+//       CHECK:   scf.for
+//       CHECK:     scf.execute_region
+//       CHECK:       memref.store %[[MUL]]
+func.func @hoist_from_execute_region(%a: i32, %b: i32, %buf: memref<?xi32>,
+                                     %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    scf.execute_region {
+      %m = arith.muli %a, %b : i32
+      memref.store %m, %buf[%i] : memref<?xi32>
+      scf.yield
+    }
+  }
+  return
+}
+
+// -----
+
+// The enclosing loop can be any loop-like op.
+
+// CHECK-LABEL: func @hoist_from_scf_if_in_parallel(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32,
+//       CHECK:   %[[ADD:.*]] = arith.addi %[[A]], %[[B]]
+//       CHECK:   scf.parallel
+//       CHECK:     scf.if
+//       CHECK:       memref.store %[[ADD]]
+func.func @hoist_from_scf_if_in_parallel(%a: i32, %b: i32,
+                                         %buf: memref<?xi32>, %lb: index,
+                                         %ub: index, %step: index) {
+  scf.parallel (%i) = (%lb) to (%ub) step (%step) {
+    %cond = arith.cmpi eq, %i, %lb : index
+    scf.if %cond {
+      %add = arith.addi %a, %b : i32
+      memref.store %add, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Invariant ops are hoisted out of the whole loop nest.
+
+// CHECK-LABEL: func @hoist_from_affine_if_in_loop_nest(
+//  CHECK-SAME:     %[[A:.*]]: f32,
+//       CHECK:   %[[ADD:.*]] = arith.addf %[[A]], %[[A]]
+//       CHECK:   affine.for
+//       CHECK:     affine.for
+//       CHECK:       affine.if
+//       CHECK:         affine.store %[[ADD]]
+func.func @hoist_from_affine_if_in_loop_nest(%a: f32, %buf: memref<10xf32>) {
+  affine.for %i = 0 to 10 {
+    affine.for %j = 0 to 10 {
+      affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)>(%i, %i) {
+        %add = arith.addf %a, %a : f32
+        affine.store %add, %buf[%i] : memref<10xf32>
+      }
+    }
+  }
+  return
+}
+
+// -----
+
+// Chains of invariant ops are hoisted across nesting levels.
+
+// CHECK-LABEL: func @hoist_chain_across_nested_ifs(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32,
+//       CHECK:   %[[MUL:.*]] = arith.muli %[[A]], %[[B]]
+//       CHECK:   %[[ADD:.*]] = arith.addi %[[MUL]], %[[A]]
+//       CHECK:   %[[SUB:.*]] = arith.subi %[[ADD]], %[[B]]
+//       CHECK:   scf.for %[[I:.*]] =
+//       CHECK:     scf.if
+//       CHECK:       scf.if
+//       CHECK:         memref.store %[[SUB]]
+//       CHECK:       %[[CAST:.*]] = arith.index_cast %[[I]]
+//       CHECK:       %[[VAR:.*]] = arith.addi %[[ADD]], %[[CAST]]
+//       CHECK:       memref.store %[[VAR]]
+func.func @hoist_chain_across_nested_ifs(%a: i32, %b: i32, %buf: memref<?xi32>,
+                                         %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %cond = arith.cmpi sgt, %i, %lb : index
+    scf.if %cond {
+      %m = arith.muli %a, %b : i32
+      %s = arith.addi %m, %a : i32
+      scf.if %cond {
+        %t = arith.subi %s, %b : i32
+        memref.store %t, %buf[%i] : memref<?xi32>
+      }
+      %iv = arith.index_cast %i : index to i32
+      %v = arith.addi %s, %iv : i32
+      memref.store %v, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// A pure op with regions is hoisted as a whole.
+
+// CHECK-LABEL: func @hoist_pure_if_as_unit(
+//  CHECK-SAME:     %[[A:.*]]: i32, %[[B:.*]]: i32, %[[C:.*]]: i1,
+//       CHECK:   %[[X:.*]] = scf.if %[[C]]
+//       CHECK:     arith.muli %[[A]], %[[B]]
+//       CHECK:   scf.for
+//       CHECK:     scf.if
+//       CHECK:       memref.store %[[X]]
+func.func @hoist_pure_if_as_unit(%a: i32, %b: i32, %c: i1,
+                                 %buf: memref<?xi32>, %lb: index, %ub: index,
+                                 %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %cond = arith.cmpi sgt, %i, %lb : index
+    scf.if %cond {
+      %x = scf.if %c -> (i32) {
+        %m = arith.muli %a, %b : i32
+        scf.yield %m : i32
+      } else {
+        scf.yield %a : i32
+      }
+      memref.store %x, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// Non-speculatable ops stay under the condition that guards them.
+
+// CHECK-LABEL: func @do_not_hoist_divsi_from_scf_if(
+//       CHECK:   scf.for
+//       CHECK:     scf.if
+//       CHECK:       arith.divsi
+func.func @do_not_hoist_divsi_from_scf_if(%a: i32, %b: i32,
+                                          %buf: memref<?xi32>, %lb: index,
+                                          %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    %cond = arith.cmpi sgt, %i, %lb : index
+    scf.if %cond {
+      %d = arith.divsi %a, %b : i32
+      memref.store %d, %buf[%i] : memref<?xi32>
+    }
+  }
+  return
+}
+
+// -----
+
+// linalg.index depends on the enclosing linalg.generic and must stay in it.
+
+// CHECK-LABEL: func @do_not_hoist_linalg_index(
+//       CHECK:   scf.for
+//       CHECK:     linalg.generic
+//       CHECK:       linalg.index
+func.func @do_not_hoist_linalg_index(%buf: memref<?xindex>, %lb: index,
+                                     %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+    linalg.generic {indexing_maps = [affine_map<(d0) -> (d0)>],
+                    iterator_types = ["parallel"]}
+        outs(%buf : memref<?xindex>) {
+    ^bb0(%out: index):
+      %idx = linalg.index 0 : index
+      linalg.yield %idx : index
+    }
+  }
+  return
+}
+
+// -----
+
+// Ops in unreachable blocks may use values defined after the loop.
+
+// CHECK-LABEL: func @do_not_hoist_from_unreachable_block(
+//       CHECK:   scf.for
+//       CHECK:     scf.execute_region
+//       CHECK:       arith.muli
+func.func @do_not_hoist_from_unreachable_block(%a: i32, %lb: index,
+                                               %ub: index,
+                                               %step: index) -> i32 {
+  scf.for %i = %lb to %ub step %step {
+    scf.execute_region {
+      scf.yield
+    ^dead:
+      %x = arith.muli %late, %a : i32
+      scf.yield
+    }
+  }
+  %late = arith.addi %a, %a : i32
+  return %late : i32
+}
+
+// -----
+
+func.func private @consume(i32)
+
+func.func @tensor_pad_region_not_hoisted(
+    %input: tensor<1xi32>, %numerator: i32, %denominator: i32) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+
+  scf.for %i = %c0 to %c0 step %c1 {
+    %padded = tensor.pad %input low[0] high[1] {
+    ^bb0(%idx: index):
+      %quotient = arith.divsi %numerator, %denominator : i32
+      tensor.yield %quotient : i32
+    } : tensor<1xi32> to tensor<2xi32>
+    %value = tensor.extract %padded[%c1] : tensor<2xi32>
+    func.call @consume(%value) : (i32) -> ()
+  }
+
+  return
+}
+
+// CHECK-LABEL: func.func @tensor_pad_region_not_hoisted
+// CHECK: scf.for
+// CHECK: tensor.pad
+// CHECK: arith.divsi
+// CHECK: tensor.yield

@@ -32,7 +32,6 @@ namespace llvm {
 class HexagonSubtarget;
 
 class HexagonTargetLowering : public TargetLowering {
-  int VarArgsFrameOffset;   // Frame offset to start of varargs area.
   const HexagonTargetMachine &HTM;
   const HexagonSubtarget &Subtarget;
 

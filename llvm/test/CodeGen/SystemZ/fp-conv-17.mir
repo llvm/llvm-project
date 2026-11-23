@@ -82,43 +82,6 @@
 ---
 name:            f0
 alignment:       4
-registers:       
-  - { id: 0, class: addr64bit }
-  - { id: 1, class: addr64bit }
-  - { id: 2, class: fp32bit }
-  - { id: 3, class: fp32bit }
-  - { id: 4, class: fp32bit }
-  - { id: 5, class: fp32bit }
-  - { id: 6, class: fp32bit }
-  - { id: 7, class: fp32bit }
-  - { id: 8, class: fp32bit }
-  - { id: 9, class: fp32bit }
-  - { id: 10, class: fp32bit }
-  - { id: 11, class: fp32bit }
-  - { id: 12, class: fp32bit }
-  - { id: 13, class: fp32bit }
-  - { id: 14, class: fp32bit }
-  - { id: 15, class: fp32bit }
-  - { id: 16, class: fp32bit }
-  - { id: 17, class: fp32bit }
-  - { id: 18, class: fp32bit }
-  - { id: 19, class: fp64bit }
-  - { id: 20, class: fp64bit }
-  - { id: 21, class: fp64bit }
-  - { id: 22, class: fp64bit }
-  - { id: 23, class: fp64bit }
-  - { id: 24, class: fp64bit }
-  - { id: 25, class: fp64bit }
-  - { id: 26, class: fp64bit }
-  - { id: 27, class: fp64bit }
-  - { id: 28, class: fp64bit }
-  - { id: 29, class: fp64bit }
-  - { id: 30, class: fp64bit }
-  - { id: 31, class: fp64bit }
-  - { id: 32, class: fp64bit }
-  - { id: 33, class: fp64bit }
-  - { id: 34, class: fp64bit }
-  - { id: 35, class: fp64bit }
 liveins:         
   - { reg: '$r2d', virtual-reg: '%0' }
   - { reg: '$r3d', virtual-reg: '%1' }
@@ -126,25 +89,25 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $r2d, $r3d
   
-    %1 = COPY $r3d
-    %0 = COPY $r2d
-    %2 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %3 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %4 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %5 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %6 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %7 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %8 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %9 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %10 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %11 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %12 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %13 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %14 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %15 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %16 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %17 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
-    %18 = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %1:addr64bit = COPY $r3d
+    %0:addr64bit = COPY $r2d
+    %2:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %3:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %4:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %5:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %6:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %7:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %8:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %9:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %10:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %11:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %12:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %13:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %14:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %15:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %16:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %17:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
+    %18:fp32bit = LE %1, 0, $noreg :: (volatile load (s32) from %ir.ptr2)
     STE %2, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
     STE %3, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
     STE %4, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
@@ -162,39 +125,39 @@ body:             |
     STE %16, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
     STE %17, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
     STE %18, %1, 0, $noreg :: (volatile store (s32) into %ir.ptr2)
-    %19 = LDEBR %2, implicit $fpc
+    %19:fp64bit = LDEBR %2, implicit $fpc
     STD %19, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %20 = LDEBR %3, implicit $fpc
+    %20:fp64bit = LDEBR %3, implicit $fpc
     STD %20, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %21 = LDEBR %4, implicit $fpc
+    %21:fp64bit = LDEBR %4, implicit $fpc
     STD %21, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %22 = LDEBR %5, implicit $fpc
+    %22:fp64bit = LDEBR %5, implicit $fpc
     STD %22, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %23 = LDEBR %6, implicit $fpc
+    %23:fp64bit = LDEBR %6, implicit $fpc
     STD %23, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %24 = LDEBR %7, implicit $fpc
+    %24:fp64bit = LDEBR %7, implicit $fpc
     STD %24, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %25 = LDEBR %8, implicit $fpc
+    %25:fp64bit = LDEBR %8, implicit $fpc
     STD %25, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %26 = LDEBR %9, implicit $fpc
+    %26:fp64bit = LDEBR %9, implicit $fpc
     STD %26, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %27 = LDEBR %10, implicit $fpc
+    %27:fp64bit = LDEBR %10, implicit $fpc
     STD %27, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %28 = LDEBR %11, implicit $fpc
+    %28:fp64bit = LDEBR %11, implicit $fpc
     STD %28, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %29 = LDEBR %12, implicit $fpc
+    %29:fp64bit = LDEBR %12, implicit $fpc
     STD %29, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %30 = LDEBR %13, implicit $fpc
+    %30:fp64bit = LDEBR %13, implicit $fpc
     STD %30, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %31 = LDEBR %14, implicit $fpc
+    %31:fp64bit = LDEBR %14, implicit $fpc
     STD %31, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %32 = LDEBR %15, implicit $fpc
+    %32:fp64bit = LDEBR %15, implicit $fpc
     STD %32, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %33 = LDEBR %16, implicit $fpc
+    %33:fp64bit = LDEBR %16, implicit $fpc
     STD %33, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %34 = LDEBR %17, implicit $fpc
+    %34:fp64bit = LDEBR %17, implicit $fpc
     STD %34, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
-    %35 = LDEBR %18, implicit $fpc
+    %35:fp64bit = LDEBR %18, implicit $fpc
     STD %35, %0, 0, $noreg :: (volatile store (s64) into %ir.ptr1)
     Return
 

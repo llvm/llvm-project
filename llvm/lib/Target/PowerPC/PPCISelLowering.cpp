@@ -11969,7 +11969,7 @@ SDValue PPCTargetLowering::LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const {
   auto VPLD = cast<VPLoadSDNode>(Op);
   bool Future = Subtarget.isISAFuture();
   SDLoc dl(Op);
-  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(3).getNode(), true) &&
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(3), true) &&
          "Mask predication not supported");
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue Len = DAG.getNode(ISD::ANY_EXTEND, dl, PtrVT, VPLD->getOperand(4));
@@ -11987,7 +11987,7 @@ SDValue PPCTargetLowering::LowerVP_LOAD(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue PPCTargetLowering::LowerVP_STORE(SDValue Op, SelectionDAG &DAG) const {
   auto VPST = cast<VPStoreSDNode>(Op);
-  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(4).getNode(), true) &&
+  assert(ISD::isConstantSplatVectorAllOnes(Op->getOperand(4), true) &&
          "Mask predication not supported");
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc dl(Op);
@@ -18403,13 +18403,13 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
             V1.getSimpleValueType() == V2.getSimpleValueType()) {
           // (0-a, a)
           if (V1.getOpcode() == ISD::SUB &&
-              ISD::isBuildVectorAllZeros(V1.getOperand(0).getNode()) &&
+              ISD::isBuildVectorAllZeros(V1.getOperand(0)) &&
               V1.getOperand(1) == V2) {
             return DAG.getNode(ISD::ABS, dl, V2.getValueType(), V2);
           }
           // (a, 0-a)
           if (V2.getOpcode() == ISD::SUB &&
-              ISD::isBuildVectorAllZeros(V2.getOperand(0).getNode()) &&
+              ISD::isBuildVectorAllZeros(V2.getOperand(0)) &&
               V2.getOperand(1) == V1) {
             return DAG.getNode(ISD::ABS, dl, V1.getValueType(), V1);
           }

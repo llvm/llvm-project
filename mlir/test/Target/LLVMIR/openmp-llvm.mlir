@@ -3147,6 +3147,21 @@ llvm.func @omp_sections_empty() -> () {
   }
   // CHECK-NEXT: br label %entry
   // CHECK: entry:
+  // CHECK-NEXT: %[[TID:.*]] = call i32 @__kmpc_global_thread_num(ptr @{{[0-9]+}})
+  // CHECK-NEXT: call void @__kmpc_barrier(ptr @{{[0-9]+}}, i32 %[[TID]])
+  // CHECK-NEXT: ret void
+  llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @omp_sections_empty_nowait
+llvm.func @omp_sections_empty_nowait() -> () {
+  omp.sections nowait {
+    omp.terminator
+  }
+  // CHECK-NEXT: br label %entry
+  // CHECK: entry:
   // CHECK-NEXT: ret void
   llvm.return
 }

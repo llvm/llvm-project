@@ -27,7 +27,7 @@ class NSDictionarySyntheticTestCase(TestBase):
     def test_rdar11988289_with_run_command_no_const(self):
         """Test that NSDictionary reports its synthetic children properly."""
         disable_constant_classes = {
-            "CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
+            "TEST_CFLAGS_EXTRAS": "-fno-constant-nsnumber-literals "
             + "-fno-constant-nsarray-literals "
             + "-fno-constant-nsdictionary-literals",
         }

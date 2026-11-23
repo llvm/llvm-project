@@ -364,10 +364,12 @@ Status PlatformRemoteGDBServer::LaunchProcess(ProcessLaunchInfo &launch_info) {
     Args args = launch_info.GetArguments();
     if (FileSpec exe_file = launch_info.GetExecutableFile())
       args.ReplaceArgumentAtIndex(0, exe_file.GetPath(false));
-    if (llvm::Error err = m_gdb_client_up->LaunchProcess(args)) {
+    llvm::Expected<StringExtractorGDBRemote> launch_response =
+        m_gdb_client_up->LaunchProcess(args);
+    if (!launch_response) {
       error = Status::FromErrorStringWithFormatv(
           "Cannot launch '{0}': {1}", args.GetArgumentAtIndex(0),
-          llvm::fmt_consume(std::move(err)));
+          llvm::fmt_consume(launch_response.takeError()));
       return error;
     }
   }

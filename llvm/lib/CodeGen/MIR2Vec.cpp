@@ -21,6 +21,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include <array>
 
 using namespace llvm;
 using namespace mir2vec;
@@ -76,9 +77,8 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
                              VocabMap &&PhysicalRegisterMap,
                              VocabMap &&VirtualRegisterMap,
                              const TargetInstrInfo &TII,
-                             const TargetRegisterInfo &TRI,
-                             const MachineRegisterInfo &MRI)
-    : TII(TII), TRI(TRI), MRI(MRI) {
+                             const TargetRegisterInfo &TRI)
+    : TII(TII), TRI(TRI) {
   buildCanonicalOpcodeMapping();
   unsigned CanonicalOpcodeCount = UniqueBaseOpcodeNames.size();
   assert(CanonicalOpcodeCount > 0 &&
@@ -90,7 +90,7 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
   Layout.OpcodeBase = 0;
   Layout.CommonOperandBase = CanonicalOpcodeCount;
   // We expect same classes for physical and virtual registers
-  Layout.PhyRegBase = Layout.CommonOperandBase + std::size(CommonOperandNames);
+  Layout.PhyRegBase = Layout.CommonOperandBase + std::size(CommonOperands);
   Layout.VirtRegBase = Layout.PhyRegBase + RegisterOperandNames.size();
 
   generateStorage(OpcodeMap, CommonOperandMap, PhysicalRegisterMap,
@@ -98,19 +98,19 @@ MIRVocabulary::MIRVocabulary(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
   Layout.TotalEntries = Storage.size();
 }
 
-Expected<MIRVocabulary>
-MIRVocabulary::create(VocabMap &&OpcodeMap, VocabMap &&CommonOperandMap,
-                      VocabMap &&PhyRegMap, VocabMap &&VirtRegMap,
-                      const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-                      const MachineRegisterInfo &MRI) {
+Expected<MIRVocabulary> MIRVocabulary::create(VocabMap &&OpcodeMap,
+                                              VocabMap &&CommonOperandMap,
+                                              VocabMap &&PhyRegMap,
+                                              VocabMap &&VirtRegMap,
+                                              const TargetInstrInfo &TII,
+                                              const TargetRegisterInfo &TRI) {
   if (OpcodeMap.empty() || CommonOperandMap.empty() || PhyRegMap.empty() ||
       VirtRegMap.empty())
     return createStringError(errc::invalid_argument,
                              "Empty vocabulary entries provided");
 
   MIRVocabulary Vocab(std::move(OpcodeMap), std::move(CommonOperandMap),
-                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI,
-                      MRI);
+                      std::move(PhyRegMap), std::move(VirtRegMap), TII, TRI);
 
   // Validate Storage after construction
   if (!Vocab.Storage.isValid())
@@ -166,12 +166,13 @@ unsigned MIRVocabulary::getCanonicalOpcodeIndex(unsigned Opcode) const {
 
 unsigned
 MIRVocabulary::getCanonicalIndexForOperandName(StringRef OperandName) const {
-  auto It = std::find(std::begin(CommonOperandNames),
-                      std::end(CommonOperandNames), OperandName);
-  assert(It != std::end(CommonOperandNames) &&
+  auto It = llvm::find_if(CommonOperands, [&](const CommonOperandEntry &E) {
+    return E.Name == OperandName;
+  });
+  assert(It != std::end(CommonOperands) &&
          "Operand name not found in common operands");
   return Layout.CommonOperandBase +
-         std::distance(std::begin(CommonOperandNames), It);
+         std::distance(std::begin(CommonOperands), It);
 }
 
 unsigned
@@ -207,10 +208,10 @@ std::string MIRVocabulary::getStringKey(unsigned Pos) const {
 
   // Handle common operands section
   if (Pos < Layout.PhyRegBase) {
-    unsigned LocalIndex = getLocalIndex(
-        Pos, Layout.CommonOperandBase, std::size(CommonOperandNames),
-        "Local index out of bounds in common operands");
-    return CommonOperandNames[LocalIndex].str();
+    unsigned LocalIndex =
+        getLocalIndex(Pos, Layout.CommonOperandBase, std::size(CommonOperands),
+                      "Local index out of bounds in common operands");
+    return CommonOperands[LocalIndex].Name.str();
   }
 
   // Handle physical registers section
@@ -261,15 +262,15 @@ void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap,
   }
 
   // Initialize common operand embeddings section
-  std::vector<Embedding> CommonOperandEmbeddings(std::size(CommonOperandNames),
+  std::vector<Embedding> CommonOperandEmbeddings(std::size(CommonOperands),
                                                  Embedding(EmbeddingDim));
   unsigned OperandIndex = 0;
-  for (const auto &CommonOperandName : CommonOperandNames) {
-    if (auto It = CommonOperandsMap.find(CommonOperandName.str());
+  for (const CommonOperandEntry &Entry : CommonOperands) {
+    if (auto It = CommonOperandsMap.find(Entry.Name.str());
         It != CommonOperandsMap.end()) {
       CommonOperandEmbeddings[OperandIndex] = It->second;
     } else {
-      handleMissingEntity(CommonOperandName);
+      handleMissingEntity(Entry.Name);
     }
     ++OperandIndex;
   }
@@ -351,17 +352,30 @@ void MIRVocabulary::buildRegisterOperandMapping() {
   }
 }
 
-unsigned MIRVocabulary::getCommonOperandIndex(
+std::optional<unsigned> MIRVocabulary::getCommonOperandIndex(
     MachineOperand::MachineOperandType OperandType) const {
   assert(OperandType != MachineOperand::MO_Register &&
          "Expected non-register operand type");
-  assert(OperandType > MachineOperand::MO_Register &&
-         OperandType < MachineOperand::MO_Last && "Operand type out of bounds");
-  return static_cast<unsigned>(OperandType) - 1;
+  assert(OperandType <= MachineOperand::MO_Last &&
+         "Operand type out of bounds");
+  static constexpr unsigned InvalidIndex = ~0u;
+  static constexpr auto OperandTypeToIndex = [] {
+    std::array<unsigned, MachineOperand::MO_Last + 1> Map{};
+    for (unsigned &I : Map)
+      I = InvalidIndex;
+    for (unsigned I = 0; I < std::size(CommonOperands); ++I)
+      Map[CommonOperands[I].Type] = I;
+    return Map;
+  }();
+  unsigned Index = OperandTypeToIndex[OperandType];
+  if (Index == InvalidIndex)
+    return std::nullopt;
+  return Index;
 }
 
 std::optional<unsigned>
-MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
+MIRVocabulary::getRegisterOperandIndex(Register Reg,
+                                       const MachineRegisterInfo &MRI) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
   assert(Reg.isValid() && "Invalid register; not expected here");
   assert((Reg.isPhysical() || Reg.isVirtual()) &&
@@ -385,12 +399,12 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
   // TODO: Avoid special-casing these registers at every use site. Classless
-  // registers currently fall back to a zero embedding in operator[] and to
-  // VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc handling
-  // the invalid/stack-slot cases already get. Give them a real vocabulary
-  // representation instead -- e.g. an explicit "no register class" entry, or
-  // keying generic vregs on their LLT/RegisterBank -- so that the lookup is
-  // total and the callers need no fallbacks.
+  // registers currently fall back to a zero embedding in getRegisterEmbedding()
+  // and to VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc
+  // handling the invalid/stack-slot cases already get. Give them a real
+  // vocabulary representation instead -- e.g. an explicit "no register class"
+  // entry, or keying generic vregs on their LLT/RegisterBank -- so that the
+  // lookup is total and the callers need no fallbacks.
   if (!RegClass) {
     LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
                       << "; using zero vector.\n");
@@ -402,8 +416,7 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg) const {
 }
 
 Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
-    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI,
-    const MachineRegisterInfo &MRI, unsigned Dim) {
+    const TargetInstrInfo &TII, const TargetRegisterInfo &TRI, unsigned Dim) {
   assert(Dim > 0 && "Dimension must be greater than zero");
 
   float DummyVal = 0.1f;
@@ -420,8 +433,8 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
   }
 
   // Add common operands
-  for (const auto &CommonOperandName : CommonOperandNames) {
-    DummyOperandMap[CommonOperandName.str()] = Embedding(Dim, DummyVal);
+  for (const CommonOperandEntry &Entry : CommonOperands) {
+    DummyOperandMap[Entry.Name.str()] = Embedding(Dim, DummyVal);
     DummyVal += 0.1f;
   }
 
@@ -440,43 +453,18 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
   // Create vocabulary directly without temporary instance
   return MIRVocabulary::create(
       std::move(DummyOpcMap), std::move(DummyOperandMap),
-      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI, MRI);
+      std::move(DummyPhyRegMap), std::move(DummyVirtRegMap), TII, TRI);
 }
 
 //===----------------------------------------------------------------------===//
 // MIR2VecVocabProvider and MIR2VecVocabLegacyAnalysis
 //===----------------------------------------------------------------------===//
 
-Expected<mir2vec::MIRVocabulary>
-MIR2VecVocabProvider::getVocabulary(const Module &M) {
-  VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
+using VocabMap = std::map<std::string, Embedding>;
 
-  if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
-                                 VirtRegVocabMap))
-    return std::move(Err);
-
-  for (const auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-
-    if (auto *MF = MMI.getMachineFunction(F)) {
-      auto &Subtarget = MF->getSubtarget();
-      if (const auto *TII = Subtarget.getInstrInfo())
-        if (const auto *TRI = Subtarget.getRegisterInfo())
-          return mir2vec::MIRVocabulary::create(
-              std::move(OpcVocab), std::move(CommonOperandVocab),
-              std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *TII, *TRI,
-              MF->getRegInfo());
-    }
-  }
-  return createStringError(errc::invalid_argument,
-                           "No machine functions found in module");
-}
-
-Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
-                                           VocabMap &CommonOperandVocab,
-                                           VocabMap &PhyRegVocabMap,
-                                           VocabMap &VirtRegVocabMap) {
+static Error readVocabulary(VocabMap &OpcodeVocab, VocabMap &CommonOperandVocab,
+                            VocabMap &PhyRegVocabMap,
+                            VocabMap &VirtRegVocabMap) {
   if (VocabFile.empty())
     return createStringError(
         errc::invalid_argument,
@@ -525,6 +513,34 @@ Error MIR2VecVocabProvider::readVocabulary(VocabMap &OpcodeVocab,
   return Error::success();
 }
 
+static Expected<mir2vec::MIRVocabulary>
+buildVocabulary(const MachineFunction &MF) {
+  VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
+
+  if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
+                                 VirtRegVocabMap))
+    return std::move(Err);
+
+  const TargetSubtargetInfo &ST = MF.getSubtarget();
+  return mir2vec::MIRVocabulary::create(
+      std::move(OpcVocab), std::move(CommonOperandVocab),
+      std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *ST.getInstrInfo(),
+      *ST.getRegisterInfo());
+}
+
+Expected<mir2vec::MIRVocabulary>
+MIR2VecVocabProvider::getVocabulary(const Module &M) {
+  for (const auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+
+    if (auto *MF = MMI.getMachineFunction(F))
+      return buildVocabulary(*MF);
+  }
+  return createStringError(errc::invalid_argument,
+                           "No machine functions found in module");
+}
+
 char MIR2VecVocabLegacyAnalysis::ID = 0;
 INITIALIZE_PASS_BEGIN(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
                       "MIR2Vec Vocabulary Analysis", false, true)
@@ -534,6 +550,17 @@ INITIALIZE_PASS_END(MIR2VecVocabLegacyAnalysis, "mir2vec-vocab-analysis",
 
 StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
   return "MIR2Vec Vocabulary Analysis";
+}
+
+AnalysisKey MIR2VecVocabAnalysis::Key;
+
+MIR2VecVocabAnalysis::Result
+MIR2VecVocabAnalysis::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto VocabOrErr = buildVocabulary(MF);
+  if (!VocabOrErr)
+    reportFatalUsageError(VocabOrErr.takeError());
+  return std::move(*VocabOrErr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -611,7 +638,7 @@ Embedding SymbolicMIREmbedder::computeEmbeddings(const MachineInstr &MI) const {
 
   // Add operand contributions
   for (const MachineOperand &MO : MI.operands())
-    InstructionEmbedding += Vocab[MO];
+    InstructionEmbedding += Vocab.getOperandEmbedding(MO, MF.getRegInfo());
 
   return InstructionEmbedding;
 }
@@ -662,26 +689,14 @@ llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecVocabPrinterLegacyPass(OS);
 }
 
-char MIR2VecPrinterLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(MIR2VecPrinterLegacyPass, "print-mir2vec",
-                      "MIR2Vec Embedder Printer Pass", false, true)
-INITIALIZE_PASS_DEPENDENCY(MIR2VecVocabLegacyAnalysis)
-INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
-INITIALIZE_PASS_END(MIR2VecPrinterLegacyPass, "print-mir2vec",
-                    "MIR2Vec Embedder Printer Pass", false, true)
-
-bool MIR2VecPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
-  auto &Analysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
-  auto VocabOrErr =
-      Analysis.getMIR2VecVocabulary(*MF.getFunction().getParent());
-  assert(VocabOrErr && "Failed to get MIR2Vec vocabulary");
-  auto &MIRVocab = *VocabOrErr;
-
+static void printEmbeddings(const MachineFunction &MF,
+                            const mir2vec::MIRVocabulary &MIRVocab,
+                            raw_ostream &OS) {
   auto Emb = mir2vec::MIREmbedder::create(MIR2VecEmbeddingKind, MF, MIRVocab);
   if (!Emb) {
     OS << "Error creating MIR2Vec embeddings for function " << MF.getName()
        << "\n";
-    return false;
+    return;
   }
 
   OS << "MIR2Vec embeddings for machine function " << MF.getName() << ":\n";
@@ -707,10 +722,32 @@ bool MIR2VecPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
       Emb->getMInstVector(MI).print(OS);
     }
   }
+}
 
+char MIR2VecPrinterLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(MIR2VecPrinterLegacyPass, "print-mir2vec",
+                      "MIR2Vec Embedder Printer Pass", false, true)
+INITIALIZE_PASS_DEPENDENCY(MIR2VecVocabLegacyAnalysis)
+INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
+INITIALIZE_PASS_END(MIR2VecPrinterLegacyPass, "print-mir2vec",
+                    "MIR2Vec Embedder Printer Pass", false, true)
+
+bool MIR2VecPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
+  auto &Analysis = getAnalysis<MIR2VecVocabLegacyAnalysis>();
+  auto VocabOrErr =
+      Analysis.getMIR2VecVocabulary(*MF.getFunction().getParent());
+  assert(VocabOrErr && "Failed to get MIR2Vec vocabulary");
+  printEmbeddings(MF, *VocabOrErr, OS);
   return false;
 }
 
 MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecPrinterLegacyPass(OS);
+}
+
+PreservedAnalyses
+MIR2VecPrinterPass::run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+  printEmbeddings(MF, MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  return PreservedAnalyses::all();
 }

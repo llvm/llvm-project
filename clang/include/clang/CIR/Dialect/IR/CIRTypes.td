@@ -97,6 +97,15 @@ def CIR_IntType : CIR_Type<"Int", "int", [
       return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
     }
 
+    /// The _BitInt alignment cap, in bits, held by the #cir.bitint_spec entry
+    /// in \p params, or the default cap when there is no entry.
+    static uint64_t
+    getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params);
+
+    /// The alignment, in bytes, that C requires of this _BitInt when the
+    /// target caps _BitInt alignment at \p maxAlignBits bits.
+    uint64_t getBitIntAlignRequirement(uint64_t maxAlignBits) const;
+
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
     /// Returns a maximum bitwidth of cir::IntType.
@@ -491,7 +500,8 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 //===----------------------------------------------------------------------===//
 
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface, ["isSized"]>,
 ]> {
   let summary = "CIR vector type";
@@ -523,6 +533,10 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     size is rounded up to a power of two of at least one byte, so
     `!cir.vector<4 x !cir.bool>` occupies one byte and
     `!cir.vector<17 x !cir.bool>` occupies four.
+
+    A vector's ABI alignment is its size in bytes, rounded up to a power of
+    two. Its language alignment is the same, capped at `max_align` bits when
+    the module carries a `#cir.vector_spec` entry.
 
     Scalable vectors are indicated by enclosing size in square brackets.
 
@@ -565,6 +579,19 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// The width of the integer a vector of `!cir.bool` is stored as: one bit
     /// per element, at least a byte.
     uint64_t getBoolStorageWidth() const;
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getMaxVectorAlign(), in bits. The element type and the
+    /// element count are not layout inputs. Every vector reads this one
+    /// entry.
+    static VectorType getMaxAlignKey(mlir::MLIRContext *ctx) {
+      return getFixed(IntType::get(ctx, /*width=*/8, /*isSigned=*/false),
+                      /*size=*/1);
+    }
+
+    /// The vector alignment cap, in bits, held by the #cir.vector_spec entry
+    /// in \p params, or 0 when there is no entry and the target sets no cap.
+    static uint64_t getMaxAlignBits(mlir::DataLayoutEntryListRef params);
   }];
 
   let extraClassDefinition = [{

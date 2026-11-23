@@ -28,7 +28,7 @@ _LIBCPP_NO_SPECIALIZATIONS inline constexpr bool is_trivially_copyable_v = __is_
 #endif
 
 template <class _Tp>
-inline const bool __is_cheap_to_copy = __is_trivially_copyable(_Tp) && sizeof(_Tp) <= sizeof(std::intmax_t);
+inline const bool __is_cheap_to_copy = __is_trivially_copyable(_Tp) && sizeof(_Tp) <= 2 * sizeof(std::intptr_t);
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -2181,7 +2181,7 @@ define i64 @v_sdiv_i64_24bit(i64 %num, i64 %den) {
 ; GISEL-NEXT:    v_mul_hi_u32 v3, v2, v3
 ; GISEL-NEXT:    v_add_i32_e32 v2, vcc, v2, v3
 ; GISEL-NEXT:    v_mul_hi_u32 v2, v0, v2
-; GISEL-NEXT:    v_mul_lo_u32 v3, v2, v1
+; GISEL-NEXT:    v_mul_u32_u24_e32 v3, v2, v1
 ; GISEL-NEXT:    v_sub_i32_e32 v0, vcc, v0, v3
 ; GISEL-NEXT:    v_cmp_ge_u32_e32 vcc, v0, v1
 ; GISEL-NEXT:    v_sub_i32_e64 v3, s[4:5], v0, v1

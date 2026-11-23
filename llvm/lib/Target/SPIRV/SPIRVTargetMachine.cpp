@@ -15,6 +15,7 @@
 #include "SPIRV.h"
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVLegalizerInfo.h"
+#include "SPIRVMachineFunctionInfo.h"
 #include "SPIRVTargetObjectFile.h"
 #include "SPIRVTargetTransformInfo.h"
 #include "TargetInfo/SPIRVTargetInfo.h"
@@ -23,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
 #include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
@@ -95,6 +97,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
+  LLT::setUseExtended(true);
   setGlobalISel(true);
   setFastISel(false);
   setO0WantsFastISel(false);
@@ -123,7 +126,6 @@ public:
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
   void addFastRegAlloc() override {}
   void addOptimizedRegAlloc() override {}
 
@@ -135,30 +137,14 @@ private:
 };
 } // namespace
 
-// We do not use physical registers, and maintain virtual registers throughout
-// the entire pipeline, so return nullptr to disable register allocation.
-FunctionPass *SPIRVPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr;
-}
-
 // A place to disable passes that may break CFG.
 void SPIRVPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 }
 
-// Disable passes that break from assuming no virtual registers exist.
 void SPIRVPassConfig::addPostRegAlloc() {
-  // Do not work with vregs instead of physical regs.
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
+  // Does not work with vregs instead of physical regs.
   disablePass(&LiveDebugValuesID);
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);
@@ -183,6 +169,63 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
 // CSE can merge same-LLT values with different SPIR-V types.
 CSEConfigBase *SPIRVTargetMachine::createCSEConfig() const {
   return new CSEConfigBase();
+}
+
+yaml::MachineFunctionInfo *
+SPIRVTargetMachine::createDefaultFuncInfoYAML() const {
+  return new yaml::SPIRVMachineFunctionInfo();
+}
+
+yaml::MachineFunctionInfo *
+SPIRVTargetMachine::convertFuncInfoToYAML(const MachineFunction &MF) const {
+  return new yaml::SPIRVMachineFunctionInfo(MF);
+}
+
+bool SPIRVTargetMachine::parseMachineFunctionInfo(
+    const yaml::MachineFunctionInfo &MFI, PerFunctionMIParsingState &PFS,
+    SMDiagnostic &Error, SMRange &SourceRange) const {
+  const auto &YamlMFI =
+      static_cast<const yaml::SPIRVMachineFunctionInfo &>(MFI);
+  MachineFunction &MF = PFS.MF;
+  // SPIRVPrepareFunctions resolves the environment, but does not run on MIR.
+  // Resolve it once, before restoring types, because it resets the registry.
+  SPIRVSubtarget &ST =
+      *const_cast<SPIRVTargetMachine *>(this)->getMutableSubtargetImpl();
+  if (ST.getEnv() == SPIRVSubtarget::Unknown)
+    ST.resolveEnvFromModule(*MF.getFunction().getParent());
+  SPIRVGlobalRegistry *GR = ST.getSPIRVGlobalRegistry();
+  const SPIRVInstrInfo &TII = *ST.getInstrInfo();
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  auto ParseVReg = [&](const yaml::StringValue &RegName, VRegInfo *&Info) {
+    if (!parseVirtualRegisterReference(PFS, Info, RegName.Value, Error))
+      return false;
+    SourceRange = RegName.SourceRange;
+    return true;
+  };
+  auto Diagnose = [&](const yaml::StringValue &RegName, StringRef Msg) {
+    const MemoryBuffer &Buffer =
+        *PFS.SM->getMemoryBuffer(PFS.SM->getMainFileID());
+    Error = SMDiagnostic(*PFS.SM, SMLoc(), Buffer.getBufferIdentifier(), 1,
+                         static_cast<int>(RegName.Value.size()),
+                         SourceMgr::DK_Error, Msg, RegName.Value, {}, {});
+    SourceRange = RegName.SourceRange;
+    return true;
+  };
+
+  for (const yaml::SPIRVVRegType &Entry : YamlMFI.VRegTypes) {
+    VRegInfo *RegInfo, *TypeInfo;
+    if (ParseVReg(Entry.Reg, RegInfo) || ParseVReg(Entry.Type, TypeInfo))
+      return true;
+    if (MRI.reg_empty(RegInfo->VReg))
+      return Diagnose(Entry.Reg, "virtual register is not used or defined");
+    const MachineInstr *TypeMI = MRI.getUniqueVRegDef(TypeInfo->VReg);
+    if (!TypeMI || !TII.isTypeDeclInstr(*TypeMI))
+      return Diagnose(Entry.Type, "expected a SPIR-V type register");
+    GR->assignSPIRVTypeToVReg(TypeMI, RegInfo->VReg, MF);
+  }
+  GR->restoreFromMIR(MF);
+  return false;
 }
 
 void SPIRVPassConfig::addIRPasses() {

@@ -212,8 +212,10 @@ bool isCommutative(const Instruction *I, const Value *ValWithUses,
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  // A lane without wrap flags, like an or converted to sub,
+                  // does not clear nsw of the vector sub.
                   ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
+                  auto *I = dyn_cast<OverflowingBinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
@@ -739,6 +741,8 @@ Value *createExtractVector(IRBuilderBase &Builder, Value *Vec,
 bool dominatesAllUses(const DominatorTree &DT, const Instruction &InsertPt,
                       const Instruction &I) {
   assert(InsertPt.getParent() == I.getParent() && "Expected same block.");
+  assert(DT.isReachableFromEntry(InsertPt.getParent()) &&
+         "Expected reachable block.");
   // The uses of the instruction after InsertPt are dominated by InsertPt.
   if (InsertPt.comesBefore(&I))
     return true;
@@ -756,16 +760,20 @@ Instruction *findPairedDivision(unsigned Opcode, Value *X, Value *Y,
   if (X->hasOneUse() || Y->hasOneUse())
     return nullptr;
   // Constants have context-wide use lists, walk the variable operand. The
-  // dividend usually has fewer users than the divisor.
-  Value *Op = isa<Constant>(X) ? Y : X;
-  if (isa<Constant>(Op) || Op->hasNUsesOrMore(UsesLimit))
-    return nullptr;
+  // dividend usually has fewer users than the divisor, the divisor is walked
+  // only if the dividend has too many.
+  Value *Op = X;
+  if (isa<Constant>(X) || X->hasNUsesOrMore(UsesLimit)) {
+    if (isa<Constant>(Y) || Y->hasNUsesOrMore(UsesLimit))
+      return nullptr;
+    Op = Y;
+  }
   const unsigned DivOpcode =
       Opcode == Instruction::URem ? Instruction::UDiv : Instruction::SDiv;
   for (User *U : Op->users()) {
     auto *I = dyn_cast<Instruction>(U);
-    if (I && I->getParent() == BB &&
-        match(I, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) && Pred(I))
+    if (I && match(I, m_BinOp(DivOpcode, m_Specific(X), m_Specific(Y))) &&
+        I->getParent() == BB && Pred(I))
       return I;
   }
   return nullptr;
