@@ -250,3 +250,18 @@ define <4 x i32> @demanded_src_multiuse(i32 %v0, i32 %v1, i32 %v2, i32 %v3, <4 x
   call void @use(<4 x i32> %d)
   ret <4 x i32> %res
 }
+
+; Mask lane 0 is poison, so result lane 0 is poison and the shufflevector doesn't need it.
+define <4 x i32> @poison_mask_elt(<4 x i32> %v, i32 %m1) {
+; CHECK-LABEL: define <4 x i32> @poison_mask_elt(
+; CHECK-SAME: <4 x i32> [[V:%.*]], i32 [[M1:%.*]]) {
+; CHECK-NEXT:    [[MASK:%.*]] = insertelement <4 x i32> poison, i32 [[M1]], i64 1
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> [[V]], <4 x i32> [[MASK]])
+; CHECK-NEXT:    [[RES1:%.*]] = shufflevector <4 x i32> [[RES]], <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    ret <4 x i32> [[RES1]]
+;
+  %mask = insertelement <4 x i32> poison, i32 %m1, i64 1
+  %res = call <4 x i32> @llvm.vector.shuffle.v4i32.v4i32(<4 x i32> %v, <4 x i32> %mask)
+  %res1 = shufflevector <4 x i32> %res, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  ret <4 x i32> %res1
+}
