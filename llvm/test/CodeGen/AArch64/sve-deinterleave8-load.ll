@@ -91,5 +91,3 @@ define void @deinterleave8_fixed_load(ptr %src, ptr %dst) {
   ret void
 }
 
-declare void @llvm.fake.use(...)
-declare {<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>} @llvm.vector.deinterleave8.nxv16f64(<vscale x 16 x double>)
