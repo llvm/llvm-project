@@ -108,8 +108,7 @@ struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
 
   LogicalResult matchAndRewrite(LoadOp op,
                                 PatternRewriter &rewriter) const override {
-    // Volatile or atomic loads should not be simplified.
-    if (op.getIsVolatile() || op.getMemOrder())
+    if (op.isVolatileOrAtomic())
       return mlir::failure();
 
     auto allocaOp = op.getAddr().getDefiningOp<cir::AllocaOp>();
@@ -120,7 +119,7 @@ struct SimplifyConstantLoad final : public OpRewritePattern<LoadOp> {
         findDominatingInitOp(allocaOp, op, domInfo.getDominanceInfo());
     if (!initStoreOp)
       return mlir::failure();
-    if (initStoreOp.getIsVolatile() || initStoreOp.getMemOrder()) {
+    if (initStoreOp.isVolatileOrAtomic()) {
       // We intentionally act conservatively here and we don't want to simplify
       // the load if the corresponding store is either volatile or atomic.
       return mlir::failure();

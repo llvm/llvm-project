@@ -1333,17 +1333,14 @@ end:
 ; }
 %struct.xyz = type { i32, i32, i32 }
 
-define void @interleave_deinterleave_factor3(ptr writeonly noalias %dst, ptr readonly %a, ptr readonly %b) {
+define void @interleave_deinterleave_factor3(ptr writeonly noalias %dst, ptr readonly %a, ptr readonly %b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @interleave_deinterleave_factor3(
 ; CHECK-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1366,12 +1363,12 @@ define void @interleave_deinterleave_factor3(ptr writeonly noalias %dst, ptr rea
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 12 x i32> @llvm.vector.interleave3.nxv12i32(<vscale x 4 x i32> [[TMP10]], <vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP13]])
 ; CHECK-NEXT:    store <vscale x 12 x i32> [[INTERLEAVED_VEC]], ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP14]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -1417,17 +1414,14 @@ for.end:
 ; }
 %struct.xyzt = type { i32, i32, i32, i32 }
 
-define void @interleave_deinterleave(ptr writeonly noalias %dst, ptr readonly %a, ptr readonly %b) {
+define void @interleave_deinterleave(ptr writeonly noalias %dst, ptr readonly %a, ptr readonly %b) vscale_range(1,16) {
 ; CHECK-LABEL: define void @interleave_deinterleave(
 ; CHECK-SAME: ptr noalias writeonly [[DST:%.*]], ptr readonly [[A:%.*]], ptr readonly [[B:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 1024, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 1024, [[TMP1]]
-; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 1024, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -1453,12 +1447,12 @@ define void @interleave_deinterleave(ptr writeonly noalias %dst, ptr readonly %a
 ; CHECK-NEXT:    [[INTERLEAVED_VEC:%.*]] = call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> [[TMP12]], <vscale x 4 x i32> [[TMP14]], <vscale x 4 x i32> [[TMP15]], <vscale x 4 x i32> [[TMP16]])
 ; CHECK-NEXT:    store <vscale x 16 x i32> [[INTERLEAVED_VEC]], ptr [[TMP13]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
+; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP34:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i64 1024, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[FOR_END:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %for.body
@@ -1514,7 +1508,7 @@ for.end:
 ;   B[i].t = d;
 ; }
 
-define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1{
+define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, ptr noalias nocapture %B) #1 vscale_range(1,16) {
 ; CHECK-LABEL: define void @interleave_deinterleave_reverse(
 ; CHECK-SAME: ptr noalias readonly captures(none) [[A:%.*]], ptr noalias captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -1562,7 +1556,7 @@ define void @interleave_deinterleave_reverse(ptr noalias nocapture readonly %A, 
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP21:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
-; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP37:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP21]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP35:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[FOR_COND_CLEANUP:.*]]
 ; CHECK:       [[FOR_COND_CLEANUP]]:
@@ -1600,6 +1594,57 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 }
+
+; Factor 5 group with a member address computed by llvm.umul.with.overflow.
+define i32 @load_factor5_umul_index(ptr noalias %p) #1 {
+; CHECK-LABEL: define i32 @load_factor5_umul_index(
+; CHECK-SAME: ptr noalias [[P:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul nuw nsw i64 [[INDEX]], 5
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P]], i64 [[TMP0]]
+; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <20 x i32>, ptr [[TMP1]], align 4
+; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <20 x i32> [[WIDE_VEC]], <20 x i32> poison, <4 x i32> <i32 0, i32 5, i32 10, i32 15>
+; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <20 x i32> [[WIDE_VEC]], <20 x i32> poison, <4 x i32> <i32 1, i32 6, i32 11, i32 16>
+; CHECK-NEXT:    [[TMP2:%.*]] = add <4 x i32> [[STRIDED_VEC]], [[STRIDED_VEC1]]
+; CHECK-NEXT:    [[TMP3]] = add <4 x i32> [[VEC_PHI]], [[TMP2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 508
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP36:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
+; CHECK:       [[SCALAR_PH]]:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %loop ]
+  %mul = mul nuw nsw i64 %iv, 5
+  %gep.0 = getelementptr inbounds i32, ptr %p, i64 %mul
+  %l.0 = load i32, ptr %gep.0, align 4
+  %umul = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %iv, i64 5)
+  %mul.1 = extractvalue { i64, i1 } %umul, 0
+  %add.1 = add nuw nsw i64 %mul.1, 1
+  %gep.1 = getelementptr inbounds i32, ptr %p, i64 %add.1
+  %l.1 = load i32, ptr %gep.1, align 4
+  %add = add i32 %l.0, %l.1
+  %sum.next = add i32 %sum, %add
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 512
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %sum.next
+}
+
 attributes #1 = { "target-features"="+sve" vscale_range(1, 16) }
 attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 ;.
@@ -1628,6 +1673,7 @@ attributes #0 = { "target-features"="+sve" vscale_range(1, 16) }
 ; CHECK: [[META30]] = distinct !{[[META30]], [[META28]]}
 ; CHECK: [[LOOP31]] = distinct !{[[LOOP31]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP33]] = distinct !{[[LOOP33]], [[META1]], [[META2]]}
+; CHECK: [[LOOP34]] = distinct !{[[LOOP34]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP35]] = distinct !{[[LOOP35]], [[META1]], [[META2]]}
-; CHECK: [[LOOP37]] = distinct !{[[LOOP37]], [[META1]], [[META2]]}
+; CHECK: [[LOOP36]] = distinct !{[[LOOP36]], [[META1]], [[META2]]}
 ;.

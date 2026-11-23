@@ -196,9 +196,7 @@ bool hasImmExt(MCInst const &MCI);
 bool hasNewValue(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasNewValue2(MCInstrInfo const &MCII, MCInst const &MCI);
 bool hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHlxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
-bool hasHxxTmp(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isTmpWrite(MCInstrInfo const &MCII, MCInst const &MCI);
 unsigned iClassOfDuplexPair(unsigned Ga, unsigned Gb);
 
 int64_t minConstant(MCInst const &MCI, size_t Index);
@@ -231,6 +229,9 @@ bool isCompound(MCInstrInfo const &MCII, MCInst const &MCI);
 // Return whether the instruction needs to be constant extended.
 bool isConstExtended(MCInstrInfo const &MCII, MCInst const &MCI);
 bool isCVINew(MCInstrInfo const &MCII, MCInst const &MCI);
+
+bool isHVXALU2SRC(MCInstrInfo const &MCII, MCInst const &MCI);
+bool isHVXVS3SRC(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Is this double register suitable for use in a duplex subinst
 bool isDblRegForSubInst(MCRegister Reg);
@@ -318,6 +319,11 @@ bool mustNotExtend(MCExpr const &Expr);
 // Returns true if this instruction requires a slot to execute.
 bool requiresSlot(MCSubtargetInfo const &STI, MCInst const &MCI);
 
+// Returns true if this instruction is an HMX Weight instruction.
+bool isHMXWeight(MCInstrInfo const &MCII, MCInst const &MCI);
+
+// Returns true if this instruction is an HMX Activation instruction.
+bool isHMXActivation(MCInstrInfo const &MCII, MCInst const &MCI);
 
 // Returns true if \a MCB would require endloop padding.
 bool LoopNeedsPadding(MCInst const &MCB);

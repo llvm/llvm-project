@@ -780,6 +780,7 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   // Replace all uses of the polynomial calculated from the two induction
   // variables with the one new one.
   IRBuilder<> Builder(FI.OuterInductionPHI->getParent()->getTerminator());
+  Builder.disableGEPCanonicalization();
   for (Value *V : FI.LinearIVUses) {
     Value *OuterValue = FI.OuterInductionPHI;
     if (FI.Widened)

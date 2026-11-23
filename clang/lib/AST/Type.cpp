@@ -2245,6 +2245,8 @@ bool Type::hasAutoForTrailingReturnType() const {
 bool Type::hasIntegerRepresentation() const {
   if (const auto *VT = dyn_cast<VectorType>(CanonicalType))
     return VT->getElementType()->isIntegerType();
+  if (const auto *MT = dyn_cast<MatrixType>(CanonicalType))
+    return MT->getElementType()->isIntegerType();
   if (CanonicalType->isSveVLSBuiltinType()) {
     const auto *VT = cast<BuiltinType>(CanonicalType);
     return VT->getKind() == BuiltinType::SveBool ||
@@ -3960,15 +3962,6 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     ExtraBits.HasArmTypeAttributes = true;
   }
 
-  if (epi.requiresFunctionProtoTypeRISCVAttributes()) {
-    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
-    RISCVTypeAttrs = FunctionTypeRISCVAttributes();
-
-    // Also set the bit in FunctionTypeExtraBitfields
-    auto &ExtraBits = *getTrailingObjects<FunctionTypeExtraBitfields>();
-    ExtraBits.HasRISCVTypeAttributes = true;
-  }
-
   // Fill in the trailing argument array.
   auto *argSlot = getTrailingObjects<QualType>();
   for (unsigned i = 0; i != getNumParams(); ++i) {
@@ -3983,14 +3976,6 @@ FunctionProtoType::FunctionProtoType(QualType result, ArrayRef<QualType> params,
     assert(epi.AArch64SMEAttributes <= SME_AttributeMask &&
            "Not enough bits to encode SME attributes");
     ArmTypeAttrs.AArch64SMEAttributes = epi.AArch64SMEAttributes;
-  }
-
-  // Propagate the RISC-V state attributes.
-  if (epi.RISCVAttributes != RISCVNormalFunction) {
-    auto &RISCVTypeAttrs = *getTrailingObjects<FunctionTypeRISCVAttributes>();
-    assert(epi.RISCVAttributes <= RISCVAttributeMask &&
-           "Not enough bits to encode RISC-V attributes");
-    RISCVTypeAttrs.RISCVAttributes = epi.RISCVAttributes;
   }
 
   // Fill in the exception type array if present.
@@ -4243,7 +4228,6 @@ void FunctionProtoType::Profile(llvm::FoldingSetNodeID &ID, QualType Result,
   ID.AddInteger((EffectCount << 3) | (HasConds << 2) |
                 (epi.AArch64SMEAttributes << 1) | epi.HasTrailingReturn);
   ID.AddInteger(epi.CFIUncheckedCallee);
-  ID.AddInteger(epi.RISCVAttributes);
 
   for (unsigned Idx = 0; Idx != EffectCount; ++Idx) {
     ID.AddInteger(epi.FunctionEffects.Effects[Idx].toOpaqueInt32());

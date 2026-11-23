@@ -8,7 +8,7 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/Support/Path.h"
 

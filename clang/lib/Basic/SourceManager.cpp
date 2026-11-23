@@ -1710,6 +1710,12 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
   // Initially no macro argument chunk is present.
   MacroArgsCache.try_emplace(0);
 
+  // Macro arguments are often passed through other macros, so a macro argument
+  // expansion is often spelled in another one. Resolving each expansion once
+  // keeps the cost linear in the number of expansions instead of quadratic in
+  // the depth of such chains.
+  MacroArgFileChunksMap ChunksByFileID;
+
   int ID = FID.ID;
   while (true) {
     ++ID;
@@ -1762,89 +1768,113 @@ void SourceManager::computeMacroArgsCache(MacroArgsMap &MacroArgsCache,
     if (!ExpInfo.isMacroArgExpansion())
       continue;
 
-    associateFileChunkWithMacroArgExp(MacroArgsCache, FID,
-                                 ExpInfo.getSpellingLoc(),
-                                 SourceLocation::getMacroLoc(Entry.getOffset()),
-                                 getFileIDSize(FileID::get(ID)));
+    SourceLocation ExpansionLoc =
+        SourceLocation::getMacroLoc(Entry.getOffset());
+    for (const MacroArgFileChunk &Chunk :
+         getMacroArgFileChunks(ChunksByFileID, FID, FileID::get(ID))) {
+      unsigned BeginOffs = Chunk.FileOffset;
+      unsigned EndOffs = BeginOffs + Chunk.Length;
+
+      // Add a new chunk for this macro argument. A previous macro argument
+      // chunk may have been lexed again, so e.g. if the map is
+      //     0   -> SourceLocation()
+      //     100 -> Expanded loc #1
+      //     110 -> SourceLocation()
+      // and we found a new macro FileID that lexed from offset 105 with length
+      // 3, the new map will be:
+      //     0   -> SourceLocation()
+      //     100 -> Expanded loc #1
+      //     105 -> Expanded loc #2
+      //     108 -> Expanded loc #1
+      //     110 -> SourceLocation()
+      //
+      // Since re-lexed macro chunks will always be the same size or less of
+      // previous chunks, we only need to find where the ending of the new macro
+      // chunk is mapped to and update the map with new begin/end mappings.
+      MacroArgsMap::iterator I = MacroArgsCache.upper_bound(EndOffs);
+      --I;
+      SourceLocation EndOffsMappedLoc = I->second;
+      MacroArgsCache[BeginOffs] =
+          ExpansionLoc.getLocWithOffset(Chunk.ExpansionOffset);
+      MacroArgsCache[EndOffs] = EndOffsMappedLoc;
+    }
   }
 }
 
-void SourceManager::associateFileChunkWithMacroArgExp(
-                                         MacroArgsMap &MacroArgsCache,
-                                         FileID FID,
-                                         SourceLocation SpellLoc,
-                                         SourceLocation ExpansionLoc,
-                                         unsigned ExpansionLength) const {
-  if (!SpellLoc.isFileID()) {
-    SourceLocation::UIntTy SpellBeginOffs = SpellLoc.getOffset();
-    SourceLocation::UIntTy SpellEndOffs = SpellBeginOffs + ExpansionLength;
+const SourceManager::MacroArgFileChunks &
+SourceManager::getMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID,
+                                     FileID FID, FileID MacroArgFID) const {
+  auto It = ChunksByFileID.find(MacroArgFID.ID);
+  if (It != ChunksByFileID.end())
+    return It->second;
 
-    // The spelling range for this macro argument expansion can span multiple
-    // consecutive FileID entries. Go through each entry contained in the
-    // spelling range and if one is itself a macro argument expansion, recurse
-    // and associate the file chunk that it represents.
+  // The tokens of a macro argument expansion are a copy of its spelling range.
+  MacroArgFileChunks Chunks = computeMacroArgFileChunks(
+      ChunksByFileID, FID,
+      getSLocEntry(MacroArgFID).getExpansion().getSpellingLoc(),
+      getFileIDSize(MacroArgFID));
+  return ChunksByFileID.try_emplace(MacroArgFID.ID, std::move(Chunks))
+      .first->second;
+}
 
-    // Current FileID in the spelling range.
-    auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
-    while (true) {
-      const SLocEntry &Entry = getSLocEntry(SpellFID);
-      SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
-      unsigned SpellFIDSize = getFileIDSize(SpellFID);
-      SourceLocation::UIntTy SpellFIDEndOffs = SpellFIDBeginOffs + SpellFIDSize;
-      const ExpansionInfo &Info = Entry.getExpansion();
-      if (Info.isMacroArgExpansion()) {
-        unsigned CurrSpellLength;
-        if (SpellFIDEndOffs < SpellEndOffs)
-          CurrSpellLength = SpellFIDSize - SpellRelativeOffs;
-        else
-          CurrSpellLength = ExpansionLength;
-        associateFileChunkWithMacroArgExp(MacroArgsCache, FID,
-                      Info.getSpellingLoc().getLocWithOffset(SpellRelativeOffs),
-                      ExpansionLoc, CurrSpellLength);
-      }
-
-      if (SpellFIDEndOffs >= SpellEndOffs)
-        return; // we covered all FileID entries in the spelling range.
-
-      // Move to the next FileID entry in the spelling range.
-      unsigned advance = SpellFIDSize - SpellRelativeOffs + 1;
-      ExpansionLoc = ExpansionLoc.getLocWithOffset(advance);
-      ExpansionLength -= advance;
-      ++SpellFID.ID;
-      SpellRelativeOffs = 0;
-    }
+SourceManager::MacroArgFileChunks
+SourceManager::computeMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID,
+                                         FileID FID, SourceLocation SpellLoc,
+                                         unsigned Length) const {
+  MacroArgFileChunks Chunks;
+  if (SpellLoc.isFileID()) {
+    unsigned FileOffset;
+    if (isInFileID(SpellLoc, FID, &FileOffset))
+      Chunks.push_back({/*ExpansionOffset=*/0, FileOffset, Length});
+    return Chunks;
   }
 
-  assert(SpellLoc.isFileID());
+  SourceLocation::UIntTy SpellBeginOffs = SpellLoc.getOffset();
+  SourceLocation::UIntTy SpellEndOffs = SpellBeginOffs + Length;
 
-  unsigned BeginOffs;
-  if (!isInFileID(SpellLoc, FID, &BeginOffs))
-    return;
+  // The spelling range for this macro argument expansion can span multiple
+  // consecutive FileID entries. Go through each entry contained in the
+  // spelling range and if one is itself a macro argument expansion, take the
+  // file chunks of the part of it that is in the spelling range.
 
-  unsigned EndOffs = BeginOffs + ExpansionLength;
+  // Current FileID in the spelling range, and its offset from SpellLoc.
+  auto [SpellFID, SpellRelativeOffs] = getDecomposedLoc(SpellLoc);
+  unsigned ExpansionOffset = 0;
+  while (true) {
+    const SLocEntry &Entry = getSLocEntry(SpellFID);
+    SourceLocation::UIntTy SpellFIDBeginOffs = Entry.getOffset();
+    unsigned SpellFIDSize = getFileIDSize(SpellFID);
+    SourceLocation::UIntTy SpellFIDEndOffs = SpellFIDBeginOffs + SpellFIDSize;
+    if (Entry.getExpansion().isMacroArgExpansion()) {
+      unsigned CurrSpellLength;
+      if (SpellFIDEndOffs < SpellEndOffs)
+        CurrSpellLength = SpellFIDSize - SpellRelativeOffs;
+      else
+        CurrSpellLength = Length;
+      unsigned RangeBegin = SpellRelativeOffs;
+      unsigned RangeEnd = SpellRelativeOffs + CurrSpellLength;
+      for (const MacroArgFileChunk &Chunk :
+           getMacroArgFileChunks(ChunksByFileID, FID, SpellFID)) {
+        unsigned Begin = std::max(Chunk.ExpansionOffset, RangeBegin);
+        unsigned End = std::min(Chunk.ExpansionOffset + Chunk.Length, RangeEnd);
+        if (Begin >= End)
+          continue;
+        Chunks.push_back({ExpansionOffset + (Begin - RangeBegin),
+                          Chunk.FileOffset + (Begin - Chunk.ExpansionOffset),
+                          End - Begin});
+      }
+    }
 
-  // Add a new chunk for this macro argument. A previous macro argument chunk
-  // may have been lexed again, so e.g. if the map is
-  //     0   -> SourceLocation()
-  //     100 -> Expanded loc #1
-  //     110 -> SourceLocation()
-  // and we found a new macro FileID that lexed from offset 105 with length 3,
-  // the new map will be:
-  //     0   -> SourceLocation()
-  //     100 -> Expanded loc #1
-  //     105 -> Expanded loc #2
-  //     108 -> Expanded loc #1
-  //     110 -> SourceLocation()
-  //
-  // Since re-lexed macro chunks will always be the same size or less of
-  // previous chunks, we only need to find where the ending of the new macro
-  // chunk is mapped to and update the map with new begin/end mappings.
+    if (SpellFIDEndOffs >= SpellEndOffs)
+      return Chunks; // we covered all FileID entries in the spelling range.
 
-  MacroArgsMap::iterator I = MacroArgsCache.upper_bound(EndOffs);
-  --I;
-  SourceLocation EndOffsMappedLoc = I->second;
-  MacroArgsCache[BeginOffs] = ExpansionLoc;
-  MacroArgsCache[EndOffs] = EndOffsMappedLoc;
+    // Move to the next FileID entry in the spelling range.
+    unsigned advance = SpellFIDSize - SpellRelativeOffs + 1;
+    ExpansionOffset += advance;
+    Length -= advance;
+    ++SpellFID.ID;
+    SpellRelativeOffs = 0;
+  }
 }
 
 void SourceManager::updateSlocUsageStats() const {

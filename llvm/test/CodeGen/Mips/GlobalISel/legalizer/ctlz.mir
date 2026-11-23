@@ -3,7 +3,6 @@
 ---
 name:            ctlz_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4
@@ -24,7 +23,6 @@ body:             |
 ---
 name:            ctlz_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5

@@ -3848,6 +3848,11 @@ bool ValueObject::CanProvideValue() {
   return (!type.IsValid()) || (0 != (type.GetTypeInfo() & eTypeHasValue));
 }
 
+bool ValueObject::HasNoStorage() {
+  std::optional<uint64_t> size = llvm::expectedToOptional(GetByteSize());
+  return size && *size == 0;
+}
+
 ValueObjectSP ValueObject::Persist() {
   if (!UpdateValueIfNeeded())
     return nullptr;
@@ -3882,12 +3887,13 @@ lldb::ValueObjectSP ValueObject::GetVTable() {
 
 ValueImpl::ValueImpl(lldb::ValueObjectSP in_valobj_sp,
                      lldb::DynamicValueType use_dynamic, bool use_synthetic,
-                     const char *name)
-    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic), m_name(name) {
+                     std::string name)
+    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
+      m_name(std::move(name)) {
   if (in_valobj_sp) {
     if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
              lldb::eNoDynamicValues, false))) {
-      if (!m_name.IsEmpty())
+      if (!m_name.empty())
         m_valobj_sp->SetName(m_name);
     }
   }
@@ -3967,7 +3973,7 @@ lldb::ValueObjectSP ValueImpl::GetSP(Process::StopLocker &stop_locker,
 
   if (!value_sp)
     error = Status::FromErrorString("invalid value object");
-  if (!m_name.IsEmpty())
+  else if (!m_name.empty())
     value_sp->SetName(m_name);
 
   return value_sp;

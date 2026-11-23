@@ -8,7 +8,16 @@ add_header_library(
     file_actions.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
     libc.include.spawn
+    libc.src.__support.alloc_checker
+    libc.src.__support.checked_ptr
+    libc.src.__support.CPP.new
+    libc.src.__support.CPP.type_traits
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.macros.attributes
+    libc.src.string.memory_utils.inline_memcpy
+    libc.src.string.string_utils
 )
 
 add_entrypoint_object(
@@ -31,7 +40,6 @@ add_entrypoint_object(
     .file_actions
     libc.hdr.errno_macros
     libc.include.spawn
-    libc.src.__support.CPP.new
 )
 
 add_entrypoint_object(
@@ -44,7 +52,7 @@ add_entrypoint_object(
     .file_actions
     libc.hdr.errno_macros
     libc.include.spawn
-    libc.src.__support.CPP.new
+    libc.src.__support.checked_ptr
 )
 
 add_entrypoint_object(
@@ -57,7 +65,7 @@ add_entrypoint_object(
     .file_actions
     libc.hdr.errno_macros
     libc.include.spawn
-    libc.src.__support.CPP.new
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -70,7 +78,7 @@ add_entrypoint_object(
     .file_actions
     libc.hdr.errno_macros
     libc.include.spawn
-    libc.src.__support.CPP.new
+    libc.src.__support.checked_ptr
 )
 
 add_entrypoint_object(

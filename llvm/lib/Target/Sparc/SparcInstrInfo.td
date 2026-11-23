@@ -86,7 +86,6 @@ def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
 
-def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
 def HasFMULS : Predicate<"!Subtarget->hasNoFMULS()">;
 def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 
@@ -403,6 +402,11 @@ def SPselectxcc : SDNode<"SPISD::SELECT_XCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectfcc : SDNode<"SPISD::SELECT_FCC", SDTSPselectcc, [SDNPInGlue]>;
 def SPselectreg : SDNode<"SPISD::SELECT_REG", SDTSPselectreg>;
 
+def SPreadcyclecounter
+    : SDNode<"SPISD::READ_CYCLE_COUNTER",
+             SDTypeProfile<2, 0, [SDTCisVT<0, i32>, SDTCisVT<1, i32>]>,
+             [SDNPHasChain, SDNPSideEffect]>;
+
 // GPRC, CHAIN = LOAD_BIG/LITTLE CHAIN, Ptr, Type
 // These are endianness-adjusted load instructions. They load the low "Type"
 // bits of the memory pointed by Ptr, possibly byte swapping it as necessary
@@ -643,6 +647,11 @@ class Pseudo<dag outs, dag ins, string asmstr, list<dag> pattern>
 
 // Full memory barrier for V8.
 def V8BAR : Pseudo<(outs), (ins), "!V8BAR", []>, Requires<[HasNoV9]>;
+
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in
+def ReadCycleCounter
+    : Pseudo<(outs IntRegs:$lo, IntRegs:$hi), (ins), "",
+             [(set IntRegs:$lo, IntRegs:$hi, (SPreadcyclecounter))]>;
 
 // GETPCX for PIC
 let Defs = [O7] in {
@@ -1484,9 +1493,6 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 // Floating-point Square Root Instructions, p.145
 let Uses = [FSR], mayRaiseFPException = 1 in {
-// FSQRTS generates an erratum on LEON processors, so by disabling this instruction
-// this will be promoted to use FSQRTD with doubles instead.
-let Predicates = [HasNoFdivSqrtFix] in
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",
@@ -1925,6 +1931,21 @@ let Predicates = [HasV9], Uses = [ASR3], Constraints = "$swap = $rd" in
                 (outs IntRegs:$rd), (ins IntRegs:$rs1, IntRegs:$rs2,
                                      IntRegs:$swap),
                  "casa [$rs1] %asi, $rs2, $rd", []>;
+
+// 64-bit compare-and-swap in 32-bit V8+ code, the equivalent of GCC's
+// *atomic_compare_and_swapdi_v8plus. The 32-bit halves of the compare and new
+// values are packed into %g/%o registers, casx is issued and the result is
+// split back into halves. The results are written before all inputs are read,
+// so they are early-clobber; $tmp is a scratch register. Expanded after
+// register allocation so no 64-bit value is spilled to a 32-bit stack slot.
+let Predicates = [HasV9], mayLoad = 1, mayStore = 1, hasSideEffects = 0,
+    Constraints = "@earlyclobber $rd_hi,@earlyclobber $rd_lo,@earlyclobber $tmp" in
+  def CASX_V8PLUS
+      : Pseudo<(outs IntRegsV8Plus:$rd_hi, IntRegsV8Plus:$rd_lo,
+                     IntRegsV8Plus:$tmp),
+               (ins IntRegs:$rs1, IntRegs:$cmp_hi, IntRegs:$cmp_lo,
+                    IntRegs:$new_hi, IntRegs:$new_lo),
+               "!CASX_V8PLUS", []>;
 
 // TODO: Add DAG sequence to lower these instructions. Currently, only provided
 // as inline assembler-supported instructions.

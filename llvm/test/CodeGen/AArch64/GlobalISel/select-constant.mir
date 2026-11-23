@@ -56,15 +56,13 @@ body:             |
 name:            const_s32
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s32
     ; CHECK: [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 42
     ; CHECK-NEXT: $w0 = COPY [[MOVi32imm]]
-    %0(i32) = G_CONSTANT i32 42
+    %0:gpr(i32) = G_CONSTANT i32 42
     $w0 = COPY %0(i32)
 ...
 
@@ -72,15 +70,13 @@ body:             |
 name:            const_s64
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s64
     ; CHECK: [[MOVi64imm:%[0-9]+]]:gpr64 = MOVi64imm 1234567890123
     ; CHECK-NEXT: $x0 = COPY [[MOVi64imm]]
-    %0(i64) = G_CONSTANT i64 1234567890123
+    %0:gpr(i64) = G_CONSTANT i64 1234567890123
     $x0 = COPY %0(i64)
 ...
 
@@ -88,15 +84,13 @@ body:             |
 name:            const_s32_zero
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s32_zero
     ; CHECK: [[COPY:%[0-9]+]]:gpr32 = COPY $wzr
     ; CHECK-NEXT: $w0 = COPY [[COPY]]
-    %0(i32) = G_CONSTANT i32 0
+    %0:gpr(i32) = G_CONSTANT i32 0
     $w0 = COPY %0(i32)
 ...
 
@@ -104,15 +98,13 @@ body:             |
 name:            const_s64_zero
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: const_s64_zero
     ; CHECK: [[COPY:%[0-9]+]]:gpr64 = COPY $xzr
     ; CHECK-NEXT: $x0 = COPY [[COPY]]
-    %0(i64) = G_CONSTANT i64 0
+    %0:gpr(i64) = G_CONSTANT i64 0
     $x0 = COPY %0(i64)
 ...
 
@@ -133,15 +125,13 @@ body:             |
 name:            fconst_s32
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s32
     ; CHECK: [[FMOVSi:%[0-9]+]]:fpr32 = FMOVSi 12
     ; CHECK-NEXT: $s0 = COPY [[FMOVSi]]
-    %0(f32) = G_FCONSTANT float 3.5
+    %0:fpr(f32) = G_FCONSTANT float 3.5
     $s0 = COPY %0(f32)
 ...
 
@@ -149,15 +139,13 @@ body:             |
 name:            fconst_s64
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s64
     ; CHECK: [[FMOVDi:%[0-9]+]]:fpr64 = FMOVDi 112
     ; CHECK-NEXT: $d0 = COPY [[FMOVDi]]
-    %0(f64) = G_FCONSTANT double 1.0
+    %0:fpr(f64) = G_FCONSTANT double 1.0
     $d0 = COPY %0(f64)
 ...
 
@@ -165,15 +153,13 @@ body:             |
 name:            fconst_s32_0
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s32_0
     ; CHECK: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
     ; CHECK-NEXT: $s0 = COPY [[FMOVS0_]]
-    %0(f32) = G_FCONSTANT float 0.0
+    %0:fpr(f32) = G_FCONSTANT float 0.0
     $s0 = COPY %0(f32)
 ...
 
@@ -181,15 +167,13 @@ body:             |
 name:            fconst_s64_0
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
 
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fconst_s64_0
     ; CHECK: [[FMOVD0_:%[0-9]+]]:fpr64 = FMOVD0
     ; CHECK-NEXT: $x0 = COPY [[FMOVD0_]]
-    %0(f64) = G_FCONSTANT double 0.0
+    %0:fpr(f64) = G_FCONSTANT double 0.0
     $x0 = COPY %0(f64)
 ...
 ---

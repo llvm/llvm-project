@@ -942,3 +942,4 @@ body:             |
     %4:fpr(<2 x i64>) = G_LOAD %2(p0) :: (load (<2 x s64>) from %ir.addr)
     $q0 = COPY %4(<2 x i64>)
     RET_ReallyLR implicit $q0
+...
