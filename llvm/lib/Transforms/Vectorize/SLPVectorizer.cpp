@@ -14799,8 +14799,10 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
     return;
 
-  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
-    return isa<UndefValue>(V) ? V : cast<LoadInst>(V)->getPointerOperand();
+  Type *PtrTy = cast<LoadInst>(E.getMainOp())->getPointerOperandType();
+  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [PtrTy](Value *V) {
+    return isa<PoisonValue>(V) ? PoisonValue::get(PtrTy)
+                               : cast<LoadInst>(V)->getPointerOperand();
   });
 
   Type *ScalarTy = E.getMainOp()->getType();
@@ -18236,10 +18238,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                   E->ReorderIndices.end());
             reorderScalars(Scalars, Mask);
           }
+          Type *PtrTy = LI0->getPointerOperandType();
           SmallVector<Value *> PointerOps =
-              map_to_vector(Scalars, [](Value *V) {
-                return isa<UndefValue>(V)
-                           ? V
+              map_to_vector(Scalars, [PtrTy](Value *V) {
+                return isa<PoisonValue>(V)
+                           ? PoisonValue::get(PtrTy)
                            : cast<LoadInst>(V)->getPointerOperand();
               });
 
