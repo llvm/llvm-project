@@ -6,7 +6,6 @@ import("//llvm/utils/gn/build/buildflags.gni")
 import("//clang/resource_dir.gni")
 
 #import("//llvm/utils/gn/build/libs/xar/enable.gni")
-import("//llvm/utils/gn/build/libs/xml/enable.gni")
 import("//llvm/utils/gn/build/libs/zlib/enable.gni")
 import("//llvm/utils/gn/build/write_cmake_config.gni")
 import("lldb_lit_site_cfg_files.gni")

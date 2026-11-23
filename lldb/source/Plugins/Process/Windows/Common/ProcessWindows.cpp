@@ -108,7 +108,7 @@ static bool ShouldUseLLDBServer() {
            use_lldb_server.equals_insensitive("1") ||
            use_lldb_server.equals_insensitive("true");
   }
-  return LLDB_ENABLE_LIBXML2;
+  return true;
 }
 
 void ProcessWindows::Initialize() {

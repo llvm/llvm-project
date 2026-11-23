@@ -51,17 +51,11 @@ macro(add_optional_dependency variable description package)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-set(LLDB_LIBXML2_VERSION "2.8" CACHE STRING
-  "Specify the version of libxml 2 to use with LLDB. This is only meant to be overridden for local
-  static builds of libxml 2. Use at your own risk.")
-mark_as_advanced(LLDB_LIBXML2_VERSION)
-
 add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG VERSION 4)
 add_optional_dependency(LLDB_ENABLE_LIBEDIT "Enable editline support in LLDB" LibEdit)
 add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" CursesAndPanel)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig)
-add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 VERSION ${LLDB_LIBXML2_VERSION})
 add_optional_dependency(LLDB_ENABLE_TREESITTER "Enable Tree-sitter syntax highlighting" TreeSitter)
 
 # liblzma comes from LLVM, and a standalone build cannot change how LLVM was

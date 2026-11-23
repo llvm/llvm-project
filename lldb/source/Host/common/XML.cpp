@@ -129,8 +129,6 @@ XMLNode XMLDocument::GetRootElement(const char *required_name) {
 
 llvm::StringRef XMLDocument::GetErrors() const { return m_errors.GetString(); }
 
-bool XMLDocument::XMLEnabled() { return true; }
-
 #pragma mark-- XMLNode
 
 XMLNode::XMLNode() = default;

@@ -30,7 +30,6 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Host/Terminal.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/XML.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValue.h"
@@ -2669,7 +2668,7 @@ static void AddLLVMTargets(StructuredData::Dictionary &dict) {
 StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
   auto config_up = std::make_unique<StructuredData::Dictionary>();
   AddBoolConfigEntry(
-      *config_up, "xml", XMLDocument::XMLEnabled(),
+      *config_up, "xml", true,
       "A boolean value that indicates if XML support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "curl", LLVM_ENABLE_CURL,

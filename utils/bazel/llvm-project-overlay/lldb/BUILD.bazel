@@ -208,13 +208,6 @@ expand_template(
             "#cmakedefine01 LLDB_HAVE_EL_RFUNC_T": "#define LLDB_HAVE_EL_RFUNC_T 0",
         },
     }) | select({
-        "//third-party:llvm_libxml2_enabled": {
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 1",
-        },
-        "//conditions:default": {
-            "#cmakedefine01 LLDB_ENABLE_LIBXML2": "#define LLDB_ENABLE_LIBXML2 0",
-        },
-    }) | select({
         ":curses_enabled": {
             "#cmakedefine01 LLDB_ENABLE_CURSES": "#define LLDB_ENABLE_CURSES 1",
         },
@@ -514,7 +507,6 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:config",
-        "//third-party:libxml2",
     ] + select({
         "@platforms//os:macos": [
             ":HostMacOSXObjCXX",
@@ -705,12 +697,7 @@ cc_library(
         "//llvm:Support",
         "//llvm:TargetParser",
         "//llvm:Telemetry",
-    ] + select({
-        "//third-party:llvm_libxml2_enabled": [
-            "//third-party:libxml2",
-        ],
-        "//conditions:default": [],
-    }),
+    ],
 )
 
 cc_library(

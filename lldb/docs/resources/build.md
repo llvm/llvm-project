@@ -50,7 +50,6 @@ CMake configuration error.
 | -------- | ---------------------------------------------------------- | --------------------- |
 | Editline | Generic line editing, history, Emacs and Vi bindings       | `LLDB_ENABLE_LIBEDIT` |
 | Curses   | Text user interface                                        | `LLDB_ENABLE_CURSES`  |
-| Libxml2  | XML                                                        | `LLDB_ENABLE_LIBXML2` |
 | Python   | Python scripting. 3.8 or later (3.11 or later on Windows). | `LLDB_ENABLE_PYTHON`  |
 | Lua      | Lua scripting. Lua 5.3 and 5.4 are supported.              | `LLDB_ENABLE_LUA`     |
 | SWIG     | Required for Python or LUA support. Version 4 or later.    | N/A                   |
@@ -59,9 +58,9 @@ Depending on your platform and package manager, one might run any of the
 commands below.
 
 ```
-$ yum install libedit-devel libxml2-devel ncurses-devel python-devel swig
-$ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev libxml2-dev
-$ pkg install swig python libxml2
+$ yum install libedit-devel ncurses-devel python-devel swig
+$ sudo apt-get install build-essential swig python3-dev libedit-dev libncurses5-dev
+$ pkg install swig python
 $ pkgin install swig python38 cmake ninja-build
 $ brew install swig cmake ninja
 ```

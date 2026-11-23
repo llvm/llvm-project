@@ -1957,11 +1957,6 @@ Status GDBRemoteCommunicationClient::LoadQXferMemoryMap() {
     // Already loaded, return success
     return error;
 
-  if (!XMLDocument::XMLEnabled()) {
-    error = Status::FromErrorString("XML is not supported");
-    return error;
-  }
-
   if (!GetQXferMemoryMapReadSupported()) {
     error = Status::FromErrorString("Memory map is not supported");
     return error;

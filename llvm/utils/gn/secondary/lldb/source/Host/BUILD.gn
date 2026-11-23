@@ -14,7 +14,6 @@ static_library("Host") {
     #   ${EXTRA_LIBS}
     #   ${LLDBObjCLibs}
   ]
-  public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
     "common/DiagnosticsRendering.cpp",
     "common/DomainSocket.cpp",
