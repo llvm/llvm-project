@@ -5539,6 +5539,9 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
     if (B != D)
       return false;
 
+    LHS = A;
+    RHS = C;
+
     switch (BO0->getOpcode()) {
     case Instruction::Shl: {
       bool NUW = Op0HasNUW && Op1HasNUW;
@@ -5548,47 +5551,38 @@ bool InstCombinerImpl::matchCommonBinOpOperands(Value *Op0, Value *Op1,
       if (!NSW && IsSigned)
         return false;
 
-      LHS = A;
-      RHS = C;
       return true;
     }
     case Instruction::LShr: {
       if (IsSigned || !BO0->isExact() || !BO1->isExact())
         return false;
 
-      LHS = A;
-      RHS = C;
       return true;
     }
     case Instruction::AShr: {
       if (!BO0->isExact() || !BO1->isExact())
         return false;
 
-      LHS = A;
-      RHS = C;
       return true;
     }
     case Instruction::UDiv: {
       if (IsSigned || !BO0->isExact() || !BO1->isExact())
         return false;
 
-      LHS = A;
-      RHS = C;
       return true;
     }
     case Instruction::SDiv: {
       if (!BO0->isExact() || !BO1->isExact())
         return false;
 
-      WithCache<const Value *> ZCache(B);
-      if (IsEquality || isKnownPositive(ZCache, Q)) {
-        LHS = A;
-        RHS = C;
+      if (IsEquality)
         return true;
-      }
-      if (IsSigned && isKnownNegative(ZCache, Q)) {
-        LHS = C;
-        RHS = A;
+
+      KnownBits Known = llvm::computeKnownBits(B, Q);
+      if (Known.isNonNegative())
+        return true;
+      if (IsSigned && Known.isNegative()) {
+        std::swap(LHS, RHS);
         return true;
       }
       return false;
