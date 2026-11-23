@@ -1465,6 +1465,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Windows Support
 
+- `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
+  Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
+
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
