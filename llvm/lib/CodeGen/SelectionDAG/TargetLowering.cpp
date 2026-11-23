@@ -9573,10 +9573,19 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG,
   SDValue Msk = Node->getOperand(1);
   unsigned BW = VT.getScalarSizeInBits();
 
-  // Depositing a single bit selects the Nth set bit of the mask. Find it by
-  // repeatedly counting the bits in the lower half and selecting a half.
-  if (VT.isScalarInteger() && isPowerOf2_32(BW) &&
-      Val.getOpcode() == ISD::SHL && isOneConstant(Val.getOperand(0))) {
+  // Prefer native scalar PDEP for vector elements when available.
+  if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
+    return AllowFullExpansion ? DAG.UnrollVectorOp(Node) : SDValue();
+
+  // Depositing a single bit per lane selects the Nth set bit of each mask.
+  // Find it by counting the bits in the lower half and selecting a half.
+  bool CanUseVectorSearch = VT.isFixedLengthVector() &&
+                            isOperationLegalOrCustom(ISD::SHL, VT) &&
+                            isOperationLegalOrCustom(ISD::SRL, VT) &&
+                            isOperationLegalOrCustom(ISD::VSELECT, VT);
+  if (isPowerOf2_32(BW) && Val.getOpcode() == ISD::SHL &&
+      isOneOrOneSplat(Val.getOperand(0)) &&
+      (VT.isScalarInteger() || CanUseVectorSearch)) {
     EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
     EVT ShiftVT = getShiftAmountTy(VT, DAG.getDataLayout());
     SDValue Zero = DAG.getConstant(0, DL, VT);
@@ -9643,10 +9652,6 @@ SDValue TargetLowering::expandPDEP(SDNode *Node, SelectionDAG &DAG,
 
   if (!AllowFullExpansion)
     return SDValue();
-
-  // Just scalarize if scalar PDEP is legal
-  if (VT.isVector() && isOperationLegal(ISD::PDEP, VT.getVectorElementType()))
-    return DAG.UnrollVectorOp(Node);
 
   // Hacker's Delight §7-5: Expand, or Generalized Insert.
   unsigned LogBW = Log2_32_Ceil(BW);
