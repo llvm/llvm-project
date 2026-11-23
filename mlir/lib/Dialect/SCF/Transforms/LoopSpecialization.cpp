@@ -128,23 +128,14 @@ static void specializeForLoopForUnrolling(ForOp op) {
   op.erase();
 }
 
-/// Rewrite a for loop with bounds/step that potentially do not divide evenly
-/// into a for loop where the step divides the iteration space evenly, followed
-/// by another scf.for for the last (partial) iteration (if any).
-///
-/// This function rewrites the given scf.for loop in-place and creates a new
-/// scf.for operation for the last iteration. It replaces all uses of the
-/// unpeeled loop with the results of the newly generated scf.for.
-///
-/// The newly generated scf.for operation is returned via `partialIteration`.
-/// The boundary at which the loop is split (new upper bound) is returned via
-/// `splitBound`. The return value indicates whether the loop was rewritten or
-/// not.
-///
-/// Note: Loops with a step size of 0 cannot be peeled. Applying this function
-/// to such a loop may result in IR with undefined behavior.
-static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
-                                 ForOp &partialIteration, Value &splitBound) {
+/// Helper that splits off the last iteration in-place.
+/// When `remainderOnly` is true, it only peels if there is a partial remainder
+/// (rejects evenly divisible ranges and step <= 1).
+/// When `remainderOnly` is false, it peels the last iteration even if the range
+/// divides evenly (peeling a full step).
+static LogicalResult peelForLoopAtLastBound(RewriterBase &b, ForOp forOp,
+                                            ForOp &partialIteration,
+                                            bool remainderOnly) {
   RewriterBase::InsertionGuard guard(b);
   Value lbVal = forOp.getLowerBound();
   Value ubVal = forOp.getUpperBound();
@@ -154,9 +145,11 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
 
   bool isUnsigned = forOp.getUnsignedCmp();
   IntegerAttr lbAttr, ubAttr, stepAttr;
-  if (matchPattern(stepVal, m_Constant(&stepAttr))) {
+  bool isStepConst = matchPattern(stepVal, m_Constant(&stepAttr));
+  if (isStepConst) {
     APInt step = stepAttr.getValue();
-    if (isUnsigned ? step.ule(1) : step.sle(1))
+    if (remainderOnly ? (isUnsigned ? step.ule(1) : step.sle(1))
+                      : (isUnsigned ? step.ult(1) : step.slt(1)))
       return failure();
   }
   if (matchPattern(lbVal, m_Constant(&lbAttr)) &&
@@ -168,15 +161,26 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
     if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
       return failure();
 
-    // lb < ub here, so ub - lb as an unsigned value is the exact distance, even
-    // for signed loops whose range exceeds the signed max. hence urem for both.
-    if (stepAttr && (ub - lb).urem(stepAttr.getValue()).isZero())
-      return failure();
+    if (isStepConst) {
+      APInt step = stepAttr.getValue();
+      if (remainderOnly) {
+        // lb < ub here, so ub - lb as an unsigned value is the exact distance,
+        // even for signed loops whose range exceeds the signed max. hence urem
+        // for both.
+        if ((ub - lb).urem(step).isZero())
+          return failure();
+      } else {
+        // Peeling is a no-op if there is at most one iteration.
+        if ((ub - lb).ule(step))
+          return failure();
+      }
+    }
   }
 
   // affine reasoning is signed and index-only,
   // so use it only for signed index loops.
-  if (!isUnsigned && forOp.getInductionVar().getType().isIndex()) {
+  if (remainderOnly && !isUnsigned &&
+      forOp.getInductionVar().getType().isIndex()) {
     AffineExpr sym0, sym1, sym2;
     bindSymbols(b.getContext(), sym0, sym1, sym2);
     SmallVector<Value> operands{forOp.getLowerBound(), forOp.getUpperBound(),
@@ -197,7 +201,20 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                            : b.createOrFold<arith::MinSIOp>(loc, lbVal, ubVal);
   Value diff = b.createOrFold<arith::SubIOp>(loc, ubVal, lbEff);
   Value rem = b.createOrFold<arith::RemUIOp>(loc, diff, stepVal);
-  splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
+
+  Value splitBound;
+  if (remainderOnly) {
+    splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, rem);
+  } else {
+    // When the range divides evenly (rem == 0), we peel a full last step.
+    // Otherwise, we peel the partial remainder.
+    Value zero =
+        b.createOrFold<arith::ConstantOp>(loc, b.getZeroAttr(rem.getType()));
+    Value isZero =
+        b.createOrFold<arith::CmpIOp>(loc, arith::CmpIPredicate::eq, rem, zero);
+    Value sub = b.createOrFold<arith::SelectOp>(loc, isZero, stepVal, rem);
+    splitBound = b.createOrFold<arith::SubIOp>(loc, ubVal, sub);
+  }
 
   // Create ForOp for partial iteration.
   b.setInsertionPointAfter(forOp);
@@ -211,6 +228,18 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
                     [&]() { forOp.getUpperBoundMutable().assign(splitBound); });
 
   return success();
+}
+
+/// Peel the last iteration out of the scf.for loop. If the iteration space
+/// divides evenly, this peels a full last step. Otherwise, it peels the
+/// partial remainder.
+///
+/// If there is at most one iteration, return failure and leave the loop
+/// unchanged.
+LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
+                                                  ForOp &partialIteration) {
+  return peelForLoopAtLastBound(b, forOp, partialIteration,
+                                /*remainderOnly=*/false);
 }
 
 static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
@@ -243,8 +272,8 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
                                                       ForOp forOp,
                                                       ForOp &partialIteration) {
   Value previousUb = forOp.getUpperBound();
-  Value splitBound;
-  if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
+  if (failed(peelForLoopAtLastBound(rewriter, forOp, partialIteration,
+                                    /*remainderOnly=*/true)))
     return failure();
 
   // The affine.min/max simplification relies on signed reasoning, which does
