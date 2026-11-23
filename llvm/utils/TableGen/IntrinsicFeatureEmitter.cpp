@@ -81,7 +81,6 @@ struct VariantEntry {
   std::vector<std::string> Types;
   // Pointers to unique GuardEntry nodes, in TargetGuard order.
   std::vector<const GuardEntry *> Guards;
-  bool AppliesToAllTypes = false;
 };
 
 // Add a check for one TargetGuard variant. For overloaded variants, record the
@@ -111,7 +110,6 @@ static void addVariant(std::vector<VariantEntry> &Entries,
   }
 
   // Record the overload types used to construct the intrinsic's signature.
-  Entry.AppliesToAllTypes = !Overload;
   if (Overload) {
     auto Types = getGuardedOverloadTypes(Overload);
     unsigned Expected = Intrinsic->getValueAsDef("TypeInfo")
@@ -234,9 +232,7 @@ static void emitIntrinsicFeatureChecks(const RecordKeeper &Records,
   for (const auto &[Name, Entries] : Intrinsics)
     for (const VariantEntry &V : Entries) {
       OS << "  {" << FirstType << ", " << V.Types.size() << ", " << FirstGuard
-         << ", " << V.Guards.size() << ", "
-         << (V.AppliesToAllTypes ? "true" : "false") << "}, // " << Name
-         << "\n";
+         << ", " << V.Guards.size() << "}, // " << Name << "\n";
       FirstType += V.Types.size();
       FirstGuard += V.Guards.size();
     }

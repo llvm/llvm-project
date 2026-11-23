@@ -47,7 +47,7 @@ TEST(IntrinsicFeatureEmitterTest, SingleGuard) {
   ArrayRef<IntrinsicFeatureVariant> Untyped =
       getInfo().getVariants(Intrinsic::test_one_guard);
   ASSERT_EQ(Untyped.size(), 1u);
-  EXPECT_TRUE(Untyped[0].AppliesToAllTypes);
+  EXPECT_EQ(Untyped[0].NumOverloadTypesToCheck, 0u);
   EXPECT_EQ(Untyped[0].NumGuards, 1u);
   const IntrinsicFeatureGuard &UntypedGuard = getInfo().getGuard(Untyped[0], 0);
   EXPECT_EQ(UntypedGuard.FirstClause, 0u);
@@ -61,8 +61,7 @@ TEST(IntrinsicFeatureEmitterTest, SingleGuard) {
   ArrayRef<IntrinsicFeatureVariant> Typed =
       getInfo().getVariants(Intrinsic::test_typed);
   ASSERT_EQ(Typed.size(), 1u);
-  EXPECT_FALSE(Typed[0].AppliesToAllTypes);
-  EXPECT_EQ(Typed[0].NumTypes, 0u);
+  EXPECT_EQ(Typed[0].NumOverloadTypesToCheck, 0u);
   EXPECT_EQ(Typed[0].NumGuards, 1u);
   EXPECT_EQ(&getInfo().getGuard(Typed[0], 0), &UntypedGuard);
 
@@ -73,7 +72,7 @@ TEST(IntrinsicFeatureEmitterTest, MultipleGuards) {
   ArrayRef<IntrinsicFeatureVariant> Variants =
       getInfo().getVariants(Intrinsic::test_two_guards);
   ASSERT_EQ(Variants.size(), 1u);
-  EXPECT_TRUE(Variants[0].AppliesToAllTypes);
+  EXPECT_EQ(Variants[0].NumOverloadTypesToCheck, 0u);
   ASSERT_EQ(Variants[0].NumGuards, 2u);
 
   const IntrinsicFeatureGuard &First = getInfo().getGuard(Variants[0], 0);
@@ -95,10 +94,8 @@ TEST(IntrinsicFeatureEmitterTest, TypeSpecificGuards) {
   ArrayRef<IntrinsicFeatureVariant> Variants =
       getInfo().getVariants(Intrinsic::test_type_specific_guards);
   ASSERT_EQ(Variants.size(), 2u);
-  EXPECT_FALSE(Variants[0].AppliesToAllTypes);
-  EXPECT_FALSE(Variants[1].AppliesToAllTypes);
-  EXPECT_EQ(Variants[0].NumTypes, 1u);
-  EXPECT_EQ(Variants[1].NumTypes, 1u);
+  EXPECT_EQ(Variants[0].NumOverloadTypesToCheck, 1u);
+  EXPECT_EQ(Variants[1].NumOverloadTypesToCheck, 1u);
   EXPECT_NE(Variants[0].FirstType, Variants[1].FirstType);
   ASSERT_EQ(Variants[0].NumGuards, 2u);
   ASSERT_EQ(Variants[1].NumGuards, 2u);

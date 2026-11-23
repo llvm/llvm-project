@@ -35,11 +35,11 @@
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr IntrinsicFeatureVariant TestTargetIntrinsicVariants[] = {
-// CHECK-NEXT:   {0, 0, 0, 1, true}, // int_test_one_guard
-// CHECK-NEXT:   {0, 0, 1, 2, true}, // int_test_two_guards
-// CHECK-NEXT:   {0, 1, 3, 2, false}, // int_test_type_specific_guards
-// CHECK-NEXT:   {1, 1, 5, 2, false}, // int_test_type_specific_guards
-// CHECK-NEXT:   {2, 0, 7, 1, false}, // int_test_typed
+// CHECK-NEXT:   {0, 0, 0, 1}, // int_test_one_guard
+// CHECK-NEXT:   {0, 0, 1, 2}, // int_test_two_guards
+// CHECK-NEXT:   {0, 1, 3, 2}, // int_test_type_specific_guards
+// CHECK-NEXT:   {1, 1, 5, 2}, // int_test_type_specific_guards
+// CHECK-NEXT:   {2, 0, 7, 1}, // int_test_typed
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr GuardedIntrinsicEntry TestTargetIntrinsicEntries[] = {

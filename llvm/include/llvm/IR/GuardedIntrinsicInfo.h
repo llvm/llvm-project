@@ -28,10 +28,10 @@ struct IntrinsicFeatureGuard {
 
 struct IntrinsicFeatureVariant {
   unsigned FirstType;
-  unsigned NumTypes;
+  // Zero means the guard applies to every valid overload.
+  unsigned NumOverloadTypesToCheck;
   unsigned FirstGuard;
   unsigned NumGuards;
-  bool AppliesToAllTypes;
 };
 
 struct GuardedIntrinsicEntry {
@@ -84,8 +84,8 @@ public:
   FunctionType *getFunctionType(LLVMContext &Context, Intrinsic::ID ID,
                                 const IntrinsicFeatureVariant &Variant) const {
     SmallVector<Type *, 4> Types;
-    for (MVT::SimpleValueType VT :
-         OverloadTypes.slice(Variant.FirstType, Variant.NumTypes))
+    for (MVT::SimpleValueType VT : OverloadTypes.slice(
+             Variant.FirstType, Variant.NumOverloadTypesToCheck))
       Types.push_back(VT == MVT::iPTR ? PointerType::get(Context, 0)
                                       : EVT(VT).getTypeForEVT(Context));
     return Intrinsic::getType(Context, ID, Types);
