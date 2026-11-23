@@ -626,21 +626,19 @@ void NullabilityChecker::checkLocation(SVal Location, bool IsLoad,
   if (!Region)
     return;
 
+  if (getNullabilityAnnotation(Region->getValueType()) != Nullability::Nonnull)
+    return;
+
   ProgramStateRef State = Context.getState();
 
   auto StoredVal = State->getSVal(Region).getAs<loc::MemRegionVal>();
   if (!StoredVal)
     return;
 
-  Nullability NullabilityOfTheLoadedValue =
-      getNullabilityAnnotation(Region->getValueType());
-
-  if (NullabilityOfTheLoadedValue == Nullability::Nonnull) {
-    // It doesn't matter what we think about this particular pointer, it should
-    // be considered non-null as annotated by the developer.
-    if (ProgramStateRef NewState = State->assume(*StoredVal, true)) {
-      Context.addTransition(NewState);
-    }
+  // It doesn't matter what we think about this particular pointer, it should
+  // be considered non-null as annotated by the developer.
+  if (ProgramStateRef NewState = State->assume(*StoredVal, true)) {
+    Context.addTransition(NewState);
   }
 }
 
