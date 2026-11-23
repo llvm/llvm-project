@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "tosa-sharding-impl"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE << "]: ")
@@ -59,23 +60,6 @@ struct MatMulSharding : public ShardingInterface::ExternalModel<
     const int64_t outputRank = outputType.getRank();
     const int64_t loopRank = outputRank + 1;
     const int64_t reductionLoop = outputRank;
-
-    auto getAlignedBatchDim = [&](RankedTensorType operandType,
-                                  int64_t outputDim) {
-      const int64_t operandDim =
-          outputDim - (outputRank - operandType.getRank());
-      return operandDim < 0 ? 1 : operandType.getDimSize(operandDim);
-    };
-    for (int64_t i = 0; i < outputRank - 2; ++i) {
-      const int64_t aDim = getAlignedBatchDim(aType, i);
-      const int64_t bDim = getAlignedBatchDim(bType, i);
-      // A dynamic dimension may be either one (broadcast) or the corresponding
-      // output extent. These cases require different indexing maps unless the
-      // other operand is known to be a singleton.
-      if ((ShapedType::isDynamic(aDim) && bDim != 1) ||
-          (ShapedType::isDynamic(bDim) && aDim != 1))
-        return {};
-    }
 
     auto getOperandMap = [&](RankedTensorType operandType, bool isB) {
       const int64_t operandRank = operandType.getRank();
@@ -124,12 +108,43 @@ struct MatMulSharding : public ShardingInterface::ExternalModel<
   FailureOr<ShardingOption>
   getShardingOption(Operation *op, ArrayRef<Sharding> operandShardings,
                     ArrayRef<Sharding> resultShardings) const {
-    // Decline propagation when a dynamic batch dimension makes the operand
-    // indexing ambiguous between replication and the corresponding loop.
+    // Decline propagation for unsupported operand or result shapes.
     if (getIndexingMaps(op).empty())
       return ShardingOption::makeEmpty();
-    return shard::detail::defaultGetShardingOption(op, operandShardings,
-                                                   resultShardings);
+    FailureOr<ShardingOption> shardingOption =
+        shard::detail::defaultGetShardingOption(op, operandShardings,
+                                                resultShardings);
+    if (failed(shardingOption) || shardingOption->empty)
+      return shardingOption;
+
+    auto aType = cast<RankedTensorType>(op->getOperand(0).getType());
+    auto bType = cast<RankedTensorType>(op->getOperand(1).getType());
+    const int64_t outputRank =
+        cast<RankedTensorType>(op->getResult(0).getType()).getRank();
+    auto getAlignedBatchDim = [&](RankedTensorType operandType,
+                                  int64_t outputDim) {
+      const int64_t operandDim =
+          outputDim - (outputRank - operandType.getRank());
+      return operandDim < 0 ? 1 : operandType.getDimSize(operandDim);
+    };
+    for (int64_t i = 0; i < outputRank - 2; ++i) {
+      if (static_cast<size_t>(i) >= shardingOption->shardingArray.size() ||
+          shardingOption->shardingArray[i].empty())
+        continue;
+
+      const int64_t aDim = getAlignedBatchDim(aType, i);
+      const int64_t bDim = getAlignedBatchDim(bType, i);
+      // A dynamic batch dimension may broadcast unless the other operand is
+      // known to be a singleton. This only matters when the batch loop is
+      // split.
+      if ((ShapedType::isDynamic(aDim) && bDim != 1) ||
+          (ShapedType::isDynamic(bDim) && aDim != 1)) {
+        LLVM_DEBUG(DBGS() << "cannot shard batch dimension " << i
+                          << ": its broadcast behavior is dynamic\n");
+        return failure();
+      }
+    }
+    return shardingOption;
   }
 };
 
