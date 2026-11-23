@@ -318,3 +318,27 @@ func.func @multi_buffer_padded_si8_aligned(%src: memref<1x1x4x8xsi8, strided<[32
   }
   return
 }
+
+// -----
+
+// Identity alloc where slot size does not divide the alloc alignment:
+// 192 bytes rounded up to 256-byte alignment gets an explicit strided layout
+// with leading stride 256 so every slot stays 256-byte aligned.
+// CHECK-DAG: #[[$MAP1:.*]] = affine_map<(d0) -> (((d0 - 1) floordiv 3) mod 5)>
+
+// CHECK-LABEL: func @multi_buffer_identity_aligned
+func.func @multi_buffer_identity_aligned(%src: memref<192xi8>) {
+// CHECK-DAG: %[[A:.*]] = memref.alloc() alignment = 256 : memref<5x192xi8, strided<[256, 1]>>
+  %0 = memref.alloc() alignment = 256 : memref<192xi8>
+  %c1024 = arith.constant 1024 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  scf.for %arg2 = %c1 to %c1024 step %c3 {
+// CHECK: %[[I:.*]] = affine.apply #[[$MAP1]](%{{.*}})
+// CHECK: %[[SV:.*]] = memref.subview %[[A]][%[[I]], 0] [1, 192] [1, 1] : memref<5x192xi8, strided<[256, 1]>> to memref<192xi8, strided<[1], offset: ?>>
+    memref.copy %src, %0 : memref<192xi8> to memref<192xi8>
+// CHECK: "some_use"(%[[SV]]) : (memref<192xi8, strided<[1], offset: ?>>) -> ()
+    "some_use"(%0) : (memref<192xi8>) -> ()
+  }
+  return
+}

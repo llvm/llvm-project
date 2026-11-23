@@ -159,24 +159,34 @@ static int64_t alignToAllocAlignment(int64_t numElements,
       elementBytes);
 }
 
-/// Layout of the expanded alloc. Identity, non-strided, or non-int/float
-/// elements stay dense. A strided int/float source keeps its trailing strides;
-/// the new leading stride is `size0 * stride0`, rounded up to the alloc
-/// alignment.
+/// Layout of the expanded alloc. Non-int/float elements or layouts that cannot
+/// be analyzed stay dense.
+///
+/// If the source has an identity layout and the slot pitch already satisfies
+/// the alloc alignment, the expanded alloc stays identity (dense).
+/// If the slot pitch needs to be rounded up to satisfy the alloc alignment,
+/// or if the source already has a strided layout, the expanded alloc gets an
+/// explicit strided layout where the new leading stride is
+/// `size0 * stride0` (rounded up to the alloc alignment) and trailing strides
+/// are preserved.
 static MemRefLayoutAttrInterface multiBufferLayout(memref::AllocOp allocOp) {
   MemRefType srcType = allocOp.getType();
   SmallVector<int64_t> strides;
   int64_t offset = 0;
-  if (srcType.getLayout().isIdentity() ||
-      !srcType.getElementType().isIntOrFloat() ||
+  if (!srcType.getElementType().isIntOrFloat() ||
       failed(srcType.getStridesAndOffset(strides, offset)) ||
       srcType.getShape().empty() || strides.empty() ||
       !ShapedType::isStatic(srcType.getDimSize(0)) ||
       !ShapedType::isStatic(strides.front()) || strides.front() <= 0)
     return {};
 
-  int64_t leadingStride =
-      alignToAllocAlignment(srcType.getDimSize(0) * strides.front(), allocOp);
+  int64_t unpaddedPitch = srcType.getDimSize(0) * strides.front();
+  int64_t leadingStride = alignToAllocAlignment(unpaddedPitch, allocOp);
+
+  // Identity layout without alignment padding stays dense.
+  if (srcType.getLayout().isIdentity() && leadingStride == unpaddedPitch)
+    return {};
+
   SmallVector<int64_t> expandedStrides{leadingStride};
   llvm::append_range(expandedStrides, strides);
   return StridedLayoutAttr::get(srcType.getContext(), /*offset=*/0,

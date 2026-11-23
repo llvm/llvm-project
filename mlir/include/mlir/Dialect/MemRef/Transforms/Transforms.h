@@ -117,8 +117,13 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// alignment). Example:
 /// `memref<2x4x8x6xf32, strided<[256, 64, 8, 1]>>` with factor 3 becomes
 /// `memref<3x2x4x8x6xf32, strided<[512, 256, 64, 8, 1]>>`.
-/// Identity layouts and non-int/float elements stay dense after expansion.
+/// If an identity alloc requires padding to satisfy the alloc alignment, it
+/// is given an explicit strided layout with leading stride rounded up.
 /// Example:
+/// `memref<192xi8> alignment = 256` with factor 2 becomes
+/// `memref<2x192xi8, strided<[256, 1]>> alignment = 256`.
+/// Identity layouts without alignment padding and non-int/float elements stay
+/// dense. Example:
 /// ```
 /// %0 = memref.alloc() : memref<4x128xf32>
 /// scf.for %iv = %c1 to %c1024 step %c3 {
