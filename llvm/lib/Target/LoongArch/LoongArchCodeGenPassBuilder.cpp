@@ -132,7 +132,7 @@ void LoongArchCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // Schedule the expansion of AtomicPseudos at the last possible moment,
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
-  // TODO(boomanaiden154): Add LoongArchExpandAtomicPseudoPass
+  addMachineFunctionPass(LoongArchExpandAtomicPseudoPass(), PMW);
   if (getOptLevel() != CodeGenOptLevel::None) {
     // TODO(boomanaiden154): Add LoongArchMemoryBarrierOptPass
   }

@@ -47,7 +47,15 @@ public:
 };
 
 FunctionPass *createLoongArchDeadRegisterDefinitionsLegacyPass();
-FunctionPass *createLoongArchExpandAtomicPseudoPass();
+
+class LoongArchExpandAtomicPseudoPass
+    : public RequiredPassInfoMixin<LoongArchExpandAtomicPseudoPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLoongArchExpandAtomicPseudoLegacyPass();
 
 class LoongArchISelDAGToDAGPass : public SelectionDAGISelPass {
 public:
@@ -94,7 +102,7 @@ FunctionPass *createLoongArchLateBranchOptPass();
 void initializeLoongArchAsmPrinterPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsLegacyPass(PassRegistry &);
-void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
+void initializeLoongArchExpandAtomicPseudoLegacyPass(PassRegistry &);
 void initializeLoongArchMemoryBarrierOptPass(PassRegistry &);
 void initializeLoongArchMergeBaseOffsetLegacyPass(PassRegistry &);
 void initializeLoongArchOptWInstrsLegacyPass(PassRegistry &);

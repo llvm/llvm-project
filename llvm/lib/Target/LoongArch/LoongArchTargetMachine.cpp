@@ -43,7 +43,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchPreRAExpandPseudoLegacyPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
-  initializeLoongArchExpandAtomicPseudoPass(*PR);
+  initializeLoongArchExpandAtomicPseudoLegacyPass(*PR);
   initializeLoongArchLateBranchOptPass(*PR);
 }
 
@@ -209,7 +209,7 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // Schedule the expansion of AtomicPseudos at the last possible moment,
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
-  addPass(createLoongArchExpandAtomicPseudoPass());
+  addPass(createLoongArchExpandAtomicPseudoLegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
     addPass(createLoongArchMemoryBarrierOptPass());
 }
