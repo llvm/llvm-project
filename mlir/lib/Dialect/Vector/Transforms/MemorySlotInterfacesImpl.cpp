@@ -171,15 +171,19 @@ struct TransferReadOpMemOpModel
     auto readOp = cast<vector::TransferReadOp>(op);
     Location loc = op->getLoc();
     Value result = reachingDefinition;
+    Value mask = readOp.getMask();
     if (readOp.getVectorType() != slot.valueType) {
       auto offsets = getPromotableReadSliceOffsets(readOp, slot, blockingUses);
       assert(succeeded(offsets) && "expected a promotable read slice");
       SmallVector<int64_t> strides(offsets->size(), 1);
-      result = vector::ExtractStridedSliceOp::create(
-          builder, loc, result, *offsets, readOp.getVectorType().getShape(),
-          strides);
+      auto extractSlice = [&](Value value) -> Value {
+        return vector::ExtractStridedSliceOp::create(
+            builder, loc, value, *offsets, readOp.getVectorType().getShape(),
+            strides);
+      };
+      result = extractSlice(result);
     }
-    if (Value mask = readOp.getMask()) {
+    if (mask) {
       Value padSplat = vector::BroadcastOp::create(
           builder, loc, readOp.getVectorType(), readOp.getPadding());
       result = arith::SelectOp::create(builder, loc, mask, result, padSplat);
