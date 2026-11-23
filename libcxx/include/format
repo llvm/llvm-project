@@ -47,7 +47,7 @@ namespace std {
     basic_string_view<charT> str;                               // exposition-only
 
   public:
-    dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {} // constexpr since C++26
+    constexpr dynamic-format-string(basic_string_view<charT> s) noexcept : str(s) {}
 
     dynamic-format-string(const dynamic-format-string&) = delete;
     dynamic-format-string& operator=(const dynamic-format-string&) = delete;
