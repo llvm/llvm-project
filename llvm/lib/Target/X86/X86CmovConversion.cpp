@@ -150,6 +150,18 @@ void X86CmovConversionLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
 }
 
+static bool hasCallInHeaderOrLatch(const MachineLoop *Loop) {
+  auto HasCall = [](const MachineBasicBlock *MBB) {
+    return llvm::any_of(*MBB,
+                        [](const MachineInstr &MI) { return MI.isCall(); });
+  };
+  const MachineBasicBlock *Header = Loop->getHeader();
+  if (HasCall(Header))
+    return true;
+  const MachineBasicBlock *Latch = Loop->getLoopLatch();
+  return Latch && Latch != Header && HasCall(Latch);
+}
+
 bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<X86Subtarget>();
   const X86Options &CLOpts = STI->getCLOpts();
@@ -237,6 +249,10 @@ bool X86CmovConversionImpl::runOnMachineFunction(MachineFunction &MF) {
     CmovGroups CmovInstGroups;
 
     if (!collectCmovCandidates(CurrLoop->getBlocks(), CmovInstGroups))
+      continue;
+
+    // Avoid optimizing loops with calls as callee cost is unknown.
+    if (hasCallInHeaderOrLatch(CurrLoop))
       continue;
 
     if (!checkForProfitableCmovCandidates(CurrLoop->getBlocks(),

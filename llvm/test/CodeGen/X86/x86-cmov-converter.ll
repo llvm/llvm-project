@@ -1047,27 +1047,21 @@ define i32 @test_call_in_loop() nounwind #0 {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $1, %ebp
-; CHECK-NEXT:    xorl %ebx, %ebx
+; CHECK-NEXT:    movl $1, %ebx
+; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:  .LBB16_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    callq foo@PLT
-; CHECK-NEXT:    movl %ebp, %ecx
-; CHECK-NEXT:    imull %ebp, %ecx
-; CHECK-NEXT:    imull %ebp, %ecx
 ; CHECK-NEXT:    movl %ebx, %eax
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    jg .LBB16_3
-; CHECK-NEXT:  # %bb.2: # %loop
-; CHECK-NEXT:    # in Loop: Header=BB16_1 Depth=1
-; CHECK-NEXT:    movl %ebp, %eax
-; CHECK-NEXT:  .LBB16_3: # %loop
-; CHECK-NEXT:    # in Loop: Header=BB16_1 Depth=1
-; CHECK-NEXT:    addl $1, %ebx
-; CHECK-NEXT:    movl %eax, %ebp
-; CHECK-NEXT:    cmpl $1024, %ebx # imm = 0x400
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovgl %ebp, %ebx
+; CHECK-NEXT:    addl $1, %ebp
+; CHECK-NEXT:    cmpl $1024, %ebp # imm = 0x400
 ; CHECK-NEXT:    jne .LBB16_1
-; CHECK-NEXT:  # %bb.4: # %exit
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
@@ -1128,30 +1122,23 @@ define i32 @test_call_in_latch() nounwind #0 {
 ; CHECK-NEXT:    pushq %rbp
 ; CHECK-NEXT:    pushq %rbx
 ; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    movl $1, %ebx
 ; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:  .LBB17_1: # %loop.header
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    imull %eax, %ecx
-; CHECK-NEXT:    imull %eax, %ecx
-; CHECK-NEXT:    movl %ebp, %ebx
-; CHECK-NEXT:    testl %ecx, %ecx
-; CHECK-NEXT:    jg .LBB17_3
-; CHECK-NEXT:  # %bb.2: # %loop.header
-; CHECK-NEXT:    # in Loop: Header=BB17_1 Depth=1
-; CHECK-NEXT:    movl %eax, %ebx
-; CHECK-NEXT:  .LBB17_3: # %loop.header
-; CHECK-NEXT:    # in Loop: Header=BB17_1 Depth=1
+; CHECK-NEXT:    movl %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    imull %ebx, %eax
+; CHECK-NEXT:    testl %eax, %eax
+; CHECK-NEXT:    cmovgl %ebp, %ebx
 ; CHECK-NEXT:    cmpl $1023, %ebp # imm = 0x3FF
-; CHECK-NEXT:    je .LBB17_5
-; CHECK-NEXT:  # %bb.4: # %loop.latch
+; CHECK-NEXT:    je .LBB17_3
+; CHECK-NEXT:  # %bb.2: # %loop.latch
 ; CHECK-NEXT:    # in Loop: Header=BB17_1 Depth=1
 ; CHECK-NEXT:    callq foo@PLT
 ; CHECK-NEXT:    addl $1, %ebp
-; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    jmp .LBB17_1
-; CHECK-NEXT:  .LBB17_5: # %exit
+; CHECK-NEXT:  .LBB17_3: # %exit
 ; CHECK-NEXT:    movl %ebx, %eax
 ; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    popq %rbx
