@@ -798,6 +798,9 @@ struct LowerIllegalTransposeStoreViaZA
 
     auto transposeMap = AffineMapAttr::get(
         AffineMap::getPermutationMap(ArrayRef<int64_t>{1, 0}, getContext()));
+    // The tiles are written transposed, so swap the in_bounds flags too.
+    SmallVector<bool> transposedInBounds(
+        llvm::reverse(writeOp.getInBoundsValues()));
 
     // Note: We need to use `get_tile` as there's no vector-level `undef`.
     Value undefTile = arm_sme::GetTileOp::create(rewriter, loc, smeTileType);
@@ -855,7 +858,7 @@ struct LowerIllegalTransposeStoreViaZA
           arith::AddIOp::create(rewriter, loc, transposedCol, writeIndices[1]);
       auto smeWrite = vector::TransferWriteOp::create(
           rewriter, loc, tile, destTensorOrMemref, ValueRange{destRow, destCol},
-          transposeMap, subMask, writeOp.getInBounds());
+          transposeMap, subMask, rewriter.getBoolArrayAttr(transposedInBounds));
 
       if (writeOp.hasPureTensorSemantics())
         destTensorOrMemref = smeWrite.getResult();
