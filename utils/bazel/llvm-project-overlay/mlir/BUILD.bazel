@@ -240,8 +240,14 @@ gentbl_cc_library(
 gentbl_cc_library(
     name = "BuiltinLocationAttributesIncGen",
     tbl_outs = {
-        "include/mlir/IR/BuiltinLocationAttributes.h.inc": ["--gen-attrdef-decls"],
-        "include/mlir/IR/BuiltinLocationAttributes.cpp.inc": ["--gen-attrdef-defs"],
+        "include/mlir/IR/BuiltinLocationAttributes.h.inc": [
+            "--gen-attrdef-decls",
+            "-attrdefs-registration-name=BuiltinLocation",
+        ],
+        "include/mlir/IR/BuiltinLocationAttributes.cpp.inc": [
+            "--gen-attrdef-defs",
+            "-attrdefs-registration-name=BuiltinLocation",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/IR/BuiltinLocationAttributes.td",
