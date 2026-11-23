@@ -8,10 +8,14 @@
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
 # RUN: llvm-bolt %t.exe -o %t.bolt \
 # RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.cluster.bolt \
+# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func \
+# RUN:   --relax-exp 2>&1 | FileCheck %s
 
 # CHECK-NOT:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
 
 # RUN: llvm-objdump -d -j .bolt.org.text %t.bolt | FileCheck %s --check-prefix=OBJDUMP
+# RUN: llvm-objdump -d -j .bolt.org.text %t.cluster.bolt | FileCheck %s --check-prefix=OBJDUMP
 # OBJDUMP: <far_away_func>:
 # OBJDUMP-NEXT: bti c
 # OBJDUMP-NEXT: add x0, x0, #0x1

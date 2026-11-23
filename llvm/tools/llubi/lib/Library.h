@@ -34,6 +34,8 @@ class Library {
   AnyValue executeCalloc(StringRef Name, Type *Type, ArrayRef<AnyValue> Args,
                          MemAllocKind AllocKind);
   AnyValue executeFree(ArrayRef<AnyValue> Args, unsigned AS);
+  AnyValue executeMemTransfer(ArrayRef<AnyValue> Args, Intrinsic::ID IID);
+  AnyValue executeMemset(ArrayRef<AnyValue> Args);
   AnyValue executePuts(ArrayRef<AnyValue> Args);
   AnyValue executePrintf(ArrayRef<AnyValue> Args);
   AnyValue executeExit(ArrayRef<AnyValue> Args);

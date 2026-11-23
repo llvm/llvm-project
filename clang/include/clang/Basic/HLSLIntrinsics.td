@@ -1003,7 +1003,7 @@ parameter.
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the fractional (or decimal) part of x.
@@ -1597,7 +1597,6 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the sine of the input value, Val.

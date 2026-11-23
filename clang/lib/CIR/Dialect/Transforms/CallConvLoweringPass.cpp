@@ -11,13 +11,14 @@
 // classification injected as a function attribute), and dispatches to
 // CIRABIRewriteContext to perform the actual IR rewriting.
 //
-// Two driver modes (mutually exclusive):
+// Three driver modes (mutually exclusive):
 //
 //   target=test
 //     Use the MLIR test ABI target (mlir/lib/ABI/Targets/Test/) to classify
-//     each function.  Predictable rules that approximate x86_64 SysV.  Real
-//     targets (x86_64, AArch64) will be added once the LLVM ABI library
-//     ships them.
+//     each function.  Predictable rules that approximate x86_64 SysV.
+//
+//   target=<supported target>
+//     Classify with the LLVM ABI Lowering Library's rules for that target.
 //
 //   classification-attr=<name>
 //     Read a DictionaryAttr named <name> from each cir.func and parse it via
@@ -150,6 +151,8 @@ createABIClassifier(cir::CallConvTarget target,
     return createAMDGPUABIClassifier(dl, modOp);
   case cir::CallConvTarget::SPIRV:
     return createSPIRVABIClassifier(dl, modOp);
+  case cir::CallConvTarget::AArch64:
+    return createAArch64ABIClassifier(dl, modOp);
   case cir::CallConvTarget::None:
     break;
   }
@@ -204,8 +207,20 @@ void CallConvLoweringPass::runOnOperation() {
   bool enableNoundefAttrs =
       !loweringOpts || loweringOpts.getEnableNoundefAttrs();
 
+  // FIXME: MLIR translation currently crashes on CC-lowered CIR module
+  // for some spirv* triples due to some MLIR/OpenMP dialect gaps,
+  // thus temporarily report error for OpenMP device code with
+  // spirv target until the fix lands in MLIR.
+  if (target == cir::CallConvTarget::SPIRV && loweringOpts &&
+      loweringOpts.getOpenmpIsTargetDevice()) {
+    moduleOp.emitOpError() << "OpenMP device code with SPIR-V target "
+                              "is not yet supported";
+    signalPassFailure();
+    return;
+  }
+
   DataLayout dl(moduleOp);
-  CIRABIRewriteContext rewriteCtx(moduleOp, dl, enableNoundefAttrs);
+  CIRABIRewriteContext rewriteCtx(moduleOp, dl, target, enableNoundefAttrs);
   // A non-byval indirect parameter's slot outlives the rewrite that retypes
   // the parameter, so that a call forwarding the parameter can still recognize
   // it.  Draining on scope exit collapses those slots whichever way this

@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BranchFolding.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
@@ -54,7 +55,6 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,36 +73,6 @@ STATISTIC(NumBranchOpts, "Number of branches optimized");
 STATISTIC(NumTailMerge , "Number of block tails merged");
 STATISTIC(NumHoist     , "Number of times common instructions are hoisted");
 STATISTIC(NumTailCalls,  "Number of tail calls optimized");
-
-static cl::opt<cl::boolOrDefault>
-    FlagEnableTailMerge("enable-tail-merge",
-                        cl::init(cl::boolOrDefault::BOU_UNSET), cl::Hidden);
-
-// Override the common-code hoisting sub-phase of BranchFolding. Unset by
-// default, in which case the value configured by the caller is used.
-static cl::opt<cl::boolOrDefault> FlagEnableHoistCommonCode(
-    "branch-folder-hoist-common-code", cl::init(cl::boolOrDefault::BOU_UNSET),
-    cl::Hidden,
-    cl::desc("Override common-code hoisting in the BranchFolding pass"));
-
-// Override the basic-block reordering sub-phase of BranchFolding. Unset by
-// default, in which case the value configured by the caller is used.
-static cl::opt<cl::boolOrDefault> FlagEnableBlockReordering(
-    "branch-folder-reorder-blocks", cl::init(cl::boolOrDefault::BOU_UNSET),
-    cl::Hidden,
-    cl::desc("Override basic-block reordering in the BranchFolding pass"));
-
-// Throttle for huge numbers of predecessors (compile speed problems)
-static cl::opt<unsigned>
-TailMergeThreshold("tail-merge-threshold",
-          cl::desc("Max number of predecessors to consider tail merging"),
-          cl::init(150), cl::Hidden);
-
-// Heuristic for tail merging (and, inversely, tail duplication).
-static cl::opt<unsigned>
-TailMergeSize("tail-merge-size",
-              cl::desc("Min number of instructions to consider tail merging"),
-              cl::init(3), cl::Hidden);
 
 namespace {
 
@@ -194,21 +164,10 @@ BranchFolder::BranchFolder(bool DefaultEnableTailMerge, bool CommonHoist,
                            MBFIWrapper &FreqInfo,
                            const MachineBranchProbabilityInfo &ProbInfo,
                            ProfileSummaryInfo *PSI, unsigned MinTailLength)
-    : EnableHoistCommonCode(CommonHoist), EnableBasicBlockReordering(true),
+    : EnableTailMerge(DefaultEnableTailMerge),
+      EnableHoistCommonCode(CommonHoist), EnableBasicBlockReordering(true),
       MinCommonTailLength(MinTailLength), MBBFreqInfo(FreqInfo), MBPI(ProbInfo),
-      PSI(PSI) {
-  switch (FlagEnableTailMerge) {
-  case cl::boolOrDefault::BOU_UNSET:
-    EnableTailMerge = DefaultEnableTailMerge;
-    break;
-  case cl::boolOrDefault::BOU_TRUE:
-    EnableTailMerge = true;
-    break;
-  case cl::boolOrDefault::BOU_FALSE:
-    EnableTailMerge = false;
-    break;
-  }
-}
+      PSI(PSI) {}
 
 void BranchFolder::RemoveDeadBlock(MachineBasicBlock *MBB) {
   assert(MBB->pred_empty() && "MBB must be dead!");
@@ -249,10 +208,10 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   MLI = mli;
   this->MRI = &MRI;
 
+  Opts = &getCodeGenOptions(MF);
   if (MinCommonTailLength == 0) {
-    MinCommonTailLength = TailMergeSize.getNumOccurrences() > 0
-                              ? TailMergeSize
-                              : TII->getTailMergeSize(MF);
+    MinCommonTailLength =
+        Opts->tail_merge_size.value_or(TII->getTailMergeSize(MF));
   }
 
   UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
@@ -262,12 +221,11 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   // Command-line flags take final precedence over the caller-configured values,
   // letting individual BranchFolding sub-phases be toggled (for tests and for
   // targets that only want a safe subset of the optimization).
-  if (FlagEnableHoistCommonCode != cl::boolOrDefault::BOU_UNSET)
-    EnableHoistCommonCode =
-        FlagEnableHoistCommonCode == cl::boolOrDefault::BOU_TRUE;
-  if (FlagEnableBlockReordering != cl::boolOrDefault::BOU_UNSET)
-    EnableBasicBlockReordering =
-        FlagEnableBlockReordering == cl::boolOrDefault::BOU_TRUE;
+  EnableTailMerge = valueOr(Opts->tail_merge, EnableTailMerge);
+  EnableHoistCommonCode =
+      valueOr(Opts->branch_folder_hoist_common_code, EnableHoistCommonCode);
+  EnableBasicBlockReordering =
+      valueOr(Opts->branch_folder_reorder_blocks, EnableBasicBlockReordering);
 
   bool MadeChange = false;
 
@@ -1109,7 +1067,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
   // Block placement may create new tail merging opportunities for these blocks.
   MergePotentials.clear();
   for (MachineBasicBlock &MBB : MF) {
-    if (MergePotentials.size() == TailMergeThreshold)
+    if (MergePotentials.size() == Opts->tail_merge_threshold)
       break;
     if (!TriedMerging.count(&MBB) && MBB.succ_empty())
       MergePotentials.push_back(MergePotentialsElt(HashEndOfMBB(MBB), &MBB,
@@ -1118,7 +1076,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
 
   // If this is a large problem, avoid visiting the same basic blocks
   // multiple times.
-  if (MergePotentials.size() == TailMergeThreshold)
+  if (MergePotentials.size() == Opts->tail_merge_threshold)
     for (const MergePotentialsElt &Elt : MergePotentials)
       TriedMerging.insert(Elt.getBlock());
 
@@ -1171,7 +1129,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
     }
 
     for (MachineBasicBlock *PBB : I->predecessors()) {
-      if (MergePotentials.size() == TailMergeThreshold)
+      if (MergePotentials.size() == Opts->tail_merge_threshold)
         break;
 
       if (TriedMerging.count(PBB))
@@ -1231,7 +1189,7 @@ bool BranchFolder::TailMergeBlocks(MachineFunction &MF) {
 
     // If this is a large problem, avoid visiting the same basic blocks multiple
     // times.
-    if (MergePotentials.size() == TailMergeThreshold)
+    if (MergePotentials.size() == Opts->tail_merge_threshold)
       for (MergePotentialsElt &Elt : MergePotentials)
         TriedMerging.insert(Elt.getBlock());
 
