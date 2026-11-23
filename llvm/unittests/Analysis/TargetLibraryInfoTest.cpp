@@ -465,7 +465,6 @@ TEST_F(TargetLibraryInfoTest, ValidProto) {
       "declare i32 @uname(ptr)\n"
       "declare i32 @ungetc(i32, ptr)\n"
       "declare i32 @unlink(ptr)\n"
-      "declare i32 @usleep(i32)\n"
       "declare i32 @utime(ptr, ptr)\n"
       "declare i32 @utimes(ptr, ptr)\n"
       "declare ptr @valloc(i64)\n"

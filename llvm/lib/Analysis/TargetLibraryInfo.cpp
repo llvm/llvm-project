@@ -159,9 +159,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
   TLI.setUnavailable(LibFunc_fputs_unlocked);
   TLI.setUnavailable(LibFunc_fgets_unlocked);
 
-  // POSIX usleep. Enabled below for hosted libcs that provide it.
-  TLI.setUnavailable(LibFunc_usleep);
-
   // There is really no runtime library on AMDGPU.
   if (T.isAMDGPU()) {
     TLI.disableAllFunctions();
@@ -710,11 +707,6 @@ static void initializeLibCalls(TargetLibraryInfoImpl &TLI, const Triple &T,
     TLI.setAvailable(LibFunc_fputs_unlocked);
     TLI.setAvailable(LibFunc_fgets_unlocked);
   }
-
-  if (T.isOSLinux() || T.isOSDarwin() || T.isOSFreeBSD() || T.isOSNetBSD() ||
-      T.isOSOpenBSD() || T.isOSDragonFly() || T.isOSSolaris() || T.isOSAIX() ||
-      T.isOSHaiku() || T.isWindowsCygwinEnvironment())
-    TLI.setAvailable(LibFunc_usleep);
 
   if (T.isPS()) {
     // PS4/PS5 do have memalign.

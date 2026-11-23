@@ -945,9 +945,6 @@ declare void @unlink(...)
 ; CHECK: declare void @unsetenv(...)
 declare void @unsetenv(...)
 
-; CHECK: declare void @usleep(...)
-declare void @usleep(...)
-
 ; CHECK: declare void @utime(...)
 declare void @utime(...)
 

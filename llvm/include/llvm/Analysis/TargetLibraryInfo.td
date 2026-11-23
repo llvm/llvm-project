@@ -1649,9 +1649,6 @@ def unlink : TargetLibCall<"unlink", Int, [Ptr]>;
 /// int unsetenv(const char *name);
 def unsetenv : TargetLibCall<"unsetenv", Int, [Ptr]>;
 
-/// int usleep(useconds_t useconds);
-def usleep : TargetLibCall<"usleep", Int, [Int]>;
-
 /// int utime(const char *path, const struct utimbuf *times);
 def utime : TargetLibCall<"utime", Int, [Ptr, Ptr]>;
 

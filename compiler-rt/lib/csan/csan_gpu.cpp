@@ -452,6 +452,8 @@ INTERFACE void __csan_write_range(void *addr, uptr size, int flags) {
   check_access(addr, size, access_flags(flags, true), GET_CALLER_PC());
 }
 
+INTERFACE NOINLINE void __csan_delay(int) { sample_delay(__gpu_lane_mask()); }
+
 INTERFACE NOINLINE void __csan_report_race(void *addr, uptr size,
                                            int access_type) {
   const uptr pc = GET_CALLER_PC();

@@ -26,8 +26,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/IntrinsicsAMDGPU.h"
-#include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
@@ -36,7 +34,6 @@
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
-#include "llvm/Transforms/Utils/BuildLibCalls.h"
 #include "llvm/Transforms/Utils/EscapeEnumerator.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -71,7 +68,7 @@ static cl::opt<bool> ClDistinguishVolatile(
     cl::Hidden);
 static cl::opt<bool>
     ClMinimal("csan-minimal", cl::init(false),
-              cl::desc("Inline value checks with a report-only runtime"),
+              cl::desc("Inline value checks; the runtime supplies the stall"),
               cl::Hidden);
 STATISTIC(NumInstrumentedReads, "Number of instrumented reads");
 STATISTIC(NumInstrumentedWrites, "Number of instrumented writes");
@@ -217,7 +214,7 @@ private:
                              bool IsWrite);
   bool emitValueCheck(Instruction *I, Value *Addr, Type *LoadTy,
                       Value *ByteSize, Align Alignment, bool IsWrite);
-  void insertInlineDelay(Instruction *InsertBefore);
+  void insertInlineDelay(Instruction *InsertBefore, bool IsWrite);
   bool shouldInstrumentAddress(Value *Addr) const;
   bool shouldInstrumentAccess(Instruction *I) const;
   void insertFuncEntryExit(Function &F);
@@ -227,7 +224,6 @@ private:
   }
 
   Module *Mod = nullptr;
-  const TargetLibraryInfo *LibInfo = nullptr;
   Type *IntptrTy = nullptr;
   IntegerType *FlagsTy = nullptr;
 
@@ -261,6 +257,8 @@ private:
   FunctionCallee CsanAtomicSignalFence;
   // void __csan_report_race(ptr, intptr, i32);
   FunctionCallee CsanReportRace;
+  // void __csan_delay(i32);
+  FunctionCallee CsanDelay;
 };
 
 void insertModuleCtor(Module &M) {
@@ -302,6 +300,8 @@ void ConcurrencySanitizer::initialize(Module &M, const TargetLibraryInfo &TLI) {
                                   .addFnAttribute(Ctx, Attribute::Cold);
   CsanReportRace = M.getOrInsertFunction("__csan_report_race", ReportAttrs,
                                          VoidTy, PtrTy, IntptrTy, FlagsTy);
+  if (ClMinimal)
+    CsanDelay = M.getOrInsertFunction("__csan_delay", Attr, VoidTy, FlagsTy);
   CsanFuncEntry =
       M.getOrInsertFunction("__csan_func_entry", Attr, VoidTy, PtrTy);
   CsanFuncExit = M.getOrInsertFunction("__csan_func_exit", Attr, VoidTy);
@@ -353,7 +353,6 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
     return false;
 
   Mod = F.getParent();
-  LibInfo = &TLI;
   MemoryAccessLists Acc;
   collectMemoryAccesses(F, Acc);
 
@@ -582,71 +581,11 @@ bool ConcurrencySanitizer::instrumentMemIntrinsic(IntrinsicInst *II,
   return true;
 }
 
-// Builds a loop that spins until a timed deadline is complete.
-static void insertDeadlineLoop(Instruction *InsertBefore, Value *End,
-                               Intrinsic::ID Clock, Intrinsic::ID Wait,
-                               Value *WaitArg) {
-  BasicBlock *Pre = InsertBefore->getParent();
-  BasicBlock *Check =
-      Pre->splitBasicBlock(InsertBefore->getIterator(), "csan.delay");
-  BasicBlock *Done =
-      Check->splitBasicBlock(InsertBefore->getIterator(), "csan.delay.done");
-  BasicBlock *Body = BasicBlock::Create(Pre->getContext(), "csan.delay.body",
-                                        Pre->getParent(), Done);
-
-  Instruction *ToDone = Check->getTerminator();
-  InstrumentationIRBuilder C(ToDone);
-  Value *Now = C.CreateIntrinsic(Clock, {});
-  C.CreateCondBr(C.CreateICmpULT(Now, End, "csan.delaying"), Body, Done);
-  ToDone->eraseFromParent();
-
-  IRBuilder<> B(Body);
-  InstrumentationIRBuilder::ensureDebugInfo(B, *Pre->getParent());
-  if (WaitArg)
-    B.CreateIntrinsic(Wait, {WaitArg});
-  else
-    B.CreateIntrinsic(Wait, {});
-  B.CreateBr(Check);
-}
-
-void ConcurrencySanitizer::insertInlineDelay(Instruction *InsertBefore) {
-  Module *M = InsertBefore->getModule();
+void ConcurrencySanitizer::insertInlineDelay(Instruction *InsertBefore,
+                                             bool IsWrite) {
   InstrumentationIRBuilder IRB(InsertBefore);
-  if (M->getTargetTriple().isAMDGPU()) {
-    // 1000 ticks is 10us at the 100MHz rate the device sampler assumes.
-    // s_sleep(15) is the yield that sampler uses between polls.
-    constexpr uint64_t AmdgpuDelayTicks = 1000;
-    Value *End =
-        IRB.CreateAdd(IRB.CreateIntrinsic(Intrinsic::readsteadycounter, {}),
-                      IRB.getInt64(AmdgpuDelayTicks), "csan.delay.end");
-    IRB.CreateIntrinsic(Intrinsic::amdgcn_s_sleep, {IRB.getInt32(2)});
-    insertDeadlineLoop(InsertBefore, End, Intrinsic::readsteadycounter,
-                       Intrinsic::amdgcn_s_sleep, IRB.getInt32(15));
-    return;
-  }
-  if (M->getTargetTriple().isNVPTX()) {
-    // The operand is nanoseconds. 10us is the device sampler's upper delay.
-    constexpr unsigned NvptxDelayNs = 10000;
-    IRB.CreateIntrinsic(Intrinsic::nvvm_nanosleep,
-                        {IRB.getInt32(NvptxDelayNs)});
-    return;
-  }
-
-  // Default udelay of the host sampler.
-  constexpr unsigned HostDelayUs = 80;
-  FunctionCallee USleep;
-  if (isLibFuncEmittable(M, LibInfo, LibFunc_usleep)) {
-    USleep = getOrInsertLibFunc(M, *LibInfo, LibFunc_usleep, IRB.getInt32Ty(),
-                                IRB.getInt32Ty());
-    inferNonMandatoryLibFuncAttrs(M, LibInfo->getName(LibFunc_usleep),
-                                  *LibInfo);
-  } else {
-    USleep =
-        M->getOrInsertFunction("usleep", IRB.getInt32Ty(), IRB.getInt32Ty());
-  }
-  CallInst *CI = IRB.CreateCall(USleep, {IRB.getInt32(HostDelayUs)});
-  if (auto *F = dyn_cast<Function>(USleep.getCallee()))
-    CI->setCallingConv(F->getCallingConv());
+  IRB.CreateCall(CsanDelay,
+                 {getFlags(IsWrite ? AccessFlags::Write : AccessFlags::None)});
 }
 
 // A memcpy has no value type. Read at most 8 bytes, or one byte when the
@@ -713,7 +652,7 @@ bool ConcurrencySanitizer::emitValueCheck(Instruction *I, Value *Addr,
                                         /*isVolatile=*/true, "csan.old");
   Old->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
 
-  insertInlineDelay(I);
+  insertInlineDelay(I, IsWrite);
 
   InstrumentationIRBuilder After(I);
   LoadInst *New = After.CreateAlignedLoad(LoadTy, Addr, Alignment,
@@ -729,9 +668,11 @@ bool ConcurrencySanitizer::emitValueCheck(Instruction *I, Value *Addr,
                 : VectorType::getInteger(cast<VectorType>(LoadTy));
   else
     BitTy = After.getIntNTy(Bits.getFixedValue());
-  Value *Changed = After.CreateICmpNE(
-      After.CreateBitPreservingCastChain(DL, Old, BitTy),
-      After.CreateBitPreservingCastChain(DL, New, BitTy), "csan.changed");
+  // Separate statements. MSVC evaluates call arguments right-to-left, which
+  // emits the casts in the other order and breaks CHECK-NEXT.
+  Value *OldBits = After.CreateBitPreservingCastChain(DL, Old, BitTy);
+  Value *NewBits = After.CreateBitPreservingCastChain(DL, New, BitTy);
+  Value *Changed = After.CreateICmpNE(OldBits, NewBits, "csan.changed");
   if (BitTy->isVectorTy())
     Changed = After.CreateOrReduce(Changed);
 

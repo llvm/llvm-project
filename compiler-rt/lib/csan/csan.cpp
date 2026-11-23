@@ -338,6 +338,8 @@ INTERFACE void __csan_write_range(void *Addr, uptr Size, int Flags) {
   __csan::CheckAccess(Addr, Size, AccessFlags(Flags, true), pc, bp);
 }
 
+INTERFACE NOINLINE void __csan_delay(int Type) { __csan::DelayAccess(Type); }
+
 INTERFACE NOINLINE void __csan_report_race(void *Addr, uptr Size, int Type) {
   GET_CALLER_PC_BP;
   __csan::ReportRace(Addr, Size, Type, pc, bp);

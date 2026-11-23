@@ -120,8 +120,8 @@ void check_access(volatile void *addr, u32 size, u32 type) {
 The probability of detecting a race and the overhead of the sanitizer is
 directly related to the probability of sampling and the length of the delay. The
 minimal configuration, selected with `-mllvm -csan-minimal`, inlines the value
-comparison and reduces the runtime to race reporting. This trades race coverage
-for a smaller runtime.
+comparison. The sampling delay is `__csan_delay`, the same randomized stall the
+watchpoint sampler uses. This trades race coverage for a smaller runtime.
 
 ## `__SANITIZE_CONCURRENCY__`
 

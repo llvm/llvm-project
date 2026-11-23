@@ -8,17 +8,17 @@
 // CHECK-NEXT:    store ptr [[A]], ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // CHECK-NEXT:    [[CSAN_OLD:%.*]] = load volatile i32, ptr [[TMP0]], align 4, !nosanitize [[META2:![0-9]+]]
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @usleep(i32 80)
+// CHECK-NEXT:    call void @__csan_delay(i32 0)
 // CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile i32, ptr [[TMP0]], align 4, !nosanitize [[META2]]
 // CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne i32 [[CSAN_OLD]], [[CSAN_NEW]]
-// CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label %[[BB2:.*]], label %[[BB3:.*]]
-// CHECK:       [[BB2]]:
+// CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label %[[BB1:.*]], label %[[BB2:.*]]
+// CHECK:       [[BB1]]:
 // CHECK-NEXT:    call void @__csan_report_race(ptr [[TMP0]], i64 4, i32 0)
-// CHECK-NEXT:    br label %[[BB3]]
-// CHECK:       [[BB3]]:
+// CHECK-NEXT:    br label %[[BB2]]
+// CHECK:       [[BB2]]:
 // CHECK-NEXT:    fence syncscope("singlethread") acq_rel
-// CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP0]], align 4
-// CHECK-NEXT:    ret i32 [[TMP4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
+// CHECK-NEXT:    ret i32 [[TMP3]]
 //
 int instrumented(int *a) {
   return *a;
