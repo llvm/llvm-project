@@ -203,13 +203,13 @@ static StringRef getArm64eArchName(uint32_t cpuSubtype) {
 
 // Like ld-prime, take only userland pointer authentication ABI version 0, even
 // on macOS, whose executables are marked version 1. Static and preload links
-// also take unversioned and kernel objects.
+// also take unversioned and kernel version 0 objects.
 static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
-  if (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype) != 0)
-    return false;
-  bool isUserland = CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype) &&
-                    !CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
-  return isUserland || config->staticLink || config->preload;
+  if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
+    return true;
+  return (config->staticLink || config->preload) &&
+         (cpuSubtype == CPU_SUBTYPE_ARM64E ||
+          cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true));
 }
 
 template <class Header>

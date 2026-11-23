@@ -2,9 +2,9 @@
 ## The CPU subtype of an arm64e object also holds its pointer authentication ABI
 ## version. Like ld-prime, an arm64e link takes only objects with userland
 ## version 0, even on macOS, whose executables are marked version 1. Static and
-## preload links also take unversioned and kernel objects. Any other object is
-## ignored with a warning, or rejected with -arch_errors_fatal, and named the
-## way ld-prime names it.
+## preload links also take unversioned and kernel version 0 objects. Any other
+## object is ignored with a warning, or rejected with -arch_errors_fatal, and
+## named the way ld-prime names it.
 
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos11.0 %t/main.s -o %t/main.o
@@ -19,6 +19,7 @@
 ## The kernel bit without the versioned bit, and a bit no version uses.
 # RUN: yaml2obj -DSUBTYPE=0x40000002 %t/helper.yaml -o %t/kernel-unversioned.o
 # RUN: yaml2obj -DSUBTYPE=0xD0000002 %t/helper.yaml -o %t/extra-bit.o
+# RUN: yaml2obj -DSUBTYPE=0x90000002 %t/helper.yaml -o %t/v0-extra-bit.o
 # RUN: llvm-ar rcs %t/v1.a %t/v1.o
 
 # DEFINE: %{lld} = %no-fatal-warnings-lld -arch arm64e -arch_errors_fatal \
@@ -34,6 +35,7 @@
 # RUN: not %{lld} %t/kernel-v2.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V2
 # RUN: not %{lld} %t/kernel-unversioned.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 # RUN: not %{lld} %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/v0-extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # RUN: %{lld} -static %t/old.o
 # RUN: %{lld} -static %t/kernel.o
@@ -42,6 +44,9 @@
 # RUN: not %{lld} -static %t/v1.o 2>&1 | FileCheck %s --check-prefix=V1
 # RUN: not %{lld} -static %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
 # RUN: not %{lld} -preload %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
+# RUN: not %{lld} -static %t/kernel-unversioned.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} -static %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} -preload %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # RUN: %no-fatal-warnings-lld -arch arm64e %t/main.o %t/v1.o -o %t/out 2>&1 | \
 # RUN:   FileCheck %s --check-prefix=WARN
