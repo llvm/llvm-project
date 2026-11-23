@@ -4407,6 +4407,382 @@ exit:
   ret void
 }
 
+define void @predicate_simplification_unknown_to_scev(ptr noalias %out, ptr %p, ptr align 8 %ap, i64 %n) {
+; COMPARE-NO-MV-LABEL: define void @predicate_simplification_unknown_to_scev(
+; COMPARE-NO-MV-SAME: ptr noalias [[OUT:%.*]], ptr [[P:%.*]], ptr align 8 [[AP:%.*]], i64 [[N:%.*]]) {
+; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-NO-MV-NEXT:    [[S:%.*]] = ptrtoint ptr [[AP]] to i64
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[S]], i64 0
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-NO-MV:       [[VECTOR_BODY]]:
+; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = mul nsw <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds i8, ptr [[P]], <4 x i64> [[TMP1]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i8> poison)
+; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    store <4 x i8> [[WIDE_MASKED_GATHER]], ptr [[TMP2]], align 1
+; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-NO-MV-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP58:![0-9]+]]
+; COMPARE-NO-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-NO-MV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COMPARE-NO-MV:       [[SCALAR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; COMPARE-NO-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-NO-MV:       [[LOOP]]:
+; COMPARE-NO-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-NO-MV-NEXT:    [[I:%.*]] = mul nsw i64 [[IV]], [[S]]
+; COMPARE-NO-MV-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
+; COMPARE-NO-MV-NEXT:    [[V:%.*]] = load i8, ptr [[G]], align 1
+; COMPARE-NO-MV-NEXT:    [[GO:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[IV]]
+; COMPARE-NO-MV-NEXT:    store i8 [[V]], ptr [[GO]], align 1
+; COMPARE-NO-MV-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; COMPARE-NO-MV-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; COMPARE-NO-MV-NEXT:    br i1 [[EC]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP59:![0-9]+]]
+; COMPARE-NO-MV:       [[EXIT]]:
+; COMPARE-NO-MV-NEXT:    ret void
+;
+; COMPARE-LAA-MV-LABEL: define void @predicate_simplification_unknown_to_scev(
+; COMPARE-LAA-MV-SAME: ptr noalias [[OUT:%.*]], ptr [[P:%.*]], ptr align 8 [[AP:%.*]], i64 [[N:%.*]]) {
+; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-LAA-MV-NEXT:    [[S:%.*]] = ptrtoint ptr [[AP]] to i64
+; COMPARE-LAA-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-LAA-MV:       [[LOOP]]:
+; COMPARE-LAA-MV-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-LAA-MV-NEXT:    [[I:%.*]] = mul nsw i64 [[IV]], [[S]]
+; COMPARE-LAA-MV-NEXT:    [[G:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 [[I]]
+; COMPARE-LAA-MV-NEXT:    [[V:%.*]] = load i8, ptr [[G]], align 1
+; COMPARE-LAA-MV-NEXT:    [[GO:%.*]] = getelementptr inbounds i8, ptr [[OUT]], i64 [[IV]]
+; COMPARE-LAA-MV-NEXT:    store i8 [[V]], ptr [[GO]], align 1
+; COMPARE-LAA-MV-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; COMPARE-LAA-MV-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; COMPARE-LAA-MV-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; COMPARE-LAA-MV:       [[EXIT]]:
+; COMPARE-LAA-MV-NEXT:    ret void
+;
+entry:
+  %s = ptrtoint ptr %ap to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %i = mul nsw i64 %iv, %s
+  %g = getelementptr inbounds i8, ptr %p, i64 %i
+  %v = load i8, ptr %g, align 1
+  %go = getelementptr inbounds i8, ptr %out, i64 %iv
+  store i8 %v, ptr %go, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride, i64 %y) {
+; COMPARE-NO-MV-LABEL: define void @livein_rewrite_might_trigger_ub_if_not_guarded(
+; COMPARE-NO-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
+; COMPARE-NO-MV-NEXT:  [[ENTRY:.*:]]
+; COMPARE-NO-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
+; COMPARE-NO-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
+; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
+; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[UDIV]]
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-NO-MV:       [[VECTOR_BODY]]:
+; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = mul <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[SRC]], <4 x i64> [[TMP1]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP2]], align 4
+; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-NO-MV-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP60:![0-9]+]]
+; COMPARE-NO-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-NO-MV-NEXT:    br label %[[EXIT:.*]]
+; COMPARE-NO-MV:       [[EXIT]]:
+; COMPARE-NO-MV-NEXT:    ret void
+;
+; COMPARE-LAA-MV-LABEL: define void @livein_rewrite_might_trigger_ub_if_not_guarded(
+; COMPARE-LAA-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
+; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*:]]
+; COMPARE-LAA-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
+; COMPARE-LAA-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
+; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_PH]]:
+; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[DST]], i64 [[UDIV]]
+; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
+; COMPARE-LAA-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
+; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[TMP0]], i64 [[INDEX]]
+; COMPARE-LAA-MV-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP2]], align 4
+; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-LAA-MV-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 128
+; COMPARE-LAA-MV-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP70:![0-9]+]]
+; COMPARE-LAA-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-LAA-MV-NEXT:    br label %[[EXIT:.*]]
+; COMPARE-LAA-MV:       [[SCALAR_PH]]:
+; COMPARE-LAA-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-LAA-MV:       [[LOOP]]:
+; COMPARE-LAA-MV-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-LAA-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
+; COMPARE-LAA-MV-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX]]
+; COMPARE-LAA-MV-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; COMPARE-LAA-MV-NEXT:    [[GEP_DST_BASE:%.*]] = getelementptr i32, ptr [[DST]], i64 [[UDIV]]
+; COMPARE-LAA-MV-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[GEP_DST_BASE]], i64 [[IV]]
+; COMPARE-LAA-MV-NEXT:    store i32 [[LD]], ptr [[GEP_DST]], align 4
+; COMPARE-LAA-MV-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; COMPARE-LAA-MV-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_NEXT]], 128
+; COMPARE-LAA-MV-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP71:![0-9]+]]
+; COMPARE-LAA-MV:       [[EXIT]]:
+; COMPARE-LAA-MV-NEXT:    ret void
+;
+entry:
+  %stride_plus_y = add i64 %stride, %y
+  %udiv = udiv i64 %n, %stride_plus_y
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst.base = getelementptr i32, ptr %dst, i64 %udiv
+  %gep.dst = getelementptr i32, ptr %gep.dst.base, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, 128
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride, i64 %y) {
+; COMPARE-NO-MV-LABEL: define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(
+; COMPARE-NO-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
+; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], [[STRIDE]]
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
+; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 3
+; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-NO-MV:       [[VECTOR_BODY]]:
+; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[SRC]], <4 x i64> [[TMP4]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], align 4
+; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-NO-MV-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP61:![0-9]+]]
+; COMPARE-NO-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-NO-MV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COMPARE-NO-MV:       [[SCALAR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; COMPARE-NO-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-NO-MV:       [[LOOP]]:
+; COMPARE-NO-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-NO-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
+; COMPARE-NO-MV-NEXT:    [[BOUND:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
+; COMPARE-NO-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
+; COMPARE-NO-MV-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX]]
+; COMPARE-NO-MV-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; COMPARE-NO-MV-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
+; COMPARE-NO-MV-NEXT:    store i32 [[LD]], ptr [[GEP_DST]], align 4
+; COMPARE-NO-MV-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMPARE-NO-MV-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; COMPARE-NO-MV-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP62:![0-9]+]]
+; COMPARE-NO-MV:       [[EXIT]]:
+; COMPARE-NO-MV-NEXT:    ret void
+;
+; COMPARE-LAA-MV-LABEL: define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(
+; COMPARE-LAA-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
+; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], [[STRIDE]]
+; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
+; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
+; COMPARE-LAA-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; COMPARE-LAA-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
+; COMPARE-LAA-MV-NEXT:    [[IDENT_CHECK:%.*]] = icmp ne i64 [[STRIDE]], 1
+; COMPARE-LAA-MV-NEXT:    br i1 [[IDENT_CHECK]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_PH]]:
+; COMPARE-LAA-MV-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 3
+; COMPARE-LAA-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-LAA-MV:       [[VECTOR_BODY]]:
+; COMPARE-LAA-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-LAA-MV-NEXT:    [[TMP4:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[INDEX]]
+; COMPARE-LAA-MV-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; COMPARE-LAA-MV-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; COMPARE-LAA-MV-NEXT:    store <4 x i32> [[WIDE_LOAD]], ptr [[TMP5]], align 4
+; COMPARE-LAA-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-LAA-MV-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-LAA-MV-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP72:![0-9]+]]
+; COMPARE-LAA-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-LAA-MV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; COMPARE-LAA-MV-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COMPARE-LAA-MV:       [[SCALAR_PH]]:
+; COMPARE-LAA-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ], [ 0, %[[VECTOR_SCEVCHECK]] ]
+; COMPARE-LAA-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-LAA-MV:       [[LOOP]]:
+; COMPARE-LAA-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-LAA-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
+; COMPARE-LAA-MV-NEXT:    [[BOUND:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
+; COMPARE-LAA-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
+; COMPARE-LAA-MV-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX]]
+; COMPARE-LAA-MV-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; COMPARE-LAA-MV-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
+; COMPARE-LAA-MV-NEXT:    store i32 [[LD]], ptr [[GEP_DST]], align 4
+; COMPARE-LAA-MV-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMPARE-LAA-MV-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; COMPARE-LAA-MV-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP73:![0-9]+]]
+; COMPARE-LAA-MV:       [[EXIT]]:
+; COMPARE-LAA-MV-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %stride_plus_y = add i64 %stride, %y
+  %bound = udiv i64 %n, %stride_plus_y
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded_more_constants(ptr noalias %dst, ptr noalias %src, i64 %stride) {
+; COMPARE-NO-MV-LABEL: define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded_more_constants(
+; COMPARE-NO-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[STRIDE:%.*]]) {
+; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = add i64 [[STRIDE]], -1
+; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 2048, [[TMP0]]
+; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
+; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
+; COMPARE-NO-MV-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; COMPARE-NO-MV:       [[VECTOR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[TMP3:%.*]] = and i64 [[TMP2]], 3
+; COMPARE-NO-MV-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP3]]
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[STRIDE]], i64 0
+; COMPARE-NO-MV-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_BODY:.*]]
+; COMPARE-NO-MV:       [[VECTOR_BODY]]:
+; COMPARE-NO-MV-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; COMPARE-NO-MV-NEXT:    [[TMP4:%.*]] = mul <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[SRC]], <4 x i64> [[TMP4]]
+; COMPARE-NO-MV-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i32> @llvm.masked.gather.v4i32.v4p0(<4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true), <4 x i32> poison)
+; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = getelementptr i32, ptr [[DST]], i64 [[INDEX]]
+; COMPARE-NO-MV-NEXT:    store <4 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP5]], align 4
+; COMPARE-NO-MV-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; COMPARE-NO-MV-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; COMPARE-NO-MV-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP63:![0-9]+]]
+; COMPARE-NO-MV:       [[MIDDLE_BLOCK]]:
+; COMPARE-NO-MV-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
+; COMPARE-NO-MV-NEXT:    br i1 [[CMP_N]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
+; COMPARE-NO-MV:       [[SCALAR_PH]]:
+; COMPARE-NO-MV-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
+; COMPARE-NO-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-NO-MV:       [[LOOP]]:
+; COMPARE-NO-MV-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-NO-MV-NEXT:    [[STRIDE_MINUS_ONE:%.*]] = add i64 [[STRIDE]], -1
+; COMPARE-NO-MV-NEXT:    [[BOUND:%.*]] = udiv i64 2048, [[STRIDE_MINUS_ONE]]
+; COMPARE-NO-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
+; COMPARE-NO-MV-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX]]
+; COMPARE-NO-MV-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; COMPARE-NO-MV-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
+; COMPARE-NO-MV-NEXT:    store i32 [[LD]], ptr [[GEP_DST]], align 4
+; COMPARE-NO-MV-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMPARE-NO-MV-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; COMPARE-NO-MV-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT]], !llvm.loop [[LOOP64:![0-9]+]]
+; COMPARE-NO-MV:       [[EXIT]]:
+; COMPARE-NO-MV-NEXT:    ret void
+;
+; COMPARE-LAA-MV-LABEL: define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded_more_constants(
+; COMPARE-LAA-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[STRIDE:%.*]]) {
+; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
+; COMPARE-LAA-MV-NEXT:    br label %[[LOOP:.*]]
+; COMPARE-LAA-MV:       [[LOOP]]:
+; COMPARE-LAA-MV-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; COMPARE-LAA-MV-NEXT:    [[STRIDE_MINUS_ONE:%.*]] = add i64 [[STRIDE]], -1
+; COMPARE-LAA-MV-NEXT:    [[BOUND:%.*]] = udiv i64 2048, [[STRIDE_MINUS_ONE]]
+; COMPARE-LAA-MV-NEXT:    [[IDX:%.*]] = mul i64 [[IV]], [[STRIDE]]
+; COMPARE-LAA-MV-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IDX]]
+; COMPARE-LAA-MV-NEXT:    [[LD:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; COMPARE-LAA-MV-NEXT:    [[GEP_DST:%.*]] = getelementptr i32, ptr [[DST]], i64 [[IV]]
+; COMPARE-LAA-MV-NEXT:    store i32 [[LD]], ptr [[GEP_DST]], align 4
+; COMPARE-LAA-MV-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; COMPARE-LAA-MV-NEXT:    [[EC:%.*]] = icmp ult i64 [[IV_NEXT]], [[BOUND]]
+; COMPARE-LAA-MV-NEXT:    br i1 [[EC]], label %[[LOOP]], label %[[EXIT:.*]]
+; COMPARE-LAA-MV:       [[EXIT]]:
+; COMPARE-LAA-MV-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %stride_minus_one = add i64 %stride, -1
+  %bound = udiv i64 2048, %stride_minus_one
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{i64 4, i64 8}
 
 ; Keep this in sync with the same under VPlan/

@@ -3669,6 +3669,335 @@ exit:
   ret void
 }
 
+; SimplifyQuery detects some cases that ScalarEvolution alone can't.
+define void @predicate_simplification_unknown_to_scev(ptr noalias %out, ptr %p, ptr align 8 %ap, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'predicate_simplification_unknown_to_scev'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %s = ptrtoint ptr %ap to i64
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%i> = mul nsw ir<%iv>, ir<%s>
+; CHECK-NEXT:      EMIT ir<%g> = getelementptr inbounds ir<%p>, ir<%i>
+; CHECK-NEXT:      EMIT-SCALAR ir<%v> = load ir<%g>
+; CHECK-NEXT:      EMIT ir<%go> = getelementptr inbounds ir<%out>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%v>, ir<%go>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp eq ir<%iv.next>, ir<%n>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %i = mul nsw i64 %iv, %s
+; CHECK-NEXT:    IR   %g = getelementptr inbounds i8, ptr %p, i64 %i
+; CHECK-NEXT:    IR   %v = load i8, ptr %g, align 1
+; CHECK-NEXT:    IR   %go = getelementptr inbounds i8, ptr %out, i64 %iv
+; CHECK-NEXT:    IR   store i8 %v, ptr %go, align 1
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  %s = ptrtoint ptr %ap to i64
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %i = mul nsw i64 %iv, %s
+  %g = getelementptr inbounds i8, ptr %p, i64 %i
+  %v = load i8, ptr %g, align 1
+  %go = getelementptr inbounds i8, ptr %out, i64 %iv
+  store i8 %v, ptr %go, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride, i64 %y) {
+; CHECK-LABEL: VPlan for loop in 'livein_rewrite_might_trigger_ub_if_not_guarded'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<128> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    IR   %stride_plus_y = add i64 %stride, %y
+; CHECK-NEXT:    IR   %udiv = udiv i64 %n, %stride_plus_y
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
+; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.src>
+; CHECK-NEXT:      EMIT ir<%gep.dst.base> = getelementptr ir<%dst>, ir<%udiv>
+; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%gep.dst.base>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.dst>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add nuw nsw ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp uge ir<%iv.next>, ir<128>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP5:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<128>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP5]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %idx = mul i64 %iv, %stride
+; CHECK-NEXT:    IR   %gep.src = getelementptr i32, ptr %src, i64 %idx
+; CHECK-NEXT:    IR   %ld = load i32, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %gep.dst.base = getelementptr i32, ptr %dst, i64 %udiv
+; CHECK-NEXT:    IR   %gep.dst = getelementptr i32, ptr %gep.dst.base, i64 %iv
+; CHECK-NEXT:    IR   store i32 %ld, ptr %gep.dst, align 4
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp ult i64 %iv.next, 128
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  %stride_plus_y = add i64 %stride, %y
+  %udiv = udiv i64 %n, %stride_plus_y
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst.base = getelementptr i32, ptr %dst, i64 %udiv
+  %gep.dst = getelementptr i32, ptr %gep.dst.base, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, 128
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, ptr noalias %src, i64 %n, i64 %stride, i64 %y) {
+; CHECK-LABEL: VPlan for loop in 'expand_scev_rewrite_might_trigger_ub_if_not_guarded'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 umax (%n /u (%stride + %y)))
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%stride_plus_y> = add ir<%stride>, ir<%y>
+; CHECK-NEXT:      EMIT ir<%bound> = udiv ir<%n>, ir<%stride_plus_y>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
+; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.src>
+; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.dst>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp uge ir<%iv.next>, ir<%bound>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %stride_plus_y = add i64 %stride, %y
+; CHECK-NEXT:    IR   %bound = udiv i64 %n, %stride_plus_y
+; CHECK-NEXT:    IR   %idx = mul i64 %iv, %stride
+; CHECK-NEXT:    IR   %gep.src = getelementptr i32, ptr %src, i64 %idx
+; CHECK-NEXT:    IR   %ld = load i32, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+; CHECK-NEXT:    IR   store i32 %ld, ptr %gep.dst, align 4
+; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp ult i64 %iv.next, %bound
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %stride_plus_y = add i64 %stride, %y
+  %bound = udiv i64 %n, %stride_plus_y
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded_more_constants(ptr noalias %dst, ptr noalias %src, i64 %stride) {
+; CHECK-LABEL: VPlan for loop in 'expand_scev_rewrite_might_trigger_ub_if_not_guarded_more_constants'
+; CHECK:  VPlan ' for UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 umax (2048 /u (-1 + %stride)))
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP4:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      EMIT ir<%stride_minus_one> = add ir<%stride>, ir<-1>
+; CHECK-NEXT:      EMIT ir<%bound> = udiv ir<2048>, ir<%stride_minus_one>
+; CHECK-NEXT:      EMIT ir<%idx> = mul ir<%iv>, ir<%stride>
+; CHECK-NEXT:      EMIT ir<%gep.src> = getelementptr ir<%src>, ir<%idx>
+; CHECK-NEXT:      EMIT-SCALAR ir<%ld> = load ir<%gep.src>
+; CHECK-NEXT:      EMIT ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv>
+; CHECK-NEXT:      EMIT store ir<%ld>, ir<%gep.dst>
+; CHECK-NEXT:      EMIT ir<%iv.next> = add ir<%iv>, ir<1>
+; CHECK-NEXT:      EMIT ir<%ec> = icmp uge ir<%iv.next>, ir<%bound>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP6:%[0-9]+]]> = exiting-iv-value ir<%iv>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP6]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %stride_minus_one = add i64 %stride, -1
+; CHECK-NEXT:    IR   %bound = udiv i64 2048, %stride_minus_one
+; CHECK-NEXT:    IR   %idx = mul i64 %iv, %stride
+; CHECK-NEXT:    IR   %gep.src = getelementptr i32, ptr %src, i64 %idx
+; CHECK-NEXT:    IR   %ld = load i32, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+; CHECK-NEXT:    IR   store i32 %ld, ptr %gep.dst, align 4
+; CHECK-NEXT:    IR   %iv.next = add i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp ult i64 %iv.next, %bound
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %stride_minus_one = add i64 %stride, -1
+  %bound = udiv i64 2048, %stride_minus_one
+
+  %idx = mul i64 %iv, %stride
+  %gep.src = getelementptr i32, ptr %src, i64 %idx
+  %ld = load i32, ptr %gep.src, align 4
+  %gep.dst = getelementptr i32, ptr %dst, i64 %iv
+  store i32 %ld, ptr %gep.dst, align 4
+
+  %iv.next = add i64 %iv, 1
+  %ec = icmp ult i64 %iv.next, %bound
+  br i1 %ec, label %loop, label %exit
+
+exit:
+  ret void
+}
 !0 = !{i64 4, i64 8}
 
 ; Keep this in sync with the same under LoopVectorize/
