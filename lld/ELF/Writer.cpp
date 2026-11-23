@@ -689,11 +689,11 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
   bool isLarge = osec.flags & SHF_X86_64_LARGE && ctx.arg.emachine == EM_X86_64;
 
   if (!isWrite && !isExec) {
-    // Among PROGBITS sections, place .lrodata further from .text.
-    // For -z lrodata-after-bss, place .lrodata after .lbss like GNU ld. This
-    // layout has one extra PT_LOAD, but alleviates relocation overflow
-    // pressure for absolute relocations referencing small data from -fno-pic
-    // relocatable files.
+    // By default, place large sections after .bss in the order
+    // .ltext/.lrodata/.ldata/.lbss, away from small sections and the ELF
+    // header. .ltext is first as small code may reference it with 32-bit
+    // relocations. -z nolrodata-after-bss places .ltext/.lrodata before .rodata
+    // instead.
     if (isLarge)
       rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : 0;
     else
@@ -718,6 +718,8 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
     // keep writable and readonly segments separate.
     if (isLarge) {
       rank |= isWrite ? RF_LARGE_EXEC_WRITE : RF_LARGE_EXEC;
+      if (ctx.arg.zLrodataAfterBss)
+        rank |= RF_LARGE_ALT;
     } else {
       rank |= isWrite ? RF_EXEC_WRITE : RF_EXEC;
     }
@@ -733,13 +735,8 @@ unsigned elf::getSectionRank(Ctx &ctx, OutputSection &osec) {
       rank |= RF_NOT_RELRO;
     // Place .ldata and .lbss after .bss. Making .bss closer to .text
     // alleviates relocation overflow pressure.
-    // For -z lrodata-after-bss, place .lbss/.lrodata/.ldata after .bss.
-    // .bss/.lbss being adjacent reuses the NOBITS size optimization.
-    if (isLarge) {
-      rank |= ctx.arg.zLrodataAfterBss
-                  ? (osec.type == SHT_NOBITS ? 1 : RF_LARGE_ALT)
-                  : RF_LARGE;
-    }
+    if (isLarge)
+      rank |= ctx.arg.zLrodataAfterBss ? RF_LARGE_ALT : RF_LARGE;
   }
 
   // Within TLS sections, or within other RelRo sections, or within non-RelRo
@@ -865,17 +862,16 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   auto isLarge = [&ctx = ctx](OutputSection *osec) {
     return ctx.arg.emachine == EM_X86_64 && osec->flags & SHF_X86_64_LARGE;
   };
-  for (auto &p : ctx.phdrs) {
-    if (p->p_type != PT_LOAD)
-      continue;
-    last = p.get();
-    if (!(p->p_flags & PF_W) && p->lastSec && !isLarge(p->lastSec))
-      lastRO = p->lastSec;
-  }
+  for (auto &p : ctx.phdrs)
+    if (p->p_type == PT_LOAD)
+      last = p.get();
+  for (OutputSection *os : ctx.outputSections)
+    if (os->ptLoad && !(os->ptLoad->p_flags & PF_W) && !isLarge(os))
+      lastRO = os;
 
   if (lastRO) {
-    // _etext is the first location after the last read-only loadable segment
-    // that does not contain large sections.
+    // _etext is the first location after the last non-large section in a
+    // read-only loadable segment. .text and .ltext may share a segment.
     if (ctx.sym.etext1)
       ctx.sym.etext1->section = lastRO;
     if (ctx.sym.etext2)
