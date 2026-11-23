@@ -2206,11 +2206,13 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
   m_fetched_external_modules = true;
   DWARFDebugInfo &debug_info = DebugInfo();
 
-  // Follow DWO skeleton unit breadcrumbs.
-  const uint32_t num_compile_units = GetNumCompileUnits();
-  for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+  // Follow DWO skeleton unit breadcrumbs. Count the DWARF units, not the
+  // lldb compile units. A file with .debug_line and no .debug_info has
+  // compile units made from its line tables and no DWARF unit behind them.
+  const size_t num_units = debug_info.GetNumUnits();
+  for (size_t unit_idx = 0; unit_idx < num_units; ++unit_idx) {
     auto *dwarf_cu =
-        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(cu_idx));
+        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(unit_idx));
     if (!dwarf_cu)
       continue;
 
@@ -4076,6 +4078,10 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
       if (sc.function) {
         symbol_context_scope =
             sc.function->GetBlock(true).FindBlockByID(sc_parent_die.GetID());
+        // An abstract parent has no block. The variable belongs to the
+        // instance being parsed.
+        if (symbol_context_scope == nullptr)
+          symbol_context_scope = sc.block;
         if (symbol_context_scope == nullptr)
           symbol_context_scope = sc.function;
       }
@@ -4301,6 +4307,32 @@ SymbolFileDWARF::MergeBlockAbstractParameters(const DWARFDIE &block_die,
   return merged;
 }
 
+/// Appends the variables that only the abstract origin of \p block_die
+/// describes, with a location or a constant value. Such a variable is the same
+/// in every instance of the block, so compilers may describe it only there.
+static void AppendAbstractVariables(const DWARFDIE &block_die,
+                                    DIEArray &variable_dies) {
+  DWARFDIE abstract_die = block_die.GetReferencedDIE(DW_AT_abstract_origin);
+  if (!abstract_die)
+    return;
+
+  // A concrete variable inherits the attributes of its abstract origin.
+  llvm::SmallPtrSet<DWARFDebugInfoEntry *, 8> concrete_origins;
+  for (const DIERef &die_ref : variable_dies)
+    concrete_origins.insert(block_die.GetDWARF()
+                                ->GetDIE(die_ref)
+                                .GetReferencedDIE(DW_AT_abstract_origin)
+                                .GetDIE());
+
+  for (DWARFDIE child : abstract_die.children()) {
+    const dw_tag_t tag = child.Tag();
+    if ((tag == DW_TAG_variable || tag == DW_TAG_constant) &&
+        (child.find(DW_AT_location) || child.find(DW_AT_const_value)) &&
+        !concrete_origins.contains(child.GetDIE()))
+      variable_dies.push_back(*child.GetDIERef());
+  }
+}
+
 size_t SymbolFileDWARF::ParseVariablesInFunctionContext(
     const SymbolContext &sc, const DWARFDIE &die,
     const lldb::addr_t func_low_pc) {
@@ -4368,7 +4400,10 @@ size_t SymbolFileDWARF::ParseVariablesInFunctionContextRecursive(
     }
     block_variables =
         MergeBlockAbstractParameters(die, std::move(block_variables));
-    vars_added += PopulateBlockVariableList(*block_variable_list_sp, sc,
+    AppendAbstractVariables(die, block_variables);
+    SymbolContext block_sc = sc;
+    block_sc.block = block;
+    vars_added += PopulateBlockVariableList(*block_variable_list_sp, block_sc,
                                             block_variables, func_low_pc);
     break;
   }

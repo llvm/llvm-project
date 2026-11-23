@@ -160,8 +160,14 @@ public:
   }
 
   /// An escaping origin (e.g., via return) makes the origin live with definite
-  /// confidence, as it dominates this program point.
+  /// confidence, as it dominates this program point. Escapes through a
+  /// parameter are only used to verify annotations.
+  // FIXME: Keeping escapes through a parameter live would diagnose stack memory
+  // escaping through a reference parameter, e.g. `out = local_view;`. That
+  // needs a separate warning.
   Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
+    if (isa<ParamEscapeFact>(OEF))
+      return In;
     return addLive(In, OEF.getEscapedOriginID(),
                    LivenessInfo(&OEF, LivenessKind::Must));
   }

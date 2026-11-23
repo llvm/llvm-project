@@ -8,7 +8,7 @@ __attribute__((optnone))
 inline int func1(int a) {
   return a + a + a + a;
 }
-// CHECK: @_Z5func1i({{.*}}) [[OPTNONE:#[0-9]+]]
+// CHECK: @_Z5func1i({{.*}}) [[OPTNONE_INLINE:#[0-9]+]]
 
 // optnone declaration, inlinehint definition.
 __attribute__((optnone))
@@ -17,7 +17,7 @@ int func2(int a);
 inline int func2(int a) {
   return a + a + a + a;
 }
-// CHECK: @_Z5func2i({{.*}}) [[OPTNONE]]
+// CHECK: @_Z5func2i({{.*}}) [[OPTNONE_INLINE]]
 
 // Keep alive the definitions of func1 and func2.
 int foo() {
@@ -33,8 +33,9 @@ __attribute__((minsize))
 int func3(int a) {
   return a + a + a + a;
 }
-// Same attribute set as everything else, therefore no 'minsize'.
-// CHECK: @_Z5func3i({{.*}}) [[OPTNONE]]
+// Same attribute set as the other non-inline functions, therefore no
+// 'minsize'.
+// CHECK: @_Z5func3i({{.*}}) [[OPTNONE:#[0-9]+]]
 
 
 // Verify that noreturn is compatible with optnone.
@@ -76,6 +77,7 @@ int exported_optnone_func(int a) {
 
 
 // CHECK: attributes [[OPTNONE]] = { mustprogress noinline {{.*}} optnone
+// CHECK: attributes [[OPTNONE_INLINE]] = { likely_module_local mustprogress noinline {{.*}} optnone
 // CHECK: attributes [[NORETURN]] = { mustprogress noinline noreturn {{.*}} optnone
 
 // CHECK: attributes [[DLLIMPORT]] =

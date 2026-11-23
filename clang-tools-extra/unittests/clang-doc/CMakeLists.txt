@@ -24,6 +24,7 @@ include_directories(
 add_extra_unittest(ClangDocTests
   BitcodeTest.cpp
   ClangDocTest.cpp
+  ConcurrentStringPoolTest.cpp
   GeneratorTest.cpp
   HTMLGeneratorTest.cpp
   MergeTest.cpp

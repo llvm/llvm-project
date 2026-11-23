@@ -208,8 +208,7 @@ mlir::Attribute CIRGenVTables::getVTableComponent(
       cir::FuncType fnTy =
           cgm.getBuilder().getFuncType({}, cgm.getBuilder().getVoidTy());
       cir::FuncOp fnPtr = cgm.createRuntimeFunction(fnTy, name);
-
-      assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+      fnPtr.setUnnamedAddr(true);
 
       // The Microsoft ABI uses the same function name for pure and deleted
       // virtual functions.
@@ -297,7 +296,13 @@ void CIRGenVTables::createVTableInitializer(cir::GlobalOp &vtableOp,
   cir::ConstRecordAttr record = cgm.getBuilder().getAnonConstRecord(members);
 
   // Create a VTableAttr
-  auto vtableAttr = cir::VTableAttr::get(record.getType(), record.getMembers());
+  SmallVector<mlir::Attribute> addressPointAttrs;
+  for (auto [vtableIndex, addressPoint] : llvm::enumerate(addressPoints))
+    addressPointAttrs.push_back(
+        cir::AddressPointAttr::get(mlirContext, vtableIndex, addressPoint));
+  auto vtableAttr = cir::VTableAttr::get(
+      record.getType(), record.getMembers(),
+      mlir::ArrayAttr::get(mlirContext, addressPointAttrs));
 
   // Add the vtable initializer to the vtable global op.
   cgm.setInitializer(vtableOp, vtableAttr);
@@ -342,8 +347,10 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
   cir::GlobalOp vtable = cgm.createOrReplaceCXXRuntimeVariable(
       loc, name, vtType, linkage, CharUnits::fromQuantity(align));
 
-  // V-tables are always unnamed_addr.
-  assert(!cir::MissingFeatures::opGlobalUnnamedAddr());
+  // dynamic_cast relies on a unique vtable address, so the address only
+  // becomes insignificant without RTTI or when the vtable may be duplicated.
+  if (!cgm.shouldEmitRTTI() || cgm.mayVTableBeDuplicated(vtable.getLinkage()))
+    vtable.setUnnamedAddr(true);
 
   mlir::Attribute rtti = cgm.getAddrOfRTTIDescriptor(
       loc, cgm.getASTContext().getCanonicalTagType(base.getBase()));
@@ -1107,4 +1114,10 @@ void CIRGenModule::emitVTablesOpportunistically() {
 
 bool CIRGenModule::shouldOpportunisticallyEmitVTables() {
   return codeGenOpts.OptimizationLevel > 0;
+}
+
+bool CIRGenModule::mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const {
+  return getTarget().getVTableUniqueness() ==
+             VTableUniquenessKind::UniqueIfStrongLinkage &&
+         cir::isWeakForLinker(linkage);
 }
