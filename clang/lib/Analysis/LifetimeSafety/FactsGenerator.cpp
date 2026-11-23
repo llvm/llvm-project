@@ -609,17 +609,27 @@ bool FactsGenerator::handleAssignmentOperatorCall(const CallExpr *CE,
   QualType LHSTy = LHSExpr->getType();
   if (!hasOrigins(LHSTy))
     return false;
-  const auto *RD = LHSTy->getAsCXXRecordDecl();
-  const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
-  // Pointer-like types and standard library callable wrappers (e.g.,
-  // std::function) propagate origins. Other tracked types only do so through
-  // a defaulted operator=; user-defined ones have opaque semantics.
-  if (!LHSTy->isPointerOrReferenceType() && !isGslPointerType(LHSTy) &&
-      !isGslOwnerType(LHSTy) && !(RD && isStdCallableWrapperType(RD)) &&
-      !(MD && MD->isDefaulted()))
-    return false;
-  handleAssignment(CE, LHSExpr, RHSExpr);
-  return true;
+  // Pointer-like types: assignment inherently propagates origins.
+  if (LHSTy->isPointerOrReferenceType() || isGslPointerType(LHSTy) ||
+      isGslOwnerType(LHSTy)) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  // Standard library callable wrappers (e.g., std::function) can propagate
+  // the stored lambda's origins.
+  if (const auto *RD = LHSTy->getAsCXXRecordDecl();
+      RD && isStdCallableWrapperType(RD)) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  // Other tracked types: only defaulted operator= propagates origins.
+  // User-defined operator= has opaque semantics, so don't handle them now.
+  if (const auto *MD = dyn_cast_or_null<CXXMethodDecl>(CE->getDirectCallee());
+      MD && MD->isDefaulted()) {
+    handleAssignment(CE, LHSExpr, RHSExpr);
+    return true;
+  }
+  return false;
 }
 
 void FactsGenerator::VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *OCE) {
