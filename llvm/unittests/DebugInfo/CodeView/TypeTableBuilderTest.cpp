@@ -66,8 +66,7 @@ protected:
         if (Ref.isSimple() || Ref.isNoneType())
           continue;
         EXPECT_LT(Ref.getIndex(), Self.getIndex())
-            << "record " << Self.getIndex() << " refers to "
-            << Ref.getIndex();
+            << "record " << Self.getIndex() << " refers to " << Ref.getIndex();
       }
     }
   }
