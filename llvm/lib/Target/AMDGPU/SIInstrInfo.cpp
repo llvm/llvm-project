@@ -11513,7 +11513,7 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
     MachineBasicBlock::const_instr_iterator E(MI.getParent()->instr_end());
     unsigned Lat = 0, Count = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
-      if (I->isDebugInstr())
+      if (I->isMetaInstruction())
         continue;
       ++Count;
       Lat = std::max(Lat, SchedModel.computeInstrLatency(&*I));
