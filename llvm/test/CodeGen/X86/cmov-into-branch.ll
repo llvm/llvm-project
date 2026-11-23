@@ -193,13 +193,10 @@ define i32 @weighted_selects(i32 %a, i32 %b) !prof !19 {
 define i32 @weighted_select_consts(i32 %a) {
 ; CHECK-LABEL: weighted_select_consts:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB12_1
-; CHECK-NEXT:  # %bb.2: # %select.false
-; CHECK-NEXT:    movl $5, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB12_1:
-; CHECK-NEXT:    movl $7, %eax
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    leal 5(%rax,%rax), %eax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 7, i32 5, !prof !16
@@ -213,13 +210,10 @@ declare i64 @slow(i64, ptr, i64)
 define ptr @weighted_select_null_global(i32 %a) {
 ; CHECK-LABEL: weighted_select_null_global:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB13_1
-; CHECK-NEXT:  # %bb.2: # %select.false
-; CHECK-NEXT:    movl $g, %eax
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB13_1:
 ; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    movl $g, %ecx
+; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, ptr null, ptr @g, !prof !16
@@ -393,13 +387,10 @@ slow:
 define double @weighted_select_fp_consts(i32 %a) {
 ; CHECK-LABEL: weighted_select_fp_consts:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jne .LBB18_1
-; CHECK-NEXT:  # %bb.2: # %select.false
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.5E+0,0.0E+0]
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB18_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.5E+0,0.0E+0]
+; CHECK-NEXT:    setne %al
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, double 1.5, double 2.5, !prof !16
@@ -410,18 +401,24 @@ define double @weighted_select_fp_consts(i32 %a) {
 define i32 @weighted_logical_and_br_cond_shared(i32 %a, i32 %b) {
 ; CHECK-LABEL: weighted_logical_and_br_cond_shared:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmpl $21, %esi
-; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    cmpl $11, %edi
 ; CHECK-NEXT:    setae %cl
-; CHECK-NEXT:    cmovael %edi, %esi
-; CHECK-NEXT:    andb %al, %cl
-; CHECK-NEXT:    cmpb $1, %cl
-; CHECK-NEXT:    jne .LBB19_2
-; CHECK-NEXT:  # %bb.1: # %t
-; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    cmpl $21, %esi
+; CHECK-NEXT:    setae %al
+; CHECK-NEXT:    andb %cl, %al
+; CHECK-NEXT:    cmpl $10, %edi
+; CHECK-NEXT:    jbe .LBB19_1
+; CHECK-NEXT:  # %bb.2: # %select.end
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    je .LBB19_4
+; CHECK-NEXT:  .LBB19_3: # %t
+; CHECK-NEXT:    movl %edi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB19_2: # %f
+; CHECK-NEXT:  .LBB19_1: # %select.false
+; CHECK-NEXT:    movl %esi, %edi
+; CHECK-NEXT:    testb %al, %al
+; CHECK-NEXT:    jne .LBB19_3
+; CHECK-NEXT:  .LBB19_4: # %f
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %c1 = icmp ugt i32 %a, 10

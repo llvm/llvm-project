@@ -24,7 +24,7 @@ entry:
 if.end.i.i:                                       ; preds = %entry
   store ptr null, ptr null, align 8, !dbg !19
   %bf.load.i.i.i.pre.i.i.i.i.i = load i32, ptr %CSRLocMap.i, align 8, !dbg !20
-  %cond.i.i.i.i.i.i.i.i.i = select i1 false, ptr null, ptr null, !dbg !21
+  %cond.i.i.i.i.i.i.i.i.i = select i1 false, ptr %this, ptr null, !dbg !21
   tail call void @llvm.dbg.value(metadata ptr %CSRLocMap.i, metadata !14, metadata !DIExpression()), !dbg !21
   %cond.i.i.i7.i.i.i.i.i.i = select i1 false, i32 0, i32 0, !dbg !22
   br label %_ZN4llvm12DenseMapBaseINS_13SmallDenseMapIjN12_GLOBAL__N_116CFIInstrInserter16CSRSavedLocationELj16ENS_12DenseMapInfoIjvEENS_6detail12DenseMapPairIjS4_EEEEjS4_S6_S9_E5clearEv.exit.i, !dbg !23

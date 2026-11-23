@@ -44,12 +44,10 @@ slow:
 define i32 @select_consts(i32 %a) {
 ; CHECK-LABEL: select_consts:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cbnz w0, .LBB1_2
-; CHECK-NEXT:  // %bb.1: // %select.false
-; CHECK-NEXT:    mov w0, #5 // =0x5
-; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    mov w0, #7 // =0x7
+; CHECK-NEXT:    mov w8, #5 // =0x5
+; CHECK-NEXT:    mov w9, #7 // =0x7
+; CHECK-NEXT:    cmp w0, #0
+; CHECK-NEXT:    csel w0, w9, w8, ne
 ; CHECK-NEXT:    ret
   %cmp = icmp ne i32 %a, 0
   %sel = select i1 %cmp, i32 7, i32 5, !prof !0

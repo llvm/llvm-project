@@ -7386,14 +7386,9 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   // whether a select is better represented as a branch.
 
   // If metadata tells us that the select condition is obviously predictable,
-  // then we want to replace the select with a branch. But not a logical and/or:
-  // SelectionDAGBuilder decides whether to split a branch on it into one branch
-  // per condition, and a branch on its condition with an i1 phi would take that
-  // choice away. SelectOptimize does not turn a logical and/or into a branch
-  // either (see TTI::shouldTreatInstructionLikeSelect).
+  // then we want to replace the select with a branch.
   uint64_t TrueWeight, FalseWeight;
-  if (!match(SI, m_LogicalOp()) &&
-      extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
+  if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
@@ -7518,6 +7513,19 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   if (!Opts.disable_select_optimize)
     return false;
 
+  const TargetLowering::SelectSupportKind SelectKind =
+      SI->getType()->isVectorTy() ? TargetLowering::ScalarCondVectorVal
+                                  : TargetLowering::ScalarValSelect;
+  const bool SelectSupported = TLI->isSelectSupported(SelectKind);
+
+  // Like SelectOptimize, leave a select that the target does not treat like a
+  // select, such as a select of two constants or a logical and/or. The next
+  // select on the same condition can still start a group, and a group takes
+  // every following select on the condition. A group whose first select the
+  // target does not support is expanded regardless of profitability.
+  if (SelectSupported && !TTI->shouldTreatInstructionLikeSelect(SI))
+    return false;
+
   // Find all consecutive select instructions that share the same condition.
   SmallVector<SelectInst *, 2> ASI;
   ASI.push_back(SI);
@@ -7547,13 +7555,7 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   if (VectorCond || SI->getMetadata(LLVMContext::MD_unpredictable))
     return false;
 
-  TargetLowering::SelectSupportKind SelectKind;
-  if (SI->getType()->isVectorTy())
-    SelectKind = TargetLowering::ScalarCondVectorVal;
-  else
-    SelectKind = TargetLowering::ScalarValSelect;
-
-  if (TLI->isSelectSupported(SelectKind) &&
+  if (SelectSupported &&
       (!isFormingBranchFromSelectProfitable(TTI, TLI, SI) ||
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI)))
     return false;
