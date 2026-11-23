@@ -1360,7 +1360,9 @@ def Vector_TransferReadOp :
 
     A memref/tensor operand with vector element type, must have its vector
     element type match a suffix (shape and element type) of the vector (e.g.
-    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
+    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>). Masking is not supported when
+    the memref/tensor has a vector element type (e.g. `memref<4xvector<4xf32>>`),
+    either with the `mask` operand or by wrapping the operation in `vector.mask`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[1 .. 1 + rank(memref/tensor))` that defines the
@@ -1622,7 +1624,9 @@ def Vector_TransferWriteOp :
     A vector memref/tensor operand must have its vector element type match a
     suffix (shape and element type) of the vector (e.g. memref<3x2x6x4x3xf32>,
     vector<1x1x4x3xf32>). If the operand is a tensor, the operation returns a
-    new tensor of the same type.
+    new tensor of the same type. Masking is not supported when the
+    memref/tensor has a vector element type (e.g. `memref<4xvector<4xf32>>`),
+    either with the `mask` operand or by wrapping the operation in `vector.mask`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[2 .. 2 + rank(memref/tensor))` that defines the
@@ -2847,10 +2851,8 @@ def Vector_MaskOp : Vector_Op<"mask", [
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
     argument, if provided, or as specified by the masked operation, otherwise.
-    At this point, `vector.mask` does not support 0-D vectors or masking a
-    `vector.transfer_read` or `vector.transfer_write` whose source has a vector
-    element type (e.g. `memref<4xvector<4xf32>>`). They may be supported in
-    the future.
+    At this point, 0-D vectors are not supported by `vector.mask`. They may be
+    supported in the future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
