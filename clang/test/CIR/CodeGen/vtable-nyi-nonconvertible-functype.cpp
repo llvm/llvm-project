@@ -27,7 +27,7 @@ void S1::key() {}
 // CIR-SAME:   #cir.global_view<@_ZTI2S1> : !cir.ptr<!u8i>,
 // CIR-SAME:   #cir.global_view<@_ZN2S13keyEv> : !cir.ptr<!u8i>,
 // CIR-SAME:   #cir.global_view<@_ZN2S19badReturnEv> : !cir.ptr<!u8i>]> :
-// CIR-SAME: !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-SAME: !cir.array<!cir.ptr<!u8i> x 4>}, address_points = [#cir.address_point<index = 0, offset = 2>]>
 
 // LLVM: @_ZTV2S1 = {{.*}}{ [4 x ptr] } { [4 x ptr] [
 // LLVM-SAME: ptr null, 
@@ -49,7 +49,7 @@ void S2::key() {}
 // CIR-SAME:    #cir.global_view<@_ZTI2S2> : !cir.ptr<!u8i>,
 // CIR-SAME:    #cir.global_view<@_ZN2S23keyEv> : !cir.ptr<!u8i>,
 // CIR-SAME:    #cir.global_view<@_ZN2S28badParamE6Param2> : !cir.ptr<!u8i>]> :
-// CIR-SAME: !cir.array<!cir.ptr<!u8i> x 4>}>
+// CIR-SAME: !cir.array<!cir.ptr<!u8i> x 4>}, address_points = [#cir.address_point<index = 0, offset = 2>]>
 
 // LLVM: @_ZTV2S2 = {{.*}}{ [4 x ptr] } { [4 x ptr] [
 // LLVM-SAME: ptr null, 

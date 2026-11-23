@@ -58,6 +58,18 @@ public:
   }
 
   bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+
+  /// Copies the debug values of the variables that read the register First and
+  /// Second define to just after \p Second, in their original order, and sets
+  /// each dependent original undef. If a copy would read a value that changes
+  /// in between, nothing is copied and only the originals are set undef.
+  ///
+  /// Call this before the replacement for First and Second is created, and
+  /// insert the replacement before \p Second. The replacement must not write a
+  /// register the copies read, unless First or Second writes it too.
+  void moveDependentDebugValues(MachineInstr &First,
+                                MachineInstr &Second) const;
+
   bool hasQFPInstrs(const MachineFunction &MF) const;
 
   /// TargetInstrInfo overrides.
@@ -380,6 +392,10 @@ public:
   bool isDotCurInst(const MachineInstr &MI) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isHMXActivateInstr(const MachineInstr &MI) const;
+  bool isHMXWeightInstr(const MachineInstr &MI) const;
+  bool isActivateWeightPair(const MachineInstr &MIa,
+                            const MachineInstr &MIb) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;
@@ -422,6 +438,7 @@ public:
   bool isToBeScheduledASAP(const MachineInstr &MI1,
                            const MachineInstr &MI2) const;
   bool isHVXVec(const MachineInstr &MI) const;
+  bool isHLXVec(const MachineInstr &MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
   bool isVecAcc(const MachineInstr &MI) const;
@@ -440,6 +457,9 @@ public:
   bool hasUncondBranch(const MachineBasicBlock *B) const;
   bool mayBeCurLoad(const MachineInstr &MI) const;
   bool mayBeNewStore(const MachineInstr &MI) const;
+  // Identify HLX pseudos that expand to a tmp load or new store and a copy.
+  bool isTmpLoadPseudo(const MachineInstr &MI) const;
+  bool isNewStorePseudo(const MachineInstr &MI) const;
   bool producesStall(const MachineInstr &ProdMI,
                      const MachineInstr &ConsMI) const;
   bool producesStall(const MachineInstr &MI,

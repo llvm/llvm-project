@@ -47,6 +47,9 @@ name:            implicit_def_copy_fpr
 legalized:       true
 body:             |
   bb.0:
+    ; RV64D-LABEL: name: implicit_def_copy_fpr
+    ; RV64D: [[DEF:%[0-9]+]]:fprb(s64) = G_IMPLICIT_DEF
+    ; RV64D-NEXT: $f10_d = COPY [[DEF]](s64)
     %0:_(s64) = G_IMPLICIT_DEF
     $f10_d = COPY %0(s64)
 ...

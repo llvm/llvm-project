@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.LogicalEqual
@@ -89,6 +90,28 @@ spirv.func @logical_or_scalar(%arg0: i1, %arg1: i1) "None" {
 spirv.func @logical_or_vector(%arg0: vector<4xi1>, %arg1: vector<4xi1>) "None" {
   // CHECK: llvm.or %{{.*}}, %{{.*}} : vector<4xi1>
   %0 = spirv.LogicalOr %arg0, %arg1 : vector<4xi1>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.Any
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @any
+spirv.func @any(%arg0: vector<4xi1>) "None" {
+  // CHECK: "llvm.intr.vector.reduce.or"(%{{.*}}) : (vector<4xi1>) -> i1
+  %0 = spirv.Any %arg0 : vector<4xi1>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.All
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @all
+spirv.func @all(%arg0: vector<4xi1>) "None" {
+  // CHECK: "llvm.intr.vector.reduce.and"(%{{.*}}) : (vector<4xi1>) -> i1
+  %0 = spirv.All %arg0 : vector<4xi1>
   spirv.Return
 }
 

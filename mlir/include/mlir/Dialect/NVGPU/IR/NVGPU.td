@@ -28,8 +28,8 @@ def NVGPU_Dialect : Dialect {
     and Vector for memory and target-specific register operands, respectively.
   }];
 
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
   
   let extraClassDeclaration = [{
     /// Return true if the given MemRefType has an integer address

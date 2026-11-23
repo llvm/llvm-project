@@ -1434,7 +1434,6 @@ private:
   TargetTransformInfo *TTI;
   OptimizationRemarkEmitter *ORE;
   SmallPtrSet<const Value *, 32> EphValues;
-  std::vector<ThreadingPath> TPaths;
 };
 } // namespace
 

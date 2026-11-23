@@ -13,7 +13,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/SandboxIR/Context.h"
 #include "llvm/SandboxIR/Instruction.h"
 #include "llvm/SandboxIR/Value.h"
 #include "llvm/Support/Casting.h"
@@ -56,7 +55,6 @@ class InstrMaps {
   /// with the same lane, as they may be coming from vectorizing different
   /// original values.
   DenseMap<Action *, DenseMap<Value *, unsigned>> VectorToOrigLaneMap;
-  std::optional<Context::CallbackID> EraseInstrCB;
 
 public:
   InstrMaps() = default;

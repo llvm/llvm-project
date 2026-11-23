@@ -1,0 +1,141 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=greedy -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s --check-prefix=RA
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=prolog-epilog \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=PEI
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -stop-after=post-ra-pseudos \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=POSTRA
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv85 -mattr=+hlx \
+# RUN:   -start-before=greedy -verify-machineinstrs %s -o - \
+# RUN:   | FileCheck %s --check-prefix=ASM
+
+# Keep nine HLX vector pairs live across the load sequence. The HlxLLR register
+# class has eight physical registers, so register allocation must spill and
+# reload at least one pair through the VTCM stack.
+
+# RA-LABEL: name: spill_pair
+# RA: PS_storerll %stack.{{[0-9]+}}, 0
+# RA: %{{[0-9]+}}:hlxllr = PS_loadrll %stack.{{[0-9]+}}, 0
+
+# PEI-LABEL: name: spill_pair
+# PEI: frame-setup V2_vallocframe_imm
+# PEI-NOT: PS_storerll
+# PEI-NOT: PS_loadrll
+# PEI: LX_S16b_pseudo
+# PEI: A2_addi {{.*}}, 2048
+# PEI: LX_S16b_pseudo
+# PEI: LX_L16b_pseudo
+# PEI: A2_addi {{.*}}, 2048
+# PEI: LX_L16b_pseudo
+# PEI: V2_vdeallocframe_imm
+
+# POSTRA-LABEL: name: spill_pair
+# POSTRA-NOT: PS_storerll
+# POSTRA-NOT: PS_loadrll
+# POSTRA: LX_S16b_pseudo
+# POSTRA: LX_S16b_pseudo
+# POSTRA: LX_L16b_pseudo
+# POSTRA: LX_L16b_pseudo
+# POSTRA: V2_vdeallocframe_imm
+
+# ASM-LABEL: spill_pair:
+# ASM: .tmp = mem(
+# ASM: .tmp = mem(
+# ASM: vdeallocframe
+
+--- |
+  define void @spill_pair() {
+    ret void
+  }
+...
+---
+name:            spill_pair
+tracksRegLiveness: true
+liveins:
+  - { reg: '$r0' }
+  - { reg: '$r1' }
+registers:
+  - { id: 0, class: hlxlr }
+  - { id: 1, class: hlxlr }
+  - { id: 2, class: hlxlr }
+  - { id: 3, class: hlxlr }
+  - { id: 4, class: hlxlr }
+  - { id: 5, class: hlxlr }
+  - { id: 6, class: hlxlr }
+  - { id: 7, class: hlxlr }
+  - { id: 8, class: hlxlr }
+  - { id: 9, class: hlxlr }
+  - { id: 10, class: hlxlr }
+  - { id: 11, class: hlxlr }
+  - { id: 12, class: hlxlr }
+  - { id: 13, class: hlxlr }
+  - { id: 14, class: hlxlr }
+  - { id: 15, class: hlxlr }
+  - { id: 16, class: hlxlr }
+  - { id: 17, class: hlxlr }
+  - { id: 18, class: hlxllr }
+  - { id: 19, class: hlxllr }
+  - { id: 20, class: hlxllr }
+  - { id: 21, class: hlxllr }
+  - { id: 22, class: hlxllr }
+  - { id: 23, class: hlxllr }
+  - { id: 24, class: hlxllr }
+  - { id: 25, class: hlxllr }
+  - { id: 26, class: hlxllr }
+  - { id: 27, class: intregs }
+  - { id: 28, class: intregs }
+body:             |
+  bb.0:
+    liveins: $r0, $r1
+
+    %27:intregs = COPY $r0
+    %28:intregs = COPY $r1
+    %0:hlxlr = LX_L16b_pseudo %27
+    %1:hlxlr = LX_L16b_pseudo %27
+    %18:hlxllr = LX_mpy_w_h %0, %1
+    %2:hlxlr = LX_L16b_pseudo %27
+    %3:hlxlr = LX_L16b_pseudo %27
+    %19:hlxllr = LX_mpy_w_h %2, %3
+    %4:hlxlr = LX_L16b_pseudo %27
+    %5:hlxlr = LX_L16b_pseudo %27
+    %20:hlxllr = LX_mpy_w_h %4, %5
+    %6:hlxlr = LX_L16b_pseudo %27
+    %7:hlxlr = LX_L16b_pseudo %27
+    %21:hlxllr = LX_mpy_w_h %6, %7
+    %8:hlxlr = LX_L16b_pseudo %27
+    %9:hlxlr = LX_L16b_pseudo %27
+    %22:hlxllr = LX_mpy_w_h %8, %9
+    %10:hlxlr = LX_L16b_pseudo %27
+    %11:hlxlr = LX_L16b_pseudo %27
+    %23:hlxllr = LX_mpy_w_h %10, %11
+    %12:hlxlr = LX_L16b_pseudo %27
+    %13:hlxlr = LX_L16b_pseudo %27
+    %24:hlxllr = LX_mpy_w_h %12, %13
+    %14:hlxlr = LX_L16b_pseudo %27
+    %15:hlxlr = LX_L16b_pseudo %27
+    %25:hlxllr = LX_mpy_w_h %14, %15
+    %16:hlxlr = LX_L16b_pseudo %27
+    %17:hlxlr = LX_L16b_pseudo %27
+    %26:hlxllr = LX_mpy_w_h %16, %17
+    LX_S16b_pseudo %28, %18.vsub_lo
+    LX_S16b_pseudo %28, %18.vsub_hi
+    LX_S16b_pseudo %28, %19.vsub_lo
+    LX_S16b_pseudo %28, %19.vsub_hi
+    LX_S16b_pseudo %28, %20.vsub_lo
+    LX_S16b_pseudo %28, %20.vsub_hi
+    LX_S16b_pseudo %28, %21.vsub_lo
+    LX_S16b_pseudo %28, %21.vsub_hi
+    LX_S16b_pseudo %28, %22.vsub_lo
+    LX_S16b_pseudo %28, %22.vsub_hi
+    LX_S16b_pseudo %28, %23.vsub_lo
+    LX_S16b_pseudo %28, %23.vsub_hi
+    LX_S16b_pseudo %28, %24.vsub_lo
+    LX_S16b_pseudo %28, %24.vsub_hi
+    LX_S16b_pseudo %28, %25.vsub_lo
+    LX_S16b_pseudo %28, %25.vsub_hi
+    LX_S16b_pseudo %28, %26.vsub_lo
+    LX_S16b_pseudo %28, %26.vsub_hi
+    PS_jmpret $r31, implicit-def dead $pc
+...
