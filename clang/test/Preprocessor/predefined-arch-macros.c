@@ -4865,6 +4865,23 @@
 // CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
 // CHECK_SPARCV9_GCC_ATOMICS: #define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 
+// RUN: %clang -msoft-float -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOFT_FLOAT
+// RUN: %clang -msoft-float -E -dM %s -o - 2>&1 \
+// RUN:     -target sparcv9-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOFT_FLOAT
+// CHECK_SPARC_SOFT_FLOAT-NOT: #define SOFT_FLOAT 1
+// CHECK_SPARC_SOFT_FLOAT: #define _SOFT_FLOAT 1
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_HARD_FLOAT
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target sparcv9-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_HARD_FLOAT
+// CHECK_SPARC_HARD_FLOAT-NOT: #define _SOFT_FLOAT 1
+
 // Begin SystemZ/GCC/Linux tests ----------------
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
