@@ -321,6 +321,17 @@ RangeSet RangeSet::Factory::getRangeSet(Range From) {
   return makePersistent(std::move(Result));
 }
 
+RangeSet RangeSet::Factory::getFullRangeSet(APSIntType Ty) {
+  for (const auto &[CachedTy, Set] : FullRangeSets)
+    if (CachedTy == Ty)
+      return Set;
+
+  RangeSet Result =
+      getRangeSet(ValueFactory.getMinValue(Ty), ValueFactory.getMaxValue(Ty));
+  FullRangeSets.emplace_back(Ty, Result.Impl);
+  return Result;
+}
+
 RangeSet RangeSet::Factory::makePersistent(ContainerType &&From) {
   llvm::FoldingSetNodeID ID;
   llvm::FoldingSetInsertToken InsertToken;
@@ -597,6 +608,15 @@ RangeSet RangeSet::Factory::intersect(RangeSet LHS, RangeSet RHS) {
   if (LHS.isEmpty() || RHS.isEmpty() || LHS.getMaxValue() < RHS.getMinValue() ||
       RHS.getMaxValue() < LHS.getMinValue())
     return getEmptySet();
+
+  // Shortcut: if one set is a single range covering the other set, the result
+  // is the other set.
+  if (RHS.size() == 1 && RHS.getMinValue() <= LHS.getMinValue() &&
+      LHS.getMaxValue() <= RHS.getMaxValue())
+    return LHS;
+  if (LHS.size() == 1 && LHS.getMinValue() <= RHS.getMinValue() &&
+      RHS.getMaxValue() <= LHS.getMaxValue())
+    return RHS;
 
   return intersect(*LHS.Impl, *RHS.Impl);
 }
@@ -1307,8 +1327,8 @@ private:
   RangeSet infer(QualType T) {
     // Lazily generate a new RangeSet representing all possible values for the
     // given symbol type.
-    RangeSet Result(RangeFactory, ValueFactory.getMinValue(T),
-                    ValueFactory.getMaxValue(T));
+    RangeSet Result =
+        RangeFactory.getFullRangeSet(ValueFactory.getAPSIntType(T));
 
     // References are known to be non-zero.
     if (T->isReferenceType())
