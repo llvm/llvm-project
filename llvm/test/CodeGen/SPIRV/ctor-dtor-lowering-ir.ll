@@ -27,10 +27,6 @@ entry:
   { i32, ptr addrspace(9), ptr addrspace(9) } { i32 50, ptr addrspace(9) @low_priority, ptr addrspace(9) null }
 ]
 
-; Mark this as an offload module (OpenMP target device).
-!llvm.module.flags = !{!0}
-!0 = !{i32 7, !"openmp-device", i32 50}
-
 ; CHECK: @__init_array_object_high_priority_{{[a-f0-9]+}}_100 = protected addrspace(1) constant ptr addrspace(9) @high_priority
 ; CHECK: @__init_array_object_low_priority_{{[a-f0-9]+}}_50 = protected addrspace(1) constant ptr addrspace(9) @low_priority
 ; CHECK: @__init_array_start = weak protected addrspace(1) global ptr null
