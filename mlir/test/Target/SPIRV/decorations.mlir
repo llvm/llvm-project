@@ -26,6 +26,23 @@ spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
 
 // -----
 
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], []> {
+  // CHECK: centroid
+  spirv.GlobalVariable @var {centroid} : !spirv.ptr<vector<4xf32>, Input>
+}
+
+// -----
+
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage, ShaderNonUniform], [SPV_EXT_descriptor_indexing]> {
+  spirv.func @non_uniform(%arg: i32) -> i32 "None" {
+    // CHECK: spirv.IAdd %{{.*}}, %{{.*}} {non_uniform} : i32
+    %0 = spirv.IAdd %arg, %arg {non_uniform} : i32
+    spirv.ReturnValue %0 : i32
+  }
+}
+
+// -----
+
 spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader, Linkage], [SPV_KHR_variable_pointers]> {
   // CHECK: aliased
   // CHECK: aliased
