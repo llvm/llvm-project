@@ -1,10 +1,9 @@
 # REQUIRES: aarch64
-## The CPU subtype of an arm64e object also holds its pointer authentication ABI
-## version. Like ld-prime, an arm64e link takes only objects with userland
-## version 0, even on macOS, whose executables are marked version 1. Static and
-## preload links also take unversioned and kernel version 0 objects. Any other
-## object is ignored with a warning, or rejected with -arch_errors_fatal, and
-## named the way ld-prime names it.
+## arm64e encodes the ptrauth ABI version in the CPU subtype. Follow ld-prime:
+## only accept userland v0 objects for regular links (macOS outputs are stamped
+## v1, not inputs), plus unversioned and kernel v0 objects for static/preload
+## links. Warn and ignore, or error out under -arch_errors_fatal, on anything
+## else, using ld-prime's names.
 
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos11.0 %t/main.s -o %t/main.o
@@ -16,7 +15,7 @@
 # RUN: yaml2obj -DSUBTYPE=0xC1000002 %t/helper.yaml -o %t/kernel-v1.o
 # RUN: yaml2obj -DSUBTYPE=0x82000002 %t/helper.yaml -o %t/v2.o
 # RUN: yaml2obj -DSUBTYPE=0xC2000002 %t/helper.yaml -o %t/kernel-v2.o
-## The kernel bit without the versioned bit, and a bit no version uses.
+## Subtypes that ld-prime calls unknown.
 # RUN: yaml2obj -DSUBTYPE=0x40000002 %t/helper.yaml -o %t/kernel-unversioned.o
 # RUN: yaml2obj -DSUBTYPE=0xD0000002 %t/helper.yaml -o %t/extra-bit.o
 # RUN: yaml2obj -DSUBTYPE=0x90000002 %t/helper.yaml -o %t/v0-extra-bit.o

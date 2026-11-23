@@ -184,8 +184,7 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
-// The CPU subtype of an arm64e object also holds its pointer authentication
-// ABI version. ld-prime names only these subtypes, and any other is unknown.
+// ld-prime's names for arm64e subtypes. Anything else is "unknown".
 static StringRef getArm64eArchName(uint32_t cpuSubtype) {
   const std::pair<uint32_t, StringRef> names[] = {
       {CPU_SUBTYPE_ARM64E, "arm64e.old"},
@@ -201,9 +200,8 @@ static StringRef getArm64eArchName(uint32_t cpuSubtype) {
   return "unknown";
 }
 
-// Like ld-prime, take only userland pointer authentication ABI version 0, even
-// on macOS, whose executables are marked version 1. Static and preload links
-// also take unversioned and kernel version 0 objects.
+// As in ld-prime: userland version 0 only, plus unversioned and kernel
+// version 0 with -static or -preload.
 static bool hasCompatiblePtrAuthABI(uint32_t cpuSubtype) {
   if (cpuSubtype == CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false))
     return true;
