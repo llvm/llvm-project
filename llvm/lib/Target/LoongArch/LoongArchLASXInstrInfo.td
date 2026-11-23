@@ -3023,11 +3023,11 @@ defm : subvector_subreg_lowering<LSX128, v16i8, LASX256, v32i8,  16, sub_128>;
 
 // LASX and LSX conversion
 def : Pat<(int_loongarch_lasx_cast_128_s (v4f32 LSX128:$src)),
-          (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$src, sub_128)>;
+          (lsx_to_lasx LSX128:$src)>;
 def : Pat<(int_loongarch_lasx_cast_128_d (v2f64 LSX128:$src)),
-          (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$src, sub_128)>;
+          (lsx_to_lasx LSX128:$src)>;
 def : Pat<(int_loongarch_lasx_cast_128 (v2i64 LSX128:$src)),
-          (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$src, sub_128)>;
+          (lsx_to_lasx LSX128:$src)>;
 def : Pat<(int_loongarch_lasx_extract_128_lo_s (v8f32 LASX256:$src)),
           (EXTRACT_SUBREG LASX256:$src, sub_128)>;
 def : Pat<(int_loongarch_lasx_extract_128_lo_d (v4f64 LASX256:$src)),
@@ -3041,17 +3041,17 @@ def : Pat<(int_loongarch_lasx_extract_128_hi_d (v4f64 LASX256:$src)),
 def : Pat<(int_loongarch_lasx_extract_128_hi (v4i64 LASX256:$src)),
           (EXTRACT_SUBREG (XVPERMI_Q (IMPLICIT_DEF), LASX256:$src, 1), sub_128)>;
 def : Pat<(int_loongarch_lasx_insert_128_lo_s (v8f32 LASX256:$src), (v4f32 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 48)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 48)>;
 def : Pat<(int_loongarch_lasx_insert_128_lo_d (v4f64 LASX256:$src), (v2f64 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 48)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 48)>;
 def : Pat<(int_loongarch_lasx_insert_128_lo (v4i64 LASX256:$src), (v2i64 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 48)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 48)>;
 def : Pat<(int_loongarch_lasx_insert_128_hi_s (v8f32 LASX256:$src), (v4f32 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 2)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 2)>;
 def : Pat<(int_loongarch_lasx_insert_128_hi_d (v4f64 LASX256:$src), (v2f64 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 2)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 2)>;
 def : Pat<(int_loongarch_lasx_insert_128_hi (v4i64 LASX256:$src), (v2i64 LSX128:$lo)),
-          (XVPERMI_Q LASX256:$src, (INSERT_SUBREG (IMPLICIT_DEF), LSX128:$lo, sub_128), 2)>;
+          (XVPERMI_Q LASX256:$src, (lsx_to_lasx LSX128:$lo), 2)>;
 
 // Sign extensions
 def : Pat<(v4i64 (sext v4i32:$vj)),
