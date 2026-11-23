@@ -172,6 +172,7 @@ def MipsSDR : SDNode<"MipsISD::SDR", SDTStore,
 
 def HasMips2     :    Predicate<"Subtarget->hasMips2()">,
                       AssemblerPredicate<(all_of FeatureMips2)>;
+def NotMips2     :    Predicate<"!Subtarget->hasMips2()">;
 def HasMips3_32  :    Predicate<"Subtarget->hasMips3_32()">,
                       AssemblerPredicate<(all_of FeatureMips3_32)>;
 def HasMips3_32r2 :   Predicate<"Subtarget->hasMips3_32r2()">,
@@ -301,6 +302,10 @@ class SYM_64 { list<Predicate> SYMPredicates = [IsSym64]; }
 //        limit long enough to develop an alternative way to handle P1||P2
 //        predicates.
 class ISA_MIPS1 {
+  list<Predicate> EncodingPredicates = [HasStdEnc];
+}
+class ISA_MIPS1_NOT_MIPS2 {
+  list<Predicate> InsnPredicates = [NotMips2];
   list<Predicate> EncodingPredicates = [HasStdEnc];
 }
 class ISA_MIPS1_NOT_MIPS3 {
@@ -3012,6 +3017,21 @@ def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
                       "jal\t$rd, $rs"> ;
 def JalOneReg : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs),
                       "jal\t$rs"> ;
+
+// PIC load of a symbol address from the GOT, emitted by the "la" and "jal"
+// macro expansions when the symbol is not defined yet. Whether the symbol is
+// local or global is only known once the whole file has been parsed, so
+// PseudoGOTLoadGlobal is relaxed to PseudoGOTLoadLocal by MipsAsmBackend when
+// the symbol turns out to be local. MipsMCCodeEmitter expands both into real
+// instructions. $flags is a mask of MipsII::GOTLoadFlags.
+let isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 1 in {
+  def PseudoGOTLoadGlobal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+  def PseudoGOTLoadLocal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+}
 
 class NORIMM_DESC_BASE<RegisterOperand RO, DAGOperand Imm> :
    MipsAsmPseudoInst<(outs RO:$rs), (ins RO:$rt, Imm:$imm),

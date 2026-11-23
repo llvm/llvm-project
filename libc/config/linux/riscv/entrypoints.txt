@@ -1807,6 +1807,13 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.sys.select.pselect
     libc.src.sys.select.select
 
+    # syslog.h entrypoints
+    libc.src.syslog.closelog
+    libc.src.syslog.openlog
+    libc.src.syslog.setlogmask
+    libc.src.syslog.syslog
+    libc.src.syslog.vsyslog
+
     # wchar.h entrypoints
     libc.src.wchar.mbrlen
     libc.src.wchar.mbsinit

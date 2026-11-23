@@ -399,6 +399,8 @@ private:
   // check-omp-structure.cpp
   using ClauseIterator =
       decltype(std::declval<const parser::OmpClauseList>().v.begin());
+  bool InExecutionPart() const;
+  bool InSpecificationPart() const;
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
