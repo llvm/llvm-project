@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/Support/Casting.h"
@@ -246,12 +247,33 @@ static MachineOperand *getSalvageOpsForTrunc(const MachineRegisterInfo &MRI,
   return &Trunc.getOperand(1);
 }
 
+static MachineOperand *getSalvageOpsForFNeg(const MachineRegisterInfo &MRI,
+                                            MachineInstr &FNeg,
+                                            SmallVectorImpl<uint64_t> &Ops) {
+  assert(FNeg.getOpcode() == TargetOpcode::G_FNEG && "Must be a G_FNEG");
+
+  const LLT Ty = MRI.getType(FNeg.getOperand(0).getReg());
+  if (!Ty.isScalar())
+    return nullptr;
+
+  // Flipping the sign bit must fit in the address-sized DWARF generic type.
+  unsigned Size = Ty.getSizeInBits();
+  if (Size > FNeg.getMF()->getDataLayout().getPointerSizeInBits())
+    return nullptr;
+
+  Ops.append(
+      {dwarf::DW_OP_constu, uint64_t(1) << (Size - 1), dwarf::DW_OP_xor});
+  return &FNeg.getOperand(1);
+}
+
 static MachineOperand *salvageDebugInfoImpl(const MachineRegisterInfo &MRI,
                                             MachineInstr &MI,
                                             SmallVectorImpl<uint64_t> &Ops) {
   switch (MI.getOpcode()) {
   case TargetOpcode::G_TRUNC:
     return getSalvageOpsForTrunc(MRI, MI, Ops);
+  case TargetOpcode::G_FNEG:
+    return getSalvageOpsForFNeg(MRI, MI, Ops);
   case TargetOpcode::COPY:
   case TargetOpcode::G_BITCAST:
     return getSalvageOpsForCopy(MRI, MI);
