@@ -13,8 +13,7 @@
 #include <__config>
 #include <__functional/operations.h>
 #include <__iterator/iterator_traits.h>
-#include <__type_traits/is_integral.h>
-#include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/is_floating_point.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -32,13 +31,10 @@ template <class _InputIterator, class _Tp, class _BinaryOp, class _UnaryOp>
 [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp
 transform_reduce(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOp __b, _UnaryOp __u) {
 #  ifndef __OPTIMIZE_SIZE__
-  if constexpr (__has_random_access_iterator_category<_InputIterator>::value && //
-                is_trivially_copyable<_Tp>::value &&                            //
-                !is_integral_v<_Tp>) {
+  if constexpr (__has_random_access_iterator_category<_InputIterator>::value && is_floating_point_v<_Tp>) {
     // Unroll the loop using a 4-way tree reduction.
     // This is often more efficient than processing element by element.
-    // However, conservatively: apply it only for trivial types that are also not integral
-    // (presumably the compiler is free to optimize operations with integral types really well).
+    // However, apply it very conservatively: only for floating-point types.
     for (; __last - __first >= 4; __first += 4)
       __init =
           __b(std::move(__init), __b(__b(__u(__first[0]), __u(__first[1])), __b(__u(__first[2]), __u(__first[3]))));
@@ -59,13 +55,10 @@ template <class _InputIterator1, class _InputIterator2, class _Tp, class _Binary
     _BinaryOp2 __b2) {
 #  ifndef __OPTIMIZE_SIZE__
   if constexpr (__has_random_access_iterator_category<_InputIterator1>::value &&
-                __has_random_access_iterator_category<_InputIterator2>::value && //
-                is_trivially_copyable<_Tp>::value &&                             //
-                !is_integral_v<_Tp>) {
+                __has_random_access_iterator_category<_InputIterator2>::value && is_floating_point_v<_Tp>) {
     // Unroll the loop using a 4-way tree reduction.
     // This is often more efficient than processing element by element.
-    // However, conservatively: apply it only for trivial types that are also not integral
-    // (presumably the compiler is free to optimize operations with integral types really well).
+    // However, apply it very conservatively: only for floating-point types.
     for (; __last1 - __first1 >= 4; __first1 += 4, (void)(__first2 += 4))
       __init = __b1(std::move(__init),
                     __b1(__b1(__b2(__first1[0], __first2[0]), __b2(__first1[1], __first2[1])),
