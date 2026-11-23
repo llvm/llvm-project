@@ -165,7 +165,7 @@ static bool peephole(MachineFunction &MF, TargetLibraryInfo &LibInfo,
       }
       // Optimize away an explicit void return at the end of the function.
       case WebAssembly::RETURN:
-        if (!Subtarget.getCLOpts().disable_wasm_fallthrough_return_opt)
+        if (Subtarget.getCLOpts().fallthrough_return_opt)
           Changed |= maybeRewriteToFallthrough(MI, MBB, MF, MFI, MRI, TII);
         break;
       }

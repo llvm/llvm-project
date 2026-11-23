@@ -541,6 +541,11 @@ void *ProgramStateManager::FindGDMContext(
 
 ProgramStateRef ProgramStateManager::addGDM(ProgramStateRef St, const void *Key,
                                             void *Data) {
+  // A null value is indistinguishable from an absent entry for every trait, so
+  // remove the key to keep a single canonical representation of the state.
+  if (!Data)
+    return removeGDM(St, Key);
+
   ProgramState::GenericDataMap M1 = St->getGDM();
   ProgramState::GenericDataMap M2 = GDMFactory.add(M1, Key, Data);
 

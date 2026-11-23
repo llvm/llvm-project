@@ -194,8 +194,6 @@ public:
     return getTM<WebAssemblyTargetMachine>();
   }
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-
   void addIRPasses() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
@@ -204,12 +202,6 @@ public:
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
   bool addPreISel() override;
-
-  // No reg alloc
-  bool addRegAssignAndRewriteFast() override { return false; }
-
-  // No reg alloc
-  bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -235,10 +227,6 @@ WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
 TargetPassConfig *
 WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new WebAssemblyPassConfig(*this, PM);
-}
-
-FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
 }
 
 //===----------------------------------------------------------------------===//
@@ -326,21 +314,6 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
-
-  // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
-
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.
   disablePass(&MachineBlockPlacementID);

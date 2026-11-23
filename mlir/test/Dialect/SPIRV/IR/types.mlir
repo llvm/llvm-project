@@ -163,6 +163,26 @@ func.func private @function_ptr_invalid_input(!spirv.ptr<(index) -> (), Function
 // -----
 
 //===----------------------------------------------------------------------===//
+// UntypedPointerType
+//===----------------------------------------------------------------------===//
+
+// CHECK: @untyped_ptr_type(!spirv.untyped_ptr<CrossWorkgroup>)
+func.func private @untyped_ptr_type(!spirv.untyped_ptr<CrossWorkgroup>) -> ()
+
+// CHECK: @untyped_ptr_array_type(!spirv.array<4 x !spirv.untyped_ptr<Function>>)
+func.func private @untyped_ptr_array_type(!spirv.array<4 x !spirv.untyped_ptr<Function>>) -> ()
+
+// CHECK: @untyped_ptr_struct_type(!spirv.struct<(i32, !spirv.untyped_ptr<Workgroup>)>)
+func.func private @untyped_ptr_struct_type(!spirv.struct<(i32, !spirv.untyped_ptr<Workgroup>)>) -> ()
+
+// -----
+
+// expected-error @+1 {{unknown storage class: SomeStorageClass}}
+func.func private @untyped_ptr_unknown_storage_class(!spirv.untyped_ptr<SomeStorageClass>) -> ()
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // RuntimeArrayType
 //===----------------------------------------------------------------------===//
 

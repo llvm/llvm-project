@@ -98,6 +98,11 @@ static-build cases once there is a shared-library build to exercise them. */
 #define ORC_RT_C_NOTHROW
 #endif
 
+/* ORC_RT_STRINGIFY(X) expands to X, after macro expansion, as a string
+   literal. */
+#define ORC_RT_STRINGIFY_IMPL(X) #X
+#define ORC_RT_STRINGIFY(X) ORC_RT_STRINGIFY_IMPL(X)
+
 /* ORC_RT_FORMAT_PRINTF(FmtIdx, FirstArg) marks a function as taking a
    printf-style format string at argument position FmtIdx, with the variadic
    arguments beginning at FirstArg, so the compiler can check the format string

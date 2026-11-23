@@ -185,7 +185,8 @@ private:
     llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
     llvm::LLVMContext &llvmContext = llvmModule->getContext();
 
-    if (attribute.getName() == "cir.amdhsa_code_object_version") {
+    if (attribute.getName() ==
+        cir::CIRDialect::getAMDGPUCodeObjectVersionAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error,
@@ -194,7 +195,7 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_printf_kind") {
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUPrintfKindAttrName()) {
       if (auto strAttr =
               mlir::dyn_cast<mlir::StringAttr>(attribute.getValue())) {
         llvm::MDString *mdStr =
@@ -204,7 +205,7 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_xnack") {
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUXnackAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.xnack",
@@ -212,7 +213,7 @@ private:
       }
     }
 
-    if (attribute.getName() == "cir.amdgpu_sramecc") {
+    if (attribute.getName() == cir::CIRDialect::getAMDGPUSramEccAttrName()) {
       if (auto intAttr =
               mlir::dyn_cast<mlir::IntegerAttr>(attribute.getValue())) {
         llvmModule->addModuleFlag(llvm::Module::Error, "amdgpu.sramecc",

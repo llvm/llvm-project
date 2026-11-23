@@ -513,7 +513,7 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
            all_of(WidenR->operands(), isSingleScalar);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->isSingleScalar() || VPI->isVectorToScalar() ||
+    return VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
             all_of(VPI->operands(), isSingleScalar));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
@@ -575,7 +575,7 @@ static bool isUniformAcrossVFsAndUFsImpl(
         return false;
       })
       .Case([&](const VPInstruction *VPI) {
-        if (!VPI->isSingleScalar() && !VPI->isVectorToScalar() &&
+        if (!VPI->doesGenerateSingleScalar() && !VPI->isVectorToScalar() &&
             !preservesUniformity(VPI->getOpcode()))
           return false;
         AddToWorklist(VPI->operands());

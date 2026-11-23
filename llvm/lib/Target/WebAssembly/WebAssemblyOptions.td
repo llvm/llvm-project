@@ -28,8 +28,10 @@ defm : BoolField<"wasm-keep-registers", "false",
   "WebAssembly: output stack registers in instruction output for test purposes only">;
 
 // WebAssemblyPeephole.cpp
-defm : BoolField<"disable-wasm-fallthrough-return-opt", "false",
-  "WebAssembly: Disable fallthrough-return optimizations">;
+defm : BoolField<"wasm-fallthrough-return-opt", "true",
+  "WebAssembly: Fallthrough-return optimizations">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"disable-wasm-fallthrough-return-opt", "wasm-fallthrough-return-opt=false">;
 
 // WebAssemblyTargetMachine.cpp
 // Emscripten's asm.js-style setjmp/longjmp handling
