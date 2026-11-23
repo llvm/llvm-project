@@ -60,7 +60,7 @@ __device__ int get_shared() {
 }
 
 // An explicit opencl_constant qualifier keeps UniformConstant.
-// LLVM-LABEL: define{{.*}} i32 @_Z6get_ocPU3AS2i(ptr addrspace(2)
+// LLVM-LABEL: define{{.*}} i32 @_Z6get_ocPU10CLconstanti(ptr addrspace(2)
 __device__ int get_oc(__attribute__((opencl_constant)) int *p) { return *p; }
 
 // Function addresses are in the program address space 4.
