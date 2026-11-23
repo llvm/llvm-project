@@ -494,3 +494,138 @@ define <4 x float> @v4f32_fadd_const_not_shrinkable(<4 x float> %a) {
   %5 = fptrunc <4 x double> %4 to <4 x float>
   ret <4 x float> %5
 }
+
+; https://github.com/llvm/llvm-project/issues/245129
+; Negative test: %and is 0 or INT_MIN, so it only has one significant bit, but
+; INT_MIN overflows half to -inf.
+
+define float @ItoFtoF_s32_f16_f32_out_of_range(i32 %a) {
+; CHECK-LABEL: @ItoFtoF_s32_f16_f32_out_of_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i32 %a, -2147483648
+  %h = sitofp i32 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+; 65536 overflows half to +inf.
+
+define float @ItoFtoF_u32_f16_f32_out_of_range(i32 %a) {
+; CHECK-LABEL: @ItoFtoF_u32_f16_f32_out_of_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 65536
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i32 %a, 65536
+  %h = uitofp i32 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+define float @ItoFtoF_s32_f16_f32_in_range(i32 %a) {
+; CHECK-LABEL: @ItoFtoF_s32_f16_f32_in_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 32768
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i32 %a, 32768
+  %h = sitofp i32 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+define float @ItoFtoF_u32_f16_f32_in_range(i32 %a) {
+; CHECK-LABEL: @ItoFtoF_u32_f16_f32_in_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 63488
+; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i32 %a, 63488
+  %h = uitofp i32 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+; Negative test: -65536 overflows half to -inf.
+
+define float @ItoFtoF_s17_f16_f32_out_of_range(i17 %a) {
+; CHECK-LABEL: @ItoFtoF_s17_f16_f32_out_of_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i17 [[A:%.*]], -65536
+; CHECK-NEXT:    [[R:%.*]] = sitofp i17 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i17 %a, -65536
+  %h = sitofp i17 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+define float @ItoFtoF_s16_f16_f32_in_range(i16 %a) {
+; CHECK-LABEL: @ItoFtoF_s16_f16_f32_in_range(
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[A:%.*]], -32768
+; CHECK-NEXT:    [[R:%.*]] = sitofp i16 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i16 %a, -32768
+  %h = sitofp i16 %and to half
+  %r = fpext half %h to float
+  ret float %r
+}
+
+define <2 x float> @ItoFtoF_v2s32_v2f16_v2f32_out_of_range(<2 x i32> %a) {
+; CHECK-LABEL: @ItoFtoF_v2s32_v2f16_v2f32_out_of_range(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 -2147483648)
+; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i32> [[AND]] to <2 x float>
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %and = and <2 x i32> %a, splat (i32 -2147483648)
+  %h = sitofp <2 x i32> %and to <2 x half>
+  %r = fpext <2 x half> %h to <2 x float>
+  ret <2 x float> %r
+}
+
+; bfloat has enough exponent range for INT_MIN.
+
+define float @ItoFtoF_s32_bf16_f32(i32 %a) {
+; CHECK-LABEL: @ItoFtoF_s32_bf16_f32(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[AND]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %and = and i32 %a, -2147483648
+  %h = sitofp i32 %and to bfloat
+  %r = fpext bfloat %h to float
+  ret float %r
+}
+
+; Negative test: bfloat has fewer significant bits than half, but a much wider
+; exponent range, e.g. 2^20 overflows half to +inf.
+
+define float @FtoItoFtoF_bf16_s32_f16_f32(bfloat %f) {
+; CHECK-LABEL: @FtoItoFtoF_bf16_s32_f16_f32(
+; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[F:%.*]] to i32
+; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = fptosi bfloat %f to i32
+  %x = sitofp i32 %i to half
+  %r = fpext half %x to float
+  ret float %r
+}
+
+; The intermediate integer type limits the magnitude.
+
+define float @FtoItoFtoF_bf16_s16_f16_f32(bfloat %f) {
+; CHECK-LABEL: @FtoItoFtoF_bf16_s16_f16_f32(
+; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[F:%.*]] to i16
+; CHECK-NEXT:    [[R:%.*]] = sitofp i16 [[I]] to float
+; CHECK-NEXT:    ret float [[R]]
+;
+  %i = fptosi bfloat %f to i16
+  %x = sitofp i16 %i to half
+  %r = fpext half %x to float
+  ret float %r
+}
