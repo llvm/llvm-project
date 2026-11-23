@@ -203,6 +203,7 @@ TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestSinglePathJumpUd2) {
 TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestSinglePathJumpUd1) {
   if (!SuccessfullyInitialised)
     GTEST_SKIP();
+  // clang-format off
   Analysis.parseSectionContents(
       {
           0x75, 0x02,                   // 0: jne 4 [+2]
@@ -210,6 +211,7 @@ TEST_F(BasicGraphBuilderTest, BuildFlowGraphTestSinglePathJumpUd1) {
           0x67, 0x0f, 0xb9, 0x40, 0x1b, // 4: ud1l 0x1b(%eax), %eax
       },
       {0xDEADBEEF, 0x0});
+  // clang-format on
   const auto Result =
       GraphBuilder::buildFlowGraph(Analysis, {0xDEADBEEF + 2, 0x0});
 
