@@ -31,6 +31,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_barrier(i1 %active) {
 ; ON-NEXT:    s_mov_b32 exec_lo, 0
 ; ON-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; ON-NEXT:    s_mov_b32 exec_lo, s1
+; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; ON-NEXT:    scratch_load_b32 v0, off, s32 nv ; 4-byte Folded Reload
 ; ON-NEXT:    s_wait_xcnt 0x0
@@ -88,6 +89,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_clobber_exec_scratch(i1 %active) {
 ; ON-NEXT:    s_mov_b32 exec_lo, 0
 ; ON-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; ON-NEXT:    s_mov_b32 exec_lo, s1
+; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; ON-NEXT:    s_clause 0x2 ; 12-byte Folded Reload
 ; ON-NEXT:    scratch_load_b32 v2, off, s32 nv
@@ -156,6 +158,7 @@ define i32 @callable_clobber_exec_scratch() {
 ; ON-NEXT:    s_mov_b32 exec_lo, 0
 ; ON-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; ON-NEXT:    s_mov_b32 exec_lo, s0
+; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_xor_saveexec_b32 s0, -1
 ; ON-NEXT:    scratch_load_b32 v2, off, s32 nv ; 4-byte Folded Reload
 ; ON-NEXT:    s_wait_xcnt 0x0
@@ -222,6 +225,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_active(i1 %active) {
 ; SDAG-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; SDAG-NEXT:    s_mov_b32 exec_lo, s2
 ; SDAG-NEXT:    scratch_load_b32 v40, off, s32 offset:8 nv ; 4-byte Folded Reload
+; SDAG-NEXT:    s_wait_xcnt 0x1
 ; SDAG-NEXT:    v_mov_b32_e32 v0, s1
 ; SDAG-NEXT:    s_wait_xcnt 0x0
 ; SDAG-NEXT:    s_xor_b32 exec_lo, s0, -1
@@ -293,6 +297,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_active(i1 %active) {
 ; GISEL-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s1
 ; GISEL-NEXT:    scratch_load_b32 v40, off, s32 offset:8 nv ; 4-byte Folded Reload
+; GISEL-NEXT:    s_wait_xcnt 0x1
 ; GISEL-NEXT:    v_cndmask_b32_e64 v0, 7, 42, s0
 ; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
@@ -367,7 +372,7 @@ define amdgpu_gfx_whole_wave i32 @whole_wave_divergent(i1 %active) {
 ; ON-NEXT:    global_load_async_to_lds_b8 v0, v[0:1], off
 ; ON-NEXT:    s_mov_b32 exec_lo, s2
 ; ON-NEXT:  .LBB4_2: ; %exit
-; ON-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; ON-NEXT:    v_cndmask_b32_e64 v0, 7, 42, s0
 ; ON-NEXT:    s_xor_b32 exec_lo, s0, -1
@@ -446,6 +451,7 @@ define amdgpu_gfx_whole_wave void @whole_wave_live_vgprs(i1 %active) {
 ; ON-NEXT:    ;;#ASMSTART
 ; ON-NEXT:    ; use v[0:1]
 ; ON-NEXT:    ;;#ASMEND
+; ON-NEXT:    s_wait_xcnt 0x0
 ; ON-NEXT:    s_xor_b32 exec_lo, s0, -1
 ; ON-NEXT:    s_clause 0x2 ; 12-byte Folded Reload
 ; ON-NEXT:    scratch_load_b32 v0, off, s32 nv

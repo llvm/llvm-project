@@ -387,8 +387,8 @@ Register SPIRVGlobalRegistry::createConstFP(const ConstantFP *CF,
                                             const SPIRVInstrInfo &TII,
                                             bool ZeroAsNull) {
   unsigned BitWidth = getScalarOrVectorBitWidth(SpvType);
-  LLT LLTy = LLT::scalar(BitWidth);
-  Register Res = CurMF->getRegInfo().createGenericVirtualRegister(LLTy);
+  Register Res =
+      CurMF->getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   CurMF->getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, *CurMF);
 
@@ -539,8 +539,7 @@ Register SPIRVGlobalRegistry::buildConstantFP(APFloat Val,
   if (Res.isValid())
     return Res;
 
-  LLT LLTy = LLT::scalar(getScalarOrVectorBitWidth(SpvType));
-  Res = MF.getRegInfo().createGenericVirtualRegister(LLTy);
+  Res = MF.getRegInfo().createGenericVirtualRegister(getRegType(SpvType));
   MF.getRegInfo().setRegClass(Res, &SPIRV::fIDRegClass);
   assignSPIRVTypeToVReg(SpvType, Res, MF);
 
@@ -854,7 +853,7 @@ Register SPIRVGlobalRegistry::buildGlobalVariable(
   MachineBasicBlock &EntryBB = MIRBuilder.getMF().front();
   MachineIRBuilder GVBuilder(MIRBuilder.getState());
   if (&GVBuilder.getMBB() != &EntryBB)
-    GVBuilder.setInsertPt(EntryBB, EntryBB.getFirstTerminator());
+    GVBuilder.setInsertPt(EntryBB, getOpVariableMBBIt(MIRBuilder.getMF()));
 
   // Pointers to opaque types stay typed even with the extension on, so emit the
   // untyped variant only when the result is actually an untyped pointer.

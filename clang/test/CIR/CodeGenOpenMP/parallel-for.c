@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fopenmp -emit-cir -fclangir %s -o - | FileCheck %s --check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-cir \
+// RUN:   -fclangir %s -o - | FileCheck %s --check-prefix=CIR
 
 // Lowering to LLVM IR: the fork_call wrapper is identical on both paths.
 // The worksharing-loop body itself uses a different runtime API and

@@ -446,6 +446,9 @@ public:
                                     const KnownFPClass &RHS, RoundingMode RM,
                                     DenormalMode Mode);
 
+  LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS, const APFloat &RHS,
+                                    RoundingMode RM, DenormalMode Mode);
+
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
                                          RoundingMode RM, DenormalMode Mode);
