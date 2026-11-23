@@ -929,7 +929,8 @@ struct LowerColumnTransferReadToLoops
           readOp, "Expected the leading dim to be scalable and the trailing "
                   "dim to be fixed.");
 
-    // The loop loads every element, so it can't keep a mask.
+    // TODO: Support masks by loading only the rows whose mask bit is set and
+    // using the padding for the others. For now, the loop loads every row.
     if (readOp.getMask() || readOp.isMasked())
       return rewriter.notifyMatchFailure(readOp,
                                          "Masked reads are not supported");
