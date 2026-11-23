@@ -1116,6 +1116,19 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
   if (HII.isNewValueStore(MI) && MJ.mayStore())
     return true;
 
+  const auto &MID = MI.getDesc();
+  const auto &MJD = MJ.getDesc();
+  bool isHVXVS3SRC = HexagonII::getTSFlag(MID, HexagonII::isHVXVS3SRCPos);
+  if (isHVXVS3SRC) {
+    bool HVXALU2SRC = HexagonII::getTSFlag(MJD, HexagonII::isHVXALU2SRCPos);
+    if (HVXALU2SRC) // Checking for a Non Unary HVX ALU Operation.
+      return true;
+    const uint64_t V = HII.getType(MJ);
+    // HVX permute instruction cannot be paired with 3 source shift.
+    if (V == HexagonII::TypeCVI_VP)
+      return true;
+  }
+
   // An HLX instruction with a 64-bit scalar source cannot be paired with
   // another HLX instruction using a scalar or immediate source. Loads and
   // stores are exempt because they do not use the shared scalar resource.
