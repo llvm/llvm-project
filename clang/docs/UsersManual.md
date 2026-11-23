@@ -4346,7 +4346,8 @@ revision is used in an earlier mode.
 
 Differences between all `c*` and `gnu*` modes:
 
-- `c*` modes define "`__STRICT_ANSI__`".
+- `c*` modes define `__STRICT_ANSI__` when MSVC compatibility mode is
+  disabled. MSVC compatibility mode is enabled by default for MSVC targets.
 - Target-specific defines not prefixed by underscores, like `linux`,
   are defined in `gnu*` modes.
 - Trigraphs default to being off in `gnu*` modes; they can be enabled
