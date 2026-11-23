@@ -5578,7 +5578,10 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //     cmpq %rsi, %rdi      // <-- can be removed
         //     cmovaeq %rsi, %rcx
         //     sbbq $-1, %rdx
-        if (!UseDefEFLAGS && Inst.readsRegister(X86::EFLAGS, TRI)) {
+        if (!UseDefEFLAGS && Inst.getParent() == &CmpMBB &&
+            Inst.readsRegister(X86::EFLAGS, TRI) &&
+            Inst.registerDefIsDead(X86::EFLAGS, TRI) && !Inst.mayLoad() &&
+            !Inst.mayStore()) {
           UseDefEFLAGS = &Inst;
           continue;
         }
@@ -5813,9 +5816,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
 
   // Move UseDefEFLAGS below the last user of CmpInstr's EFLAGS.
   if (UseDefEFLAGS) {
-    if (&CmpMBB != SubBB || UseDefEFLAGS->getParent() != &CmpMBB ||
-        !LastEFLAGSUse || LastEFLAGSUse->isTerminator() ||
-        UseDefEFLAGS->mayLoad() || UseDefEFLAGS->mayStore())
+    if (&CmpMBB != SubBB || !LastEFLAGSUse || LastEFLAGSUse->isTerminator() ||
+        LastEFLAGSUse->killsRegister(X86::EFLAGS, TRI))
       return false;
 
     for (MachineInstr &IM :
