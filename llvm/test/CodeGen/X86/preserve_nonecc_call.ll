@@ -267,3 +267,85 @@ define preserve_nonecc i64 @preserve_none_i128_no_split(
   ret i64 %res
 }
 
+; Test that varargs preserve_nonecc functions fall back to the C calling
+; convention for arguments while keeping preserve_nonecc callee-saved registers.
+%struct.va_list = type { i32, i32, ptr, ptr }
+declare preserve_nonecc i64 @preserve_none_varargs_ext(i64, ...)
+
+define preserve_nonecc i64 @preserve_none_varargs_callee(i64 %fixed, ...) nounwind {
+; CHECK-LABEL: preserve_none_varargs_callee:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    subq $88, %rsp
+; CHECK-NEXT:    movl %eax, %ebx
+; CHECK-NEXT:    movq %rdi, %rax
+; CHECK-NEXT:    testb %bl, %bl
+; CHECK-NEXT:    je .LBB11_5
+; CHECK-NEXT:  # %bb.4:
+; CHECK-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm1, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm2, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm3, (%rsp)
+; CHECK-NEXT:    movaps %xmm4, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm5, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm6, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movaps %xmm7, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:  .LBB11_5:
+; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r8, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movq %r9, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movabsq $206158430216, %rcx # imm = 0x3000000008
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    leaq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rcx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movl -{{[0-9]+}}(%rsp), %edx
+; CHECK-NEXT:    cmpl $48, %edx
+; CHECK-NEXT:    jae .LBB11_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    addq %rdx, %rcx
+; CHECK-NEXT:    addl $8, %edx
+; CHECK-NEXT:    movl %edx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:    jmp .LBB11_3
+; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:    movq -{{[0-9]+}}(%rsp), %rcx
+; CHECK-NEXT:    movq %rcx, %rdx
+; CHECK-NEXT:    addq $8, %rdx
+; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
+; CHECK-NEXT:  .LBB11_3:
+; CHECK-NEXT:    addq (%rcx), %rax
+; CHECK-NEXT:    addq $88, %rsp
+; CHECK-NEXT:    retq
+  %ap = alloca %struct.va_list, align 16
+  call void @llvm.va_start.p0(ptr %ap)
+  %v = va_arg ptr %ap, i64
+  call void @llvm.va_end.p0(ptr %ap)
+  %sum = add i64 %fixed, %v
+  ret i64 %sum
+}
+
+define i64 @preserve_none_varargs_caller(i64 %x, double %y) nounwind {
+; CHECK-LABEL: preserve_none_varargs_caller:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pushq %r15
+; CHECK-NEXT:    pushq %r14
+; CHECK-NEXT:    pushq %r13
+; CHECK-NEXT:    pushq %r12
+; CHECK-NEXT:    pushq %rbx
+; CHECK-NEXT:    movl $2, %esi
+; CHECK-NEXT:    movb $1, %al
+; CHECK-NEXT:    callq preserve_none_varargs_ext@PLT
+; CHECK-NEXT:    popq %rbx
+; CHECK-NEXT:    popq %r12
+; CHECK-NEXT:    popq %r13
+; CHECK-NEXT:    popq %r14
+; CHECK-NEXT:    popq %r15
+; CHECK-NEXT:    retq
+  %r = call preserve_nonecc i64 (i64, ...) @preserve_none_varargs_ext(i64 %x, i64 2, double %y)
+  ret i64 %r
+}
+
+
