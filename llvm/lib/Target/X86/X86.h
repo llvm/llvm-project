@@ -22,6 +22,7 @@
 #include "llvm/PassInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+#include <optional>
 
 struct RetpolineThunkInserter;
 struct LVIThunkInserter;
@@ -31,6 +32,7 @@ namespace llvm {
 class FunctionPass;
 class InstructionSelector;
 class MachineFunction;
+class MachineInstr;
 class PassRegistry;
 class X86RegisterBankInfo;
 class X86Subtarget;
@@ -253,7 +255,8 @@ FunctionPass *createX86LowerTileCopyLegacyPass();
 /// Return a pass that inserts int3 at the end of the function if it ends with a
 /// CALL instruction. The pass does the same for each funclet as well. This
 /// ensures that the open interval of function start and end PCs contains all
-/// return addresses for the benefit of the Windows x64 unwinder.
+/// return addresses for the benefit of the Windows x64 unwinder. Also inserts
+/// padding where a call's return address would cross an EH boundary.
 class X86AvoidTrailingCallPass
     : public RequiredPassInfoMixin<X86AvoidTrailingCallPass> {
 public:
@@ -262,6 +265,9 @@ public:
 };
 
 FunctionPass *createX86AvoidTrailingCallLegacyPass();
+
+/// Return the padding opcode needed after a call for Win64 unwinding, if any.
+std::optional<unsigned> getWinEHCallPadding(const MachineInstr &MI);
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.

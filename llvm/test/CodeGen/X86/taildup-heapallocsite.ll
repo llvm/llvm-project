@@ -9,6 +9,7 @@
 ; }
 
 ; In this case, block placement duplicates the heap allocation site.
+; The recorded call lengths exclude the WinEH padding NOPs.
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"
@@ -37,12 +38,12 @@ cond.end:                                         ; preds = %entry, %cond.true
 ; CHECK: testq
 ; CHECK: je
 ; CHECK: callq alloc
+; CHECK-NEXT: [[L1:.Ltmp[0-9]+]]:
 ; CHECK-NEXT: nop
-; CHECK-NEXT: [[L1:.Ltmp[0-9]+]]
 ; CHECK: jmp f2 # TAILCALL
 ; CHECK: callq alloc
+; CHECK-NEXT: [[L3:.Ltmp[0-9]+]]:
 ; CHECK-NEXT: nop
-; CHECK-NEXT: [[L3:.Ltmp[0-9]+]]
 ; CHECK: jmp f2 # TAILCALL
 
 ; CHECK-LABEL: .short 4423                    # Record kind: S_GPROC32_ID

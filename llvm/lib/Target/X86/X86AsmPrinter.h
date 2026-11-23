@@ -153,7 +153,6 @@ private:
                                     MCSymbol *LazyPointer) override;
 
   void emitCallInstruction(const llvm::MCInst &MCI);
-  void maybeEmitNopAfterCallForWindowsEH(const MachineInstr *MI);
 
   // Emits a label to mark the next instruction as being relevant to Import Call
   // Optimization.
@@ -173,10 +172,6 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitInstruction(const MachineInstr *MI) override;
-
-  void emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                        const MCSubtargetInfo *EndInfo,
-                        const MachineInstr *MI) override;
 
   void emitBasicBlockEnd(const MachineBasicBlock &MBB) override;
 

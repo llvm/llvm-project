@@ -1,4 +1,5 @@
 ; RUN: llc < %s | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -stop-after=x86-avoid-trailing-call -o - | FileCheck %s --check-prefix=MIR
 
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.28.29914"
@@ -13,10 +14,18 @@ entry:
 define dso_local void @test() personality ptr @__CxxFrameHandler3 {
 entry:
 
+; Windows x64 unwinding may insert padding after a call to ensure that the
+; return address is in the same IP2State as the call instruction itself. We also
+; do the same for inline asm that may unwind, as we don't know if there is
+; call instruction inside that asm.
 ; CHECK-LABEL: .Ltmp0:
 ; CHECK: callq  trap
 ; CHECK: nop
 ; CHECK-LABEL: .Ltmp1:
+; MIR-LABEL: name: test
+; MIR:       INLINEASM &"call trap", sideeffect unwind
+; MIR-NEXT:  NOOP
+; MIR-NEXT:  EH_LABEL
 
   invoke void asm sideeffect unwind "call trap", "~{dirflag},~{fpsr},~{flags}"()
           to label %exit unwind label %except
@@ -63,3 +72,24 @@ declare dso_local void @printf(ptr, ...)
 ; CHECK-NEXT:    .long    .Ltmp1@IMGREL                   # IP
 ; CHECK-NEXT:    .long    -1                              # ToState
 
+; Empty unwinding asm has no call return address to pad.
+define dso_local void @test_empty() personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: test_empty:
+; CHECK:       #APP
+; CHECK-NEXT:  #NO_APP
+; CHECK-NEXT:  .Ltmp{{[0-9]+}}:{{.*}}# EH_LABEL
+; MIR-LABEL:   name: test_empty
+; MIR:         INLINEASM &"", sideeffect unwind
+; MIR-NEXT:    EH_LABEL
+entry:
+  invoke void asm sideeffect unwind "", ""()
+          to label %exit unwind label %except
+
+exit:
+  ret void
+
+except:
+  %cp = cleanuppad within none []
+  call void (ptr, ...) @printf(ptr @str) [ "funclet"(token %cp) ]
+  cleanupret from %cp unwind to caller
+}

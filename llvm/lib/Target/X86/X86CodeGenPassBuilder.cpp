@@ -291,11 +291,6 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   addMachineFunctionPass(X86IndirectThunksPass(), PMW);
   addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
-  // Insert extra int3 instructions after trailing call instructions to avoid
-  // issues in the unwinder.
-  if (TT.isOSWindows() && TT.isX86_64())
-    addMachineFunctionPass(X86AvoidTrailingCallPass(), PMW);
-
   // Verify basic block incoming and outgoing cfa offset and register values and
   // correct CFA calculation rule where needed by inserting appropriate CFI
   // instructions. CFIInstrInserter self-skips targets that do not use DWARF
@@ -329,6 +324,11 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
                  M->getFunction("objc_unsafeClaimAutoreleasedReturnValue")));
       }),
       PMW);
+
+  // Insert call padding after layout and bundle expansion, before the unwind
+  // passes inspect the final instructions.
+  if (TT.isOSWindowsOrUEFI() && TT.isX86_64())
+    addMachineFunctionPass(X86AvoidTrailingCallPass(), PMW);
 
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
