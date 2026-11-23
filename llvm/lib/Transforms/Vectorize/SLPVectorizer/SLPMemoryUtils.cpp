@@ -403,6 +403,12 @@ bool isMaskedLoadCompress(
       }
     }
   }
+  if (!Order.empty()) {
+    SmallVector<int> NewMask(Sz, PoisonMaskElem);
+    for (unsigned I : seq<unsigned>(Sz))
+      NewMask[I] = Info.CompressMask[Mask[I]];
+    Info.CompressMask.swap(NewMask);
+  }
   // Estimating the compression shuffle cost below can be extremely expensive
   // for a very wide LoadVecTy, which is split into a large number of vector
   // registers (see processShuffleMasks). The shuffle cost is always
@@ -417,12 +423,6 @@ bool isMaskedLoadCompress(
   transformScalarShuffleIndiciesToVector(getNumElements(ScalarTy), CostMask);
   InstructionCost CompressCost = getShuffleCost(
       TTI, TTI::SK_PermuteSingleSrc, Info.LoadVecTy, CostKind, CostMask);
-  if (!Order.empty()) {
-    SmallVector<int> NewMask(Sz, PoisonMaskElem);
-    for (unsigned I : seq<unsigned>(Sz))
-      NewMask[I] = Info.CompressMask[Mask[I]];
-    Info.CompressMask.swap(NewMask);
-  }
   InstructionCost TotalVecCost = VectorGEPCost + LoadCost + CompressCost;
   return TotalVecCost < GatherCost;
 }
