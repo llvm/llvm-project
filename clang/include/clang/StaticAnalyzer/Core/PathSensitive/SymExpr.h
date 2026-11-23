@@ -102,14 +102,7 @@ public:
     symbol_iterator() = default;
     explicit symbol_iterator(SmallVectorImpl<const SymExpr *> *WL) : WL(WL) {}
 
-    symbol_iterator &operator++() {
-      assert(!atEnd() && "attempting to iterate on an 'end' iterator");
-      const SymExpr *SE = WL->pop_back_val();
-      // SymbolData has no operands, which is by far the most common case.
-      if (!isa<SymbolData>(SE))
-        expand(SE);
-      return *this;
-    }
+    symbol_iterator &operator++();
 
     const SymExpr *operator*() const {
       assert(!atEnd() && "attempting to dereference an 'end' iterator");
@@ -193,6 +186,15 @@ public:
     return K >= BEGIN_SYMBOLS && K <= END_SYMBOLS;
   }
 };
+
+inline SymExpr::symbol_iterator &SymExpr::symbol_iterator::operator++() {
+  assert(!atEnd() && "attempting to iterate on an 'end' iterator");
+  const SymExpr *SE = WL->pop_back_val();
+  // SymbolData has no operands, which is by far the most common case.
+  if (!isa<SymbolData>(SE))
+    expand(SE);
+  return *this;
+}
 
 } // namespace ento
 } // namespace clang
