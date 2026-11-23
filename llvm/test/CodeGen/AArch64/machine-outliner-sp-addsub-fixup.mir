@@ -595,14 +595,14 @@ body:             |
 # CHECK-NEXT:  $sp = ADDXri $sp, 16, 0
 # CHECK-NEXT:  RET $lr
 
-# CHECK:       name:            [[OVERFLOW_FUNC]]
-# CHECK-NOT:   STRXpre
-# CHECK:       $x15 = ADDXri $sp, 4095, 0
-# CHECK-NEXT:  $x15 = ADDXri $sp, 4095, 0
-# CHECK-NEXT:  RET $lr
-
 # CHECK:       name:            [[SHIFTED_ADD_FUNC]]
 # CHECK-NOT:   STRXpre
 # CHECK:       $x15 = ADDXri $sp, 1, 12
 # CHECK-NEXT:  $x15 = ADDXri $sp, 1, 12
+# CHECK-NEXT:  RET $lr
+
+# CHECK:       name:            [[OVERFLOW_FUNC]]
+# CHECK-NOT:   STRXpre
+# CHECK:       $x15 = ADDXri $sp, 4095, 0
+# CHECK-NEXT:  $x15 = ADDXri $sp, 4095, 0
 # CHECK-NEXT:  RET $lr

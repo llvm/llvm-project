@@ -424,13 +424,22 @@ AArch64TTIImpl::getInlineCallPenalty(const Function *F, const CallBase &Call,
 }
 
 bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
-    TargetTransformInfo::RegisterKind K) const {
-  assert(K != TargetTransformInfo::RGK_Scalar);
+    TargetTransformInfo::VectorKind K, Type *ElementTy) const {
+  // Don't maximize bandwidth for i1s. The legal width of predicates is derived
+  // from the data vectors they are used with. Maximizing the predicate width
+  // will just result in excessive VFs with a lot of unpacking.
+  if (ElementTy && ElementTy->isIntegerTy(1))
+    return false;
 
-  if (K == TargetTransformInfo::RGK_FixedWidthVector && ST->isNeonAvailable())
+  // If we don't know the specific class of vector just return true. Later VF
+  // selection will ask us about fixed or scalable vectors.
+  if (K == TargetTransformInfo::VectorKind::FixedOrScalable)
     return true;
 
-  return K == TargetTransformInfo::RGK_ScalableVector &&
+  if (K == TargetTransformInfo::VectorKind::FixedWidth && ST->isNeonAvailable())
+    return true;
+
+  return K == TargetTransformInfo::VectorKind::Scalable &&
          ST->isSVEorStreamingSVEAvailable() &&
          !ST->disableMaximizeScalableBandwidth();
 }
@@ -5956,6 +5965,35 @@ bool AArch64TTIImpl::useNeonVector(const Type *Ty) const {
   return isa<FixedVectorType>(Ty) && !ST->useSVEForFixedLengthVectors();
 }
 
+// Get the latency of NumInst of Inst according to the scheduling model. The
+// latency will be the latency of the last instruction plus the time it gets to
+// get there, which will be the amount of other instructions before that (i.e.
+// NumInst - 1) multiplied by how long it takes to get through them (the
+// reciprocal of the throughput). If the model has no information for this
+// instruction then we assume the reciprocal throughput is 1 and use
+// DefaultLatency for the latency.
+static InstructionCost
+getLatencyFromSchedModel(const AArch64Subtarget *ST, unsigned Inst,
+                         unsigned NumInst, InstructionCost DefaultLatency) {
+  assert(NumInst != 0 && "Can't calculate latency of zero instructions");
+  const MCSchedModel &Sched = ST->getSchedModel();
+  const TargetInstrInfo *TII = ST->getInstrInfo();
+  unsigned SchedClass = TII->get(Inst).getSchedClass();
+  const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
+                                    ? Sched.getSchedClassDesc(SchedClass)
+                                    : nullptr;
+  // If the cpu has no scheduling model, or it doesn't describe the
+  // instruction, then fall back to the default latency. Variant
+  // scheduling classes can't be resolved without a MachineInstr, so
+  // treat them the same way.
+  if (!SCD || !SCD->isValid() || SCD->isVariant())
+    return (NumInst - 1) + DefaultLatency;
+  // We need to convert the number of instructions before the last to a float
+  // here, as the reciprocal throughput may be fractional.
+  return (float)(NumInst - 1) * Sched.getReciprocalThroughput(*ST, *SCD) +
+         Sched.computeInstrLatency(*ST, *SCD);
+}
+
 InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
                                                 Align Alignment,
                                                 unsigned AddressSpace,
@@ -6003,13 +6041,9 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     // querying the SchedModel.
     if (ST->getFixedLoadLatency())
       return (LT.first - 1) + ST->getFixedLoadLatency();
-    // We expect the load to become LT.first loads of type LT.second. The
-    // latency will be the latency of the last load plus the time it gets to get
-    // there, which will be the amount of other loads before that (i.e. total
-    // loads - 1) multiplied by how long it takes to get through them (the
-    // reciprocal of the throughput). We get the latency and reciprocal
-    // throughput from the SchedModel, and assume that the loads become the
-    // variant with unsigned integer offset.
+    // We expect the load to become LT.first loads of type LT.second. We
+    // calculate the latency using the SchedModel, and assume that the loads
+    // become the variant with unsigned integer offset.
     unsigned Inst = 0;
     if (LT.second.isScalableVector() ||
         ST->useSVEForFixedLengthVectors(LT.second)) {
@@ -6052,22 +6086,8 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
         llvm_unreachable("Unexpected integer type");
       }
     }
-    const MCSchedModel &Sched = ST->getSchedModel();
-    const TargetInstrInfo *TII = ST->getInstrInfo();
-    unsigned SchedClass = TII->get(Inst).getSchedClass();
-    const MCSchedClassDesc *SCD = Sched.hasInstrSchedModel()
-                                      ? Sched.getSchedClassDesc(SchedClass)
-                                      : nullptr;
-    // If the cpu has no scheduling model, or it doesn't describe the load, then
-    // fall back to the default load latency. Variant scheduling classes can't
-    // be resolved without a MachineInstr, so treat them the same way.
-    if (!SCD || !SCD->isValid() || SCD->isVariant())
-      return (LT.first - 1) + ST->getLoadLatency();
-    // We need to convert the number of loads before the last to a float here,
-    // as the reciprocal throughput may be fractional.
-    float NumLoads = (LT.first - 1).getValue();
-    return NumLoads * Sched.getReciprocalThroughput(*ST, *SCD) +
-           Sched.computeInstrLatency(*ST, *SCD);
+    return getLatencyFromSchedModel(ST, Inst, LT.first.getValue(),
+                                    ST->getLoadLatency());
   }
 
   if (ST->isMisaligned128StoreSlow() && Opcode == Instruction::Store &&
@@ -6097,8 +6117,7 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
     }
     EVT EltVT = VT.getVectorElementType();
     unsigned EltSize = EltVT.getScalarSizeInBits();
-    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64 ||
-        Alignment != Align(1))
+    if (!isPowerOf2_32(EltSize) || EltSize < 8 || EltSize > 64)
       return LT.first;
     // FIXME: v3i8 lowering currently is very inefficient, due to automatic
     // widening to v4i8, which produces suboptimal results.
@@ -6115,7 +6134,11 @@ InstructionCost AArch64TTIImpl::getMemoryOpCost(unsigned Opcode, Type *Ty,
       TypeWorklist.push_back({Remainder, 0});
       while (!TypeWorklist.empty()) {
         auto [CurrNumElements, Offset] = TypeWorklist.pop_back_val();
-        if (isPowerOf2_32(CurrNumElements)) {
+        // Loads with sufficient alignment are widened to the next power of two,
+        // so only a single load is needed.
+        if (isPowerOf2_32(CurrNumElements) ||
+            (Opcode == Instruction::Load &&
+             Alignment >= PowerOf2Ceil(CurrNumElements) * EltSize / 8)) {
           // 1 per load/store + possible lane insert.
           Cost += 1 + (Offset == 0 ? 0 : 1);
           continue;
@@ -6173,9 +6196,44 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
     // Accesses having vector types that are a multiple of 128 bits can be
     // matched to more than one ldN/stN instruction.
     bool UseScalable;
+
     if (EC.isKnownMultipleOf(Factor) &&
-        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable))
-      return Factor * TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+        TLI->isLegalInterleavedAccessType(SubVecTy, DL, UseScalable)) {
+      unsigned Num = TLI->getNumInterleavedAccesses(SubVecTy, DL, UseScalable);
+      if (CostKind == TTI::TCK_Latency) {
+        // Latency doesn't make much sense for stores, so just return 1
+        if (Opcode == Instruction::Store)
+          return 1;
+        // If the subtarget has overridden the load latency then use that
+        // instead of querying the SchedModel.
+        if (ST->getFixedLoadLatency())
+          return (LT.first - 1) + ST->getFixedLoadLatency();
+        // Lookup the load opcode based on whether we're using SVE, interleaving
+        // factor, and element size.
+        const unsigned Opcodes[2][3][4] = {
+            {
+                {AArch64::LD2Twov16b, AArch64::LD2Twov8h, AArch64::LD2Twov4s,
+                 AArch64::LD2Twov2d},
+                {AArch64::LD3Threev16b, AArch64::LD3Threev8h,
+                 AArch64::LD3Threev4s, AArch64::LD3Threev2d},
+                {AArch64::LD4Fourv16b, AArch64::LD4Fourv8h, AArch64::LD4Fourv4s,
+                 AArch64::LD4Fourv2d},
+            },
+            {
+                {AArch64::LD2B, AArch64::LD2H, AArch64::LD2W, AArch64::LD2D},
+                {AArch64::LD3B, AArch64::LD3H, AArch64::LD3W, AArch64::LD3D},
+                {AArch64::LD4B, AArch64::LD4H, AArch64::LD4W, AArch64::LD4D},
+            }};
+        unsigned LogElemSize =
+            Log2_32(DL.getTypeSizeInBits(SubVecTy->getElementType()));
+        assert(LogElemSize >= 3 && LogElemSize <= 6 &&
+               "Unexpected element size");
+        assert(Factor <= 4 && "Unexpected interleaving factor");
+        unsigned Inst = Opcodes[UseScalable][Factor - 2][LogElemSize - 3];
+        return getLatencyFromSchedModel(ST, Inst, Num, ST->getLoadLatency());
+      }
+      return Factor * Num;
+    }
 
     // Cost the alternative approach for scalable vectors where the interleave
     // factor is larger than the VF: use a contiguous load/store of the full
@@ -6506,20 +6564,22 @@ getAppleRuntimeUnrollPreferences(Loop *L, ScalarEvolution &SE,
 
     // Try to find an unroll count that maximizes the use of the instruction
     // window, i.e. trying to fetch as many instructions per cycle as possible.
-    unsigned MaxInstsPerLine = 16;
-    unsigned UC = 1;
+    constexpr unsigned MaxInstsPerLine = 16;
+    constexpr unsigned MaxLines = 3;
+    constexpr unsigned MaxSizeWithUC = MaxInstsPerLine * MaxLines;
+    constexpr unsigned MaxUC = 8;
+
     unsigned BestUC = 1;
-    unsigned SizeWithBestUC = BestUC * Size;
-    while (UC <= 8) {
+    unsigned BestLineRemainder = Size % MaxInstsPerLine;
+    for (unsigned UC = 2; UC <= MaxUC; ++UC) {
       unsigned SizeWithUC = UC * Size;
-      if (SizeWithUC > 48)
+      if (SizeWithUC > MaxSizeWithUC)
         break;
-      if ((SizeWithUC % MaxInstsPerLine) == 0 ||
-          (SizeWithBestUC % MaxInstsPerLine) < (SizeWithUC % MaxInstsPerLine)) {
+      unsigned LineRemainder = SizeWithUC % MaxInstsPerLine;
+      if (LineRemainder == 0 || BestLineRemainder < LineRemainder) {
         BestUC = UC;
-        SizeWithBestUC = BestUC * Size;
+        BestLineRemainder = LineRemainder;
       }
-      UC++;
     }
 
     if (BestUC == 1)
@@ -7026,6 +7086,23 @@ AArch64TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
     if (!Entry)
       break;
     auto *ValVTy = cast<FixedVectorType>(ValTy);
+    // A non-power-of-2 i1 vector is widened with the identity and reduced as
+    // the promoted integer vector, the i1 min/max lowering does not apply. The
+    // zero identity of or/xor is set by a single masking and.
+    if (ValTy->isIntOrIntVectorTy(1) &&
+        !isPowerOf2_32(ValVTy->getNumElements()) && LT.first == 1) {
+      unsigned PaddedElts = MTy.getVectorNumElements();
+      auto *PaddedTy =
+          FixedVectorType::get(ValVTy->getElementType(), PaddedElts);
+      if (ISD != ISD::AND)
+        return Entry->Cost +
+               getArithmeticInstrCost(Instruction::And, PaddedTy, CostKind);
+      return Entry->Cost +
+             getScalarizationOverhead(
+                 PaddedTy,
+                 APInt::getBitsSetFrom(PaddedElts, ValVTy->getNumElements()),
+                 /*Insert=*/true, /*Extract=*/false, CostKind);
+    }
     if (MTy.getVectorNumElements() <= ValVTy->getNumElements() &&
         isPowerOf2_32(ValVTy->getNumElements())) {
       InstructionCost ExtraCost = 0;
@@ -7052,8 +7129,15 @@ InstructionCost AArch64TTIImpl::getExtendedReductionCost(
   EVT VecVT = TLI->getValueType(DL, VecTy);
   EVT ResVT = TLI->getValueType(DL, ResTy);
 
+  if (IsUnsigned && Opcode == Instruction::Add &&
+      VecVT.isScalableVectorOf(MVT::i1) && ResVT.isSimple() &&
+      getTLI()->isTypeLegal(VecVT)) {
+    // This is vecreduce.add(ZExt(mask)) which can lower as cntp(mask).
+    return 1;
+  }
+
   if (Opcode == Instruction::Add && VecVT.isSimple() && ResVT.isSimple() &&
-      VecVT.getSizeInBits() >= 64) {
+      !VecVT.isScalableVT() && VecVT.getFixedSizeInBits() >= 64) {
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(VecTy);
 
     // The legal cases are:
@@ -7146,9 +7230,12 @@ AArch64TTIImpl::getSpliceCost(VectorType *Tp, int Index,
         getCastInstrCost(Instruction::Trunc, LegalVTy, PromotedVTy,
                          TTI::CastContextHint::None, CostKind);
   }
+
   const auto *Entry =
       CostTableLookup(ShuffleTbl, TTI::SK_Splice, PromotedVT.getSimpleVT());
-  assert(Entry && "Illegal Type for Splice");
+  if (!Entry)
+    return InstructionCost::getInvalid();
+
   LegalizationCost += Entry->Cost;
   return LegalizationCost * LT.first;
 }

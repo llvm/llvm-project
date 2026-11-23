@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -83,14 +84,6 @@ public:
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
 };
-
-static cl::list<std::string> SPVAllowUnknownIntrinsics(
-    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
-    cl::desc("Emit unknown intrinsics as calls to external functions. A "
-             "comma-separated input list of intrinsic prefixes must be "
-             "provided, and only intrinsics carrying a listed prefix get "
-             "emitted as described."),
-    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
@@ -448,8 +441,13 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
     return true;
   }
 
+  auto *Alloca = dyn_cast<AllocaInst>(LifetimeArg0);
+  if (!Alloca || !Alloca->isStaticAlloca()) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
@@ -635,11 +633,13 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           break;
         }
         if (STI.getTargetTriple().getVendor() == Triple::AMD ||
-            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
-              if (Prefix.empty())
-                return false;
-              return II->getCalledFunction()->getName().starts_with(Prefix);
-            }))
+            any_of(STI.getCLOpts().allow_unknown_intrinsics,
+                   [II](StringRef Prefix) {
+                     if (Prefix.empty())
+                       return false;
+                     return II->getCalledFunction()->getName().starts_with(
+                         Prefix);
+                   }))
           Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }
@@ -668,6 +668,17 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   if (!AsmConstraints.empty())
     MDArgs.push_back(MDNode::get(Ctx, MDString::get(Ctx, AsmConstraints)));
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
+}
+
+// Drops attributes that are invalid on the i32 placeholders in the type of V.
+template <typename T> static void removeIncompatibleAttrs(T *V) {
+  FunctionType *FTy = V->getFunctionType();
+  AttributeList Attrs = V->getAttributes();
+  V->removeRetAttrs(AttributeFuncs::typeIncompatible(FTy->getReturnType(),
+                                                     Attrs.getRetAttrs()));
+  for (auto [I, Ty] : enumerate(FTy->params()))
+    V->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(Ty, Attrs.getParamAttrs(I)));
 }
 
 // Returns F if aggregate argument/return types are not present or cloned F
@@ -722,6 +733,7 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
   NewF->setComdat(F->getComdat());
+  removeIncompatibleAttrs(NewF);
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
@@ -927,6 +939,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
           CB, CB->getType());
     CB->mutateFunctionType(NewFTy);
+    removeIncompatibleAttrs(CB);
   }
 
   return true;
@@ -1000,8 +1013,10 @@ bool SPIRVPrepareFunctionsImpl::runOnModule(Module &M) {
     for (User *U : NewF->users())
       if (auto *CB = dyn_cast<CallBase>(U); CB &&
                                             CB->getCalledOperand() == NewF &&
-                                            CB->getFunctionType() == OldFTy)
+                                            CB->getFunctionType() == OldFTy) {
         CB->mutateFunctionType(NewF->getFunctionType());
+        removeIncompatibleAttrs(CB);
+      }
   for (Function &F : M)
     Changed |= removeAggregateTypesFromCalls(&F);
   return Changed;

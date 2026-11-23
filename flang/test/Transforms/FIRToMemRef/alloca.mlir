@@ -115,3 +115,11 @@ func.func @copy_acc_var_name_attr() {
   fir.store %c1_i32 to %1 : !fir.ref<i32>
   return
 }
+
+// The alignment is not part of the memref type, so carry it over.
+// CHECK-LABEL: func.func @copy_alignment
+// CHECK:       memref.alloca() alignment = 8 {uniq_name = "y"} : memref<12xi8>
+func.func @copy_alignment() {
+  %0 = fir.alloca !fir.array<12xi8> <{alignment = 8 : i64, uniq_name = "y"}>
+  return
+}

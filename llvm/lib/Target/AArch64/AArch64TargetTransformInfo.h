@@ -158,8 +158,8 @@ public:
     return ST->getVScaleForTuning();
   }
 
-  bool shouldMaximizeVectorBandwidth(
-      TargetTransformInfo::RegisterKind K) const override;
+  bool shouldMaximizeVectorBandwidth(TargetTransformInfo::VectorKind K,
+                                     Type *ElementTy) const override;
 
   /// Try to return an estimate cost factor that can be used as a multiplier
   /// when scalarizing an operation for a vector with ElementCount \p VF.
@@ -370,10 +370,9 @@ public:
     if (!ST->isSVEAvailable())
       return false;
 
-    // For fixed vectors, scalarize if not using SVE for them.
     auto *DataTypeFVTy = dyn_cast<FixedVectorType>(DataType);
-    if (DataTypeFVTy && (!ST->useSVEForFixedLengthVectors() ||
-                         DataTypeFVTy->getNumElements() < 2))
+    if (DataTypeFVTy && (DataTypeFVTy->getNumElements() < 2 ||
+                         DataType->getScalarType()->isIntegerTy(1)))
       return false;
 
     return isElementTypeLegalForScalableVector(DataType->getScalarType());

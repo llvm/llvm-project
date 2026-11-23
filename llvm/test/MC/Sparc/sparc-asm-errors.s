@@ -20,3 +20,13 @@
         sll %g1, 32, %g2
         ! V9: immediate shift value out of range
         slx %g1, 64, %g2
+
+! %r0 - %r31 only; don't truncate the register number to two digits.
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        mov %r32, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        mov %r100, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        mov %r145, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid relocation specifier
+        mov %r310, %g1

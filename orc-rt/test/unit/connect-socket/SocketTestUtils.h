@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // Sockets for tests of the socket APIs, defined once per system under
-// sys/<system>/ so that a test needing one stays portable.
+// host/<system>/ so that a test needing one stays portable.
 //
 //===----------------------------------------------------------------------===//
 

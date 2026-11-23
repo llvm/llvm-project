@@ -52,6 +52,12 @@ void bzero(void *dst, size_t n);
 size_t fread(void *ptr, size_t size, size_t nmemb, FILE *stream);
 size_t fwrite(const void *ptr, size_t size, size_t nmemb, FILE *stream);
 char *fgets(char *s, int size, FILE *stream);
+void *memccpy(void *dst, const void *src, int c, size_t n);
+void *memset_explicit(void *dst, int c, size_t n);
+void explicit_bzero(void *dst, size_t n);
+size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+char *fgets_unlocked(char *s, int size, FILE *stream);
 
 #ifdef __cplusplus
 }
@@ -161,6 +167,30 @@ void call_bcopy_bzero(void) {
   __builtin_bzero(dst, 11); // expected-warning {{'bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
 }
 
+void call_memccpy_explicit_zero(size_t runtime_n) {
+  char src[20], dst[10];
+  memccpy(dst, src, '\0', 0);
+  memccpy(dst, src, '\0', 10);
+  memccpy(dst, src, '\0', 11); // expected-warning {{'memccpy' size argument is too large; destination buffer has size 10, but size argument is 11}}
+  memccpy(dst, src, '\0', -1); // expected-warning {{'memccpy' size argument is too large; destination buffer has size 10, but size argument is 18446744073709551615}}
+  // memccpy stops at the stop byte, so passing sizeof(dst) with a shorter
+  // source string should not trigger an overread warning.
+  memccpy(dst, "hi", '\0', sizeof(dst));
+  memccpy(dst, src, '\0', runtime_n);
+
+  memset_explicit(dst, 0, 0);
+  memset_explicit(dst, 0, 10);
+  memset_explicit(dst, 0, 11); // expected-warning {{'memset_explicit' will always overflow; destination buffer has size 10, but size argument is 11}}
+  memset_explicit(dst, 0, -1); // expected-warning {{'memset_explicit' will always overflow; destination buffer has size 10, but size argument is 18446744073709551615}}
+  memset_explicit(dst, 0, runtime_n);
+
+  explicit_bzero(dst, 0);
+  explicit_bzero(dst, 10);
+  explicit_bzero(dst, 11); // expected-warning {{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 11}}
+  explicit_bzero(dst, -1); // expected-warning {{'explicit_bzero' will always overflow; destination buffer has size 10, but size argument is 18446744073709551615}}
+  explicit_bzero(dst, runtime_n);
+}
+
 void call_fread_fwrite_fgets(FILE *fp) {
   char src[4];
   fread(src, 2, 3, fp); // expected-warning {{'fread' will always overflow; destination buffer has size 4, but size argument is 6}}
@@ -174,6 +204,31 @@ void call_fread_fwrite_fgets(FILE *fp) {
   fwrite(src, 2, 2, fp);
   fgets(src, 4, fp);
   fgets(src, 0, fp);
+}
+
+void call_fread_fwrite_fgets_unlocked(FILE *fp, size_t runtime_n,
+                                      int runtime_int) {
+  char buf[4];
+  fread_unlocked(buf, 2, 3, fp); // expected-warning {{'fread_unlocked' will always overflow; destination buffer has size 4, but size argument is 6}}
+  fread_unlocked(buf, 1ULL << 32, 1ULL << 32, fp); // expected-warning {{'fread_unlocked' will always overflow; destination buffer has size 4, but size argument is 18446744073709551616}}
+  fread_unlocked(buf, -1, 1, fp); // expected-warning {{'fread_unlocked' will always overflow; destination buffer has size 4, but size argument is 18446744073709551615}}
+  fwrite_unlocked(buf, 2, 3, fp); // expected-warning {{'fwrite_unlocked' will always read past the end of the source buffer; source buffer has size 4, but the size is 6}}
+  fwrite_unlocked(buf, 1ULL << 32, 1ULL << 32, fp); // expected-warning {{'fwrite_unlocked' will always read past the end of the source buffer; source buffer has size 4, but the size is 18446744073709551616}}
+  fwrite_unlocked(buf, -1, 1, fp); // expected-warning {{'fwrite_unlocked' will always read past the end of the source buffer; source buffer has size 4, but the size is 18446744073709551615}}
+  fgets_unlocked(buf, 5, fp); // expected-warning {{'fgets_unlocked' size argument is too large; destination buffer has size 4, but size argument is 5}}
+  fgets_unlocked(buf, -1, fp); // expected-warning {{'fgets_unlocked' size argument is negative}}
+
+  fread_unlocked(buf, 2, 2, fp);
+  fread_unlocked(buf, 0, 10, fp);
+  fread_unlocked(buf, 10, 0, fp);
+  fread_unlocked(buf, runtime_n, 2, fp);
+  fwrite_unlocked(buf, 2, 2, fp);
+  fwrite_unlocked(buf, 0, 10, fp);
+  fwrite_unlocked(buf, 10, 0, fp);
+  fwrite_unlocked(buf, runtime_n, 2, fp);
+  fgets_unlocked(buf, 4, fp);
+  fgets_unlocked(buf, 0, fp);
+  fgets_unlocked(buf, runtime_int, fp);
 }
 
 void call_snprintf(double d, int n) {
@@ -421,4 +476,23 @@ void call_call_memcpy() {
   call_memcpy_dep<9, 10>(); // expected-note {{in instantiation of function template specialization 'call_memcpy_dep<9, 10>' requested here}}
                             // expected-warning@-7 {{'memcpy' will always overflow; destination buffer has size 9, but size argument is 10}}
 }
+
+namespace non_c_linkage {
+void *memccpy(void *dst, const void *src, int c, size_t n);
+void *memset_explicit(void *dst, int c, size_t n);
+void explicit_bzero(void *dst, size_t n);
+size_t fread_unlocked(void *ptr, size_t size, size_t nmemb, FILE *stream);
+size_t fwrite_unlocked(const void *ptr, size_t size, size_t nmemb, FILE *stream);
+char *fgets_unlocked(char *s, int size, FILE *stream);
+
+void call_non_builtins(FILE *fp) {
+  char src[20], dst[10];
+  memccpy(dst, src, '\0', 20);
+  memset_explicit(dst, 0, 20);
+  explicit_bzero(dst, 20);
+  non_c_linkage::fread_unlocked(dst, 2, 10, fp);
+  non_c_linkage::fwrite_unlocked(dst, 2, 10, fp);
+  non_c_linkage::fgets_unlocked(dst, 20, fp);
+}
+} // namespace non_c_linkage
 #endif

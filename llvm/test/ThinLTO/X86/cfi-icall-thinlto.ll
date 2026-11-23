@@ -6,7 +6,7 @@
 ; RUN: llvm-lto2 run -save-temps %t.dir/lib.bc %t.dir/main.bc -o %t.dir/summary \
 ; RUN:   -r=%t.dir/lib.bc,_Z11public_funcv,plx \
 ; RUN:   -r=%t.dir/lib.bc,syscall, \
-; RUN:   -r=%t.dir/lib.bc,_ZN12_GLOBAL__N_113internal_funcEv.35df87b54cddf81e734207bfc5eea57a,pl \
+; RUN:   -r=%t.dir/lib.bc,_ZN12_GLOBAL__N_113internal_funcEv.llvm.35df87b54cddf81e734207bfc5eea57a,pl \
 ; RUN:   -r=%t.dir/main.bc,main,plx \
 ; RUN:   -r=%t.dir/main.bc,_Z11public_funcv,l
 ; RUN: llvm-dis %t.dir/summary.2.4.opt.bc -o - | FileCheck %s
@@ -15,7 +15,7 @@
 ; RUN:   -o %t.dir/distidx \
 ; RUN:   -r=%t.dir/lib.bc,_Z11public_funcv,plx \
 ; RUN:   -r=%t.dir/lib.bc,syscall, \
-; RUN:   -r=%t.dir/lib.bc,_ZN12_GLOBAL__N_113internal_funcEv.35df87b54cddf81e734207bfc5eea57a,pl \
+; RUN:   -r=%t.dir/lib.bc,_ZN12_GLOBAL__N_113internal_funcEv.llvm.35df87b54cddf81e734207bfc5eea57a,pl \
 ; RUN:   -r=%t.dir/main.bc,main,plx \
 ; RUN:   -r=%t.dir/main.bc,_Z11public_funcv,l
 ; RUN: llvm-bcanalyzer -dump %t.dir/lib.bc.thinlto.bc | FileCheck %s --check-prefix=DIST
@@ -32,9 +32,9 @@
 ; Verify that the distributed index records CFI_FUNCTION_DEFS with the
 ; 3-field format [GUID, strtab_offset, name_length]. The promoted internal
 ; function is listed with its stable pre-promotion GUID.
-; DIST:     <CFI_FUNCTION_DEFS op0={{[-0-9]+}} op1=0 op2=67/>
+; DIST:     <CFI_FUNCTION_DEFS op0={{[-0-9]+}} op1=0 op2=72/>
 ; DIST: <STRTAB_BLOCK
-; DIST-NEXT:   <BLOB abbrevid=4/> blob data = '_ZN12_GLOBAL__N_113internal_funcEv.35df87b54cddf81e734207bfc5eea57a_ZTSFjvE'
+; DIST-NEXT:   <BLOB abbrevid=4/> blob data = '_ZN12_GLOBAL__N_113internal_funcEv.llvm.35df87b54cddf81e734207bfc5eea57a_ZTSFjvE'
 
 ;--- lib.ll
 target triple = "x86_64-unknown-linux-gnu"

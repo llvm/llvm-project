@@ -42,4 +42,4 @@ body:             |
     %zext:_(i32) = G_ZEXT %cmp:_(i1)
     $w0 = COPY %zext
     RET_ReallyLR implicit $w0
----
+...

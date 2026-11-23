@@ -32,7 +32,6 @@
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
-#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -693,7 +692,6 @@ void llvm::deleteDeadLoop(Loop *L, DominatorTree *DT, ScalarEvolution *SE,
     // be be replaced with undef. Loop invariant values will still be available.
     // Move dbg.values out the loop so that earlier location ranges are still
     // terminated and loop invariant assignments are preserved.
-    DIBuilder DIB(*ExitBlock->getModule());
     BasicBlock::iterator InsertDbgValueBefore =
         ExitBlock->getFirstInsertionPt();
     assert(InsertDbgValueBefore != ExitBlock->end() &&
@@ -2193,7 +2191,7 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
     auto *LowAR = cast<SCEVAddRecExpr>(Low);
     const Loop *OuterLoop = TheLoop->getParentLoop();
     const SCEV *Recur = LowAR->getStepRecurrence(SE);
-    if (Recur == HighAR->getStepRecurrence(SE) &&
+    if (LowAR->isAffine() && Recur == HighAR->getStepRecurrence(SE) &&
         HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
       const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);
@@ -2278,8 +2276,8 @@ Value *llvm::addRuntimeChecks(
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, Exp, HoistRuntimeChecks);
 
-  IRBuilder ChkBuilder(Loc->getIterator(),
-                       InstSimplifyFolder(Loc->getDataLayout()));
+  const DataLayout &DL = Loc->getDataLayout();
+  IRBuilder ChkBuilder(Loc->getIterator(), InstSimplifyFolder(DL));
   // Our instructions might fold to a constant.
   Value *MemoryRuntimeCheck = nullptr;
   SmallPtrSet<Value *, 4> CheckedStrides;
@@ -2288,11 +2286,13 @@ Value *llvm::addRuntimeChecks(
     // Check if two pointers (A and B) conflict where conflict is computed as:
     // start(A) <= end(B) && start(B) <= end(A)
 
-    assert((A.Start->getType()->getPointerAddressSpace() ==
-            B.End->getType()->getPointerAddressSpace()) &&
-           (B.Start->getType()->getPointerAddressSpace() ==
-            A.End->getType()->getPointerAddressSpace()) &&
-           "Trying to bounds check pointers with different address spaces");
+    // Compare B's bounds in A's address space; LAA ensures casts are no-ops.
+    Type *PtrTy = A.Start->getType();
+    assert(DL.getPointerTypeSizeInBits(PtrTy) ==
+               DL.getPointerTypeSizeInBits(B.Start->getType()) &&
+           "Expected bounds with the same pointer size");
+    Value *BStart = ChkBuilder.CreateAddrSpaceCast(B.Start, PtrTy);
+    Value *BEnd = ChkBuilder.CreateAddrSpaceCast(B.End, PtrTy);
 
     // [A|B].Start points to the first accessed byte under base [A|B].
     // [A|B].End points to the last accessed byte, plus one.
@@ -2302,8 +2302,8 @@ Value *llvm::addRuntimeChecks(
     // bound0 = (B.Start < A.End)
     // bound1 = (A.Start < B.End)
     //  IsConflict = bound0 & bound1
-    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, B.End, "bound0");
-    Value *Cmp1 = ChkBuilder.CreateICmpULT(B.Start, A.End, "bound1");
+    Value *Cmp0 = ChkBuilder.CreateICmpULT(A.Start, BEnd, "bound0");
+    Value *Cmp1 = ChkBuilder.CreateICmpULT(BStart, A.End, "bound1");
     Value *IsConflict = ChkBuilder.CreateAnd(Cmp0, Cmp1, "found.conflict");
     if (A.StrideToCheck && CheckedStrides.insert(A.StrideToCheck).second) {
       Value *IsNegativeStride = ChkBuilder.CreateICmpSLT(

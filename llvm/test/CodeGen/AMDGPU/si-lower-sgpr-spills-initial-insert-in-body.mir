@@ -70,3 +70,4 @@ body:             |
   bb.4:
     liveins: $sgpr30_sgpr31
     S_SETPC_B64 $sgpr30_sgpr31
+...

@@ -1121,23 +1121,12 @@ define <16 x i8> @load2multi1_v4i8(float %tmp, ptr %a, ptr %b) {
 }
 
 define <16 x i8> @load2multi2_v4i8(float %tmp, ptr %a, ptr %b) {
-; CHECK-SD-LABEL: load2multi2_v4i8:
-; CHECK-SD:       // %bb.0:
-; CHECK-SD-NEXT:    ldr s0, [x0]
-; CHECK-SD-NEXT:    ldr s1, [x1]
-; CHECK-SD-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-SD-NEXT:    ushll v1.8h, v1.8b, #0
-; CHECK-SD-NEXT:    mov v0.d[1], v0.d[0]
-; CHECK-SD-NEXT:    mov v1.d[1], v1.d[0]
-; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: load2multi2_v4i8:
-; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ld1r { v0.2s }, [x0]
-; CHECK-GI-NEXT:    ld1r { v1.2s }, [x1]
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: load2multi2_v4i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1r { v0.2s }, [x0]
+; CHECK-NEXT:    ld1r { v1.2s }, [x1]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    ret
   %la = load <4 x i8>, ptr %a
   %lb = load <4 x i8>, ptr %b
   %s1 = shufflevector <4 x i8> %la, <4 x i8> %la, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

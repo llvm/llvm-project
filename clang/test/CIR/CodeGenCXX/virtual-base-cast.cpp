@@ -26,11 +26,7 @@ D* x;
 // CIR: }, false {
 // CIR:   %[[X_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
 // CIR:   %[[X_VPTR_BASE:.*]] = cir.load{{.*}} %[[X_VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:   %[[X_BASE_I8PTR:.*]] = cir.cast bitcast %[[X_VPTR_BASE]] : !cir.vptr -> !cir.ptr<!u8i>
-// CIR:   %[[OFFSET_OFFSET:.*]] = cir.const #cir.int<-32> : !s64i
-// CIR:   %[[OFFSET_PTR:.*]] = cir.ptr_stride %[[X_BASE_I8PTR]], %[[OFFSET_OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
-// CIR:   %[[OFFSET_PTR_CAST:.*]] = cir.cast bitcast %[[OFFSET_PTR]] : !cir.ptr<!u8i> -> !cir.ptr<!s64i>
-// CIR:   %[[OFFSET:.*]] = cir.load{{.*}} %[[OFFSET_PTR_CAST]] : !cir.ptr<!s64i>, !s64i
+// CIR:   %[[OFFSET:.*]] = cir.vtable.get_offset %[[X_VPTR_BASE]][-4] : !cir.vptr -> !s64i
 // CIR:   %[[VBASE_ADDR:.*]] = cir.ptr_stride {{.*}}, %[[OFFSET]] : (!cir.ptr<!u8i>, !s64i) -> !cir.ptr<!u8i>
 // CIR:   cir.cast bitcast %[[VBASE_ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_D>
 // CIR: })
@@ -129,7 +125,7 @@ struct F : E, D { int f; };
 F* y;
 
 // CIR-LABEL: @_Z1dv
-// CIR: %[[OFFSET:.*]] = cir.load{{.*}} {{.*}} : !cir.ptr<!s64i>, !s64i
+// CIR: %[[OFFSET:.*]] = cir.vtable.get_offset {{.*}} : !cir.vptr -> !s64i
 // CIR: %[[ADJUST:.*]] = cir.const #cir.int<16> : !s64i
 // CIR: cir.add %[[OFFSET]], %[[ADJUST]] : !s64i
 

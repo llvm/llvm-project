@@ -58,8 +58,13 @@ public:
       : ctx(ctx), sec(sec), shard(shard) {}
   void scanEhSection(EhInputSection &s);
 
-  template <class ELFT, class RelTy>
-  int64_t getAddend(const RelTy &r, RelType type);
+  template <class RelTy> int64_t getAddend(const RelTy &r, RelType type) {
+    if constexpr (RelTy::HasAddend)
+      return r.r_addend;
+    else
+      return ctx.target->getImplicitAddend(sec->content().data() + r.r_offset,
+                                           type);
+  }
   bool maybeReportUndefined(Undefined &sym, uint64_t offset);
   bool checkTlsLe(uint64_t offset, Symbol &sym, RelType type);
   bool isStaticLinkTimeConstant(RelExpr e, RelType type, const Symbol &sym,
@@ -173,23 +178,16 @@ public:
   }
 };
 
-template <class ELFT, class RelTy>
-int64_t RelocScan::getAddend(const RelTy &r, RelType type) {
-  return RelTy::HasAddend ? elf::getAddend<ELFT>(r)
-                          : ctx.target->getImplicitAddend(
-                                sec->content().data() + r.r_offset, type);
-}
-
 // Dispatch to target-specific scanSectionImpl based on relocation format.
 template <class ELFT, class Target>
 void scanSection1(Target &target, InputSectionBase &sec, unsigned shard) {
   const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
   if (rels.areRelocsCrel())
-    target.template scanSectionImpl<ELFT>(sec, rels.crels, shard);
+    target.scanSectionImpl(sec, rels.crels, shard);
   else if (rels.areRelocsRel())
-    target.template scanSectionImpl<ELFT>(sec, rels.rels, shard);
+    target.scanSectionImpl(sec, rels.rels, shard);
   else
-    target.template scanSectionImpl<ELFT>(sec, rels.relas, shard);
+    target.scanSectionImpl(sec, rels.relas, shard);
 }
 
 } // namespace lld::elf

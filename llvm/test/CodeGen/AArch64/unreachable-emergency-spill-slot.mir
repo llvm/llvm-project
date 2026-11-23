@@ -37,3 +37,4 @@ body: |
     ; Pick SP here. Picking FP will require scavenging a register.
     ; CHECK: STRXui undef $x8, $sp, 4062
     RET_ReallyLR
+...

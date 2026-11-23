@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBBreakpoint.h"
+#include "Utils.h"
 #include "lldb/API/SBBreakpointLocation.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
@@ -295,7 +296,7 @@ const char *SBBreakpoint::GetCondition() {
   StopCondition cond = bkpt_sp->GetCondition();
   if (!cond)
     return nullptr;
-  return ConstString(cond.GetText()).GetCString();
+  return GetDebuggerStringPool(bkpt_sp->GetTarget()).Intern(cond.GetText());
 }
 
 void SBBreakpoint::SetConditionMode(lldb::BreakpointConditionMode mode) {
@@ -448,7 +449,8 @@ const char *SBBreakpoint::GetThreadName() const {
   std::lock_guard<TargetAPIMutex> guard(api_lock);
   if (const ThreadSpec *thread_spec =
           bkpt_sp->GetOptions().GetThreadSpecNoCreate())
-    return ConstString(thread_spec->GetName()).GetCString();
+    return GetDebuggerStringPool(bkpt_sp->GetTarget())
+        .Intern(thread_spec->GetName());
 
   return nullptr;
 }
@@ -475,7 +477,8 @@ const char *SBBreakpoint::GetQueueName() const {
   std::lock_guard<TargetAPIMutex> guard(api_lock);
   if (const ThreadSpec *thread_spec =
           bkpt_sp->GetOptions().GetThreadSpecNoCreate())
-    return ConstString(thread_spec->GetQueueName()).GetCString();
+    return GetDebuggerStringPool(bkpt_sp->GetTarget())
+        .Intern(thread_spec->GetQueueName());
 
   return nullptr;
 }
@@ -883,7 +886,7 @@ public:
     if (bkpt->GetTargetSP() != target_sp)
       return false;
     lldb::break_id_t bp_id = bkpt->GetID();
-    if (!llvm::is_contained(m_break_ids, bp_id))
+    if (llvm::is_contained(m_break_ids, bp_id))
       return false;
 
     m_break_ids.push_back(bkpt->GetID());
@@ -918,6 +921,19 @@ private:
 SBBreakpointList::SBBreakpointList(SBTarget &target)
     : m_opaque_sp(new SBBreakpointListImpl(target.GetSP())) {
   LLDB_INSTRUMENT_VA(this, target);
+}
+
+SBBreakpointList::SBBreakpointList(const SBBreakpointList &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBBreakpointList &SBBreakpointList::operator=(const SBBreakpointList &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs)
+    m_opaque_sp = rhs.m_opaque_sp;
+  return *this;
 }
 
 SBBreakpointList::~SBBreakpointList() = default;
