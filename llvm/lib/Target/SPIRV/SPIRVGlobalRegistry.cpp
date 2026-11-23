@@ -190,25 +190,25 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeInt(unsigned Width,
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                     MachineIRBuilder &MIRBuilder) {
-  return createConstOrTypeAtFunctionEntry(
-      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
-            .addDef(createTypeVReg(MIRBuilder))
-            .addImm(Width);
-      });
+  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
+                                                              &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+        .addDef(createTypeVReg(MIRBuilder))
+        .addImm(Width);
+  });
 }
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOpTypeFloat(uint32_t Width,
                                     MachineIRBuilder &MIRBuilder,
                                     SPIRV::FPEncoding::FPEncoding FPEncode) {
-  return createConstOrTypeAtFunctionEntry(
-      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
-            .addDef(createTypeVReg(MIRBuilder))
-            .addImm(Width)
-            .addImm(FPEncode);
-      });
+  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
+                                                              &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeFloat)
+        .addDef(createTypeVReg(MIRBuilder))
+        .addImm(Width)
+        .addImm(FPEncode);
+  });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeVoid(MachineIRBuilder &MIRBuilder) {
@@ -1132,13 +1132,13 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypePointer(
   if (!Reg.isValid())
     Reg = createTypeVReg(MIRBuilder);
 
-  return createConstOrTypeAtFunctionEntry(
-      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        return MIRBuilder.buildInstr(SPIRV::OpTypePointer)
-            .addDef(Reg)
-            .addImm(static_cast<uint32_t>(SC))
-            .addUse(getSPIRVTypeID(ElemType));
-      });
+  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
+                                                              &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypePointer)
+        .addDef(Reg)
+        .addImm(static_cast<uint32_t>(SC))
+        .addUse(getSPIRVTypeID(ElemType));
+  });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeFunction(
@@ -1153,15 +1153,15 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeFunction(
         Fn, "SPIR-V shaders do not support variadic functions",
         MIRBuilder.getDebugLoc()));
   }
-  return createConstOrTypeAtFunctionEntry(
-      MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
-        auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
-                       .addDef(createTypeVReg(MIRBuilder))
-                       .addUse(getSPIRVTypeID(RetType));
-        for (auto &ArgType : ArgTypes)
-          MIB.addUse(getSPIRVTypeID(ArgType));
-        return MIB;
-      });
+  return createConstOrTypeAtFunctionEntry(MIRBuilder, [&](MachineIRBuilder
+                                                              &MIRBuilder) {
+    auto MIB = MIRBuilder.buildInstr(SPIRV::OpTypeFunction)
+                   .addDef(createTypeVReg(MIRBuilder))
+                   .addUse(getSPIRVTypeID(RetType));
+    for (auto &ArgType : ArgTypes)
+      MIB.addUse(getSPIRVTypeID(ArgType));
+    return MIB;
+  });
 }
 
 SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateOpTypeFunctionWithArgs(
