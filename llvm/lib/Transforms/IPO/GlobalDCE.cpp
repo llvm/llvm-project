@@ -17,7 +17,6 @@
 #include "llvm/Transforms/IPO/GlobalDCE.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
