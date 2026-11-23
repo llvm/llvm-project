@@ -4227,7 +4227,7 @@ public:
 ///   auto &[a, b, c] = n;
 ///
 /// a, b, and c are BindingDecls, whose bindings are the expressions
-/// x[0], x[1], and x[2] respectively, where x is the implicit
+/// n[0], n[1], and n[2] respectively, where n is the implicit
 /// DecompositionDecl of type 'int (&)[3]'.
 class BindingDecl : public ValueDecl {
   /// The declaration that this binding binds to part of.

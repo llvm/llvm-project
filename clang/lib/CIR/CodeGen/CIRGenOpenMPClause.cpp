@@ -190,3 +190,59 @@ bool OpenMPClauseEmitter::emitMap(
   }
   return found;
 }
+
+bool OpenMPClauseEmitter::emitPrivate(
+    mlir::omp::PrivateClauseOps &result,
+    llvm::SmallVector<const VarDecl *> &emittedAsPrivate,
+    PrivatizerFn emitPrivatizer) const {
+  llvm::SmallDenseSet<const VarDecl *> alreadyEmittedSet;
+  for (const clang::OMPClause *const clause : clauses) {
+    const auto *pc = dyn_cast<OMPPrivateClause>(clause);
+    if (!pc)
+      continue;
+
+    for (const Expr *const originalRef : pc->varlist()) {
+      const DeclRefExpr *originalDeclRef = dyn_cast<DeclRefExpr>(originalRef);
+      if (!originalDeclRef) {
+        cgm.errorNYI(originalRef->getBeginLoc(),
+                     "OpenMP private cause with non-DeclRefExpr variable.");
+        return false;
+      }
+
+      // TODO: Not necessarily a VarDecl. Could be, e.g., BindingDecl.
+      const VarDecl *vd = dyn_cast<VarDecl>(originalDeclRef->getDecl());
+      if (!vd) {
+        cgm.errorNYI(originalDeclRef->getBeginLoc(),
+                     "OpenMP private clause with non-VarDecl variable.");
+        return false;
+      }
+
+      if (vd->hasGlobalStorage()) {
+        cgm.errorNYI(vd->getBeginLoc(),
+                     "OpenMP private clause with global variable.");
+        return false;
+      }
+      if (!vd->getType()->isBuiltinType()) {
+        cgm.errorNYI(vd->getBeginLoc(),
+                     "OpenMP private clause with non-builtin types.");
+        return false;
+      }
+      if (!alreadyEmittedSet.insert(vd).second)
+        continue;
+
+      mlir::Location vdLoc = cgf.getLoc(vd->getBeginLoc());
+      Address vdAddr = cgf.getAddrOfLocalVar(vd);
+      mlir::Value vdSSA = vdAddr.getPointer();
+      mlir::Type vdType = vdAddr.getElementType();
+
+      mlir::omp::PrivateClauseOp privatizer =
+          emitPrivatizer(cgm, vdLoc, vd->getName(), vdType);
+
+      result.privateVars.push_back(vdSSA);
+      result.privateSyms.push_back(mlir::SymbolRefAttr::get(privatizer));
+
+      emittedAsPrivate.push_back(vd);
+    }
+  }
+  return !alreadyEmittedSet.empty();
+}

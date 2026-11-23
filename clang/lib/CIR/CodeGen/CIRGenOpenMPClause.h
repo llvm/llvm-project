@@ -12,6 +12,7 @@
 #include "CIRGenBuilder.h"
 #include "CIRGenModule.h"
 #include "mlir/Dialect/OpenMP/OpenMPClauseOperands.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "clang/AST/OpenMPClause.h"
 #include "clang/AST/StmtOpenMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -49,6 +50,12 @@ public:
                llvm::SmallVectorImpl<const VarDecl *> *mapSyms = nullptr) const;
 
   bool emitNumThreads(mlir::omp::NumThreadsClauseOps &result) const;
+
+  using PrivatizerFn = llvm::function_ref<mlir::omp::PrivateClauseOp(
+      CIRGenModule &, mlir::Location, llvm::StringRef, mlir::Type)>;
+  bool emitPrivate(mlir::omp::PrivateClauseOps &result,
+                   llvm::SmallVector<const VarDecl *> &emittedAsPrivate,
+                   PrivatizerFn emitPrivatizer) const;
 
   bool emitProcBind(mlir::omp::ProcBindClauseOps &result) const;
 

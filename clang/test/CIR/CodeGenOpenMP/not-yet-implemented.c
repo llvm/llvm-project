@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -fopenmp -triple x86_64-linux-gnu -fclangir %s -verify -emit-cir -o -
 
+int globalX = 10;
+
 void do_things() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP OMPCriticalDirective}}
 #pragma omp critical
@@ -16,6 +18,10 @@ void do_things() {
   // expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'shared' clause}}
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP PARALLEL 'firstprivate' clause}}
 #pragma omp parallel shared(a) firstprivate(b)
+  {}
+  
+// expected-error@+2{{ClangIR code gen Not Yet Implemented: OpenMP private clause with global variable.}}
+#pragma omp parallel private(globalX) 
   {}
 
   // A clause routed through construct decomposition but not yet emittable must

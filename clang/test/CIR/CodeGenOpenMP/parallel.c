@@ -174,3 +174,111 @@ void num_threads_parallel() {
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }
+
+void aux_private_parallel(int x) {
+  // CHECK: cir.func{{.*}}@aux_private_parallel
+
+  // CHECK-NEXT: %[[FUNC_X_ADDR:.*]] = cir.alloca "x"
+  // CHECK-NEXT: cir.store %arg0, %[[FUNC_X_ADDR]]
+  #pragma omp parallel private(x)
+  {
+    x = 20;
+  }
+  // CHECK-NEXT: omp.parallel private(@[[FUNC_X_PRIVATIZER:.*]] %[[FUNC_X_ADDR]] -> %[[PRIV_X_ADDR:.*]] {{.*}}) {
+  // CHECK-NEXT: %[[AUX_ONE_ADDR:.*]] = cir.const #cir.int<20>
+  // CHECK-NEXT: cir.store align(4) %[[AUX_ONE_ADDR]], %[[PRIV_X_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  // CHECK: omp.private {type = private} @[[FUNC_X_PRIVATIZER]]
+}
+
+void private_parallel() {
+  // CHECK: cir.func{{.*}}@private_parallel
+
+  int x = 10;
+  int y = 50;
+
+  // CHECK-NEXT: %[[X_LOCAL_ADDR:.*]] = cir.alloca "x"
+  // CHECK-NEXT: %[[Y_LOCAL_ADDR:.*]] = cir.alloca "y"
+  // CHECK-NEXT: %[[CONST_10_ADDR:.*]] = cir.const #cir.int<10>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_10_ADDR]], %[[X_LOCAL_ADDR]]
+  // CHECK-NEXT: %[[CONST_50_ADDR:.*]] = cir.const #cir.int<50>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_50_ADDR]], %[[Y_LOCAL_ADDR]]
+  #pragma omp parallel private(x)
+  {
+    x = 20;
+  }
+  // CHECK-NEXT: omp.parallel private(@[[X_PRIVATIZER_1:.*]] %[[X_LOCAL_ADDR]] -> %[[X_PRIV_ADDR:.*]] {{.*}}) {
+  // CHECK-NEXT: %[[CONST_20_ADDR:.*]] = cir.const #cir.int<20>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_20_ADDR]], %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  #pragma omp parallel private(x, y)
+  {
+    x = 20;
+    y = 50;
+  }
+  // CHECK-NEXT: omp.parallel private(@[[X_PRIVATIZER_2:.*]] %[[X_LOCAL_ADDR]] -> %[[X_PRIV_ADDR:.*]], @[[Y_PRIVATIZER_0:.*]] %[[Y_LOCAL_ADDR]] -> %[[Y_PRIV_ADDR:.*]] : {{.*}}) {
+  // CHECK-NEXT: %[[CONST_20_ADDR:.*]] = cir.const #cir.int<20>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_20_ADDR]], %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: %[[CONST_50_ADDR:.*]] = cir.const #cir.int<50>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_50_ADDR]], %[[Y_PRIV_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  #pragma omp parallel private(x)
+  {
+    x = 20;
+    #pragma omp parallel private(x, y)
+    {
+      x = 30;
+      y = 100;
+    }
+    x = 20;
+    y = 50;
+  }
+  // CHECK-NEXT: omp.parallel private(@[[X_PRIVATIZER_3:.*]] %[[X_LOCAL_ADDR]] -> %[[X_PRIV_ADDR:.*]] : {{.*}}) {
+  // CHECK-NEXT: %[[CONST_20_ADDR:.*]] = cir.const #cir.int<20>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_20_ADDR]], %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: omp.parallel private(@[[X_PRIVATIZER_4:.*]] %[[X_PRIV_ADDR]] -> %[[X_INNER_PRIV_ADDR:.*]], @[[Y_PRIVATIZER_1:.*]] %[[Y_LOCAL_ADDR]] -> %[[Y_INNER_PRIV_ADDR:.*]] : {{.*}}) {
+  // CHECK-NEXT: %[[CONST_30_ADDR:.*]] = cir.const #cir.int<30>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_30_ADDR]], %[[X_INNER_PRIV_ADDR]]
+  // CHECK-NEXT: %[[CONST_100_ADDR:.*]] = cir.const #cir.int<100>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_100_ADDR]], %[[Y_INNER_PRIV_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+  // CHECK-NEXT: %[[CONST_20_ADDR:.*]] = cir.const #cir.int<20>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_20_ADDR]], %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: %[[CONST_50_ADDR:.*]] = cir.const #cir.int<50> 
+  // CHECK-NEXT: cir.store align(4) %[[CONST_50_ADDR]], %[[Y_LOCAL_ADDR]]
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  aux_private_parallel(x);
+  #pragma omp parallel private(x)
+  {
+    x = 30;
+    aux_private_parallel(x);
+  }
+  // CHECK-NEXT: %[[X_PARAM_ADDR:.*]] = cir.load align(4) %[[X_LOCAL_ADDR]]
+  // CHECK-NEXT: cir.call @aux_private_parallel(%[[X_PARAM_ADDR]])
+  // CHECK-NEXT: omp.parallel private(@[[X_PRIVATIZER_5:.*]] %[[X_LOCAL_ADDR]] -> %[[X_PRIV_ADDR:.*]] : {{.*}})
+  // CHECK-NEXT: %[[CONST_30_ADDR:.*]] = cir.const #cir.int<30>
+  // CHECK-NEXT: cir.store align(4) %[[CONST_30_ADDR]], %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: %[[X_CALL_ADDR:.*]] = cir.load align(4) %[[X_PRIV_ADDR]]
+  // CHECK-NEXT: cir.call @aux_private_parallel(%[[X_CALL_ADDR]])
+  // CHECK-NEXT: omp.terminator
+  // CHECK-NEXT: }
+
+  // CHECK-NEXT: cir.return
+  // CHECK-NEXT: }
+  // CHECK-NEXT: omp.private {type = private} @[[X_PRIVATIZER_1]]
+  // CHECK-NEXT: omp.private {type = private} @[[X_PRIVATIZER_2]]
+  // CHECK-NEXT: omp.private {type = private} @[[Y_PRIVATIZER_0]]
+  // CHECK-NEXT: omp.private {type = private} @[[X_PRIVATIZER_3]]
+  // CHECK-NEXT: omp.private {type = private} @[[X_PRIVATIZER_4]]
+  // CHECK-NEXT: omp.private {type = private} @[[Y_PRIVATIZER_1]]
+  // CHECK-NEXT: omp.private {type = private} @[[X_PRIVATIZER_5]]
+}

@@ -24,6 +24,11 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
+static mlir::omp::PrivateClauseOp emitScalarPrivatizer(CIRGenModule &cgm,
+                                                       mlir::Location loc,
+                                                       llvm::StringRef baseName,
+                                                       mlir::Type elemTy);
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPScopeDirective(const OMPScopeDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPScopeDirective");
@@ -56,17 +61,18 @@ static mlir::LogicalResult
 emitParallelClauses(CIRGenFunction &cgf, CIRGenModule &cgm,
                     CIRGenBuilderTy &builder, mlir::Location loc,
                     llvm::ArrayRef<const OMPClause *> clauses,
-                    mlir::omp::ParallelOperands &clauseOps) {
+                    mlir::omp::ParallelOperands &clauseOps,
+                    llvm::SmallVector<const VarDecl *> &emittedAsPrivate) {
   OpenMPClauseEmitter ce(cgf, cgm, builder, loc, clauses);
   ce.emitIf(clauseOps, llvm::omp::Directive::OMPD_parallel);
   ce.emitNumThreads(clauseOps);
+  ce.emitPrivate(clauseOps, emittedAsPrivate, emitScalarPrivatizer);
   ce.emitProcBind(clauseOps);
   return ce.emitNYI</*supported=*/OMPIfClause, OMPNumThreadsClause,
-                    OMPProcBindClause, OMPPrivateClause>(
+                    OMPPrivateClause, OMPProcBindClause>(
       /*nyi=*/OpenMPNYIClauseList<OMPAllocateClause, OMPCopyinClause,
                                   OMPDefaultClause, OMPFirstprivateClause,
-                                  OMPReductionClause,
-                                  OMPSharedClause>{},
+                                  OMPReductionClause, OMPSharedClause>{},
       llvm::omp::Directive::OMPD_parallel);
 }
 
@@ -96,8 +102,9 @@ static mlir::LogicalResult
 emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
                const omp::ConstructQueue &queue,
                omp::ConstructQueue::const_iterator item, mlir::Location begin,
-               mlir::Location end, const mlir::omp::ParallelOperands &clauseOps,
-               llvm::function_ref<mlir::LogicalResult()> emitBody) {
+               mlir::Location end, mlir::omp::ParallelOperands &clauseOps,
+               llvm::function_ref<mlir::LogicalResult()> emitBody,
+               llvm::SmallVector<const VarDecl *> &emittedAsPrivate) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   CIRGenModule &cgm = cgf.getCIRGenModule();
 
@@ -117,6 +124,20 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
     parallelOp.setCombined(true);
 
   mlir::Block &block = parallelOp.getRegion().emplaceBlock();
+
+  for (auto varAddr : clauseOps.privateVars)
+    block.addArgument(varAddr.getType(), varAddr.getLoc());
+
+  llvm::SmallVector<std::unique_ptr<CIRGenFunction::DeclMapRevertingRAII>>
+      guards;
+  for (auto [idx, vd] : llvm::enumerate(emittedAsPrivate)) {
+    Address origAddr = cgf.getAddrOfLocalVar(vd);
+    guards.push_back(
+        std::make_unique<CIRGenFunction::DeclMapRevertingRAII>(cgf, vd));
+    mlir::Value blockSSA = block.getArgument(idx);
+    cgf.replaceAddrOfLocalVar(vd, Address(blockSSA, origAddr.getAlignment()));
+  }
+
   return emitOMPRegionBody<mlir::omp::TerminatorOp>(cgf, block, begin, end,
                                                     emitBody);
 }
@@ -133,13 +154,14 @@ static mlir::LogicalResult emitParallel(
     return mlir::failure();
 
   mlir::omp::ParallelOperands parallelOps;
-  if (mlir::failed(emitParallelClauses(cgf, cgf.getCIRGenModule(),
-                                       cgf.getBuilder(), begin,
-                                       parallelItem->clauses, parallelOps)))
+  llvm::SmallVector<const VarDecl *> emittedAsPrivate;
+  if (mlir::failed(emitParallelClauses(
+          cgf, cgf.getCIRGenModule(), cgf.getBuilder(), begin,
+          parallelItem->clauses, parallelOps, emittedAsPrivate)))
     return mlir::failure();
 
   return emitParallelOp(cgf, s, queue, parallelItem, begin, end, parallelOps,
-                        emitBody);
+                        emitBody, emittedAsPrivate);
 }
 
 mlir::LogicalResult
