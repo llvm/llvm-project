@@ -123,7 +123,8 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// `memref<192xi8> alignment = 256` with factor 2 becomes
 /// `memref<2x192xi8, strided<[256, 1]>> alignment = 256`.
 /// Identity layouts without alignment padding and non-int/float elements stay
-/// dense. Example:
+/// dense. Otherwise the alloc grows a leading dimension and each iteration
+/// takes a subview of one slot. With factor 5:
 /// ```
 /// %0 = memref.alloc() : memref<4x128xf32>
 /// scf.for %iv = %c1 to %c1024 step %c3 {
@@ -142,6 +143,28 @@ void populateMemRefNarrowTypeEmulationConversions(
 ///     memref<5x4x128xf32> to memref<4x128xf32, strided<[128, 1], offset: ?>>
 ///   memref.copy %1, %sv : memref<4x128xf32> to memref<4x128xf32, strided<...>>
 ///   "some_use"(%sv) : (memref<4x128xf32, strided<...>) -> ()
+/// }
+/// ```
+/// A 1-D identity i8 alloc used by `memref.view` stays 1-D. The original alloc
+/// is replaced by a view of the current slot, so user views keep their byte
+/// shifts. With factor 2:
+/// ```
+/// %0 = memref.alloc() : memref<192xi8>
+/// scf.for %iv = %c0 to %c8 step %c1 {
+///   %v = memref.view %0[%c16][] : memref<192xi8> to memref<16xf32>
+///   memref.copy %src, %0 : memref<192xi8> to memref<192xi8>
+///   "some_use"(%v) : (memref<16xf32>) -> ()
+/// }
+/// ```
+/// into:
+/// ```
+/// %0 = memref.alloc() : memref<384xi8>
+/// scf.for %iv = %c0 to %c8 step %c1 {
+///   %off = affine.apply affine_map<(d0) -> (d0 * 192)>(%iv)
+///   %slot = memref.view %0[%off][] : memref<384xi8> to memref<192xi8>
+///   %v = memref.view %slot[%c16][] : memref<192xi8> to memref<16xf32>
+///   memref.copy %src, %slot : memref<192xi8> to memref<192xi8>
+///   "some_use"(%v) : (memref<16xf32>) -> ()
 /// }
 /// ```
 FailureOr<memref::AllocOp> multiBuffer(RewriterBase &rewriter,

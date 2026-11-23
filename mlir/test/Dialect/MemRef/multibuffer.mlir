@@ -342,3 +342,33 @@ func.func @multi_buffer_identity_aligned(%src: memref<192xi8>) {
   }
   return
 }
+
+// -----
+
+// The view is created before the copy. It does not read the buffer, and the
+// copy dominates the read, so the alloc stays 1-D and is replaced by a view of
+// the current slot. The user view keeps its constant byte shift.
+// CHECK-DAG: #[[$MAP_VIEW:.*]] = affine_map<(d0) -> (((d0 - 1) floordiv 3) * 192 - (((d0 - 1) floordiv 3) floordiv 5) * 960)>
+
+// CHECK-LABEL: func @multi_buffer_view
+func.func @multi_buffer_view(%src: memref<192xi8>) {
+// CHECK-DAG: %[[A:.*]] = memref.alloc() : memref<960xi8>
+// CHECK-DAG: %[[C128:.*]] = arith.constant 128 : index
+  %0 = memref.alloc() : memref<192xi8>
+  %c128 = arith.constant 128 : index
+  %c1024 = arith.constant 1024 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+// CHECK: scf.for %[[IV:.*]] =
+  scf.for %arg2 = %c1 to %c1024 step %c3 {
+// CHECK: %[[OFF:.*]] = affine.apply #[[$MAP_VIEW]](%[[IV]])
+// CHECK: %[[SLOT:.*]] = memref.view %[[A]][%[[OFF]]][] : memref<960xi8> to memref<192xi8>
+// CHECK: %[[V:.*]] = memref.view %[[SLOT]][%[[C128]]][] : memref<192xi8> to memref<16xf32>
+    %1 = memref.view %0[%c128][] : memref<192xi8> to memref<16xf32>
+// CHECK: memref.copy %{{.*}}, %[[SLOT]] : memref<192xi8> to memref<192xi8>
+    memref.copy %src, %0 : memref<192xi8> to memref<192xi8>
+// CHECK: "some_use"(%[[V]]) : (memref<16xf32>) -> ()
+    "some_use"(%1) : (memref<16xf32>) -> ()
+  }
+  return
+}

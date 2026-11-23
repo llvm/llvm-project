@@ -39,6 +39,20 @@ static bool overrideBuffer(Operation *op, Value buffer) {
   return copyOp.getTarget() == buffer;
 }
 
+/// Return true when `overwrite` dominates every read reachable through `user`.
+/// `memref.view` does not read the buffer, so it may be created before the
+/// overwrite as long as every user of that view is dominated by `overwrite`.
+static bool dominatesBufferRead(DominanceInfo &dom, Operation *overwrite,
+                                Operation *user) {
+  if (dom.dominates(overwrite, user))
+    return true;
+  if (!isa<memref::ViewOp>(user))
+    return false;
+  return llvm::all_of(user->getUsers(), [&](Operation *viewUser) {
+    return dominatesBufferRead(dom, overwrite, viewUser);
+  });
+}
+
 /// Replace the uses of `oldOp` with the given `val` and for view-like uses
 /// propagate the type change. Changing the memref type may require propagating
 /// it through view-like ops (subview, expand_shape, collapse_shape, cast) so
@@ -193,6 +207,32 @@ static MemRefLayoutAttrInterface multiBufferLayout(memref::AllocOp allocOp) {
                                 expandedStrides);
 }
 
+/// Return true if `allocOp` is a valid `memref.view` source with a view user.
+static bool isViewedByteAlloc(memref::AllocOp allocOp) {
+  MemRefType type = allocOp.getType();
+  return type.getRank() == 1 && type.hasStaticShape() &&
+         type.getElementType().isSignlessInteger(8) &&
+         type.getLayout().isIdentity() &&
+         llvm::any_of(allocOp->getUsers(), llvm::IsaPred<memref::ViewOp>);
+}
+
+/// Replace the deallocs of `allocOp` with deallocs of `mbAlloc`.
+static void replaceDeallocs(RewriterBase &rewriter, memref::AllocOp allocOp,
+                            memref::AllocOp mbAlloc) {
+  for (OpOperand &use : llvm::make_early_inc_range(allocOp->getUses())) {
+    auto deallocOp = dyn_cast<memref::DeallocOp>(use.getOwner());
+    if (!deallocOp)
+      continue;
+    OpBuilder::InsertionGuard g(rewriter);
+    rewriter.setInsertionPoint(deallocOp);
+    auto newDeallocOp =
+        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
+    (void)newDeallocOp;
+    LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
+    rewriter.eraseOp(deallocOp);
+  }
+}
+
 // Transformation to do multi-buffering/array expansion to remove dependencies
 // on the temporary allocation between consecutive loop iterations.
 // Returns success if the transformation happened and failure otherwise.
@@ -224,9 +264,10 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
         LLVM_DEBUG(DBGS() << "--Skip user: found loop-carried dependence\n");
         continue;
       }
-      // If this user doesn't dominate all the other users keep looking.
+      // If this user doesn't dominate all the other reads keep looking.
+      // A view may be created earlier; only its reads have to be dominated.
       if (llvm::any_of(allocOp->getUsers(), [&](Operation *otherUser) {
-            return !dom.dominates(user, otherUser);
+            return !dominatesBufferRead(dom, user, otherUser);
           })) {
         LLVM_DEBUG(
             DBGS() << "--Skip user: does not dominate all other users\n");
@@ -268,6 +309,42 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   LLVM_DEBUG(DBGS() << "Start multibuffering loop: " << candidateLoop << "\n");
 
+  Location loc = allocOp->getLoc();
+  OpBuilder::InsertionGuard g(rewriter);
+
+  // `memref.view` needs a 1-D byte source with identity layout, so a viewed
+  // byte alloc stays flat. The alloc is replaced by a view of the current slot
+  // so its view users keep their constant byte shifts.
+  if (isViewedByteAlloc(allocOp)) {
+    int64_t slotBytes = allocOp.getType().getDimSize(0);
+    int64_t flatBytes = slotBytes * multiBufferingFactor;
+    MemRefType flatType =
+        MemRefType::Builder(allocOp.getType()).setShape({flatBytes});
+    rewriter.setInsertionPoint(allocOp);
+    auto mbAlloc = memref::AllocOp::create(
+        rewriter, loc, flatType, ValueRange{}, allocOp.getAlignmentAttr());
+    mbAlloc->setDiscardableAttrs(allocOp->getDiscardableAttrDictionary());
+    LLVM_DEBUG(DBGS() << "--multi-buffered alloc: " << mbAlloc << "\n");
+
+    rewriter.setInsertionPointToStart(
+        &candidateLoop.getLoopRegions().front()->front());
+    Value lbVal = getValueOrCreateConstantIndexOp(rewriter, loc, *lowerBound);
+    Value stepVal = getValueOrCreateConstantIndexOp(rewriter, loc, *singleStep);
+    AffineExpr iv, lb, step;
+    bindDims(rewriter.getContext(), iv, lb, step);
+    Value slotOffset = affine::makeComposedAffineApply(
+        rewriter, loc,
+        ((iv - lb).floorDiv(step)) % multiBufferingFactor * slotBytes,
+        {*inductionVar, lbVal, stepVal});
+    Value slot = memref::ViewOp::create(rewriter, loc, allocOp.getType(),
+                                        mbAlloc, slotOffset, ValueRange{});
+    LLVM_DEBUG(DBGS() << "--multi-buffered slot view: " << slot << "\n");
+
+    replaceDeallocs(rewriter, allocOp, mbAlloc);
+    rewriter.replaceOp(allocOp, slot);
+    return mbAlloc;
+  }
+
   // 1. Construct the multi-buffered memref type.
   ArrayRef<int64_t> originalShape = allocOp.getType().getShape();
   SmallVector<int64_t, 4> multiBufferedShape{multiBufferingFactor};
@@ -279,8 +356,6 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   LLVM_DEBUG(DBGS() << "--multi-buffered type: " << mbMemRefType << "\n");
 
   // 2. Create the multi-buffered alloc.
-  Location loc = allocOp->getLoc();
-  OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(allocOp);
   auto mbAlloc = memref::AllocOp::create(
       rewriter, loc, mbMemRefType, ValueRange{}, allocOp.getAlignmentAttr());
@@ -323,18 +398,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   // 5. Due to the recursive nature of replaceUsesAndPropagateType , we need
   // to handle dealloc uses separately..
-  for (OpOperand &use : llvm::make_early_inc_range(allocOp->getUses())) {
-    auto deallocOp = dyn_cast<memref::DeallocOp>(use.getOwner());
-    if (!deallocOp)
-      continue;
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(deallocOp);
-    auto newDeallocOp =
-        memref::DeallocOp::create(rewriter, deallocOp->getLoc(), mbAlloc);
-    (void)newDeallocOp;
-    LLVM_DEBUG(DBGS() << "----Created dealloc: " << newDeallocOp << "\n");
-    rewriter.eraseOp(deallocOp);
-  }
+  replaceDeallocs(rewriter, allocOp, mbAlloc);
 
   // 6. RAUW with the particular slice, taking modular rotation into account.
   if (failed(replaceUsesAndPropagateType(rewriter, allocOp, subview)))
