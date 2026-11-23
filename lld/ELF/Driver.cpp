@@ -2501,26 +2501,15 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
     return;
   }
 
-  // Calling sym->extract() in the loop is not safe because it may add new
-  // symbols to the symbol table, invalidating the current iterator.
-  ArrayRef<Symbol *> allSyms = ctx.symtab->getSymbols();
-  constexpr size_t chunkSize = 4096;
-  size_t numChunks = (allSyms.size() + chunkSize - 1) / chunkSize;
-  SmallVector<SmallVector<Symbol *, 0>, 0> matches(numChunks);
-  parallelFor(0, numChunks, [&](size_t chunk) {
-    size_t begin = chunk * chunkSize;
-    size_t end = std::min(begin + chunkSize, allSyms.size());
-    auto &out = matches[chunk];
-    for (size_t i = begin; i != end; ++i) {
-      Symbol *sym = allSyms[i];
-      if (!sym->isPlaceholder() && pat->match(sym->getName()))
-        out.push_back(sym);
-    }
+  ArrayRef<Symbol *> syms = ctx.symtab->getSymbols();
+  SmallVector<uint8_t, 0> matched(syms.size());
+  parallelFor(0, syms.size(), [&](size_t i) {
+    matched[i] = !syms[i]->isPlaceholder() && pat->match(syms[i]->getName());
   });
-
-  for (const auto &chunk : matches)
-    for (Symbol *sym : chunk)
-      handleUndefined(ctx, sym, "--undefined-glob");
+  // handleUndefined may append to the symbol table, invalidating syms.
+  for (size_t i : llvm::seq(matched.size()))
+    if (matched[i])
+      handleUndefined(ctx, ctx.symtab->getSymbols()[i], "--undefined-glob");
 }
 
 static void handleLibcall(Ctx &ctx, StringRef name) {
