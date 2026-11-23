@@ -39,7 +39,14 @@ bool lowerLoongArchMachineOperandToMCOperand(const MachineOperand &MO,
                                              MCOperand &MCOp,
                                              const AsmPrinter &AP);
 
-FunctionPass *createLoongArchDeadRegisterDefinitionsPass();
+class LoongArchDeadRegisterDefinitionsPass
+    : public OptionalPassInfoMixin<LoongArchDeadRegisterDefinitionsPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLoongArchDeadRegisterDefinitionsLegacyPass();
 FunctionPass *createLoongArchExpandAtomicPseudoPass();
 
 class LoongArchISelDAGToDAGPass : public SelectionDAGISelPass {
@@ -86,7 +93,7 @@ FunctionPass *createLoongArchExpandPseudoPass();
 FunctionPass *createLoongArchLateBranchOptPass();
 void initializeLoongArchAsmPrinterPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
-void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
+void initializeLoongArchDeadRegisterDefinitionsLegacyPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchMemoryBarrierOptPass(PassRegistry &);
 void initializeLoongArchMergeBaseOffsetLegacyPass(PassRegistry &);

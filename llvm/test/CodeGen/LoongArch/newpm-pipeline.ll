@@ -116,6 +116,7 @@
 ; O2-NEXT:     register-coalescer
 ; O2-NEXT:     rename-independent-subregs
 ; O2-NEXT:     machine-scheduler
+; O2-NEXT:     loongarch-dead-register-definitions
 ; O2-NEXT:     greedy<all>
 ; O2-NEXT:     virt-reg-rewriter
 ; O2-NEXT:     stack-slot-coloring

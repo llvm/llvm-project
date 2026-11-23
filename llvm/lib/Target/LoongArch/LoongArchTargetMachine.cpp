@@ -36,7 +36,7 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
-  initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchDeadRegisterDefinitionsLegacyPass(*PR);
   initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetLegacyPass(*PR);
   initializeLoongArchOptWInstrsLegacyPass(*PR);
@@ -238,14 +238,14 @@ bool LoongArchPassConfig::addILPOpts() {
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
-    addPass(createLoongArchDeadRegisterDefinitionsPass());
+    addPass(createLoongArchDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
-    addPass(createLoongArchDeadRegisterDefinitionsPass());
+    addPass(createLoongArchDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 

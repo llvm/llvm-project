@@ -16,6 +16,8 @@
 #ifndef MACHINE_FUNCTION_PASS
 #define MACHINE_FUNCTION_PASS(NAME, CREATE_PASS)
 #endif
+MACHINE_FUNCTION_PASS("loongarch-dead-register-definitions",
+                      LoongArchDeadRegisterDefinitionsPass())
 MACHINE_FUNCTION_PASS("loongarch-isel",
                       LoongArchISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("loongarch-merge-base-offset",
