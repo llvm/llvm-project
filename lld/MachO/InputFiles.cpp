@@ -194,6 +194,12 @@ static StringRef getArm64eArchName(uint32_t cpuSubtype) {
       {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true), "arm64e.kernel"},
       {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, true), "arm64e.kernel.v1"},
       {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(2, true), "arm64e.kernel.v2"},
+      {CPU_SUBTYPE_ARM64E_X1, "arm64e.x1.old"},
+      {CPU_SUBTYPE_ARM64E_X1 | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK,
+       "arm64e.x1"},
+      {CPU_SUBTYPE_ARM64E_X1 | CPU_SUBTYPE_ARM64E_VERSIONED_PTRAUTH_ABI_MASK |
+           CPU_SUBTYPE_ARM64E_KERNEL_PTRAUTH_ABI_MASK,
+       "arm64e.x1.kernel"},
   };
   for (auto [subtype, name] : names)
     if (subtype == cpuSubtype)
@@ -243,8 +249,10 @@ static bool isCompatibleDylib(uint32_t cpuType, uint32_t cpuSubtype) {
 
 static void reportIncompatibleArch(const InputFile *file, uint32_t cpuType,
                                    uint32_t cpuSubtype) {
-  bool isArm64e = cpuType == CPU_TYPE_ARM64 &&
-                  (cpuSubtype & ~CPU_SUBTYPE_MASK) == CPU_SUBTYPE_ARM64E;
+  uint32_t subtype = cpuSubtype & ~CPU_SUBTYPE_MASK;
+  bool isArm64e =
+      cpuType == CPU_TYPE_ARM64 &&
+      (subtype == CPU_SUBTYPE_ARM64E || subtype == CPU_SUBTYPE_ARM64E_X1);
   Architecture arch = getArchitectureFromCpuType(cpuType, cpuSubtype);
   StringRef archName =
       isArm64e ? getArm64eArchName(cpuSubtype) : getArchitectureName(arch);
