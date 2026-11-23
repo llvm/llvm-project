@@ -14,16 +14,9 @@ define void @cast_alloca(ptr addrspace(1) %out) {
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
 ; SDAG-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; SDAG-NEXT:    v_mov_b32_e32 v1, v2
-; SDAG-NEXT:    s_mov_b64 s[6:7], 0
-; SDAG-NEXT:    s_mov_b32 s8, s7
 ; SDAG-NEXT:    s_mov_b64 s[4:5], src_private_base
 ; SDAG-NEXT:    s_mov_b32 s4, s5
-; SDAG-NEXT:    s_mov_b32 s9, -1
 ; SDAG-NEXT:    s_lshr_b32 s5, s32, 6
-; SDAG-NEXT:    s_cmp_lg_u32 s5, s9
-; SDAG-NEXT:    s_cselect_b32 s4, s4, s8
-; SDAG-NEXT:    ; kill: def $sgpr6 killed $sgpr6 killed $sgpr6_sgpr7
-; SDAG-NEXT:    s_cselect_b32 s5, s5, s6
 ; SDAG-NEXT:    v_mov_b32_e32 v2, s5
 ; SDAG-NEXT:    v_mov_b32_e32 v4, s4
 ; SDAG-NEXT:    ; kill: def $vgpr2 killed $vgpr2 def $vgpr2_vgpr3 killed $exec
@@ -61,16 +54,9 @@ define amdgpu_kernel void @cast_lds_gv(ptr addrspace(1) %out) {
 ; SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; SDAG-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; SDAG-NEXT:    v_mov_b32_e32 v0, 0
-; SDAG-NEXT:    s_mov_b64 s[8:9], 0
-; SDAG-NEXT:    s_mov_b32 s10, s9
 ; SDAG-NEXT:    s_mov_b64 s[6:7], src_shared_base
 ; SDAG-NEXT:    s_mov_b32 s6, s7
-; SDAG-NEXT:    s_mov_b32 s11, -1
 ; SDAG-NEXT:    s_mov_b32 s7, 0
-; SDAG-NEXT:    s_cmp_lg_u32 s7, s11
-; SDAG-NEXT:    s_cselect_b32 s6, s6, s10
-; SDAG-NEXT:    ; kill: def $sgpr8 killed $sgpr8 killed $sgpr8_sgpr9
-; SDAG-NEXT:    s_cselect_b32 s7, s7, s8
 ; SDAG-NEXT:    v_mov_b32_e32 v1, s7
 ; SDAG-NEXT:    v_mov_b32_e32 v3, s6
 ; SDAG-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec

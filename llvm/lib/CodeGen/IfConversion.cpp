@@ -37,7 +37,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -177,7 +176,6 @@ class IfConverterImpl {
   std::vector<BBInfo> BBAnalysis;
   TargetSchedModel SchedModel;
 
-  const TargetLoweringBase *TLI = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   const MachineBranchProbabilityInfo *MBPI = nullptr;
@@ -452,7 +450,6 @@ bool IfConverterImpl::runOnMachineFunction(
 
   const CodeGenOptions &Opts = getCodeGenOptions(MF);
   const TargetSubtargetInfo &ST = MF.getSubtarget();
-  TLI = ST.getTargetLowering();
   TII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MBFIWrapper MBFI(GetMBFI());

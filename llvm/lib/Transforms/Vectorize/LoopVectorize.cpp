@@ -6542,6 +6542,12 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
+  // Interleave memory: for each Interleave Group we marked earlier as relevant
+  // for this VPlan, replace the Recipes widening its memory instructions with a
+  // single VPInterleaveRecipe at its insertion point.
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, PlanCM.isEpilogueAllowed());
+
   RUN_VPLAN_PASS(VPlanTransforms::removeBranchOnConst, *Plan, false);
 
   // Create partial reduction recipes for scaled reductions and transform
@@ -6551,12 +6557,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
                  Range);
   RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
                  Range);
-
-  // Interleave memory: for each Interleave Group we marked earlier as relevant
-  // for this VPlan, replace the Recipes widening its memory instructions with a
-  // single VPInterleaveRecipe at its insertion point.
-  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
-                 InterleaveGroups, PlanCM.isEpilogueAllowed());
 
   // Convert memory recipes to strided access recipes if the strided access is
   // legal and profitable.
@@ -7191,11 +7191,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  for (VPRecipeBase &R :
-       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
-    ResumePhi->eraseFromParent();
+  for (VPPhi &ResumePhi : make_early_inc_range(
+           map_range(MainPlan.getScalarPreheader()->phis(), CastTo<VPPhi>))) {
+    ResumePhi.replaceAllUsesWith(ResumePhi.getOperand(1));
+    ResumePhi.eraseFromParent();
   }
   return {VectorTCMarker, std::move(ResumeValues)};
 }
@@ -7451,13 +7450,14 @@ static void preparePlanForEpilogueVectorLoop(
 
   // Re-use the SCEVs expanded for the main loop instead of expanding them
   // again, which also lets simplifyLiveInsWithSCEV fold their users.
+  // Others are expanded with the epilogue plan.
   // TODO: Remove once the epilogue plan uses the main plan's VPValues directly.
   for (VPExpandSCEVRecipe &ExpandR : make_early_inc_range(
            make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry()))) {
-    assert(ExpandedSCEVs.contains(ExpandR.getSCEV()) &&
-           "Epilogue plan needs a SCEV not expanded for the main loop");
-    VPValue *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR.getSCEV()));
+    Value *V = ExpandedSCEVs.lookup(ExpandR.getSCEV());
+    if (!V)
+      continue;
+    VPValue *ExpandedVal = Plan.getOrAddLiveIn(V);
     ExpandR.replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == &ExpandR)
       Plan.resetTripCount(ExpandedVal);

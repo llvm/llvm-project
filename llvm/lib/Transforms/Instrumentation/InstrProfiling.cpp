@@ -1780,6 +1780,17 @@ InstrLowerer::createRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc,
   return GV;
 }
 
+/// Return the scope in which to describe \p F's profile variables for debug
+/// info correlation, or null if the module has no debug info. A function
+/// without debug info has no subprogram, so its variables are described at the
+/// scope of the module's first compile unit.
+static DIScope *getCorrelationScope(const Function &F) {
+  if (DISubprogram *SP = F.getSubprogram())
+    return SP;
+  auto CUs = F.getParent()->debug_compile_units();
+  return CUs.empty() ? nullptr : *CUs.begin();
+}
+
 GlobalVariable *
 InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
   GlobalVariable *NamePtr = Inc->getName();
@@ -1797,8 +1808,9 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
       Opts.profile_correlate == ProfCorrelatorKind::DebugInfo) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
-    if (auto *SP = Fn->getSubprogram()) {
-      DIBuilder DB(M, true, SP->getUnit());
+    if (DIScope *Scope = getCorrelationScope(*Fn)) {
+      auto *SP = dyn_cast<DISubprogram>(Scope);
+      DIBuilder DB(M, true, SP ? SP->getUnit() : cast<DICompileUnit>(Scope));
       Metadata *FunctionNameAnnotation[] = {
           MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
           MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
@@ -1812,13 +1824,15 @@ InstrLowerer::getOrCreateRegionBitmaps(InstrProfMCDCBitmapInstBase *Inc) {
           MDNode::get(Ctx, NumBitmapBitsAnnotation),
       });
       auto *DICounter = DB.createGlobalVariableExpression(
-          SP, BitmapPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
+          Scope, BitmapPtr->getName(), /*LinkageName=*/StringRef(),
+          Scope->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Bitmap Type"),
           BitmapPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       BitmapPtr->addDebugInfo(DICounter);
-      DB.finalizeSubprogram(SP);
+      if (SP)
+        DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 
@@ -1869,8 +1883,9 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   if (Opts.profile_correlate == ProfCorrelatorKind::DebugInfo) {
     LLVMContext &Ctx = M.getContext();
     Function *Fn = Inc->getParent()->getParent();
-    if (auto *SP = Fn->getSubprogram()) {
-      DIBuilder DB(M, true, SP->getUnit());
+    if (DIScope *Scope = getCorrelationScope(*Fn)) {
+      auto *SP = dyn_cast<DISubprogram>(Scope);
+      DIBuilder DB(M, true, SP ? SP->getUnit() : cast<DICompileUnit>(Scope));
       Metadata *FunctionNameAnnotation[] = {
           MDString::get(Ctx, InstrProfCorrelator::FunctionNameAttributeName),
           MDString::get(Ctx, getPGOFuncNameVarInitializer(NamePtr)),
@@ -1889,13 +1904,15 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
           MDNode::get(Ctx, NumCountersAnnotation),
       });
       auto *DICounter = DB.createGlobalVariableExpression(
-          SP, CounterPtr->getName(), /*LinkageName=*/StringRef(), SP->getFile(),
+          Scope, CounterPtr->getName(), /*LinkageName=*/StringRef(),
+          Scope->getFile(),
           /*LineNo=*/0, DB.createUnspecifiedType("Profile Data Type"),
           CounterPtr->hasLocalLinkage(), /*IsDefined=*/true, /*Expr=*/nullptr,
           /*Decl=*/nullptr, /*TemplateParams=*/nullptr, /*AlignInBits=*/0,
           Annotations);
       CounterPtr->addDebugInfo(DICounter);
-      DB.finalizeSubprogram(SP);
+      if (SP)
+        DB.finalizeSubprogram(SP);
       DB.finalize();
     }
 

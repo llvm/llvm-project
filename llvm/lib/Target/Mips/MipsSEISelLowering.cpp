@@ -1274,6 +1274,10 @@ MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return MipsTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case Mips::BPOSGE32_PSEUDO:
     return emitBPOSGE32(MI, BB);
+  case Mips::PseudoTRUNC_W_S_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_S);
+  case Mips::PseudoTRUNC_W_D32_M1:
+    return emitTRUNC_W_M1(MI, BB, Mips::CVT_W_D32);
   case Mips::SNZ_B_PSEUDO:
     return emitMSACBranchPseudo(MI, BB, Mips::BNZ_B);
   case Mips::SNZ_H_PSEUDO:
@@ -2098,9 +2102,11 @@ SDValue MipsSETargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::mips_flog2_d:
     return DAG.getNode(ISD::FLOG2, DL, Op->getValueType(0), Op->getOperand(1));
   case Intrinsic::mips_fmadd_w:
-  case Intrinsic::mips_fmadd_d:
+  case Intrinsic::mips_fmadd_d: {
+    // The mips intrinsics compute `a + b*c`, which is `fma(b, c, a)`.
     return DAG.getNode(ISD::FMA, SDLoc(Op), Op->getValueType(0),
-                       Op->getOperand(1), Op->getOperand(2), Op->getOperand(3));
+                       Op->getOperand(2), Op->getOperand(3), Op->getOperand(1));
+  }
   case Intrinsic::mips_fmul_w:
   case Intrinsic::mips_fmul_d:
     return DAG.getNode(ISD::FMUL, DL, Op->getValueType(0), Op->getOperand(1),
@@ -3236,6 +3242,40 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   if ((Result = lowerVECTOR_SHUFFLE_SHF(Op, ResTy, Indices, DAG)))
     return Result;
   return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, false, DAG);
+}
+
+// MIPS I has no trunc.w.fmt. Do the conversion with cvt.w.fmt and the
+// rounding mode set to round toward zero, then restore the FCSR. This is the
+// same sequence the assembler uses for the trunc.w.fmt macro.
+//
+//   cfc1 $old, $31
+//   ori  $tmp, $old, 3
+//   xori $tmp, $tmp, 2
+//   ctc1 $tmp, $31
+//   cvt.w.fmt $dst, $src
+//   ctc1 $old, $31
+MachineBasicBlock *MipsSETargetLowering::emitTRUNC_W_M1(MachineInstr &MI,
+                                                        MachineBasicBlock *BB,
+                                                        unsigned CvtOpc) const {
+  MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
+  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const TargetRegisterClass *RC = &Mips::GPR32RegClass;
+  DebugLoc DL = MI.getDebugLoc();
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src = MI.getOperand(1).getReg();
+  Register Old = RegInfo.createVirtualRegister(RC);
+  Register Tmp0 = RegInfo.createVirtualRegister(RC);
+  Register Tmp1 = RegInfo.createVirtualRegister(RC);
+
+  BuildMI(*BB, MI, DL, TII->get(Mips::CFC1), Old).addReg(Mips::FCR31);
+  BuildMI(*BB, MI, DL, TII->get(Mips::ORi), Tmp0).addReg(Old).addImm(3);
+  BuildMI(*BB, MI, DL, TII->get(Mips::XORi), Tmp1).addReg(Tmp0).addImm(2);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Tmp1);
+  BuildMI(*BB, MI, DL, TII->get(CvtOpc), Dst).addReg(Src);
+  BuildMI(*BB, MI, DL, TII->get(Mips::CTC1), Mips::FCR31).addReg(Old);
+
+  MI.eraseFromParent();
+  return BB;
 }
 
 MachineBasicBlock *

@@ -28,6 +28,7 @@
 
 namespace llvm::orc::sps {
 
+using MemMgrCreateProxySpec = ProxySpec<rt::sps_ci::MemMgrCreate>;
 using MemMgrReserveProxySpec = ProxySpec<rt::sps_ci::MemMgrReserve>;
 using MemMgrInitializeProxySpec = ProxySpec<rt::sps_ci::MemMgrInitialize>;
 using MemMgrDeinitializeProxySpec = ProxySpec<rt::sps_ci::MemMgrDeinitialize>;
@@ -36,6 +37,13 @@ using MemMgrReleaseProxySpec = ProxySpec<rt::sps_ci::MemMgrRelease>;
 /// Build bindings over the SPS controller interface, resolving the operations
 /// in the given JITDylib under the specs' default (SimpleNativeMemoryMap)
 /// names.
+///
+/// If the executor provides the create operation (MemMgrCreateProxySpec) then
+/// it is called to create a new executor-side instance for these bindings, so
+/// each call to this function binds a distinct instance. Otherwise the
+/// executor's pre-created instance is bound (see
+/// rt::sps_ci::SimpleNativeMemoryMapInstanceName). An error is returned if
+/// neither is available.
 ///
 /// To bind a different executor-side implementation, use the specs above with
 /// recordProxy<Spec>(&P, Name) to resolve its own names instead.
