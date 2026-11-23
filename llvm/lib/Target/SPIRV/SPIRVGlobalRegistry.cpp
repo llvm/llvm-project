@@ -20,6 +20,7 @@
 #include "SPIRVSubtarget.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -1077,10 +1078,18 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
     MaxNumElements = MaxWordCount - 1;
   }
 
-  for (const auto &Elem : Ty->elements()) {
-    SPIRVTypeInst ElemTy = findSPIRVType(
-        toTypedPointer(Elem), MIRBuilder, AccQual,
-        /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+  for (const auto &[Idx, Elem] : enumerate(Ty->elements())) {
+    SPIRVTypeInst ElemTy;
+    auto *PadTy = dyn_cast<TargetExtType>(Elem);
+    if (PadTy && PadTy->getName() == "spirv.Padding")
+      ElemTy = getOrCreatePaddingType(
+          MIRBuilder, PadTy->getIntParameter(0),
+          DL.getStructLayout(const_cast<StructType *>(Ty))
+              ->getElementOffset(Idx));
+    else
+      ElemTy = findSPIRVType(
+          toTypedPointer(Elem), MIRBuilder, AccQual,
+          /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
@@ -1626,19 +1635,17 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOrCreateVulkanBufferType(
 
 SPIRVTypeInst
 SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
-                                            uint64_t PaddingSizeInBytes) {
+                                            uint64_t PaddingSizeInBytes,
+                                            uint64_t OffsetInBytes) {
   // Member offsets are explicit, so the padding member only needs to be a
-  // valid integer that fits the gap. Use the widest of i32/i16/i8 that divides
-  // the size: i8 members require the Int8 capability and, in Vulkan,
+  // valid integer that fits the gap. Use the widest of i32/i16/i8 whose size
+  // divides both the padding size and its offset (so the member is aligned):
+  // i8 members require the Int8 capability and, in Vulkan,
   // uniformAndStorageBuffer8BitAccess.
-  // Note: the member's offset is not considered. Padding that starts at an
-  // offset not aligned to the chosen width would produce a misaligned member.
   assert(PaddingSizeInBytes != 0 && "spirv.Padding must not be empty");
-  unsigned Width = 8;
-  if (PaddingSizeInBytes % 4 == 0)
-    Width = 32;
-  else if (PaddingSizeInBytes % 2 == 0)
-    Width = 16;
+  uint64_t WidthInBytes =
+      std::min<uint64_t>(4, MinAlign(OffsetInBytes, PaddingSizeInBytes));
+  unsigned Width = WidthInBytes * 8;
   auto Key = SPIRV::irhandle_padding(Width);
   if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
     return MI;

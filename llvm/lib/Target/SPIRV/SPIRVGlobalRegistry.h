@@ -695,7 +695,8 @@ public:
                               bool IsWritable, bool EmitIr = false);
 
   SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
-                                       uint64_t PaddingSizeInBytes);
+                                       uint64_t PaddingSizeInBytes,
+                                       uint64_t OffsetInBytes = 0);
 
   SPIRVTypeInst getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
                                                   Type *ElemType);
