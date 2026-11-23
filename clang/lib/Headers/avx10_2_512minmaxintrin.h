@@ -16,7 +16,7 @@
 
 #define _mm512_minmax_pbh(A, B, C)                                             \
   ((__m512bh)__builtin_ia32_vminmaxbf16512((__v32bf)(__m512bh)(A),             \
-                                           (__v32bf)(__m512bh)(A), (int)(C)))
+                                           (__v32bf)(__m512bh)(B), (int)(C)))
 
 #define _mm512_mask_minmax_pbh(W, U, A, B, C)                                  \
   ((__m512bh)__builtin_ia32_selectpbf_512(                                     \

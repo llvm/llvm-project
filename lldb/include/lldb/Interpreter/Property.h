@@ -30,6 +30,11 @@ struct PropertyDefinition {
   const char *default_cstr_value;
   OptionEnumValues enum_values;
   const char *description;
+  // Deprecated settings can still be set and shown by name, but are mostly
+  // hidden otherwise. See the Deprecated class in PropertiesBase.td.
+  bool deprecated;
+  // What users of a deprecated setting should do instead, or nullptr.
+  const char *deprecation_message;
 };
 
 struct PropertyCollectionDefinition {
@@ -57,6 +62,27 @@ public:
 
   bool IsGlobal() const { return m_is_global; }
 
+  bool IsDeprecated() const { return m_is_deprecated; }
+
+  /// What users of this deprecated property should do instead.
+  llvm::StringRef GetDeprecationMessage() const {
+    return m_deprecation_message;
+  }
+
+  /// Whether listings should leave this property out. Deprecated properties
+  /// are only listed when \a include_deprecated is set.
+  bool IsHidden(bool include_deprecated) const {
+    return m_is_deprecated && !include_deprecated;
+  }
+
+  /// If this property is deprecated, and output produced with \a dump_mask can
+  /// be tagged, write the deprecation tag that follows the property's name.
+  void DumpDeprecatedTag(Stream &strm, uint32_t dump_mask) const;
+
+  /// The description, starting with a deprecation tag if this property is
+  /// deprecated.
+  std::string GetTaggedDescription() const;
+
   void Dump(const ExecutionContext *exe_ctx, Stream &strm,
             uint32_t dump_mask) const;
 
@@ -66,7 +92,7 @@ public:
 
   void DumpDescription(
       CommandInterpreter &interpreter, Stream &strm, uint32_t output_width,
-      bool display_qualified_name,
+      bool display_qualified_name, bool include_deprecated,
       std::optional<Stream::HighlightSettings> highlight = std::nullopt) const;
 
   void SetValueChangedCallback(std::function<void()> callback);
@@ -76,6 +102,9 @@ protected:
   std::string m_description;
   lldb::OptionValueSP m_value_sp;
   bool m_is_global;
+  bool m_is_deprecated = false;
+  /// Points into the static PropertyDefinition table, or is nullptr.
+  const char *m_deprecation_message = nullptr;
 };
 
 } // namespace lldb_private

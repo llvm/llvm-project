@@ -19,11 +19,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
@@ -39,26 +39,15 @@ STATISTIC(NumAliases, "Number of aliases internalized");
 STATISTIC(NumFunctions, "Number of functions internalized");
 STATISTIC(NumGlobals, "Number of global vars internalized");
 
-// APIFile - A file which contains a list of symbol glob patterns that should
-// not be marked external.
-static cl::opt<std::string>
-    APIFile("internalize-public-api-file", cl::value_desc("filename"),
-            cl::desc("A file containing list of symbol names to preserve"));
-
-// APIList - A list of symbol glob patterns that should not be marked internal.
-static cl::list<std::string>
-    APIList("internalize-public-api-list", cl::value_desc("list"),
-            cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
-
 namespace {
 // Helper to load an API list to preserve from file and expose it as a functor
 // for internalization.
 class PreserveAPIList {
 public:
-  PreserveAPIList() {
-    if (!APIFile.empty())
-      LoadFile(APIFile);
-    for (StringRef Pattern : APIList)
+  PreserveAPIList(const IPOOptions &Opts) {
+    if (!Opts.internalize_public_api_file.empty())
+      LoadFile(Opts.internalize_public_api_file);
+    for (StringRef Pattern : Opts.internalize_public_api_list)
       addGlob(Pattern);
   }
 
@@ -270,10 +259,12 @@ bool InternalizePass::internalizeModule(Module &M) {
   return Changed;
 }
 
-InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
-
 PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!internalizeModule(M))
+  bool Changed =
+      MustPreserveGV
+          ? internalizeModule(M)
+          : llvm::internalizeModule(M, PreserveAPIList(getIPOOptions(M)));
+  if (!Changed)
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;

@@ -771,6 +771,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_tcp_info
+  HDRS
+    struct_tcp_info.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_tcp_info
+)
+
+add_proxy_header_library(
   struct_udphdr
   HDRS
     struct_udphdr.h
@@ -784,6 +792,30 @@ add_proxy_header_library(
     struct_ether_addr.h
   FULL_BUILD_DEPENDS
     libc.include.llvm-libc-types.struct_ether_addr
+)
+
+add_proxy_header_library(
+  ns_class
+  HDRS
+    ns_class.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ns_class
+)
+
+add_proxy_header_library(
+  ns_sect
+  HDRS
+    ns_sect.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ns_sect
+)
+
+add_proxy_header_library(
+  ns_type
+  HDRS
+    ns_type.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.ns_type
 )
 
 add_proxy_header_library(

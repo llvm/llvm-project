@@ -174,7 +174,7 @@ def ROCDL_Dialect : Dialect {
      "::mlir::UnitAttr":$ignore_denormal_mode
   );
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 #endif // ROCDLIR_DIALECT

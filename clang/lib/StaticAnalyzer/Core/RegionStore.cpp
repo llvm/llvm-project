@@ -196,6 +196,12 @@ public:
                              IsMainAnalysis);
   }
 
+  template <typename PredFn>
+  RegionBindingsRef filterClusters(PredFn Pred) const {
+    return RegionBindingsRef(ParentTy::filter(Pred), *CBFactory,
+                             IsMainAnalysis);
+  }
+
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
 
   RegionBindingsRef addBinding(const MemRegion *R,
@@ -3163,12 +3169,8 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
-  for (const MemRegion *Base : llvm::make_first_range(B)) {
-    // If the cluster has been visited, we know the region has been marked.
-    // Otherwise, remove the dead entry.
-    if (!W.isVisited(Base))
-      B = B.removeCluster(Base);
-  }
+  // A cluster that has been visited has been marked live.
+  B = B.filterClusters([&](const auto &E) { return W.isVisited(E.first); });
 
   return StoreRef(B.asStore(), *this);
 }

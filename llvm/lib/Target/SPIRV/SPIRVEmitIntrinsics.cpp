@@ -24,6 +24,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/InstVisitor.h"
@@ -179,6 +180,61 @@ static std::optional<uint64_t> getByteAddressingMultiplier(Type *Ty) {
   return std::nullopt;
 }
 
+// InstCombine emits `P[I + K]` as a constant byte offset C from `P[I]`, which
+// can land past element I. Logical SPIR-V has no pointer arithmetic, and an
+// access chain based on `P[I]` can only index inside element I.
+//
+// To fix this, we split C into a count of array elements, which we add to the
+// array index, and the leftover bytes, fewer than one element, which stay a
+// byte offset inside the new element:
+//
+//    gep i8, (gep [N x i8], P, I), C   becomes
+//    gep i8, (gep [N x i8], P, I + floor(C / N)), C mod N.
+static void foldConstantOffsetIntoArrayIndex(Function &F) {
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    auto *Outer = dyn_cast<GetElementPtrInst>(&I);
+    if (!Outer || Outer->getNumIndices() != 1 ||
+        !Outer->getSourceElementType()->isIntegerTy(8))
+      continue;
+    auto *Offset = dyn_cast<ConstantInt>(Outer->getOperand(1));
+    auto *Inner = dyn_cast<GetElementPtrInst>(Outer->getPointerOperand());
+    if (!Offset || !Inner || Inner->getNumIndices() != 1)
+      continue;
+    Value *Index = Inner->getOperand(1);
+    std::optional<uint64_t> Stride =
+        getByteAddressingMultiplier(Inner->getSourceElementType());
+    if (isa<Constant>(Index) || !Stride || *Stride <= 1)
+      continue;
+
+    // Compute in the index type, as the GEP does.
+    Type *IdxTy = F.getDataLayout().getIndexType(Inner->getType());
+    int64_t Bytes = Offset->getValue()
+                        .sextOrTrunc(IdxTy->getScalarSizeInBits())
+                        .getSExtValue();
+    int64_t Size = *Stride;
+    int64_t Elements = divideFloorSigned(Bytes, Size);
+    if (Elements == 0)
+      continue;
+
+    GEPNoWrapFlags NW = Inner->isInBounds() && Outer->isInBounds()
+                            ? GEPNoWrapFlags::inBounds()
+                            : GEPNoWrapFlags::none();
+    IRBuilder<> B(Outer);
+    Value *NewIndex = B.CreateAdd(B.CreateSExtOrTrunc(Index, IdxTy),
+                                  ConstantInt::getSigned(IdxTy, Elements));
+    Value *Ptr = B.CreateGEP(Inner->getSourceElementType(),
+                             Inner->getPointerOperand(), NewIndex, "", NW);
+    if (int64_t Remainder = mod(Bytes, Size))
+      Ptr = B.CreateGEP(B.getInt8Ty(), Ptr, ConstantInt::get(IdxTy, Remainder),
+                        "", NW);
+    Ptr->takeName(Outer);
+    Outer->replaceAllUsesWith(Ptr);
+    Outer->eraseFromParent();
+    if (Inner->use_empty())
+      Inner->eraseFromParent();
+  }
+}
+
 class SPIRVEmitIntrinsicsImpl
     : public InstVisitor<SPIRVEmitIntrinsicsImpl, Instruction *> {
   const SPIRVTargetMachine &TM;
@@ -269,6 +325,7 @@ class SPIRVEmitIntrinsicsImpl
   Value *lowerUndefOrPoison(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void preprocessUndefsAndPoisons(IRBuilder<> &B);
   void insertCompositeAggregateArms(Instruction *I, IRBuilder<> &B);
+  Value *lowerCompositeMember(Value *Op, IRBuilder<> &B, bool HasPoisonExt);
   void simplifyNullAddrSpaceCasts();
 
   Type *reconstructType(Value *Op, bool UnknownElemTypeI8,
@@ -339,6 +396,7 @@ class SPIRVEmitIntrinsicsImpl
   bool convertMaskedMemIntrinsics(Module &M);
   bool preprocessModule(Module &M);
   void preprocessBoolVectorBitcasts(Function &F);
+  void scalarizeVectorPtrCasts(Function &F);
 
   void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
@@ -777,12 +835,14 @@ static Type *getPointeeTypeByCallInst(StringRef DemangledName,
                                       Function *CalledF, unsigned OpIdx) {
   // OpenCL.std printf takes its format string as a pointer to i8. Match the
   // bare builtin name, as lowering does, to also cover unmangled `printf`.
+  std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
   // OpenCL get_fence only has void* overloads.
-  if (OpIdx == 0) {
-    std::string Name = SPIRV::lookupBuiltinNameHelper(DemangledName);
-    if (Name == "printf" || Name == "get_fence")
-      return IntegerType::getInt8Ty(CalledF->getContext());
-  }
+  if (OpIdx == 0 && (Name == "printf" || Name == "get_fence"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
+  // OpCaptureEventProfilingInfo requires Value to point to an 8-bit integer.
+  if (OpIdx == 2 && (Name == "capture_event_profiling_info" ||
+                     Name == "__spirv_CaptureEventProfilingInfo"))
+    return IntegerType::getInt8Ty(CalledF->getContext());
   return nullptr;
 }
 
@@ -1213,6 +1273,20 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
   if (!Visited.insert(U).second)
     return OrigTy;
 
+  auto DeduceOpTy = [&](Value *Op, Type *OpTy) -> Type * {
+    auto *PtrTy = dyn_cast<PointerType>(OpTy);
+    if (!PtrTy)
+      return deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
+                                    UnknownElemTypeI8);
+    // A uniqued null carries the pointee an earlier user gave it.
+    if (isa<ConstantPointerNull>(Op))
+      return OpTy;
+    if (Type *NestedTy =
+            deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
+      return getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
+    return OpTy;
+  };
+
   if (auto *OrigStructTy = dyn_cast<StructType>(OrigTy)) {
     SmallVector<Type *> Tys;
     bool Change = false;
@@ -1220,15 +1294,7 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       Value *Op = U->getOperand(i);
       assert(Op && "Operands should not be null.");
       Type *OpTy = Op->getType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       Tys.push_back(Ty);
       Change |= Ty != OpTy;
     }
@@ -1240,17 +1306,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       return NewTy;
     }
   } else if (auto *ArrTy = dyn_cast<ArrayType>(OrigTy)) {
-    if (Value *Op = U->getNumOperands() > 0 ? U->getOperand(0) : nullptr) {
+    for (Value *Op : U->operands()) {
       Type *OpTy = ArrTy->getElementType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       if (Ty != OpTy) {
         Type *NewTy = ArrayType::get(Ty, ArrTy->getNumElements());
         GR->addDeducedCompositeType(U, NewTy);
@@ -1258,17 +1316,9 @@ Type *SPIRVEmitIntrinsicsImpl::deduceNestedTypeHelper(
       }
     }
   } else if (auto *VecTy = dyn_cast<VectorType>(OrigTy)) {
-    if (Value *Op = U->getNumOperands() > 0 ? U->getOperand(0) : nullptr) {
+    for (Value *Op : U->operands()) {
       Type *OpTy = VecTy->getElementType();
-      Type *Ty = OpTy;
-      if (auto *PtrTy = dyn_cast<PointerType>(OpTy)) {
-        if (Type *NestedTy =
-                deduceElementTypeHelper(Op, Visited, UnknownElemTypeI8))
-          Ty = getTypedPointerWrapper(NestedTy, PtrTy->getAddressSpace());
-      } else {
-        Ty = deduceNestedTypeHelper(dyn_cast<User>(Op), OpTy, Visited,
-                                    UnknownElemTypeI8);
-      }
+      Type *Ty = DeduceOpTy(Op, OpTy);
       if (Ty != OpTy) {
         Type *NewTy = VectorType::get(Ty, VecTy->getElementCount());
         GR->addDeducedCompositeType(U,
@@ -1845,10 +1895,17 @@ static bool isAggregateValueIdInstr(const Instruction &I) {
 void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
                                                            IRBuilder<> &B) {
   auto *Phi = dyn_cast<PHINode>(I);
+  // A switch can list an incoming block twice, and both entries need the same
+  // value, so build one chain per block.
+  SmallDenseMap<BasicBlock *, Value *> PhiArms;
   for (Use &U : I->operands()) {
     Value *Op = U.get();
     if (!isMultiRegisterAggregate(Op))
       continue;
+    if (Value *Arm = Phi ? PhiArms.lookup(Phi->getIncomingBlock(U)) : nullptr) {
+      U.set(Arm);
+      continue;
+    }
     // A PHI arm materializes in its incoming block, everything else after the
     // producer.
     if (Phi)
@@ -1862,7 +1919,24 @@ void SPIRVEmitIntrinsicsImpl::insertCompositeAggregateArms(Instruction *I,
       Composite = B.CreateInsertValue(Composite, Field, Idx);
     }
     U.set(Composite);
+    if (Phi)
+      PhiArms[Phi->getIncomingBlock(U)] = Composite;
   }
+}
+
+// Lower a constant aggregate member to null in the target address space
+// if it's `addrspacecast(null)`, and nested `undef/poison` because they're
+// missed in `preprocessUndefsAndPoisons()`.
+Value *SPIRVEmitIntrinsicsImpl::lowerCompositeMember(Value *Op, IRBuilder<> &B,
+                                                     bool HasPoisonExt) {
+  if (auto *CE = dyn_cast<ConstantExpr>(Op);
+      CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
+      isa<ConstantPointerNull>(CE->getOperand(0)))
+    return ConstantPointerNull::get(cast<PointerType>(CE->getType()));
+  if (isa<UndefValue>(Op))
+    if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
+      return Repl;
+  return Op;
 }
 
 void SPIRVEmitIntrinsicsImpl::preprocessCompositeConstants(IRBuilder<> &B) {
@@ -1905,37 +1979,54 @@ void SPIRVEmitIntrinsicsImpl::preprocessCompositeConstants(IRBuilder<> &B) {
                 : B.SetInsertPoint(I);
           BPrepared = true;
         };
+        PrepareInsert();
+        Type *DeducedTy = deduceNestedTypeHelper(AggrConst, false);
+        // Users other than an intrinsic or extractvalue expect the LLVM type.
+        // Rebuild the constant as an insert chain, which casts each member
+        // to it.
+        if (DeducedTy != AggrConst->getType() &&
+            !isa<IntrinsicInst, ExtractValueInst>(I)) {
+          bool IsVector = AggrConst->getType()->isVectorTy();
+          Value *Composite = PoisonValue::get(AggrConst->getType());
+          for (unsigned Idx = 0, E = AggrConst->getNumOperands(); Idx != E;
+               ++Idx) {
+            Value *Member = AggrConst->getOperand(Idx);
+            // Lowered undef/poison is an i32 placeholder, so it is set after
+            // Create, which checks the types.
+            Value *LoweredBase =
+                lowerCompositeMember(Composite, B, HasPoisonExt);
+            Value *LoweredMember =
+                lowerCompositeMember(Member, B, HasPoisonExt);
+            Instruction *Insert;
+            if (IsVector)
+              Insert = InsertElementInst::Create(
+                  Composite, Member, B.getInt32(Idx), "", B.GetInsertPoint());
+            else
+              Insert = InsertValueInst::Create(Composite, Member, Idx, "",
+                                               B.GetInsertPoint());
+            Insert->setOperand(0, LoweredBase);
+            Insert->setOperand(1, LoweredMember);
+            Worklist.push(Insert);
+            Composite = Insert;
+          }
+          I->replaceUsesOfWith(Op, Composite);
+          KeepInst = true;
+          continue;
+        }
         SmallVector<Value *> Args;
         if (auto *COp = dyn_cast<ConstantDataSequential>(Op))
           for (unsigned i = 0; i < COp->getNumElements(); ++i)
             Args.push_back(COp->getElementAsConstant(i));
         else
-          for (Value *Op : AggrConst->operands()) {
-            // Simplify addrspacecast(null) to null in the target address space
-            // so that null pointers get the correct pointer type when lowered.
-            if (auto *CE = dyn_cast<ConstantExpr>(Op);
-                CE && CE->getOpcode() == Instruction::AddrSpaceCast &&
-                isa<ConstantPointerNull>(CE->getOperand(0)))
-              Op = ConstantPointerNull::get(cast<PointerType>(CE->getType()));
-            // Undef or poison nested in a constant aggregate is not a direct
-            // instruction operand, so preprocessUndefsAndPoisons() misses it.
-            // An unlowered aggregate one would reach IRTranslator as an
-            // untranslatable spv_const_composite operand.
-            if (isa<UndefValue>(Op)) {
-              PrepareInsert();
-              if (Value *Repl = lowerUndefOrPoison(Op, B, HasPoisonExt))
-                Op = Repl;
-            }
-            Args.push_back(Op);
-          }
-        PrepareInsert();
+          for (Value *Op : AggrConst->operands())
+            Args.push_back(lowerCompositeMember(Op, B, HasPoisonExt));
         auto *CI = B.CreateIntrinsicWithoutFolding(
             Intrinsic::spv_const_composite, {ResTy}, {Args});
         Worklist.push(CI);
         I->replaceUsesOfWith(Op, CI);
         KeepInst = true;
         AggrConsts[CI] = AggrConst;
-        AggrConstTypes[CI] = deduceNestedTypeHelper(AggrConst, false);
+        AggrConstTypes[CI] = DeducedTy;
       }
     }
     if (!KeepInst)
@@ -2450,6 +2541,15 @@ void SPIRVEmitIntrinsicsImpl::insertPtrCastOrAssignTypeInstr(Instruction *I,
           InsertValueInst::getInsertedValueOperandIndex(), B);
     return;
   }
+  // So must a pointer inserted into a vector, whose elements are untyped
+  // pointers and so pointers to i8.
+  if (auto *IEI = dyn_cast<InsertElementInst>(I)) {
+    Value *Op = IEI->getOperand(1);
+    if (isPointerTy(Op->getType()))
+      replacePointerOperandWithPtrCast(
+          I, Op, IntegerType::getInt8Ty(I->getContext()), 1, B);
+    return;
+  }
 
   // TODO: review and merge with existing logics:
   // Handle calls to builtins (non-intrinsics):
@@ -2573,6 +2673,85 @@ SPIRVEmitIntrinsicsImpl::visitExtractElementInst(ExtractElementInst &I) {
   return NewI;
 }
 
+// Scalarize ptrtoint and inttoptr instructions operating on vectors of
+// pointers, since SPIR-V does not support vectors of pointers without
+// extensions. Run before preprocessCompositeConstants so that
+// findScalarElement still sees constant vectors.
+void SPIRVEmitIntrinsicsImpl::scalarizeVectorPtrCasts(Function &F) {
+  // If the extension for vector-of-pointers is available, no scalarization
+  // is needed - the backend can handle them natively.
+  const SPIRVSubtarget &ST = TM.getSubtarget<SPIRVSubtarget>(F);
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_masked_gather_scatter))
+    return;
+
+  SmallVector<Instruction *, 8> ToErase;
+
+  for (Instruction &I : make_early_inc_range(instructions(F))) {
+    if (auto *PTI = dyn_cast<PtrToIntInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(PTI->getOperand(0)->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
+
+      IRBuilder<> B(PTI);
+      unsigned NumElems = VecTy->getNumElements();
+      Type *ElemIntTy = cast<VectorType>(PTI->getType())->getElementType();
+      Value *Result = PoisonValue::get(PTI->getType());
+
+      for (unsigned Idx = 0; Idx < NumElems; ++Idx) {
+        Value *ElemPtr = findScalarElement(PTI->getOperand(0), Idx);
+        if (!ElemPtr)
+          ElemPtr = B.CreateExtractElement(PTI->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreatePtrToInt(ElemPtr, ElemIntTy);
+        Result = B.CreateInsertElement(Result, Conv, B.getInt32(Idx));
+      }
+
+      PTI->replaceAllUsesWith(Result);
+      ToErase.push_back(PTI);
+    } else if (auto *ITP = dyn_cast<IntToPtrInst>(&I)) {
+      auto *VecTy = dyn_cast<FixedVectorType>(ITP->getType());
+      if (!VecTy || !VecTy->getElementType()->isPointerTy())
+        continue;
+
+      // Only scalarize if all users are extractelement with constant index.
+      // Other uses (e.g. masked.gather) need the vector-of-pointers and
+      // should be handled by extension-specific lowering.
+      bool AllUsersExtract = llvm::all_of(ITP->users(), [&](User *U) {
+        auto *EE = dyn_cast<ExtractElementInst>(U);
+        return EE && isa<ConstantInt>(EE->getIndexOperand());
+      });
+      if (!AllUsersExtract)
+        continue;
+
+      IRBuilder<> B(ITP);
+      Type *ElemPtrTy = VecTy->getElementType();
+
+      // Replace extractelement users with scalar inttoptr.
+      for (User *U : make_early_inc_range(ITP->users())) {
+        auto *EE = cast<ExtractElementInst>(U);
+        unsigned Idx = cast<ConstantInt>(EE->getIndexOperand())->getZExtValue();
+        B.SetInsertPoint(EE);
+        Value *Elem =
+            B.CreateExtractElement(ITP->getOperand(0), B.getInt32(Idx));
+        Value *Conv = B.CreateIntToPtr(Elem, ElemPtrTy);
+        EE->replaceAllUsesWith(Conv);
+        ToErase.push_back(EE);
+      }
+
+      ToErase.push_back(ITP);
+    }
+  }
+
+  if (ToErase.empty())
+    return;
+  SmallVector<WeakTrackingVH, 8> MaybeDead;
+  for (Instruction *I : ToErase) {
+    for (Value *Op : I->operand_values())
+      MaybeDead.push_back(Op);
+    I->eraseFromParent();
+  }
+  RecursivelyDeleteTriviallyDeadInstructionsPermissive(MaybeDead);
+}
+
 Instruction *SPIRVEmitIntrinsicsImpl::visitInsertValueInst(InsertValueInst &I) {
   IRBuilder<> B(I.getParent());
   B.SetInsertPoint(&I);
@@ -2609,42 +2788,21 @@ SPIRVEmitIntrinsicsImpl::visitExtractValueInst(ExtractValueInst &I) {
     Args.push_back(B.getInt32(Op));
   Instruction *NewI = B.CreateIntrinsicWithoutFolding(Intrinsic::spv_extractv,
                                                       {I.getType()}, {Args});
-  // If this aggregate extract feeds another insertvalue, the extracted
-  // composite is used as a SPIR-V value-id by llvm.spv.insertv. Keep the real
-  // aggregate type in metadata, but expose the value itself as i32 so the
-  // intrinsic signature remains valid.
-  if (NewI->getType()->isAggregateType() &&
-      any_of(I.users(), [](User *U) { return isa<InsertValueInst>(U); })) {
-    AggrConstTypes[NewI] = I.getType();
+  // An aggregate extract is a SPIR-V value-id like an aggregate PHI, select or
+  // freeze: keep the real aggregate type in metadata, but expose the value
+  // itself as i32 so the intrinsic signature and its users stay valid.
+  if (NewI->getType()->isAggregateType()) {
+    Type *AggrTy = I.getType();
+    AggrConstTypes[NewI] = AggrTy;
     NewI->mutateType(B.getInt32Ty());
     replaceMemInstrUses(&I, NewI, B);
+    // The aggregate extractvalue only carried a name record; unlike a PHI, a
+    // select or freeze does not pass its type down to an untyped operand.
+    setInsertPointAfterDef(B, NewI);
+    GR->buildAssignType(B, AggrTy, NewI, CanUseAnyVectorRank);
     return NewI;
   }
   replaceAllUsesWithAndErase(B, &I, NewI);
-  // If the aggregate result feeds a return or callsite whose type was rewritten
-  // to an i32 value-id by SPIRVPrepareFunctions, mutate it to match.
-  if (NewI->getType()->isAggregateType()) {
-    for (const Use &U : NewI->uses()) {
-      User *Usr = U.getUser();
-      if (auto *RI = dyn_cast<ReturnInst>(Usr)) {
-        if (RI->getFunction()->getReturnType() != NewI->getType()) {
-          NewI->mutateType(B.getInt32Ty());
-          break;
-        }
-        continue;
-      }
-      auto *CB = dyn_cast<CallBase>(Usr);
-      if (!CB || !CB->isArgOperand(&U))
-        continue;
-      unsigned ArgNo = CB->getArgOperandNo(&U);
-      FunctionType *FT = CB->getFunctionType();
-      if (ArgNo < FT->getNumParams() &&
-          !FT->getParamType(ArgNo)->isAggregateType()) {
-        NewI->mutateType(B.getInt32Ty());
-        break;
-      }
-    }
-  }
   return NewI;
 }
 
@@ -3899,7 +4057,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   AggrConstTypes.clear();
   AggrStores.clear();
 
+  scalarizeVectorPtrCasts(Func);
   processParamTypesByFunHeader(CurrF, B);
+
+  if (ST.isLogicalSPIRV())
+    foldConstantOffsetIntoArrayIndex(Func);
 
   // Fix GEP result types ahead of inference, and simplify if possible.
   // Data structure for dead instructions that were simplified and replaced.
@@ -3947,6 +4109,11 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
     processGlobalValue(GV, B);
 
   reconstructAggregateReturns(Func, B);
+  // Before preprocessUndefsAndPoisons, which gives the poison starting each
+  // chain a typed placeholder.
+  for (Instruction &I : instructions(Func))
+    if (isAggregateValueIdInstr(I))
+      insertCompositeAggregateArms(&I, B);
   preprocessUndefsAndPoisons(B);
   simplifyNullAddrSpaceCasts();
   preprocessCompositeConstants(B);
@@ -3961,8 +4128,6 @@ bool SPIRVEmitIntrinsicsImpl::runOnFunction(Function &Func) {
   for (Instruction &I : instructions(Func)) {
     if (!isAggregateValueIdInstr(I))
       continue;
-    // Give multi-register arms a value-id first, before the result is mutated.
-    insertCompositeAggregateArms(&I, B);
     AggrConstTypes[&I] = I.getType();
     I.mutateType(I32Ty);
   }

@@ -42,9 +42,8 @@
 #include <system_error>
 
 using namespace llvm;
+using namespace offload;
 using namespace llvm::object;
-using namespace omp;
-using namespace omp::target;
 
 namespace {
 
@@ -289,7 +288,7 @@ JITEngine::compile(StringRef Image, const std::string &ComputeUnitKind,
 }
 
 Expected<std::unique_ptr<MemoryBuffer>>
-JITEngine::process(StringRef Image, target::plugin::GenericDeviceTy &Device) {
+JITEngine::process(StringRef Image, plugin::GenericDeviceTy &Device) {
   assert(identify_magic(Image) == file_magic::bitcode && "Image not LLVM-IR");
 
   const std::string &ComputeUnitKind = Device.getComputeUnitKind();

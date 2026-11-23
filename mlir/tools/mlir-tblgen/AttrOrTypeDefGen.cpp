@@ -8,6 +8,7 @@
 
 #include "AttrOrTypeFormatGen.h"
 #include "CppGenUtilities.h"
+#include "DialectGenUtilities.h"
 #include "mlir/TableGen/AttrOrTypeDef.h"
 #include "mlir/TableGen/Class.h"
 #include "mlir/TableGen/Format.h"
@@ -848,8 +849,14 @@ namespace {
 /// This struct is the base generator used when processing tablegen interfaces.
 class DefGenerator {
 public:
-  bool emitDecls(StringRef selectedDialect);
-  bool emitDefs(StringRef selectedDialect);
+  /// Emit the declarations of the defs of `selectedDialect`. The registration
+  /// hook is named after `registrationName`, or after the dialect class if
+  /// empty.
+  bool emitDecls(StringRef selectedDialect, StringRef registrationName);
+  /// Emit the definitions of the defs of `selectedDialect`. The registration
+  /// hook is named after `registrationName`, or after the dialect class if
+  /// empty.
+  bool emitDefs(StringRef selectedDialect, StringRef registrationName);
 
 protected:
   DefGenerator(ArrayRef<const Record *> defs, raw_ostream &os,
@@ -866,6 +873,18 @@ protected:
   void emitTypeDefList(ArrayRef<AttrOrTypeDef> defs);
   /// Emit the code to dispatch between different defs during parsing/printing.
   void emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs);
+
+  /// Returns true if the dialect of `defs` registers them with the generated
+  /// registration hook. Otherwise, no hook is generated.
+  bool hasRegistrationHook(ArrayRef<AttrOrTypeDef> defs) const;
+
+  /// Emit the declaration of the hook that registers `defs` with their dialect.
+  void emitRegistrationHookDecl(raw_ostream &os, ArrayRef<AttrOrTypeDef> defs,
+                                StringRef registrationName);
+
+  /// Emit the definition of the hook that registers `defs` with their dialect.
+  void emitRegistrationHookDef(ArrayRef<AttrOrTypeDef> defs,
+                               StringRef registrationName);
 
   /// The set of def records to emit.
   std::vector<const Record *> defRecords;
@@ -908,7 +927,8 @@ class AsmPrinter;
 } // namespace mlir
 )";
 
-bool DefGenerator::emitDecls(StringRef selectedDialect) {
+bool DefGenerator::emitDecls(StringRef selectedDialect,
+                             StringRef registrationName) {
   emitSourceFileHeader((defType + "Def Declarations").str(), os);
   llvm::IfDefEmitter scope(os, "GET_" + defType.upper() + "DEF_CLASSES");
 
@@ -938,6 +958,9 @@ bool DefGenerator::emitDecls(StringRef selectedDialect) {
       gen.emitDecl(declOs);
       llvm::append_range(includes, gen.getRequiredIncludes());
     }
+
+    if (hasRegistrationHook(defs))
+      emitRegistrationHookDecl(declOs, defs, registrationName);
   }
   tblgen::emitIncludes(os, includes);
 
@@ -1193,6 +1216,45 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
   printer.writeDeclTo(indentedOs);
 }
 
+bool DefGenerator::hasRegistrationHook(ArrayRef<AttrOrTypeDef> defs) const {
+  Dialect dialect = defs.front().getDialect();
+  return isAttrGenerator ? dialect.useDefaultAttributeRegistration()
+                         : dialect.useDefaultTypeRegistration();
+}
+
+void DefGenerator::emitRegistrationHookDecl(raw_ostream &os,
+                                            ArrayRef<AttrOrTypeDef> defs,
+                                            StringRef registrationName) {
+  Dialect dialect = defs.front().getDialect();
+  std::string dialectClass = dialect.getCppClassName();
+  os << "class " << dialectClass << ";\n"
+     << llvm::formatv("/// Registers the {0}s defined in this file with "
+                      "`dialect`.\n",
+                      valueType.lower())
+     << llvm::formatv("void {0}({1} *dialect);\n",
+                      getAttrOrTypeRegistrationHookName(dialect, valueType,
+                                                        registrationName),
+                      dialectClass);
+}
+
+/// Emit the hook that registers the defs with their dialect. Registering
+/// requires the definitions of the storage classes, so the hook is defined
+/// alongside the defs. Every set of defs of a dialect must hence use a distinct
+/// `registrationName` (e.g. the defs of dialect extensions).
+void DefGenerator::emitRegistrationHookDef(ArrayRef<AttrOrTypeDef> defs,
+                                           StringRef registrationName) {
+  Dialect dialect = defs.front().getDialect();
+  DialectNamespaceEmitter ns(os, dialect);
+  os << llvm::formatv(
+      "void {0}({1} *dialect) {{\n",
+      getAttrOrTypeRegistrationHookName(dialect, valueType, registrationName),
+      dialect.getCppClassName());
+  for (const AttrOrTypeDef &def : defs)
+    os << llvm::formatv("  ::mlir::Abstract{0}::insert<{1}>(*dialect);\n",
+                        valueType, def.getCppClassName());
+  os << "}\n";
+}
+
 /// Headers declaring the C++ constructs used by every generated attribute or
 /// type definition, beyond those already included by the declarations.
 static constexpr StringRef attrOrTypeDefIncludes[] = {
@@ -1208,7 +1270,8 @@ static constexpr StringRef attrOrTypeDefIncludes[] = {
     "mlir/IR/OpImplementation.h",
 };
 
-bool DefGenerator::emitDefs(StringRef selectedDialect) {
+bool DefGenerator::emitDefs(StringRef selectedDialect,
+                            StringRef registrationName) {
   emitSourceFileHeader((defType + "Def Definitions").str(), os);
 
   SmallVector<AttrOrTypeDef, 16> defs;
@@ -1232,6 +1295,8 @@ bool DefGenerator::emitDefs(StringRef selectedDialect) {
          << def.getDialect().getCppNamespace() << "::" << def.getCppClassName()
          << ")\n";
   }
+  if (hasRegistrationHook(defs))
+    emitRegistrationHookDef(defs, registrationName);
 
   Dialect firstDialect = defs.front().getDialect();
 
@@ -1370,18 +1435,26 @@ static llvm::cl::opt<std::string>
     attrDialect("attrdefs-dialect",
                 llvm::cl::desc("Generate attributes for this dialect"),
                 llvm::cl::cat(attrdefGenCat), llvm::cl::CommaSeparated);
+static llvm::cl::opt<std::string> attrRegistrationName(
+    "attrdefs-registration-name",
+    llvm::cl::desc("Name the attribute registration hook "
+                   "'register<name>Attributes' instead of using the dialect "
+                   "class name. Required to generate attributes of a dialect "
+                   "in more than one file, e.g. for dialect extensions"),
+    llvm::cl::cat(attrdefGenCat));
 
 static mlir::GenRegistration
     genAttrDefs("gen-attrdef-defs", "Generate AttrDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
                   AttrDefGenerator generator(records, os);
-                  return generator.emitDefs(attrDialect);
+                  return generator.emitDefs(attrDialect, attrRegistrationName);
                 });
 static mlir::GenRegistration
     genAttrDecls("gen-attrdef-decls", "Generate AttrDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
                    AttrDefGenerator generator(records, os);
-                   return generator.emitDecls(attrDialect);
+                   return generator.emitDecls(attrDialect,
+                                              attrRegistrationName);
                  });
 
 static mlir::GenRegistration
@@ -1408,18 +1481,26 @@ static llvm::cl::opt<std::string>
     typeDialect("typedefs-dialect",
                 llvm::cl::desc("Generate types for this dialect"),
                 llvm::cl::cat(typedefGenCat), llvm::cl::CommaSeparated);
+static llvm::cl::opt<std::string> typeRegistrationName(
+    "typedefs-registration-name",
+    llvm::cl::desc("Name the type registration hook 'register<name>Types' "
+                   "instead of using the dialect class name. Required to "
+                   "generate types of a dialect in more than one file, e.g. "
+                   "for dialect extensions"),
+    llvm::cl::cat(typedefGenCat));
 
 static mlir::GenRegistration
     genTypeDefs("gen-typedef-defs", "Generate TypeDef definitions",
                 [](const RecordKeeper &records, raw_ostream &os) {
                   TypeDefGenerator generator(records, os);
-                  return generator.emitDefs(typeDialect);
+                  return generator.emitDefs(typeDialect, typeRegistrationName);
                 });
 static mlir::GenRegistration
     genTypeDecls("gen-typedef-decls", "Generate TypeDef declarations",
                  [](const RecordKeeper &records, raw_ostream &os) {
                    TypeDefGenerator generator(records, os);
-                   return generator.emitDecls(typeDialect);
+                   return generator.emitDecls(typeDialect,
+                                              typeRegistrationName);
                  });
 
 static mlir::GenRegistration

@@ -392,6 +392,10 @@ public:
   bool isDotCurInst(const MachineInstr &MI) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isHMXActivateInstr(const MachineInstr &MI) const;
+  bool isHMXWeightInstr(const MachineInstr &MI) const;
+  bool isActivateWeightPair(const MachineInstr &MIa,
+                            const MachineInstr &MIb) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;
