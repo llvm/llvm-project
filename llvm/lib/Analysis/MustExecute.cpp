@@ -801,17 +801,31 @@ bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
   if (IBB->getParent() != PPBB->getParent())
     return false;
 
+  // Queries usually come in batches for the same program point, so remember
+  // the summaries of the last one.
+  if (PP != LastPP) {
+    LastPP = PP;
+    LastForwardStop = ExploreCFGForward ? getForwardStop(PP) : nullptr;
+    LastForwardContext =
+        ExploreCFGForward && !LastForwardStop && ExploreInterBlock
+            ? &getForwardContext(PPBB)
+            : nullptr;
+    LastBackwardContext = ExploreCFGBackward && ExploreInterBlock
+                              ? &getBackwardContext(PPBB)
+                              : nullptr;
+  }
+
   if (ExploreCFGForward) {
     // Forward, the context contains the instructions up to the first one that
     // might not transfer execution. If there is none, it continues in the
     // forward context of the next block.
-    const Instruction *Stop = getForwardStop(PP);
+    const Instruction *Stop = LastForwardStop;
     if (IBB == PPBB && PP->comesBefore(I) && (!Stop || !Stop->comesBefore(I)))
       return true;
-    if (!Stop && ExploreInterBlock) {
-      const ForwardContextTy &Context = getForwardContext(PPBB);
-      auto It = Context.find(IBB);
-      if (It != Context.end() && (!It->second || !It->second->comesBefore(I)))
+    if (LastForwardContext) {
+      auto It = LastForwardContext->find(IBB);
+      if (It != LastForwardContext->end() &&
+          (!It->second || !It->second->comesBefore(I)))
         return true;
     }
   }
@@ -821,7 +835,7 @@ bool MustBeExecutedContextExplorer::isInContextOf(const Instruction *I,
     // the backward context of the backward join point.
     if (IBB == PPBB && I->comesBefore(PP))
       return true;
-    if (ExploreInterBlock && getBackwardContext(PPBB).contains(IBB))
+    if (LastBackwardContext && LastBackwardContext->contains(IBB))
       return true;
   }
   return false;
