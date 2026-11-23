@@ -4762,7 +4762,8 @@ Sema::CheckVarTemplateId(VarTemplateDecl *Template, SourceLocation TemplateLoc,
       (void)Result;
     } else {
       Matched.push_back(PartialSpecMatchResult());
-      Matched.back().Partial = Partial;
+      Matched.back().Partial = cast<VarTemplatePartialSpecializationDecl>(
+          Partial->getCanonicalDecl());
       Matched.back().Args = Info.takeSugared();
     }
   }
