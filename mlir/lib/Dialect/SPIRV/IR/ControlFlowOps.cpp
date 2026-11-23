@@ -311,13 +311,13 @@ Block *SwitchOp::getSuccessorForOperands(ArrayRef<Attribute> operands) {
 
 /// Returns true if `type` is a numerical scalar, physical pointer, vector,
 /// matrix, or an aggregate recursively containing only such types. Without an
-/// enclosing `module` any pointer is accepted.
-static bool isConcreteType(Type type, spirv::ModuleOp module) {
+/// enclosing `moduleOp` any pointer is accepted.
+static bool isConcreteType(Type type, spirv::ModuleOp moduleOp) {
   return TypeSwitch<Type, bool>(type)
       .Case([&](spirv::PointerType pointerType) {
-        if (!module)
+        if (!moduleOp)
           return true;
-        spirv::AddressingModel addressingModel = module.getAddressingModel();
+        spirv::AddressingModel addressingModel = moduleOp.getAddressingModel();
         if (addressingModel == spirv::AddressingModel::Logical)
           return false;
         return addressingModel !=
@@ -329,12 +329,12 @@ static bool isConcreteType(Type type, spirv::ModuleOp module) {
           [](spirv::ScalarType scalarType) { return !scalarType.isInteger(1); })
       .Case<VectorType, spirv::ArrayType, spirv::MatrixType>(
           [&](auto compositeType) {
-            return isConcreteType(compositeType.getElementType(), module);
+            return isConcreteType(compositeType.getElementType(), moduleOp);
           })
       .Case([&](spirv::StructType structType) {
         return llvm::all_of(structType.getElementTypes(),
                             [&](Type elementType) {
-                              return isConcreteType(elementType, module);
+                              return isConcreteType(elementType, moduleOp);
                             });
       })
       .Default(false);
