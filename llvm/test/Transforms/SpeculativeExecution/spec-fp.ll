@@ -31,7 +31,7 @@ b:
 }
 
 ; CHECK-LABEL: @ifThen_binary_fneg(
-; CHECK: fsub float -0.0
+; CHECK: fsub float -0.000000e+00
 ; CHECK: br i1 true
 define void @ifThen_binary_fneg() {
   br i1 true, label %a, label %b

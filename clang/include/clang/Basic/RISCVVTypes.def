@@ -73,6 +73,11 @@
   RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, false, false, true)
 #endif
 
+#ifndef RVV_VECTOR_TYPE_OFP8
+#define RVV_VECTOR_TYPE_OFP8(Name, Id, SingletonId, NumEls, E5m2)              \
+  RVV_VECTOR_TYPE_INT(Name, Id, SingletonId, NumEls, 8, 1, false)
+#endif
+
 //===- Vector types -------------------------------------------------------===//
 
 RVV_VECTOR_TYPE_INT("__rvv_int8mf8_t", RvvInt8mf8, RvvInt8mf8Ty, 1,   8, 1, true)
@@ -126,6 +131,36 @@ RVV_VECTOR_TYPE_INT("__rvv_uint64m1_t",RvvUint64m1,RvvUint64m1Ty,1,  64, 1, fals
 RVV_VECTOR_TYPE_INT("__rvv_uint64m2_t",RvvUint64m2,RvvUint64m2Ty,2,  64, 1, false)
 RVV_VECTOR_TYPE_INT("__rvv_uint64m4_t",RvvUint64m4,RvvUint64m4Ty,4,  64, 1, false)
 RVV_VECTOR_TYPE_INT("__rvv_uint64m8_t",RvvUint64m8,RvvUint64m8Ty,8,  64, 1, false)
+
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3mf8_t", RvvFloat8E4M3mf8,
+                     RvvFloat8E4M3mf8Ty, 1, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3mf4_t", RvvFloat8E4M3mf4,
+                     RvvFloat8E4M3mf4Ty, 2, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3mf2_t", RvvFloat8E4M3mf2,
+                     RvvFloat8E4M3mf2Ty, 4, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3m1_t", RvvFloat8E4M3m1,
+                     RvvFloat8E4M3m1Ty, 8, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3m2_t", RvvFloat8E4M3m2,
+                     RvvFloat8E4M3m2Ty, 16, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3m4_t", RvvFloat8E4M3m4,
+                     RvvFloat8E4M3m4Ty, 32, false)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e4m3m8_t", RvvFloat8E4M3m8,
+                     RvvFloat8E4M3m8Ty, 64, false)
+
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2mf8_t", RvvFloat8E5M2mf8,
+                     RvvFloat8E5M2mf8Ty, 1, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2mf4_t", RvvFloat8E5M2mf4,
+                     RvvFloat8E5M2mf4Ty, 2, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2mf2_t", RvvFloat8E5M2mf2,
+                     RvvFloat8E5M2mf2Ty, 4, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2m1_t", RvvFloat8E5M2m1,
+                     RvvFloat8E5M2m1Ty, 8, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2m2_t", RvvFloat8E5M2m2,
+                     RvvFloat8E5M2m2Ty, 16, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2m4_t", RvvFloat8E5M2m4,
+                     RvvFloat8E5M2m4Ty, 32, true)
+RVV_VECTOR_TYPE_OFP8("__rvv_float8e5m2m8_t", RvvFloat8E5M2m8,
+                     RvvFloat8E5M2m8Ty, 64, true)
 
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16mf4_t",RvvFloat16mf4,RvvFloat16mf4Ty,1,  16, 1)
 RVV_VECTOR_TYPE_FLOAT("__rvv_float16mf2_t",RvvFloat16mf2,RvvFloat16mf2Ty,2,  16, 1)
@@ -508,6 +543,7 @@ RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m2x4_t", RvvBFloat16m2x4, RvvBFloat16m2x4T
 RVV_VECTOR_TYPE_BFLOAT("__rvv_bfloat16m4x2_t", RvvBFloat16m4x2, RvvBFloat16m4x2Ty,
                        16, 16, 2)
 
+#undef RVV_VECTOR_TYPE_OFP8
 #undef RVV_VECTOR_TYPE_BFLOAT
 #undef RVV_VECTOR_TYPE_FLOAT
 #undef RVV_VECTOR_TYPE_INT

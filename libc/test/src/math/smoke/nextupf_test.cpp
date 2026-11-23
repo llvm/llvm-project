@@ -10,4 +10,4 @@
 
 #include "src/math/nextupf.h"
 
-LIST_NEXTUP_TESTS(float, LIBC_NAMESPACE::nextupf)
+LIST_NEXTUP_TESTS(Nextupf, float, LIBC_NAMESPACE::nextupf)

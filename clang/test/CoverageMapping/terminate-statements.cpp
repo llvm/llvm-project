@@ -346,6 +346,22 @@ int elsecondnoret(void) {
   return 0;
 }
 
+// CHECK-LABEL: _Z18statementexprnoretb:
+int statementexprnoret(bool crash) {
+  int rc = ({ if (crash) abort(); 0; }); // CHECK: File 0, [[@LINE]]:35 -> [[@LINE+1]]:12 = (#0 - #1)
+  return rc;                             // CHECK-NOT: Gap
+}
+
+// CHECK-LABEL: _Z13do_with_breaki:
+int do_with_break(int n) {
+  do {
+    if (n == 87) {
+      break;
+    }               // CHECK: File 0, [[@LINE-2]]:18 -> [[@LINE]]:6 = #2
+  } while (0);      // CHECK: File 0, [[@LINE]]:12 -> [[@LINE]]:13 = ((#0 + #1) - #2)
+  return 0;         // CHECK-NOT: Gap,File 0, [[@LINE-1]]:15
+}
+
 int main() {
   foo(0);
   foo(1);
@@ -368,5 +384,7 @@ int main() {
   ornoret();
   abstractcondnoret();
   elsecondnoret();
+  statementexprnoret(false);
+  do_with_break(0);
   return 0;
 }

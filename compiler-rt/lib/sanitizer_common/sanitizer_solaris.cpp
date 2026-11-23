@@ -102,6 +102,10 @@ uptr internal_open(const char *filename, int flags, u32 mode) {
   return _REAL64(open)(filename, flags, mode);
 }
 
+uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags) {
+  return -1;  // Not supported.
+}
+
 DECLARE__REAL_AND_INTERNAL(uptr, read, fd_t fd, void *buf, uptr count) {
   return _REAL(read)(fd, buf, count);
 }

@@ -194,6 +194,46 @@ if.end:
   ret i32 %add
 }
 
+define i32 @load_before_store_escape_addr_only(i64 %i, i32 %b)  {
+; CHECK-LABEL: @load_before_store_escape_addr_only(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [2 x i32], align 8
+; CHECK-NEXT:    store i64 4294967296, ptr [[A]], align 8
+; CHECK-NEXT:    call void @fork_some_threads(ptr captures(address) [[A]])
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 [[I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP0]], [[B:%.*]]
+; CHECK-NEXT:    [[SPEC_STORE_SELECT:%.*]] = select i1 [[CMP]], i32 [[B]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 [[SPEC_STORE_SELECT]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds [2 x i32], ptr [[A]], i64 0, i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    call void @join_some_threads()
+; CHECK-NEXT:    ret i32 [[ADD]]
+;
+entry:
+  %a = alloca [2 x i32], align 8
+  store i64 4294967296, ptr %a, align 8
+  call void @fork_some_threads(ptr captures(address) %a)
+  %arrayidx = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 %i
+  %0 = load i32, ptr %arrayidx, align 4
+  %cmp = icmp slt i32 %0, %b
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:
+  store i32 %b, ptr %arrayidx, align 4
+  br label %if.end
+
+if.end:
+  %1 = load i32, ptr %a, align 4
+  %arrayidx2 = getelementptr inbounds [2 x i32], ptr %a, i64 0, i64 1
+  %2 = load i32, ptr %arrayidx2, align 4
+  %add = add nsw i32 %1, %2
+  call void @join_some_threads()
+  ret i32 %add
+}
+
 define i64 @load_before_store_noescape_byval(ptr byval([2 x i32]) %a, i64 %i, i32 %b)  {
 ; CHECK-LABEL: @load_before_store_noescape_byval(
 ; CHECK-NEXT:  entry:

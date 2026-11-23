@@ -38,9 +38,7 @@ define void @test_xmm(i32 %shift, i32 %mulp, <2 x i64> %a,ptr %arraydecay,ptr %f
 ; CHECK-NEXT:    callq _check_mask16
 ; CHECK-NEXT:    vmovaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi ## 8-byte Reload
-; CHECK-NEXT:    vpmovd2m %xmm0, %k0
-; CHECK-NEXT:    ## kill: def $k1 killed $k0
-; CHECK-NEXT:    kmovd %k0, %eax
+; CHECK-NEXT:    vmovmskps %xmm0, %eax
 ; CHECK-NEXT:    ## kill: def $al killed $al killed $eax
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax

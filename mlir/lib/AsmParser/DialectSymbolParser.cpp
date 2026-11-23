@@ -89,6 +89,7 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
     nestedPunctuation.pop_back();
     return success();
   };
+  const char *curBufferEnd = state.lex.getBufferEnd();
   do {
     // Handle code completions, which may appear in the middle of the symbol
     // body.
@@ -98,10 +99,15 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
       break;
     }
 
+    if (curBufferEnd == curPtr) {
+      if (!nestedPunctuation.empty())
+        return emitPunctError();
+      return emitError("unexpected nul or EOF in pretty dialect name");
+    }
+
     char c = *curPtr++;
     switch (c) {
     case '\0':
-      // This also handles the EOF case.
       if (!nestedPunctuation.empty())
         return emitPunctError();
       return emitError("unexpected nul or EOF in pretty dialect name");
@@ -114,7 +120,7 @@ ParseResult Parser::parseDialectSymbolBody(StringRef &body,
 
     case '-':
       // The sequence `->` is treated as special token.
-      if (*curPtr == '>')
+      if (curPtr != curBufferEnd && *curPtr == '>')
         ++curPtr;
       continue;
 

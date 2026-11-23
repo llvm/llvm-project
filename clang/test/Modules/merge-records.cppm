@@ -31,27 +31,6 @@ union U {
     int c;
 };
 
-//--- another_records.h
-struct A {
-    int a;
-    double b;
-    float c;
-};
-
-struct NoNameEntity {
-    struct {
-        int a;
-        unsigned b;
-        long c;
-    };
-};
-
-union U {
-    int a;
-    double b;
-    short c;
-};
-
 //--- A.cppm
 module;
 #include "records.h"

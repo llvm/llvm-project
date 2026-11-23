@@ -1,0 +1,26 @@
+# RUN: not --crash llc -mtriple=x86_64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s --implicit-check-not="Bad machine code"
+# REQUIRES: x86-registered-target
+
+# A tied use and def of the same virtual register must agree on the subregister
+# index.
+
+---
+name: tied_subreg_mismatch
+body: |
+  bb.0:
+    %0:gr32_abcd = IMPLICIT_DEF
+    %1:gr8 = IMPLICIT_DEF
+    %2:gr32 = IMPLICIT_DEF
+
+    ; CHECK: Bad machine code: Tied use and def of the same virtual register must use the same subregister index
+    ; CHECK: - instruction: undef %0.sub_8bit:gr32_abcd = ADD8rr %0.sub_8bit_hi:gr32_abcd(tied-def 0)
+    undef %0.sub_8bit:gr32_abcd = ADD8rr %0.sub_8bit_hi, %1, implicit-def dead $eflags
+
+    ; CHECK: Bad machine code: Tied use and def of the same virtual register must use the same subregister index
+    ; CHECK: - instruction: INLINEASM &"" [attdialect], $0:[regdef:GR32], def %2:gr32, $1:[reguse tiedto:$0], %2.sub_16bit:gr32(tied-def 3)
+    INLINEASM &"", attdialect, regdef:GR32, def %2, reguse tiedto:$0, %2.sub_16bit(tied-def 3)
+
+    undef %0.sub_8bit:gr32_abcd = ADD8rr %0.sub_8bit, %1, implicit-def dead $eflags
+
+    RET64 implicit %0, implicit %2
+...

@@ -46,10 +46,34 @@ static_assert(alignof(outer<int,char>::inner<double,short>) == alignof(int) * al
 
 static_assert(alignof(int(int)) >= 1, "alignof(function) not positive"); // expected-error{{invalid application of 'alignof' to a function type}}
 
-[[__carries_dependency__]]
+// carries_dependency was removed from the standard by P3475R2.
+[[__carries_dependency__]] // expected-warning {{unknown attribute 'carries_dependency' ignored}}
 void func(void);
 
 alignas(4) auto PR19252 = 0;
 
 // Check the diagnostic message
 class alignas(void) AlignasVoid {}; // expected-error {{invalid application of 'alignas' to an incomplete type 'void'}}
+
+namespace GH108819 {
+void a([[maybe_unused]] void) {}                 // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}}\
+                                                 // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+void b([[deprecated, maybe_unused]] void) {}     // expected-warning {{attribute 'deprecated' cannot be applied to a 'void' parameter}} \
+                                                 // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \
+                                                 // expected-warning {{use of the 'deprecated' attribute is a C++14 extension}} \
+                                                 // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+void c([[clang::lifetimebound]] void) {}         // expected-warning {{attribute 'clang::lifetimebound' cannot be applied to a 'void' parameter}}
+void d([[clang::annotate("a", "b", 1)]] void) {} // expected-warning {{attribute 'clang::annotate' cannot be applied to a 'void' parameter}}
+
+struct S {
+  void e([[maybe_unused]] void) {} // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \
+                                   // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+};
+
+template <typename T>
+void f([[maybe_unused]] void) {} // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \
+                                 // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+
+auto g = []([[maybe_unused]] void) { }; // expected-warning {{attribute 'maybe_unused' cannot be applied to a 'void' parameter}} \
+                                        // expected-warning {{use of the 'maybe_unused' attribute is a C++17 extension}}
+}

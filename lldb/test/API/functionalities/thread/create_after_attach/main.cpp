@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include "attach.h"
 #include <chrono>
 #include <thread>
 
@@ -56,6 +56,4 @@ int main(int argc, char const *argv[])
     // Wait for the threads to finish.
     thread_1.join();
     thread_2.join();
-
-    printf("Exiting now\n");
 }

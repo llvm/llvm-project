@@ -1259,10 +1259,10 @@ define <2 x float> @sin_2x(ptr %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]]) #[[ATTR2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.sin.f32(float [[VECEXT_1]]) #[[ATTR3]]
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x float> [[VECINS]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[VECINS_1]]
 ;
@@ -1337,10 +1337,10 @@ define <2 x float> @cos_2x(ptr %a) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A:%.*]], align 16
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x float> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    [[VECINS:%.*]] = insertelement <2 x float> poison, float [[TMP1]], i32 0
 ; CHECK-NEXT:    [[VECEXT_1:%.*]] = extractelement <2 x float> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]]) #[[ATTR3]]
+; CHECK-NEXT:    [[TMP2:%.*]] = tail call fast float @llvm.cos.f32(float [[VECEXT_1]]) #[[ATTR4]]
 ; CHECK-NEXT:    [[VECINS_1:%.*]] = insertelement <2 x float> [[VECINS]], float [[TMP2]], i32 1
 ; CHECK-NEXT:    ret <2 x float> [[VECINS_1]]
 ;

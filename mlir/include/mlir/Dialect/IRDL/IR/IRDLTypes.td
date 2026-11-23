@@ -14,10 +14,11 @@
 #define MLIR_DIALECT_IRDL_IR_IRDLTYPES
 
 include "mlir/IR/AttrTypeBase.td"
-include "IRDL.td"
+include "mlir/Dialect/IRDL/IR/IRDL.td"
 
 class IRDL_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<IRDL_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/IRDL/IR/IRDL.h"];
   let mnemonic = typeMnemonic;
 }
 

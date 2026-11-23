@@ -1,7 +1,7 @@
-# RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,SI,SICI,SIVI
-# RUN: llc -mtriple=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,CI,SICI
-# RUN: llc -mtriple=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,VI,SIVI
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
+# RUN: llc -mtriple=amdgpu6.00 -run-pass=instruction-select %s -o - | FileCheck %s -check-prefixes=GCN,SI,SICI,SIVI
+# RUN: llc -mtriple=amdgpu7.01 -run-pass=instruction-select %s -o - | FileCheck %s -check-prefixes=GCN,CI,SICI
+# RUN: llc -mtriple=amdgpu8.03 -run-pass=instruction-select %s -o - | FileCheck %s -check-prefixes=GCN,VI,SIVI
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=instruction-select %s -o - | FileCheck %s -check-prefixes=GCN,GFX9
 
 --- |
   define amdgpu_kernel void @smrd_imm(ptr addrspace(4) %const0) { ret void }
@@ -15,6 +15,7 @@
 name:            smrd_imm
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 # GCN: body:
 # GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
@@ -158,6 +159,7 @@ body: |
 name:            smrd_wide
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -197,6 +199,7 @@ body: |
 name:            constant_address_positive
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -219,6 +222,7 @@ body: |
 name:            smrd_sgpr
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -242,6 +246,7 @@ body: |
 name:            smrd_sgpr_imm
 legalized:       true
 regBankSelected: true
+tracksRegLiveness: false
 
 body: |
   bb.0:

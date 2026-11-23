@@ -21,6 +21,7 @@ include "mlir/IR/OpBase.td"
 
 def TypedAttrInterface : AttrInterface<"TypedAttr"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
 
   let description = [{
     This interface is used for attributes that have a type. The type of an
@@ -40,6 +41,7 @@ def TypedAttrInterface : AttrInterface<"TypedAttr"> {
 
 def BlobAttrInterface : AttrInterface<"BlobAttr"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
   let description = [{
     This interface allows an attribute to expose a blob of data without more
     information. The data must be stored so that it can be accessed as a
@@ -58,6 +60,7 @@ def BlobAttrInterface : AttrInterface<"BlobAttr"> {
 
 def ElementsAttrInterface : AttrInterface<"ElementsAttr", [TypedAttrInterface]> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
   let description = [{
     This interface is used for attributes that contain the constant elements of
     a tensor or vector type. It allows for opaquely interacting with the
@@ -471,6 +474,7 @@ def ElementsAttrInterface : AttrInterface<"ElementsAttr", [TypedAttrInterface]> 
 
 def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/IR/BuiltinAttributeInterfaces.h"];
 
   let description = [{
     This interface is used for attributes that can represent the MemRef type's
@@ -480,8 +484,8 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
 
     Note: the MemRef type's layout is assumed to represent simple strided buffer
     layout. For more complicated case, like sparse storage buffers,
-    it is preferable to use separate type with more specic layout, rather then
-    introducing extra complexity to the builin MemRef type.
+    it is preferable to use a separate type with a more specific layout, rather
+    than introducing extra complexity to the builtin MemRef type.
   }];
 
   let methods = [
@@ -509,6 +513,23 @@ def MemRefLayoutAttrInterface : AttrInterface<"MemRefLayoutAttrInterface"> {
         return ::mlir::detail::verifyAffineMapAsLayout($_attr.getAffineMap(),
                                                        shape, emitError);
       }]
+    >,
+
+    InterfaceMethod<
+      [{Return the strides (using ShapedType::kDynamic for the dynamic case)
+      that this layout corresponds to into `strides` and `offset` if such exist
+      and can be determined from a combination of the layout and the given
+      `shape`. If these strides cannot be inferred, return failure().
+      The values of `strides` and `offset` are undefined on failure.}],
+      "::llvm::LogicalResult", "getStridesAndOffset",
+      (ins "::llvm::ArrayRef<int64_t>":$shape,
+           "::llvm::SmallVectorImpl<int64_t>&":$strides,
+           "int64_t&":$offset),
+           [{}],
+           [{
+            return ::mlir::detail::getAffineMapStridesAndOffset(
+              $_attr.getAffineMap(), shape, strides, offset);
+           }]
     >
   ];
 }

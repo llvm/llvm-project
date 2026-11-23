@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # changelog:
 # 10/13/2005b: replaced the # in tmp(.#*)* with alphanumeric and _, this will then remove
@@ -7,7 +7,7 @@
 #%tmp.#, i.e. it now will remove %tmp.12.3.15 etc, additionally fixed a spelling error in
 # the comments
 # 10/12/2005: now it only removes nodes and edges for which the label is %tmp.# rather
-# than removing all lines for which the lable CONTAINS %tmp.#
+# than removing all lines for which the label CONTAINS %tmp.#
 
 from __future__ import print_function
 

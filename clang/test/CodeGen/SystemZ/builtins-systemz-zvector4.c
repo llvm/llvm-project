@@ -2,9 +2,11 @@
 // RUN: %clang_cc1 -target-cpu z16 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -target-cpu z16 -triple s390x-linux-gnu -O2 -fzvector -flax-vector-conversions=none -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s %}
 // RUN: %clang_cc1 -target-cpu z16 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -target-cpu z16 -triple s390x-linux-gnu -O2 -fzvector -flax-vector-conversions=none -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM %}
 
 #include <vecintrin.h>
 
@@ -21,6 +23,7 @@ volatile vector bool short vbs;
 volatile vector bool int vbi;
 volatile vector bool long long vbl;
 volatile vector float vf;
+volatile vector float vf1;
 volatile vector double vd;
 
 void test_nnp_assist(void) {
@@ -40,10 +43,10 @@ void test_nnp_assist(void) {
   // CHECK: call <4 x float> @llvm.s390.vclfnls(<8 x i16> %{{.*}}, i32 15)
   // CHECK-ASM: vclfnl
 
-  vus = vec_round_from_fp32(vf, vf, 0);
+  vus = vec_round_from_fp32(vf, vf1, 0);
   // CHECK: call <8 x i16> @llvm.s390.vcrnfs(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 0)
   // CHECK-ASM: vcrnf
-  vus = vec_round_from_fp32(vf, vf, 15);
+  vus = vec_round_from_fp32(vf, vf1, 15);
   // CHECK: call <8 x i16> @llvm.s390.vcrnfs(<4 x float> %{{.*}}, <4 x float> %{{.*}}, i32 15)
   // CHECK-ASM: vcrnf
 

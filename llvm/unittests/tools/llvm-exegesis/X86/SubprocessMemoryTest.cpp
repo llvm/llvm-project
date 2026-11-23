@@ -11,7 +11,6 @@
 #include "X86/TestBase.h"
 #include "gtest/gtest.h"
 #include <string>
-#include <unordered_map>
 
 #ifdef __linux__
 #include <endian.h>
@@ -29,7 +28,7 @@ namespace exegesis {
 
 // This needs to be updated anytime a test is added or removed from the test
 // suite.
-static constexpr const size_t TestCount = 4;
+static constexpr size_t TestCount = 4;
 
 class SubprocessMemoryTest : public X86TestBase {
 protected:
@@ -40,9 +39,8 @@ protected:
     return getpid() * TestCount + TestNumber;
   }
 
-  void
-  testCommon(std::unordered_map<std::string, MemoryValue> MemoryDefinitions,
-             const unsigned TestNumber) {
+  void testCommon(StringMap<MemoryValue> MemoryDefinitions,
+                  const unsigned TestNumber) {
     EXPECT_FALSE(
         SM.initializeSubprocessMemory(getSharedMemoryNumber(TestNumber)));
     EXPECT_FALSE(SM.addMemoryDefinition(MemoryDefinitions,

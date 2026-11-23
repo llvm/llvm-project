@@ -3,9 +3,9 @@
 ; if instruction being considered for addition to packet has higher latency,
 ; end existing packet and start a new one.
 
-; CHECK: .LBB0_4:
 ; CHECK: p{{[0-3]+}} = cmp.gtu(r{{[0-9]+}},r{{[0-9]+}})
-; CHECK-NEXT: }
+; CHECK: if (p{{[0-3]+}}.new) jumpr:nt r31
+; CHECK: }
 
 @array = external dso_local local_unnamed_addr global ptr, align 4
 

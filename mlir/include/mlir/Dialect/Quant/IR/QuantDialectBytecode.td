@@ -13,6 +13,7 @@
 #ifndef QUANT_BYTECODE
 #define QUANT_BYTECODE
 
+include "mlir/IR/BuiltinDialectBytecode.td"
 include "mlir/IR/BytecodeBase.td"
 
 def DoubleAPFloat:
@@ -21,6 +22,12 @@ def DoubleAPFloat:
   WithPrinter<"$_writer.writeAPFloatWithKnownSemantics(APFloat($_getter))",
   WithType   <"double">>>>;
 def DoubleAPFloatList : List<DoubleAPFloat>;
+
+def OptionalSignedVarInt:
+  WithParser <"succeeded(readOptionalSignedVarInt($_reader, $_var))",
+  WithBuilder<"$_args",
+  WithPrinter<"writeOptionalSignedVarInt($_writer, $_getter)",
+  WithType   <"std::optional<int64_t>">>>>;
 
 let cType = "AnyQuantizedType" in {
 
@@ -81,20 +88,39 @@ def UniformQuantizedPerAxisType: DialectType<(type
   }];
 }
 
+def UniformQuantizedSubChannelType
+    : DialectType<(type VarInt:$flags, Type:$storageType, Type:$expressedType,
+          SignedVarInt:$storageTypeMin, SignedVarInt:$storageTypeMax,
+          Array<SignedVarIntList>:$quantizedDimensions,
+          Array<SignedVarIntList>:$blockSizes, DenseElementsAttr:$scales,
+          DenseElementsAttr:$zeroPoints)> {
+  // Note: builder order differs from bytecode.
+  let cBuilder = [{
+      get<$_resultType>(context, flags, storageType, expressedType, scales,
+        zeroPoints, llvm::to_vector(llvm::map_range(quantizedDimensions,
+        [](int64_t dim) { return static_cast<int32_t>(dim);})), blockSizes,
+        storageTypeMin, storageTypeMax)
+  }];
+}
+
+def QuantileType : DialectType<(type
+  Type:$storageType,
+  Type:$quantileType,
+  Array<DoubleAPFloatList>:$quantiles,
+  OptionalSignedVarInt:$storageMin,
+  OptionalSignedVarInt:$storageMax
+)>;
+
 /// This enum contains marker codes used to indicate which attribute is
 /// currently being decoded, and how it should be decoded. The order of these
 /// codes should generally be unchanged, as any changes will inevitably break
 /// compatibility with older bytecode.
 
 def QuantDialectTypes : DialectTypes<"Quant"> {
-  let elems = [
-    ReservedOrDead,
-    AnyQuantizedType,
-    AnyQuantizedTypeWithExpressedType,
-    CalibratedQuantizedType,
-    UniformQuantizedType,
-    UniformQuantizedPerAxisType
-  ];
+  let elems = [ReservedOrDead, AnyQuantizedType,
+               AnyQuantizedTypeWithExpressedType, CalibratedQuantizedType,
+               UniformQuantizedType, UniformQuantizedPerAxisType,
+               UniformQuantizedSubChannelType, QuantileType];
 }
 
 #endif // QUANT_BYTECODE

@@ -1,5 +1,5 @@
 add_flang_tool(fir-opt fir-opt.cpp)
-llvm_update_compile_flags(fir-opt)
+
 get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 
@@ -7,6 +7,7 @@ if(FLANG_INCLUDE_TESTS)
   set(test_libs
     FIRTestAnalysis
     FIRTestOpenACCInterfaces
+    MLIROpenACCTestPasses
     MLIRTestIR
     )
 endif()
@@ -18,11 +19,16 @@ target_link_libraries(fir-opt PRIVATE
   FIRSupport
   FIRTransforms
   FIRCodeGen
+  FIRCodeGenDialect
   HLFIRDialect
   HLFIRTransforms
   FIROpenACCSupport
+  FIROpenACCTransforms
+  FIROpenMPSupport
   FlangOpenMPTransforms
   FIRAnalysis
+  MIFDialect
+  flangPasses
   ${test_libs}
 )
 
@@ -45,3 +51,8 @@ mlir_target_link_libraries(fir-opt PRIVATE
   MLIRVectorToLLVM
   MLIROptLib
 )
+
+llvm_update_compile_flags(fir-opt)
+
+mlir_check_all_link_libraries(fir-opt)
+export_executable_symbols_for_plugins(fir-opt)

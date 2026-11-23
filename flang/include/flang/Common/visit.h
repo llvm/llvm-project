@@ -21,8 +21,8 @@
 #ifndef FORTRAN_COMMON_VISIT_H_
 #define FORTRAN_COMMON_VISIT_H_
 
+#include "api-attrs.h"
 #include "variant.h"
-#include "flang/Common/api-attrs.h"
 #include <type_traits>
 
 namespace Fortran::common {

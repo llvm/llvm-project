@@ -87,8 +87,6 @@
 ---
 name:            test_vqrshruntq_n_s32
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -98,7 +96,7 @@ frameInfo:
   stackSize:       8
   offsetAdjustment: 0
   maxAlignment:    4
-  restorePoint:    ''
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: 0, size: 4, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,
@@ -194,8 +192,6 @@ body:             |
 ---
 name:            test_vqrshruntq_n_s16
 alignment:       2
-tracksRegLiveness: true
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

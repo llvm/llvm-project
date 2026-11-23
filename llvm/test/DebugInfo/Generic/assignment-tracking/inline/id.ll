@@ -1,5 +1,4 @@
 ; RUN: opt %s -S -passes=inline -o - | FileCheck %s
-; RUN: opt --try-experimental-debuginfo-iterators %s -S -passes=inline -o - | FileCheck %s
 
 ;; Check that all DIAssignID metadata that are inlined are replaced with new
 ;; versions. Otherwise two inlined instances of an assignment will be considered
@@ -22,8 +21,8 @@
 ; CHECK-NEXT: #dbg_assign(i32 5, [[val]], !DIExpression(), [[ID_1]], ptr %val.i1, !DIExpression(), [[dl_inline_1:![0-9]+]]
 ;
 ; CHECK-DAG: [[val]] = !DILocalVariable(name: "val",
-; CHECK-DAG: [[dl_inline_0]] = !DILocation({{.*}}inlinedAt
-; CHECK-DAG: [[dl_inline_1]] = !DILocation({{.*}}inlinedAt
+; CHECK-DAG: [[dl_inline_0]] = distinct !DILocation({{.*}}inlinedAt
+; CHECK-DAG: [[dl_inline_1]] = distinct !DILocation({{.*}}inlinedAt
 ; CHECK-DAG: [[ID_0]] = distinct !DIAssignID()
 ; CHECK-DAG: [[ID_1]] = distinct !DIAssignID()
 

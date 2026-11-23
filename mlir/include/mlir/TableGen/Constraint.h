@@ -17,6 +17,7 @@
 #include "mlir/TableGen/Predicate.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <vector>
 
 namespace llvm {
 class Record;
@@ -30,7 +31,14 @@ namespace tblgen {
 class Constraint {
 public:
   // Constraint kind
-  enum Kind { CK_Attr, CK_Region, CK_Successor, CK_Type, CK_Uncategorized };
+  enum Kind {
+    CK_Attr,
+    CK_Prop,
+    CK_Region,
+    CK_Successor,
+    CK_Type,
+    CK_Uncategorized
+  };
 
   // Create a constraint with a TableGen definition and a kind.
   Constraint(const llvm::Record *record, Kind kind) : def(record), kind(kind) {}
@@ -73,6 +81,10 @@ public:
   /// constraint, or std::nullopt if no C++ function should be generated.
   std::optional<StringRef> getCppFunctionName() const;
 
+  /// Returns the C++ headers declaring the C++ classes this type or attribute
+  /// constraint refers to.
+  std::vector<StringRef> getCppIncludes() const;
+
   Kind getKind() const { return kind; }
 
   /// Return the underlying def.
@@ -112,10 +124,6 @@ namespace llvm {
 /// correct error message is reported when verification fails.
 template <>
 struct DenseMapInfo<mlir::tblgen::Constraint> {
-  using RecordDenseMapInfo = llvm::DenseMapInfo<const llvm::Record *>;
-
-  static mlir::tblgen::Constraint getEmptyKey();
-  static mlir::tblgen::Constraint getTombstoneKey();
   static unsigned getHashValue(mlir::tblgen::Constraint constraint);
   static bool isEqual(mlir::tblgen::Constraint lhs,
                       mlir::tblgen::Constraint rhs);

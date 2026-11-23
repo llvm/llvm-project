@@ -13,7 +13,6 @@
 // The various representations are distinguished by their binary precisions
 // (number of explicit significand bits and any implicit MSB in the fraction).
 
-#include "flang/Common/api-attrs.h"
 #include <cinttypes>
 
 namespace Fortran::common {

@@ -1,9 +1,9 @@
 ; RUN: llvm-as -disable-output <%s 2>&1| FileCheck %s
 
-; CHECK-NOT: llvm.dbg.value
+; CHECK-NOT: #dbg_value
 ; CHECK: Entry values are only allowed in MIR unless they target a swiftasync Argument
-; CHECK: call void @llvm.dbg.value(metadata i32 %param, metadata !{{.*}}, metadata !DIExpression(DW_OP_LLVM_entry_value, 1))
-; CHECK-NOT: llvm.dbg.value
+; CHECK: #dbg_value(i32 %param, !{{.*}}, !DIExpression(DW_OP_LLVM_entry_value, 1),
+; CHECK-NOT: #dbg_value
 ; CHECK-NOT: Entry values are only allowed
 ; CHECK: warning: ignoring invalid debug info
 

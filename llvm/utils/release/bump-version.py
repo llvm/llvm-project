@@ -169,7 +169,7 @@ if __name__ == "__main__":
 
     verstr = args.version
 
-    # parse the version string with distutils.
+    # parse the version string.
     # note that -rc will end up as version.pre here
     # since it's a prerelease
     version = packaging.version.parse(verstr)
@@ -186,6 +186,11 @@ if __name__ == "__main__":
         # Lit configuration
         (
             "llvm/utils/lit/lit/__init__.py",
+            LitProcessor(args),
+        ),
+        # IR2Vec Python Bindings configuration
+        (
+            "llvm/tools/llvm-ir2vec/Bindings/python/ir2vec/__init__.py",
             LitProcessor(args),
         ),
         # mlgo-utils configuration

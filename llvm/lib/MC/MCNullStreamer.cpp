@@ -9,7 +9,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCDirectives.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Support/SMLoc.h"
 namespace llvm {
 class MCContext;
 class MCExpr;
@@ -21,37 +20,42 @@ using namespace llvm;
 
 namespace {
 
-  class MCNullStreamer : public MCStreamer {
-  public:
-    MCNullStreamer(MCContext &Context) : MCStreamer(Context) {}
+class MCNullStreamer : public MCStreamer {
+public:
+  MCNullStreamer(MCContext &Context) : MCStreamer(Context) {}
 
-    /// @name MCStreamer Interface
-    /// @{
+  /// @name MCStreamer Interface
+  /// @{
 
-    bool hasRawTextSupport() const override { return true; }
-    void emitRawTextImpl(StringRef String) override {}
+  bool hasRawTextSupport() const override { return true; }
+  void emitRawTextImpl(StringRef String) override {}
 
-    bool emitSymbolAttribute(MCSymbol *Symbol,
-                             MCSymbolAttr Attribute) override {
-      return true;
-    }
+  bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override {
+    return true;
+  }
 
-    void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
-                          Align ByteAlignment) override {}
-    void emitZerofill(MCSection *Section, MCSymbol *Symbol = nullptr,
-                      uint64_t Size = 0, Align ByteAlignment = Align(1),
-                      SMLoc Loc = SMLoc()) override {}
-    void emitGPRel32Value(const MCExpr *Value) override {}
-    void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
-    void emitCOFFSymbolStorageClass(int StorageClass) override {}
-    void emitCOFFSymbolType(int Type) override {}
-    void endCOFFSymbolDef() override {}
-    void
-    emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol, MCSymbolAttr Linkage,
-                                         MCSymbolAttr Visibility) override {}
-  };
+  void emitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+                        Align ByteAlignment) override {}
+  void emitSubsectionsViaSymbols() override {};
+  void beginCOFFSymbolDef(const MCSymbol *Symbol) override {}
+  void emitCOFFSymbolStorageClass(int StorageClass) override {}
+  void emitCOFFSymbolType(int Type) override {}
+  void endCOFFSymbolDef() override {}
+  void emitXCOFFLocalCommonSymbol(MCSymbol *LabelSym, uint64_t Size,
+                                  MCSymbol *CsectSym,
+                                  Align Alignment) override {}
+  void emitXCOFFSymbolLinkageWithVisibility(MCSymbol *Symbol,
+                                            MCSymbolAttr Linkage,
+                                            MCSymbolAttr Visibility) override {}
+  void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
+                                unsigned Lang, unsigned Reason,
+                                unsigned FunctionSize, bool hasDebug) override {
+  }
+  void emitXCOFFRefDirective(const MCSymbol *Symbol) override {}
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override {}
+};
 
-}
+} // namespace
 
 MCStreamer *llvm::createNullStreamer(MCContext &Context) {
   return new MCNullStreamer(Context);

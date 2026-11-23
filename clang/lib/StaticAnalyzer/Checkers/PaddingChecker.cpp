@@ -15,16 +15,13 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/RecordLayout.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
-#include <numeric>
 
 using namespace clang;
 using namespace ento;
@@ -79,6 +76,9 @@ public:
     if (!(RD = RD->getDefinition()))
       return;
 
+    if (RD->isInvalidDecl())
+      return;
+
     // This is the simplest correct case: a class with no fields and one base
     // class. Other cases are more complicated because of how the base classes
     // & fields might interact, so we don't bother dealing with them.
@@ -107,7 +107,7 @@ public:
       // There is not enough excess padding to trigger a warning.
       return;
     }
-    reportRecord(RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
+    reportRecord(ASTContext, RD, BaselinePad, OptimalPad, OptimalFieldsOrder);
   }
 
   /// Look for arrays of overly padded types. If the padding of the
@@ -121,12 +121,12 @@ public:
       Elts = CArrTy->getZExtSize();
     if (Elts == 0)
       return;
-    const RecordType *RT = ArrTy->getElementType()->getAs<RecordType>();
-    if (RT == nullptr)
+    const auto *RD = ArrTy->getElementType()->getAsRecordDecl();
+    if (!RD)
       return;
 
     // TODO: Recurse into the fields to see if they have excess padding.
-    visitRecord(RT->getDecl(), Elts);
+    visitRecord(RD, Elts);
   }
 
   bool shouldSkipDecl(const RecordDecl *RD) const {
@@ -162,9 +162,7 @@ public:
         return true;
       // Can't layout a template, so skip it. We do still layout the
       // instantiations though.
-      if (CXXRD->getTypeForDecl()->isDependentType())
-        return true;
-      if (CXXRD->getTypeForDecl()->isInstantiationDependentType())
+      if (CXXRD->isDependentType())
         return true;
     }
     // How do you reorder fields if you haven't got any?
@@ -180,6 +178,17 @@ public:
       QualType Ty = FD->getType();
       if (Ty->isIncompleteArrayType())
         return true;
+
+      // Defensive backstop: a lambda closure type can be left non-dependent due
+      // to a bug, leaving the closure with a field of a bare dependent type
+      // whose layout cannot be computed. This workaround is temporary and
+      // should be removed together with the related FIXME in
+      // Sema::ActOnLambdaExpressionAfterIntroducer once the bug is fixed. See:
+      // * https://github.com/llvm/llvm-project/issues/232874
+      // * https://github.com/llvm/llvm-project/issues/233102
+      if (Ty->isDependentType())
+        return true;
+
       return false;
     };
 
@@ -309,14 +318,14 @@ public:
   }
 
   void reportRecord(
-      const RecordDecl *RD, CharUnits BaselinePad, CharUnits OptimalPad,
+      const ASTContext &Ctx, const RecordDecl *RD, CharUnits BaselinePad,
+      CharUnits OptimalPad,
       const SmallVector<const FieldDecl *, 20> &OptimalFieldsOrder) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
     Os << "Excessive padding in '";
-    Os << QualType::getAsString(RD->getTypeForDecl(), Qualifiers(),
-                                LangOptions())
-       << "'";
+    QualType(Ctx.getCanonicalTagType(RD)).print(Os, LangOptions());
+    Os << "'";
 
     if (auto *TSD = dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
       // TODO: make this show up better in the console output and in
@@ -329,12 +338,12 @@ public:
     }
 
     Os << " (" << BaselinePad.getQuantity() << " padding bytes, where "
-       << OptimalPad.getQuantity() << " is optimal). "
-       << "Optimal fields order: ";
+       << OptimalPad.getQuantity() << " is optimal), "
+       << "optimal fields order: ";
     for (const auto *FD : OptimalFieldsOrder)
       Os << FD->getName() << ", ";
     Os << "consider reordering the fields or adding explicit padding "
-          "members.";
+          "members";
 
     PathDiagnosticLocation CELoc =
         PathDiagnosticLocation::create(RD, BR->getSourceManager());

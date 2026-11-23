@@ -201,6 +201,29 @@ static StructType *getResRetType(Type *ElementTy) {
   return getOrCreateStructType(TypeName, FieldTypes, Ctx);
 }
 
+static StructType *getCBufRetType(Type *ElementTy) {
+  LLVMContext &Ctx = ElementTy->getContext();
+  OverloadKind Kind = getOverloadKind(ElementTy);
+  std::string TypeName = constructOverloadTypeName(Kind, "dx.types.CBufRet.");
+
+  // 64-bit types only have two elements
+  if (ElementTy->isDoubleTy() || ElementTy->isIntegerTy(64))
+    return getOrCreateStructType(TypeName, {ElementTy, ElementTy}, Ctx);
+
+  // 16-bit types pack 8 elements and have .8 in their name to differentiate
+  // from min-precision types.
+  if (ElementTy->isHalfTy() || ElementTy->isIntegerTy(16)) {
+    TypeName += ".8";
+    return getOrCreateStructType(TypeName,
+                                 {ElementTy, ElementTy, ElementTy, ElementTy,
+                                  ElementTy, ElementTy, ElementTy, ElementTy},
+                                 Ctx);
+  }
+
+  return getOrCreateStructType(
+      TypeName, {ElementTy, ElementTy, ElementTy, ElementTy}, Ctx);
+}
+
 static StructType *getHandleType(LLVMContext &Ctx) {
   return getOrCreateStructType("dx.types.Handle", PointerType::getUnqual(Ctx),
                                Ctx);
@@ -228,6 +251,35 @@ static StructType *getSplitDoubleType(LLVMContext &Context) {
     return ST;
   Type *Int32Ty = Type::getInt32Ty(Context);
   return StructType::create({Int32Ty, Int32Ty}, "dx.types.splitdouble");
+}
+
+static StructType *getBinaryWithCarryType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.i32c"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  Type *Int1Ty = Type::getInt1Ty(Context);
+  return StructType::create({Int32Ty, Int1Ty}, "dx.types.i32c");
+}
+
+static StructType *getDimensionsType(LLVMContext &Context) {
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return getOrCreateStructType("dx.types.Dimensions",
+                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
+}
+
+static StructType *getFouri32sType(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.fouri32"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return getOrCreateStructType("dx.types.fouri32",
+                               {Int32Ty, Int32Ty, Int32Ty, Int32Ty}, Context);
+}
+
+static StructType *getTwoI32Type(LLVMContext &Context) {
+  if (auto *ST = StructType::getTypeByName(Context, "dx.types.twoi32"))
+    return ST;
+  Type *Int32Ty = Type::getInt32Ty(Context);
+  return StructType::create({Int32Ty, Int32Ty}, "dx.types.twoi32");
 }
 
 static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
@@ -265,6 +317,18 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResRetType(Type::getInt32Ty(Ctx));
   case OpParamType::ResRetInt64Ty:
     return getResRetType(Type::getInt64Ty(Ctx));
+  case OpParamType::CBufRetHalfTy:
+    return getCBufRetType(Type::getHalfTy(Ctx));
+  case OpParamType::CBufRetFloatTy:
+    return getCBufRetType(Type::getFloatTy(Ctx));
+  case OpParamType::CBufRetDoubleTy:
+    return getCBufRetType(Type::getDoubleTy(Ctx));
+  case OpParamType::CBufRetInt16Ty:
+    return getCBufRetType(Type::getInt16Ty(Ctx));
+  case OpParamType::CBufRetInt32Ty:
+    return getCBufRetType(Type::getInt32Ty(Ctx));
+  case OpParamType::CBufRetInt64Ty:
+    return getCBufRetType(Type::getInt64Ty(Ctx));
   case OpParamType::HandleTy:
     return getHandleType(Ctx);
   case OpParamType::ResBindTy:
@@ -273,7 +337,16 @@ static Type *getTypeFromOpParamType(OpParamType Kind, LLVMContext &Ctx,
     return getResPropsType(Ctx);
   case OpParamType::SplitDoubleTy:
     return getSplitDoubleType(Ctx);
+  case OpParamType::BinaryWithCarryTy:
+    return getBinaryWithCarryType(Ctx);
+  case OpParamType::DimensionsTy:
+    return getDimensionsType(Ctx);
+  case OpParamType::Fouri32s:
+    return getFouri32sType(Ctx);
+  case OpParamType::TwoI32Ty:
+    return getTwoI32Type(Ctx);
   }
+
   llvm_unreachable("Invalid parameter kind");
   return nullptr;
 }
@@ -374,8 +447,7 @@ constexpr static uint64_t computeSwitchEnum(dxil::OpCode OpCode,
   return (OpCodePack << 32) | (VersionMajor << 16) | VersionMinor;
 }
 
-// Retreive all the set attributes for a DXIL OpCode given the targeted
-// DXILVersion
+/// Get the set of attributes for a given DXIL OpCode and the DXIL version.
 static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
                                           VersionTuple DXILVersion) {
   // Instantiate all versions to iterate through
@@ -404,20 +476,25 @@ static dxil::Attributes getDXILAttributes(dxil::OpCode OpCode,
   return Attributes;
 }
 
-// Retreive the set of DXIL Attributes given the version and map them to an
-// llvm function attribute that is set onto the instruction
-static void setDXILAttributes(CallInst *CI, dxil::OpCode OpCode,
-                              VersionTuple DXILVersion) {
+/// Get the attributes to apply to the function for the DXIL operation with the
+/// given OpCode and DXIL version.
+static AttributeList getDXILFnAttributeList(LLVMContext &Ctx,
+                                            dxil::OpCode OpCode,
+                                            VersionTuple DXILVersion) {
   dxil::Attributes Attributes = getDXILAttributes(OpCode, DXILVersion);
+  AttrBuilder FnAttrs(Ctx);
+
   if (Attributes.ReadNone)
-    CI->setDoesNotAccessMemory();
+    FnAttrs.addMemoryAttr(MemoryEffects::none());
   if (Attributes.ReadOnly)
-    CI->setOnlyReadsMemory();
+    FnAttrs.addMemoryAttr(MemoryEffects::readOnly());
   if (Attributes.NoReturn)
-    CI->setDoesNotReturn();
+    FnAttrs.addAttribute(Attribute::NoReturn);
   if (Attributes.NoDuplicate)
-    CI->setCannotDuplicate();
-  return;
+    FnAttrs.addAttribute(Attribute::NoDuplicate);
+  FnAttrs.addAttribute(Attribute::NoUnwind);
+
+  return AttributeList::get(Ctx, AttributeList::FunctionIndex, FnAttrs);
 }
 
 namespace llvm {
@@ -427,16 +504,15 @@ namespace dxil {
 // Triple is well-formed or that the target is supported since these checks
 // would have been done at the time the module M is constructed in the earlier
 // stages of compilation.
-DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M.getContext()) {
-  Triple TT(Triple(M.getTargetTriple()));
+DXILOpBuilder::DXILOpBuilder(Module &M) : M(M), IRB(M) {
+  const Triple &TT = M.getTargetTriple();
   DXILVersion = TT.getDXILVersion();
   ShaderStage = TT.getEnvironment();
   // Ensure Environment type is known
   if (ShaderStage == Triple::UnknownEnvironment) {
-    report_fatal_error(
+    reportFatalUsageError(
         Twine(DXILVersion.getAsString()) +
-            ": Unknown Compilation Target Shader Stage specified ",
-        /*gen_crash_diag*/ false);
+        ": Unknown Compilation Target Shader Stage specified ");
   }
 }
 
@@ -492,7 +568,7 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
     return makeOpError(OpCode, Twine("No valid stage for DXIL version ") +
                                    DXILVersion.getAsString());
 
-  uint16_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
+  uint32_t ValidShaderKindMask = Prop->Stages[*StIndexOrErr].ValidStages;
 
   // Ensure valid shader stage properties are specified
   if (ValidShaderKindMask == ShaderKind::removed)
@@ -506,8 +582,11 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
   if (!(ValidShaderKindMask & ModuleStagekind))
     return makeOpError(OpCode, "Invalid stage");
 
+  AttributeList DXILFnAttrs =
+      getDXILFnAttributeList(M.getContext(), OpCode, DXILVersion);
   std::string DXILFnName = constructOverloadName(Kind, OverloadTy, *Prop);
-  FunctionCallee DXILFn = M.getOrInsertFunction(DXILFnName, DXILOpFT);
+  FunctionCallee DXILFn =
+      M.getOrInsertFunction(DXILFnName, DXILOpFT, DXILFnAttrs);
 
   // We need to inject the opcode as the first argument.
   SmallVector<Value *> OpArgs;
@@ -516,9 +595,6 @@ Expected<CallInst *> DXILOpBuilder::tryCreateOp(dxil::OpCode OpCode,
 
   // Create the function call instruction
   CallInst *CI = IRB.CreateCall(DXILFn, OpArgs, Name);
-
-  // We then need to attach available function attributes
-  setDXILAttributes(CI, OpCode, DXILVersion);
 
   return CI;
 }
@@ -535,8 +611,8 @@ StructType *DXILOpBuilder::getResRetType(Type *ElementTy) {
   return ::getResRetType(ElementTy);
 }
 
-StructType *DXILOpBuilder::getSplitDoubleType(LLVMContext &Context) {
-  return ::getSplitDoubleType(Context);
+StructType *DXILOpBuilder::getCBufRetType(Type *ElementTy) {
+  return ::getCBufRetType(ElementTy);
 }
 
 StructType *DXILOpBuilder::getHandleType() {

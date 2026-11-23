@@ -11,21 +11,54 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMMCAsmInfo.h"
+#include "ARMMCTargetDesc.h"
+#include "llvm/ADT/Enum.h"
+#include "llvm/MC/MCExpr.h"
+#include "llvm/MC/MCSubtargetInfo.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
+constexpr EnumStringDef<MCAsmInfo::AtSpecifierKind> AtSpecifierDefs[] = {
+    {{"GOT_PREL"}, ARM::S_GOT_PREL},
+    {{"none"}, ARM::S_ARM_NONE},
+    {{"prel31"}, ARM::S_PREL31},
+    {{"sbrel"}, ARM::S_SBREL},
+    {{"target1"}, ARM::S_TARGET1},
+    {{"target2"}, ARM::S_TARGET2},
+    {{"TLSLDO"}, ARM::S_TLSLDO},
+    {{"imgrel"}, MCSymbolRefExpr::VK_COFF_IMGREL32},
+    {{"FUNCDESC"}, ARM::S_FUNCDESC},
+    {{"GOT"}, ARM::S_GOT},
+    {{"GOTFUNCDESC"}, ARM::S_GOTFUNCDESC},
+    {{"GOTOFF"}, ARM::S_GOTOFF},
+    {{"GOTOFFFUNCDESC"}, ARM::S_GOTOFFFUNCDESC},
+    {{"GOTTPOFF"}, ARM::S_GOTTPOFF},
+    {{"gottpoff_fdpic"}, ARM::S_GOTTPOFF_FDPIC},
+    {{"PLT"}, ARM::S_PLT},
+    {{"SECREL32"}, ARM::S_COFF_SECREL},
+    {{"tlscall"}, ARM::S_TLSCALL},
+    {{"tlsdesc"}, ARM::S_TLSDESC},
+    {{"TLSGD"}, ARM::S_TLSGD},
+    {{"tlsgd_fdpic"}, ARM::S_TLSGD_FDPIC},
+    {{"TLSLDM"}, ARM::S_TLSLDM},
+    {{"tlsldm_fdpic"}, ARM::S_TLSLDM_FDPIC},
+    {{"TPOFF"}, ARM::S_TPOFF},
+};
+constexpr auto atSpecifiers = BUILD_ENUM_STRINGS(AtSpecifierDefs);
+
 void ARMMCAsmInfoDarwin::anchor() { }
 
-ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
+ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple,
+                                       const MCTargetOptions &Options)
+    : MCAsmInfoDarwin(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
   UseDataRegionDirectives = true;
 
   SupportsDebugInformation = true;
@@ -33,15 +66,14 @@ ARMMCAsmInfoDarwin::ARMMCAsmInfoDarwin(const Triple &TheTriple) {
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  // Exceptions handling
-  ExceptionsType = (TheTriple.isOSDarwin() && !TheTriple.isWatchABI())
-                       ? ExceptionHandling::SjLj
-                       : ExceptionHandling::DwarfCFI;
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::anchor() { }
 
-ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
+ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple,
+                                 const MCTargetOptions &Options)
+    : MCAsmInfoELF(Options) {
   if ((TheTriple.getArch() == Triple::armeb) ||
       (TheTriple.getArch() == Triple::thumbeb))
     IsLittleEndian = false;
@@ -51,26 +83,16 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
 
   Data64bitsDirective = nullptr;
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
 
   SupportsDebugInformation = true;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
-  // Exceptions handling
-  switch (TheTriple.getOS()) {
-  case Triple::NetBSD:
-    ExceptionsType = ExceptionHandling::DwarfCFI;
-    break;
-  default:
-    ExceptionsType = ExceptionHandling::ARM;
-    break;
-  }
-
+  initializeAtSpecifiers(atSpecifiers);
   // foo(plt) instead of foo@plt
-  UseParensForSymbolVariant = true;
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -83,40 +105,105 @@ void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
   }
 }
 
+bool ARMELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // Thumb encoding uses compressed instruction byte-order
+  return STI.hasFeature(ARM::ModeThumb);
+}
+
 void ARMCOFFMCAsmInfoMicrosoft::anchor() { }
 
-ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
+ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft(
+    const MCTargetOptions &Options)
+    : MCAsmInfoMicrosoft(Options) {
   AlignmentIsInBytes = false;
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  PrivateGlobalPrefix = "$M";
-  PrivateLabelPrefix = "$M";
+  InternalSymbolPrefix = "$M";
   CommentString = "@";
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }
 
-ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
+ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU(const MCTargetOptions &Options)
+    : MCAsmInfoGNUCOFF(Options) {
   AlignmentIsInBytes = false;
   HasSingleParameterDotFile = true;
 
   CommentString = "@";
-  Code16Directive = ".code\t16";
-  Code32Directive = ".code\t32";
-  PrivateGlobalPrefix = ".L";
-  PrivateLabelPrefix = ".L";
+  InternalSymbolPrefix = ".L";
 
   SupportsDebugInformation = true;
-  ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseParensForSymbolVariant = true;
-
   DwarfRegNumForCFI = false;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
+
+  initializeAtSpecifiers(atSpecifiers);
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
+}
+
+void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
+                             const MCSpecifierExpr &Expr) {
+  switch (Expr.getSpecifier()) {
+  default:
+    llvm_unreachable("Invalid kind!");
+  case ARM::S_HI16:
+    OS << ":upper16:";
+    break;
+  case ARM::S_LO16:
+    OS << ":lower16:";
+    break;
+  case ARM::S_HI_8_15:
+    OS << ":upper8_15:";
+    break;
+  case ARM::S_HI_0_7:
+    OS << ":upper0_7:";
+    break;
+  case ARM::S_LO_8_15:
+    OS << ":lower8_15:";
+    break;
+  case ARM::S_LO_0_7:
+    OS << ":lower0_7:";
+    break;
+  }
+
+  const MCExpr *Sub = Expr.getSubExpr();
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << '(';
+  MAI.printExpr(OS, *Sub);
+  if (Sub->getKind() != MCExpr::SymbolRef)
+    OS << ')';
+}
+
+const MCSpecifierExpr *ARM::createUpper16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower16(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO16, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createUpper0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_HI_0_7, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower8_15(const MCExpr *Expr,
+                                            MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_8_15, Ctx);
+}
+
+const MCSpecifierExpr *ARM::createLower0_7(const MCExpr *Expr, MCContext &Ctx) {
+  return MCSpecifierExpr::create(Expr, ARM::S_LO_0_7, Ctx);
 }

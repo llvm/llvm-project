@@ -1,0 +1,10 @@
+REQUIRES: zlib
+
+; Verify that composite payload size counting works while the enclosing section
+; is redirected through the existing compression buffer.
+; RUN: llvm-profdata merge --sample --extbinary-composite-prof --extbinary --compress-all-sections %S/Inputs/sample-profile.proftext -o %t.prof
+; RUN: llvm-profdata show --sample --show-composite-info-only %t.prof | FileCheck %s
+
+; CHECK: Function:
+; CHECK-NEXT:   Profile blocks: 1
+; CHECK-NEXT:   Type: 0 (LBR), Payload size: {{[1-9][0-9]*}}

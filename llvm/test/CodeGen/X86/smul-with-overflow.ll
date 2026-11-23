@@ -11,7 +11,7 @@ define i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jno .LBB0_1
+; X86-NEXT:    jae .LBB0_1
 ; X86-NEXT:  # %bb.2: # %overflow
 ; X86-NEXT:    movl $no, (%esp)
 ; X86-NEXT:    calll printf@PLT
@@ -31,7 +31,7 @@ define i1 @test1(i32 %v1, i32 %v2) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    imull %esi, %eax
-; X64-NEXT:    jno .LBB0_1
+; X64-NEXT:    jae .LBB0_1
 ; X64-NEXT:  # %bb.2: # %overflow
 ; X64-NEXT:    movl $no, %edi
 ; X64-NEXT:    xorl %eax, %eax
@@ -68,7 +68,7 @@ define i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    imull {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jno .LBB1_2
+; X86-NEXT:    jae .LBB1_2
 ; X86-NEXT:  # %bb.1: # %overflow
 ; X86-NEXT:    movl $no, (%esp)
 ; X86-NEXT:    calll printf@PLT
@@ -88,7 +88,7 @@ define i1 @test2(i32 %v1, i32 %v2) nounwind {
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    imull %esi, %eax
-; X64-NEXT:    jno .LBB1_2
+; X64-NEXT:    jae .LBB1_2
 ; X64-NEXT:  # %bb.1: # %overflow
 ; X64-NEXT:    movl $no, %edi
 ; X64-NEXT:    xorl %eax, %eax

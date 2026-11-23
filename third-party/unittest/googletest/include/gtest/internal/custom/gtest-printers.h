@@ -65,13 +65,14 @@ inline void PrintTo(const SmallVectorImpl<char> &S, std::ostream *OS) {
   *OS << ::testing::PrintToString(std::string(S.data(), S.size()));
 }
 
-// DenseMap's entries inherit from std::pair, and should act like pairs.
-// However gTest's provided `PrintTo(pair<K,V>)` template won't deduce K and V
-// because of the needed derived-to-base conversion.
+// gTest's provided `PrintTo(pair<K,V>)` template won't deduce K and V from a
+// DenseMap entry. Print the members rather than converting, which would copy
+// them and so require both to be copyable.
 namespace detail {
 template <typename K, typename V>
 inline void PrintTo(const DenseMapPair<K, V> &Pair, std::ostream *OS) {
-  *OS << ::testing::PrintToString(static_cast<const std::pair<K, V> &>(Pair));
+  *OS << "(" << ::testing::PrintToString(Pair.first) << ", "
+      << ::testing::PrintToString(Pair.second) << ")";
 }
 } // namespace detail
 

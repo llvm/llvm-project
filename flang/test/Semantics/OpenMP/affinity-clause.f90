@@ -1,8 +1,8 @@
-!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45
+!RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=45 -Werror -Wno-experimental-option
 
 subroutine f00(x)
   integer :: x(10)
-!ERROR: AFFINITY clause is not allowed on directive TASK in OpenMP v4.5, try -fopenmp-version=50
+!ERROR: AFFINITY clause is not allowed on TASK directive in OpenMP v4.5, try -fopenmp-version=50 [-Wopenmp-future]
 !$omp task affinity(x)
   x = x + 1
 !$omp end task

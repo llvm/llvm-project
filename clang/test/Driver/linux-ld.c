@@ -1,7 +1,11 @@
 // UNSUPPORTED: system-windows
-// General tests that ld invocations on Linux targets sane. Note that we use
-// sysroot to make these tests independent of the host system.
-//
+/// Tests for Linux toolchain discovery and start/end-file selection in
+/// gnutools::Linker::ConstructJob: crt*.o selection, -L search paths, multilib,
+/// -m elf_* per triple, --hash-style per target, -lgcc chains, and per-triple
+/// --dynamic-linker. Every RUN uses a sysroot tree so results are host-
+/// independent. Pure driver->linker argument forwarding without sysroot
+/// dependencies lives in linux-ld-args.c.
+
 // RUN: %clang -### -Werror %s -no-pie 2>&1 \
 // RUN:     --target=i386-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -62,7 +66,22 @@
 // CHECK-LD-RT: "-lc"
 // CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
-//
+
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
+// RUN:     --target=x86_64-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --rtlib=none \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RT-NONE %s
+// CHECK-LD-RT-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RT-NONE-SAME: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "-lc"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "crtend.o"
+
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
@@ -299,7 +318,7 @@
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-32-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -314,7 +333,7 @@
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib/../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-32-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/i386-unknown-linux/10.2.0/../../../../i386-unknown-linux/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -329,7 +348,7 @@
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-64-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -344,7 +363,7 @@
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-64-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -359,7 +378,7 @@
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32: "-L[[SYSROOT]]/lib"
 // CHECK-X32: "-L[[SYSROOT]]/usr/lib"
@@ -374,7 +393,7 @@
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-64-TO-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-X32: "-L[[SYSROOT]]/usr/lib"
@@ -389,7 +408,7 @@
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-32-TO-X32: "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/lib"
 // CHECK-32-TO-X32: "-L[[SYSROOT]]/usr/lib"
@@ -404,7 +423,7 @@
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-X32-TO-64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-64: "-L[[SYSROOT]]/usr/lib"
@@ -419,7 +438,7 @@
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib/../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-X32-TO-32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-unknown-linux/10.2.0/../../../../x86_64-unknown-linux/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/lib"
 // CHECK-X32-TO-32: "-L[[SYSROOT]]/usr/lib"
@@ -433,7 +452,7 @@
 // CHECK-64-TO-32-SYSROOT: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32{{/|\\\\}}crtbegin.o"
 // CHECK-64-TO-32-SYSROOT: "-L{{[^"]*}}/Inputs/multilib_64bit_linux_tree/usr/lib/gcc/x86_64-unknown-linux/10.2.0/32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-32-SYSROOT: "-L[[SYSROOT]]/usr/lib"
 //
@@ -524,7 +543,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM-HF: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabihf/4.8/../../../../arm-linux-gnueabihf/lib/../lib{{/|\\\\}}crtn.o"
@@ -542,7 +561,7 @@
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "-L[[SYSROOT]]/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7{{/|\\\\}}crtend.o"
 // CHECK-X86-64-UBUNTU-13-10-ARM: "{{.*}}/usr/lib/gcc-cross/arm-linux-gnueabi/4.7/../../../../arm-linux-gnueabi/lib/../lib{{/|\\\\}}crtn.o"
@@ -575,7 +594,7 @@
 // CHECK-UBUNTU-14-04-X32: "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/x32"
 // CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32"
 // CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/lib/../libx32"
-// CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/../libx32"
+// CHECK-UBUNTU-14-04-X32-SAME: {{^}} "-L[[SYSROOT]]/usr{{/|\\\\}}libx32"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/x32{{/|\\\\}}crtend.o"
 // CHECK-UBUNTU-14-04-X32: "{{.*}}/usr/lib/gcc/x86_64-linux-gnu/4.8/../../../../libx32{{/|\\\\}}crtn.o"
 //
@@ -649,7 +668,7 @@
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/4.1.2/64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/gcc/powerpc64-suse-linux/4.1.2/../../../../lib64"
 // CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-SUSE-10-3-PPC64: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 //
 // Check openSuse Leap 42.2 on AArch64
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -926,16 +945,9 @@
 // CHECK-MIPS64EL-REDHAT-NOT: "-dynamic-linker" "{{.*}}/lib{{(64)?}}/ld-musl-mipsel.so.1"
 // CHECK-MIPS64EL-REDHAT-NOT: "--hash-style={{gnu|both}}"
 
-// Check that we pass --hash-style=both for pre-M Android versions and
-// --hash-style=gnu for newer Android versions.
+// Check that we pass --hash-style=gnu.
 // RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android21 \
-// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-L %s
-// CHECK-ANDROID-HASH-STYLE-L: "{{.*}}ld{{(.exe)?}}"
-// CHECK-ANDROID-HASH-STYLE-L: "--hash-style=both"
-//
-// RUN: %clang -### %s -no-pie 2>&1 \
-// RUN:     --target=armv7-linux-android23 \
+// RUN:     --target=armv7-linux-android \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-HASH-STYLE-M %s
 // CHECK-ANDROID-HASH-STYLE-M: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-HASH-STYLE-M: "--hash-style=gnu"
@@ -954,21 +966,44 @@
 // CHECK-ANDROID-ROSEGMENT-29: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ANDROID-ROSEGMENT-29-NOT: "--no-rosegment"
 
-// Check that we pass --pack-dyn-relocs=relr for API 28+ and not before.
+// Check that we pass --pack-dyn-relocs=android for API pre 27.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android23 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-23 %s
+// CHECK-ANDROID-RELR-23: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-23: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-23-NOT: "--pack-dyn-relocs=relr"
+// CHECK-ANDROID-RELR-23-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-23-NOT: "--use-android-relr-tags"
+//
+// Check that we pass --pack-dyn-relocs=relr --use-android-relr-tags for API 28-30 and not before.
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android27 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-27 %s
 // CHECK-ANDROID-RELR-27: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-27: "--pack-dyn-relocs=android"
 // CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=relr"
 // CHECK-ANDROID-RELR-27-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-27-NOT: "--use-android-relr-tags"
 //
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=armv7-linux-android28 \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-28 %s
 // CHECK-ANDROID-RELR-28: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=android+relr"
 // CHECK-ANDROID-RELR-28: "--use-android-relr-tags"
-// CHECK-ANDROID-RELR-28: "--pack-dyn-relocs=relr"
-// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-28-NOT: "--pack-dyn-relocs=relr"
+//
+// Check that we stop passing --use-android-relr-tags for ABI 30+.
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armv7-linux-android30 \
+// RUN:   | FileCheck --check-prefix=CHECK-ANDROID-RELR-30 %s
+// CHECK-ANDROID-RELR-30: "{{.*}}ld{{(.exe)?}}"
+// CHECK-ANDROID-RELR-30: "--pack-dyn-relocs=android+relr"
+// CHECK-ANDROID-RELR-30-NOT: "--use-android-relr-tags"
+// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=android"
+// CHECK-ANDROID-RELR-30-NOT: "--pack-dyn-relocs=relr"
 
 // RUN: %clang -### %s -no-pie 2>&1 --target=mips64-linux-gnuabin32 \
 // RUN:   | FileCheck --check-prefix=CHECK-MIPS64EL-GNUABIN32 %s
@@ -1318,7 +1353,7 @@
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/lib/../lib"
-// CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib/../lib"
+// CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr{{/|\\\\}}lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPSEL: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1333,7 +1368,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/lib/../lib64"
-// CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib/../lib64"
+// CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr{{/|\\\\}}lib64"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1348,7 +1383,7 @@
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/n32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/gcc/mipsel-linux-gnu/4.4/../../../../lib32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/lib/../lib32"
-// CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib/../lib32"
+// CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr{{/|\\\\}}lib32"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/lib"
 // CHECK-DEBIAN-ML-MIPS64EL-N32: "-L[[SYSROOT]]/usr/lib"
 //
@@ -1616,6 +1651,39 @@
 // RUN:     --target=mips64el-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64EL %s
 // RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsel-pc-linux-musl -mfloat-abi=soft \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSEL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-musl -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=n32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64-pc-linux-muslabin32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa32r6el-pc-linux-musl \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips-pc-linux-musl -march=mips32r6 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSR6 %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=i6400 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPS64R6EL %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -march=mips64r6 -mabi=n32 -msoft-float \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-MIPSN32R6EL-SF %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mips64el-pc-linux-musl -mabi=32 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-O32-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN:     --target=mipsisa64r6el-pc-linux-musl -march=mips64r2 \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-R2-OVERRIDE %s
+// RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=powerpc-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC %s
 // RUN: %clang -### %s -no-pie 2>&1 \
@@ -1666,12 +1734,35 @@
 // RUN: %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=aarch64_be-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32im -mabi=ilp32 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SF %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imf -mabi=ilp32f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32-SP %s
+// RUN: %clang -### %s --target=riscv32-pc-linux-musl -march=rv32imfd -mabi=ilp32d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV32 %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64im -mabi=lp64 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SF %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imf -mabi=lp64f 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64-SP %s
+// RUN: %clang -### %s --target=riscv64-pc-linux-musl -march=rv64imfd -mabi=lp64d 2>&1 | \
+// RUN:   FileCheck --check-prefix=CHECK-MUSL-RISCV64 %s
 // CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
 // CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
 // CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
 // CHECK-MUSL-MIPSEL:     "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
 // CHECK-MUSL-MIPS64:     "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
 // CHECK-MUSL-MIPS64EL:   "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
+// CHECK-MUSL-MIPS-SF:    "-dynamic-linker" "/lib/ld-musl-mips-sf.so.1"
+// CHECK-MUSL-MIPSEL-SF:  "-dynamic-linker" "/lib/ld-musl-mipsel-sf.so.1"
+// CHECK-MUSL-MIPS64-SF:  "-dynamic-linker" "/lib/ld-musl-mips64-sf.so.1"
+// CHECK-MUSL-MIPSN32EL:  "-dynamic-linker" "/lib/ld-musl-mipsn32el.so.1"
+// CHECK-MUSL-MIPSN32:    "-dynamic-linker" "/lib/ld-musl-mipsn32.so.1"
+// CHECK-MUSL-MIPSR6EL:   "-dynamic-linker" "/lib/ld-musl-mipsr6el.so.1"
+// CHECK-MUSL-MIPSR6:     "-dynamic-linker" "/lib/ld-musl-mipsr6.so.1"
+// CHECK-MUSL-MIPS64R6EL: "-dynamic-linker" "/lib/ld-musl-mips64r6el.so.1"
+// CHECK-MUSL-MIPSN32R6EL-SF: "-dynamic-linker" "/lib/ld-musl-mipsn32r6el-sf.so.1"
+// CHECK-MUSL-O32-OVERRIDE:   "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
+// CHECK-MUSL-R2-OVERRIDE:    "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
 // CHECK-MUSL-PPC:        "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
 // CHECK-MUSL-PPC64:      "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
 // CHECK-MUSL-PPCSPE:     "-dynamic-linker" "/lib/ld-musl-powerpc-sf.so.1"
@@ -1681,6 +1772,12 @@
 // CHECK-MUSL-ARMEBHF:    "-dynamic-linker" "/lib/ld-musl-armebhf.so.1"
 // CHECK-MUSL-AARCH64:    "-dynamic-linker" "/lib/ld-musl-aarch64.so.1"
 // CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"
+// CHECK-MUSL-RISCV32-SF: "-dynamic-linker" "/lib/ld-musl-riscv32-sf.so.1"
+// CHECK-MUSL-RISCV32-SP: "-dynamic-linker" "/lib/ld-musl-riscv32-sp.so.1"
+// CHECK-MUSL-RISCV32:    "-dynamic-linker" "/lib/ld-musl-riscv32.so.1"
+// CHECK-MUSL-RISCV64-SF: "-dynamic-linker" "/lib/ld-musl-riscv64-sf.so.1"
+// CHECK-MUSL-RISCV64-SP: "-dynamic-linker" "/lib/ld-musl-riscv64-sp.so.1"
+// CHECK-MUSL-RISCV64:    "-dynamic-linker" "/lib/ld-musl-riscv64.so.1"
 
 // Check whether multilib gcc install works fine on Gentoo with gcc-config
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
@@ -1788,7 +1885,3 @@
 // CHECK-OE-AARCH64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed" "-lc" "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0{{/|\\\\}}crtend.o"
 // CHECK-OE-AARCH64: "[[SYSROOT]]/usr/lib64/aarch64-oe-linux/6.3.0/../../../lib64{{/|\\\\}}crtn.o"
-
-/// -nopie is OpenBSD-specific.
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu %s -nopie 2>&1 | FileCheck %s --check-prefix=CHECK-NOPIE
-// CHECK-NOPIE: error: unsupported option '-nopie' for target 'x86_64-unknown-linux-gnu'

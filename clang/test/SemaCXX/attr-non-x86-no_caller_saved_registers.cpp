@@ -11,7 +11,7 @@ __attribute__((no_caller_saved_registers(999))) void bar(int *) {} // expected-w
 
 __attribute__((no_caller_saved_registers)) void foo(int *){} // expected-warning {{unknown attribute 'no_caller_saved_registers' ignored}}
 
-[[gnu::no_caller_saved_registers]] void foo2(int *) {} // expected-warning {{unknown attribute 'no_caller_saved_registers' ignored}}
+[[gnu::no_caller_saved_registers]] void foo2(int *) {} // expected-warning {{unknown attribute 'gnu::no_caller_saved_registers' ignored}}
 
 typedef __attribute__((no_caller_saved_registers)) void (*foo3)(int *); // expected-warning {{unknown attribute 'no_caller_saved_registers' ignored}}
 

@@ -18,7 +18,7 @@
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/MC/MCStreamer.h"
-#include "llvm/Passes/CodeGenPassBuilder.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 #include <utility>
 
@@ -28,15 +28,18 @@ namespace llvm {
 // AMDGPU Target Machine (R600+)
 //===----------------------------------------------------------------------===//
 
+namespace AMDGPU {
+StringRef getSchedStrategy(const AMDGPUOptions &CLOpts, const Function &F);
+}
+
 class AMDGPUTargetMachine : public CodeGenTargetMachineImpl {
 protected:
+  const AMDGPUOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
-
-  StringRef getGPUName(const Function &F) const;
-  StringRef getFeatureString(const Function &F) const;
 
 public:
   static bool EnableFunctionCalls;
+  static bool EnableObjectLinking;
   static bool EnableLowerModuleLDS;
 
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -45,7 +48,8 @@ public:
                       std::optional<CodeModel::Model> CM, CodeGenOptLevel OL);
   ~AMDGPUTargetMachine() override;
 
-  const TargetSubtargetInfo *getSubtargetImpl() const;
+  const AMDGPUOptions &getCLOpts() const { return CLOpts; }
+
   const TargetSubtargetInfo *
   getSubtargetImpl(const Function &) const override = 0;
 
@@ -56,10 +60,8 @@ public:
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
   void registerDefaultAliasAnalyses(AAManager &) override;
 
-  /// Get the integer value of a null pointer in the given address space.
-  static int64_t getNullPointerValue(unsigned AddrSpace);
-
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override;
+  bool isNoopAddrSpaceCast(const DataLayout &DL, unsigned SrcAS,
+                           unsigned DestAS) const override;
 
   unsigned getAssumedAddrSpace(const Value *V) const override;
 
@@ -71,6 +73,8 @@ public:
   bool splitModule(Module &M, unsigned NumParts,
                    function_ref<void(std::unique_ptr<Module> MPart)>
                        ModuleCallback) override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -80,6 +84,24 @@ public:
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
   mutable StringMap<std::unique_ptr<GCNSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute GPU, FS;
+    bool BufRelaxed = false;
+    bool TBufRelaxed = false;
+    AMDGPU::TargetIDSetting Xnack = AMDGPU::TargetIDSetting::Any;
+    AMDGPU::TargetIDSetting SramEcc = AMDGPU::TargetIDSetting::Any;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return GPU == RHS.GPU && FS == RHS.FS && BufRelaxed == RHS.BufRelaxed &&
+             TBufRelaxed == RHS.TBufRelaxed && Xnack == RHS.Xnack &&
+             SramEcc == RHS.SramEcc;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<GCNSubtarget, SubtargetAttrs> LastSubtarget;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -96,13 +118,19 @@ public:
 
   bool useIPRA() const override { return true; }
 
-  Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                             raw_pwrite_stream *DwoOut,
+  Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
+                             raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts,
+                             const CGPassBuilderOption &Opts, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;
+
+  /// Get xnack/sramecc setting from module flag or command line option (for
+  /// testing).
+  /// Returns Any if not specified.
+  AMDGPU::TargetIDSetting
+  getTargetIDSettingFromModuleFlag(const Module &M, StringRef FlagName) const;
 
   MachineFunctionInfo *
   createMachineFunctionInfo(BumpPtrAllocator &Allocator, const Function &F,
@@ -115,6 +143,10 @@ public:
                                 PerFunctionMIParsingState &PFS,
                                 SMDiagnostic &Error,
                                 SMRange &SourceRange) const override;
+  ScheduleDAGInstrs *
+  createMachineScheduler(MachineSchedContext *C) const override;
+  ScheduleDAGInstrs *
+  createPostMachineScheduler(MachineSchedContext *C) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -122,16 +154,15 @@ public:
 //===----------------------------------------------------------------------===//
 
 class AMDGPUPassConfig : public TargetPassConfig {
+protected:
+  const AMDGPUOptions &CLOpts;
+
 public:
   AMDGPUPassConfig(TargetMachine &TM, PassManagerBase &PM);
 
   AMDGPUTargetMachine &getAMDGPUTargetMachine() const {
     return getTM<AMDGPUTargetMachine>();
   }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override;
-
   void addEarlyCSEOrGVNPass();
   void addStraightLineScalarOptimizationPasses();
   void addIRPasses() override;
@@ -143,48 +174,12 @@ public:
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 
   /// Check if a pass is enabled given \p Opt option. The option always
-  /// overrides defaults if explicitly used. Otherwise its default will
-  /// be used given that a pass shall work at an optimization \p Level
-  /// minimum.
-  bool isPassEnabled(const cl::opt<bool> &Opt,
+  /// overrides defaults if explicitly used. Otherwise the pass is enabled at an
+  /// optimization \p Level minimum.
+  bool isPassEnabled(BoolOrDefault Opt,
                      CodeGenOptLevel Level = CodeGenOptLevel::Default) const {
-    if (Opt.getNumOccurrences())
-      return Opt;
-    if (TM->getOptLevel() < Level)
-      return false;
-    return Opt;
+    return valueOr(Opt, TM->getOptLevel() >= Level);
   }
-};
-
-//===----------------------------------------------------------------------===//
-// AMDGPU CodeGen Pass Builder interface.
-//===----------------------------------------------------------------------===//
-
-class AMDGPUCodeGenPassBuilder
-    : public CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine> {
-  using Base = CodeGenPassBuilder<AMDGPUCodeGenPassBuilder, GCNTargetMachine>;
-
-public:
-  AMDGPUCodeGenPassBuilder(GCNTargetMachine &TM,
-                           const CGPassBuilderOption &Opts,
-                           PassInstrumentationCallbacks *PIC);
-
-  void addIRPasses(AddIRPass &) const;
-  void addCodeGenPrepare(AddIRPass &) const;
-  void addPreISel(AddIRPass &addPass) const;
-  void addILPOpts(AddMachinePass &) const;
-  void addAsmPrinter(AddMachinePass &, CreateMCStreamer) const;
-  Error addInstSelector(AddMachinePass &) const;
-  void addMachineSSAOptimization(AddMachinePass &) const;
-  void addPostRegAlloc(AddMachinePass &) const;
-
-  /// Check if a pass is enabled given \p Opt option. The option always
-  /// overrides defaults if explicitly used. Otherwise its default will be used
-  /// given that a pass shall work at an optimization \p Level minimum.
-  bool isPassEnabled(const cl::opt<bool> &Opt,
-                     CodeGenOptLevel Level = CodeGenOptLevel::Default) const;
-  void addEarlyCSEOrGVNPass(AddIRPass &) const;
-  void addStraightLineScalarOptimizationPasses(AddIRPass &) const;
 };
 
 } // end namespace llvm

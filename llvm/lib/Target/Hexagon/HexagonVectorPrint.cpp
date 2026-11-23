@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSubtarget.h"
 #include "llvm/ADT/StringRef.h"
@@ -40,26 +41,16 @@ static cl::opt<bool>
     TraceHexVectorStoresOnly("trace-hex-vector-stores-only", cl::Hidden,
                              cl::desc("Enables tracing of vector stores"));
 
-namespace llvm {
-
-FunctionPass *createHexagonVectorPrint();
-void initializeHexagonVectorPrintPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
 class HexagonVectorPrint : public MachineFunctionPass {
   const HexagonSubtarget *QST = nullptr;
   const HexagonInstrInfo *QII = nullptr;
-  const HexagonRegisterInfo *QRI = nullptr;
 
 public:
   static char ID;
 
-  HexagonVectorPrint() : MachineFunctionPass(ID) {
-    initializeHexagonVectorPrintPass(*PassRegistry::getPassRegistry());
-  }
+  HexagonVectorPrint() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Hexagon VectorPrint pass"; }
 
@@ -131,7 +122,6 @@ static bool getInstrVecReg(const MachineInstr &MI, unsigned &Reg) {
 bool HexagonVectorPrint::runOnMachineFunction(MachineFunction &Fn) {
   bool Changed = false;
   QST = &Fn.getSubtarget<HexagonSubtarget>();
-  QRI = QST->getRegisterInfo();
   QII = QST->getInstrInfo();
   std::vector<MachineInstr *> VecPrintList;
   for (auto &MBB : Fn)

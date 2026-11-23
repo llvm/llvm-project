@@ -2,6 +2,10 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s
 
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-comment -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c90 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=c11 %s -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -fsyntax-only -verify -Wall -W -Wno-strict-prototypes -triple arm64-linux-gnu -target-feature +sve -std=gnu11 %s -fexperimental-new-constant-interpreter
+
 typedef __SVInt8_t svint8_t;
 typedef __SVInt16_t svint16_t;
 
@@ -94,12 +98,12 @@ void func(int sel) {
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 
   const svint8_t const_int8 = local_int8; // expected-note {{declared const here}}
-  const svint8_t uninit_const_int8;
+  const svint8_t uninit_const_int8;       // expected-warning {{default initialization of an object of type 'const svint8_t' (aka 'const __SVInt8_t') leaves the object uninitialized}};
 
   volatile svint8_t volatile_int8;
 
   const volatile svint8_t const_volatile_int8 = local_int8; // expected-note {{declared const here}}
-  const volatile svint8_t uninit_const_volatile_int8;
+  const volatile svint8_t uninit_const_volatile_int8;       // expected-warning {{default initialization of an object of type 'const volatile svint8_t' (aka 'const volatile __SVInt8_t') leaves the object uninitialized}}
 
   _Atomic svint8_t atomic_int8;      // expected-error {{_Atomic cannot be applied to sizeless type 'svint8_t'}}
   __restrict svint8_t restrict_int8; // expected-error {{requires a pointer or reference}}

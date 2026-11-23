@@ -21,6 +21,11 @@ def k_alias: Flag<["--"], "kill-at">, Alias<k>;
 def no_leading_underscore: Flag<["--"], "no-leading-underscore">,
     HelpText<"Don't add leading underscores on symbols">;
 
+def I: JoinedOrSeparate<["-"], "I">, HelpText<"Identify DLL name from import library">;
+def I_long : JoinedOrSeparate<["--"], "identify">, Alias<I>;
+
+def identify_strict : Flag<["--"], "identify-strict">, HelpText<"Error out if the --identify option detects more than one DLL">;
+
 //==============================================================================
 // The flags below do nothing. They are defined only for dlltool compatibility.
 //==============================================================================

@@ -17,22 +17,32 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
+
 // This pass is responsible for removing optional traps, like llvm.ubsantrap
 // from the hot code.
-class LowerAllowCheckPass : public PassInfoMixin<LowerAllowCheckPass> {
+class LowerAllowCheckPass : public RequiredPassInfoMixin<LowerAllowCheckPass> {
 public:
   struct Options {
-    std::vector<unsigned int> placeholder; // TODO: cutoffs
+    std::vector<unsigned int> cutoffs;
+    unsigned int runtime_check = 0;
   };
 
   explicit LowerAllowCheckPass(LowerAllowCheckPass::Options Opts)
       : Opts(std::move(Opts)) {};
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 
-  static bool IsRequested();
+  LLVM_ABI static bool
+  isRequested(const cl::LibraryOptionsContext &LibraryOptions);
+  LLVM_ABI void
+  printPipeline(raw_ostream &OS,
+                function_ref<StringRef(StringRef)> MapClassName2PassName);
 
 private:
   LowerAllowCheckPass::Options Opts;

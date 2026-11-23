@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_INSTRUMENTATION_THREADSANITIZER_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 class Function;
@@ -24,18 +25,16 @@ class Module;
 /// Instruments functions to detect race conditions reads. This function pass
 /// inserts calls to runtime library functions. If the functions aren't declared
 /// yet, the pass inserts the declarations. Otherwise the existing globals are
-struct ThreadSanitizerPass : public PassInfoMixin<ThreadSanitizerPass> {
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
-  static bool isRequired() { return true; }
+struct ThreadSanitizerPass : public RequiredPassInfoMixin<ThreadSanitizerPass> {
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM);
 };
 
 /// A module pass for tsan instrumentation.
 ///
 /// Create ctor and init functions.
 struct ModuleThreadSanitizerPass
-  : public PassInfoMixin<ModuleThreadSanitizerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
-  static bool isRequired() { return true; }
+    : public RequiredPassInfoMixin<ModuleThreadSanitizerPass> {
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 } // namespace llvm

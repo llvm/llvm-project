@@ -54,15 +54,33 @@ public:
     EXPECT_TRUE(FPBits(res).is_quiet_nan());
     EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 1).uintval(), FPBits(res).uintval());
 
-    EXPECT_EQ(0, func(&res, T(0x42.0p+0)));
-    EXPECT_TRUE(FPBits(res).is_quiet_nan());
-    EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x42).uintval(),
-              FPBits(res).uintval());
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 5) {
+      EXPECT_EQ(0, func(&res, T(0x15.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_quiet_nan());
+      EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x15).uintval(),
+                FPBits(res).uintval());
+    }
 
-    EXPECT_EQ(0, func(&res, T(0x123.0p+0)));
-    EXPECT_TRUE(FPBits(res).is_quiet_nan());
-    EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x123).uintval(),
-              FPBits(res).uintval());
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 6) {
+      EXPECT_EQ(0, func(&res, T(0x31.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_quiet_nan());
+      EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x31).uintval(),
+                FPBits(res).uintval());
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 7) {
+      EXPECT_EQ(0, func(&res, T(0x42.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_quiet_nan());
+      EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x42).uintval(),
+                FPBits(res).uintval());
+    }
+
+    if constexpr (FPBits::FRACTION_LEN - 1 >= 9) {
+      EXPECT_EQ(0, func(&res, T(0x123.0p+0)));
+      EXPECT_TRUE(FPBits(res).is_quiet_nan());
+      EXPECT_EQ(FPBits::quiet_nan(Sign::POS, 0x123).uintval(),
+                FPBits(res).uintval());
+    }
 
     // The following code is creating a NaN payload manually to prevent a
     // conversion from BigInt to float128.
@@ -80,11 +98,11 @@ public:
   }
 };
 
-#define LIST_SETPAYLOAD_TESTS(T, func)                                         \
-  using LlvmLibcSetPayloadTest = SetPayloadTestTemplate<T>;                    \
-  TEST_F(LlvmLibcSetPayloadTest, InvalidPayloads) {                            \
+#define LIST_SETPAYLOAD_TESTS(Name, T, func)                                   \
+  using LlvmLibc##Name##Test = SetPayloadTestTemplate<T>;                      \
+  TEST_F(LlvmLibc##Name##Test, InvalidPayloads) {                              \
     testInvalidPayloads(&func);                                                \
   }                                                                            \
-  TEST_F(LlvmLibcSetPayloadTest, ValidPayloads) { testValidPayloads(&func); }
+  TEST_F(LlvmLibc##Name##Test, ValidPayloads) { testValidPayloads(&func); }
 
 #endif // LIBC_TEST_SRC_MATH_SMOKE_SETPAYLOADTEST_H

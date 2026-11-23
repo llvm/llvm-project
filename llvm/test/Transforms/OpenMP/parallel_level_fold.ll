@@ -53,13 +53,13 @@ define weak ptx_kernel void @parallel() "kernel" {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment, ptr null)
 ; CHECK-NEXT:    call void @spmd_helper()
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0, i32 0)
 ; CHECK-NEXT:    call void @__kmpc_target_deinit()
 ; CHECK-NEXT:    ret void
 ;
   %i = call i32 @__kmpc_target_init(ptr @parallel_kernel_environment, ptr null)
   call void @spmd_helper()
-  call void @__kmpc_parallel_51(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0)
+  call void @__kmpc_parallel_60(ptr null, i32 0, i32 0, i32 0, i32 0, ptr null, ptr null, ptr null, i64 0, i32 0)
   call void @__kmpc_target_deinit()
   ret void
 }
@@ -108,8 +108,8 @@ define internal void @spmd_helper() {
   ret void
 }
 
-define internal void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) {
-; CHECK-LABEL: define {{[^@]+}}@__kmpc_parallel_51
+define internal void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32) {
+; CHECK-LABEL: define {{[^@]+}}@__kmpc_parallel_60
 ; CHECK-SAME: (ptr [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]], i32 [[TMP3:%.*]], i32 [[TMP4:%.*]], ptr [[TMP5:%.*]], ptr [[TMP6:%.*]], ptr [[TMP7:%.*]], i64 [[TMP8:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    call void @parallel_helper()
 ; CHECK-NEXT:    ret void

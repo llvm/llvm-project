@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <optional>
+#include <string>
 #include <vector>
 
 #include <cstddef>
@@ -38,9 +40,7 @@ public:
 
   virtual ~Properties();
 
-  virtual lldb::OptionValuePropertiesSP GetValueProperties() const {
-    // This function is virtual in case subclasses want to lazily implement
-    // creating the properties.
+  lldb::OptionValuePropertiesSP GetValueProperties() const {
     return m_collection_sp;
   }
 
@@ -62,10 +62,16 @@ public:
                                      bool is_json = false);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
-                                   Stream &strm) const;
+                                   Stream &strm, bool include_deprecated) const;
 
-  size_t Apropos(llvm::StringRef keyword,
-                 std::vector<const Property *> &matching_properties) const;
+  void Apropos(llvm::StringRef keyword,
+               std::vector<const Property *> &matching_properties,
+               std::vector<const Property *> &matching_property_paths) const;
+
+  /// The warning to show when the setting at \a property_path is changed, or
+  /// std::nullopt if that setting isn't deprecated.
+  std::optional<std::string>
+  GetDeprecationWarning(llvm::StringRef property_path) const;
 
   // We sometimes need to introduce a setting to enable experimental features,
   // but then we don't want the setting for these to cause errors when the

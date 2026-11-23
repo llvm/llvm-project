@@ -11,7 +11,7 @@
 // CHECK-O0-NEXT:    [[A:%.*]] = alloca i8, align 1
 // CHECK-O0-NEXT:    store i8 1, ptr [[A]], align 1
 // CHECK-O0-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
-// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-O0-NEXT:    [[TMP1:%.*]] = call i1 @llvm.ctpop.i1(i1 [[LOADEDV]])
 // CHECK-O0-NEXT:    [[CAST:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-O0-NEXT:    ret i32 [[CAST]]
@@ -53,7 +53,7 @@ int test_popcountg_ubi2() {
 // CHECK-O0-NEXT:    [[A:%.*]] = alloca i8, align 1
 // CHECK-O0-NEXT:    store i8 0, ptr [[A]], align 1
 // CHECK-O0-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
-// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-O0-NEXT:    [[TMP1:%.*]] = call i1 @llvm.cttz.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-O0-NEXT:    [[CAST:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-O0-NEXT:    ret i32 [[CAST]]
@@ -95,7 +95,7 @@ int test_ctzg_ubi2() {
 // CHECK-O0-NEXT:    [[A:%.*]] = alloca i8, align 1
 // CHECK-O0-NEXT:    store i8 0, ptr [[A]], align 1
 // CHECK-O0-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A]], align 1
-// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = trunc i8 [[TMP0]] to i1
+// CHECK-O0-NEXT:    [[LOADEDV:%.*]] = icmp ne i8 [[TMP0]], 0
 // CHECK-O0-NEXT:    [[TMP1:%.*]] = call i1 @llvm.ctlz.i1(i1 [[LOADEDV]], i1 false)
 // CHECK-O0-NEXT:    [[CAST:%.*]] = zext i1 [[TMP1]] to i32
 // CHECK-O0-NEXT:    ret i32 [[CAST]]

@@ -2,6 +2,7 @@ REQUIRES: aarch64
 RUN: split-file %s %t.dir && cd %t.dir
 
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ext.s -o ext.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows ext-mangled.s -o ext-mangled.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows impl.s -o impl.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows impl-cpp.s -o impl-cpp.obj
 RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig.obj
@@ -49,6 +50,20 @@ RUN: lld-link -machine:arm64ec -dll -noentry -out:out4.dll impl-cpp.obj loadconf
 RUN: llvm-objdump -d out4.dll | FileCheck --check-prefix=DISASM %s
 RUN: llvm-readobj --hex-dump=.test out4.dll | FileCheck --check-prefix=TESTSEC %s
 
+# Check that when both mangled and demangled alternate names are used,
+# only the one whose target is defined is used (the mangled one in this case).
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out5.dll ext-mangled.obj loadconfig.obj "-alternatename:#func=#altsym" -alternatename:func=altsym
+RUN: llvm-objdump -d out5.dll | FileCheck --check-prefix=DISASM %s
+RUN: llvm-readobj --hex-dump=.test out5.dll | FileCheck --check-prefix=TESTSEC %s
+
+# Check that when both mangled and demangled alternate names are used,
+# only the one whose target is defined is used (the demangled one in this case).
+
+RUN: lld-link -machine:arm64ec -dll -noentry -out:out6.dll ext.obj loadconfig.obj "-alternatename:#func=#altsym" -alternatename:func=altsym
+RUN: llvm-objdump -d out6.dll | FileCheck --check-prefix=DISASM2 %s
+RUN: llvm-readobj --hex-dump=.test out6.dll | FileCheck --check-prefix=TESTSEC2 %s
+
 #--- ext.s
         .weak_anti_dep func
 .set func, "#func"
@@ -69,6 +84,30 @@ thunksym:
 altsym:
         mov w0, #1
         ret
+
+#--- ext-mangled.s
+        .weak_anti_dep func
+.set func, "#func"
+        .weak_anti_dep "#func"
+.set "#func", thunksym
+
+        .section .test, "r"
+        .rva func
+        .rva "#func"
+
+        .section .thnk,"xr",discard,thunksym
+thunksym:
+        mov w0, #2
+        ret
+
+        .section .text,"xr",discard,"#altsym"
+        .globl "#altsym"
+"#altsym":
+        mov w0, #1
+        ret
+
+        .weak_anti_dep altsym
+        .set altsym,"#altsym"
 
 #--- impl.s
         .weak_anti_dep func

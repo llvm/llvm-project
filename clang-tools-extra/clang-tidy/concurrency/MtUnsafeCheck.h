@@ -1,4 +1,4 @@
-//===--- MtUnsafeCheck.h - clang-tidy ---------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -16,7 +16,7 @@ namespace clang::tidy::concurrency {
 /// Checks that non-thread-safe functions are not used.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/concurrency/mt-unsafe.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/concurrency/mt-unsafe.html
 class MtUnsafeCheck : public ClangTidyCheck {
 public:
   MtUnsafeCheck(StringRef Name, ClangTidyContext *Context);

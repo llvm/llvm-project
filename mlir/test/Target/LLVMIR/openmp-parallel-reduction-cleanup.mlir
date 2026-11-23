@@ -45,7 +45,6 @@
   llvm.func @malloc(%arg0 : i64) -> !llvm.ptr
   llvm.func @free(%arg0 : !llvm.ptr) -> ()
 
-// CHECK: %{{.+}} = 
 // Call to the outlined function.
 // CHECK: call void {{.*}} @__kmpc_fork_call
 // CHECK-SAME: @[[OUTLINED:[A-Za-z_.][A-Za-z0-9_.]*]]

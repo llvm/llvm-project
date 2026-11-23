@@ -1,0 +1,25 @@
+## Checks that llvm-strip continues to strip objects after encountering a bad
+## one while emitting an error for each bad one.
+
+# RUN: echo "bad" > %t1
+# RUN: yaml2obj %s -o %t2
+# RUN: cp %t1 %t3
+# RUN: not llvm-strip --strip-sections %t1 %t2 %t3 2>&1 | FileCheck %s --check-prefix=ERROR -DFILE1=%t1 -DFILE3=%t3 --implicit-check-not=error:
+
+# ERROR: error: '[[FILE1]]': The file was not recognized as a valid object file
+# ERROR-NEXT: error: '[[FILE3]]': The file was not recognized as a valid object file
+
+# RUN: llvm-readobj --file-header %t2 | FileCheck %s --check-prefix=NUMSECTIONS
+
+# NUMSECTIONS: SectionHeaderCount: 0
+
+!ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data:  ELFDATA2LSB
+  Type:  ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .debugGlobal
+    Type:    SHT_PROGBITS
+    Content: "00000000"

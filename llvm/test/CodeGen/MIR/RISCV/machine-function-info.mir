@@ -19,19 +19,9 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr, preferred-register: '' }
-  - { id: 1, class: gpr, preferred-register: '' }
-  - { id: 2, class: gpr, preferred-register: '' }
-  - { id: 3, class: gpr, preferred-register: '' }
-  - { id: 4, class: gpr, preferred-register: '' }
-  - { id: 5, class: gpr, preferred-register: '' }
-  - { id: 6, class: gpr, preferred-register: '' }
-  - { id: 7, class: gpr, preferred-register: '' }
 liveins:
   - { reg: '$x11', virtual-reg: '%1' }
   - { reg: '$x12', virtual-reg: '%2' }
@@ -58,8 +48,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     false
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:
   - { id: 0, type: default, offset: -8, size: 8, alignment: 8, stack-id: default,
       isImmutable: true, isAliased: false, callee-saved-register: '', callee-saved-restored: true,

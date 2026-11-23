@@ -2,9 +2,24 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z10 | FileCheck %s
 
+declare half @llvm.experimental.constrained.uitofp.f16.i32(i32, metadata, metadata)
 declare float @llvm.experimental.constrained.uitofp.f32.i32(i32, metadata, metadata)
 declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
 declare fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32, metadata, metadata)
+
+; Check i32->f16.  There is no native instruction, so we must promote
+; to i64 first.
+define half @f0(i32 %i) #0 {
+; CHECK-LABEL: f0:
+; CHECK: llgfr [[REGISTER:%r[0-5]]], %r2
+; CHECK: cegbr %f0, [[REGISTER]]
+; CHECK-NEXT: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %conv = call half @llvm.experimental.constrained.uitofp.f16.i32(i32 %i,
+                                               metadata !"round.dynamic",
+                                               metadata !"fpexcept.strict") #0
+  ret half %conv
+}
 
 ; Check i32->f32.  There is no native instruction, so we must promote
 ; to i64 first.

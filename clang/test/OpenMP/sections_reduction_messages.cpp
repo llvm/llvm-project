@@ -178,7 +178,7 @@ T tmain(T argc) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
+#pragma omp sections reduction(&& : argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}} omp45-error 2 {{unexpected OpenMP clause 'allocate' in directive '#pragma omp sections'}}
   {
     foo();
   }
@@ -268,6 +268,7 @@ T tmain(T argc) {
   {
     foo();
   }
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)       // expected-note 2 {{defined as private}}
 #pragma omp sections reduction(+ : fl) // expected-error 2 {{reduction variable must be shared}}
   {
@@ -278,6 +279,7 @@ T tmain(T argc) {
   {
     foo();
   }
+#endif
 
   return T();
 }
@@ -453,6 +455,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 #pragma omp parallel private(fl)       // expected-note {{defined as private}}
 #pragma omp sections reduction(+ : fl) // expected-error {{reduction variable must be shared}}
   {
@@ -463,6 +466,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
+#endif
   static int m;
 #pragma omp sections reduction(+ : m) // OK
   {

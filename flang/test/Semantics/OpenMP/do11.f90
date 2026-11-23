@@ -2,24 +2,24 @@
 ! OpenMP Version 4.5
 ! 2.7.1 Do Loop Constructs
 
-!DEF: /omp_do MainProgram
-program omp_do
-  !DEF: /omp_do/i ObjectEntity INTEGER(4)
-  !DEF: /omp_do/j ObjectEntity INTEGER(4)
-  !DEF: /omp_do/k ObjectEntity INTEGER(4)
+!DEF: /OMP_DO MainProgram
+program OMP_DO
+  !DEF: /OMP_DO/i ObjectEntity INTEGER(4)
+  !DEF: /OMP_DO/j ObjectEntity INTEGER(4)
+  !DEF: /OMP_DO/k ObjectEntity INTEGER(4)
   integer i, j, k
   !$omp do
-  !DEF: /omp_do/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
+  !DEF: /OMP_DO/OtherConstruct1/i (OmpPrivate, OmpPreDetermined) HostAssoc INTEGER(4)
   do i=1,10
-    !REF: /omp_do/j
+    !REF: /OMP_DO/j
     do j=1,10
-      !REF: /omp_do/OtherConstruct1/i
-      !REF: /omp_do/j
+      !REF: /OMP_DO/OtherConstruct1/i
+      !REF: /OMP_DO/j
       print *, "it", i, j
     end do
   end do
   !$omp end do
-end program omp_do
+end program OMP_DO
 
 !DEF: /omp_do2 (Subroutine)Subprogram
 subroutine omp_do2

@@ -164,7 +164,8 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
 
         if (!DT.isReachableFromEntry(Pred))
           continue;
-
+        if (!DT.dominates(Pred, UsersDominatorHead))
+          continue;
         DominatingPredecessor =
             DominatingPredecessor
                 ? DT.findNearestCommonDominator(DominatingPredecessor, Pred)
@@ -177,9 +178,10 @@ static bool runMoveAutoInit(Function &F, DominatorTree &DT, MemorySSA &MSSA) {
       UsersDominator = DominatingPredecessor;
     }
 
-    // CatchSwitchInst blocks can only have one instruction, so they are not
-    // good candidates for insertion.
-    while (isa<CatchSwitchInst>(UsersDominator->getFirstNonPHIIt())) {
+    // EH pad blocks are not good candidates for insertion: CatchSwitchInst
+    // blocks can only have one instruction, and for other pads we risk
+    // re-ordering memory access instructions and violating MemorySSA rules.
+    while (UsersDominator->isEHPad()) {
       for (BasicBlock *Pred : predecessors(UsersDominator))
         if (DT.isReachableFromEntry(Pred))
           UsersDominator = DT.findNearestCommonDominator(UsersDominator, Pred);
@@ -225,7 +227,6 @@ PreservedAnalyses MoveAutoInitPass::run(Function &F,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  PA.preserve<DominatorTreeAnalysis>();
   PA.preserve<MemorySSAAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;

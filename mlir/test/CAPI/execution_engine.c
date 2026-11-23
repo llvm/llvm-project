@@ -11,11 +11,13 @@
  */
 /* REQUIRES: host-supports-jit
  */
+// XFAIL: system-aix
 
 #include "mlir-c/Conversion.h"
 #include "mlir-c/ExecutionEngine.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/RegisterEverything.h"
+#include "llvm-c/Support.h"
 
 #include <assert.h>
 #include <math.h>
@@ -69,7 +71,7 @@ void testSimpleExecution(void) {
   mlirRegisterAllLLVMTranslations(ctx);
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false);
+      /*enableObjectDump=*/false, /*enablePIC=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Execution engine creation failed");
     exit(2);
@@ -125,7 +127,7 @@ void testOmpCreation(void) {
   // against the OpenMP library.
   MlirExecutionEngine jit = mlirExecutionEngineCreate(
       module, /*optLevel=*/2, /*numPaths=*/0, /*sharedLibPaths=*/NULL,
-      /*enableObjectDump=*/false);
+      /*enableObjectDump=*/false, /*enablePIC=*/false);
   if (mlirExecutionEngineIsNull(jit)) {
     fprintf(stderr, "Engine creation failed with OpenMP");
     exit(2);
@@ -135,6 +137,17 @@ void testOmpCreation(void) {
   mlirExecutionEngineDestroy(jit);
   mlirModuleDestroy(module);
   mlirContextDestroy(ctx);
+}
+
+// The JIT reads the options that LLVMParseCommandLineOptions sets.
+// CHECK-LABEL: Running test 'testLibraryOptions'
+void testLibraryOptions(void) {
+  const char *argv[] = {"execution_engine", "-print-after-isel"};
+  LLVMParseCommandLineOptions(2, argv, "");
+  // Order the dump on stderr after the test label.
+  fflush(stdout);
+  // CHECK: # After Instruction Selection:
+  testSimpleExecution();
 }
 
 int main(void) {
@@ -147,5 +160,6 @@ int main(void) {
 
   TEST(testSimpleExecution);
   TEST(testOmpCreation);
+  TEST(testLibraryOptions);
   return 0;
 }

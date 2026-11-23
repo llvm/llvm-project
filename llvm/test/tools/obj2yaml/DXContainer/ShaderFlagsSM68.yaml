@@ -1,0 +1,92 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
+
+# This test verifies round-tripping of the shader feature flags added for
+# Shader Model 6.8 (see issue llvm/llvm-project#83177):
+#   - SampleCmpWithGradientOrBias (bit 31, value 0x0000000080000000)
+#   - ExtendedCommandInfo         (bit 32, value 0x0000000100000000)
+--- !dxcontainer
+Header:
+  Hash:            [ 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+                     0x0, 0x0, 0x0, 0x0, 0x0, 0x0 ]
+  Version:
+    Major:           1
+    Minor:           0
+  PartCount:       1
+Parts:
+  - Name:            SFI0
+    Size:            8
+    Flags:
+      Doubles:         true
+      ComputeShadersPlusRawAndStructuredBuffers: true
+      UAVsAtEveryStage: true
+      Max64UAVs:       true
+      MinimumPrecision: true
+      DX11_1_DoubleExtensions: true
+      DX11_1_ShaderExtensions: true
+      LEVEL9ComparisonFiltering: true
+      TiledResources:  true
+      StencilRef:      true
+      InnerCoverage:   true
+      TypedUAVLoadAdditionalFormats: true
+      ROVs:            true
+      ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: true
+      WaveOps:         true
+      Int64Ops:        true
+      ViewID:          true
+      Barycentrics:    true
+      NativeLowPrecision: true
+      ShadingRate:     true
+      Raytracing_Tier_1_1: true
+      SamplerFeedback: true
+      AtomicInt64OnTypedResource: true
+      AtomicInt64OnGroupShared: true
+      DerivativesInMeshAndAmpShaders: true
+      ResourceDescriptorHeapIndexing: true
+      SamplerDescriptorHeapIndexing: true
+      RESERVED:        true
+      AtomicInt64OnHeapResource: true
+      AdvancedTextureOps: true
+      WriteableMSAATextures: true
+      SampleCmpWithGradientOrBias: true
+      ExtendedCommandInfo: true
+      NextUnusedBit:   true
+...
+
+# CHECK: Parts:
+# CHECK-NEXT:   - Name:            SFI0
+# CHECK-NEXT:     Size:            8
+# CHECK-NEXT:     Flags:
+# CHECK-NEXT:       Doubles:         true
+# CHECK-NEXT:       ComputeShadersPlusRawAndStructuredBuffers: true
+# CHECK-NEXT:       UAVsAtEveryStage: true
+# CHECK-NEXT:       Max64UAVs:       true
+# CHECK-NEXT:       MinimumPrecision: true
+# CHECK-NEXT:       DX11_1_DoubleExtensions: true
+# CHECK-NEXT:       DX11_1_ShaderExtensions: true
+# CHECK-NEXT:       LEVEL9ComparisonFiltering: true
+# CHECK-NEXT:       TiledResources:  true
+# CHECK-NEXT:       StencilRef:      true
+# CHECK-NEXT:       InnerCoverage:   true
+# CHECK-NEXT:       TypedUAVLoadAdditionalFormats: true
+# CHECK-NEXT:       ROVs:            true
+# CHECK-NEXT:       ViewportAndRTArrayIndexFromAnyShaderFeedingRasterizer: true
+# CHECK-NEXT:       WaveOps:         true
+# CHECK-NEXT:       Int64Ops:        true
+# CHECK-NEXT:       ViewID:          true
+# CHECK-NEXT:       Barycentrics:    true
+# CHECK-NEXT:       NativeLowPrecision: true
+# CHECK-NEXT:       ShadingRate:     true
+# CHECK-NEXT:       Raytracing_Tier_1_1: true
+# CHECK-NEXT:       SamplerFeedback: true
+# CHECK-NEXT:       AtomicInt64OnTypedResource: true
+# CHECK-NEXT:       AtomicInt64OnGroupShared: true
+# CHECK-NEXT:       DerivativesInMeshAndAmpShaders: true
+# CHECK-NEXT:       ResourceDescriptorHeapIndexing: true
+# CHECK-NEXT:       SamplerDescriptorHeapIndexing: true
+# CHECK-NEXT:       RESERVED:        true
+# CHECK-NEXT:       AtomicInt64OnHeapResource: true
+# CHECK-NEXT:       AdvancedTextureOps: true
+# CHECK-NEXT:       WriteableMSAATextures: true
+# CHECK-NEXT:       SampleCmpWithGradientOrBias: true
+# CHECK-NEXT:       ExtendedCommandInfo: true
+# CHECK-NEXT:       NextUnusedBit:   true

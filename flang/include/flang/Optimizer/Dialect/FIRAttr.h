@@ -13,6 +13,7 @@
 #ifndef FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 #define FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H
 
+#include "mlir/Dialect/OpenACC/OpenACCVariableInfo.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 namespace mlir {
@@ -67,6 +68,16 @@ public:
 
   static constexpr llvm::StringLiteral name = "fir.must_be_heap";
   static constexpr llvm::StringRef getAttrName() { return "fir.must_be_heap"; }
+};
+
+/// Attribute which can be applied to a fir.alloca operation, specifying that
+/// the allocation may not be moved to the heap by passes.
+class MustBeStackAttr : public mlir::BoolAttr {
+public:
+  using BoolAttr::BoolAttr;
+
+  static constexpr llvm::StringLiteral name = "fir.must_be_stack";
+  static constexpr llvm::StringRef getAttrName() { return "fir.must_be_stack"; }
 };
 
 // Attributes for building SELECT CASE multiway branches
@@ -150,6 +161,11 @@ public:
   llvm::APFloat getValue() const;
 };
 
+/// Module attribute set when -fcheck-integer-mod-zero-divisor is enabled.
+static constexpr llvm::StringRef getCheckIntegerModZeroDivisorAttrName() {
+  return "fir.check_integer_mod_zero_divisor";
+}
+
 mlir::Attribute parseFirAttribute(FIROpsDialect *dialect,
                                   mlir::DialectAsmParser &parser,
                                   mlir::Type type);
@@ -163,5 +179,7 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 
 #define GET_ATTRDEF_CLASSES
 #include "flang/Optimizer/Dialect/FIRAttr.h.inc"
+
+#include "flang/Optimizer/Dialect/SafeTempArrayCopyAttrInterface.h"
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H

@@ -2,9 +2,26 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare i32 @llvm.s390.tdc.f16(half, i64)
 declare i32 @llvm.s390.tdc.f32(float, i64)
 declare i32 @llvm.s390.tdc.f64(double, i64)
 declare i32 @llvm.s390.tdc.f128(fp128, i64)
+
+; Check using or i1
+define i32 @f0(half %x) {
+; CHECK-LABEL: f0
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: tceb %f0, 7
+; CHECK-NEXT: ipm [[REG1:%r[0-9]+]]
+; CHECK-NEXT: risbg %r2, [[REG1]], 63, 191, 36
+  %a = call i32 @llvm.s390.tdc.f16(half %x, i64 3)
+  %b = call i32 @llvm.s390.tdc.f16(half %x, i64 6)
+  %a1 = icmp ne i32 %a, 0
+  %b1 = icmp ne i32 %b, 0
+  %res = or i1 %a1, %b1
+  %xres = zext i1 %res to i32
+  ret i32 %xres
+}
 
 ; Check using or i1
 define i32 @f1(float %x) {

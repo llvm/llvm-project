@@ -104,7 +104,7 @@ struct DeallocationOptions {
 /// BufferDeallocation pass.
 class DeallocationState {
 public:
-  DeallocationState(Operation *op);
+  DeallocationState(Operation *op, SymbolTableCollection &symbolTables);
 
   // The state should always be passed by reference.
   DeallocationState(const DeallocationState &) = delete;
@@ -186,10 +186,17 @@ public:
   /// attributes on the function operation.
   SymbolTableCollection *getSymbolTable() { return &symbolTable; }
 
+  /// Register that 'oldValue' has been replaced by 'newValue'. When the
+  /// liveness analysis is consulted after an op has been replaced (e.g., via
+  /// appendOpResults), the cached liveness may still refer to the old value.
+  /// This mapping is used to translate stale values to their replacements
+  /// before checking whether a value is a MemRef.
+  void mapValue(Value oldValue, Value newValue);
+
 private:
   // Symbol cache to lookup functions from call operations to check attributes
   // on the function operation.
-  SymbolTableCollection symbolTable;
+  SymbolTableCollection &symbolTable;
 
   // Mapping from each SSA value with MemRef type to the associated ownership in
   // each block.
@@ -203,6 +210,12 @@ private:
   // The underlying liveness analysis to compute fine grained information about
   // alloc and dealloc positions.
   Liveness liveness;
+
+  // Maps values that have been replaced (e.g., when an op is cloned with extra
+  // results via appendOpResults) to their replacements. The liveness analysis
+  // is computed once and may contain stale values after IR modifications; this
+  // map is used to translate them before accessing their types.
+  DenseMap<Value, Value> valueMapping;
 };
 
 namespace deallocation_impl {

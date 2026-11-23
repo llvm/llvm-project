@@ -1899,7 +1899,7 @@ define <4 x i64> @test_mm256_set1_epi16(i16 %a0) nounwind {
 ; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovd %eax, %xmm0
 ; X86-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X86-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X86-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X86-NEXT:    retl
 ;
@@ -1907,7 +1907,7 @@ define <4 x i64> @test_mm256_set1_epi16(i16 %a0) nounwind {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovd %edi, %xmm0
 ; X64-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; X64-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res0  = insertelement <16 x i16> undef,  i16 %a0, i32 0
@@ -2697,12 +2697,14 @@ define void @test_mm256_stream_pd(ptr%a0, <4 x double> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_pd:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <4 x double> %a1, ptr %a0, align 32, !nontemporal !0
@@ -2714,12 +2716,14 @@ define void @test_mm256_stream_ps(ptr%a0, <8 x float> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_ps:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <8 x float> %a1, ptr %a0, align 32, !nontemporal !0
@@ -2731,12 +2735,14 @@ define void @test_mm256_stream_si256(ptr%a0, <4 x i64> %a1) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovntps %ymm0, (%eax)
+; X86-NEXT:    sfence
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_stream_si256:
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovntps %ymm0, (%rdi)
+; X64-NEXT:    sfence
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
   store <4 x i64> %a1, ptr %a0, align 32, !nontemporal !0

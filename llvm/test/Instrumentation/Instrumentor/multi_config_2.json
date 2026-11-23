@@ -1,0 +1,12 @@
+{
+  "configuration": {
+    "runtime_prefix": "__c2_",
+    "function_regex": "bar"
+  },
+  "instruction_pre": {
+    "store": {
+      "enabled": true,
+      "id": false
+    }
+  }
+}

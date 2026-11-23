@@ -134,11 +134,27 @@ constexpr Parser<EndSubroutineStmt> endSubroutineStmt; // R1537
 constexpr Parser<EntryStmt> entryStmt; // R1541
 constexpr Parser<ContainsStmt> containsStmt; // R1543
 constexpr Parser<CompilerDirective> compilerDirective;
+// Diagnose a misplaced OpenACC DECLARE and return Success.
+struct MisplacedOpenACCDeclare {
+  using resultType = Success;
+  std::optional<Success> Parse(ParseState &) const;
+};
+constexpr MisplacedOpenACCDeclare misplacedOpenACCDeclare;
+
+// Recognize a misplaced DECLARE and construct its generic recovery node.
+struct MisplacedOpenACCDeclareRecovery {
+  using resultType = ErrorRecovery;
+  std::optional<ErrorRecovery> Parse(ParseState &) const;
+};
+constexpr MisplacedOpenACCDeclareRecovery misplacedOpenACCDeclareRecovery;
+
 constexpr Parser<OpenACCConstruct> openaccConstruct;
 constexpr Parser<OpenACCDeclarativeConstruct> openaccDeclarativeConstruct;
 constexpr Parser<OpenMPConstruct> openmpConstruct;
+constexpr Parser<OpenMPExecDirective> openmpExecDirective;
 constexpr Parser<OpenMPDeclarativeConstruct> openmpDeclarativeConstruct;
-constexpr Parser<OmpEndLoopDirective> ompEndLoopDirective;
+constexpr Parser<OpenMPMisplacedEndDirective> openmpMisplacedEndDirective;
+constexpr Parser<OpenMPInvalidDirective> openmpInvalidDirective;
 constexpr Parser<IntrinsicVectorTypeSpec> intrinsicVectorTypeSpec; // Extension
 constexpr Parser<VectorTypeSpec> vectorTypeSpec; // Extension
 constexpr Parser<UnsignedTypeSpec> unsignedTypeSpec; // Extension

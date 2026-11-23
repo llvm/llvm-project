@@ -18,6 +18,7 @@
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
 
 #include "gtest/gtest.h"
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -34,7 +35,8 @@ TEST(ModuleSpecTest, InvalidInMemoryBuffer) {
   uint8_t Invalid[] = "This is not a binary file.";
   DataBufferSP InvalidBufferSP =
       std::make_shared<DataBufferUnowned>(Invalid, sizeof(Invalid));
-  ModuleSpec Spec(FileSpec(), UUID(), InvalidBufferSP);
+  ModuleSpec Spec(FileSpec(), UUID(),
+                  std::make_shared<DataExtractor>(InvalidBufferSP));
 
   auto InvalidModuleSP = std::make_shared<Module>(Spec);
   ASSERT_EQ(InvalidModuleSP->GetObjectFile(), nullptr);
@@ -44,7 +46,8 @@ TEST(ModuleSpecTest, InvalidInMemoryBufferValidFile) {
   uint8_t Invalid[] = "This is not a binary file.";
   DataBufferSP InvalidBufferSP =
       std::make_shared<DataBufferUnowned>(Invalid, sizeof(Invalid));
-  ModuleSpec Spec(FileSpec(TestMainArgv0), UUID(), InvalidBufferSP);
+  ModuleSpec Spec(FileSpec(TestMainArgv0), UUID(),
+                  std::make_shared<DataExtractor>(InvalidBufferSP));
 
   auto InvalidModuleSP = std::make_shared<Module>(Spec);
   ASSERT_EQ(InvalidModuleSP->GetObjectFile(), nullptr);
@@ -73,6 +76,49 @@ Sections:
   ObjectFile *OF = M->GetObjectFile();
 
   ASSERT_EQ(llvm::isa<ObjectFileELF>(OF), true);
+}
+
+TEST(ModuleSpecTest, PreservesEmbeddedObjectSpecification) {
+  SubsystemRAII<ObjectFileELF> subsystems;
+  auto ExpectedFile = TestFile::fromYaml(R"(
+--- !ELF
+FileHeader:
+  Class: ELFCLASS64
+  Data: ELFDATA2LSB
+  Type: ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Content: "90"
+...
+)");
+  ASSERT_THAT_EXPECTED(ExpectedFile, llvm::Succeeded());
+  ModuleSpec original = ExpectedFile->moduleSpec();
+  original.SetObjectOffset(0x10000);
+  original.GetPlatformFileSpec() = FileSpec("/remote/container");
+  original.GetSymbolFileSpec() = FileSpec("/symbols/object.debug");
+  auto module = std::make_shared<Module>(original);
+  ASSERT_NE(module->GetObjectFile(), nullptr);
+  ModuleSpec spec = module->GetModuleSpec();
+  ASSERT_EQ(spec.GetExtractor()->GetByteSize(),
+            original.GetExtractor()->GetByteSize());
+  EXPECT_EQ(std::memcmp(spec.GetExtractor()->GetDataStart(),
+                        original.GetExtractor()->GetDataStart(),
+                        spec.GetExtractor()->GetByteSize()),
+            0);
+  EXPECT_EQ(spec.GetObjectOffset(), original.GetObjectOffset());
+  EXPECT_EQ(spec.GetObjectSize(), original.GetObjectSize());
+  EXPECT_EQ(spec.GetArchitecture(), module->GetArchitecture());
+  EXPECT_EQ(spec.GetUUID(), module->GetUUID());
+  EXPECT_EQ(spec.GetPlatformFileSpec(), original.GetPlatformFileSpec());
+  EXPECT_EQ(spec.GetSymbolFileSpec(), original.GetSymbolFileSpec());
+  auto reconstructed = std::make_shared<Module>(spec);
+  ASSERT_NE(reconstructed->GetObjectFile(), nullptr);
+  EXPECT_EQ(reconstructed->GetUUID(), module->GetUUID());
+  EXPECT_EQ(reconstructed->GetObjectOffset(), original.GetObjectOffset());
+  EXPECT_EQ(reconstructed->GetObjectSize(), original.GetObjectSize());
 }
 
 TEST(ModuleSpecTest, TestCOFFFile) {
@@ -121,6 +167,7 @@ TEST(ModuleSpecTest, TestMachOFile) {
 
   auto ExpectedFile = TestFile::fromYaml(R"(
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

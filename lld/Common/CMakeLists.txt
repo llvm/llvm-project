@@ -24,17 +24,18 @@ set_source_files_properties("${version_inc}"
 
 add_lld_library(lldCommon
   Args.cpp
-  BPSectionOrdererBase.cpp
   CommonLinkerContext.cpp
   DriverDispatcher.cpp
   DWARF.cpp
   ErrorHandler.cpp
   Filesystem.cpp
   Memory.cpp
+  Parallel.cpp
   Reproduce.cpp
   Strings.cpp
   TargetOptionsCommandFlags.cpp
   Timer.cpp
+  Utils.cpp
   VCSVersion.inc
   Version.cpp
 
@@ -48,7 +49,6 @@ add_lld_library(lldCommon
   Demangle
   MC
   Option
-  ProfileData
   Support
   Target
   TargetParser

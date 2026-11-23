@@ -1,4 +1,4 @@
-; RUN: opt -S %loadNPMPolly -polly-pattern-matching-based-opts=false -polly-vectorizer=stripmine '-passes=polly-opt-isl,print<polly-ast>' -disable-output < %s | FileCheck %s
+; RUN: opt -S %loadNPMPolly -plugin-arg=Polly,-polly-pattern-matching-based-opts=false -plugin-arg=Polly,-polly-vectorizer=stripmine '-passes=polly-custom<opt-isl;ast>' -plugin-arg=Polly,-polly-print-ast -disable-output < %s | FileCheck %s
 ; CHECK:          // 1st level tiling - Tiles
 ; CHECK-NEXT:    #pragma known-parallel
 ; CHECK-NEXT:    for (int c0 = 0; c0 <= floord(ni - 1, 32); c0 += 1)

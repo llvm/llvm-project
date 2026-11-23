@@ -4,17 +4,17 @@ target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
 %struct.__va_list = type { i64, i64, ptr, ptr }
-declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.start.p0(ptr)
 declare void @llvm.va_start(ptr)
 declare void @llvm.va_end(ptr)
-declare void @llvm.lifetime.end.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(ptr)
 
 define i64 @foo(i64 %guard, ...) #1 {
   %vl = alloca %struct.__va_list
-  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.start.p0(ptr %vl)
   call void @llvm.va_start(ptr %vl)
   call void @llvm.va_end(ptr %vl)
-  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
+  call void @llvm.lifetime.end.p0(ptr %vl)
   ret i64 0
 }
 
@@ -55,7 +55,7 @@ define i64 @foo(i64 %guard, ...) #1 {
 ; CHECK: call void @__msan_metadata_ptr_for_store_1(ptr [[TMP]], ptr [[Overflow]])
 ; CHECK: [[OverflowMeta:%.*]] = load { ptr, ptr }, ptr [[TMP]]
 ; CHECK: [[OverflowShadow:%.*]] = extractvalue { ptr, ptr } [[OverflowMeta]], 0
-; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i32 160
+; CHECK: [[OverflowShadowBackup:%.*]] = getelementptr i8, ptr [[ShadowBackup]], i64 160
 ; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OverflowShadow]], ptr align 8 [[OverflowShadowBackup]], i64 [[OverflowSize]], i1 false)
 
 declare i32 @random_i32()

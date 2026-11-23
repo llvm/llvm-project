@@ -1,0 +1,66 @@
+# REQUIRES: webassembly
+
+# An active data segment is mapped into the module's linear memory at the
+# virtual address given by its init expression. Linear memory is a separate
+# address space from code: a wasm 64-bit address encodes the space in its top
+# two bits (0 = Memory, 1 = Object/code). Code is addressed in the Object space
+# by its module offset; data must be addressed in the Memory space at its
+# linear address.
+#
+# Here the data segment's init expr places it at linear address 0x10000.
+
+# RUN: yaml2obj %s -o %t.wasm
+# RUN: %lldb %t.wasm \
+# RUN:   -o "target modules dump sections" \
+# RUN:   -o "target modules load --file %t.wasm --slide 0x4000000000000000" \
+# RUN:   -o "target modules dump sections" \
+# RUN:   -o exit 2>&1 | FileCheck %s
+
+# Before loading, sections carry their file addresses. The data segment's file
+# address is its linear-memory address (from the init expr), not its offset in
+# the wasm file.
+# CHECK-LABEL: File Address
+# CHECK:       code  {{.*}}[0x0000000000000000-
+# CHECK:       data  {{.*}}[0x0000000000010000-0x0000000000010004)
+
+# After loading the module in the Object space (top bit set), the code section
+# is placed in the Object space at its module offset, while the data segment is
+# placed in the Memory space at its linear address. It is *not* Object-tagged.
+# CHECK-LABEL: Load Address
+# CHECK:       code  {{.*}}[0x40000000{{[0-9a-f]+}}-
+# CHECK:       data  {{.*}}[0x0000000000010000-0x0000000000010004)
+
+--- !WASM
+FileHeader:
+  Version: 0x1
+Sections:
+  - Type: TYPE
+    Signatures:
+      - Index: 0
+        ParamTypes: []
+        ReturnTypes:
+          - I32
+  - Type: FUNCTION
+    FunctionTypes: [ 0 ]
+  - Type: MEMORY
+    Memories:
+      - Minimum: 0x2
+  - Type: CODE
+    Functions:
+      - Index: 0
+        Locals: []
+        Body: 412A0F0B
+  - Type: DATA
+    Segments:
+      - SectionOffset:   6
+        InitFlags:       0
+        Offset:
+          Opcode:          I32_CONST
+          Value:           65536
+        Content:          'DEADBEEF'
+  - Type: CUSTOM
+    Name: name
+    FunctionNames:
+      - Index: 0
+        Name: get_42
+...

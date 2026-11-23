@@ -8,10 +8,7 @@ description = "Tooling for ML in LLVM"
 readme = "README.md"
 requires-python = ">=3.8"
 dynamic = ["version"]
-license = {text = "Apache-2.0 WITH LLVM-exception"}
-classifiers = [
-  "License :: OSI Approved :: Apache Software License"
-]
+license = "Apache-2.0 WITH LLVM-exception"
 
 [tool.setuptools.dynamic]
 version = {attr = "mlgo.__version__"}

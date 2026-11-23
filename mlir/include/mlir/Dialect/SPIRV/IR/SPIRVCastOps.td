@@ -34,17 +34,47 @@ class SPIRV_CastOp<string mnemonic, Type resultType, Type operandType,
   }];
 }
 
+// Saturating conversions between signed and unsigned integers. Unlike the ops
+// derived from SPIRV_CastOp, they do not accept cooperative matrices, and the
+// component widths of the operand and the result may be equal or different.
+class SPIRV_SatConvertOp<string mnemonic, list<Trait> traits = []> :
+      SPIRV_Op<mnemonic,
+             !listconcat(traits,
+                         [Pure, SameOperandsAndResultShape])> {
+  let availability = [
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Kernel]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$operand
+  );
+
+  let results = (outs
+    SPIRV_ScalarOrVectorOf<SPIRV_Integer>:$result
+  );
+
+  let assemblyFormat = [{
+    $operand attr-dict `:` type($operand) `to` type($result)
+  }];
+
+  // No additional verification needed in addition to the ODS-generated ones.
+  let hasVerifier = 0;
+}
+
 // -----
 
 def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   let summary = "Bit pattern-preserving type conversion.";
 
   let description = [{
-    Result Type must be an OpTypePointer, or a scalar or vector of
-    numerical-type.
+    Result Type must be an OpTypePointer, cooperative matrix, or a scalar or
+    vector of numerical-type.
 
-    Operand must have a type of OpTypePointer, or a scalar or vector of
-    numerical-type. It must be a different type than Result Type.
+    Operand must have a type of OpTypePointer, cooperative matrix, or a scalar
+    or vector of numerical-type. It must be a different type than Result Type.
 
     If either Result Type or Operand is a pointer, the other must be a
     pointer (diverges from the SPIR-V spec).
@@ -71,11 +101,11 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
   }];
 
   let arguments = (ins
-    SPIRV_ScalarOrVectorOrPtr:$operand
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$operand
   );
 
   let results = (outs
-    SPIRV_ScalarOrVectorOrPtr:$result
+    SPIRV_ScalarOrVectorOrPtrOrCoopMatrix:$result
   );
 
   let assemblyFormat = [{
@@ -86,7 +116,7 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
 
 // -----
 
-def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_Float, []> {
+def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_AnyFloat, []> {
   let summary = [{
     Convert value numerically from floating point to signed integer, with
     round toward 0.0.
@@ -111,7 +141,7 @@ def SPIRV_ConvertFToSOp : SPIRV_CastOp<"ConvertFToS", SPIRV_Integer, SPIRV_Float
 
 // -----
 
-def SPIRV_ConvertFToUOp : SPIRV_CastOp<"ConvertFToU", SPIRV_Integer, SPIRV_Float, []> {
+def SPIRV_ConvertFToUOp : SPIRV_CastOp<"ConvertFToU", SPIRV_Integer, SPIRV_AnyFloat, []> {
   let summary = [{
     Convert value numerically from floating point to unsigned integer, with
     round toward 0.0.
@@ -138,7 +168,7 @@ def SPIRV_ConvertFToUOp : SPIRV_CastOp<"ConvertFToU", SPIRV_Integer, SPIRV_Float
 // -----
 
 def SPIRV_ConvertSToFOp : SPIRV_CastOp<"ConvertSToF",
-                                   SPIRV_Float,
+                                   SPIRV_AnyFloat,
                                    SPIRV_Integer,
                                    [SignedOp]> {
   let summary = [{
@@ -165,7 +195,7 @@ def SPIRV_ConvertSToFOp : SPIRV_CastOp<"ConvertSToF",
 // -----
 
 def SPIRV_ConvertUToFOp : SPIRV_CastOp<"ConvertUToF",
-                                   SPIRV_Float,
+                                   SPIRV_AnyFloat,
                                    SPIRV_Integer,
                                    [UnsignedOp]> {
   let summary = [{
@@ -192,8 +222,8 @@ def SPIRV_ConvertUToFOp : SPIRV_CastOp<"ConvertUToF",
 // -----
 
 def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
-                                SPIRV_Float,
-                                SPIRV_Float,
+                                SPIRV_AnyFloat,
+                                SPIRV_AnyFloat,
                                 [UsableInSpecConstantOp]> {
   let summary = [{
     Convert value numerically from one floating-point width to another
@@ -204,16 +234,16 @@ def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
     Result Type must be a scalar or vector of floating-point type.
 
     Float Value must be a scalar or vector of floating-point type.  It must
-    have the same number of components as Result Type.  The component width
-    cannot equal the component width in Result Type.
+    have the same number of components as Result Type.  The component type
+    must not equal the component type in Result Type.
 
     Results are computed per component.
 
     #### Example:
 
     ```mlir
-    %1 = spirv.FConvertOp %0 : f32 to f64
-    %3 = spirv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
+    %1 = spirv.FConvert %0 : f32 to f64
+    %3 = spirv.FConvert %2 : vector<3xf32> to vector<3xf64>
     ```
   }];
 }
@@ -240,8 +270,8 @@ def SPIRV_SConvertOp : SPIRV_CastOp<"SConvert",
     #### Example:
 
     ```mlir
-    %1 = spirv.SConvertOp %0 : i32 to i64
-    %3 = spirv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.SConvert %0 : i32 to i64
+    %3 = spirv.SConvert %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
@@ -269,8 +299,60 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
     #### Example:
 
     ```mlir
-    %1 = spirv.UConvertOp %0 : i32 to i64
-    %3 = spirv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.UConvert %0 : i32 to i64
+    %3 = spirv.UConvert %2 : vector<3xi32> to vector<3xi64>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_SatConvertSToUOp : SPIRV_SatConvertOp<"SatConvertSToU", [SignedOp]> {
+  let summary = [{
+    Convert a signed integer to unsigned integer. Converted values outside
+    the representable range of Result Type are clamped to the nearest
+    representable value of Result Type.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Signed Value must be a scalar or vector of integer type.  It must have
+    the same number of components as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.SatConvertSToU %0 : i32 to i8
+    %3 = spirv.SatConvertSToU %2 : vector<3xi32> to vector<3xi32>
+    ```
+  }];
+}
+
+// -----
+
+def SPIRV_SatConvertUToSOp : SPIRV_SatConvertOp<"SatConvertUToS", [UnsignedOp]> {
+  let summary = [{
+    Convert an unsigned integer to signed integer. Converted values outside
+    the representable range of Result Type are clamped to the nearest
+    representable value of Result Type.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of integer type.
+
+    Unsigned Value must be a scalar or vector of integer type.  It must have
+    the same number of components as Result Type.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %1 = spirv.SatConvertUToS %0 : i32 to i8
+    %3 = spirv.SatConvertUToS %2 : vector<3xi32> to vector<3xi32>
     ```
   }];
 }
@@ -390,7 +472,7 @@ def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
     #### Example:
 
     ```mlir
-    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to
+    %1 = spirv.PtrCastToGeneric %0 : !spirv.ptr<f32, CrossWorkgroup> to
          !spirv.ptr<f32, Generic>
     ```
   }];
@@ -433,8 +515,8 @@ def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [Pure]> {
     #### Example:
 
     ```mlir
-       %1 = spirv.GenericCastToPtrOp %0 : !spirv.ptr<f32, Generic> to
-       !spirv.ptr<f32, CrossWorkGroup>
+    %1 = spirv.GenericCastToPtr %0 : !spirv.ptr<f32, Generic> to
+         !spirv.ptr<f32, CrossWorkgroup>
     ```
   }];
 
@@ -482,8 +564,8 @@ def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [Pur
     #### Example:
 
     ```mlir
-       %1 = spirv.GenericCastToPtrExplicitOp %0 : !spirv.ptr<f32, Generic> to
-       !spirv.ptr<f32, CrossWorkGroup>
+    %1 = spirv.GenericCastToPtrExplicit %0 : !spirv.ptr<f32, Generic> to
+         !spirv.ptr<f32, CrossWorkgroup>
     ```
   }];
 

@@ -18,45 +18,47 @@
 # SEC: There are no relocations in this file.
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000: bl 0x2018
-# CHECK-NEXT:           bl 0x2018
-# CHECK-NEXT:           bl 0x2018
-# CHECK-NEXT:           bl 0x2002008
+# PD-NEXT:        2000: bl 0x2028
 # PD-NEXT:              bl 0x2028
+# PD-NEXT:              bl 0x2028
+# PI-NEXT:        2000: bl 0x2038
 # PI-NEXT:              bl 0x2038
-
-## high = 0x02002008 = 65536*512+8200
-# PD:         <__LongThunk_high>:
-# PD-NEXT:        2018: lis 12, 512
-# PD-NEXT:              addi 12, 12, 8200
-# PD-NEXT:              mtctr 12
-# PD-NEXT:              bctr
+# PI-NEXT:              bl 0x2038
+# CHECK-NEXT:           bl 0x2002008
+# CHECK-NEXT:           bl 0x2018
 
 ## .text_high+16 = 0x02002010 = 65536*512+8208
 # PD:         <__LongThunk_>:
-# PD-NEXT:        2028: lis 12, 512
+# PD-NEXT:        2018: lis 12, 512
 # PD-NEXT:              addi 12, 12, 8208
 # PD-NEXT:              mtctr 12
 # PD-NEXT:              bctr
 
-## high-0x2028 = 0x02002008-0x2020 = 65536*512-24
-# PI:         <__LongThunk_high>:
+## high = 0x02002008 = 65536*512+8200
+# PD:         <__LongThunk_high>:
+# PD-NEXT:        2028: lis 12, 512
+# PD-NEXT:              addi 12, 12, 8200
+# PD-NEXT:              mtctr 12
+# PD-NEXT:              bctr
+
+## .text_high+16-0x2020 = 0x02002010-0x2020 = 65536*512-16
+# PI:         <__LongThunk_>:
 # PI-NEXT:        2018: mflr 0
 # PI-NEXT:              bcl 20, 31, 0x2020
 # PI-NEXT:        2020: mflr 12
 # PI-NEXT:              addis 12, 12, 512
-# PI-NEXT:              addi 12, 12, -24
+# PI-NEXT:              addi 12, 12, -16
 # PI-NEXT:              mtlr 0
 # PI-NEXT:              mtctr 12
 # PI-NEXT:              bctr
 
-## .text_high+16-0x2048 = 0x02002010-0x2048 = 65536*512-48
-# PI:         <__LongThunk_>:
+## high-0x2040 = 0x02002008-0x2040 = 65536*512-56
+# PI:         <__LongThunk_high>:
 # PI-NEXT:        2038: mflr 0
 # PI-NEXT:              bcl 20, 31, 0x2040
 # PI-NEXT:        2040: mflr 12
 # PI-NEXT:              addis 12, 12, 512
-# PI-NEXT:              addi 12, 12, -48
+# PI-NEXT:              addi 12, 12, -56
 # PI-NEXT:              mtlr 0
 # PI-NEXT:              mtctr 12
 # PI-NEXT:              bctr

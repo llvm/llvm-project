@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=bpfel < %s | FileCheck %s
-; RUN: llc -mtriple=bpfel -mcpu=v3 < %s | FileCheck %s
+; RUN: opt -passes=expand-memcmp -mtriple=bpfel -S < %s | llc -mtriple=bpfel | FileCheck %s
+; RUN: opt -passes=expand-memcmp -mtriple=bpfel -mcpu=v3 -S < %s | llc -mtriple=bpfel -mcpu=v3 | FileCheck %s
 ;
 ; Source code:
 ;   /* set aligned 4 to minimize the number of loads */
@@ -49,7 +49,7 @@ entry:
 ; CHECK-DAG:   *(u32 *)(r10 - 12)
 ; CHECK-DAG:   *(u32 *)(r1 + 8)
 ; CHECK-DAG:   *(u32 *)(r1 + 12)
-; CHECK-DAG:   *(u32 *)(r2 + 16)
+; CHECK-DAG:   *(u32 *)(r1 + 16)
 ; CHECK-DAG:   *(u32 *)(r10 - 4)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn

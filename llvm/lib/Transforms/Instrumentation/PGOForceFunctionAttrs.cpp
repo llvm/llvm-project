@@ -20,7 +20,7 @@ static bool shouldRunOnFunction(Function &F, ProfileSummaryInfo &PSI,
   if (F.isDeclaration())
     return false;
   // Respect existing attributes.
-  if (F.hasOptNone() || F.hasOptSize() || F.hasMinSize())
+  if (F.hasOptNone() || F.hasOptSize())
     return false;
   if (F.hasFnAttribute(Attribute::Cold))
     return true;
@@ -52,14 +52,25 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
       F.addFnAttr(Attribute::MinSize);
       break;
     case PGOOptions::ColdFuncOpt::OptNone:
-      // alwaysinline is incompatible with optnone.
+      // alwaysinline functions will be inlined regardless (alwaysinline takes
+      // precedence over optnone), and noinline is incompatible with
+      // alwaysinline.
       if (F.hasFnAttribute(Attribute::AlwaysInline))
         continue;
       F.addFnAttr(Attribute::OptimizeNone);
       F.addFnAttr(Attribute::NoInline);
       break;
     }
+
+    FAM.clear(F, F.getName());
     MadeChange = true;
   }
-  return MadeChange ? PreservedAnalyses::none() : PreservedAnalyses::all();
+
+  if (!MadeChange)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

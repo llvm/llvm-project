@@ -17,6 +17,7 @@
 #include "lsan_allocator.h"
 #include "lsan_common.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_dl.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
 #include "sanitizer_common/sanitizer_thread_history.h"
 #include "sanitizer_common/sanitizer_thread_registry.h"
@@ -66,12 +67,15 @@ u32 ThreadCreate(u32 parent_tid, bool detached, void *arg) {
   return thread_registry->CreateThread(0, detached, parent_tid, arg);
 }
 
-void ThreadContextLsanBase::ThreadStart(u32 tid, tid_t os_id,
+void ThreadContextLsanBase::ThreadStart(u32 tid, ThreadID os_id,
                                         ThreadType thread_type, void *arg) {
   thread_registry->StartThread(tid, os_id, thread_type, arg);
 }
 
-void ThreadFinish() { thread_registry->FinishThread(GetCurrentThreadId()); }
+void ThreadFinish() {
+  ClearDlerror();
+  thread_registry->FinishThread(GetCurrentThreadId());
+}
 
 void EnsureMainThreadIDIsCorrect() {
   if (GetCurrentThreadId() == kMainTid)
@@ -80,7 +84,7 @@ void EnsureMainThreadIDIsCorrect() {
 
 ///// Interface to the common LSan module. /////
 
-void GetThreadExtraStackRangesLocked(tid_t os_id,
+void GetThreadExtraStackRangesLocked(ThreadID os_id,
                                      InternalMmapVector<Range> *ranges) {}
 void GetThreadExtraStackRangesLocked(InternalMmapVector<Range> *ranges) {}
 
@@ -99,11 +103,11 @@ ThreadRegistry *GetLsanThreadRegistryLocked() {
   return thread_registry;
 }
 
-void GetRunningThreadsLocked(InternalMmapVector<tid_t> *threads) {
+void GetRunningThreadsLocked(InternalMmapVector<ThreadID> *threads) {
   GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *threads) {
         if (tctx->status == ThreadStatusRunning) {
-          reinterpret_cast<InternalMmapVector<tid_t> *>(threads)->push_back(
+          reinterpret_cast<InternalMmapVector<ThreadID> *>(threads)->push_back(
               tctx->os_id);
         }
       },

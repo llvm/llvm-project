@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 // TSX instructions
 
+// Test if in transactional execution.
 def X86xtest: SDNode<"X86ISD::XTEST", SDTypeProfile<1, 0, [SDTCisVT<0, i32>]>,
                      [SDNPHasChain, SDNPSideEffect]>;
 

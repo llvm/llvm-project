@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/MLProgram/IR/MLProgram.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ml_program;
@@ -39,14 +37,6 @@ struct MLProgramInlinerInterface : public DialectInlinerInterface {
 
 struct MLProgramOpAsmDialectInterface : public OpAsmDialectInterface {
   using OpAsmDialectInterface::OpAsmDialectInterface;
-
-  AliasResult getAlias(Attribute attr, raw_ostream &os) const override {
-    if (llvm::isa<ExternAttr>(attr)) {
-      os << "extern";
-      return AliasResult::OverridableAlias;
-    }
-    return AliasResult::NoAlias;
-  }
 };
 } // namespace
 

@@ -17,6 +17,7 @@
 
 namespace lldb_private {
 class CommandPluginInterfaceImplementation;
+class CommandReturnObject;
 class SBCommandReturnObjectImpl;
 namespace python {
 class SWIGBridge;
@@ -41,6 +42,10 @@ public:
   explicit operator bool() const;
 
   bool IsValid() const;
+
+  /// Get the command as the user typed it. Empty string if commands were run on
+  /// behalf of lldb.
+  const char *GetCommand();
 
   const char *GetOutput();
 
@@ -127,10 +132,15 @@ public:
 
   const char *GetError(bool only_if_no_immediate);
 
+  /// Fail the command with the message of \a error. A successful \a error
+  /// leaves the result unchanged. An invalid \a error fails the command with
+  /// \a fallback_error_cstr, if given.
   void SetError(lldb::SBError &error,
                 const char *fallback_error_cstr = nullptr);
 
   void SetError(const char *error_cstr);
+
+  lldb::SBValueList GetValues(lldb::DynamicValueType use_dynamic);
 
 protected:
   friend class SBCommandInterpreter;
@@ -138,6 +148,7 @@ protected:
 
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
+  friend class lldb_private::ScriptInterpreterBridge;
 
   SBCommandReturnObject(lldb_private::CommandReturnObject &ref);
 

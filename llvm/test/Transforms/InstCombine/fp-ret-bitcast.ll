@@ -12,11 +12,11 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 @"\01L_OBJC_METH_VAR_NAME_112" = internal global [15 x i8] c"whiteComponent\00", section "__TEXT,__cstring,cstring_literals"
 @"\01L_OBJC_SELECTOR_REFERENCES_81" = internal global ptr @"\01L_OBJC_METH_VAR_NAME_112", section "__OBJC,__message_refs,literal_pointers,no_dead_strip"
 
-define void @bork() nounwind  {
+define void @bork(ptr %color, ptr %color.466) nounwind  {
 ; CHECK-LABEL: @bork(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[COLOR:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    [[TMP103:%.*]] = load ptr, ptr [[COLOR]], align 4
+; CHECK-NEXT:    [[TMP103:%.*]] = load ptr, ptr [[COLOR:%.*]], align 4
+; CHECK-NEXT:    store ptr [[TMP103]], ptr [[COLOR_466:%.*]], align 4
 ; CHECK-NEXT:    [[TMP105:%.*]] = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_81", align 4
 ; CHECK-NEXT:    [[TMP107:%.*]] = call float @objc_msgSend_fpret(ptr [[TMP103]], ptr [[TMP105]]) #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
@@ -24,8 +24,6 @@ define void @bork() nounwind  {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %color = alloca ptr
-  %color.466 = alloca ptr
   %tmp103 = load ptr, ptr %color, align 4
   store ptr %tmp103, ptr %color.466, align 4
   %tmp105 = load ptr, ptr @"\01L_OBJC_SELECTOR_REFERENCES_81", align 4

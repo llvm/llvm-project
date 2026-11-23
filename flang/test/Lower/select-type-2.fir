@@ -36,8 +36,8 @@
 // CHECK:           %[[VAL_1:.*]] = arith.constant false
 // CHECK:           %[[VAL_2:.*]] = arith.constant 9 : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant 777 : i32
-// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = ".result"}
-// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.ptr<none>> {bindc_name = ".result"}
+// CHECK:           %[[VAL_4:.*]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = ".result"}>
+// CHECK:           %[[VAL_5:.*]] = fir.alloca !fir.class<!fir.ptr<none>> <{bindc_name = ".result"}>
 // CHECK:           %[[VAL_6:.*]] = fir.call @_QPfstar() fastmath<contract> : () -> !fir.class<!fir.ptr<none>>
 // CHECK:           fir.save_result %[[VAL_6]] to %[[VAL_5]] : !fir.class<!fir.ptr<none>>, !fir.ref<!fir.class<!fir.ptr<none>>>
 // CHECK:           %[[VAL_7:.*]] = fir.load %[[VAL_5]] : !fir.ref<!fir.class<!fir.ptr<none>>>

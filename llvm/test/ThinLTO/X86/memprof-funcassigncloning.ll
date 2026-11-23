@@ -135,7 +135,7 @@ uselistorder ptr @_Znam, { 1, 0 }
 
 attributes #0 = { noinline optnone }
 
-!0 = !{!1, !3, !5}
+!0 = !{!3, !5, !1}
 !1 = !{!2, !"cold"}
 !2 = !{i64 -3461278137325233666, i64 -7799663586031895603}
 !3 = !{!4, !"notcold"}
@@ -163,50 +163,50 @@ attributes #0 = { noinline optnone }
 ; DUMP: Callsite Context Graph:
 ; DUMP: Node [[ENEW1ORIG:0x[a-z0-9]+]]
 ; DUMP:         Versions: 1 MIB:
-; DUMP:                 AllocType 2 StackIds: 0
+; DUMP:                 AllocType 1 StackIds: 0
 ; DUMP:                 AllocType 1 StackIds: 1
-; DUMP:                 AllocType 1 StackIds: 2
+; DUMP:                 AllocType 2 StackIds: 2
 ; DUMP:         (clone 0)
 ; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 2 3
+; DUMP: 	ContextIds: 1 2
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 2
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 3
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 1
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B:0x[a-z0-9]+]] AllocTypes: NotCold ContextIds: 2
 ; DUMP: 	Clones: [[ENEW1CLONE:0x[a-z0-9]+]]
-
-; DUMP: Node [[D:0x[a-z0-9]+]]
+;
+; DUMP: Node [[C]]
 ; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 0 (clone 0)
 ; DUMP: 	AllocTypes: NotColdCold
-; DUMP: 	ContextIds: 1 6
+; DUMP: 	ContextIds: 1 5
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 1
-; DUMP: 		Edge from Callee [[ENEW2ORIG:0x[a-z0-9]+]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
-; DUMP: 	CallerEdges:
-
-; DUMP: Node [[C]]
-; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 1 (clone 0)
-; DUMP: 	AllocTypes: NotColdCold
-; DUMP: 	ContextIds: 2 5
-; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C]] AllocTypes: NotCold ContextIds: 2
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[C]] AllocTypes: NotCold ContextIds: 1
 ; DUMP: 		Edge from Callee [[ENEW2CLONE:0x[a-z0-9]+]] to Caller: [[C]] AllocTypes: Cold ContextIds: 5
 ; DUMP: 	CallerEdges:
-
+;
 ; DUMP: Node [[B]]
-; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 2 (clone 0)
+; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 1 (clone 0)
 ; DUMP: 	AllocTypes: NotCold
-; DUMP: 	ContextIds: 3 4
+; DUMP: 	ContextIds: 2 4
 ; DUMP: 	CalleeEdges:
-; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 3
-; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
+; DUMP: 		Edge from Callee [[ENEW1ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 2
+; DUMP: 		Edge from Callee [[ENEW2ORIG:0x[a-z0-9]+]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
 ; DUMP: 	CallerEdges:
-
+;
+; DUMP: Node [[D:0x[a-z0-9]+]]
+; DUMP: 	Callee: 16147627620923572899 (_Z1EPPcS0_) Clones: 0 StackIds: 2 (clone 0)
+; DUMP: 	AllocTypes: NotColdCold
+; DUMP: 	ContextIds: 3 6
+; DUMP: 	CalleeEdges:
+; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 3
+; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
+; DUMP: 	CallerEdges:
+;
 ; DUMP: Node [[ENEW2ORIG]]
 ; DUMP:         Versions: 1 MIB:
+; DUMP:                 AllocType 1 StackIds: 1
+; DUMP:                 AllocType 2 StackIds: 0
 ; DUMP:                 AllocType 1 StackIds: 2
-; DUMP:                 AllocType 2 StackIds: 1
-; DUMP:                 AllocType 1 StackIds: 0
 ; DUMP:         (clone 0)
 ; DUMP: 	AllocTypes: NotCold
 ; DUMP: 	ContextIds: 4 6
@@ -215,25 +215,25 @@ attributes #0 = { noinline optnone }
 ; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[B]] AllocTypes: NotCold ContextIds: 4
 ; DUMP: 		Edge from Callee [[ENEW2ORIG]] to Caller: [[D]] AllocTypes: NotCold ContextIds: 6
 ; DUMP: 	Clones: [[ENEW2CLONE]]
-
+;
 ; DUMP: Node [[ENEW1CLONE]]
 ; DUMP:         Versions: 1 MIB:
-; DUMP:                 AllocType 2 StackIds: 0
+; DUMP:                 AllocType 1 StackIds: 0
 ; DUMP:                 AllocType 1 StackIds: 1
-; DUMP:                 AllocType 1 StackIds: 2
+; DUMP:                 AllocType 2 StackIds: 2
 ; DUMP:         (clone 0)
 ; DUMP: 	AllocTypes: Cold
-; DUMP: 	ContextIds: 1
+; DUMP: 	ContextIds: 3
 ; DUMP: 	CalleeEdges:
 ; DUMP: 	CallerEdges:
-; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 1
+; DUMP: 		Edge from Callee [[ENEW1CLONE]] to Caller: [[D]] AllocTypes: Cold ContextIds: 3
 ; DUMP: 	Clone of [[ENEW1ORIG]]
-
+;
 ; DUMP: Node [[ENEW2CLONE]]
 ; DUMP:         Versions: 1 MIB:
+; DUMP:                 AllocType 1 StackIds: 1
+; DUMP:                 AllocType 2 StackIds: 0
 ; DUMP:                 AllocType 1 StackIds: 2
-; DUMP:                 AllocType 2 StackIds: 1
-; DUMP:                 AllocType 1 StackIds: 0
 ; DUMP:         (clone 0)
 ; DUMP: 	AllocTypes: Cold
 ; DUMP: 	ContextIds: 5

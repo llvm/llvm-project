@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/PassTimingInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/PassRegistry.h"
 #include <gtest/gtest.h>
@@ -27,6 +28,8 @@ namespace llvm {
 
 void initializePass1Pass(PassRegistry &);
 void initializePass2Pass(PassRegistry &);
+
+} // namespace llvm
 
 namespace {
 struct Pass1 : public ModulePass {
@@ -55,7 +58,6 @@ public:
 };
 char Pass2::ID;
 } // namespace
-} // namespace llvm
 
 INITIALIZE_PASS(Pass1, "Pass1", "Pass1", false, false)
 INITIALIZE_PASS(Pass2, "Pass2", "Pass2", false, false)
@@ -74,8 +76,8 @@ TEST(TimePassesTest, LegacyCustomOut) {
 
   // Setup pass manager
   legacy::PassManager PM1;
-  PM1.add(new llvm::Pass1());
-  PM1.add(new llvm::Pass2());
+  PM1.add(new Pass1());
+  PM1.add(new Pass2());
 
   // Enable time-passes and run passes.
   TimePassesIsEnabled = true;
@@ -99,7 +101,7 @@ TEST(TimePassesTest, LegacyCustomOut) {
 
   // Now run just a single pass to populate timers again.
   legacy::PassManager PM2;
-  PM2.add(new llvm::Pass2());
+  PM2.add(new Pass2());
   PM2.run(M);
 
   // Generate report again.
@@ -115,8 +117,8 @@ TEST(TimePassesTest, LegacyCustomOut) {
   TimePassesIsEnabled = false;
 }
 
-class MyPass1 : public PassInfoMixin<MyPass1> {};
-class MyPass2 : public PassInfoMixin<MyPass2> {};
+class MyPass1 : public OptionalPassInfoMixin<MyPass1> {};
+class MyPass2 : public OptionalPassInfoMixin<MyPass2> {};
 
 TEST(TimePassesTest, CustomOut) {
   PassInstrumentationCallbacks PIC;
@@ -161,8 +163,8 @@ TEST(TimePassesTest, CustomOut) {
   PI.runBeforePass(Pass2, M);
   PI.runAfterPass(Pass2, M, PreservedAnalyses::all());
 
-  // Generate report by deleting the handler.
-  TimePasses.reset();
+  // Clear and generate report again.
+  TimePasses->print();
 
   // There should be Pass2 in this report and no Pass1.
   EXPECT_FALSE(TimePassesStr.str().empty());

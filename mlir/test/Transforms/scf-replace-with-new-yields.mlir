@@ -16,3 +16,23 @@ func.func @doubleup(%lb: index, %ub: index, %step: index, %extra_arg: f32) -> f3
 //       CHECK:     %[[DOUBLE2:.+]] = arith.addf %[[DOUBLE]], %[[DOUBLE]]
 //       CHECK:     scf.yield %[[DOUBLE]], %[[DOUBLE2]]
 //       CHECK:   return %[[NEWLOOP]]#0
+
+// -----
+
+func.func @unsigned_loop(%lb: i32, %ub: i32, %step: i32,
+                         %extra_arg: f32) -> f32 {
+  %0 = scf.for unsigned %i = %lb to %ub step %step
+      iter_args(%iter = %extra_arg) -> (f32) : i32 {
+    %1 = arith.addf %iter, %iter : f32
+    scf.yield %1 : f32
+  } {test.marker}
+  return %0 : f32
+}
+// CHECK-LABEL: func @unsigned_loop
+// CHECK-SAME: %[[ARG:[a-zA-Z0-9]+]]: f32
+// CHECK: %[[NEWLOOP:.+]]:2 = scf.for unsigned
+// CHECK-SAME: iter_args(%[[INIT1:.+]] = %[[ARG]], %[[INIT2:.+]] = %[[ARG]]
+// CHECK: arith.addf %[[INIT1]], %[[INIT1]]
+// CHECK: scf.yield
+// CHECK-NEXT: } {test.marker, "test.trip-count" = "none"}
+// CHECK: return %[[NEWLOOP]]#0

@@ -8,7 +8,7 @@
 // An SNaN with no payload is formed by setting the bit after the
 // the quiet bit (MSB of the significand).
 
-// CHECK: float 0x7FF8000000000000, float 0x7FF4000000000000
+// CHECK: float +qnan, float +snan(0x200000)
 
 float f[] = {
   __builtin_nanf(""),
@@ -22,14 +22,14 @@ float f[] = {
 // but that should not cause a compilation error in the default
 // (ignore FP exceptions) mode.
 
-// CHECK: float 0x7FF8000000000000, float 0x7FFC000000000000
+// CHECK: float +qnan, float +nan(0x200000)
 
 float converted_to_float[] = {
   __builtin_nan(""),
   __builtin_nans(""),
 };
 
-// CHECK: double 0x7FF8000000000000, double 0x7FF4000000000000
+// CHECK: double +qnan, double +snan(0x4000000000000)
 
 double d[] = {
   __builtin_nan(""),

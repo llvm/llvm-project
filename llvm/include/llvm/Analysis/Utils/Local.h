@@ -14,6 +14,8 @@
 #ifndef LLVM_ANALYSIS_UTILS_LOCAL_H
 #define LLVM_ANALYSIS_UTILS_LOCAL_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 
 class DataLayout;
@@ -26,8 +28,8 @@ class Value;
 /// pointer). Return the result as a signed integer of intptr size.
 /// When NoAssumptions is true, no assumptions about index computation not
 /// overflowing is made.
-Value *emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL, User *GEP,
-                     bool NoAssumptions = false);
+LLVM_ABI Value *emitGEPOffset(IRBuilderBase *Builder, const DataLayout &DL,
+                              User *GEP, bool NoAssumptions = false);
 
 } // namespace llvm
 

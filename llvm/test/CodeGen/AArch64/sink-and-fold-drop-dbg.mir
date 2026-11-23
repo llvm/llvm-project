@@ -63,21 +63,16 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 callsEHReturn:   false
 callsUnwindInit: false
-hasEHCatchret:   false
+hasEHContTarget: false
 hasEHScopes:     false
 hasEHFunclets:   false
 isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gpr32common, preferred-register: '' }
-  - { id: 1, class: gpr32sp, preferred-register: '' }
-  - { id: 2, class: gpr32all, preferred-register: '' }
 liveins:
   - { reg: '$w0', virtual-reg: '%0' }
 frameInfo:
@@ -99,8 +94,8 @@ frameInfo:
   hasMustTailInVarArgFunc: false
   hasTailCall:     true
   localFrameSize:  0
-  savePoint:       ''
-  restorePoint:    ''
+  savePoint:       []
+  restorePoint:    []
 fixedStack:      []
 stack:           []
 entry_values:    []

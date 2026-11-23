@@ -11,7 +11,7 @@ define target("aarch64.svcount") @test_alloca_store_reload(target("aarch64.svcou
 ; CHECK-NEXT:    br i1 [[I1_PEEL]], label [[LOOP_EXIT:%.*]], label [[LOOP_BODY:%.*]]
 ; CHECK:       loop.body:
 ; CHECK-NEXT:    [[IND:%.*]] = phi i64 [ [[IND_NEXT:%.*]], [[LOOP_BODY]] ], [ 1, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[IPTR_GEP:%.*]] = getelementptr i64, ptr [[IPTR]], i64 [[IND]]
+; CHECK-NEXT:    [[IPTR_GEP:%.*]] = getelementptr [8 x i8], ptr [[IPTR]], i64 [[IND]]
 ; CHECK-NEXT:    store i64 [[IND]], ptr [[IPTR_GEP]], align 8
 ; CHECK-NEXT:    store target("aarch64.svcount") [[VAL1:%.*]], ptr [[PPTR]], align 2
 ; CHECK-NEXT:    [[IND_NEXT]] = add i64 [[IND]], 1

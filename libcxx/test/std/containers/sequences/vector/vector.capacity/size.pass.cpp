@@ -18,9 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-TEST_CONSTEXPR_CXX20 bool tests()
-{
-    {
+TEST_CONSTEXPR_CXX20 bool tests() {
+  {
     typedef std::vector<int> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
@@ -37,9 +36,9 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(c.size() == 1);
     c.erase(c.begin());
     assert(c.size() == 0);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::vector<int, min_allocator<int>> C;
     C c;
     ASSERT_NOEXCEPT(c.size());
@@ -56,35 +55,34 @@ TEST_CONSTEXPR_CXX20 bool tests()
     assert(c.size() == 1);
     c.erase(c.begin());
     assert(c.size() == 0);
-    }
-    {
-      typedef std::vector<int, safe_allocator<int>> C;
-      C c;
-      ASSERT_NOEXCEPT(c.size());
-      assert(c.size() == 0);
-      c.push_back(C::value_type(2));
-      assert(c.size() == 1);
-      c.push_back(C::value_type(1));
-      assert(c.size() == 2);
-      c.push_back(C::value_type(3));
-      assert(c.size() == 3);
-      c.erase(c.begin());
-      assert(c.size() == 2);
-      c.erase(c.begin());
-      assert(c.size() == 1);
-      c.erase(c.begin());
-      assert(c.size() == 0);
-    }
+  }
+  {
+    typedef std::vector<int, safe_allocator<int>> C;
+    C c;
+    ASSERT_NOEXCEPT(c.size());
+    assert(c.size() == 0);
+    c.push_back(C::value_type(2));
+    assert(c.size() == 1);
+    c.push_back(C::value_type(1));
+    assert(c.size() == 2);
+    c.push_back(C::value_type(3));
+    assert(c.size() == 3);
+    c.erase(c.begin());
+    assert(c.size() == 2);
+    c.erase(c.begin());
+    assert(c.size() == 1);
+    c.erase(c.begin());
+    assert(c.size() == 0);
+  }
 #endif
 
-    return true;
+  return true;
 }
 
-int main(int, char**)
-{
-    tests();
+int main(int, char**) {
+  tests();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
   return 0;
 }

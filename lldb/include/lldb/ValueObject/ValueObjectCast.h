@@ -20,23 +20,28 @@
 #include <optional>
 
 namespace lldb_private {
-class ConstString;
 
 /// A ValueObject that represents a given value represented as a different type.
 class ValueObjectCast : public ValueObject {
 public:
   ~ValueObjectCast() override;
 
-  static lldb::ValueObjectSP Create(ValueObject &parent, ConstString name,
+  static lldb::ValueObjectSP Create(ValueObject &parent, llvm::StringRef name,
                                     const CompilerType &cast_type);
 
-  std::optional<uint64_t> GetByteSize() override;
+  llvm::Expected<uint64_t> GetByteSize() override;
 
   llvm::Expected<uint32_t> CalculateNumChildren(uint32_t max) override;
 
   lldb::ValueType GetValueType() const override;
 
   bool IsInScope() override;
+
+  AddrAndType GetAddressOf(bool scalar_is_load_address = true) override;
+
+  const char *GetLocationAsCString() override;
+
+  llvm::Error CanSetValue() override;
 
   ValueObject *GetParent() override {
     return ((m_parent != nullptr) ? m_parent->GetParent() : nullptr);
@@ -47,7 +52,7 @@ public:
   }
 
 protected:
-  ValueObjectCast(ValueObject &parent, ConstString name,
+  ValueObjectCast(ValueObject &parent, llvm::StringRef name,
                   const CompilerType &cast_type);
 
   bool UpdateValue() override;
@@ -57,6 +62,9 @@ protected:
   CompilerType m_cast_type;
 
 private:
+  /// True if the value is a scalar but the cast lives in the parent's storage.
+  bool LivesInParentStorage();
+
   ValueObjectCast(const ValueObjectCast &) = delete;
   const ValueObjectCast &operator=(const ValueObjectCast &) = delete;
 };

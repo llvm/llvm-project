@@ -8,7 +8,7 @@ RUN: llvm-objdump -d --disassemble-symbols=use_avx512 %t | \
 RUN:   FileCheck %s --check-prefix=CHECK-DIS-NO-TRAP
 
 RUN: llvm-bolt %t --trap-avx512=1 -o %t.bolt --lite=0 2>&1 | FileCheck %s
-RUN: llvm-objdump -d --disassemble-symbols=use_avx512 %t.bolt | \
+RUN: llvm-objdump -d --disassemble-symbols=use_avx512,secondary_entry %t.bolt | \
 RUN:   FileCheck %s --check-prefix=CHECK-DIS
 
 RUN: llvm-bolt %t --trap-avx512=0 -o %t.bolt --lite=0
@@ -20,6 +20,7 @@ CHECK: BOLT-WARNING: 1 function will trap on entry
 ## Check that we have two ud2 instructions - one per entry.
 CHECK-DIS:      use_avx512
 CHECK-DIS-NEXT:    ud2
+CHECK-DIS:      <secondary_entry>:
 CHECK-DIS-NEXT:    ud2
 
 ## Check that we generate correct AVX-512

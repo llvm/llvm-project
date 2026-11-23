@@ -82,6 +82,6 @@ int nested(int a){
 // TCHECK-DAG: = !{i32 0, i32 {{-?[0-9]+}}, i32 {{-?[0-9]+}}, !"[[NNAME]]", i32 [[T1L]], i32 0, i32 {{[0-9]+}}}
 // TCHECK-DAG: = !{i32 0, i32 {{-?[0-9]+}}, i32 {{-?[0-9]+}}, !"[[NNAME]]", i32 [[T2L]], i32 0, i32 {{[0-9]+}}}
 
-// CHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
-// TCHECK-DAG: !{!"llvm.loop.vectorize.enable", i1 true}
+// CHECK-DAG: !{!"llvm.loop.vectorize.enable"}
+// TCHECK-DAG: !{!"llvm.loop.vectorize.enable"}
 #endif

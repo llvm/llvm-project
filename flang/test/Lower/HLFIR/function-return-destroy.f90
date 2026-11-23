@@ -59,9 +59,11 @@ subroutine test1a
 end subroutine test1a
 ! CHECK-LABEL:   func.func @_QPtest1a() {
 ! CHECK-NOT: fir.call{{.*}}Destroy
-! CHECK:           fir.if %{{.*}} {
-! CHECK-NEXT:        fir.freemem %{{.*}} : !fir.heap<!fir.type<_QMtypesTt1{x:f32}>>
+! CHECK-NOT: fir.freemem
+! CHECK:     hlfir.as_expr %{{.*}} move %true
 ! CHECK-NOT: fir.call{{.*}}Destroy
+! CHECK-NOT: fir.freemem
+! CHECK:     hlfir.destroy
 ! CHECK:           fir.if %{{.*}} {
 ! CHECK:             fir.call @_FortranAAllocatableDeallocate({{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
 ! CHECK-NOT: fir.call{{.*}}Destroy

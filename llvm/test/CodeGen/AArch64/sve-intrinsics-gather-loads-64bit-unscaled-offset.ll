@@ -115,7 +115,7 @@ define <vscale x 2 x i64> @gld1b_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.nxv2i8(<vscale x 2 x i1> %pg,
@@ -130,7 +130,7 @@ define <vscale x 2 x i64> @gld1h_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.nxv2i16(<vscale x 2 x i1> %pg,
@@ -145,7 +145,7 @@ define <vscale x 2 x i64> @gld1w_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %offsets)
   %load = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.gather.nxv2i32(<vscale x 2 x i1> %pg,
@@ -160,7 +160,7 @@ define <vscale x 2 x i64> @gld1d_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1.gather.nxv2i64(<vscale x 2 x i1> %pg,
@@ -174,7 +174,7 @@ define <vscale x 2 x double> @gld1d_d_double_sxtw(<vscale x 2 x i1> %pg, ptr %ba
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.gather.nxv2f64(<vscale x 2 x i1> %pg,
@@ -193,7 +193,7 @@ define <vscale x 2 x i64> @gld1sb_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.nxv2i8(<vscale x 2 x i1> %pg,
@@ -208,7 +208,7 @@ define <vscale x 2 x i64> @gld1sh_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.nxv2i16(<vscale x 2 x i1> %pg,
@@ -223,7 +223,7 @@ define <vscale x 2 x i64> @gld1sw_d_sxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0, z0.d, sxtw]
 ; CHECK-NEXT:    ret
-  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %sxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.sxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %offsets)
   %load = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.gather.nxv2i32(<vscale x 2 x i1> %pg,
@@ -243,7 +243,7 @@ define <vscale x 2 x i64> @gld1b_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1b { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.nxv2i8(<vscale x 2 x i1> %pg,
@@ -258,7 +258,7 @@ define <vscale x 2 x i64> @gld1h_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1h { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.nxv2i16(<vscale x 2 x i1> %pg,
@@ -273,7 +273,7 @@ define <vscale x 2 x i64> @gld1w_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1w { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %offsets)
   %load = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.gather.nxv2i32(<vscale x 2 x i1> %pg,
@@ -288,7 +288,7 @@ define <vscale x 2 x i64> @gld1d_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vscal
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i64> @llvm.aarch64.sve.ld1.gather.nxv2i64(<vscale x 2 x i1> %pg,
@@ -302,7 +302,7 @@ define <vscale x 2 x double> @gld1d_d_double_uxtw(<vscale x 2 x i1> %pg, ptr %ba
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x double> @llvm.aarch64.sve.ld1.gather.nxv2f64(<vscale x 2 x i1> %pg,
@@ -321,7 +321,7 @@ define <vscale x 2 x i64> @gld1sb_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sb { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i8> @llvm.aarch64.sve.ld1.gather.nxv2i8(<vscale x 2 x i1> %pg,
@@ -336,7 +336,7 @@ define <vscale x 2 x i64> @gld1sh_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sh { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %b)
   %load = call <vscale x 2 x i16> @llvm.aarch64.sve.ld1.gather.nxv2i16(<vscale x 2 x i1> %pg,
@@ -351,7 +351,7 @@ define <vscale x 2 x i64> @gld1sw_d_uxtw(<vscale x 2 x i1> %pg, ptr %base, <vsca
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1sw { z0.d }, p0/z, [x0, z0.d, uxtw]
 ; CHECK-NEXT:    ret
-  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> undef,
+  %uxtw = call <vscale x 2 x i64> @llvm.aarch64.sve.uxtw.nxv2i64(<vscale x 2 x i64> poison,
                                                                  <vscale x 2 x i1> %pg,
                                                                  <vscale x 2 x i64> %offsets)
   %load = call <vscale x 2 x i32> @llvm.aarch64.sve.ld1.gather.nxv2i32(<vscale x 2 x i1> %pg,

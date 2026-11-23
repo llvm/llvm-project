@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify %s -stdlib=libc++ -std=c++20 -fsyntax-only
+// RUN: %clang_cc1 -verify %s -stdlib=libc++ -std=c++20 -fsyntax-only -Wno-coroutines-unsupported-target
 
 namespace std {
 template <class Promise = void>

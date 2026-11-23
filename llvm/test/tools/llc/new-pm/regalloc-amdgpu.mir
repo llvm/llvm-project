@@ -2,11 +2,65 @@
 # RUN: llc -mtriple=amdgcn --passes='regallocfast<filter=sgpr>,regallocfast<filter=wwm>,regallocfast<filter=vgpr>' --print-pipeline-passes --filetype=null %s | FileCheck %s --check-prefix=PASS
 # RUN: not llc -mtriple=amdgcn --passes='regallocfast<filter=bad-filter>' --print-pipeline-passes --filetype=null %s 2>&1 | FileCheck %s --check-prefix=BAD-FILTER
 
+# Test default behavior at -O0: uses fast allocator
+# RUN: llc -mtriple=amdgcn -enable-new-pm -O0 -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEFAULT-O0
+
+# Test default behavior at -O2: uses greedy allocator
+# RUN: llc -mtriple=amdgcn -enable-new-pm -O2 -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=DEFAULT-O2
+
+# Test AMDGPU-specific NPM regalloc options
+# RUN: llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc-npm=fast -wwm-regalloc-npm=fast -vgpr-regalloc-npm=fast -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-FAST
+# RUN: llc -mtriple=amdgcn -enable-new-pm -O3 -sgpr-regalloc-npm=greedy -wwm-regalloc-npm=greedy -vgpr-regalloc-npm=greedy -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-GREEDY
+# RUN: llc -mtriple=amdgcn -enable-new-pm -O3 -sgpr-regalloc-npm=fast -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=NPM-MIXED
+
+# Test error cases for unsupported allocators
+# RUN: not llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc-npm=basic -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-BASIC
+# RUN: not llc -mtriple=amdgcn -enable-new-pm -vgpr-regalloc-npm=pbqp -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-PBQP
+
+# Test error when legacy PM options are used with NPM
+# RUN: not llc -mtriple=amdgcn -enable-new-pm -sgpr-regalloc=greedy -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-LEGACY
+
+# Test error when generic --regalloc-npm is used with AMDGPU
+# RUN: not llc -mtriple=amdgcn -enable-new-pm -regalloc-npm=fast -filetype=null %s 2>&1 | FileCheck %s --check-prefix=ERR-GENERIC
+
 # PASS: regallocfast<filter=sgpr>
 # PASS: regallocfast<filter=wwm>
 # PASS: regallocfast<filter=vgpr>
 # BAD-FILTER: invalid regallocfast register filter 'bad-filter'
 
+# At -O0, default uses fast allocator for all register classes.
+# DEFAULT-O0: regallocfast<filter=sgpr
+# DEFAULT-O0: regallocfast<filter=wwm
+# DEFAULT-O0: regallocfast<filter=vgpr
+
+# At -O2, default uses greedy allocator for all register classes.
+# DEFAULT-O2: greedy<sgpr>
+# DEFAULT-O2: greedy<wwm>
+# DEFAULT-O2: greedy<vgpr>
+
+# NPM-FAST: regallocfast<filter=sgpr
+# NPM-FAST: regallocfast<filter=wwm
+# NPM-FAST: regallocfast<filter=vgpr
+
+# NPM-GREEDY: greedy<sgpr>
+# NPM-GREEDY: greedy<wwm>
+# NPM-GREEDY: greedy<vgpr>
+
+# At -O3, default is greedy. With -sgpr-regalloc-npm=fast, SGPR uses fast,
+# but WWM and VGPR still use greedy.
+# NPM-MIXED: regallocfast<filter=sgpr
+# NPM-MIXED: greedy<wwm>
+# NPM-MIXED: greedy<vgpr>
+
+# Error messages for unsupported allocators.
+# ERR-BASIC: unsupported register allocator 'basic' for SGPR registers
+# ERR-PBQP: unsupported register allocator 'pbqp' for VGPR registers
+
+# Error message for legacy PM options with NPM.
+# ERR-LEGACY: -sgpr-regalloc, -vgpr-regalloc, and -wwm-regalloc are legacy PM options
+
+# Error message for generic --regalloc-npm with AMDGPU.
+# ERR-GENERIC: -regalloc-npm not supported for amdgcn
 ---
 name: f
 ...

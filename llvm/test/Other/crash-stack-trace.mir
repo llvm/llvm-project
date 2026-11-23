@@ -1,0 +1,16 @@
+# REQUIRES: asserts, backtrace, x86-registered-target
+
+# RUN: not --crash llc -mtriple=x86_64-pc-linux-gnu -passes=trigger-crash-machine-function -filetype=null %s 2>&1 | \
+# RUN: FileCheck %s --check-prefix=CHECK-MACHINE-FUNCTION
+
+# CHECK-MACHINE-FUNCTION:      Stack dump:
+# CHECK-MACHINE-FUNCTION-NEXT: 0. Program arguments:
+# CHECK-MACHINE-FUNCTION-NEXT: 1. Running pass "function(machine-function(trigger-crash-machine-function))" on module "{{.*}}crash-stack-trace.mir"
+# CHECK-MACHINE-FUNCTION-NEXT: 2. Running pass "machine-function(trigger-crash-machine-function)" on function "foo"
+
+---
+name: foo
+body: |
+  bb.0:
+    RET 0
+...

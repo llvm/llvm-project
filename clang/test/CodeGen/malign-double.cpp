@@ -1,8 +1,10 @@
 // RUN: %clang_cc1 -malign-double -triple i386-unknown-linux -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=CHECK-ON --check-prefix=CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -malign-double -triple i386-unknown-linux -emit-llvm %s -o -   | FileCheck --check-prefix=CHECK-ON --check-prefix=CHECK %s %}
 
 // RUN: %clang_cc1 -triple i386-unknown-linux -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=CHECK-OFF --check-prefix=CHECK %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple i386-unknown-linux -emit-llvm %s -o -   | FileCheck --check-prefix=CHECK-OFF --check-prefix=CHECK %s %}
 
 /* Structs S1, S2, S3, S4, and union U5 are taken from Intel, "IA-64
    Software Conventions and Runtime Architecture Guide", version of

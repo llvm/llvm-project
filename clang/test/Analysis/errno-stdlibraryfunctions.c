@@ -99,7 +99,9 @@ void errno_mkdtemp3(CHAR_PTR template) {
   }
 }
 
-void errno_getcwd(char *Buf, size_t Sz) {
+void errno_getcwd_buf_nonnull(char *Buf, size_t Sz) {
+  if (Buf == NULL)
+    return;
   char *Path = getcwd(Buf, Sz);
   if (Sz == 0) {
     clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
@@ -110,6 +112,17 @@ void errno_getcwd(char *Buf, size_t Sz) {
     if (errno) {}                      // no warning
   } else {
     clang_analyzer_eval(Path == Buf);  // expected-warning{{TRUE}}
+    if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+void errno_getcwd_buf_null() {
+  // POSIX does not mention this case but many implementations (Linux, FreeBSD) work this way.
+  char *Path = getcwd(NULL, 1);
+  if (Path == NULL) {
+    clang_analyzer_eval(errno != 0);   // expected-warning{{TRUE}}
+    if (errno) {}                      // no warning
+  } else {
     if (errno) {}                      // expected-warning{{An undefined value may be read from 'errno'}}
   }
 }
@@ -160,5 +173,15 @@ void errno_realpath(char *Path, char *Buf) {
     if (errno) {}                     // no-warning
   } else {
     if (errno) {} // expected-warning{{An undefined value may be read from 'errno'}}
+  }
+}
+
+// A failed socket() sets errno to a non-zero value, so a caller that returns
+// errno on the failure path cannot return zero. GH43015 reported a false
+// use-after-free in clang 18.1.0. Since clang 19.1.0 the false positive is
+// no longer present.
+void GH43015(void) {
+  if (socket(1, 2, 3) < 0) {
+    clang_analyzer_eval(errno != 0); // expected-warning{{TRUE}}
   }
 }

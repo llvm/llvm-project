@@ -210,6 +210,11 @@ class BreakpointSerialization(TestBase):
                 "Source and dest breakpoints are not identical: \nsource: %s\ndest: %s"
                 % (source_text, copy_text),
             )
+            self.assertEqual(
+                source_bp.GetNumLocations(),
+                copy_bp.GetNumLocations(),
+                "Source and dest num locations are not the same",
+            )
 
     def do_check_resolvers(self):
         """Use Python APIs to check serialization of breakpoint resolvers"""
@@ -386,7 +391,7 @@ class BreakpointSerialization(TestBase):
         source_bps.Clear()
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeAuto, empty_module_list, empty_cu_list
         )
         bkpt.SetIgnoreCount(10)
         bkpt.SetThreadName("grubby")
@@ -394,7 +399,7 @@ class BreakpointSerialization(TestBase):
         all_bps.Append(bkpt)
 
         bkpt = self.orig_target.BreakpointCreateByName(
-            "blubby", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
+            "main", lldb.eFunctionNameTypeFull, empty_module_list, empty_cu_list
         )
         bkpt.SetCondition("something != something_else")
         bkpt.SetQueueName("grubby")

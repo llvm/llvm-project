@@ -1,8 +1,7 @@
 ! RUN: not %flang_fc1 -pedantic %s 2>&1 | FileCheck %s
 ! Test extension: allow forward references to dummy arguments or COMMON
 ! from specification expressions in scopes with IMPLICIT NONE(TYPE),
-! as long as those symbols are eventually typed later with the
-! same integer type they would have had without IMPLICIT NONE.
+! as long as those symbols are eventually typed later.
 
 !CHECK: warning: 'n1' was used without (or before) being explicitly typed
 !CHECK: error: No explicit type declared for dummy argument 'n1'
@@ -19,12 +18,15 @@ subroutine foo2(a, n2)
   double precision n2
 end
 
-!CHECK: warning: 'n3' was used without (or before) being explicitly typed
-!CHECK-NOT: error: Dummy argument 'n3'
-subroutine foo3(a, n3)
+!CHECK: warning: 'n3a' was used under IMPLICIT NONE(TYPE) before being explicitly typed
+!CHECK: warning: 'n3b' was used under IMPLICIT NONE(TYPE) before being explicitly typed
+!CHECK-NOT: error: Dummy argument 'n3a'
+!CHECK-NOT: error: Dummy argument 'n3b'
+subroutine foo3(a, n3a, n3b)
   implicit none
-  real a(n3)
-  integer n3
+  integer a(n3a, n3b)
+  integer n3a
+  integer(8) n3b
 end
 
 !CHECK: warning: 'n4' was used without (or before) being explicitly typed

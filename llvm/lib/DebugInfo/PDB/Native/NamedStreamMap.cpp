@@ -56,7 +56,11 @@ Error NamedStreamMap::load(BinaryStreamReader &Stream) {
     return EC;
   NamesBuffer.assign(Buffer.begin(), Buffer.end());
 
-  return OffsetIndexMap.load(Stream);
+  if (auto EC = OffsetIndexMap.load(Stream))
+    return EC;
+
+  uint32_t NiMac;
+  return Stream.readInteger(NiMac);
 }
 
 Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
@@ -69,17 +73,22 @@ Error NamedStreamMap::commit(BinaryStreamWriter &Writer) const {
   if (auto EC = Writer.writeFixedString(Data))
     return EC;
 
-  // And finally the Offset Index map.
+  // Followed by the Offset Index map.
   if (auto EC = OffsetIndexMap.commit(Writer))
+    return EC;
+
+  // And finally the NMTNI::niMac value.
+  if (auto EC = Writer.writeInteger<uint32_t>(0))
     return EC;
 
   return Error::success();
 }
 
 uint32_t NamedStreamMap::calculateSerializedLength() const {
-  return sizeof(uint32_t)                              // String data size
-         + NamesBuffer.size()                          // String data
-         + OffsetIndexMap.calculateSerializedLength(); // Offset Index Map
+  return sizeof(uint32_t)                             // String data size
+         + NamesBuffer.size()                         // String data
+         + OffsetIndexMap.calculateSerializedLength() // Offset Index Map
+         + sizeof(uint32_t);                          // NMTNI::niMac.
 }
 
 uint32_t NamedStreamMap::size() const { return OffsetIndexMap.size(); }

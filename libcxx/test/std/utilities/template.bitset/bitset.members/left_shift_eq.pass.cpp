@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=15000000
+
 // bitset<N>& operator<<=(size_t pos); // constexpr since C++23
 
 #include <bitset>
@@ -18,20 +20,20 @@
 
 template <std::size_t N>
 TEST_CONSTEXPR_CXX23 bool test_left_shift() {
-    std::vector<std::bitset<N> > const cases = get_test_cases<N>();
-    for (std::size_t c = 0; c != cases.size(); ++c) {
-        for (std::size_t s = 0; s <= N+1; ++s) {
-            std::bitset<N> v1 = cases[c];
-            std::bitset<N> v2 = v1;
-            v1 <<= s;
-            for (std::size_t i = 0; i < v1.size(); ++i)
-                if (i < s)
-                    assert(v1[i] == 0);
-                else
-                    assert(v1[i] == v2[i-s]);
-        }
+  std::vector<std::bitset<N> > const cases = get_test_cases<N>();
+  for (std::size_t c = 0; c != cases.size(); ++c) {
+    for (std::size_t s = 0; s <= N + 1; ++s) {
+      std::bitset<N> v1 = cases[c];
+      std::bitset<N> v2 = v1;
+      v1 <<= s;
+      for (std::size_t i = 0; i < v1.size(); ++i)
+        if (i < s)
+          assert(v1[i] == 0);
+        else
+          assert(v1[i] == v2[i - s]);
     }
-    return true;
+  }
+  return true;
 }
 
 int main(int, char**) {

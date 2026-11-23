@@ -746,3 +746,43 @@ define void @fixed_scalable_neg(ptr %ptr) vscale_range(1, 2) {
   store <4 x i64> zeroinitializer, ptr %ptr
   ret void
 }
+
+define void @memset_different_attributes_1(i1 %c, ptr %ptr) {
+; CHECK-LABEL: @memset_different_attributes_1(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[PTR:%.*]], i8 0, i64 20, i1 false)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %ptr, i8 0, i64 20, i1 false)
+  br i1 %c, label %if, label %end
+
+if:
+  call void @llvm.memset.p0.i64(ptr dereferenceable(20) %ptr, i8 0, i64 20, i1 false)
+  br label %end
+
+end:
+  ret void
+}
+
+define void @memset_different_attributes_2(i1 %c, ptr %ptr) {
+; CHECK-LABEL: @memset_different_attributes_2(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr dereferenceable(20) [[PTR:%.*]], i8 0, i64 20, i1 false)
+; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF:%.*]], label [[END:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    br label [[END]]
+; CHECK:       end:
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr dereferenceable(20) %ptr, i8 0, i64 20, i1 false)
+  br i1 %c, label %if, label %end
+
+if:
+  call void @llvm.memset.p0.i64(ptr %ptr, i8 0, i64 20, i1 false)
+  br label %end
+
+end:
+  ret void
+}

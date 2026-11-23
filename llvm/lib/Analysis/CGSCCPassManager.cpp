@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CGSCCPassManager.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
@@ -22,7 +24,7 @@
 #include "llvm/IR/PassManagerImpl.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -33,25 +35,25 @@
 
 using namespace llvm;
 
+STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
+
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
 namespace llvm {
-static cl::opt<bool> AbortOnMaxDevirtIterationsReached(
-    "abort-on-max-devirt-iterations-reached",
-    cl::desc("Abort when the max iterations for devirtualization CGSCC repeat "
-             "pass is reached"));
-
 AnalysisKey ShouldNotRunFunctionPassesAnalysis::Key;
 
 // Explicit instantiations for the core proxy templates.
-template class AllAnalysesOn<LazyCallGraph::SCC>;
-template class AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE AllAnalysesOn<LazyCallGraph::SCC>;
+template class LLVM_EXPORT_TEMPLATE
+    AnalysisManager<LazyCallGraph::SCC, LazyCallGraph &>;
 template class PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager,
                            LazyCallGraph &, CGSCCUpdateResult &>;
-template class InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
-template class OuterAnalysisManagerProxy<ModuleAnalysisManager,
-                                         LazyCallGraph::SCC, LazyCallGraph &>;
-template class OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
+template class LLVM_EXPORT_TEMPLATE
+    InnerAnalysisManagerProxy<CGSCCAnalysisManager, Module>;
+template class LLVM_EXPORT_TEMPLATE OuterAnalysisManagerProxy<
+    ModuleAnalysisManager, LazyCallGraph::SCC, LazyCallGraph &>;
+template class LLVM_EXPORT_TEMPLATE
+    OuterAnalysisManagerProxy<CGSCCAnalysisManager, Function>;
 
 /// Explicitly specialize the pass manager run method to handle call graph
 /// updates.
@@ -81,6 +83,8 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass(*Pass, *C))
       continue;
+
+    LargestCGSCC.updateMax(C->size());
 
     PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
 
@@ -380,12 +384,11 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
                     SmallMapVector<Value *, WeakTrackingVH, 16> &CallHandles) {
     assert(CallHandles.empty() && "Must start with a clear set of handles.");
 
-    SmallDenseMap<Function *, CallCount> CallCounts;
+    SmallDenseMap<LazyCallGraph::Node *, CallCount> CallCounts;
     CallCount CountLocal = {0, 0};
     for (LazyCallGraph::Node &N : C) {
       CallCount &Count =
-          CallCounts.insert(std::make_pair(&N.getFunction(), CountLocal))
-              .first->second;
+          CallCounts.insert(std::make_pair(&N, CountLocal)).first->second;
       for (Instruction &I : instructions(N.getFunction()))
         if (auto *CB = dyn_cast<CallBase>(&I)) {
           if (CB->getCalledFunction()) {
@@ -458,7 +461,7 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
     // manner of transformations such as DCE and other things, but seems to
     // work well in practice.
     if (!Devirt)
-      // Iterate over the keys in NewCallCounts, if Function also exists in
+      // Iterate over the keys in NewCallCounts, if the node also exists in
       // CallCounts, make the check below.
       for (auto &Pair : NewCallCounts) {
         auto &CallCountNew = Pair.second;
@@ -479,7 +482,8 @@ PreservedAnalyses DevirtSCCRepeatedPass::run(LazyCallGraph::SCC &InitialC,
 
     // Otherwise, if we've already hit our max, we're done.
     if (Iteration >= MaxIterations) {
-      if (AbortOnMaxDevirtIterationsReached)
+      if (getAnalysisOptions(C->begin()->getFunction())
+              .abort_on_max_devirt_iterations_reached)
         report_fatal_error("Max devirtualization iterations reached");
       LLVM_DEBUG(
           dbgs() << "Found another devirtualization after hitting the max "
@@ -510,9 +514,7 @@ PreservedAnalyses CGSCCToFunctionPassAdaptor::run(LazyCallGraph::SCC &C,
   FunctionAnalysisManager &FAM =
       AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
 
-  SmallVector<LazyCallGraph::Node *, 4> Nodes;
-  for (LazyCallGraph::Node &N : C)
-    Nodes.push_back(&N);
+  SmallVector<LazyCallGraph::Node *, 4> Nodes(llvm::make_pointer_range(C));
 
   // The SCC may get split while we are optimizing functions due to deleting
   // edges. If this happens, the current SCC can shift, so keep track of
@@ -1066,8 +1068,7 @@ static LazyCallGraph::SCC &updateCGAndAnalysisManagerForPass(
 
   // We added a ref edge earlier for new call edges, promote those to call edges
   // alongside PromotedRefTargets.
-  for (Node *E : NewCallEdges)
-    PromotedRefTargets.insert(E);
+  PromotedRefTargets.insert_range(NewCallEdges);
 
   // Now promote ref edges into call edges.
   for (Node *CallTarget : PromotedRefTargets) {

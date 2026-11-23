@@ -84,7 +84,7 @@ void bolt::JumpTable::updateOriginal() {
   const uint64_t BaseOffset = getAddress() - getSection().getAddress();
   uint64_t EntryOffset = BaseOffset;
   for (MCSymbol *Entry : Entries) {
-    const uint64_t RelType =
+    const uint32_t RelType =
         Type == JTT_NORMAL ? ELF::R_X86_64_64 : ELF::R_X86_64_PC32;
     const uint64_t RelAddend =
         Type == JTT_NORMAL ? 0 : EntryOffset - BaseOffset;

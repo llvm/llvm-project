@@ -4,6 +4,7 @@ static_library("Option") {
   sources = [
     "Arg.cpp",
     "ArgList.cpp",
+    "LibraryOptions.cpp",
     "OptTable.cpp",
     "Option.cpp",
   ]

@@ -3,7 +3,9 @@
 
 # RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown %s -o %t.o
 # RUN: llvm-strip --strip-unneeded %t.o
-# RUN: %clangxx %cflags %t.o -o %t.exe
+# RUN: %clang %cflags -fpic -shared -xc /dev/null -o %t.so
+## Link against a DSO to ensure PLT entries.
+# RUN: %clangxx %cflags %t.o %t.so -o %t.exe
 # RUN: llvm-bolt %t.exe -o %t --reorder-blocks=cache --print-after-lowering \
 # RUN:   --print-only=_Z10SolveCubicddddPiPd 2>&1 | FileCheck %s
 #

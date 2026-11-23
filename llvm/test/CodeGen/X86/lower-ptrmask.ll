@@ -5,7 +5,7 @@ declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 ; CHECK-LABEL: name: test1
 ; CHECK:         %0:gr64 = COPY $rdi
 ; CHECK-NEXT:    %1:gr64 = MOV64ri 72057594037927928
-; CHECK-NEXT:    %2:gr64 = AND64rr %0, killed %1, implicit-def dead $eflags
+; CHECK-NEXT:    %2:gr64 = AND64rr %0, %1, implicit-def dead $eflags
 ; CHECK-NEXT:    $rax = COPY %2
 ; CHECK-NEXT:    RET 0, $rax
 

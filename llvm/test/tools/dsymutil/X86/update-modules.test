@@ -1,0 +1,10 @@
+Update mode keeps the clang module skeleton units in the compile unit list, so
+the linker clones units whose DIE array holds nothing but the unit DIE.
+
+RUN: dsymutil --update --linker classic -f -oso-prepend-path=%p/../Inputs/modules \
+RUN:   -y %p/dummy-debug-map.map -o - \
+RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
+
+CHECK: DW_AT_name ("modules.m")
+CHECK: DW_AT_GNU_dwo_name ("/Foo.pcm")
+CHECK: DW_AT_GNU_dwo_name ("./Bar.pcm")

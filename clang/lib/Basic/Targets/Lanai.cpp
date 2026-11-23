@@ -44,7 +44,7 @@ void LanaiTargetInfo::fillValidCPUList(
   Values.emplace_back("v11");
 }
 
-bool LanaiTargetInfo::setCPU(const std::string &Name) {
+bool LanaiTargetInfo::setCPU(StringRef Name) {
   CPU = llvm::StringSwitch<CPUKind>(Name).Case("v11", CK_V11).Default(CK_NONE);
 
   return CPU != CK_NONE;

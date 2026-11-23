@@ -22,35 +22,8 @@
 ; RUN: opt -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
 
 ; Verify that debugify can be safely used with piping
-; RUN: opt -enable-debugify -O1 < %s | opt -O2 -o /dev/null
-; RUN: opt -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -o /dev/null
-
-;; Perform the same checks again for intrinsic debug info
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify -S -o - < %s | FileCheck %s
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify -S -o - < %s | FileCheck %s
-
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,debugify -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,debugify -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-REPEAT
-
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,check-debugify -S -o - < %s | \
-; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,check-debugify -S -o - < %s | \
-; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
-; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -passes=verify -S -o - < %s | \
-; RUN:   FileCheck %s -implicit-check-not="CheckModuleDebugify: FAIL"
-
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,strip,check-debugify -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-WARN
-
-; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -passes=strip -S -o - < %s 2>&1 | \
-; RUN:   FileCheck %s -check-prefix=CHECK-WARN
-
-; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -S -o - < %s 2>&1 | FileCheck %s -check-prefix=PASS
-
-; RUN: opt --experimental-debuginfo-iterators=false -enable-debugify -O1 < %s | opt -O2 -o /dev/null
-; RUN: opt --experimental-debuginfo-iterators=false -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -o /dev/null
+; RUN: opt -enable-debugify -O1 < %s | opt -O2 -disable-output
+; RUN: opt -passes=debugify,mem2reg,check-debugify < %s | opt -O2 -disable-output
 
 ; CHECK-LABEL: define void @foo
 define void @foo() {

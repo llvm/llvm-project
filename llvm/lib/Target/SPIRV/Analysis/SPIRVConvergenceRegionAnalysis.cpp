@@ -1,4 +1,4 @@
-//===- ConvergenceRegionAnalysis.h -----------------------------*- C++ -*--===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVConvergenceRegionAnalysis.h"
+#include "SPIRV.h"
+#include "llvm/ADT/PostOrderIterator.h"
+#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -24,10 +28,7 @@
 #define DEBUG_TYPE "spirv-convergence-region-analysis"
 
 using namespace llvm;
-
-namespace llvm {
-void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
-} // namespace llvm
+using namespace SPIRV;
 
 INITIALIZE_PASS_BEGIN(SPIRVConvergenceRegionAnalysisWrapperPass,
                       "convergence-region",
@@ -39,8 +40,6 @@ INITIALIZE_PASS_END(SPIRVConvergenceRegionAnalysisWrapperPass,
                     "convergence-region", "SPIRV convergence regions analysis",
                     true, true)
 
-namespace llvm {
-namespace SPIRV {
 namespace {
 
 template <typename BasicBlockType, typename IntrinsicInstType>
@@ -74,12 +73,13 @@ getConvergenceTokenInternal(BasicBlockType *BB) {
 
   return std::nullopt;
 }
+} // anonymous namespace
 
 // Given a ConvergenceRegion tree with |Start| as its root, finds the smallest
 // region |Entry| belongs to. If |Entry| does not belong to the region defined
 // by |Start|, this function returns |nullptr|.
-ConvergenceRegion *findParentRegion(ConvergenceRegion *Start,
-                                    BasicBlock *Entry) {
+static ConvergenceRegion *findParentRegion(ConvergenceRegion *Start,
+                                           BasicBlock *Entry) {
   ConvergenceRegion *Candidate = nullptr;
   ConvergenceRegion *NextCandidate = Start;
 
@@ -102,13 +102,13 @@ ConvergenceRegion *findParentRegion(ConvergenceRegion *Start,
   return Candidate;
 }
 
-} // anonymous namespace
-
-std::optional<IntrinsicInst *> getConvergenceToken(BasicBlock *BB) {
+std::optional<IntrinsicInst *>
+llvm::SPIRV::getConvergenceToken(BasicBlock *BB) {
   return getConvergenceTokenInternal<BasicBlock, IntrinsicInst>(BB);
 }
 
-std::optional<const IntrinsicInst *> getConvergenceToken(const BasicBlock *BB) {
+std::optional<const IntrinsicInst *>
+llvm::SPIRV::getConvergenceToken(const BasicBlock *BB) {
   return getConvergenceTokenInternal<const BasicBlock, const IntrinsicInst>(BB);
 }
 
@@ -187,8 +187,8 @@ void ConvergenceRegion::dump(const unsigned IndentSize) const {
   dbgs() << Indent << "}\n";
 }
 
+namespace {
 class ConvergenceRegionAnalyzer {
-
 public:
   ConvergenceRegionAnalyzer(Function &F, DominatorTree &DT, LoopInfo &LI)
       : DT(DT), LI(LI), F(F) {}
@@ -212,32 +212,52 @@ private:
     return false;
   }
 
-  std::unordered_set<BasicBlock *>
+  class ForwardPostOrderTraversal
+      : public PostOrderTraversalBase<ForwardPostOrderTraversal,
+                                      GraphTraits<BasicBlock *>> {
+    const ConvergenceRegionAnalyzer &Analyzer;
+
+  public:
+    ForwardPostOrderTraversal(const ConvergenceRegionAnalyzer &Analyzer,
+                              BasicBlock *From)
+        : Analyzer(Analyzer) {
+      init(From);
+    }
+
+    bool insertEdge(std::optional<BasicBlock *> From, BasicBlock *To) {
+      return !(From && Analyzer.isBackEdge(*From, To)) &&
+             Visited.insert(To).second;
+    }
+
+  private:
+    SmallPtrSet<BasicBlock *, 16> Visited;
+  };
+
+  SmallPtrSet<BasicBlock *, 0>
   findPathsToMatch(LoopInfo &LI, BasicBlock *From,
                    std::function<bool(const BasicBlock *)> isMatch) const {
-    std::unordered_set<BasicBlock *> Output;
+    ForwardPostOrderTraversal Traversal(*this, From);
 
-    if (isMatch(From))
-      Output.insert(From);
+    // Postorder visits successors before predecessors, so reachability to a
+    // match propagates in one linear scan instead of per-path recursion.
+    SmallPtrSet<BasicBlock *, 0> Output;
+    for (auto *BB : Traversal) {
+      bool ReachesMatch = false;
+      auto *Terminator = BB->getTerminator();
+      for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
+        auto *To = Terminator->getSuccessor(i);
+        if (!isBackEdge(BB, To) && Output.contains(To))
+          ReachesMatch = true;
+      }
 
-    auto *Terminator = From->getTerminator();
-    for (unsigned i = 0; i < Terminator->getNumSuccessors(); ++i) {
-      auto *To = Terminator->getSuccessor(i);
-      // Ignore back edges.
-      if (isBackEdge(From, To))
-        continue;
+      if (isMatch(BB) || ReachesMatch)
+        Output.insert(BB);
 
-      auto ChildSet = findPathsToMatch(LI, To, isMatch);
-      if (ChildSet.size() == 0)
-        continue;
-
-      Output.insert(ChildSet.begin(), ChildSet.end());
-      Output.insert(From);
-      if (LI.isLoopHeader(From)) {
-        auto *L = LI.getLoopFor(From);
-        for (auto *BB : L->getBlocks()) {
-          Output.insert(BB);
-        }
+      // A qualifying path through a loop header brings in the whole loop.
+      if (ReachesMatch && LI.isLoopHeader(BB)) {
+        auto *L = LI.getLoopFor(BB);
+        for (auto *LoopBB : L->getBlocks())
+          Output.insert(LoopBB);
       }
     }
 
@@ -272,8 +292,7 @@ public:
       ToProcess.pop();
 
       auto CT = getConvergenceToken(L->getHeader());
-      SmallPtrSet<BasicBlock *, 8> RegionBlocks(L->block_begin(),
-                                                L->block_end());
+      SmallPtrSet<BasicBlock *, 8> RegionBlocks(llvm::from_range, L->blocks());
       SmallVector<BasicBlock *> LoopExits;
       L->getExitingBlocks(LoopExits);
       if (CT.has_value()) {
@@ -284,7 +303,7 @@ public:
               return false;
             return Token.value() == CT.value();
           });
-          RegionBlocks.insert(N.begin(), N.end());
+          RegionBlocks.insert_range(N);
         }
       }
 
@@ -305,14 +324,14 @@ private:
   LoopInfo &LI;
   Function &F;
 };
+} // anonymous namespace
 
-ConvergenceRegionInfo getConvergenceRegions(Function &F, DominatorTree &DT,
-                                            LoopInfo &LI) {
+ConvergenceRegionInfo llvm::SPIRV::getConvergenceRegions(Function &F,
+                                                         DominatorTree &DT,
+                                                         LoopInfo &LI) {
   ConvergenceRegionAnalyzer Analyzer(F, DT, LI);
   return Analyzer.analyze();
 }
-
-} // namespace SPIRV
 
 char SPIRVConvergenceRegionAnalysisWrapperPass::ID = 0;
 
@@ -339,5 +358,3 @@ SPIRVConvergenceRegionAnalysis::run(Function &F, FunctionAnalysisManager &AM) {
 }
 
 AnalysisKey SPIRVConvergenceRegionAnalysis::Key;
-
-} // namespace llvm

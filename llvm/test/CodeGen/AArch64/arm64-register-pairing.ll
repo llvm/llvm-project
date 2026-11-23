@@ -34,14 +34,14 @@ define void @odd() nounwind {
 ; CHECK-NOTMACHO:       // %bb.0:
 ; CHECK-NOTMACHO-NEXT:    stp d14, d12, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    stp d10, d8, [sp, #16] // 16-byte Folded Spill
-; CHECK-NOTMACHO-NEXT:    str x27, [sp, #32] // 8-byte Folded Spill
+; CHECK-NOTMACHO-NEXT:    str x27, [sp, #32] // 8-byte Spill
 ; CHECK-NOTMACHO-NEXT:    stp x25, x23, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    stp x21, x19, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    //APP
 ; CHECK-NOTMACHO-NEXT:    mov x0, #42 // =0x2a
 ; CHECK-NOTMACHO-NEXT:    //NO_APP
 ; CHECK-NOTMACHO-NEXT:    ldp x21, x19, [sp, #64] // 16-byte Folded Reload
-; CHECK-NOTMACHO-NEXT:    ldr x27, [sp, #32] // 8-byte Folded Reload
+; CHECK-NOTMACHO-NEXT:    ldr x27, [sp, #32] // 8-byte Reload
 ; CHECK-NOTMACHO-NEXT:    ldp x25, x23, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NOTMACHO-NEXT:    ldp d10, d8, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NOTMACHO-NEXT:    ldp d14, d12, [sp], #80 // 16-byte Folded Reload
@@ -81,14 +81,14 @@ define void @even() nounwind {
 ; CHECK-NOTMACHO:       // %bb.0:
 ; CHECK-NOTMACHO-NEXT:    stp d15, d13, [sp, #-80]! // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    stp d11, d9, [sp, #16] // 16-byte Folded Spill
-; CHECK-NOTMACHO-NEXT:    str x28, [sp, #32] // 8-byte Folded Spill
+; CHECK-NOTMACHO-NEXT:    str x28, [sp, #32] // 8-byte Spill
 ; CHECK-NOTMACHO-NEXT:    stp x26, x24, [sp, #48] // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    stp x22, x20, [sp, #64] // 16-byte Folded Spill
 ; CHECK-NOTMACHO-NEXT:    //APP
 ; CHECK-NOTMACHO-NEXT:    mov x0, #42 // =0x2a
 ; CHECK-NOTMACHO-NEXT:    //NO_APP
 ; CHECK-NOTMACHO-NEXT:    ldp x22, x20, [sp, #64] // 16-byte Folded Reload
-; CHECK-NOTMACHO-NEXT:    ldr x28, [sp, #32] // 8-byte Folded Reload
+; CHECK-NOTMACHO-NEXT:    ldr x28, [sp, #32] // 8-byte Reload
 ; CHECK-NOTMACHO-NEXT:    ldp x26, x24, [sp, #48] // 16-byte Folded Reload
 ; CHECK-NOTMACHO-NEXT:    ldp d11, d9, [sp, #16] // 16-byte Folded Reload
 ; CHECK-NOTMACHO-NEXT:    ldp d15, d13, [sp], #80 // 16-byte Folded Reload

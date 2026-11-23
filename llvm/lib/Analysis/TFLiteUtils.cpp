@@ -30,7 +30,6 @@
 #include "tensorflow/lite/logger.h"
 
 #include <cassert>
-#include <numeric>
 #include <optional>
 
 using namespace llvm;

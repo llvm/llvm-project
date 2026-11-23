@@ -1,0 +1,8 @@
+---
+MainSourceFile:  '@FOO@'
+Replacements:
+  - FilePath:        '@FOO@'
+    Offset:          30
+    Length:          3
+    ReplacementText: 'Q'
+...

@@ -17,18 +17,23 @@ namespace llvm {
 
 class MachineRegisterInfo;
 class GCNSubtarget;
-class GISelKnownBits;
+class GISelValueTracking;
 class LLT;
 class MachineFunction;
+class MachineInstr;
 class MachineIRBuilder;
 class RegisterBankInfo;
 
 namespace AMDGPU {
 
+/// Return whether div.fmas can use ordinary FMA without changing denormals.
+bool isUnscaledIEEEDivFmas(const MachineInstr &MI,
+                           const MachineRegisterInfo &MRI);
+
 /// Returns base register and constant offset.
 std::pair<Register, unsigned>
 getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
-                          GISelKnownBits *KnownBits = nullptr,
+                          GISelValueTracking *ValueTracking = nullptr,
                           bool CheckNUW = false);
 
 // Currently finds S32/S64 lane masks that can be declared as divergent by
@@ -39,7 +44,6 @@ getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
 // reg class after instruction-select, don't search for all of them.
 class IntrinsicLaneMaskAnalyzer {
   SmallDenseSet<Register, 8> S32S64LaneMask;
-  MachineRegisterInfo &MRI;
 
 public:
   IntrinsicLaneMaskAnalyzer(MachineFunction &MF);
@@ -47,12 +51,12 @@ public:
 
 private:
   void initLaneMaskIntrinsics(MachineFunction &MF);
-  // This will not be needed when we turn off LCSSA for global-isel.
-  void findLCSSAPhi(Register Reg);
 };
 
 void buildReadAnyLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
                       const RegisterBankInfo &RBI);
+void buildReadFirstLane(MachineIRBuilder &B, Register SgprDst, Register VgprSrc,
+                        const RegisterBankInfo &RBI);
 }
 }
 
