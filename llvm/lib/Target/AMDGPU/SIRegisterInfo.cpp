@@ -4146,8 +4146,9 @@ MCRegister SIRegisterInfo::findUnusedRegister(
   return MCRegister();
 }
 
-MCRegister SIRegisterInfo::findUnusedLongBranchSGPR(
-    const MachineFunction &MF, bool ReserveHighestRegister) const {
+MCRegister
+SIRegisterInfo::findUnusedLongBranchSGPR(const MachineFunction &MF,
+                                         bool ReserveHighestRegister) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
   LiveRegUnits LiveRegs(*this);
   // Branch relaxation inserts the clobber after callee saves have been emitted.
