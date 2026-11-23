@@ -1781,9 +1781,16 @@ void PPCFrameLowering::emitEpilogue(MachineFunction &MF,
       for (unsigned CRField : MustSaveCRs) {
         CRMask |= 0x80 >> (CRField - PPC::CR0);
       }
-      BuildMI(MBB, InsertPt, dl, TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
-          .addImm(CRMask)
-          .addReg(SrcReg, getKillRegState(true));
+      MachineInstrBuilder MIB =
+          BuildMI(MBB, InsertPt, dl,
+                  TII.get(isPPC64 ? PPC::MTCRF8 : PPC::MTCRF))
+              .addImm(CRMask)
+              .addReg(SrcReg, getKillRegState(true));
+      // MTCRF does not statically model which CR fields it writes. Add the
+      // restored fields as implicit defs so that the post-RA scheduler treats
+      // them as writes (and doesn't move MTCRF above reads of those fields).
+      for (unsigned CRField : MustSaveCRs)
+        MIB.addDef(CRField, RegState::Implicit);
     }
   };
 
@@ -2581,9 +2588,17 @@ static void restoreCRs(bool is31, bool CR2Spilled, bool CR3Spilled,
       CRMask |= 0x10;
     if (CR4Spilled)
       CRMask |= 0x08;
-    MBB.insert(MI, BuildMI(*MF, DL, TII.get(PPC::MTCRF))
-                       .addImm(CRMask)
-                       .addReg(MoveReg, getKillRegState(true)));
+    MachineInstrBuilder MIB = BuildMI(*MF, DL, TII.get(PPC::MTCRF))
+                                  .addImm(CRMask)
+                                  .addReg(MoveReg, getKillRegState(true));
+    // Add the restored CR fields as implicit defs (see BuildMoveToCR).
+    if (CR2Spilled)
+      MIB.addDef(PPC::CR2, RegState::Implicit);
+    if (CR3Spilled)
+      MIB.addDef(PPC::CR3, RegState::Implicit);
+    if (CR4Spilled)
+      MIB.addDef(PPC::CR4, RegState::Implicit);
+    MBB.insert(MI, MIB);
   }
 }
 

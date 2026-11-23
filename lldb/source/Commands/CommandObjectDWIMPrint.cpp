@@ -45,6 +45,7 @@ CommandObjectDWIMPrint::CommandObjectDWIMPrint(CommandInterpreter &interpreter)
                         LLDB_OPT_SET_1);
   StringRef exclude_expr_options[] = {"debug", "top-level"};
   m_option_group.Append(&m_expr_options, exclude_expr_options);
+  m_expr_options.AppendLanguageOptions(m_option_group);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL, LLDB_OPT_SET_1);
   m_option_group.Finalize();
 }
@@ -239,6 +240,11 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       else
         result.AppendErrorWithFormatv(
             "unknown error evaluating expression `{0}`", expr);
+      // A setup or parse error can be a bug in the evaluator. Any other failure
+      // happens once the expression runs.
+      if (expr_result == eExpressionSetupError ||
+          expr_result == eExpressionParseError)
+        GetDebugger().SuggestBugReport(expr, result.GetErrorStream());
       return;
     }
 

@@ -408,6 +408,12 @@ void LocalReferenceAliasObjectUseIsOk() {
   v.push_back(42);          // expected-note {{local variable 'vv' is invalidated here}}
   use(v);                   // expected-note {{later used here}}
 }
+
+// FIXME: Distinguish owner-borrow from content-borrow.
+std::vector<int> &ReturnParameterObjectIsOk(std::vector<int> &v) { // expected-warning {{parameter 'v' is later invalidated}}
+  v.push_back(42); // expected-note {{parameter 'v' is invalidated here}}
+  return v;        // expected-note {{later used here}}
+}
 } // namespace ContainerObjectAliases
 
 namespace ElementReferences {
@@ -1126,3 +1132,45 @@ void BorrowViaObjectInvalidateQualified(S &s) {
   use(*it);               // expected-note {{later used here}}
 }
 } // namespace static_member_container
+
+namespace invalidated_then_returned {
+const int *ReturnAfterResize(std::vector<int> &v [[clang::lifetimebound]], unsigned long n) { // expected-warning {{parameter 'v' is later invalidated}}
+  const int *base = v.data(); // expected-note {{result of call to 'data' aliases the storage of parameter 'v' because the implicit object parameter is inferred as lifetimebound}}
+  v.resize(n);                // expected-note {{parameter 'v' is invalidated here}}
+  return base;                // expected-note {{later used here}}
+}
+
+// The borrow is read before the invalidation but only escapes after it.
+const int *InvalidateInsideReturn(std::vector<int> &v [[clang::lifetimebound]], unsigned long n) { // expected-warning {{parameter 'v' is later invalidated}}
+  const int *base = v.data();      // expected-note {{result of call to 'data' aliases the storage of parameter 'v' because the implicit object parameter is inferred as lifetimebound}}
+  return base + (v.resize(n), 0u); // expected-note {{parameter 'v' is invalidated here}} \
+                                   // expected-note {{later used here}}
+}
+
+std::vector<int>::iterator ReturnIteratorAfterPushBack(std::vector<int> &v [[clang::lifetimebound]]) { // expected-warning {{parameter 'v' is later invalidated}}
+  auto it = v.begin();
+  v.push_back(1);      // expected-note {{parameter 'v' is invalidated here}}
+  return it;           // expected-note {{later used here}}
+}
+
+const int *ReturnLocalAfterResize(unsigned long n) {
+  std::vector<int> v;
+  const int *base = v.data(); // expected-warning {{local variable 'v' is later invalidated}} \
+                              // expected-note {{result of call to 'data' aliases the storage of local variable 'v' because the implicit object parameter is inferred as lifetimebound}}
+  v.resize(n);                // expected-note {{local variable 'v' is invalidated here}}
+  return base;                // expected-note {{later used here}}
+}
+
+const int *ReturnAfterResizeUnannotated(std::vector<int> &v, unsigned long n) { // expected-warning {{parameter 'v' is later invalidated}}
+  const int *base = v.data(); // expected-note {{result of call to 'data' aliases the storage of parameter 'v' because the implicit object parameter is inferred as lifetimebound}}
+  v.resize(n);                // expected-note {{parameter 'v' is invalidated here}}
+  return base;                // expected-note {{later used here}}
+}
+
+const int *ReturnInvalidatedOnOnePath(std::vector<int> &v [[clang::lifetimebound]], bool b) { // expected-warning {{parameter 'v' is later invalidated}}
+  const int *base = v.data(); // expected-note {{result of call to 'data' aliases the storage of parameter 'v' because the implicit object parameter is inferred as lifetimebound}}
+  if (b)
+    v.clear();                // expected-note {{parameter 'v' is invalidated here}}
+  return base;                // expected-note {{later used here}}
+}
+} // namespace invalidated_then_returned

@@ -126,18 +126,6 @@ objects:
   - object_name: optopt
     object_type: int
 functions:
-  - name: __llvm_libc_syscall
-    standards:
-      - posix
-    return_type: long
-    arguments:
-      - type: long
-      - type: long
-      - type: long
-      - type: long
-      - type: long
-      - type: long
-      - type: long
   - name: _exit
     standards:
       - posix
@@ -721,6 +709,13 @@ functions:
     return_type: int
     arguments:
       - type: int
+  - name: syscall
+    standards:
+      - gnu
+    return_type: long
+    arguments:
+      - type: long
+      - type: '...'
   - name: sysconf
     standards:
       - posix

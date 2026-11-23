@@ -374,7 +374,10 @@ public:
     // We need to clear the mutability bit in case we are
     // destroying the node as part of a sweep in ImutAVLFactory::recoverNodes().
     IsMutable = false;
-    factory->freeNodes.push_back(this);
+    // The children were released above, so reuse the left pointer to link
+    // this node into the factory's free list.
+    left = factory->freeNodes;
+    factory->freeNodes = this;
   }
 };
 
@@ -405,7 +408,8 @@ class ImutAVLFactory
 
   uintptr_t Allocator;
   std::vector<TreeTy*> createdNodes;
-  std::vector<TreeTy*> freeNodes;
+  // Destroyed nodes, linked through their left pointers.
+  TreeTy *freeNodes = nullptr;
 
   bool ownsAllocator() const {
     return (Allocator & 0x1) == 0;
@@ -475,6 +479,15 @@ public:
     return T;
   }
 
+  /// Returns the tree of the elements of \p T for which \p Pred holds. \p Pred
+  /// is called on the elements in order and must not use this factory.
+  /// Subtrees that keep all of their elements are shared rather than rebuilt.
+  template <typename PredFn> TreeTy *filterTree(TreeTy *T, PredFn Pred) {
+    T = filter_internal(T, Pred);
+    recoverNodes(T);
+    return T;
+  }
+
   TreeTy* getEmptyTree() const { return nullptr; }
 
 protected:
@@ -513,9 +526,10 @@ protected:
   TreeTy* createNode(TreeTy* L, value_type_ref V, TreeTy* R) {
     BumpPtrAllocator& A = getAllocator();
     TreeTy* T;
-    if (!freeNodes.empty()) {
-      T = freeNodes.back();
-      freeNodes.pop_back();
+    if (freeNodes) {
+      T = freeNodes;
+      freeNodes = T->getLeft();
+      assert(!T->isMutable() && "free-list node must have been destroyed");
       assert(T != L);
       assert(T != R);
     } else {
@@ -780,6 +794,22 @@ protected:
     }
     return balanceTree(removeMinBinding(getLeft(T), Noderemoved),
                        getValue(T), getRight(T));
+  }
+
+  template <typename PredFn> TreeTy *filter_internal(TreeTy *T, PredFn &Pred) {
+    if (isEmpty(T))
+      return T;
+    TreeTy *L = filter_internal(getLeft(T), Pred);
+    bool Keep = Pred(getValue(T));
+    TreeTy *R = filter_internal(getRight(T), Pred);
+    if (Keep)
+      return L == getLeft(T) && R == getRight(T) ? T
+                                                 : joinTrees(L, getValue(T), R);
+    if (isEmpty(R))
+      return L;
+    TreeTy *Min;
+    R = removeMinBinding(R, Min);
+    return joinTrees(L, getValue(Min), R);
   }
 
 public:
