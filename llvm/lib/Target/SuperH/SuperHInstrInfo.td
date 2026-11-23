@@ -1533,7 +1533,7 @@ def MOVIL         : SHPseudo<(outs GPR:$dst), (ins i32imm:$src),
 //===--------------------------------------------------------------------------===//
 
 // Shift by immediate
-let Defs = [SR] in {
+let Defs = [SR], Constraints = "$dst = $src" in {
 def SHLri       : SHPseudo<(outs GPR:$dst), (ins i32imm:$shift, GPR:$src),
                           "! SHLri $shift, $dst",
                           []>;
