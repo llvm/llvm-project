@@ -34,6 +34,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "evaluator"
@@ -596,6 +597,9 @@ bool Evaluator::EvaluateBlock(BasicBlock::iterator CurInst, BasicBlock *&NextBB,
 /// function.
 bool Evaluator::EvaluateFunction(Function *F, Constant *&RetVal,
                                  const SmallVectorImpl<Constant*> &ActualArgs) {
+  SaveAndRestore<const TargetLibraryInfo *> SaveRestoreTLI(
+      TLI, GetTLI ? &GetTLI(*F) : nullptr);
+
   assert(ActualArgs.size() == F->arg_size() && "wrong number of arguments");
 
   // Check to see if this function is already executing (recursion).  If so,

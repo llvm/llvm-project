@@ -79,8 +79,9 @@ class Evaluator {
   };
 
 public:
-  Evaluator(const DataLayout &DL, const TargetLibraryInfo *TLI)
-      : DL(DL), TLI(TLI) {
+  Evaluator(const DataLayout &DL,
+            const function_ref<TargetLibraryInfo &(Function &)> GetTLI)
+      : DL(DL), GetTLI(GetTLI) {
     ValueStack.emplace_back();
   }
 
@@ -166,7 +167,8 @@ private:
   SmallPtrSet<Constant*, 8> SimpleConstants;
 
   const DataLayout &DL;
-  const TargetLibraryInfo *TLI;
+  const TargetLibraryInfo *TLI = nullptr;
+  function_ref<TargetLibraryInfo &(Function &)> GetTLI;
 };
 
 } // end namespace llvm
