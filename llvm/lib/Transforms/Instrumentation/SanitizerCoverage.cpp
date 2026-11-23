@@ -729,7 +729,7 @@ void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
     }
     BasicBlock *Color = Colors.front();
     BasicBlock::iterator Pad = Color->getFirstNonPHIIt();
-    if (Pad == Color->end() || !Pad->isEHPad())
+    if (Pad == Color->end() || !isa<FuncletPadInst>(Pad))
       continue;
     OperandBundleDef OB("funclet", &*Pad);
     CallBase *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,
