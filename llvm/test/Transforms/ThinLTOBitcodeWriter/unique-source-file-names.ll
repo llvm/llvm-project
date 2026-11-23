@@ -6,7 +6,7 @@ source_filename = "unique-source-file-names.c"
 
 @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @f, ptr null }]
 
-; CHECK: @g.45934e8a5251fb7adbecfff71a4e70ed =
+; CHECK: @g.llvm.45934e8a5251fb7adbecfff71a4e70ed =
 @g = internal global i8 42, !type !0
 
 declare void @sink(ptr)

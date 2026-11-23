@@ -6,7 +6,6 @@ name:            uadde_s64
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1
@@ -37,7 +36,6 @@ name:            uadde_s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $w0, $w1
@@ -68,7 +66,6 @@ name:            uadde_opt_prev_uaddo
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -101,7 +98,6 @@ name:            uadde_opt_prev_uadde
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3
@@ -137,7 +133,6 @@ name:            uadde_opt_bail_clobber
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x4, $x5, $x6
@@ -181,7 +176,6 @@ name:            uadde_opt_prev_dead
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x0, $x1, $x2, $x3

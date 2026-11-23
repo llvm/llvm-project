@@ -6,6 +6,8 @@
 // RUN:   spirv-pc-vulkan1.3-library %s -emit-llvm -disable-llvm-passes -o - | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,SPVCHECK
 
+using namespace hlsl;
+
 // Test that the RWByteAddressBuffer::InterlockedCompareStoreFloatBitwise
 // member method lowers to `resource_getpointer -> cmpxchg`, for both DXIL and
 // SPIR-V targets. The float arguments become their bit patterns first, because

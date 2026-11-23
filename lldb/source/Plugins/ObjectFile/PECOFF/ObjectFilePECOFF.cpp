@@ -779,6 +779,9 @@ llvm::StringRef ObjectFilePECOFF::GetSectionName(const section_header_t &sect) {
 }
 
 void ObjectFilePECOFF::ParseSymtab(Symtab &symtab) {
+  // An image read from memory may not hold enough data for llvm::object.
+  if (!CreateBinary())
+    return;
   SectionList *sect_list = GetSectionList();
   rva_symbol_list_t sorted_exports = AppendFromExportTable(sect_list, symtab);
   AppendFromCOFFSymbolTable(sect_list, symtab, sorted_exports);
@@ -952,8 +955,10 @@ std::unique_ptr<CallFrameInfo> ObjectFilePECOFF::CreateCallFrameInfo() {
                                            data_dir_exception.vmsize);
 }
 
-lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() const {
+lldb::addr_t ObjectFilePECOFF::GetTlsIndexAddress() {
   addr_t addr = LLDB_INVALID_ADDRESS;
+  if (!CreateBinary())
+    return addr;
   if (m_binary->is64()) {
     if (m_binary->getTLSDirectory64())
       addr = m_binary->getTLSDirectory64()->AddressOfIndex.value();
@@ -1037,7 +1042,8 @@ size_t ObjectFilePECOFF::GetSectionDataSize(Section *section) {
   // FileAlignment and the actual section size is in VirtualSize
   // (getByteSize()). See the comment on
   // llvm::object::COFFObjectFile::getSectionSize().
-  if (m_binary->getPE32Header() || m_binary->getPE32PlusHeader())
+  if (CreateBinary() &&
+      (m_binary->getPE32Header() || m_binary->getPE32PlusHeader()))
     return std::min(section->GetByteSize(), section->GetFileSize());
   return section->GetFileSize();
 }
@@ -1109,6 +1115,8 @@ UUID ObjectFilePECOFF::GetUUID() {
 std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   std::string gnu_debuglink_file;
   uint32_t gnu_debuglink_crc;
+  if (!CreateBinary())
+    return std::nullopt;
   if (GetDebugLinkContents(*m_binary, gnu_debuglink_file, gnu_debuglink_crc))
     return FileSpec(gnu_debuglink_file);
   return std::nullopt;
@@ -1117,6 +1125,8 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
 std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
   llvm::StringRef pdb_file;
   const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  if (!CreateBinary())
+    return std::nullopt;
   if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
     // DebugInfo section is corrupt.
     Log *log = GetLog(LLDBLog::Object);

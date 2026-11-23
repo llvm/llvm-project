@@ -204,6 +204,12 @@ bool AArch64BranchTargetsImpl::replaceWithNonBranchTarget(
 
 void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
                                       bool CouldJump, bool HasWinCFI) {
+  // LFI rewrites every indirect branch to go through x28, including tail calls
+  // that would otherwise use x16/x17. Therefore we need to record this
+  // location as reachable by a normal non-x16/x17-targeted jump.
+  if (Subtarget->isLFI() && CouldCall)
+    CouldJump = true;
+
   LLVM_DEBUG(dbgs() << "Adding BTI " << (CouldJump ? "j" : "")
                     << (CouldCall ? "c" : "") << " to " << MBB.getName()
                     << "\n");

@@ -121,6 +121,7 @@ private:
   bool CanBeFlattened: 1;   // isDirect()
   bool SignExt : 1;         // isExtend()
   bool ZeroExt : 1;         // isExtend()
+  bool Conservative : 1;    // isExtend()
 
   bool canHavePaddingType() const {
     return isDirect() || isExtend() || isIndirect() || isIndirectAliased() ||
@@ -139,10 +140,10 @@ private:
 public:
   ABIArgInfo(Kind K = Direct)
       : TypeData(nullptr), PaddingType(nullptr), DirectAttr{0, 0}, TheKind(K),
-        PaddingInReg(false), InAllocaSRet(false),
-        InAllocaIndirect(false), IndirectByVal(false), IndirectRealign(false),
-        SRetAfterThis(false), InReg(false), CanBeFlattened(false),
-        SignExt(false), ZeroExt(false) {}
+        PaddingInReg(false), InAllocaSRet(false), InAllocaIndirect(false),
+        IndirectByVal(false), IndirectRealign(false), SRetAfterThis(false),
+        InReg(false), CanBeFlattened(false), SignExt(false), ZeroExt(false),
+        Conservative(false) {}
 
   static ABIArgInfo getDirect(llvm::Type *T = nullptr, unsigned Offset = 0,
                               llvm::Type *Padding = nullptr,
@@ -202,6 +203,20 @@ public:
     AI.setPaddingType(nullptr);
     AI.setDirectOffset(0);
     AI.setDirectAlign(0);
+    return AI;
+  }
+
+  static ABIArgInfo getConservativeExtend(QualType Ty,
+                                          llvm::Type *T = nullptr) {
+    auto AI = getExtend(Ty, T);
+    AI.setConservative(true);
+    return AI;
+  }
+
+  static ABIArgInfo getConservativeExtendInReg(QualType Ty,
+                                               llvm::Type *T = nullptr) {
+    auto AI = getConservativeExtend(Ty, T);
+    AI.setInReg(true);
     return AI;
   }
 
@@ -377,6 +392,18 @@ public:
   bool isNoExt() const {
     assert(isExtend() && (SignExt + ZeroExt <= 1) && "Invalid kind / flags!");
     return !SignExt && !ZeroExt;
+  }
+
+  /// Whether the extension is conservative, i.e. the sender extends, but the
+  /// receiver does not assume the extension. Currently only supported for
+  /// arguments, i.e. caller extends, but callee does not assume extension.
+  bool isConservative() const {
+    assert(isExtend() && "Invalid kind");
+    return Conservative;
+  }
+  void setConservative(bool Val) {
+    assert(isExtend() && "Invalid kind");
+    Conservative = Val;
   }
 
   llvm::Type *getPaddingType() const {

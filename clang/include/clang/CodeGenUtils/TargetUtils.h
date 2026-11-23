@@ -108,6 +108,7 @@ enum class MSVCIntrin {
   _InterlockedDecrement_acq,
   _InterlockedDecrement_rel,
   _InterlockedDecrement_nf,
+  _ReadWriteBarrier,
   __fastfail,
 };
 

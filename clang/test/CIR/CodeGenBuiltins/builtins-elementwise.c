@@ -262,6 +262,34 @@ void test_builtin_elementwise_exp10(float f, double d, vfloat4 vf4,
   vd4 = __builtin_elementwise_exp10(vd4);
 }
 
+void test_builtin_elementwise_ldexp(float f, double d, vfloat4 vf4,
+                                    int i, short s, long l, vint4 vi4) {
+  // CIR-LABEL: test_builtin_elementwise_ldexp
+  // LLVM-LABEL: test_builtin_elementwise_ldexp
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s32i
+  // LLVM: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %{{.*}})
+  f = __builtin_elementwise_ldexp(f, i);
+
+  // CIR: %[[S32:.*]] = cir.cast integral %{{.*}} : !s16i -> !s32i
+  // CIR: cir.ldexp %{{.*}}, %[[S32]] : !cir.float, !s32i
+  // LLVM: %[[S32:.*]] = sext i16 %{{.*}} to i32
+  // LLVM: call float @llvm.ldexp.f32.i32(float %{{.*}}, i32 %[[S32]])
+  f = __builtin_elementwise_ldexp(f, s);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.float, !s64i
+  // LLVM: call float @llvm.ldexp.f32.i64(float %{{.*}}, i64 %{{.*}})
+  f = __builtin_elementwise_ldexp(f, l);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.double, !s32i
+  // LLVM: call double @llvm.ldexp.f64.i32(double %{{.*}}, i32 %{{.*}})
+  d = __builtin_elementwise_ldexp(d, i);
+
+  // CIR: cir.ldexp %{{.*}}, %{{.*}} : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i>
+  // LLVM: call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> %{{.*}}, <4 x i32> %{{.*}})
+  vf4 = __builtin_elementwise_ldexp(vf4, vi4);
+}
+
 void test_builtin_elementwise_log(float f, double d, vfloat4 vf4,
                                   vdouble4  vd4) {
   // CIR-LABEL: test_builtin_elementwise_log

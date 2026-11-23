@@ -3600,6 +3600,14 @@ LLVM_C_ABI LLVMValueRef LLVMMetadataAsValue(LLVMContextRef C,
 LLVM_C_ABI LLVMMetadataRef LLVMValueAsMetadata(LLVMValueRef Val);
 
 /**
+ * Return a string representation of the metadata. Use
+ * LLVMDisposeMessage to free the string.
+ *
+ * @see llvm::Metadata::print()
+ */
+LLVM_C_ABI char *LLVMPrintMetadataToString(LLVMMetadataRef MD);
+
+/**
  * Obtain the underlying string from a MDString value.
  *
  * @param V Instance to obtain string from.

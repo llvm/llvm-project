@@ -8,6 +8,9 @@
 // Extensions on SB API.
 //===----------------------------------------------------------------------===//
 
+#ifndef LLDB_TOOLS_LLDB_DAP_SBAPIEXTRAS_H
+#define LLDB_TOOLS_LLDB_DAP_SBAPIEXTRAS_H
+
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
@@ -30,10 +33,9 @@ class iter
                                         std::random_access_iterator_tag, Item,
                                         Index> {
 public:
-  iter(const Container &container, Index index)
-      : container(container), index(index) {}
+  iter(Container &container, Index index)
+      : container(&container), index(index) {}
 
-  Item operator*() { return std::invoke(Get, container, index); }
   Item operator*() const { return std::invoke(Get, container, index); }
   iter &operator+=(Index N) {
     index += N;
@@ -49,31 +51,31 @@ public:
   bool operator<(const iter &other) const { return index < other.index; }
 
 private:
-  Container container;
+  Container *container = nullptr;
   Index index;
 };
 
 /// SBProcess thread iterator.
 using process_thread_iter =
     iter<SBProcess, SBThread, size_t, &SBProcess::GetThreadAtIndex>;
-inline process_thread_iter begin(SBProcess P) { return {P, 0}; }
-inline process_thread_iter end(SBProcess P) { return {P, P.GetNumThreads()}; }
+inline process_thread_iter begin(SBProcess &P) { return {P, 0}; }
+inline process_thread_iter end(SBProcess &P) { return {P, P.GetNumThreads()}; }
 
 /// SBThreadCollection thread iterator.
 using thread_collection_iter = iter<SBThreadCollection, SBThread, size_t,
                                     &SBThreadCollection::GetThreadAtIndex>;
-inline thread_collection_iter begin(SBThreadCollection TC) { return {TC, 0}; }
-inline thread_collection_iter end(SBThreadCollection TC) {
+inline thread_collection_iter begin(SBThreadCollection &TC) { return {TC, 0}; }
+inline thread_collection_iter end(SBThreadCollection &TC) {
   return {TC, TC.GetSize()};
 }
 
 /// SBThread frame iterator.
 using frame_iter =
     iter<SBThread, SBFrame, uint32_t, &SBThread::GetFrameAtIndex>;
-inline frame_iter begin(SBThread T) { return {T, 0}; }
-inline frame_iter end(SBThread T) { return {T, T.GetNumFrames()}; }
+inline frame_iter begin(SBThread &T) { return {T, 0}; }
+inline frame_iter end(SBThread &T) { return {T, T.GetNumFrames()}; }
 
-/// SBValue value iterators.
+/// SBValue child iterator.
 /// @{
 using value_iter = iter<SBValue, SBValue, uint32_t,
                         static_cast<SBValue (SBValue::*)(uint32_t)>(
@@ -82,7 +84,7 @@ inline value_iter begin(SBValue &T) { return {T, 0}; }
 inline value_iter end(SBValue &T) { return {T, T.GetNumChildren()}; }
 /// @}
 
-/// SBValue value iterators.
+/// SBValueList value iterator.
 /// @{
 using value_list_iter =
     iter<SBValueList, SBValue, uint32_t, &SBValueList::GetValueAtIndex>;
@@ -120,3 +122,5 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
 }
 
 } // namespace lldb
+
+#endif // LLDB_TOOLS_LLDB_DAP_SBAPIEXTRAS_H

@@ -86,7 +86,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -124,7 +123,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -162,7 +160,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -199,7 +196,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -238,7 +234,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -277,7 +272,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -315,7 +309,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebp' }
@@ -353,7 +346,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$eax' }
   - { reg: '$ebx' }
@@ -391,7 +383,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$ebx' }
   - { reg: '$ebp' }
@@ -428,7 +419,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$ebx' }
   - { reg: '$ebp' }
@@ -466,7 +456,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$ebx' }
   - { reg: '$ebp' }
@@ -503,7 +492,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$ebp' }
   - { reg: '$eax' }

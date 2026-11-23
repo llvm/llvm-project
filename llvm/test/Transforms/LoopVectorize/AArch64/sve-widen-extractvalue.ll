@@ -7,11 +7,10 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-LABEL: define void @widen_extractvalue(
 ; CHECK-SAME: ptr [[DST:%.*]], { i64, i64 } [[SV:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 [[TMP0]], 1
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 1000, [[TMP1]]
-; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 1000, [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 1000, [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractvalue { i64, i64 } [[SV]], 0
@@ -29,7 +28,7 @@ define void @widen_extractvalue(ptr %dst, {i64, i64} %sv) #0 {
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 1000, [[N_VEC]]
-; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; CHECK-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ;
 entry:
@@ -50,7 +49,7 @@ exit:
   ret void
 }
 
-attributes #0 = { "target-features"="+sve" }
+attributes #0 = { "target-features"="+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}

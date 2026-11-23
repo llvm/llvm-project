@@ -175,85 +175,85 @@ default:
   ret void
 }
 
-define void @one_pred_too_large(i32 %x) {
-; CHECK-LABEL: define void @one_pred_too_large(
+; When the block with a switch has single predecessor we always merge it, as
+; doing that doesn't cause code size increase.
+define void @one_pred_large(i32 %x) {
+; CHECK-LABEL: define void @one_pred_large(
 ; CHECK-SAME: i32 [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[ZERO:.*]], label %[[SW:.*]]
-; CHECK:       [[COMMON_RET:.*]]:
-; CHECK-NEXT:    ret void
-; CHECK:       [[ZERO]]:
-; CHECK-NEXT:    call void @f(i32 -1)
-; CHECK-NEXT:    br label %[[COMMON_RET]]
-; CHECK:       [[SW]]:
 ; CHECK-NEXT:    switch i32 [[X]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[EVEN:.*]]
+; CHECK-NEXT:      i32 -1, label %[[ZERO1:.*]]
+; CHECK-NEXT:      i32 0, label %[[ZERO:.*]]
 ; CHECK-NEXT:      i32 1, label %[[ODD:.*]]
-; CHECK-NEXT:      i32 2, label %[[EVEN]]
+; CHECK-NEXT:      i32 2, label %[[ZERO]]
 ; CHECK-NEXT:      i32 3, label %[[ODD]]
-; CHECK-NEXT:      i32 4, label %[[EVEN]]
+; CHECK-NEXT:      i32 4, label %[[ZERO]]
 ; CHECK-NEXT:      i32 5, label %[[ODD]]
-; CHECK-NEXT:      i32 6, label %[[EVEN]]
+; CHECK-NEXT:      i32 6, label %[[ZERO]]
 ; CHECK-NEXT:      i32 7, label %[[ODD]]
-; CHECK-NEXT:      i32 8, label %[[EVEN]]
+; CHECK-NEXT:      i32 8, label %[[ZERO]]
 ; CHECK-NEXT:      i32 9, label %[[ODD]]
-; CHECK-NEXT:      i32 10, label %[[EVEN]]
+; CHECK-NEXT:      i32 10, label %[[ZERO]]
 ; CHECK-NEXT:      i32 11, label %[[ODD]]
-; CHECK-NEXT:      i32 12, label %[[EVEN]]
+; CHECK-NEXT:      i32 12, label %[[ZERO]]
 ; CHECK-NEXT:      i32 13, label %[[ODD]]
-; CHECK-NEXT:      i32 14, label %[[EVEN]]
+; CHECK-NEXT:      i32 14, label %[[ZERO]]
 ; CHECK-NEXT:      i32 15, label %[[ODD]]
-; CHECK-NEXT:      i32 16, label %[[EVEN]]
+; CHECK-NEXT:      i32 16, label %[[ZERO]]
 ; CHECK-NEXT:      i32 17, label %[[ODD]]
-; CHECK-NEXT:      i32 18, label %[[EVEN]]
+; CHECK-NEXT:      i32 18, label %[[ZERO]]
 ; CHECK-NEXT:      i32 19, label %[[ODD]]
-; CHECK-NEXT:      i32 20, label %[[EVEN]]
+; CHECK-NEXT:      i32 20, label %[[ZERO]]
 ; CHECK-NEXT:      i32 21, label %[[ODD]]
-; CHECK-NEXT:      i32 22, label %[[EVEN]]
+; CHECK-NEXT:      i32 22, label %[[ZERO]]
 ; CHECK-NEXT:      i32 23, label %[[ODD]]
-; CHECK-NEXT:      i32 24, label %[[EVEN]]
+; CHECK-NEXT:      i32 24, label %[[ZERO]]
 ; CHECK-NEXT:      i32 25, label %[[ODD]]
-; CHECK-NEXT:      i32 26, label %[[EVEN]]
+; CHECK-NEXT:      i32 26, label %[[ZERO]]
 ; CHECK-NEXT:      i32 27, label %[[ODD]]
-; CHECK-NEXT:      i32 28, label %[[EVEN]]
+; CHECK-NEXT:      i32 28, label %[[ZERO]]
 ; CHECK-NEXT:      i32 29, label %[[ODD]]
-; CHECK-NEXT:      i32 30, label %[[EVEN]]
+; CHECK-NEXT:      i32 30, label %[[ZERO]]
 ; CHECK-NEXT:      i32 31, label %[[ODD]]
-; CHECK-NEXT:      i32 32, label %[[EVEN]]
+; CHECK-NEXT:      i32 32, label %[[ZERO]]
 ; CHECK-NEXT:      i32 33, label %[[ODD]]
-; CHECK-NEXT:      i32 34, label %[[EVEN]]
+; CHECK-NEXT:      i32 34, label %[[ZERO]]
 ; CHECK-NEXT:      i32 35, label %[[ODD]]
-; CHECK-NEXT:      i32 36, label %[[EVEN]]
+; CHECK-NEXT:      i32 36, label %[[ZERO]]
 ; CHECK-NEXT:      i32 37, label %[[ODD]]
-; CHECK-NEXT:      i32 38, label %[[EVEN]]
+; CHECK-NEXT:      i32 38, label %[[ZERO]]
 ; CHECK-NEXT:      i32 39, label %[[ODD]]
-; CHECK-NEXT:      i32 40, label %[[EVEN]]
+; CHECK-NEXT:      i32 40, label %[[ZERO]]
 ; CHECK-NEXT:      i32 41, label %[[ODD]]
-; CHECK-NEXT:      i32 42, label %[[EVEN]]
+; CHECK-NEXT:      i32 42, label %[[ZERO]]
 ; CHECK-NEXT:      i32 43, label %[[ODD]]
-; CHECK-NEXT:      i32 44, label %[[EVEN]]
+; CHECK-NEXT:      i32 44, label %[[ZERO]]
 ; CHECK-NEXT:      i32 45, label %[[ODD]]
-; CHECK-NEXT:      i32 46, label %[[EVEN]]
+; CHECK-NEXT:      i32 46, label %[[ZERO]]
 ; CHECK-NEXT:      i32 47, label %[[ODD]]
-; CHECK-NEXT:      i32 48, label %[[EVEN]]
+; CHECK-NEXT:      i32 48, label %[[ZERO]]
 ; CHECK-NEXT:      i32 49, label %[[ODD]]
-; CHECK-NEXT:      i32 50, label %[[EVEN]]
+; CHECK-NEXT:      i32 50, label %[[ZERO]]
 ; CHECK-NEXT:      i32 51, label %[[ODD]]
-; CHECK-NEXT:      i32 52, label %[[EVEN]]
+; CHECK-NEXT:      i32 52, label %[[ZERO]]
 ; CHECK-NEXT:      i32 53, label %[[ODD]]
-; CHECK-NEXT:      i32 54, label %[[EVEN]]
+; CHECK-NEXT:      i32 54, label %[[ZERO]]
 ; CHECK-NEXT:      i32 55, label %[[ODD]]
-; CHECK-NEXT:      i32 56, label %[[EVEN]]
+; CHECK-NEXT:      i32 56, label %[[ZERO]]
 ; CHECK-NEXT:      i32 57, label %[[ODD]]
-; CHECK-NEXT:      i32 58, label %[[EVEN]]
+; CHECK-NEXT:      i32 58, label %[[ZERO]]
 ; CHECK-NEXT:      i32 59, label %[[ODD]]
-; CHECK-NEXT:      i32 60, label %[[EVEN]]
+; CHECK-NEXT:      i32 60, label %[[ZERO]]
 ; CHECK-NEXT:      i32 61, label %[[ODD]]
-; CHECK-NEXT:      i32 62, label %[[EVEN]]
+; CHECK-NEXT:      i32 62, label %[[ZERO]]
 ; CHECK-NEXT:      i32 63, label %[[ODD]]
 ; CHECK-NEXT:    ]
-; CHECK:       [[EVEN]]:
+; CHECK:       [[COMMON_RET:.*]]:
+; CHECK-NEXT:    ret void
+; CHECK:       [[ZERO1]]:
+; CHECK-NEXT:    call void @f(i32 -1)
+; CHECK-NEXT:    br label %[[COMMON_RET]]
+; CHECK:       [[ZERO]]:
 ; CHECK-NEXT:    call void @f(i32 0)
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ; CHECK:       [[ODD]]:
@@ -264,7 +264,7 @@ define void @one_pred_too_large(i32 %x) {
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;
 entry:
-  %cmp = icmp eq i32 %x, 0
+  %cmp = icmp eq i32 %x, -1
   br i1 %cmp, label %zero, label %sw
 
 zero:

@@ -32,16 +32,16 @@ define void @vector_reverse_f64(i64 %N, ptr noalias %a, ptr noalias %b) #0{
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds double, ptr [[B]], i64 [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub nuw nsw i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i64 0, [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP6]], i64 [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub i64 [[TMP8]], [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds double, ptr [[TMP6]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP6]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x double>, ptr [[TMP9]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <vscale x 8 x double>, ptr [[TMP11]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <vscale x 8 x double> [[WIDE_LOAD1]], splat (double 1.000000e+00)
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds double, ptr [[A]], i64 [[TMP5]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds double, ptr [[TMP14]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds double, ptr [[TMP14]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP14]], i64 [[TMP8]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP14]], i64 [[TMP10]]
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP12]], ptr [[TMP15]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x double> [[TMP13]], ptr [[TMP16]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -86,8 +86,8 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP0]], 7
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[TMP2]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = shl nuw nsw i64 [[TMP0]], 7
+; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i64 [[TMP2]], -1
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i64 [[B3]], [[A4]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = sub i64 [[TMP4]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP5]], [[TMP3]]
@@ -105,16 +105,16 @@ define void @vector_reverse_i64(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub nuw nsw i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[TMP12:%.*]] = sub i64 0, [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP10]], i64 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = sub i64 [[TMP12]], [[TMP6]]
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP10]], i64 [[TMP14]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 8 x i64>, ptr [[TMP13]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <vscale x 8 x i64>, ptr [[TMP15]], align 8
 ; CHECK-NEXT:    [[TMP16:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP17:%.*]] = add <vscale x 8 x i64> [[WIDE_LOAD5]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP9]]
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i64, ptr [[TMP18]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i64, ptr [[TMP18]], i64 [[TMP14]]
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP18]], i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP18]], i64 [[TMP14]]
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP16]], ptr [[TMP19]], align 8
 ; CHECK-NEXT:    store <vscale x 8 x i64> [[TMP17]], ptr [[TMP20]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
@@ -144,7 +144,7 @@ for.body:
   br i1 %cmp, label %for.body, label %for.cond.cleanup, !llvm.loop !0
 }
 
-attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" }
+attributes #0 = { "target-cpu"="generic" "target-features"="+neon,+sve" vscale_range(1,16) }
 
 !0 = distinct !{!0, !1, !2, !3, !4, !5}
 !1 = !{!"llvm.loop.mustprogress"}

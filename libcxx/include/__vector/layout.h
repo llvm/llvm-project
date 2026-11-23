@@ -331,25 +331,25 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
-  return __begin_ + __size_;
+  return __begin_ptr() + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
-  return __begin_ + __size_;
+  return __begin_ptr() + __size_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
-  return __begin_ + __capacity_;
+  return __begin_ptr() + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
-  return __begin_ + __capacity_;
+  return __begin_ptr() + __capacity_;
 }
 
 template <class _Tp, class _Alloc>
@@ -448,24 +448,32 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::__empty() const
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__end_));
   return __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__end_));
   return __end_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__capacity_));
   return __capacity_;
 }
 
 template <class _Tp, class _Alloc>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::const_pointer
 __vector_layout<_Tp, _Alloc>::__capacity_ptr() const _NOEXCEPT {
+  if _LIBCPP_CONSTEXPR (__is_std_allocator_v<allocator_type>)
+    std::__assume_separate_storage(this, std::__to_address(__capacity_));
   return __capacity_;
 }
 

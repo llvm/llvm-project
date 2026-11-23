@@ -24,7 +24,7 @@ define void @urem_lookup(ptr noalias %src, ptr noalias %dst, ptr noalias %tbl, i
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds float, ptr [[SRC]], i64 [[IV]]
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr align 4 [[GEP_SRC]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = and <vscale x 4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TBL]], <vscale x 4 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [4 x i8], ptr [[TBL]], <vscale x 4 x i64> [[TMP4]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[TMP5]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <vscale x 4 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <vscale x 4 x float> [[TMP6]], [[WIDE_MASKED_LOAD]]
@@ -85,7 +85,7 @@ define void @over_conservative_merge(ptr noalias %A, ptr noalias %B, i64 %N) #0 
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 4 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i64> [ [[TMP2]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = and <vscale x 4 x i64> [[VEC_IND]], splat (i64 3)
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr float, ptr [[A]], <vscale x 4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr [4 x i8], ptr [[A]], <vscale x 4 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <vscale x 4 x float> @llvm.masked.gather.nxv4f32.nxv4p0(<vscale x 4 x ptr> align 4 [[WIDE_GEP]], <vscale x 4 x i1> [[ACTIVE_LANE_MASK]], <vscale x 4 x float> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <vscale x 4 x float> [[WIDE_MASKED_GATHER]], [[WIDE_MASKED_GATHER]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl nuw nsw i64 [[INDEX]], 1

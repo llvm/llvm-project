@@ -55,6 +55,7 @@ static_library("bugprone") {
     "IntegerDivisionCheck.cpp",
     "InvalidEnumDefaultInitializationCheck.cpp",
     "LambdaFunctionNameCheck.cpp",
+    "MacroConditionCheck.cpp",
     "MacroParenthesesCheck.cpp",
     "MacroRepeatedSideEffectsCheck.cpp",
     "MisleadingSetterOfReferenceCheck.cpp",
