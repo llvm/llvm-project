@@ -9899,6 +9899,30 @@ cc_library(
 )
 
 cc_library(
+    name = "OpenACCToLLVMIRTranslation",
+    srcs = glob(["lib/Target/LLVMIR/Dialect/OpenACC/*.cpp"]),
+    hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenACC/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":IR",
+        ":LLVMDialect",
+        ":NVVMDialect",
+        ":OpenACCDialect",
+        ":ROCDLDialect",
+        ":Support",
+        ":ToLLVMIRTranslation",
+        ":XeVMDialect",
+        "//llvm:BinaryFormat",
+        "//llvm:Core",
+        "//llvm:FrontendOffloading",
+        "//llvm:Object",
+        "//llvm:Support",
+        "//llvm:TransformUtils",
+    ],
+)
+
+cc_library(
     name = "OpenMPToLLVMIRTranslation",
     srcs = glob(["lib/Target/LLVMIR/Dialect/OpenMP/*.cpp"]),
     hdrs = glob(["include/mlir/Target/LLVMIR/Dialect/OpenMP/*.h"]) + [
@@ -9975,6 +9999,7 @@ cc_library(
         ":LLVMIRToNVVMTranslation",
         ":LLVMToLLVMIRTranslation",
         ":NVVMToLLVMIRTranslation",
+        ":OpenACCToLLVMIRTranslation",
         ":OpenMPToLLVMIRTranslation",
         ":PtrToLLVMIRTranslation",
         ":ROCDLToLLVMIRTranslation",
