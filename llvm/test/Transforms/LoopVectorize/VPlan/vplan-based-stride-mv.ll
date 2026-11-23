@@ -3805,6 +3805,7 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; CHECK-NEXT:  ir-bb<entry>:
 ; CHECK-NEXT:    IR   %stride_plus_y = add i64 %stride, %y
 ; CHECK-NEXT:    IR   %udiv = udiv i64 %n, %stride_plus_y
+; FIXME: Can trigger UB, must be guarded.
 ; CHECK-NEXT:    EMIT vp<[[VP3:%[0-9]+]]> = EXPAND SCEV (%n /u (1 + %y))
 ; CHECK-NEXT:    EMIT vp<[[VP4:%[0-9]+]]> = EXPAND SCEV (1 + %y)
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
@@ -3894,6 +3895,7 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<entry>:
+; FIXME: Can trigger UB, must be guarded.
 ; CHECK-NEXT:    EMIT vp<[[VP3]]> = EXPAND SCEV (1 umax (%n /u (1 + %y)))
 ; CHECK-NEXT:  Successor(s): scalar.ph, strides.check
 ; CHECK-EMPTY:

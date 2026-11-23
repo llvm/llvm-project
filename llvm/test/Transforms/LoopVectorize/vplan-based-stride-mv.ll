@@ -4814,6 +4814,7 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; COMPARE-NO-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
 ; COMPARE-NO-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
 ; COMPARE-NO-MV-NEXT:    [[TMP5:%.*]] = add i64 [[Y]], 1
+; FIXME: Can trigger UB, must be guarded.
 ; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP5]]
 ; COMPARE-NO-MV-NEXT:    br label %[[VECTOR_PH:.*]]
 ; COMPARE-NO-MV:       [[VECTOR_PH]]:
@@ -4855,6 +4856,7 @@ define void @livein_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %dst, pt
 ; COMPARE-LAA-MV-NEXT:    [[STRIDE_PLUS_Y:%.*]] = add i64 [[STRIDE]], [[Y]]
 ; COMPARE-LAA-MV-NEXT:    [[UDIV:%.*]] = udiv i64 [[N]], [[STRIDE_PLUS_Y]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP4:%.*]] = add i64 [[Y]], 1
+; FIXME: Can trigger UB, must be guarded.
 ; COMPARE-LAA-MV-NEXT:    [[TMP5:%.*]] = udiv i64 [[N]], [[TMP4]]
 ; COMPARE-LAA-MV-NEXT:    br label %[[VECTOR_SCEVCHECK:.*]]
 ; COMPARE-LAA-MV:       [[VECTOR_SCEVCHECK]]:
@@ -4918,6 +4920,7 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; COMPARE-NO-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
 ; COMPARE-NO-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-NO-MV-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
+; FIXME: Can trigger UB, must be guarded.
 ; COMPARE-NO-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
 ; COMPARE-NO-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
 ; COMPARE-NO-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
@@ -4963,6 +4966,7 @@ define void @expand_scev_rewrite_might_trigger_ub_if_not_guarded(ptr noalias %ds
 ; COMPARE-LAA-MV-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]], i64 [[N:%.*]], i64 [[STRIDE:%.*]], i64 [[Y:%.*]]) {
 ; COMPARE-LAA-MV-NEXT:  [[ENTRY:.*]]:
 ; COMPARE-LAA-MV-NEXT:    [[TMP0:%.*]] = add i64 [[Y]], 1
+; FIXME: Can trigger UB, must be guarded.
 ; COMPARE-LAA-MV-NEXT:    [[TMP1:%.*]] = udiv i64 [[N]], [[TMP0]]
 ; COMPARE-LAA-MV-NEXT:    [[TMP2:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP1]], i64 1)
 ; COMPARE-LAA-MV-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
