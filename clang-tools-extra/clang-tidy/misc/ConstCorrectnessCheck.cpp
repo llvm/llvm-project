@@ -316,25 +316,34 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
   // template pattern contains all uses, so the variable must not be modified
   // there either. The function declaring the variable is used rather than
   // 'Function', which can be an enclosing function, e.g. for a variable in a
-  // generic lambda.
+  // generic lambda. The lookup traverses the pattern body, so it is done
+  // lazily, only for variables that are not mutated in the instantiation.
   const FunctionDecl *PatternFunction = nullptr;
   const Stmt *PatternBody = nullptr;
   const VarDecl *PatternVariable = nullptr;
-  if (const auto *DeclaringFunction = dyn_cast_if_present<FunctionDecl>(
-          Variable->getParentFunctionOrMethod());
-      DeclaringFunction && DeclaringFunction->isTemplateInstantiation())
-    if (const FunctionDecl *Pattern =
-            DeclaringFunction->getTemplateInstantiationPattern())
-      if ((PatternBody = Pattern->getBody(PatternFunction)))
-        PatternVariable =
-            getPatternVariable(Variable, PatternBody, *Result.Context);
+  bool PatternVariableLookedUp = false;
+  const auto GetPatternVariable = [&]() -> const VarDecl * {
+    if (PatternVariableLookedUp)
+      return PatternVariable;
+    PatternVariableLookedUp = true;
+    if (const auto *DeclaringFunction = dyn_cast_if_present<FunctionDecl>(
+            Variable->getParentFunctionOrMethod());
+        DeclaringFunction && DeclaringFunction->isTemplateInstantiation())
+      if (const FunctionDecl *Pattern =
+              DeclaringFunction->getTemplateInstantiationPattern())
+        if ((PatternBody = Pattern->getBody(PatternFunction)))
+          PatternVariable =
+              getPatternVariable(Variable, PatternBody, *Result.Context);
+    return PatternVariable;
+  };
 
   const auto CheckValue = [&]() {
     // Offload const-analysis to utility function.
     if (isMutated(Variable, LocalScope, Function, Result.Context))
       return;
-    if (PatternVariable && isMutated(PatternVariable, PatternBody,
-                                     PatternFunction, Result.Context))
+    if (const VarDecl *PatternVar = GetPatternVariable();
+        PatternVar &&
+        isMutated(PatternVar, PatternBody, PatternFunction, Result.Context))
       return;
 
     const auto Diag = diag(Variable->getBeginLoc(),
@@ -375,9 +384,9 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    if (PatternVariable) {
+    if (const VarDecl *PatternVar = GetPatternVariable()) {
       registerScope(PatternBody, Result.Context);
-      if (ScopesCache[PatternBody]->isPointeeMutated(PatternVariable))
+      if (ScopesCache[PatternBody]->isPointeeMutated(PatternVar))
         return;
     }
     const auto Diag =
