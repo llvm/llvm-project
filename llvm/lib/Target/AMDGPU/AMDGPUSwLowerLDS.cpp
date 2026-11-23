@@ -164,9 +164,7 @@ struct FunctionsAndLDSAccess {
 class AMDGPUSwLowerLDS {
 public:
   AMDGPUSwLowerLDS(Module &Mod, DomTreeCallback Callback)
-      : M(Mod), IRB(M), DTCallback(Callback) {
-    IRB.disableGEPCanonicalization();
-  }
+      : M(Mod), IRB(M), DTCallback(Callback) {}
   bool run();
   void getUsesOfLDSByNonKernels();
   void getNonKernelsWithLDSInstructions(const CallGraph &CG);
@@ -384,8 +382,7 @@ static void markUsedByKernel(Function *Func, GlobalVariable *SGV) {
   Function *Decl = Intrinsic::getOrInsertDeclaration(Func->getParent(),
                                                      Intrinsic::donothing, {});
 
-  Value *UseInstance[1] = {
-      Builder.CreateConstInBoundsGEP1_32(SGV->getValueType(), SGV, 0)};
+  Value *UseInstance[] = {SGV};
 
   Builder.CreateCall(Decl, {},
                      {OperandBundleDefT<Value *>("ExplicitUse", UseInstance)});

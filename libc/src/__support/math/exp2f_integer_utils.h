@@ -16,8 +16,9 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_EXP2F_INTEGER_UTILS_H
 
 #include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/PolyEval.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/frac64.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"

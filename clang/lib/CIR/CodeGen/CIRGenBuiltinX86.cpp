@@ -1195,7 +1195,8 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
 
     mlir::Value cpuFeatVal = builder.getArrayElement(
         loc, loc, cpuFeatArrPtr, arrTy,
-        /*index=*/builder.getUInt32(0, loc), /*shouldDecay=*/true);
+        /*idx=*/builder.getUInt32(0, loc), /*shouldDecay=*/true,
+        cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, cpuFeatVal, CharUnits::fromQuantity(4));
 
@@ -1215,7 +1216,7 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
         loc, loc, getCpuFeatures2,
         cast<cir::PointerType>(getCpuFeatures2.getType()).getPointee(),
         builder.getUInt32(/*index=*/i - 1, loc),
-        /*shouldDecay=*/true);
+        /*shouldDecay=*/true, cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, getArrayElt, CharUnits::fromQuantity(4));
 
@@ -1319,6 +1320,12 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
   case MSVCIntrin::__fastfail:
     cgm.errorNYI(E->getExprLoc(), "MSVC intrinsic");
     return {};
+  case MSVCIntrin::_ReadWriteBarrier:
+    cir::AtomicFenceOp::create(
+        builder, getLoc(E->getExprLoc()), cir::MemOrder::SequentiallyConsistent,
+        cir::SyncScopeKindAttr::get(&getMLIRContext(),
+                                    cir::SyncScopeKind::SingleThread));
+    return mlir::Value{};
   }
   llvm_unreachable("Incorrect MSVC intrinsic!");
 }
@@ -3140,16 +3147,6 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return builder.emitIntrinsicCallOp(
         getLoc(expr->getExprLoc()), intrinsicName, i64Ty,
         mlir::ValueRange{ops[0], ops[1], ops[2]});
-  }
-  case X86::BI_ReadWriteBarrier:
-  case X86::BI_ReadBarrier:
-  case X86::BI_WriteBarrier: {
-    cir::AtomicFenceOp::create(
-        builder, getLoc(expr->getExprLoc()),
-        cir::MemOrder::SequentiallyConsistent,
-        cir::SyncScopeKindAttr::get(&getMLIRContext(),
-                                    cir::SyncScopeKind::SingleThread));
-    return mlir::Value{};
   }
   case X86::BI_AddressOfReturnAddress: {
     mlir::Location loc = getLoc(expr->getExprLoc());

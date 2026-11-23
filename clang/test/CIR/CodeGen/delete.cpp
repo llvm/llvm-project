@@ -107,7 +107,7 @@ Container::~Container() { delete contents; }
 // OGCG:   br i1 %[[ISNULL]], label %{{.*}}, label %[[DELETE_NOTNULL:.*]]
 // OGCG: [[DELETE_NOTNULL]]:
 // OGCG:   call void @_ZN8ContentsD2Ev(ptr noundef nonnull align 1 dereferenceable(1) %[[CONTENTS_PTR]])
-// OGCG:   call void @_ZdlPvm(ptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
+// OGCG:   call void @_ZdlPvm(ptr allocptr noundef %[[CONTENTS_PTR]], i64 noundef 1)
 
 // Contents::~Contents()
 // CIR: cir.func {{.*}} @_ZN8ContentsD2Ev
@@ -117,7 +117,7 @@ Container::~Container() { delete contents; }
 // operator delete(void*, unsigned long)
 // CIR: cir.func {{.*}} @_ZdlPvm(!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef})
 // LLVM: declare void @_ZdlPvm(ptr noundef, i64 noundef)
-// OGCG: declare void @_ZdlPvm(ptr noundef, i64 noundef)
+// OGCG: declare void @_ZdlPvm(ptr allocptr noundef, i64 noundef)
 
 struct StructWithVirtualDestructor {
   virtual ~StructWithVirtualDestructor();
@@ -136,8 +136,7 @@ void destroy(StructWithVirtualDestructor *x) {
 // CIR:   cir.if %[[NOT_NULL]] {
 // CIR:     %[[VTABLE_PTR:.*]] = cir.vtable.get_vptr %[[X]] : !cir.ptr<!rec_StructWithVirtualDestructor> -> !cir.ptr<!cir.vptr>
 // CIR:     %[[VTABLE:.*]] = cir.load{{.*}} %[[VTABLE_PTR]] : !cir.ptr<!cir.vptr>, !cir.vptr
-// CIR:     %[[DTOR_FN_ADDR_PTR:.*]] = cir.vtable.get_virtual_fn_addr %[[VTABLE]][1]
-// CIR:     %[[DTOR_FN_ADDR:.*]] = cir.load{{.*}} %[[DTOR_FN_ADDR_PTR]]
+// CIR:     %[[DTOR_FN_ADDR:.*]] = cir.vtable.get_virtual_fn %[[VTABLE]][1]
 // CIR:     cir.call %[[DTOR_FN_ADDR]](%[[X]])
 // CIR:   }
 

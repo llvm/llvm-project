@@ -91,95 +91,95 @@ body:             |
   bb.1:
     liveins: $x10, $x11, $x12
 
-    %0:gprb(s32) = COPY $x10
+    %0:gprb(i32) = COPY $x10
     %1:gprb(p0) = COPY $x11
-    %3:gprb(s32) = COPY $x12
-    %26:gprb(s32) = G_CONSTANT i32 -1
-    %29:gprb(s32) = G_CONSTANT i32 1
-    %4:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %56:gprb(s32) = G_ICMP intpred(eq), %4(s32), %0
-    G_BRCOND %56(s32), %bb.15
+    %3:gprb(i32) = COPY $x12
+    %26:gprb(i32) = G_CONSTANT i32 -1
+    %29:gprb(i32) = G_CONSTANT i32 1
+    %4:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %56:gprb(i32) = G_ICMP intpred(eq), %4(i32), %0
+    G_BRCOND %56(i32), %bb.15
     G_BR %bb.2
 
   bb.2:
-    %6:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %54:gprb(s32) = G_ICMP intpred(ne), %6(s32), %0
-    G_BRCOND %54(s32), %bb.15
+    %6:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %54:gprb(i32) = G_ICMP intpred(ne), %6(i32), %0
+    G_BRCOND %54(i32), %bb.15
     G_BR %bb.3
 
   bb.3:
-    %8:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %52:gprb(s32) = G_ICMP intpred(slt), %8(s32), %0
-    G_BRCOND %52(s32), %bb.15
+    %8:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %52:gprb(i32) = G_ICMP intpred(slt), %8(i32), %0
+    G_BRCOND %52(i32), %bb.15
     G_BR %bb.4
 
   bb.4:
-    %10:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %50:gprb(s32) = G_ICMP intpred(sge), %10(s32), %0
-    G_BRCOND %50(s32), %bb.15
+    %10:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %50:gprb(i32) = G_ICMP intpred(sge), %10(i32), %0
+    G_BRCOND %50(i32), %bb.15
     G_BR %bb.5
 
   bb.5:
-    %12:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %48:gprb(s32) = G_ICMP intpred(ult), %12(s32), %0
-    G_BRCOND %48(s32), %bb.15
+    %12:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %48:gprb(i32) = G_ICMP intpred(ult), %12(i32), %0
+    G_BRCOND %48(i32), %bb.15
     G_BR %bb.6
 
   bb.6:
-    %14:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %46:gprb(s32) = G_ICMP intpred(uge), %14(s32), %0
-    G_BRCOND %46(s32), %bb.15
+    %14:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %46:gprb(i32) = G_ICMP intpred(uge), %14(i32), %0
+    G_BRCOND %46(i32), %bb.15
     G_BR %bb.7
 
   bb.7:
-    %16:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %44:gprb(s32) = G_ICMP intpred(sgt), %16(s32), %0
-    G_BRCOND %44(s32), %bb.15
+    %16:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %44:gprb(i32) = G_ICMP intpred(sgt), %16(i32), %0
+    G_BRCOND %44(i32), %bb.15
     G_BR %bb.8
 
   bb.8:
-    %18:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %42:gprb(s32) = G_ICMP intpred(sle), %18(s32), %0
-    G_BRCOND %42(s32), %bb.15
+    %18:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %42:gprb(i32) = G_ICMP intpred(sle), %18(i32), %0
+    G_BRCOND %42(i32), %bb.15
     G_BR %bb.9
 
   bb.9:
-    %20:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %40:gprb(s32) = G_ICMP intpred(ugt), %20(s32), %0
-    G_BRCOND %40(s32), %bb.15
+    %20:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %40:gprb(i32) = G_ICMP intpred(ugt), %20(i32), %0
+    G_BRCOND %40(i32), %bb.15
     G_BR %bb.10
 
   bb.10:
-    %22:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %38:gprb(s32) = G_ICMP intpred(ule), %22(s32), %0
-    G_BRCOND %38(s32), %bb.15
+    %22:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %38:gprb(i32) = G_ICMP intpred(ule), %22(i32), %0
+    G_BRCOND %38(i32), %bb.15
     G_BR %bb.11
 
   bb.11:
-    %24:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %57:gprb(s32) = G_CONSTANT i32 1
-    %36:gprb(s32) = G_AND %3, %57
-    G_BRCOND %36(s32), %bb.15
+    %24:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %57:gprb(i32) = G_CONSTANT i32 1
+    %36:gprb(i32) = G_AND %3, %57
+    G_BRCOND %36(i32), %bb.15
     G_BR %bb.12
 
   bb.12:
     successors: %bb.15(0x50000000), %bb.13(0x30000000)
 
-    %25:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %35:gprb(s32) = G_ICMP intpred(sgt), %25(s32), %26
-    G_BRCOND %35(s32), %bb.15
+    %25:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %35:gprb(i32) = G_ICMP intpred(sgt), %25(i32), %26
+    G_BRCOND %35(i32), %bb.15
     G_BR %bb.13
 
   bb.13:
     successors: %bb.15(0x30000000), %bb.14(0x50000000)
 
-    %28:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
-    %33:gprb(s32) = G_ICMP intpred(slt), %28(s32), %29
-    G_BRCOND %33(s32), %bb.15
+    %28:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %33:gprb(i32) = G_ICMP intpred(slt), %28(i32), %29
+    G_BRCOND %33(i32), %bb.15
     G_BR %bb.14
 
   bb.14:
-    %31:gprb(s32) = G_LOAD %1(p0) :: (volatile load (s32))
+    %31:gprb(i32) = G_LOAD %1(p0) :: (volatile load (s32))
 
   bb.15:
     PseudoRET

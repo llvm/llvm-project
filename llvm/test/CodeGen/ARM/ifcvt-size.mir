@@ -160,7 +160,7 @@ body:             |
     renamable $r1 = t2MOVi 0, 14, $noreg, $noreg
     t2STRi12 killed renamable $r1, killed renamable $r3, 0, 14, $noreg
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn2
 alignment:       1
@@ -205,7 +205,7 @@ body:             |
     renamable $r1 = t2MOVi 0, 14, $noreg, $noreg
     t2STRi12 killed renamable $r1, killed renamable $r3, 0, 14, $noreg
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn3
 alignment:       1
@@ -247,7 +247,7 @@ body:             |
     renamable $r0 = t2LDRi12 killed renamable $r0, 0, 14, $noreg
     renamable $r0 = t2LDRSHi12 killed renamable $r0, 0, 14, $noreg
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn4
 alignment:       1
@@ -297,7 +297,7 @@ body:             |
     renamable $r1 = MOVi 0, 14, $noreg, $noreg
     STRi12 killed renamable $r1, killed renamable $r3, 0, 14, $noreg
     BX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn5
 alignment:       1
@@ -333,7 +333,7 @@ body:             |
     renamable $r0 = t2LDRi12 killed renamable $r0, 0, 14, $noreg
     renamable $r0 = t2LDRSHi12 killed renamable $r0, 0, 14, $noreg
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn6
 alignment:       1
@@ -391,7 +391,7 @@ body:             |
     liveins: $r0
 
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn7
 alignment:       1
@@ -446,7 +446,7 @@ body:             |
     renamable $r1 = MOVi 0, 14, $noreg, $noreg
     STRi12 killed renamable $r1, killed renamable $r3, 0, 14, $noreg
     BX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn8
 alignment:       1
@@ -498,7 +498,7 @@ body:             |
     renamable $r1 = t2MOVi 0, 14, $noreg, $noreg
     t2STRi12 killed renamable $r1, killed renamable $r3, 0, 14, $noreg
     tBX_RET 14, $noreg, implicit $r0
-
+...
 ---
 name:            fn9
 alignment:       2

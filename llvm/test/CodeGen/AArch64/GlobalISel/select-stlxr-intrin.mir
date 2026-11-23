@@ -119,3 +119,4 @@ body:             |
     %5:gpr(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.stlxr), %4(i64), %2(p0) :: (volatile store (i16) into %ir.addr)
     $w0 = COPY %5(i32)
     RET_ReallyLR implicit $w0
+...

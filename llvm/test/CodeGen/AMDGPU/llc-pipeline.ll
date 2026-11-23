@@ -1,3 +1,4 @@
+; NOTE: Do not autogenerate. Check the ordered pass pipeline at each optimization level.
 ; UNSUPPORTED: expensive_checks
 ; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s

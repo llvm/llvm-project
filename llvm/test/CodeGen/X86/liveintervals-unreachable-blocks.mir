@@ -8,7 +8,6 @@
 # CHECK: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
 ---
 name: use_in_unreachable_block
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -27,7 +26,6 @@ body: |
 # CHECK: %0 [16r,48B:0)[48B,80B:1)[80B,96r:2) 0@16r 1@48B-phi 2@80B-phi
 ---
 name: unreachable_block_into_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -46,7 +44,6 @@ body: |
 # CHECK: %0 [16r,16d:0)[48B,96B:1) 0@16r 1@48B-phi
 ---
 name: unreachable_loop
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -62,7 +59,6 @@ body: |
 # CHECK: %0 [16r,16d:0)[48B,96B:1)[96B,128B:2) 0@16r 1@48B-phi 2@96B-phi
 ---
 name: unreachable_multi_block_loop
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -81,7 +77,6 @@ body: |
 # CHECK: %0 [16r,16d:0)[48B,80B:2)[80B,128B:1) 0@16r 1@80B-phi 2@48B-phi
 ---
 name: unreachable_loop_with_preheader
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -100,7 +95,6 @@ body: |
 # CHECK: %0 [16r,48B:0)[48B,96B:1)[96B,112r:2) 0@16r 1@48B-phi 2@96B-phi
 ---
 name: unreachable_loop_exits_to_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -121,7 +115,6 @@ body: |
 # CHECK: %0 [48r,80B:0)[80B,96r:1) 0@48r 1@80B-phi
 ---
 name: def_and_use_in_unreachable_blocks
-tracksRegLiveness: true
 body: |
   bb.0:
     RET64
@@ -139,7 +132,6 @@ body: |
 # CHECK: %0 [16r,48B:1)[64r,96B:0)[96B,112r:2) 0@64r 1@16r 2@96B-phi
 ---
 name: redefined_in_unreachable_block
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -159,7 +151,6 @@ body: |
 # CHECK: %0 [16r,48B:1)[64r,96B:0)[96B,144B:2)[144B,160r:3) 0@64r 1@16r 2@96B-phi 3@144B-phi
 ---
 name: redefined_in_unreachable_loop
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -184,7 +175,6 @@ body: |
 # CHECK: DIL [0B,0d:0)[32B,48r:1) 0@0B-phi 1@32B-phi
 ---
 name: physreg_use_in_unreachable_block
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -203,7 +193,6 @@ body: |
 # SUBREG: %0 [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi  L000000000000000F [16r,16d:0)[48B,64r:1) 0@16r 1@48B-phi
 ---
 name: subreg_use_in_unreachable_block
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $rdi
@@ -223,7 +212,6 @@ body: |
 # CHECK-NEXT: %1 [64r,96B:1)[112r,144B:0)[144B,160r:2) 0@112r 1@64r 2@144B-phi
 ---
 name: separate_phi_component
-tracksRegLiveness: true
 body: |
   bb.0:
     JCC_1 %bb.2, 4, implicit undef $eflags

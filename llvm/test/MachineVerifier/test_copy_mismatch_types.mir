@@ -14,8 +14,6 @@
 ---
 name:            test_copy
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: _, preferred-register: '' }
 liveins:
 body:             |
   bb.0:
@@ -23,6 +21,6 @@ body:             |
     ; This test is used to catch verifier errors with copys having mismatching sizes
     ; CHECK: Bad machine code: Copy Instruction is illegal with mismatching types
 
-    %0(s32) = COPY $w0
+    %0:_(s32) = COPY $w0
     %1:_(<2 x s16>) = COPY %0
 ...

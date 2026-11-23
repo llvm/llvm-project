@@ -6,10 +6,6 @@ name:            legal_v4s32_v2s32
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 frameInfo:
   maxCallFrameSize: 0
 body:             |
@@ -39,10 +35,6 @@ name:            legal_v8s16_v4s16
 alignment:       4
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: fpr }
-  - { id: 1, class: fpr }
-  - { id: 2, class: fpr }
 frameInfo:
   maxCallFrameSize: 0
 body:             |

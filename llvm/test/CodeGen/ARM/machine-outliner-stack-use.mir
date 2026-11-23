@@ -53,3 +53,4 @@ body:             |
     ;CHECK-NEXT: $r0 = LDRi12 $sp, 0, 14 /* CC::al */, $noreg
     ;CHECK-NEXT: $r0 = MOVi 1, 14 /* CC::al */, $noreg, $noreg
     ;CHECK-NEXT: MOVPCLR 14 /* CC::al */, $noreg
+...
