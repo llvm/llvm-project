@@ -491,6 +491,11 @@ mlir::Value Fortran::lower::genAllocateCoarray(
       base = hlfir::derefPointersAndAllocatables(loc, builder, base);
       hlfir::AssignOp::create(builder, loc, initVal, base);
       stmtCtx.finalizeAndPop();
+      // Insert post-init synchronization to prevent data races
+      // on subsequent cross-image coindexed access.
+      // TODO: Post-init synchronization for nonallocatable save coarrays can
+      //       and should easily be factored into a single synchronization at
+      //       startup.
       mif::SyncAllOp::create(builder, loc, /*stat=*/mlir::Value{},
                              /*errmsg=*/mlir::Value{});
     }
