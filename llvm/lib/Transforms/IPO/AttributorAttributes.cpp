@@ -12427,9 +12427,10 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
         NumIndirectCallsPromoted++;
         return ChangeStatus::CHANGED;
       }
-      Instruction *NewCall =
+      CallInst *NewCall =
           CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                            CB->getName(), CB->getIterator());
+      NewCall->setCallingConv(CB->getCallingConv());
       NewCall->setDebugLoc(CB->getDebugLoc());
       if (!CBIsVoid)
         A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
@@ -12486,6 +12487,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                                    CB->getName(), ThenTI->getIterator());
+        NewCall->setCallingConv(CB->getCallingConv());
         NewCall->setDebugLoc(CB->getDebugLoc());
       }
       NewCalls.push_back({NewCall, RetBC});
