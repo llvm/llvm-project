@@ -8,6 +8,8 @@
 
 #include "DebugInfoLinker.h"
 #include "Error.h"
+#include "ObjectFile.h"
+#include "llvm/ADT/AddressRanges.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/DWARFLinker/Classic/DWARFLinker.h"
 #include "llvm/DWARFLinker/Classic/DWARFStreamer.h"
@@ -28,6 +30,29 @@ using namespace dwarf_linker;
 
 namespace dwarfutil {
 
+struct ObjectAddressRanges {
+  AddressRanges Text;
+  AddressRanges Alloc;
+};
+
+// Add an overload for each supported format. There is deliberately no generic
+// fallback: admitting a new format must also define its address ranges.
+static ObjectAddressRanges
+collectAddressRanges(const object::ELFObjectFileBase &File) {
+  ObjectAddressRanges Ranges;
+  for (const object::SectionRef &Sect : File.sections()) {
+    const uint64_t Size = Sect.getSize();
+    if (Size == 0)
+      continue;
+    const uint64_t StartAddr = Sect.getAddress();
+    if (Sect.isText())
+      Ranges.Text.insert({StartAddr, StartAddr + Size});
+    if (object::ELFSectionRef(Sect).getFlags() & ELF::SHF_ALLOC)
+      Ranges.Alloc.insert({StartAddr, StartAddr + Size});
+  }
+  return Ranges;
+}
+
 // ObjFileAddressMap allows to check whether specified DIE referencing
 // dead addresses. It uses tombstone values to determine dead addresses.
 // The concrete values of tombstone constants were discussed in
@@ -47,20 +72,9 @@ namespace dwarfutil {
 // universal: maxpc and bfd
 class ObjFileAddressMap : public AddressesMap {
 public:
-  ObjFileAddressMap(const Options &Options, object::ObjectFile &ObjFile)
-      : Opts(Options) {
-    // Remember code ranges separately from the ranges that can hold variables.
-    for (const object::SectionRef &Sect : ObjFile.sections()) {
-      const uint64_t Size = Sect.getSize();
-      if (Size == 0)
-        continue;
-      const uint64_t StartAddr = Sect.getAddress();
-      if (Sect.isText())
-        TextAddressRanges.insert({StartAddr, StartAddr + Size});
-      if (object::ELFSectionRef(Sect).getFlags() & ELF::SHF_ALLOC)
-        AllocAddressRanges.insert({StartAddr, StartAddr + Size});
-    }
-  }
+  ObjFileAddressMap(const Options &Options, ObjectAddressRanges Ranges)
+      : TextAddressRanges(std::move(Ranges.Text)),
+        AllocAddressRanges(std::move(Ranges.Alloc)), Opts(Options) {}
 
   // Determine liveness from each DIE's addresses rather than relocations.
   // Return true so the linker processes the file and performs those checks.
@@ -378,8 +392,14 @@ Error linkDebugInfoImpl(object::ObjectFile &File, const Options &Options,
           ReportWarn(Info.message(), "", nullptr);
         });
       });
-  std::unique_ptr<ObjFileAddressMap> AddressesMap(
-      std::make_unique<ObjFileAddressMap>(Options, File));
+  ObjectAddressRanges Ranges;
+  if (Error Err = dispatchObject(File, [&](auto &TypedFile) -> Error {
+        Ranges = collectAddressRanges(TypedFile);
+        return Error::success();
+      }))
+    return Err;
+  auto AddressesMap =
+      std::make_unique<ObjFileAddressMap>(Options, std::move(Ranges));
 
   ObjectsForLinking[0] = std::make_unique<DWARFFile>(
       File.getFileName(), std::move(Context), std::move(AddressesMap));
