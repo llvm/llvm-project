@@ -14319,7 +14319,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
                                   TTI::getOperandInfo(LhsTE->Scalars),
                                   TTI::getOperandInfo(RhsTE->Scalars), {},
-                                  TE.getMainOp()) +
+                                  TE.getMainOp(), TLI, TE.Scalars) +
       TTI->getCastInstrCost(
           Instruction::ZExt, VecTy,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
@@ -14557,11 +14557,13 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
       TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
                                   TTI::getOperandInfo(LhsTE->Scalars),
                                   TTI::getOperandInfo(ShiftTE->Scalars),
-                                  /*Args=*/{}, ShlTE->getMainOp(), TLI);
+                                  /*Args=*/{}, ShlTE->getMainOp(), TLI,
+                                  ShlTE->Scalars);
   if (TE.getOpcode() == Instruction::And)
     VecCost += TTI->getArithmeticInstrCost(
         Instruction::And, VecTy, CostKind, TTI::getOperandInfo(ShlTE->Scalars),
-        TTI::getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
+        TTI::getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI,
+        TE.Scalars);
   const TreeEntry *SrcTE = getBitPackSource(*LhsTE, *Info);
   auto *SrcTy = cast<FixedVectorType>(
       getWidenedType(SrcTE->Scalars.front()->getType(), TE.getVectorFactor()));
@@ -18464,17 +18466,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           for (unsigned Idx : seq<unsigned>(1, E->getNumOperands())) {
             TTI::OperandValueInfo ColInfo =
                 TTI::getOperandInfo(E->getOperand(Idx));
-            if (!RunningInfo.isConstant() || !ColInfo.isConstant()) {
-              bool IsFinal = Idx + 1 == E->getNumOperands();
+            if (!RunningInfo.isConstant() || !ColInfo.isConstant())
               Cost += TTIRef.getArithmeticInstrCost(
                   Opcode, VecTy, CostKind, RunningInfo, ColInfo, {},
-                  IsFinal ? (Opcode == E->getOpcode() ? E->getMainOp()
-                                                      : E->getAltOp())
-                          : nullptr,
-                  TLI,
-                  IsFinal ? ArrayRef<const Value *>(E->Scalars)
-                          : ArrayRef<const Value *>{});
-            }
+                  Opcode == E->getOpcode() ? E->getMainOp() : E->getAltOp(),
+                  TLI, E->Scalars);
             TTI::OperandValueKind Kind = TTI::OK_AnyValue;
             if (RunningInfo.isConstant() && ColInfo.isConstant())
               Kind = RunningInfo.Kind == TTI::OK_UniformConstantValue &&

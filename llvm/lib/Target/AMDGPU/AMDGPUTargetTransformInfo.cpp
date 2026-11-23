@@ -542,18 +542,12 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
 
   // A vector operation has a property of its context instruction only if all
-  // lanes of the same opcode have it.
-  auto AllLanes = [&](function_ref<bool(const Instruction *)> Pred,
-                      bool SkipOtherOpcodes) {
+  // non-poison lanes satisfy Pred.
+  auto AllLanes = [&](function_ref<bool(const Value *)> Pred) {
     if (!CtxI || CtxI->getOpcode() != Opcode || !Pred(CtxI))
       return false;
     return all_of(Scalars, [&](const Value *V) {
-      if (!V || isa<PoisonValue>(V))
-        return true;
-      const auto *I = dyn_cast<Instruction>(V);
-      if (!I || I->getOpcode() != Opcode)
-        return SkipOtherOpcodes;
-      return I == CtxI || Pred(I);
+      return !V || isa<PoisonValue>(V) || V == CtxI || Pred(V);
     });
   };
 
@@ -607,18 +601,16 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
     if (CtxI &&
         (CtxI->getType() == Ty ||
          getMaximumVF(Ty->getScalarSizeInBits(), Opcode) == 1) &&
-        AllLanes(
-            [&](const Instruction *FMul) {
-              if (!FMul->hasOneUse())
-                return false;
-              const auto *FAddSub =
-                  dyn_cast<BinaryOperator>(*FMul->user_begin());
-              return FAddSub &&
-                     (FAddSub->getOpcode() == Instruction::FAdd ||
-                      FAddSub->getOpcode() == Instruction::FSub) &&
-                     isFusedFMul(*TLI, Ty, FMul, FAddSub);
-            },
-            /*SkipOtherOpcodes=*/false))
+        AllLanes([&](const Value *V) {
+          const auto *FMul = dyn_cast<Instruction>(V);
+          if (!FMul || FMul->getOpcode() != Opcode || !FMul->hasOneUse())
+            return false;
+          const auto *FAddSub = dyn_cast<BinaryOperator>(*FMul->user_begin());
+          return FAddSub &&
+                 (FAddSub->getOpcode() == Instruction::FAdd ||
+                  FAddSub->getOpcode() == Instruction::FSub) &&
+                 isFusedFMul(*TLI, Ty, FMul, FAddSub);
+        }))
       return TargetTransformInfo::TCC_Free;
     [[fallthrough]];
   case ISD::FADD:
@@ -672,9 +664,10 @@ InstructionCost GCNTTIImpl::getArithmeticInstrCost(
       return LT.first * Cost * NElts;
     }
 
-    if (SLT == MVT::f32 &&
-        AllLanes([](const Instruction *I) { return I->hasApproxFunc(); },
-                 /*SkipOtherOpcodes=*/true)) {
+    if (SLT == MVT::f32 && AllLanes([](const Value *V) {
+          const auto *FPMO = dyn_cast<FPMathOperator>(V);
+          return !FPMO || FPMO->hasApproxFunc();
+        })) {
       // Fast unsafe fdiv lowering:
       // f32 rcp
       // f32 fmul
