@@ -18,6 +18,8 @@
 #include "Encoding.h"
 #include "FormatToken.h"
 
+#include <optional>
+
 namespace clang {
 class SourceManager;
 
@@ -301,6 +303,12 @@ struct ParenState {
   /// Used to align further variables if necessary.
   unsigned VariablePos = 0;
 
+  /// The column of the most recent lambda signature that applies to this
+  /// scope, i.e. the column of the lambda introducer '['. Used by
+  /// LambdaBodyIndentation: SignatureColumn. std::nullopt if no lambda
+  /// signature has been encountered in this scope.
+  std::optional<unsigned> LambdaSignatureColumn;
+
   /// The precedence. The outermost level and the levels corresponding to tokens
   /// have prec::Unknown.
   prec::Level Precedence = prec::Unknown;
@@ -430,6 +438,8 @@ struct ParenState {
       return CallContinuation < Other.CallContinuation;
     if (VariablePos != Other.VariablePos)
       return VariablePos < Other.VariablePos;
+    if (LambdaSignatureColumn != Other.LambdaSignatureColumn)
+      return LambdaSignatureColumn < Other.LambdaSignatureColumn;
     if (ContainsLineBreak != Other.ContainsLineBreak)
       return ContainsLineBreak;
     if (ContainsUnwrappedBuilder != Other.ContainsUnwrappedBuilder)

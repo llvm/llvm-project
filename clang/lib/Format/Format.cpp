@@ -582,6 +582,7 @@ struct ScalarEnumerationTraits<FormatStyle::LambdaBodyIndentationKind> {
                           FormatStyle::LambdaBodyIndentationKind &Value) {
     IO.enumCase(Value, "Signature", FormatStyle::LBI_Signature);
     IO.enumCase(Value, "OuterScope", FormatStyle::LBI_OuterScope);
+    IO.enumCase(Value, "SignatureColumn", FormatStyle::LBI_SignatureColumn);
   }
 };
 
