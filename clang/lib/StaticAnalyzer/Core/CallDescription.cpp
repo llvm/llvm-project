@@ -85,9 +85,18 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
     [[fallthrough]];
   case DeclarationName::CXXConstructorName:
     // Constructor and destructor names are printed using the record name.
-    if (const auto *RT = Name.getCXXNameType()->getAsCanonical<RecordType>())
-      if (const IdentifierInfo *RecordII = RT->getDecl()->getIdentifier())
+    if (const auto *RT = Name.getCXXNameType()->getAsCanonical<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
+      if (const IdentifierInfo *RecordII = RD->getIdentifier())
         return RecordII->getName() == FuncName;
+      // An unnamed record with a typedef name for linkage purposes is printed
+      // using the typedef name.
+      if (const TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
+        return TD->getIdentifier()->getName() == FuncName;
+      // Other unnamed records are printed with their source location, e.g.
+      // "(lambda at file:line:col)", which no description names.
+      return false;
+    }
     break;
   case DeclarationName::CXXOperatorName:
   case DeclarationName::CXXLiteralOperatorName:
@@ -100,7 +109,8 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
   }
 
   // Fall back to printing the name for overloaded, literal and conversion
-  // operators, and for constructors and destructors of unnamed records.
+  // operators, and for constructor and destructor names whose type is not a
+  // record type.
   return Name.getAsString() == getFunctionName();
 }
 

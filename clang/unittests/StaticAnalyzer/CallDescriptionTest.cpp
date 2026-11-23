@@ -206,6 +206,20 @@ TEST(CallDescription, MatchConstructor) {
       Code));
 }
 
+TEST(CallDescription, MatchConstructorOfTypedefNamedStruct) {
+  constexpr StringRef Code = R"code(
+    typedef struct { int x; } Foo;
+    void foo() {
+      Foo f;
+    })code";
+  EXPECT_TRUE(
+      tooling::runToolOnCode(std::unique_ptr<FrontendAction>(
+                                 new CallDescriptionAction<CXXConstructExpr>({
+                                     {{CDM::CXXMethod, {"Foo"}, 0, 0}, true},
+                                 })),
+                             Code));
+}
+
 // FIXME: Test matching destructors: {"std", "basic_string", "~basic_string"}
 //        This feature is actually implemented, but the test infra is not yet
 //        sophisticated enough for testing this. To do that, we will need to
