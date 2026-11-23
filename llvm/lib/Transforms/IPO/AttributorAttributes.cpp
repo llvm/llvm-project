@@ -597,15 +597,14 @@ struct AACalleeToCallSite : public BaseType {
 
 /// Helper function to accumulate uses.
 template <class AAType, typename StateType = typename AAType::StateType>
-static void followUsesInContext(AAType &AA, Attributor &A,
-                                MustBeExecutedContextExplorer &Explorer,
-                                const Instruction *CtxI,
-                                SetVector<const Use *> &Uses,
-                                StateType &State) {
+static void
+followUsesInContext(AAType &AA, Attributor &A,
+                    const MustBeExecutedContextExplorer::Context &Context,
+                    SetVector<const Use *> &Uses, StateType &State) {
   for (unsigned u = 0; u < Uses.size(); ++u) {
     const Use *U = Uses[u];
     if (const Instruction *UserI = dyn_cast<Instruction>(U->getUser())) {
-      bool Found = Explorer.isInContextOf(UserI, CtxI);
+      bool Found = Context.contains(UserI);
       if (Found && AA.followUseInMBEC(A, U, UserI, State))
         Uses.insert_range(llvm::make_pointer_range(UserI->uses()));
     }
@@ -638,7 +637,8 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   for (const Use &U : Val.uses())
     Uses.insert(&U);
 
-  followUsesInContext<AAType>(AA, A, *Explorer, &CtxI, Uses, S);
+  MustBeExecutedContextExplorer::Context Context = Explorer->getContext(&CtxI);
+  followUsesInContext<AAType>(AA, A, Context, Uses, S);
 
   if (S.isAtFixpoint())
     return;
@@ -682,7 +682,7 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
   //    }
   // }
 
-  Explorer->checkForAllTerminatorsInContext(&CtxI, Pred);
+  Context.checkForAllTerminators(Pred);
   for (const CondBrInst *Br : BrInsts) {
     StateType ParentState;
 
@@ -694,7 +694,8 @@ static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
       StateType ChildState;
 
       size_t BeforeSize = Uses.size();
-      followUsesInContext(AA, A, *Explorer, &BB->front(), Uses, ChildState);
+      followUsesInContext(AA, A, Explorer->getContext(&BB->front()), Uses,
+                          ChildState);
 
       // Erase uses which only appear in the child.
       for (auto It = Uses.begin() + BeforeSize; It != Uses.end();)
