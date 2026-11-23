@@ -20,6 +20,8 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/IR/Analysis.h"
 
 using namespace llvm;
 
@@ -28,136 +30,22 @@ using namespace llvm;
 
 namespace {
 
-class LoongArchExpandAtomicPseudo : public MachineFunctionPass {
+class LoongArchExpandAtomicPseudoLegacy : public MachineFunctionPass {
 public:
-  const LoongArchInstrInfo *TII;
   static char ID;
 
-  LoongArchExpandAtomicPseudo() : MachineFunctionPass(ID) {}
+  LoongArchExpandAtomicPseudoLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
     return LoongArch_EXPAND_ATOMIC_PSEUDO_NAME;
   }
-
-private:
-  bool expandMBB(MachineBasicBlock &MBB);
-  bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                MachineBasicBlock::iterator &NextMBBI);
-  bool expandAtomicBinOp(MachineBasicBlock &MBB,
-                         MachineBasicBlock::iterator MBBI, AtomicRMWInst::BinOp,
-                         bool IsMasked, int Width,
-                         MachineBasicBlock::iterator &NextMBBI);
-  bool expandAtomicMinMaxOp(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MBBI,
-                            AtomicRMWInst::BinOp, bool IsMasked, int Width,
-                            MachineBasicBlock::iterator &NextMBBI);
-  bool expandAtomicCmpXchg(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MBBI, bool IsMasked,
-                           int Width, MachineBasicBlock::iterator &NextMBBI);
-  bool expandAtomicCmpXchg128(MachineBasicBlock &MBB,
-                              MachineBasicBlock::iterator,
-                              MachineBasicBlock::iterator &NextMBBI);
 };
 
-char LoongArchExpandAtomicPseudo::ID = 0;
+} // end namespace
 
-bool LoongArchExpandAtomicPseudo::runOnMachineFunction(MachineFunction &MF) {
-  TII =
-      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  bool Modified = false;
-  for (auto &MBB : MF)
-    Modified |= expandMBB(MBB);
-  return Modified;
-}
-
-bool LoongArchExpandAtomicPseudo::expandMBB(MachineBasicBlock &MBB) {
-  bool Modified = false;
-
-  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
-  while (MBBI != E) {
-    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
-    Modified |= expandMI(MBB, MBBI, NMBBI);
-    MBBI = NMBBI;
-  }
-
-  return Modified;
-}
-
-bool LoongArchExpandAtomicPseudo::expandMI(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
-  switch (MBBI->getOpcode()) {
-  case LoongArch::PseudoMaskedAtomicSwap32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, true, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicSwap32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadAdd32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, true, 32, NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadSub32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, true, 32, NextMBBI);
-  case LoongArch::PseudoAtomicLoadNand32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadNand64:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 64,
-                             NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadNand32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, true, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadAdd32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadSub32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadAnd32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::And, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadOr32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Or, false, 32, NextMBBI);
-  case LoongArch::PseudoAtomicLoadXor32:
-    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xor, false, 32,
-                             NextMBBI);
-  case LoongArch::PseudoAtomicLoadUMax32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMax, false, 32,
-                                NextMBBI);
-  case LoongArch::PseudoAtomicLoadUMin32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMin, false, 32,
-                                NextMBBI);
-  case LoongArch::PseudoAtomicLoadMax32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Max, false, 32,
-                                NextMBBI);
-  case LoongArch::PseudoAtomicLoadMin32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Min, false, 32,
-                                NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadUMax32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMax, true, 32,
-                                NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadUMin32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMin, true, 32,
-                                NextMBBI);
-  case LoongArch::PseudoCmpXchg32:
-    return expandAtomicCmpXchg(MBB, MBBI, false, 32, NextMBBI);
-  case LoongArch::PseudoCmpXchg64:
-    return expandAtomicCmpXchg(MBB, MBBI, false, 64, NextMBBI);
-  case LoongArch::PseudoCmpXchg128:
-  case LoongArch::PseudoCmpXchg128Acquire:
-    return expandAtomicCmpXchg128(MBB, MBBI, NextMBBI);
-  case LoongArch::PseudoMaskedCmpXchg32:
-    return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadMax32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Max, true, 32,
-                                NextMBBI);
-  case LoongArch::PseudoMaskedAtomicLoadMin32:
-    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Min, true, 32,
-                                NextMBBI);
-  }
-  return false;
-}
+char LoongArchExpandAtomicPseudoLegacy::ID = 0;
 
 static void doAtomicBinOpExpansion(const LoongArchInstrInfo *TII,
                                    MachineInstr &MI, DebugLoc DL,
@@ -315,10 +203,11 @@ static void doMaskedAtomicBinOpExpansion(
       .addMBB(LoopMBB);
 }
 
-bool LoongArchExpandAtomicPseudo::expandAtomicBinOp(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
-    MachineBasicBlock::iterator &NextMBBI) {
+static bool expandAtomicBinOp(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              AtomicRMWInst::BinOp BinOp, bool IsMasked,
+                              int Width, MachineBasicBlock::iterator &NextMBBI,
+                              const LoongArchInstrInfo *TII) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
 
@@ -364,10 +253,12 @@ static void insertSext(const LoongArchInstrInfo *TII, DebugLoc DL,
       .addReg(ShamtReg);
 }
 
-bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    AtomicRMWInst::BinOp BinOp, bool IsMasked, int Width,
-    MachineBasicBlock::iterator &NextMBBI) {
+static bool expandAtomicMinMaxOp(MachineBasicBlock &MBB,
+                                 MachineBasicBlock::iterator MBBI,
+                                 AtomicRMWInst::BinOp BinOp, bool IsMasked,
+                                 int Width,
+                                 MachineBasicBlock::iterator &NextMBBI,
+                                 const LoongArchInstrInfo *TII) {
   assert(Width == 32 && "Should never need to expand masked 64-bit operations");
 
   MachineInstr &MI = *MBBI;
@@ -496,9 +387,11 @@ bool LoongArchExpandAtomicPseudo::expandAtomicMinMaxOp(
   return true;
 }
 
-bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, bool IsMasked,
-    int Width, MachineBasicBlock::iterator &NextMBBI) {
+static bool expandAtomicCmpXchg(MachineBasicBlock &MBB,
+                                MachineBasicBlock::iterator MBBI, bool IsMasked,
+                                int Width,
+                                MachineBasicBlock::iterator &NextMBBI,
+                                const LoongArchInstrInfo *TII) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MBB.getParent();
@@ -636,9 +529,10 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg(
   return true;
 }
 
-bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg128(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI) {
+static bool expandAtomicCmpXchg128(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MBB.getParent();
@@ -741,15 +635,125 @@ bool LoongArchExpandAtomicPseudo::expandAtomicCmpXchg128(
   return true;
 }
 
-} // end namespace
+static bool expandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+                     MachineBasicBlock::iterator &NextMBBI,
+                     const LoongArchInstrInfo *TII) {
+  switch (MBBI->getOpcode()) {
+  case LoongArch::PseudoMaskedAtomicSwap32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, true, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicSwap32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xchg, false, 32,
+                             NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadAdd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, true, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoMaskedAtomicLoadSub32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, true, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadNand32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 32,
+                             NextMBBI, TII);
+  case LoongArch::PseudoAtomicLoadNand64:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, false, 64,
+                             NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadNand32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Nand, true, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadAdd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Add, false, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadSub32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Sub, false, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadAnd32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::And, false, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadOr32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Or, false, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadXor32:
+    return expandAtomicBinOp(MBB, MBBI, AtomicRMWInst::Xor, false, 32, NextMBBI,
+                             TII);
+  case LoongArch::PseudoAtomicLoadUMax32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMax, false, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoAtomicLoadUMin32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMin, false, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoAtomicLoadMax32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Max, false, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoAtomicLoadMin32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Min, false, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadUMax32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMax, true, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadUMin32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::UMin, true, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoCmpXchg32:
+    return expandAtomicCmpXchg(MBB, MBBI, false, 32, NextMBBI, TII);
+  case LoongArch::PseudoCmpXchg64:
+    return expandAtomicCmpXchg(MBB, MBBI, false, 64, NextMBBI, TII);
+  case LoongArch::PseudoCmpXchg128:
+  case LoongArch::PseudoCmpXchg128Acquire:
+    return expandAtomicCmpXchg128(MBB, MBBI, NextMBBI, TII);
+  case LoongArch::PseudoMaskedCmpXchg32:
+    return expandAtomicCmpXchg(MBB, MBBI, true, 32, NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadMax32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Max, true, 32,
+                                NextMBBI, TII);
+  case LoongArch::PseudoMaskedAtomicLoadMin32:
+    return expandAtomicMinMaxOp(MBB, MBBI, AtomicRMWInst::Min, true, 32,
+                                NextMBBI, TII);
+  }
+  return false;
+}
 
-INITIALIZE_PASS(LoongArchExpandAtomicPseudo, "loongarch-expand-atomic-pseudo",
+static bool expandMBB(MachineBasicBlock &MBB, const LoongArchInstrInfo *TII) {
+  bool Modified = false;
+
+  MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
+  while (MBBI != E) {
+    MachineBasicBlock::iterator NMBBI = std::next(MBBI);
+    Modified |= expandMI(MBB, MBBI, NMBBI, TII);
+    MBBI = NMBBI;
+  }
+
+  return Modified;
+}
+
+static bool expandAtomicPseudo(MachineFunction &MF) {
+  const LoongArchInstrInfo *TII =
+      static_cast<const LoongArchInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  bool Modified = false;
+  for (auto &MBB : MF)
+    Modified |= expandMBB(MBB, TII);
+  return Modified;
+}
+
+bool LoongArchExpandAtomicPseudoLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return expandAtomicPseudo(MF);
+}
+
+PreservedAnalyses
+LoongArchExpandAtomicPseudoPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  return expandAtomicPseudo(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                : PreservedAnalyses::all();
+}
+
+INITIALIZE_PASS(LoongArchExpandAtomicPseudoLegacy,
+                "loongarch-expand-atomic-pseudo",
                 LoongArch_EXPAND_ATOMIC_PSEUDO_NAME, false, false)
 
 namespace llvm {
 
-FunctionPass *createLoongArchExpandAtomicPseudoPass() {
-  return new LoongArchExpandAtomicPseudo();
+FunctionPass *createLoongArchExpandAtomicPseudoLegacyPass() {
+  return new LoongArchExpandAtomicPseudoLegacy();
 }
 
 } // end namespace llvm

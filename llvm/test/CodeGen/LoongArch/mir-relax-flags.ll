@@ -1,13 +1,13 @@
-; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --stop-after loongarch-pre-ra-expand-pseudo \
 ; RUN:     --relocation-model=pic --code-model=medium %s -o %t.mir
-; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --run-pass loongarch-pre-ra-expand-pseudo \
 ; RUN:     --code-model=medium %t.mir -o - | FileCheck %s --check-prefixes=CHECK,MEDCALL
 ; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --run-pass loongarch-expand-pseudo \
 ; RUN:     --code-model=medium %t.mir -o - | FileCheck %s --check-prefixes=CHECK,CALL36
 
-; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --stop-after loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --stop-after loongarch-pre-ra-expand-pseudo \
 ; RUN:     --relocation-model=pic --enable-tlsdesc --code-model=medium %s -o %t.desc.mir
-; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --run-pass loongarch-prera-expand-pseudo \
+; RUN: llc --mtriple=loongarch64 -mattr=+d,+relax --run-pass loongarch-pre-ra-expand-pseudo \
 ; RUN:     --code-model=medium %t.desc.mir -o - | FileCheck %s --check-prefix=DESC
 
 ;; Check target-flags after expand-pseudo pass.
