@@ -102,7 +102,7 @@ void f() {
 
 namespace gh235460{
   template<class... Ts>
-  auto f(unsigned char x, Ts const&... xs) -> decltype(sizeof(x)) {
+  unsigned long f(unsigned char x, Ts const&... xs) {
     auto n = sizeof(x);
     ((n += sizeof(xs)), ...);
     return n;

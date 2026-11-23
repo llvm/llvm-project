@@ -226,9 +226,9 @@ static bool isStdMoveOperandInTemplate(const VarDecl *Variable,
 static const VarDecl *getPatternVariable(const VarDecl *Variable,
                                          const Stmt *PatternBody,
                                          ASTContext &Context) {
-  for (const BoundNodes &Nodes : match(
-           stmt(forEachDescendant(varDecl().bind("var"))), *PatternBody,
-           Context)) {
+  for (const BoundNodes &Nodes :
+       match(stmt(forEachDescendant(varDecl().bind("var"))), *PatternBody,
+             Context)) {
     const auto *PatternVar = Nodes.getNodeAs<VarDecl>("var");
     if (PatternVar->getLocation() == Variable->getLocation())
       return PatternVar->getType()->isDependentType() ? nullptr : PatternVar;
