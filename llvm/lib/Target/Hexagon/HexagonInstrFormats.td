@@ -166,8 +166,8 @@ class InstHexagon<dag outs, dag ins, string asmstr, list<dag> pattern,
   bit isHVXALU2SRC = 0;
   let TSFlags{61} = isHVXALU2SRC;
 
-  bit hasUnaryRestriction = 0;
-  let TSFlags{62} = hasUnaryRestriction;
+  bit isHVXVS3SRC = 0;
+  let TSFlags{62} = isHVXVS3SRC;
 
   // Fields used for relation models.
   bit isNonTemporal = 0;

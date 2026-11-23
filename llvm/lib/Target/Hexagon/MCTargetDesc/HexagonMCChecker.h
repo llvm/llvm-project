@@ -104,6 +104,7 @@ class HexagonMCChecker {
   bool checkLegalVecRegPair();
   bool checkValidTmpDst();
   bool checkHVXAccum();
+  bool checkHVXRestrictions();
 
   static void compoundRegisterMap(unsigned &);
 
