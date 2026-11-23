@@ -33,7 +33,7 @@ template <class _Tp,
 #  endif
                       ,
                       int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 swap(optional<_Tp>& __x, optional<_Tp>& __y) noexcept(noexcept(__x.swap(__y))) {
   __x.swap(__y);
 }

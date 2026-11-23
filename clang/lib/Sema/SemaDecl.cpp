@@ -7035,6 +7035,13 @@ Sema::CheckTypedefForVariablyModifiedType(Scope *S, TypedefNameDecl *NewTD) {
   // that redeclarations will match.
   TypeSourceInfo *TInfo = NewTD->getTypeSourceInfo();
   QualType T = TInfo->getType();
+
+  if (T.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(T, TInfo->getTypeLoc().getBeginLoc())) {
+    NewTD->setInvalidDecl();
+    return;
+  }
+
   if (T->isVariablyModifiedType()) {
     setFunctionHasBranchProtectedScope();
 
@@ -9040,6 +9047,16 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
   // If the decl is already known invalid, don't check it.
   if (NewVD->isInvalidDecl())
     return;
+
+  if (NewVD->getType().getCanonicalType()->isVariablyModifiedType()) {
+    SourceLocation VMLoc = NewVD->getLocation();
+    if (TypeSourceInfo *TSI = NewVD->getTypeSourceInfo())
+      VMLoc = TSI->getTypeLoc().getBeginLoc();
+    if (!CheckVariablyModifiedTypeUse(NewVD->getType(), VMLoc)) {
+      NewVD->setInvalidDecl();
+      return;
+    }
+  }
 
   QualType T = NewVD->getType();
 
@@ -16191,6 +16208,11 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
   ParmVarDecl *New = ParmVarDecl::Create(Context, DC, StartLoc, NameLoc, Name,
                                          Context.getAdjustedParameterType(T),
                                          TSInfo, SC, nullptr);
+
+  if (T.getCanonicalType()->isVariablyModifiedType() &&
+      !CheckVariablyModifiedTypeUse(
+          T, TSInfo ? TSInfo->getTypeLoc().getBeginLoc() : NameLoc))
+    New->setInvalidDecl();
 
   // Make a note if we created a new pack in the scope of a lambda, so that
   // we know that references to that pack must also be expanded within the

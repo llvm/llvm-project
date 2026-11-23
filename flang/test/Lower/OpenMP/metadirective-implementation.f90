@@ -17,6 +17,36 @@ subroutine test_unknown_vendor_match_none()
   !$omp& when(user={condition(.true.)}: barrier)
 end subroutine
 
+! An unknown KIND property weighs like an unmatched known one: inside PARALLEL,
+! KIND adds 2 and beats the vendor score of 1.
+! CHECK-LABEL: func.func @_QPtest_unknown_kind_weight()
+! CHECK: omp.parallel
+! CHECK-NOT: omp.barrier
+! CHECK: omp.taskyield
+! CHECK-NOT: omp.barrier
+! CHECK: omp.terminator
+subroutine test_unknown_kind_weight()
+  !$omp parallel
+  !$omp metadirective &
+  !$omp& when(device={kind(bogus_kind)}, implementation={extension(match_none)}: &
+  !$omp& taskyield) &
+  !$omp& when(implementation={vendor(score(1): llvm)}: barrier)
+  !$omp end parallel
+end subroutine
+
+! A score on a selector with a known and an unknown property counts once:
+! 1 + 5 loses to 1 + 8.
+! CHECK-LABEL: func.func @_QPtest_mixed_vendor_score()
+! CHECK-NOT: omp.taskyield
+! CHECK: omp.barrier
+! CHECK-NEXT: return
+subroutine test_mixed_vendor_score()
+  !$omp metadirective &
+  !$omp& when(implementation={vendor(score(5): llvm, bogus_vendor), &
+  !$omp& extension(match_any)}: taskyield) &
+  !$omp& when(user={condition(score(8): .true.)}: barrier)
+end subroutine
+
 ! CHECK-LABEL: func.func @_QPtest_vendor_llvm()
 ! CHECK:         omp.taskwait
 ! CHECK:         return

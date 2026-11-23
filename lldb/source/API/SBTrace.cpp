@@ -13,6 +13,7 @@
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBTrace.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "lldb/Core/StructuredDataImpl.h"
 
@@ -23,6 +24,33 @@ using namespace lldb_private;
 using namespace llvm;
 
 SBTrace::SBTrace() { LLDB_INSTRUMENT_VA(this); }
+
+SBTrace::SBTrace(const SBTrace &rhs)
+    : m_opaque_sp(rhs.m_opaque_sp), m_opaque_wp(rhs.m_opaque_wp) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+}
+
+SBTrace &SBTrace::operator=(const SBTrace &rhs) {
+  LLDB_INSTRUMENT_VA(this, rhs);
+
+  if (this != &rhs) {
+    m_opaque_sp = rhs.m_opaque_sp;
+    m_opaque_wp = rhs.m_opaque_wp;
+  }
+  return *this;
+}
+
+SBTrace::SBTrace(SBTrace &&rhs)
+    : m_opaque_sp(std::move(rhs.m_opaque_sp)),
+      m_opaque_wp(std::move(rhs.m_opaque_wp)) {}
+
+SBTrace &SBTrace::operator=(SBTrace &&rhs) {
+  m_opaque_sp = std::move(rhs.m_opaque_sp);
+  m_opaque_wp = std::move(rhs.m_opaque_wp);
+  return *this;
+}
+
+SBTrace::~SBTrace() = default;
 
 SBTrace::SBTrace(const lldb::TraceSP &trace_sp) : m_opaque_sp(trace_sp) {
   LLDB_INSTRUMENT_VA(this, trace_sp);
@@ -89,7 +117,8 @@ const char *SBTrace::GetStartConfigurationHelp() {
   if (!m_opaque_sp)
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetStartConfigurationHelp()).GetCString();
+  return StringPool::GetSystemPool().Intern(
+      m_opaque_sp->GetStartConfigurationHelp());
 }
 
 SBError SBTrace::Start(const SBStructuredData &configuration) {

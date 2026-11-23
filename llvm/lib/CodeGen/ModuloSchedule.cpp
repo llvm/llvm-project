@@ -1299,7 +1299,7 @@ void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
 class KernelRewriter {
   ModuloSchedule &S;
   MachineBasicBlock *BB;
-  MachineBasicBlock *PreheaderBB, *ExitBB;
+  MachineBasicBlock *PreheaderBB;
   MachineRegisterInfo &MRI;
   const TargetInstrInfo *TII;
   LiveIntervals *LIS;
@@ -1333,7 +1333,7 @@ public:
 KernelRewriter::KernelRewriter(MachineLoop &L, ModuloSchedule &S,
                                MachineBasicBlock *LoopBB, LiveIntervals *LIS)
     : S(S), BB(LoopBB), PreheaderBB(L.getLoopPreheader()),
-      ExitBB(L.getExitBlock()), MRI(BB->getParent()->getRegInfo()),
+      MRI(BB->getParent()->getRegInfo()),
       TII(BB->getParent()->getSubtarget().getInstrInfo()), LIS(LIS) {
   PreheaderBB = *BB->pred_begin();
   if (PreheaderBB == BB)
@@ -1583,7 +1583,6 @@ class KernelOperandInfo {
   MachineRegisterInfo &MRI;
   SmallVector<Register, 4> PhiDefaults;
   MachineOperand *Source;
-  MachineOperand *Target;
 
 public:
   KernelOperandInfo(MachineOperand *MO, MachineRegisterInfo &MRI,
@@ -1610,7 +1609,6 @@ public:
                                             : &MI->getOperand(3);
       PhiDefaults.push_back(Default);
     }
-    Target = MO;
   }
 
   bool operator==(const KernelOperandInfo &Other) const {

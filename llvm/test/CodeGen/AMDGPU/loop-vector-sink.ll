@@ -45,7 +45,8 @@ loopExit:
 }
 
 ; testing extract case with single use - with divergent control flow
-; The vector has SINGLE use (extractelement), both sink into if.then
+; The vector has SINGLE use (extractelement). Neither sinks: only the scalar
+; user is in if.then
 define amdgpu_kernel void @test_sink_extract_single_use_operands(ptr addrspace(1) %out0, <2 x i32> %inputVec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_single_use_operands(
 ; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], <2 x i32> [[INPUTVEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) {
@@ -77,7 +78,8 @@ if.end:
 }
 
 ; testing extract case - extracting two elements with divergent control flow
-; The vector has TWO uses (two extractelements), all sink into if.then
+; The vector has TWO uses (two extractelements). None of them sink: only the
+; scalar users are in if.then
 define amdgpu_kernel void @test_sink_extract_operands(ptr addrspace(1) %out0, ptr addrspace(1) %out1, <4 x i32> %input_vec, i32 %tid, i32 %cond) {
 ; OPT-LABEL: define amdgpu_kernel void @test_sink_extract_operands(
 ; OPT-SAME: ptr addrspace(1) [[OUT0:%.*]], ptr addrspace(1) [[OUT1:%.*]], <4 x i32> [[INPUT_VEC:%.*]], i32 [[TID:%.*]], i32 [[COND:%.*]]) {

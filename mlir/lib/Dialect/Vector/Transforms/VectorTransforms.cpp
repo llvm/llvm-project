@@ -1940,6 +1940,14 @@ struct FoldArithExtIntoContractionOp
                                          "no defining op on contract operands");
     }
 
+    // The contraction requires lhs and rhs to have the same element type, so
+    // the two extensions must also start from the same one.
+    if (getElementTypeOrSelf(lhsDefOp.getIn().getType()) !=
+        getElementTypeOrSelf(rhsDefOp.getIn().getType())) {
+      return rewriter.notifyMatchFailure(
+          contractOp, "lhs and rhs are extended from different element types");
+    }
+
     rewriter.replaceOpWithNewOp<vector::ContractionOp>(
         contractOp, lhsDefOp->getOperand(0), rhsDefOp->getOperand(0),
         contractOp.getAcc(), contractOp.getIndexingMapsAttr(),
@@ -1977,8 +1985,16 @@ struct ChainedReduction final : OpRewritePattern<vector::ReductionOp> {
     if (!acc.getType().isIntOrFloat())
       return failure();
 
+    // The parent reduction produces `op`'s accumulator. Fold only when it is
+    // an `add` reduction too.
     auto parentReduction = acc.getDefiningOp<vector::ReductionOp>();
-    if (!parentReduction)
+    if (!parentReduction ||
+        parentReduction.getKind() != vector::CombiningKind::ADD)
+      return failure();
+
+    // Fold only when the parent's result has one use. Then the parent is dead
+    // after the fold and can be removed.
+    if (!parentReduction.getResult().hasOneUse())
       return failure();
 
     Location loc = op.getLoc();

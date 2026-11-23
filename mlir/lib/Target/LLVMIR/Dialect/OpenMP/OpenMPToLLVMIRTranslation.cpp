@@ -662,6 +662,35 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("dyn_groupprivate");
   };
 
+  // `declare_mapper.info` supports a single-dimension iterator whose region
+  // (which may itself span several blocks) yields one member-free omp.map.info
+  // for a locator described by var_ptr + bounds. Descriptor-indirect
+  // (var_ptr_ptr) locators aren't handled yet. Anything else falls back to the
+  // generic (not yet implemented) diagnostic above.
+  auto checkDeclareMapperMap = [&todo](omp::DeclareMapperInfoOp op,
+                                       LogicalResult &result) {
+    for (Value iterVal : op.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<omp::IteratorOp>();
+      bool supported = itersOp && itersOp.getLoopLowerBounds().size() == 1;
+      if (supported) {
+        omp::YieldOp yieldOp = itersOp.getYieldOp();
+        supported = yieldOp && yieldOp.getResults().size() == 1;
+        if (supported) {
+          auto mapInfoOp =
+              yieldOp.getResults()[0].getDefiningOp<omp::MapInfoOp>();
+          supported =
+              mapInfoOp && !mapInfoOp.getVarPtrPtr() &&
+              mapInfoOp.getMembers().empty() &&
+              mapInfoOp.getMapCaptureType() == omp::VariableCaptureKind::ByRef;
+        }
+      }
+      if (!supported) {
+        result = todo("map/motion clause with iterator modifier");
+        return;
+      }
+    }
+  };
+
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
       .Case([&](omp::DistributeOp op) {
@@ -750,7 +779,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkThreadLimit(op, result);
       })
       .Case([&](omp::TargetDataOp op) { checkMap(op, result); })
-      .Case([&](omp::DeclareMapperInfoOp op) { checkMap(op, result); })
+      .Case([&](omp::DeclareMapperInfoOp op) {
+        checkDeclareMapperMap(op, result);
+      })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
         // checked above.
@@ -8794,6 +8825,23 @@ getOrCreateUserDefinedMapperFunc(Operation *op, llvm::IRBuilderBase &builder,
                                mapperFuncName, targetDirective);
 }
 
+/// The mapper body (and any iterator regions in it) is emitted inside the
+/// mapper's per-element loop, so temporaries Flang allocates in the mapper
+/// region (e.g. the storage for an iterator variable) would be allocated once
+/// per element and grow the stack with every iteration. Move constant-size
+/// allocas to the function's entry block, where a frontend would place them.
+static void hoistMapperAllocasToEntry(llvm::Function &mapperFn) {
+  llvm::BasicBlock &entry = mapperFn.getEntryBlock();
+  llvm::SmallVector<llvm::AllocaInst *> toHoist;
+  for (llvm::BasicBlock &bb : llvm::drop_begin(mapperFn))
+    for (llvm::Instruction &inst : bb)
+      if (auto *alloca = dyn_cast<llvm::AllocaInst>(&inst))
+        if (isa<llvm::ConstantInt>(alloca->getArraySize()))
+          toHoist.push_back(alloca);
+  for (llvm::AllocaInst *alloca : toHoist)
+    alloca->moveBefore(entry.getFirstNonPHIOrAlloca());
+}
+
 static llvm::Expected<llvm::Function *>
 emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
                       LLVM::ModuleTranslation &moduleTranslation,
@@ -8829,12 +8877,305 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
     MapInfoData mapData;
     collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
                                   builder);
+
+    // Components produced by an `iterator` modifier on the mapper's own map
+    // clause: their count is only known at runtime, so they are recorded as
+    // dynamic segments and pushed one at a time (via
+    // __tgt_push_mapper_component) from a generated loop, mirroring how the
+    // depend/affinity clauses already handle iterator-produced entries. Each
+    // per-iteration locator keeps its array base in var_ptr with bounds
+    // selecting the mapped element, the same shape as an ordinary
+    // array-section map, so the existing calculateBoundsOffset helper
+    // computes its address.
+    //
+    // Like statically-known members (see processMapWithMembersOf), the
+    // iterated elements are grouped under a component for the mapper variable
+    // via MEMBER_OF, so the runtime treats them as sub-ranges of one
+    // allocation rather than independent objects. If the mapper also maps the
+    // variable itself that component is reused. Otherwise a storage-only
+    // parent is synthesized that, like the parent of explicit members, spans
+    // exactly the elements the iterators expand to: its begin/end are the
+    // runtime min/max over all iterations, so it never extends a mapping of
+    // the component the user may have made separately, and it is skipped
+    // altogether when every iterator has a zero trip count (an empty iterator
+    // acts as if the list item were omitted). The parent must precede every
+    // other component: the runtime maps components in order and rejects a
+    // later one that extends an earlier mapping.
+    struct IteratedEntryInfo {
+      mlir::omp::IteratorOp itersOp;
+      mlir::omp::MapInfoOp mapInfoOp;
+      llvm::Type *baseLLVMTy;
+      llvm::Value *elemSizeVal;
+      IteratorInfo iterInfo;
+    };
+    llvm::SmallVector<IteratedEntryInfo, 2> iteratedEntries;
+    for (mlir::Value iterVal : declMapperInfoOp.getMapIterated()) {
+      auto itersOp = iterVal.getDefiningOp<mlir::omp::IteratorOp>();
+      assert(itersOp && "map_iterated value must be defined by omp.iterator");
+      // Lowering the locator's indices (e.g. involving LEN_TRIM) can
+      // introduce control flow inside the iterator, so its `omp.yield` is
+      // not necessarily in the region's first block.
+      mlir::omp::YieldOp yieldOp = itersOp.getYieldOp();
+      assert(yieldOp && "expected exactly one omp.yield in the iterator body");
+      auto mapInfoOp =
+          yieldOp.getResults()[0].getDefiningOp<mlir::omp::MapInfoOp>();
+      assert(mapInfoOp && "expected an omp.map.info in the map_iterated body");
+
+      mlir::Type varPtrMlirTy = mapInfoOp.getVarPtrType();
+      // Byte size of one element of the locator's innermost dimension; the
+      // bounds supply the (runtime) element count per iteration.
+      uint64_t elemSizeInBits = dl.getTypeSizeInBits(varPtrMlirTy);
+      if (auto arrTy = mlir::dyn_cast<mlir::LLVM::LLVMArrayType>(varPtrMlirTy))
+        elemSizeInBits = getArrayElementSizeInBits(arrTy, dl);
+      iteratedEntries.push_back(
+          {itersOp, mapInfoOp, moduleTranslation.convertType(varPtrMlirTy),
+           builder.getInt64(elemSizeInBits / 8),
+           IteratorInfo(itersOp, moduleTranslation, builder)});
+    }
+
+    // Emits the (base, begin, size) of the entry for one iteration, given the
+    // loop's linear induction variable. `info` is taken by value: it holds
+    // the lb/ub/step/trip llvm::Value*s looked up while `declMapperOp`'s
+    // region mapping was still valid, and this may run later (from within
+    // OpenMPIRBuilder::emitUserDefinedMapper), after that mapping has been
+    // dropped via forgetMapping.
+    auto genIteratedEntry = [&moduleTranslation](IteratedEntryInfo info,
+                                                 llvm::IRBuilderBase &b,
+                                                 llvm::Value *linearIV)
+        -> llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> {
+      if (failed(convertIteratorRegion(linearIV, info.iterInfo,
+                                       info.itersOp.getRegion(), b,
+                                       moduleTranslation)))
+        return llvm::make_error<PreviouslyReportedError>();
+      llvm::Value *base =
+          moduleTranslation.lookupValue(info.mapInfoOp.getVarPtr());
+      bool isByteOffset = false;
+      std::vector<llvm::Value *> offsetIdx = calculateBoundsOffset(
+          moduleTranslation, b, info.baseLLVMTy->isArrayTy(),
+          info.mapInfoOp.getBounds(), isByteOffset);
+      llvm::Value *addr = base;
+      if (!offsetIdx.empty())
+        addr = b.CreateInBoundsGEP(
+            isByteOffset ? b.getInt8Ty() : info.baseLLVMTy, base, offsetIdx);
+      // Size = product over dimensions of (ub - lb + 1), times the element
+      // size, the same calculation getSizeInBytes does for static entries.
+      llvm::Value *elementCount = b.getInt64(1);
+      for (mlir::Value bound : info.mapInfoOp.getBounds()) {
+        auto boundOp = bound.getDefiningOp<mlir::omp::MapBoundsOp>();
+        if (!boundOp)
+          continue;
+        llvm::Value *lb =
+            moduleTranslation.lookupValue(boundOp.getLowerBound());
+        llvm::Value *ub =
+            moduleTranslation.lookupValue(boundOp.getUpperBound());
+        elementCount = b.CreateMul(
+            elementCount, b.CreateAdd(b.CreateSub(ub, lb), b.getInt64(1)));
+      }
+      llvm::Value *size = b.CreateMul(elementCount, info.elemSizeVal);
+      moduleTranslation.forgetMapping(info.itersOp.getRegion());
+      // The array base is the component's base pointer, as for a
+      // statically-known member; MEMBER_OF ties it to the parent entry.
+      return llvm::SmallVector<llvm::Value *, 3>{base, addr, size};
+    };
+
+    bool hasIterated = !iteratedEntries.empty();
+    std::optional<unsigned> iteratedParentIdx;
+    // Span of the iterated elements, computed when the mapper does not map
+    // the variable whole; null otherwise.
+    llvm::Value *anyTrips = nullptr;
+    llvm::Value *spanBegin = nullptr;
+    llvm::Value *spanEnd = nullptr;
+    bool hasStaticParent = false;
+    if (hasIterated) {
+      bool mapsWholeVariable = false;
+      for (Value mapVar : mapVars) {
+        auto mapOp = cast<omp::MapInfoOp>(mapVar.getDefiningOp());
+        if (mapOp.getVarPtr() != declMapperOp.getSymVal())
+          continue;
+        // A partial map with a single member is emitted as an individual map
+        // of that member (see processMapWithMembersOf), so there is no parent
+        // component to attach the iterated elements to.
+        if (mapOp.getPartialMap() && mapOp.getMembers().size() == 1)
+          continue;
+        hasStaticParent = true;
+        if (!mapOp.getPartialMap() && mapOp.getBounds().empty())
+          mapsWholeVariable = true;
+      }
+      if (!mapsWholeVariable) {
+        // Span of all iterated elements as [spanBegin, spanEnd) integers,
+        // meaningful only when anyTrips. A pre-pass loop over each segment's
+        // iterations (the same ones the mapper pushes later) accumulates the
+        // min begin / max end in two slots; createIteratorLoop carries no
+        // loop state, so memory is used rather than PHIs. The allocas end
+        // up in the entry block via hoistMapperAllocasToEntry.
+        llvm::Type *i64Ty = builder.getInt64Ty();
+        anyTrips = builder.getFalse();
+        spanBegin = builder.getInt64(0);
+        spanEnd = builder.getInt64(0);
+        llvm::Value *beginSlot =
+            builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.begin");
+        llvm::Value *endSlot =
+            builder.CreateAlloca(i64Ty, nullptr, "omp.iterparent.end");
+        for (IteratedEntryInfo &info : iteratedEntries) {
+          llvm::Value *trips = info.iterInfo.getTotalTrips();
+          llvm::Value *hasTrips =
+              builder.CreateICmpNE(trips, builder.getInt64(0));
+          builder.CreateStore(builder.getInt64(~0ULL), beginSlot);
+          builder.CreateStore(builder.getInt64(0), endSlot);
+          auto spanBodyGen = [&](InsertPointTy bodyIP,
+                                 llvm::Value *linearIV) -> llvm::Error {
+            builder.restoreIP(bodyIP);
+            llvm::Expected<llvm::SmallVector<llvm::Value *, 3>> entryOrErr =
+                genIteratedEntry(info, builder, linearIV);
+            if (!entryOrErr)
+              return entryOrErr.takeError();
+            llvm::Value *begin =
+                builder.CreatePtrToInt((*entryOrErr)[1], i64Ty);
+            llvm::Value *end = builder.CreateAdd(begin, (*entryOrErr)[2]);
+            builder.CreateStore(builder.CreateBinaryIntrinsic(
+                                    llvm::Intrinsic::umin,
+                                    builder.CreateLoad(i64Ty, beginSlot),
+                                    begin),
+                                beginSlot);
+            builder.CreateStore(builder.CreateBinaryIntrinsic(
+                                    llvm::Intrinsic::umax,
+                                    builder.CreateLoad(i64Ty, endSlot), end),
+                                endSlot);
+            return llvm::Error::success();
+          };
+          llvm::OpenMPIRBuilder::InsertPointOrErrorTy afterIP =
+              ompBuilder->createIteratorLoop(
+                  llvm::OpenMPIRBuilder::LocationDescription(builder), trips,
+                  spanBodyGen, "mapper.iterspan");
+          if (!afterIP)
+            return afterIP.takeError();
+          builder.restoreIP(*afterIP);
+          llvm::Value *segBegin = builder.CreateLoad(i64Ty, beginSlot);
+          llvm::Value *segEnd = builder.CreateLoad(i64Ty, endSlot);
+          // Fold this segment into the overall span unless it is empty.
+          llvm::Value *mergedBegin = builder.CreateSelect(
+              anyTrips,
+              builder.CreateBinaryIntrinsic(llvm::Intrinsic::umin, spanBegin,
+                                            segBegin),
+              segBegin);
+          llvm::Value *mergedEnd =
+              builder.CreateSelect(anyTrips,
+                                   builder.CreateBinaryIntrinsic(
+                                       llvm::Intrinsic::umax, spanEnd, segEnd),
+                                   segEnd);
+          spanBegin = builder.CreateSelect(hasTrips, mergedBegin, spanBegin);
+          spanEnd = builder.CreateSelect(hasTrips, mergedEnd, spanEnd);
+          anyTrips = builder.CreateOr(anyTrips, hasTrips);
+        }
+        // The pre-pass loops split the block emitUserDefinedMapper was
+        // emitting into; move its builder to the continuation as well.
+        ompBuilder->Builder.restoreIP(builder.saveIP());
+
+        if (!hasStaticParent) {
+          // No map clause covers the variable, so synthesize a storage-only
+          // parent for the span, pushed only when there are elements.
+          iteratedParentIdx = 0;
+          combinedInfo.BasePointers.push_back(ptrPHI);
+          combinedInfo.Pointers.push_back(
+              builder.CreateIntToPtr(spanBegin, builder.getPtrTy()));
+          combinedInfo.Sizes.push_back(builder.CreateSub(spanEnd, spanBegin));
+          combinedInfo.Types.push_back(
+              llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE);
+          combinedInfo.HasAttachPtr.push_back(false);
+          combinedInfo.DevicePointers.push_back(
+              llvm::OpenMPIRBuilder::DeviceInfoTy::None);
+          combinedInfo.Mappers.push_back(nullptr);
+          combinedInfo.Names.push_back(LLVM::createMappingInformation(
+              declMapperOp.getLoc(), *ompBuilder, declMapperOp.getSymName()));
+          combinedInfo.LeadingParentCond = anyTrips;
+        }
+      }
+    }
+
     genMapInfos(builder, moduleTranslation, dl, combinedInfo, mapData,
                 targetDirective);
 
-    // Drop the mapping that is no longer necessary so that the same region
-    // can be processed multiple times.
-    moduleTranslation.forgetMapping(declMapperOp.getRegion());
+    llvm::omp::OpenMPOffloadMappingFlags iteratedMemberOf =
+        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+    if (hasIterated) {
+      if (!iteratedParentIdx) {
+        // The component genMapInfos emitted for the variable: the whole
+        // variable, or the partial parent of its statically mapped members.
+        // Members also have the variable as base, but carry MEMBER_OF.
+        for (unsigned i = 0; i < combinedInfo.BasePointers.size(); ++i) {
+          if (combinedInfo.BasePointers[i] == ptrPHI &&
+              (combinedInfo.Types[i] &
+               llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_MEMBER_OF) ==
+                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE) {
+            iteratedParentIdx = i;
+            break;
+          }
+        }
+      }
+      assert(iteratedParentIdx && "no parent component for iterated entries");
+      if (iteratedParentIdx && spanBegin && hasStaticParent) {
+        // The partial parent spans only the static members. The runtime
+        // rejects a later entry that extends an earlier one, so rather than
+        // adding a second parent, widen this one to also cover the iterated
+        // elements (when there are any).
+        unsigned idx = *iteratedParentIdx;
+        llvm::Type *i64Ty = builder.getInt64Ty();
+        llvm::Value *parentBegin =
+            builder.CreatePtrToInt(combinedInfo.Pointers[idx], i64Ty);
+        llvm::Value *parentEnd =
+            builder.CreateAdd(parentBegin, combinedInfo.Sizes[idx]);
+        llvm::Value *newBegin = builder.CreateSelect(
+            anyTrips,
+            builder.CreateBinaryIntrinsic(llvm::Intrinsic::umin, parentBegin,
+                                          spanBegin),
+            parentBegin, "omp.iterparent.begin.merged");
+        llvm::Value *newEnd =
+            builder.CreateSelect(anyTrips,
+                                 builder.CreateBinaryIntrinsic(
+                                     llvm::Intrinsic::umax, parentEnd, spanEnd),
+                                 parentEnd, "omp.iterparent.end.merged");
+        combinedInfo.Pointers[idx] =
+            builder.CreateIntToPtr(newBegin, builder.getPtrTy());
+        combinedInfo.Sizes[idx] = builder.CreateSub(newEnd, newBegin);
+      }
+      if (iteratedParentIdx)
+        iteratedMemberOf = ompBuilder->getMemberOfFlag(*iteratedParentIdx);
+    }
+
+    for (IteratedEntryInfo &info : iteratedEntries) {
+      llvm::omp::OpenMPOffloadMappingFlags mapType =
+          convertClauseMapFlags(info.mapInfoOp.getMapType());
+      ompBuilder->setCorrectMemberOfFlag(mapType, iteratedMemberOf);
+      bool hasAttachPtr =
+          (mapType & llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ATTACH) !=
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
+
+      combinedInfo.DynamicSegments.push_back(MapInfosTy::DynamicSegment{
+          info.iterInfo.getTotalTrips(), {}, mapType, hasAttachPtr});
+      MapInfosTy::DynamicSegment &seg = combinedInfo.DynamicSegments.back();
+      seg.GenEntry = [genIteratedEntry, info](llvm::IRBuilderBase &b,
+                                              llvm::Value *linearIV) {
+        return genIteratedEntry(info, b, linearIV);
+      };
+
+      if (info.mapInfoOp.getMapperId()) {
+        auto childMapperOp =
+            SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+                info.mapInfoOp, info.mapInfoOp.getMapperIdAttr());
+        // Emitting the child mapper for the first time leaves builder's
+        // insertion point inside the child function; restore it so that
+        // later iterator segments are emitted into this (the parent)
+        // mapper function instead.
+        llvm::IRBuilderBase::InsertPointGuard childMapperIPGuard(builder);
+        llvm::Expected<llvm::Function *> childMapperFn =
+            getOrCreateUserDefinedMapperFunc(
+                childMapperOp, builder, moduleTranslation, targetDirective);
+        if (!childMapperFn)
+          return childMapperFn.takeError();
+        seg.ChildMapperFn = *childMapperFn;
+      }
+    }
+
     return combinedInfo;
   };
 
@@ -8849,8 +9190,14 @@ emitUserDefinedMapper(Operation *op, llvm::IRBuilderBase &builder,
       genMapInfoCB, varType, mapperFuncName, customMapperCB,
       /*PreserveMemberOfFlags=*/true, /*PropagatePresentToPointeeStorage=*/true,
       /*PropagatePresentToNonPointeeStorage=*/true);
+  // Only now that emitUserDefinedMapper has fully finished (including running
+  // any iterator-produced DynamicSegment::GenEntry callbacks, which look up
+  // values defined in declMapperOp's region) is it safe to drop the mapping,
+  // so that the same region can be processed multiple times.
+  moduleTranslation.forgetMapping(declMapperOp.getRegion());
   if (!newFn)
     return newFn.takeError();
+  hoistMapperAllocasToEntry(**newFn);
   if ([[maybe_unused]] llvm::Function *mappedFunc =
           moduleTranslation.lookupFunction(mapperFuncName)) {
     assert(mappedFunc == *newFn &&
