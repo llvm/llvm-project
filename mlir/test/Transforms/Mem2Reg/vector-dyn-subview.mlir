@@ -186,6 +186,24 @@ func.func @write_dyn_subview_in_scf_if(%v: vector<8x16xf32>, %w: vector<8x16xf32
 
 // -----
 
+// A dynamic subview's slot value represents its parent, not its runtime shape.
+// CHECK-LABEL: func.func @subview_dynamic_partial_read
+// CHECK-SAME: (%[[V:.*]]: vector<8xf32>, %[[PAD:.*]]: f32, %[[SIZE:.*]]: index)
+// CHECK-NOT: memref.alloca
+// CHECK-NOT: memref.subview
+// CHECK: %[[SLICE:.*]] = vector.extract_strided_slice %[[V]] offsets = [0], sizes = [4], strides = [1]
+// CHECK: return %[[SLICE]]
+func.func @subview_dynamic_partial_read(%v: vector<8xf32>, %pad: f32, %size: index) -> vector<4xf32> {
+  %c0 = arith.constant 0 : index
+  %a = memref.alloca() : memref<8xf32>
+  vector.transfer_write %v, %a[%c0] {in_bounds = [true]} : vector<8xf32>, memref<8xf32>
+  %sv = memref.subview %a[0] [%size] [1] : memref<8xf32> to memref<?xf32, strided<[1]>>
+  %r = vector.transfer_read %sv[%c0], %pad {in_bounds = [true]} : memref<?xf32, strided<[1]>>, vector<4xf32>
+  return %r : vector<4xf32>
+}
+
+// -----
+
 // Negative: an out-of-bounds transfer (`in_bounds = [false]`) through a dynamic
 // subview is not promoted; lanes past the extent must be masked off instead.
 // TODO: Remove once out-of-bounds transfers are removed (#227821).
