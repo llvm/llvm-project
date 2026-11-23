@@ -110,8 +110,6 @@ def push_dynamic_library_lookup_path(config, new_path):
         dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
     elif platform.system() == "Haiku":
         dynamic_library_lookup_var = "LIBRARY_PATH"
-    elif platform.system() == "AIX":
-        dynamic_library_lookup_var = "LIBPATH"
     else:
         dynamic_library_lookup_var = "LD_LIBRARY_PATH"
 
@@ -120,10 +118,11 @@ def push_dynamic_library_lookup_path(config, new_path):
     )
 
     if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
         new_ld_library_path = os.path.normpath(new_ld_library_path)
 
     config.environment[dynamic_library_lookup_var] = new_ld_library_path
-
 
 # Set dynamic library lookup path so that dynamically linked runtimes can be found.
 push_dynamic_library_lookup_path(config, config.flang_rt_output_resource_lib_dir)
