@@ -27,7 +27,6 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/Support/LEB128.h"
-#include "RISCVMachineFunctionInfo.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -229,17 +228,19 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 
 // Insert instruction to swap mscratchsw with sp
 static void emitInterruptStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI,
-                                    const DebugLoc &DL,
-                                    MachineInstr::MIFlag FrameFlag) {
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL,
+                                   MachineInstr::MIFlag FrameFlag) {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
   int64_t SwapReg;
   if (RVFI->isSiFiveStackSwapInterrupt(MF)) {
     assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
-    
+
     SwapReg = RISCVSysReg::sf_mscratchcsw;
-  } else if (RVFI->getInterruptStackKind(MF) == llvm::RISCVMachineFunctionInfo::InterruptStackKind::SupervisorStackSwap) {
+  } else if (RVFI->getInterruptStackKind(MF) ==
+             llvm::RISCVMachineFunctionInfo::InterruptStackKind::
+                 SupervisorStackSwap) {
     SwapReg = RISCVSysReg::sscratch;
   } else {
     return;
