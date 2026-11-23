@@ -13,7 +13,7 @@
 // aware targets like amdgpu.
 
 // S is not trivially destructible, so f returns it through a generic sret
-// pointer rather than a __retval alloca.
+// pointer rather than a return slot alloca.
 // CIR-FLAT-LABEL: cir.func {{.*}} @_Z1fv(%arg0: !cir.ptr<!rec_S> {{.*}}llvm.sret = !rec_S
 // CIR-FLAT:       cir.alloca "__cleanup_dest_slot" {{.*}} : !cir.ptr<!s32i, target_address_space(5)>
 // CIR-FLAT:       cir.alloca "nrvo" {{.*}} : !cir.ptr<!cir.bool, target_address_space(5)>
@@ -27,7 +27,7 @@
 // CIR-FLATO1-LABEL: cir.func {{.*}} @_Z2f1i
 // CIR-FLATO1:       cir.alloca "__ret_operand_tmp" align(4) : !cir.ptr<!s32i, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "__cleanup_dest_slot" align(4) cleanup_dest_slot : !cir.ptr<!s32i, target_address_space(5)>
-// CIR-FLATO1:       cir.alloca "__retval" align(4) : !cir.ptr<!rec_S1, target_address_space(5)>
+// CIR-FLATO1:       cir.alloca "" align(4) return_slot : !cir.ptr<!rec_S1, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "a" align(4) init : !cir.ptr<!s32i, target_address_space(5)>
 // CIR-FLATO1:       cir.alloca "c" align(4) init const : !cir.ptr<!s32i, target_address_space(5)>
 
