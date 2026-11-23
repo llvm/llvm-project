@@ -38,6 +38,24 @@ define i32 @sub_lshr_signbits(i8 noundef %x) {
   ret i32 %res
 }
 
+define i32 @sub_lshr_possibly_neg(i8 noundef %x) {
+; CHECK-LABEL: define i32 @sub_lshr_possibly_neg(
+; CHECK-SAME: i8 noundef [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[WIDE]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[WIDE]], [[SHIFTED]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 128
+; CHECK-NEXT:    [[RES:%.*]] = add i32 [[AND]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %wide = sext i8 %x to i32
+  %shifted = lshr i32 %wide, 1
+  %sub = sub i32 %wide, %shifted
+  %and = and i32 %sub, 128
+  %res = add i32 %and, %sub
+  ret i32 %res
+}
+
 define <2 x i32> @sub_ashr_signbits_vector(<2 x i8> noundef %x) {
 ; CHECK-LABEL: define <2 x i32> @sub_ashr_signbits_vector(
 ; CHECK-SAME: <2 x i8> noundef [[X:%.*]]) {
@@ -72,4 +90,23 @@ define <2 x i32> @sub_lshr_signbits_vector(<2 x i8> noundef %x) {
   %and = and <2 x i32> %sub, splat (i32 128)
   %res = add <2 x i32> %and, %sub
   ret <2 x i32> %res
+}
+
+define i32 @sub_ashr_signbits_negative(i8 %x) {
+; CHECK-LABEL: define i32 @sub_ashr_signbits_negative(
+; CHECK-SAME: i8 [[X:%.*]]) {
+; CHECK-NEXT:    [[WIDE:%.*]] = sext i8 [[X]] to i32
+; CHECK-NEXT:    [[SHIFTED:%.*]] = ashr i32 [[WIDE]], 1
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[WIDE]], [[SHIFTED]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], 128
+; CHECK-NEXT:    [[RES:%.*]] = add nsw i32 [[AND]], [[SUB]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+  %wide = sext i8 %x to i32
+  %shifted = ashr i32 %wide, 1
+  %sub = sub i32 %wide, %shifted
+  %and = and i32 %sub, 128
+  %res = add i32 %and, %sub
+  ret i32 %res
+
 }

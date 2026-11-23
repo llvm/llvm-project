@@ -4813,6 +4813,46 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
       return std::min(Tmp, Tmp2) - 1;
 
     case Instruction::Sub: {
+      Value *X = U->getOperand(0);
+      // If we have a sub X, ashr/lshr (X, C), we can avoid losing one
+      // known sign bit if ashr or if lshr and X is nonnegative.
+      //
+      // Suppose we have
+      // 1) Y = sub i8 X, ashr (X, C),
+      // 2) tmp = ashr (X, C)
+      //
+      // For non-undef X,
+      //
+      // If X >=0, we can conclude: 0 <= tmp <= X
+      // cause of the ashr, the tmp shrinks.
+      // Therefore, 0 <= Y <= X.
+      //
+      // For X < 0, we can conclude X <= tmp <= 0,
+      // cause again the ashr keeps tmp negative but
+      // smaller in magnitude.
+      //
+      // As an example,
+      // Tmp = ashr i4 -8, 1
+      // -8 == 1000, becomes 1100 = -4
+      //
+      // Y = sub X, Tmp
+      // Therefore, X <= Y <= 0
+      //
+      // So, for any valid shift amount, X - ashr(X, C) stays in the signed
+      // range between X and 0.
+
+      // For nonnegative X: 0 <= X <= M
+      // tmp = lshr(X, C) : 0 <= tmp <= M
+      // So, -M <= X - tmp <= M.
+      // That preserves the signed bit bound of X.
+      if ((match(U->getOperand(1), m_AShr(m_Specific(X), m_Value())) &&
+          isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
+                                   Depth + 1)) ||
+          (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value()))) &&
+          isKnownNonNegative(X, Q, Depth + 1)) {
+        return ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
+      }
+
       Tmp2 = ComputeNumSignBits(U->getOperand(1), DemandedElts, Q, Depth + 1);
       if (Tmp2 == 1)
         break;
@@ -4836,25 +4876,12 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
           // Otherwise, we treat this like a SUB.
         }
 
-      bool NeedsExtraBit = true;
-      Value *X = U->getOperand(0);
-      const APInt *C = nullptr;
-      // if have a sub X, ashr/lshr (X, C), we can avoid losing one
-      // known sign bit if ashr or if lshr and X is no negative.
-      if ((match(U->getOperand(1), m_Shr(m_Specific(X), m_APInt(C)))) &&
-          isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
-                                   Depth + 1)) {
-        auto *Shift = cast<Operator>(U->getOperand(1));
-        bool IsLShr = Shift->getOpcode() == Instruction::LShr;
-        NeedsExtraBit =
-            (!IsLShr || isKnownNonNegative(X, Q, Depth + 1)) ? false : true;
-      }
       // Sub can have at most one carry bit.  Thus we know that the output
       // is, at worst, one more bit than the inputs.
       Tmp = ComputeNumSignBits(U->getOperand(0), DemandedElts, Q, Depth + 1);
       if (Tmp == 1)
         break;
-      return NeedsExtraBit ? std::min(Tmp, Tmp2) - 1 : std::min(Tmp, Tmp2);
+      return std::min(Tmp, Tmp2) - 1;
     }
     case Instruction::Mul: {
       // The output of the Mul can be at most twice the valid bits in the
