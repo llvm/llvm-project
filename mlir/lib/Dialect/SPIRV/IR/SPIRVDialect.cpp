@@ -159,7 +159,8 @@ std::optional<unsigned> parseAndVerify<unsigned>(SPIRVDialect const &dialect,
                                                  DialectAsmParser &parser);
 
 static Type parseAndVerifyType(SPIRVDialect const &dialect,
-                               DialectAsmParser &parser) {
+                               DialectAsmParser &parser,
+                               bool allowFunctionType = false) {
   Type type;
   SMLoc typeLoc = parser.getCurrentLocation();
   if (parser.parseType(type))
@@ -170,7 +171,20 @@ static Type parseAndVerifyType(SPIRVDialect const &dialect,
     return type;
 
   // Check other allowed types.
-  if (auto t = dyn_cast<FloatType>(type)) {
+  if (auto t = dyn_cast<FunctionType>(type); t && allowFunctionType) {
+    if (t.getNumResults() > 1) {
+      parser.emitError(typeLoc, "function type must have at most one result");
+      return Type();
+    }
+    for (Type elementType :
+         llvm::concat<const Type>(t.getInputs(), t.getResults())) {
+      if (!isa<SPIRVType>(elementType)) {
+        parser.emitError(typeLoc, "cannot use ")
+            << elementType << " to compose SPIR-V types";
+        return Type();
+      }
+    }
+  } else if (auto t = dyn_cast<FloatType>(type)) {
     if (!ScalarType::isValid(t)) {
       parser.emitError(typeLoc,
                        "only 8/16/32/64-bit float type allowed but found ")
@@ -450,7 +464,8 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   if (parser.parseLess())
     return Type();
 
-  auto pointeeType = parseAndVerifyType(dialect, parser);
+  auto pointeeType =
+      parseAndVerifyType(dialect, parser, /*allowFunctionType=*/true);
   if (!pointeeType)
     return Type();
 

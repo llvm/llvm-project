@@ -199,8 +199,11 @@ LogicalResult getAccessRelation(const AffineValueMap &accessValueMap,
 /// checks on its own account: that the two access the same memref, that at
 /// least one of them writes, and, where `loopDepth` is past the loops they
 /// share, that the source precedes the destination.
+///
+/// The check composes `srcRel` and `dstRel` in place, so their contents are
+/// unspecified on return.
 DependenceResult checkAccessDependence(
-    presburger::IntegerRelation srcRel, presburger::IntegerRelation dstRel,
+    presburger::IntegerRelation &&srcRel, presburger::IntegerRelation &&dstRel,
     unsigned loopDepth,
     FlatAffineValueConstraints *dependenceConstraints = nullptr,
     SmallVector<DependenceComponent, 2> *dependenceComponents = nullptr);

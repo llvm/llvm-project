@@ -394,6 +394,93 @@ void HexagonSubtarget::HVXMemLatencyMutation::apply(ScheduleDAGInstrs *DAG) {
   }
 }
 
+// Ensure that HMX activate and weight instructions are scheduled together.
+// The main idea is to:
+// 1. Reduce any latency between corresponding A/W to 0.
+// 2. Make the depths of corresponding A/W instructions be the same. (The
+//    post-RA scheduler is a top-down list scheduler.)
+void HexagonSubtarget::HMXActivateWeightMutation::apply(
+    ScheduleDAGInstrs *DAG) {
+  if (DAG->SUnits.empty())
+    return;
+
+  auto &HII = static_cast<const HexagonInstrInfo &>(*DAG->TII);
+  DenseMap<SUnit *, SUnit *> AWMap; // Map: Activation <-> Weight.
+  DenseSet<SUnit *> First;          // Which of the two came first.
+  // The SUnits in the DAG follow the order of instructions. The code below
+  // depends on it to pair up activation and weight instructions.
+  SUnit *A = nullptr, *W = nullptr;
+  for (SUnit &SU : DAG->SUnits) {
+    MachineInstr *MI = SU.getInstr();
+    if (HII.isHMXActivateInstr(*MI)) {
+      assert(A == nullptr && "Unexpected activation instruction");
+      A = &SU;
+      if (!W)
+        First.insert(A);
+    } else if (HII.isHMXWeightInstr(*MI)) {
+      assert(W == nullptr && "Unexpected weight instruction");
+      W = &SU;
+      if (!A)
+        First.insert(W);
+    }
+    if (A && W) {
+      AWMap.insert({A, W});
+      AWMap.insert({W, A});
+      A = W = nullptr;
+    }
+  }
+  assert(A == nullptr && "Unmatched activation instruction");
+  assert(W == nullptr && "Unmatched weight instruction");
+
+  // Reset the latency between matching instructions to 0.
+  for (SUnit *FirstSU : First) {
+    SUnit *SecondSU = AWMap.lookup(FirstSU);
+    // Set the successor latency to 0.
+    for (SDep &D : FirstSU->Succs) {
+      if (D.getSUnit() == SecondSU) {
+        D.setLatency(0);
+        FirstSU->setHeightDirty();
+      }
+    }
+    // Set the predecessor latency to 0.
+    for (SDep &D : SecondSU->Preds) {
+      if (D.getSUnit() == FirstSU) {
+        D.setLatency(0);
+        SecondSU->setDepthDirty();
+      }
+    }
+  }
+
+  SUnit *Entry = &DAG->SUnits[0];
+  assert(Entry->getDepth() == 0);
+
+  // For each pair, reset the depth (max distance from the entry) to be the
+  // max of the two. We can't just set the depth directly, because the post-RA
+  // scheduler recalculates it during scheduling. There are also assertions
+  // in it that can fire when the depth on the node is inconsistent with the
+  // calculations.
+  // To avoid this issue, make the depth "real" by adding a fake edge from
+  // the Entry node (which is assumed to have a depth of 0).
+  // Adding a new edge will mark the depths of successors (recursively)
+  // as dirty, potentially including subsequent pairs. The "getDepth" call
+  // will recompute a dirty depth, so it's important to iterate over the nodes
+  // in such a way that predecessors are visited first.
+  //
+  // Skip the first SUnit in case it's an A/W instruction, so that we don't
+  // try to create an edge from that node to itself.
+  for (SUnit &SU : MutableArrayRef<SUnit>(DAG->SUnits).drop_front()) {
+    if (!First.count(&SU))
+      continue;
+    SUnit *FirstSU = &SU;
+    SUnit *SecondSU = AWMap.lookup(FirstSU);
+    unsigned MaxDepth = std::max(FirstSU->getDepth(), SecondSU->getDepth());
+    SDep DepthEdge(Entry, SDep::Artificial);
+    DepthEdge.setLatency(MaxDepth);
+    FirstSU->addPred(DepthEdge);
+    SecondSU->addPred(DepthEdge);
+  }
+}
+
 // Check if a call and subsequent A2_tfrpi instructions should maintain
 // scheduling affinity. We are looking for the TFRI to be consumed in
 // the next instruction. This should help reduce the instances of
@@ -654,6 +741,7 @@ void HexagonSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(std::make_unique<UsrOverflowMutation>());
   Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<HMXActivateWeightMutation>());
   Mutations.push_back(std::make_unique<BankConflictMutation>());
   Mutations.push_back(std::make_unique<HLXPseudoMutation>());
 }
@@ -662,6 +750,7 @@ void HexagonSubtarget::getSMSMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(std::make_unique<UsrOverflowMutation>());
   Mutations.push_back(std::make_unique<HVXMemLatencyMutation>());
+  Mutations.push_back(std::make_unique<HMXActivateWeightMutation>());
 }
 
 // Pin the vtable to this file.

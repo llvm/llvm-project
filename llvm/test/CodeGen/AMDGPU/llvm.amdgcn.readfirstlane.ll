@@ -667,8 +667,8 @@ define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) #0 {
 ; CHECK-SDAG-LABEL: test_readfirstlane_fi:
 ; CHECK-SDAG:       ; %bb.0:
 ; CHECK-SDAG-NEXT:    s_add_u32 s0, s0, s17
-; CHECK-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-SDAG-NEXT:    s_mov_b32 s4, 0
+; CHECK-SDAG-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-SDAG-NEXT:    ;;#ASMSTART
 ; CHECK-SDAG-NEXT:    ; use s4
 ; CHECK-SDAG-NEXT:    ;;#ASMEND
@@ -677,8 +677,8 @@ define amdgpu_kernel void @test_readfirstlane_fi(ptr addrspace(1) %out) #0 {
 ; CHECK-GISEL-LABEL: test_readfirstlane_fi:
 ; CHECK-GISEL:       ; %bb.0:
 ; CHECK-GISEL-NEXT:    s_add_u32 s0, s0, s17
-; CHECK-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-GISEL-NEXT:    s_mov_b32 s4, 0
+; CHECK-GISEL-NEXT:    s_addc_u32 s1, s1, 0
 ; CHECK-GISEL-NEXT:    ;;#ASMSTART
 ; CHECK-GISEL-NEXT:    ; use s4
 ; CHECK-GISEL-NEXT:    ;;#ASMEND
@@ -1005,6 +1005,13 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s63, v29
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s62, v28
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s60, v26
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s59, v25
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s58, v24
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s57, v23
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s53, v19
@@ -1013,17 +1020,6 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s50, v16
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s49, v15
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s48, v14
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s39, v5
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s38, v4
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s37, v3
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s63, v29
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s62, v28
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s60, v26
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s59, v25
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s58, v24
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s57, v23
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s47, v13
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s46, v12
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s45, v11
@@ -1032,6 +1028,10 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s42, v8
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s40, v6
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s39, v5
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s38, v4
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s37, v3
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s36, v2
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v0
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(1)
@@ -1092,15 +1092,6 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s48, v14
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s49, v15
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s50, v16
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s51, v17
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s52, v18
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s53, v19
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s54, v20
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s55, v21
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s40, v6
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s42, v8
@@ -1109,6 +1100,14 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s45, v11
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s46, v12
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s47, v13
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s48, v14
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s49, v15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s50, v16
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s51, v17
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s52, v18
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s53, v19
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s54, v20
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s57, v23
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s58, v24
@@ -1117,6 +1116,7 @@ define void @test_readfirstlane_v32f32(ptr addrspace(1) %out, <32 x float> %src)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s61, v27
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s62, v28
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s63, v29
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s65, v0
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(1)
@@ -1450,6 +1450,13 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-SDAG-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:4
 ; CHECK-SDAG-NEXT:    buffer_load_dword v27, off, s[0:3], s32
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s64, v30
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s63, v29
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s62, v28
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s60, v26
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s59, v25
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s58, v24
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s57, v23
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s54, v20
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s53, v19
@@ -1458,17 +1465,6 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s50, v16
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s49, v15
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s48, v14
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s39, v5
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s38, v4
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s37, v3
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s36, v2
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s63, v29
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s62, v28
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s60, v26
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s59, v25
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s58, v24
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s57, v23
-; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s47, v13
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s46, v12
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s45, v11
@@ -1477,6 +1473,10 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s42, v8
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s40, v6
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s39, v5
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s38, v4
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s37, v3
+; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s36, v2
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-SDAG-NEXT:    v_readfirstlane_b32 s67, v0
 ; CHECK-SDAG-NEXT:    s_waitcnt vmcnt(1)
@@ -1537,15 +1537,6 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s37, v3
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s38, v4
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s39, v5
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s48, v14
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s49, v15
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s50, v16
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s51, v17
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s52, v18
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s53, v19
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s54, v20
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s55, v21
-; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s40, v6
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s41, v7
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s42, v8
@@ -1554,6 +1545,14 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s45, v11
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s46, v12
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s47, v13
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s48, v14
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s49, v15
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s50, v16
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s51, v17
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s52, v18
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s53, v19
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s54, v20
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s55, v21
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s56, v22
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s57, v23
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s58, v24
@@ -1562,6 +1561,7 @@ define void @test_readfirstlane_v32i32(ptr addrspace(1) %out, <32 x i32> %src) #
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s61, v27
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s62, v28
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s63, v29
+; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s64, v30
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(2)
 ; CHECK-GISEL-NEXT:    v_readfirstlane_b32 s65, v0
 ; CHECK-GISEL-NEXT:    s_waitcnt vmcnt(1)

@@ -26,7 +26,7 @@ module attributes {
 
   // The callee builds its result directly in the caller's sret memory.
   cir.func @ret_big() -> !rec_Big requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_Big, target_address_space(5)>
     %1 = cir.cast address_space %0 : !cir.ptr<!rec_Big, target_address_space(5)> -> !cir.ptr<!rec_Big>
     cir.call @fill(%1) : (!cir.ptr<!rec_Big>) -> ()
     %2 = cir.load %0 : !cir.ptr<!rec_Big, target_address_space(5)>, !rec_Big
@@ -64,7 +64,7 @@ module attributes {
   }
 
   // CHECK:      cir.func @discard_big() {
-  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "sret" align(4) : !cir.ptr<!rec_Big, target_address_space(5)>
+  // CHECK-NEXT:   %[[SLOT:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_Big, target_address_space(5)>
   // CHECK-NEXT:   cir.call @make_big(%[[SLOT]]) : (!cir.ptr<!rec_Big, target_address_space(5)> {llvm.align = 4 : i64, llvm.dead_on_unwind, llvm.sret = !rec_Big, llvm.writable}) -> ()
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }

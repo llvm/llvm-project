@@ -17,8 +17,8 @@ def Python_Test_Dialect : Dialect {
   let name = "python_test";
   let cppNamespace = "python_test";
 
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
 }
 
 class TestType<string name, string typeMnemonic>

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AggressiveAntiDepBreaker.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/iterator_range.h"
@@ -30,7 +31,6 @@
 #include "llvm/CodeGenTypes/MachineValueType.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -38,17 +38,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "post-RA-sched"
-
-// If DebugDiv > 0 then only break antidep with (ID % DebugDiv) == DebugMod
-static cl::opt<int>
-DebugDiv("agg-antidep-debugdiv",
-         cl::desc("Debug control for aggressive anti-dep breaker"),
-         cl::init(0), cl::Hidden);
-
-static cl::opt<int>
-DebugMod("agg-antidep-debugmod",
-         cl::desc("Debug control for aggressive anti-dep breaker"),
-         cl::init(0), cl::Hidden);
 
 AggressiveAntiDepState::AggressiveAntiDepState(const unsigned TargetRegs,
                                                MachineBasicBlock *BB)
@@ -579,10 +568,12 @@ bool AggressiveAntiDepBreaker::FindSuitableFreeRegisters(
   }
 
 #ifndef NDEBUG
-  // If DebugDiv > 0 then only rename (renamecnt % DebugDiv) == DebugMod
-  if (DebugDiv > 0) {
+  // If -agg-antidep-debugdiv=D is positive, only rename when
+  // renamecnt % D == -agg-antidep-debugmod.
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
+  if (Opts.agg_antidep_debugdiv > 0) {
     static int renamecnt = 0;
-    if (renamecnt++ % DebugDiv != DebugMod)
+    if (renamecnt++ % Opts.agg_antidep_debugdiv != Opts.agg_antidep_debugmod)
       return false;
 
     dbgs() << "*** Performing rename " << printReg(SuperReg, TRI)

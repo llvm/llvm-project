@@ -17,8 +17,6 @@ class TestFrameVarDILLiterals(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Check boolean literals parsing
         self.expect_var_path("true", value="true", type="bool")
         self.expect_var_path("false", value="false", type="bool")

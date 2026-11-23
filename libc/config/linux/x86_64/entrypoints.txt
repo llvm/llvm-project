@@ -109,6 +109,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sched.sched_setparam
     libc.src.sched.sched_setscheduler
     libc.src.sched.sched_yield
+    libc.src.sched.unshare
 
     # string.h entrypoints
     libc.src.string.memccpy
@@ -278,6 +279,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdlib.strfroml
     libc.src.stdlib.strtod
     libc.src.stdlib.strtof
+    libc.src.stdlib.strtof128
     libc.src.stdlib.strtol
     libc.src.stdlib.strtold
     libc.src.stdlib.strtoll
@@ -319,6 +321,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.vsprintf
     libc.src.stdio.vasprintf
 
+    # sys/capability.h entrypoints
+    libc.src.sys.capability.capget
+    libc.src.sys.capability.capset
+
     # sys/epoll.h entrypoints
     libc.src.sys.epoll.epoll_create
     libc.src.sys.epoll.epoll_create1
@@ -343,6 +349,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/ipc.h entrypoints
     libc.src.sys.ipc.ftok
 
+    # sys/klog.h entrypoints
+    libc.src.sys.klog.klogctl
+
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
     libc.src.sys.mman.memfd_create
@@ -366,6 +375,11 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.sys.mman.posix_madvise
     libc.src.sys.mman.shm_open
     libc.src.sys.mman.shm_unlink
+
+    # sys/mount.h entrypoints
+    libc.src.sys.mount.mount
+    libc.src.sys.mount.umount
+    libc.src.sys.mount.umount2
 
     # sys/random.h entrypoints
     libc.src.sys.random.getrandom
@@ -443,6 +457,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     # sys/statvfs.h entrypoints
     libc.src.sys.statvfs.fstatvfs
     libc.src.sys.statvfs.statvfs
+
+    # sys/swap.h entrypoints
+    libc.src.sys.swap.swapoff
+    libc.src.sys.swap.swapon
 
     # sys/time.h entrypoints
     libc.src.sys.time.utimes
@@ -575,6 +593,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.unistd.symlinkat
     libc.src.unistd.sync
     libc.src.unistd.syncfs
+    libc.src.unistd.syscall
     libc.src.unistd.tcgetpgrp
     libc.src.unistd.tcsetpgrp
     libc.src.unistd.truncate
@@ -1491,6 +1510,7 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.pthread.pthread_equal
     libc.src.pthread.pthread_exit
     libc.src.pthread.pthread_getattr_np
+    libc.src.pthread.pthread_getcpuclockid
     libc.src.pthread.pthread_getname_np
     libc.src.pthread.pthread_getschedparam
     libc.src.pthread.pthread_getspecific
@@ -1770,7 +1790,6 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.locale.uselocale
 
     # unistd.h entrypoints
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd._exit
     libc.src.unistd.confstr
     libc.src.unistd.environ
@@ -1791,6 +1810,13 @@ if(LLVM_LIBC_FULL_BUILD)
     # sys/select.h entrypoints
     libc.src.sys.select.pselect
     libc.src.sys.select.select
+
+    # syslog.h entrypoints
+    libc.src.syslog.closelog
+    libc.src.syslog.openlog
+    libc.src.syslog.setlogmask
+    libc.src.syslog.syslog
+    libc.src.syslog.vsyslog
 
     # wchar.h entrypoints
     libc.src.wchar.mbrlen
@@ -1816,6 +1842,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.nl_types.catopen
     libc.src.nl_types.catclose
     libc.src.nl_types.catgets
+
+    # langinfo.h entrypoints
+    libc.src.langinfo.nl_langinfo
+    libc.src.langinfo.nl_langinfo_l
 
     # link.h entrypoints
     libc.src.link._r_debug

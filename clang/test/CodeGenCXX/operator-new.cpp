@@ -34,7 +34,7 @@ void *f3(unsigned long N) {
   return ::operator new(N);
 }
 
-// SANE: attributes [[ATTR]] = { builtin allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) }
+// SANE: attributes [[ATTR]] = { builtin allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="_Znam" }
 // SANE: attributes [[ATTR2]] = { allocsize(0) }
-// SANENOT: attributes [[ATTR]] = { builtin allocsize(0) }
+// SANENOT: attributes [[ATTR]] = { builtin allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znam" }
 // SANENOT: attributes [[ATTR2]] = { allocsize(0) }
