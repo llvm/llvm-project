@@ -212,8 +212,6 @@ def J_CustomStorageCtorAttr : AttrDef<Test_Dialect, "CustomStorageCtorAttr"> {
 // DECL: class TestDialect;
 // DECL-NEXT: /// Registers the attributes defined in this file with `dialect`.
 // DECL-NEXT: void registerTestDialectAttributes(TestDialect *dialect);
-// DECL-EMPTY:
-// DECL-NEXT: } // namespace test
 
 // DEF: void registerTestDialectAttributes(TestDialect *dialect) {
 // DEF-NEXT:   ::mlir::AbstractAttribute::insert<IndexAttr>(*dialect);

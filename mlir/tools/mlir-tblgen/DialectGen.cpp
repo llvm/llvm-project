@@ -377,13 +377,14 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
   for (const std::string &hook : hooks)
     os << llvm::formatv("void {0}({1} *dialect);\n", hook, cppClassName);
 
-  SmallVector<std::string> initStatements;
+  std::string initCode;
+  llvm::raw_string_ostream initOs(initCode);
+  llvm::ListSeparator sep("\n  ");
   for (StringRef dependentDialect : dialect.getDependentDialects())
-    initStatements.push_back(
-        llvm::formatv(dialectRegistrationTemplate, dependentDialect).str());
+    initOs << sep
+           << llvm::formatv(dialectRegistrationTemplate, dependentDialect);
   for (const std::string &hook : hooks)
-    initStatements.push_back(llvm::formatv("{0}(this);", hook).str());
-  std::string initCode = llvm::join(initStatements, "\n  ");
+    initOs << sep << hook << "(this);";
 
   // Emit the constructor and destructor.
   StringRef superClassName =

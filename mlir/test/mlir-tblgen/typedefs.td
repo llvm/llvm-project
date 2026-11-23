@@ -161,8 +161,6 @@ def E_IntegerType : TestType<"Integer"> {
 // DECL: class TestDialect;
 // DECL-NEXT: /// Registers the types defined in this file with `dialect`.
 // DECL-NEXT: void registerTestDialectTypes(TestDialect *dialect);
-// DECL-EMPTY:
-// DECL-NEXT: } // namespace test
 
 // DEF: void registerTestDialectTypes(TestDialect *dialect) {
 // DEF-NEXT:   ::mlir::AbstractType::insert<SimpleAType>(*dialect);
