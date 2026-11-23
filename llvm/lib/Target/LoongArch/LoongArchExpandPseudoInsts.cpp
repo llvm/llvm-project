@@ -101,11 +101,13 @@ static bool expandPcaxxu12iInstPair(MachineBasicBlock &MBB,
   return true;
 }
 
-static bool expandLargeAddressLoad(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned LastOpcode,
-    unsigned IdentifyingMO, const MachineOperand &Symbol, Register DestReg,
-    bool EraseFromParent, const LoongArchInstrInfo *TII) {
+static bool expandLargeAddressLoad(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   unsigned LastOpcode, unsigned IdentifyingMO,
+                                   const MachineOperand &Symbol,
+                                   Register DestReg, bool EraseFromParent,
+                                   const LoongArchInstrInfo *TII) {
   // Code Sequence:
   //
   // Part1: pcalau12i  $scratch, %MO1(sym)
@@ -194,19 +196,22 @@ static bool expandLargeAddressLoad(
   return true;
 }
 
-static bool expandLargeAddressLoad(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, unsigned LastOpcode,
-    unsigned IdentifyingMO, const LoongArchInstrInfo *TII) {
+static bool expandLargeAddressLoad(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   unsigned LastOpcode, unsigned IdentifyingMO,
+                                   const LoongArchInstrInfo *TII) {
   MachineInstr &MI = *MBBI;
   return expandLargeAddressLoad(MBB, MBBI, NextMBBI, LastOpcode, IdentifyingMO,
                                 MI.getOperand(2), MI.getOperand(0).getReg(),
                                 true, TII);
 }
 
-static bool expandLoadAddressPcrel(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII, bool Large = false) {
+static bool expandLoadAddressPcrel(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII,
+                                   bool Large = false) {
   if (Large)
     // Emit the 5-insn large address load sequence with the `%pc` family of
     // relocs.
@@ -270,9 +275,10 @@ static bool expandLoadAddressGot(MachineBasicBlock &MBB,
                                  FlagsHi, FlagsLo, TII);
 }
 
-static bool expandLoadAddressTLSLE(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII) {
+static bool expandLoadAddressTLSLE(MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   MachineBasicBlock::iterator &NextMBBI,
+                                   const LoongArchInstrInfo *TII) {
   // Code Sequence:
   // lu12i.w $rd, %le_hi20_r(sym)
   // add.w/d $rd, $rd, $tp, %le_add_r(sym)
@@ -549,9 +555,10 @@ static bool expandLoadAddressTLSDesc(MachineBasicBlock &MBB,
   return true;
 }
 
-static bool expandFunctionCALL(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, bool IsTailCall, const LoongArchInstrInfo *TII) {
+static bool expandFunctionCALL(MachineBasicBlock &MBB,
+                               MachineBasicBlock::iterator MBBI,
+                               MachineBasicBlock::iterator &NextMBBI,
+                               bool IsTailCall, const LoongArchInstrInfo *TII) {
   MachineFunction *MF = MBB.getParent();
   MachineInstr &MI = *MBBI;
 
@@ -597,8 +604,8 @@ static bool expandFunctionCALL(
   llvm_unreachable("Unexpected code model");
 }
 
-static void annotateTableJump(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
+static void annotateTableJump(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI) {
   MachineFunction *MF = MBB.getParent();
   MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
 
@@ -655,9 +662,10 @@ static bool expandMOVCF2GRViaFR(MachineBasicBlock &MBB,
   return true;
 }
 
-static bool expandMIPreRA(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-    MachineBasicBlock::iterator &NextMBBI, const LoongArchInstrInfo *TII) {
+static bool expandMIPreRA(MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator MBBI,
+                          MachineBasicBlock::iterator &NextMBBI,
+                          const LoongArchInstrInfo *TII) {
   switch (MBBI->getOpcode()) {
   case LoongArch::PseudoLA_PCREL:
     return expandLoadAddressPcrel(MBB, MBBI, NextMBBI, TII);
@@ -939,6 +947,7 @@ PreservedAnalyses
 LoongArchPreRAExpandPseudoPass::run(MachineFunction &MF,
                                     MachineFunctionAnalysisManager &MFAM) {
   return expandPseudosPreRAInMF(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                          .preserveSet<CFGAnalyses>()
                                     : PreservedAnalyses::all();
 }
 
