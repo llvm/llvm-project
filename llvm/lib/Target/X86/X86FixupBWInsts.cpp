@@ -42,8 +42,8 @@
 /// wouldn't be created, or when your know a newer processor is being
 /// targeted, or when optimizing for minimum code size.
 ///
-/// Widening the loads in this pass can leave behind zero extends of values
-/// that are already zero extended, so as a second step these are removed.
+/// Widening the loads in this pass can leave behind zero and sign extends of
+/// values that are already extended, so as a second step these are removed.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -110,9 +110,9 @@ private:
   // otherwise.
   MachineInstr *tryReplaceInstr(MachineInstr *MI, MachineBasicBlock &MBB) const;
 
-  /// Remove the zero extends in \p MBB of values that an earlier instruction
-  /// in the same block (widened by this pass) has already zero extended.
-  void eliminateRedundantZeroExtends(MachineBasicBlock &MBB);
+  /// Remove the zero and sign extends in \p MBB of values that an earlier
+  /// instruction in the same block (widened by this pass) has already extended.
+  void eliminateRedundantExtends(MachineBasicBlock &MBB);
 
   MachineFunction *MF = nullptr;
 
@@ -435,60 +435,82 @@ X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
   return nullptr;
 }
 
-void X86FixupBWInstImpl::eliminateRedundantZeroExtends(MachineBasicBlock &MBB) {
-  // Return the number of source bits in the zero extending mov.
-  auto DefinedZeroExtendedValueBits =
-      [](const MachineInstr &MI) -> std::optional<unsigned> {
+void X86FixupBWInstImpl::eliminateRedundantExtends(MachineBasicBlock &MBB) {
+  // A value that is the zero or sign extension of its low Bits bits.
+  struct Extension {
+    unsigned Bits;
+    bool IsSigned;
+  };
+
+  // Return the extension done by the extending mov.
+  auto DefinedExtension =
+      [](const MachineInstr &MI) -> std::optional<Extension> {
     switch (MI.getOpcode()) {
     case X86::MOVZX32rm8:
     case X86::MOVZX32rr8:
-      return 8;
+      return Extension{8, false};
     case X86::MOVZX32rm16:
     case X86::MOVZX32rr16:
-      return 16;
+      return Extension{16, false};
+    case X86::MOVSX32rm8:
+    case X86::MOVSX32rr8:
+      return Extension{8, true};
+    case X86::MOVSX32rm16:
+    case X86::MOVSX32rr16:
+      return Extension{16, true};
     default:
       return std::nullopt;
     }
   };
 
-  // Maps what is currently known about each 32 bit register to the number
-  // of low bits its value is known to be zero extended from: 8 for a value
-  // in [0, 0xFF] and 16 for one in [0, 0xFFFF]. Only tracks registers within
-  // a single block.
-  SmallDenseMap<MCRegister, unsigned, 8> Known;
+  // Whether extending the low Ext.Bits bits of a register known to hold
+  // KnownExt leaves its value unchanged. Zero extending a sign extended value
+  // never does, as the value may be negative. Sign extending a zero extended
+  // value does if the sign bit is known to be zero, i.e. the value was zero
+  // extended from fewer bits.
+  auto IsRedundant = [](Extension KnownExt, Extension Ext) {
+    if (KnownExt.IsSigned == Ext.IsSigned)
+      return KnownExt.Bits <= Ext.Bits;
+    return !KnownExt.IsSigned && KnownExt.Bits < Ext.Bits;
+  };
+
+  // Maps what is currently known about each 32 bit register to the extension
+  // its value is known to be the result of: a value zero extended from 8 bits
+  // is in [0, 0xFF] and one sign extended from 8 bits is in [-0x80, 0x7F], and
+  // likewise for 16 bits. Only tracks registers within a single block.
+  SmallDenseMap<MCRegister, Extension, 8> Known;
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
     if (MI.isDebugInstr())
       continue;
 
-    // Only match 8 and 16 bit register to register extends. Loads can't be
-    // eliminated. The 64 bit target versions are handled by the 32 bit
-    // versions.
+    std::optional<Extension> Ext = DefinedExtension(MI);
+
+    // Only match 8 and 16 bit register to register extends to 32 bits. Loads
+    // can't be eliminated. 64 bit zero extends are done by the 32 bit versions,
+    // while 64 bit sign extends are not handled.
     unsigned Opc = MI.getOpcode();
-    if (Opc == X86::MOVZX32rr8 || Opc == X86::MOVZX32rr16) {
-      // The extend is redundant if the value is already zero extended from no
-      // more bits than it reads.
-      unsigned ReadBits = Opc == X86::MOVZX32rr8 ? 8 : 16;
+    if (Opc == X86::MOVZX32rr8 || Opc == X86::MOVZX32rr16 ||
+        Opc == X86::MOVSX32rr8 || Opc == X86::MOVSX32rr16) {
       MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
       MCRegister Src = MI.getOperand(1).getReg().asMCReg();
       MCRegister SrcSuper = getX86SubSuperRegister(Src, 32);
       auto It = Known.find(SrcSuper);
       // Reading %ah and friends does not read the part of the super register
       // that is known to hold the whole value, so insist on the low bits.
-      if (getX86SubSuperRegister(SrcSuper, ReadBits) == Src &&
-      if (It != Known.end() && It->second <= ReadBits &&
-          getX86SubSuperRegister(SrcSuper, ReadBits) == Src) {
+      if (It != Known.end() && IsRedundant(It->second, *Ext) &&
+          getX86SubSuperRegister(SrcSuper, Ext->Bits) == Src) {
 
         if (Dst == SrcSuper) {
           // The extend writes back the value that is already in the register.
-          LLVM_DEBUG(dbgs() << "Removing redundant zero extend: " << MI);
+          LLVM_DEBUG(dbgs() << "Removing redundant extend: " << MI);
           MI.eraseFromParent();
           continue;
         }
 
         // The extend is redundant but the move is not. A 32 bit copy is a
         // byte shorter and can be eliminated at rename.
-        LLVM_DEBUG(dbgs() << "Turning zero extend into a copy: " << MI);
+        LLVM_DEBUG(dbgs() << "Turning extend into a copy: " << MI);
         MachineInstrBuilder MIB =
             BuildMI(MBB, MI, MIMetadata(MI), TII->get(X86::MOV32rr), Dst)
                 .addReg(SrcSuper);
@@ -500,8 +522,8 @@ void X86FixupBWInstImpl::eliminateRedundantZeroExtends(MachineBasicBlock &MBB) {
 
         // The copy leaves the destination holding the value the source had,
         // so it inherits what was known about it.
-        unsigned SrcBits = It->second;
-        Known[Dst] = SrcBits;
+        Extension SrcExt = It->second;
+        Known[Dst] = SrcExt;
         continue;
       }
     }
@@ -522,9 +544,9 @@ void X86FixupBWInstImpl::eliminateRedundantZeroExtends(MachineBasicBlock &MBB) {
       }
     }
 
-    if (auto Bits = DefinedZeroExtendedValueBits(MI)) {
+    if (Ext) {
       MCRegister Dst = MI.getOperand(0).getReg().asMCReg();
-      Known[getX86SubSuperRegister(Dst, 32)] = *Bits;
+      Known[getX86SubSuperRegister(Dst, 32)] = *Ext;
     }
   }
 }
@@ -569,8 +591,8 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
     MBB.erase(MI);
   }
 
-  // Finally, clean up any zero extends made redundant by widening.
-  eliminateRedundantZeroExtends(MBB);
+  // Finally, clean up any extends made redundant by widening.
+  eliminateRedundantExtends(MBB);
 }
 
 bool X86FixupBWInstLegacy::runOnMachineFunction(MachineFunction &MF) {
