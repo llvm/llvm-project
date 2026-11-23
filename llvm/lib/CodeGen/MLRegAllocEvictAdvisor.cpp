@@ -735,7 +735,7 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
       // breaking a cascade is legal in RAGreedy::evictInterference.
       if (Cascade <= IntfCascade) {
         bool CanBreakCascade = (Cascade < IntfCascade && Urgent) ||
-                               VirtReg.isSpillable() < Intf->isSpillable();
+                               (!VirtReg.isSpillable() && Intf->isSpillable());
         if (!CanBreakCascade)
           return false;
         ++NumUrgent;
