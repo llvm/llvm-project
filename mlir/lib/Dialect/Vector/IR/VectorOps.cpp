@@ -6307,20 +6307,14 @@ public:
         newExtractOp.getResult(), transferOp.getIndices(),
         transferOp.getPermutationMapAttr(),
         rewriter.getBoolArrayAttr(newInBounds));
-    Operation *newOp = newTransferWriteOp;
     // The slice can be smaller than the vector, so mask off the lanes past it.
-    // A static full slice needs no mask. This also skips 0-D writes, whose
-    // inferred 1-D mask type has no matching sizes.
-    if (insertOp.getSourceType().getShape() !=
-        transferOp.getShapedType().getShape()) {
-      VectorType maskType = inferTransferOpMaskType(
-          transferOp.getVectorType(), transferOp.getPermutationMap());
-      Value mask = CreateMaskOp::create(rewriter, transferOp.getLoc(), maskType,
-                                        insertOp.getMixedSizes());
-      newOp = maskOperation(rewriter, newTransferWriteOp, mask);
-    }
+    VectorType maskType = inferTransferOpMaskType(
+        transferOp.getVectorType(), transferOp.getPermutationMap());
+    Value mask = CreateMaskOp::create(rewriter, transferOp.getLoc(), maskType,
+                                      insertOp.getMixedSizes());
+    Operation *maskedOp = maskOperation(rewriter, newTransferWriteOp, mask);
     rewriter.modifyOpInPlace(insertOp, [&]() {
-      insertOp.getSourceMutable().assign(newOp->getResult(0));
+      insertOp.getSourceMutable().assign(maskedOp->getResult(0));
     });
     return success();
   }
