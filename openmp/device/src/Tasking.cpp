@@ -91,6 +91,15 @@ void __kmpc_taskloop(IdentTy *Loc, uint32_t TId,
   __kmpc_omp_task_with_deps(Loc, TId, TaskDescriptor, 0, 0, 0, 0);
 }
 
+// Every task on the device is executed immediately by the encountering thread,
+// and is complete once its structured block has finished. There is no
+// completion event to register for a detachable task, so the event handle is
+// null and fulfilling it (see omp_fulfill_event) does nothing.
+void *__kmpc_task_allow_completion_event(IdentTy *Loc, uint32_t TId,
+                                         TaskDescriptorTy *TaskDescriptor) {
+  return nullptr;
+}
+
 int omp_in_final(void) {
   // treat all tasks as final... Specs may expect runtime to keep
   // track more precisely if a task was actively set by users... This
@@ -100,4 +109,8 @@ int omp_in_final(void) {
 }
 
 int omp_get_max_task_priority(void) { return 0; }
+
+// Detachable tasks do not wait for their event on the device, see
+// __kmpc_task_allow_completion_event.
+void omp_fulfill_event(omp_event_handle_t Event) {}
 }
