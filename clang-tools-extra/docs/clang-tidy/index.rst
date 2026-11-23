@@ -184,6 +184,9 @@ An overview of all the command-line options:
     --experimental-custom-checks     - Enable experimental clang-query based
                                        custom checks.
                                        see https://clang.llvm.org/extra/clang-tidy/QueryBasedCustomChecks.html.
+    --experimental-sarif-export=<filename> - File in which to store diagnostics in SARIF format.
+                                       Use '-' to write to stdout instead of the usual
+                                       diagnostic output.
     --explain-config                 - For each enabled check explains, where it is
                                        enabled, i.e. in clang-tidy binary, command
                                        line or a specific configuration file.

@@ -188,10 +188,16 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     return Res;
 
   if (auto *VTy = dyn_cast<VectorType>(C->getType())) {
-    // Handle a vector->scalar integer/fp cast.
-    if (isa<IntegerType>(DestTy) || DestTy->isFloatingPointTy()) {
+    // Handle a vector->scalar integer/fp/byte cast.
+    if (isa<IntegerType>(DestTy) || DestTy->isFloatingPointTy() ||
+        DestTy->isByteTy()) {
       unsigned NumSrcElts = cast<FixedVectorType>(VTy)->getNumElements();
       Type *SrcEltTy = VTy->getElementType();
+
+      // A byte constant can't represent partial poison or pointer provenance.
+      if (DestTy->isByteTy() &&
+          (C->containsPoisonElement() || SrcEltTy->isPointerTy()))
+        return ConstantExpr::getBitCast(C, DestTy);
 
       // Bitcasting a byte containing any poison bit to an integer or fp type
       // yields poison.
@@ -200,6 +206,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
       // If the vector is a vector of floating point or bytes, convert it to a
       // vector of int to simplify things.
+      Constant *OrigC = C;
       if (SrcEltTy->isFloatingPointTy() || SrcEltTy->isByteTy()) {
         unsigned Width = SrcEltTy->getPrimitiveSizeInBits();
         auto *SrcIVTy = FixedVectorType::get(
@@ -209,12 +216,19 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       }
 
       APInt Result(DL.getTypeSizeInBits(DestTy), 0);
-      if (Constant *CE = foldConstVectorToAPInt(Result, DestTy, C,
-                                                SrcEltTy, NumSrcElts, DL))
-        return CE;
+      // An element that isn't a plain constant, like a pointer cast to a byte,
+      // can't be folded. Byte destinations fall back to a bitcast of the
+      // original vector, as the integer vector C would drop its provenance.
+      if (Constant *CE = foldConstVectorToAPInt(Result, DestTy, C, SrcEltTy,
+                                                NumSrcElts, DL))
+        return DestTy->isByteTy() ? ConstantExpr::getBitCast(OrigC, DestTy)
+                                  : CE;
 
       if (isa<IntegerType>(DestTy))
         return ConstantInt::get(DestTy, Result);
+
+      if (isa<ByteType>(DestTy))
+        return ConstantByte::get(DestTy->getContext(), Result);
 
       APFloat FP(DestTy->getFltSemantics(), Result);
       return ConstantFP::get(DestTy->getContext(), FP);
@@ -530,6 +544,15 @@ Constant *llvm::ConstantFoldLoadThroughBitcast(Constant *C, Type *DestTy,
   return nullptr;
 }
 
+/// Return true if \p Ty is or contains a byte type.
+static bool containsByteType(Type *Ty) {
+  if (auto *ATy = dyn_cast<ArrayType>(Ty))
+    return containsByteType(ATy->getElementType());
+  if (auto *STy = dyn_cast<StructType>(Ty))
+    return any_of(STy->elements(), containsByteType);
+  return Ty->isByteOrByteVectorTy();
+}
+
 namespace {
 
 /// Recursive helper to read bits out of global. C is the constant being copied
@@ -569,6 +592,12 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
     }
     return true;
   }
+
+  // Read a `ConstantByte` as an integer with the same bits.
+  auto *CB = dyn_cast<ConstantByte>(C);
+  if (CB && CB->getType()->isByteTy())
+    return ReadDataFromGlobal(ConstantInt::get(C->getContext(), CB->getValue()),
+                              ByteOffset, CurPtr, BytesLeft, DL, IsByteLoad);
 
   auto *CFP = dyn_cast<ConstantFP>(C);
   if (CFP && CFP->getType()->isFloatingPointTy()) {
@@ -629,7 +658,7 @@ bool ReadDataFromGlobal(Constant *C, uint64_t ByteOffset, unsigned char *CurPtr,
 
   if (isa<ConstantArray>(C) || isa<ConstantVector>(C) ||
       isa<ConstantDataSequential>(C) || isa<ConstantInt>(C) ||
-      isa<ConstantFP>(C)) {
+      isa<ConstantFP>(C) || isa<ConstantByte>(C)) {
     uint64_t NumElts, EltSize;
     Type *EltTy;
     if (auto *AT = dyn_cast<ArrayType>(C->getType())) {
@@ -702,6 +731,17 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     if (!LoadTy->isFloatingPointTy() && !LoadTy->isPointerTy() &&
         !LoadTy->isByteTy() && !LoadTy->isVectorTy())
       return nullptr;
+
+    // Reinterpret pointers read from `ConstantByte` as a bitcast, rather than
+    // an inttoptr.
+    if (LoadTy->isPtrOrPtrVectorTy() &&
+        !DL.isNonIntegralPointerType(LoadTy->getScalarType()) &&
+        containsByteType(C->getType())) {
+      Type *ByteTy = DL.getBytePtrType(LoadTy);
+      if (Constant *Res =
+              FoldReinterpretLoadFromConst(C, ByteTy, ByteTy, Offset, DL))
+        return ConstantFoldCastOperand(Instruction::BitCast, Res, LoadTy, DL);
+    }
 
     Type *MapTy = Type::getIntNTy(C->getContext(),
                                   DL.getTypeSizeInBits(LoadTy).getFixedValue());
@@ -1634,11 +1674,10 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       // If the input is an inttoptr, eliminate the pair.  This requires knowing
       // the width of a pointer, so it can't be done in ConstantExpr::getCast.
       if (CE->getOpcode() == Instruction::IntToPtr) {
-        // zext/trunc the inttoptr to pointer/address size.
-        Type *MidTy = Opcode == Instruction::PtrToInt
-                          ? DL.getAddressType(CE->getType())
-                          : DL.getIntPtrType(CE->getType());
-        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0), MidTy,
+        // zext/trunc the inttoptr to pointer size. ptrtoaddr is truncated to
+        // the address size below.
+        FoldedValue = ConstantFoldIntegerCast(CE->getOperand(0),
+                                              DL.getIntPtrType(CE->getType()),
                                               /*IsSigned=*/false, DL);
       } else if (auto *GEP = dyn_cast<GEPOperator>(CE)) {
         // If we have GEP, we can perform the following folds:
@@ -1718,9 +1757,40 @@ Constant *llvm::ConstantFoldBitInsertOperands(Constant *Base, Constant *Val,
   if (isa<PoisonValue>(Base) && isa<PoisonValue>(Val))
     return Base;
 
-  // TODO: Fold vectors element by element.
-  if (Base->getType()->isVectorTy())
-    return nullptr;
+  if (auto *VTy = dyn_cast<VectorType>(Base->getType())) {
+    // Fast path for splatted constants.
+    Constant *BaseSplat = Base->getSplatValue();
+    Constant *ValSplat = Val->getSplatValue();
+    Constant *OffsetSplat = Offset->getSplatValue();
+    if (BaseSplat && ValSplat && OffsetSplat) {
+      Constant *Res =
+          ConstantFoldBitInsertOperands(BaseSplat, ValSplat, OffsetSplat, DL);
+      if (!Res)
+        return nullptr;
+      return ConstantVector::getSplat(VTy->getElementCount(), Res);
+    }
+
+    auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+    if (!FVTy)
+      return nullptr;
+
+    // Fold each element and create a vector constant from those constants.
+    SmallVector<Constant *, 16> Result;
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+      Constant *BaseElt = Base->getAggregateElement(I);
+      Constant *ValElt = Val->getAggregateElement(I);
+      Constant *OffsetElt = Offset->getAggregateElement(I);
+      if (!BaseElt || !ValElt || !OffsetElt)
+        return nullptr;
+      Constant *Res =
+          ConstantFoldBitInsertOperands(BaseElt, ValElt, OffsetElt, DL);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
+    }
+
+    return ConstantVector::get(Result);
+  }
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)
@@ -1768,9 +1838,39 @@ Constant *llvm::ConstantFoldBitExtractOperands(Type *Ty, Constant *Src,
   if (isa<PoisonValue>(Src) || isa<UndefValue>(Offset))
     return PoisonValue::get(Ty);
 
-  // TODO: Fold vectors element by element.
-  if (Ty->isVectorTy())
-    return nullptr;
+  if (auto *VTy = dyn_cast<VectorType>(Ty)) {
+    Type *EltTy = VTy->getElementType();
+    // Fast path for splatted constants.
+    Constant *SrcSplat = Src->getSplatValue();
+    Constant *OffsetSplat = Offset->getSplatValue();
+    if (SrcSplat && OffsetSplat) {
+      Constant *Res =
+          ConstantFoldBitExtractOperands(EltTy, SrcSplat, OffsetSplat, DL);
+      if (!Res)
+        return nullptr;
+      return ConstantVector::getSplat(VTy->getElementCount(), Res);
+    }
+
+    auto *FVTy = dyn_cast<FixedVectorType>(VTy);
+    if (!FVTy)
+      return nullptr;
+
+    // Fold each element and create a vector constant from those constants.
+    SmallVector<Constant *, 16> Result;
+    for (unsigned I = 0, E = FVTy->getNumElements(); I != E; ++I) {
+      Constant *SrcElt = Src->getAggregateElement(I);
+      Constant *OffsetElt = Offset->getAggregateElement(I);
+      if (!SrcElt || !OffsetElt)
+        return nullptr;
+      Constant *Res =
+          ConstantFoldBitExtractOperands(EltTy, SrcElt, OffsetElt, DL);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
+    }
+
+    return ConstantVector::get(Result);
+  }
 
   auto *COffset = dyn_cast<ConstantInt>(Offset);
   if (!COffset)

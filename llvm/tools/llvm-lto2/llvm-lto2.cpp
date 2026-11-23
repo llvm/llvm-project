@@ -37,8 +37,6 @@
 using namespace llvm;
 using namespace lto;
 
-static codegen::RegisterCodeGenFlags CGF;
-
 static cl::opt<char>
     OptLevel("O",
              cl::desc("Optimization level. [-O0, -O1, -O2, or -O3] "

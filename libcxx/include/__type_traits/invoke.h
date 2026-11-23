@@ -78,8 +78,7 @@ template <class, class... _Args>
 struct __invoke_result_impl {};
 
 template <class... _Args>
-using __direct_invoke_result_t _LIBCPP_NODEBUG =
-    decltype(__builtin_invoke(reinterpret_cast<_Args&&>(static_cast<int&&>(0))...));
+using __direct_invoke_result_t _LIBCPP_NODEBUG = decltype(__builtin_invoke(std::declval<_Args>()...));
 
 template <class... _Args>
 struct __invoke_result_impl<__void_t<__direct_invoke_result_t<_Args...> >, _Args...> {
@@ -144,7 +143,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __direct_invoke_result_t<_Args...> __inv
 }
 
 template <class... _Args>
-using __is_invocable_r _LIBCPP_NODEBUG = _BoolConstant<__is_invocable_r_v<_Args...> >;
+struct __is_invocable_r : _BoolConstant<__is_invocable_r_v<_Args...> > {};
 
 template <class _Ret, class... _Args>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __enable_if_t<!is_void<_Ret>::value, _Ret>

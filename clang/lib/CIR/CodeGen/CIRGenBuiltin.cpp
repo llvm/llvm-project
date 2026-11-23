@@ -378,8 +378,8 @@ mlir::Value CIRGenFunction::makeBinaryAtomicValue(cir::AtomicFetchKind kind,
 
   auto rmwi = cir::AtomicFetchOp::create(
       builder, cgf.getLoc(expr->getSourceRange()), destValue, val, kind,
-      ordering, cir::SyncScopeKind::System, false, /* is volatile */
-      true);                                       /* fetch first */
+      ordering, cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false, /*fetch_first=*/true);
   return rmwi->getResult(0);
 }
 
@@ -439,7 +439,8 @@ static RValue emitAtomicXchg(CIRGenFunction &cgf, const CallExpr *e,
 
   auto xchg = cir::AtomicXchgOp::create(
       builder, cgf.getLoc(e->getSourceRange()), destValue, val, ordering,
-      cir::SyncScopeKind::System, /*is_volatile=*/false);
+      cir::SyncScopeKind::System, /*alignment=*/nullptr,
+      /*is_volatile=*/false);
   return RValue::get(xchg.getResult());
 }
 
@@ -632,7 +633,8 @@ static RValue emitTernaryMaybeConstrainedFPBuiltin(CIRGenFunction &cgf,
   mlir::Type ty = cgf.convertType(e.getType());
 
   auto call = Op::create(cgf.getBuilder(), loc, ty, arg0, arg1, arg2,
-                         cgf.getBuilder().getConstrainedFPAttr());
+                         cgf.getBuilder().getConstrainedFPAttr(),
+                         cgf.getBuilder().getFastMathFlagsAttr());
   return RValue::get(call->getResult(0));
 }
 
@@ -1176,6 +1178,13 @@ decodeFixedType(CIRGenFunction &cgf,
     mlir::Type elementType = decodeFixedType(cgf, infos, overloadTys, context);
     unsigned numElements = descriptor.VectorWidth.getFixedValue();
     return cir::VectorType::getFixed(elementType, numElements);
+  }
+  case IITDescriptor::Struct: {
+    SmallVector<mlir::Type, 8> members;
+    for (unsigned i = 0; i < descriptor.StructNumElements; ++i)
+      members.push_back(decodeFixedType(cgf, infos, overloadTys, context));
+    return cgf.getBuilder().getAnonRecordTy(
+        members, /*packed=*/false, cir::RecordType::getAllDataKinds(members));
   }
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
@@ -3474,7 +3483,9 @@ emitTargetArchBuiltinExpr(CIRGenFunction *cgf, unsigned builtinID,
   case llvm::Triple::spirv64:
     if (cgf->getTarget().getTriple().getOS() == llvm::Triple::OSType::AMDHSA)
       return cgf->emitAMDGPUBuiltinExpr(builtinID, e);
-    return std::nullopt;
+    [[fallthrough]];
+  case llvm::Triple::spirv:
+    return cgf->emitSPIRVBuiltinExpr(builtinID, e);
   default:
     return std::nullopt;
   }

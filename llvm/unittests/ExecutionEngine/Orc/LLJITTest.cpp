@@ -62,7 +62,11 @@ static void compileRunAndCheck42(LLJIT &J) {
 // allocator end to end; on hosts that still default to RuntimeDyld (COFF today)
 // the allocator is constructed but unused, so this confirms the opt-in does no
 // harm there.
+#if defined(_AIX)
+TEST(LLJITTest, DISABLED_ColocatingSlabAllocator) {
+#else
 TEST(LLJITTest, ColocatingSlabAllocator) {
+#endif
   InitializeNativeTarget();
   InitializeNativeTargetAsmPrinter();
 

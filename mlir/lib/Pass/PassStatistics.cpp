@@ -11,6 +11,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 
+#include <cinttypes>
+
 using namespace mlir;
 using namespace mlir::detail;
 
@@ -48,9 +50,9 @@ static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
 
   // Print each of the statistics.
   for (auto &stat : stats) {
-    os.indent(indent + 2) << llvm::format("(S) %*u %-*s - %s\n", largestValue,
-                                          stat.value, largestName, stat.name,
-                                          stat.desc);
+    os.indent(indent + 2) << llvm::format(
+        "(S) %*" PRIu64 " %-*s - %s\n", static_cast<int>(largestValue),
+        stat.value, static_cast<int>(largestName), stat.name, stat.desc);
   }
 }
 

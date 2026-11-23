@@ -1996,12 +1996,26 @@ private:
   SourceLocation getFileLocSlowCase(SourceLocation Loc,
                                     unsigned MaxDepth) const;
 
+  /// A chunk of a macro argument expansion that was spelled in the file whose
+  /// macro argument cache is being computed: \c Length bytes at
+  /// \c ExpansionOffset in the expansion were spelled at \c FileOffset.
+  struct MacroArgFileChunk {
+    unsigned ExpansionOffset;
+    unsigned FileOffset;
+    unsigned Length;
+  };
+  using MacroArgFileChunks = SmallVector<MacroArgFileChunk, 1>;
+  /// The file chunks of each macro argument expansion FileID, relative to the
+  /// start of the FileID, while computing one file's macro argument cache.
+  using MacroArgFileChunksMap = llvm::DenseMap<int, MacroArgFileChunks>;
+
   void computeMacroArgsCache(MacroArgsMap &MacroArgsCache, FileID FID) const;
-  void associateFileChunkWithMacroArgExp(MacroArgsMap &MacroArgsCache,
-                                         FileID FID,
-                                         SourceLocation SpellLoc,
-                                         SourceLocation ExpansionLoc,
-                                         unsigned ExpansionLength) const;
+  const MacroArgFileChunks &
+  getMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID, FileID FID,
+                        FileID MacroArgFID) const;
+  MacroArgFileChunks
+  computeMacroArgFileChunks(MacroArgFileChunksMap &ChunksByFileID, FileID FID,
+                            SourceLocation SpellLoc, unsigned Length) const;
   void updateSlocUsageStats() const;
 };
 

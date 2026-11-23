@@ -118,9 +118,10 @@ public:
 };
 } // anonymous namespace
 
-static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
+static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name,
+                      bool show_hidden) {
   std::string usage_str = tool_name.str() + " options";
-  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
+  table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", show_hidden);
 
   llvm::outs() << R"___(
 EXAMPLES:
@@ -132,17 +133,22 @@ EXAMPLES:
 
     lldb-dap --connection listen://localhost:<port>
 
-  Passing --wait-for-debugger will pause the process at startup and wait for a
-  debugger to attach to the process.
-
-    lldb-dap -g
-
   You can also use lldb-dap to launch a supported client, for example the
   LLDB-DAP Visual Studio Code extension.
 
     lldb-dap --client vscode -- /path/to/binary <args>
 
 )___";
+
+  if (show_hidden) {
+    llvm::outs()
+        << R"___(  Passing --wait-for-debugger will pause the process at startup and wait for a
+  debugger to attach to the process.
+
+    lldb-dap -g
+
+)___";
+  }
 }
 
 static void PrintVersion() {
@@ -354,10 +360,10 @@ SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
 #endif
 
 // If --launch-target is provided, this instance of lldb-dap becomes a
-// runInTerminal launcher. It will ultimately launch the program specified in
-// the --launch-target argument, which is the original program the user wanted
-// to debug. This is done in such a way that the actual debug adapter can
-// place breakpoints at the beginning of the program.
+// runInTerminal launcher. It will ultimately launch the program given after
+// `--`, which is the original program the user wanted to debug. This is done in
+// such a way that the actual debug adapter can place breakpoints at the
+// beginning of the program.
 //
 // The launcher will communicate with the debug adapter using a fifo file in the
 // directory specified in the --comm-file argument.
@@ -367,16 +373,14 @@ SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
 // attached by the adapter.
 //
 // Once attached and resumed, the launcher will exec and become the program
-// specified by --launch-target, which is the original target the
-// user wanted to run.
+// passed after `--`, which is the original target the user wanted to run.
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
-static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                                     llvm::StringRef comm_file,
-                                                     lldb::pid_t debugger_pid,
-                                                     llvm::StringRef stdio,
-                                                     char *argv[], int argc) {
+static llvm::Expected<int>
+LaunchRunInTerminalTarget(llvm::ArrayRef<const char *> target_args,
+                          llvm::StringRef comm_file, lldb::pid_t debugger_pid,
+                          llvm::StringRef stdio) {
   // This env var should be used only for tests.
   const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
   int timeout_in_ms =
@@ -395,9 +399,8 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 #ifdef _WIN32
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
 
-  llvm::ArrayRef<const char *> args_arr = llvm::ArrayRef(argv, argc);
   auto wcommand_line_or_err =
-      lldb_private::GetFlattenedWindowsCommandStringW(args_arr);
+      lldb_private::GetFlattenedWindowsCommandStringW(target_args);
   if (!wcommand_line_or_err)
     return notifyError(comm_channel, "Failed to process arguments");
 
@@ -533,8 +536,10 @@ static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
     return err;
   }
 
-  const char *target = target_arg.getValue();
-  execvp(target, argv);
+  // execvp needs a null-terminated argv.
+  std::vector<const char *> exec_args(target_args.begin(), target_args.end());
+  exec_args.push_back(nullptr);
+  ::execvp(exec_args[0], const_cast<char *const *>(exec_args.data()));
 
   return notifyError(comm_channel, std::strerror(errno));
 #endif
@@ -754,11 +759,12 @@ int main(int argc, char *argv[]) {
 
   LLDBDAPOptTable T;
   unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc - 1);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
-  if (input_args.hasArg(OPT_help)) {
-    PrintHelp(T, llvm::sys::path::filename(argv[0]));
+  if (input_args.hasArg(OPT_help, OPT_help_hidden)) {
+    const llvm::StringRef tool_name = llvm::sys::path::filename(argv[0]);
+    PrintHelp(T, tool_name, input_args.hasArg(OPT_help_hidden));
     return EXIT_SUCCESS;
   }
 
@@ -854,7 +860,7 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
+  if (input_args.hasArg(OPT_launch_target)) {
     if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
       lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
       llvm::opt::Arg *debugger_pid = input_args.getLastArg(OPT_debugger_pid);
@@ -867,17 +873,18 @@ int main(int argc, char *argv[]) {
           return EXIT_FAILURE;
         }
       }
-      int target_args_pos = argc;
-      for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "--launch-target") == 0) {
-          target_args_pos = i + 1;
-          break;
-        }
+
+      // Any argument after -- is for the launch target.
+      llvm::ArrayRef<const char *> target_args;
+      if (llvm::opt::Arg *arg = input_args.getLastArgNoClaim(OPT_REM))
+        target_args = arg->getValues();
+      if (target_args.empty()) {
+        llvm::errs() << "\"--launch-target\" requires a target after \"--\"\n";
+        return EXIT_FAILURE;
       }
       llvm::StringRef stdio = input_args.getLastArgValue(OPT_stdio);
       auto return_code_or_err = LaunchRunInTerminalTarget(
-          *target_arg, comm_file->getValue(), pid, stdio,
-          argv + target_args_pos, argc - target_args_pos);
+          target_args, comm_file->getValue(), pid, stdio);
       if (!return_code_or_err) {
         llvm::errs() << llvm::toString(return_code_or_err.takeError()) << '\n';
         return EXIT_FAILURE;

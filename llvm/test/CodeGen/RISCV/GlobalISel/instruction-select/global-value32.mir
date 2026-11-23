@@ -31,8 +31,6 @@
 name:            global_addr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gprb, preferred-register: '' }
 body:             |
   bb.1.entry:
     ; RV32-PIE-LABEL: name: global_addr
@@ -63,8 +61,6 @@ body:             |
 name:            extern_weak_global_addr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gprb, preferred-register: '' }
 body:             |
   bb.1.entry:
     ; RV32-PIE-LABEL: name: extern_weak_global_addr
@@ -95,8 +91,6 @@ body:             |
 name:            local_global_addr
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: gprb, preferred-register: '' }
 body:             |
   bb.1.entry:
     ; RV32-PIE-LABEL: name: local_global_addr

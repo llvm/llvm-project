@@ -242,7 +242,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   auto *NewRHS =
       Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
-  IRBuilder<> Builder(ICmp);
+  IRBuilder<> Builder(PHTerm);
+  Builder.SetCurrentDebugLocation(DebugLoc::getDropped());
   Value *NewICmp = Builder.CreateICmp(InvariantPredicate, NewLHS, NewRHS, "",
                                       ICmp->hasSameSign());
   NewICmp->takeName(ICmp);
@@ -2056,8 +2057,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU,
 void WidenIV::pushNarrowIVUsers(Instruction *NarrowDef, Instruction *WideDef) {
   const SCEV *NarrowSCEV = SE->getSCEV(NarrowDef);
   bool NonNegativeDef =
-      SE->isKnownPredicate(ICmpInst::ICMP_SGE, NarrowSCEV,
-                           SE->getZero(NarrowSCEV->getType()));
+      SE->isKnownPredicateAt(ICmpInst::ICMP_SGE, NarrowSCEV,
+                             SE->getZero(NarrowSCEV->getType()), NarrowDef);
   for (User *U : NarrowDef->users()) {
     Instruction *NarrowUser = cast<Instruction>(U);
 

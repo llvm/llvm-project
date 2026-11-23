@@ -121,7 +121,8 @@ TransferReadOfExtractSliceOpFolder::matchAndRewriteMaskableOp(
       readOp.getPadding(),
       /*mask=*/Value(), readOp.getInBoundsAttr());
   if (maskOp)
-    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask());
+    newOp = mlir::vector::maskOperation(rewriter, newOp, maskOp.getMask(),
+                                        maskOp.getPassthru());
   return newOp->getResults()[0];
 }
 

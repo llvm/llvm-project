@@ -179,7 +179,6 @@ private:
   std::optional<Align> MaxFrameAlignment;
 
   SmallVector<Field, 8> Fields;
-  DenseMap<Value*, unsigned> FieldIndexByKey;
 
 public:
   FrameTypeBuilder(const DataLayout &DL, std::optional<Align> MaxFrameAlignment)
