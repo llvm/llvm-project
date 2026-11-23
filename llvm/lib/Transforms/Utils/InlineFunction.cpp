@@ -26,6 +26,7 @@
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/IndirectCallVisitor.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryProfileInfo.h"
 #include "llvm/Analysis/ObjCARCAnalysisUtils.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
@@ -935,25 +936,34 @@ propagateMemProfMetadata(Function *Callee, CallBase &CB,
   }
 }
 
-/// Collect all calls that produce RetVal, following only pointer-preserving
-/// instructions (cast, phi, select).
-static void collectPointerReturningCalls(Value *RetVal,
-                                         SmallVectorImpl<CallBase *> &Out) {
+/// Collect the calls whose result RetVal returns as a whole, following casts,
+/// phis, selects, and a load of a local temporary from the value last stored
+/// to it in the same block (as emitted before SROA, e.g. when an always_inline
+/// wrapper is inlined at -O0).
+static void collectReturnedCalls(Value *RetVal,
+                                 SmallVectorImpl<CallBase *> &Out) {
   SmallVector<Value *, 8> Worklist{RetVal};
   SmallPtrSet<Value *, 8> Visited;
   while (!Worklist.empty()) {
     Value *V = Worklist.pop_back_val();
-    if (!V->getType()->isPointerTy() || !Visited.insert(V).second)
+    if (!Visited.insert(V).second)
       continue;
-    if (auto *CB = dyn_cast<CallBase>(V))
+    if (auto *CB = dyn_cast<CallBase>(V)) {
       Out.push_back(CB);
-    else if (isa<BitCastInst, AddrSpaceCastInst>(V))
+    } else if (isa<BitCastInst, AddrSpaceCastInst>(V)) {
       Worklist.push_back(cast<CastInst>(V)->getOperand(0));
-    else if (auto *PN = dyn_cast<PHINode>(V))
+    } else if (auto *PN = dyn_cast<PHINode>(V)) {
       append_range(Worklist, PN->incoming_values());
-    else if (auto *SI = dyn_cast<SelectInst>(V)) {
+    } else if (auto *SI = dyn_cast<SelectInst>(V)) {
       Worklist.push_back(SI->getTrueValue());
       Worklist.push_back(SI->getFalseValue());
+    } else if (auto *LI = dyn_cast<LoadInst>(V)) {
+      if (!isa<AllocaInst>(LI->getPointerOperand()->stripPointerCasts()))
+        continue;
+      BasicBlock::iterator ScanFrom = LI->getIterator();
+      Value *Stored = FindAvailableLoadedValue(LI, LI->getParent(), ScanFrom);
+      if (Stored && Stored->getType() == LI->getType())
+        Worklist.push_back(Stored);
     }
   }
 }
@@ -974,7 +984,7 @@ propagateAllocTokenMetadata(Function *CalledFunc, CallBase &CB,
   for (BasicBlock &BB : *CalledFunc)
     if (auto *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
       if (Value *RV = RI->getReturnValue())
-        collectPointerReturningCalls(RV, AllocCalls);
+        collectReturnedCalls(RV, AllocCalls);
 
   for (CallBase *OrigCall : AllocCalls) {
     auto *ClonedCall = dyn_cast_or_null<CallBase>(VMap.lookup(OrigCall));
