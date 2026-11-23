@@ -147,7 +147,7 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// ```
 /// A 1-D identity i8 alloc used by `memref.view` stays 1-D. The original alloc
 /// is replaced by a view of the current slot, so user views keep their byte
-/// shifts. With factor 2:
+/// shifts. A dynamic length is left unchanged. With factor 2:
 /// ```
 /// %0 = memref.alloc() : memref<192xi8>
 /// scf.for %iv = %c0 to %c8 step %c1 {
@@ -160,7 +160,7 @@ void populateMemRefNarrowTypeEmulationConversions(
 /// ```
 /// %0 = memref.alloc() : memref<384xi8>
 /// scf.for %iv = %c0 to %c8 step %c1 {
-///   %off = affine.apply affine_map<(d0) -> (d0 * 192)>(%iv)
+///   %off = affine.apply affine_map<(d0) -> ((d0 mod 2) * 192)>(%iv)
 ///   %slot = memref.view %0[%off][] : memref<384xi8> to memref<192xi8>
 ///   %v = memref.view %slot[%c16][] : memref<192xi8> to memref<16xf32>
 ///   memref.copy %src, %slot : memref<192xi8> to memref<192xi8>

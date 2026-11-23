@@ -372,3 +372,26 @@ func.func @multi_buffer_view(%src: memref<192xi8>) {
   }
   return
 }
+
+// -----
+
+// A dynamic viewed alloc has no constant slot size. Leave it unchanged instead
+// of expanding it to a ranked memref that memref.view cannot use.
+// CHECK-LABEL: func @multi_buffer_view_dynamic
+func.func @multi_buffer_view_dynamic(%src: memref<?xi8>, %n: index) {
+// CHECK-NOT: memref.alloc() : memref<5x
+//     CHECK: %[[A:.*]] = memref.alloc(%{{.*}}) : memref<?xi8>
+  %0 = memref.alloc(%n) : memref<?xi8>
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c8 = arith.constant 8 : index
+  scf.for %iv = %c0 to %c8 step %c1 {
+//     CHECK: %[[V:.*]] = memref.view %[[A]][%{{.*}}][] : memref<?xi8> to memref<16xf32>
+    %1 = memref.view %0[%c0][] : memref<?xi8> to memref<16xf32>
+//     CHECK: memref.copy %{{.*}}, %[[A]] : memref<?xi8> to memref<?xi8>
+    memref.copy %src, %0 : memref<?xi8> to memref<?xi8>
+//     CHECK: "some_use"(%[[V]]) : (memref<16xf32>) -> ()
+    "some_use"(%1) : (memref<16xf32>) -> ()
+  }
+  return
+}

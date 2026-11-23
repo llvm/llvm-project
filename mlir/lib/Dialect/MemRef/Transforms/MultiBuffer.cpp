@@ -207,13 +207,18 @@ static MemRefLayoutAttrInterface multiBufferLayout(memref::AllocOp allocOp) {
                                 expandedStrides);
 }
 
-/// Return true if `allocOp` is a valid `memref.view` source with a view user.
+/// Return true if `allocOp` has a `memref.view` user.
+static bool hasViewUser(memref::AllocOp allocOp) {
+  return llvm::any_of(allocOp->getUsers(), llvm::IsaPred<memref::ViewOp>);
+}
+
+/// Return true if `allocOp` is a static 1-D identity i8 `memref.view` source.
+/// A dynamic length cannot be turned into a constant flat slot size.
 static bool isViewedByteAlloc(memref::AllocOp allocOp) {
   MemRefType type = allocOp.getType();
-  return type.getRank() == 1 && type.hasStaticShape() &&
+  return hasViewUser(allocOp) && type.getRank() == 1 && type.hasStaticShape() &&
          type.getElementType().isSignlessInteger(8) &&
-         type.getLayout().isIdentity() &&
-         llvm::any_of(allocOp->getUsers(), llvm::IsaPred<memref::ViewOp>);
+         type.getLayout().isIdentity();
 }
 
 /// Replace the deallocs of `allocOp` with deallocs of `mbAlloc`.
@@ -314,8 +319,14 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
 
   // `memref.view` needs a 1-D byte source with identity layout, so a viewed
   // byte alloc stays flat. The alloc is replaced by a view of the current slot
-  // so its view users keep their constant byte shifts.
-  if (isViewedByteAlloc(allocOp)) {
+  // so its view users keep their constant byte shifts. A dynamic length has no
+  // constant slot size; leave it unchanged instead of adding a leading
+  // dimension.
+  if (hasViewUser(allocOp)) {
+    if (!isViewedByteAlloc(allocOp)) {
+      LLVM_DEBUG(DBGS() << "Skip alloc: viewed alloc is not a static 1-D i8\n");
+      return failure();
+    }
     int64_t slotBytes = allocOp.getType().getDimSize(0);
     int64_t flatBytes = slotBytes * multiBufferingFactor;
     MemRefType flatType =
