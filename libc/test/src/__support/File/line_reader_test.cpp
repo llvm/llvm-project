@@ -43,7 +43,7 @@ LIBC_NAMESPACE::File *open_temp(const char *path,
 
 TEST(LlvmLibcLineReaderTest, EmptySpanAndWriteOnlyStream) {
   {
-    const char *path = libc_make_test_file_path("line_reader_empty_span.test");
+    auto path = libc_make_test_file_path("line_reader_empty_span.test");
     LIBC_NAMESPACE::File *f = open_temp(path, "\na\n");
     ASSERT_NE(f, nullptr);
     LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
@@ -72,7 +72,7 @@ TEST(LlvmLibcLineReaderTest, EmptySpanAndWriteOnlyStream) {
   }
 
   {
-    const char *path = libc_make_test_file_path("line_reader_wonly.test");
+    auto path = libc_make_test_file_path("line_reader_wonly.test");
     LIBC_NAMESPACE::File *f = open_temp(path, "hello\n", "w");
     ASSERT_NE(f, nullptr);
     LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
@@ -94,7 +94,7 @@ TEST(LlvmLibcLineReaderTest, EmptySpanAndWriteOnlyStream) {
 }
 
 TEST(LlvmLibcLineReaderTest, FixedSpanReadTruncateAndEof) {
-  const char *path = libc_make_test_file_path("line_reader_span.test");
+  auto path = libc_make_test_file_path("line_reader_span.test");
   LIBC_NAMESPACE::File *f = open_temp(path, "abcd\n\nefghi\nok");
   ASSERT_NE(f, nullptr);
   LIBC_NAMESPACE::cpp::scope_exit cleanup([&]() {
@@ -144,7 +144,7 @@ TEST(LlvmLibcLineReaderTest, FixedSpanReadTruncateAndEof) {
 
 TEST(LlvmLibcLineReaderTest, EmbeddedNullAndCarriageReturnPreserved) {
   constexpr char RAW[] = "ab\0cd\r\n";
-  const char *path = libc_make_test_file_path("line_reader_nul.test");
+  auto path = libc_make_test_file_path("line_reader_nul.test");
   LIBC_NAMESPACE::File *f =
       open_temp(path, LIBC_NAMESPACE::cpp::string_view(RAW, sizeof(RAW) - 1));
   ASSERT_NE(f, nullptr);
@@ -165,7 +165,7 @@ TEST(LlvmLibcLineReaderTest, DynamicBufferGrowthReuseAndEmptyEof) {
 
   // Immediate EOF on a fresh DynamicBuffer does not allocate.
   {
-    const char *empty_path = libc_make_test_file_path("line_reader_empty.test");
+    auto empty_path = libc_make_test_file_path("line_reader_empty.test");
     LIBC_NAMESPACE::File *empty_f = open_temp(empty_path, "");
     ASSERT_NE(empty_f, nullptr);
     LIBC_NAMESPACE::cpp::scope_exit cleanup_empty([&]() {
@@ -187,7 +187,7 @@ TEST(LlvmLibcLineReaderTest, DynamicBufferGrowthReuseAndEmptyEof) {
   content[LONG_LEN + 1] = 'h';
   content[LONG_LEN + 2] = 'i';
 
-  const char *long_path = libc_make_test_file_path("line_reader_long.test");
+  auto long_path = libc_make_test_file_path("line_reader_long.test");
   LIBC_NAMESPACE::File *long_f = open_temp(
       long_path, LIBC_NAMESPACE::cpp::string_view(content, LONG_LEN + 3));
   ASSERT_NE(long_f, nullptr);

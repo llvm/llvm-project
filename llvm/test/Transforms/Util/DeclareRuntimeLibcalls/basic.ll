@@ -11,7 +11,7 @@ define float @sinf(float %x) {
   ret float %x
 }
 
-; CHECK: declare void @_Unwind_Resume(ptr)
+; CHECK: declare void @_Unwind_Resume(ptr) [[NORETURN_ONLY_ATTRS:#[0-9]+]]
 
 ; CHECK: declare void @__atomic_load(i64, ptr captures(none), ptr writeonly captures(none), i32) [[ATOMIC_ATTRS:#[0-9]+]]
 ; CHECK: declare i32 @__atomic_load_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
@@ -76,6 +76,7 @@ define float @sinf(float %x) {
 
 ; CHECK: declare x86_fp80 @truncl(x86_fp80) [[NOMEM_ATTRS]]
 
+; CHECK: attributes [[NORETURN_ONLY_ATTRS]] = { noreturn }
 ; CHECK: attributes [[NOMEM_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(none) }
 ; CHECK: attributes [[ATOMIC_ATTRS]] = { nocallback nofree nounwind willreturn }
 ; CHECK: attributes [[ERRNO_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(errnomem: write) }
