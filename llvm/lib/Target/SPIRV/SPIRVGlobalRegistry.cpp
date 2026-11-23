@@ -1087,9 +1087,9 @@ SPIRVTypeInst SPIRVGlobalRegistry::getOpTypeStruct(
           DL.getStructLayout(const_cast<StructType *>(Ty))
               ->getElementOffset(Idx));
     else
-      ElemTy = findSPIRVType(
-          toTypedPointer(Elem), MIRBuilder, AccQual,
-          /* ExplicitLayoutRequired= */ Decorator != nullptr, EmitIR);
+      ElemTy = findSPIRVType(toTypedPointer(Elem), MIRBuilder, AccQual,
+                             /* ExplicitLayoutRequired= */ Decorator != nullptr,
+                             EmitIR);
     assert(ElemTy && ElemTy->getOpcode() != SPIRV::OpTypeVoid &&
            "Invalid struct element type");
     FieldTypes.push_back(getSPIRVTypeID(ElemTy));
