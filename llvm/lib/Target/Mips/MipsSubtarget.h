@@ -91,9 +91,6 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   // Used to avoid printing ginv warnings multiple times.
   static bool GINVWarningPrinted;
 
-  // Used to avoid printing Mips1 warnings multiple times.
-  static bool MIPS1WarningPrinted;
-
   // Used to avoid printing virt warnings multiple times.
   static bool VirtWarningPrinted;
 
@@ -258,6 +255,7 @@ public:
   bool enablePostRAScheduler() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
   CodeGenOptLevel getOptLevelToEnablePostRAScheduler() const override;
+  void mirFileLoaded(MachineFunction &MF) const override;
 
   bool isABI_N64() const;
   bool isABI_N32() const;

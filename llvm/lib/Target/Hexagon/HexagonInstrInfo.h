@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class AAResults;
 class HexagonSubtarget;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
@@ -58,6 +59,18 @@ public:
   }
 
   bool isMIBefore(const MachineInstr *A, const MachineInstr *B) const;
+
+  /// Copies the debug values of the variables that read the register First and
+  /// Second define to just after \p Second, in their original order, and sets
+  /// each dependent original undef. If a copy would read a value that changes
+  /// in between, nothing is copied and only the originals are set undef.
+  ///
+  /// Call this before the replacement for First and Second is created, and
+  /// insert the replacement before \p Second. The replacement must not write a
+  /// register the copies read, unless First or Second writes it too.
+  void moveDependentDebugValues(MachineInstr &First,
+                                MachineInstr &Second) const;
+
   bool hasQFPInstrs(const MachineFunction &MF) const;
 
   /// TargetInstrInfo overrides.
@@ -307,6 +320,12 @@ public:
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
 
+  /// Return true if the memory accesses of \p MIa and \p MIb may depend on
+  /// each other. Uses \p AA, if not null, for accesses that are not
+  /// trivially disjoint.
+  bool areMemAccessesDependent(AAResults *AA, const MachineInstr *MIa,
+                               const MachineInstr *MIb) const;
+
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.
   bool getBaseAndOffsetPosition(const MachineInstr &MI, unsigned &BasePos,
@@ -380,6 +399,10 @@ public:
   bool isDotCurInst(const MachineInstr &MI) const;
   bool isDotNewInst(const MachineInstr &MI) const;
   bool isDuplexPair(const MachineInstr &MIa, const MachineInstr &MIb) const;
+  bool isHMXActivateInstr(const MachineInstr &MI) const;
+  bool isHMXWeightInstr(const MachineInstr &MI) const;
+  bool isActivateWeightPair(const MachineInstr &MIa,
+                            const MachineInstr &MIb) const;
   bool isEndLoopN(unsigned Opcode) const;
   bool isExpr(unsigned OpType) const;
   bool isExtendable(const MachineInstr &MI) const;

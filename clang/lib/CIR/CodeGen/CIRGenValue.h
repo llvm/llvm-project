@@ -473,6 +473,7 @@ public:
   Overlap_t mayOverlap() const { return Overlap_t(overlapFlag); }
 
   IsZeroed_t isZeroed() const { return IsZeroed_t(zeroedFlag); }
+  void setZeroed(bool zeroed = true) { zeroedFlag = zeroed; }
 
   IsAliased_t isPotentiallyAliased() const { return IsAliased_t(aliasedFlag); }
 
@@ -481,6 +482,15 @@ public:
       return RValue::getIgnored();
     assert(!cir::MissingFeatures::aggValueSlot());
     return RValue::getAggregate(getAddress());
+  }
+
+  /// Get the preferred size to use when storing a value to this slot. This
+  /// is the type size unless that might overlap another object, in which
+  /// case it's the dsize.
+  clang::CharUnits getPreferredSize(clang::ASTContext &ctx,
+                                    clang::QualType type) const {
+    return mayOverlap() ? ctx.getTypeInfoDataSizeInChars(type).Width
+                        : ctx.getTypeSizeInChars(type);
   }
 };
 

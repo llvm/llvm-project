@@ -133,7 +133,8 @@ public:
   }
 
   using EscapingTarget =
-      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *>;
+      llvm::PointerUnion<const Expr *, const FieldDecl *, const VarDecl *,
+                         const CXXMethodDecl *>;
 
   // Suggests lifetime bound annotations for function parameters.
   virtual void suggestLifetimeboundToParmVar(WarningScope Scope,
@@ -150,6 +151,11 @@ public:
   // assignment to a global variable
   virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
                                        const VarDecl *EscapeGlobal) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes into the
+  // object of the method, e.g. through a base initializer or
+  // [[clang::lifetime_capture_by_this]].
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const CXXMethodDecl *EscapeMethod) {}
 
   // Reports misuse of [[clang::lifetimebound]] when parameter doesn't escape
   // through return.
@@ -164,7 +170,7 @@ public:
   // Reports a parameter captured by an entity that its
   // [[clang::lifetime_capture_by]] attributes do not name. \p CapturerIdx is
   // the index such an attribute uses for that entity, and \p CapturedBy is the
-  // field or global it is captured by, if known.
+  // field, global or parameter it is captured by, if known.
   virtual void reportCaptureByViolation(const ParmVarDecl *PVD,
                                         const LifetimeCaptureByAttr *Attr,
                                         int CapturerIdx,

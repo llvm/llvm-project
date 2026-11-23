@@ -137,7 +137,7 @@ module attributes {
 
   // The argument is passed as its field, but the return stays the struct.
   cir.func @ret_cdwrap(%arg0: !rec_cdwrap_t) -> !rec_cdwrap_t requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
     %1 = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
     %2 = cir.cast address_space %1 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
     %3 = cir.cast address_space %0 : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
@@ -151,7 +151,7 @@ module attributes {
   // CHECK-NEXT:   %[[COERCE:.*]] = cir.alloca "coerce" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
   // CHECK-NEXT:   %[[FIELD:.*]] = cir.get_member %[[COERCE]][0] {name = ""} : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
   // CHECK-NEXT:   cir.store %[[ARG]], %[[FIELD]] : !cir.complex<!cir.double>, !cir.ptr<!cir.complex<!cir.double>, target_address_space(5)>
-  // CHECK-NEXT:   %[[RETVAL:.*]] = cir.alloca "__retval" align(8) : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
+  // CHECK-NEXT:   %[[RETVAL:.*]] = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
   // CHECK-NEXT:   %[[W:.*]] = cir.alloca "w" align(8) init : !cir.ptr<!rec_cdwrap_t, target_address_space(5)>
   // CHECK-NEXT:   %[[W_CAST:.*]] = cir.cast address_space %[[W]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>
   // CHECK-NEXT:   %[[RETVAL_CAST:.*]] = cir.cast address_space %[[RETVAL]] : !cir.ptr<!rec_cdwrap_t, target_address_space(5)> -> !cir.ptr<!rec_cdwrap_t>

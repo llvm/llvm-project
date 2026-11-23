@@ -120,7 +120,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN3SumC1Ei
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR1:[0-9]+]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i32, align 4
@@ -133,7 +133,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z8func_redv.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[ARRAY:%.*]]) #[[ATTR2:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[ARRAY:%.*]]) #[[ATTR3:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -239,7 +239,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_combiner.
-// CHECK-SAME: (ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
+// CHECK-SAME: (ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -252,7 +252,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN3SumpLERKS_
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RHS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RHS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[RHS_ADDR:%.*]] = alloca ptr, align 8
@@ -270,7 +270,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@.omp_initializer.
-// CHECK-SAME: (ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR3]] {
+// CHECK-SAME: (ptr noalias noundef [[TMP0:%.*]], ptr noalias noundef [[TMP1:%.*]]) #[[ATTR4]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -283,7 +283,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK3SumplERKS_
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RHS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], ptr noundef nonnull align 4 dereferenceable(4) [[RHS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca [[CLASS_SUM:%.*]], align 4
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
@@ -304,7 +304,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z8func_redv.omp_outlined.omp.reduction.reduction_func
-// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5:[0-9]+]] {
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR6:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -316,7 +316,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN3SumC2Ei
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[THIS:%.*]], i32 noundef [[V:%.*]]) unnamed_addr #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[V_ADDR:%.*]] = alloca i32, align 4
@@ -467,7 +467,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z6do_rediPiRi.omp.reduction.reduction_func
-// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5]] {
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR6]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -660,7 +660,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z15do_red_extendediPiRiS0_.omp.reduction.reduction_func
-// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR5]] {
+// CHECK-SAME: (ptr noundef [[TMP0:%.*]], ptr noundef [[TMP1:%.*]]) #[[ATTR6]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTADDR1:%.*]] = alloca ptr, align 8
@@ -672,7 +672,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@main
-// CHECK-SAME: () #[[ATTR7:[0-9]+]] {
+// CHECK-SAME: () #[[ATTR8:[0-9]+]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[V:%.*]] = alloca [10 x i32], align 16
@@ -710,7 +710,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@main.omp_outlined
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[V:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[V:%.*]]) #[[ATTR3]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8
@@ -726,7 +726,7 @@ int main(void) {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@main.omp_outlined.1
-// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[V:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SUM_V_EXT:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[PROD_V_EXT:%.*]]) #[[ATTR2]] {
+// CHECK-SAME: (ptr noalias noundef [[DOTGLOBAL_TID_:%.*]], ptr noalias noundef [[DOTBOUND_TID_:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(40) [[V:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[SUM_V_EXT:%.*]], ptr nofreeobj noundef nonnull align 4 dereferenceable(4) [[PROD_V_EXT:%.*]]) #[[ATTR3]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DOTGLOBAL_TID__ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTBOUND_TID__ADDR:%.*]] = alloca ptr, align 8

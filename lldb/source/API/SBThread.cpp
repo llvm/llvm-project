@@ -42,6 +42,7 @@
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
@@ -54,7 +55,8 @@ using namespace lldb_private;
 const char *SBThread::GetBroadcasterClassName() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Thread::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Thread::GetStaticBroadcasterClass());
 }
 
 // Constructors
@@ -376,7 +378,8 @@ const char *SBThread::GetName() const {
   if (!exe_ctx->HasThreadScope())
     return nullptr;
 
-  return ConstString(exe_ctx->GetThreadPtr()->GetName()).GetCString();
+  return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+      .Intern(exe_ctx->GetThreadPtr()->GetName());
 }
 
 const char *SBThread::GetQueueName() const {
@@ -392,7 +395,8 @@ const char *SBThread::GetQueueName() const {
   if (!exe_ctx->HasThreadScope())
     return nullptr;
 
-  return ConstString(exe_ctx->GetThreadPtr()->GetQueueName()).GetCString();
+  return GetDebuggerStringPool(exe_ctx->GetTargetRef())
+      .Intern(exe_ctx->GetThreadPtr()->GetQueueName());
 }
 
 lldb::queue_id_t SBThread::GetQueueID() const {

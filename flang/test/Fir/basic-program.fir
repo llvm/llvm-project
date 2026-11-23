@@ -121,6 +121,7 @@ func.func @_QQmain() {
 
 // PASSES-NEXT: 'func.func' Pipeline
 // PASSES-NEXT:   LoopInvariantCodeMotion
+// PASSES-NEXT:   LoopIdiomRecognize
 
 // PASSES-NEXT: PolymorphicOpConversion
 // PASSES-NEXT: 'func.func' Pipeline

@@ -236,6 +236,9 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to building LLVM
 
+* The minimum required CMake version to build LLVM has been raised from 3.20.0
+  to 3.31.0.
+
 * A new `LLVM_ENABLE_LZMA` option (`ON`, `OFF` or `FORCE_ON`; default `ON`)
   controls whether LLVM links liblzma for xz decompression. It replaces LLDB's
   `LLDB_ENABLE_LZMA`, which is deprecated: a monorepo build maps it onto
@@ -334,6 +337,9 @@ Makes programs 10x faster by doing Special New Thing.
   respectively, `apple-m6`, `apple-a20`, and `apple-s11`)
 
 ### Changes to the AMDGPU Backend
+
+* Added a compiler workaround for async barrier arrivals on gfx1250 and gfx1251
+  unless XNACK is explicitly disabled.
 
 * Replaced `xnack` and `sramecc` target features with `amdgpu.xnack`
   and `amdgpu.sramecc` module flags.
@@ -444,6 +450,9 @@ Makes programs 10x faster by doing Special New Thing.
   the WebAssembly `memory.copy` and `memory.fill` instructions.
 
 ### Changes to the Windows Target
+
+* On 32-bit Arm, a trap now follows a noreturn call that would otherwise end
+  a function or funclet, so the unwinder finds the right frame.
 
 ### Changes to the X86 Backend
 
@@ -601,6 +610,9 @@ Makes programs 10x faster by doing Special New Thing.
 * MiniDebugInfo (the ELF `.gnu_debugdata` section) is now decompressed by LLVM
   rather than by LLDB's own liblzma binding, and is enabled with
   `LLVM_ENABLE_LZMA` instead of the deprecated `LLDB_ENABLE_LZMA`.
+* The pre-DIL implementation of `frame variable` has been removed, together with
+  the `target.experimental.use-DIL` setting that selected it. Path expressions
+  are now always evaluated by the Data Inspection Language (DIL).
 
 #### SBAPI
 
@@ -612,6 +624,8 @@ Makes programs 10x faster by doing Special New Thing.
   return values that were actually in a different set. Both methods are now fixed
   so that they are limited to the registers within the register set. Scripts
   using these methods may have to be updated as a result.
+* `SBInitializationOptions` carries process-wide options to a new
+  `SBDebugger::Initialize` overload.
 
 #### Windows
 
