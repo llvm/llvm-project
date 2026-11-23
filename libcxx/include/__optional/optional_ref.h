@@ -247,7 +247,9 @@ public:
   }
 
 #  if _LIBCPP_STD_VER >= 29
-  constexpr _Tp* get_ptr() const noexcept { return __value_; }
+
+  [[nodiscard]] constexpr _Tp* get_ptr() const noexcept { return __value_; }
+
 #  endif
 
   template <class _Func>
