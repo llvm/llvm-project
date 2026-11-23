@@ -283,7 +283,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
     if (isSub && !isEAXLiveIn(MBB))
       Reg = Rax;
     else
-      Reg = getX86SubSuperRegister(TRI->findDeadCallerSavedReg(MBB, MBBI),
+      Reg = getX86SubSuperRegister(TRI->findDeadScratchReg(MBB, MBBI),
                                    Uses64BitFramePtr ? 64 : 32);
 
     unsigned AddSubRROpc = isSub ? getSUBrrOpcode(Uses64BitFramePtr)
@@ -340,7 +340,7 @@ void X86FrameLowering::emitSPUpdate(MachineBasicBlock &MBB,
       // Use push / pop for slot sized adjustments as a size optimization. We
       // need to find a dead register when using pop.
       unsigned Reg = isSub ? (unsigned)(Is64Bit ? X86::RAX : X86::EAX)
-                           : TRI->findDeadCallerSavedReg(MBB, MBBI);
+                           : TRI->findDeadScratchReg(MBB, MBBI);
       if (Reg) {
         unsigned Opc = isSub ? (Is64Bit ? X86::PUSH64r : X86::PUSH32r)
                              : (Is64Bit ? X86::POP64r : X86::POP32r);

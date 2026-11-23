@@ -1111,8 +1111,9 @@ skipEpilogueCSRPops(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI) {
   return I;
 }
 
-unsigned X86RegisterInfo::findDeadCallerSavedReg(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator &MBBI) const {
+unsigned
+X86RegisterInfo::findDeadScratchReg(MachineBasicBlock &MBB,
+                                    MachineBasicBlock::iterator &MBBI) const {
   const MachineFunction *MF = MBB.getParent();
   if (MF->callsEHReturn())
     return 0;
