@@ -82,8 +82,8 @@ constexpr __padding_size_result __padding_size(size_t __size, size_t __width, __
 ///
 /// This uses a "mass output function" of __format::__output_buffer when possible.
 template <__fmt_char_type _CharT, __fmt_char_type _OutCharT = _CharT>
-constexpr auto
-__copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+constexpr auto __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto __out_it)
+    -> decltype(__out_it) {
   if constexpr (std::same_as<decltype(__out_it), std::back_insert_iterator<__format::__output_buffer<_OutCharT>>>) {
     __out_it.__get_container()->__copy(__str);
     return __out_it;
@@ -98,8 +98,8 @@ __copy(basic_string_view<_CharT> __str, output_iterator<const _OutCharT&> auto _
 template <contiguous_iterator _Iterator,
           __fmt_char_type _CharT    = typename iterator_traits<_Iterator>::value_type,
           __fmt_char_type _OutCharT = _CharT>
-constexpr auto
-__copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it) -> decltype(__out_it) {
+constexpr auto __copy(_Iterator __first, _Iterator __last, output_iterator<const _OutCharT&> auto __out_it)
+    -> decltype(__out_it) {
   return __formatter::__copy(basic_string_view{__first, __last}, std::move(__out_it));
 }
 
@@ -148,8 +148,7 @@ constexpr _OutIt __fill(_OutIt __out_it, size_t __n, _CharT __value) {
 }
 
 template <__fmt_char_type _CharT, output_iterator<const _CharT&> _OutIt>
-constexpr _OutIt
-__fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
+constexpr _OutIt __fill(_OutIt __out_it, size_t __n, __format_spec::__code_point<_CharT> __value) {
 #  if _LIBCPP_HAS_UNICODE
   if constexpr (same_as<_CharT, char>) {
     std::size_t __bytes = std::countl_one(static_cast<unsigned char>(__value.__data[0]));

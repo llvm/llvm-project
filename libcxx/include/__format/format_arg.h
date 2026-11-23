@@ -262,8 +262,7 @@ public:
   constexpr __basic_format_arg_value(int __value) noexcept : __int_(__value) {}
   constexpr __basic_format_arg_value(unsigned __value) noexcept : __unsigned_(__value) {}
   constexpr __basic_format_arg_value(long long __value) noexcept : __long_long_(__value) {}
-  constexpr __basic_format_arg_value(unsigned long long __value) noexcept
-      : __unsigned_long_long_(__value) {}
+  constexpr __basic_format_arg_value(unsigned long long __value) noexcept : __unsigned_long_long_(__value) {}
 #  if _LIBCPP_HAS_INT128
   constexpr __basic_format_arg_value(__int128_t __value) noexcept : __i128_(__value) {}
   constexpr __basic_format_arg_value(__uint128_t __value) noexcept : __u128_(__value) {}
@@ -271,13 +270,10 @@ public:
   constexpr __basic_format_arg_value(float __value) noexcept : __float_(__value) {}
   constexpr __basic_format_arg_value(double __value) noexcept : __double_(__value) {}
   constexpr __basic_format_arg_value(long double __value) noexcept : __long_double_(__value) {}
-  constexpr __basic_format_arg_value(const _CharT* __value) noexcept
-      : __const_char_type_ptr_(__value) {}
-  constexpr __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept
-      : __string_view_(__value) {}
+  constexpr __basic_format_arg_value(const _CharT* __value) noexcept : __const_char_type_ptr_(__value) {}
+  constexpr __basic_format_arg_value(basic_string_view<_CharT> __value) noexcept : __string_view_(__value) {}
   constexpr __basic_format_arg_value(const void* __value) noexcept : __ptr_(__value) {}
-  constexpr __basic_format_arg_value(__handle&& __value) noexcept
-      : __handle_(std::move(__value)) {}
+  constexpr __basic_format_arg_value(__handle&& __value) noexcept : __handle_(std::move(__value)) {}
 };
 
 template <class _Context>
@@ -353,8 +349,7 @@ public:
   __basic_format_arg_value<_Context> __value_;
   __format::__arg_t __type_;
 
-  constexpr explicit basic_format_arg(
-      __format::__arg_t __type, __basic_format_arg_value<_Context> __value) noexcept
+  constexpr explicit basic_format_arg(__format::__arg_t __type, __basic_format_arg_value<_Context> __value) noexcept
       : __value_(__value), __type_(__type) {}
 };
 

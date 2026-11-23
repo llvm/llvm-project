@@ -45,8 +45,8 @@ namespace __formatter {
 /// \note When \c _LIBCPP_HAS_UNICODE is false the function assumes the input is ASCII.
 template <class _CharT>
 constexpr auto __write_string(basic_string_view<_CharT> __str,
-               output_iterator<const _CharT&> auto __out_it,
-               __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+                              output_iterator<const _CharT&> auto __out_it,
+                              __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   if (!__specs.__has_precision())
     return __formatter::__write_string_no_precision(__str, std::move(__out_it), __specs);
 

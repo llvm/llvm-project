@@ -69,8 +69,7 @@ using wformat_args = basic_format_args<wformat_context>;
 #  endif
 
 template <class _Context = format_context, class... _Args>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 __format_arg_store<_Context, _Args...>
-make_format_args(_Args&... __args) {
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 __format_arg_store<_Context, _Args...> make_format_args(_Args&... __args) {
   return std::__format_arg_store<_Context, _Args...>(__args...);
 }
 
@@ -353,20 +352,17 @@ private:
   friend struct basic_format_string;
 
 public:
-  _LIBCPP_CONSTEXPR_SINCE_CXX26 __dynamic_format_string(basic_string_view<_CharT> __s) noexcept
-      : __str_(__s) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX26 __dynamic_format_string(basic_string_view<_CharT> __s) noexcept : __str_(__s) {}
 
   __dynamic_format_string(const __dynamic_format_string&)            = delete;
   __dynamic_format_string& operator=(const __dynamic_format_string&) = delete;
 };
 
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<char>
-dynamic_format(string_view __fmt) noexcept {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<char> dynamic_format(string_view __fmt) noexcept {
   return __fmt;
 }
 #    if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<wchar_t>
-dynamic_format(wstring_view __fmt) noexcept {
+_LIBCPP_CONSTEXPR_SINCE_CXX26 inline __dynamic_format_string<wchar_t> dynamic_format(wstring_view __fmt) noexcept {
   return __fmt;
 }
 #    endif
@@ -383,8 +379,7 @@ struct basic_format_string {
 
   constexpr basic_string_view<_CharT> get() const noexcept { return __str_; }
 #  if _LIBCPP_STD_VER >= 26
-  constexpr basic_format_string(__dynamic_format_string<_CharT> __s) noexcept
-      : __str_(__s.__str_) {}
+  constexpr basic_format_string(__dynamic_format_string<_CharT> __s) noexcept : __str_(__s.__str_) {}
 #  endif
 
 private:
@@ -415,10 +410,9 @@ using wformat_string = basic_format_string<wchar_t, type_identity_t<_Args>...>;
 
 template <class _OutIt, class _CharT, class _FormatOutIt>
   requires(output_iterator<_OutIt, const _CharT&>)
-constexpr _OutIt
-__vformat_to(_OutIt __out_it,
-             basic_string_view<_CharT> __fmt,
-             basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
+constexpr _OutIt __vformat_to(_OutIt __out_it,
+                              basic_string_view<_CharT> __fmt,
+                              basic_format_args<basic_format_context<_FormatOutIt, _CharT>> __args) {
   if constexpr (same_as<_OutIt, _FormatOutIt>)
     return std::__format::__vformat_to(
         basic_format_parse_context{__fmt, __args.__size()}, std::__format_context_create(std::move(__out_it), __args));
@@ -441,22 +435,22 @@ vformat_to(_OutIt __out_it, string_view __fmt, format_args __args) {
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <output_iterator<const wchar_t&> _OutIt>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-_OutIt vformat_to(_OutIt __out_it, wstring_view __fmt, wformat_args __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE _OutIt vformat_to(_OutIt __out_it, wstring_view __fmt, wformat_args __args) {
   return std::__vformat_to(std::move(__out_it), __fmt, __args);
 }
 #  endif
 
 template <output_iterator<const char&> _OutIt, class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-_OutIt format_to(_OutIt __out_it, format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE _OutIt format_to(_OutIt __out_it, format_string<_Args...> __fmt, _Args&&... __args) {
   return std::vformat_to(std::move(__out_it), __fmt.get(), std::make_format_args(__args...));
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <output_iterator<const wchar_t&> _OutIt, class... _Args>
-_LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-_OutIt format_to(_OutIt __out_it, wformat_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE _OutIt format_to(_OutIt __out_it, wformat_string<_Args...> __fmt, _Args&&... __args) {
   return std::vformat_to(std::move(__out_it), __fmt.get(), std::make_wformat_args(__args...));
 }
 #  endif
@@ -534,15 +528,15 @@ vformat(wstring_view __fmt, wformat_args __args) {
 #  endif
 
 template <class... _Args>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-string format(format_string<_Args...> __fmt, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE string format(format_string<_Args...> __fmt, _Args&&... __args) {
   return std::vformat(__fmt.get(), std::make_format_args(__args...));
 }
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class... _Args>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-wstring format(wformat_string<_Args...> __fmt, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE wstring format(wformat_string<_Args...> __fmt, _Args&&... __args) {
   return std::vformat(__fmt.get(), std::make_wformat_args(__args...));
 }
 #  endif
@@ -589,8 +583,8 @@ formatted_size(format_string<_Args...> __fmt, _Args&&... __args) {
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class... _Args>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE
-size_t formatted_size(wformat_string<_Args...> __fmt, _Args&&... __args) {
+[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26
+    _LIBCPP_ALWAYS_INLINE size_t formatted_size(wformat_string<_Args...> __fmt, _Args&&... __args) {
   return std::__vformatted_size(__fmt.get(), basic_format_args{std::make_wformat_args(__args...)});
 }
 #  endif

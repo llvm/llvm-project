@@ -56,8 +56,7 @@ namespace __formatter {
 
 template <contiguous_iterator _Iterator>
   requires same_as<char, iter_value_t<_Iterator>>
-constexpr inline _Iterator
-__insert_sign(_Iterator __buf, bool __negative, __format_spec::__sign __sign) {
+constexpr inline _Iterator __insert_sign(_Iterator __buf, bool __negative, __format_spec::__sign __sign) {
   if (__negative)
     *__buf++ = '-';
   else
@@ -126,10 +125,9 @@ inline string __determine_grouping(ptrdiff_t __size, const string& __grouping) {
 //
 
 template <__fmt_char_type _CharT>
-constexpr auto
-__format_char(integral auto __value,
-              output_iterator<const _CharT&> auto __out_it,
-              __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
+constexpr auto __format_char(integral auto __value,
+                             output_iterator<const _CharT&> auto __out_it,
+                             __format_spec::__parsed_specifications<_CharT> __specs) -> decltype(__out_it) {
   using _Tp = decltype(__value);
   if constexpr (!same_as<_CharT, _Tp>) {
     // cmp_less and cmp_greater can't be used for character types.

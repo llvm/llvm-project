@@ -57,8 +57,7 @@ namespace __format {
 // A helper to limit the total size of code units written.
 class __max_output_size {
 public:
-  [[nodiscard]] constexpr explicit __max_output_size(size_t __max_size)
-      : __max_size_{__max_size} {}
+  [[nodiscard]] constexpr explicit __max_output_size(size_t __max_size) : __max_size_{__max_size} {}
 
   // This function adjusts the size of a (bulk) write operations. It ensures the
   // number of code units written by a __output_buffer never exceeds
@@ -70,9 +69,7 @@ public:
     return __result;
   }
 
-  [[nodiscard]] constexpr size_t __code_units_written() const noexcept {
-    return __code_units_written_;
-  }
+  [[nodiscard]] constexpr size_t __code_units_written() const noexcept { return __code_units_written_; }
 
 private:
   size_t __max_size_;
@@ -188,8 +185,7 @@ public:
   using __prepare_write_type _LIBCPP_NODEBUG = void (*)(__output_buffer<_CharT>&, size_t);
 
   [[nodiscard]]
-  constexpr explicit __output_buffer(
-      _CharT* __ptr, size_t __capacity, __prepare_write_type __function)
+  constexpr explicit __output_buffer(_CharT* __ptr, size_t __capacity, __prepare_write_type __function)
       : __output_buffer{__ptr, __capacity, __function, nullptr} {}
 
   [[nodiscard]] constexpr explicit __output_buffer(
@@ -429,8 +425,7 @@ public:
       : __direct_iterator_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  constexpr explicit __direct_iterator_buffer(
-      _OutIt __out_it, __max_output_size* __max_output_size)
+  constexpr explicit __direct_iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{std::__unwrap_iter(__out_it), __buffer_size, __prepare_write, __max_output_size},
         __out_it_(__out_it) {}
 
@@ -458,8 +453,7 @@ public:
       : __container_inserter_buffer{__out_it, nullptr} {}
 
   [[nodiscard]]
-  constexpr explicit __container_inserter_buffer(
-      _OutIt __out_it, __max_output_size* __max_output_size)
+  constexpr explicit __container_inserter_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
       : __output_buffer<_CharT>{__small_buffer_, __buffer_size, __prepare_write, __max_output_size},
         __container_{__out_it.__get_container()} {}
 
@@ -502,9 +496,7 @@ public:
   constexpr explicit __iterator_buffer(_OutIt __out_it, __max_output_size* __max_output_size)
       : __allocating_buffer<_CharT>{__max_output_size}, __out_it_{std::move(__out_it)} {}
 
-  [[nodiscard]] constexpr auto __out_it() && {
-    return std::ranges::copy(this->__view(), std::move(__out_it_)).out;
-  }
+  [[nodiscard]] constexpr auto __out_it() && { return std::ranges::copy(this->__view(), std::move(__out_it_)).out; }
 
 private:
   _OutIt __out_it_;
@@ -534,9 +526,7 @@ public:
       : _Base{std::move(__out_it), std::addressof(__max_output_size_)},
         __max_output_size_{__n < 0 ? size_t{0} : static_cast<size_t>(__n)} {}
 
-  [[nodiscard]] constexpr auto __make_output_iterator() {
-    return _Base::__make_output_iterator();
-  }
+  [[nodiscard]] constexpr auto __make_output_iterator() { return _Base::__make_output_iterator(); }
 
   [[nodiscard]] constexpr format_to_n_result<_OutIt> __result() && {
     return {static_cast<_Base&&>(*this).__out_it(),
@@ -559,15 +549,11 @@ public:
   [[nodiscard]] constexpr __formatted_size_buffer()
       : _Base{nullptr, 0, __prepare_write, std::addressof(__max_output_size_)} {}
 
-  [[nodiscard]] constexpr auto __make_output_iterator() {
-    return _Base::__make_output_iterator();
-  }
+  [[nodiscard]] constexpr auto __make_output_iterator() { return _Base::__make_output_iterator(); }
 
   // This function does not need to be r-value qualified, however this is
   // consistent with similar objects.
-  [[nodiscard]] constexpr size_t __result() && {
-    return __max_output_size_.__code_units_written();
-  }
+  [[nodiscard]] constexpr size_t __result() && { return __max_output_size_.__code_units_written(); }
 
 private:
   __max_output_size __max_output_size_{0};

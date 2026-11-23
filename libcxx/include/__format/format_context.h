@@ -79,8 +79,7 @@ public:
 
   static_assert(output_iterator<_OutIt, const _CharT&>, "[format.context]/p3 requires OutIt to be an output_iterator");
 
-  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_arg<basic_format_context>
-  arg(size_t __id) const noexcept {
+  [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_arg<basic_format_context> arg(size_t __id) const noexcept {
     return __args_.get(__id);
   }
 #  if _LIBCPP_HAS_LOCALIZATION
@@ -110,8 +109,7 @@ private:
   optional<std::locale> __loc_;
 
   template <class _OtherOutIt, class _OtherCharT>
-  friend _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OtherOutIt, _OtherCharT>
-  __format_context_create(
+  friend _LIBCPP_CONSTEXPR_SINCE_CXX26 basic_format_context<_OtherOutIt, _OtherCharT> __format_context_create(
       _OtherOutIt, basic_format_args<basic_format_context<_OtherOutIt, _OtherCharT>>, optional<std::locale>&&);
 
   // Note: the Standard doesn't specify the required constructors.
