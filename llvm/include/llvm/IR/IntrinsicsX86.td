@@ -221,14 +221,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
       DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_v4f32_ty], [IntrNoMem]>;
   def int_x86_sse_cvttss2si64 : ClangBuiltin<"__builtin_ia32_cvttss2si64">,
       DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-
-  def int_x86_sse_cvtps2pi :
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_cvttps2pi:
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v4f32_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpi2ps :
-      DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
-                             llvm_x86mmx_ty], [IntrNoMem]>;
 }
 
 // Cacheability support ops
@@ -420,12 +412,6 @@ let TargetPrefix = "x86" in {  // All intrinsics start with "llvm.x86.".
   def int_x86_sse2_cvtsd2ss : ClangBuiltin<"__builtin_ia32_cvtsd2ss">,
       DefaultAttrsIntrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty,
                              llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpd2pi :
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvttpd2pi:
-      DefaultAttrsIntrinsic<[llvm_x86mmx_ty], [llvm_v2f64_ty], [IntrNoMem]>;
-  def int_x86_sse_cvtpi2pd :
-      DefaultAttrsIntrinsic<[llvm_v2f64_ty], [llvm_x86mmx_ty], [IntrNoMem]>;
 }
 
 // Misc.

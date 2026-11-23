@@ -6158,15 +6158,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_sse_cvttss2si:
       handleSSEVectorConvertIntrinsic(I, 1);
       break;
-    case Intrinsic::x86_sse_cvtps2pi:
-    case Intrinsic::x86_sse_cvttps2pi:
-      handleSSEVectorConvertIntrinsic(I, 2);
-      break;
-
-      // TODO:
-      //   <1 x i64> @llvm.x86.sse.cvtpd2pi(<2 x double>)
-      //   <2 x double> @llvm.x86.sse.cvtpi2pd(<1 x i64>)
-      //   <4 x float> @llvm.x86.sse.cvtpi2ps(<4 x float>, <1 x i64>)
 
     case Intrinsic::x86_vcvtps2ph_128:
     case Intrinsic::x86_vcvtps2ph_256: {
