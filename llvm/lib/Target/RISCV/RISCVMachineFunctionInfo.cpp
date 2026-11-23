@@ -80,6 +80,7 @@ RISCVMachineFunctionInfo::getInterruptStackKind(
       .Case("SiFive-CLIC-stack-swap", InterruptStackKind::SiFiveCLICStackSwap)
       .Case("SiFive-CLIC-preemptible-stack-swap",
             InterruptStackKind::SiFiveCLICPreemptibleStackSwap)
+      .Case("supervisor-stack-swap", InterruptStackKind::SupervisorStackSwap)
       .Default(InterruptStackKind::None);
 }
 
