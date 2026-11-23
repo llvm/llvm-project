@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Instrumentation/SanitizerCoverage.h"
 #include "InstrumentationOptions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
@@ -710,14 +711,15 @@ CallInst *ModuleSanitizerCoverage::createRuntimeCall(IRBuilder<> &IRB,
 // integer or makes an indirect call would lose its body. Give each runtime
 // call the bundle of the funclet it is in.
 void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
-  SmallVector<CallInst *, 16> Calls;
-  std::swap(Calls, RuntimeCalls);
-  if (Calls.empty() || !F.hasPersonalityFn() ||
+  if (RuntimeCalls.empty())
+    return;
+  llvm::scope_exit ClearCalls([&] { RuntimeCalls.clear(); });
+  if (!F.hasPersonalityFn() ||
       !isScopedEHPersonality(classifyEHPersonality(F.getPersonalityFn())))
     return;
 
   DenseMap<BasicBlock *, ColorVector> BlockColors = colorEHFunclets(F);
-  for (CallInst *CI : Calls) {
+  for (CallInst *CI : RuntimeCalls) {
     const ColorVector &Colors = BlockColors[CI->getParent()];
     // Unreachable blocks have no color; they are deleted later.
     if (Colors.empty())
@@ -729,7 +731,7 @@ void ModuleSanitizerCoverage::addFuncletBundles(Function &F) {
     }
     BasicBlock *Color = Colors.front();
     BasicBlock::iterator Pad = Color->getFirstNonPHIIt();
-    if (Pad == Color->end() || !Pad->isEHPad())
+    if (Pad == Color->end() || !isa<FuncletPadInst>(Pad))
       continue;
     OperandBundleDef OB("funclet", &*Pad);
     CallBase *NewCall = CallBase::addOperandBundle(CI, LLVMContext::OB_funclet,

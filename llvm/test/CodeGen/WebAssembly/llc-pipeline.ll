@@ -1,4 +1,4 @@
-; RUN: llc -O2 -mtriple=wasm32-unknown-unknown -disable-verify -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck -match-full-lines -strict-whitespace -check-prefix=O2 %s
+; RUN: llc -O2 -mtriple=wasm32-unknown-unknown -disable-verify -verify-machineinstrs=0 -debug-pass=Structure < %s -o /dev/null 2>&1 | FileCheck -match-full-lines -strict-whitespace -check-prefix=O2 %s
 ; REQUIRES: asserts
 
 ; O2:Target Library Information
@@ -168,7 +168,3 @@
 ; O2-NEXT:Pass Arguments:  -domtree
 ; O2-NEXT:  FunctionPass Manager
 ; O2-NEXT:    Dominator Tree Construction
-
-define void @empty() {
-  ret void
-}

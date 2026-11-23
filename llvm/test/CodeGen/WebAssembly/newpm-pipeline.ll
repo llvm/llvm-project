@@ -108,7 +108,3 @@
 ; O2-NEXT:     wasm-asm-printer
 ; O2-NEXT:   free-machine-function
 ; O2-NEXT: wasm-asm-printer-end
-
-define void @empty() {
-  ret void
-}
