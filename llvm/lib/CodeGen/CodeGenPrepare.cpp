@@ -7386,9 +7386,14 @@ static bool isFormingBranchFromSelectProfitable(const TargetTransformInfo *TTI,
   // whether a select is better represented as a branch.
 
   // If metadata tells us that the select condition is obviously predictable,
-  // then we want to replace the select with a branch.
+  // then we want to replace the select with a branch. But not a logical and/or:
+  // SelectionDAGBuilder decides whether to split a branch on it into one branch
+  // per condition, and a branch on its condition with an i1 phi would take that
+  // choice away. SelectOptimize does not turn a logical and/or into a branch
+  // either (see TTI::shouldTreatInstructionLikeSelect).
   uint64_t TrueWeight, FalseWeight;
-  if (extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
+  if (!match(SI, m_LogicalOp()) &&
+      extractBranchWeights(*SI, TrueWeight, FalseWeight)) {
     uint64_t Max = std::max(TrueWeight, FalseWeight);
     uint64_t Sum = TrueWeight + FalseWeight;
     if (Sum != 0) {
