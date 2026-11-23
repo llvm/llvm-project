@@ -2186,13 +2186,13 @@ void CombinerHelper::applyCombineMulToShl(MachineInstr &MI,
   MachineIRBuilder MIB(MI);
   LLT ShiftTy = MRI.getType(MI.getOperand(0).getReg());
   auto ShiftCst = MIB.buildConstant(ShiftTy, ShiftVal);
+  Observer.changingInstr(MI);
   if (MI.getOpcode() == TargetOpcode::G_SMULL)
     MI.getOperand(1).setReg(
         MIB.buildSExt(ShiftTy, MI.getOperand(1).getReg()).getReg(0));
   else if (MI.getOpcode() == TargetOpcode::G_UMULL)
     MI.getOperand(1).setReg(
         MIB.buildZExt(ShiftTy, MI.getOperand(1).getReg()).getReg(0));
-  Observer.changingInstr(MI);
   MI.setDesc(MIB.getTII().get(TargetOpcode::G_SHL));
   MI.getOperand(2).setReg(ShiftCst.getReg(0));
   if (ShiftVal == ShiftTy.getScalarSizeInBits() - 1)
@@ -6172,7 +6172,8 @@ bool CombinerHelper::matchExtMulToMULL(
   unsigned I2Opc = I2->getOpcode();
   unsigned EltSize = DstTy.getScalarSizeInBits();
 
-  if (I1->getNumOperands() < 2 || I2->getNumOperands() < 2)
+  if (I1->getNumOperands() < 2 || I2->getNumOperands() < 2 ||
+      !isPowerOf2_64(EltSize) || EltSize < 16)
     return false;
 
   auto isAtLeastDoubleExtend = [&](Register R) {
@@ -6215,7 +6216,7 @@ bool CombinerHelper::matchExtMulToMULL(
   }
 
   // Select UMULL if we can replace the other operand with an extend.
-  unsigned HalfSize = divideCeil(EltSize, 2);
+  unsigned HalfSize = EltSize / 2;
   APInt Mask = APInt::getHighBitsSet(EltSize, HalfSize);
   if (KB && (IsZExt1 || IsZExt2) &&
       isAtLeastDoubleExtend(IsZExt1 ? I1->getOperand(1).getReg()
@@ -6229,14 +6230,6 @@ bool CombinerHelper::matchExtMulToMULL(
       get<2>(MatchInfo) = IsZExt1 ? ZExtOp : I2->getOperand(1).getReg();
       return true;
     }
-  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
-             KB->maskedValueIsZero(MI.getOperand(1).getReg(), Mask) &&
-             KB->maskedValueIsZero(MI.getOperand(2).getReg(), Mask) &&
-             isLegalMull(TargetOpcode::G_UMULL)) {
-    get<0>(MatchInfo) = true;
-    get<1>(MatchInfo) = MI.getOperand(1).getReg();
-    get<2>(MatchInfo) = MI.getOperand(2).getReg();
-    return true;
   }
 
   if (KB && (IsSExt1 || IsSExt2) &&
@@ -6251,10 +6244,38 @@ bool CombinerHelper::matchExtMulToMULL(
       get<2>(MatchInfo) = IsSExt1 ? SExtOp : I2->getOperand(1).getReg();
       return true;
     }
-  } else if (KB && DstTy == LLT::fixed_vector(2, 64) &&
-             KB->computeNumSignBits(MI.getOperand(1).getReg()) > HalfSize &&
-             KB->computeNumSignBits(MI.getOperand(2).getReg()) > HalfSize &&
-             isLegalMull(TargetOpcode::G_SMULL)) {
+  }
+
+  return false;
+}
+
+// Match mul({z/s}ext , {z/s}ext) => {u/s}mull more aggressively, even at the
+// expense of inserting truncates.
+bool CombinerHelper::matchAggressiveExtMulToMULL(
+    MachineInstr &MI, MachineRegisterInfo &MRI, GISelValueTracking *KB,
+    std::tuple<bool, Register, Register> &MatchInfo,
+    std::function<bool(LLT)> Condition) const {
+  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+
+  if (!Condition(DstTy))
+    return false;
+
+  unsigned EltSize = DstTy.getScalarSizeInBits();
+  unsigned HalfSize = EltSize / 2;
+  APInt Mask = APInt::getHighBitsSet(EltSize, HalfSize);
+
+  // Check UMULL from known-bits
+  if (KB && KB->maskedValueIsZero(MI.getOperand(1).getReg(), Mask) &&
+      KB->maskedValueIsZero(MI.getOperand(2).getReg(), Mask)) {
+    get<0>(MatchInfo) = true;
+    get<1>(MatchInfo) = MI.getOperand(1).getReg();
+    get<2>(MatchInfo) = MI.getOperand(2).getReg();
+    return true;
+  }
+
+  // Check SMULL from sign-bits
+  if (KB && KB->computeNumSignBits(MI.getOperand(1).getReg()) > HalfSize &&
+      KB->computeNumSignBits(MI.getOperand(2).getReg()) > HalfSize) {
     get<0>(MatchInfo) = false;
     get<1>(MatchInfo) = MI.getOperand(1).getReg();
     get<2>(MatchInfo) = MI.getOperand(2).getReg();

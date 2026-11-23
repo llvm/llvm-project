@@ -806,6 +806,11 @@ public:
   matchExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
                     GISelValueTracking *KB,
                     std::tuple<bool, Register, Register> &MatchInfo) const;
+  LLVM_ABI bool
+  matchAggressiveExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
+                              GISelValueTracking *KB,
+                              std::tuple<bool, Register, Register> &MatchInfo,
+                              std::function<bool(LLT)> Condition) const;
   LLVM_ABI void
   applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B, GISelChangeObserver &Observer,

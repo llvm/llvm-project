@@ -10701,11 +10701,25 @@ LegalizerHelper::lowerSMULH_UMULH(MachineInstr &MI) {
   auto SizeInBits = OrigTy.getScalarSizeInBits();
   LLT WideTy = OrigTy.changeElementSize(SizeInBits * 2);
 
-  auto LHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(1)});
-  auto RHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(2)});
-  auto Mul = MIRBuilder.buildMul(WideTy, LHS, RHS);
-  unsigned ShiftOp = IsSigned ? TargetOpcode::G_ASHR : TargetOpcode::G_LSHR;
+  Register Mul;
+  // Generate SMULL / UMULL if supported, or ZExt/SExt + Mul otherwise
+  if (IsSigned &&
+      LI.getAction({TargetOpcode::G_SMULL, {OrigTy, WideTy}}).Action !=
+          LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildSMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
+              .getReg(0);
+  } else if (!IsSigned &&
+             LI.getAction({TargetOpcode::G_UMULL, {OrigTy, WideTy}}).Action !=
+                 LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildUMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
+              .getReg(0);
+  } else {
+    auto LHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(1)});
+    auto RHS = MIRBuilder.buildInstr(ExtOp, {WideTy}, {MI.getOperand(2)});
+    Mul = MIRBuilder.buildMul(WideTy, LHS, RHS).getReg(0);
+  }
 
+  unsigned ShiftOp = IsSigned ? TargetOpcode::G_ASHR : TargetOpcode::G_LSHR;
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, SizeInBits);
   auto Shifted = MIRBuilder.buildInstr(ShiftOp, {WideTy}, {Mul, ShiftAmt});
   MIRBuilder.buildTrunc(Result, Shifted);

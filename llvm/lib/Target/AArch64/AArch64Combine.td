@@ -133,6 +133,14 @@ def combine_mul_cmlt : GICombineRule<
   (apply [{ AArch64GISelUtils::applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+def v2i64extmultomull : GICombineRule<
+  (defs root:$root, mull_matchdata:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+         [{ return Helper.matchAggressiveExtMulToMULL(*${root}, MRI, VT, ${matchinfo},
+                    [](LLT Ty) { return Ty.isVector() && Ty.getScalarSizeInBits() > 32; }); }]),
+  (apply [{ Helper.applyExtMulToMULL(*${root}, MRI, B, Observer, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -151,6 +159,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       push_add_through_sext,
                                       push_mul_through_sext,
                                       simplify_uaddo,
+                                      v2i64extmultomull,
                                       memcpy_family_combines,
                                       emit_bzero,
                                       combine_mul_cmlt,
