@@ -33,6 +33,7 @@
 ; O0-NEXT:     loongarch-isel
 ; O0-NEXT:     finalize-isel
 ; O0-NEXT:     localstackalloc
+; O0-NEXT:     loongarch-pre-ra-expand-pseudo
 ; O0-NEXT:     phi-node-elimination
 ; O0-NEXT:     regallocfast
 ; O0-NEXT:     remove-redundant-debug-values
@@ -102,6 +103,7 @@
 ; O2-NEXT:     peephole-opt
 ; O2-NEXT:     dead-mi-elimination
 ; O2-64-NEXT:  loongarch-opt-w-instrs
+; O2-NEXT:     loongarch-pre-ra-expand-pseudo
 ; O2-NEXT:     detect-dead-lanes
 ; O2-NEXT:     init-undef
 ; O2-NEXT:     process-implicit-defs

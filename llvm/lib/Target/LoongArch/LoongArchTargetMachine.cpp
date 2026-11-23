@@ -40,7 +40,7 @@ LLVMInitializeLoongArchTarget() {
   initializeLoongArchMemoryBarrierOptPass(*PR);
   initializeLoongArchMergeBaseOffsetOptPass(*PR);
   initializeLoongArchOptWInstrsLegacyPass(*PR);
-  initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchPreRAExpandPseudoLegacyPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
@@ -223,7 +223,7 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
 }
 
 void LoongArchPassConfig::addPreRegAlloc() {
-  addPass(createLoongArchPreRAExpandPseudoPass());
+  addPass(createLoongArchPreRAExpandPseudoLegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
     addPass(createLoongArchMergeBaseOffsetOptPass());
 }

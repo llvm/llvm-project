@@ -19,4 +19,6 @@
 MACHINE_FUNCTION_PASS("loongarch-isel",
                       LoongArchISelDAGToDAGPass(*this, getOptLevel()))
 MACHINE_FUNCTION_PASS("loongarch-opt-w-instrs", LoongArchOptWInstrsPass())
+MACHINE_FUNCTION_PASS("loongarch-pre-ra-expand-pseudo",
+                      LoongArchPreRAExpandPseudoPass())
 #undef MACHINE_FUNCTION_PASS
