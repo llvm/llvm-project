@@ -459,118 +459,950 @@ define bfloat @test_tailcall_flipped(bfloat %a, bfloat %b) #0 {
   ret bfloat %r
 }
 
-;define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) #0 {
-;  %r = select i1 %c, bfloat %a, bfloat %b
-;  ret bfloat %r
-;}
+define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) #0 {
+; CHECK-CVT-LABEL: test_select:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r1, s1
+; CHECK-CVT-NEXT:    cmp r0, #0
+; CHECK-CVT-NEXT:    vmovne r1, s0
+; CHECK-CVT-NEXT:    vmov s0, r1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_select:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r2, s1
+; CHECK-NOFP16-NEXT:    cmp r0, #0
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    uxth r2, r2
+; CHECK-NOFP16-NEXT:    uxthne r2, r1
+; CHECK-NOFP16-NEXT:    vmov s0, r2
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_select:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    cmp r0, #0
+; CHECK-FP16-NEXT:    vseleq.f16 s0, s1, s0
+; CHECK-FP16-NEXT:    bx lr
+  %r = select i1 %c, bfloat %a, bfloat %b
+  ret bfloat %r
+}
 
-;define bfloat @test_select_cc(bfloat %a, bfloat %b, bfloat %c, bfloat %d) #0 {
-;  %cc = fcmp une bfloat %c, %d
-;  %r = select i1 %cc, bfloat %a, bfloat %b
-;  ret bfloat %r
-;}
+define bfloat @test_select_cc(bfloat %a, bfloat %b, bfloat %c, bfloat %d) #0 {
+; CHECK-CVT-LABEL: test_select_cc:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s3
+; CHECK-CVT-NEXT:    vmov r1, s2
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s4, r0
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vcmp.f32 s4, s2
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    vmovne r0, s0
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_select_cc:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s3
+; CHECK-NOFP16-NEXT:    vmov r1, s2
+; CHECK-NOFP16-NEXT:    vmov r2, s0
+; CHECK-NOFP16-NEXT:    vmov r3, s1
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    uxth r0, r3
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    uxthne r0, r2
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_select_cc:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s2
+; CHECK-FP16-NEXT:    vmov r1, s3
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s4, r0
+; CHECK-FP16-NEXT:    vmov s2, r1
+; CHECK-FP16-NEXT:    vcmp.f32 s4, s2
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    vmovne.f32 s1, s0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s1
+; CHECK-FP16-NEXT:    bx lr
+  %cc = fcmp une bfloat %c, %d
+  %r = select i1 %cc, bfloat %a, bfloat %b
+  ret bfloat %r
+}
 
-;define float @test_select_cc_f32_f16(float %a, float %b, bfloat %c, bfloat %d) #0 {
-;  %cc = fcmp une bfloat %c, %d
-;  %r = select i1 %cc, float %a, float %b
-;  ret float %r
-;}
+define float @test_select_cc_f32_bf16(float %a, float %b, bfloat %c, bfloat %d) #0 {
+; CHECK-CVT-LABEL: test_select_cc_f32_bf16:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s3
+; CHECK-CVT-NEXT:    vmov r1, s2
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s4, r0
+; CHECK-CVT-NEXT:    vcmp.f32 s4, s2
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    vseleq.f32 s0, s1, s0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_select_cc_f32_bf16:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s3
+; CHECK-NOFP16-NEXT:    vmov r1, s2
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s4, r0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s4, s2
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    vseleq.f32 s0, s1, s0
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_select_cc_f32_bf16:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s2
+; CHECK-FP16-NEXT:    vmov r1, s3
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s4, r0
+; CHECK-FP16-NEXT:    vmov s2, r1
+; CHECK-FP16-NEXT:    vcmp.f32 s4, s2
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    vseleq.f32 s0, s1, s0
+; CHECK-FP16-NEXT:    bx lr
+  %cc = fcmp une bfloat %c, %d
+  %r = select i1 %cc, float %a, float %b
+  ret float %r
+}
 
-;define bfloat @test_select_cc_f16_f32(bfloat %a, bfloat %b, float %c, float %d) #0 {
-;  %cc = fcmp une float %c, %d
-;  %r = select i1 %cc, bfloat %a, bfloat %b
-;  ret bfloat %r
-;}
+define bfloat @test_select_cc_bf16_f32(bfloat %a, bfloat %b, float %c, float %d) #0 {
+; CHECK-CVT-LABEL: test_select_cc_bf16_f32:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s3
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmovne r0, s0
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_select_cc_bf16_f32:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r1, s1
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s3
+; CHECK-NOFP16-NEXT:    vmov r0, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    uxth r1, r1
+; CHECK-NOFP16-NEXT:    uxthne r1, r0
+; CHECK-NOFP16-NEXT:    vmov s0, r1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_select_cc_bf16_f32:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s3
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    vmovne.f32 s1, s0
+; CHECK-FP16-NEXT:    vmov.f32 s0, s1
+; CHECK-FP16-NEXT:    bx lr
+  %cc = fcmp une float %c, %d
+  %r = select i1 %cc, bfloat %a, bfloat %b
+  ret bfloat %r
+}
 
-;define i1 @test_fcmp_une(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp une bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_une(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_une:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwne r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_une:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwne r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_une:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwne r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp une bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ueq(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ueq bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ueq(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ueq:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movweq r0, #1
+; CHECK-CVT-NEXT:    movwvs r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ueq:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movweq r0, #1
+; CHECK-NOFP16-NEXT:    movwvs r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ueq:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movweq r0, #1
+; CHECK-FP16-NEXT:    movwvs r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ueq bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ugt(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ugt bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ugt(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ugt:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwhi r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ugt:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwhi r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ugt:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwhi r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ugt bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_uge(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp uge bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_uge(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_uge:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwpl r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_uge:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwpl r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_uge:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwpl r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp uge bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ult(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ult bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ult(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ult:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwlt r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ult:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwlt r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ult:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwlt r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ult bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ule(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ule bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ule(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ule:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwle r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ule:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwle r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ule:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwle r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ule bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_uno(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp uno bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_uno(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_uno:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwvs r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_uno:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwvs r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_uno:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwvs r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp uno bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_one(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp one bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_one(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_one:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwmi r0, #1
+; CHECK-CVT-NEXT:    movwgt r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_one:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwmi r0, #1
+; CHECK-NOFP16-NEXT:    movwgt r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_one:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwmi r0, #1
+; CHECK-FP16-NEXT:    movwgt r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp one bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_oeq(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp oeq bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_oeq(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_oeq:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movweq r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_oeq:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movweq r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_oeq:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movweq r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp oeq bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ogt(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ogt bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ogt(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ogt:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwgt r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ogt:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwgt r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ogt:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwgt r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ogt bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_oge(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp oge bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_oge(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_oge:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwge r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_oge:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwge r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_oge:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwge r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp oge bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_olt(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp olt bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_olt(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_olt:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwmi r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_olt:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwmi r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_olt:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwmi r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp olt bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ole(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ole bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ole(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ole:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwls r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ole:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwls r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ole:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwls r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ole bfloat %a, %b
+  ret i1 %r
+}
 
-;define i1 @test_fcmp_ord(bfloat %a, bfloat %b) #0 {
-;  %r = fcmp ord bfloat %a, %b
-;  ret i1 %r
-;}
+define i1 @test_fcmp_ord(bfloat %a, bfloat %b) #0 {
+; CHECK-CVT-LABEL: test_fcmp_ord:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r0, s1
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    lsl r0, r0, #16
+; CHECK-CVT-NEXT:    vmov s0, r0
+; CHECK-CVT-NEXT:    lsl r0, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r0
+; CHECK-CVT-NEXT:    mov r0, #0
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movwvc r0, #1
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_fcmp_ord:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r0
+; CHECK-NOFP16-NEXT:    mov r0, #0
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movwvc r0, #1
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_fcmp_ord:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r0, s0
+; CHECK-FP16-NEXT:    vmov r1, s1
+; CHECK-FP16-NEXT:    lsl r0, r0, #16
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s2, r0
+; CHECK-FP16-NEXT:    vmov s0, r1
+; CHECK-FP16-NEXT:    mov r0, #0
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movwvc r0, #1
+; CHECK-FP16-NEXT:    bx lr
+  %r = fcmp ord bfloat %a, %b
+  ret i1 %r
+}
 
-;define void @test_fccmp(bfloat %in, ptr %out) {
-;  %cmp1 = fcmp ogt bfloat %in, 0xR4800
-;  %cmp2 = fcmp olt bfloat %in, 0xR4500
-;  %cond = and i1 %cmp1, %cmp2
-;  %result = select i1 %cond, bfloat %in, bfloat 0xR4500
-;  store bfloat %result, ptr %out
-;  ret void
-;}
+define void @test_fccmp(bfloat %in, ptr %out) {
+; CHECK-CVT-LABEL: test_fccmp:
+; CHECK-CVT:       @ %bb.0:
+; CHECK-CVT-NEXT:    vmov r1, s0
+; CHECK-CVT-NEXT:    vldr s0, .LCPI30_0
+; CHECK-CVT-NEXT:    vldr s4, .LCPI30_1
+; CHECK-CVT-NEXT:    lsl r2, r1, #16
+; CHECK-CVT-NEXT:    vmov s2, r2
+; CHECK-CVT-NEXT:    mov r2, #17664
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s4
+; CHECK-CVT-NEXT:    movpl r1, r2
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movle r1, r2
+; CHECK-CVT-NEXT:    strh r1, [r0]
+; CHECK-CVT-NEXT:    bx lr
+; CHECK-CVT-NEXT:    .p2align 2
+; CHECK-CVT-NEXT:  @ %bb.1:
+; CHECK-CVT-NEXT:  .LCPI30_0:
+; CHECK-CVT-NEXT:    .long 0x45000000 @ float 2048
+; CHECK-CVT-NEXT:  .LCPI30_1:
+; CHECK-CVT-NEXT:    .long 0x48000000 @ float 131072
+;
+; CHECK-NOFP16-LABEL: test_fccmp:
+; CHECK-NOFP16:       @ %bb.0:
+; CHECK-NOFP16-NEXT:    vmov r2, s0
+; CHECK-NOFP16-NEXT:    vldr s0, .LCPI30_1
+; CHECK-NOFP16-NEXT:    adr r1, .LCPI30_0
+; CHECK-NOFP16-NEXT:    vldr s4, .LCPI30_2
+; CHECK-NOFP16-NEXT:    ldrh r1, [r1]
+; CHECK-NOFP16-NEXT:    lsl r3, r2, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r3
+; CHECK-NOFP16-NEXT:    mov r3, r1
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s4
+; CHECK-NOFP16-NEXT:    uxthmi r3, r2
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movle r3, r1
+; CHECK-NOFP16-NEXT:    strh r3, [r0]
+; CHECK-NOFP16-NEXT:    bx lr
+; CHECK-NOFP16-NEXT:    .p2align 2
+; CHECK-NOFP16-NEXT:  @ %bb.1:
+; CHECK-NOFP16-NEXT:  .LCPI30_1:
+; CHECK-NOFP16-NEXT:    .long 0x45000000 @ float 2048
+; CHECK-NOFP16-NEXT:  .LCPI30_2:
+; CHECK-NOFP16-NEXT:    .long 0x48000000 @ float 131072
+; CHECK-NOFP16-NEXT:  .LCPI30_0:
+; CHECK-NOFP16-NEXT:    .short 0x4500 @ bfloat 2048
+;
+; CHECK-FP16-LABEL: test_fccmp:
+; CHECK-FP16:       @ %bb.0:
+; CHECK-FP16-NEXT:    vmov r1, s0
+; CHECK-FP16-NEXT:    vldr s2, .LCPI30_0
+; CHECK-FP16-NEXT:    vldr.16 s6, .LCPI30_1
+; CHECK-FP16-NEXT:    lsl r1, r1, #16
+; CHECK-FP16-NEXT:    vmov s4, r1
+; CHECK-FP16-NEXT:    vcmp.f32 s4, s2
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    vmov.f32 s2, s6
+; CHECK-FP16-NEXT:    vmovmi.f32 s2, s0
+; CHECK-FP16-NEXT:    vldr s0, .LCPI30_2
+; CHECK-FP16-NEXT:    vcmp.f32 s4, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    vselgt.f16 s0, s2, s6
+; CHECK-FP16-NEXT:    vstr.16 s0, [r0]
+; CHECK-FP16-NEXT:    bx lr
+; CHECK-FP16-NEXT:    .p2align 2
+; CHECK-FP16-NEXT:  @ %bb.1:
+; CHECK-FP16-NEXT:  .LCPI30_0:
+; CHECK-FP16-NEXT:    .long 0x45000000 @ float 2048
+; CHECK-FP16-NEXT:  .LCPI30_2:
+; CHECK-FP16-NEXT:    .long 0x48000000 @ float 131072
+; CHECK-FP16-NEXT:  .LCPI30_1:
+; CHECK-FP16-NEXT:    .short 0x4500 @ bfloat 2048
+  %cmp1 = fcmp ogt bfloat %in, 0xR4800
+  %cmp2 = fcmp olt bfloat %in, 0xR4500
+  %cond = and i1 %cmp1, %cmp2
+  %result = select i1 %cond, bfloat %in, bfloat 0xR4500
+  store bfloat %result, ptr %out
+  ret void
+}
 
-;define void @test_br_cc(bfloat %a, bfloat %b, ptr %p1, ptr %p2) #0 {
-;  %c = fcmp uge bfloat %a, %b
-;  br i1 %c, label %then, label %else
-;then:
-;  store i32 0, ptr %p1
-;  ret void
-;else:
-;  store i32 0, ptr %p2
-;  ret void
-;}
+define void @test_br_cc(bfloat %a, bfloat %b, ptr %p1, ptr %p2) #0 {
+; CHECK-CVT-LABEL: test_br_cc:
+; CHECK-CVT:       @ %bb.0: @ %common.ret
+; CHECK-CVT-NEXT:    vmov r2, s1
+; CHECK-CVT-NEXT:    vmov r3, s0
+; CHECK-CVT-NEXT:    lsl r2, r2, #16
+; CHECK-CVT-NEXT:    vmov s0, r2
+; CHECK-CVT-NEXT:    lsl r2, r3, #16
+; CHECK-CVT-NEXT:    vmov s2, r2
+; CHECK-CVT-NEXT:    vcmp.f32 s2, s0
+; CHECK-CVT-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-CVT-NEXT:    movmi r0, r1
+; CHECK-CVT-NEXT:    mov r1, #0
+; CHECK-CVT-NEXT:    str r1, [r0]
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_br_cc:
+; CHECK-NOFP16:       @ %bb.0: @ %common.ret
+; CHECK-NOFP16-NEXT:    vmov r2, s1
+; CHECK-NOFP16-NEXT:    vmov r3, s0
+; CHECK-NOFP16-NEXT:    lsl r2, r2, #16
+; CHECK-NOFP16-NEXT:    vmov s0, r2
+; CHECK-NOFP16-NEXT:    lsl r2, r3, #16
+; CHECK-NOFP16-NEXT:    vmov s2, r2
+; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-NOFP16-NEXT:    movmi r0, r1
+; CHECK-NOFP16-NEXT:    mov r1, #0
+; CHECK-NOFP16-NEXT:    str r1, [r0]
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_br_cc:
+; CHECK-FP16:       @ %bb.0: @ %common.ret
+; CHECK-FP16-NEXT:    vmov r2, s0
+; CHECK-FP16-NEXT:    vmov r3, s1
+; CHECK-FP16-NEXT:    lsl r2, r2, #16
+; CHECK-FP16-NEXT:    lsl r3, r3, #16
+; CHECK-FP16-NEXT:    vmov s2, r2
+; CHECK-FP16-NEXT:    vmov s0, r3
+; CHECK-FP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-FP16-NEXT:    vmrs APSR_nzcv, fpscr
+; CHECK-FP16-NEXT:    movmi r0, r1
+; CHECK-FP16-NEXT:    mov r1, #0
+; CHECK-FP16-NEXT:    str r1, [r0]
+; CHECK-FP16-NEXT:    bx lr
+  %c = fcmp uge bfloat %a, %b
+  br i1 %c, label %then, label %else
+then:
+  store i32 0, ptr %p1
+  ret void
+else:
+  store i32 0, ptr %p2
+  ret void
+}
 
 define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-LABEL: test_phi:
@@ -582,7 +1414,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r4, r0
 ; CHECK-CVT-NEXT:    ldrh r0, [r0]
 ; CHECK-CVT-NEXT:    vmov s18, r0
-; CHECK-CVT-NEXT:  .LBB12_1: @ %loop
+; CHECK-CVT-NEXT:  .LBB32_1: @ %loop
 ; CHECK-CVT-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-CVT-NEXT:    ldrh r0, [r4]
 ; CHECK-CVT-NEXT:    vmov.f32 s16, s18
@@ -590,7 +1422,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-CVT-NEXT:    mov r0, r4
 ; CHECK-CVT-NEXT:    bl test_dummy
 ; CHECK-CVT-NEXT:    tst r0, #1
-; CHECK-CVT-NEXT:    bne .LBB12_1
+; CHECK-CVT-NEXT:    bne .LBB32_1
 ; CHECK-CVT-NEXT:  @ %bb.2: @ %return
 ; CHECK-CVT-NEXT:    vmov.f32 s0, s16
 ; CHECK-CVT-NEXT:    vpop {d8, d9}
@@ -605,7 +1437,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r4, r0
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r0]
 ; CHECK-NOFP16-NEXT:    vmov s18, r0
-; CHECK-NOFP16-NEXT:  .LBB12_1: @ %loop
+; CHECK-NOFP16-NEXT:  .LBB32_1: @ %loop
 ; CHECK-NOFP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NOFP16-NEXT:    ldrh r0, [r4]
 ; CHECK-NOFP16-NEXT:    vmov.f32 s16, s18
@@ -613,7 +1445,7 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-NOFP16-NEXT:    mov r0, r4
 ; CHECK-NOFP16-NEXT:    bl test_dummy
 ; CHECK-NOFP16-NEXT:    tst r0, #1
-; CHECK-NOFP16-NEXT:    bne .LBB12_1
+; CHECK-NOFP16-NEXT:    bne .LBB32_1
 ; CHECK-NOFP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-NOFP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-NOFP16-NEXT:    vpop {d8, d9}
@@ -627,14 +1459,14 @@ define bfloat @test_phi(ptr %p1) #0 {
 ; CHECK-FP16-NEXT:    vpush {d8, d9}
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r0]
 ; CHECK-FP16-NEXT:    mov r4, r0
-; CHECK-FP16-NEXT:  .LBB12_1: @ %loop
+; CHECK-FP16-NEXT:  .LBB32_1: @ %loop
 ; CHECK-FP16-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-FP16-NEXT:    mov r0, r4
 ; CHECK-FP16-NEXT:    vmov.f32 s16, s18
 ; CHECK-FP16-NEXT:    vldr.16 s18, [r4]
 ; CHECK-FP16-NEXT:    bl test_dummy
 ; CHECK-FP16-NEXT:    tst r0, #1
-; CHECK-FP16-NEXT:    bne .LBB12_1
+; CHECK-FP16-NEXT:    bne .LBB32_1
 ; CHECK-FP16-NEXT:  @ %bb.2: @ %return
 ; CHECK-FP16-NEXT:    vmov.f32 s0, s16
 ; CHECK-FP16-NEXT:    vpop {d8, d9}

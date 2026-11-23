@@ -594,6 +594,10 @@ multiclass vsel_inst<string op, bits<2> opc, int CC> {
                          (ARMcmov (f64 DPR:$Dm), (f64 DPR:$Dn), CC, CPSR))]>,
                    Requires<[HasFPARMv8, HasDPVFP]>;
   }
+
+  def : Pat<(ARMcmov bf16:$Sm, bf16:$Sn, CC, CPSR),
+            (!cast<Instruction>(NAME#"H") $Sn, $Sm)>,
+        Requires<[HasFullFP16]>;
 }
 
 // The CC constants here match ARMCC::CondCodes.
@@ -2575,7 +2579,10 @@ def : Pat<(ARMcmov f32:$Sn, f32:$Sm, imm:$cc, CPSR),
 
 def : Pat<(ARMcmov f16:$Sn, f16:$Sm, imm:$cc, CPSR),
           (VMOVHcc $Sn, $Sm, imm:$cc, CPSR)>,
-      Requires<[HasFPRegs]>; // FIXME: Shouldn't this be HasFPRegs16?
+      Requires<[HasFPRegs16]>;
+def : Pat<(ARMcmov bf16:$Sn, bf16:$Sm, imm:$cc, CPSR),
+          (VMOVHcc $Sn, $Sm, imm:$cc, CPSR)>,
+      Requires<[HasFPRegs16]>;
 
 //===----------------------------------------------------------------------===//
 // Move from VFP System Register to ARM core register.

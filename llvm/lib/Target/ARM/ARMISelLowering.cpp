@@ -586,7 +586,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
                     ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
-                    ISD::FROUNDEVEN, ISD::FTRUNC})
+                    ISD::FROUNDEVEN, ISD::FTRUNC, ISD::SETCC})
       setOperationAction(Op, MVT::bf16, Promote);
 
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
@@ -605,6 +605,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FTAN})
       setOperationAction(Op, MVT::bf16, Promote);
 
+    setOperationAction(ISD::SELECT_CC, MVT::bf16, Custom);
     setOperationAction(ISD::FABS, MVT::bf16, Custom);
     setOperationAction(ISD::FNEG, MVT::bf16, Custom);
   } else {
@@ -5459,6 +5460,25 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     }
   }
 
+  // Promote bf16 conditions to f32
+  if (LHS.getValueType() == MVT::bf16) {
+    SDValue Ext1 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, LHS);
+    SDValue Ext2 = DAG.getNode(ISD::FP_EXTEND, dl, MVT::f32, RHS);
+    return DAG.getNode(ISD::SELECT_CC, dl, VT, Ext1, Ext2, TrueVal, FalseVal,
+                       Op.getOperand(4));
+  }
+
+  // Without fp16, perform the select via i32. This would be more efficient via
+  // s regs but we do not currently have a node for converting and the
+  // combination for bf16 without fp16 should in theory be relatively rare.
+  if (VT == MVT::bf16 && Subtarget->hasBF16() && !Subtarget->hasFPRegs16()) {
+    SDValue V1 = DAG.getNode(ARMISD::VMOVrs, dl, MVT::i32, TrueVal);
+    SDValue V2 = DAG.getNode(ARMISD::VMOVrs, dl, MVT::i32, FalseVal);
+    SDValue SCC = DAG.getNode(ISD::SELECT_CC, dl, MVT::i32, LHS, RHS, V1, V2,
+                              Op.getOperand(4));
+    return DAG.getNode(ARMISD::VMOVsr, dl, VT, SCC);
+  }
+
   if (isUnsupportedFloatingType(LHS.getValueType())) {
     softenSetCCOperands(DAG, LHS.getValueType(), LHS, RHS, CC, dl, LHS, RHS);
 
@@ -5482,6 +5502,7 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
     // sometimes need to swap the operands to the VSEL (which inverts the
     // condition in the sense of firing whenever the previous condition didn't)
     if (Subtarget->hasFPARMv8Base() && (TrueVal.getValueType() == MVT::f16 ||
+                                        TrueVal.getValueType() == MVT::bf16 ||
                                         TrueVal.getValueType() == MVT::f32 ||
                                         TrueVal.getValueType() == MVT::f64)) {
       ARMCC::CondCodes CondCode = IntCCToARMCC(CC);
