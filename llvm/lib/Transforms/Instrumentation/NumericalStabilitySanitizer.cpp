@@ -712,6 +712,23 @@ void NumericalStabilitySanitizer::createShadowArguments(
     Function &F, const TargetLibraryInfo &TLI, ValueToShadowMap &Map) {
   assert(!F.getIntrinsicID() && "found a definition of an intrinsic");
 
+  // The copy of a `byval` argument lives in fresh stack memory that the caller
+  // never populated with shadow values, so it may overlap stale shadow memory
+  // from earlier frames. Reset it to unknown so that loads from it fall back
+  // to the native values instead of reading stale shadow.
+  for (Argument &Arg : F.args()) {
+    if (!Arg.hasByValAttr())
+      continue;
+    TypeSize ByValSize = DL.getTypeAllocSize(Arg.getParamByValType());
+    assert(!ByValSize.isScalable() && "scalable byval is rejected by verifier");
+    if (ByValSize.getFixedValue() == 0)
+      continue;
+    IRBuilder<> ByValBuilder(F.getEntryBlock().getFirstNonPHIIt());
+    ByValBuilder.CreateCall(
+        NsanSetUnknownFns.getFallback(),
+        {&Arg, ConstantInt::get(IntptrTy, ByValSize.getFixedValue())});
+  }
+
   // Do not bother if there are no FP args.
   if (all_of(F.args(), [this](const Argument &Arg) {
         return Config.getExtendedFPType(Arg.getType()) == nullptr;
