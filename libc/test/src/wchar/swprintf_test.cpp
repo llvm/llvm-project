@@ -3091,6 +3091,9 @@ TEST_F(LlvmLibcSwprintfTest, WideCharStringConversion) {
 }
 #endif // !LIBC_COPT_PRINTF_DISABLE_WIDE && !LIBC_TARGET_ARCH_IS_GPU
 
+// Unlike snprintf, swprintf returns a negative value and sets errno if bufsz or
+// more wide characters would be written. The truncated, null-terminated output
+// is still written to the buffer when bufsz is greater than zero.
 TEST_F(LlvmLibcSwprintfTest, CutOff) {
   constexpr size_t N = 100;
   wchar_t buff[N];
@@ -3098,19 +3101,34 @@ TEST_F(LlvmLibcSwprintfTest, CutOff) {
 
   written = LIBC_NAMESPACE::swprintf(buff, 16,
                                      L"A simple string with no conversions.");
-  EXPECT_EQ(written, 36);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
   ASSERT_STREQ(buff, L"A simple string");
 
   written = LIBC_NAMESPACE::swprintf(buff, 5, L"%s", "1234567890");
-  EXPECT_EQ(written, 10);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
   ASSERT_STREQ(buff, L"1234");
 
   written = LIBC_NAMESPACE::swprintf(buff, 5, L"%ls", L"1234567890");
-  EXPECT_EQ(written, 10);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
   ASSERT_STREQ(buff, L"1234");
 
+  // The output fills the buffer exactly, leaving no room for the terminator.
+  written = LIBC_NAMESPACE::swprintf(buff, 5, L"%ls", L"12345");
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
+  ASSERT_STREQ(buff, L"1234");
+
+  written = LIBC_NAMESPACE::swprintf(buff, 1, L"a");
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
+  ASSERT_STREQ(buff, L"");
+
   written = LIBC_NAMESPACE::swprintf(buff, 67, L"%-101c", 'a');
-  EXPECT_EQ(written, 101);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
   ASSERT_STREQ(buff, L"a "
                      L"        " // Each of these is 8 spaces, and there are 8.
                      L"        " // In total there are 65 spaces
@@ -3121,12 +3139,22 @@ TEST_F(LlvmLibcSwprintfTest, CutOff) {
                      L"        "
                      L"        ");
 
-  // passing null as the output pointer is allowed as long as bufsz is 0.
+  // Passing null as the output pointer is allowed as long as bufsz is 0, but
+  // since there is no room for even the null terminator, the call fails.
+  // Unlike snprintf, swprintf cannot be used to query the required size.
   written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"%s and more", "1234567890");
-  EXPECT_EQ(written, 19);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
 
+  written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"");
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
+
+  // The INT_MIN width is treated as a left-justified width of INT_MAX, which
+  // still fits in an int, so this fails with E2BIG rather than EOVERFLOW.
   written = LIBC_NAMESPACE::swprintf(nullptr, 0, L"%*s", INT_MIN, "nothing");
-  EXPECT_EQ(written, INT_MAX);
+  EXPECT_EQ(written, -1);
+  ASSERT_ERRNO_EQ(E2BIG);
 }
 
 TEST_F(LlvmLibcSwprintfTest, NoCutOff) {
@@ -3146,15 +3174,25 @@ TEST_F(LlvmLibcSwprintfTest, NoCutOff) {
   written = LIBC_NAMESPACE::swprintf(buff, 20, L"%ls", L"1234567890");
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, L"1234567890");
+
+  // The output and the null terminator fill the buffer exactly.
+  written = LIBC_NAMESPACE::swprintf(buff, 5, L"%ls", L"1234");
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, L"1234");
+
+  written = LIBC_NAMESPACE::swprintf(buff, 1, L"%ls", L"");
+  EXPECT_EQ(written, 0);
+  ASSERT_STREQ(buff, L"");
 }
 
 TEST_F(LlvmLibcSwprintfTest, CharsWrittenOverflow) {
   wchar_t buff[0];
 
   // Trigger an overflow in the return value of swprintf by writing more than
-  // INT_MAX wide characters.
+  // INT_MAX wide characters. This is reported as EOVERFLOW even though the
+  // output also does not fit in the buffer.
   int int_max = LIBC_NAMESPACE::cpp::numeric_limits<int>::max();
   int written = LIBC_NAMESPACE::swprintf(buff, 0, L"%*stest", int_max, "");
   EXPECT_LT(written, 0);
-  ASSERT_ERRNO_FAILURE();
+  ASSERT_ERRNO_EQ(EOVERFLOW);
 }

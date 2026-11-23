@@ -43,6 +43,8 @@ LIBC_INLINE static int internal_error_to_errno(int internal_error) {
   case ILLEGAL_WIDE_CHAR:
   case MB_CONVERSION_ERROR:
     return EILSEQ;
+  case TRUNCATION_ERROR:
+    return E2BIG;
   default:
     LIBC_ASSERT(
         false &&

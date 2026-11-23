@@ -64,6 +64,15 @@ LLVM_LIBC_FUNCTION(int, swprintf,
     return -1;
   }
 
+  // Unlike snprintf, swprintf must return a negative value if bufsz or more
+  // wide characters were requested to be written (C11 7.29.2.3p3), and POSIX
+  // requires errno to be set. The truncated output written above is kept.
+  if (ret_val.value() >= bufsz) {
+    libc_errno =
+        printf_core::internal_error_to_errno(-printf_core::TRUNCATION_ERROR);
+    return -1;
+  }
+
   return static_cast<int>(ret_val.value());
 }
 

@@ -163,6 +163,9 @@ constexpr int ALLOCATION_ERROR = -1006;
 constexpr int OVERFLOW_ERROR = -1007;
 constexpr int ILLEGAL_WIDE_CHAR = -1008;
 constexpr int MB_CONVERSION_ERROR = -1009;
+// Used by functions such as swprintf that must fail, rather than silently
+// truncate, when the output does not fit in the buffer.
+constexpr int TRUNCATION_ERROR = -1010;
 
 } // namespace printf_core
 } // namespace LIBC_NAMESPACE_DECL
