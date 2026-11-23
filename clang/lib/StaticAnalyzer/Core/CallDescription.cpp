@@ -108,9 +108,8 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
     break;
   }
 
-  // Fall back to printing the name for overloaded, literal and conversion
-  // operators, and for constructor and destructor names whose type is not a
-  // record type.
+  // Fall back to printing the name, e.g. for overloaded, literal and conversion
+  // operators.
   return Name.getAsString() == getFunctionName();
 }
 
