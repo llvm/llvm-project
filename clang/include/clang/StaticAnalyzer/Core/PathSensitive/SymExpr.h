@@ -106,8 +106,7 @@ public:
       assert(!atEnd() && "attempting to iterate on an 'end' iterator");
       const SymExpr *SE = WL->pop_back_val();
       // SymbolData has no operands, which is by far the most common case.
-      Kind K = SE->getKind();
-      if (K < BEGIN_SYMBOLS || K > END_SYMBOLS)
+      if (!isa<SymbolData>(SE))
         expand(SE);
       return *this;
     }
