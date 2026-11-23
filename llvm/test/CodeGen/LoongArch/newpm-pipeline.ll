@@ -104,6 +104,7 @@
 ; O2-NEXT:     dead-mi-elimination
 ; O2-64-NEXT:  loongarch-opt-w-instrs
 ; O2-NEXT:     loongarch-pre-ra-expand-pseudo
+; O2-NEXT:     loongarch-merge-base-offset
 ; O2-NEXT:     detect-dead-lanes
 ; O2-NEXT:     init-undef
 ; O2-NEXT:     process-implicit-defs

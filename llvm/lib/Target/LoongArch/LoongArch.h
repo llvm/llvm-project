@@ -51,7 +51,19 @@ public:
 FunctionPass *createLoongArchISelDagLegacyPass(LoongArchTargetMachine &TM,
                                                CodeGenOptLevel OptLevel);
 FunctionPass *createLoongArchMemoryBarrierOptPass();
-FunctionPass *createLoongArchMergeBaseOffsetOptPass();
+
+class LoongArchMergeBaseOffsetPass
+    : public OptionalPassInfoMixin<LoongArchMergeBaseOffsetPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+
+  MachineFunctionProperties getRequiredProperties() const {
+    return MachineFunctionProperties().setIsSSA();
+  }
+};
+
+FunctionPass *createLoongArchMergeBaseOffsetLegacyPass();
 
 class LoongArchOptWInstrsPass
     : public OptionalPassInfoMixin<LoongArchOptWInstrsPass> {
@@ -77,7 +89,7 @@ void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsPass(PassRegistry &);
 void initializeLoongArchExpandAtomicPseudoPass(PassRegistry &);
 void initializeLoongArchMemoryBarrierOptPass(PassRegistry &);
-void initializeLoongArchMergeBaseOffsetOptPass(PassRegistry &);
+void initializeLoongArchMergeBaseOffsetLegacyPass(PassRegistry &);
 void initializeLoongArchOptWInstrsLegacyPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoLegacyPass(PassRegistry &);
 void initializeLoongArchExpandPseudoPass(PassRegistry &);

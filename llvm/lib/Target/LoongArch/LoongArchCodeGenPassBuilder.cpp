@@ -101,9 +101,8 @@ void LoongArchCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) {
 
 void LoongArchCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   addMachineFunctionPass(LoongArchPreRAExpandPseudoPass(), PMW);
-  if (getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset) {
-    // TODO(boomanaiden154): Add LoongArchMergeBaseOffsetOptPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
+    addMachineFunctionPass(LoongArchMergeBaseOffsetPass(), PMW);
 }
 
 Error LoongArchCodeGenPassBuilder::addRegAssignAndRewriteFast(

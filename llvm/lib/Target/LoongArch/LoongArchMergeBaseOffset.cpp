@@ -12,9 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "LoongArchSubtarget.h"
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePassManager.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Target/TargetOptions.h"
@@ -27,35 +31,12 @@ using namespace llvm;
 
 namespace {
 
-class LoongArchMergeBaseOffsetOpt : public MachineFunctionPass {
-  const LoongArchSubtarget *ST = nullptr;
-  MachineRegisterInfo *MRI;
-
+class LoongArchMergeBaseOffsetLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-  bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Lo12,
-                      MachineInstr *&Lo20, MachineInstr *&Hi12,
-                      MachineInstr *&Last);
-  bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Add,
-                      MachineInstr *&Lo12);
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
-  bool detectAndFoldOffset(MachineInstr &Hi20, MachineInstr &Lo12,
-                           MachineInstr *&Lo20, MachineInstr *&Hi12,
-                           MachineInstr *&Last);
-  void foldOffset(MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
-                  MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
-                  int64_t Offset);
-  bool foldLargeOffset(MachineInstr &Hi20, MachineInstr &Lo12,
-                       MachineInstr *&Lo20, MachineInstr *&Hi12,
-                       MachineInstr *&Last, MachineInstr &TailAdd,
-                       Register GAReg);
-
-  bool foldIntoMemoryOps(MachineInstr &Hi20, MachineInstr &Lo12,
-                         MachineInstr *&Lo20, MachineInstr *&Hi12,
-                         MachineInstr *&Last);
-
-  LoongArchMergeBaseOffsetOpt() : MachineFunctionPass(ID) {}
+  LoongArchMergeBaseOffsetLegacy() : MachineFunctionPass(ID) {}
 
   MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().setIsSSA();
@@ -72,8 +53,8 @@ public:
 };
 } // end anonymous namespace
 
-char LoongArchMergeBaseOffsetOpt::ID = 0;
-INITIALIZE_PASS(LoongArchMergeBaseOffsetOpt, DEBUG_TYPE,
+char LoongArchMergeBaseOffsetLegacy::ID = 0;
+INITIALIZE_PASS(LoongArchMergeBaseOffsetLegacy, DEBUG_TYPE,
                 LoongArch_MERGE_BASE_OFFSET_NAME, false, false)
 
 static inline bool isPCAddLo(unsigned Flags) {
@@ -110,11 +91,10 @@ static inline bool isPCAddLo(unsigned Flags) {
 //    3) The address operands have the appropriate type, reflecting the
 //       lowering of a global address or constant pool using the pattern.
 //    4) The offset value in the Global Address or Constant Pool is 0.
-bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
-                                                 MachineInstr *&Lo12,
-                                                 MachineInstr *&Lo20,
-                                                 MachineInstr *&Hi12,
-                                                 MachineInstr *&Last) {
+static bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Lo12,
+                           MachineInstr *&Lo20, MachineInstr *&Hi12,
+                           MachineInstr *&Last, const LoongArchSubtarget *ST,
+                           MachineRegisterInfo *MRI) {
   if (Hi20.getOpcode() != LoongArch::PCALAU12I &&
       Hi20.getOpcode() != LoongArch::PCADDU12I)
     return false;
@@ -208,9 +188,9 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
 //    2) The address operands have the appropriate type, reflecting the
 //       lowering of a thread_local global address using the pattern.
 //    3) The offset value in the ThreadLocal Global Address is 0.
-bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
-                                                 MachineInstr *&Add,
-                                                 MachineInstr *&Lo12) {
+static bool detectFoldable(MachineInstr &Hi20, MachineInstr *&Add,
+                           MachineInstr *&Lo12, const LoongArchSubtarget *ST,
+                           MachineRegisterInfo *MRI) {
   if (Hi20.getOpcode() != LoongArch::LU12I_W)
     return false;
 
@@ -270,10 +250,10 @@ bool LoongArchMergeBaseOffsetOpt::detectFoldable(MachineInstr &Hi20,
 // Update the offset in Hi20, (Add), Lo12, (Lo20 and Hi12) instructions.
 // Delete the tail instruction and update all the uses to use the
 // output from Last.
-void LoongArchMergeBaseOffsetOpt::foldOffset(
-    MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
-    MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &Tail,
-    int64_t Offset) {
+static void foldOffset(MachineInstr &Hi20, MachineInstr &Lo12,
+                       MachineInstr *&Lo20, MachineInstr *&Hi12,
+                       MachineInstr *&Last, MachineInstr &Tail, int64_t Offset,
+                       MachineRegisterInfo *MRI) {
   // Put the offset back in Hi and the Lo
   MachineOperand &Lo12Op2 = Lo12.getOperand(2);
   Hi20.getOperand(1).setOffset(Offset);
@@ -351,10 +331,10 @@ void LoongArchMergeBaseOffsetOpt::foldOffset(
 //                                                                    |
 //        TailAdd: add.d  vreg4, vreg2, voff       <------------------+
 //
-bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
-    MachineInstr &Hi20, MachineInstr &Lo12, MachineInstr *&Lo20,
-    MachineInstr *&Hi12, MachineInstr *&Last, MachineInstr &TailAdd,
-    Register GAReg) {
+static bool foldLargeOffset(MachineInstr &Hi20, MachineInstr &Lo12,
+                            MachineInstr *&Lo20, MachineInstr *&Hi12,
+                            MachineInstr *&Last, MachineInstr &TailAdd,
+                            Register GAReg, MachineRegisterInfo *MRI) {
   assert((TailAdd.getOpcode() == LoongArch::ADD_W ||
           TailAdd.getOpcode() == LoongArch::ADD_D) &&
          "Expected ADD instruction!");
@@ -453,7 +433,7 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   if (!Offset)
     return false;
 
-  foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset);
+  foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailAdd, Offset, MRI);
   LLVM_DEBUG(dbgs() << "  Offset Instrs:\n");
   for (auto I : Instrs) {
     LLVM_DEBUG(dbgs() << "                 " << *I);
@@ -466,11 +446,11 @@ bool LoongArchMergeBaseOffsetOpt::foldLargeOffset(
   return true;
 }
 
-bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
-                                                      MachineInstr &Lo12,
-                                                      MachineInstr *&Lo20,
-                                                      MachineInstr *&Hi12,
-                                                      MachineInstr *&Last) {
+static bool detectAndFoldOffset(MachineInstr &Hi20, MachineInstr &Lo12,
+                                MachineInstr *&Lo20, MachineInstr *&Hi12,
+                                MachineInstr *&Last,
+                                const LoongArchSubtarget *ST,
+                                MachineRegisterInfo *MRI) {
   Register DestReg =
       Last ? Last->getOperand(0).getReg() : Lo12.getOperand(0).getReg();
 
@@ -509,14 +489,14 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
           TailTail.getOpcode() == LoongArch::ADDI_D) {
         Offset += TailTail.getOperand(2).getImm();
         LLVM_DEBUG(dbgs() << "  Offset Instrs: " << Tail << TailTail);
-        foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailTail, Offset);
+        foldOffset(Hi20, Lo12, Lo20, Hi12, Last, TailTail, Offset, MRI);
         Tail.eraseFromParent();
         return true;
       }
     }
 
     LLVM_DEBUG(dbgs() << "  Offset Instr: " << Tail);
-    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, Offset);
+    foldOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, Offset, MRI);
     return true;
   }
   case LoongArch::ADD_W:
@@ -525,7 +505,7 @@ bool LoongArchMergeBaseOffsetOpt::detectAndFoldOffset(MachineInstr &Hi20,
     [[fallthrough]];
   case LoongArch::ADD_D:
     // The offset is too large to fit in the immediate field of ADDI.
-    return foldLargeOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, DestReg);
+    return foldLargeOffset(Hi20, Lo12, Lo20, Hi12, Last, Tail, DestReg, MRI);
     break;
   }
 
@@ -586,11 +566,10 @@ static unsigned getNewOpc(unsigned Op, bool isLarge) {
   }
 }
 
-bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
-                                                    MachineInstr &Lo12,
-                                                    MachineInstr *&Lo20,
-                                                    MachineInstr *&Hi12,
-                                                    MachineInstr *&Last) {
+static bool foldIntoMemoryOps(MachineInstr &Hi20, MachineInstr &Lo12,
+                              MachineInstr *&Lo20, MachineInstr *&Hi12,
+                              MachineInstr *&Last, const LoongArchSubtarget *ST,
+                              MachineRegisterInfo *MRI) {
   Register DestReg =
       Last ? Last->getOperand(0).getReg() : Lo12.getOperand(0).getReg();
 
@@ -861,15 +840,12 @@ bool LoongArchMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi20,
   return true;
 }
 
-bool LoongArchMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  ST = &Fn.getSubtarget<LoongArchSubtarget>();
+static bool runMergeBaseOffsetOpt(MachineFunction &MF) {
+  const LoongArchSubtarget *ST = &MF.getSubtarget<LoongArchSubtarget>();
 
   bool MadeChange = false;
-  MRI = &Fn.getRegInfo();
-  for (MachineBasicBlock &MBB : Fn) {
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
+  for (MachineBasicBlock &MBB : MF) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
     for (MachineInstr &Hi20 : MBB) {
       MachineInstr *Lo12 = nullptr;
@@ -879,12 +855,12 @@ bool LoongArchMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       if (Hi20.getOpcode() == LoongArch::PCADDU12I ||
           Hi20.getOpcode() == LoongArch::PCALAU12I) {
         // Detect foldable pcala code sequence in small/medium/large code model.
-        if (!detectFoldable(Hi20, Lo12, Lo20, Hi12, Last))
+        if (!detectFoldable(Hi20, Lo12, Lo20, Hi12, Last, ST, MRI))
           continue;
       } else if (Hi20.getOpcode() == LoongArch::LU12I_W) {
         MachineInstr *Add = nullptr;
         // Detect foldable tls-le code sequence in small/medium code model.
-        if (!detectFoldable(Hi20, Add, Lo12))
+        if (!detectFoldable(Hi20, Add, Lo12, ST, MRI))
           continue;
       } else {
         continue;
@@ -892,15 +868,30 @@ bool LoongArchMergeBaseOffsetOpt::runOnMachineFunction(MachineFunction &Fn) {
       // For tls-le, we do not pass the second PseudoAddTPRel instr in order to
       // reuse the existing hooks and the last three paramaters should always be
       // nullptr.
-      MadeChange |= detectAndFoldOffset(Hi20, *Lo12, Lo20, Hi12, Last);
-      MadeChange |= foldIntoMemoryOps(Hi20, *Lo12, Lo20, Hi12, Last);
+      MadeChange |= detectAndFoldOffset(Hi20, *Lo12, Lo20, Hi12, Last, ST, MRI);
+      MadeChange |= foldIntoMemoryOps(Hi20, *Lo12, Lo20, Hi12, Last, ST, MRI);
     }
   }
 
   return MadeChange;
 }
 
+bool LoongArchMergeBaseOffsetLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runMergeBaseOffsetOpt(MF);
+}
+
 /// Returns an instance of the Merge Base Offset Optimization pass.
-FunctionPass *llvm::createLoongArchMergeBaseOffsetOptPass() {
-  return new LoongArchMergeBaseOffsetOpt();
+FunctionPass *llvm::createLoongArchMergeBaseOffsetLegacyPass() {
+  return new LoongArchMergeBaseOffsetLegacy();
+}
+
+PreservedAnalyses
+LoongArchMergeBaseOffsetPass::run(MachineFunction &MF,
+                                  MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  return runMergeBaseOffsetOpt(MF) ? getMachineFunctionPassPreservedAnalyses()
+                                         .preserveSet<CFGAnalyses>()
+                                   : PreservedAnalyses::all();
 }
