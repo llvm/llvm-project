@@ -777,7 +777,6 @@ bool AArch64CallLowering::lowerFormalArguments(
     return false;
 
   SmallVector<ArgInfo, 8> SplitArgs;
-  SmallVector<std::pair<Register, Register>> BoolArgs;
 
   // Insert the hidden sret parameter if the return value won't fit in the
   // return registers.
@@ -789,25 +788,8 @@ bool AArch64CallLowering::lowerFormalArguments(
     if (DL.getTypeStoreSize(Arg.getType()).isZero())
       continue;
 
-    ArgInfo OrigArg{VRegs[i], Arg, i};
-    setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
-
-    // i1 arguments are zero-extended to i8 by the caller. Emit a
-    // hint to reflect this.
-    if (OrigArg.Ty->isIntegerTy(1)) {
-      assert(OrigArg.Regs.size() == 1 &&
-             MRI.getType(OrigArg.Regs[0]).getSizeInBits() == 1 &&
-             "Unexpected registers used for i1 arg");
-
-      auto &Flags = OrigArg.Flags[0];
-      if (!Flags.isZExt() && !Flags.isSExt()) {
-        // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
-        Register OrigReg = OrigArg.Regs[0];
-        Register WideReg = MRI.createGenericVirtualRegister(LLT::integer(8));
-        OrigArg.Regs[0] = WideReg;
-        BoolArgs.push_back({OrigReg, WideReg});
-      }
-    }
+    ArgInfo OrigArg{VRegs[i], Arg, Arg.getArgNo()};
+    setArgFlags(OrigArg, Arg.getArgNo() + AttributeList::FirstArgIndex, DL, F);
 
     if (Arg.hasAttribute(Attribute::SwiftAsync))
       MF.getInfo<AArch64FunctionInfo>()->setHasSwiftAsyncContext(true);
@@ -826,20 +808,42 @@ bool AArch64CallLowering::lowerFormalArguments(
   FormalArgHandler Handler(MIRBuilder, MRI);
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
-  if (!determineAssignments(Assigner, SplitArgs, CCInfo) ||
-      !handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, MIRBuilder))
+  if (!determineAssignments(Assigner, SplitArgs, CCInfo))
     return false;
 
-  if (!BoolArgs.empty()) {
-    for (auto &KV : BoolArgs) {
-      Register OrigReg = KV.first;
-      Register WideReg = KV.second;
-      LLT WideTy = MRI.getType(WideReg);
-      assert(MRI.getType(OrigReg).getScalarSizeInBits() == 1 &&
-             "Unexpected bit size of a bool arg");
-      MIRBuilder.buildTrunc(
-          OrigReg, MIRBuilder.buildAssertZExt(WideTy, WideReg, 1).getReg(0));
+  SmallVector<std::pair<Register, Register>> BoolArgs;
+  for (CCValAssign &VA : ArgLocs) {
+    ArgInfo &Arg = SplitArgs[VA.getValNo()];
+    // The scalar i1 ABI does not apply to an i1 split from an aggregate.
+    if (VA.needsCustom() || !Arg.Ty->isIntegerTy(1) || Arg.Flags[0].isZExt() ||
+        Arg.Flags[0].isSExt() ||
+        !F.getArg(Arg.OrigArgIndex)->getType()->isIntegerTy(1))
+      continue;
+
+    assert(Arg.Regs.size() == 1 &&
+           MRI.getType(Arg.Regs[0]) == LLT::integer(1) &&
+           "Unexpected registers used for i1 argument");
+
+    // LocVT is promoted, but the caller stores only the zero-extended byte.
+    if (VA.isMemLoc() && VA.getValVT() == MVT::i8 &&
+        VA.getLocInfo() == CCValAssign::AExt) {
+      VA = CCValAssign::getMem(VA.getValNo(), MVT::i1, VA.getLocMemOffset(),
+                               MVT::i1, CCValAssign::Full);
+      continue;
     }
+
+    // Only bits 1-7 of the incoming register are known zero.
+    Register ByteReg = MRI.createGenericVirtualRegister(LLT::integer(8));
+    BoolArgs.emplace_back(Arg.Regs[0], ByteReg);
+    Arg.Regs[0] = ByteReg;
+  }
+
+  if (!handleAssignments(Handler, SplitArgs, CCInfo, ArgLocs, MIRBuilder))
+    return false;
+
+  for (auto [Reg, ByteReg] : BoolArgs) {
+    auto Byte = MIRBuilder.buildAssertZExt(LLT::integer(8), ByteReg, 1);
+    MIRBuilder.buildTrunc(Reg, Byte);
   }
 
   AArch64FunctionInfo *FuncInfo = MF.getInfo<AArch64FunctionInfo>();

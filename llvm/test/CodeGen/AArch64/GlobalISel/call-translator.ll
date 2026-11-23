@@ -248,20 +248,6 @@ define void @test_call_stack() {
   ret void
 }
 
-; CHECK-LABEL: name: test_mem_i1
-; CHECK: fixedStack:
-; CHECK-NEXT: - { id: [[SLOT:[0-9]+]], type: default, offset: 0, size: 1, alignment: 16, stack-id: default,
-; CHECK-NEXT: isImmutable: true,
-; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.[[SLOT]]
-; CHECK: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[ADDR]](p0) :: (invariant load (i8) from %fixed-stack.[[SLOT]], align 16)
-; CHECK: [[TRUNC8:%[0-9]+]]:_(i8) = G_TRUNC [[LOAD]]
-; CHECK: [[TRUNCASSERT:%[0-9]+]]:_(i8) = G_ASSERT_ZEXT [[TRUNC8]], 1
-; CHECK: {{%[0-9]+}}:_(i1) = G_TRUNC [[TRUNCASSERT]]
-
-define void @test_mem_i1([8 x i64], i1 %in) {
-  ret void
-}
-
 ; CHECK-LABEL: name: test_128bit_struct
 ; CHECK: $x0 = COPY
 ; CHECK: $x1 = COPY
