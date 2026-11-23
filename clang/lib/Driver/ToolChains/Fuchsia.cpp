@@ -347,7 +347,7 @@ ToolChain::RuntimeLibType
 Fuchsia::GetRuntimeLibType(const ArgList &Args) const {
   if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt" && Value != "platform")
+    if (Value != "compiler-rt" && Value != "platform" && Value != "none")
       getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
           << Value << "Fuchsia";
   }

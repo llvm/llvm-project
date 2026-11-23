@@ -47,6 +47,8 @@ def SPIRV_Dialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::spirv";
+  let hasAttributes = 1;
+  let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 1;
   let hasConstantMaterializer = 1;
   let hasOperationAttrVerify = 1;
@@ -4729,6 +4731,8 @@ def SPIRV_OC_OpGroupNonUniformLogicalAnd      : I32EnumAttrCase<"OpGroupNonUnifo
 def SPIRV_OC_OpGroupNonUniformLogicalOr       : I32EnumAttrCase<"OpGroupNonUniformLogicalOr", 363>;
 def SPIRV_OC_OpGroupNonUniformLogicalXor      : I32EnumAttrCase<"OpGroupNonUniformLogicalXor", 364>;
 def SPIRV_OC_OpGroupNonUniformQuadSwap        : I32EnumAttrCase<"OpGroupNonUniformQuadSwap", 366>;
+def SPIRV_OC_OpPtrEqual                       : I32EnumAttrCase<"OpPtrEqual", 401>;
+def SPIRV_OC_OpPtrNotEqual                    : I32EnumAttrCase<"OpPtrNotEqual", 402>;
 def SPIRV_OC_OpTypeTensorARM                  : I32EnumAttrCase<"OpTypeTensorARM", 4163>;
 def SPIRV_OC_OpGraphConstantARM               : I32EnumAttrCase<"OpGraphConstantARM", 4181>;
 def SPIRV_OC_OpGraphEntryPointARM             : I32EnumAttrCase<"OpGraphEntryPointARM", 4182>;
@@ -4874,6 +4878,7 @@ def SPIRV_OpcodeAttr :
       SPIRV_OC_OpGroupNonUniformBitwiseOr, SPIRV_OC_OpGroupNonUniformBitwiseXor,
       SPIRV_OC_OpGroupNonUniformLogicalAnd, SPIRV_OC_OpGroupNonUniformLogicalOr,
       SPIRV_OC_OpGroupNonUniformLogicalXor, SPIRV_OC_OpGroupNonUniformQuadSwap,
+      SPIRV_OC_OpPtrEqual, SPIRV_OC_OpPtrNotEqual,
       SPIRV_OC_OpTypeTensorARM,
       SPIRV_OC_OpGraphEntryPointARM, SPIRV_OC_OpGraphARM,
       SPIRV_OC_OpGraphInputARM, SPIRV_OC_OpGraphSetOutputARM, SPIRV_OC_OpGraphEndARM,

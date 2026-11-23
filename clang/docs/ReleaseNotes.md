@@ -1456,11 +1456,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
+- `__ARM_SIZEOF_WCHAR_T` now matches the size of `wchar_t`. It was 4 on Arm and
+  AArch64 Windows, where `wchar_t` is 2 bytes.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
+
+- `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
+  Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
 
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing

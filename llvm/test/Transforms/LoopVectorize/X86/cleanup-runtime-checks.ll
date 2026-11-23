@@ -73,13 +73,12 @@ exit:
 }
 
 ; Vectorization is not profitable. Computing the exit value of %v via SCEV
-; reuses %s.
-; FIXME: %s should keep its nsw flag, as the loop is not vectorized.
+; reuses %s, which must keep its nsw flag, as the loop is not vectorized.
 define i64 @exit_value_reuse_value_with_flags(i64 %a, i64 %b, i64 %n) {
 ; CHECK-LABEL: define i64 @exit_value_reuse_value_with_flags(
 ; CHECK-SAME: i64 [[A:%.*]], i64 [[B:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[S:%.*]] = add i64 [[A]], [[B]]
+; CHECK-NEXT:    [[S:%.*]] = add nsw i64 [[A]], [[B]]
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
