@@ -380,11 +380,15 @@ The pass applies patterns for the following simplifications:
 ## Lower Deallocations Pass
 
 The `-lower-deallocations` pass transforms all `bufferization.dealloc`
-operations to `memref.dealloc` operations and may also insert operations from
-the `scf`, `func`, and `arith` dialects to make deallocations conditional and
-check whether two MemRef values come from the same allocation at runtime (when
-the `buffer-deallocation-simplification` pass wasn't able to determine it
-statically).
+operations to the deallocations their operands' buffer types build
+(`BufferLikeType::genFree`), which are `memref.dealloc` operations for MemRefs,
+and may also insert operations from the `scf`, `func`, and `arith` dialects to
+make deallocations conditional and check whether two buffers come from the same
+allocation at runtime (when the `buffer-deallocation-simplification` pass wasn't
+able to determine it statically). The check compares the identities the
+buffers' types build (`BufferLikeType::genIdentity`), which is the aligned
+pointer for a MemRef. A dealloc with an operand whose type does not support
+deallocation (`BufferLikeType::supportsDeallocation`) is not lowered.
 
 The same lowering of the `bufferization.dealloc` operation is also part of the
 `-convert-bufferization-to-memref` conversion pass which also lowers all the
@@ -482,12 +486,12 @@ allocation and their new ownerships.
 
 The generated function takes two MemRefs of indices and three MemRefs of
 booleans as arguments:
-  * The first argument A should contain the result of the
-  extract_aligned_pointer_as_index operation applied to the MemRefs to be
-  deallocated
-  * The second argument B should contain the result of the
-  extract_aligned_pointer_as_index operation applied to the MemRefs to be
-  retained
+  * The first argument A should contain the identities of the buffers to be
+  deallocated (for MemRefs, the result of the extract_aligned_pointer_as_index
+  operation)
+  * The second argument B should contain the identities of the buffers to be
+  retained (for MemRefs, the result of the extract_aligned_pointer_as_index
+  operation)
   * The third argument C should contain the conditions as passed directly
   to the deallocation operation.
   * The fourth argument D is used to pass results to the caller. Those

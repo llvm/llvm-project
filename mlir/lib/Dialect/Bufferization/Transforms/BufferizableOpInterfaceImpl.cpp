@@ -189,7 +189,11 @@ struct DeallocTensorOpInterface
         rewriter, deallocTensorOp.getTensor(), options, state);
     if (failed(buffer))
       return failure();
-    memref::DeallocOp::create(rewriter, deallocTensorOp.getLoc(), *buffer);
+    auto bufferType = cast<BufferLikeType>(buffer->getType());
+    if (!bufferType.supportsDeallocation())
+      return deallocTensorOp.emitError() << "deallocating a buffer of type "
+                                         << bufferType << " is not supported";
+    bufferType.genFree(rewriter, deallocTensorOp.getLoc(), *buffer);
     rewriter.eraseOp(op);
     return success();
   }

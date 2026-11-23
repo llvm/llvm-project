@@ -62,10 +62,54 @@ def Bufferization_BufferLikeTypeInterface
   let description = [{
     Indicates that this type is a buffer type (similarly to a MLIR builtin
     memref) for bufferization purposes.
-
-    The interface currently has no methods as it is used by types to opt into
-    being supported by the bufferization procedures.
   }];
+
+  let methods = [
+    InterfaceMethod<[{
+        Returns whether this instance of the type says how its values are
+        deallocated and identified, by `genFree` and `genIdentity`, which may
+        be called only where this holds.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"supportsDeallocation",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return false;"
+    >,
+    InterfaceMethod<[{
+        Builds the deallocation of `buffer`, a value of this type that a
+        `bufferization.dealloc` deallocates. Which values of the type may be
+        deallocated is the type's to say; for a builtin memref it is the
+        originally allocated memref, as for `memref.dealloc`.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"genFree",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder, "::mlir::Location":$loc,
+                    "::mlir::Value":$buffer),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        llvm_unreachable("genFree not implemented");
+      }]
+    >,
+    InterfaceMethod<[{
+        Builds an `index` that the lowering of `bufferization.dealloc`
+        compares at runtime to decide whether two deallocated values, or a
+        deallocated and a retained value, belong to the same allocation:
+        equal identities are taken to be the same allocation, different ones
+        different allocations. Identities are compared across buffer types. A
+        builtin memref's identity is its aligned pointer, so two views of one
+        allocation whose aligned pointers differ have different identities.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genIdentity",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder, "::mlir::Location":$loc,
+                    "::mlir::Value":$buffer),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        llvm_unreachable("genIdentity not implemented");
+      }]
+    >
+  ];
 }
 
 #endif // BUFFERIZATION_TYPE_INTERFACES

@@ -60,7 +60,22 @@ struct BuiltinTensorExternalModel
 template <typename MemRef>
 struct BuiltinMemRefExternalModel
     : BufferLikeType::ExternalModel<BuiltinMemRefExternalModel<MemRef>,
-                                    MemRef> {};
+                                    MemRef> {
+  bool supportsDeallocation(Type type) const { return true; }
+
+  void genFree(Type type, OpBuilder &builder, Location loc,
+               Value buffer) const {
+    memref::DeallocOp::create(builder, loc, buffer);
+  }
+
+  /// A memref's identity is its aligned pointer, so a view that moves the
+  /// aligned pointer, such as a `memref.view` at a byte offset, is not
+  /// recognized as its allocation.
+  Value genIdentity(Type type, OpBuilder &builder, Location loc,
+                    Value buffer) const {
+    return memref::ExtractAlignedPointerAsIndexOp::create(builder, loc, buffer);
+  }
+};
 } // namespace
 
 //===----------------------------------------------------------------------===//

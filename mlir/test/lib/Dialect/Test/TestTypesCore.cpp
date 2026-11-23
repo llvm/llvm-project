@@ -14,6 +14,7 @@
 #include "TestDialectBase.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -457,6 +458,38 @@ TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
   }
 
   return emitError() << "expected MemRefType or TestMemrefType";
+}
+
+/// Returns the builtin memref type a test memref type stands for.
+static MemRefType getBuiltinMemRefType(TestMemrefType type) {
+  return MemRefType::get(type.getShape(), type.getElementType(),
+                         type.getLayout());
+}
+
+/// Returns `buffer`, a test memref, as the builtin memref it stands for.
+static Value castToBuiltinMemRef(OpBuilder &builder, Location loc,
+                                 Value buffer) {
+  auto memrefType =
+      getBuiltinMemRefType(cast<TestMemrefType>(buffer.getType()));
+  return UnrealizedConversionCastOp::create(builder, loc, memrefType, buffer)
+      .getResult(0);
+}
+
+bool TestMemrefType::supportsDeallocation() const { return true; }
+
+void TestMemrefType::genFree(::mlir::OpBuilder &builder, ::mlir::Location loc,
+                             ::mlir::Value buffer) const {
+  Value memref = castToBuiltinMemRef(builder, loc, buffer);
+  cast<::mlir::bufferization::BufferLikeType>(memref.getType())
+      .genFree(builder, loc, memref);
+}
+
+::mlir::Value TestMemrefType::genIdentity(::mlir::OpBuilder &builder,
+                                          ::mlir::Location loc,
+                                          ::mlir::Value buffer) const {
+  Value memref = castToBuiltinMemRef(builder, loc, buffer);
+  return cast<::mlir::bufferization::BufferLikeType>(memref.getType())
+      .genIdentity(builder, loc, memref);
 }
 
 ::mlir::LogicalResult TestUnshapedType::verifyCompatibleBufferType(
