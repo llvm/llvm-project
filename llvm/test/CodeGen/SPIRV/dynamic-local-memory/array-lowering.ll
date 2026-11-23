@@ -12,7 +12,7 @@
 @unused = external addrspace(3) global [0 x i8]
 @sized = internal addrspace(3) global [4 x i32] poison, align 4
 
-; AMDHSA does not take the memory as a kernel argument.
+; AMDHSA should not be affected by the pass.
 ; UNCHANGED: @buf = external addrspace(3) global [0 x i32]
 ; UNCHANGED-NOT: @__spirv_dynamic_local_memory
 ; UNCHANGED: define spir_kernel void @kernel(ptr addrspace(1) noundef %out) addrspace(9)
