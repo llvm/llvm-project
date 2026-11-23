@@ -54,6 +54,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void SystemZCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
     flushFPMsToMPM(PMW);
@@ -155,8 +157,6 @@ void SystemZCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void SystemZCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(SystemZAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SystemZTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SystemZPassRegistry.def"

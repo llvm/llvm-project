@@ -20,22 +20,14 @@ define void @_Z12lane_pc_testj() #0 !dbg !9 {
 ; GCN-NEXT:    .cfi_undefined 1538
 ; GCN-NEXT:    .cfi_undefined 36
 ; GCN-NEXT:    .cfi_undefined 37
-; GCN-NEXT:    .cfi_undefined 38
-; GCN-NEXT:    .cfi_undefined 39
-; GCN-NEXT:    .cfi_undefined 40
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:  ; %bb.1: ; %lab
 ; GCN-NEXT:  .Ltmp0:
 ; GCN-NEXT:    .loc 0 12 1 prologue_end ; t.cpp:12:1
-; GCN-NEXT:    s_mov_b64 s[4:5], 0
-; GCN-NEXT:    s_mov_b64 s[6:7], src_private_base
-; GCN-NEXT:    s_mov_b32 s6, -1
-; GCN-NEXT:    s_lshr_b32 s8, s32, 5
-; GCN-NEXT:    s_cmp_lg_u32 s8, s6
-; GCN-NEXT:    s_cselect_b32 s5, s7, s5
-; GCN-NEXT:    s_cselect_b32 s4, s8, s4
-; GCN-NEXT:    v_mov_b32_e32 v2, 0
+; GCN-NEXT:    s_mov_b64 s[4:5], src_private_base
+; GCN-NEXT:    s_lshr_b32 s4, s32, 5
 ; GCN-NEXT:    .loc 0 13 1 ; t.cpp:13:1
+; GCN-NEXT:    v_mov_b32_e32 v2, 0
 ; GCN-NEXT:    v_mov_b32_e32 v0, s4
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
 ; GCN-NEXT:    flat_store_dword v[0:1], v2

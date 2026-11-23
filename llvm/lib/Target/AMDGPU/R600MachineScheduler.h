@@ -20,12 +20,10 @@
 namespace llvm {
 
 class R600InstrInfo;
-struct R600RegisterInfo;
 
 class R600SchedStrategy final : public MachineSchedStrategy {
   const ScheduleDAGMILive *DAG = nullptr;
   const R600InstrInfo *TII = nullptr;
-  const R600RegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
 
   enum InstKind {

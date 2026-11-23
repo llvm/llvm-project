@@ -307,12 +307,13 @@ public:
   void FindCompileUnits(const FileSpec &path, SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctions ()
-  void FindFunctions(ConstString name, lldb::FunctionNameType name_type_mask,
+  void FindFunctions(llvm::StringRef name,
+                     lldb::FunctionNameType name_type_mask,
                      const ModuleFunctionSearchOptions &options,
                      SymbolContextList &sc_list) const;
 
   /// \see Module::FindFunctionSymbols ()
-  void FindFunctionSymbols(ConstString name,
+  void FindFunctionSymbols(llvm::StringRef name,
                            lldb::FunctionNameType name_type_mask,
                            SymbolContextList &sc_list);
 
@@ -333,7 +334,7 @@ public:
   ///
   /// \param[in] variable_list
   ///     A list of variables that gets the matches appended to.
-  void FindGlobalVariables(ConstString name, size_t max_matches,
+  void FindGlobalVariables(llvm::StringRef name, size_t max_matches,
                            VariableList &variable_list) const;
 
   /// Find global and static variables by regular expression.
@@ -386,7 +387,7 @@ public:
   /// Finds the first module whose file specification matches \a module_spec.
   lldb::ModuleSP FindFirstModule(const ModuleSpec &module_spec) const;
 
-  void FindSymbolsWithNameAndType(ConstString name,
+  void FindSymbolsWithNameAndType(llvm::StringRef name,
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list) const;
 

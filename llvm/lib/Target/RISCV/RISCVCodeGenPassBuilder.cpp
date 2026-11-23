@@ -83,8 +83,7 @@ protected:
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   Error addFastRegAlloc(PassManagerWrapper &PMW) override;
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
@@ -93,6 +92,8 @@ protected:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void RISCVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -245,7 +246,7 @@ Error RISCVCodeGenPassBuilder::addRegAssignAndRewriteFast(
   return Base::addRegAssignAndRewriteFast(PMW);
 }
 
-Expected<bool> RISCVCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+Error RISCVCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) {
   addMachineFunctionPass(RAGreedyPass({onlyAllocateRVVReg, "rvv"}), PMW);
   addMachineFunctionPass(VirtRegRewriterPass(false), PMW);
@@ -336,8 +337,6 @@ void RISCVCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void RISCVCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(RISCVAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void RISCVTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
 #define GET_PASS_REGISTRY "RISCVPassRegistry.def"

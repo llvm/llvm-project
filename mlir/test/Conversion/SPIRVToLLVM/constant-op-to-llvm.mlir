@@ -102,3 +102,14 @@ spirv.func @struct_constant() "None" {
   %2 = spirv.Constant [] : !spirv.struct<()>
   spirv.Return
 }
+
+// CHECK-LABEL: @null_constant
+spirv.func @null_constant() "None" {
+  // CHECK: llvm.mlir.zero : !llvm.ptr
+  %0 = spirv.Constant #spirv.null : !spirv.ptr<f32, Function>
+  // CHECK: llvm.mlir.zero : !llvm.array<4 x i32>
+  %1 = spirv.Constant #spirv.null : !spirv.array<4 x i32>
+  // CHECK: llvm.mlir.zero : !llvm.struct<packed (i32, ptr)>
+  %2 = spirv.Constant #spirv.null : !spirv.struct<(i32, !spirv.ptr<f32, Function>)>
+  spirv.Return
+}
