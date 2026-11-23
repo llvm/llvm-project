@@ -433,6 +433,11 @@ struct LegalizeMultiTileTransferWriteAsStoreLoop
       return rewriter.notifyMatchFailure(writeOp,
                                          "TODO: transpose unsupported");
 
+    // The loop writes every row, so the rows must be in bounds.
+    if (!writeOp.isDimInBounds(0))
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "out-of-bounds rows are unsupported");
+
     auto vectorType = writeOp.getVectorType();
     if (!isMultipleOfSMETileVectorType(vectorType))
       return rewriter.notifyMatchFailure(writeOp,

@@ -291,6 +291,20 @@ func.func @negative_transfer_write_f32_scalable_32x32(%dest: memref<?x?xf32>, %d
 
 // -----
 
+// Writes whose rows may be out of bounds are not supported for the store loop
+// lowering. They are split into tile writes, which keep `in_bounds`.
+
+// CHECK-LABEL: @negative_transfer_write_f32_scalable_8x8_out_of_bounds_rows
+// CHECK-NOT: scf.for
+// CHECK-COUNT-4: vector.transfer_write {{.*}} {in_bounds = [false, true]} : vector<[4]x[4]xf32>, memref<?x?xf32>
+func.func @negative_transfer_write_f32_scalable_8x8_out_of_bounds_rows(%dest: memref<?x?xf32>, %vec: vector<[8]x[8]xf32>, %y: index, %x: index)
+{
+  vector.transfer_write %vec, %dest[%y, %x] {in_bounds = [false, true]} : vector<[8]x[8]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
 #transpose = affine_map<(d0, d1) -> (d1, d0)>
 
 // CHECK-LABEL: @transpose_f32_scalable_4x16_via_read(
