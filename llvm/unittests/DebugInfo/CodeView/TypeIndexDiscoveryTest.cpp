@@ -57,7 +57,11 @@ protected:
   template <typename... T> void writeFieldList(T &&... MemberRecords) {
     CRB->begin(ContinuationRecordKind::FieldList);
     writeFieldListImpl(std::forward<T>(MemberRecords)...);
-    auto Records = CRB->end(TTB->nextTypeIndex());
+    std::vector<CVType> Records;
+    CRB->end([&](ArrayRef<uint8_t> Segment) {
+      Records.emplace_back(Segment);
+      return TypeIndex::fromArrayIndex(Records.size() - 1);
+    });
     ASSERT_EQ(1u, Records.size());
     TTB->insertRecordBytes(Records.front().RecordData);
     discoverAllTypeIndices();
