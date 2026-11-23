@@ -2231,7 +2231,7 @@ class BaseMemOpClusterMutation : public ScheduleDAGMutation {
   /// Encodes a relationship between two memops, A and B. Here, a path is 'safe'
   /// if it is of length 1 and consists of only memory or barrier edges.
   enum class MemOpRelationship {
-    Path,       ///< There is an unsafe path in either direction.
+    UnsafePath, ///< There is an unsafe path in either direction.
     Unrelated,  ///< The two memops are mutually unreachable.
     DirectOrd,  ///< All paths from A to B are safe and there is such a path.
     ReverseOrd, ///< All paths from B to A are safe and there is such a path.
@@ -2316,12 +2316,12 @@ BaseMemOpClusterMutation::computeRelationship(ScheduleDAGInstrs *DAG,
       continue;
     if (Succ.getSUnit() == SUb) {
       if (!Succ.isNormalMemoryOrBarrier())
-        return MemOpRelationship::Path;
+        return MemOpRelationship::UnsafePath;
       continue;
     }
 
     if (DAG->IsReachable(SUb, Succ.getSUnit()))
-      return MemOpRelationship::Path;
+      return MemOpRelationship::UnsafePath;
   }
 
   return Reverse ? MemOpRelationship::ReverseOrd : MemOpRelationship::DirectOrd;
@@ -2344,12 +2344,12 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
   for (unsigned Idx = 0, End = MemOpRecords.size(); Idx < (End - 1); ++Idx) {
     // Decision to cluster mem ops is taken based on target dependent logic
     auto MemOpa = MemOpRecords[Idx];
-    MemOpRelationship Relationship = MemOpRelationship::Path;
+    MemOpRelationship Relationship = MemOpRelationship::UnsafePath;
 
     // Seek for the next load/store to do the cluster.
     unsigned NextIdx = Idx + 1;
     for (; NextIdx < End; ++NextIdx) {
-      // Skip if MemOpb has been clustered already or can't cluster with MemOpa.
+      // Skip if MemOpb has been clustered already.
       if (SUnit2ClusterInfo.count(MemOpRecords[NextIdx].SU->NodeNum))
         continue;
 
@@ -2362,7 +2362,7 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
       Relationship =
           computeRelationship(DAG, MemOpa.SU, MemOpRecords[NextIdx].SU);
-      if (Relationship != MemOpRelationship::Path)
+      if (Relationship != MemOpRelationship::UnsafePath)
         break;
     }
 
@@ -2399,8 +2399,11 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
 
     // This check is necessary to ensure we don't create a cycle with
     // FastCluster enabled.
-    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster)))
+    if (!DAG->addEdge(SUb, SDep(SUa, SDep::Cluster))) {
+      assert(FastCluster &&
+             "Adding an edge would create a cycle without FastCluster enabled");
       continue;
+    }
 
     Clusters.unionSets(SUa, SUb);
     LLVM_DEBUG(dbgs() << "Cluster ld/st " << *SUa << " - " << *SUb << "\n");
