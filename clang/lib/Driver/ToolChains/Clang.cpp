@@ -9793,9 +9793,8 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     // Add one "code=" per Intel GPU requested for this IGCA target.
     // llvm-offload-binary joins them, so the image gets
     // "code=xe-mtl-h,xe-mtl-u".
-    if (OffloadAction->getOffloadingDeviceKind() == Action::OFK_SYCL)
-      for (StringRef Device : C.getIGCADevices(TC, Arch.ArchName))
-        Parts.emplace_back("code=" + Device.str());
+    for (StringRef Device : C.getIGCADevices(TC, Arch.ArchName))
+      Parts.emplace_back("code=" + Device.str());
 
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))
       for (StringRef Feature : FeatureArgs)

@@ -4154,6 +4154,9 @@ Driver::getOffloadArchs(Compilation &C, const llvm::opt::DerivedArgList &Args,
   // For SYCL, compile once per IGCA target, e.g. once for igca_30r for both
   // xe-mtl-u and xe-mtl-h, and record its Intel GPUs for ahead-of-time
   // compilation.
+  // TODO: Do this for other offload kinds too. Their SPIR-V device link
+  // (spirv-link or llvm-lto) doesn't run ocloc for the "code" list yet; only
+  // the SYCL device link (clang-sycl-linker) does.
   if (Kind == Action::OFK_SYCL) {
     llvm::DenseSet<StringRef> Targets;
     for (StringRef Arch : Archs) {

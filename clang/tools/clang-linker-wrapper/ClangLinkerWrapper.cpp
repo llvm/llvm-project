@@ -1401,6 +1401,13 @@ Error emitExtractCommands(
   StringSaver Saver(Alloc);
   MapVector<StringRef, SmallVector<StringRef>> Commands;
   DenseSet<StringRef> Seen;
+  // Filter on an empty "code" only if some image has one, so that an image
+  // without "code" does not also match one with it for the same architecture.
+  bool AnyCode = llvm::any_of(InputsForTarget, [](const auto &Input) {
+    return llvm::any_of(Input, [](const OffloadFile &File) {
+      return !File.getBinary()->getString("code").empty();
+    });
+  });
   for (const auto &Input : InputsForTarget) {
     for (const OffloadFile &File : Input) {
       const OffloadBinary &Binary = *File.getBinary();
@@ -1419,10 +1426,8 @@ Error emitExtractCommands(
               .str();
       if (!Binary.getArch().empty())
         ImageArg += (",arch=" + Binary.getArch()).str();
-      // Filter on "code", including an empty one, so that an image without
-      // "code" does not also match one with it for the same architecture.
       SmallVector<StringRef> Devices = getCodeDevices(Binary);
-      if (Devices.empty())
+      if (Devices.empty() && AnyCode)
         ImageArg += ",code=";
       for (StringRef Device : Devices)
         ImageArg += (",code=" + Device).str();
