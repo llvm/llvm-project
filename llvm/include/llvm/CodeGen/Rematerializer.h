@@ -40,8 +40,8 @@ namespace llvm {
 /// 3. All defining instructions are deemed rematerializable by the TII and
 ///    don't have any physical register use that is both non-constant and
 ///    non-ignorable.
-/// 4. The register has at least one non-debug use that is inside or at a region
-///    boundary (see below for what we consider to be a region).
+/// 4. The register has at least one non-debug use that is inside a region (see
+///    below for what we consider to be a region).
 ///
 /// Rematerializable registers (represented by \ref Rematerializer::Reg) form a
 /// DAG of their own, with every register having incoming edges from all
@@ -230,9 +230,10 @@ public:
 
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  LLVM_ABI Rematerializer(MachineFunction &MF,
-                          MutableArrayRef<RegionBoundaries> Regions,
-                          LiveIntervals &LIS);
+  Rematerializer(MachineFunction &MF, MutableArrayRef<RegionBoundaries> Regions,
+                 LiveIntervals &LIS)
+      : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
+        TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {}
 
   /// Goes through the whole MF and identifies all rematerializable registers.
   /// Returns whether there is any rematerializable register in regions.

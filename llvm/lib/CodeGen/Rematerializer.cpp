@@ -447,29 +447,6 @@ void Rematerializer::preDeletion(RegisterIdx DeleteRegIdx) {
     Rematerializations.erase(OriginIdx);
 }
 
-Rematerializer::Rematerializer(MachineFunction &MF,
-                               MutableArrayRef<RegionBoundaries> Regions,
-                               LiveIntervals &LIS)
-    : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
-      TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {
-#ifdef EXPENSIVE_CHECKS
-  // Check that regions are valid.
-  DenseSet<MachineInstr *> SeenMIs;
-  for (const auto &[RegionBegin, RegionEnd] : Regions) {
-    assert(RegionBegin != RegionEnd && "empty region");
-    for (auto MI = RegionBegin; MI != RegionEnd; ++MI) {
-      bool IsNewMI = SeenMIs.insert(&*MI).second;
-      assert(IsNewMI && "overlapping regions");
-      assert(!MI->isTerminator() && "terminator in region");
-    }
-    if (RegionEnd != RegionBegin->getParent()->end()) {
-      bool IsNewMI = SeenMIs.insert(&*RegionEnd).second;
-      assert(IsNewMI && "overlapping regions (upper bound)");
-    }
-  }
-#endif
-}
-
 bool Rematerializer::analyze() {
   Regs.clear();
   UnrematableDeps.clear();
@@ -480,27 +457,22 @@ bool Rematerializer::analyze() {
   if (Regions.empty())
     return false;
 
-  /// Maps all MIs to their parent region. Region terminators are considered
-  /// part of the region they terminate.
+  /// Maps all MIs to their parent region.
   DenseMap<MachineInstr *, unsigned> MIRegion;
 
   // Initialize MI to containing region mapping.
-  RegionMBB.reserve(Regions.size());
-  for (unsigned I = 0, E = Regions.size(); I < E; ++I) {
-    RegionBoundaries Region = Regions[I];
-    assert(Region.first != Region.second && "empty cannot be region");
-    for (auto MI = Region.first; MI != Region.second; ++MI) {
-      assert(!MIRegion.contains(&*MI) && "regions should not intersect");
-      MIRegion.insert({&*MI, I});
-    }
-    MachineBasicBlock &MBB = *Region.first->getParent();
-    RegionMBB.push_back(&MBB);
-
-    // A terminator instruction is considered part of the region it terminates.
-    if (Region.second != MBB.end()) {
-      MachineInstr *RegionTerm = &*Region.second;
-      assert(!MIRegion.contains(RegionTerm) && "regions should not intersect");
-      MIRegion.insert({RegionTerm, I});
+  RegionMBB.resize(Regions.size(), nullptr);
+  for (const auto &[RegionIdx, RegionBounds] : enumerate(Regions)) {
+    auto [MI, End] = RegionBounds;
+    MI = skipDebugInstructionsForward(MI, End);
+    assert(MI != End && "empty region");
+    RegionMBB[RegionIdx] = MI->getParent();
+    for (; MI != End; ++MI) {
+      if (MI->isDebugInstr())
+        continue;
+      assert(!MI->isTerminator() && "no terminator allowed in region");
+      if (!MIRegion.insert({&*MI, RegionIdx}).second)
+        llvm_unreachable("overlapping regions");
     }
   }
 
