@@ -267,4 +267,3 @@ LoadCommands:
 # CASE4-NEXT:     Name: __TEXT{{$}}
 # CASE4:          nsects: 3
 # CASE4-NOT:    Segment {
-
