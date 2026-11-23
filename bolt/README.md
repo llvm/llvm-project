@@ -132,7 +132,6 @@ final link step of your application.
 > You can verify the presence of relocations by checking for `.rela.text`
 > section in the binary. BOLT will also report if it detects relocations while
 > processing the binary.
-BOLT will also report if it detects relocations while processing the binary.
 
 ### Step 1: Collect Profile
 
