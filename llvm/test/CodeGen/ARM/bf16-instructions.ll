@@ -370,9 +370,6 @@ define bfloat @test_call(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    vmov s1, r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r1
 ; CHECK-NOFP16-NEXT:    bl test_callee
-; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    vmov s0, r0
 ; CHECK-NOFP16-NEXT:    pop {r11, pc}
 ;
 ; CHECK-FP16-LABEL: test_call:
@@ -411,9 +408,6 @@ define bfloat @test_call_flipped(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    vmov s1, r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r1
 ; CHECK-NOFP16-NEXT:    bl test_callee
-; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    vmov s0, r0
 ; CHECK-NOFP16-NEXT:    pop {r11, pc}
 ;
 ; CHECK-FP16-LABEL: test_call_flipped:
@@ -470,12 +464,10 @@ define bfloat @test_select(bfloat %a, bfloat %b, i1 zeroext %c) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_select:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    vmov r2, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s1
 ; CHECK-NOFP16-NEXT:    cmp r0, #0
-; CHECK-NOFP16-NEXT:    vmov r1, s0
-; CHECK-NOFP16-NEXT:    uxth r2, r2
-; CHECK-NOFP16-NEXT:    uxthne r2, r1
-; CHECK-NOFP16-NEXT:    vmov s0, r2
+; CHECK-NOFP16-NEXT:    vmovne r1, s0
+; CHECK-NOFP16-NEXT:    vmov s0, r1
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_select:
@@ -507,16 +499,14 @@ define bfloat @test_select_cc(bfloat %a, bfloat %b, bfloat %c, bfloat %d) #0 {
 ; CHECK-NOFP16:       @ %bb.0:
 ; CHECK-NOFP16-NEXT:    vmov r0, s3
 ; CHECK-NOFP16-NEXT:    vmov r1, s2
-; CHECK-NOFP16-NEXT:    vmov r2, s0
-; CHECK-NOFP16-NEXT:    vmov r3, s1
 ; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
-; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
 ; CHECK-NOFP16-NEXT:    vmov s2, r0
-; CHECK-NOFP16-NEXT:    uxth r0, r3
-; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
+; CHECK-NOFP16-NEXT:    vmov s4, r0
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vcmp.f32 s4, s2
 ; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP16-NEXT:    uxthne r0, r2
+; CHECK-NOFP16-NEXT:    vmovne r0, s0
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
@@ -594,13 +584,11 @@ define bfloat @test_select_cc_bf16_f32(bfloat %a, bfloat %b, float %c, float %d)
 ;
 ; CHECK-NOFP16-LABEL: test_select_cc_bf16_f32:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    vmov r1, s1
 ; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s3
-; CHECK-NOFP16-NEXT:    vmov r0, s0
 ; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP16-NEXT:    uxth r1, r1
-; CHECK-NOFP16-NEXT:    uxthne r1, r0
-; CHECK-NOFP16-NEXT:    vmov s0, r1
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmovne r0, s0
+; CHECK-NOFP16-NEXT:    vmov s0, r0
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_select_cc_bf16_f32:
@@ -1298,14 +1286,13 @@ define void @test_fccmp(bfloat %in, ptr %out) {
 ; CHECK-NOFP16-NEXT:    ldrh r1, [r1]
 ; CHECK-NOFP16-NEXT:    lsl r3, r2, #16
 ; CHECK-NOFP16-NEXT:    vmov s2, r3
-; CHECK-NOFP16-NEXT:    mov r3, r1
 ; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s0
 ; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
 ; CHECK-NOFP16-NEXT:    vcmp.f32 s2, s4
-; CHECK-NOFP16-NEXT:    uxthmi r3, r2
+; CHECK-NOFP16-NEXT:    movpl r2, r1
 ; CHECK-NOFP16-NEXT:    vmrs APSR_nzcv, fpscr
-; CHECK-NOFP16-NEXT:    movle r3, r1
-; CHECK-NOFP16-NEXT:    strh r3, [r0]
+; CHECK-NOFP16-NEXT:    movle r2, r1
+; CHECK-NOFP16-NEXT:    strh r2, [r0]
 ; CHECK-NOFP16-NEXT:    bx lr
 ; CHECK-NOFP16-NEXT:    .p2align 2
 ; CHECK-NOFP16-NEXT:  @ %bb.1:
@@ -1553,10 +1540,16 @@ define bfloat @test_fptrunc_float(float %a) #0 {
   ret bfloat %r
 }
 
-;define bfloat @test_fptrunc_double(double %a) #0 {
-;  %r = fptrunc double %a to bfloat
-;  ret bfloat %r
-;}
+define bfloat @test_fptrunc_double(double %a) #0 {
+; CHECK-LABEL: test_fptrunc_double:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __truncdfbf2
+; CHECK-NEXT:    pop {r11, pc}
+  %r = fptrunc double %a to bfloat
+  ret bfloat %r
+}
 
 define bfloat @test_fptrunc_float_fast(float %a) #0 {
 ; CHECK-CVT-LABEL: test_fptrunc_float_fast:
@@ -1574,10 +1567,16 @@ define bfloat @test_fptrunc_float_fast(float %a) #0 {
   ret bfloat %r
 }
 
-;define bfloat @test_fptrunc_double_fast(double %a) #0 {
-;  %r = fptrunc fast double %a to bfloat
-;  ret bfloat %r
-;}
+define bfloat @test_fptrunc_double_fast(double %a) #0 {
+; CHECK-LABEL: test_fptrunc_double_fast:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    .save {r11, lr}
+; CHECK-NEXT:    push {r11, lr}
+; CHECK-NEXT:    bl __truncdfbf2
+; CHECK-NEXT:    pop {r11, pc}
+  %r = fptrunc fast double %a to bfloat
+  ret bfloat %r
+}
 
 define float @test_fpext_float(bfloat %a) #0 {
 ; CHECK-LABEL: test_fpext_float:
@@ -2242,7 +2241,6 @@ define bfloat @test_fneg(bfloat %a) #0 {
 ; CHECK-NOFP16:       @ %bb.0:
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
 ; CHECK-NOFP16-NEXT:    eor r0, r0, #32768
-; CHECK-NOFP16-NEXT:    uxth r0, r0
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
@@ -2332,10 +2330,9 @@ define bfloat @test_copysign(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s1
 ; CHECK-NOFP16-NEXT:    vmov r1, s0
-; CHECK-NOFP16-NEXT:    uxth r0, r0
 ; CHECK-NOFP16-NEXT:    strh r0, [sp]
-; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    lsr r0, r0, #7
 ; CHECK-NOFP16-NEXT:    bfi r1, r0, #15, #1
 ; CHECK-NOFP16-NEXT:    vmov s0, r1
@@ -2452,10 +2449,9 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s1
 ; CHECK-NOFP16-NEXT:    vmov r1, s0
-; CHECK-NOFP16-NEXT:    uxth r0, r0
 ; CHECK-NOFP16-NEXT:    strh r0, [sp]
-; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    lsr r0, r0, #7
 ; CHECK-NOFP16-NEXT:    bfi r1, r0, #15, #1
 ; CHECK-NOFP16-NEXT:    lsl r0, r1, #16

@@ -22,12 +22,10 @@ define arm_aapcscc bfloat @callee_soft_bfloat_in_reg(bfloat %f) {
 ;
 ; LE-BF16-LABEL: callee_soft_bfloat_in_reg:
 ; LE-BF16:       @ %bb.0: @ %entry
-; LE-BF16-NEXT:    uxth r0, r0
 ; LE-BF16-NEXT:    bx lr
 ;
 ; BE-BF16-LABEL: callee_soft_bfloat_in_reg:
 ; BE-BF16:       @ %bb.0: @ %entry
-; BE-BF16-NEXT:    uxth r0, r0
 ; BE-BF16-NEXT:    bx lr
 ;
 ; LE-GISEL-LABEL: callee_soft_bfloat_in_reg:
@@ -187,16 +185,10 @@ define arm_aapcs_vfpcc bfloat @callee_hard_bfloat_in_reg(bfloat %f) {
 ;
 ; LE-BF16-LABEL: callee_hard_bfloat_in_reg:
 ; LE-BF16:       @ %bb.0: @ %entry
-; LE-BF16-NEXT:    vmov r0, s0
-; LE-BF16-NEXT:    uxth r0, r0
-; LE-BF16-NEXT:    vmov s0, r0
 ; LE-BF16-NEXT:    bx lr
 ;
 ; BE-BF16-LABEL: callee_hard_bfloat_in_reg:
 ; BE-BF16:       @ %bb.0: @ %entry
-; BE-BF16-NEXT:    vmov r0, s0
-; BE-BF16-NEXT:    uxth r0, r0
-; BE-BF16-NEXT:    vmov s0, r0
 ; BE-BF16-NEXT:    bx lr
 ;
 ; LE-GISEL-LABEL: callee_hard_bfloat_in_reg:
