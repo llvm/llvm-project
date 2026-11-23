@@ -704,6 +704,94 @@ static llvm::Type *getAggregateType(llvm::Type *ScalarTy, QualType ArgTy) {
   return ScalarTy;
 }
 
+static Align getRawBufferAlignment(const DataLayout &DL, llvm::Type *Ty) {
+  // HLSL records are packed, so Ty's alignment is potentially bad.
+  // Instead use the guarantee that structs are aligned to that of the largest
+  // scalar element type (of vectors, arrays, or scalars themselves)
+  if (auto *ST = dyn_cast<llvm::StructType>(Ty)) {
+    Align Alignment(1);
+    for (llvm::Type *ElementTy : ST->elements())
+      Alignment = std::max(Alignment, getRawBufferAlignment(DL, ElementTy));
+    return Alignment;
+  }
+  if (auto *AT = dyn_cast<llvm::ArrayType>(Ty))
+    return getRawBufferAlignment(DL, AT->getElementType());
+  return DL.getABITypeAlign(Ty->getScalarType());
+}
+
+static Value *emitRawBufferAccess(CodeGenFunction &CGF, llvm::Type *Ty,
+                                  Value *Handle, Value *Offset, Align Alignment,
+                                  Value *Stored = nullptr) {
+  auto &B = CGF.Builder;
+  const DataLayout &DL = CGF.CGM.getDataLayout();
+  // Split aggregates into loads/stores of their elements
+  if (Ty->isAggregateType()) {
+    auto *ST = dyn_cast<llvm::StructType>(Ty);
+    auto *AT = dyn_cast<llvm::ArrayType>(Ty);
+    assert((ST || AT) && "expected a struct or array aggregate");
+    unsigned Count = ST ? ST->getNumElements() : AT->getNumElements();
+    Value *Result = PoisonValue::get(Ty);
+    for (unsigned I = 0; I != Count; ++I) {
+      llvm::Type *ElementTy = ST ? ST->getElementType(I) : AT->getElementType();
+      uint64_t ByteOffset =
+          ST ? DL.getStructLayout(ST)->getElementOffset(I)
+             : I * DL.getTypeAllocSize(ElementTy).getFixedValue();
+      Value *Element = emitRawBufferAccess(
+          CGF, ElementTy, Handle, B.CreateAdd(Offset, B.getInt32(ByteOffset)),
+          commonAlignment(Alignment, ByteOffset),
+          Stored ? B.CreateExtractValue(Stored, {I}) : nullptr);
+      if (!Stored)
+        Result = B.CreateInsertValue(Result, Element, {I});
+    }
+    return Result;
+  }
+  // For DXIL, split long vectors into 4-element chunks. SPIRV can make
+  // this decision later, because untyped pointers + long vectors extensions
+  // make this unecessary.
+  // TODO, this could be done in backend-independent pass
+  if (auto *VT = dyn_cast<llvm::FixedVectorType>(Ty);
+      CGF.CGM.getTriple().isDXIL() && VT && VT->getNumElements() > 4) {
+    Value *Result = PoisonValue::get(Ty);
+    llvm::Type *ScalarTy = VT->getElementType();
+    uint64_t Stride = DL.getTypeStoreSize(ScalarTy).getFixedValue();
+    for (unsigned I = 0; I < VT->getNumElements(); I += 4) {
+      unsigned Count = std::min(4u, VT->getNumElements() - I);
+      auto *ChunkTy = llvm::FixedVectorType::get(ScalarTy, Count);
+      SmallVector<int, 4> Mask;
+      for (unsigned J = 0; J != Count; ++J)
+        Mask.push_back(I + J);
+      Value *Chunk = emitRawBufferAccess(
+          CGF, ChunkTy, Handle, B.CreateAdd(Offset, B.getInt32(I * Stride)),
+          commonAlignment(Alignment, I * Stride),
+          Stored ? B.CreateShuffleVector(Stored, Mask) : nullptr);
+      if (!Stored)
+        for (unsigned J = 0; J != Count; ++J)
+          Result = B.CreateInsertElement(
+              Result, B.CreateExtractElement(Chunk, J), I + J);
+    }
+    return Result;
+  }
+  if (CGF.CGM.getTriple().isSPIRV()) {
+    if (Stored)
+      return CGF.EmitIntrinsicCall(
+          Intrinsic::spv_resource_store_rawbuffer, {Handle->getType(), Ty},
+          {Handle, Offset, Stored, B.getInt32(Alignment.value())});
+    return CGF.EmitIntrinsicCall(
+        Intrinsic::spv_resource_load_rawbuffer, {Ty, Handle->getType()},
+        {Handle, Offset, B.getInt32(Alignment.value())});
+  }
+  Value *UnusedOffset = PoisonValue::get(B.getInt32Ty());
+  if (Stored)
+    return B.CreateIntrinsic(Intrinsic::dx_resource_store_rawbuffer,
+                             {Handle->getType(), Ty},
+                             {Handle, Offset, UnusedOffset, Stored});
+  llvm::Type *ResultTy = llvm::StructType::get(Ty, B.getInt1Ty());
+  Value *Loaded =
+      B.CreateIntrinsic(ResultTy, Intrinsic::dx_resource_load_rawbuffer,
+                        {Handle, Offset, UnusedOffset});
+  return B.CreateExtractValue(Loaded, {0});
+}
+
 Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                             const CallExpr *E,
                                             ReturnValueSlot ReturnValue) {
@@ -1954,6 +2042,34 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     llvm::Value *DefaultVal = EmitScalarExpr(E->getArg(1));
     llvm::Value *Args[] = {SpecId, DefaultVal};
     return Builder.CreateCall(SpecConstantFn, Args);
+  }
+  case Builtin::BI__builtin_hlsl_resource_load_rawbuffer: {
+    Value *Handle = EmitScalarExpr(E->getArg(0));
+    Value *Offset = EmitScalarExpr(E->getArg(1));
+    bool IsAggregate = hasAggregateEvaluationKind(E->getType());
+    llvm::Type *Ty =
+        IsAggregate
+            ? ConvertTypeForMem(E->getType())
+            : convertTypeForLoadStore(E->getType(), ConvertType(E->getType()));
+    Align Alignment = getRawBufferAlignment(CGM.getDataLayout(), Ty);
+    Value *Loaded = emitRawBufferAccess(*this, Ty, Handle, Offset, Alignment);
+    if (IsAggregate)
+      Builder.CreateStore(Loaded, ReturnValue.getAddress());
+    return IsAggregate ? Loaded : EmitFromMemory(Loaded, E->getType());
+  }
+  case Builtin::BI__builtin_hlsl_resource_store_rawbuffer: {
+    Value *Handle = EmitScalarExpr(E->getArg(0));
+    Value *Offset = EmitScalarExpr(E->getArg(1));
+    const Expr *ValueExpr = E->getArg(2);
+    RValue Stored = EmitAnyExpr(ValueExpr);
+    Value *Data =
+        Stored.isAggregate()
+            ? Builder.CreateLoad(Stored.getAggregateAddress())
+            : EmitToMemory(Stored.getScalarVal(), ValueExpr->getType());
+    Align Alignment =
+        getRawBufferAlignment(CGM.getDataLayout(), Data->getType());
+    return emitRawBufferAccess(*this, Data->getType(), Handle, Offset,
+                               Alignment, Data);
   }
   }
   return nullptr;

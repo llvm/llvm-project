@@ -838,19 +838,15 @@ class SPIRVLegalizePointerCastImpl {
         return;
       // We still need to split long vectors into smaller parts
 
-      if (SC != SPIRV::StorageClass::Uniform) {
-        // For Vulkan, uniform storage class has stride/alignment requirements
-        // without the uniformBufferStandardLayout feature
-        Type *ViewTy = ArrayType::get(AccessTy->getElementType(),
-                                      AccessTy->getNumElements());
-        IRBuilder<> ViewBuilder(II);
-        OriginalOperand = buildIntrWithMD(
-            Intrinsic::spv_ptrcast, {II->getType(), II->getType()},
-            PoisonValue::get(ViewTy), OriginalOperand,
-            {ViewBuilder.getInt32(getPointerAddressSpace(II->getType()))},
-            ViewBuilder);
-        GR->buildAssignPtr(ViewBuilder, ViewTy, OriginalOperand);
-      }
+      Type *ViewTy =
+          ArrayType::get(AccessTy->getElementType(), AccessTy->getNumElements());
+      IRBuilder<> ViewBuilder(II);
+      OriginalOperand = buildIntrWithMD(
+          Intrinsic::spv_ptrcast, {II->getType(), II->getType()},
+          PoisonValue::get(ViewTy), OriginalOperand,
+          {ViewBuilder.getInt32(getPointerAddressSpace(II->getType()))},
+          ViewBuilder);
+      GR->buildAssignPtr(ViewBuilder, ViewTy, OriginalOperand);
     }
 
     IRBuilder<> B(*II->getModule());

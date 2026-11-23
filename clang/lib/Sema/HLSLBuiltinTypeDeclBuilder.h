@@ -139,17 +139,18 @@ public:
                                               bool IsArray = false);
   BuiltinTypeDeclBuilder &addIncrementCounterMethod();
   BuiltinTypeDeclBuilder &addDecrementCounterMethod();
-  BuiltinTypeDeclBuilder &addHandleAccessFunction(DeclarationName &Name,
-                                                  bool IsConstReturn,
-                                                  bool IsRef, QualType IndexTy,
-                                                  QualType ElemTy = QualType(),
-                                                  bool TransposeResult = false);
+  BuiltinTypeDeclBuilder &
+  addHandleAccessFunction(DeclarationName &Name, bool IsConstReturn, bool IsRef,
+                          QualType IndexTy, QualType ElemTy = QualType(),
+                          bool TransposeResult = false,
+                          bool IsByteAddressBuffer = false);
   BuiltinTypeDeclBuilder &
   addLoadWithStatusFunction(DeclarationName &Name,
                             QualType ReturnTy = QualType());
-  BuiltinTypeDeclBuilder &addStoreFunction(DeclarationName &Name, bool IsConst,
-                                           QualType ValueType,
-                                           bool TransposeArg = false);
+  BuiltinTypeDeclBuilder &
+  addByteAddressBufferStoreFunction(DeclarationName &Name, bool IsConst,
+                                    QualType ValueType,
+                                    bool TransposeArg = false);
   BuiltinTypeDeclBuilder &
   addByteAddressBufferInterlockedMethod(StringRef MethodName, QualType ValueTy,
                                         StringRef BuiltinName,

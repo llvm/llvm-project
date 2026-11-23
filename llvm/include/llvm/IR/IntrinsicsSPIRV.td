@@ -712,6 +712,20 @@ let TargetPrefix = "spv" in {
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty],
                               [IntrNoMem, IntrConvergent]>;
 
+  // Scalar/vector ByteAddressBuffer accesses. Offsets and alignment are in bytes.
+  def int_spv_resource_load_rawbuffer
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_any_ty, llvm_i32_ty, llvm_i32_ty],
+                              [IntrReadMem, IntrConvergent,
+                               ImmArg<ArgIndex<2>>]>;
+
+  def int_spv_resource_store_rawbuffer
+      : DefaultAttrsIntrinsic<[],
+                              [llvm_any_ty, llvm_i32_ty, llvm_any_ty,
+                               llvm_i32_ty],
+                              [IntrWriteMem, IntrConvergent,
+                               ImmArg<ArgIndex<3>>]>;
+
   def int_spv_pushconstant_getpointer
       : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_any_ty], [IntrNoMem]>;
 

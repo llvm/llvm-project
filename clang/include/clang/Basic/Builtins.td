@@ -5465,6 +5465,18 @@ def HLSLResourceGetPointerTyped : Builtin {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceLoadRawBuffer : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_rawbuffer"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceStoreRawBuffer : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_store_rawbuffer"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def HLSLMaybeTransposeMatrix : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_transpose_if_memory_is_row_major"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

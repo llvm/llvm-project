@@ -572,6 +572,22 @@ SPIR-V backend, along with their descriptions and argument details.
        return type is a scalar, then the first element of the vector is
        returned. If the return type is an n-element vector, then the first
        n-elements of the 4-element vector are returned.
+   * - `int_spv_resource_load_rawbuffer`
+     - `T`
+     - `[Handle, i32 byteOffset, i32 alignment]`
+     - Loads a value of type `T` from a ByteAddressBuffer. `byteOffset` is a
+       byte count, not an element index. `alignment` must be a nonzero constant
+       power of two specifying the guaranteed alignment of the memory access;
+       it is independent of the size of `T`. For example, a `float3` access can
+       have a byte offset of 12 and an alignment of 4. `T` is a numeric scalar
+       or vector; Clang emits separate accesses for aggregate fields. The
+       backend selects typed resource aliases or untyped pointers according
+       to target support.
+   * - `int_spv_resource_store_rawbuffer`
+     - None
+     - `[Handle, i32 byteOffset, T value, i32 alignment]`
+     - Stores a value to a ByteAddressBuffer, with the same byte-offset,
+       alignment, and layout conventions as `int_spv_resource_load_rawbuffer`.
    * - `int_spv_resource_store_typedbuffer`
      - void
      - `[spirv.Image Image, 32-bit Integer coordinate, vec4 data]`

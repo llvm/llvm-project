@@ -133,7 +133,6 @@ bool SPIRVSubtarget::canUseUntypedPointers(
   if (!canUseExtension(SPIRV::Extension::SPV_KHR_untyped_pointers))
     return false;
   return !isShader() || SC == SPIRV::StorageClass::StorageBuffer ||
-         SC == SPIRV::StorageClass::Uniform ||
          SC == SPIRV::StorageClass::PhysicalStorageBufferEXT;
 }
 
