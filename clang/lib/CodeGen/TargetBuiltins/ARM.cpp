@@ -2283,18 +2283,11 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
 
   if (BuiltinID == clang::ARM::BI_MulHigh ||
       BuiltinID == clang::ARM::BI_MulUnsignedHigh) {
-    bool IsSigned = BuiltinID == clang::ARM::BI_MulHigh;
-    llvm::Type *ResType = ConvertType(E->getType());
-    Value *LHS =
-        Builder.CreateIntCast(EmitScalarExpr(E->getArg(0)), Int64Ty, IsSigned);
-    Value *RHS =
-        Builder.CreateIntCast(EmitScalarExpr(E->getArg(1)), Int64Ty, IsSigned);
-    Value *HigherBits;
-    if (IsSigned)
-      HigherBits = Builder.CreateAShr(Builder.CreateNSWMul(LHS, RHS), 32);
-    else
-      HigherBits = Builder.CreateLShr(Builder.CreateNUWMul(LHS, RHS), 32);
-    return Builder.CreateIntCast(HigherBits, ResType, IsSigned);
+    Intrinsic::ID IID = BuiltinID == clang::ARM::BI_MulHigh ? Intrinsic::smulh
+                                                            : Intrinsic::umulh;
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateBinaryIntrinsic(IID, LHS, RHS);
   }
 
   if (BuiltinID == clang::ARM::BI_ReadStatusReg) {
