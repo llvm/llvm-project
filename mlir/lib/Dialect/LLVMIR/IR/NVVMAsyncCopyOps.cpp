@@ -22,7 +22,6 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
-#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/Casting.h"
 
 #include <array>
@@ -295,14 +294,33 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   auto ord = getOrd();
   Value newVal = getNewValue();
   auto newValAttr = getNewValueAttr();
-  auto fieldName = stringifyEnum(getField());
+  auto allocClass = getAllocClass();
+
+  if (!getField()) {
+    if (!allocClass)
+      return emitOpError("either field or alloc_class must be specified");
+    if (ord || newVal || newValAttr)
+      return emitOpError(
+          "new_value and ordinal are not supported without a field");
+    if (*allocClass == NVVM::TensormapAllocClass::SAME)
+      return emitOpError(
+          "same alloc_class is only supported for global_address field");
+    return success();
+  }
+
+  NVVM::TensormapField field = *getField();
+  auto fieldName = stringifyEnum(field);
 
   if (ord && !llvm::is_contained({NVVM::TensormapField::BOX_DIM,
                                   NVVM::TensormapField::GLOBAL_DIM,
                                   NVVM::TensormapField::GLOBAL_STRIDE,
                                   NVVM::TensormapField::ELEMENT_STRIDE},
-                                 getField()))
+                                 field))
     return emitOpError("ordinal is not supported for ")
+           << fieldName << " field";
+
+  if (allocClass && field != NVVM::TensormapField::GLOBAL_ADDRESS)
+    return emitOpError("alloc_class is not supported for ")
            << fieldName << " field";
 
   auto invalidNewVal = [&](llvm::Twine type) -> std::string {
@@ -318,7 +336,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
         .str();
   };
 
-  switch (getField()) {
+  switch (field) {
   case NVVM::TensormapField::GLOBAL_ADDRESS:
     if (!(newVal && newVal.getType().isInteger(64)))
       return emitOpError(invalidNewVal("i64"));
@@ -337,8 +355,7 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   case NVVM::TensormapField::GLOBAL_DIM:
   case NVVM::TensormapField::ELEMENT_STRIDE:
     if (!ord)
-      return emitOpError("ordinal is required for ")
-             << stringifyEnum(getField()) << " field";
+      return emitOpError("ordinal is required for ") << fieldName << " field";
     if (!(newVal && newVal.getType().isInteger(32)))
       return emitOpError(invalidNewVal("i32"));
     break;
@@ -363,6 +380,15 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
       return emitOpError(invalidNewValAttr());
     break;
   }
+
+  return success();
+}
+
+LogicalResult NVVM::TensormapQueryAllocClassLargeOp::verify() {
+  if (getInParamSpace() &&
+      !isPtrInAddrSpace(getAddr(), NVVM::NVVMMemorySpace::Generic))
+    return emitOpError(
+        "in_param_space can only be specified for a generic pointer");
 
   return success();
 }
@@ -946,10 +972,13 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
     args.push_back(builder.getInt32(val));
   }
 
-  // TODO: Add support for the alloc_class qualifier.
-  if (thisOp.getField() == NVVM::TensormapField::GLOBAL_ADDRESS)
-    args.push_back(builder.getInt32(
-        static_cast<unsigned>(llvm::nvvm::TensormapAllocClass::SMALL)));
+  std::optional<NVVM::TensormapField> field = thisOp.getField();
+  if (!field || *field == NVVM::TensormapField::GLOBAL_ADDRESS)
+    args.push_back(builder.getInt32(static_cast<unsigned>(
+        thisOp.getAllocClass().value_or(NVVM::TensormapAllocClass::SMALL))));
+
+  if (!field)
+    return {llvm::Intrinsic::nvvm_tensormap_replace_alloc_class, args};
 
   static constexpr llvm::Intrinsic::ID IDs[] = {
       llvm::Intrinsic::nvvm_tensormap_replace_global_address,
@@ -965,9 +994,20 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
       llvm::Intrinsic::nvvm_tensormap_replace_fill_mode,
   };
 
-  unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
+  unsigned fieldIndex = static_cast<unsigned>(*field);
 
   return {IDs[fieldIndex], args};
+}
+
+mlir::NVVM::IDArgPair TensormapQueryAllocClassLargeOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::TensormapQueryAllocClassLargeOp>(op);
+
+  llvm::Value *addr = mt.lookupValue(thisOp.getAddr());
+  if (thisOp.getInParamSpace())
+    addr = getParamCastedAddr(addr, builder);
+
+  return {llvm::Intrinsic::nvvm_tensormap_query_alloc_class_large, {addr}};
 }
 
 #define GET_OP_CLASSES
