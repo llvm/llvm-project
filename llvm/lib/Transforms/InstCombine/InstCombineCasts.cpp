@@ -2245,12 +2245,29 @@ bool InstCombiner::canBeCastedExactlyIntToFP(Value *V, Type *FPTy,
                                              const Instruction *CtxI) const {
   Type *SrcTy = V->getType();
   assert(SrcTy->isIntOrIntVectorTy() && "Expected an integer type");
-  int SrcSize = (int)SrcTy->getScalarSizeInBits() - IsSigned;
+  int BitWidth = (int)SrcTy->getScalarSizeInBits();
+  int SrcSize = BitWidth - IsSigned;
   int DestNumSigBits = FPTy->getFPMantissaWidth();
+
+  // Besides having enough significant bits, the destination type must also
+  // have enough exponent range to hold the value; otherwise the cast overflows
+  // to infinity (e.g. sitofp i32 INT_MIN to half).
+  //
+  // A value that fits in an N-bit integer of the cast's signedness has a
+  // magnitude of at most 2^(N-1) (signed) or 2^N - 1 (unsigned), so its highest
+  // set bit is at position N - 1 or lower. If the value is also exactly
+  // representable in terms of significant bits, it is finite in the
+  // destination type iff that position is not above the maximum exponent.
+  int DestMaxExp =
+      APFloat::semanticsMaxExponent(FPTy->getScalarType()->getFltSemantics());
+  auto FitsExponentRange = [DestMaxExp](int NumIntBits) {
+    return NumIntBits - 1 <= DestMaxExp;
+  };
+  bool SrcTyFitsExponentRange = FitsExponentRange(BitWidth);
 
   // Easy case - if the source integer type has less bits than the FP mantissa,
   // then the cast must be exact.
-  if (SrcSize <= DestNumSigBits)
+  if (SrcSize <= DestNumSigBits && SrcTyFitsExponentRange)
     return true;
 
   // Cast from FP to integer and back to FP is independent of the intermediate
@@ -2260,35 +2277,50 @@ bool InstCombiner::canBeCastedExactlyIntToFP(Value *V, Type *FPTy,
     // If this is uitofp (fptosi F), the source needs an extra bit to avoid
     // potential rounding of negative FP input values.
     int SrcNumSigBits = F->getType()->getFPMantissaWidth();
-    if (!IsSigned && match(V, m_FPToSI(m_Value())))
+    bool IsUIToFPOfFPToSI = !IsSigned && match(V, m_FPToSI(m_Value()));
+    if (IsUIToFPOfFPToSI)
       SrcNumSigBits++;
+
+    // The magnitude of fpto[su]i F is not larger than the magnitude of F, so it
+    // is in range if the exponent range of F is not wider than the one of the
+    // destination type. This does not hold for uitofp (fptosi F), where a
+    // negative F is reinterpreted as a large unsigned value.
+    bool InRange =
+        SrcTyFitsExponentRange ||
+        (!IsUIToFPOfFPToSI &&
+         APFloat::semanticsMaxExponent(
+             F->getType()->getScalarType()->getFltSemantics()) <= DestMaxExp);
 
     // [su]itofp (fpto[su]i F) --> exact if the source type has less or equal
     // significant bits than the destination (and make sure neither type is
     // weird -- ppc_fp128).
     if (SrcNumSigBits > 0 && DestNumSigBits > 0 &&
-        SrcNumSigBits <= DestNumSigBits)
+        SrcNumSigBits <= DestNumSigBits && InRange)
       return true;
   }
 
   // Try harder to find if the source integer type has less significant bits.
   // Compute number of sign bits or determine trailing zeros.
   KnownBits SrcKnown = computeKnownBits(V, CtxI);
-  int SigBits = (int)SrcTy->getScalarSizeInBits() -
-                SrcKnown.countMinLeadingZeros() -
+  int SigBits = BitWidth - SrcKnown.countMinLeadingZeros() -
                 SrcKnown.countMinTrailingZeros();
-  if (SigBits <= DestNumSigBits)
-    return true;
-
-  // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
-  // (BitWidth - NumSignBits) consume mantissa.
-  if (IsSigned) {
-    SigBits = (int)SrcTy->getScalarSizeInBits() - ComputeNumSignBits(V, CtxI);
-    if (SigBits <= DestNumSigBits)
-      return true;
+  if (SigBits > DestNumSigBits) {
+    // For sitofp, the sign maps to the FP sign bit, so only magnitude bits
+    // (BitWidth - NumSignBits) consume mantissa.
+    if (!IsSigned)
+      return false;
+    SigBits = BitWidth - (int)ComputeNumSignBits(V, CtxI);
+    if (SigBits > DestNumSigBits)
+      return false;
   }
 
-  return false;
+  // The value is exactly representable in terms of significant bits; now make
+  // sure it is also within the exponent range of the destination type.
+  if (SrcTyFitsExponentRange)
+    return true;
+  if (!IsSigned || SrcKnown.isNonNegative())
+    return FitsExponentRange(BitWidth - SrcKnown.countMinLeadingZeros());
+  return FitsExponentRange(BitWidth - (int)ComputeNumSignBits(V, CtxI) + 1);
 }
 
 bool InstCombiner::isKnownExactCastIntToFP(CastInst &I) const {

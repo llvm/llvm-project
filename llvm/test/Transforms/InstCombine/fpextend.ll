@@ -502,7 +502,8 @@ define <4 x float> @v4f32_fadd_const_not_shrinkable(<4 x float> %a) {
 define float @ItoFtoF_s32_f16_f32_out_of_range(i32 %a) {
 ; CHECK-LABEL: @ItoFtoF_s32_f16_f32_out_of_range(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2147483648
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[AND]] to float
+; CHECK-NEXT:    [[H:%.*]] = sitofp i32 [[AND]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[H]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %and = and i32 %a, -2147483648
@@ -516,7 +517,8 @@ define float @ItoFtoF_s32_f16_f32_out_of_range(i32 %a) {
 define float @ItoFtoF_u32_f16_f32_out_of_range(i32 %a) {
 ; CHECK-LABEL: @ItoFtoF_u32_f16_f32_out_of_range(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 65536
-; CHECK-NEXT:    [[R:%.*]] = uitofp nneg i32 [[AND]] to float
+; CHECK-NEXT:    [[H:%.*]] = uitofp nneg i32 [[AND]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[H]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %and = and i32 %a, 65536
@@ -554,7 +556,8 @@ define float @ItoFtoF_u32_f16_f32_in_range(i32 %a) {
 define float @ItoFtoF_s17_f16_f32_out_of_range(i17 %a) {
 ; CHECK-LABEL: @ItoFtoF_s17_f16_f32_out_of_range(
 ; CHECK-NEXT:    [[AND:%.*]] = and i17 [[A:%.*]], -65536
-; CHECK-NEXT:    [[R:%.*]] = sitofp i17 [[AND]] to float
+; CHECK-NEXT:    [[H:%.*]] = sitofp i17 [[AND]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[H]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %and = and i17 %a, -65536
@@ -578,7 +581,8 @@ define float @ItoFtoF_s16_f16_f32_in_range(i16 %a) {
 define <2 x float> @ItoFtoF_v2s32_v2f16_v2f32_out_of_range(<2 x i32> %a) {
 ; CHECK-LABEL: @ItoFtoF_v2s32_v2f16_v2f32_out_of_range(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], splat (i32 -2147483648)
-; CHECK-NEXT:    [[R:%.*]] = sitofp <2 x i32> [[AND]] to <2 x float>
+; CHECK-NEXT:    [[H:%.*]] = sitofp <2 x i32> [[AND]] to <2 x half>
+; CHECK-NEXT:    [[R:%.*]] = fpext <2 x half> [[H]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %and = and <2 x i32> %a, splat (i32 -2147483648)
@@ -607,7 +611,8 @@ define float @ItoFtoF_s32_bf16_f32(i32 %a) {
 define float @FtoItoFtoF_bf16_s32_f16_f32(bfloat %f) {
 ; CHECK-LABEL: @FtoItoFtoF_bf16_s32_f16_f32(
 ; CHECK-NEXT:    [[I:%.*]] = fptosi bfloat [[F:%.*]] to i32
-; CHECK-NEXT:    [[R:%.*]] = sitofp i32 [[I]] to float
+; CHECK-NEXT:    [[X:%.*]] = sitofp i32 [[I]] to half
+; CHECK-NEXT:    [[R:%.*]] = fpext half [[X]] to float
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %i = fptosi bfloat %f to i32

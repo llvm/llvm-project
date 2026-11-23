@@ -437,8 +437,10 @@ define half @fdiv_narrow_ninf_on_both(half %x, half %y) {
 define half @fptrunc_fadd_sitofp_out_of_range(i32 %a, half %y) {
 ; CHECK-LABEL: @fptrunc_fadd_sitofp_out_of_range(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], -2147483648
-; CHECK-NEXT:    [[TMP1:%.*]] = sitofp i32 [[AND]] to half
-; CHECK-NEXT:    [[R:%.*]] = fadd half [[Y:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[X:%.*]] = sitofp i32 [[AND]] to float
+; CHECK-NEXT:    [[YE:%.*]] = fpext half [[Y:%.*]] to float
+; CHECK-NEXT:    [[ADD:%.*]] = fadd float [[X]], [[YE]]
+; CHECK-NEXT:    [[R:%.*]] = fptrunc float [[ADD]] to half
 ; CHECK-NEXT:    ret half [[R]]
 ;
   %and = and i32 %a, -2147483648
