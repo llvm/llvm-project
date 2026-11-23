@@ -1190,7 +1190,7 @@ bool Decoder::dumpXDataRecord(const COFFObjectFile &COFF,
 
 bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
                                 const SectionRef Section, uint64_t Offset,
-                                unsigned Index, const RuntimeFunction &RF) {
+                                const RuntimeFunction &RF) {
   assert(RF.Flag() == RuntimeFunctionFlag::RFF_Unpacked &&
          "packed entry cannot be treated as an unpacked entry");
 
@@ -1258,7 +1258,7 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
 
 bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
                               const SectionRef Section, uint64_t Offset,
-                              unsigned Index, const RuntimeFunction &RF) {
+                              const RuntimeFunction &RF) {
   assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
           RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
          "unpacked entry cannot be treated as a packed entry");
@@ -1356,7 +1356,6 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
 
 bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                    const SectionRef Section, uint64_t Offset,
-                                   unsigned Index,
                                    const RuntimeFunctionARM64 &RF) {
   assert((RF.Flag() == RuntimeFunctionFlag::RFF_Packed ||
           RF.Flag() == RuntimeFunctionFlag::RFF_PackedFragment) &&
@@ -1490,20 +1489,18 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
 bool Decoder::dumpProcedureDataEntry(const COFFObjectFile &COFF,
                                      const SectionRef Section, uint64_t Offset,
                                      ArrayRef<uint8_t> Contents) {
-  // The index of the entry, relative to the start of the section.
-  unsigned Index = Offset / PDataEntrySize;
   const ulittle32_t *Data =
     reinterpret_cast<const ulittle32_t *>(Contents.data() + Offset);
 
   const RuntimeFunction Entry(Data);
   DictScope RFS(SW, "RuntimeFunction");
   if (Entry.Flag() == RuntimeFunctionFlag::RFF_Unpacked)
-    return dumpUnpackedEntry(COFF, Section, Offset, Index, Entry);
+    return dumpUnpackedEntry(COFF, Section, Offset, Entry);
   if (isAArch64) {
     const RuntimeFunctionARM64 EntryARM64(Data);
-    return dumpPackedARM64Entry(COFF, Section, Offset, Index, EntryARM64);
+    return dumpPackedARM64Entry(COFF, Section, Offset, EntryARM64);
   }
-  return dumpPackedEntry(COFF, Section, Offset, Index, Entry);
+  return dumpPackedEntry(COFF, Section, Offset, Entry);
 }
 
 void Decoder::dumpProcedureData(const COFFObjectFile &COFF,

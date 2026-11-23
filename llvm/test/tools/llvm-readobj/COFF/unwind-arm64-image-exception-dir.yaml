@@ -20,6 +20,13 @@
 # RUN:   -DPDATA=00100000003000000010000005000000
 # RUN: llvm-readobj --unwind %t3.exe | FileCheck %s
 
+## The function table starts at an offset into .pdata that is 4-byte aligned
+## but not 8-byte aligned (the size of an entry), between two pieces of other
+## data.
+# RUN: yaml2obj %s -o %t5.exe -DRVA=8196 \
+# RUN:   -DPDATA=00300000001000000500000000300000
+# RUN: llvm-readobj --unwind %t5.exe | FileCheck %s
+
 # CHECK:      UnwindInformation [
 # CHECK-NEXT:   RuntimeFunction {
 # CHECK-NEXT:     Function: main (0x140001000)
@@ -79,7 +86,7 @@ sections:
     VirtualSize:     16
     ## The function table entry is for main, with packed unwind data
     ## (Flag=1, FunctionLength=4). The other data, which is not part of the
-    ## function table, is the RVA of main and the RVA of a 4-byte object in
+    ## function table, consists of RVAs of main and of a 4-byte object in
     ## .rdata.
     SectionData:     [[PDATA]]
   - Name:            .rdata
