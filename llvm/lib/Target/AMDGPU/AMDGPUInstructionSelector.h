@@ -123,7 +123,7 @@ private:
   bool selectEndCfIntrinsic(MachineInstr &MI) const;
   bool selectDSOrderedIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
   bool selectDSGWSIntrinsic(MachineInstr &MI, Intrinsic::ID IID) const;
-  bool selectDSAppendConsume(MachineInstr &MI, bool IsAppend) const;
+  bool selectDSAppendConsume(MachineInstr &MI) const;
   bool selectInitWholeWave(MachineInstr &MI) const;
   bool selectDSBvhStackIntrinsic(MachineInstr &MI) const;
 

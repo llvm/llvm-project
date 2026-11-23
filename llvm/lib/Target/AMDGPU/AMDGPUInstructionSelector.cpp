@@ -2050,34 +2050,69 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI,
-                                                      bool IsAppend) const {
-  Register PtrBase = MI.getOperand(2).getReg();
-  LLT PtrTy = MRI->getType(PtrBase);
-  bool IsGDS = PtrTy.getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
-
-  int64_t Offset;
-  std::tie(PtrBase, Offset) = selectDS1Addr1OffsetImpl(MI.getOperand(2));
-
-  // TODO: Should this try to look through readfirstlane like GWS?
-  if (!isDSOffsetLegal(PtrBase, Offset)) {
-    PtrBase = MI.getOperand(2).getReg();
-    Offset = 0;
-  }
-
+bool AMDGPUInstructionSelector::selectDSAppendConsume(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
-  const unsigned Opc = IsAppend ? AMDGPU::DS_APPEND : AMDGPU::DS_CONSUME;
+  const Function &Fn = MF->getFunction();
+  Register PtrReg = MI.getOperand(2).getReg();
+  bool IsGDS =
+      MRI->getType(PtrReg).getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
 
-  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
-    .addReg(PtrBase);
-  if (!RBI.constrainGenericRegister(PtrBase, AMDGPU::SReg_32RegClass, *MRI))
-    return false;
+  if (IsGDS && !STI.hasGDS()) {
+    Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+        Fn, "GDS is not supported on this subtarget", DL));
+    Register DstReg = MI.getOperand(0).getReg();
+    BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::IMPLICIT_DEF), DstReg);
+    MI.eraseFromParent();
+    return RBI.constrainGenericRegister(DstReg, AMDGPU::VGPR_32RegClass, *MRI);
+  }
 
+  std::optional<ValueAndVReg> ConstAddr =
+      getIConstantVRegValWithLookThrough(PtrReg, *MRI);
+  uint64_t ImmOffset = 0;
+  if (IsGDS) {
+    // GDS takes the whole address from M0.base and requires a zero offset.
+    unsigned GDSSize = MF->getInfo<SIMachineFunctionInfo>()->getGDSSize();
+    if (ConstAddr) {
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0)
+          .addImm(uint32_t(ConstAddr->Value.getZExtValue() << 16) | GDSSize);
+    } else {
+      if (!RBI.constrainGenericRegister(PtrReg, AMDGPU::SReg_32RegClass, *MRI))
+        return false;
+      Register Base = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_LSHL_B32), Base)
+          .addReg(PtrReg)
+          .addImm(16)
+          .setOperandDead(3); // Dead scc
+      Register M0Val = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_OR_B32), M0Val)
+          .addReg(Base)
+          .addImm(GDSSize)
+          .setOperandDead(3); // Dead scc
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(M0Val);
+    }
+  } else {
+    // LDS ignores M0, so the whole address must fit in the offset field.
+    if (ConstAddr && isUInt<16>(ConstAddr->Value.getZExtValue()) &&
+        isAligned(Align(4), ConstAddr->Value.getZExtValue()))
+      ImmOffset = ConstAddr->Value.getZExtValue();
+    else
+      Fn.getContext().diagnose(DiagnosticInfoUnsupported(
+          Fn,
+          "ds_append/ds_consume requires a constant, dword aligned LDS address "
+          "that fits in the 16 bit offset field",
+          DL));
+    if (STI.ldsRequiresM0Init())
+      BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_MOV_B32), AMDGPU::M0).addImm(-1);
+  }
+
+  const unsigned Opc = cast<GIntrinsic>(MI).is(Intrinsic::amdgcn_ds_append)
+                           ? AMDGPU::DS_APPEND
+                           : AMDGPU::DS_CONSUME;
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc), MI.getOperand(0).getReg())
-    .addImm(Offset)
-    .addImm(IsGDS ? -1 : 0)
-    .cloneMemRefs(MI);
+                 .addImm(ImmOffset)
+                 .addImm(IsGDS)
+                 .cloneMemRefs(MI);
   MI.eraseFromParent();
   constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   return true;
@@ -2434,9 +2469,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
   case Intrinsic::amdgcn_ds_gws_sema_release_all:
     return selectDSGWSIntrinsic(I, IntrinsicID);
   case Intrinsic::amdgcn_ds_append:
-    return selectDSAppendConsume(I, true);
   case Intrinsic::amdgcn_ds_consume:
-    return selectDSAppendConsume(I, false);
+    return selectDSAppendConsume(I);
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
   // Until we can store both the address space of the global and the LDS
