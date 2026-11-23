@@ -29954,11 +29954,6 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
                     << " ElementSize=" << ElementSize
                     << " VectorStoreBytes=" << VectorStoreBytes << "\n");
 
-  // Loop-carried byte stride of the store. A conflict is only a real hazard if
-  // a future iteration's load re-reads the bytes this store wrote, which is a
-  // property of the stride (see the per-load check below).
-  std::optional<int64_t> StoreStride =
-      getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), L);
   auto *LoadI = LoadTE.getFirstLoad();
   // Take the distance in bytes: a load need not start on a store element.
   Type *ByteTy = Type::getInt8Ty(LoadI->getContext());
@@ -30000,15 +29995,22 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
     return false;
   const auto StoreBytes = static_cast<int64_t>(VectorStoreBytes);
   const auto LoadBytes = static_cast<int64_t>(LoadElementSize);
-  // A load overlapping the store of the same iteration, or of every iteration
-  // for loop-invariant addresses, is forwarded only if the store covers it.
-  if ((StoreStride == 0 || DT->dominates(BaseStore, LoadI)) &&
-      Offset < StoreBytes && Offset > -LoadBytes)
-    return Offset < 0 || Offset > StoreBytes - LoadBytes;
+  bool OverlapsStore = Offset < StoreBytes && Offset > -LoadBytes;
+  bool PartialOverlap = Offset < 0 || Offset > StoreBytes - LoadBytes;
+  // A load overlapping the store of the same iteration is forwarded only if
+  // the store covers it. The wide load is emitted at the main op; the first
+  // load may be a copyable load from a predecessor block.
+  if (OverlapsStore && DT->dominates(BaseStore, LoadTE.getMainOp()))
+    return PartialOverlap;
   // Without a constant step nothing shows that a later iteration re-reads the
-  // stored bytes.
-  if (StoreStride.value_or(0) == 0)
+  // stored bytes. A loop-invariant address overlaps on every iteration, so the
+  // same overlap test applies when the store does not dominate the load.
+  std::optional<int64_t> StoreStride =
+      getConstantLoopStrideInBytes(BaseStore->getPointerOperand(), L);
+  if (!StoreStride)
     return false;
+  if (*StoreStride == 0)
+    return OverlapsStore && PartialOverlap;
   // A descending loop mirrors an ascending one: reflect the addresses so the
   // bytes written by earlier iterations always lie below the store.
   if (*StoreStride < 0 && SubOverflow(StoreBytes - LoadBytes, Offset, Offset))
@@ -30055,12 +30057,14 @@ bool BoUpSLP::storeConflictsWithLoad(StoreInst *BaseStore, unsigned VF,
 }
 
 bool BoUpSLP::findStoreLoadForwardingHazardForLoad(const TreeEntry &LoadTE) {
-  auto *BaseLoad = LoadTE.getFirstLoad();
-  const Loop *LoadL = LI->getLoopFor(BaseLoad->getParent());
+  // The wide load is emitted in the main op's block. A copyable first load
+  // may sit in a predecessor, so only the address comes from that load.
+  const Loop *LoadL = LI->getLoopFor(LoadTE.getMainOp()->getParent());
   if (!LoadL)
     return false;
 
-  Value *LoadBase = getUnderlyingObject(BaseLoad->getPointerOperand());
+  Value *LoadBase =
+      getUnderlyingObject(LoadTE.getFirstLoad()->getPointerOperand());
   auto [It, Inserted] = LoopSimpleStores.try_emplace(LoadL);
   if (Inserted) {
     for (BasicBlock *BB : LoadL->blocks()) {
