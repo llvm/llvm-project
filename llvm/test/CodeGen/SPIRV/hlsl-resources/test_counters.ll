@@ -1,5 +1,13 @@
 ; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-library %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+; RUN: llc -O0 -verify-machineinstrs -mtriple=spirv-vulkan-library -spirv-ext=+SPV_KHR_untyped_pointers %s -o - | FileCheck %s --check-prefix=UNTYPED
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv-vulkan-library -spirv-ext=+SPV_KHR_untyped_pointers %s -o - -filetype=obj | spirv-val --target-env vulkan1.3 %}
+
+; UNTYPED: OpTypeUntypedPointerKHR StorageBuffer
+; UNTYPED: OpUntypedAccessChainKHR
+; UNTYPED: OpAtomicIAdd
+; UNTYPED: OpUntypedAccessChainKHR
+; UNTYPED: OpAtomicIAdd
 
 ; ModuleID = 'test_counters.hlsl'
 source_filename = "test_counters.hlsl"

@@ -19,7 +19,7 @@ export float2x3 TestLoad() {
 }
 
 // CHECK-LABEL: define {{.*}} <6 x float> @{{.*}}ByteAddressBuffer4LoadIu11matrix_typeILj2ELj3EfEEET_j
-// CHECK: [[LOADED:%.*]] = load <6 x float>, ptr addrspace(11) %{{.*}}
+// CHECK: [[LOADED:%.*]] = call {{.*}} <6 x float> @llvm.spv.resource.load.rawbuffer
 // DEFAULT-NOT: call {{.*}} @llvm.matrix.transpose
 // DEFAULT: ret <6 x float> [[LOADED]]
 // LEGACY: [[TRANSPOSED:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[LOADED]], i32 3, i32 2)
@@ -32,6 +32,6 @@ export void TestStore(float2x3 M) {
 // CHECK-LABEL: define {{.*}} void @{{.*}}RWByteAddressBuffer5StoreIu11matrix_typeILj2ELj3EfEEEvjT_
 // CHECK: [[VALUE:%.*]] = load <6 x float>, ptr %Value.addr
 // DEFAULT-NOT: call {{.*}} @llvm.matrix.transpose
-// DEFAULT: store <6 x float> [[VALUE]], ptr addrspace(11) %{{.*}}
+// DEFAULT: call void @llvm.spv.resource.store.rawbuffer{{.*}}({{.*}}, <6 x float> [[VALUE]], i32 4)
 // LEGACY: [[TRANSPOSED:%.*]] = call {{.*}} <6 x float> @llvm.matrix.transpose.v6f32(<6 x float> [[VALUE]], i32 2, i32 3)
-// LEGACY: store <6 x float> [[TRANSPOSED]], ptr addrspace(11) %{{.*}}
+// LEGACY: call void @llvm.spv.resource.store.rawbuffer{{.*}}({{.*}}, <6 x float> [[TRANSPOSED]], i32 4)

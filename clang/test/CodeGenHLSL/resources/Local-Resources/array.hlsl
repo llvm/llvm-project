@@ -19,7 +19,5 @@ void main() {
 // Out's handle (u0, space0) flows into Store 42 at offset 0; Aux's (u1, space0) into Store 99 at offset 4.
 // CHECK: %[[H0:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 0,
 // CHECK: %[[H1:[^ ]+]] = tail call {{.*}}handlefrombinding{{.*}}(i32 0, i32 1,
-// CHECK: %[[P0:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H0]], i32 0)
-// CHECK: store i32 42, ptr %[[P0]]
-// CHECK: %[[P1:[^ ]+]] = call ptr {{.*}}getpointer{{.*}}(target({{.*}}) %[[H1]], i32 4)
-// CHECK: store i32 99, ptr %[[P1]]
+// CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H0]], i32 0, i32 poison, i32 42)
+// CHECK: call void @llvm.dx.resource.store.rawbuffer{{.*}}(target({{.*}}) %[[H1]], i32 4, i32 poison, i32 99)
