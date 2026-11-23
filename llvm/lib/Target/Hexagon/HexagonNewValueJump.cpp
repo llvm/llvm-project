@@ -672,11 +672,13 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
           bool MO2IsKill = isSecondOpReg && cmpPos->killsRegister(cmpOp2, QRI);
 
           // The feeder moves down to the jump. Debug values between them that
-          // read its register would precede it, so set them undef. No copies:
-          // the packetizer needs the feeder next to the jump.
+          // read its register would precede it, so set them undef. Entry values
+          // do not depend on the register and are kept. No copies: the
+          // packetizer needs the feeder next to the jump.
           for (auto I = std::next(MI.getIterator());
                I != jmpInstr->getIterator(); ++I)
-            if (I->isDebugValue() && I->readsRegister(feederReg, QRI))
+            if (I->isDebugValue() && !I->isDebugEntryValue() &&
+                I->readsRegister(feederReg, QRI))
               I->setDebugValueUndef();
 
           // The compare is removed, so the predicate it defines is no longer
@@ -686,7 +688,8 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
           auto UndefPredicateReaders = [&](MachineBasicBlock::iterator Begin,
                                            MachineBasicBlock &Blk) {
             for (auto I = Begin; I != Blk.end(); ++I) {
-              if (I->isDebugValue() && I->readsRegister(predReg, QRI))
+              if (I->isDebugValue() && !I->isDebugEntryValue() &&
+                  I->readsRegister(predReg, QRI))
                 I->setDebugValueUndef();
               else if (!I->isDebugInstr() &&
                        (I->isCall() || (I->modifiesRegister(predReg, QRI) &&
