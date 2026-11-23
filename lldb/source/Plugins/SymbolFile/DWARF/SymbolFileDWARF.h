@@ -321,7 +321,7 @@ public:
   static lldb::LanguageType GetLanguageFamily(DWARFUnit &unit);
 
   StatsDuration::Duration GetDebugInfoParseTime() override {
-    return m_parse_time;
+    return GetDebugInfoParseTimeRef();
   }
   StatsDuration::Duration GetDebugInfoIndexTime() override;
 

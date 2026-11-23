@@ -158,6 +158,8 @@ void SymbolFileDWARFDwo::FindGlobalVariables(
                                           variables);
 }
 
+// Parse time is added to the module's symbol file, so this file's own
+// m_parse_time is left unused.
 StatsDuration &SymbolFileDWARFDwo::GetDebugInfoParseTimeRef() {
   return GetBaseSymbolFile().GetDebugInfoParseTimeRef();
 }
