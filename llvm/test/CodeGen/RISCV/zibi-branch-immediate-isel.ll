@@ -58,7 +58,8 @@ define void @eq_one(i32 %a) {
   ; OPT64-NEXT: {{  $}}
   ; OPT64-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
   ; OPT64-NEXT:   [[ADDIW:%[0-9]+]]:gpr = ADDIW [[COPY]], 0
-  ; OPT64-NEXT:   BNEI [[ADDIW]], 1, %bb.2
+  ; OPT64-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
+  ; OPT64-NEXT:   BNE [[ADDIW]], [[ADDI]], %bb.2
   ; OPT64-NEXT:   PseudoBR %bb.1
   ; OPT64-NEXT: {{  $}}
   ; OPT64-NEXT: bb.1.call:
@@ -77,7 +78,8 @@ define void @eq_one(i32 %a) {
   ; OPT32-NEXT:   liveins: $x10
   ; OPT32-NEXT: {{  $}}
   ; OPT32-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $x10
-  ; OPT32-NEXT:   BNEI [[COPY]], 1, %bb.2
+  ; OPT32-NEXT:   [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 1
+  ; OPT32-NEXT:   BNE [[COPY]], [[ADDI]], %bb.2
   ; OPT32-NEXT:   PseudoBR %bb.1
   ; OPT32-NEXT: {{  $}}
   ; OPT32-NEXT: bb.1.call:

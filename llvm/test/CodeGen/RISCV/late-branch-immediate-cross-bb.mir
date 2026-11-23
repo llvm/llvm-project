@@ -11,14 +11,13 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.1(0x80000000)
   ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x11 = ADDI $x0, 7
   ; ZIBI-NEXT:   PseudoBR %bb.1
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BNE $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BNEI $x10, 7, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -70,22 +69,19 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.1(0x80000000)
   ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x11 = ADDI $x0, -1
   ; ZIBI-NEXT:   PseudoBR %bb.1
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.2(0x80000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x12 = COPY $x11
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
   ; ZIBI-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x12
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x13 = ADDI $x12, 0
-  ; ZIBI-NEXT:   BEQ killed renamable $x13, killed renamable $x10, %bb.4
+  ; ZIBI-NEXT:   BEQI killed renamable $x10, -1, %bb.4
   ; ZIBI-NEXT:   PseudoBR %bb.3
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.3:
@@ -157,21 +153,19 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.3(0x80000000)
   ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x11 = ADDI $x0, 7
   ; ZIBI-NEXT:   PseudoBR %bb.3
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
   ; ZIBI-NEXT:   successors: %bb.3(0x80000000)
   ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x11 = ADDI $x0, 7
   ; ZIBI-NEXT:   PseudoBR %bb.3
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.3:
   ; ZIBI-NEXT:   successors: %bb.5(0x40000000), %bb.4(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BEQ $x10, $x11, %bb.5
+  ; ZIBI-NEXT:   BEQI $x10, 7, %bb.5
   ; ZIBI-NEXT:   PseudoBR %bb.4
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.4:
@@ -340,19 +334,18 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.1(0x80000000)
   ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   $x11 = ADDI $x0, 1
   ; ZIBI-NEXT:   PseudoBR %bb.1
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BNE $x10, $x11, %bb.2
+  ; ZIBI-NEXT:   BNEI $x10, 1, %bb.2
   ; ZIBI-NEXT:   PseudoBR %bb.3
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
   ; ZIBI-NEXT:   successors: %bb.1(0x80000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT:   $x10 = ADDI $x10, -1
   ; ZIBI-NEXT:   PseudoBR %bb.1
@@ -499,7 +492,7 @@ body: |
   ; ZIBI-NEXT:   liveins: $x10, $x11, $x12
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT:   SW $x11, $x12, 0
-  ; ZIBI-NEXT:   BNE $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BNEI $x10, 1, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -560,7 +553,7 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; ZIBI-NEXT:   liveins: $x10, $x11, $x12
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BEQ $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BEQI $x10, 1, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -761,9 +754,9 @@ body: |
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11
+  ; ZIBI-NEXT:   liveins: $x10
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BEQ $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BEQI $x10, 1, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -820,7 +813,7 @@ body: |
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BNE $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BNEI $x10, 1, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -873,9 +866,9 @@ body: |
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.1:
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
-  ; ZIBI-NEXT:   liveins: $x10, $x11, $x12
+  ; ZIBI-NEXT:   liveins: $x10, $x12
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BNE $x10, $x11, %bb.3
+  ; ZIBI-NEXT:   BNEI $x10, 7, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
@@ -943,7 +936,7 @@ body: |
   ; ZIBI-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; ZIBI-NEXT:   liveins: $x5, $x10_x11
   ; ZIBI-NEXT: {{  $}}
-  ; ZIBI-NEXT:   BNE $x5, $x11, %bb.3
+  ; ZIBI-NEXT:   BNEI $x5, 7, %bb.3
   ; ZIBI-NEXT:   PseudoBR %bb.2
   ; ZIBI-NEXT: {{  $}}
   ; ZIBI-NEXT: bb.2:
