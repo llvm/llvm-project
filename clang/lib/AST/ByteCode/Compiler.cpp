@@ -3281,7 +3281,8 @@ bool Compiler<Emitter>::VisitSYCLUniqueStableNameExpr(
   QualType CharTy = A.CharTy.withConst();
   APInt Size(A.getTypeSize(A.getSizeType()), ResultStr.size() + 1);
   QualType ArrayTy = A.getConstantArrayType(CharTy, Size, nullptr,
-                                            ArraySizeModifier::Normal, 0);
+                                            ArraySizeModifier::Normal,
+                                            ArraySizeStar::Star, 0);
 
   StringLiteral *SL =
       StringLiteral::Create(A, ResultStr, StringLiteralKind::Ordinary,

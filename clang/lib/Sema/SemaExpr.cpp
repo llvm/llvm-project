@@ -3733,6 +3733,7 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
                               Str, RawChars);
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
+                                           ArraySizeStar::Normal,
                                            /*IndexTypeQuals*/ 0);
       SL = StringLiteral::Create(Context, RawChars, StringLiteralKind::Wide,
                                  /*Pascal*/ false, ResTy, Loc);
@@ -3740,6 +3741,7 @@ ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
       ResTy = Context.adjustStringLiteralBaseType(Context.CharTy.withConst());
       ResTy = Context.getConstantArrayType(ResTy, LengthI, nullptr,
                                            ArraySizeModifier::Normal,
+                                           ArraySizeStar::Normal,
                                            /*IndexTypeQuals*/ 0);
       SL = StringLiteral::Create(Context, Str, StringLiteralKind::Ordinary,
                                  /*Pascal*/ false, ResTy, Loc);
@@ -3994,7 +3996,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
       unsigned Length = Literal.getUDSuffixOffset();
       QualType StrTy = Context.getConstantArrayType(
           Context.adjustStringLiteralBaseType(Context.CharTy.withConst()),
-          llvm::APInt(32, Length + 1), nullptr, ArraySizeModifier::Normal, 0);
+          llvm::APInt(32, Length + 1), nullptr, ArraySizeModifier::Normal,
+          ArraySizeStar::Normal, 0);
       Expr *Lit =
           StringLiteral::Create(Context, StringRef(TokSpelling.data(), Length),
                                 StringLiteralKind::Ordinary,

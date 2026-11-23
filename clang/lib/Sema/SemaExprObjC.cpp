@@ -73,7 +73,8 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
     assert(CAT && "String literal not of constant array type!");
     QualType StrTy = Context.getConstantArrayType(
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
-        CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
+        CAT->getSizeModifier(), CAT->getSizeStar(),
+        CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
                               /*Pascal=*/false, StrTy, StrLocs);
   }

@@ -2593,10 +2593,11 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
           AllocType,
           llvm::APInt(Context.getTypeSize(Context.getSizeType()),
                       *KnownArraySize),
-          *ArraySize, ArraySizeModifier::Normal, 0);
+          *ArraySize, ArraySizeModifier::Normal, ArraySizeStar::Normal, 0);
     else if (ArraySize)
       InitType = Context.getIncompleteArrayType(AllocType,
-                                                ArraySizeModifier::Normal, 0);
+                                                ArraySizeModifier::Normal,
+                                                ArraySizeStar::Normal, 0);
     else
       InitType = AllocType;
 
@@ -6392,9 +6393,11 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
       case Array:
         if (auto *CAT = cast_or_null<ConstantArrayType>(ClassOrBound))
           return Ctx.getConstantArrayType(T, CAT->getSize(), nullptr,
-                                          ArraySizeModifier::Normal, 0);
+                                          ArraySizeModifier::Normal,
+                                          ArraySizeStar::Normal, 0);
         else
-          return Ctx.getIncompleteArrayType(T, ArraySizeModifier::Normal, 0);
+          return Ctx.getIncompleteArrayType(T, ArraySizeModifier::Normal,
+                                            ArraySizeStar::Normal, 0);
       }
       llvm_unreachable("unknown step kind");
     }

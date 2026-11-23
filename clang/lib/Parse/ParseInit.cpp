@@ -396,7 +396,8 @@ ExprResult Parser::createEmbedExpr() {
       llvm::APSInt ArraySize =
           Context.MakeIntValue(Str.size(), Context.getSizeType());
       QualType ArrayTy = Context.getConstantArrayType(
-          Ty, ArraySize, nullptr, ArraySizeModifier::Normal, 0);
+          Ty, ArraySize, nullptr, ArraySizeModifier::Normal,
+          ArraySizeStar::Normal, 0);
       return StringLiteral::Create(Context, Str, StringLiteralKind::Binary,
                                    false, ArrayTy, StartLoc);
     };

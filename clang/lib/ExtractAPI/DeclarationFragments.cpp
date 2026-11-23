@@ -359,16 +359,11 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
     // Push the array size part first to make sure they are in the right order.
     After.append("[", DeclarationFragments::FragmentKind::Text);
 
-    switch (AT->getSizeModifier()) {
-    case ArraySizeModifier::Normal:
-      break;
-    case ArraySizeModifier::Static:
+    if (AT->getSizeModifier() == ArraySizeModifier::Static)
       Fragments.append("static", DeclarationFragments::FragmentKind::Keyword);
-      break;
-    case ArraySizeModifier::Star:
-      Fragments.append("*", DeclarationFragments::FragmentKind::Text);
-      break;
-    }
+
+    if (AT->getSizeStar() == ArraySizeStar::Star)
+      Fragments.append(" *", DeclarationFragments::FragmentKind::Text);
 
     if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(AT)) {
       // FIXME: right now this would evaluate any expressions/macros written in

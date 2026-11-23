@@ -2132,6 +2132,7 @@ bool Sema::checkArrayTooLarge(QualType ElementType,
 }
 
 QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
+                              ArraySizeStar Star,
                               Expr *ArraySize, unsigned Quals,
                               SourceRange Brackets, DeclarationName Entity) {
   // ArrayType stores only the CVR qualifiers; __unaligned and _Atomic are
@@ -2294,17 +2295,18 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
 
   llvm::APSInt ConstVal(Context.getTypeSize(Context.getSizeType()));
   if (!ArraySize) {
-    if (ASM == ArraySizeModifier::Star) {
+    if (Star == ArraySizeStar::Star) {
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
 
-      T = Context.getVariableArrayType(T, nullptr, ASM, IndexTypeQuals);
+      T = Context.getVariableArrayType(T, nullptr, ASM, Star, IndexTypeQuals);
     } else {
-      T = Context.getIncompleteArrayType(T, ASM, IndexTypeQuals);
+      T = Context.getIncompleteArrayType(T, ASM, Star, IndexTypeQuals);
     }
   } else if (ArraySize->isTypeDependent() || ArraySize->isValueDependent()) {
-    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, IndexTypeQuals);
+    T = Context.getDependentSizedArrayType(T, ArraySize, ASM, Star,
+                                           IndexTypeQuals);
   } else {
     ExprResult R =
         checkArraySize(*this, ArraySize, ConstVal, VLADiag, VLAIsError);
@@ -2315,7 +2317,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       // C99: an array with a non-ICE size is a VLA. We accept any expression
       // that we can fold to a non-zero positive value as a non-VLA as an
       // extension.
-      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Star, IndexTypeQuals);
     } else if (!T->isDependentType() && !T->isIncompleteType() &&
                !T->isConstantSizeType()) {
       // C99: an array with an element type that has a non-constant-size is a
@@ -2324,7 +2326,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
       Diag(Loc, VLADiag);
       if (VLAIsError)
         return QualType();
-      T = Context.getVariableArrayType(T, ArraySize, ASM, IndexTypeQuals);
+      T = Context.getVariableArrayType(T, ArraySize, ASM, Star, IndexTypeQuals);
     } else {
       // C99 6.7.5.2p1: If the expression is a constant expression, it shall
       // have a value greater than zero.
@@ -2361,7 +2363,7 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
                              ArraySize->getSourceRange()))
         return QualType();
 
-      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM,
+      T = Context.getConstantArrayType(T, ConstVal, ArraySize, ASM, Star,
                                        IndexTypeQuals);
     }
   }
@@ -2382,10 +2384,11 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
 
   // If this is not C99, diagnose array size modifiers on non-VLAs.
   if (!getLangOpts().C99 && !T->isVariableArrayType() &&
-      (ASM != ArraySizeModifier::Normal || Quals != 0)) {
+      (ASM != ArraySizeModifier::Normal || Star != ArraySizeStar::Normal ||
+       Quals != 0)) {
     Diag(Loc, getLangOpts().CPlusPlus ? diag::err_c99_array_usage_cxx
                                       : diag::ext_c99_array_usage)
-        << ASM;
+        << ASM;  // XXX: (How?) should I print 'Star'?
   }
 
   // OpenCL v2.0 s6.12.5 - Arrays of blocks are not supported.
@@ -4876,6 +4879,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       DeclaratorChunk::ArrayTypeInfo &ATI = DeclType.Arr;
       Expr *ArraySize = ATI.NumElts;
       ArraySizeModifier ASM;
+      ArraySizeStar Star;
 
       // Microsoft property fields can have multiple sizeless array chunks
       // (i.e. int x[][][]). Skip all of these except one to avoid creating
@@ -4890,12 +4894,14 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       }
 
       if (ATI.isStar)
-        ASM = ArraySizeModifier::Star;
-      else if (ATI.hasStatic)
+        Star = ArraySizeStar::Star;
+      else
+        Star = ArraySizeStar::Normal;
+      if (ATI.hasStatic)
         ASM = ArraySizeModifier::Static;
       else
         ASM = ArraySizeModifier::Normal;
-      if (ASM == ArraySizeModifier::Star && !D.isPrototypeContext()) {
+      if (Star == ArraySizeStar::Star && !D.isPrototypeContext()) {
         // FIXME: This check isn't quite right: it allows star in prototypes
         // for function definitions, and disallows some edge cases detailed
         // in http://gcc.gnu.org/ml/gcc-patches/2009-02/msg00133.html
@@ -4942,7 +4948,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
         checkNullabilityConsistency(S, SimplePointerKind::Array, DeclType.Loc);
       }
 
-      T = S.BuildArrayType(T, ASM, ArraySize, ATI.TypeQuals,
+      T = S.BuildArrayType(T, ASM, Star, ArraySize, ATI.TypeQuals,
                            SourceRange(DeclType.Loc, DeclType.EndLoc), Name);
       break;
     }
@@ -7269,6 +7275,7 @@ namespace {
           QualType New = wrap(C, CAT->getElementType(), I);
           return C.getConstantArrayType(New, CAT->getSize(), CAT->getSizeExpr(),
                                         CAT->getSizeModifier(),
+                                        CAT->getSizeStar(),
                                         CAT->getIndexTypeCVRQualifiers());
         }
 
@@ -7276,12 +7283,14 @@ namespace {
           QualType New = wrap(C, VAT->getElementType(), I);
           return C.getVariableArrayType(New, VAT->getSizeExpr(),
                                         VAT->getSizeModifier(),
+                                        VAT->getSizeStar(),
                                         VAT->getIndexTypeCVRQualifiers());
         }
 
         const auto *IAT = cast<IncompleteArrayType>(Old);
         QualType New = wrap(C, IAT->getElementType(), I);
         return C.getIncompleteArrayType(New, IAT->getSizeModifier(),
+                                        IAT->getSizeStar(),
                                         IAT->getIndexTypeCVRQualifiers());
       }
 
@@ -9541,7 +9550,7 @@ void Sema::completeExprArrayBound(Expr *E) {
           IAT->getElementType(),
           llvm::APInt(Context.getTypeSize(Context.getSizeType()), 1),
           /*SizeExpr=*/nullptr, ArraySizeModifier::Normal,
-          /*IndexTypeQuals=*/0);
+          ArraySizeStar::Normal, /*IndexTypeQuals=*/0);
       E->setType(ResultType);
     }
   }

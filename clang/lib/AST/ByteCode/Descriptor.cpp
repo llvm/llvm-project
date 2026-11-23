@@ -451,7 +451,7 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
     if (IsArray)
       return Ctx.getConstantArrayType(
           ElemType, APInt(64, static_cast<uint64_t>(getNumElems()), false),
-          nullptr, ArraySizeModifier::Normal, 0);
+          nullptr, ArraySizeModifier::Normal, ArraySizeStar::Normal, 0);
     return ElemType;
   };
 

@@ -695,16 +695,11 @@ void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
 }
 
 void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
-  switch (AT->getSizeModifier()) {
-  case ArraySizeModifier::Star:
-    JOS.attribute("sizeModifier", "*");
-    break;
-  case ArraySizeModifier::Static:
+  if (AT->getSizeModifier() == ArraySizeModifier::Static)
     JOS.attribute("sizeModifier", "static");
-    break;
-  case ArraySizeModifier::Normal:
-    break;
-  }
+
+  if (AT->getSizeStar() == ArraySizeStar::Star)
+    JOS.attribute("sizeModifier", "*");
 
   std::string Str = AT->getIndexTypeQualifiers().getAsString();
   if (!Str.empty())

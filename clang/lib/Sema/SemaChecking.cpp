@@ -15796,7 +15796,7 @@ static void diagnoseArrayStarInParamType(Sema &S, QualType PType,
   if (!AT)
     return;
 
-  if (AT->getSizeModifier() != ArraySizeModifier::Star) {
+  if (AT->getSizeStar() != ArraySizeStar::Star) {
     diagnoseArrayStarInParamType(S, AT->getElementType(), Loc);
     return;
   }

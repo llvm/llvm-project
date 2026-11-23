@@ -138,17 +138,20 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
         QT = Context.getConstantArrayType(
             ElementTy, CAT->getSize(), CAT->getSizeExpr(),
-            CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
+            CAT->getSizeModifier(), CAT->getSizeStar(),
+            CAT->getIndexTypeCVRQualifiers());
       else if (const auto *VAT = dyn_cast<VariableArrayType>(AT))
         QT = Context.getVariableArrayType(ElementTy, VAT->getSizeExpr(),
                                           VAT->getSizeModifier(),
+                                          VAT->getSizeStar(),
                                           VAT->getIndexTypeCVRQualifiers());
       else if (const auto *DSAT = dyn_cast<DependentSizedArrayType>(AT))
         QT = Context.getDependentSizedArrayType(
             ElementTy, DSAT->getSizeExpr(), DSAT->getSizeModifier(),
-            DSAT->getIndexTypeCVRQualifiers());
+            DSAT->getSizeStar(), DSAT->getIndexTypeCVRQualifiers());
       else if (const auto *IAT = dyn_cast<IncompleteArrayType>(AT))
         QT = Context.getIncompleteArrayType(ElementTy, IAT->getSizeModifier(),
+                                            IAT->getSizeStar(),
                                             IAT->getIndexTypeCVRQualifiers());
       else
         llvm_unreachable("Unhandled array type");
