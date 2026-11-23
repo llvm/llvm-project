@@ -2385,7 +2385,8 @@ void ContinuationIndenter::moveStateToNewBlock(LineState &State, bool NewLine) {
       State.NextToken->is(TT_LambdaLBrace) &&
       !State.Line->MightBeFunctionDecl) {
     const auto Indent = Style.IndentWidth * Style.BraceWrapping.IndentBraces;
-    State.Stack.back().NestedBlockIndent = State.FirstIndent + Indent;
+    State.Stack.back().NestedBlockIndent =
+        State.FirstIndent + (NewLine ? Indent : 0);
   }
   unsigned NestedBlockIndent = State.Stack.back().NestedBlockIndent;
   // ObjC block sometimes follow special indentation rules.

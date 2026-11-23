@@ -22053,6 +22053,25 @@ TEST_F(FormatTest, FormatsLambdas) {
                BeforeLambdaBodyStyle);
 }
 
+TEST_F(FormatTest, LambdaOuterScopeIndentBraces) {
+  auto Style = getLLVMStyle();
+  Style.LambdaBodyIndentation = FormatStyle::LBI_OuterScope;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.IndentBraces = true;
+  Style.AllowShortLambdasOnASingleLine = FormatStyle::SLS_None;
+  verifyFormat("void test() {\n"
+               "  auto f = [](int x) {\n"
+               "    return x;\n"
+               "  };\n"
+               "}",
+               "void test() {\n"
+               "  auto f = [](int x) {\n"
+               "return x;\n"
+               "};\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTest, LambdaWithLineComments) {
   FormatStyle LLVMWithBeforeLambdaBody = getLLVMStyle();
   LLVMWithBeforeLambdaBody.BreakBeforeBraces = FormatStyle::BS_Custom;
