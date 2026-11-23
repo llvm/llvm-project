@@ -30,6 +30,7 @@
 
 namespace llvm {
 
+class AAResults;
 class HexagonSubtarget;
 class MachineBranchProbabilityInfo;
 class MachineFunction;
@@ -318,6 +319,12 @@ public:
   bool
   areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
                                   const MachineInstr &MIb) const override;
+
+  /// Return true if the memory accesses of \p MIa and \p MIb may depend on
+  /// each other. Uses \p AA, if not null, for accesses that are not
+  /// trivially disjoint.
+  bool areMemAccessesDependent(AAResults *AA, const MachineInstr *MIa,
+                               const MachineInstr *MIb) const;
 
   /// For instructions with a base and offset, return the position of the
   /// base register and offset operands.

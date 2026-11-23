@@ -11212,6 +11212,7 @@ def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_escapes_to_param_here: Note<"escapes to this parameter">;
+def note_lifetime_safety_escapes_to_object_here: Note<"escapes to the object">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
@@ -13667,6 +13668,13 @@ def warn_preserve_access_index_enumerator_not_relocated : Warning<
   "enumerator %0 is not relocated where a constant is required, although %1 "
   "has the 'preserve_access_index' attribute">,
   InGroup<BPFEnumNotRelocated>, DefaultError;
+def note_preserve_enum_value_not_const : Note<
+  "an explicit '__builtin_preserve_enum_value' call is relocated at load time, "
+  "so it is not a constant">;
+def note_preserve_enum_value_case_attr : Note<
+  "a case label with an enumerator of an enum with the "
+  "'preserve_access_index' attribute is relocated, and compared like an 'if' "
+  "condition before the switch">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;

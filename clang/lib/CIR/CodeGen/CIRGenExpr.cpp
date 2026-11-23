@@ -875,7 +875,8 @@ int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
 // appropriate shufflevector.
 RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   mlir::Location loc = lv.getExtVectorPointer().getLoc();
-  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+  mlir::Value vec =
+      builder.createLoad(loc, lv.getExtVectorAddress(), lv.isVolatile());
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
@@ -2730,6 +2731,13 @@ CIRGenCallee CIRGenFunction::emitCallee(const clang::Expr *e) {
 RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
+
+  // Builtins never have block type.
+  if (e->getCallee()->getType()->isBlockPointerType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCallExpr: block pointer type"));
+    return getUndefRValue(e->getType());
+  }
 
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);
