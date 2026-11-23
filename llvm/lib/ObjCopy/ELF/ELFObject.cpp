@@ -2520,11 +2520,26 @@ template <class ELFT> void ELFWriter<ELFT>::assignOffsets() {
     // For --only-keep-debug, the sections that did not preserve contents were
     // changed to SHT_NOBITS. We now rewrite sh_offset fields of sections, and
     // then rewrite p_offset/p_filesz of program headers.
-    uint64_t HdrEnd =
-        sizeof(Elf_Ehdr) + llvm::size(Obj.segments()) * sizeof(Elf_Phdr);
+    //
+    // If the program header table does not follow the ELF header in the input,
+    // there may be no room for it there, so write it after the sections
+    // instead.
+    const uint64_t PhdrSize = llvm::size(Obj.segments()) * sizeof(Elf_Phdr);
+    const bool PhdrsAfterEhdr = Obj.ProgramHdrSegment.OriginalOffset -
+                                    Obj.ElfHdrSegment.OriginalOffset ==
+                                sizeof(Elf_Ehdr);
+    uint64_t HdrEnd = sizeof(Elf_Ehdr) + (PhdrsAfterEhdr ? PhdrSize : 0);
     Offset = layoutSectionsForOnlyKeepDebug(Obj, HdrEnd);
     Offset = std::max(Offset,
                       layoutSegmentsForOnlyKeepDebug(OrderedSegments, HdrEnd));
+    if (!PhdrsAfterEhdr) {
+      Offset = alignTo(Offset, sizeof(Elf_Addr));
+      Obj.ProgramHdrSegment.Offset = Offset;
+      Offset += PhdrSize;
+      for (Segment &Seg : Obj.segments())
+        if (Seg.Type == PT_PHDR)
+          Seg.Offset = Obj.ProgramHdrSegment.Offset;
+    }
   } else {
     // Offset is used as the start offset of the first segment to be laid out.
     // Since the ELF Header (ElfHdrSegment) must be at the start of the file,
