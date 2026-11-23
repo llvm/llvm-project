@@ -560,14 +560,14 @@ public:
 
   MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                               unsigned Flags, unsigned EntrySize,
-                              const Twine &Group, bool IsComdat) {
+                              StringRef Group, bool IsComdat) {
     return getELFSection(Section, Type, Flags, EntrySize, Group, IsComdat,
                          MCSection::NonUniqueID, nullptr);
   }
 
   LLVM_ABI MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                        unsigned Flags, unsigned EntrySize,
-                                       const Twine &Group, bool IsComdat,
+                                       StringRef Group, bool IsComdat,
                                        unsigned UniqueID,
                                        const MCSymbolELF *LinkedToSym);
 
@@ -582,7 +582,7 @@ public:
   /// describes the type of the section and \p Flags are used to further
   /// configure this named section.
   LLVM_ABI MCSectionELF *getELFNamedSection(const Twine &Prefix,
-                                            const Twine &Suffix, unsigned Type,
+                                            StringRef Suffix, unsigned Type,
                                             unsigned Flags,
                                             unsigned EntrySize = 0);
 
@@ -641,7 +641,7 @@ public:
   }
 
   LLVM_ABI MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
-                                         unsigned Flags, const Twine &Group,
+                                         unsigned Flags, StringRef Group,
                                          unsigned UniqueID);
 
   LLVM_ABI MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
