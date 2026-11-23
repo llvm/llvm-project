@@ -723,9 +723,6 @@ static void collectParamRefs(const ParsedAttributes &Attrs,
   }
 }
 
-// Rejects a name whose binding changed with how these attributes are parsed,
-// rather than silently rebinding it. Remove these checks once code relying on
-// the old binding is no longer a concern.
 bool Parser::checkLateAttributeParamRefs(
     const LateParsedAttribute &LPA, ArrayRef<const DeclRefExpr *> ParamRefs,
     bool ReenteredProtoParams) {
