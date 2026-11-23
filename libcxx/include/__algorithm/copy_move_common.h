@@ -16,6 +16,7 @@
 #include <__config>
 #include <__cstddef/size_t.h>
 #include <__iterator/concepts.h>
+#include <__iterator/incrementable_traits.h>
 #include <__iterator/iterator_traits.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/enable_if.h>
@@ -142,7 +143,11 @@ template <class _Algorithm,
                         int> = 0>
 _LIBCPP_CONSTEXPR_SINCE_CXX17 __in_out_result<_InIter, _OutIter>
 __copy_move_unwrap_iters(_InIter __first, _Sent __last, _OutIter __out_first) {
+#if _LIBCPP_STD_VER >= 20
+  using _OutDiff _LIBCPP_NODEBUG = iter_difference_t<_OutIter>;
+#else
   using _OutDiff _LIBCPP_NODEBUG = typename iterator_traits<_OutIter>::difference_type;
+#endif
   auto __n                       = __last - __first;
   auto __range                   = std::__unwrap_range(__first, std::move(__last));
   _OutDiff __out_n               = static_cast<_OutDiff>(__n);
