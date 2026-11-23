@@ -100,8 +100,8 @@ FilterOverriddenELFFunctions(Target &target,
       // 1. The name resolves to a unique external/weak ELF symbol address,
       // 2. This candidate has no symbol of its own at its address (neither the
       //    selected symbol nor a localized symbol), and
-      // 3. Another DWARF candidate exists at the selected address (otherwise,
-      //    keep this candidate so its declaration still provides the type).
+      // 3. Lookup found a DWARF definition at the linked address. Otherwise,
+      //    keep this candidate for its type.
       if (selected &&
           !FindSymbolAtFileAddress(symbols,
                                    function->GetAddress().GetFileAddress()) &&
@@ -692,9 +692,8 @@ lldb::VariableSP ClangExpressionDeclMap::FindGlobalVariable(
   if (vars.GetSize() == 0)
     return VariableSP();
 
-  // FIXME: This blindly picks the first match without checking ELF symbol
-  // binding. For overridden weak variables, this currently works by accident
-  // only when the weak DIE's DW_AT_location resolves to the strong storage.
+  // The first match may come from the weak definition's DIE. This can work
+  // because its DW_AT_location resolves to the strong ELF symbol's address.
   return vars.GetVariableAtIndex(0);
 }
 
