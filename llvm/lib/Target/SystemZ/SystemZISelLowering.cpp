@@ -5743,6 +5743,21 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(ISD::MULHU, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2));
 
+  case Intrinsic::s390_vavgb:
+  case Intrinsic::s390_vavgh:
+  case Intrinsic::s390_vavgf:
+  case Intrinsic::s390_vavgg:
+  case Intrinsic::s390_vavgq:
+    return DAG.getNode(ISD::AVGCEILS, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vavglb:
+  case Intrinsic::s390_vavglh:
+  case Intrinsic::s390_vavglf:
+  case Intrinsic::s390_vavglg:
+  case Intrinsic::s390_vavglq:
+    return DAG.getNode(ISD::AVGCEILU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
   case Intrinsic::s390_vmahb:
   case Intrinsic::s390_vmahh:
   case Intrinsic::s390_vmahf:

@@ -627,20 +627,6 @@ let Predicates = [FeatureVector] in {
       def VAVGLQ : BinaryVRRc<"vavglq", 0xE7F0, avgceilu, v128q, v128q, 4>;
   }
 
-  def : Pat<(v16i8 (int_s390_vavgb VR128:$x, VR128:$y)), (VAVGB VR128:$x, VR128:$y)>;
-  def : Pat<(v8i16 (int_s390_vavgh VR128:$x, VR128:$y)), (VAVGH VR128:$x, VR128:$y)>;
-  def : Pat<(v4i32 (int_s390_vavgf VR128:$x, VR128:$y)), (VAVGF VR128:$x, VR128:$y)>;
-  def : Pat<(v2i64 (int_s390_vavgg VR128:$x, VR128:$y)), (VAVGG VR128:$x, VR128:$y)>;
-  let Predicates = [FeatureVectorEnhancements3] in
-    def : Pat<(i128 (int_s390_vavgq VR128:$x, VR128:$y)), (VAVGQ VR128:$x, VR128:$y)>;
-
-  def : Pat<(v16i8 (int_s390_vavglb VR128:$x, VR128:$y)), (VAVGLB VR128:$x, VR128:$y)>;
-  def : Pat<(v8i16 (int_s390_vavglh VR128:$x, VR128:$y)), (VAVGLH VR128:$x, VR128:$y)>;
-  def : Pat<(v4i32 (int_s390_vavglf VR128:$x, VR128:$y)), (VAVGLF VR128:$x, VR128:$y)>;
-  def : Pat<(v2i64 (int_s390_vavglg VR128:$x, VR128:$y)), (VAVGLG VR128:$x, VR128:$y)>;
-  let Predicates = [FeatureVectorEnhancements3] in
-    def : Pat<(i128 (int_s390_vavglq VR128:$x, VR128:$y)), (VAVGLQ VR128:$x, VR128:$y)>;
-
   // Checksum.
   def VCKSM : BinaryVRRc<"vcksm", 0xE766, int_s390_vcksm, v128f, v128f>;
 
