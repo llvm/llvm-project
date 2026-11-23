@@ -413,7 +413,12 @@ enum RecordFlags : unsigned {
   IsCXXRecord = 1 << 3,
   IsPolymorphic = 1 << 4,
   HasFlexibleArrayMember = 1 << 5,
-  LLVM_MARK_AS_BITMASK_ENUM(/* LargestValue = */ HasFlexibleArrayMember),
+  IsCXXEmpty = 1 << 6,
+  HasNonTrivialCopyAssignment = 1 << 7,
+  HasNonTrivialDestructor = 1 << 8,
+  HasNonTrivialDefaultConstructor = 1 << 9,
+  LLVM_MARK_AS_BITMASK_ENUM(
+      /* LargestValue = */ HasNonTrivialDefaultConstructor),
 };
 
 class RecordType : public Type {
@@ -450,6 +455,24 @@ public:
   bool hasFlexibleArrayMember() const {
     return static_cast<unsigned>(Flags & RecordFlags::HasFlexibleArrayMember) !=
            0;
+  }
+  /// True for a C++ class that is empty in the sense of std::is_empty. This
+  /// differs from isEmpty(), which applies the ABI rules for ignoring empty
+  /// records.
+  bool isCXXEmpty() const {
+    return static_cast<unsigned>(Flags & RecordFlags::IsCXXEmpty) != 0;
+  }
+  bool hasNonTrivialCopyAssignment() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialCopyAssignment) != 0;
+  }
+  bool hasNonTrivialDestructor() const {
+    return static_cast<unsigned>(Flags &
+                                 RecordFlags::HasNonTrivialDestructor) != 0;
+  }
+  bool hasNonTrivialDefaultConstructor() const {
+    return static_cast<unsigned>(
+               Flags & RecordFlags::HasNonTrivialDefaultConstructor) != 0;
   }
   uint32_t getNumBaseClasses() const { return BaseClasses.size(); }
   uint32_t getNumVirtualBaseClasses() const {

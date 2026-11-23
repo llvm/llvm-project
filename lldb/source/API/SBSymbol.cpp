@@ -14,6 +14,7 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -55,7 +56,7 @@ const char *SBSymbol::GetName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetName().AsCString(nullptr);
+    name = StringPool::GetSystemPool().InternNonEmpty(m_opaque_ptr->GetName());
 
   return name;
 }
@@ -65,8 +66,8 @@ const char *SBSymbol::GetDisplayName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name =
-        m_opaque_ptr->GetMangled().GetDisplayDemangledName().AsCString(nullptr);
+    name = StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetDisplayDemangledName());
 
   return name;
 }
@@ -76,7 +77,8 @@ const char *SBSymbol::GetMangledName() const {
 
   const char *name = nullptr;
   if (m_opaque_ptr)
-    name = m_opaque_ptr->GetMangled().GetMangledName().AsCString(nullptr);
+    name = StringPool::GetSystemPool().InternNonEmpty(
+        m_opaque_ptr->GetMangled().GetMangledName());
   return name;
 }
 
@@ -86,7 +88,8 @@ const char *SBSymbol::GetBaseName() const {
   if (!m_opaque_ptr)
     return nullptr;
 
-  return m_opaque_ptr->GetMangled().GetBaseName().AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_ptr->GetMangled().GetBaseName());
 }
 
 bool SBSymbol::operator==(const SBSymbol &rhs) const {

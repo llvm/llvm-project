@@ -1466,8 +1466,8 @@ struct WgToSgVectorDeinterleaveOp
     for (auto src : adaptor.getSource()) {
       auto newDeinterleave =
           vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
-      newRes1Ops.push_back(newDeinterleave.getRes1());
-      newRes2Ops.push_back(newDeinterleave.getRes2());
+      newRes1Ops.push_back(newDeinterleave.getResultEven());
+      newRes2Ops.push_back(newDeinterleave.getResultOdd());
     }
 
     SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};

@@ -100,6 +100,10 @@ void DivUIOp::inferResultDivisibility(ArrayRef<IntegerDivisibility> argDivs,
   if (!matchPattern(getRhs(), m_ConstantInt(&intVal)))
     return;
 
+  // Division by zero is undefined, so there is nothing to infer.
+  if (intVal.isZero())
+    return;
+
   auto lhsDivisibility = getDivisibilityOfOperand(getLhs(), argDivs[0]);
 
   uint64_t divUDiv = lhsDivisibility.udiv() % intVal.getZExtValue() == 0

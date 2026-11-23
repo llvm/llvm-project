@@ -227,7 +227,11 @@
 // (and hence their vtable symbol) changes too. Note that the vtable and RTTI are not marked with
 // [[gnu::visibility("hidden")]], since the vtable and RTTI should still be deduplicated across dylibs with the same
 // instatiations.
-#define _LIBCPP_HIDE_STRUCT_FROM_ABI [[__gnu__::__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))]]
+#ifndef _LIBCPP_NO_ABI_TAG
+#  define _LIBCPP_HIDE_STRUCT_FROM_ABI [[__gnu__::__abi_tag__(_LIBCPP_TOSTRING(_LIBCPP_ODR_SIGNATURE))]]
+#else
+#  define _LIBCPP_HIDE_STRUCT_FROM_ABI
+#endif
 
 // Optional attributes
 // -------------------
@@ -482,12 +486,6 @@
 #  define _LIBCPP_WARN_UNUSED [[__gnu__::__warn_unused__]]
 #else
 #  define _LIBCPP_WARN_UNUSED
-#endif
-
-#if defined(_LIBCPP_COMPILER_CLANG_BASED) && !defined(__OPTIMIZE_SIZE__)
-#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION _Pragma("clang loop vectorize(enable) interleave(enable)")
-#else
-#  define _LIBCPP_ENABLE_LOOP_VECTORIZATION
 #endif
 
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H

@@ -37,8 +37,8 @@ void ABIRISCVTestFixture::TearDownTestCase() {
 
 static DynamicRegisterInfo::Register MakeRegister(const char *name) {
   DynamicRegisterInfo::Register reg;
-  reg.name = ConstString(name);
-  reg.set_name = ConstString("GPR");
+  reg.name = name;
+  reg.set_name = "GPR";
   return reg;
 }
 

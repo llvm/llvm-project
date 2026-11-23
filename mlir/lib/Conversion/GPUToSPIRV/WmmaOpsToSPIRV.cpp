@@ -128,9 +128,12 @@ bool allOperandsHaveSameCoopMatrixType(ValueRange operands) {
   return isa<spirv::CooperativeMatrixType>(operands.front().getType());
 }
 
-static bool hasSignedIntegerElementType(spirv::CooperativeMatrixType type) {
+// gpu.subgroup_mma_compute (GPUOps.td) specifies that integer A/B types carry
+// signedness and the signless accumulator implies a signed integer. Treat
+// signless C/Result as signed when selecting the SignedComponentsKHR flags.
+static bool hasSignedGpuMmaIntegerSemantics(spirv::CooperativeMatrixType type) {
   auto elementType = dyn_cast<IntegerType>(type.getElementType());
-  return elementType && elementType.isSigned();
+  return elementType && !elementType.isUnsigned();
 }
 
 static spirv::CooperativeMatrixOperandsKHR
@@ -141,13 +144,13 @@ getSignedCoopMatrixOperands(spirv::CooperativeMatrixType aType,
   using Operands = spirv::CooperativeMatrixOperandsKHR;
 
   Operands operands = Operands::None;
-  if (hasSignedIntegerElementType(aType))
+  if (hasSignedGpuMmaIntegerSemantics(aType))
     operands |= Operands::ASigned;
-  if (hasSignedIntegerElementType(bType))
+  if (hasSignedGpuMmaIntegerSemantics(bType))
     operands |= Operands::BSigned;
-  if (hasSignedIntegerElementType(cType))
+  if (hasSignedGpuMmaIntegerSemantics(cType))
     operands |= Operands::CSigned;
-  if (hasSignedIntegerElementType(resultType))
+  if (hasSignedGpuMmaIntegerSemantics(resultType))
     operands |= Operands::ResultSigned;
   return operands;
 }
@@ -321,6 +324,36 @@ struct WmmaElementwiseOpToSPIRVScalarMulLowering final
 
 namespace khr {
 namespace {
+struct MemoryRequirements {
+  spirv::MemoryAccessAttr memoryAccess;
+  IntegerAttr alignment;
+};
+
+/// Mirrors calculateMemoryRequirements in MemRefToSPIRV.cpp, simplified since
+/// coop matrix load/store have no alignment or nontemporal attrs of their own.
+static MemoryRequirements calculateMemoryRequirements(Value accessedPtr) {
+  auto ptrType = cast<spirv::PointerType>(accessedPtr.getType());
+  if (ptrType.getStorageClass() != spirv::StorageClass::PhysicalStorageBuffer)
+    return {};
+
+  // PhysicalStorageBuffer pointers require Aligned.
+  std::optional<int64_t> sizeInBytes;
+  Type pointeeType = ptrType.getPointeeType();
+  if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType)) {
+    sizeInBytes = scalarType.getSizeInBytes();
+  } else if (auto vecType = dyn_cast<VectorType>(pointeeType)) {
+    if (auto scalarElem = dyn_cast<spirv::ScalarType>(vecType.getElementType()))
+      if (auto elemSize = scalarElem.getSizeInBytes())
+        sizeInBytes = *elemSize * vecType.getNumElements();
+  }
+
+  if (!sizeInBytes)
+    return {};
+
+  MLIRContext *ctx = accessedPtr.getContext();
+  return {spirv::MemoryAccessAttr::get(ctx, spirv::MemoryAccess::Aligned),
+          IntegerAttr::get(IntegerType::get(ctx, 32), *sizeInBytes)};
+}
 
 /// Converts the GPU MMA loadOp to KHRCooperativeMatrixLoad op in the SPIRV
 /// dialect.
@@ -354,8 +387,10 @@ struct WmmaLoadOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixLoadOp>(
-        op, coopType, bufferPtr, strideValue, layout);
+        op, coopType, bufferPtr, layout, strideValue, memReq.memoryAccess,
+        memReq.alignment);
     return success();
   }
 };
@@ -386,8 +421,10 @@ struct WmmaStoreOpToSPIRVLowering final
     auto layout = isColMajor ? spirv::CooperativeMatrixLayoutKHR::ColumnMajor
                              : spirv::CooperativeMatrixLayoutKHR::RowMajor;
 
+    MemoryRequirements memReq = calculateMemoryRequirements(bufferPtr);
     rewriter.replaceOpWithNewOp<spirv::KHRCooperativeMatrixStoreOp>(
-        op, bufferPtr, adaptor.getSrc(), strideValue, layout);
+        op, bufferPtr, adaptor.getSrc(), layout, strideValue,
+        memReq.memoryAccess, memReq.alignment);
     return success();
   }
 };

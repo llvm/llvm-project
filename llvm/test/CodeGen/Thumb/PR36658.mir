@@ -132,7 +132,6 @@
 ---
 name:            foo4
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0' }
 frameInfo:

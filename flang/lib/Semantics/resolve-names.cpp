@@ -188,6 +188,7 @@ public:
 
   // Make a placeholder symbol for a Name that otherwise wouldn't have one.
   // It is not in any scope and always has MiscDetails.
+  Symbol *MakePlaceholder(parser::CharBlock name, MiscDetails::Kind kind);
   void MakePlaceholder(const parser::Name &, MiscDetails::Kind);
 
   template <typename T> common::IfNoLvalue<T, T> FoldExpr(T &&expr) {
@@ -823,6 +824,8 @@ protected:
     // of the specification part, since the declaration typing the index's
     // name may follow the DATA statement (F'2023 19.4 p5)
     std::vector<MutableSymbolRef> deferredDataIDoVars;
+    std::vector<const parser::ScalarLogicalConstantExpr *>
+        ompAssumesNoParallelismConditions;
     // Info about SAVE statements and attributes in current scope
     struct {
       std::optional<SourceName> saveAll; // "SAVE" without entity list
@@ -1851,13 +1854,46 @@ public:
   bool Pre(const parser::OmpClause::To &);
   bool Pre(const parser::OmpClause::From &);
 
+  bool Pre(const parser::OmpClause::NoParallelism &) {
+    return !inSpecificationPart_;
+  }
+
   void Post(const parser::OmpAssumesDirective &x) {
-    if (llvm::any_of(x.v.Clauses().v, [](const parser::OmpClause &clause) {
-          return std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u);
-        })) {
-      if (Symbol * symbol{currScope().symbol()}) {
-        symbol->set(Symbol::Flag::OmpAssumesNoOpenmp);
+    if (Symbol * symbol{currScope().symbol()}) {
+      llvm::omp::Clauses clauses;
+      llvm::omp::Directives absent;
+      for (const parser::OmpClause &clause : x.v.Clauses().v) {
+        if (std::holds_alternative<parser::OmpClause::NoOpenmp>(clause.u)) {
+          clauses.set(clause.Id());
+        } else if (const auto *noParallelism{
+                       std::get_if<parser::OmpClause::NoParallelism>(
+                           &clause.u)}) {
+          if (const auto &condition{noParallelism->v}) {
+            specPartState_.ompAssumesNoParallelismConditions.push_back(
+                &condition->v);
+          } else {
+            clauses.set(clause.Id());
+          }
+        } else if (const auto *absentClause{
+                       std::get_if<parser::OmpClause::Absent>(&clause.u)}) {
+          clauses.set(clause.Id());
+          for (llvm::omp::Directive directive : absentClause->v.v) {
+            absent.set(directive);
+          }
+        }
       }
+      common::visit(
+          [&](auto &details) {
+            if constexpr (std::is_convertible_v<decltype(details),
+                              WithOmpDeclarative &>) {
+              details.set_version(context().langOptions().getOpenMPVersion());
+              details.set_ompAssumes(details.ompAssumes() | clauses);
+              for (llvm::omp::Directive directive : absent) {
+                details.add_ompAssumesAbsent(directive);
+              }
+            }
+          },
+          symbol->details());
     }
   }
 
@@ -2159,6 +2195,22 @@ void OmpVisitor::ProcessMapperSpecifier(const parser::OmpMapperSpecifier &spec,
 void OmpVisitor::ProcessReductionSpecifier(
     const parser::OmpReductionSpecifier &spec,
     const parser::OmpClauseList &clauses) {
+  // Even if this directive is invalid or ignored for any reason, there is
+  // still some processing that needs to happen in order for all Name's
+  // embedded in the reduction specifier and the clauses to have symbols.
+  bool ignore{false};
+
+  // Ignore declarative METADIRECTIVEs for now. Those are not handled yet.
+  // Also, the top of the declaratives_ stack can be a nullptr if this
+  // directive is (incorrectly) placed in the execution part.
+  const parser::OpenMPDeclarativeConstruct *ompDecl{declaratives_.back()};
+  auto dirId = ompDecl
+      ? parser::omp::GetOmpDirectiveSpecification(*ompDecl).DirId()
+      : llvm::omp::Directive::OMPD_nothing;
+  if (dirId != llvm::omp::OMPD_declare_reduction) {
+    ignore = true;
+  }
+
   const parser::Name *name{nullptr};
   parser::CharBlock mangledName;
   UserReductionDetails reductionDetailsTemp;
@@ -2189,7 +2241,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   UserReductionDetails *reductionDetails{&reductionDetailsTemp};
   // Use scope-local lookup to avoid false matches from parent scopes.
   Symbol *symbol{FindInScope(currScope(), mangledName)};
-  if (symbol) {
+  if (!ignore && symbol) {
     if (symbol->detailsIf<UseDetails>()) {
       // USE-associated reduction: shadow it with a new local declaration.
       EraseSymbol(*symbol);
@@ -2208,22 +2260,29 @@ void OmpVisitor::ProcessReductionSpecifier(
     }
   }
 
-  reductionDetails->AddDecl(declaratives_.back());
-
   // Do not walk OmpTypeNameList. The types on the list will be visited
-  // during procesing of OmpCombinerExpression.
+  // during procesing of OmpCombinerExpression. The traversal of
+  // OmpCombinerExpression will also create symbols for omp_* variables,
+  // so it has to run regardless of whether this directive is valid
+  // or not.
   Walk(std::get<std::optional<parser::OmpCombinerExpression>>(spec.t));
   Walk(clauses);
 
-  for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
-    // The declTypeSpec can be null if there is some semantic error.
-    if (type.declTypeSpec) {
-      reductionDetails->AddType(*type.declTypeSpec);
+  if (!ignore) {
+    reductionDetails->AddDecl(declaratives_.back());
+
+    for (auto &type : std::get<parser::OmpTypeNameList>(spec.t).v) {
+      // The declTypeSpec can be null if there is some semantic error.
+      if (type.declTypeSpec) {
+        reductionDetails->AddType(*type.declTypeSpec);
+      }
     }
   }
 
-  if (!symbol) {
-    symbol = &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
+  if (ignore || !symbol) {
+    symbol = ignore
+        ? MakePlaceholder(mangledName, MiscDetails::Kind::None)
+        : &MakeSymbol(mangledName, Attrs{}, std::move(*reductionDetails));
   }
   if (name) {
     name->symbol = symbol;
@@ -2535,11 +2594,15 @@ template <typename T> void BaseVisitor::Walk(const T &x) {
   parser::Walk(x, *this_);
 }
 
+Symbol *BaseVisitor::MakePlaceholder(
+    parser::CharBlock name, MiscDetails::Kind kind) {
+  return &context_->globalScope().MakeSymbol(name, Attrs{}, MiscDetails{kind});
+}
+
 void BaseVisitor::MakePlaceholder(
     const parser::Name &name, MiscDetails::Kind kind) {
   if (!name.symbol) {
-    name.symbol = &context_->globalScope().MakeSymbol(
-        name.source, Attrs{}, MiscDetails{kind});
+    name.symbol = MakePlaceholder(name.source, kind);
   }
 }
 
@@ -6626,7 +6689,7 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     enumerator.SetType(declType);
     // Store the init as a StructureConstructor of the enumeration type with
     // the ordinal in the hidden __ordinal component.  This gives each
-    // enumerator a distinct Constant<SomeDerived> value.
+    // enumerator a distinct Constant<Type<TypeCategory::Derived>> value.
     evaluate::StructureConstructor enumCtor{declType.derivedTypeSpec()};
     // Look up the __ordinal component symbol in the type's scope.
     auto ordinalIter{
@@ -6637,8 +6700,9 @@ bool DeclarationVisitor::Pre(const parser::EnumerationEnumeratorStmt &x) {
     enumCtor.Add(ordinalSym,
         evaluate::AsGenericExpr(evaluate::MakeCIntegerExpr(ordinal)));
     enumerator.get<ObjectEntityDetails>().set_init(
-        SomeExpr{evaluate::Expr<evaluate::SomeDerived>{
-            evaluate::Constant<evaluate::SomeDerived>{std::move(enumCtor)}}});
+        SomeExpr{evaluate::Expr<evaluate::Type<common::TypeCategory::Derived>>{
+            evaluate::Constant<evaluate::Type<common::TypeCategory::Derived>>{
+                std::move(enumCtor)}}});
     typeDetails.set_enumeratorCount(ordinal);
   }
   return false;
@@ -8571,6 +8635,15 @@ Symbol &DeclarationVisitor::FindOrDeclareEnclosingEntity(
     prev = &MakeSymbol(InclusiveScope(), name.source, Attrs{});
     ConvertToObjectEntity(*prev);
     ApplyImplicitRules(*prev);
+  } else {
+    // A name in a locality-spec must be a variable (F2023 C1126). An entity
+    // declared in an enclosing BLOCK is not classified as an object or a
+    // procedure until the end of the BLOCK, so classify it now; the locality
+    // checks then diagnose a name that cannot be a variable. A nested BLOCK
+    // can reach the entity through a host-association symbol (for example,
+    // after an ASYNCHRONOUS or VOLATILE statement), so classify the ultimate
+    // entity. The locality checks still use prev, which has those attributes.
+    ConvertToObjectEntity(prev->GetUltimate());
   }
   return *prev;
 }
@@ -9424,13 +9497,11 @@ void ConstructVisitor::SetTypeFromAssociation(Symbol &symbol) {
   if (*pexpr) {
     const SomeExpr &expr{**pexpr};
     if (std::optional<evaluate::DynamicType> type{expr.GetType()}) {
-      if (const auto *charExpr{
-              evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeCharacter>>(
-                  expr)}) {
-        symbol.SetType(ToDeclTypeSpec(std::move(*type),
-            FoldExpr(common::visit(
-                [](const auto &kindChar) { return kindChar.LEN(); },
-                charExpr->u))));
+      if (const auto *charExpr{evaluate::UnwrapExpr<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Character>>>(
+              expr)}) {
+        symbol.SetType(
+            ToDeclTypeSpec(std::move(*type), FoldExpr(charExpr->LEN())));
       } else {
         symbol.SetType(ToDeclTypeSpec(std::move(*type)));
       }
@@ -11122,6 +11193,25 @@ void ResolveNamesVisitor::FinishSpecificationPart(
     // procedure declaration in an interface block
     CheckEquivalenceSets();
   }
+  if (Symbol * symbol{currScope().symbol()}) {
+    for (const auto *condition :
+        specPartState_.ompAssumesNoParallelismConditions) {
+      Walk(*condition);
+      if (auto value{EvaluateExpr(*condition)};
+          value && omp::GetLogicalValue(*value).value_or(false)) {
+        common::visit(
+            [&](auto &details) {
+              if constexpr (std::is_convertible_v<decltype(details),
+                                WithOmpDeclarative &>) {
+                llvm::omp::Clauses clauses{details.ompAssumes()};
+                clauses.set(llvm::omp::Clause::OMPC_no_parallelism);
+                details.set_ompAssumes(clauses);
+              }
+            },
+            symbol->details());
+      }
+    }
+  }
 }
 
 // Analyze the bodies of statement functions now that the symbols in this
@@ -11488,6 +11578,14 @@ void ResolveNamesVisitor::Post(const parser::CompilerDirective &x) {
           }
         }
       }
+    }
+  } else if (std::holds_alternative<parser::CompilerDirective::Align>(x.u)) {
+    // Not context().Warn(): the directive may appear outside any program
+    // unit, where there is no scope to look up.
+    if (context().ShouldWarn(common::UsageWarning::IgnoredDirective)) {
+      Say(x.source,
+          "!DIR$ ALIGN is not yet implemented and was ignored"_warn_en_US)
+          .set_usageWarning(common::UsageWarning::IgnoredDirective);
     }
   } else if (const auto *inlineAlways{
                  std::get_if<parser::CompilerDirective::InlineAlways>(&x.u)}) {

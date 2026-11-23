@@ -187,7 +187,6 @@ bool AArch64PTrueCoalescingImpl::tryCoalesce(PredicateInfo &DomPI,
   }
 
   MRI->replaceRegWith(CanReg, DomReg);
-  MRI->clearKillFlags(DomReg);
   CanMI->eraseFromParent();
 
   // Update DomPI based on uses inherited from CanPI.

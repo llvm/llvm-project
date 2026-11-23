@@ -25,6 +25,8 @@ T *__addressof(T &arg);
 
 char *data(std::string &c);
 
+string to_string(int);
+
 } // end namespace std
 
 void consume(const char *) {}
@@ -436,4 +438,18 @@ void no_CXXRecordDecl() {
 
 void checkReference(std::string &s) {
   const char *c = s.c_str();
+}
+
+// In Clang 14.0.0 cplusplus.InnerPointer reported a false
+// positive at the return statement:
+// "Inner pointer of container used after re/deallocation".
+// The underlying issue was fixed and since Clang 15.0.0 the
+// false positive is no longer present. 'retval' has thread
+// storage duration, so it outlives the call and the pointer
+// returned by c_str() stays valid.
+const char *GH59870(int value) {
+  thread_local std::string retval;
+
+  retval = std::to_string(value);
+  return retval.c_str(); // no-warning
 }

@@ -80,7 +80,8 @@ Symbol::Symbol(const Symbol &rhs)
       m_type_data_resolved(rhs.m_type_data_resolved),
       m_is_synthetic(rhs.m_is_synthetic), m_is_debug(rhs.m_is_debug),
       m_is_external(rhs.m_is_external),
-      m_size_is_sibling(rhs.m_size_is_sibling), m_size_is_synthesized(false),
+      m_size_is_sibling(rhs.m_size_is_sibling),
+      m_size_is_synthesized(rhs.m_size_is_synthesized),
       m_size_is_valid(rhs.m_size_is_valid),
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
@@ -940,6 +941,7 @@ const char *Symbol::GetTypeAsString(lldb::SymbolType symbol_type) {
     ENUM_TO_CSTRING(ObjCMetaClass);
     ENUM_TO_CSTRING(ObjCIVar);
     ENUM_TO_CSTRING(ReExported);
+    ENUM_TO_CSTRING(ASTFile);
   }
   return "<unknown SymbolType>";
 }
@@ -975,6 +977,7 @@ lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
       .Case("objcmetaclass", eSymbolTypeObjCMetaClass)
       .Case("objcivar", eSymbolTypeObjCIVar)
       .Case("reexported", eSymbolTypeReExported)
+      .Case("astfile", eSymbolTypeASTFile)
       .Default(eSymbolTypeInvalid);
 }
 

@@ -18,7 +18,7 @@
 
 using namespace llvm;
 
-static llvm::opt::RegisterLibraryOptions<llvm::VectorizeOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::VectorizeOptions)
 
 const VectorizeOptions &llvm::getVectorizeOptions(const Loop &L) {
   return getVectorizeOptions(L.getHeader()->getContext());

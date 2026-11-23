@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -423,6 +424,11 @@ LogicalResult spirv::CompositeConstructOp::verify() {
         "expected to return a vector or cooperative matrix when the number of "
         "constituents is less than what the result needs");
 
+  if (constituents.size() < 2)
+    return emitOpError("has incorrect number of operands: expected at least "
+                       "2 for a vector result, but provided ")
+           << constituents.size();
+
   SmallVector<unsigned> sizes;
   for (Value component : constituents) {
     if (!isa<VectorType>(component.getType()) &&
@@ -599,7 +605,8 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()) &&
+      !isa<spirv::NullAttr>(getValue()))
     printer << " : " << getType();
 }
 
@@ -612,7 +619,11 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                             "matrix constant, but found ")
              << denseAttr;
   }
-  if (isa<IntegerAttr, FloatAttr>(value)) {
+  if (isa<spirv::NullAttr>(value) &&
+      !isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(opType))
+    return op.emitOpError("must have spirv.ptr, spirv.array or spirv.struct "
+                          "result type for null value");
+  if (isa<IntegerAttr, FloatAttr, spirv::NullAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
       return op.emitOpError("result type (")
@@ -1501,6 +1512,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
     return emitOpError("storage class cannot be '")
            << stringifyStorageClass(storageClass) << "'";
   }
+
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
 
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."

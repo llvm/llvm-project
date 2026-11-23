@@ -509,4 +509,3 @@ body:             |
     $vgpr2 = V_ACCVGPR_READ_B32_e64 killed $agpr0, implicit $exec
     $vgpr4 = FLAT_LOAD_DWORD $vgpr2_vgpr3, 0, 0, implicit $exec, implicit $flat_scr
 ...
----
