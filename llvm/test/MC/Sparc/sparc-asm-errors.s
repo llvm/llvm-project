@@ -45,3 +45,19 @@
         sethi %foo(sym), %g1
         ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: unexpected relocation specifier
         sethi %tgd_add(sym), %g1
+
+! Register names are case-sensitive, as in GNU as.
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %G1, %g2
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %SP, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %R14, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        fmovs %F0, %f1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        rd %Y, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %O6, %g1
+        ! CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: invalid register name
+        mov %I6, %g1
