@@ -156,3 +156,4 @@ body: |
     %3:gpr64 = MADDXrrr %0, %0, %4
     $x0 = COPY %3
     RET_ReallyLR implicit $x0
+...

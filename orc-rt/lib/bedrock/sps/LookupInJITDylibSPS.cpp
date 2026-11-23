@@ -16,6 +16,7 @@
 #include "orc-rt-internal/support/StringExtras.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/sps/SPSJITDylibLookupFlags.h"
+#include "orc-rt/support/sps/SPSSymbolLookupResult.h"
 #include "orc-rt/support/sps/SPSSymbolLookupSet.h"
 #include "orc-rt/support/sps/SPSWrapperFunction.h"
 

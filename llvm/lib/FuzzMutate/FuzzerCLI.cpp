@@ -16,6 +16,7 @@
 using namespace llvm;
 
 void llvm::parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
+                             ArrayRef<const cl::LibraryOptions *> ToolOptions,
                              int ArgC, char *ArgV[]) {
   std::vector<const char *> CLArgs;
   CLArgs.push_back(ArgV[0]);
@@ -27,7 +28,7 @@ void llvm::parseFuzzerCLOpts(cl::LibraryOptionsContext &LibraryOptions,
   while (I < ArgC)
     CLArgs.push_back(ArgV[I++]);
 
-  cl::parseCommandLineOptions(LibraryOptions, CLArgs);
+  cl::parseCommandLineOptions(LibraryOptions, ToolOptions, CLArgs);
 }
 
 void llvm::handleExecNameEncodedBEOpts(

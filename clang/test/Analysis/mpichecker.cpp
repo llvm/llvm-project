@@ -380,3 +380,12 @@ void externFunctions2() {
   void callNonblockingExtern(MPI_Request *req);
   callNonblockingExtern(&req);
 }
+
+bool coin();
+void GH64647() {
+  if (coin()) {
+    MPI_Request request_item;
+    MPI_Wait(&request_item, MPI_STATUS_IGNORE); // expected-warning {{Request 'request_item' has no matching nonblocking call.}}
+	}
+	GH64647();
+}

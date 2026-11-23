@@ -423,6 +423,11 @@ LogicalResult spirv::CompositeConstructOp::verify() {
         "expected to return a vector or cooperative matrix when the number of "
         "constituents is less than what the result needs");
 
+  if (constituents.size() < 2)
+    return emitOpError("has incorrect number of operands: expected at least "
+                       "2 for a vector result, but provided ")
+           << constituents.size();
+
   SmallVector<unsigned> sizes;
   for (Value component : constituents) {
     if (!isa<VectorType>(component.getType()) &&
@@ -599,7 +604,8 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()) &&
+      !isa<spirv::NullAttr>(getValue()))
     printer << " : " << getType();
 }
 
@@ -612,7 +618,11 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                             "matrix constant, but found ")
              << denseAttr;
   }
-  if (isa<IntegerAttr, FloatAttr>(value)) {
+  if (isa<spirv::NullAttr>(value) &&
+      !isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(opType))
+    return op.emitOpError("must have spirv.ptr, spirv.array or spirv.struct "
+                          "result type for null value");
+  if (isa<IntegerAttr, FloatAttr, spirv::NullAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
       return op.emitOpError("result type (")

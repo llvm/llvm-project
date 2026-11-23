@@ -33,7 +33,6 @@ namespace bufferization {
 using namespace mlir;
 
 namespace {
-
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
@@ -203,18 +202,24 @@ public:
 
           // find the ancestor of user that is in the same block as the allocOp.
           auto *topUser = allocOp->getBlock()->findAncestorOpInBlock(*user);
+          // A user outside the block cannot be ordered against the dealloc op.
+          if (!topUser)
+            return WalkResult::advance();
           if (!lastUser || happensBefore(lastUser, topUser)) {
             lastUser = topUser;
           }
         }
       }
-      if (lastUser == nullptr) {
-        return WalkResult::advance();
+      if (lastUser) {
+        LDBG() << "Last user found: " << *lastUser;
+        assert(lastUser->getBlock() == allocOp->getBlock());
+        assert(lastUser->getBlock() == deallocOp->getBlock());
+      } else {
+        LDBG() << "Last not user found";
       }
-      LDBG() << "Last user found: " << *lastUser;
-      assert(lastUser->getBlock() == allocOp->getBlock());
-      assert(lastUser->getBlock() == deallocOp->getBlock());
 
+      // If no lastUser we can still try to optimize the position of the
+      // deallocOp
       Operation *target =
           findValidInsertionPoint(&domInfo, allocOp, deallocOp, lastUser);
       if (!target) {
@@ -229,5 +234,4 @@ public:
     });
   }
 };
-
 } // end anonymous namespace

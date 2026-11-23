@@ -211,8 +211,10 @@ bool isCommutative(const Instruction *I, const Value *ValWithUses,
                       (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_NE))
                     return true;
                   // Commutative, if abs(sub nsw, true) or abs(sub, false).
+                  // A lane without wrap flags, like an or converted to sub,
+                  // does not clear nsw of the vector sub.
                   ConstantInt *Flag;
-                  auto *I = dyn_cast<BinaryOperator>(U.get());
+                  auto *I = dyn_cast<OverflowingBinaryOperator>(U.get());
                   return match(U.getUser(),
                                m_Intrinsic<Intrinsic::abs>(
                                    m_Specific(U.get()), m_ConstantInt(Flag))) &&
@@ -309,19 +311,8 @@ std::optional<unsigned> getExtractIndex(const Instruction *E) {
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
          "Expected extractelement or extractvalue instruction.");
-  if (Opcode == Instruction::ExtractElement) {
-    auto *CI = dyn_cast<ConstantInt>(E->getOperand(1));
-    if (!CI)
-      return std::nullopt;
-    // Check if the index is out of bound. We can get the source vector from
-    // operand 0.
-    unsigned Idx = CI->getZExtValue();
-    auto *EE = cast<ExtractElementInst>(E);
-    const unsigned VF = getNumElements(EE->getVectorOperandType());
-    if (Idx >= VF)
-      return std::nullopt;
-    return Idx;
-  }
+  if (Opcode == Instruction::ExtractElement)
+    return getInsertExtractIndex<ExtractElementInst>(E, /*Offset=*/0);
   auto *EI = cast<ExtractValueInst>(E);
   if (EI->getNumIndices() != 1)
     return std::nullopt;

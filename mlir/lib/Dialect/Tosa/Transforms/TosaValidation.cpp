@@ -1386,6 +1386,22 @@ LogicalResult checkErrorIfPad(Operation *op) {
   return success();
 }
 
+LogicalResult checkErrorIfTile(Operation *op) {
+  auto tileOp = dyn_cast<tosa::TileOp>(op);
+  if (!tileOp)
+    return success();
+
+  SmallVector<int64_t> multiples;
+  if (failed(tileOp.getConstantMultiples(multiples)))
+    return success();
+
+  if (llvm::any_of(multiples, [](int64_t v) { return v <= 0; }))
+    return op->emitOpError("multiples values must be > 0, got [")
+           << multiples << "]";
+
+  return success();
+}
+
 LogicalResult checkErrorIfReshape(Operation *op) {
   auto reshapeOp = dyn_cast<tosa::ReshapeOp>(op);
   if (!reshapeOp)
@@ -1396,11 +1412,50 @@ LogicalResult checkErrorIfReshape(Operation *op) {
                                  shapeValues))
     return success();
 
-  if (llvm::is_contained(shapeValues, kInferableDimSize))
-    return op->emitOpError("shape input contains inferable dimension (")
-           << kInferableDimSize
-           << ") "
-              "which does not conform to the TOSA specification";
+  // ERROR_IF(any(shape < 1)): shape dimensions must be positive. This also
+  // rejects the legacy inferable dimension (-1) and zero-sized dimensions, and
+  // makes the `ShapedType::kDynamic` sentinel (INT64_MIN) invalid. Dynamic
+  // dimensions must be expressed with `tosa.dim`, not -1.
+  for (int64_t dim : shapeValues)
+    if (dim < 1)
+      return op->emitOpError()
+             << "new shape has invalid tensor dimension size " << dim;
+
+  auto outputType = dyn_cast<RankedTensorType>(reshapeOp.getType());
+
+  // ERROR_IF(shape disagrees with the statically known result shape)
+  if (outputType &&
+      outputType.getRank() == static_cast<int64_t>(shapeValues.size())) {
+    for (auto [newShapeDim, outputShapeDim] :
+         llvm::zip_equal(shapeValues, outputType.getShape())) {
+      if (ShapedType::isDynamic(outputShapeDim))
+        continue;
+      if (newShapeDim != outputShapeDim)
+        return op->emitOpError()
+               << "new shape is inconsistent with result shape";
+    }
+  }
+
+  // ERROR_IF(the number of elements is not preserved). Every dimension is now
+  // known to be positive, so the product is exact.
+  if (auto inputType =
+          dyn_cast<RankedTensorType>(reshapeOp.getInput1().getType());
+      inputType && inputType.hasStaticShape()) {
+    int64_t inputElementsNum = inputType.getNumElements();
+    if (outputType && outputType.hasStaticShape()) {
+      int64_t outputElementsNum = outputType.getNumElements();
+      if (inputElementsNum != outputElementsNum)
+        return op->emitOpError() << "cannot reshape " << inputElementsNum
+                                 << " elements into " << outputElementsNum;
+    }
+
+    int64_t newShapeElementsNum =
+        llvm::accumulate(shapeValues, int64_t(1),
+                         [](int64_t acc, int64_t dim) { return acc * dim; });
+    if (inputElementsNum != newShapeElementsNum)
+      return op->emitOpError() << "cannot reshape " << inputElementsNum
+                               << " elements into " << newShapeElementsNum;
+  }
 
   return success();
 }
@@ -1599,9 +1654,9 @@ LogicalResult TosaValidation::applyErrorIfCheck(Operation *op) {
   if (failed(checkErrorIfResize(op, strictOpSpecAlignment)) ||
       failed(checkErrorIfMul(op)) || failed(checkErrorIfTable(op)) ||
       failed(checkErrorIfRescale(op)) || failed(checkErrorIfPad(op)) ||
-      failed(checkErrorIfReshape(op)) || failed(checkErrorIfSlice(op)) ||
-      failed(checkErrorIfCondIf(op)) || failed(checkErrorIfWhileLoop(op)) ||
-      failed(checkErrorIfScatter(op)))
+      failed(checkErrorIfTile(op)) || failed(checkErrorIfReshape(op)) ||
+      failed(checkErrorIfSlice(op)) || failed(checkErrorIfCondIf(op)) ||
+      failed(checkErrorIfWhileLoop(op)) || failed(checkErrorIfScatter(op)))
     return failure();
   return success();
 }
@@ -1684,7 +1739,7 @@ LogicalResult TosaValidation::validateValidElementType(Operation *op, Type type,
     }
   } else if (isa<tosa::shapeType>(type))
     return success();
-  else if (isa<tosa::mxint8Type, tosa::BlockScaledType>(type))
+  else if (isa<MXI8Type, tosa::mxint8Type, tosa::BlockScaledType>(type))
     return success();
 
   return op->emitOpError() << "is not profile-aligned: element type " << type

@@ -196,10 +196,13 @@ DefGen::DefGen(const AttrOrTypeDef &def)
     : def(def), params(def.getParameters()), defCls(def.getCppClassName()),
       valueType(isa<AttrDef>(def) ? "Attribute" : "Type"),
       defType(isa<AttrDef>(def) ? "Attr" : "Type") {
-  // Check that all parameters have names.
-  for (const AttrOrTypeParameter &param : def.getParameters())
+  // Check that all parameters have names and record the headers declaring
+  // their types.
+  for (const AttrOrTypeParameter &param : def.getParameters()) {
     if (param.isAnonymous())
       llvm::PrintFatalError("all parameters must have a name");
+    llvm::append_range(requiredIncludes, param.getCppIncludes());
+  }
 
   // If a storage class is needed, create one.
   if (def.getNumParameters() > 0)
@@ -1120,10 +1123,12 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                   {"::mlir::AsmPrinter &", "printer"}});
 
   // The parser dispatch uses a KeywordSwitch, matching on the mnemonic and
-  // calling the def's parse function.
+  // calling the def's parse function. The KeywordSwitch only parses the
+  // mnemonic if `*mnemonic` is empty, so that callers can continue with a
+  // mnemonic they already parsed, e.g. in another dispatch function.
   parse.body() << "  return "
                   "::mlir::AsmParser::KeywordSwitch<::mlir::"
-                  "OptionalParseResult>(parser)\n";
+                  "OptionalParseResult>(parser, mnemonic)\n";
   const char *const getValueForMnemonic =
       R"(    .Case({0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {{
       value = {0}::{1};

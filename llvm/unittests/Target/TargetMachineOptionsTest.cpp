@@ -17,6 +17,8 @@
 #include "llvm-c/Target.h"
 #include "llvm-c/TargetMachine.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/CommandLine.h"
+#include "llvm/Target/TargetMachine.h"
 #include "gtest/gtest.h"
 
 namespace llvm {
@@ -67,6 +69,10 @@ TEST(TargetMachineCTest, TargetMachineCreation) {
   auto *Options = LLVMCreateTargetMachineOptions();
   auto *TM = LLVMCreateTargetMachineWithOptions(Target, Triple, Options);
   ASSERT_NE(TM, nullptr);
+  // The target machine reads the options that LLVMParseCommandLineOptions sets.
+  EXPECT_EQ(
+      reinterpret_cast<TargetMachine *>(TM)->Options.MCOptions.LibraryOptions,
+      &cl::getCAPILibraryOptions());
 
   LLVMDisposeMessage(Triple);
   LLVMDisposeTargetMachineOptions(Options);

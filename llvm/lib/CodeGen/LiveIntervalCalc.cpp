@@ -119,18 +119,6 @@ void LiveIntervalCalc::constructMainRangeFromSubranges(LiveInterval &LI) {
   extendToUses(MainRange, LI.reg(), LaneBitmask::getAll(), &LI);
 }
 
-void LiveIntervalCalc::createDeadDefs(LiveRange &LR, Register Reg) {
-  const MachineRegisterInfo *MRI = getRegInfo();
-  SlotIndexes *Indexes = getIndexes();
-  VNInfo::Allocator *Alloc = getVNAlloc();
-  assert(MRI && Indexes && "call reset() first");
-
-  // Visit all def operands. If the same instruction has multiple defs of Reg,
-  // LR.createDeadDef() will deduplicate.
-  for (MachineOperand &MO : MRI->def_operands(Reg))
-    createDeadDef(*Indexes, *Alloc, LR, MO);
-}
-
 void LiveIntervalCalc::extendToUses(LiveRange &LR, Register Reg,
                                     LaneBitmask Mask, LiveInterval *LI) {
   const MachineRegisterInfo *MRI = getRegInfo();

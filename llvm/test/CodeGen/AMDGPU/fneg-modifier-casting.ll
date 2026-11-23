@@ -152,7 +152,6 @@ define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i6
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e32 vcc_lo, 1, v0.l
 ; GFX11-TRUE16-NEXT:    v_cmp_eq_u16_e64 s0, 1, v0.h
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e32 v0, v6, v2, vcc_lo
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v2, v8, v4, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v1, -v7, -v3, vcc_lo
 ; GFX11-TRUE16-NEXT:    v_cndmask_b32_e64 v3, -v9, -v5, s0
@@ -167,7 +166,6 @@ define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i6
 ; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v0, v6, v2 :: v_dual_and_b32 v1, 1, v1
 ; GFX11-FAKE16-NEXT:    v_cmp_eq_u32_e64 s0, 1, v1
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v1, -v7, -v3, vcc_lo
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v2, v8, v4, s0
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e64 v3, -v9, -v5, s0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]

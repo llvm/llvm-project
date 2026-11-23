@@ -456,6 +456,13 @@ def FormatOptionalDefaultEnumAttrs : TEST_Op<"format_optional_default_enum_attr"
   let assemblyFormat = "($e^)? attr-dict";
 }
 
+def FormatOptionalDefaultEnumProps : TEST_Op<"format_optional_default_enum_props"> {
+  let arguments = (ins
+    DefaultValuedEnumProp<SomeI64Enum, I64Case5>:$value,
+    DefaultValuedEnumProp<TestBitEnum, TestBitEnumNone>:$flags);
+  let assemblyFormat = "($value^)? ($flags^)? attr-dict";
+}
+
 // Two adjacent optional enum props with different enum types, to exercise
 // constrained keyword parsing (parseOptionalKeyword with keyword list).
 def TestEnumPropDefault : EnumProp<TestEnum> {

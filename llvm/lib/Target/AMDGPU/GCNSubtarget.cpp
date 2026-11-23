@@ -469,6 +469,48 @@ bool GCNSubtarget::useVGPRIndexMode() const {
 
 bool GCNSubtarget::useAA() const { return getCLOpts().use_aa_in_codegen; }
 
+uint64_t GCNSubtarget::getMaxBufferIntrinsicWidth(const DataLayout &DL, Type *T,
+                                                  Align A, bool NoWrapFromMax,
+                                                  bool NoPartialOOB) const {
+  Align Result(16);
+  if (!hasUnalignedBufferAccessEnabled() && A < Align(4))
+    Result = A;
+  auto *VT = dyn_cast<VectorType>(T);
+  if (!hasRelaxedBufferOOBMode() && VT) {
+    TypeSize ElemBits = DL.getTypeSizeInBits(VT->getElementType());
+    if (ElemBits.isKnownMultipleOf(32)) {
+      // Word-sized operations are bounds-checked per word. So, the only case we
+      // have to worry about is stores that start out of bounds and then go in,
+      // and those can only become in-bounds on a multiple of their alignment.
+      // Therefore, we can use the declared alignment of the operation as the
+      // maximum width, rounding up to 4.
+      if (!NoWrapFromMax)
+        Result = std::min(Result, std::max(A, Align(4)));
+    } else if ((ElemBits.isKnownMultipleOf(8) ||
+                isPowerOf2_64(ElemBits.getKnownMinValue()))) {
+      // To ensure correct behavior for sub-word types, we must always scalarize
+      // unaligned loads of sub-word types. For example, if you load
+      // a <4 x i8> from offset 7 in an 8-byte buffer, expecting the vector
+      // to be padded out with 0s after that last byte, you'll get all 0s
+      // instead. To prevent this behavior when not requested, de-vectorize such
+      // loads.
+      //
+      // If we knew that the value that triggers bounds checks was a multiple of
+      // 4 along with the access being word-aligned, we could avoid the
+      // scalarization here, as the bitcast wouldn't change any check behavior,
+      // but we don't currently try to analyze this.
+      //
+      // Strict OOB checking isn't supported if the size of each element is a
+      // non-power-of-2 value less than 8, since there's no feasible way to
+      // apply such a strict bounds check.
+      if (!NoPartialOOB)
+        Result =
+            commonAlignment(Result, divideCeil(ElemBits.getKnownMinValue(), 8));
+    }
+  }
+  return Result.value() * 8;
+}
+
 unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
   return AMDGPU::IsaInfo::getOccupancyWithNumSGPRs(*this, SGPRs);
 }

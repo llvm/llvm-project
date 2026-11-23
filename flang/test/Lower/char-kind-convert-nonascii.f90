@@ -7,7 +7,7 @@ subroutine nonascii(first)
   character(kind=4, len=8) :: first
   ! CHECK: %[[LIT:.*]] = fir.address_of(@[[NONASCII:_QQcl[^)]*]]) : !fir.ref<!fir.char<1,9>>
   ! CHECK: %[[LITDECL:.*]]:2 = hlfir.declare %[[LIT]]
-  ! CHECK: fir.char_convert %[[LITDECL]]#0 for %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1,9>>, index, !fir.ref<!fir.char<4,?>>
+  ! CHECK: fir.char_convert %[[LITDECL]]#0 for %{{.*}} to %{{.*}} : !fir.ref<!fir.char<1,9>>, index, !fir.heap<!fir.char<4,?>>
   first = '3.14 = π'
 end subroutine
 

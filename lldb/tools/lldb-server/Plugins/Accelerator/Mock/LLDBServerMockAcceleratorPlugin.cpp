@@ -216,6 +216,10 @@ LLDBServerMockAcceleratorPlugin::CreateConnection() {
   if (Status error = m_accelerator_gdb_server->LaunchProcess(); error.Fail())
     LLDB_LOG(log, "failed to create mock accelerator process: {0}",
              error.AsCString());
+  else if (GetMockEnvSetting(
+               "LLDB_MOCK_ACCELERATOR_DYNAMIC_LOADER_STOP_ON_RESUME", "0") ==
+           "1")
+    GetAcceleratorProcess()->SetStopReasonOnResume(eStopReasonDynamicLoader);
 
   // Register the accept handler before starting the loop thread so the loop's
   // handles are only touched on that thread.

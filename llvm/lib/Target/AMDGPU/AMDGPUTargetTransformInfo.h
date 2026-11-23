@@ -41,7 +41,6 @@ class AMDGPUTTIImpl final : public BasicTTIImplBase<AMDGPUTTIImpl> {
   friend BaseT;
 
   const AMDGPUOptions &CLOpts;
-  Triple TargetTriple;
 
   const TargetSubtargetInfo *ST;
   const TargetLoweringBase *TLI;
@@ -243,6 +242,10 @@ public:
                                              IntrinsicInst &II,
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
+
+  Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+                                               IntrinsicInst &II,
+                                               APInt DemandedElts) const;
 
   Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                                 IntrinsicInst &II) const;

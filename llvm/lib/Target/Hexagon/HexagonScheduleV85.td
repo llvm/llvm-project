@@ -8,10 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 def HexagonV85ItinList : DepScalarItinV85, ScalarItin,
-                         DepHVXItinV85, HVXItin, PseudoItin {
+                         DepHVXItinV85, HVXItin, HLXItin, PseudoItin {
   list<InstrItinData> ItinList =
     !listconcat(DepScalarItinV85_list, ScalarItin_list,
-                DepHVXItinV85_list, HVXItin_list, PseudoItin_list);
+                DepHVXItinV85_list, HVXItin_list, HLXItin_list,
+                PseudoItin_list);
 }
 
 def HexagonItinerariesV85 :

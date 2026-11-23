@@ -126,6 +126,9 @@ using namespace vector;
 /// In the future, these operations will expose a contract to constrain the
 /// search on vectorization patterns and sizes.
 ///
+/// Each transfer is emitted under a `vector.mask` that enables the lanes inside
+/// the memref. The examples in this file leave the mask out.
+///
 /// Occurrence of super-vectorization in the compiler flow:
 /// =======================================================
 /// This is an active area of investigation. We start with 2 remarks to position
@@ -1275,7 +1278,7 @@ static Operation *vectorizeAffineLoad(AffineLoadOp loadOp,
 
   Value transferVal = createReadOrMaskedRead(
       state.builder, loadOp.getLoc(), loadOp.getMemRef(), vectorType,
-      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/true, indices,
+      /*padValue=*/std::nullopt, /*useInBoundsInsteadOfMasking=*/false, indices,
       permutationMap);
   Operation *transfer = transferVal.getDefiningOp();
 
@@ -1334,7 +1337,7 @@ static Operation *vectorizeAffineStore(AffineStoreOp storeOp,
   Operation *transfer = createWriteOrMaskedWrite(
       state.builder, storeOp.getLoc(), vectorValue, storeOp.getMemRef(),
       SmallVector<Value>(indices.begin(), indices.end()),
-      /*useInBoundsInsteadOfMasking=*/true, permutationMap);
+      /*useInBoundsInsteadOfMasking=*/false, permutationMap);
   LLVM_DEBUG(dbgs() << "\n[early-vect]+++++ vectorized store: " << *transfer);
 
   // Register replacement for future uses in the scope.

@@ -1345,15 +1345,13 @@ define void @uitofp_i56_to_half(ptr addrspace(1) noalias %out, ptr addrspace(1) 
 ; GFX1100-LABEL: uitofp_i56_to_half:
 ; GFX1100:       ; %bb.0:
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1100-NEXT:    v_mov_b16_e32 v10.l, 0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX1100-NEXT:    v_mov_b32_e32 v5, v10
-; GFX1100-NEXT:    v_mov_b32_e32 v7, v10
-; GFX1100-NEXT:    v_mov_b32_e32 v11, v10
+; GFX1100-NEXT:    v_dual_mov_b32 v5, 0 :: v_dual_mov_b32 v10, 0
+; GFX1100-NEXT:    v_mov_b32_e32 v7, 0
+; GFX1100-NEXT:    v_mov_b32_e32 v11, 0
 ; GFX1100-NEXT:    s_clause 0xb
-; GFX1100-NEXT:    global_load_u16 v12, v[2:3], off offset:20
 ; GFX1100-NEXT:    global_load_d16_hi_u8 v5, v[2:3], off offset:6
 ; GFX1100-NEXT:    global_load_d16_hi_u8 v7, v[2:3], off offset:14
+; GFX1100-NEXT:    global_load_u16 v12, v[2:3], off offset:20
 ; GFX1100-NEXT:    global_load_b32 v4, v[2:3], off offset:16
 ; GFX1100-NEXT:    global_load_u16 v13, v[2:3], off offset:12
 ; GFX1100-NEXT:    global_load_b32 v6, v[2:3], off offset:8
@@ -1389,18 +1387,18 @@ define void @uitofp_i56_to_half(ptr addrspace(1) noalias %out, ptr addrspace(1) 
 ; GFX1100-NEXT:    v_sub_nc_u32_e32 v10, 32, v10
 ; GFX1100-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1100-NEXT:    v_lshlrev_b64 v[2:3], v13, v[2:3]
-; GFX1100-NEXT:    v_sub_nc_u32_e32 v13, 32, v13
+; GFX1100-NEXT:    v_sub_nc_u32_e32 v11, 32, v11
 ; GFX1100-NEXT:    v_min_u32_e32 v6, 1, v6
 ; GFX1100-NEXT:    v_min_u32_e32 v8, 1, v8
 ; GFX1100-NEXT:    v_min_u32_e32 v4, 1, v4
-; GFX1100-NEXT:    v_sub_nc_u32_e32 v11, 32, v11
+; GFX1100-NEXT:    v_sub_nc_u32_e32 v12, 32, v12
 ; GFX1100-NEXT:    v_min_u32_e32 v2, 1, v2
 ; GFX1100-NEXT:    v_or_b32_e32 v6, v7, v6
 ; GFX1100-NEXT:    v_or_b32_e32 v8, v9, v8
 ; GFX1100-NEXT:    v_or_b32_e32 v4, v5, v4
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_or_b32_e32 v2, v3, v2
-; GFX1100-NEXT:    v_sub_nc_u32_e32 v3, 32, v12
+; GFX1100-NEXT:    v_sub_nc_u32_e32 v3, 32, v13
 ; GFX1100-NEXT:    v_cvt_f32_u32_e32 v5, v8
 ; GFX1100-NEXT:    v_cvt_f32_u32_e32 v6, v6
 ; GFX1100-NEXT:    v_cvt_f32_u32_e32 v4, v4
@@ -1409,14 +1407,14 @@ define void @uitofp_i56_to_half(ptr addrspace(1) noalias %out, ptr addrspace(1) 
 ; GFX1100-NEXT:    v_ldexp_f32 v5, v5, v10
 ; GFX1100-NEXT:    v_ldexp_f32 v6, v6, v11
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1100-NEXT:    v_ldexp_f32 v3, v4, v3
-; GFX1100-NEXT:    v_ldexp_f32 v4, v2, v13
+; GFX1100-NEXT:    v_ldexp_f32 v4, v4, v12
+; GFX1100-NEXT:    v_ldexp_f32 v7, v2, v3
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX1100-NEXT:    v_cvt_f16_f32_e32 v2.l, v5
 ; GFX1100-NEXT:    v_cvt_f16_f32_e32 v2.h, v6
 ; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1100-NEXT:    v_cvt_f16_f32_e32 v3.l, v3
-; GFX1100-NEXT:    v_cvt_f16_f32_e32 v3.h, v4
+; GFX1100-NEXT:    v_cvt_f16_f32_e32 v3.l, v4
+; GFX1100-NEXT:    v_cvt_f16_f32_e32 v3.h, v7
 ; GFX1100-NEXT:    global_store_b64 v[0:1], v[2:3], off
 ; GFX1100-NEXT:    s_setpc_b64 s[30:31]
 ;

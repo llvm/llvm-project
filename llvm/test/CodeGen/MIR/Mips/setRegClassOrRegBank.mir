@@ -16,7 +16,6 @@
 ---
 name:            add_v4i32_builtin_imm
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
