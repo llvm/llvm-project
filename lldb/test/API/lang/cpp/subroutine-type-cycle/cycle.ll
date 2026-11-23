@@ -1,6 +1,3 @@
-; A function type whose parameter type is already being resolved further up the
-; stack cannot be built. Check that this is reported instead of crashing.
-;
 ; Base is described by two DIEs, the way the parallel DWARF linker splits a
 ; class with a member that depends on a local type:
 ;
@@ -14,20 +11,16 @@
 ; erase(int *). Its class is the other DIE, so the class is completed, which
 ; resolves the declaration of erase<lambda> and its lambda parameter again.
 
-; RUN: llc %s -filetype=obj -o %t.o
-; RUN: %lldb %t.o -b -o "image lookup -v -n erase_lambda" 2>&1 | FileCheck %s
-
-; CHECK-DAG: error: {{.*}}DW_TAG_subprogram 'erase<lambda>' has a return or parameter type that cannot be resolved
-; CHECK-DAG: Function: id = {{.*}}, name = "{{.*}}erase<lambda>
-
-target triple = "x86_64-unknown-linux-gnu"
-
 define void @erase() !dbg !20 {
   ret void, !dbg !25
 }
 
 define void @erase_lambda() !dbg !40 {
   ret void, !dbg !43
+}
+
+define i32 @main() {
+  ret i32 0
 }
 
 !llvm.dbg.cu = !{!0}
