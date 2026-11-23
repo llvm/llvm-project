@@ -76,10 +76,40 @@ bool ento::CallDescription::matchNameOnly(const NamedDecl *ND) const {
     return NameII == *II; // Fast case.
   }
 
-  // Fallback to the slow stringification and comparison for:
-  // C++ overloaded operators, constructors, destructors, etc.
-  // FIXME This comparison is way SLOWER than comparing pointers.
-  // At some point in the future, we should compare FunctionDecl pointers.
+  // Avoid the stringification below where the printed name is known.
+  StringRef FuncName = getFunctionName();
+  switch (Name.getNameKind()) {
+  case DeclarationName::CXXDestructorName:
+    if (!FuncName.consume_front("~"))
+      return false;
+    [[fallthrough]];
+  case DeclarationName::CXXConstructorName:
+    // Constructor and destructor names are printed using the record name.
+    if (const auto *RT = Name.getCXXNameType()->getAsCanonical<RecordType>()) {
+      const RecordDecl *RD = RT->getDecl();
+      if (const IdentifierInfo *RecordII = RD->getIdentifier())
+        return RecordII->getName() == FuncName;
+      // An unnamed record with a typedef name for linkage purposes is printed
+      // using the typedef name.
+      if (const TypedefNameDecl *TD = RD->getTypedefNameForAnonDecl())
+        return TD->getIdentifier()->getName() == FuncName;
+      // Other unnamed records are printed with their source location, e.g.
+      // "(lambda at file:line:col)", which no description names.
+      return false;
+    }
+    break;
+  case DeclarationName::CXXOperatorName:
+  case DeclarationName::CXXLiteralOperatorName:
+  case DeclarationName::CXXConversionFunctionName:
+    if (!FuncName.starts_with("operator"))
+      return false;
+    break;
+  default:
+    break;
+  }
+
+  // Fall back to printing the name, e.g. for overloaded, literal and conversion
+  // operators.
   return Name.getAsString() == getFunctionName();
 }
 
