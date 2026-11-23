@@ -3493,6 +3493,13 @@ def StrLen : LibBuiltin<"string.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// C23 string.h
+def MemsetExplicit : LibBuiltin<"string.h"> {
+  let Spellings = ["memset_explicit"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*(void*, int, size_t)";
+}
+
 // C99 stdio.h
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
@@ -4005,6 +4012,27 @@ def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, const char*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def ExplicitBZero : GNULibBuiltin<"string.h"> {
+  let Spellings = ["explicit_bzero"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void*, size_t)";
+}
+
+def FreadUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fread_unlocked"];
+  let Prototype = "size_t(void*, size_t, size_t, FILE*)";
+}
+
+def FwriteUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fwrite_unlocked"];
+  let Prototype = "size_t(const void*, size_t, size_t, FILE*)";
+}
+
+def FgetsUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets_unlocked"];
+  let Prototype = "char*(char*, int, FILE*)";
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {

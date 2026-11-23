@@ -4,12 +4,16 @@
 ; Predicated stores to the same pointer with a non-constant stride. With
 ; %s == 0, all iterations store to the same address, so the stores must not be
 ; reordered across iterations. %s * %s avoids versioning the stride to 1.
-; FIXME: The dependence between the stores is unsafe.
 define void @predicated_stores_same_ptr_non_constant_stride(ptr %dst, i64 %s, i64 %n) {
 ; CHECK-LABEL: 'predicated_stores_same_ptr_non_constant_stride'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            store i32 20, ptr %gep.dst, align 4 ->
+; CHECK-NEXT:            store i32 10, ptr %gep.dst, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:
@@ -48,12 +52,16 @@ exit:
 }
 
 ; Same as above, but with a load, so the write-only loop shortcut is not taken.
-; FIXME: The dependence between the stores is unsafe.
 define void @predicated_stores_same_ptr_non_constant_stride_with_load(ptr %dst, ptr %src, i64 %s, i64 %n) {
 ; CHECK-LABEL: 'predicated_stores_same_ptr_non_constant_stride_with_load'
 ; CHECK-NEXT:    loop:
-; CHECK-NEXT:      Memory dependences are safe with run-time checks
+; CHECK-NEXT:      Report: unsafe dependent memory operations in loop. Use #pragma clang loop distribute(enable) to allow loop distribution to attempt to isolate the offending operations into a separate loop
+; CHECK-NEXT:  Unsafe indirect dependence.
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        IndirectUnsafe:
+; CHECK-NEXT:            store i32 20, ptr %gep.dst, align 4 ->
+; CHECK-NEXT:            store i32 10, ptr %gep.dst, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Check 0:
 ; CHECK-NEXT:        Comparing group GRP0:
@@ -110,6 +118,10 @@ define void @predicated_stores_same_ptr_unit_stride(ptr %dst, i64 %n) {
 ; CHECK-NEXT:    loop:
 ; CHECK-NEXT:      Memory dependences are safe
 ; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:        Forward:
+; CHECK-NEXT:            store i32 20, ptr %gep.dst, align 4 ->
+; CHECK-NEXT:            store i32 10, ptr %gep.dst, align 4
+; CHECK-EMPTY:
 ; CHECK-NEXT:      Run-time memory checks:
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-EMPTY:

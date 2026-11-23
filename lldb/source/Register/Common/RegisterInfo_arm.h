@@ -52,7 +52,7 @@ public:
   };
 
   RegisterInfo_arm(const lldb_private::ArchSpec &target_arch,
-                        bool has_tls_reg = false);
+                   bool has_tls_reg = false);
 
   size_t GetGPRSize() const override;
 

@@ -320,7 +320,6 @@ private:
   void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
       const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
   void CheckIterationVariables(const parser::OpenMPLoopConstruct &x);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -400,6 +399,8 @@ private:
   // check-omp-structure.cpp
   using ClauseIterator =
       decltype(std::declval<const parser::OmpClauseList>().v.begin());
+  bool InExecutionPart() const;
+  bool InSpecificationPart() const;
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
@@ -417,6 +418,7 @@ private:
       llvm::omp::Directive id, const parser::OmpDirectiveSpecification &spec);
   void AddClauses(llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
+  void CheckCoindexedArguments(const parser::OmpDirectiveSpecification &);
   void AnalyzeObject(const parser::OmpObject &object);
   void AnalyzeSubstring(const parser::OmpObject &object);
 
@@ -545,6 +547,7 @@ private:
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
   void CheckTempDescriptorMappings();
+  void ClauseDecompPortabilityWarn(SemanticsContext &context_);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }

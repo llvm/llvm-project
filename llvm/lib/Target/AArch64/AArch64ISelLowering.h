@@ -242,14 +242,6 @@ public:
                              ShuffleVectorInst *SVI, unsigned Factor,
                              const APInt &GapMask) const override;
 
-  bool lowerDeinterleaveIntrinsicToLoad(Instruction *Load, Value *Mask,
-                                        IntrinsicInst *DI,
-                                        const APInt &GapMask) const override;
-
-  bool lowerInterleaveIntrinsicToStore(
-      Instruction *Store, Value *Mask,
-      ArrayRef<Value *> InterleaveValues) const override;
-
   bool isLegalAddImmediate(int64_t) const override;
   bool isLegalAddScalableImmediate(int64_t) const override;
   bool isLegalICmpImmediate(int64_t) const override;
@@ -364,6 +356,7 @@ public:
   bool isOpSuitableForLDPSTP(const Instruction *I) const;
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
+  bool isOpSuitableForLSCP(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
   bool shouldInsertTrailingSeqCstFenceForAtomicStore(
       const Instruction *I) const override;
@@ -774,6 +767,7 @@ private:
   SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_SHUFFLE_VAR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,

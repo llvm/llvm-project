@@ -290,6 +290,7 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.time.localtime
     libc.src.time.localtime_r
     libc.src.time.mktime
+    libc.src.time.timegm
     libc.src.time.strftime
     libc.src.time.strftime_l
     libc.src.time.timespec_get

@@ -24,7 +24,7 @@
 ; CHECK-PEI-LABEL: name: parameter_16_pair
 ; CHECK-PEI-NOT: V2_vallocframe_imm
 ; CHECK-PEI-DAG: A2_addi killed $r{{[0-9]+}}, 4096
-; CHECK-PEI-DAG: A2_addi killed renamable $r{{[0-9]+}}, 2048
+; CHECK-PEI-DAG: A2_addi {{(killed )?}}renamable $r{{[0-9]+}}, 2048
 ; CHECK-PEI-DAG: LX_L16b_pseudo {{.*}} :: (load (s16384) from %fixed-stack.0)
 ; CHECK-PEI-DAG: LX_L16b_pseudo {{.*}} :: (load (s16384) from %fixed-stack.0 + 2048)
 ; CHECK-PEI-DAG: LX_L16b_pseudo {{.*}} :: (load (s16384) from %fixed-stack.1)

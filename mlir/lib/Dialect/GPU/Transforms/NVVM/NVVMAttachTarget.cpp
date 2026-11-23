@@ -15,6 +15,7 @@
 
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/Support/Regex.h"
@@ -79,10 +80,17 @@ void NVVMAttachTarget::runOnOperation() {
   OpBuilder builder(&getContext());
   ArrayRef<std::string> libs(linkLibs);
   SmallVector<StringRef> filesToLink(libs);
-  auto target = builder.getAttr<NVVMTargetAttr>(
-      optLevel, triple, chip, features, getFlags(builder),
+  // Build the target attribute, failing the pass if the options are invalid.
+  // `getChecked` takes its arguments by value and pass options are not
+  // copyable, hence the conversions.
+  auto emitError = [op = getOperation()]() { return op->emitError(); };
+  auto target = NVVMTargetAttr::getChecked(
+      emitError, &getContext(), static_cast<int>(optLevel), StringRef(triple),
+      StringRef(chip), StringRef(features), getFlags(builder),
       filesToLink.empty() ? nullptr : builder.getStrArrayAttr(filesToLink),
-      verifyTarget);
+      static_cast<bool>(verifyTarget));
+  if (!target)
+    return signalPassFailure();
   llvm::Regex matcher(moduleMatcher);
   for (Region &region : getOperation()->getRegions())
     for (Block &block : region.getBlocks())
