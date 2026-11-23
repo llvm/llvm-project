@@ -516,15 +516,10 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
 /// Infer non-negativity for R + (R < 0 ? A : 0), where R = srem X, Y.
 /// A must be a non-negative Y or abs(Y).
 static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
+                                             const APInt &DemandedElts,
                                              KnownBits &KnownOut,
                                              const SimplifyQuery &Q,
                                              unsigned Depth) {
-  Type *Ty = Op0->getType();
-
-  // Only handle scalars for now.
-  if (Ty->isVectorTy())
-    return;
-
   const Value *Divisor = nullptr, *Cond = nullptr, *Remainder = nullptr,
               *AdjustmentValue = nullptr;
   CmpPredicate Pred;
@@ -546,8 +541,10 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Accept Y itself if non-negative, or abs(Y).
+  // For vectors, only check the demanded elements.
   bool IsPositiveDivisorCase =
-      Divisor == AdjustmentValue && isKnownNonNegative(Divisor, Q, Depth + 1);
+      Divisor == AdjustmentValue &&
+      computeKnownBits(Divisor, DemandedElts, Q, Depth + 1).isNonNegative();
   bool IsAbsoluteValueCase =
       match(AdjustmentValue,
             m_Intrinsic<Intrinsic::abs>(m_Specific(Divisor), m_Value()));
@@ -556,6 +553,8 @@ static void computeKnownBitsFromEuclideanRem(const Value *Op0, const Value *Op1,
     return;
 
   // Repeated uses must agree. An undef value could break this relationship.
+  // For vectors, this check is conservative (checks the entire vector, not just
+  // the demanded elements).
   if (!isGuaranteedNotToBeUndef(Remainder, Q.AC, Q.CtxI, Q.DT, Depth + 1) ||
       !isGuaranteedNotToBeUndef(Divisor, Q.AC, Q.CtxI, Q.DT, Depth + 1))
     return;
@@ -579,7 +578,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
       // Independent operand bits give no result, but the Euclidean remainder
       // pattern can establish non-negativity through the operands'
       // relationship.
-      computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+      computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                       Depth);
     }
     return;
   }
@@ -598,7 +598,8 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
     computeKnownBitsFromLerpPattern(Op0, Op1, DemandedElts, KnownOut, Q, Depth);
 
     // Use the relationship between the remainder and its adjustment.
-    computeKnownBitsFromEuclideanRem(Op0, Op1, KnownOut, Q, Depth);
+    computeKnownBitsFromEuclideanRem(Op0, Op1, DemandedElts, KnownOut, Q,
+                                     Depth);
   }
 }
 

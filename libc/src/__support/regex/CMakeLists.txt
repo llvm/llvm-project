@@ -10,6 +10,7 @@ add_object_library(
     libc.hdr.regex_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.size_t
+    libc.src.__support.blockstore
     libc.src.__support.checked_ptr
     libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.array

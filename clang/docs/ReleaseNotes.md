@@ -577,6 +577,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
   corresponding buffer (or is negative for `fgets_unlocked`).
 
+- `-Wfortify-source` now diagnoses when `getlogin_r`, `ttyname_r`, `ptsname_r`,
+  or `confstr` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -592,6 +596,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   before C23. They stay in `-Wc23-extensions` and are still reported under
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
+
+- `-Wuninitialized` no longer warns about an uninitialized variable passed to
+  `__builtin_classify_type`, `__builtin_constant_p`,
+  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
+  none of which depends on its arguments' values.
 
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
