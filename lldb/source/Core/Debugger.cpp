@@ -1929,6 +1929,11 @@ bool Debugger::ShouldSuggestBugReport(llvm::StringRef failure) {
          m_suggested_bugreports.Insert(llvm::stable_hash_name(failure));
 }
 
+void Debugger::SuggestBugReport(llvm::StringRef failure, Stream &strm) {
+  if (ShouldSuggestBugReport(failure))
+    strm << GetBugReportNote().ltrim() << '\n';
+}
+
 void Debugger::ReportInfo(std::string message,
                           std::optional<lldb::user_id_t> debugger_id,
                           std::once_flag *once) {

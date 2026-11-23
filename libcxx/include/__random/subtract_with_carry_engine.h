@@ -77,22 +77,23 @@ public:
   static inline _LIBCPP_CONSTEXPR const size_t long_lag  = __r;
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type min() { return _Min; }
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI static _LIBCPP_CONSTEXPR result_type max() { return _Max; }
-  static inline _LIBCPP_CONSTEXPR const result_type default_seed = 19780503u;
+  static inline _LIBCPP_CONSTEXPR const uint_least32_t default_seed = 19780503u;
 
   // constructors and seeding functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI subtract_with_carry_engine() : subtract_with_carry_engine(default_seed) {}
+  _LIBCPP_HIDE_FROM_ABI subtract_with_carry_engine() : subtract_with_carry_engine(0u) {}
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd) { seed(__sd); }
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = default_seed) { seed(__sd); }
+  _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(result_type __sd = 0u) { seed(__sd); }
 #endif
   template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, subtract_with_carry_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit subtract_with_carry_engine(_Sseq& __q) {
     seed(__q);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = default_seed) {
-    linear_congruential_engine<result_type, 40014u, 0u, 2147483563u> __e(__sd == 0u ? default_seed : __sd);
+  _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd = 0u) {
+    linear_congruential_engine<uint_least32_t, 40014u, 0u, 2147483563u> __e(
+        __sd == 0u ? default_seed : static_cast<uint_least32_t>(__sd % 2147483563u));
     for (size_t __i = 0; __i < __r; ++__i) {
       if _LIBCPP_CONSTEXPR ((1 + (__w - 1) / 32) == 1) {
         __x_[__i] = static_cast<result_type>(__e() & _Max);

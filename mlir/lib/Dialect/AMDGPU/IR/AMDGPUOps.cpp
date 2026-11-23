@@ -887,7 +887,7 @@ struct FuseMemoryCounterWaitOp final : OpRewritePattern<MemoryCounterWaitOp> {
 
   LogicalResult matchAndRewrite(MemoryCounterWaitOp op,
                                 PatternRewriter &rewriter) const override {
-    auto next = dyn_cast<MemoryCounterWaitOp>(op->getNextNode());
+    auto next = dyn_cast_or_null<MemoryCounterWaitOp>(op->getNextNode());
     if (!next)
       return failure();
 

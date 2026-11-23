@@ -2169,7 +2169,9 @@ void UnwrappedLineParser::parseStructuralElement(
         if (FollowedByNewline &&
             (Text.size() >= 5 ||
              (FunctionLike && FormatTok->isNot(tok::l_paren))) &&
-            tokenCanStartNewLine(*FormatTok) && Text == Text.upper()) {
+            tokenCanStartNewLine(*FormatTok) && Text == Text.upper() &&
+            (!FormatTok->Previous ||
+             FormatTok->Previous->isNot(TT_TrailingCommaVaOptRParen))) {
           if (PreviousToken->isNot(TT_UntouchableMacroFunc))
             PreviousToken->setFinalizedType(TT_FunctionLikeOrFreestandingMacro);
           addUnwrappedLine();
@@ -2509,7 +2511,8 @@ bool UnwrappedLineParser::tryToParseLambdaIntroducer() {
     const auto *PrevPrev = Previous->getPreviousNonComment();
     if (Previous->is(tok::star) && PrevPrev && PrevPrev->isTypeName(LangOpts))
       return false;
-    if (Previous->closesScope()) {
+    if (Previous->closesScope() &&
+        Previous->isNot(TT_TrailingCommaVaOptRParen)) {
       // Not a potential C-style cast.
       if (Previous->isNot(tok::r_paren))
         return false;
@@ -2651,6 +2654,11 @@ bool UnwrappedLineParser::parseBracedList(bool IsAngleBracket, bool IsEnum) {
           parseChildBlock();
         break;
       }
+      if (IsEnum && !Style.AllowShortEnumsOnASingleLine &&
+          FormatTok->Previous &&
+          FormatTok->Previous->is(TT_TrailingCommaVaOptRParen)) {
+        addUnwrappedLine();
+      }
       break;
     case tok::l_brace:
       // Assume there are no blocks inside a braced init list apart
@@ -2781,6 +2789,11 @@ bool UnwrappedLineParser::parseParens(TokenType StarAndAmpTokenType,
         } else if (Prev->is(TT_TypenameMacro)) {
           LParen->setFinalizedType(TT_TypeDeclarationParen);
           RParen->setFinalizedType(TT_TypeDeclarationParen);
+        } else if (IsCpp && Prev->is(Keywords.kw___VA_OPT__) &&
+                   Prev->is(TT_Unknown) && RParen->Previous->is(tok::comma) &&
+                   RParen->Previous->Previous->isNot(tok::kw_operator)) {
+          // TT_Unknown excludes configured macros; exclude `operator,`.
+          RParen->setFinalizedType(TT_TrailingCommaVaOptRParen);
         } else if (Prev->is(tok::greater) && RParen->Previous == LParen) {
           Prev->setFinalizedType(TT_TemplateCloser);
         } else if (FormatTok->is(tok::l_brace) && Prev->is(tok::amp) &&
