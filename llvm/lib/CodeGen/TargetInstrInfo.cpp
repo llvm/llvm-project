@@ -1381,6 +1381,8 @@ reassociateFMAChain(const TargetInstrInfo &TII, MachineInstr &Root,
     }
     Register NewDst = MRI.createVirtualRegister(RC);
     MachineInstr *NewInstr = MF->CloneMachineInstr(Link);
+    // The add joining the halves may read registers a moved link killed.
+    NewInstr->clearKillInfo();
     if (Pos == 0) {
       NewInstr->untieRegOperand(0);
       NewInstr->removeOperand(AccIdx);

@@ -67,6 +67,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/LiveRegUnits.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
@@ -1362,10 +1363,12 @@ bool MachineOutliner::outline(
       // functions themselves currently don't track liveness, but we should
       // make sure that the ranges we yank things out of aren't wrong.
       if (MBB.getParent()->getProperties().hasTracksLiveness()) {
-        // The following code is to add implicit def operands to the call
-        // instruction. It also updates call site information for moved
+        // The following code is to add implicit def and use operands to the
+        // call instruction. It also updates call site information for moved
         // code.
         SmallSet<Register, 2> UseRegs, DefRegs;
+        LiveRegUnits LiveUnits(
+            *MBB.getParent()->getSubtarget().getRegisterInfo());
         // Copy over the defs in the outlined range.
         // First inst in outlined range <-- Anything that's defined in this
         // ...                           .. range has to be added as an
@@ -1379,42 +1382,32 @@ bool MachineOutliner::outline(
           MachineInstr *MI = &*Iter;
           if (MI->isDebugInstr())
             continue;
-          SmallSet<Register, 2> InstrUseRegs;
+          LiveUnits.stepBackward(*MI);
           for (MachineOperand &MOP : MI->operands()) {
-            // Skip over anything that isn't a register.
-            if (!MOP.isReg())
+            if (!MOP.isReg() || !MOP.getReg())
               continue;
 
-            if (MOP.isDef()) {
-              // Introduce DefRegs set to skip the redundant register.
+            if (MOP.isDef())
               DefRegs.insert(MOP.getReg());
-              if (UseRegs.count(MOP.getReg()) &&
-                  !InstrUseRegs.count(MOP.getReg()))
-                // Since the regiester is modeled as defined,
-                // it is not necessary to be put in use register set.
-                UseRegs.erase(MOP.getReg());
-            } else if (!MOP.isUndef()) {
-              // Any register which is not undefined should
-              // be put in the use register set.
+            else if (MOP.readsReg() && MOP.getReg().isPhysical())
               UseRegs.insert(MOP.getReg());
-              InstrUseRegs.insert(MOP.getReg());
-            }
           }
           if (MI->isCandidateForAdditionalCallInfo())
             MI->getMF()->eraseAdditionalCallInfo(MI);
         }
 
+        // If it's a def, add it to the call instruction.
         for (const Register &I : DefRegs)
-          // If it's a def, add it to the call instruction.
           CallInst->addOperand(
               MachineOperand::CreateReg(I, true, /* isDef = true */
                                         true /* isImp = true */));
 
+        // If it's live into the range, add it to the call instruction.
         for (const Register &I : UseRegs)
-          // If it's a exposed use, add it to the call instruction.
-          CallInst->addOperand(
-              MachineOperand::CreateReg(I, false, /* isDef = false */
-                                        true /* isImp = true */));
+          if (!LiveUnits.available(I.asMCReg()))
+            CallInst->addOperand(
+                MachineOperand::CreateReg(I, false, /* isDef = false */
+                                          true /* isImp = true */));
       }
 
       // Erase from the point after where the call was inserted up to, and

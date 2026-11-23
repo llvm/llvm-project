@@ -1,0 +1,38 @@
+# RUN: llc -O0 -mtriple=spirv64-unknown-unknown -run-pass=spirv-postlegalizer %s -o - | FileCheck %s
+
+# Float results with no typed operand or use get their SPIR-V type from the LLT.
+# Integer results of float operands stay integer.
+
+--- |
+  define void @float_llt() {
+    ret void
+  }
+...
+---
+name:            float_llt
+legalized:       true
+body:             |
+  ; CHECK-LABEL: name: float_llt
+  ; CHECK: %[[#F32:]]:type(s64) = OpTypeFloat 32
+  ; CHECK: %[[#V2F32:]]:type(s64) = OpTypeVector %[[#F32]](s64), 2
+  ; CHECK: %[[#]]:type(s64) = OpTypeInt 32, 0
+  ; CHECK: %[[#]]:fid(f32) = G_IMPLICIT_DEF
+  ; CHECK: %[[#FNEG:]]:fid(f32) = G_FNEG
+  ; CHECK: ASSIGN_TYPE %[[#FNEG]](f32), %[[#F32]](s64)
+  ; CHECK: %[[#]]:vfid(<2 x f32>) = G_IMPLICIT_DEF
+  ; CHECK: %[[#VFNEG:]]:vfid(<2 x f32>) = G_FNEG
+  ; CHECK: ASSIGN_TYPE %[[#VFNEG]](<2 x f32>), %[[#V2F32]](s64)
+  ; CHECK: %[[#]]:iid(i32) = G_BITCAST
+  ; CHECK: %[[#]]:fid(f32), %[[#]]:iid(s32) = G_FFREXP
+  ; CHECK: %[[#]]:vfid(<2 x f32>) = G_BUILD_VECTOR
+
+  bb.0:
+    %0:_(f32) = G_IMPLICIT_DEF
+    %1:_(f32) = G_FNEG %0
+    %2:_(<2 x f32>) = G_IMPLICIT_DEF
+    %3:_(<2 x f32>) = G_FNEG %2
+    %4:_(i32) = G_BITCAST %0
+    %5:_(f32), %6:_(i32) = G_FFREXP %0
+    %7:_(<2 x f32>) = G_BUILD_VECTOR %5, %5
+    OpReturn
+...

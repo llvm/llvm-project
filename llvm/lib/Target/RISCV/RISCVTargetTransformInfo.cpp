@@ -1723,6 +1723,27 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first * 8;
     break;
   }
+  case Intrinsic::minimum:
+  case Intrinsic::maximum: {
+    // Without Zfa, scalar fminimum/fmaximum are lowered to fmin/fmax plus a
+    // NaN check and select.
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (!LT.second.isVector() && LT.second.isFloatingPoint() &&
+        !TLI->isOperationLegal(ISD::FMINIMUM, LT.second) &&
+        TLI->isOperationLegal(ISD::FMINIMUMNUM, LT.second)) {
+      Type *ScalarTy = RetTy->getScalarType();
+      InstructionCost Cost = 1;
+      if (!ICA.getFlags().noNaNs()) {
+        Type *CondTy = Type::getInt1Ty(RetTy->getContext());
+        Cost += getCmpSelInstrCost(Instruction::FCmp, ScalarTy, CondTy,
+                                   CmpInst::FCMP_UNO, CostKind) +
+                getCmpSelInstrCost(Instruction::Select, ScalarTy, CondTy,
+                                   CmpInst::BAD_FCMP_PREDICATE, CostKind);
+      }
+      return Cost * LT.first;
+    }
+    break;
+  }
   case Intrinsic::umin:
   case Intrinsic::umax:
   case Intrinsic::smin:
