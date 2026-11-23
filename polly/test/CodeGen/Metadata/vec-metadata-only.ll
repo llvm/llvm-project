@@ -1,24 +1,21 @@
 ; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
 ; RUN:   -plugin-arg=Polly,-polly-annotate-metadata-vectorize \
 ; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s \
-; RUN:   | FileCheck %s --check-prefix=VECTORIZED
-; RUN: opt %loadNPMPolly -S '-passes=polly<no-default-opts>' \
-; RUN:   -plugin-arg=Polly,-polly-annotate-metadata-vectorize \
-; RUN:   -plugin-arg=Polly,-polly-process-unprofitable=false < %s \
-; RUN:   | FileCheck %s --check-prefix=NO-VECTORIZE
+; RUN:   | FileCheck %s
 
 ; Verify vectorization metadata is attached to Polly-generated loops, but the
-; metadata option does not make an unprofitable loop eligible for Polly.
-; VECTORIZED-LABEL: define{{.*}} @nested_loop(
-; VECTORIZED: polly.stmt.
-; VECTORIZED: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
-; VECTORIZED-DAG: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], {{.*}}[[ENABLE:![0-9]+]]}
-; VECTORIZED-DAG: [[ENABLE]] = !{!"llvm.loop.vectorize.enable"}
-
-; NO-VECTORIZE-LABEL: define{{.*}} @simple_add(
-; NO-VECTORIZE-NOT: polly.stmt.
-; NO-VECTORIZE: {{^}}for.body:
-; NO-VECTORIZE-NOT: polly.stmt.
+; metadata option does not make an unprofitable loop eligible for vectorization
+; CHECK-LABEL: define{{.*}} @nested_loop(
+; CHECK: polly.stmt.
+; CHECK: br {{.*}} !llvm.loop [[POLLY_LOOP:![0-9]+]]
+;
+; CHECK-LABEL: define{{.*}} @simple_add(
+; CHECK-NOT: polly.stmt.
+; CHECK: {{^}}for.body:
+; CHECK-NOT: polly.stmt.
+;
+; CHECK-DAG: [[POLLY_LOOP]] = distinct !{[[POLLY_LOOP]], {{.*}}[[ENABLE:![0-9]+]]}
+; CHECK-DAG: [[ENABLE]] = !{!"llvm.loop.vectorize.enable"}
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"

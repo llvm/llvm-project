@@ -1755,8 +1755,15 @@ bool ScopDetection::hasPossiblyDistributableLoop(
 bool ScopDetection::isProfitableRegion(DetectionContext &Context) const {
   Region &CurRegion = Context.CurRegion;
 
-  if (PollyDetectForVectorization || PollyOptimizeForVectorization ||
-      PollyProcessUnprofitable)
+  if(PollyProcessUnprofitable)
+	return true;
+
+  // Skip these checks when polly is attempting to add vectorization
+  // metadata as they reject some beneficial cases
+  //
+  // TODO: Add some checks related to vectorization too instead of
+  // only skipping existing checks
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization)
     return true;
 
   // We can probably not do a lot on scops that only write or only read

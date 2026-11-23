@@ -1942,12 +1942,19 @@ isl::set Scop::getAssumedContext() const {
 }
 
 bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
-  if (PollyDetectForVectorization || PollyOptimizeForVectorization ||
-      PollyProcessUnprofitable)
-    return true;
+  if (PollyProcessUnprofitable)
+	return true;
 
   if (isEmpty())
     return false;
+
+  // Skip these checks when polly is attempting to add vectorization
+  // metadata as they reject some beneficial cases
+  //
+  // TODO: Add some checks related to vectorization too instead of
+  // only skipping existing checks
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization)
+    return true;
 
   unsigned OptimizableStmtsOrLoops = 0;
   for (auto &Stmt : *this) {
