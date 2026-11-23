@@ -405,6 +405,11 @@ static bool checkParamsForPreconditionViolation(ArrayRef<ParmVarDecl *> Params,
     if (ParamDecl->isParameterPack())
       break;
 
+    // Only nonnull parameters can violate the precondition; check this before
+    // looking up the region of the parameter.
+    if (getNullabilityAnnotation(ParamDecl->getType()) != Nullability::Nonnull)
+      continue;
+
     SVal LV = State->getLValue(ParamDecl, SF);
     if (checkValueAtLValForInvariantViolation(State, LV,
                                               ParamDecl->getType())) {
