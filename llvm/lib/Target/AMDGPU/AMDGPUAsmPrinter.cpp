@@ -18,6 +18,7 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPU.h"
 #include "AMDGPUHSAMetadataStreamer.h"
+#include "AMDGPULDSProfiling.h"
 #include "AMDGPUMCResourceInfo.h"
 #include "AMDGPUResourceUsageAnalysis.h"
 #include "AMDGPUTargetMachine.h"
@@ -291,6 +292,57 @@ void AMDGPUAsmPrinter::endFunction(const MachineFunction *MF) {
       CurrentProgramInfo.VCCUsed, CurrentProgramInfo.FlatUsed);
 
   Streamer.popSection();
+
+  emitLDSProfilingInfo(*MF);
+}
+
+/// Emit what a profiler needs to use the LDS profiling clone of a kernel: for
+/// the kernel and for its clone, the number of LDS instructions which were
+/// numbered and a hash of their sequence; for the clone, its counters.
+void AMDGPUAsmPrinter::emitLDSProfilingInfo(const MachineFunction &MF) {
+  using namespace AMDGPU::LDSProfiling;
+
+  const Function &F = MF.getFunction();
+  const bool IsClone = F.hasFnAttribute(CloneAttr);
+  if (!IsClone && !F.hasFnAttribute(OriginalAttr))
+    return;
+
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  const unsigned NumSites = MFI.getNumLDSProfilingSites();
+
+  OutStreamer->pushSection();
+
+  // The two copies agree on the site ids only if these records are equal.
+  MCSymbol *InfoSym =
+      OutContext.getOrCreateSymbol(Twine(CurrentFnSym->getName()) + ".ldsprof");
+  OutStreamer->switchSection(
+      OutContext.getELFSection(InfoSection, ELF::SHT_PROGBITS, 0));
+  OutStreamer->emitValueToAlignment(Align(4));
+  OutStreamer->emitSymbolAttribute(InfoSym, MCSA_ELF_TypeObject);
+  OutStreamer->emitLabel(InfoSym);
+  OutStreamer->emitInt32(NumSites);
+  OutStreamer->emitInt32(MFI.getLDSProfilingSiteHash());
+  OutStreamer->emitELFSize(InfoSym, MCConstantExpr::create(8, OutContext));
+
+  const GlobalVariable *Counters =
+      IsClone
+          ? F.getParent()->getNamedGlobal((F.getName() + CountersSuffix).str())
+          : nullptr;
+  if (Counters && NumSites) {
+    const uint64_t Size = uint64_t(NumSites) * SiteRecordSize;
+    MCSymbol *CountersSym = getSymbol(Counters);
+    OutStreamer->switchSection(getObjFileLowering().getBSSSection());
+    OutStreamer->emitValueToAlignment(Align(4));
+    OutStreamer->emitSymbolAttribute(CountersSym, MCSA_Global);
+    OutStreamer->emitSymbolAttribute(CountersSym, MCSA_Protected);
+    OutStreamer->emitSymbolAttribute(CountersSym, MCSA_ELF_TypeObject);
+    OutStreamer->emitLabel(CountersSym);
+    OutStreamer->emitZeros(Size);
+    OutStreamer->emitELFSize(CountersSym,
+                             MCConstantExpr::create(Size, OutContext));
+  }
+
+  OutStreamer->popSection();
 }
 
 void AMDGPUAsmPrinter::emitImplicitDef(const MachineInstr *MI) const {

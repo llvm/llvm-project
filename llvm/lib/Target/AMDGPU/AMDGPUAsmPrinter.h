@@ -141,6 +141,8 @@ public:
 
   void endFunction(const MachineFunction *MF);
 
+  void emitLDSProfilingInfo(const MachineFunction &MF);
+
   void emitImplicitDef(const MachineInstr *MI) const override;
 
   void emitFunctionEntryLabel() override;

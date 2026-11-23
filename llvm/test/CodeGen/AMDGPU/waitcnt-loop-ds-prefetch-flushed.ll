@@ -24,7 +24,9 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    v_lshl_add_u32 v13, v10, 8, s1
 ; CHECK-NEXT:    v_lshl_add_u32 v14, v10, 7, s1
 ; CHECK-NEXT:    s_mov_b32 s1, 0
+; CHECK-NEXT:  .Lpcsection0:
 ; CHECK-NEXT:    ds_load_b64 v[0:1], v11 offset:4
+; CHECK-NEXT:  .Lpcsection1:
 ; CHECK-NEXT:    ds_load_b64 v[2:3], v12
 ; CHECK-NEXT:    s_wait_dscnt 0x0
 ; CHECK-NEXT:  .LBB0_1: ; %loop
@@ -42,9 +44,13 @@ define amdgpu_kernel void @ds_prefetch_flushed(ptr addrspace(3) %lds, ptr addrsp
 ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    v_pk_add_f32 v[8:9], v[6:7], v[4:5]
 ; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:  .Lpcsection2:
 ; CHECK-NEXT:    ds_load_b64 v[16:17], v12
+; CHECK-NEXT:  .Lpcsection3:
 ; CHECK-NEXT:    ds_load_b64 v[18:19], v11
+; CHECK-NEXT:  .Lpcsection4:
 ; CHECK-NEXT:    ds_load_b64 v[6:7], v14
+; CHECK-NEXT:  .Lpcsection5:
 ; CHECK-NEXT:    ds_load_b64 v[4:5], v13
 ; CHECK-NEXT:    v_dual_add_nc_u32 v12, 8, v12 :: v_dual_add_nc_u32 v11, 8, v11
 ; CHECK-NEXT:    v_dual_add_nc_u32 v13, 8, v13 :: v_dual_add_nc_u32 v14, 8, v14

@@ -26,6 +26,7 @@
 #include "AMDGPUHazardLatency.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
+#include "AMDGPULDSProfiling.h"
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPUMacroFusion.h"
 #include "AMDGPUNextUseAnalysis.h"
@@ -491,6 +492,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUAsmPrinterPass(*PR);
   initializeAMDGPUDAGToDAGISelLegacyPass(*PR);
   initializeAMDGPUPrepareAGPRAllocLegacyPass(*PR);
+  initializeAMDGPULDSProfilingLegacyPass(*PR);
+  initializeAMDGPUCreateProfilingClonesLegacyPass(*PR);
   initializeGCNDPPCombineLegacyPass(*PR);
   initializeSILowerI1CopiesLegacyPass(*PR);
   initializeAMDGPUGlobalISelDivergenceLoweringLegacyPass(*PR);
@@ -1553,6 +1556,13 @@ bool GCNPassConfig::addPreISel() {
       !isGlobalISelAbortEnabled())
     addPass(createLCSSAPass());
 
+  // This has to follow every IR pass which changes a function body: the kernel
+  // and its profiling clone must reach instruction selection with identical
+  // bodies. It precedes the call graph passes so that code generation keeps a
+  // single call graph order.
+  if (CLOpts.lds_profiling_clones)
+    addPass(createAMDGPUCreateProfilingClonesLegacyPass(TM));
+
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
 
@@ -1653,6 +1663,8 @@ void GCNPassConfig::addFastRegAlloc() {
 void GCNPassConfig::addPreRegAlloc() {
   if (getOptLevel() != CodeGenOptLevel::None)
     addPass(&AMDGPUPrepareAGPRAllocLegacyID);
+  if (CLOpts.lds_profiling_clones)
+    addPass(&AMDGPULDSProfilingLegacyID);
 }
 
 void GCNPassConfig::addOptimizedRegAlloc() {
@@ -2330,6 +2342,14 @@ void AMDGPUCodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) {
       !isGlobalISelAbortEnabled())
     addFunctionPass(LCSSAPass(), PMW);
 
+  // This has to follow every IR pass which changes a function body: the kernel
+  // and its profiling clone must reach instruction selection with identical
+  // bodies.
+  if (CLOpts.lds_profiling_clones) {
+    flushFPMsToMPM(PMW);
+    addModulePass(AMDGPUCreateProfilingClonesPass(getTM()), PMW);
+  }
+
   if (TM.getOptLevel() > CodeGenOptLevel::Less) {
     flushFPMsToMPM(PMW);
     addModulePass(AMDGPUPerfHintAnalysisPass(getTM()), PMW);
@@ -2522,6 +2542,8 @@ Error AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {
 void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None)
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
+  if (CLOpts.lds_profiling_clones)
+    addMachineFunctionPass(AMDGPULDSProfilingPass(), PMW);
 }
 
 Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(

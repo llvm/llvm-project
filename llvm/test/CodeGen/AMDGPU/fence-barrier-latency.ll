@@ -27,13 +27,21 @@ define amdgpu_kernel void @fence_barrier_latency_test(ptr addrspace(1) %global_p
 ; CHECK-NEXT:    tensor_load_to_lds s[0:3], s[8:15]
 ; CHECK-NEXT:    s_barrier_signal -1
 ; CHECK-NEXT:    s_barrier_wait -1
+; CHECK-NEXT:  .Lpcsection0:
 ; CHECK-NEXT:    ds_load_b128 v[0:3], v28
+; CHECK-NEXT:  .Lpcsection1:
 ; CHECK-NEXT:    ds_load_b128 v[4:7], v28 offset:32
+; CHECK-NEXT:  .Lpcsection2:
 ; CHECK-NEXT:    ds_load_b128 v[8:11], v28 offset:64
+; CHECK-NEXT:  .Lpcsection3:
 ; CHECK-NEXT:    ds_load_b128 v[12:15], v28 offset:96
+; CHECK-NEXT:  .Lpcsection4:
 ; CHECK-NEXT:    ds_load_b128 v[16:19], v28 offset:128
+; CHECK-NEXT:  .Lpcsection5:
 ; CHECK-NEXT:    ds_load_b128 v[20:23], v28 offset:160
+; CHECK-NEXT:  .Lpcsection6:
 ; CHECK-NEXT:    ds_load_b128 v[24:27], v28 offset:192
+; CHECK-NEXT:  .Lpcsection7:
 ; CHECK-NEXT:    ds_load_b128 v[28:31], v28 offset:224
 ; CHECK-NEXT:    s_wait_dscnt 0x7
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v3

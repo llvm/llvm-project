@@ -184,6 +184,7 @@ define amdgpu_kernel void @local_volatile_load_0(
 ; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:  .Lpcsection0:
 ; GFX1250-NEXT:    ds_load_b32 v1, v1
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -401,6 +402,7 @@ define amdgpu_kernel void @local_volatile_load_1(
 ; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s2
 ; GFX1250-NEXT:    s_mov_b32 s2, 2
 ; GFX1250-NEXT:    v_lshl_add_u32 v1, v1, s2, s3
+; GFX1250-NEXT:  .Lpcsection1:
 ; GFX1250-NEXT:    ds_load_b32 v1, v1
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
@@ -569,6 +571,7 @@ define amdgpu_kernel void @local_volatile_store_0(
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-NEXT:  .Lpcsection2:
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {
@@ -765,6 +768,7 @@ define amdgpu_kernel void @local_volatile_store_1(
 ; GFX1250-NEXT:    v_lshl_add_u32 v0, v0, s1, s2
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
+; GFX1250-NEXT:  .Lpcsection3:
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(1) %in, ptr addrspace(3) %out) {
@@ -933,10 +937,12 @@ define amdgpu_kernel void @local_volatile_workgroup_acquire_load(
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    s_load_b32 s0, s[4:5], 0x4 nv
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s1
+; GFX1250-NEXT:  .Lpcsection4:
 ; GFX1250-NEXT:    ds_load_b32 v1, v0
 ; GFX1250-NEXT:    s_wait_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
+; GFX1250-NEXT:  .Lpcsection5:
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
     ptr addrspace(3) %in, ptr addrspace(3) %out) {
@@ -1110,6 +1116,7 @@ define amdgpu_kernel void @local_volatile_workgroup_release_store(
 ; GFX1250-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX1250-NEXT:    s_wait_storecnt 0x0
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:  .Lpcsection6:
 ; GFX1250-NEXT:    ds_store_b32 v0, v1
 ; GFX1250-NEXT:    s_endpgm
    i32 %in, ptr addrspace(3) %out) {

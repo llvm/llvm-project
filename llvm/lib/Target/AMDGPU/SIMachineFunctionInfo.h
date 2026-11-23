@@ -593,6 +593,11 @@ private:
 
   bool IsWholeWaveFunction = false;
 
+  // Number of LDS instructions numbered by AMDGPULDSProfiling, and a hash of
+  // their sequence.
+  unsigned NumLDSProfilingSites = 0;
+  uint32_t LDSProfilingSiteHash = 0;
+
   using PrologEpilogSGPRSpill =
       std::pair<Register, PrologEpilogSGPRSaveRestoreInfo>;
   // To track the SGPR spill method used for a CSR SGPR register during
@@ -704,6 +709,13 @@ public:
   }
 
   bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
+
+  void setLDSProfilingSites(unsigned NumSites, uint32_t Hash) {
+    NumLDSProfilingSites = NumSites;
+    LDSProfilingSiteHash = Hash;
+  }
+  unsigned getNumLDSProfilingSites() const { return NumLDSProfilingSites; }
+  uint32_t getLDSProfilingSiteHash() const { return LDSProfilingSiteHash; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));

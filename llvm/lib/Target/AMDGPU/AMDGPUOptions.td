@@ -78,6 +78,10 @@ defm : BoolField<"amdgpu-bypass-slow-div", "true",
 defm : BoolField<"amdgpu-late-codegenprepare-widen-constant-loads", "true",
   "Widen sub-dword constant address space loads in AMDGPULateCodeGenPrepare">;
 
+// AMDGPULDSProfiling.cpp
+defm : BoolField<"amdgpu-lds-profiling-clones", "true",
+  "Emit a profiling clone of each kernel which measures LDS bank conflicts">;
+
 // AMDGPULegalizerInfo.cpp
 // Hack until load/store selection patterns support any tuple of legal types.
 defm : BoolField<"amdgpu-global-isel-new-legality", "false",

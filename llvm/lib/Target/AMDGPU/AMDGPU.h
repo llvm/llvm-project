@@ -223,6 +223,9 @@ private:
 void initializeAMDGPUPrepareAGPRAllocLegacyPass(PassRegistry &);
 extern char &AMDGPUPrepareAGPRAllocLegacyID;
 
+void initializeAMDGPULDSProfilingLegacyPass(PassRegistry &);
+extern char &AMDGPULDSProfilingLegacyID;
+
 void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
 extern char &AMDGPUReserveWWMRegsLegacyID;
 
@@ -631,6 +634,10 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
 void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);
 extern char &AMDGPUExportKernelRuntimeHandlesLegacyID;
+
+ModulePass *createAMDGPUCreateProfilingClonesLegacyPass(const TargetMachine *);
+void initializeAMDGPUCreateProfilingClonesLegacyPass(PassRegistry &);
+extern char &AMDGPUCreateProfilingClonesLegacyID;
 
 void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;

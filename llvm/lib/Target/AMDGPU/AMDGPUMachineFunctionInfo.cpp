@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUMachineFunctionInfo.h"
+#include "AMDGPULDSProfiling.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSubtarget.h"
 #include "Utils/AMDGPUBaseInfo.h"
@@ -23,7 +24,8 @@ static const GlobalVariable *
 getKernelDynLDSGlobalFromFunction(const Function &F) {
   const Module *M = F.getParent();
   SmallString<64> KernelDynLDSName("llvm.amdgcn.");
-  KernelDynLDSName += F.getName();
+  // A profiling clone uses the LDS layout of the kernel it was cloned from.
+  KernelDynLDSName += AMDGPU::LDSProfiling::getLDSKernelName(F);
   KernelDynLDSName += ".dynlds";
   return M->getNamedGlobal(KernelDynLDSName);
 }
