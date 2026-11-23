@@ -2482,6 +2482,12 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  // TODO: Support outer-loop plans. Their loop region need not form a
+  // single-successor chain, which the alias check below expects, and sinking
+  // only supports stores with an invariant address.
+  if (FirstBB->getPlan()->isOuterLoop())
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 
@@ -3499,14 +3505,19 @@ static bool handleUncountableExitsWithSideEffects(
   // the FirstActiveLane.
   assert(match(MiddleVPBB->getTerminator(), m_BranchOnCond()) &&
          "Expected BranchOnCond terminator for MiddleVPBB");
+  // The trip count may be wider than the IV; compute the exit IV in its type,
+  // as it may be one past the largest IV value.
   VPBuilder MiddleBuilder(MiddleVPBB->getTerminator());
   Type *IVScalarTy = IV->getScalarType();
+  Type *TCTy = Plan.getTripCount()->getScalarType();
   VPValue *Zero = Plan.getZero(IVScalarTy);
   VPValue *FirstActive = MiddleBuilder.createScalarZExtOrTrunc(
-      MiddleBuilder.createFirstActiveLane(Cond), IVScalarTy, DebugLoc());
+      MiddleBuilder.createFirstActiveLane(Cond), TCTy, DebugLoc());
   VPValue *ScalarIV = MiddleBuilder.createNaryOp(VPInstruction::ExtractLane,
                                                  {Zero, IV}, DebugLoc());
-  VPValue *ExitIV = MiddleBuilder.createAdd(ScalarIV, FirstActive);
+  VPValue *ExitIV = MiddleBuilder.createAdd(
+      MiddleBuilder.createScalarZExtOrTrunc(ScalarIV, TCTy, DebugLoc()),
+      FirstActive);
   VPValue *FullTC =
       MiddleBuilder.createICmp(CmpInst::ICMP_EQ, ExitIV, Plan.getTripCount());
   MiddleVPBB->getTerminator()->setOperand(0, FullTC);
@@ -3529,7 +3540,8 @@ static bool handleUncountableExitsWithSideEffects(
       match(ContinueIV->getOperand(0),
             m_VPInstruction<VPInstruction::ExitingIVValue>(m_Specific(IV))) &&
       "Continuing from different IV");
-  ContinueIV->setOperand(0, ExitIV);
+  ContinueIV->setOperand(
+      0, MiddleBuilder.createScalarZExtOrTrunc(ExitIV, IVScalarTy, DebugLoc()));
   return true;
 }
 
@@ -4713,15 +4725,13 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
       continue;
     }
 
-    // For now, we only support full interleave groups storing load interleave
-    // groups.
-    if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
-          VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
-          if (!DefR)
-            return false;
-          auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
-          return IR && IR->getInterleaveGroup()->isFull() &&
-                 IR->getVPValue(Op.index()) == Op.value();
+    // For now, we only support full interleave groups storing a single full
+    // load interleave group in order.
+    auto *LoadGroup =
+        dyn_cast_or_null<VPInterleaveRecipe>(Member0->getDefiningRecipe());
+    if (LoadGroup && LoadGroup->getInterleaveGroup()->isFull() &&
+        all_of(enumerate(InterleaveR->getStoredValues()), [LoadGroup](auto Op) {
+          return LoadGroup->getVPValue(Op.index()) == Op.value();
         })) {
       StoreGroups.push_back(InterleaveR);
       continue;
@@ -5389,6 +5399,10 @@ static void transformToPartialReduction(const PartialReductionDescriptor &Link,
                                         VPReductionPHIRecipe *RdxPhi) {
   VPWidenRecipe *WidenRecipe = Link.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
+  assert(is_contained({Instruction::Add, Instruction::Sub, Instruction::FAdd,
+                       Instruction::FSub},
+                      WidenRecipe->getOpcode()) &&
+         "Partial reductions can only be formed from add and sub links");
 
   VPValue *Accumulator = WidenRecipe->getOperand(Link.AccumulatorOpIdx);
   auto *ExtendedOp = cast<VPSingleDefRecipe>(
@@ -5662,8 +5676,16 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
   VPValue *ExitValue = RdxResult->getOperand(0);
   match(ExitValue, m_Select(m_VPValue(), m_VPValue(ExitValue), m_VPValue()));
 
-  SmallVector<PartialReductionDescriptor> Chain;
+  // Each link is lowered to a partial add reduction, so only recurrences made
+  // up of add and sub links can be handled.
   RecurKind RK = RedPhiR->getRecurrenceKind();
+  if (!is_contained({RecurKind::Add, RecurKind::Sub,
+                     RecurKind::AddChainWithSubs, RecurKind::FAdd,
+                     RecurKind::FSub, RecurKind::FAddChainWithSubs},
+                    RK))
+    return std::nullopt;
+
+  SmallVector<PartialReductionDescriptor> Chain;
   Type *PhiType = RedPhiR->getScalarType();
   TypeSize PHISize = PhiType->getPrimitiveSizeInBits();
 
@@ -5685,7 +5707,7 @@ getScaledReductionChain(VPReductionPHIRecipe *RedPhiR) {
     }
 
     auto *UpdateR = dyn_cast<VPWidenRecipe>(CurrentValue);
-    if (!UpdateR || !Instruction::isBinaryOp(UpdateR->getOpcode()))
+    if (!UpdateR)
       return std::nullopt;
 
     VPValue *Op = UpdateR->getOperand(1);

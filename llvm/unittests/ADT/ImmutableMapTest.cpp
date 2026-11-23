@@ -11,6 +11,7 @@
 #include <map>
 #include <random>
 #include <utility>
+#include <vector>
 
 using namespace llvm;
 
@@ -168,5 +169,78 @@ TEST(ImmutableMapTest, MultiElemIntMapRefTest) {
         EXPECT_EQ(RefB, GotB);
       }
     }
+  }
+
+  template <typename Map> void testFilter() {
+    using VT = typename Map::value_type;
+    std::mt19937 Rng(99);
+    std::uniform_int_distribution<int> SizeDist(0, 150);
+    std::uniform_int_distribution<int> KeyDist(0, 300);
+    for (int Trial = 0; Trial < 200; ++Trial) {
+      typename Map::Factory F;
+      Map M = F.getEmptyMap();
+      std::map<int, int> Ref;
+      for (int I = 0, N = SizeDist(Rng); I < N; ++I) {
+        int K = KeyDist(Rng);
+        M = F.add(M, K, K * 2);
+        Ref[K] = K * 2;
+      }
+      // Mode 0 keeps all keys, 1 drops all, otherwise a residue class is
+      // dropped.
+      int Mode = Trial % 8;
+      auto Keeps = [&](int K) {
+        return Mode == 0 || (Mode != 1 && K % Mode != Trial % Mode);
+      };
+      std::vector<int> Seen;
+      Map Filtered = F.filter(M, [&](const VT &E) {
+        Seen.push_back(E.first);
+        return Keeps(E.first);
+      });
+      if (const auto *Root = Filtered.getRootWithoutRetain())
+        Root->validateTree();
+
+      std::vector<int> AllKeys;
+      std::map<int, int> Exp;
+      for (auto &[K, V] : Ref) {
+        AllKeys.push_back(K);
+        if (Keeps(K))
+          Exp[K] = V;
+      }
+      EXPECT_EQ(AllKeys, Seen); // Pred is called once per entry, in order.
+      std::map<int, int> Got;
+      for (auto It = Filtered.begin(), E = Filtered.end(); It != E; ++It)
+        Got[It.getKey()] = It.getData();
+      EXPECT_EQ(Exp, Got);
+      if (Mode == 0)
+        EXPECT_EQ(M.getRootWithoutRetain(), Filtered.getRootWithoutRetain());
+      if (Mode == 1)
+        EXPECT_TRUE(Filtered.isEmpty());
+      if constexpr (std::is_same_v<Map, ImmutableMap<int, int>>) {
+        // A canonicalizing factory returns the same tree as for an equal map
+        // built independently.
+        Map Indep = F.getEmptyMap();
+        for (auto &[K, V] : Exp)
+          Indep = F.add(Indep, K, V);
+        EXPECT_EQ(Indep.getRootWithoutRetain(),
+                  Filtered.getRootWithoutRetain());
+      }
+    }
+  }
+
+  TEST(ImmutableMapTest, FilterTest) {
+    testFilter<NCMap<int, int>>();
+    testFilter<ImmutableMap<int, int>>();
+  }
+
+  // Removing the smallest key keeps the root's right subtree shared.
+  TEST(ImmutableMapTest, FilterSharesUnchangedTest) {
+    NCMap<int, int>::Factory F;
+    NCMap<int, int> M = F.getEmptyMap();
+    for (int I = 0; I < 100; ++I)
+      M = F.add(M, I, I);
+    NCMap<int, int> Filtered =
+        F.filter(M, [](const auto &E) { return E.first != 0; });
+    EXPECT_EQ(M.getRootWithoutRetain()->getRight(),
+              Filtered.getRootWithoutRetain()->getRight());
   }
 }

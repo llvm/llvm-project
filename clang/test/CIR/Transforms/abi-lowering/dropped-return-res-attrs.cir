@@ -33,7 +33,7 @@ module attributes {
   // drops to zero, and a stale res_attrs fails the func verifier.
   cir.func @returns_big_res_attr() -> (!rec_Big {llvm.noundef})
       requires_call_conv_lowering attributes { test_classify = #indirect_return } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big

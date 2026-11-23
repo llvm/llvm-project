@@ -972,7 +972,27 @@ public:
 
   void setFillContents(FillContentsMode FillContents) {
     initThreadMaybe();
+    const Options Options = Primary.Options.load();
+    auto CurFillMode = Options.getFillContentsMode();
+    // Set the new mode first to minimize the time where a deallocate
+    // might be occurring using the old mode.
     Primary.Options.setFillContentsMode(FillContents);
+    if (AllocatorConfig::getDeallocZeroFill() && CurFillMode != ZeroFill &&
+        FillContents == ZeroFill) {
+      // Any free blocks on any lists need to be zeroed.
+
+      // When tagging is enabled, the allocation is already zeroed during
+      // the operation to change the tags.
+      if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+        // Drain all of the TSD cache entries.
+        drainCaches();
+        // Now zero all of the free blocks in the primary.
+        Primary.zeroFreeBlocks();
+      }
+
+      // Release and zero all elements in the secondary cache.
+      Secondary.releaseToOS(ReleaseToOS::ForceAll);
+    }
   }
 
   void setAddLargeAllocationSlack(bool AddSlack) {
