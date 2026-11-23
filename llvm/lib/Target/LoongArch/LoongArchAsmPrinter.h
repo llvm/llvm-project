@@ -69,6 +69,25 @@ public:
   void emitDebugValue(const MCExpr *Value, unsigned Size) const override;
 };
 
+class LoongArchAsmPrinterBeginPass
+    : public RequiredPassInfoMixin<LoongArchAsmPrinterBeginPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
+class LoongArchAsmPrinterPass
+    : public RequiredPassInfoMixin<LoongArchAsmPrinterPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+class LoongArchAsmPrinterEndPass
+    : public RequiredPassInfoMixin<LoongArchAsmPrinterEndPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MFAM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCHASMPRINTER_H

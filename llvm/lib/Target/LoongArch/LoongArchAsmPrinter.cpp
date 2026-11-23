@@ -19,6 +19,7 @@
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "TargetInfo/LoongArchTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
+#include "llvm/CodeGen/AsmPrinterAnalysis.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Module.h"
@@ -348,4 +349,34 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeLoongArchAsmPrinter() {
   RegisterAsmPrinter<LoongArchAsmPrinter> X(getTheLoongArch32Target());
   RegisterAsmPrinter<LoongArchAsmPrinter> Y(getTheLoongArch64Target());
+}
+
+PreservedAnalyses
+LoongArchAsmPrinterBeginPass::run(Module &M, ModuleAnalysisManager &MAM) {
+  LoongArchAsmPrinter &AsmPrinter = static_cast<LoongArchAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses
+LoongArchAsmPrinterPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  LoongArchAsmPrinter &AsmPrinter = static_cast<LoongArchAsmPrinter &>(
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<AsmPrinterAnalysis>(*MF.getFunction().getParent())
+          ->getPrinter());
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses LoongArchAsmPrinterEndPass::run(Module &M,
+                                                  ModuleAnalysisManager &MAM) {
+  LoongArchAsmPrinter &AsmPrinter = static_cast<LoongArchAsmPrinter &>(
+      MAM.getResult<AsmPrinterAnalysis>(M).getPrinter());
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }

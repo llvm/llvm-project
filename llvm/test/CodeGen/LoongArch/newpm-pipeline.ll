@@ -28,6 +28,7 @@
 ; O0-NEXT:   safe-stack
 ; O0-NEXT:   stack-protector
 ; O0-NEXT:   verify
+; O0-NEXT: loongarch-asm-printer-begin
 ; O0-NEXT: function
 ; O0-NEXT:   machine-function
 ; O0-NEXT:     loongarch-isel
@@ -53,7 +54,9 @@
 ; O0-NEXT:     loongarch-expand-pseudo
 ; O0-NEXT:     loongarch-expand-atomic-pseudo
 ; O0-NEXT:     verify
+; O0-NEXT:     loongarch-asm-printer
 ; O0-NEXT:   free-machine-function
+; O0-NEXT: loongarch-asm-printer-end
 
 ; O2: require<MachineModuleAnalysis>
 ; O2-NEXT: require<profile-summary>
@@ -89,6 +92,7 @@
 ; O2-NEXT:   safe-stack
 ; O2-NEXT:   stack-protector
 ; O2-NEXT:   verify
+; O2-NEXT: loongarch-asm-printer-begin
 ; O2-NEXT: function
 ; O2-NEXT:   machine-function
 ; O2-NEXT:     loongarch-isel
@@ -151,4 +155,6 @@
 ; O2-NEXT:     loongarch-expand-atomic-pseudo
 ; O2-NEXT:     loongarch-memory-barrier-opt
 ; O2-NEXT:     verify
+; O2-NEXT:     loongarch-asm-printer
 ; O2-NEXT:   free-machine-function
+; O2-NEXT: loongarch-asm-printer-end

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoongArch.h"
+#include "LoongArchAsmPrinter.h"
 #include "LoongArchTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -147,15 +148,15 @@ void LoongArchCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
 }
 
 void LoongArchCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add LoongArchAsmPrinterBeginPass
+  addModulePass(LoongArchAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void LoongArchCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add LoongArchAsmPrinterPass
+  addMachineFunctionPass(LoongArchAsmPrinterPass(), PMW);
 }
 
 void LoongArchCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add LoongArchAsmPrinterEndPass
+  addModulePass(LoongArchAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
 
 void LoongArchTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
