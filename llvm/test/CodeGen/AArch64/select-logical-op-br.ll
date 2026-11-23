@@ -13,19 +13,13 @@ define i64 @logical_or_br(i64 %gas, ptr %m, i64 %n) {
 ; CHECK-NEXT:    ldp x8, x9, [x1]
 ; CHECK-NEXT:    add x8, x8, #32
 ; CHECK-NEXT:    cmp x8, x9
-; CHECK-NEXT:    cset w9, hi
-; CHECK-NEXT:    cmp x2, x8
-; CHECK-NEXT:    b.hi .LBB0_3
-; CHECK-NEXT:  // %bb.1: // %select.end
-; CHECK-NEXT:    tbnz w9, #0, .LBB0_4
-; CHECK-NEXT:  .LBB0_2: // %fast
+; CHECK-NEXT:    ccmp x2, x8, #2, ls
+; CHECK-NEXT:    b.hi .LBB0_2
+; CHECK-NEXT:  // %bb.1: // %fast
 ; CHECK-NEXT:    sub x0, x0, #3
 ; CHECK-NEXT:    str x8, [x1]
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:    mov w9, #1 // =0x1
-; CHECK-NEXT:    tbz w9, #0, .LBB0_2
-; CHECK-NEXT:  .LBB0_4: // %slow
+; CHECK-NEXT:  .LBB0_2: // %slow
 ; CHECK-NEXT:    b slow
   %size = load i64, ptr %m, align 8
   %s = add i64 %size, 32

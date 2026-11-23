@@ -232,21 +232,16 @@ define i64 @weighted_logical_or_br(i64 %gas, ptr %m, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    cmpq 8(%rsi), %rax
-; CHECK-NEXT:    seta %cl
 ; CHECK-NEXT:    cmpq %rax, %rdx
-; CHECK-NEXT:    ja .LBB14_1
-; CHECK-NEXT:  .LBB14_2: # %select.end
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne slow@PLT # TAILCALL
-; CHECK-NEXT:  # %bb.3: # %fast
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2: # %fast
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    addq $-3, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB14_1:
-; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    jmp .LBB14_2
   %size = load i64, ptr %m, align 8
   %s = add i64 %size, 32
   %c1 = icmp ugt i64 %n, %s
@@ -272,24 +267,19 @@ define i64 @weighted_logical_or3_br(i64 %gas, ptr %m, i64 %n, i64 %k) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    cmpq 8(%rsi), %rax
-; CHECK-NEXT:    seta %r8b
-; CHECK-NEXT:    cmpq %rax, %rdx
-; CHECK-NEXT:    ja .LBB15_1
-; CHECK-NEXT:  .LBB15_2: # %select.end
 ; CHECK-NEXT:    cmpq %rax, %rcx
 ; CHECK-NEXT:    ja slow@PLT # TAILCALL
-; CHECK-NEXT:  # %bb.3: # %select.end
-; CHECK-NEXT:    testb %r8b, %r8b
-; CHECK-NEXT:    jne slow@PLT # TAILCALL
-; CHECK-NEXT:  # %bb.4: # %fast
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq %rax, %rdx
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3: # %fast
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    addq $-3, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB15_1:
-; CHECK-NEXT:    movb $1, %r8b
-; CHECK-NEXT:    jmp .LBB15_2
   %size = load i64, ptr %m, align 8
   %s = add i64 %size, 32
   %c1 = icmp ugt i64 %n, %s
@@ -318,25 +308,15 @@ define i64 @weighted_logical_or3_nested_br(i64 %gas, ptr %m, i64 %n) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq (%rsi), %rax
 ; CHECK-NEXT:    addq $32, %rax
-; CHECK-NEXT:    cmpq 8(%rsi), %rax
-; CHECK-NEXT:    seta %r9b
 ; CHECK-NEXT:    cmpq %rax, %rdx
-; CHECK-NEXT:    movb $1, %cl
-; CHECK-NEXT:    movb $1, %r8b
-; CHECK-NEXT:    ja .LBB16_2
-; CHECK-NEXT:  # %bb.1: # %select.false
-; CHECK-NEXT:    movl %r9d, %r8d
-; CHECK-NEXT:  .LBB16_2: # %select.end
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq 8(%rsi), %rax
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    cmpq 16(%rsi), %rax
-; CHECK-NEXT:    seta %r9b
-; CHECK-NEXT:    testb %r8b, %r8b
-; CHECK-NEXT:    jne .LBB16_4
-; CHECK-NEXT:  # %bb.3: # %select.false2
-; CHECK-NEXT:    movl %r9d, %ecx
-; CHECK-NEXT:  .LBB16_4: # %select.end1
-; CHECK-NEXT:    testb %cl, %cl
-; CHECK-NEXT:    jne slow@PLT # TAILCALL
-; CHECK-NEXT:  # %bb.5: # %fast
+; CHECK-NEXT:    ja slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3: # %fast
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    addq $-3, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
@@ -369,23 +349,21 @@ slow:
 define i64 @weighted_logical_or4_br(i64 %gas, ptr %m, i64 %n) {
 ; CHECK-LABEL: weighted_logical_or4_br:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq (%rsi), %rax
-; CHECK-NEXT:    xorq %rdx, %rax
-; CHECK-NEXT:    orq 8(%rsi), %rax
-; CHECK-NEXT:    orq 16(%rsi), %rax
-; CHECK-NEXT:    jne .LBB17_1
-; CHECK-NEXT:  # %bb.2: # %select.false
-; CHECK-NEXT:    movzbl 24(%rsi), %eax
-; CHECK-NEXT:  .LBB17_3: # %select.end
-; CHECK-NEXT:    testb $1, %al
+; CHECK-NEXT:    cmpq %rdx, (%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    cmpq $0, 8(%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpq $0, 16(%rsi)
+; CHECK-NEXT:    jne slow@PLT # TAILCALL
+; CHECK-NEXT:  # %bb.3:
+; CHECK-NEXT:    testb $1, 24(%rsi)
 ; CHECK-NEXT:    jne slow@PLT # TAILCALL
 ; CHECK-NEXT:  # %bb.4: # %fast
 ; CHECK-NEXT:    addq $-3, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB17_1:
-; CHECK-NEXT:    movb $1, %al
-; CHECK-NEXT:    jmp .LBB17_3
   %a = load i64, ptr %m, align 8
   %c1 = icmp ne i64 %a, %n
   %bp = getelementptr inbounds i8, ptr %m, i64 8
@@ -434,20 +412,16 @@ define i32 @weighted_logical_and_br_cond_shared(i32 %a, i32 %b) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    cmpl $21, %esi
 ; CHECK-NEXT:    setae %al
-; CHECK-NEXT:    cmpl $10, %edi
-; CHECK-NEXT:    jbe .LBB19_1
-; CHECK-NEXT:  # %bb.2: # %select.end
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    je .LBB19_4
-; CHECK-NEXT:  .LBB19_3: # %t
-; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl $11, %edi
+; CHECK-NEXT:    setae %cl
+; CHECK-NEXT:    cmovael %edi, %esi
+; CHECK-NEXT:    andb %al, %cl
+; CHECK-NEXT:    cmpb $1, %cl
+; CHECK-NEXT:    jne .LBB19_2
+; CHECK-NEXT:  # %bb.1: # %t
+; CHECK-NEXT:    movl %esi, %eax
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB19_1: # %select.false
-; CHECK-NEXT:    xorl %eax, %eax
-; CHECK-NEXT:    movl %esi, %edi
-; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB19_3
-; CHECK-NEXT:  .LBB19_4: # %f
+; CHECK-NEXT:  .LBB19_2: # %f
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    retq
   %c1 = icmp ugt i32 %a, 10

@@ -10,19 +10,18 @@ define i64 @logical_or_br(i64 %gas, ptr %m, i64 %n) {
 ; CHECK-LABEL: logical_or_br:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld 6, 0(4)
+; CHECK-NEXT:    ld 7, 8(4)
 ; CHECK-NEXT:    addi 6, 6, 32
 ; CHECK-NEXT:    cmpld 5, 6
-; CHECK-NEXT:    bgt 0, .LBB0_3
-; CHECK-NEXT:  # %bb.1: # %select.false
-; CHECK-NEXT:    ld 7, 8(4)
+; CHECK-NEXT:    bc 12, 1, .LBB0_3
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cmpld 6, 7
-; CHECK-NEXT:    bc 12, 1, .LBB0_4
+; CHECK-NEXT:    bc 12, 1, .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %fast
 ; CHECK-NEXT:    addi 3, 3, -3
 ; CHECK-NEXT:    std 6, 0(4)
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB0_3:
-; CHECK-NEXT:  .LBB0_4: # %slow
+; CHECK-NEXT:  .LBB0_3: # %slow
 ; CHECK-NEXT:    sub 3, 3, 5
 ; CHECK-NEXT:    blr
   %size = load i64, ptr %m, align 8
@@ -48,24 +47,21 @@ define i64 @logical_or3_br(i64 %gas, ptr %m, i64 %n, i64 %k) {
 ; CHECK-LABEL: logical_or3_br:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld 7, 0(4)
+; CHECK-NEXT:    ld 8, 8(4)
 ; CHECK-NEXT:    addi 7, 7, 32
 ; CHECK-NEXT:    cmpld 5, 7
-; CHECK-NEXT:    bgt 0, .LBB1_4
-; CHECK-NEXT:  # %bb.1: # %select.false
-; CHECK-NEXT:    ld 8, 8(4)
+; CHECK-NEXT:    bc 12, 1, .LBB1_4
+; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    cmpld 7, 8
-; CHECK-NEXT:  .LBB1_2: # %select.end
-; CHECK-NEXT:    cmpld 1, 6, 7
-; CHECK-NEXT:    cror 20, 5, 1
-; CHECK-NEXT:    bc 12, 20, .LBB1_5
+; CHECK-NEXT:    bc 12, 1, .LBB1_4
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    cmpld 6, 7
+; CHECK-NEXT:    bc 12, 1, .LBB1_4
 ; CHECK-NEXT:  # %bb.3: # %fast
 ; CHECK-NEXT:    addi 3, 3, -3
 ; CHECK-NEXT:    std 7, 0(4)
 ; CHECK-NEXT:    blr
-; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    creqv 1, 1, 1
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_5: # %slow
+; CHECK-NEXT:  .LBB1_4: # %slow
 ; CHECK-NEXT:    sub 3, 3, 5
 ; CHECK-NEXT:    blr
   %size = load i64, ptr %m, align 8
