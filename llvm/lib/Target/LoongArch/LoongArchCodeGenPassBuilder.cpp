@@ -133,9 +133,8 @@ void LoongArchCodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // avoiding the possibility for other passes to break the requirements for
   // forward progress in the LL/SC block.
   addMachineFunctionPass(LoongArchExpandAtomicPseudoPass(), PMW);
-  if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add LoongArchMemoryBarrierOptPass
-  }
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(LoongArchMemoryBarrierOptPass(), PMW);
 }
 
 void LoongArchCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {

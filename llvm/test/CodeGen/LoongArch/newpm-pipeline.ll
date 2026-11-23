@@ -148,5 +148,6 @@
 ; O2-NEXT:     stack-frame-layout
 ; O2-NEXT:     loongarch-expand-pseudo
 ; O2-NEXT:     loongarch-expand-atomic-pseudo
+; O2-NEXT:     loongarch-memory-barrier-opt
 ; O2-NEXT:     verify
 ; O2-NEXT:   free-machine-function

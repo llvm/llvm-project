@@ -22,7 +22,9 @@
 #include "LoongArchInstrInfo.h"
 #include "LoongArchSubtarget.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
+#include "llvm/IR/Analysis.h"
 #include "llvm/InitializePasses.h"
 
 using namespace llvm;
@@ -177,40 +179,32 @@ struct InstBarrier {
   bool IsAM;
 };
 
-class LoongArchMemoryBarrierOpt : public MachineFunctionPass {
+class LoongArchMemoryBarrierOptLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  LoongArchMemoryBarrierOpt() : MachineFunctionPass(ID) {}
+  LoongArchMemoryBarrierOptLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return LOONGARCH_MEMORY_BARRIER_OPT_NAME;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
     AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachinePostDominatorTreeWrapperPass>();
-    AU.addPreserved<MachinePostDominatorTreeWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  bool runOnMachineFunction(MachineFunction &Fn) override;
-
-private:
-  enum : unsigned {
-    CandidateA = 1u << 0,
-    CandidateB = 1u << 1,
-  };
-
-  unsigned resolveBarrierRedundancy(const MachineInstr *A,
-                                    const MachineInstr *B) const;
-  bool eliminateRedundantBarrier(InstBarrier &IA, InstBarrier &IB) const;
-
-  MachineFunction *MF;
-  const MachineDominatorTree *MDT;
-  const MachinePostDominatorTree *MPDT;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 };
+
+enum : unsigned {
+  CandidateA = 1u << 0,
+  CandidateB = 1u << 1,
+};
+
+} // namespace
 
 static bool checkAllPathSafe(const MachineBasicBlock *MBBA,
                              const MachineBasicBlock *MBBB, bool IsAToB) {
@@ -253,8 +247,10 @@ static bool checkAllPathSafe(const MachineBasicBlock *MBBA,
 }
 
 // Returns a bitmask indicating removal candidates: A (bit 1) and B (bit 2).
-unsigned LoongArchMemoryBarrierOpt::resolveBarrierRedundancy(
-    const MachineInstr *A, const MachineInstr *B) const {
+static unsigned resolveBarrierRedundancy(const MachineInstr *A,
+                                         const MachineInstr *B,
+                                         const MachineDominatorTree *MDT,
+                                         const MachinePostDominatorTree *MPDT) {
   const MachineBasicBlock *MBBA = A->getParent();
   const MachineBasicBlock *MBBB = B->getParent();
 
@@ -299,24 +295,26 @@ unsigned LoongArchMemoryBarrierOpt::resolveBarrierRedundancy(
 }
 
 // Update DBAR hint
-static void updateMB(InstBarrier &I, BarrierHint Hint, MachineFunction *MF) {
+static void updateMB(InstBarrier &I, BarrierHint Hint) {
   assert(I.IsMB && "Unexpected!");
   I.Pre = I.Post = Hint;
   I.MI->getOperand(0).setImm(Hint.Hint);
 }
 
 // Replace AMO to AMO_DB
-static void replaceAM(InstBarrier &I, MachineFunction *MF) {
+static void replaceAM(InstBarrier &I, MachineFunction &MF) {
   if (!I.IsAM)
     return;
   if (I.OpcAMDB) {
-    auto &ST = MF->getSubtarget<LoongArchSubtarget>();
+    auto &ST = MF.getSubtarget<LoongArchSubtarget>();
     I.MI->setDesc(ST.getInstrInfo()->get(I.OpcAMDB));
   }
 }
 
-bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
-    InstBarrier &IA, InstBarrier &IB) const {
+static bool eliminateRedundantBarrier(InstBarrier &IA, InstBarrier &IB,
+                                      MachineFunction &MF,
+                                      const MachineDominatorTree *MDT,
+                                      const MachinePostDominatorTree *MPDT) {
   MachineInstr *A = IA.MI;
   MachineInstr *B = IB.MI;
 
@@ -325,13 +323,13 @@ bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
   if (A == B)
     return false;
 
-  unsigned Mask = resolveBarrierRedundancy(A, B);
+  unsigned Mask = resolveBarrierRedundancy(A, B, MDT, MPDT);
   if (!Mask)
     return false;
 
   auto eraseOrReplaceWithNop = [&](MachineInstr *MI) {
     if (ReplaceEliminatedMBToNop) {
-      auto &ST = MF->getSubtarget<LoongArchSubtarget>();
+      auto &ST = MF.getSubtarget<LoongArchSubtarget>();
       BuildMI(*MI->getParent(), MI->getIterator(), MI->getDebugLoc(),
               ST.getInstrInfo()->get(LoongArch::ANDI), LoongArch::R0)
           .addReg(LoongArch::R0)
@@ -349,7 +347,7 @@ bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
     if (!IB.Pre.subsumes(IA.Post)) {
       if (!IB.IsMB || (RequireNoPathBypass && !(Mask & CandidateB)))
         return false;
-      updateMB(IB, IB.Pre.merge(IA.Post), MF);
+      updateMB(IB, IB.Pre.merge(IA.Post));
     }
     replaceAM(IB, MF);
     eraseOrReplaceWithNop(A);
@@ -366,7 +364,7 @@ bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
     if (!IA.Post.subsumes(IB.Pre)) {
       if (!IA.IsMB || (RequireNoPathBypass && !(Mask & CandidateA)))
         return false;
-      updateMB(IA, IA.Post.merge(IB.Pre), MF);
+      updateMB(IA, IA.Post.merge(IB.Pre));
     }
     replaceAM(IA, MF);
     eraseOrReplaceWithNop(B);
@@ -377,18 +375,13 @@ bool LoongArchMemoryBarrierOpt::eliminateRedundantBarrier(
   return false;
 }
 
-bool LoongArchMemoryBarrierOpt::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  MF = &Fn;
-  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  MPDT = &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-
+static bool runMemoryBarrierOpt(MachineFunction &MF,
+                                const MachineDominatorTree *MDT,
+                                const MachinePostDominatorTree *MPDT) {
   SmallVector<InstBarrier, 32> Sites;
   bool Changed = false;
 
-  for (MachineBasicBlock &MBB : Fn)
+  for (MachineBasicBlock &MBB : MF)
     for (MachineInstr &MI : MBB) {
       InstBarrier IB(MI);
       if (IB.IsMB || IB.IsAM)
@@ -399,23 +392,42 @@ bool LoongArchMemoryBarrierOpt::runOnMachineFunction(MachineFunction &Fn) {
     for (size_t b = a + 1; b < Sites.size(); ++b) {
       InstBarrier &IA = Sites[a];
       InstBarrier &IB = Sites[b];
-      Changed |= eliminateRedundantBarrier(IA, IB);
-      Changed |= eliminateRedundantBarrier(IB, IA);
+      Changed |= eliminateRedundantBarrier(IA, IB, MF, MDT, MPDT);
+      Changed |= eliminateRedundantBarrier(IB, IA, MF, MDT, MPDT);
     }
   }
 
   return Changed;
 }
-} // namespace
 
-char LoongArchMemoryBarrierOpt::ID = 0;
-INITIALIZE_PASS_BEGIN(LoongArchMemoryBarrierOpt, DEBUG_TYPE,
+bool LoongArchMemoryBarrierOptLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+  return runMemoryBarrierOpt(
+      MF, &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree(),
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree());
+}
+
+char LoongArchMemoryBarrierOptLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(LoongArchMemoryBarrierOptLegacy, DEBUG_TYPE,
                       LOONGARCH_MEMORY_BARRIER_OPT_NAME, false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(LoongArchMemoryBarrierOpt, DEBUG_TYPE,
+INITIALIZE_PASS_END(LoongArchMemoryBarrierOptLegacy, DEBUG_TYPE,
                     LOONGARCH_MEMORY_BARRIER_OPT_NAME, false, false)
 
-FunctionPass *llvm::createLoongArchMemoryBarrierOptPass() {
-  return new LoongArchMemoryBarrierOpt();
+FunctionPass *llvm::createLoongArchMemoryBarrierOptLegacyPass() {
+  return new LoongArchMemoryBarrierOptLegacy();
+}
+
+PreservedAnalyses
+LoongArchMemoryBarrierOptPass::run(MachineFunction &MF,
+                                   MachineFunctionAnalysisManager &MFAM) {
+  bool Changed = runMemoryBarrierOpt(
+      MF, &MFAM.getResult<MachineDominatorTreeAnalysis>(MF),
+      &MFAM.getResult<MachinePostDominatorTreeAnalysis>(MF));
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses().preserveSet<CFGAnalyses>();
 }

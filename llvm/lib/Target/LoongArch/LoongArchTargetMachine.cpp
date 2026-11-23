@@ -37,7 +37,7 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
   initializeLoongArchDeadRegisterDefinitionsLegacyPass(*PR);
-  initializeLoongArchMemoryBarrierOptPass(*PR);
+  initializeLoongArchMemoryBarrierOptLegacyPass(*PR);
   initializeLoongArchMergeBaseOffsetLegacyPass(*PR);
   initializeLoongArchOptWInstrsLegacyPass(*PR);
   initializeLoongArchPreRAExpandPseudoLegacyPass(*PR);
@@ -211,7 +211,7 @@ void LoongArchPassConfig::addPreEmitPass2() {
   // forward progress in the LL/SC block.
   addPass(createLoongArchExpandAtomicPseudoLegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None)
-    addPass(createLoongArchMemoryBarrierOptPass());
+    addPass(createLoongArchMemoryBarrierOptLegacyPass());
 }
 
 void LoongArchPassConfig::addMachineSSAOptimization() {

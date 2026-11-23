@@ -23,6 +23,8 @@ MACHINE_FUNCTION_PASS("loongarch-expand-atomic-pseudo",
 MACHINE_FUNCTION_PASS("loongarch-expand-pseudo", LoongArchExpandPseudoPass())
 MACHINE_FUNCTION_PASS("loongarch-isel",
                       LoongArchISelDAGToDAGPass(*this, getOptLevel()))
+MACHINE_FUNCTION_PASS("loongarch-memory-barrier-opt",
+                      LoongArchMemoryBarrierOptPass())
 MACHINE_FUNCTION_PASS("loongarch-merge-base-offset",
                       LoongArchMergeBaseOffsetPass())
 MACHINE_FUNCTION_PASS("loongarch-opt-w-instrs", LoongArchOptWInstrsPass())
