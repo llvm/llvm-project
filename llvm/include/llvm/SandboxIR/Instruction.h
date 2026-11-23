@@ -106,6 +106,9 @@ protected:
   /// according to \p Pos.
   LLVM_ABI static IRBuilder<> &setInsertPos(InsertPosition Pos);
 
+  /// A common hash calculation based on the instruction opcode and its operands
+  hash_code hashHelper() const { return hash_combine(Opc, User::hashHelper()); }
+
 public:
   static const char *getOpcodeName(Opcode Opc) {
     switch (Opc) {
@@ -378,6 +381,10 @@ public:
 
 #ifndef NDEBUG
   void dumpOS(raw_ostream &OS) const override;
+
+  // TODO: This hash function does not capture the full state of several
+  // subclasses. So we need to implement subclass specific overrides.
+  hash_code hash() const final { return Instruction::hashHelper(); }
 #endif
 };
 
