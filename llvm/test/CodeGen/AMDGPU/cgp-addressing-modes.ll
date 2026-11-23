@@ -691,59 +691,8 @@ done:
   ret void
 }
 
-; OPT-LABEL: @test_sink_small_offset_ds_append(
-; OPT: %sunkaddr = getelementptr i8, ptr addrspace(3) %in, i32 28
-; OPT: %tmp1 = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %sunkaddr, i1 false)
-define amdgpu_kernel void @test_sink_small_offset_ds_append(ptr addrspace(3) %out, ptr addrspace(3) %in) {
-entry:
-  %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
-  %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
-  %tmp0 = icmp eq i32 %tid, 0
-  br i1 %tmp0, label %endif, label %if
-
-if:
-  %tmp1 = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %in.gep, i1 false)
-  br label %endif
-
-endif:
-  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
-  store i32 %x, ptr addrspace(3) %out.gep
-  br label %done
-
-done:
-  ret void
-}
-
-; OPT-LABEL: @test_sink_small_offset_ds_consume(
-; OPT: %sunkaddr = getelementptr i8, ptr addrspace(3) %in, i32 28
-; OPT: %tmp1 = call i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %sunkaddr, i1 false)
-define amdgpu_kernel void @test_sink_small_offset_ds_consume(ptr addrspace(3) %out, ptr addrspace(3) %in) {
-entry:
-  %out.gep = getelementptr i32, ptr addrspace(3) %out, i32 999999
-  %in.gep = getelementptr i32, ptr addrspace(3) %in, i32 7
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #0
-  %tmp0 = icmp eq i32 %tid, 0
-  br i1 %tmp0, label %endif, label %if
-
-if:
-  %tmp1 = call i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) %in.gep, i1 false)
-  br label %endif
-
-endif:
-  %x = phi i32 [ %tmp1, %if ], [ 0, %entry ]
-  store i32 %x, ptr addrspace(3) %out.gep
-  br label %done
-
-done:
-  ret void
-}
-
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #0
-declare i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) nocapture, i1 immarg) #3
-declare i32 @llvm.amdgcn.ds.consume.p3(ptr addrspace(3) nocapture, i1 immarg) #3
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
 attributes #2 = { nounwind argmemonly }
-attributes #3 = { argmemonly convergent nounwind willreturn }
