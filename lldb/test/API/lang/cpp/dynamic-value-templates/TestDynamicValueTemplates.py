@@ -6,6 +6,11 @@ import re
 
 
 class DynamicValueTemplates(TestBase):
+    # Requires __clang_vtable with the Itanium ABI.
+    @skipIf(compiler=no_match("clang"), oslist=no_match("windows"))
+    @skipIf(
+        compiler="clang", compiler_version=["<", "24.0"], oslist=no_match("windows")
+    )
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(

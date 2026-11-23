@@ -1843,6 +1843,17 @@ struct Attributor {
            (Configuration.IPOAmendableCB && Configuration.IPOAmendableCB(F));
   }
 
+  /// Return true if the body of the associated function can be used to derive
+  /// information for \p IRP.
+  ///
+  /// That is not the case for the interface (function, argument and return
+  /// positions) of a function that might be replaced by another definition,
+  /// e.g. a linkonce_odr function.
+  bool canUseBodyFor(const IRPosition &IRP) {
+    return !IRP.isFnInterfaceKind() ||
+           isFunctionIPOAmendable(*IRP.getAssociatedFunction());
+  }
+
   /// Return whether attributes can participate in fixed-point deduction.
   bool isDuringDeduction() const {
     return Phase == AttributorPhase::SEEDING ||

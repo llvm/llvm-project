@@ -18,3 +18,6 @@ int siglongjmp;
 int strlcpy;
 int strlcat;
 int explicit_bzero;
+int fread_unlocked;
+int fwrite_unlocked;
+int fgets_unlocked;

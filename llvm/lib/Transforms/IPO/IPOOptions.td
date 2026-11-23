@@ -98,6 +98,10 @@ defm : EnumField<"expand-variadics-override", "ExpandVariadicsMode", "",
   "Override the behaviour of expand-variadics">;
 
 // ForceFunctionAttrs.cpp
+defm : ListField<"force-attribute", "StringRef",
+  "Add an attribute to a function. This can be a pair of 'function-name:attribute-name', to apply an attribute to a specific function. For example -force-attribute=foo:noinline. Specifying only an attribute will apply the attribute to every function in the module. This option can be specified multiple times">;
+defm : ListField<"force-remove-attribute", "StringRef",
+  "Remove an attribute from a function. This can be a pair of 'function-name:attribute-name' to remove an attribute from a specific function. For example -force-remove-attribute=foo:noinline. Specifying only an attribute will remove the attribute from all functions in the module. This option can be specified multiple times">;
 defm : ValueField<"forceattrs-csv-path", "StringRef", "",
   "Path to CSV file containing lines of function names and attributes to add to them in the form of `f1,attr1` or `f2,attr2=str`">;
 
@@ -203,12 +207,27 @@ defm : ValueField<"intra-scc-cost-multiplier", "int", "2",
 // A flag for test, so we can print the content of the advisor when running it
 // as part of the default (e.g. -O3) pipeline.
 defm : BoolField<"keep-inline-advisor-for-printing", "false", "">;
+// Allows printing the contents of the advisor after each SCC inliner pass.
+defm : BoolField<"scc-inline-advisor-printing", "false", "">;
+// TODO: Remove the old spelling after 2027-05.
+def : AliasOf<"enable-scc-inline-advisor-printing", "scc-inline-advisor-printing">;
 
 // Instrumentor.cpp
+defm : ListField<"instrumentor-read-config-files", "StringRef",
+  "Read the instrumentor configuration from the specified JSON files (comma separated)">;
 defm : ValueField<"instrumentor-read-config-paths-file", "StringRef", "",
   "Read the instrumentor configuration file paths from the specified file (newline separated)">;
 defm : ValueField<"instrumentor-write-config-file", "StringRef", "",
   "Write the instrumentor configuration into the specified JSON file">;
+
+// Internalize.cpp
+// A file which contains a list of symbol glob patterns that should not be
+// marked external.
+defm : ValueField<"internalize-public-api-file", "StringRef", "",
+  "A file containing list of symbol names to preserve">;
+// A list of symbol glob patterns that should not be marked internal.
+defm : ListField<"internalize-public-api-list", "StringRef",
+  "A list of symbol names to preserve">;
 
 // LowerTypeTests.cpp
 defm : BoolField<"lowertypetests-avoid-reuse", "true",
