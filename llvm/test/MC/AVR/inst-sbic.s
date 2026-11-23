@@ -21,7 +21,6 @@ foo:
 ; CHECK: sbic 31, 7                  ; encoding: [0xff,0x99]
 
 ; CHECK: sbic foo+1, 1               ; encoding: [0bAAAAA001,0x99]
-; CHECK:                             ;   fixup A - offset: 0, value: foo+1, kind: fixup_port5
 
 ; CHECK-INST: sbic 4,  3
 ; CHECK-INST: sbic 6,  2

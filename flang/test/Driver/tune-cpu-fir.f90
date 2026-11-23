@@ -14,7 +14,7 @@
 ! ARMTUNE-SAME:     fir.tune_cpu = "neoverse-n1"
 
 ! ARMBOTH-SAME: fir.target_cpu = "aarch64"
-! ARMBOTH-SAME: fir.tune_cpu = "neoverse-n1"  
+! ARMBOTH-SAME: fir.tune_cpu = "neoverse-n1"
 
 ! X86CPU-SAME:      fir.target_cpu = "x86-64"
 ! X86CPU-NOT:       fir.tune_cpu = "pentium4"

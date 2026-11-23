@@ -265,6 +265,13 @@ void __kmp_dispatch_init_algorithm(ident_t *loc, int gtid,
       // Use the scheduling specified by OMP_SCHEDULE (or __kmp_sch_default if
       // not specified)
       schedule = team->t.t_sched.r_sched_type;
+#if KMP_STATIC_STEAL_ENABLED
+      // Treat static_steal set by omp_set_schedule() like
+      // OMP_SCHEDULE=static_steal, i.e. as nonmonotonic dynamic
+      if (SCHEDULE_WITHOUT_MODIFIERS(schedule) == kmp_sch_static_steal)
+        schedule = (enum sched_type)(kmp_sch_dynamic_chunked |
+                                     kmp_sch_modifier_nonmonotonic);
+#endif
       monotonicity = __kmp_get_monotonicity(loc, schedule, use_hier);
       schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
       if (pr->flags.ordered) // correct monotonicity for ordered loop if needed

@@ -270,7 +270,7 @@ public:
                         int *BytesAdded = nullptr) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
-                   const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
+                   const DebugLoc &DL, Register DestReg, Register SrcReg,
                    bool KillSrc, bool RenamableDest = false,
                    bool RenamableSrc = false) const override;
 
@@ -278,22 +278,21 @@ public:
                          unsigned &Size, unsigned &Offset,
                          const MachineFunction &MF) const override;
 
-  void storeRegToStackSlot(MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator MI, Register SrcReg,
-                           bool IsKill, int FrameIndex,
-                           const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI,
-                           Register VReg) const override;
+  void storeRegToStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool IsKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
-  void loadRegFromStackSlot(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, Register DestReg,
-                            int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI,
-                            Register VReg) const override;
+  void loadRegFromStackSlot(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+      int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
+      MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool isPCRelRegisterOperandLegal(const MachineOperand &MO) const override;
+  bool isPCRelRegisterOperandLegal(const MachineInstr &MI,
+                                   unsigned OpIdx) const override;
 
   /// Add appropriate SExt nodes
   void AddSExt(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -313,20 +312,25 @@ public:
   bool ExpandMOVSZX_RR(MachineInstrBuilder &MIB, bool IsSigned, MVT MVTDst,
                        MVT MVTSrc) const;
 
+  /// Move from memory and expand register class without extension
+  bool ExpandMOVX_RM(MachineInstrBuilder &MIB, unsigned Opc, MVT MVTDst,
+                     MVT MVTSrc) const;
+
   /// Move from memory and extend
-  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned,
-                       const MCInstrDesc &Desc, MVT MVTDst, MVT MVTSrc) const;
+  bool ExpandMOVSZX_RM(MachineInstrBuilder &MIB, bool IsSigned, unsigned Opc,
+                       MVT MVTDst, MVT MVTSrc) const;
 
   /// Push/Pop to/from stack
   bool ExpandPUSH_POP(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                       bool IsPush) const;
 
-  /// Moves to/from CCR
-  bool ExpandCCR(MachineInstrBuilder &MIB, bool IsToCCR) const;
-
   /// Expand all MOVEM pseudos into real MOVEMs
   bool ExpandMOVEM(MachineInstrBuilder &MIB, const MCInstrDesc &Desc,
                    bool IsRM) const;
+
+  void buildClearRegister(Register Reg, MachineBasicBlock &MBB,
+                          MachineBasicBlock::iterator Iter, DebugLoc &DL,
+                          bool AllowSideEffects = true) const override;
 
   /// Return a virtual register initialized with the global base register
   /// value. Output instructions required to initialize the register in the

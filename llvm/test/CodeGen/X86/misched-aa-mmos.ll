@@ -12,10 +12,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare zeroext i1 @bar(ptr, i32) #5
 
-define i32 @foo() #0 align 2 {
+define i32 @foo(i1 %arg) #0 align 2 {
 entry:
   %temp_rhs = alloca %c1, align 8
-  br i1 undef, label %if.else56, label %cond.end.i
+  br i1 %arg, label %if.else56, label %cond.end.i
 
 cond.end.i:
   %significand.i18.i = getelementptr inbounds %c1, ptr %temp_rhs, i64 0, i32 1

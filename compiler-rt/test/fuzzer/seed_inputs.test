@@ -1,5 +1,5 @@
 # Uses echo in a way that is not supported by the iOS "run-on-device" script.
-UNSUPPORTED: ios
+UNSUPPORTED: darwin-remote
 
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 

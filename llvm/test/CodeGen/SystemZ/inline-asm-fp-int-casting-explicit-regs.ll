@@ -4,6 +4,20 @@
 ;
 ; Test inline assembly where the operand is bitcasted.
 
+define signext i16 @short_and_f(i16 signext %cc_dep1) {
+; CHECK-LABEL: short_and_f:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vlvgh %v0, %r2, 0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vlgvh %r0, %v0, 0
+; CHECK-NEXT:    lghr %r2, %r0
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = tail call i16 asm sideeffect "", "={f0},0"(i16 %cc_dep1)
+  ret i16 %0
+}
+
 define signext i32 @int_and_f(i32 signext %cc_dep1) {
 ; CHECK-LABEL: int_and_f:
 ; CHECK:       # %bb.0: # %entry
@@ -35,8 +49,8 @@ define void @__int128_and_f(ptr noalias nocapture writeonly sret(i128) align 8 %
 ; Z15-LABEL: __int128_and_f:
 ; Z15:       # %bb.0: # %entry
 ; Z15-NEXT:    vl %v0, 0(%r3), 3
-; Z15-NEXT:    vlr %v4, %v0
 ; Z15-NEXT:    vrepg %v6, %v0, 1
+; Z15-NEXT:    vlr %v4, %v0
 ; Z15-NEXT:    #APP
 ; Z15-NEXT:    #NO_APP
 ; Z15-NEXT:    vmrhg %v0, %v4, %v6
@@ -101,6 +115,19 @@ entry:
   ret void
 }
 
+define half @half_and_r(half %cc_dep1) {
+; CHECK-LABEL: half_and_r:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    vlgvh %r0, %v0, 0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vlvgh %v0, %r0, 0
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = tail call half asm sideeffect "", "={r0},0"(half %cc_dep1)
+  ret half %0
+}
+
 define float @float_and_r(float %cc_dep1) {
 ; CHECK-LABEL: float_and_r:
 ; CHECK:       # %bb.0: # %entry
@@ -143,6 +170,19 @@ entry:
   %1 = tail call fp128 asm sideeffect "", "={r4},0"(fp128 %cc_dep1)
   store fp128 %1, ptr %agg.result, align 8
   ret void
+}
+
+define half @half_and_v(half %cc_dep1) {
+; CHECK-LABEL: half_and_v:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    ldr %f3, %f0
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    ldr %f0, %f3
+; CHECK-NEXT:    br %r14
+entry:
+  %0 = tail call half asm sideeffect "", "={v3},0"(half %cc_dep1)
+  ret half %0
 }
 
 define float @float_and_v(float %cc_dep1) {
@@ -260,8 +300,8 @@ entry:
 define <4 x i32> @vec128_and_f(<4 x i32> %cc_dep1) {
 ; CHECK-LABEL: vec128_and_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vlr %v1, %v24
 ; CHECK-NEXT:    vrepg %v3, %v24, 1
+; CHECK-NEXT:    vlr %v1, %v24
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmrhg %v24, %v1, %v3

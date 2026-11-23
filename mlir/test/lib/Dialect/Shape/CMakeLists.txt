@@ -8,8 +8,8 @@ add_mlir_library(MLIRShapeTestPasses
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Shape
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/IR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRShapeTestPasses PUBLIC
   MLIRIR
   MLIRPass
   MLIRShapeOpsTransforms

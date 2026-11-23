@@ -1,17 +1,18 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -enable-machine-outliner < %s | FileCheck %s --check-prefix=BTI
+; RUN: llc -mtriple=aarch64-none-linux-gnu -enable-machine-outliner < %s | \
+; RUN: FileCheck %s --check-prefixes=CHECK,BTI --implicit-check-not=OUTLINED_FUNCTION
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -enable-machine-outliner < %s | \
-; RUN: FileCheck %s --check-prefix=BTI
+; RUN: FileCheck %s --check-prefix=GISEL-BTI
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -fast-isel -enable-machine-outliner < %s | \
-; RUN: FileCheck %s --check-prefix=BTI
+; RUN: FileCheck %s --check-prefixes=CHECK,BTI --implicit-check-not=OUTLINED_FUNCTION
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -enable-machine-outliner -mattr=+no-bti-at-return-twice < %s | \
-; RUN: FileCheck %s --check-prefix=NOBTI
+; RUN: FileCheck %s --check-prefixes=CHECK,NOBTI --implicit-check-not=OUTLINED_FUNCTION
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -global-isel -enable-machine-outliner -mattr=+no-bti-at-return-twice < %s | \
-; RUN: FileCheck %s --check-prefix=NOBTI
+; RUN: FileCheck %s --check-prefix=GISEL-NOBTI
 ; RUN: llc -mtriple=aarch64-none-linux-gnu -fast-isel -enable-machine-outliner -mattr=+no-bti-at-return-twice < %s | \
-; RUN: FileCheck %s --check-prefix=NOBTI
+; RUN: FileCheck %s --check-prefixes=CHECK,NOBTI --implicit-check-not=OUTLINED_FUNCTION
 
-; Check that the outliner does not split up the call to setjmp and the bti after it.
-; When we do not insert a bti, it is allowed to move the setjmp call into an outlined function.
+; Functions calling returns_twice are not outlined; setjmp retains its BTI when enabled.
+; TODO: GlobalISel does not set exposesReturnsTwice and still allows outlining.
 
 ; C source
 ; --------
@@ -28,15 +29,21 @@
 ; }
 
 define i32 @f(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
-; BTI-LABEL: f:
-; BTI:         bl      OUTLINED_FUNCTION_1
-; BTI-NEXT:    bl      setjmp
+; CHECK-LABEL: f:
+; CHECK:       bl      setjmp
 ; BTI-NEXT:    hint    #36
-; BTI-NEXT:    bl      OUTLINED_FUNCTION_0
+; NOBTI-NOT:   hint    #36
+; CHECK:       ret
 
-; NOBTI:      f:
-; NOBTI:        bl      OUTLINED_FUNCTION_0
-; NOBTI-NEXT:   bl      OUTLINED_FUNCTION_1
+; GISEL-BTI-LABEL: f:
+; GISEL-BTI:         bl      OUTLINED_FUNCTION_1
+; GISEL-BTI-NEXT:    bl      setjmp
+; GISEL-BTI-NEXT:    hint    #36
+; GISEL-BTI-NEXT:    bl      OUTLINED_FUNCTION_0
+
+; GISEL-NOBTI-LABEL: f:
+; GISEL-NOBTI:         bl      OUTLINED_FUNCTION_0
+; GISEL-NOBTI-NEXT:    bl      OUTLINED_FUNCTION_1
 
 entry:
   %call = call i32 @setjmp(ptr noundef null) #1
@@ -51,15 +58,21 @@ entry:
 declare i32 @setjmp(ptr noundef) #0
 
 define i32 @g(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) #0 {
-; BTI-LABEL: g:
-; BTI:         bl      OUTLINED_FUNCTION_1
-; BTI-NEXT:    bl      setjmp
+; CHECK-LABEL: g:
+; CHECK:       bl      setjmp
 ; BTI-NEXT:    hint    #36
-; BTI-NEXT:    bl      OUTLINED_FUNCTION_0
+; NOBTI-NOT:   hint    #36
+; CHECK:       ret
 
-; NOBTI:      g:
-; NOBTI:        bl      OUTLINED_FUNCTION_0
-; NOBTI-NEXT:   bl      OUTLINED_FUNCTION_1
+; GISEL-BTI-LABEL: g:
+; GISEL-BTI:         bl      OUTLINED_FUNCTION_1
+; GISEL-BTI-NEXT:    bl      setjmp
+; GISEL-BTI-NEXT:    hint    #36
+; GISEL-BTI-NEXT:    bl      OUTLINED_FUNCTION_0
+
+; GISEL-NOBTI-LABEL: g:
+; GISEL-NOBTI:         bl      OUTLINED_FUNCTION_0
+; GISEL-NOBTI-NEXT:    bl      OUTLINED_FUNCTION_1
 
 entry:
   %call = call i32 @setjmp(ptr noundef null) #1
@@ -71,10 +84,10 @@ entry:
   ret i32 %add2
 }
 
-; NOBTI-LABEL: OUTLINED_FUNCTION_0:
-; NOBTI:         b       setjmp
-; NOBTI:       OUTLINED_FUNCTION_1:
-; NOBTI-LABEL:   ret
+; GISEL-NOBTI-LABEL: OUTLINED_FUNCTION_0:
+; GISEL-NOBTI:         b       setjmp
+; GISEL-NOBTI:       OUTLINED_FUNCTION_1:
+; GISEL-NOBTI-LABEL:   ret
 
 attributes #0 = { "branch-target-enforcement" }
 attributes #1 = { returns_twice }

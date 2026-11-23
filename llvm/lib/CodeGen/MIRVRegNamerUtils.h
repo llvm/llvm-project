@@ -24,6 +24,7 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 class MachineBasicBlock;
 class MachineInstr;
 class MachineRegisterInfo;
@@ -45,6 +46,7 @@ class VRegRenamer {
     Register getReg() const { return Reg; }
   };
 
+  const CodeGenOptions &Opts;
   MachineRegisterInfo &MRI;
 
   unsigned CurrentBBNumber = 0;
@@ -61,19 +63,19 @@ class VRegRenamer {
 
   /// For all the VRegs that are candidates for renaming,
   /// return a mapping from old vregs to new vregs with names.
-  std::map<unsigned, unsigned>
+  std::map<Register, Register>
   getVRegRenameMap(const std::vector<NamedVReg> &VRegs);
 
   /// Perform replacing of registers based on the <old,new> vreg map.
-  bool doVRegRenaming(const std::map<unsigned, unsigned> &VRegRenameMap);
+  bool doVRegRenaming(const std::map<Register, Register> &VRegRenameMap);
 
   /// createVirtualRegister - Given an existing vreg, create a named vreg to
   /// take its place. The name is determined by calling
   /// getInstructionOpcodeHash.
-  unsigned createVirtualRegister(unsigned VReg);
+  Register createVirtualRegister(Register VReg);
 
   /// Create a vreg with name and return it.
-  unsigned createVirtualRegisterWithLowerName(unsigned VReg, StringRef Name);
+  Register createVirtualRegisterWithLowerName(Register VReg, StringRef Name);
 
   /// Linearly traverse the MachineBasicBlock and rename each instruction's
   /// vreg definition based on the semantics of the instruction.
@@ -82,7 +84,8 @@ class VRegRenamer {
 
 public:
   VRegRenamer() = delete;
-  VRegRenamer(MachineRegisterInfo &MRI) : MRI(MRI) {}
+  VRegRenamer(const CodeGenOptions &Opts, MachineRegisterInfo &MRI)
+      : Opts(Opts), MRI(MRI) {}
 
   /// Same as the above, but sets a BBNum depending on BB traversal that
   /// will be used as prefix for the vreg names.

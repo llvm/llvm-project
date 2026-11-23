@@ -18,6 +18,7 @@
 #include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -25,6 +26,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Path.h"
 #include <optional>
 #include <queue>
 #include <set>
@@ -239,8 +241,9 @@ llvm::SmallVector<Hinted<Header>> findHeaders(const SymbolLocation &Loc,
 }
 
 llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
-                                           const SourceManager &SM,
+                                           const Preprocessor &PP,
                                            const PragmaIncludes *PI) {
+  const auto &SM = PP.getSourceManager();
   // Get headers for all the locations providing Symbol. Same header can be
   // reached through different traversals, deduplicate those into a single
   // Header by merging their hints.
@@ -248,7 +251,7 @@ llvm::SmallVector<Header> headersForSymbol(const Symbol &S,
   if (auto SpecialHeaders = headersForSpecialSymbol(S, SM, PI)) {
     Headers = std::move(*SpecialHeaders);
   } else {
-    for (auto &Loc : locateSymbol(S))
+    for (auto &Loc : locateSymbol(S, PP.getLangOpts()))
       Headers.append(applyHints(findHeaders(Loc, SM, PI), Loc.Hint));
   }
   // If two Headers probably refer to the same file (e.g. Verbatim(foo.h) and

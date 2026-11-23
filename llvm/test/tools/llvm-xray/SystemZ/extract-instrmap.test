@@ -1,0 +1,27 @@
+## This test makes sure we can extract the instrumentation map from an
+## XRay-instrumented PIE file.
+
+# RUN: yaml2obj %S/Inputs/elf64-pic.yaml -o %t.so
+# RUN: llvm-xray extract %t.so -s | FileCheck %s
+# RUN: llvm-xray extract %t.so --no-demangle --demangle -s | FileCheck %s
+
+# CHECK:      ---
+# CHECK-NEXT: - { id: 1, address: 0x1420, function: 0x1420, kind: function-enter, always-instrument: true, function-name: 'foo()', version: 2 }
+# CHECK-NEXT: - { id: 1, address: 0x1442, function: 0x1420, kind: function-exit, always-instrument: true, function-name: 'foo()', version: 2 }
+# CHECK-NEXT: - { id: 2, address: 0x1460, function: 0x1460, kind: function-enter, always-instrument: true, function-name: 'bar()', version: 2 }
+# CHECK-NEXT: - { id: 2, address: 0x1482, function: 0x1460, kind: function-exit, always-instrument: true, function-name: 'bar()', version: 2 }
+# CHECK-NEXT: - { id: 3, address: 0x14A0, function: 0x14A0, kind: function-enter, always-instrument: true, function-name: 'jar()', version: 2 }
+# CHECK-NEXT: - { id: 3, address: 0x14C2, function: 0x14A0, kind: function-exit, always-instrument: true, function-name: 'jar()', version: 2 }
+# CHECK-NEXT: ...
+
+# RUN: llvm-xray extract -s --no-demangle %t.so | FileCheck --check-prefix=MANGLED %s
+# RUN: llvm-xray extract -s --demangle --no-demangle %t.so | FileCheck --check-prefix=MANGLED %s
+
+# MANGLED:      ---
+# MANGLED-NEXT: - { id: 1, address: 0x1420, function: 0x1420, kind: function-enter, always-instrument: true, function-name: _Z3foov, version: 2 }
+# MANGLED-NEXT: - { id: 1, address: 0x1442, function: 0x1420, kind: function-exit, always-instrument: true, function-name: _Z3foov, version: 2 }
+# MANGLED-NEXT: - { id: 2, address: 0x1460, function: 0x1460, kind: function-enter, always-instrument: true, function-name: _Z3barv, version: 2 }
+# MANGLED-NEXT: - { id: 2, address: 0x1482, function: 0x1460, kind: function-exit, always-instrument: true, function-name: _Z3barv, version: 2 }
+# MANGLED-NEXT: - { id: 3, address: 0x14A0, function: 0x14A0, kind: function-enter, always-instrument: true, function-name: _Z3jarv, version: 2 }
+# MANGLED-NEXT: - { id: 3, address: 0x14C2, function: 0x14A0, kind: function-exit, always-instrument: true, function-name: _Z3jarv, version: 2 }
+# MANGLED-NEXT: ...

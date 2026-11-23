@@ -14,14 +14,14 @@
 #include "sanitizer_common/sanitizer_platform.h"
 #if SANITIZER_APPLE
 
-#include "asan_interceptors.h"
-#include "asan_report.h"
-#include "asan_stack.h"
-#include "asan_stats.h"
-#include "lsan/lsan_common.h"
+#  include "asan_interceptors.h"
+#  include "asan_report.h"
+#  include "asan_stack.h"
+#  include "asan_stats.h"
+#  include "lsan/lsan_common.h"
 
 using namespace __asan;
-#define COMMON_MALLOC_ZONE_NAME "asan"
+#  define COMMON_MALLOC_ZONE_NAME "asan"
 #  define COMMON_MALLOC_ENTER() \
     do {                        \
       AsanInitFromRtl();        \
@@ -31,25 +31,25 @@ using namespace __asan;
 #  define COMMON_MALLOC_FORCE_UNLOCK() asan_mz_force_unlock()
 #  define COMMON_MALLOC_MEMALIGN(alignment, size) \
     GET_STACK_TRACE_MALLOC;                       \
-    void *p = asan_memalign(alignment, size, &stack, FROM_MALLOC)
+    void* p = asan_memalign(alignment, size, &stack)
 #  define COMMON_MALLOC_MALLOC(size) \
     GET_STACK_TRACE_MALLOC;          \
-    void *p = asan_malloc(size, &stack)
+    void* p = asan_malloc(size, &stack)
 #  define COMMON_MALLOC_REALLOC(ptr, size) \
     GET_STACK_TRACE_MALLOC;                \
-    void *p = asan_realloc(ptr, size, &stack);
+    void* p = asan_realloc(ptr, size, &stack);
 #  define COMMON_MALLOC_CALLOC(count, size) \
     GET_STACK_TRACE_MALLOC;                 \
-    void *p = asan_calloc(count, size, &stack);
+    void* p = asan_calloc(count, size, &stack);
 #  define COMMON_MALLOC_POSIX_MEMALIGN(memptr, alignment, size) \
     GET_STACK_TRACE_MALLOC;                                     \
     int res = asan_posix_memalign(memptr, alignment, size, &stack);
 #  define COMMON_MALLOC_VALLOC(size) \
     GET_STACK_TRACE_MALLOC;          \
-    void *p = asan_memalign(GetPageSizeCached(), size, &stack, FROM_MALLOC);
+    void* p = asan_memalign(GetPageSizeCached(), size, &stack);
 #  define COMMON_MALLOC_FREE(ptr) \
     GET_STACK_TRACE_FREE;         \
-    asan_free(ptr, &stack, FROM_MALLOC);
+    asan_free(ptr, &stack);
 #  define COMMON_MALLOC_SIZE(ptr) uptr size = asan_mz_size(ptr);
 #  define COMMON_MALLOC_FILL_STATS(zone, stats)                    \
     AsanMallocStats malloc_stats;                                  \
@@ -89,7 +89,7 @@ bool HandleDlopenInit() {
 
 namespace {
 
-void mi_extra_init(sanitizer_malloc_introspection_t *mi) {
+void mi_extra_init(sanitizer_malloc_introspection_t* mi) {
   uptr last_byte_plus_one = 0;
   mi->allocator_ptr = 0;
   // Range is [begin_ptr, end_ptr)

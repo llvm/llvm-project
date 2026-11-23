@@ -105,7 +105,6 @@ def : ReadAdvance<ReadIMul32, 0>;
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedA;
-defm : UnsupportedSchedD;
 defm : UnsupportedSchedF;
 defm : UnsupportedSchedSFB;
 defm : UnsupportedSchedV;
@@ -117,7 +116,6 @@ defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;
-defm : UnsupportedSchedZfh;
-defm : UnsupportedSchedXsfvcp;
 defm : UnsupportedSchedZvk;
+defm : UnsupportedSchedXsf;
 }

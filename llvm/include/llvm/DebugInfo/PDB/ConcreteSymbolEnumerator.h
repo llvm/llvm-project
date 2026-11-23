@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_PDB_CONCRETESYMBOLENUMERATOR_H
 
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
+#include "llvm/DebugInfo/PDB/PDBSymbol.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/Support/Casting.h"
 #include <algorithm>

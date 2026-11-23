@@ -1,10 +1,12 @@
 # RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs -run-pass=cfi-instr-inserter
+# RUN: llc -o - %s -mtriple=x86_64-- -verify-cfiinstrs -passes=cfi-instr-inserter
 
 --- |
   define void @foo() { ret void }
 ...
 ---
 name: foo
+tracksRegLiveness: false
 body: |
   bb.0:
     JCC_1 %bb.3, 4, implicit $eflags

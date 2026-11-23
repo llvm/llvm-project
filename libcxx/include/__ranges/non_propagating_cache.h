@@ -14,16 +14,18 @@
 #include <__iterator/concepts.h>        // indirectly_readable
 #include <__iterator/iterator_traits.h> // iter_reference_t
 #include <__memory/addressof.h>
+#include <__optional/nullopt_t.h>
+#include <__optional/optional.h>
+#include <__type_traits/is_object.h>
 #include <__utility/forward.h>
-#include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 // __non_propagating_cache is a helper type that allows storing an optional value in it,
@@ -36,7 +38,7 @@ namespace ranges {
 // may refer to internal details of the source view.
 template <class _Tp>
   requires is_object_v<_Tp>
-class _LIBCPP_TEMPLATE_VIS __non_propagating_cache {
+class __non_propagating_cache {
   struct __from_tag {};
   struct __forward_tag {};
 
@@ -96,8 +98,8 @@ public:
 struct __empty_cache {};
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___RANGES_NON_PROPAGATING_CACHE_H

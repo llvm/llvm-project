@@ -1,5 +1,5 @@
 ; RUN:  llc -verify-machineinstrs -mtriple powerpc-ibm-aix-xcoff -mcpu=pwr7 \
-; RUN:     -mattr=+altivec  -vec-extabi -xcoff-traceback-table=true 2>&1 < %s | \
+; RUN:     -mattr=+altivec  -target-abi=vec-extabi -xcoff-traceback-table=true 2>&1 < %s | \
 ; RUN:   FileCheck --check-prefixes=CHECK-ASM %s 
 
 ;; void f(vector float vf, ...) {
@@ -15,7 +15,7 @@ entry:
 ;CHECK-ASM:             .vbyte  4, 0x00000000                   # Traceback table begin
 ;CHECK-ASM-NEXT:        .byte   0x00                            # Version = 0
 ;CHECK-ASM-NEXT:        .byte   0x09                            # Language = CPlusPlus
-;CHECK-ASM-NEXT:        .byte   0x20                            # -IsGlobaLinkage, -IsOutOfLineEpilogOrPrologue
+;CHECK-ASM-NEXT:        .byte   0x20                            # -IsGlobalLinkage, -IsOutOfLineEpilogOrPrologue
 ;CHECK-ASM-NEXT:                                         # +HasTraceBackTableOffset, -IsInternalProcedure
 ;CHECK-ASM-NEXT:                                         # -HasControlledStorage, -IsTOCless
 ;CHECK-ASM-NEXT:                                         # -IsFloatingPointPresent

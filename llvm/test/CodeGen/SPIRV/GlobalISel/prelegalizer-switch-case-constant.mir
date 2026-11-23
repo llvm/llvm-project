@@ -1,0 +1,62 @@
+# RUN: llc -O0 -mtriple=spirv64-unknown-unknown -run-pass=spirv-prelegalizer %s -o - | FileCheck %s
+
+# addNumImm() writes one literal word up to 32 bits, two up to 64 and one per
+# 32 bits above that, and the decoder has to read all three shapes back. Only
+# the first is reachable from LLVM IR, because every constant the module emits
+# before this pass runs is a 32-bit nonzero component count or array length, so
+# the wider ones and the null are written here directly. Distinct words catch a
+# word-order error that equal words would not.
+
+--- |
+  define void @case_constants_i128() {
+  entry:
+    br label %exit
+  exit:
+    ret void
+  }
+
+  define void @case_constants_i64() {
+  entry:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name:            case_constants_i128
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: case_constants_i128
+  ; CHECK: intrinsic(@llvm.spv.switch), {{.*}}, i128 316912650112397582603894390785, {{.*}}, i128 0
+
+  bb.0.entry:
+    %0:type(s64) = OpTypeInt 128, 0
+    %1:iid(s128) = OpConstantI %0(s64), 1, 2, 3, 4
+    %2:iid(s128) = OpConstantNull %0(s64)
+    %3:_(s128) = G_IMPLICIT_DEF
+    %4:_(p0) = G_BLOCK_ADDR blockaddress(@case_constants_i128, %ir-block.exit)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.switch), %3(s128), %4(p0), %1(s128), %4(p0), %2(s128), %4(p0)
+    G_BRINDIRECT %4(p0)
+
+  bb.1.exit (ir-block-address-taken %ir-block.exit):
+    OpReturn
+...
+---
+name:            case_constants_i64
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: case_constants_i64
+  ; CHECK: intrinsic(@llvm.spv.switch), {{.*}}, i64 8589934593, {{.*}}, i64 0
+
+  bb.0.entry:
+    %0:type(s64) = OpTypeInt 64, 0
+    %1:iid(s64) = OpConstantI %0(s64), 1, 2
+    %2:iid(s64) = OpConstantNull %0(s64)
+    %3:_(s64) = G_IMPLICIT_DEF
+    %4:_(p0) = G_BLOCK_ADDR blockaddress(@case_constants_i64, %ir-block.exit)
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.switch), %3(s64), %4(p0), %1(s64), %4(p0), %2(s64), %4(p0)
+    G_BRINDIRECT %4(p0)
+
+  bb.1.exit (ir-block-address-taken %ir-block.exit):
+    OpReturn
+...

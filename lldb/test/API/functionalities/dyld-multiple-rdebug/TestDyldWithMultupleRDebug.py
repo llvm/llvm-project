@@ -17,6 +17,7 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 
+@skipIfTargetDoesNotSupportSharedLibraries()
 class TestDyldWithMultipleRDebug(TestBase):
     @skipIf(oslist=no_match(["linux"]))
     @no_debug_info_test

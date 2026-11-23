@@ -10,36 +10,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
-#define LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
+#define LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCRegister.h"
 
 namespace llvm {
 class SPIRVInstPrinter : public MCInstPrinter {
 private:
-  SmallDenseMap<unsigned, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
+  SmallDenseMap<MCRegister, SPIRV::InstructionSet::InstructionSet> ExtInstSetIDs;
+  SmallDenseMap<MCRegister, unsigned> IntTypeBitwidths;
   void recordOpExtInstImport(const MCInst *MI);
+  void recordIntType(const MCInst *MI);
 
 public:
   using MCInstPrinter::MCInstPrinter;
 
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &OS) override;
-  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O,
-                    const char *Modifier = nullptr);
+  void printOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printStringImm(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printOpDecorate(const MCInst *MI, raw_ostream &O);
   void printOpExtInst(const MCInst *MI, raw_ostream &O);
+  void printUnknownType(const MCInst *MI, raw_ostream &O);
   void printRemainingVariableOps(const MCInst *MI, unsigned StartIndex,
                                  raw_ostream &O, bool SkipFirstSpace = false,
                                  bool SkipImmediates = false);
   void printOpConstantVarOps(const MCInst *MI, unsigned StartIndex,
                              raw_ostream &O);
+  unsigned printMemoryOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
 
   void printExtension(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   template <SPIRV::OperandCategory::OperandCategory category>
@@ -53,4 +57,4 @@ public:
 };
 } // namespace llvm
 
-#endif // LLVM_LIB_TARGET_SPIRV_INSTPRINTER_SPIRVINSTPRINTER_H
+#endif // LLVM_LIB_TARGET_SPIRV_MCTARGETDESC_SPIRVINSTPRINTER_H

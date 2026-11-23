@@ -28,7 +28,6 @@ define void @b() {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 6
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    # kill: def $k0 killed $k6
 ; CHECK-NEXT:    kmovw %k6, (%esp)
 ; CHECK-NEXT:    addl $2, %esp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 4

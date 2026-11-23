@@ -30,7 +30,7 @@ void to_cf(id obj) {
   CFTypeRef cf1 = (__bridge_retained IdType)CreateSomething();
   CFStringRef cf2 = (__bridge_retained StringType)CreateNSString();
   CFTypeRef cf3 = (__bridge IdType)CreateSomething();
-  CFStringRef cf4 = (__bridge StringType)CreateNSString(); 
+  CFStringRef cf4 = (__bridge StringType)CreateNSString();
 }
 
 template void to_cf<CFTypeRef, CFStringRef>(id);
@@ -63,7 +63,7 @@ extern "C" const CFAnnotatedObjectRef r3 = &cf0;
 void testExternC() {
   id obj;
   obj = (id)r0;
-  obj = (id)r1; // expected-error{{cast of C pointer type 'CFAnnotatedObjectRef' (aka 'const __CFAnnotatedObject *') to Objective-C pointer type 'id' requires a bridged cast}} expected-note{{use __bridge to convert directly}} expected-note{{use __bridge_transfer to transfer ownership of a +1 'CFAnnotatedObjectRef'}}
+  obj = (id)r1; // expected-error{{cast of C pointer type 'CFAnnotatedObjectRef' (aka 'const struct __CFAnnotatedObject *') to Objective-C pointer type 'id' requires a bridged cast}} expected-note{{use __bridge to convert directly}} expected-note{{use __bridge_transfer to transfer ownership of a +1 'CFAnnotatedObjectRef'}}
   obj = (id)r2;
-  obj = (id)r3; // expected-error{{cast of C pointer type 'CFAnnotatedObjectRef' (aka 'const __CFAnnotatedObject *') to Objective-C pointer type 'id' requires a bridged cast}} expected-note{{use __bridge to convert directly}} expected-note{{use __bridge_transfer to transfer ownership of a +1 'CFAnnotatedObjectRef'}}
+  obj = (id)r3; // expected-error{{cast of C pointer type 'CFAnnotatedObjectRef' (aka 'const struct __CFAnnotatedObject *') to Objective-C pointer type 'id' requires a bridged cast}} expected-note{{use __bridge to convert directly}} expected-note{{use __bridge_transfer to transfer ownership of a +1 'CFAnnotatedObjectRef'}}
 }

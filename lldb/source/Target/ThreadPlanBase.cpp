@@ -47,7 +47,7 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
 ThreadPlanBase::~ThreadPlanBase() = default;
 
 void ThreadPlanBase::GetDescription(Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Base thread plan.");
+  s->PutCString("Base thread plan.");
 }
 
 bool ThreadPlanBase::ValidatePlan(Stream *error) { return true; }
@@ -195,4 +195,8 @@ bool ThreadPlanBase::DoWillResume(lldb::StateType resume_state,
 bool ThreadPlanBase::MischiefManaged() {
   // The base plan is never done.
   return false;
+}
+
+RunDirection ThreadPlanBase::GetDirection() const {
+  return m_process.GetBaseDirection();
 }

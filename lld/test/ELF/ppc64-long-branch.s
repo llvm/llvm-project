@@ -31,22 +31,22 @@
 # BRANCH-BE-NEXT: 0x02002058 00000000 00002008
 
 # CHECK:      <_start>:
-# CHECK-NEXT:     2000:       bl 0x2020
-# CHECK-NEXT:                 bl 0x2020
-# CHECK-NEXT:                 bl 0x2020
+# CHECK-NEXT:     2000:       bl 0x2040
+# CHECK-NEXT:                 bl 0x2040
+# CHECK-NEXT:                 bl 0x2040
 # CHECK-NEXT:                 bl 0x2002008
-
-## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32760
-# CHECK:      <__long_branch_high>:
-# CHECK-NEXT:     2020:       addis 12, 2, 0
-# CHECK-NEXT:                 ld 12, -32760(12)
-# CHECK-NEXT:                 mtctr 12
-# CHECK-NEXT:                 bctr
 
 ## &.branch_lt[1] - .TOC. = .branch_lt - (.got+0x8000) = -32752
 # CHECK:      <__long_branch_>:
-# CHECK-NEXT:     2040:       addis 12, 2, 0
+# CHECK-NEXT:     2020:       addis 12, 2, 0
 # CHECK-NEXT:                 ld 12, -32752(12)
+# CHECK-NEXT:                 mtctr 12
+# CHECK-NEXT:                 bctr
+
+## &.branch_lt[0] - .TOC. = .branch_lt - (.got+0x8000) = -32760
+# CHECK:      <__long_branch_high>:
+# CHECK-NEXT:     2040:       addis 12, 2, 0
+# CHECK-NEXT:                 ld 12, -32760(12)
 # CHECK-NEXT:                 mtctr 12
 # CHECK-NEXT:                 bctr
 

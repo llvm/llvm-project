@@ -15,7 +15,6 @@
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
-#include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallDescription.h"
@@ -77,7 +76,7 @@ void MmapWriteExecChecker::checkPreCall(const CallEvent &Call,
 
       auto Report = std::make_unique<PathSensitiveBugReport>(
           BT,
-          "Both PROT_WRITE and PROT_EXEC flags are set. This can "
+          "Both PROT_WRITE and PROT_EXEC flags are set; this can "
           "lead to exploitable memory regions, which could be overwritten "
           "with malicious code",
           N);

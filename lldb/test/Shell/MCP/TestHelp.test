@@ -1,0 +1,7 @@
+# RUN: lldb-mcp --help | FileCheck %s
+# RUN: lldb-mcp -h | FileCheck %s
+# CHECK: OVERVIEW: LLDB MCP
+# CHECK: USAGE: lldb-mcp
+# CHECK: OPTIONS:
+# CHECK: --help
+# CHECK: --version

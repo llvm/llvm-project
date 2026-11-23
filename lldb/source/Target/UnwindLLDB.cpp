@@ -33,7 +33,8 @@ UnwindLLDB::UnwindLLDB(Thread &thread)
     size_t count = args.GetArgumentCount();
     for (size_t i = 0; i < count; i++) {
       const char *func_name = args.GetArgumentAtIndex(i);
-      m_user_supplied_trap_handler_functions.push_back(ConstString(func_name));
+      m_user_supplied_trap_handler_functions.push_back(
+          llvm::StringRef(func_name).str());
     }
   }
 }
@@ -103,10 +104,8 @@ bool UnwindLLDB::AddFirstFrame() {
 
 unwind_done:
   Log *log = GetLog(LLDBLog::Unwind);
-  if (log) {
-    LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
-              m_thread.GetIndexID());
-  }
+  LLDB_LOGF(log, "th%d Unwind of this thread is complete.",
+            m_thread.GetIndexID());
   m_unwind_complete = true;
   return false;
 }

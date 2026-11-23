@@ -7,6 +7,7 @@ add_mlir_library(MLIRTestIR
   TestClone.cpp
   TestDiagnostics.cpp
   TestDiagnosticsMetadata.cpp
+  TestDiagnosticsNext.cpp
   TestDominance.cpp
   TestFunc.cpp
   TestInterfaces.cpp
@@ -29,15 +30,13 @@ add_mlir_library(MLIRTestIR
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRPass
-  MLIRBytecodeReader
-  MLIRBytecodeWriter
-  MLIRFunctionInterfaces
   MLIRTestDialect
   )
 
-target_include_directories(MLIRTestIR
-  PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
-  ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
+mlir_target_link_libraries(MLIRTestIR PUBLIC
+  MLIRAnalysisBase
+  MLIRBytecodeReader
+  MLIRBytecodeWriter
+  MLIRFunctionInterfaces
+  MLIRPass
   )

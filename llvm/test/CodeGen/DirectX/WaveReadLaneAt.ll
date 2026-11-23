@@ -51,6 +51,8 @@ entry:
   ret i64 %ret
 }
 
+; CHECK-NOT: attributes {{.*}} memory(none)
+
 declare half @llvm.dx.wave.readlane.f16(half, i32)
 declare float @llvm.dx.wave.readlane.f32(float, i32)
 declare double @llvm.dx.wave.readlane.f64(double, i32)

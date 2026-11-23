@@ -4,14 +4,14 @@ define i32 @test_return(ptr %p, i32 %oldval, i32 %newval) {
 ; CHECK-LABEL: test_return:
 
 ; CHECK: ldrex [[LOADED:r[0-9]+]], [r0]
-; CHECK: cmp [[LOADED]], r1
+; CHECK: cmp [[LOADED]], r1 
 ; CHECK: bne [[FAILED:LBB[0-9]+_[0-9]+]]
 
 ; CHECK: dmb ishst
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: strex [[STATUS:r[0-9]+]], {{r[0-9]+}}, [r0]
-; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+; CHECK: cmp r3, #0
 
 ; CHECK: ldrex [[LOADED]], [r0]
 ; CHECK: cmp [[LOADED]], r1
@@ -21,12 +21,6 @@ define i32 @test_return(ptr %p, i32 %oldval, i32 %newval) {
 ; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
 ; CHECK: clrex
 ; CHECK: movs r0, #0
-; CHECK: dmb ish
-; CHECK: bx lr
-
-; CHECK: [[SUCCESS]]:
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: movs r0, #1
 ; CHECK: dmb ish
 ; CHECK: bx lr
 
@@ -49,7 +43,7 @@ define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: strexb [[STATUS:r[0-9]+]], {{r[0-9]+}}, [r0]
-; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+; CHECK: cmp [[STATUS]], #0
 
 ; CHECK: ldrexb [[LOADED]], [r0]
 ; CHECK: cmp [[LOADED]], [[OLDBYTE]]
@@ -60,12 +54,6 @@ define i1 @test_return_bool(ptr %value, i8 %oldValue, i8 %newValue) {
 ; CHECK: [[FAIL]]:
 ; CHECK: clrex
 ; CHECK: movs [[TMP:r[0-9]+]], #0
-; CHECK: eor r0, [[TMP]], #1
-; CHECK: bx lr
-
-; CHECK: [[SUCCESS]]:
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: movs [[TMP:r[0-9]+]], #1
 ; CHECK: eor r0, [[TMP]], #1
 ; CHECK: bx lr
 
@@ -87,7 +75,7 @@ define void @test_conditional(ptr %p, i32 %oldval, i32 %newval) {
 
 ; CHECK: [[LOOP:LBB[0-9]+_[0-9]+]]:
 ; CHECK: strex [[STATUS:r[0-9]+]], r2, [r0]
-; CHECK: cbz [[STATUS]], [[SUCCESS:LBB[0-9]+_[0-9]+]]
+; CHECK: cmp [[STATUS]], #0 
 
 ; CHECK: ldrex [[LOADED]], [r0]
 ; CHECK: cmp [[LOADED]], r1
@@ -98,11 +86,6 @@ define void @test_conditional(ptr %p, i32 %oldval, i32 %newval) {
 ; CHECK: clrex
 ; CHECK: dmb ish
 ; CHECK: b.w _baz
-
-; CHECK: [[SUCCESS]]:
-; CHECK-NOT: cmp {{r[0-9]+}}, {{r[0-9]+}}
-; CHECK: dmb ish
-; CHECK: b.w _bar
 
   %pair = cmpxchg ptr %p, i32 %oldval, i32 %newval seq_cst seq_cst
   %success = extractvalue { i32, i1 } %pair, 1

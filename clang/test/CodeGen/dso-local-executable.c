@@ -12,6 +12,9 @@
 // RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-AUTO-IMPORT %s
 // RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -fno-auto-import | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-NO-AUTO-IMPORT %s
 // RUN: %clang_cc1 -triple x86_64-w64-mingw32 -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS,MINGW-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm %s -o - | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm %s -o - -fno-auto-import | FileCheck --check-prefixes=MINGW,MINGW-NATIVE_TLS,MINGW-NO-AUTO-IMPORT %s
+// RUN: %clang_cc1 -triple x86_64-pc-cygwin   -emit-llvm %s -o - -femulated-tls | FileCheck --check-prefixes=MINGW,MINGW-EMUTLS,MINGW-AUTO-IMPORT %s
 // MINGW:      @baz = dso_local global i32 42
 // MINGW-NEXT: @import_var = external dllimport global i32
 // MINGW-NEXT: @weak_bar = extern_weak global i32

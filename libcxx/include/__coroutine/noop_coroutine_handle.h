@@ -20,48 +20,44 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#  if __has_builtin(__builtin_coro_noop) || defined(_LIBCPP_COMPILER_GCC)
-
 // [coroutine.noop]
 // [coroutine.promise.noop]
 struct noop_coroutine_promise {};
 
 // [coroutine.handle.noop]
 template <>
-struct _LIBCPP_TEMPLATE_VIS coroutine_handle<noop_coroutine_promise> {
+struct coroutine_handle<noop_coroutine_promise> {
 public:
   // [coroutine.handle.noop.conv], conversion
-  _LIBCPP_HIDE_FROM_ABI constexpr operator coroutine_handle<>() const noexcept {
-    return coroutine_handle<>::from_address(address());
-  }
+  constexpr operator coroutine_handle<>() const noexcept { return coroutine_handle<>::from_address(address()); }
 
   // [coroutine.handle.noop.observers], observers
-  _LIBCPP_HIDE_FROM_ABI constexpr explicit operator bool() const noexcept { return true; }
-  _LIBCPP_HIDE_FROM_ABI constexpr bool done() const noexcept { return false; }
+  constexpr explicit operator bool() const noexcept { return true; }
+  [[nodiscard]] constexpr bool done() const noexcept { return false; }
 
   // [coroutine.handle.noop.resumption], resumption
-  _LIBCPP_HIDE_FROM_ABI constexpr void operator()() const noexcept {}
-  _LIBCPP_HIDE_FROM_ABI constexpr void resume() const noexcept {}
-  _LIBCPP_HIDE_FROM_ABI constexpr void destroy() const noexcept {}
+  constexpr void operator()() const noexcept {}
+  constexpr void resume() const noexcept {}
+  constexpr void destroy() const noexcept {}
 
   // [coroutine.handle.noop.promise], promise access
-  _LIBCPP_HIDE_FROM_ABI noop_coroutine_promise& promise() const noexcept {
+  [[nodiscard]] noop_coroutine_promise& promise() const noexcept {
     return *static_cast<noop_coroutine_promise*>(
         __builtin_coro_promise(this->__handle_, alignof(noop_coroutine_promise), false));
   }
 
   // [coroutine.handle.noop.address], address
-  _LIBCPP_HIDE_FROM_ABI constexpr void* address() const noexcept { return __handle_; }
+  [[nodiscard]] constexpr void* address() const noexcept { return __handle_; }
 
 private:
-  _LIBCPP_HIDE_FROM_ABI friend coroutine_handle<noop_coroutine_promise> noop_coroutine() noexcept;
+  friend coroutine_handle<noop_coroutine_promise> noop_coroutine() noexcept;
 
-#    if __has_builtin(__builtin_coro_noop)
-  _LIBCPP_HIDE_FROM_ABI coroutine_handle() noexcept { this->__handle_ = __builtin_coro_noop(); }
+#  if __has_builtin(__builtin_coro_noop)
+  coroutine_handle() noexcept { this->__handle_ = __builtin_coro_noop(); }
 
   void* __handle_ = nullptr;
 
-#    elif defined(_LIBCPP_COMPILER_GCC)
+#  elif defined(_LIBCPP_COMPILER_GCC)
   // GCC doesn't implement __builtin_coro_noop().
   // Construct the coroutine frame manually instead.
   struct __noop_coroutine_frame_ty_ {
@@ -76,24 +72,22 @@ private:
 
   void* __handle_ = &__noop_coroutine_frame_;
 
-  _LIBCPP_HIDE_FROM_ABI coroutine_handle() noexcept = default;
+  coroutine_handle() noexcept = default;
 
-#    endif // __has_builtin(__builtin_coro_noop)
+#  endif // __has_builtin(__builtin_coro_noop)
 };
 
 using noop_coroutine_handle = coroutine_handle<noop_coroutine_promise>;
 
-#    if defined(_LIBCPP_COMPILER_GCC)
+#  if defined(_LIBCPP_COMPILER_GCC)
 inline noop_coroutine_handle::__noop_coroutine_frame_ty_ noop_coroutine_handle::__noop_coroutine_frame_{};
-#    endif
+#  endif
 
 // [coroutine.noop.coroutine]
-inline _LIBCPP_HIDE_FROM_ABI noop_coroutine_handle noop_coroutine() noexcept { return noop_coroutine_handle(); }
-
-#  endif // __has_builtin(__builtin_coro_noop) || defined(_LIBCPP_COMPILER_GCC)
+[[nodiscard]] inline noop_coroutine_handle noop_coroutine() noexcept { return noop_coroutine_handle(); }
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // __LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___COROUTINE_NOOP_COROUTINE_HANDLE_H

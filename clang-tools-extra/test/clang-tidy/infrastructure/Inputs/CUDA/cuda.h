@@ -1,0 +1,64 @@
+/* Minimal declarations for CUDA support.  Testing purposes only. */
+
+#include <stddef.h>
+
+// Make this file work with nvcc, for testing compatibility.
+
+#ifndef __NVCC__
+#define __constant__ __attribute__((constant))
+#define __device__ __attribute__((device))
+#define __global__ __attribute__((global))
+#define __host__ __attribute__((host))
+#define __shared__ __attribute__((shared))
+#define __managed__ __attribute__((managed))
+#define __grid_constant__ __attribute__((grid_constant))
+#define __launch_bounds__(...) __attribute__((launch_bounds(__VA_ARGS__)))
+#define __cluster_dims__(...) __attribute__((cluster_dims(__VA_ARGS__)))
+#define __no_cluster__ __attribute__((no_cluster))
+
+struct dim3 {
+  unsigned x, y, z;
+  __host__ __device__ dim3(unsigned x, unsigned y = 1, unsigned z = 1) : x(x), y(y), z(z) {}
+};
+
+#ifdef __HIP__
+typedef struct hipStream *hipStream_t;
+typedef enum hipError {} hipError_t;
+int hipConfigureCall(dim3 gridSize, dim3 blockSize, size_t sharedSize = 0,
+                     hipStream_t stream = 0); // NOLINT
+extern "C" hipError_t __hipPushCallConfiguration(dim3 gridSize, dim3 blockSize,
+                                                 size_t sharedSize = 0,
+                                                 hipStream_t stream = 0); // NOLINT
+extern "C" hipError_t hipLaunchKernel(const void *func, dim3 gridDim,
+                                      dim3 blockDim, void **args,
+                                      size_t sharedMem,
+                                      hipStream_t stream);
+#else
+typedef struct cudaStream *cudaStream_t;
+typedef enum cudaError {} cudaError_t;
+
+extern "C" int cudaConfigureCall(dim3 gridSize, dim3 blockSize,
+                                 size_t sharedSize = 0,
+                                 cudaStream_t stream = 0); // NOLINT
+extern "C" int __cudaPushCallConfiguration(dim3 gridSize, dim3 blockSize,
+                                           size_t sharedSize = 0,
+                                           cudaStream_t stream = 0); // NOLINT
+extern "C" cudaError_t cudaLaunchKernel(const void *func, dim3 gridDim,
+                                        dim3 blockDim, void **args,
+                                        size_t sharedMem, cudaStream_t stream);
+extern "C" __device__ cudaError_t cudaLaunchDevice(void *func,
+                                                   void *parameterBuffer,
+                                                   dim3 gridDim, dim3 blockDim,
+                                                   unsigned int sharedMem,
+                                                   cudaStream_t stream);
+extern "C" __device__ void *cudaGetParameterBuffer(size_t alignment,
+                                                   size_t size);
+#endif
+
+// Host- and device-side placement new overloads.
+void *operator new(__SIZE_TYPE__, void *p) { return p; }
+void *operator new[](__SIZE_TYPE__, void *p) { return p; }
+__device__ void *operator new(__SIZE_TYPE__, void *p) { return p; }
+__device__ void *operator new[](__SIZE_TYPE__, void *p) { return p; }
+
+#endif // !__NVCC__

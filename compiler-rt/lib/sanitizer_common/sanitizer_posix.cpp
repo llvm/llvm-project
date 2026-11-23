@@ -27,12 +27,13 @@
 #include <signal.h>
 #include <sys/mman.h>
 
-#if SANITIZER_FREEBSD
+#  if SANITIZER_FREEBSD || SANITIZER_AIX
 // The MAP_NORESERVE define has been removed in FreeBSD 11.x, and even before
 // that, it was never implemented.  So just define it to zero.
-#undef  MAP_NORESERVE
-#define MAP_NORESERVE 0
-#endif
+// Similarly, AIX does not define MAP_NORESERVE.
+#    undef MAP_NORESERVE
+#    define MAP_NORESERVE 0
+#  endif
 
 namespace __sanitizer {
 
@@ -225,17 +226,9 @@ void *MapWritableFileToMemory(void *addr, uptr size, fd_t fd, OFF_T offset) {
   return (void *)p;
 }
 
-static inline bool IntervalsAreSeparate(uptr start1, uptr end1,
-                                        uptr start2, uptr end2) {
-  CHECK(start1 <= end1);
-  CHECK(start2 <= end2);
-  return (end1 < start2) || (end2 < start1);
-}
-
+#  if !SANITIZER_APPLE
 // FIXME: this is thread-unsafe, but should not cause problems most of the time.
-// When the shadow is mapped only a single thread usually exists (plus maybe
-// several worker threads on Mac, which aren't expected to map big chunks of
-// memory).
+// When the shadow is mapped only a single thread usually exists
 bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   if (proc_maps.Error())
@@ -251,7 +244,6 @@ bool MemoryRangeIsAvailable(uptr range_start, uptr range_end) {
   return true;
 }
 
-#if !SANITIZER_APPLE
 void DumpProcessMap() {
   MemoryMappingLayout proc_maps(/*cache_enabled*/true);
   const sptr kBufSize = 4095;
@@ -265,7 +257,7 @@ void DumpProcessMap() {
   Report("End of process memory map.\n");
   UnmapOrDie(filename, kBufSize);
 }
-#endif
+#  endif
 
 const char *GetPwd() {
   return GetEnv("PWD");
@@ -366,9 +358,10 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
   if (!common_flags()->decorate_proc_maps || !name)
     return -1;
   char shmname[200];
-  CHECK(internal_strlen(name) < sizeof(shmname) - 10);
-  internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu [%s]",
-                    internal_getpid(), name);
+  int len =
+      internal_snprintf(shmname, sizeof(shmname), "/dev/shm/%zu.%llu [%s]",
+                        internal_getpid(), GetTid(), name);
+  CHECK_LT(len, sizeof(shmname));
   int o_cloexec = 0;
 #if defined(O_CLOEXEC)
   o_cloexec = O_CLOEXEC;

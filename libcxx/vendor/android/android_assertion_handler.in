@@ -1,0 +1,58 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef __LIBCPP_ANDROID_ASSERTION_HANDLER
+#define __LIBCPP_ANDROID_ASSERTION_HANDLER
+
+#include <__config>
+#include <__log_hardening_failure>
+#include <__verbose_abort>
+#include <__verbose_trap>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_IGNORE
+#  define _LIBCPP_ASSERTION_HANDLER(message) ((void)0)
+
+#elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_OBSERVE
+#  define _LIBCPP_ASSERTION_HANDLER(message) _LIBCPP_LOG_HARDENING_FAILURE(message)
+
+#elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE
+
+// Require `nomerge` for better crash attribution.
+#  define _LIBCPP_ASSERTION_HANDLER(message) \
+  ({ [[_Clang::__nomerge__]] _LIBCPP_VERBOSE_TRAP(message); })
+
+#elif _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+_LIBCPP_BEGIN_NAMESPACE_STD
+
+// Calling this saves code size compared to
+// `__libcpp_verbose_abort("%s", "error message")`.
+[[_Clang::__nomerge__]] [[__noreturn__]]
+inline void __libcpp_android_verbose_abort(const char *__message) {
+  _LIBCPP_VERBOSE_ABORT("%s", __message);
+}
+_LIBCPP_END_NAMESPACE_STD
+
+#  define _LIBCPP_ASSERTION_HANDLER(message) \
+  ::std::__libcpp_android_verbose_abort(message)
+
+#else
+
+#  error _LIBCPP_ASSERTION_SEMANTIC must be set to one of the following values: \
+_LIBCPP_ASSERTION_SEMANTIC_IGNORE, \
+_LIBCPP_ASSERTION_SEMANTIC_OBSERVE, \
+_LIBCPP_ASSERTION_SEMANTIC_QUICK_ENFORCE, \
+_LIBCPP_ASSERTION_SEMANTIC_ENFORCE
+
+#endif // _LIBCPP_ASSERTION_SEMANTIC == _LIBCPP_ASSERTION_SEMANTIC_IGNORE
+
+#endif // __LIBCPP_ANDROID_ASSERTION_HANDLER

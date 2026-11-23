@@ -1,4 +1,4 @@
-; RUN: opt -mtriple amdgcn-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple amdgpu7.00-mesa-mesa3d -passes='print<uniformity>' -disable-output %s 2>&1 | FileCheck %s
 
 ;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.swap.i32(
 define float @raw_buffer_atomic_swap(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
@@ -348,6 +348,70 @@ main_body:
 define float @struct_ptr_buffer_atomic_cmpswap(ptr addrspace (8) inreg %rsrc, i32 inreg %data, i32 inreg %cmp) #0 {
 main_body:
   %orig = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cmpswap.i32(i32 %data, i32 %cmp, ptr addrspace (8) %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(
+define float @raw_buffer_atomic_cond_sub_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cond.sub.u32.i32(
+define float @raw_ptr_buffer_atomic_cond_sub_u32(ptr addrspace(8) inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.cond.sub.u32.i32(i32 %data, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(
+define float @struct_buffer_atomic_cond_sub_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.cond.sub.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cond.sub.u32.i32(
+define float @struct_ptr_buffer_atomic_cond_sub_u32(ptr addrspace(8) inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.cond.sub.u32.i32(i32 %data, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.sub.clamp.u32.i32(
+define float @raw_buffer_atomic_sub_clamp_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.raw.buffer.atomic.sub.clamp.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.clamp.u32.i32(
+define float @raw_ptr_buffer_atomic_sub_clamp_u32(ptr addrspace(8) inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.raw.ptr.buffer.atomic.sub.clamp.u32.i32(i32 %data, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.clamp.u32.i32(
+define float @struct_buffer_atomic_sub_clamp_u32(<4 x i32> inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.clamp.u32.i32(i32 %data, <4 x i32> %rsrc, i32 0, i32 0, i32 0, i32 0)
+  %r = bitcast i32 %orig to float
+  ret float %r
+}
+
+;CHECK: DIVERGENT: %orig = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.clamp.u32.i32(
+define float @struct_ptr_buffer_atomic_sub_clamp_u32(ptr addrspace(8) inreg %rsrc, i32 inreg %data) #0 {
+main_body:
+  %orig = call i32 @llvm.amdgcn.struct.ptr.buffer.atomic.sub.clamp.u32.i32(i32 %data, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 0, i32 0)
   %r = bitcast i32 %orig to float
   ret float %r
 }

@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -fopenmp -fdebug-dump-symbols -o - %s 2>&1 | FileCheck %s
 ! Check scan reduction
 
-! CHECK: MainProgram scope: omp_reduction
+! CHECK: MainProgram scope: OMP_REDUCTION
 program omp_reduction
   ! CHECK: i size=4 offset=0: ObjectEntity type: INTEGER(4)
   integer i
@@ -12,13 +12,13 @@ program omp_reduction
 
   ! CHECK: OtherConstruct scope
   ! CHECK: i (OmpPrivate, OmpPreDetermined): HostAssoc
-  ! CHECK: k (OmpReduction, OmpInclusiveScan, OmpInScanReduction): HostAssoc
+  ! CHECK: k (OmpReduction, OmpExplicit, OmpInclusiveScan, OmpInScanReduction): HostAssoc
   !$omp parallel do  reduction(inscan, +:k)
   do i=1,10
    !$omp scan inclusive(k)
   end do
   !$omp end parallel do
-  ! CHECK: m (OmpReduction, OmpExclusiveScan, OmpInScanReduction): HostAssoc
+  ! CHECK: m (OmpReduction, OmpExplicit, OmpExclusiveScan, OmpInScanReduction): HostAssoc
   !$omp parallel do  reduction(inscan, +:m)
   do i=1,10
    !$omp scan exclusive(m)

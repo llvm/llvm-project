@@ -18,9 +18,9 @@ target triple = "i386-unknown-linux-gnu"
 
 declare void @llvm.memcpy.p0.p0.i32(ptr nocapture, ptr nocapture, i32, i1) nounwind
 
-define linkonce_odr void @test() nounwind {
+define linkonce_odr void @test(i1 %arg) nounwind {
 entry:
-  br i1 undef, label %while.end.while.end26_crit_edge, label %while.body12.lr.ph
+  br i1 %arg, label %while.end.while.end26_crit_edge, label %while.body12.lr.ph
 
 while.end.while.end26_crit_edge:                  ; preds = %entry
   br label %while.end26
@@ -104,7 +104,7 @@ if.then.i.i.i.i.i43:                              ; preds = %if.then17
   unreachable
 
 D:                                                ; preds = %if.then17
-  br i1 undef, label %if.then.i.i.i.i.i, label %E
+  br i1 %arg, label %if.then.i.i.i.i.i, label %E
 
 if.then.i.i.i.i.i:                                ; preds = %D
   unreachable
@@ -125,7 +125,7 @@ while.cond10.while.end26_crit_edge:               ; preds = %if.end24
   br label %while.end26
 
 while.end26:                                      ; preds = %while.cond10.while.end26_crit_edge, %while.end.while.end26_crit_edge
-  br i1 undef, label %while.body.lr.ph.i, label %F
+  br i1 %arg, label %while.body.lr.ph.i, label %F
 
 while.body.lr.ph.i:                               ; preds = %while.end26
   br label %while.body.i

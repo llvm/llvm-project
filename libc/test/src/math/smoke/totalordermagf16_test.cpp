@@ -10,4 +10,5 @@
 
 #include "src/math/totalordermagf16.h"
 
-LIST_TOTALORDERMAG_TESTS(float16, LIBC_NAMESPACE::totalordermagf16)
+LIST_TOTALORDERMAG_TESTS(Totalordermagf16, float16,
+                         LIBC_NAMESPACE::totalordermagf16)

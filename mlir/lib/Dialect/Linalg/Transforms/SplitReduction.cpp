@@ -115,8 +115,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
         newShape,
         cast<RankedTensorType>(operand->get().getType()).getElementType());
 
-    Value newInput = b.create<tensor::ExpandShapeOp>(
-        loc, newType, operand->get(), reassociation);
+    Value newInput = tensor::ExpandShapeOp::create(
+        b, loc, newType, operand->get(), reassociation);
     newInputs.push_back(newInput);
   }
 
@@ -140,18 +140,18 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   }
   Value emptyOrAllocTensor;
   if (useAlloc) {
-    emptyOrAllocTensor = b.create<bufferization::AllocTensorOp>(
-        loc,
+    emptyOrAllocTensor = bufferization::AllocTensorOp::create(
+        b, loc,
         RankedTensorType::get(newOutputShape,
                               op.getRegionOutputArgs()[0].getType()),
         ValueRange{});
   } else {
-    emptyOrAllocTensor = b.create<tensor::EmptyOp>(
-        loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
+    emptyOrAllocTensor = tensor::EmptyOp::create(
+        b, loc, newOutputShape, op.getRegionOutputArgs()[0].getType());
   }
-  Value constantOp = b.create<arith::ConstantOp>(loc, *identity);
+  Value constantOp = arith::ConstantOp::create(b, loc, *identity);
   Value identityTensor =
-      b.create<linalg::FillOp>(op->getLoc(), constantOp, emptyOrAllocTensor)
+      linalg::FillOp::create(b, op->getLoc(), constantOp, emptyOrAllocTensor)
           .getResult(0);
 
   newMaps.push_back(AffineMap::get(oldOutputMap.getNumDims() + 1, 0, outputExpr,
@@ -168,8 +168,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   }
   // Create the new op matching the original op with an extra parallel
   // dimension.
-  GenericOp genericOp = b.create<GenericOp>(
-      loc, TypeRange({emptyOrAllocTensor.getType()}), newInputs,
+  GenericOp genericOp = GenericOp::create(
+      b, loc, TypeRange({emptyOrAllocTensor.getType()}), newInputs,
       ValueRange({identityTensor}), newMaps, newIteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
                        genericOp.getRegion().begin());
@@ -191,14 +191,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReduction(
   AffineMap outputMap = AffineMap::get(intermRank, 0, exprs, op.getContext());
   SmallVector<AffineMap> reductionMaps = {inputMap, outputMap};
 
-  auto reduction = b.create<GenericOp>(
-      loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
+  auto reduction = GenericOp::create(
+      b, loc, op->getResultTypes(), ValueRange({genericOp.getResult(0)}),
       op.getDpsInits(), reductionMaps, reductionIteratorTypes,
       [reductionOp](OpBuilder &b, Location loc, ValueRange inputs) {
         Operation *clonedReductionOp = b.clone(*reductionOp);
         clonedReductionOp->setOperand(0, inputs[0]);
         clonedReductionOp->setOperand(1, inputs[1]);
-        b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
+        linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
       });
   b.replaceOp(op, reduction.getResults());
 
@@ -318,14 +318,14 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
     Value emptyOrAllocTensor;
     if (useAlloc) {
       emptyOrAllocTensor =
-          b.create<bufferization::AllocTensorOp>(loc, newT, dims);
+          bufferization::AllocTensorOp::create(b, loc, newT, dims);
     } else {
-      emptyOrAllocTensor = b.create<tensor::EmptyOp>(loc, newT.getShape(),
-                                                     t.getElementType(), dims);
+      emptyOrAllocTensor = tensor::EmptyOp::create(b, loc, newT.getShape(),
+                                                   t.getElementType(), dims);
     }
-    Value constantOp = b.create<arith::ConstantOp>(loc, std::get<1>(it));
-    fillOps.push_back(
-        b.create<linalg::FillOp>(op->getLoc(), constantOp, emptyOrAllocTensor));
+    Value constantOp = arith::ConstantOp::create(b, loc, std::get<1>(it));
+    fillOps.push_back(linalg::FillOp::create(b, op->getLoc(), constantOp,
+                                             emptyOrAllocTensor));
     newOutputs.push_back(fillOps.back().getResult(0));
     emptyOrAllocTensorOps.push_back(emptyOrAllocTensor.getDefiningOp());
   }
@@ -354,8 +354,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   SmallVector<Value> newInputs = op.getDpsInputs();
   // Add a single shape-only tensor to carry the dimensions without resorting to
   // more complex inversions.
-  newInputs.push_back(b.create<tensor::EmptyOp>(
-      loc, ArrayRef<int64_t>{reductionDimSize / splitFactor, splitFactor},
+  newInputs.push_back(tensor::EmptyOp::create(
+      b, loc, ArrayRef<int64_t>{reductionDimSize / splitFactor, splitFactor},
       b.getIntegerType(1)));
   // Output tensors are already good to go.
 
@@ -365,8 +365,8 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
   iteratorTypes.insert(iteratorTypes.begin() + reductionDimPos,
                        utils::IteratorType::parallel);
   GenericOp genericOp =
-      b.create<GenericOp>(loc, ValueRange(newOutputs).getTypes(), newInputs,
-                          newOutputs, newMaps, iteratorTypes);
+      GenericOp::create(b, loc, ValueRange(newOutputs).getTypes(), newInputs,
+                        newOutputs, newMaps, iteratorTypes);
   b.inlineRegionBefore(op->getRegion(0), genericOp.getRegion(),
                        genericOp.getRegion().begin());
   genericOp.getRegion().front().insertArgument(reductionDimPos,
@@ -396,7 +396,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
         utils::IteratorType::reduction;
 
     // clang-format off
-    auto reductionOp = b.create<GenericOp>(
+    auto reductionOp = GenericOp::create(b,
         loc,
         originalOutputType,
         reindexedOutput,
@@ -407,7 +407,7 @@ FailureOr<SplitReductionResult> mlir::linalg::splitReductionByScaling(
           Operation *clonedReductionOp = b.clone(*combinerOp);
           clonedReductionOp->setOperand(0, bbArgs[0]);
           clonedReductionOp->setOperand(1, bbArgs[1]);
-          b.create<linalg::YieldOp>(loc, clonedReductionOp->getResult(0));
+          linalg::YieldOp::create(b, loc, clonedReductionOp->getResult(0));
         });
     // clang-format on
 

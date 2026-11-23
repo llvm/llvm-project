@@ -22,7 +22,7 @@ define double @fold_from_fp16_to_fp64() {
 
 define x86_fp80 @fold_from_fp16_to_fp80() {
 ; CHECK-LABEL: @fold_from_fp16_to_fp80(
-; CHECK-NEXT:    ret x86_fp80 0xK00000000000000000000
+; CHECK-NEXT:    ret x86_fp80 0.000000e+00
 ;
   %r = call x86_fp80 @llvm.convert.from.fp16.f80(i16 0)
   ret x86_fp80 %r
@@ -30,7 +30,7 @@ define x86_fp80 @fold_from_fp16_to_fp80() {
 
 define fp128 @fold_from_fp16_to_fp128() {
 ; CHECK-LABEL: @fold_from_fp16_to_fp128(
-; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000000
+; CHECK-NEXT:    ret fp128 0.000000e+00
 ;
   %r = call fp128 @llvm.convert.from.fp16.f128(i16 0)
   ret fp128 %r
@@ -38,7 +38,7 @@ define fp128 @fold_from_fp16_to_fp128() {
 
 define ppc_fp128 @fold_from_fp16_to_ppcfp128() {
 ; CHECK-LABEL: @fold_from_fp16_to_ppcfp128(
-; CHECK-NEXT:    ret ppc_fp128 0xM00000000000000000000000000000000
+; CHECK-NEXT:    ret ppc_fp128 0.000000e+00
 ;
   %r = call ppc_fp128 @llvm.convert.from.fp16.ppcf128(i16 0)
   ret ppc_fp128 %r
@@ -64,7 +64,7 @@ define double @fold_from_fp16_to_fp64_b() {
 
 define x86_fp80 @fold_from_fp16_to_fp80_b() {
 ; CHECK-LABEL: @fold_from_fp16_to_fp80_b(
-; CHECK-NEXT:    ret x86_fp80 0xK40018000000000000000
+; CHECK-NEXT:    ret x86_fp80 4.000000e+00
 ;
   %a = call i16 @llvm.convert.to.fp16.f64(double 4.0)
   %r = call x86_fp80 @llvm.convert.from.fp16.f80(i16 %a)
@@ -73,7 +73,7 @@ define x86_fp80 @fold_from_fp16_to_fp80_b() {
 
 define fp128 @fold_from_fp16_to_fp128_b() {
 ; CHECK-LABEL: @fold_from_fp16_to_fp128_b(
-; CHECK-NEXT:    ret fp128 0xL00000000000000004001000000000000
+; CHECK-NEXT:    ret fp128 4.000000e+00
 ;
   %a = call i16 @llvm.convert.to.fp16.f64(double 4.0)
   %r = call fp128 @llvm.convert.from.fp16.f128(i16 %a)
@@ -82,7 +82,7 @@ define fp128 @fold_from_fp16_to_fp128_b() {
 
 define ppc_fp128 @fold_from_fp16_to_ppcfp128_b() {
 ; CHECK-LABEL: @fold_from_fp16_to_ppcfp128_b(
-; CHECK-NEXT:    ret ppc_fp128 0xM40100000000000000000000000000000
+; CHECK-NEXT:    ret ppc_fp128 4.000000e+00
 ;
   %a = call i16 @llvm.convert.to.fp16.f64(double 4.0)
   %r = call ppc_fp128 @llvm.convert.from.fp16.ppcf128(i16 %a)
@@ -94,7 +94,7 @@ define ppc_fp128 @fold_from_fp16_to_ppcfp128_b() {
 
 define float @convert_snan() {
 ; CHECK-LABEL: @convert_snan(
-; CHECK-NEXT:    ret float 0x7FF8040000000000
+; CHECK-NEXT:    ret float +nan(0x2000)
 ;
   %r = call float @llvm.convert.from.fp16.f32(i16 31745) ; 0x7c01
   ret float %r

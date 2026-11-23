@@ -338,7 +338,7 @@ define <vscale x 8 x i16> @sub_multiple_use_stepvector_nxv8i16() {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    index z0.h, #0, #1
 ; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    mov z1.d, z0.d
+; CHECK-NEXT:    movprfx z1, z0
 ; CHECK-NEXT:    subr z1.h, z1.h, #2 // =0x2
 ; CHECK-NEXT:    lsl z0.h, p0/m, z0.h, z1.h
 ; CHECK-NEXT:    ret

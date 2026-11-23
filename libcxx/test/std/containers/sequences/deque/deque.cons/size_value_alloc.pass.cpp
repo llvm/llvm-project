@@ -19,23 +19,20 @@
 #include "min_allocator.h"
 
 template <class T, class Allocator>
-void
-test(unsigned n, const T& x, const Allocator& a)
-{
-    typedef std::deque<T, Allocator> C;
-    typedef typename C::const_iterator const_iterator;
-    C d(n, x, a);
-    assert(d.get_allocator() == a);
-    assert(d.size() == n);
-    assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
-    LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
-    for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
-        assert(*i == x);
+void test(unsigned n, const T& x, const Allocator& a) {
+  typedef std::deque<T, Allocator> C;
+  typedef typename C::const_iterator const_iterator;
+  C d(n, x, a);
+  assert(d.get_allocator() == a);
+  assert(d.size() == n);
+  assert(static_cast<std::size_t>(std::distance(d.begin(), d.end())) == d.size());
+  LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(d));
+  for (const_iterator i = d.begin(), e = d.end(); i != e; ++i)
+    assert(*i == x);
 }
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     std::allocator<int> a;
     test(0, 5, a);
     test(1, 10, a);
@@ -49,9 +46,9 @@ int main(int, char**)
     test(4095, 78, a);
     test(4096, 1165, a);
     test(4097, 157, a);
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     min_allocator<int> a;
     test(0, 5, a);
     test(1, 10, a);
@@ -65,7 +62,7 @@ int main(int, char**)
     test(4095, 78, a);
     test(4096, 1165, a);
     test(4097, 157, a);
-    }
+  }
 #endif
 
   return 0;

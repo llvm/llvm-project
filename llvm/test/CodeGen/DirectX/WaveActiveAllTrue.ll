@@ -2,7 +2,7 @@
 
 define noundef i1 @wave_all_simple(i1 noundef %p1) {
 entry:
-; CHECK: call i1 @dx.op.waveAllTrue(i32 114, i1 %p1)
+; CHECK: call i1 @dx.op.waveAllTrue(i32 114, i1 %p1){{$}}
   %ret = call i1 @llvm.dx.wave.all(i1 %p1)
   ret i1 %ret
 }

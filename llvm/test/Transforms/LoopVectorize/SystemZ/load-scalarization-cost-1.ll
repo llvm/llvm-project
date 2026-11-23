@@ -24,5 +24,5 @@ for.body:
 for.end:
   ret i32 %acc_next
 
-; CHECK: Found an estimated cost of 4 for VF 4 For instruction:   %ld = load i32, ptr %gep
+; CHECK: Cost of 4 for VF 4: REPLICATE ir<%ld> = load ir<%gep>
 }

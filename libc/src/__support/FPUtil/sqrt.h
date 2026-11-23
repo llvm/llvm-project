@@ -9,17 +9,72 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
 #define LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H
 
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/cpu_features.h"
 
-#if defined(LIBC_TARGET_ARCH_IS_X86_64) && defined(LIBC_TARGET_CPU_HAS_SSE2)
+#include "src/__support/FPUtil/generic/sqrt.h"
+
+// Generic instruction specializations with __builtin_elementwise_sqrt.
+#if !defined(LIBC_USE_CONSTEXPR) && (defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) || \
+                                     defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE))
+
+#if __has_builtin(__builtin_elementwise_sqrt)
+
+namespace LIBC_NAMESPACE_DECL {
+namespace fputil {
+
+#ifdef LIBC_TARGET_CPU_HAS_FPU_FLOAT
+template <> LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float sqrt<float>(float x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<float>(x);
+  } else {
+    return __builtin_elementwise_sqrt(x);
+  }
+}
+#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+template <> LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double sqrt<double>(double x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<double>(x);
+  } else {
+    return __builtin_elementwise_sqrt(x);
+  }
+}
+#endif // LIBC_TARGET_CPU_HAS_FPU_DOUBLE
+
+// Use 80-bit long double instruction on x86.
+// https://godbolt.org/z/oWEaj6hxK
+#ifdef LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+template <>
+LIBC_INLINE LIBC_CONSTEXPR_DEFAULT long double
+sqrt<long double>(long double x) {
+  if (cpp::is_constant_evaluated()) {
+    return generic::sqrt<long double>(x);
+  } else {
+    return __builtin_elementwise_sqrt(x);
+  }
+}
+#endif // LIBC_TYPES_LONG_DOUBLE_IS_X86_FLOAT80
+
+} // namespace fputil
+} // namespace LIBC_NAMESPACE_DECL
+
+#else // __builtin_elementwise_sqrt
+// Use inline assembly when __builtin_elementwise_sqrt is not available.
+#if defined(LIBC_TARGET_CPU_HAS_SSE2) && defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/sqrt.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "arm/sqrt.h"
 #elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
 #include "riscv/sqrt.h"
-#else
-#include "generic/sqrt.h"
+#endif // Target specific header of inline asm.
 
-#endif
+#endif // __builtin_elementwise_sqrt
+
+#endif // LIBC_TARGET_CPU_HAS_FPU_FLOAT or DOUBLE
+
 #endif // LLVM_LIBC_SRC___SUPPORT_FPUTIL_SQRT_H

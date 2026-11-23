@@ -14,7 +14,26 @@
 #ifndef MLIR_IR_BUILTINDIALECT_H_
 #define MLIR_IR_BUILTINDIALECT_H_
 
-#include "mlir/IR/Dialect.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
+
+//===----------------------------------------------------------------------===//
+// BuiltinDialectVersion
+//===----------------------------------------------------------------------===//
+
+struct BuiltinDialectVersion : public mlir::DialectVersion {
+  BuiltinDialectVersion(int64_t version) : version(version) {}
+
+  int64_t getVersion() const { return version; }
+
+  static BuiltinDialectVersion getCurrentVersion() { return {1}; }
+
+  bool operator<(const BuiltinDialectVersion &other) const {
+    return version < other.version;
+  }
+
+private:
+  int64_t version;
+};
 
 //===----------------------------------------------------------------------===//
 // Dialect

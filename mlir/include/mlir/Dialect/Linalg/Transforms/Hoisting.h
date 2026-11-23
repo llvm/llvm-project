@@ -37,6 +37,12 @@ namespace linalg {
 /// results in scf::ForOp yielding the value that originally transited through
 /// memory.
 ///
+/// When `verifyNonZeroTrip` is true, a singleton transfer_write with no
+/// matching read is also sunk after the loop when its operands are
+/// loop-invariant and nothing else in the loop accesses its memref, since the
+/// loop is then proven to execute at least once and the store is not
+/// introduced spuriously.
+///
 /// TODO: To further improve hoisting opportunities, fold aliasing memref
 /// operations into respective vector.transfer{read|write} operations and
 /// avoid using ops implementing ViewLikeOpInterface as the source for transfer

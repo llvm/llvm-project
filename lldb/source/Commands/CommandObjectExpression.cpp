@@ -12,6 +12,8 @@
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Host/StreamFile.h"
+#include "lldb/Host/common/DiagnosticsRendering.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -20,14 +22,25 @@
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
-#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/lldb-enumerations.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
+#include "llvm/ADT/StringSet.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-CommandObjectExpression::CommandOptions::CommandOptions() = default;
+CommandObjectExpression::CommandOptions::CommandOptions() {
+  llvm::StringSet<> plugin_names;
+  Language::ForEach([&](Language *language) {
+    if (!plugin_names.insert(language->GetPluginName()).second)
+      return IterationAction::Continue;
+    if (std::unique_ptr<OptionGroupLanguageExpression> options =
+            language->CreateExpressionOptions())
+      m_language_options.push_back(std::move(options));
+    return IterationAction::Continue;
+  });
+}
 
 CommandObjectExpression::CommandOptions::~CommandOptions() = default;
 
@@ -200,7 +213,7 @@ EvaluateExpressionOptions
 CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
     const Target &target, const OptionGroupValueObjectDisplay &display_opts) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(display_opts.use_objc);
+  options.SetCoerceToId(display_opts.use_object_desc);
   options.SetUnwindOnError(unwind_on_error);
   options.SetIgnoreBreakpoints(ignore_breakpoints);
   options.SetKeepInMemory(true);
@@ -211,6 +224,9 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetExecutionPolicy(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
+  for (const std::shared_ptr<OptionGroupLanguageExpression> &language_options :
+       m_language_options)
+    language_options->Apply(options);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)
@@ -239,12 +255,19 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
 bool CommandObjectExpression::CommandOptions::ShouldSuppressResult(
     const OptionGroupValueObjectDisplay &display_opts) const {
   // Explicitly disabling persistent results takes precedence over the
-  // m_verbosity/use_objc logic.
+  // m_verbosity/use_object_desc logic.
   if (suppress_persistent_result != eLazyBoolCalculate)
     return suppress_persistent_result == eLazyBoolYes;
 
-  return display_opts.use_objc &&
+  return display_opts.use_object_desc &&
          m_verbosity == eLanguageRuntimeDescriptionDisplayVerbosityCompact;
+}
+
+void CommandObjectExpression::CommandOptions::AppendLanguageOptions(
+    OptionGroupOptions &group) {
+  for (const std::shared_ptr<OptionGroupLanguageExpression> &language_options :
+       m_language_options)
+    group.Append(language_options.get());
 }
 
 CommandObjectExpression::CommandObjectExpression(
@@ -254,7 +277,8 @@ CommandObjectExpression::CommandObjectExpression(
                        "thread.  Displays any returned value "
                        "with LLDB's default formatting.",
                        "",
-                       eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+                       eCommandProcessMustBePaused | eCommandTryTargetAPILock |
+                           eCommandAllowsDummyTarget),
       IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
       m_format_options(eFormatDefault),
       m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false,
@@ -318,6 +342,7 @@ Examples:
                             OptionGroupFormat::OPTION_GROUP_GDB_FMT,
                         LLDB_OPT_SET_1);
   m_option_group.Append(&m_command_options);
+  m_command_options.AppendLanguageOptions(m_option_group);
   m_option_group.Append(&m_varobj_options, LLDB_OPT_SET_ALL,
                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2);
   m_option_group.Append(&m_repl_option, LLDB_OPT_SET_ALL, LLDB_OPT_SET_3);
@@ -330,7 +355,7 @@ Options *CommandObjectExpression::GetOptions() { return &m_option_group; }
 
 void CommandObjectExpression::HandleCompletion(CompletionRequest &request) {
   EvaluateExpressionOptions options;
-  options.SetCoerceToId(m_varobj_options.use_objc);
+  options.SetCoerceToId(m_varobj_options.use_object_desc);
   options.SetLanguage(m_command_options.language);
   options.SetExecutionPolicy(lldb_private::eExecutionPolicyNever);
   options.SetAutoApplyFixIts(false);
@@ -413,7 +438,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
 
   if (m_command_options.top_level && !m_command_options.allow_jit) {
     result.AppendErrorWithFormat(
-        "Can't disable JIT compilation for top-level expressions.\n");
+        "Can't disable JIT compilation for top-level expressions");
     return false;
   }
 
@@ -434,6 +459,8 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
   }
 
   if (result_valobj_sp) {
+    result.GetValueObjectList().Append(result_valobj_sp);
+
     Format format = m_format_options.GetFormat();
 
     if (result_valobj_sp->GetError().Success()) {
@@ -445,7 +472,7 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
           Status error(CanBeUsedForElementCountPrinting(*result_valobj_sp));
           if (error.Fail()) {
             result.AppendErrorWithFormat(
-                "expression cannot be used with --element-count %s\n",
+                "expression cannot be used with --element-count %s",
                 error.AsCString(""));
             return false;
           }
@@ -465,6 +492,9 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
           result.AppendError(toString(std::move(error)));
           return false;
         }
+
+        m_interpreter.PrintWarningsIfNecessary(result.GetOutputStream(),
+                                               m_cmd_name);
 
         if (suppress_result)
           if (auto result_var_sp =
@@ -490,29 +520,32 @@ bool CommandObjectExpression::EvaluateExpression(llvm::StringRef expr,
       }
     }
   } else {
-    error_stream.Printf("error: unknown error\n");
+    error_stream.PutCString("error: unknown error\n");
   }
 
-  return (success != eExpressionSetupError &&
-          success != eExpressionParseError);
+  // A setup or parse error can be a bug in the evaluator. Any other failure
+  // happens once the expression runs.
+  const bool evaluator_failed =
+      success == eExpressionSetupError || success == eExpressionParseError;
+  if (evaluator_failed)
+    GetDebugger().SuggestBugReport(expr, result.GetErrorStream());
+  return !evaluator_failed;
 }
 
 void CommandObjectExpression::IOHandlerInputComplete(IOHandler &io_handler,
                                                      std::string &line) {
   io_handler.SetIsDone(true);
-  StreamFileSP output_sp = io_handler.GetOutputStreamFileSP();
-  StreamFileSP error_sp = io_handler.GetErrorStreamFileSP();
+  StreamSP output_stream =
+      GetCommandInterpreter().GetDebugger().GetAsyncOutputStream();
+  StreamSP error_stream =
+      GetCommandInterpreter().GetDebugger().GetAsyncErrorStream();
 
   CommandReturnObject return_obj(
       GetCommandInterpreter().GetDebugger().GetUseColor());
-  EvaluateExpression(line.c_str(), *output_sp, *error_sp, return_obj);
+  EvaluateExpression(line.c_str(), *output_stream, *error_stream, return_obj);
 
-  if (output_sp)
-    output_sp->Flush();
-  if (error_sp) {
-    *error_sp << return_obj.GetErrorString();
-    error_sp->Flush();
-  }
+  output_stream->Flush();
+  *error_stream << return_obj.GetErrorString();
 }
 
 bool CommandObjectExpression::IOHandlerIsInputComplete(IOHandler &io_handler,
@@ -544,11 +577,10 @@ void CommandObjectExpression::GetMultilineExpression() {
                             1, // Show line numbers starting at 1
                             *this));
 
-  StreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP();
-  if (output_sp) {
-    output_sp->PutCString(
+  if (LockableStreamFileSP output_sp = io_handler_sp->GetOutputStreamFileSP()) {
+    LockedStreamFile locked_stream = output_sp->Lock();
+    locked_stream.PutCString(
         "Enter expressions, then terminate with an empty line to evaluate:\n");
-    output_sp->Flush();
   }
   debugger.RunIOHandlerAsync(io_handler_sp);
 }
@@ -584,6 +616,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
 
   if (command.empty()) {
     GetMultilineExpression();
+    // Still gathering input; the IOHandler will set the final status.
+    result.SetStatus(eReturnStatusStarted);
     return;
   }
 
@@ -595,12 +629,13 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
       return;
 
     if (m_repl_option.GetOptionValue().GetCurrentValue()) {
-      Target &target = GetTarget();
+      Target *target = GetTarget();
+      assert(target && "target guaranteed by eCommandAllowsDummyTarget");
       // Drop into REPL
       m_expr_lines.clear();
       m_expr_line_count = 0;
 
-      Debugger &debugger = target.GetDebugger();
+      Debugger &debugger = target->GetDebugger();
 
       // Check if the LLDB command interpreter is sitting on top of a REPL
       // that launched it...
@@ -615,12 +650,12 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
         // interpreter, so just push one
         bool initialize = false;
         Status repl_error;
-        REPLSP repl_sp(target.GetREPL(repl_error, m_command_options.language,
+        REPLSP repl_sp(target->GetREPL(repl_error, m_command_options.language,
                                        nullptr, false));
 
         if (!repl_sp) {
           initialize = true;
-          repl_sp = target.GetREPL(repl_error, m_command_options.language,
+          repl_sp = target->GetREPL(repl_error, m_command_options.language,
                                     nullptr, true);
           if (repl_error.Fail()) {
             result.SetError(std::move(repl_error));
@@ -651,6 +686,8 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     // No expression following options
     else if (expr.empty()) {
       GetMultilineExpression();
+      // Still gathering input; the IOHandler will set the final status.
+      result.SetStatus(eReturnStatusStarted);
       return;
     }
   }
@@ -663,11 +700,12 @@ void CommandObjectExpression::DoExecute(llvm::StringRef command,
     indent = pos;
   result.SetDiagnosticIndent(indent);
 
-  Target &target = GetTarget();
+  Target *target = GetTarget();
+  assert(target && "target guaranteed by eCommandAllowsDummyTarget");
   if (EvaluateExpression(expr, result.GetOutputStream(),
                          result.GetErrorStream(), result)) {
 
-    if (!m_fixed_expression.empty() && target.GetEnableNotifyAboutFixIts()) {
+    if (!m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts()) {
       CommandHistory &history = m_interpreter.GetCommandHistory();
       // FIXME: Can we figure out what the user actually typed (e.g. some alias
       // for expr???)

@@ -74,6 +74,7 @@ class AnonymousTestCase(TestBase):
             substrs=["(type_y) $", "dummy = 2"],
         )
 
+    @requireExpressionEvaluation
     def test_expr_null(self):
         self.build()
         self.common_setup(self.line2)
@@ -87,31 +88,12 @@ class AnonymousTestCase(TestBase):
     def test_child_by_name(self):
         self.build()
 
-        # Set debugger into synchronous mode
-        self.dbg.SetAsync(False)
-
-        # Create a target
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        break_in_main = target.BreakpointCreateBySourceRegex(
-            "// Set breakpoint 2 here.", lldb.SBFileSpec(self.source)
+        _, _, thread, _ = lldbutil.run_to_source_breakpoint(
+            self, "// Set breakpoint 2 here.", lldb.SBFileSpec(self.source)
         )
-        self.assertTrue(break_in_main, VALID_BREAKPOINT)
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, break_in_main)
-        if len(threads) != 1:
-            self.fail("Failed to stop at breakpoint in main.")
-
-        thread = threads[0]
         frame = thread.frames[0]
-
-        if not frame.IsValid():
-            self.fail("Failed to get frame 0.")
+        self.assertTrue(frame.IsValid(), "Failed to get frame 0.")
 
         var_n = frame.FindVariable("n")
         if not var_n.IsValid():
@@ -149,27 +131,12 @@ class AnonymousTestCase(TestBase):
         # Set debugger into synchronous mode
         self.dbg.SetAsync(False)
 
-        # Create a target
-        exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         # Set breakpoints inside and outside methods that take pointers to the
         # containing struct.
-        lldbutil.run_break_set_by_file_and_line(
-            self, self.source, line, num_expected_locations=1, loc_exact=True
+        _, _, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), line
         )
+        self.assertEqual(bkpt.GetNumLocations(), 1)
+        self.assertEqual(thread.GetFrameAtIndex(0).GetLineEntry().GetLine(), line)
 
-        # Now launch the process, and do not stop at entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, PROCESS_IS_VALID)
-
-        # The stop reason of the thread should be breakpoint.
-        self.expect(
-            "thread list",
-            STOPPED_DUE_TO_BREAKPOINT,
-            substrs=["stopped", "stop reason = breakpoint"],
-        )
-
-        # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno=1, expected_hit_count=1)

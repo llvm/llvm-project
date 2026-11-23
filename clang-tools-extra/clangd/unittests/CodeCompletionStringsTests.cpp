@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeCompletionStrings.h"
+#include "Config.h"
 #include "TestTU.h"
 #include "clang/Sema/CodeCompleteConsumer.h"
 #include "gmock/gmock.h"
@@ -67,6 +68,59 @@ TEST_F(CompletionStringTest, GetDeclCommentBadUTF8) {
   auto AST = TU.build();
   EXPECT_EQ("x\xef\xbf\xbdy",
             getDeclComment(AST.getASTContext(), findDecl(AST, "X")));
+}
+
+TEST_F(CompletionStringTest, GetDeclCommentForParam) {
+  auto TU =
+      TestTU::withCode("/** @param a this is param a */\nvoid func(int a);");
+  auto AST = TU.build();
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  const auto &FD = llvm::cast<FunctionDecl>(findDecl(AST, "func"));
+  EXPECT_EQ(FD.getNumParams(), 1UL);
+  EXPECT_EQ("this is param a",
+            getDeclComment(AST.getASTContext(), *FD.parameters()[0]));
+}
+
+TEST_F(CompletionStringTest, GetDeclCommentForMultipleParams) {
+  auto TU = TestTU::withCode("/** @param a this is param a\n * @param b this "
+                             "is param b\n */\nvoid func(int a, int b);");
+  auto AST = TU.build();
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  const auto &FD = llvm::cast<FunctionDecl>(findDecl(AST, "func"));
+  EXPECT_EQ(FD.getNumParams(), 2UL);
+  EXPECT_EQ("this is param a",
+            getDeclComment(AST.getASTContext(), *FD.parameters()[0]));
+  EXPECT_EQ("this is param b",
+            getDeclComment(AST.getASTContext(), *FD.parameters()[1]));
+}
+
+TEST_F(CompletionStringTest, GetDeclCommentForUndocumentedParam) {
+  auto TU =
+      TestTU::withCode("/** @param c this is param c */\nvoid func(int a);");
+  auto AST = TU.build();
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  const auto &FD = llvm::cast<FunctionDecl>(findDecl(AST, "func"));
+  EXPECT_EQ(FD.getNumParams(), 1UL);
+  EXPECT_EQ("", getDeclComment(AST.getASTContext(), *FD.parameters()[0]));
+}
+
+TEST_F(CompletionStringTest, GetDeclCommentForParamWithUnknownDoxygenCommand) {
+  auto TU = TestTU::withCode("/** @param a this is param a and an\n * @unknown "
+                             "command\n */\nvoid func(int a);");
+  auto AST = TU.build();
+  Config Cfg;
+  Cfg.Documentation.CommentFormat = Config::CommentFormatPolicy::Doxygen;
+  WithContextValue WithCfg(Config::Key, std::move(Cfg));
+  const auto &FD = llvm::cast<FunctionDecl>(findDecl(AST, "func"));
+  EXPECT_EQ(FD.getNumParams(), 1UL);
+  EXPECT_EQ("this is param a and an\n@unknown command",
+            getDeclComment(AST.getASTContext(), *FD.parameters()[0]));
 }
 
 TEST_F(CompletionStringTest, MultipleAnnotations) {

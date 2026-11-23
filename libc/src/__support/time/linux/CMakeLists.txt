@@ -6,39 +6,37 @@ add_object_library(
     clock_gettime.cpp
   DEPENDS
     libc.include.sys_syscall
-    libc.hdr.types.struct_timespec
     libc.hdr.types.clockid_t
+    libc.hdr.types.struct_timespec
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_gettime
+    libc.src.__support.OSUtil.linux.vdso
     libc.src.__support.common
     libc.src.__support.error_or
-    libc.src.__support.OSUtil.osutil
-    libc.src.__support.OSUtil.linux.vdso
+    libc.src.__support.macros.config
 )
 
 add_header_library(
-  clock_conversion
+  cpu_clock
   HDRS
-    clock_conversion.h
+    cpu_clock.h
   DEPENDS
-    .clock_gettime
-    libc.src.__support.time.units
+    libc.hdr.types.clockid_t
+    libc.hdr.types.pid_t
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
 )
 
-add_header_library(
-  abs_timeout
+add_object_library(
+  clock_settime
   HDRS
-    abs_timeout.h
+    ../clock_settime.h
+  SRCS
+    clock_settime.cpp
   DEPENDS
+    libc.hdr.types.clockid_t
     libc.hdr.types.struct_timespec
-    libc.src.__support.time.units
-    libc.src.__support.CPP.expected
-)
-
-add_header_library(
-  monotonicity
-  HDRS
-    monotonicity.h
-  DEPENDS
-    .clock_conversion
-    .abs_timeout
-    libc.hdr.time_macros
+    libc.src.__support.OSUtil.linux.syscall_wrappers.clock_settime
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
 )

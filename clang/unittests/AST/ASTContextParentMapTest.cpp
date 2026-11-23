@@ -49,6 +49,20 @@ TEST(GetParents, ReturnsParentForNestedNameSpecifierLoc) {
                              nestedNameSpecifierLoc(hasParent(typeLoc()))));
 }
 
+TEST(GetParents, ReturnsParentForObjCProtocolLoc) {
+  auto AST = tooling::buildASTFromCodeWithArgs(
+      "@protocol P @end @interface I <P> @end", {"-x", "objective-c"});
+  ASTContext &Ctx = AST->getASTContext();
+  auto Matches = match(objcInterfaceDecl(hasName("I")).bind("i"), Ctx);
+  ASSERT_EQ(Matches.size(), 1u);
+  const auto *I = Matches[0].getNodeAs<ObjCInterfaceDecl>("i");
+
+  ObjCProtocolLoc ProtocolLoc(*I->protocol_begin(), *I->protocol_loc_begin());
+  auto Parents = Ctx.getParents(ProtocolLoc);
+  ASSERT_EQ(Parents.size(), 1u);
+  EXPECT_EQ(Parents[0].get<ObjCInterfaceDecl>(), I);
+}
+
 TEST(GetParents, ReturnsParentInsideTemplateInstantiations) {
   MatchVerifier<Decl> DeclVerifier;
   EXPECT_TRUE(DeclVerifier.match(
@@ -131,10 +145,9 @@ TEST(GetParents, FriendTypeLoc) {
   auto &FrB = *cast<FriendDecl>(*++(cast<CXXRecordDecl>(B).decls_begin()));
   TypeLoc FrALoc = FrA.getFriendType()->getTypeLoc();
   TypeLoc FrBLoc = FrB.getFriendType()->getTypeLoc();
-  TagDecl *FrATagDecl =
-      FrALoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
-  TagDecl *FrBTagDecl =
-      FrBLoc.getTypePtr()->getAs<ElaboratedType>()->getOwnedTagDecl();
+  bool FrAOwnsTag = FrALoc.getTypePtr()->getAs<TagType>()->isTagOwned();
+  TagDecl *FrATagDecl = FrALoc.getTypePtr()->getAs<TagType>()->getDecl();
+  bool FrBOwnsTag = FrBLoc.getTypePtr()->getAs<TagType>()->isTagOwned();
 
   EXPECT_THAT(Ctx.getParents(A), ElementsAre(DynTypedNode::create(TU)));
   EXPECT_THAT(Ctx.getParents(B), ElementsAre(DynTypedNode::create(TU)));
@@ -142,8 +155,8 @@ TEST(GetParents, FriendTypeLoc) {
   EXPECT_THAT(Ctx.getParents(FrB), ElementsAre(DynTypedNode::create(B)));
   EXPECT_THAT(Ctx.getParents(FrALoc), ElementsAre(DynTypedNode::create(FrA)));
   EXPECT_THAT(Ctx.getParents(FrBLoc), ElementsAre(DynTypedNode::create(FrB)));
-  EXPECT_TRUE(FrATagDecl);
-  EXPECT_FALSE(FrBTagDecl);
+  EXPECT_TRUE(FrAOwnsTag);
+  EXPECT_FALSE(FrBOwnsTag);
   EXPECT_THAT(Ctx.getParents(*FrATagDecl),
               ElementsAre(DynTypedNode::create(FrA)));
 }

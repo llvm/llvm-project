@@ -12,6 +12,9 @@ Example
 .. code-block:: c++
 
   auto Iter1 = std::find(Items.begin(), Items.end(), 0);
+  auto NewEnd = std::unique(Items.begin(), Items.end());
+  auto Out = std::copy(Items.begin(), Items.end(), Output);
+  auto [First, Last] = std::equal_range(Items.begin(), Items.end(), 0);
   auto AreSame = std::equal(Items1.cbegin(), Items1.cend(),
                             std::begin(Items2), std::end(Items2));
 
@@ -21,6 +24,9 @@ Transforms to:
 .. code-block:: c++
 
   auto Iter1 = std::ranges::find(Items, 0);
+  auto NewEnd = std::ranges::unique(Items).begin();
+  auto Out = std::ranges::copy(Items, Output).out;
+  auto [First, Last] = std::ranges::equal_range(Items, 0);
   auto AreSame = std::ranges::equal(Items1, Items2);
 
 Supported algorithms
@@ -114,7 +120,7 @@ If calls are made using reverse iterators on containers, The code will be
 fixed using the ``std::views::reverse`` adaptor.
 
 .. code-block:: c++
-  
+
   auto AreSame = std::equal(Items1.rbegin(), Items1.rend(),
                             std::crbegin(Items2), std::crend(Items2));
 
@@ -122,8 +128,8 @@ Transforms to:
 
 .. code-block:: c++
 
-  auto AreSame = std::ranges::equal(std::ranges::reverse_view(Items1),
-                                    std::ranges::reverse_view(Items2));
+  auto AreSame = std::ranges::equal(std::views::reverse(Items1),
+                                    std::views::reverse(Items2));
 
 Options
 -------

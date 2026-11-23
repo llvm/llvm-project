@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++17
-// RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++23
+// RUN: %clang_cc1 -fsyntax-only -verify %s %std_cxx11-
+// RUN: %clang_cc1 -fsyntax-only -verify %s %std_cxx11- -fexperimental-new-constant-interpreter
 
 // Template argument deduction with template template parameters.
 template<typename T, template<T> class A>

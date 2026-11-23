@@ -277,8 +277,8 @@ llvm.func @invalid_indirect_memset_inline() -> i32 {
 // CHECK-LABEL: llvm.func @memset_double_use
 llvm.func @memset_double_use() -> i32 {
   // CHECK: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[ALLOCA_INT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[MEMSET_VALUE:.*]] = llvm.mlir.constant(42 : i8) : i8
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, f32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
@@ -309,8 +309,8 @@ llvm.func @memset_double_use() -> i32 {
 // CHECK-LABEL: llvm.func @memset_inline_double_use
 llvm.func @memset_inline_double_use() -> i32 {
   // CHECK: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[ALLOCA_INT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[MEMSET_VALUE:.*]] = llvm.mlir.constant(42 : i8) : i8
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", (i32, f32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
@@ -398,8 +398,8 @@ llvm.func @memset_inline_considers_alignment() -> i32 {
 // CHECK-LABEL: llvm.func @memset_considers_packing
 llvm.func @memset_considers_packing() -> i32 {
   // CHECK: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[ALLOCA_INT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[MEMSET_VALUE:.*]] = llvm.mlir.constant(42 : i8) : i8
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", packed (i8, i32, f32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr
@@ -430,8 +430,8 @@ llvm.func @memset_considers_packing() -> i32 {
 // CHECK-LABEL: llvm.func @memset_inline_considers_packing
 llvm.func @memset_inline_considers_packing() -> i32 {
   // CHECK: %[[ALLOCA_LEN:.*]] = llvm.mlir.constant(1 : i32) : i32
-  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[ALLOCA_INT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x i32
+  // CHECK: %[[ALLOCA_FLOAT:.*]] = llvm.alloca %[[ALLOCA_LEN]] x f32
   // CHECK: %[[MEMSET_VALUE:.*]] = llvm.mlir.constant(42 : i8) : i8
   %0 = llvm.mlir.constant(1 : i32) : i32
   %1 = llvm.alloca %0 x !llvm.struct<"foo", packed (i8, i32, f32)> {alignment = 8 : i64} : (i32) -> !llvm.ptr

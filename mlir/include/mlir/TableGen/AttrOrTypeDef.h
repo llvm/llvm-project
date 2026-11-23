@@ -68,7 +68,11 @@ public:
   /// If specified, get the custom allocator code for this parameter.
   std::optional<StringRef> getAllocator() const;
 
-  /// If specified, get the custom comparator code for this parameter.
+  /// Return true if user defined comparator is specified.
+  bool hasCustomComparator() const;
+
+  /// Get the custom comparator code for this parameter or fallback to the
+  /// default.
   StringRef getComparator() const;
 
   /// Get the C++ type of this parameter.
@@ -82,6 +86,10 @@ public:
 
   /// Get the C++ code to convert from the storage type to the parameter type.
   StringRef getConvertFromStorage() const;
+
+  /// Get the C++ headers declaring the C++ type of this parameter. Only
+  /// parameters that are attribute or type constraints specify headers.
+  std::vector<StringRef> getCppIncludes() const;
 
   /// Get an optional C++ parameter parser.
   std::optional<StringRef> getParser() const;
@@ -211,6 +219,10 @@ public:
 
   /// Returns the def's extra class definition code.
   std::optional<StringRef> getExtraDefs() const;
+
+  /// Returns true if we need to generate a default 'getAlias' implementation
+  /// using the mnemonic.
+  bool genMnemonicAlias() const;
 
   /// Get the code location (for error printing).
   ArrayRef<SMLoc> getLoc() const;

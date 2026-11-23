@@ -10,8 +10,13 @@
 #define LLDB_SOURCE_PLUGINS_PROCESS_GDB_REMOTE_GDBREMOTECLIENTBASE_H
 
 #include "GDBRemoteCommunication.h"
-
+#include "lldb/Utility/Broadcaster.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include <chrono>
 #include <condition_variable>
+#include <cstdint>
+#include <mutex>
 
 namespace lldb_private {
 namespace process_gdb_remote {
@@ -56,7 +61,8 @@ public:
   // ErrorReplyTimeout.
   PacketResult SendPacketAndWaitForResponse(
       llvm::StringRef payload, StringExtractorGDBRemote &response,
-      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
+      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0),
+      bool sync_on_timeout = true);
 
   PacketResult ReadPacketWithOutputSupport(
       StringExtractorGDBRemote &response, Timeout<std::micro> timeout,
@@ -67,6 +73,11 @@ public:
       llvm::StringRef payload, StringExtractorGDBRemote &response,
       std::chrono::seconds interrupt_timeout,
       llvm::function_ref<void(llvm::StringRef)> output_callback);
+
+  /// Wrapper around SendPacketAndWaitForResponse that returns an `Expected`.
+  llvm::Expected<StringExtractorGDBRemote> SendPacketAndExpectResponse(
+      llvm::StringRef payload,
+      std::chrono::seconds interrupt_timeout = std::chrono::seconds(0));
 
   class Lock {
   public:
@@ -99,7 +110,8 @@ public:
 protected:
   PacketResult
   SendPacketAndWaitForResponseNoLock(llvm::StringRef payload,
-                                     StringExtractorGDBRemote &response);
+                                     StringExtractorGDBRemote &response,
+                                     bool sync_on_timeout = true);
 
   virtual void OnRunPacketSent(bool first);
 

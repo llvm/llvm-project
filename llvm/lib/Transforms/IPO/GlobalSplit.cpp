@@ -153,8 +153,8 @@ static bool splitGlobal(GlobalVariable &GV) {
 
   for (const GEPInfo &Info : Infos) {
     assert(Info.MemberIndex < SplitGlobals.size() && "Invalid member");
-    auto *NewGEP = ConstantExpr::getGetElementPtr(
-        Type::getInt8Ty(GV.getContext()), SplitGlobals[Info.MemberIndex],
+    auto *NewGEP = ConstantExpr::getPtrAdd(
+        SplitGlobals[Info.MemberIndex],
         ConstantInt::get(GV.getContext(), Info.MemberRelativeOffset),
         Info.GEP->isInBounds());
     Info.GEP->replaceAllUsesWith(NewGEP);
@@ -193,5 +193,10 @@ static bool splitGlobals(Module &M) {
 PreservedAnalyses GlobalSplitPass::run(Module &M, ModuleAnalysisManager &AM) {
   if (!splitGlobals(M))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  // Only global variables were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

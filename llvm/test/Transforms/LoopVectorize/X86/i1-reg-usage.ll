@@ -1,4 +1,4 @@
-; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize -disable-output 2>&1 < %s | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-vectorize,vplan -disable-output 2>&1 < %s | FileCheck %s
 ; REQUIRES: asserts
 
 target triple = "x86_64"
@@ -8,8 +8,8 @@ target triple = "x86_64"
 ; CHECK-LABEL: LV: Checking a loop in 'or_reduction_avx' from <stdin>
 ; CHECK: LV(REG): VF = 64
 ; CHECK-NEXT: LV(REG): Found max usage: 2 item
+; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 2 registers
 ; CHECK-NEXT: LV(REG): RegisterClass: Generic::VectorRC, 136 registers
-; CHECK-NEXT: LV(REG): RegisterClass: Generic::ScalarRC, 1 registers
 
 define i1 @or_reduction_avx(i32 %arg, ptr %ptr) "target-features"="+avx" {
 entry:

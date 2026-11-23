@@ -470,3 +470,46 @@ Sections:
        Value: 0x1
      - Tag:   DT_NULL
        Value: 0x0
+
+# RUN: yaml2obj --docnum=5 %s -o %t5
+# RUN: llvm-objdump -p %t5 2>&1 | FileCheck %s --strict-whitespace -DFILE=%t5 --check-prefix=WARN
+
+# WARN: Dynamic Section:
+# WARN-NEXT: warning: '[[FILE]]': invalid string table offset
+# WARN-NEXT:  NEEDED 0x0000000000000010
+# WARN-NEXT:  NEEDED {{$}}
+# WARN-NEXT:  STRTAB 0x0000000000001000
+# WARN-NEXT:  STRSZ  0x0000000000000010
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynstr
+    Type:    SHT_STRTAB
+    Address: 0x1000
+    Size:    0x10
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+     - Tag:   DT_NEEDED
+       Value: 0x10
+     - Tag:   DT_NEEDED
+       Value: 0x0F
+     - Tag:   DT_STRTAB
+       Value: 0x1000
+     - Tag:   DT_STRSZ
+       Value: 0x10
+     - Tag:   DT_NULL
+       Value: 0x0
+ProgramHeaders:
+  - Type:     PT_LOAD
+    VAddr:    0x1000
+    FirstSec: .dynstr
+    LastSec:  .dynamic
+  - Type:     PT_DYNAMIC
+    FirstSec: .dynamic
+    LastSec:  .dynamic

@@ -1,0 +1,83 @@
+// RUN: rm -rf %t
+// RUN: split-file %s %t
+
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-0.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,SANITIZE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-1.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-2.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,SANITIZE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-3.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-4.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,SANITIZE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-5.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-6.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,SANITIZE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-7.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,IGNORE
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fsanitize=signed-integer-overflow,unsigned-integer-overflow -fsanitize-ignorelist=%t/order-8.ignorelist -emit-llvm %t/test.c -o - | FileCheck %s --check-prefixes=CHECK,SANITIZE
+
+
+// The same type can appear multiple times within an ignorelist. Any ``=sanitize`` type
+// entries enable sanitizer instrumentation, even if it was ignored by entries before.
+// If multiple entries match the source, then the latest entry takes the
+// precedence.
+
+
+//--- order-0.ignorelist
+fun:add
+fun:add=sanitize
+
+//--- order-1.ignorelist
+fun:add=sanitize
+fun:add
+
+//--- order-2.ignorelist
+fun:ad*
+fun:add=sanitize
+
+//--- order-3.ignorelist
+fun:ad*=sanitize
+fun:add
+
+//--- order-4.ignorelist
+fun:add
+fun:ad*=sanitize
+
+//--- order-5.ignorelist
+fun:add=sanitize
+fun:ad*
+
+//--- order-6.ignorelist
+fun:add
+fun:add=sanitize
+fun:a*d
+fun:*dd=sanitize
+
+//--- order-7.ignorelist
+[{unsigned-integer-overflow,signed-integer-overflow}]
+fun:*
+fun:add=sanitize
+fun:a*d
+fun:*dd=sanitize
+[{unsigned-integer-overflow,signed-integer-overflow}]
+fun:*
+fun:add
+fun:a*d=sanitize
+fun:*d
+
+//--- order-8.ignorelist
+[{unsigned-integer-overflow,signed-integer-overflow}]
+fun:*
+fun:add
+fun:a*d=sanitize
+fun:*dd
+[{unsigned-integer-overflow,signed-integer-overflow}]
+fun:*
+fun:add=sanitize
+fun:a*d
+fun:*dd=sanitize
+
+
+//--- test.c
+// CHECK-LABEL: define dso_local void @add
+void add(int A) {
+// IGNORE: %inc = add nsw
+// SANITIZE: @llvm.sadd.with.overflow.i32
+  ++A;
+}
+

@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Affine/IR/AffineDialect.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Pass/Pass.h"
@@ -30,8 +30,7 @@ struct TestLinalgRankReduceContractionOps
 
   TestLinalgRankReduceContractionOps() = default;
   TestLinalgRankReduceContractionOps(
-      const TestLinalgRankReduceContractionOps &pass)
-      : PassWrapper(pass) {}
+      const TestLinalgRankReduceContractionOps &pass) = default;
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<affine::AffineDialect, linalg::LinalgDialect,
                     memref::MemRefDialect, tensor::TensorDialect>();
@@ -51,7 +50,6 @@ struct TestLinalgRankReduceContractionOps
     linalg::populateContractionOpRankReducingPatterns(patterns);
     if (failed(applyPatternsGreedily(funcOp.getBody(), std::move(patterns))))
       return signalPassFailure();
-    return;
   }
 };
 

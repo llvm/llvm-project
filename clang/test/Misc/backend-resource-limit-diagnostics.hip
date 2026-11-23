@@ -1,5 +1,5 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: not %clang_cc1 -triple amdgcn-amd-amdhsa -target-cpu gfx906 -debug-info-kind=standalone -x hip -fcuda-is-device -emit-codegen-only < %s 2>&1 | FileCheck -DFILE=%s %s
+// RUN: not %clang_cc1 -triple amdgpu9.06-amd-amdhsa -debug-info-kind=standalone -x hip -fcuda-is-device -emit-codegen-only < %s 2>&1 | FileCheck -DFILE=%s %s
 
 #define __global__ __attribute__((global))
 #define __shared__ __attribute__((shared))

@@ -29,6 +29,7 @@ class GlobalOp;
 } // namespace memref
 
 namespace bufferization {
+class BufferizationState;
 
 /// A simple analysis that detects allocation operations.
 class BufferPlacementAllocs {
@@ -122,8 +123,13 @@ protected:
 // Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.
 FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp constantOp,
+                                         SymbolTableCollection &symbolTables,
                                          uint64_t alignment,
                                          Attribute memorySpace = {});
+
+void removeSymbol(Operation *op, BufferizationState &state);
+
+void insertSymbol(Operation *op, BufferizationState &state);
 
 } // namespace bufferization
 } // namespace mlir

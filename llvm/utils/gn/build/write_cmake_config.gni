@@ -6,6 +6,8 @@
 # Parameters:
 #
 #   input (required) [string]
+
+#   extra_inputs (optional) [list of string]
 #
 #   output (required) [string]
 #
@@ -31,6 +33,11 @@ template("write_cmake_config") {
     script = "//llvm/utils/gn/build/write_cmake_config.py"
 
     sources = [ invoker.input ]
+
+    if (defined(invoker.extra_inputs)) {
+      sources += invoker.extra_inputs
+    }
+
     outputs = [ invoker.output ]
     args = [
              "-o",

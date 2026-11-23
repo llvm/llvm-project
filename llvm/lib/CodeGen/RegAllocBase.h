@@ -37,6 +37,7 @@
 #define LLVM_LIB_CODEGEN_REGALLOCBASE_H
 
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/RegAllocCommon.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
@@ -68,7 +69,7 @@ protected:
   VirtRegMap *VRM = nullptr;
   LiveIntervals *LIS = nullptr;
   LiveRegMatrix *Matrix = nullptr;
-  RegisterClassInfo RegClassInfo;
+  RegisterClassInfo *RegClassInfo = nullptr;
 
 private:
   /// Private, callees should go through shouldAllocateRegister
@@ -81,13 +82,15 @@ protected:
   /// always available for the remat of all the siblings of the original reg.
   SmallPtrSet<MachineInstr *, 32> DeadRemats;
 
+  SmallSet<Register, 2> FailedVRegs;
   RegAllocBase(const RegAllocFilterFunc F = nullptr)
       : shouldAllocateRegisterImpl(F) {}
 
   virtual ~RegAllocBase() = default;
 
   // A RegAlloc pass should call this before allocatePhysRegs.
-  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat);
+  void init(VirtRegMap &vrm, LiveIntervals &lis, LiveRegMatrix &mat,
+            RegisterClassInfo &rci);
 
   /// Get whether a given register should be allocated
   bool shouldAllocateRegister(Register Reg) {
@@ -103,6 +106,17 @@ protected:
   // Include spiller post optimization and removing dead defs left because of
   // rematerialization.
   virtual void postOptimization();
+
+  /// Perform cleanups on registers that failed to allocate. This hacks on the
+  /// liveness in order to avoid spurious verifier errors in later passes.
+  void cleanupFailedVReg(Register FailedVReg, MCRegister PhysReg,
+                         SmallVectorImpl<Register> &SplitRegs);
+
+  /// Add the defs of \p FailedReg on \p MI to the \p PhysReg regunit live
+  /// ranges, and make the defs of \p PhysReg on \p MI consistently dead or
+  /// live.
+  void cleanupFailedDefs(MachineInstr &MI, Register FailedReg,
+                         MCRegister PhysReg);
 
   // Get a temporary reference to a Spiller instance.
   virtual Spiller &spiller() = 0;

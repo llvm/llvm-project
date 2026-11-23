@@ -1,5 +1,5 @@
 // RUN: mlir-opt %s -test-spirv-cpu-runner-pipeline \
-// RUN: | mlir-cpu-runner - -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_spirv_cpu_runtime --link-nested-modules \
+// RUN: | mlir-runner - -e main --entry-point-result=void --shared-libs=%mlir_runner_utils,%mlir_spirv_cpu_runtime --link-nested-modules \
 // RUN: | FileCheck %s
 
 // CHECK: [8,  8,  8,  8,  8,  8]

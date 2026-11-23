@@ -6,9 +6,9 @@
 ; RUN: split-file %s %t
 ; RUN: llvm-ctxprof-util fromYAML --input=%t/profile.yaml --output=%t/profile.ctxprofdata
 ;
-; RUN: opt -passes=ctx-instr-gen %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=INSTR
-; RUN: opt -passes=ctx-instr-gen,module-inline %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=POST-INL
-; RUN: opt -passes=ctx-instr-gen,module-inline,ctx-prof-flatten %t/example.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=FLATTEN
+; RUN: opt -passes=ctx-instr-gen %t/1234.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=INSTR
+; RUN: opt -passes=ctx-instr-gen,module-inline %t/1234.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=POST-INL
+; RUN: opt -passes=ctx-instr-gen,module-inline,ctx-prof-flatten %t/1234.ll -use-ctx-profile=%t/profile.ctxprofdata -S -o - | FileCheck %s --check-prefix=FLATTEN
 
 ; INSTR-LABEL: yes:
 ; INSTR-NEXT:   call void @llvm.instrprof.increment(ptr @foo, i64 [[#]], i32 2, i32 1)
@@ -21,8 +21,9 @@
 ; INSTR-NEXT:   call void @llvm.instrprof.increment(ptr @bar, i64 [[#]], i32 2, i32 0)
 ; INSTR-NEXT:   %inc =
 ; INSTR:        %test = icmp eq i32 %t, 0
-; INSTR-NEXT:   %1  = zext i1 %test to i64
-; INSTR-NEXT:   call void @llvm.instrprof.increment.step(ptr @bar, i64 [[#]], i32 2, i32 1, i64 %1)
+; INSTR-NEXT:   [[FREEZE:%.*]] = freeze i1 %test
+; INSTR-NEXT:   [[ZEXT:%.*]] = zext i1 [[FREEZE]] to i64
+; INSTR-NEXT:   call void @llvm.instrprof.increment.step(ptr @bar, i64 [[#]], i32 2, i32 1, i64 [[ZEXT]])
 ; INSTR-NEXT:   %res = select
 
 ; POST-INL-LABEL: yes:
@@ -45,7 +46,7 @@
 ; entry count of that BB is 4.
 ; ![[SELPROF]] = !{!"branch_weights", i32 3, i32 1}
 
-;--- example.ll
+;--- 1234.ll
 define i32 @foo(i32 %t) !guid !0 {
   %test = icmp slt i32 %t, 0
   br i1 %test, label %yes, label %no
@@ -73,11 +74,13 @@ define i32 @bar(i32 %t) !guid !1 {
 !1 = !{i64 5678}
 
 ;--- profile.yaml
-- Guid: 1234
-  Counters: [10, 4]
-  Callsites:  -
-                - Guid: 5678
-                  Counters: [4,3]
-              - 
-                - Guid: 5678
-                  Counters: [6,6]
+Contexts:
+  - Guid: 1234
+    TotalRootEntryCount: 100
+    Counters: [10, 4]
+    Callsites:  -
+                  - Guid: 5678
+                    Counters: [4,3]
+                - 
+                  - Guid: 5678
+                    Counters: [6,6]

@@ -293,7 +293,7 @@ shown below:
 // function should not recurse into the child location. Recursion into nested
 // location is performed as necessary by the caller.
 auto shouldShowFn = [](Location loc) -> bool {
-  FileLineColLoc fileLoc = loc.dyn_cast<FileLineColLoc>();
+  FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(loc);
 
   // We don't perform any filtering on non-file locations.
   // Reminder: The caller will recurse into any necessary child locations.
@@ -318,18 +318,22 @@ This handler is a wrapper around a llvm::SourceMgr that is used to verify that
 certain diagnostics have been emitted to the context. To use this handler,
 annotate your source file with expected diagnostics in the form of:
 
-*   `expected-(error|note|remark|warning)(-re)? {{ message }}`
+*   `expected-(error|note|remark|warning)(-re)?(@([+-][0-9]+|above|below|unknown))?(:[0-9]+)? {{ message }}`
 
 The provided `message` is a string expected to be contained within the generated
 diagnostic. The `-re` suffix may be used to enable regex matching within the
 `message`. When present, the `message` may define regex match sequences within
 `{{` `}}` blocks. The regular expression matcher supports Extended POSIX regular
-expressions (ERE). A few examples are shown below:
+expressions (ERE).
+An optional `:<col>` requires the diagnostic to be emitted at the given 1-based column.
+`expected-` must not be preceded by an alphanumeric
+character, hyphen, or underscore (so e.g. `unexpected-error` is ignored). A few
+examples are shown below:
 
 ```mlir
-// Expect an error on the same line.
+// Expect an error on the same line, at column 9.
 func.func @bad_branch() {
-  cf.br ^missing  // expected-error {{reference to an undefined block}}
+  cf.br ^missing  // expected-error:9 {{reference to an undefined block}}
 }
 
 // Expect an error on an adjacent line.

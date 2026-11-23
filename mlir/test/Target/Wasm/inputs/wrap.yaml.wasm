@@ -1,0 +1,24 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I64
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            i64_wrap
+        Kind:            FUNCTION
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            2000A70B
+...

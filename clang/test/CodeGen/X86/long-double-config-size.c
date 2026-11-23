@@ -5,9 +5,9 @@
 // RUN: %clang_cc1 -triple x86_64-windows-msvc %s -emit-llvm -o - | FileCheck %s --check-prefix=SIZE64
 
 long double global;
-// SIZE64: @global = dso_local global double 0
-// SIZE80: @global = dso_local global x86_fp80 0xK{{0+}}, align 16
-// SIZE128: @global = dso_local global fp128 0
+// SIZE64: @global = dso_local global double 0.0
+// SIZE80: @global = dso_local global x86_fp80 0.000000e+00, align 16
+// SIZE128: @global = dso_local global fp128 0.0
 
 long double func(long double param) {
   // SIZE64: define dso_local double @func(double noundef %param)

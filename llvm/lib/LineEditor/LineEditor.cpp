@@ -209,6 +209,7 @@ LineEditor::LineEditor(StringRef ProgName, StringRef HistoryPath, FILE *In,
 
   ::el_set(Data->EL, EL_PROMPT, ElGetPromptFn);
   ::el_set(Data->EL, EL_EDITOR, "emacs");
+  ::el_set(Data->EL, EL_SIGNAL, 1);
   ::el_set(Data->EL, EL_HIST, history, Data->Hist);
   ::el_set(Data->EL, EL_ADDFN, "tab_complete", "Tab completion function",
            ElCompletionFn);

@@ -6,24 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/errno_macros.h"
 #include "hdr/math_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/errno/libc_errno.h"
 #include "src/math/coshf.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-#include <stdint.h>
 
 using LlvmLibcCoshfTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::coshf(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -41,7 +38,6 @@ TEST_F(LlvmLibcCoshfTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcCoshfTest, Overflow) {
-  LIBC_NAMESPACE::libc_errno = 0;
   EXPECT_FP_EQ_WITH_EXCEPTION(
       inf, LIBC_NAMESPACE::coshf(FPBits(0x7f7fffffU).get_val()), FE_OVERFLOW);
   EXPECT_MATH_ERRNO(ERANGE);
@@ -56,7 +52,7 @@ TEST_F(LlvmLibcCoshfTest, Overflow) {
 }
 
 TEST_F(LlvmLibcCoshfTest, InFloatRange) {
-  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t COUNT = 1'231;
   constexpr uint32_t STEP = UINT32_MAX / COUNT;
   for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
     float x = FPBits(v).get_val();

@@ -161,7 +161,7 @@ define i1 @icmp_slt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 define i1 @icmp_slt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_slt_samesign_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i6 [[X:%.*]], [[R_V]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp1 = icmp samesign ult i6 %x, %y
@@ -185,7 +185,7 @@ define i1 @icmp_sgt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 define i1 @icmp_sgt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_sgt_samesign_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    [[R:%.*]] = icmp sgt i6 [[X:%.*]], [[R_V]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp1 = icmp samesign ugt i6 %x, %y
@@ -257,7 +257,7 @@ define i1 @icmp_slt_sgt_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 define i1 @icmp_slt_sgt_samesign_common(i1 %c, i6 %x, i6 %y, i6 %z) {
 ; CHECK-LABEL: @icmp_slt_sgt_samesign_common(
 ; CHECK-NEXT:    [[R_V:%.*]] = select i1 [[C:%.*]], i6 [[Y:%.*]], i6 [[Z:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i6 [[X:%.*]], [[R_V]]
+; CHECK-NEXT:    [[R:%.*]] = icmp slt i6 [[X:%.*]], [[R_V]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %cmp1 = icmp samesign ult i6 %x, %y
@@ -794,6 +794,110 @@ define i1 @sel_icmp_cmp_and_no_simplify_comm(i1 %c, i32 %a1, i32 %a2, i8 %b) {
   %sel = select i1 %c, i8 %b, i8 %v
   %cmp = icmp sle i8 %sel, 0
   ret i1 %cmp
+}
+
+define i1 @icmp_lt_slt(i1 %c, i32 %arg) {
+; CHECK-LABEL: @icmp_lt_slt(
+; CHECK-NEXT:    [[SELECT_V:%.*]] = select i1 [[C:%.*]], i32 131072, i32 0
+; CHECK-NEXT:    [[SELECT:%.*]] = icmp slt i32 [[ARG:%.*]], [[SELECT_V]]
+; CHECK-NEXT:    ret i1 [[SELECT]]
+;
+  %cmp1 = icmp samesign ult i32 %arg, 131072
+  %cmp2 = icmp slt i32 %arg, 0
+  %select = select i1 %c, i1 %cmp1, i1 %cmp2
+  ret i1 %select
+}
+
+define i32 @fold_ucmp(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_ucmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call i32 @llvm.ucmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
+}
+
+define i32 @fold_scmp(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_scmp(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call i32 @llvm.scmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
+}
+
+define i32 @fold_ucmp_negative_test(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_ucmp_negative_test(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 1, i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call i32 @llvm.ucmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 1, i32 %cmp2 ; wrong constant
+  ret i32 %cmp3
+}
+
+define i32 @fold_scmp_negative_test(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_scmp_negative_test(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0]], i32 [[TMP1]])
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 1, i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call i32 @llvm.scmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 1, i32 %cmp2 ; wrong constant
+  ret i32 %cmp3
+}
+
+define i32 @fold_ucmp_default_range(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_ucmp_default_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call range(i32 -1, 2) i32 @llvm.ucmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
+}
+
+define i32 @fold_scmp_default_range(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_scmp_default_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call range(i32 -1, 2) i32 @llvm.scmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
+}
+
+define i32 @fold_ucmp_drop_poison_generating_range(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_ucmp_drop_poison_generating_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.ucmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call range(i32 1, 2) i32 @llvm.ucmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
+}
+
+define i32 @fold_scmp_drop_poison_generating_range(i32 %arg0, i32 %arg1) {
+; CHECK-LABEL: @fold_scmp_drop_poison_generating_range(
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.scmp.i32.i32(i32 [[TMP0:%.*]], i32 [[TMP1:%.*]])
+; CHECK-NEXT:    ret i32 [[TMP3]]
+;
+  %cmp1 = icmp eq i32 %arg0, %arg1
+  %cmp2 = tail call range(i32 1, 2) i32 @llvm.scmp.i32.i32(i32 %arg0, i32 %arg1)
+  %cmp3 = select i1 %cmp1, i32 0, i32 %cmp2
+  ret i32 %cmp3
 }
 
 declare void @use(i1)

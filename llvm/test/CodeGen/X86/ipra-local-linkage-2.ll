@@ -127,10 +127,8 @@ define void @caller_use_esi(i32 %X) nounwind ssp {
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl __stack_chk_guard, %ecx
 ; X86-NEXT:    movl %ecx, 16(%esi)
-; X86-NEXT:    movl %esp, %ecx
-; X86-NEXT:    shll $2, %eax
-; X86-NEXT:    subl %eax, %ecx
-; X86-NEXT:    movl %ecx, %esp
+; X86-NEXT:    negl %eax
+; X86-NEXT:    leal (%esp,%eax,4), %esp
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    calll callee_clobber_esi

@@ -25,13 +25,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -61,13 +54,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -94,18 +80,11 @@ body:             |
 
 # CDB can't be used if one operand is a VR64 (and not FP64).
 # CHECK-LABEL: fun2:
-# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Folded Reload
+# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Reload
 # CHECK-NEXT: wfcdb   %v16, %f0
 ---
 name:            fun2
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -135,13 +114,6 @@ body:             |
 ---
 name:            fun3
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -171,13 +143,6 @@ body:             |
 ---
 name:            fun4
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -204,18 +169,11 @@ body:             |
 
 # CEB can't be used if one operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun5:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wfcsb   %v16, %f0
 ---
 name:            fun5
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -245,13 +203,6 @@ body:             |
 ---
 name:            fun6
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -281,13 +232,6 @@ body:             |
 ---
 name:            fun7
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: fp64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -314,18 +258,11 @@ body:             |
 
 # KDB can't be used if one operand is a VR64 (and not FP64).
 # CHECK-LABEL: fun8:
-# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Folded Reload
+# CHECK:      ld      %f0, 160(%r15)                  # 8-byte Reload
 # CHECK-NEXT: wfkdb   %v16, %f0
 ---
 name:            fun8
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp64bit }
-  - { id: 1, class: vr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr64bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0d', virtual-reg: '%0' }
   - { reg: '$f2d', virtual-reg: '%1' }
@@ -355,13 +292,6 @@ body:             |
 ---
 name:            fun9
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -391,13 +321,6 @@ body:             |
 ---
 name:            fun10
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -424,18 +347,11 @@ body:             |
 
 # CEB can't be used if one operand is a VR32 (and not FP32).
 # CHECK-LABEL: fun11:
-# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Folded Reload
+# CHECK:      lde     %f0, 164(%r15)                  # 4-byte Reload
 # CHECK-NEXT: wfksb   %v16, %f0
 ---
 name:            fun11
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }
@@ -467,13 +383,6 @@ body:             |
 ---
 name:            fun12
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: fp32bit }
-  - { id: 1, class: vr128bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: vr32bit }
-  - { id: 4, class: gr64bit }
 liveins:
   - { reg: '$f0s', virtual-reg: '%0' }
   - { reg: '$f2s', virtual-reg: '%1' }

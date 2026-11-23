@@ -14,12 +14,6 @@
 // Get the DWARF constant definitions from llvm
 #include "llvm/BinaryFormat/Dwarf.h"
 
-namespace lldb_private {
-namespace dwarf {
-  using namespace llvm::dwarf;
-}
-}
-
 typedef llvm::dwarf::Attribute dw_attr_t;
 typedef llvm::dwarf::Form dw_form_t;
 typedef llvm::dwarf::Tag dw_tag_t;

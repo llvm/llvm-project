@@ -6,7 +6,7 @@
 # Use -sectcreate to create a section from a data file.
 
 # Jitlink does not support ARM64 COFF files.
-# UNSUPPORTED: target=aarch64-pc-windows-{{.*}}
+# UNSUPPORTED: target=aarch64-{{.*}}-windows-{{.*}}
 
 # On MinGW targets, when compiling the main() function, it gets
 # an implicitly generated call to __main(), which is missing in

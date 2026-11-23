@@ -15,9 +15,10 @@ entry:
   ret void
 }
 
+; This could be "NoAlias" as well, but does not appear to be beneficial in
+; practice.
 define void @select_in_gep2(i1 %c, i64 %x) {
 entry:
-  ; TODO: should be "NoAlias" here as well.
 ; CHECK-LABEL: Function: select_in_gep2
 ; CHECK: MayAlias:     i32* %arrayidx1, i32* %arrayidx2
   %add1_ = add nsw i64 %x, 1

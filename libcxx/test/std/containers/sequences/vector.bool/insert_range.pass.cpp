@@ -12,6 +12,7 @@
 // template<container-compatible-range<bool> R>
 //   constexpr iterator insert_range(const_iterator position, R&& rg); // C++23
 
+#include <sstream>
 #include <vector>
 
 #include "../insert_range_sequence_containers.h"
@@ -31,12 +32,12 @@ constexpr bool test() {
     });
   });
 
-  { // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
+  {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.
-      constexpr int N = 255;
-      bool in[N] = {};
+      constexpr int N     = 255;
+      bool in[N]          = {};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
-      auto initial = v;
+      auto initial        = v;
       assert(v.capacity() < v.size() + std::ranges::size(in));
 
       v.insert_range(v.end(), in);
@@ -48,7 +49,7 @@ constexpr bool test() {
     }
 
     { // Ensure no reallocation happens.
-      bool in[] = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
+      bool in[]           = {1, 1, 1, 1, 0, 0, 1, 1, 1, 1};
       std::vector<bool> v = {0, 0, 0, 1, 1, 0, 0, 0};
       v.reserve(v.size() + std::ranges::size(in));
       assert(v.capacity() >= v.size() + std::ranges::size(in));
@@ -56,10 +57,28 @@ constexpr bool test() {
       v.insert_range(v.end(), in);
       assert(std::ranges::equal(v, std::vector<bool>{0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1}));
     }
+
+    { // Ensure input-only sized ranges are accepted.
+      using input_iter = cpp20_input_iterator<const bool*>;
+      const bool in[]{true, true, false, true};
+      std::vector<bool> v{true, false};
+      v.insert_range(v.begin(), std::views::counted(input_iter{std::ranges::begin(in)}, std::ranges::ssize(in)));
+      assert(std::ranges::equal(v, std::vector<bool>{true, true, false, true, true, false}));
+    }
   }
 
   return true;
 }
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+void test_counted_istream_view() {
+  std::istringstream is{"1 1 0 1"};
+  auto vals = std::views::istream<bool>(is);
+  std::vector<bool> v;
+  v.insert_range(v.end(), std::views::counted(vals.begin(), 3));
+  assert(v == (std::vector{true, true, false}));
+}
+#endif
 
 int main(int, char**) {
   test();
@@ -67,6 +86,10 @@ int main(int, char**) {
 
   // Note: `test_insert_range_exception_safety_throwing_copy` doesn't apply because copying booleans cannot throw.
   test_insert_range_exception_safety_throwing_allocator<std::vector, bool>();
+
+#ifndef TEST_HAS_NO_LOCALIZATION
+  test_counted_istream_view();
+#endif
 
   return 0;
 }

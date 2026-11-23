@@ -12,6 +12,7 @@
 
 // CHECK:      Binary Function "_start" after fix-riscv-calls {
 // CHECK:      call near_f
+// CHECK-NEXT: nop
 // CHECK-NEXT: call far_f
 // CHECK-NEXT: tail near_f
 

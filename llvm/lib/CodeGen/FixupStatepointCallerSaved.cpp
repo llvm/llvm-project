@@ -20,6 +20,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/FixupStatepointCallerSaved.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -37,35 +39,17 @@ STATISTIC(NumSpilledRegisters, "Number of spilled register");
 STATISTIC(NumSpillSlotsAllocated, "Number of spill slots allocated");
 STATISTIC(NumSpillSlotsExtended, "Number of spill slots extended");
 
-static cl::opt<bool> FixupSCSExtendSlotSize(
-    "fixup-scs-extend-slot-size", cl::Hidden, cl::init(false),
-    cl::desc("Allow spill in spill slot of greater size than register size"),
-    cl::Hidden);
-
-static cl::opt<bool> PassGCPtrInCSR(
-    "fixup-allow-gcptr-in-csr", cl::Hidden, cl::init(false),
-    cl::desc("Allow passing GC Pointer arguments in callee saved registers"));
-
-static cl::opt<bool> EnableCopyProp(
-    "fixup-scs-enable-copy-propagation", cl::Hidden, cl::init(true),
-    cl::desc("Enable simple copy propagation during register reloading"));
-
-// This is purely debugging option.
-// It may be handy for investigating statepoint spilling issues.
-static cl::opt<unsigned> MaxStatepointsWithRegs(
-    "fixup-max-csr-statepoints", cl::Hidden,
-    cl::desc("Max number of statepoints allowed to pass GC Ptrs in registers"));
-
 namespace {
 
-class FixupStatepointCallerSaved : public MachineFunctionPass {
+struct FixupStatepointCallerSavedImpl {
+  bool run(MachineFunction &MF);
+};
+
+class FixupStatepointCallerSavedLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  FixupStatepointCallerSaved() : MachineFunctionPass(ID) {
-    initializeFixupStatepointCallerSavedPass(*PassRegistry::getPassRegistry());
-  }
-
+  FixupStatepointCallerSavedLegacy() : MachineFunctionPass(ID) {}
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -80,12 +64,12 @@ public:
 
 } // End anonymous namespace.
 
-char FixupStatepointCallerSaved::ID = 0;
-char &llvm::FixupStatepointCallerSavedID = FixupStatepointCallerSaved::ID;
+char FixupStatepointCallerSavedLegacy::ID = 0;
+char &llvm::FixupStatepointCallerSavedID = FixupStatepointCallerSavedLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(FixupStatepointCallerSaved, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(FixupStatepointCallerSavedLegacy, DEBUG_TYPE,
                       "Fixup Statepoint Caller Saved", false, false)
-INITIALIZE_PASS_END(FixupStatepointCallerSaved, DEBUG_TYPE,
+INITIALIZE_PASS_END(FixupStatepointCallerSavedLegacy, DEBUG_TYPE,
                     "Fixup Statepoint Caller Saved", false, false)
 
 // Utility function to get size of the register.
@@ -107,7 +91,7 @@ static unsigned getRegisterSize(const TargetRegisterInfo &TRI, Register Reg) {
 //       On successful copy propagation set to new spill point.
 //  IsKill - set to true if COPY is Kill (there are no uses of Y)
 //  Returns either found source copy register or original one.
-static Register performCopyPropagation(Register Reg,
+static Register performCopyPropagation(const CodeGenOptions &Opts, Register Reg,
                                        MachineBasicBlock::iterator &RI,
                                        bool &IsKill, const TargetInstrInfo &TII,
                                        const TargetRegisterInfo &TRI) {
@@ -118,7 +102,7 @@ static Register performCopyPropagation(Register Reg,
     return Reg;
   }
 
-  if (!EnableCopyProp)
+  if (!Opts.fixup_scs_enable_copy_propagation)
     return Reg;
 
   MachineBasicBlock *MBB = RI->getParent();
@@ -179,19 +163,11 @@ class RegReloadCache {
 public:
   RegReloadCache() = default;
 
-  // Record reload of Reg from FI in block MBB
-  void recordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
+  // Record reload of Reg from FI in block MBB if not present yet.
+  // Return true if the reload is successfully recorded.
+  bool tryRecordReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
     RegSlotPair RSP(Reg, FI);
-    auto Res = Reloads[MBB].insert(RSP);
-    (void)Res;
-    assert(Res.second && "reload already exists");
-  }
-
-  // Does basic block MBB contains reload of Reg from FI?
-  bool hasReload(Register Reg, int FI, const MachineBasicBlock *MBB) {
-    RegSlotPair RSP(Reg, FI);
-    auto It = Reloads.find(MBB);
-    return It != Reloads.end() && It->second.count(RSP);
+    return Reloads[MBB].insert(RSP).second;
   }
 };
 
@@ -208,6 +184,7 @@ private:
     // Current index of un-used yet frame index.
     unsigned Index = 0;
   };
+  const CodeGenOptions &Opts;
   MachineFrameInfo &MFI;
   const TargetRegisterInfo &TRI;
   // Map size to list of frame indexes of this size. If the mode is
@@ -229,12 +206,13 @@ private:
   FrameIndexesPerSize &getCacheBucket(unsigned Size) {
     // In FixupSCSExtendSlotSize mode the bucket with 0 index is used
     // for all sizes.
-    return Cache[FixupSCSExtendSlotSize ? 0 : Size];
+    return Cache[Opts.fixup_scs_extend_slot_size ? 0 : Size];
   }
 
 public:
-  FrameIndexesCache(MachineFrameInfo &MFI, const TargetRegisterInfo &TRI)
-      : MFI(MFI), TRI(TRI) {}
+  FrameIndexesCache(const CodeGenOptions &Opts, MachineFrameInfo &MFI,
+                    const TargetRegisterInfo &TRI)
+      : Opts(Opts), MFI(MFI), TRI(TRI) {}
   // Reset the current state of used frame indexes. After invocation of
   // this function all frame indexes are available for allocation with
   // the exception of slots reserved for landing pad processing (if any).
@@ -245,8 +223,7 @@ public:
     ReservedSlots.clear();
     if (EHPad)
       if (auto It = GlobalIndices.find(EHPad); It != GlobalIndices.end())
-        for (auto &RSP : It->second)
-          ReservedSlots.insert(RSP.second);
+        ReservedSlots.insert_range(llvm::make_second_range(It->second));
   }
 
   // Get frame index to spill the register.
@@ -302,7 +279,7 @@ public:
   // FixupSCSExtendSlotSize mode it will minimize the total frame size.
   // In non FixupSCSExtendSlotSize mode we can skip this step.
   void sortRegisters(SmallVectorImpl<Register> &Regs) {
-    if (!FixupSCSExtendSlotSize)
+    if (!Opts.fixup_scs_extend_slot_size)
       return;
     llvm::sort(Regs, [&](Register &A, Register &B) {
       return getRegisterSize(TRI, A) > getRegisterSize(TRI, B);
@@ -313,6 +290,7 @@ public:
 // Describes the state of the current processing statepoint instruction.
 class StatepointState {
 private:
+  const CodeGenOptions &Opts;
   // statepoint instruction.
   MachineInstr &MI;
   MachineFunction &MF;
@@ -336,9 +314,11 @@ private:
   DenseMap<Register, int> RegToSlotIdx;
 
 public:
-  StatepointState(MachineInstr &MI, const uint32_t *Mask,
-                  FrameIndexesCache &CacheFI, bool AllowGCPtrInCSR)
-      : MI(MI), MF(*MI.getMF()), TRI(*MF.getSubtarget().getRegisterInfo()),
+  StatepointState(const CodeGenOptions &Opts, MachineInstr &MI,
+                  const uint32_t *Mask, FrameIndexesCache &CacheFI,
+                  bool AllowGCPtrInCSR)
+      : Opts(Opts), MI(MI), MF(*MI.getMF()),
+        TRI(*MF.getSubtarget().getRegisterInfo()),
         TII(*MF.getSubtarget().getInstrInfo()), MFI(MF.getFrameInfo()),
         Mask(Mask), CacheFI(CacheFI), AllowGCPtrInCSR(AllowGCPtrInCSR) {
 
@@ -366,7 +346,9 @@ public:
   MachineBasicBlock *getEHPad() const { return EHPad; }
 
   // Return true if register is callee saved.
-  bool isCalleeSaved(Register Reg) { return (Mask[Reg / 32] >> Reg % 32) & 1; }
+  bool isCalleeSaved(Register Reg) {
+    return (Mask[Reg.id() / 32] >> (Reg.id() % 32)) & 1;
+  }
 
   // Iterates over statepoint meta args to find caller saver registers.
   // Also cache the size of found registers.
@@ -417,21 +399,21 @@ public:
       // Perform trivial copy propagation
       bool IsKill = true;
       MachineBasicBlock::iterator InsertBefore(MI);
-      Reg = performCopyPropagation(Reg, InsertBefore, IsKill, TII, TRI);
+      Reg = performCopyPropagation(Opts, Reg, InsertBefore, IsKill, TII, TRI);
       const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
-                              RC, &TRI, Register());
+                              RC, Register());
     }
   }
 
-  void insertReloadBefore(unsigned Reg, MachineBasicBlock::iterator It,
+  void insertReloadBefore(Register Reg, MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) {
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
-      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
       return;
     }
 
@@ -439,7 +421,7 @@ public:
     // and then swap them.
     assert(!MBB->empty() && "Empty block");
     --It;
-    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, Register());
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
     (void)Dummy;
@@ -459,8 +441,7 @@ public:
       LLVM_DEBUG(dbgs() << "Reloading " << printReg(Reg, &TRI) << " from FI "
                         << RegToSlotIdx[Reg] << " after statepoint\n");
 
-      if (EHPad && !RC.hasReload(Reg, RegToSlotIdx[Reg], EHPad)) {
-        RC.recordReload(Reg, RegToSlotIdx[Reg], EHPad);
+      if (EHPad && RC.tryRecordReload(Reg, RegToSlotIdx[Reg], EHPad)) {
         auto EHPadInsertPoint =
             EHPad->SkipPHIsLabelsAndDebug(EHPad->begin(), Reg);
         insertReloadBefore(Reg, EHPadInsertPoint, EHPad);
@@ -562,15 +543,16 @@ public:
 
 class StatepointProcessor {
 private:
+  const CodeGenOptions &Opts;
   MachineFunction &MF;
   const TargetRegisterInfo &TRI;
   FrameIndexesCache CacheFI;
   RegReloadCache ReloadCache;
 
 public:
-  StatepointProcessor(MachineFunction &MF)
-      : MF(MF), TRI(*MF.getSubtarget().getRegisterInfo()),
-        CacheFI(MF.getFrameInfo(), TRI) {}
+  StatepointProcessor(const CodeGenOptions &Opts, MachineFunction &MF)
+      : Opts(Opts), MF(MF), TRI(*MF.getSubtarget().getRegisterInfo()),
+        CacheFI(Opts, MF.getFrameInfo(), TRI) {}
 
   bool process(MachineInstr &MI, bool AllowGCPtrInCSR) {
     StatepointOpers SO(&MI);
@@ -583,7 +565,7 @@ public:
                       << MI);
     CallingConv::ID CC = SO.getCallingConv();
     const uint32_t *Mask = TRI.getCallPreservedMask(MF, CC);
-    StatepointState SS(MI, Mask, CacheFI, AllowGCPtrInCSR);
+    StatepointState SS(Opts, MI, Mask, CacheFI, AllowGCPtrInCSR);
     CacheFI.reset(SS.getEHPad());
 
     if (!SS.findRegistersToSpill())
@@ -597,10 +579,7 @@ public:
 };
 } // namespace
 
-bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
-  if (skipFunction(MF.getFunction()))
-    return false;
-
+bool FixupStatepointCallerSavedImpl::run(MachineFunction &MF) {
   const Function &F = MF.getFunction();
   if (!F.hasGC())
     return false;
@@ -614,16 +593,37 @@ bool FixupStatepointCallerSaved::runOnMachineFunction(MachineFunction &MF) {
   if (Statepoints.empty())
     return false;
 
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
   bool Changed = false;
-  StatepointProcessor SPP(MF);
+  StatepointProcessor SPP(Opts, MF);
   unsigned NumStatepoints = 0;
-  bool AllowGCPtrInCSR = PassGCPtrInCSR;
+  bool AllowGCPtrInCSR = Opts.fixup_allow_gcptr_in_csr;
   for (MachineInstr *I : Statepoints) {
     ++NumStatepoints;
-    if (MaxStatepointsWithRegs.getNumOccurrences() &&
-        NumStatepoints >= MaxStatepointsWithRegs)
+    if (Opts.fixup_max_csr_statepoints &&
+        NumStatepoints >= *Opts.fixup_max_csr_statepoints)
       AllowGCPtrInCSR = false;
     Changed |= SPP.process(*I, AllowGCPtrInCSR);
   }
   return Changed;
+}
+
+bool FixupStatepointCallerSavedLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  return FixupStatepointCallerSavedImpl().run(MF);
+}
+
+PreservedAnalyses
+FixupStatepointCallerSavedPass::run(MachineFunction &MF,
+                                    MachineFunctionAnalysisManager &MFAM) {
+
+  if (!FixupStatepointCallerSavedImpl().run(MF))
+    return PreservedAnalyses::all();
+
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

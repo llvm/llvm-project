@@ -1,23 +1,23 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm64-unknown-unknown -o %t.o %s
 
-# RUN: not wasm-ld -mwasm64 --experimental-pic -shared %t.o -o /dev/null 2>&1 | \
+# RUN: not wasm-ld -mwasm64 -shared %t.o -o /dev/null 2>&1 | \
 # RUN:   FileCheck %s
 
-# RUN: not wasm-ld -mwasm64 --experimental-pic -shared %t.o -o /dev/null  --unresolved-symbols=report-all 2>&1 | \
+# RUN: not wasm-ld -mwasm64 -shared %t.o -o /dev/null  --unresolved-symbols=report-all 2>&1 | \
 # RUN:   FileCheck %s
 
-# RUN: not wasm-ld -mwasm64 --experimental-pic -shared %t.o -o /dev/null  --warn-unresolved-symbols 2>&1 | \
+# RUN: not wasm-ld -mwasm64 -shared %t.o -o /dev/null  --warn-unresolved-symbols 2>&1 | \
 # RUN:   FileCheck %s
 
-# RUN: not wasm-ld -mwasm64 --experimental-pic -shared %t.o -o /dev/null  --unresolved-symbols=ignore-all 2>&1 | \
+# RUN: not wasm-ld -mwasm64 -shared %t.o -o /dev/null  --unresolved-symbols=ignore-all 2>&1 | \
 # RUN:   FileCheck %s
 
-# RUN: not wasm-ld -mwasm64 --experimental-pic -shared %t.o -o /dev/null  --unresolved-symbols=import-dynamic 2>&1 | \
+# RUN: not wasm-ld -mwasm64 -shared %t.o -o /dev/null  --unresolved-symbols=import-dynamic 2>&1 | \
 # RUN:   FileCheck %s
 
 ## These errors should not be reported under -r/--relocation (i.e. when
 ## generating an object file)
-# RUN: wasm-ld -mwasm64 --experimental-pic -r %t.o -o /dev/null
+# RUN: wasm-ld -mwasm64 -r %t.o -o /dev/null
 
 .functype external_func () -> ()
 

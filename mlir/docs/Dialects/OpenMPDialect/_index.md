@@ -30,8 +30,8 @@ words separated by underscores.
 If the operation corresponds to a directive, clause or other kind of definition
 in the OpenMP specification, it must use the same name split into words in the
 same way. For example, the `target data` directive would become `TargetDataOp` /
-`omp.target_data`, whereas `taskloop` would become `TaskloopOp` /
-`omp.taskloop`.
+`omp.target_data`, whereas `taskloop` would become `TaskloopWrapperOp` /
+`omp.taskloop.wrapper`.
 
 Operations intended to carry extra information for another particular operation
 or clause must be named after that other operation or clause, followed by the
@@ -352,12 +352,31 @@ let assemblyFormat = clausesAssemblyFormat # [{
 ```
 
 The `BlockArgOpenMPOpInterface` has been introduced to simplify the addition and
-handling of these kinds of clauses. It holds `num<ClauseName>BlockArgs()`
-functions that by default return 0, to be overriden by each clause through the
-`extraClassDeclaration` property. Based on these functions and the expected
-alphabetical sorting between entry block argument-defining clauses, it
-implements `get<ClauseName>BlockArgs()` functions that are the intended method
-of accessing clause-defined block arguments.
+handling of these kinds of clauses. Adding it to an operation directly, or
+indirectly through a clause, results in the addition of overridable
+`get<ClauseName>Vars()` and `num<ClauseName>BlockArgs()` public functions for
+all entry block argument-generating clauses. By default, the reported number of
+block arguments defined by a clause will correspond to the number of operands
+taken by the operation for that clause. This list of operands will be empty by
+default, and will automatically be overriden by getters of the corresponding
+`Variadic<...> $<clause_name>_vars` argument of the same clause's definition.
+
+In addition to these methods added to the actual operations, the
+`BlockArgOpenMPOpInterface` itself defines a set of methods based on the
+previous ones and on the convention that entry block arguments for multiple
+clauses are sorted alphabetically by clause name. These are listed below, and
+they represent the main way in which clause-defined block arguments should be
+accessed:
+  - `get<ClauseName>BlockArgsStart()`: Returns the index within the list of
+  entry block arguments where the first element defined by the given clause
+  should be located.
+  - `get<ClauseName>BlockArgs()`: Returns the list of entry block arguments
+  defined by the given clause.
+  - `numClauseBlockArgs()`: Returns the total number of entry block arguments
+  defined by all clauses.
+  - `getBlockArgsPairs()`: Returns a list of pairs where the first element is
+  the outside value, or operand, and the second element is the corresponding
+  entry block argument.
 
 ## Loop-Associated Directives
 
@@ -372,7 +391,7 @@ wrapper or `omp.loop_nest` operation.
 This approach splits the representation for a loop nest and the loop-associated
 constructs that specify how its iterations are executed, possibly across various
 SIMD lanes (`omp.simd`), threads (`omp.wsloop`), teams of threads
-(`omp.distribute`) or tasks (`omp.taskloop`). The ability to directly nest
+(`omp.distribute`) or tasks (`omp.taskloop.wrapper`). The ability to directly nest
 multiple loop wrappers to impact the execution of a single loop nest is used to
 represent composite constructs in a modular way.
 

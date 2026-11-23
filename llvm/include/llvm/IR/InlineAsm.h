@@ -19,7 +19,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <string>
 #include <vector>
@@ -63,10 +65,11 @@ public:
 
   /// InlineAsm::get - Return the specified uniqued inline asm string.
   ///
-  static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
-                        StringRef Constraints, bool hasSideEffects,
-                        bool isAlignStack = false,
-                        AsmDialect asmDialect = AD_ATT, bool canThrow = false);
+  LLVM_ABI static InlineAsm *get(FunctionType *Ty, StringRef AsmString,
+                                 StringRef Constraints, bool hasSideEffects,
+                                 bool isAlignStack = false,
+                                 AsmDialect asmDialect = AD_ATT,
+                                 bool canThrow = false);
 
   bool hasSideEffects() const { return HasSideEffects; }
   bool isAlignStack() const { return IsAlignStack; }
@@ -81,15 +84,15 @@ public:
 
   /// getFunctionType - InlineAsm's are always pointers to functions.
   ///
-  FunctionType *getFunctionType() const;
+  LLVM_ABI FunctionType *getFunctionType() const;
 
-  const std::string &getAsmString() const { return AsmString; }
-  const std::string &getConstraintString() const { return Constraints; }
-  void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
+  StringRef getAsmString() const { return AsmString; }
+  StringRef getConstraintString() const { return Constraints; }
+  LLVM_ABI void collectAsmStrs(SmallVectorImpl<StringRef> &AsmStrs) const;
 
   /// This static method can be used by the parser to check to see if the
   /// specified constraint string is legal for the type.
-  static Error verify(FunctionType *Ty, StringRef Constraints);
+  LLVM_ABI static Error verify(FunctionType *Ty, StringRef Constraints);
 
   // Constraint String Parsing
   enum ConstraintPrefix {
@@ -169,11 +172,11 @@ public:
     /// Parse - Analyze the specified string (e.g. "=*&{eax}") and fill in the
     /// fields in this structure.  If the constraint string is not understood,
     /// return true, otherwise return false.
-    bool Parse(StringRef Str, ConstraintInfoVector &ConstraintsSoFar);
+    LLVM_ABI bool Parse(StringRef Str, ConstraintInfoVector &ConstraintsSoFar);
 
     /// selectAlternative - Point this constraint to the alternative constraint
     /// indicated by the index.
-    void selectAlternative(unsigned index);
+    LLVM_ABI void selectAlternative(unsigned index);
 
     /// Whether this constraint corresponds to an argument.
     bool hasArg() const {
@@ -184,7 +187,8 @@ public:
   /// ParseConstraints - Split up the constraint string into the specific
   /// constraints and their prefixes.  If this returns an empty vector, and if
   /// the constraint string itself isn't empty, there was an error parsing.
-  static ConstraintInfoVector ParseConstraints(StringRef ConstraintString);
+  LLVM_ABI static ConstraintInfoVector
+  ParseConstraints(StringRef ConstraintString);
 
   /// ParseConstraints - Parse the constraints of this inlineasm object,
   /// returning them the same way that ParseConstraints(str) does.
@@ -217,6 +221,7 @@ public:
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
     Extra_IsConvergent = 32,
+    Extra_MayUnwind = 64,
   };
 
   // Inline asm operands map to multiple SDNode / MachineInstr operands.
@@ -269,7 +274,10 @@ public:
     ZS,
     ZT,
 
-    Max = ZT,
+    // AMDGPU-specific constraints
+    RF,
+
+    Max = RF,
   };
 
   // This class is intentionally packed into a 32b value as it is used as a
@@ -320,7 +328,7 @@ public:
     explicit Flag(uint32_t F) : Storage(F) {}
     Flag(enum Kind K, unsigned NumOps) : Storage(0) {
       Bitfield::set<KindField>(Storage, K);
-      Bitfield::set<NumOperands>(Storage, NumOps);
+      setNumOperandRegisters(NumOps);
     }
     operator uint32_t() { return Storage; }
     Kind getKind() const { return Bitfield::get<KindField>(Storage); }
@@ -356,6 +364,19 @@ public:
     /// inline asm operand flag.
     unsigned getNumOperandRegisters() const {
       return Bitfield::get<NumOperands>(Storage);
+    }
+
+    /// The largest number of operands that a flag can describe.
+    static constexpr unsigned getMaxNumOperandRegisters() {
+      return maskTrailingOnes<unsigned>(NumOperands::Bits);
+    }
+
+    /// Set the number of operands that follow the flag. (The MIR parser reads
+    /// the count last, so it can't pass it to the constructor.)
+    void setNumOperandRegisters(unsigned NumOps) {
+      assert(NumOps <= getMaxNumOperandRegisters() &&
+             "Too many operands for a flag");
+      Bitfield::set<NumOperands>(Storage, NumOps);
     }
 
     /// isUseOperandTiedToDef - Return true if the flag of the inline asm
@@ -428,17 +449,28 @@ public:
     /// ("rm") vs ones it does not ("r"). This is because the inline asm may use
     /// instructions which don't support memory addressing modes for that
     /// operand.
+    ///
+    /// A tied use can't be foldable: it stores its matched operand number in
+    /// the bits that otherwise hold RegMayBeFolded.
     void setRegMayBeFolded(bool B) {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
+      assert(!isMatched() && "Tied operand cannot be marked foldable");
       Bitfield::set<RegMayBeFolded>(Storage, B);
     }
     bool getRegMayBeFolded() const {
       assert((isRegDefKind() || isRegDefEarlyClobberKind() || isRegUseKind()) &&
              "Must be reg");
+      // Bit 30 of a tied use is part of its matched operand number.
+      if (isMatched())
+        return false;
       return Bitfield::get<RegMayBeFolded>(Storage);
     }
   };
+
+  static AsmDialect getDialect(unsigned ExtraInfo) {
+    return ExtraInfo & Extra_AsmDialect ? AD_Intel : AD_ATT;
+  }
 
   static std::vector<StringRef> getExtraInfoNames(unsigned ExtraInfo) {
     std::vector<StringRef> Result;
@@ -452,10 +484,10 @@ public:
       Result.push_back("isconvergent");
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       Result.push_back("alignstack");
+    if (ExtraInfo & InlineAsm::Extra_MayUnwind)
+      Result.push_back("unwind");
 
-    AsmDialect Dialect =
-        InlineAsm::AsmDialect((ExtraInfo & InlineAsm::Extra_AsmDialect));
-
+    AsmDialect Dialect = getDialect(ExtraInfo);
     if (Dialect == InlineAsm::AD_ATT)
       Result.push_back("attdialect");
     if (Dialect == InlineAsm::AD_Intel)
@@ -522,6 +554,8 @@ public:
       return "ZS";
     case ConstraintCode::ZT:
       return "ZT";
+    case ConstraintCode::RF:
+      return "RF";
     default:
       llvm_unreachable("Unknown memory constraint");
     }

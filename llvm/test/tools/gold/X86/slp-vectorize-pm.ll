@@ -1,7 +1,7 @@
 ; RUN: opt -module-summary %s -o %t.o
 
 ; Test SLP and Loop Vectorization are enabled by default at O2 and O3.
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=new-pass-manager \
 ; RUN:     --plugin-opt=debug-pass-manager \
@@ -12,7 +12,7 @@
 ; RUN:     -o %t2.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O0-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O0-LPV
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=new-pass-manager \
 ; RUN:     --plugin-opt=debug-pass-manager \
@@ -23,7 +23,7 @@
 ; RUN:     -o %t3.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O1-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O1-LPV
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=new-pass-manager \
 ; RUN:     --plugin-opt=debug-pass-manager \
@@ -34,7 +34,7 @@
 ; RUN:     -o %t4.o %t.o 2>&1 | FileCheck %s --check-prefix=CHECK-O2-SLP
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-O2-LPV
 
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     --plugin-opt=thinlto \
 ; RUN:     --plugin-opt=new-pass-manager \
 ; RUN:     --plugin-opt=debug-pass-manager \

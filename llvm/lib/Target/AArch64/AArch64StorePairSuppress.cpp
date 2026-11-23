@@ -30,17 +30,13 @@ using namespace llvm;
 namespace {
 class AArch64StorePairSuppress : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
-  const TargetRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
   TargetSchedModel SchedModel;
   MachineTraceMetrics *Traces;
   MachineTraceMetrics::Ensemble *MinInstr;
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
-    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
-  }
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
@@ -135,9 +131,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
   if (!ST.enableStorePairSuppress())
     return false;
 
-  TII = static_cast<const AArch64InstrInfo *>(ST.getInstrInfo());
-  TRI = ST.getRegisterInfo();
-  MRI = &MF.getRegInfo();
+  TII = ST.getInstrInfo();
   SchedModel.init(&ST);
   Traces = &getAnalysis<MachineTraceMetricsWrapperPass>().getMTM();
   MinInstr = nullptr;
@@ -162,8 +156,7 @@ bool AArch64StorePairSuppress::runOnMachineFunction(MachineFunction &MF) {
       const MachineOperand *BaseOp;
       int64_t Offset;
       bool OffsetIsScalable;
-      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable,
-                                       TRI) &&
+      if (TII->getMemOperandWithOffset(MI, BaseOp, Offset, OffsetIsScalable) &&
           BaseOp->isReg()) {
         Register BaseReg = BaseOp->getReg();
         if (PrevBaseReg == BaseReg) {

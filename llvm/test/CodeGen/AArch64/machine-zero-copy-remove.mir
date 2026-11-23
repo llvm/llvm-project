@@ -1,11 +1,11 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -verify-machineinstrs -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -run-pass=aarch64-copyelim %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -passes=aarch64-copyelim %s -o - | FileCheck %s
 ---
 # CHECK-LABEL: name: test1
 # CHECK: ANDSWri $w0, 1, implicit-def $nzcv
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test1
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -29,7 +29,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test2
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2
@@ -53,7 +52,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test3
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -77,7 +75,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2
@@ -101,7 +98,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test5
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -125,7 +121,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test6
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2
@@ -149,7 +144,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test7
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -173,7 +167,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test8
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -197,7 +190,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test9
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -221,7 +213,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test10
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -245,7 +236,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test11
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -269,7 +259,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test12
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -293,7 +282,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test13
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -317,7 +305,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test14
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -341,7 +328,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test15
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -365,7 +351,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -389,7 +374,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test17
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -413,7 +397,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $xzr
 name:            test18
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2, $x3
@@ -437,7 +420,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK-NOT: COPY $wzr
 name:            test19
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $w1, $x2, $x3
@@ -463,7 +445,6 @@ body:             |
 # CHECK-NOT: $w0 = COPY $wzr
 # CHECK-NOT: $w1 = MOVi32imm 1
 name:            test20
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w1, $x2
@@ -490,7 +471,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: $w0 = COPY $wzr
 name:            test21
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2
@@ -517,7 +497,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: $x0 = MOVi64imm 1
 name:            test22
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0, $x1, $x2
@@ -542,7 +521,6 @@ body:             |
 # CHECK: bb.1:
 # CHECK: COPY $wzr
 name:            test23
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0, $x1, $x2

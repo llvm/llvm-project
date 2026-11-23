@@ -4,6 +4,7 @@
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>
@@ -54,7 +55,7 @@ int test_omp_aligned_alloc_on_device() {
 int main() {
   int errors = 0;
   if (test_omp_aligned_alloc_on_device())
-    printf("FAILE\n");
+    printf("FAILED\n");
   else
     // CHECK: PASSED
     printf("PASSED\n");

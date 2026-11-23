@@ -1,0 +1,11 @@
+standard: c23
+c-reference-root: numeric/ckd_arith
+macros:
+  __STDC_VERSION_STDCKDINT_H__:
+    c-definition: '7.20'
+  ckd_add:
+    c-definition: 7.20.1
+  ckd_mul:
+    c-definition: 7.20.1
+  ckd_sub:
+    c-definition: 7.20.1

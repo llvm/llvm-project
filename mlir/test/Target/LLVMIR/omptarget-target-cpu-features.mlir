@@ -8,7 +8,7 @@ module attributes {omp.is_target_device = false} {
     target_cpu = "x86-64",
     target_features = #llvm.target_features<["+mmx", "+sse"]>
   } {
-    omp.target {
+    omp.target kernel_type(generic) {
       omp.terminator
     }
     llvm.return
@@ -16,7 +16,7 @@ module attributes {omp.is_target_device = false} {
 }
 
 // CHECK: define void @omp_target_region() #[[ATTRS:.*]] {
-// CHECK: define internal void @__omp_offloading_{{.*}}_omp_target_region_{{.*}}() #[[ATTRS]] {
+// CHECK: define internal void @__omp_offloading_{{.*}}_omp_target_region_{{.*}}(ptr %{{.*}}) #[[ATTRS]] {
 
 // CHECK: attributes #[[ATTRS]] = {
 // CHECK-SAME: "target-cpu"="x86-64"

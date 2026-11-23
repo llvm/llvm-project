@@ -93,6 +93,11 @@ entry:
   ret i64 %dot
 }
 
+; DOPCHECK-DAG: declare i16 @dx.op.tertiary.i16(i32, i16, i16, i16) #[[#ATTR0:]]
+; DOPCHECK-DAG: declare i32 @dx.op.tertiary.i32(i32, i32, i32, i32) #[[#ATTR0]]
+; DOPCHECK-DAG: declare i64 @dx.op.tertiary.i64(i32, i64, i64, i64) #[[#ATTR0]]
+; DOPCHECK: attributes #[[#ATTR0]] = { nounwind memory(none) }
+
 declare i16 @llvm.dx.sdot.v2i16(<2 x i16>, <2 x i16>)
 declare i32 @llvm.dx.sdot.v4i32(<4 x i32>, <4 x i32>)
 declare i16 @llvm.dx.udot.v3i32(<3 x i16>, <3 x i16>)

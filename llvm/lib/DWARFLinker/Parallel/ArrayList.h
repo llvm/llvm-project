@@ -9,6 +9,7 @@
 #ifndef LLVM_LIB_DWARFLINKER_PARALLEL_ARRAYLIST_H
 #define LLVM_LIB_DWARFLINKER_PARALLEL_ARRAYLIST_H
 
+#include "llvm/Support/Parallel.h"
 #include "llvm/Support/PerThreadBumpPtrAllocator.h"
 #include <atomic>
 
@@ -77,12 +78,16 @@ public:
     LastGroup = nullptr;
   }
 
-  void sort(function_ref<bool(const T &LHS, const T &RHS)> Comparator) {
+  void sort(function_ref<bool(const T &LHS, const T &RHS)> Comparator,
+            bool Parallel = false) {
     SmallVector<T> SortedItems;
     forEach([&](T &Item) { SortedItems.push_back(Item); });
 
     if (SortedItems.size()) {
-      std::sort(SortedItems.begin(), SortedItems.end(), Comparator);
+      if (Parallel)
+        parallelSort(SortedItems, Comparator);
+      else
+        std::sort(SortedItems.begin(), SortedItems.end(), Comparator);
 
       size_t SortedItemIdx = 0;
       forEach([&](T &Item) { Item = SortedItems[SortedItemIdx++]; });
@@ -137,7 +142,7 @@ protected:
     NewGroup->Next = nullptr;
 
     // Try to replace current group with allocated one.
-    if (AtomicGroup.compare_exchange_weak(CurGroup, NewGroup))
+    if (AtomicGroup.compare_exchange_strong(CurGroup, NewGroup))
       return true;
 
     // Put allocated group as last group.

@@ -20,15 +20,33 @@
 
 namespace Fortran::evaluate {
 
+template <typename SCALAR>
+inline void StoreSerialValues(char *dst, llvm::ArrayRef<SCALAR> values,
+    size_t elementSize, bool *changed = nullptr) {
+  for (auto [i, v] : llvm::enumerate(values)) {
+    v.StoreRawBytes(dst + i * elementSize, elementSize, changed);
+  }
+}
+
+template <typename SCALAR>
+inline void LoadSerialValues(int kind, const char *src,
+    llvm::MutableArrayRef<SCALAR> values, size_t stride) {
+  for (auto it : llvm::enumerate(values)) {
+    it.value() = SCALAR::FromRawBytes(
+        kind, src + stride * it.index(), SCALAR::bytesStored(kind));
+  }
+}
+
 class InitialImage {
 public:
   enum Result {
     Ok,
+    OkNoChange,
     NotAConstant,
     OutOfRange,
     SizeMismatch,
     LengthMismatch,
-    TooManyElems
+    TooManyElems,
   };
 
   explicit InitialImage(std::size_t bytes) : data_(bytes) {}
@@ -52,53 +70,20 @@ public:
               x.values().size() * static_cast<std::size_t>(*elementBytes)) {
         return SizeMismatch;
       } else if (bytes == 0) {
-        return Ok;
+        return OkNoChange;
       } else {
         // TODO endianness
-        std::memcpy(&data_.at(offset), &x.values().at(0), bytes);
-        return Ok;
+        bool changed{false};
+        StoreSerialValues<Scalar<T>>(&data_.at(offset),
+            llvm::ArrayRef<Scalar<T>>(x.values()), *elementBytes, &changed);
+        return changed ? Ok : OkNoChange;
       }
     }
   }
-  template <int KIND>
-  Result Add(ConstantSubscript offset, std::size_t bytes,
-      const Constant<Type<TypeCategory::Character, KIND>> &x,
-      FoldingContext &) {
-    if (offset < 0 || offset + bytes > data_.size()) {
-      return OutOfRange;
-    } else {
-      auto optElements{TotalElementCount(x.shape())};
-      if (!optElements) {
-        return TooManyElems;
-      }
-      auto elements{*optElements};
-      auto elementBytes{bytes > 0 ? bytes / elements : 0};
-      if (elements * elementBytes != bytes) {
-        return SizeMismatch;
-      } else if (bytes == 0) {
-        return Ok;
-      } else {
-        Result result{Ok};
-        for (auto at{x.lbounds()}; elements-- > 0; x.IncrementSubscripts(at)) {
-          auto scalar{x.At(at)}; // this is a std string; size() in chars
-          auto scalarBytes{scalar.size() * KIND};
-          if (scalarBytes != elementBytes) {
-            result = LengthMismatch;
-          }
-          // Blank padding when short
-          for (; scalarBytes < elementBytes; scalarBytes += KIND) {
-            scalar += ' ';
-          }
-          // TODO endianness
-          std::memcpy(&data_.at(offset), scalar.data(), elementBytes);
-          offset += elementBytes;
-        }
-        return result;
-      }
-    }
-  }
-  Result Add(ConstantSubscript, std::size_t, const Constant<SomeDerived> &,
-      FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Character>> &, FoldingContext &);
+  Result Add(ConstantSubscript, std::size_t,
+      const Constant<Type<TypeCategory::Derived>> &, FoldingContext &);
   template <typename T>
   Result Add(ConstantSubscript offset, std::size_t bytes, const Expr<T> &x,
       FoldingContext &c) {
@@ -106,9 +91,10 @@ public:
         [&](const auto &y) { return Add(offset, bytes, y, c); }, x.u);
   }
 
-  void AddPointer(ConstantSubscript, const Expr<SomeType> &);
+  Result AddPointer(ConstantSubscript, const Expr<SomeType> &);
 
-  void Incorporate(ConstantSubscript toOffset, const InitialImage &from,
+  // Returns true if anything changes
+  bool Incorporate(ConstantSubscript toOffset, const InitialImage &from,
       ConstantSubscript fromOffset, ConstantSubscript bytes);
 
   // Conversions to constant initializers

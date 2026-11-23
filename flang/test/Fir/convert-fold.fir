@@ -44,3 +44,61 @@ func.func @ptrtest(%0 : !fir.heap<!fir.array<2xf32>>) -> !fir.heap<!fir.array<2x
 // CHECK:           return %[[VAL_0]] : !fir.heap<!fir.array<2xf32>>
   return %2 : !fir.heap<!fir.array<2xf32>>
 }
+
+// CHECK-LABEL: @convert_fold_widen_signed
+func.func @convert_fold_widen_signed() -> i64 {
+  %1 = arith.constant -1 : i32
+  %2 = fir.convert %1 : (i32) -> i64
+  // CHECK-NEXT: %{{.*}} = arith.constant -1 : i64
+  // CHECK-NEXT: return %{{.*}} : i64
+  return %2 : i64
+}
+
+// CHECK-LABEL: @convert_fold_widen_i1
+func.func @convert_fold_widen_i1() -> i32 {
+  %1 = arith.constant true
+  %2 = fir.convert %1 : (i1) -> i32
+  // CHECK-NEXT: %{{.*}} = arith.constant 1 : i32
+  // CHECK-NEXT: return %{{.*}} : i32
+  return %2 : i32
+}
+
+// CHECK-LABEL: @convert_fold_narrow
+func.func @convert_fold_narrow() -> i8 {
+  %1 = arith.constant 258 : i32
+  %2 = fir.convert %1 : (i32) -> i8
+  // CHECK-NEXT: %{{.*}} = arith.constant 2 : i8
+  // CHECK-NEXT: return %{{.*}} : i8
+  return %2 : i8
+}
+
+// The fold composes with arith.index_cast, which already folds a constant, so
+// a value widened and then cast to index becomes a single index constant.
+// CHECK-LABEL: @convert_fold_chain_to_index
+func.func @convert_fold_chain_to_index() -> index {
+  %1 = arith.constant 1 : i32
+  %2 = fir.convert %1 : (i32) -> i64
+  %3 = arith.index_cast %2 : i64 to index
+  // CHECK-NEXT: %{{.*}} = arith.constant 1 : index
+  // CHECK-NOT: fir.convert
+  // CHECK: return %{{.*}} : index
+  return %3 : index
+}
+
+// CHECK-LABEL: @convert_no_fold
+func.func @convert_no_fold(%x : i32) -> i64 {
+  %1 = fir.convert %x : (i32) -> i64
+  // CHECK-NEXT: %[[R:.*]] = fir.convert %{{.*}} : (i32) -> i64
+  // CHECK-NEXT: return %[[R]] : i64
+  return %1 : i64
+}
+
+// An unsigned result is left alone: arith.constant cannot carry it.
+// CHECK-LABEL: @convert_no_fold_unsigned_result
+func.func @convert_no_fold_unsigned_result() -> ui32 {
+  %1 = arith.constant 1 : i32
+  %2 = fir.convert %1 : (i32) -> ui32
+  // CHECK: %[[R:.*]] = fir.convert %{{.*}} : (i32) -> ui32
+  // CHECK: return %[[R]] : ui32
+  return %2 : ui32
+}

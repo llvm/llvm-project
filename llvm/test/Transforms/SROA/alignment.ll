@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes='sroa<preserve-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-PRESERVE-CFG
 ; RUN: opt < %s -passes='sroa<modify-cfg>' -S | FileCheck %s --check-prefixes=CHECK,CHECK-MODIFY-CFG
 ; RUN: opt -passes='debugify,function(sroa<preserve-cfg>)' -S < %s | FileCheck %s -check-prefix CHECK-DEBUGLOC
-; RUN: opt -passes='debugify,function(sroa<preserve-cfg>)' -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix CHECK-DEBUGLOC
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-n8:16:32:64"
 
@@ -23,8 +22,8 @@ define void @test1(ptr %a, ptr %b) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @test1(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 8), [[META14:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9]], !DIExpression(DW_OP_LLVM_fragment, 8, 8), [[META14]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META9:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 8), [[META14:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META9]], !DIExpression(DW_OP_LLVM_fragment, 8, 8), [[META14]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9]], !DIExpression(), [[META14]])
 ; CHECK-DEBUGLOC-NEXT:    [[GEP_A:%.*]] = getelementptr { i8, i8 }, ptr [[A:%.*]], i32 0, i32 0, !dbg [[DBG15:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_A]], [[META11:![0-9]+]], !DIExpression(), [[DBG15]])
@@ -102,7 +101,7 @@ define void @PR13920(ptr %a, ptr %b) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @PR13920(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META37:![0-9]+]], !DIExpression(), [[META38:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META37:![0-9]+]], !DIExpression(), [[META38:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 2, !dbg [[DBG39:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr [[B:%.*]], align 2, !dbg [[DBG40:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    ret void, !dbg [[DBG41:![0-9]+]]
@@ -261,7 +260,7 @@ define void @test7(ptr %out) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @test7(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META86:![0-9]+]], !DIExpression(), [[META90:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META86:![0-9]+]], !DIExpression(), [[META90:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META86]], !DIExpression(), [[META90]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META87:![0-9]+]], !DIExpression(), [[META91:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load double, ptr [[OUT:%.*]], align 1, !dbg [[DBG92:![0-9]+]]

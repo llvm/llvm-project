@@ -9,7 +9,7 @@
 #ifndef liblldb_NativeRegisterContextWindows_h_
 #define liblldb_NativeRegisterContextWindows_h_
 
-#include "Plugins/Process/Utility/NativeRegisterContextRegisterInfo.h"
+#include "Plugins/Register/Native/NativeRegisterContextRegisterInfo.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 
@@ -17,15 +17,16 @@ namespace lldb_private {
 
 class NativeThreadWindows;
 
-class NativeRegisterContextWindows : public NativeRegisterContextRegisterInfo {
+class NativeRegisterContextWindows
+    : public virtual NativeRegisterContextRegisterInfo {
 public:
-  NativeRegisterContextWindows(
-      NativeThreadProtocol &native_thread,
-      RegisterInfoInterface *reg_info_interface_p);
-
   static std::unique_ptr<NativeRegisterContextWindows>
   CreateHostNativeRegisterContextWindows(const ArchSpec &target_arch,
                                          NativeThreadProtocol &native_thread);
+
+  // MSVC compiler deletes the default constructor due to virtual inheritance.
+  // Explicitly defining it ensures the class remains constructible.
+  NativeRegisterContextWindows() {}
 
 protected:
   lldb::thread_t GetThreadHandle() const;

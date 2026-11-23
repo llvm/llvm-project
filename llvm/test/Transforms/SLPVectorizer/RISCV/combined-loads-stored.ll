@@ -5,11 +5,15 @@ define void @test(ptr noalias %p, ptr %p1) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: ptr noalias [[P:%.*]], ptr [[P1:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[L3:%.*]] = load i16, ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 18
+; CHECK-NEXT:    [[L4:%.*]] = load i16, ptr [[GEP3]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[P]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i16>, ptr [[GEP2]], align 2
-; CHECK-NEXT:    [[TMP3:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> poison, <2 x i16> [[TMP1]], i64 0)
-; CHECK-NEXT:    [[TMP5:%.*]] = call <4 x i16> @llvm.vector.insert.v4i16.v2i16(<4 x i16> [[TMP3]], <2 x i16> [[TMP2]], i64 2)
-; CHECK-NEXT:    store <4 x i16> [[TMP5]], ptr [[P1]], align 2
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[P1]], align 2
+; CHECK-NEXT:    [[GEPS2:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 4
+; CHECK-NEXT:    store i16 [[L3]], ptr [[GEPS2]], align 2
+; CHECK-NEXT:    [[GEPS3:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 6
+; CHECK-NEXT:    store i16 [[L4]], ptr [[GEPS3]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %l1 = load i16, ptr %p, align 2

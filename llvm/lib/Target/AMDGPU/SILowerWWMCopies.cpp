@@ -15,9 +15,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "SILowerWWMCopies.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -30,13 +30,28 @@ using namespace llvm;
 
 namespace {
 
-class SILowerWWMCopies : public MachineFunctionPass {
+class SILowerWWMCopies {
+public:
+  SILowerWWMCopies(LiveIntervals *LIS, SlotIndexes *SI, VirtRegMap *VRM)
+      : LIS(LIS), Indexes(SI), VRM(VRM) {}
+  bool run(MachineFunction &MF);
+
+private:
+  bool isSCCLiveAtMI(const MachineInstr &MI);
+  void addToWWMSpills(MachineFunction &MF, Register Reg);
+
+  LiveIntervals *LIS;
+  SlotIndexes *Indexes;
+  VirtRegMap *VRM;
+  const SIRegisterInfo *TRI;
+  SIMachineFunctionInfo *MFI;
+};
+
+class SILowerWWMCopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerWWMCopies() : MachineFunctionPass(ID) {
-    initializeSILowerWWMCopiesPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -49,31 +64,20 @@ public:
     AU.setPreservesAll();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
-
-private:
-  bool isSCCLiveAtMI(const MachineInstr &MI);
-  void addToWWMSpills(MachineFunction &MF, Register Reg);
-
-  LiveIntervals *LIS;
-  SlotIndexes *Indexes;
-  VirtRegMap *VRM;
-  const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
-  SIMachineFunctionInfo *MFI;
 };
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies",
+INITIALIZE_PASS_BEGIN(SILowerWWMCopiesLegacy, DEBUG_TYPE, "SI Lower WWM Copies",
                       false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(VirtRegMapWrapperLegacy)
-INITIALIZE_PASS_END(SILowerWWMCopies, DEBUG_TYPE, "SI Lower WWM Copies", false,
-                    false)
+INITIALIZE_PASS_END(SILowerWWMCopiesLegacy, DEBUG_TYPE, "SI Lower WWM Copies",
+                    false, false)
 
-char SILowerWWMCopies::ID = 0;
+char SILowerWWMCopiesLegacy::ID = 0;
 
-char &llvm::SILowerWWMCopiesID = SILowerWWMCopies::ID;
+char &llvm::SILowerWWMCopiesLegacyID = SILowerWWMCopiesLegacy::ID;
 
 bool SILowerWWMCopies::isSCCLiveAtMI(const MachineInstr &MI) {
   // We can't determine the liveness info if LIS isn't available. Early return
@@ -93,25 +97,45 @@ void SILowerWWMCopies::addToWWMSpills(MachineFunction &MF, Register Reg) {
   if (Reg.isPhysical())
     return;
 
+  // FIXME: VRM may be null here.
   MCRegister PhysReg = VRM->getPhys(Reg);
   assert(PhysReg && "should have allocated a physical register");
 
   MFI->allocateWWMSpill(MF, PhysReg);
 }
 
-bool SILowerWWMCopies::runOnMachineFunction(MachineFunction &MF) {
+bool SILowerWWMCopiesLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
+  auto *LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
+
+  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
+  auto *Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
+
+  auto *VRMWrapper = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>();
+  auto *VRM = VRMWrapper ? &VRMWrapper->getVRM() : nullptr;
+
+  SILowerWWMCopies Impl(LIS, Indexes, VRM);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+SILowerWWMCopiesPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  auto *LIS = MFAM.getCachedResult<LiveIntervalsAnalysis>(MF);
+  auto *Indexes = MFAM.getCachedResult<SlotIndexesAnalysis>(MF);
+  auto *VRM = MFAM.getCachedResult<VirtRegMapAnalysis>(MF);
+
+  SILowerWWMCopies Impl(LIS, Indexes, VRM);
+  Impl.run(MF);
+  return PreservedAnalyses::all();
+}
+
+bool SILowerWWMCopies::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
 
   MFI = MF.getInfo<SIMachineFunctionInfo>();
-  auto *LISWrapper = getAnalysisIfAvailable<LiveIntervalsWrapperPass>();
-  LIS = LISWrapper ? &LISWrapper->getLIS() : nullptr;
-  auto *SIWrapper = getAnalysisIfAvailable<SlotIndexesWrapperPass>();
-  Indexes = SIWrapper ? &SIWrapper->getSI() : nullptr;
-  auto *VRMWrapper = getAnalysisIfAvailable<VirtRegMapWrapperLegacy>();
-  VRM = VRMWrapper ? &VRMWrapper->getVRM() : nullptr;
   TRI = ST.getRegisterInfo();
-  MRI = &MF.getRegInfo();
 
   if (!MFI->hasVRegFlags())
     return false;

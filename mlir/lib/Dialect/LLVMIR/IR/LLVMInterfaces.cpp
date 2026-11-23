@@ -11,7 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
+#include "mlir/IR/TypeUtilities.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;
@@ -62,46 +64,69 @@ mlir::LLVM::detail::verifyAliasAnalysisOpInterface(Operation *op) {
   return isArrayOf<TBAATagAttr>(op, tags);
 }
 
-SmallVector<Value> mlir::LLVM::AtomicCmpXchgOp::getAccessedOperands() {
-  return {getPtr()};
+//===----------------------------------------------------------------------===//
+// TBAAStructOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult mlir::LLVM::detail::verifyTBAAStructOpInterface(Operation *op) {
+  auto iface = cast<TBAAStructOpInterface>(op);
+  ArrayAttr fields = iface.getTBAAStructOrNull();
+  if (!fields)
+    return success();
+
+  if (failed(isArrayOf<TBAAStructFieldAttr>(op, fields)))
+    return failure();
+
+  // Field offsets must be non-decreasing, matching LLVM's verifier rule.
+  // Compare unsigned: LLVM zero-extends the offsets before comparing.
+  std::optional<uint64_t> prevOffset;
+  for (Attribute field : fields) {
+    uint64_t offset = cast<TBAAStructFieldAttr>(field).getOffset();
+    if (prevOffset && offset < *prevOffset)
+      return op->emitOpError(
+          "tbaa.struct field offsets must be non-decreasing");
+    prevOffset = offset;
+  }
+  return success();
 }
 
-SmallVector<Value> mlir::LLVM::AtomicRMWOp::getAccessedOperands() {
-  return {getPtr()};
+//===----------------------------------------------------------------------===//
+// DereferenceableOpInterface
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+mlir::LLVM::detail::verifyDereferenceableOpInterface(Operation *op) {
+  auto iface = cast<DereferenceableOpInterface>(op);
+
+  if (auto derefAttr = iface.getDereferenceableOrNull())
+    if (op->getNumResults() != 1 ||
+        !mlir::isa<LLVMPointerType>(op->getResult(0).getType()))
+      return op->emitOpError(
+          "expected op to return a single LLVM pointer type");
+
+  return success();
 }
 
-SmallVector<Value> mlir::LLVM::LoadOp::getAccessedOperands() {
-  return {getAddr()};
-}
+//===----------------------------------------------------------------------===//
+// RangeOpInterface
+//===----------------------------------------------------------------------===//
 
-SmallVector<Value> mlir::LLVM::StoreOp::getAccessedOperands() {
-  return {getAddr()};
-}
+LogicalResult mlir::LLVM::detail::verifyRangeOpInterface(Operation *op) {
+  auto iface = cast<RangeOpInterface>(op);
 
-SmallVector<Value> mlir::LLVM::MemcpyOp::getAccessedOperands() {
-  return {getDst(), getSrc()};
-}
-
-SmallVector<Value> mlir::LLVM::MemcpyInlineOp::getAccessedOperands() {
-  return {getDst(), getSrc()};
-}
-
-SmallVector<Value> mlir::LLVM::MemmoveOp::getAccessedOperands() {
-  return {getDst(), getSrc()};
-}
-
-SmallVector<Value> mlir::LLVM::MemsetOp::getAccessedOperands() {
-  return {getDst()};
-}
-
-SmallVector<Value> mlir::LLVM::MemsetInlineOp::getAccessedOperands() {
-  return {getDst()};
-}
-
-SmallVector<Value> mlir::LLVM::CallOp::getAccessedOperands() {
-  return llvm::filter_to_vector(getArgOperands(), [](Value arg) {
-    return isa<LLVMPointerType>(arg.getType());
-  });
+  ConstantRangeAttr range = iface.getRangeOrNull();
+  if (!range)
+    return success();
+  if (op->getNumResults() != 1)
+    return op->emitOpError("expected op to have a single result");
+  auto intType =
+      dyn_cast<IntegerType>(getElementTypeOrSelf(op->getResult(0).getType()));
+  if (!intType || intType.getWidth() != range.getLower().getBitWidth())
+    return op->emitOpError(
+        "expected range bitwidth to match the integer (element) result type");
+  if (range.getLower() == range.getUpper())
+    return op->emitOpError("expected range to be neither empty nor full");
+  return success();
 }
 
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.cpp.inc"

@@ -4,7 +4,7 @@
 
 program test_atomic_cas
   use iso_fortran_env, only: atomic_int_kind, atomic_logical_kind
-  implicit none
+  implicit none(external, type)
 
   integer(kind=atomic_int_kind) :: int_scalar_coarray[*], non_scalar_coarray(10)[*], non_coarray
   integer(kind=atomic_int_kind) :: repeated_atom[*], array(10)
@@ -51,13 +51,13 @@ program test_atomic_cas
   call atomic_cas(non_scalar_coarray, old_int, compare_int, new_int)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
-  call atomic_cas(non_scalar_coarray[1], old_int, compare_int, new_int)
+  call atomic_cas(non_scalar_coarray(:)[1], old_int, compare_int, new_int)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
   call atomic_cas(non_scalar_logical_coarray, old_logical, compare_logical, new_logical)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
-  call atomic_cas(non_scalar_logical_coarray[1], old_logical, compare_logical, new_logical)
+  call atomic_cas(non_scalar_logical_coarray(:)[1], old_logical, compare_logical, new_logical)
 
   !ERROR: 'atom=' argument must be a scalar coarray or coindexed object for intrinsic 'atomic_cas'
   call atomic_cas(non_coarray, old_int, compare_int, new_int)
@@ -70,16 +70,16 @@ program test_atomic_cas
 
 ! mismatches where 'atom' has wrong kind
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(4)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(4)'
   call atomic_cas(default_kind_coarray, old_int, compare_int, new_int)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'INTEGER(1)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind, but is 'INTEGER(1)'
   call atomic_cas(kind1_coarray, old_int, compare_int, new_int)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(4)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_logical_kind, but is 'LOGICAL(4)'
   call atomic_cas(default_kind_logical_coarray, old_logical, compare_logical, new_logical)
 
-  !ERROR: Actual argument for 'atom=' must have kind=atomic_int_kind or atomic_logical_kind, but is 'LOGICAL(1)'
+  !ERROR: Actual argument for 'atom=' must have kind=atomic_logical_kind, but is 'LOGICAL(1)'
   call atomic_cas(kind1_logical_coarray, old_logical, compare_logical, new_logical)
 
 ! mismatch where 'atom' has wrong type

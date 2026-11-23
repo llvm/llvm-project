@@ -5,6 +5,7 @@
 // RUN: %llvm_jitlink -ObjC %t/force-objc.o -L%t -lFooClass
 //
 // REQUIRES: system-darwin && host-arch-compatible
+// UNSUPPORTED: host-jit-triple=arm64e-{{.*}}
 
 id objc_getClass(const char *name);
 

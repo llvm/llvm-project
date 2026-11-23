@@ -93,3 +93,8 @@ label1 : {
   return 0;
 }
 
+namespace GH139360 {
+void f(){
+#pragma omp cancel( // expected-error {{one of 'for', 'parallel', 'sections' or 'taskgroup' is expected}}
+}
+} // namesapce GH139360

@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+zbkb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBKB
 
-declare i32 @llvm.riscv.brev8(i32);
-
 define i32 @brev8(i32 %a) nounwind {
 ; RV32ZBKB-LABEL: brev8:
 ; RV32ZBKB:       # %bb.0:
@@ -25,8 +23,6 @@ define zeroext i16 @brev8_knownbits(i16 zeroext %a) nounwind {
   ret i16 %trunc
 }
 
-declare i32 @llvm.bswap.i32(i32)
-
 define i32 @rev8_i32(i32 %a) nounwind {
 ; RV32ZBKB-LABEL: rev8_i32:
 ; RV32ZBKB:       # %bb.0:
@@ -36,8 +32,6 @@ define i32 @rev8_i32(i32 %a) nounwind {
   ret i32 %1
 }
 
-declare i32 @llvm.riscv.zip(i32);
-
 define i32 @zip(i32 %a) nounwind {
 ; RV32ZBKB-LABEL: zip:
 ; RV32ZBKB:       # %bb.0:
@@ -46,8 +40,6 @@ define i32 @zip(i32 %a) nounwind {
   %val = call i32 @llvm.riscv.zip(i32 %a)
   ret i32 %val
 }
-
-declare i32 @llvm.riscv.unzip(i32);
 
 define i32 @unzip(i32 %a) nounwind {
 ; RV32ZBKB-LABEL: unzip:

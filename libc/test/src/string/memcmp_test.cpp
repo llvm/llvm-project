@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/signal_macros.h"
 #include "memory_utils/memory_check_utils.h"
 #include "src/__support/macros/config.h"
 #include "src/string/memcmp.h"
@@ -64,5 +65,14 @@ TEST(LlvmLibcMemcmpTest, SizeSweep) {
     ASSERT_TRUE(OK);
   }
 }
+
+#if defined(LIBC_ADD_NULL_CHECKS)
+
+TEST(LlvmLibcMemcmpTest, CrashOnNullPtr) {
+  ASSERT_DEATH([]() { LIBC_NAMESPACE::memcmp(nullptr, nullptr, 1); },
+               WITH_SIGNAL(-1));
+}
+
+#endif // defined(LIBC_ADD_NULL_CHECKS)
 
 } // namespace LIBC_NAMESPACE_DECL

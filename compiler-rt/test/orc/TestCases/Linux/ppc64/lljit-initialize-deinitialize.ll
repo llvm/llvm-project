@@ -1,5 +1,8 @@
 ; RUN: %lli_orc_jitlink %s | FileCheck %s
 
+; REQUIRES: disabled
+;; https://github.com/llvm/llvm-project/issues/175094
+
 ; CHECK: constructor
 ; CHECK-NEXT: main
 ; CHECK-NEXT: destructor

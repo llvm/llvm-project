@@ -27,6 +27,8 @@ static StringRef getName(Value *V) {
 static void insertIfNamed(SetVector<Value *> &Values, Value *V) {
   if (!V->hasName())
     return;
+  if (!V->getType()->isPointerTy())
+    return;
   Values.insert(V);
 }
 

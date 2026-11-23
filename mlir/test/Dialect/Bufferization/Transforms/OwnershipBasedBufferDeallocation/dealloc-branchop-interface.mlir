@@ -593,3 +593,28 @@ func.func @blocks_not_preordered_by_dominance() {
 //  CHECK-NEXT:   [[ALLOC]] = memref.alloc()
 //  CHECK-NEXT:   cf.br [[BB2]]
 //  CHECK-NEXT: }
+
+// -----
+
+// Regression test: a block that contains both a structured loop
+// (RegionBranchOpInterface) with iter_args and an explicit cf.br
+// (BranchOpInterface) must not crash. The pass used to use-after-free when
+// accessing the liveness info after the loop op was replaced by
+// appendOpResults.
+// https://github.com/llvm/llvm-project/issues/119863
+
+// CHECK-LABEL: func @region_branch_op_followed_by_cf_br
+func.func @region_branch_op_followed_by_cf_br(%arg0: f32) -> f32 {
+  cf.br ^bb1
+^bb1:
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  %0 = scf.for %iv = %c0 to %c10 step %c1 iter_args(%acc = %arg0) -> f32 {
+    %1 = arith.addf %acc, %acc : f32
+    scf.yield %1 : f32
+  }
+  cf.br ^bb2
+^bb2:
+  return %0 : f32
+}

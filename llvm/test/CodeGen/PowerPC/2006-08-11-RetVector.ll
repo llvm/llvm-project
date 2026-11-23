@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-disable-perfect-shuffle=false | grep vsldoi
-; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-disable-perfect-shuffle=false | not grep vor
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-perfect-shuffle | grep vsldoi
+; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5 -ppc-perfect-shuffle | not grep vor
 
 ; TODO: Fix this case when disabling perfect shuffle
 

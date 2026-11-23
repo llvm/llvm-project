@@ -16,14 +16,16 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <cstddef>
 
 namespace llvm {
 
 /// SmallString - A SmallString is just a SmallVector with methods and accessors
 /// that make it work better as a string (e.g. operator+ etc).
-template<unsigned InternalLen>
-class SmallString : public SmallVector<char, InternalLen> {
+template <unsigned InternalLen>
+class LLVM_ATTRIBUTE_WARN_UNUSED SmallString
+    : public SmallVector<char, InternalLen> {
 public:
   /// Default ctor - Initialize to empty.
   SmallString() = default;
@@ -121,10 +123,24 @@ public:
     return str().starts_with(Prefix);
   }
 
+  /// starts_with - Check if this string starts with the given character \p C.
+  [[nodiscard]] bool starts_with(char C) const { return str().starts_with(C); }
+
   /// ends_with - Check if this string ends with the given \p Suffix.
   [[nodiscard]] bool ends_with(StringRef Suffix) const {
     return str().ends_with(Suffix);
   }
+
+  /// ends_with - Check if this string ends with the given character \p C.
+  [[nodiscard]] bool ends_with(char C) const { return str().ends_with(C); }
+
+  /// contains - Check if \p Other is a substring of this string.
+  [[nodiscard]] bool contains(StringRef Other) const {
+    return str().contains(Other);
+  }
+
+  /// contains - Check if this string contains the character \p C.
+  [[nodiscard]] bool contains(char C) const { return str().contains(C); }
 
   /// @}
   /// @name String Searching

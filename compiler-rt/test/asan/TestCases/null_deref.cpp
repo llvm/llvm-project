@@ -3,7 +3,9 @@
 // RUN: %clangxx_asan -O2 %s -o %t && not %run %t 2>&1 | FileCheck %s
 // RUN: %clangxx_asan -O3 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
-__attribute__((noinline))
+#include "defines.h"
+
+ATTRIBUTE_NOINLINE
 // FIXME: Static symbols don't show up in PDBs. We can remove this once we start
 // using DWARF.
 #ifndef _MSC_VER

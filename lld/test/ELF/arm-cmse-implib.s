@@ -6,10 +6,10 @@
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.base implib-v1 -I %S/Inputs -o 1.o
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj --triple=thumbv8m.base implib-v2 -I %S/Inputs -o 2.o
 
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o 1 app.o --out-implib=1.lib --cmse-implib 1.o
+// RUN: ld.lld --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o 1 app.o --out-implib=1.lib --cmse-implib 1.o
 // RUN: llvm-readelf -s 1 1.lib | FileCheck %s --check-prefixes=CHECK1
 
-// RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o 2 app.o --out-implib=2.lib --in-implib=1.lib --cmse-implib 2.o
+// RUN: ld.lld --image-base=0x8000 -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 -o 2 app.o --out-implib=2.lib --in-implib=1.lib --cmse-implib 2.o
 // RUN: llvm-readelf -s 2 2.lib | FileCheck %s --check-prefixes=CHECK2
 
 //--- app

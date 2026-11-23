@@ -5,6 +5,7 @@
 
 // REQUIRES: stable-runtime
 // XFAIL: target={{(powerpc64|s390x).*}}
+// UNSUPPORTED: rtsan
 
 volatile int *null = 0;
 

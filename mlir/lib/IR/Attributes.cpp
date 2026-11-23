@@ -46,6 +46,12 @@ NamedAttribute::NamedAttribute(StringAttr name, Attribute value)
   assert(!name.empty() && "expected valid attribute name");
 }
 
+NamedAttribute::NamedAttribute(StringRef name, Attribute value) : value(value) {
+  assert(value && "expected valid attribute value");
+  assert(!name.empty() && "expected valid attribute name");
+  this->name = StringAttr::get(value.getContext(), name);
+}
+
 StringAttr NamedAttribute::getName() const {
   return llvm::cast<StringAttr>(name);
 }

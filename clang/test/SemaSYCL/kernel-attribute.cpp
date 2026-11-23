@@ -1,17 +1,17 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -fsycl-is-device -verify %s
 
 // Only function templates
-[[clang::sycl_kernel]] int gv2 = 0; // expected-warning {{'sycl_kernel' attribute only applies to function templates}}
+[[clang::sycl_kernel]] int gv2 = 0; // expected-warning {{'clang::sycl_kernel' attribute only applies to function templates}}
 __attribute__((sycl_kernel)) int gv3 = 0; // expected-warning {{'sycl_kernel' attribute only applies to function templates}}
 
 __attribute__((sycl_kernel)) void foo(); // expected-warning {{'sycl_kernel' attribute only applies to function templates}}
-[[clang::sycl_kernel]] void foo1(); // expected-warning {{'sycl_kernel' attribute only applies to function templates}}
+[[clang::sycl_kernel]] void foo1(); // expected-warning {{'clang::sycl_kernel' attribute only applies to function templates}}
 
 // Attribute takes no arguments
 template <typename T, typename A>
 __attribute__((sycl_kernel(1))) void foo(T P); // expected-error {{'sycl_kernel' attribute takes no arguments}}
 template <typename T, typename A, int I>
-[[clang::sycl_kernel(1)]] void foo1(T P);// expected-error {{'sycl_kernel' attribute takes no arguments}}
+[[clang::sycl_kernel(1)]] void foo1(T P);// expected-error {{'clang::sycl_kernel' attribute takes no arguments}}
 
 // At least two template parameters
 template <typename T>

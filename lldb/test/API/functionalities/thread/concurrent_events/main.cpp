@@ -19,7 +19,17 @@ typedef std::vector<pthread_t> thread_vector;
 pseudo_barrier_t g_barrier;
 int g_breakpoint = 0;
 int g_sigusr1_count = 0;
-uint32_t g_watchme;
+
+// Hardware watchpoints round the watched address/size to an alignment
+// boundary, so a watchpoint on a plain global could end up covering a
+// neighboring global too. Group the watched data with trailing padding in a
+// single aligned struct so the compiler is guaranteed to lay them out
+// together and nothing else can share the watchpoint's range.
+#define WATCHPOINT_SIZE 16
+struct alignas(WATCHPOINT_SIZE) WatchMePadding {
+  uint32_t data;
+  char padding_after[WATCHPOINT_SIZE];
+} g_watchme;
 
 struct action_args {
   int delay;
@@ -64,7 +74,7 @@ watchpoint_func (void *input) {
     pseudo_barrier_wait(g_barrier);
     do_action_args(input);
 
-    g_watchme = 1;     // watchpoint triggers here
+    g_watchme.data = 1; // watchpoint triggers here
     return 0;
 }
 
@@ -112,61 +122,63 @@ void start_threads(thread_vector& threads,
 
 int dotest()
 {
-    g_watchme = 0;
+  g_watchme.data = 0;
 
-    // Actions are triggered immediately after the thread is spawned
-    unsigned num_breakpoint_threads = 1;
-    unsigned num_watchpoint_threads = 0;
-    unsigned num_signal_threads = 1;
-    unsigned num_crash_threads = 0;
+  // Actions are triggered immediately after the thread is spawned
+  unsigned num_breakpoint_threads = 1;
+  unsigned num_watchpoint_threads = 0;
+  unsigned num_signal_threads = 1;
+  unsigned num_crash_threads = 0;
 
-    // Actions below are triggered after a 1-second delay
-    unsigned num_delay_breakpoint_threads = 0;
-    unsigned num_delay_watchpoint_threads = 0;
-    unsigned num_delay_signal_threads = 0;
-    unsigned num_delay_crash_threads = 0;
+  // Actions below are triggered after a 1-second delay
+  unsigned num_delay_breakpoint_threads = 0;
+  unsigned num_delay_watchpoint_threads = 0;
+  unsigned num_delay_signal_threads = 0;
+  unsigned num_delay_crash_threads = 0;
 
-    register_signal_handler(SIGUSR1, sigusr1_handler); // Break here and adjust num_[breakpoint|watchpoint|signal|crash]_threads
+  // clang-format off
+  register_signal_handler(SIGUSR1, sigusr1_handler); // Break here and adjust num_[breakpoint|watchpoint|signal|crash]_threads
+  // clang-format on
 
-    unsigned total_threads = num_breakpoint_threads \
-                             + num_watchpoint_threads \
-                             + num_signal_threads \
-                             + num_crash_threads \
-                             + num_delay_breakpoint_threads \
-                             + num_delay_watchpoint_threads \
-                             + num_delay_signal_threads \
-                             + num_delay_crash_threads;
+  unsigned total_threads = num_breakpoint_threads + num_watchpoint_threads +
+                           num_signal_threads + num_crash_threads +
+                           num_delay_breakpoint_threads +
+                           num_delay_watchpoint_threads +
+                           num_delay_signal_threads + num_delay_crash_threads;
 
-    // Don't let either thread do anything until they're both ready.
-    pseudo_barrier_init(g_barrier, total_threads);
+  // Don't let either thread do anything until they're both ready.
+  pseudo_barrier_init(g_barrier, total_threads);
 
-    action_counts actions;
-    actions.push_back(std::make_pair(num_breakpoint_threads, breakpoint_func));
-    actions.push_back(std::make_pair(num_watchpoint_threads, watchpoint_func));
-    actions.push_back(std::make_pair(num_signal_threads, signal_func));
-    actions.push_back(std::make_pair(num_crash_threads, crash_func));
+  action_counts actions;
+  actions.push_back(std::make_pair(num_breakpoint_threads, breakpoint_func));
+  actions.push_back(std::make_pair(num_watchpoint_threads, watchpoint_func));
+  actions.push_back(std::make_pair(num_signal_threads, signal_func));
+  actions.push_back(std::make_pair(num_crash_threads, crash_func));
 
-    action_counts delay_actions;
-    delay_actions.push_back(std::make_pair(num_delay_breakpoint_threads, breakpoint_func));
-    delay_actions.push_back(std::make_pair(num_delay_watchpoint_threads, watchpoint_func));
-    delay_actions.push_back(std::make_pair(num_delay_signal_threads, signal_func));
-    delay_actions.push_back(std::make_pair(num_delay_crash_threads, crash_func));
+  action_counts delay_actions;
+  delay_actions.push_back(
+      std::make_pair(num_delay_breakpoint_threads, breakpoint_func));
+  delay_actions.push_back(
+      std::make_pair(num_delay_watchpoint_threads, watchpoint_func));
+  delay_actions.push_back(
+      std::make_pair(num_delay_signal_threads, signal_func));
+  delay_actions.push_back(std::make_pair(num_delay_crash_threads, crash_func));
 
-    // Create threads that handle instant actions
-    thread_vector threads;
-    start_threads(threads, actions);
+  // Create threads that handle instant actions
+  thread_vector threads;
+  start_threads(threads, actions);
 
-    // Create threads that handle delayed actions
-    action_args delay_arg;
-    delay_arg.delay = 1;
-    start_threads(threads, delay_actions, &delay_arg);
+  // Create threads that handle delayed actions
+  action_args delay_arg;
+  delay_arg.delay = 1;
+  start_threads(threads, delay_actions, &delay_arg);
 
-    // Join all threads
-    typedef std::vector<pthread_t>::iterator thread_iterator;
-    for(thread_iterator t = threads.begin(); t != threads.end(); ++t)
-        pthread_join(*t, 0);
+  // Join all threads
+  typedef std::vector<pthread_t>::iterator thread_iterator;
+  for (thread_iterator t = threads.begin(); t != threads.end(); ++t)
+    pthread_join(*t, 0);
 
-    return 0;
+  return 0;
 }
 
 int main ()

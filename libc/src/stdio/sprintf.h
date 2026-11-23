@@ -14,6 +14,8 @@
 namespace LIBC_NAMESPACE_DECL {
 
 int sprintf(char *__restrict buffer, const char *__restrict format, ...);
+int __sprintf_modular(char *__restrict buffer, const char *__restrict format,
+                      ...);
 
 } // namespace LIBC_NAMESPACE_DECL
 

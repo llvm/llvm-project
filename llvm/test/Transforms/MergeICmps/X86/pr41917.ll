@@ -7,13 +7,13 @@ target triple = "i386-pc-windows-msvc19.11.0"
 %class.a = type { i32, i32, i32, i32, i32 }
 
 ; Function Attrs: nounwind optsize
-define dso_local zeroext i1 @pr41917(ptr byval(%class.a) nocapture readonly align 4 %g, ptr byval(%class.a) nocapture readonly align 4 %p2) local_unnamed_addr #0 {
+define dso_local zeroext i1 @pr41917(ptr byval(%class.a) nocapture readonly align 4 %g, ptr byval(%class.a) nocapture readonly align 4 %p2) local_unnamed_addr {
 ; CHECK-LABEL: @pr41917(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2() #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call zeroext i1 @f2()
 ; CHECK-NEXT:    br i1 [[CALL]], label [[LAND_RHS:%.*]], label %"land.end+land.rhs3"
 ; CHECK:       land.rhs:
-; CHECK-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @f2() #[[ATTR3]]
+; CHECK-NEXT:    [[CALL1:%.*]] = tail call zeroext i1 @f2()
 ; CHECK-NEXT:    br label %"land.end+land.rhs3"
 ; CHECK:       "land.end+land.rhs3":
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [[CLASS_A:%.*]], ptr [[G:%.*]], i32 0, i32 1
@@ -25,11 +25,11 @@ define dso_local zeroext i1 @pr41917(ptr byval(%class.a) nocapture readonly alig
 ; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
 entry:
-  %call = tail call zeroext i1 @f2() #2
+  %call = tail call zeroext i1 @f2()
   br i1 %call, label %land.rhs, label %land.end
 
 land.rhs:                                         ; preds = %entry
-  %call1 = tail call zeroext i1 @f2() #2
+  %call1 = tail call zeroext i1 @f2()
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
@@ -53,11 +53,7 @@ land.end6:                                        ; preds = %land.rhs3, %land.en
   ret i1 %4
 }
 
-declare dso_local zeroext i1 @f2() local_unnamed_addr #1
-
-attributes #0 = { nounwind optsize "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { optsize "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind optsize }
+declare dso_local zeroext i1 @f2() local_unnamed_addr
 
 !llvm.module.flags = !{!0, !1}
 !llvm.ident = !{!2}

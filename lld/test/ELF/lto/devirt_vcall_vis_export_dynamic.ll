@@ -5,20 +5,24 @@
 
 ;; Index based WPD
 ;; Generate unsplit module with summary for ThinLTO index-based WPD.
-; RUN: opt --thinlto-bc -o %t2.o %s
+; RUN: opt --passes=assign-guid --thinlto-bc -o %t2.o %s
 ; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
+;; --export-dynamic without .dynsym does not prevent devirtualization.
+; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN:   -mllvm -pass-remarks=. \
+; RUN:   --export-dynamic 2>&1 | FileCheck %s --check-prefix=REMARK
 
 ;; Hybrid WPD
 ;; Generate split module with summary for hybrid Thin/Regular LTO WPD.
-; RUN: opt --thinlto-bc --thinlto-split-lto-unit -o %t.o %s
+; RUN: opt --passes=assign-guid --thinlto-bc --thinlto-split-lto-unit -o %t.o %s
 ; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
 
 ;; Regular LTO WPD
-; RUN: opt -o %t4.o %s
+; RUN: opt --passes=assign-guid -o %t4.o %s
 ; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck %s --check-prefix=REMARK
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-IR
@@ -28,20 +32,25 @@
 
 ;; Check that all WPD fails with --export-dynamic.
 
+; RUN: echo '.globl foo; foo:' > %ta.s
+; RUN: llvm-mc -filetype=obj -triple=x86_64 %ta.s -o %ta.o
+; RUN: ld.lld -shared -soname=ta %ta.o -o %ta.so
+
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-NODEVIRT-IR
@@ -49,19 +58,19 @@
 ;; Check that WPD fails for target _ZN1D1mEi with --export-dynamic-symbol=_ZTV1D.
 
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --export-dynamic-symbol=_ZTV1D 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
@@ -74,19 +83,19 @@
 ; RUN: echo "{ _ZTV1D; };" > %t.list
 
 ;; Index based WPD
-; RUN: ld.lld %t2.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t2.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t2.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Hybrid WPD
-; RUN: ld.lld %t.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t.o.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
 
 ;; Regular LTO WPD
-; RUN: ld.lld %t4.o -o %t3 -save-temps --lto-whole-program-visibility \
+; RUN: ld.lld %t4.o %ta.so -o %t3 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. \
 ; RUN:   --dynamic-list=%t.list 2>&1 | FileCheck %s --check-prefix=REMARK-AONLY
 ; RUN: llvm-dis %t3.0.4.opt.bc -o - | FileCheck %s --check-prefix=CHECK-AONLY-IR
@@ -98,19 +107,19 @@
 ;; preemption, even without any options.
 
 ;; Index based WPD
-; RUN: opt -relocation-model=pic --thinlto-bc -o %t5.o %s
+; RUN: opt --passes=assign-guid -relocation-model=pic --thinlto-bc -o %t5.o %s
 ; RUN: ld.lld %t5.o -o %t5.so -shared
 ; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
 ;; Hybrid WPD
-; RUN: opt -relocation-model=pic --thinlto-bc --thinlto-split-lto-unit -o %t5.o %s
+; RUN: opt --passes=assign-guid -relocation-model=pic --thinlto-bc --thinlto-split-lto-unit -o %t5.o %s
 ; RUN: ld.lld %t5.o -o %t5.so -shared
 ; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty
 
 ;; Regular LTO WPD
-; RUN: opt -relocation-model=pic -o %t5.o %s
+; RUN: opt --passes=assign-guid -relocation-model=pic -o %t5.o %s
 ; RUN: ld.lld %t5.o -o %t5.so -shared
 ; RUN: ld.lld %t5.o %t5.so -o %t5 -save-temps --lto-whole-program-visibility \
 ; RUN:   -mllvm -pass-remarks=. 2>&1 | FileCheck /dev/null --implicit-check-not single-impl --allow-empty

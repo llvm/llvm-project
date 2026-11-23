@@ -46,4 +46,29 @@ namespace test3 {
   }
 }
 
+// Ensure volatile is preserved during derived-to-base conversion. 
+namespace PR127683 {
+
+struct Base {
+  int Val;
+};
+  
+struct Derived : Base { };
+  
+volatile Derived Obj;
+
+// CHECK-LABEL: define void @_ZN8PR12768319test_volatile_storeEv()
+// CHECK:         store volatile i32 0, ptr @_ZN8PR1276833ObjE, align 4
+void test_volatile_store() {
+  Obj.Val = 0;
+}
+
+// CHECK-LABEL: define void @_ZN8PR12768318test_volatile_loadEv()
+// CHECK:         %0 = load volatile i32, ptr @_ZN8PR1276833ObjE, align 4
+void test_volatile_load() {
+  [[maybe_unused]] int Val = Obj.Val;
+}
+
+}
+
 // CHECK: attributes [[NUW]] = { mustprogress noinline nounwind{{.*}} }

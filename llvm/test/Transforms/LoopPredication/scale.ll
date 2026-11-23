@@ -7,7 +7,7 @@
 ; Predicate is profitable when the scale factor is 2 and not profitable if it's less than 2.
 define i64 @predicate_eq_ones(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-PROF-LABEL: define i64 @predicate_eq_ones(
-; CHECK-PROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CHECK-PROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-PROF-NEXT:  entry:
 ; CHECK-PROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-PROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4
@@ -36,7 +36,7 @@ define i64 @predicate_eq_ones(ptr nocapture readonly %arg, i32 %length, ptr noca
 ; CHECK-PROF-NEXT:    ret i64 [[RESULT_LE]]
 ;
 ; CHECK-NOTPROF-LABEL: define i64 @predicate_eq_ones(
-; CHECK-NOTPROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CHECK-NOTPROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NOTPROF-NEXT:  entry:
 ; CHECK-NOTPROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-NOTPROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4
@@ -90,7 +90,7 @@ exit:                                             ; preds = %Header
 ; Same as the previous one, but with zero weights (should be treated as if no profile - equal probability)
 define i64 @predicate_eq_zeroes(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-PROF-LABEL: define i64 @predicate_eq_zeroes(
-; CHECK-PROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
+; CHECK-PROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
 ; CHECK-PROF-NEXT:  entry:
 ; CHECK-PROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-PROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4
@@ -119,7 +119,7 @@ define i64 @predicate_eq_zeroes(ptr nocapture readonly %arg, i32 %length, ptr no
 ; CHECK-PROF-NEXT:    ret i64 [[RESULT_LE]]
 ;
 ; CHECK-NOTPROF-LABEL: define i64 @predicate_eq_zeroes(
-; CHECK-NOTPROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
+; CHECK-NOTPROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
 ; CHECK-NOTPROF-NEXT:  entry:
 ; CHECK-NOTPROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-NOTPROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4
@@ -173,7 +173,7 @@ exit:                                             ; preds = %Header
 ; No profile on br in Header
 define i64 @predicate_eq_none(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-PROF-LABEL: define i64 @predicate_eq_none(
-; CHECK-PROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
+; CHECK-PROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
 ; CHECK-PROF-NEXT:  entry:
 ; CHECK-PROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-PROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4
@@ -202,7 +202,7 @@ define i64 @predicate_eq_none(ptr nocapture readonly %arg, i32 %length, ptr noca
 ; CHECK-PROF-NEXT:    ret i64 [[RESULT_LE]]
 ;
 ; CHECK-NOTPROF-LABEL: define i64 @predicate_eq_none(
-; CHECK-NOTPROF-SAME: ptr nocapture readonly [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr nocapture readonly [[ARG2:%.*]], ptr nocapture readonly [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
+; CHECK-NOTPROF-SAME: ptr readonly captures(none) [[ARG:%.*]], i32 [[LENGTH:%.*]], ptr readonly captures(none) [[ARG2:%.*]], ptr readonly captures(none) [[N_ADDR:%.*]], i64 [[I:%.*]]) !prof [[PROF0]] {
 ; CHECK-NOTPROF-NEXT:  entry:
 ; CHECK-NOTPROF-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH]] to i64
 ; CHECK-NOTPROF-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR]], align 4

@@ -11,7 +11,7 @@ define i8 @foo(i8 signext %a) {
 }
 
 define i8 @bar(i8 zeroext %a) {
-; CHECK: ld.param.u8
+; CHECK: ld.param.b8
   %ret = add i8 %a, 3
   ret i8 %ret
 }

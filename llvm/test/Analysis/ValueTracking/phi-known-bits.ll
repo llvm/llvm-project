@@ -936,7 +936,7 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP(ptr %val1) {
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TEST_0_I]] = getelementptr i8, ptr [[A_PN_I]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
@@ -970,7 +970,7 @@ define i1 @recursiveGEP_withPtrSub_scalableGEP_inbounds(ptr %val1) {
 ; CHECK:       while.cond.i:
 ; CHECK-NEXT:    [[A_PN_I:%.*]] = phi ptr [ [[TEST_0_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1:%.*]], [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[TEST_0_I]] = getelementptr inbounds i8, ptr [[A_PN_I]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TEST_0_I]], align 1
 ; CHECK-NEXT:    [[CMP3_NOT_I:%.*]] = icmp eq i8 [[TMP2]], 0
@@ -1111,4 +1111,339 @@ if.end4:
 cleanup:
   %retval.0 = phi i1 [ %cmp, %if.then ], [ %tobool, %if.end4 ]
   ret i1 %retval.0
+}
+
+
+define i32 @issue_124275_wrong_br_direction(i32 noundef %inp) {
+; CHECK-LABEL: @issue_124275_wrong_br_direction(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i32 [[INP:%.*]], -2
+; CHECK-NEXT:    [[XOR_INP_NEG:%.*]] = add i32 [[TMP0]], 1
+; CHECK-NEXT:    [[CMP_NE_NOT:%.*]] = icmp eq i32 [[XOR_INP_NEG]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_NOT]], label [[B1:%.*]], label [[B0:%.*]]
+; CHECK:       B0:
+; CHECK-NEXT:    [[PHI_B0:%.*]] = phi i32 [ [[PHI_B1:%.*]], [[B1]] ], [ [[XOR_INP_NEG]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    br label [[B1]]
+; CHECK:       B1:
+; CHECK-NEXT:    [[PHI_B1]] = phi i32 [ [[PHI_B0]], [[B0]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP_NE_B1_NOT:%.*]] = icmp eq i32 [[PHI_B1]], 0
+; CHECK-NEXT:    br i1 [[CMP_NE_B1_NOT]], label [[B0]], label [[END:%.*]]
+; CHECK:       end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %xor_inp = xor i32 %inp, 1
+  %sub = sub i32 0, %xor_inp
+  %cmp_ne = icmp ne i32 %sub, 0
+  br i1 %cmp_ne, label %B0, label %B1
+
+B0:
+  %phi_B0 = phi i32 [ %phi_B1, %B1 ], [ %sub, %entry ]
+  br label %B1
+
+B1:
+  %phi_B1 = phi i32 [ %phi_B0, %B0 ], [ 0, %entry ]
+  %cmp_ne_B1 = icmp ne i32 %phi_B1, 0
+  %cmp_eq_B1 = xor i1 %cmp_ne_B1, true
+  br i1 %cmp_eq_B1, label %B0, label %end
+
+end:
+  ret i32 0
+}
+
+;=================================================================================
+; Test bounds where phi-input is guarded by a comparison with a variable bound.
+;=================================================================================
+
+; Loop guard with variable bound: %n64 = zext i32 %n has 32 leading zeros.
+; Guard: icmp ult %iv.next, %n64 implies %iv.next < 2^32 on the backedge,
+; giving %iv 32 leading zeros and enabling nuw nsw on the add.
+define void @loop_phi_variable_bound_zext_i64(i32 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_zext_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N64:%.*]] = zext i32 [[N:%.*]] to i64
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i64 [[IV_NEXT]], [[N64]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n64 = zext i32 %n to i64
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  store i64 %iv, ptr %p
+  %cmp = icmp ult i64 %iv.next, %n64
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Negative test: bound is arbitrary i64, no leading zeros derivable.
+define void @loop_phi_variable_bound_no_lz_i64(i64 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_no_lz_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i64 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i64 %iv, 1
+  store i64 %iv, ptr %p
+  %cmp = icmp ult i64 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Loop guard with variable bound: %n32 = zext i16 %n has 16 leading zeros.
+; Guard: icmp ult %iv.next, %n32 implies %iv.next < 2^16 on the backedge,
+; giving %iv 16 leading zeros and enabling nuw nsw on the add.
+define void @loop_phi_variable_bound_zext_i32(i16 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_zext_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N32:%.*]] = zext i16 [[N:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
+; CHECK-NEXT:    store i32 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[IV_NEXT]], [[N32]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n32 = zext i16 %n to i32
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  store i32 %iv, ptr %p
+  %cmp = icmp ult i32 %iv.next, %n32
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Negative test: bound is arbitrary i32, no leading zeros derivable.
+define void @loop_phi_variable_bound_no_lz_i32(i32 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_no_lz_i32(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
+; CHECK-NEXT:    store i32 [[IV]], ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i32 %iv, 1
+  store i32 %iv, ptr %p
+  %cmp = icmp ult i32 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Loop guard with variable bound: %n16 = zext i8 %n has 8 leading zeros.
+; Guard: icmp ult %iv.next, %n16 implies %iv.next < 2^8 on the backedge,
+; giving %iv 8 leading zeros and enabling nuw nsw on the add.
+define void @loop_phi_variable_bound_zext_i16(i8 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_zext_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[N16:%.*]] = zext i8 [[N:%.*]] to i16
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i16 [[IV]], 1
+; CHECK-NEXT:    store i16 [[IV]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i16 [[IV_NEXT]], [[N16]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %n16 = zext i8 %n to i16
+  br label %loop
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i16 %iv, 1
+  store i16 %iv, ptr %p
+  %cmp = icmp ult i16 %iv.next, %n16
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Negative test: bound is arbitrary i16, no leading zeros derivable.
+define void @loop_phi_variable_bound_no_lz_i16(i16 %n, ptr %p) {
+; CHECK-LABEL: @loop_phi_variable_bound_no_lz_i16(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 1
+; CHECK-NEXT:    store i16 [[IV]], ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[IV_NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add i16 %iv, 1
+  store i16 %iv, ptr %p
+  %cmp = icmp ult i16 %iv.next, %n
+  br i1 %cmp, label %loop, label %exit
+exit:
+  ret void
+}
+
+; Variable bound version of phi_ugt_high_bits using i32.
+; %bound >= 0xBFFFFFFF => ugt implies x >= 0xC0000000, bits 30,31 known one.
+define i32 @phi_ugt_variable_high_bits(i32 %x, i32 %b) {
+; CHECK-LABEL: @phi_ugt_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i32 [[B:%.*]], -1073741825
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i32 1073741824
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = or i32 %b, 3221225471
+  %cmp = icmp ugt i32 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i32 [ %x, %entry ], [ -1, %F ]
+  %r = and i32 %v, 1073741824
+  ret i32 %r
+F:
+  br label %T
+}
+
+; Variable bound version of phi_ult_low_bits using i16.
+; %bound >= 0xC000 => ult false branch implies x >= 0xC000, bits 14,15 known one.
+define i16 @phi_ult_variable_low_bits(i16 %x, i16 %b) {
+; CHECK-LABEL: @phi_ult_variable_low_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i16 [[B:%.*]], -16384
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i16 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    br label [[F]]
+; CHECK:       F:
+; CHECK-NEXT:    ret i16 16384
+;
+entry:
+  %bound = or i16 %b, 49152
+  %cmp = icmp ult i16 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  br label %F
+F:
+  %v = phi i16 [ %x, %entry ], [ -1, %T ]
+  %r = and i16 %v, 16384
+  ret i16 %r
+}
+
+; Negative: %b has no known bits, so ugt gives no useful range for %x.
+define i8 @phi_ugt_variable_no_known_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_ugt_variable_no_known_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[X:%.*]], [[B:%.*]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    [[V:%.*]] = phi i8 [ [[X]], [[ENTRY:%.*]] ], [ -1, [[F]] ]
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[V]], 64
+; CHECK-NEXT:    ret i8 [[R]]
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %cmp = icmp ugt i8 %x, %b
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ -1, %F ]
+  %r = and i8 %v, 64
+  ret i8 %r
+F:
+  br label %T
+}
+
+; Variable bound version of phi_sgt_high_bits.
+; x >= bound where bound in [0, 127] implies x >= 0, bit 7 known zero.
+define i8 @phi_sge_variable_high_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_sge_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = and i8 [[B:%.*]], 127
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp slt i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i8 0
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = and i8 %b, 127
+  %cmp = icmp sge i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ 0, %F ]
+  %r = and i8 %v, -128
+  ret i8 %r
+F:
+  br label %T
+}
+
+; Variable bound version of phi_slt_high_bits.
+; x < bound where bound in [-64, -1] implies x in [-128, -2],
+; bit 7 known one.
+define i8 @phi_slt_variable_high_bits(i8 %x, i8 %b) {
+; CHECK-LABEL: @phi_slt_variable_high_bits(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[BOUND:%.*]] = or i8 [[B:%.*]], -64
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[X:%.*]], [[BOUND]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[T:%.*]], label [[F:%.*]]
+; CHECK:       T:
+; CHECK-NEXT:    ret i8 -128
+; CHECK:       F:
+; CHECK-NEXT:    br label [[T]]
+;
+entry:
+  %bound = or i8 %b, -64
+  %cmp = icmp slt i8 %x, %bound
+  br i1 %cmp, label %T, label %F
+T:
+  %v = phi i8 [ %x, %entry ], [ -1, %F ]
+  %r = and i8 %v, -128
+  ret i8 %r
+F:
+  br label %T
 }

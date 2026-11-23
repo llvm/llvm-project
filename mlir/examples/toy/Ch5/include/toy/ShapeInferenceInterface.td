@@ -21,6 +21,8 @@ def ShapeInferenceOpInterface : OpInterface<"ShapeInference"> {
     operation that can be used during type inference.
   }];
 
+  let cppNamespace = "::mlir::toy";
+
   let methods = [
     InterfaceMethod<"Infer and set the output shape for the current operation.",
                     "void", "inferShapes">

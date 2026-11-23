@@ -37,6 +37,41 @@
 ; RUN: llvm-nm -pa %t/test | FileCheck %s --check-prefixes CHECK,OBJPATH-FILE -DFILE=%t/lto-tmp.o
 ; RUN: llvm-otool -l %t/lto-tmp.o | FileCheck %s --check-prefixes=MINOS
 
+;; Test that attempting to hardlink when cache and lto-temps are not empty does NOT cause a crash
+;; Link attempt must be done twice, first run populates lto-temps/ and cache/.
+; RUN: opt -thinlto-bc %S/Inputs/large-lto-object.ll -o %t/large.o
+; RUN: rm -rf %t/lto-temps
+; RUN: rm -rf %t/cache
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+;; The second link keeps the existing hardlinks to the cache.
+; RUN: ls -l %t/lto-temps/1.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+
+;; When an input changes, the stale object in lto-temps is replaced by a
+;; hardlink to the new cache entry.
+; RUN: cp %t/lto-temps/2.x86_64.lto.o %t/large-old.lto.o
+; RUN: sed 's/AAAA/BBBB/' %S/Inputs/large-lto-object.ll | opt -thinlto-bc - -o %t/large.o
+; RUN: %lld %t/test.o %t/large.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: not cmp -s %t/lto-temps/2.x86_64.lto.o %t/large-old.lto.o
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+
+;; Changing the input order moves modules to other task indices; each object
+;; is relinked to the cache entry of the module now at that index.
+; RUN: %lld %t/large.o %t/test.o -o %t/test -object_path_lto %t/lto-temps -cache_path_lto %t/cache --thinlto-jobs=all --lto-O0
+; RUN: llvm-nm %t/lto-temps/1.x86_64.lto.o | FileCheck %s --check-prefix=LARGE
+; RUN: llvm-nm %t/lto-temps/2.x86_64.lto.o | FileCheck %s --check-prefix=MAIN
+; RUN: ls -l %t/lto-temps/1.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; RUN: ls -l %t/lto-temps/2.x86_64.lto.o | tr -s ' ' | cut -f 2 -d ' ' | FileCheck %s --check-prefix=HARDLINK
+; LARGE: D _dummy_data
+; MAIN: T _main
+
+;; A link without the cache does not write through hardlinks left in lto-temps
+;; by an earlier link with the cache.
+; RUN: cp -R %t/cache %t/cache-old
+; RUN: sed 's/AAAA/CCCC/' %S/Inputs/large-lto-object.ll | opt -thinlto-bc - -o %t/large.o
+; RUN: %lld %t/large.o %t/test.o -o %t/test -object_path_lto %t/lto-temps --thinlto-jobs=all --lto-O0
+; RUN: diff -r %t/cache %t/cache-old
 
 ; CHECK:             0000000000000000                - 00 0000    SO /tmp/test.cpp
 ; NOOBJPATH-NEXT:    0000000000000000                - 03 0001   OSO /tmp/lto.tmp
@@ -46,7 +81,7 @@
 ; OBJPATH-FILE-NEXT: {{[0-9a-f]*[1-9a-f]+[0-9a-f]*}} - 03 0001   OSO [[FILE]]
 ; CHECK-NEXT:        {{[0-9a-f]+}}                   - 01 0000   FUN _main
 ; CHECK-NEXT:        0000000000000001                - 00 0000   FUN
-; CHECK-NEXT:        0000000000000000                - 01 0000    SO
+; CHECK:             0000000000000000                - 01 0000    SO
 ; CHECK-NEXT:        {{[0-9a-f]+}}                   T _main
 ; DSYM: DW_AT_name ("test.cpp")
 ; HARDLINK: 2

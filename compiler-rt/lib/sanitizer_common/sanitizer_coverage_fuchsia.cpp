@@ -105,8 +105,9 @@ class TracePcGuardController final {
       // uses the `dumpfile` symbolizer markup element to highlight the
       // dump.  See the explanation for this in:
       // https://fuchsia.googlesource.com/zircon/+/master/docs/symbolizer_markup.md
-      Printf("SanitizerCoverage: " FORMAT_DUMPFILE " with up to %u PCs\n",
-             kSancovSinkName, vmo_name_, next_index_ - 1);
+      if (common_flags()->print_coverage_summary)
+        Printf("SanitizerCoverage: " FORMAT_DUMPFILE " with up to %u PCs\n",
+               kSancovSinkName, vmo_name_, next_index_ - 1);
     }
   }
 

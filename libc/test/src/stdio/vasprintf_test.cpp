@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/stdio/sprintf.h"
 #include "src/stdio/vasprintf.h"
 #include "src/string/memset.h"
 #include "test/UnitTest/Test.h"

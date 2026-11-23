@@ -101,12 +101,7 @@ bool mlir::sortTopologically(
 
 bool mlir::sortTopologically(
     Block *block, function_ref<bool(Value, Operation *)> isOperandReady) {
-  if (block->empty())
-    return true;
-  if (block->back().hasTrait<OpTrait::IsTerminator>())
-    return sortTopologically(block, block->without_terminator(),
-                             isOperandReady);
-  return sortTopologically(block, *block, isOperandReady);
+  return sortTopologically(block, block->without_terminator(), isOperandReady);
 }
 
 bool mlir::computeTopologicalSorting(
@@ -116,11 +111,8 @@ bool mlir::computeTopologicalSorting(
     return true;
 
   // The set of operations that have not yet been scheduled.
-  DenseSet<Operation *> unscheduledOps;
-
   // Mark all operations as unscheduled.
-  for (Operation *op : ops)
-    unscheduledOps.insert(op);
+  DenseSet<Operation *> unscheduledOps(llvm::from_range, ops);
 
   unsigned nextScheduledOp = 0;
 
@@ -159,7 +151,7 @@ SetVector<Block *> mlir::getBlocksSortedByDominance(Region &region) {
   for (Block &b : region) {
     if (blocks.count(&b) == 0) {
       llvm::ReversePostOrderTraversal<Block *> traversal(&b);
-      blocks.insert(traversal.begin(), traversal.end());
+      blocks.insert_range(traversal);
     }
   }
   assert(blocks.size() == region.getBlocks().size() &&
@@ -222,7 +214,7 @@ private:
       }
     }
     auto firstRange = llvm::make_first_range(regionCounts);
-    ancestorRegions.insert(firstRange.begin(), firstRange.end());
+    ancestorRegions.insert_range(firstRange);
     return res;
   }
 

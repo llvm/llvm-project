@@ -10,7 +10,8 @@ define i32 @SplitSP() nounwind {
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $sp, $sp, -16
 ; CHECK-NEXT:    addi.d $a0, $sp, 12
-; CHECK-NEXT:    bl %plt(foo)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    addi.d $sp, $sp, 16
 ; CHECK-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
@@ -31,7 +32,8 @@ define i32 @NoSplitSP() nounwind {
 ; CHECK-NEXT:    addi.d $sp, $sp, -2032
 ; CHECK-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
 ; CHECK-NEXT:    addi.d $a0, $sp, 8
-; CHECK-NEXT:    bl %plt(foo)
+; CHECK-NEXT:    pcaddu18i $ra, %call36(foo)
+; CHECK-NEXT:    jirl $ra, $ra, 0
 ; CHECK-NEXT:    move $a0, $zero
 ; CHECK-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
 ; CHECK-NEXT:    addi.d $sp, $sp, 2032

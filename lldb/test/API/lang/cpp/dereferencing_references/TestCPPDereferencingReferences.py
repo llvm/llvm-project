@@ -5,6 +5,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test(self):
         """Tests deferencing lvalue/rvalue references via LLDB's builtin type system."""
         self.build()

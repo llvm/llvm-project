@@ -424,3 +424,84 @@ bc_equal:
 not_eq:
   ret i1 false
 }
+
+define i1 @test_eq_for_signed_cmp(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2)  {
+; CHECK-LABEL: @test_eq_for_signed_cmp(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V2:%.*]], [[V0:%.*]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V0]], [[V1:%.*]]
+; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[CMP1]], [[CMP]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[V1]], [[V2]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cmp = icmp eq i32 %v2, %v0
+  %cmp1 = icmp sge i32 %v0, %v1
+  %and0 = and i1 %cmp1, %cmp
+  %cmp4 = icmp sgt i32 %v1, %v2
+  %and1 = and i1 %cmp4, %and0
+  ret i1 %and1
+}
+
+define i1 @test_eq_for_signed_cmp_with_decompsition(i32 noundef %v0, i32 noundef %v1, i32 noundef %v2, i32 noundef %addend0, i32 noundef %addend1)  {
+; CHECK-LABEL: @test_eq_for_signed_cmp_with_decompsition(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[V0ADD:%.*]] = add nsw i32 [[V0:%.*]], [[ADDEND0:%.*]]
+; CHECK-NEXT:    [[V1ADD:%.*]] = add nsw i32 [[V1:%.*]], [[ADDEND1:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[V2:%.*]], [[V0ADD]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp sge i32 [[V0ADD]], [[V1ADD]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sge i32 [[ADDEND0]], 0
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp slt i32 [[ADDEND0]], [[ADDEND1]]
+; CHECK-NEXT:    [[AND0:%.*]] = and i1 [[CMP1]], [[CMP]]
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[AND0]], [[CMP2]]
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 [[AND1]], [[CMP3]]
+; CHECK-NEXT:    [[CMP4:%.*]] = icmp sgt i32 [[V1]], [[V2]]
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %v0add = add nsw i32 %v0, %addend0
+  %v1add = add nsw i32 %v1, %addend1
+  %cmp = icmp eq i32 %v2, %v0add
+  %cmp1 = icmp sge i32 %v0add, %v1add
+  %cmp2 = icmp sge i32 %addend0, 0
+  %cmp3 = icmp slt i32 %addend0, %addend1
+  %and0 = and i1 %cmp1, %cmp
+  %and1 = and i1 %and0, %cmp2
+  %and2 = and i1 %and1, %cmp3
+  %cmp4 = icmp sgt i32 %v1, %v2
+  %and3 = and i1 %cmp4, %and2
+  ret i1 %and3
+}
+
+define i1 @assume_a_gt_b_and_b_ge_c_signed(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @assume_a_gt_b_and_b_ge_c_signed(
+; CHECK-NEXT:    [[AB:%.*]] = icmp sgt i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AB]])
+; CHECK-NEXT:    [[BC:%.*]] = icmp sge i64 [[B]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
+; CHECK-NEXT:    ret i1 false
+;
+  %ab = icmp sgt i64 %a, %b
+  call void @llvm.assume(i1 %ab)
+  %bc = icmp sge i64 %b, %c
+  call void @llvm.assume(i1 %bc)
+  %eq = icmp eq i64 %a, %c
+  ret i1 %eq
+}
+
+define i1 @assume_a_le_b_and_b_le_c_signed(i64 %a, i64 %b, i64 %c) {
+; CHECK-LABEL: @assume_a_le_b_and_b_le_c_signed(
+; CHECK-NEXT:    [[AB:%.*]] = icmp sle i64 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[AB]])
+; CHECK-NEXT:    [[BC:%.*]] = icmp sle i64 [[B]], [[C:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[BC]])
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq i64 [[A]], [[C]]
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %ab = icmp sle i64 %a, %b
+  call void @llvm.assume(i1 %ab)
+  %bc = icmp sle i64 %b, %c
+  call void @llvm.assume(i1 %bc)
+  %eq = icmp eq i64 %a, %c
+  ret i1 %eq
+}

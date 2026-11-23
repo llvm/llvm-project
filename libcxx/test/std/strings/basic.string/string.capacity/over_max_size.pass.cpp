@@ -8,6 +8,9 @@
 
 // UNSUPPORTED: no-exceptions
 
+// The allocations are done in the dylib, so we need to use an up-to-date one
+// XFAIL: using-built-library-before-llvm-23
+
 // <string>
 
 // size_type max_size() const; // constexpr since C++20

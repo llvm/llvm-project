@@ -21,22 +21,22 @@ void g() {
   typedef A (*Func)();
   Func fp;
   fp(); // expected-error {{calling function with incomplete return type 'A'}}
-  ((Func)0)();  // expected-error {{calling function with incomplete return type 'A'}}  
-  
+  ((Func)0)();  // expected-error {{calling function with incomplete return type 'A'}}
+
   B b;
   b.f(); // expected-error {{calling 'f' with incomplete return type 'A'}}
-  
+
   b.operator()(); // expected-error {{calling 'operator()' with incomplete return type 'A'}}
   b.operator A(); // expected-error {{calling 'operator A' with incomplete return type 'A'}}
   b.operator!(); // expected-error {{calling 'operator!' with incomplete return type 'A'}}
-  
+
   !b; // expected-error {{calling 'operator!' with incomplete return type 'A'}}
   b(); // expected-error {{calling 'operator()' with incomplete return type 'A'}}
   b++; // expected-error {{calling 'operator++' with incomplete return type 'A'}}
   b[0]; // expected-error {{calling 'operator[]' with incomplete return type 'A'}}
   b + 1; // expected-error {{calling 'operator+' with incomplete return type 'A'}}
   b->f(); // expected-error {{calling 'operator->' with incomplete return type 'A'}}
-  
+
   A (B::*mfp)() = 0;
   (b.*mfp)(); // expected-error {{calling function with incomplete return type 'A'}}
 
@@ -59,7 +59,7 @@ namespace pr18542 {
     int count;
     template<typename CharT> class basic_istream;
     template<typename CharT>
-      void basic_istream<CharT>::read() { // expected-error{{out-of-line definition of 'read' from class 'basic_istream<CharT>' without definition}}
+      void basic_istream<CharT>::read() { // expected-error{{out-of-line definition of 'read' from class 'pr18542::X::basic_istream<CharT>' without definition}}
         count = 0;
       }
   };

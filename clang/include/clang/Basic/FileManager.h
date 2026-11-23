@@ -25,23 +25,27 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <ctime>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 
 namespace llvm {
 
-class MemoryBuffer;
+namespace vfs {
+class File;
+class Status;
+} // end namespace vfs
 
 } // end namespace llvm
 
 namespace clang {
-
-class FileSystemStatCache;
 
 /// Implements support for file system lookup, file system caching,
 /// and directory search management.
@@ -120,9 +124,6 @@ class FileManager : public RefCountedBase<FileManager> {
   unsigned NumDirCacheMisses = 0;
   unsigned NumFileCacheMisses = 0;
 
-  // Caching.
-  std::unique_ptr<FileSystemStatCache> StatCache;
-
   std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
                                bool isFile, std::unique_ptr<llvm::vfs::File> *F,
                                bool IsText = true);
@@ -134,26 +135,32 @@ class FileManager : public RefCountedBase<FileManager> {
   /// Fills the RealPathName in file entry.
   void fillRealPathName(FileEntry *UFE, llvm::StringRef FileName);
 
+  /// Implementation for getFileRef and getOptionalFileRef. Uses \c ErrorOr for
+  /// efficiency when an error will be ignored.
+  llvm::ErrorOr<FileEntryRef> getFileRefImpl(StringRef Filename, bool OpenFile,
+                                             bool CacheFailure, bool IsText);
+
+  /// Implementation for getDirectoryRef and getOptionalDirectoryRef. Uses
+  /// \c ErrorOr for efficiency when an error will be ignored.
+  llvm::ErrorOr<DirectoryEntryRef> getDirectoryRefImpl(StringRef DirName,
+                                                       bool CacheFailure);
+
+  /// Retrieves the directory that the given \p Filename resides in.
+  /// \p Filename can point to either a real file or a virtual file.
+  llvm::ErrorOr<DirectoryEntryRef> getDirectoryFromFile(StringRef Filename,
+                                                        bool CacheFailure);
+
 public:
   /// Construct a file manager, optionally with a custom VFS.
   ///
   /// \param FS if non-null, the VFS to use.  Otherwise uses
   /// llvm::vfs::getRealFileSystem().
   FileManager(const FileSystemOptions &FileSystemOpts,
-              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS = nullptr);
+              IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
+  /// Construct a file manager over the real file system. Separate from the
+  /// overload above so that callers do not need a complete FileSystem type.
+  explicit FileManager(const FileSystemOptions &FileSystemOpts);
   ~FileManager();
-
-  /// Installs the provided FileSystemStatCache object within
-  /// the FileManager.
-  ///
-  /// Ownership of this object is transferred to the FileManager.
-  ///
-  /// \param statCache the new stat cache to install. Ownership of this
-  /// object is transferred to the FileManager.
-  void setStatCache(std::unique_ptr<FileSystemStatCache> statCache);
-
-  /// Removes the FileSystemStatCache object from the manager.
-  void clearStatCache();
 
   /// Returns the number of unique real file entries cached by the file manager.
   size_t getNumUniqueRealFiles() const { return UniqueRealFiles.size(); }
@@ -169,50 +176,20 @@ public:
   /// \param CacheFailure If true and the file does not exist, we'll cache
   /// the failure to find this file.
   llvm::Expected<DirectoryEntryRef> getDirectoryRef(StringRef DirName,
-                                                    bool CacheFailure = true);
+                                                    bool CacheFailure = true) {
+    auto Ref = getDirectoryRefImpl(DirName, CacheFailure);
+    if (Ref)
+      return *Ref;
+    return llvm::createFileError(DirName, Ref.getError());
+  }
 
   /// Get a \c DirectoryEntryRef if it exists, without doing anything on error.
   OptionalDirectoryEntryRef getOptionalDirectoryRef(StringRef DirName,
                                                     bool CacheFailure = true) {
-    return llvm::expectedToOptional(getDirectoryRef(DirName, CacheFailure));
+    if (auto Ref = getDirectoryRefImpl(DirName, CacheFailure))
+      return *Ref;
+    return std::nullopt;
   }
-
-  /// Lookup, cache, and verify the specified directory (real or
-  /// virtual).
-  ///
-  /// This function is deprecated and will be removed at some point in the
-  /// future, new clients should use
-  ///  \c getDirectoryRef.
-  ///
-  /// This returns a \c std::error_code if there was an error reading the
-  /// directory. If there is no error, the DirectoryEntry is guaranteed to be
-  /// non-NULL.
-  ///
-  /// \param CacheFailure If true and the file does not exist, we'll cache
-  /// the failure to find this file.
-  LLVM_DEPRECATED("Functions returning DirectoryEntry are deprecated.",
-                  "getOptionalDirectoryRef()")
-  llvm::ErrorOr<const DirectoryEntry *>
-  getDirectory(StringRef DirName, bool CacheFailure = true);
-
-  /// Lookup, cache, and verify the specified file (real or
-  /// virtual).
-  ///
-  /// This function is deprecated and will be removed at some point in the
-  /// future, new clients should use
-  ///  \c getFileRef.
-  ///
-  /// This returns a \c std::error_code if there was an error loading the file.
-  /// If there is no error, the FileEntry is guaranteed to be non-NULL.
-  ///
-  /// \param OpenFile if true and the file exists, it will be opened.
-  ///
-  /// \param CacheFailure If true and the file does not exist, we'll cache
-  /// the failure to find this file.
-  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
-                  "getOptionalFileRef()")
-  llvm::ErrorOr<const FileEntry *>
-  getFile(StringRef Filename, bool OpenFile = false, bool CacheFailure = true);
 
   /// Lookup, cache, and verify the specified file (real or virtual). Return the
   /// reference to the file entry together with the exact path that was used to
@@ -231,7 +208,12 @@ public:
   llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
                                           bool OpenFile = false,
                                           bool CacheFailure = true,
-                                          bool IsText = true);
+                                          bool IsText = true) {
+    auto Ref = getFileRefImpl(Filename, OpenFile, CacheFailure, IsText);
+    if (Ref)
+      return *Ref;
+    return llvm::createFileError(Filename, Ref.getError());
+  }
 
   /// Get the FileEntryRef for stdin, returning an error if stdin cannot be
   /// read.
@@ -244,9 +226,11 @@ public:
   /// Get a FileEntryRef if it exists, without doing anything on error.
   OptionalFileEntryRef getOptionalFileRef(StringRef Filename,
                                           bool OpenFile = false,
-                                          bool CacheFailure = true) {
-    return llvm::expectedToOptional(
-        getFileRef(Filename, OpenFile, CacheFailure));
+                                          bool CacheFailure = true,
+                                          bool IsText = true) {
+    if (auto Ref = getFileRefImpl(Filename, OpenFile, CacheFailure, IsText))
+      return *Ref;
+    return std::nullopt;
   }
 
   /// Returns the current file system options
@@ -255,17 +239,13 @@ public:
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const { return *FS; }
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-  getVirtualFileSystemPtr() const {
-    return FS;
-  }
+  getVirtualFileSystemPtr() const;
 
   /// Enable or disable tracking of VFS usage. Used to not track full header
   /// search and implicit modulemap lookup.
   void trackVFSUsage(bool Active);
 
-  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS) {
-    this->FS = std::move(FS);
-  }
+  void setVirtualFileSystem(IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS);
 
   /// Retrieve a file entry for a "virtual" file that acts as
   /// if there were a file with the given name on disk.
@@ -273,11 +253,6 @@ public:
   /// The file itself is not accessed.
   FileEntryRef getVirtualFileRef(StringRef Filename, off_t Size,
                                  time_t ModificationTime);
-
-  LLVM_DEPRECATED("Functions returning FileEntry are deprecated.",
-                  "getVirtualFileRef()")
-  const FileEntry *getVirtualFile(StringRef Filename, off_t Size,
-                                  time_t ModificationTime);
 
   /// Retrieve a FileEntry that bypasses VFE, which is expected to be a virtual
   /// file entry, to access the real file.  The returned FileEntry will have
@@ -317,30 +292,23 @@ private:
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 
 public:
-  /// Get the 'stat' information for the given \p Path.
-  ///
-  /// If the path is relative, it will be resolved against the WorkingDir of the
-  /// FileManager's FileSystemOptions.
-  ///
-  /// \returns a \c std::error_code describing an error, if there was one
-  std::error_code getNoncachedStatValue(StringRef Path,
-                                        llvm::vfs::Status &Result);
-
   /// If path is not absolute and FileSystemOptions set the working
   /// directory, the path is modified to be relative to the given
   /// working directory.
-  /// \returns true if \c path changed.
-  bool FixupRelativePath(SmallVectorImpl<char> &path) const;
+  /// \returns true if \c Path changed.
+  bool FixupRelativePath(SmallVectorImpl<char> &Path) const {
+    return fixupRelativePath(FileSystemOpts, Path);
+  }
+  static bool fixupRelativePath(const FileSystemOptions &FileSystemOpts,
+                                SmallVectorImpl<char> &Path);
 
   /// Makes \c Path absolute taking into account FileSystemOptions and the
-  /// working directory option.
-  /// \returns true if \c Path changed to absolute.
-  bool makeAbsolutePath(SmallVectorImpl<char> &Path) const;
-
-  /// Produce an array mapping from the unique IDs assigned to each
-  /// file to the corresponding FileEntryRef.
-  void
-  GetUniqueIDMapping(SmallVectorImpl<OptionalFileEntryRef> &UIDToFiles) const;
+  /// working directory option, and canonicalizes through
+  /// `llvm::path::remove_dots` if \c Canonicalize is true.
+  ///
+  /// \returns true if \c Path was changed.
+  bool makeAbsolutePath(SmallVectorImpl<char> &Path,
+                        bool Canonicalize = false) const;
 
   /// Retrieve the canonical name for a given directory.
   ///

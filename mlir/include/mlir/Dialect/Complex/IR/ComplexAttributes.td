@@ -20,6 +20,7 @@ include "mlir/Dialect/Complex/IR/ComplexBase.td"
 class Complex_Attr<string attrName, string attrMnemonic,
                    list<Trait> traits = []>
     : AttrDef<Complex_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/Complex/IR/Complex.h"];
   let mnemonic = attrMnemonic;
 }
 
@@ -57,8 +58,8 @@ def Complex_NumberAttr : Complex_Attr<"Number", "number",
   ];
 
   let extraClassDeclaration = [{
-    std::complex<APFloat> getValue() {
-      return std::complex<APFloat>(getReal(), getImag());
+    mlir::Complex<APFloat> getValue() {
+      return mlir::Complex<APFloat>(getReal(), getImag());
     }
   }];
 

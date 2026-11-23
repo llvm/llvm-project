@@ -52,8 +52,7 @@ protected:
 
   DebuggerSP m_debugger_sp;
   PlatformSP m_platform_sp;
-  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX, ProgressManager>
-      subsystems;
+  SubsystemRAII<FileSystem, HostInfo, PlatformMacOSX> subsystems;
 };
 
 TEST_F(BreakpointSetCallbackTest, TestBreakpointSetCallback) {

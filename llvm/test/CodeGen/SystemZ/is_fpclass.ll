@@ -3,10 +3,26 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
+declare i1 @llvm.is.fpclass.f16(half, i32)
 declare i1 @llvm.is.fpclass.f32(float, i32)
 declare i1 @llvm.is.fpclass.f64(double, i32)
 declare i1 @llvm.is.fpclass.f128(fp128, i32)
 
+
+define i1 @isnan_h(half %x) {
+; CHECK-LABEL: isnan_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
+; CHECK-NEXT:    lgdr %r0, %f0
+; CHECK-NEXT:    risbg %r0, %r0, 49, 191, 16
+; CHECK-NEXT:    chi %r0, 31744
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r2, %r0, 63, 191, 35
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
+  ret i1 %1
+}
 
 define i1 @isnan_f(float %x) {
 ; CHECK-LABEL: isnan_f:
@@ -142,3 +158,80 @@ define i1 @isnotfinite_f(float %x) {
   ret i1 %1
 }
 
+
+define i1 @isnormal_h(half %x) {
+; CHECK-LABEL: isnormal_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
+; CHECK-NEXT:    lgdr %r0, %f0
+; CHECK-NEXT:    risbg %r0, %r0, 49, 191, 16
+; CHECK-NEXT:    ahi %r0, -1024
+; CHECK-NEXT:    llhr %r0, %r0
+; CHECK-NEXT:    chi %r0, 30720
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r2, %r0, 63, 191, 36
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 264)  ; 0x108 = normal
+  ret i1 %1
+}
+
+define i1 @isnormal_f(float %x) {
+; CHECK-LABEL: isnormal_f:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tceb %f0, 768
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    srl %r2, 28
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 264)  ; 0x108 = normal
+  ret i1 %1
+}
+
+define i1 @isnormal_d(double %x) {
+; CHECK-LABEL: isnormal_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcdb %f0, 768
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    srl %r2, 28
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 264)  ; 0x108 = normal
+  ret i1 %1
+}
+
+define i1 @issubnormal_h(half %x) {
+; CHECK-LABEL: issubnormal_h:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $f0h killed $f0h def $f0d
+; CHECK-NEXT:    lgdr %r0, %f0
+; CHECK-NEXT:    risbg %r0, %r0, 49, 191, 16
+; CHECK-NEXT:    ahi %r0, -1
+; CHECK-NEXT:    clfi %r0, 1023
+; CHECK-NEXT:    ipm %r0
+; CHECK-NEXT:    risbg %r2, %r0, 63, 191, 36
+; CHECK-NEXT:    # kill: def $r2l killed $r2l killed $r2d
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 144)  ; 0x90 = subnormal
+  ret i1 %1
+}
+
+define i1 @issubnormal_f(float %x) {
+; CHECK-LABEL: issubnormal_f:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tceb %f0, 192
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    srl %r2, 28
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 144)  ; 0x90 = subnormal
+  ret i1 %1
+}
+
+define i1 @issubnormal_d(double %x) {
+; CHECK-LABEL: issubnormal_d:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    tcdb %f0, 192
+; CHECK-NEXT:    ipm %r2
+; CHECK-NEXT:    srl %r2, 28
+; CHECK-NEXT:    br %r14
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 144)  ; 0x90 = subnormal
+  ret i1 %1
+}

@@ -12,55 +12,59 @@
 
 // class multimap
 
-// iterator insert(const_iterator hint, node_type&&);
+// iterator insert(const_iterator hint, node_type&&); // constexpr since C++26
 
 #include <map>
 #include "test_macros.h"
 #include "min_allocator.h"
 
 template <class Container>
-typename Container::node_type
-node_factory(typename Container::key_type const& key,
-             typename Container::mapped_type const& mapped)
-{
-    static Container c;
-    auto it = c.insert({key, mapped});
-    return c.extract(it);
+TEST_CONSTEXPR_CXX26 typename Container::node_type
+node_factory(Container& c, typename Container::key_type const& key, typename Container::mapped_type const& mapped) {
+  auto it = c.insert({key, mapped});
+  return c.extract(it);
 }
 
 template <class Container>
-void test(Container& c)
-{
-    auto* nf = &node_factory<Container>;
+TEST_CONSTEXPR_CXX26 void test(Container& c) {
+  auto* nf = &node_factory<Container>;
+  Container c2;
 
-    for (int i = 0; i != 10; ++i)
-    {
-        typename Container::node_type node = nf(i, i + 1);
-        assert(!node.empty());
-        std::size_t prev = c.size();
-        auto it = c.insert(c.end(), std::move(node));
-        assert(node.empty());
-        assert(prev + 1 == c.size());
-        assert(it == c.find(i));
-        assert(it->first == i);
-        assert(it->second == i + 1);
-    }
+  for (int i = 0; i != 10; ++i) {
+    typename Container::node_type node = nf(c2, i, i + 1);
+    assert(!node.empty());
+    std::size_t prev = c.size();
+    auto it          = c.insert(c.end(), std::move(node));
+    assert(node.empty());
+    assert(prev + 1 == c.size());
+    assert(it == c.find(i));
+    assert(it->first == i);
+    assert(it->second == i + 1);
+  }
 
-    assert(c.size() == 10);
+  assert(c.size() == 10);
 
-    for (int i = 0; i != 10; ++i)
-    {
-        assert(c.count(i) == 1);
-        assert(c.find(i)->second == i + 1);
-    }
+  for (int i = 0; i != 10; ++i) {
+    assert(c.count(i) == 1);
+    assert(c.find(i)->second == i + 1);
+  }
 }
 
-int main(int, char**)
-{
-    std::multimap<int, int> m;
-    test(m);
-    std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
-    test(m2);
+TEST_CONSTEXPR_CXX26
+bool test() {
+  std::multimap<int, int> m;
+  test(m);
+  std::multimap<int, int, std::less<int>, min_allocator<std::pair<const int, int>>> m2;
+  test(m2);
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

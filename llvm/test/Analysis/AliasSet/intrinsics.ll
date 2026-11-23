@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-alias-sets -S -o - < %s 2>&1 | FileCheck %s --implicit-check-not="Unknown instructions"
+; RUN: opt -passes='print<alias-sets>' -S -o - < %s 2>&1 | FileCheck %s --implicit-check-not="Unknown instructions"
 
 ; CHECK: Alias sets for function 'test1':
 ; CHECK: Alias Set Tracker: 2 alias sets for 2 pointer values.
@@ -110,4 +110,4 @@ declare void @llvm.experimental.noalias.scope.decl(metadata)
 
 !0 = !{ !1 }
 !1 = distinct !{ !1, !2, !"test5: var" }
-!2 = distinct !{ !2, !"test5" }
+!2 = distinct !{!2, i1 false, !"test5"}

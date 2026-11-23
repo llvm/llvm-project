@@ -28,12 +28,12 @@ const char * f(S s)
 //
 // FIXME: We could defer starting the lifetime of the return object of concat
 // until the call.
-// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T1]])
+// CHECK: call void @llvm.lifetime.start.p0(ptr [[T1]])
 //
-// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T2]])
+// CHECK: call void @llvm.lifetime.start.p0(ptr [[T2]])
 // CHECK: [[T4:%.*]] = call noundef ptr @_ZN1TC1EPKc(ptr {{[^,]*}} [[T2]], ptr noundef @.str)
 //
-// CHECK: call void @llvm.lifetime.start.p0(i64 16, ptr [[T3]])
+// CHECK: call void @llvm.lifetime.start.p0(ptr [[T3]])
 // CHECK: [[T5:%.*]] = call noundef ptr @_ZN1TC1E1S(ptr {{[^,]*}} [[T3]], [2 x i32] %{{.*}})
 //
 // CHECK: call void @_ZNK1T6concatERKS_(ptr dead_on_unwind writable sret(%class.T) align 4 [[T1]], ptr {{[^,]*}} [[T2]], ptr noundef nonnull align 4 dereferenceable(16) [[T3]])

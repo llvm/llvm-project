@@ -1,14 +1,7 @@
 # RUN: llvm-mc -triple=avr %s | FileCheck --check-prefix=PRINT %s
 # RUN: llvm-mc -filetype=obj -triple=avr %s | llvm-readobj -r - | FileCheck %s
 
-# PRINT:      .reloc 4, R_AVR_NONE, .data
-# PRINT-NEXT: .reloc 2, R_AVR_NONE, foo+4
-# PRINT-NEXT: .reloc 0, R_AVR_NONE, 8
-# PRINT:      .reloc 0, R_AVR_32, .data+2
-# PRINT-NEXT: .reloc 0, R_AVR_16, foo+3
-# PRINT:      .reloc 0, BFD_RELOC_NONE, 9
-# PRINT-NEXT: .reloc 0, BFD_RELOC_16, 9
-# PRINT-NEXT: .reloc 0, BFD_RELOC_32, 9
+# PRINT:      .reloc {{.*}}+4, R_AVR_NONE, .data
 
 # CHECK:      Section ({{.*}}) .rela.text {
 # CHECK-NEXT:   0x4 R_AVR_NONE .data 0x0
@@ -22,19 +15,19 @@
 # CHECK-NEXT: }
 
 .text
+  .reloc .+4, R_AVR_NONE, .data
+  .reloc .+2, R_AVR_NONE, foo+4
+  .reloc .+0, R_AVR_NONE, 8
+
+  .reloc .+0, R_AVR_32, .data+2
+  .reloc .+0, R_AVR_16, foo+3
+
+  .reloc .+0, BFD_RELOC_NONE, 9
+  .reloc .+0, BFD_RELOC_16, 9
+  .reloc .+0, BFD_RELOC_32, 9
   ret
   nop
   nop
-  .reloc 4, R_AVR_NONE, .data
-  .reloc 2, R_AVR_NONE, foo+4
-  .reloc 0, R_AVR_NONE, 8
-
-  .reloc 0, R_AVR_32, .data+2
-  .reloc 0, R_AVR_16, foo+3
-
-  .reloc 0, BFD_RELOC_NONE, 9
-  .reloc 0, BFD_RELOC_16, 9
-  .reloc 0, BFD_RELOC_32, 9
 
 .data
 .globl foo

@@ -39,6 +39,7 @@ ProgramHeaders:
   - Type: PT_GNU_STACK
   - Type: PT_GNU_RELRO
   - Type: PT_GNU_PROPERTY
+  - Type: PT_GNU_SFRAME
 
 #CHECK:     ProgramHeaders [
 #CHECK-NEXT:   ProgramHeader {
@@ -77,6 +78,9 @@ ProgramHeaders:
 #CHECK:       }
 #CHECK-NEXT:  ProgramHeader {
 #CHECK-NEXT:    Type: PT_GNU_PROPERTY (0x6474E553)
+#CHECK:       }
+#CHECK-NEXT:  ProgramHeader {
+#CHECK-NEXT:    Type: PT_GNU_SFRAME (0x6474E554)
 #CHECK:       }
 #CHECK-NEXT:]
 

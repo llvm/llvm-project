@@ -68,4 +68,6 @@ int main(int, const char**) {
   assert(std::distance(list.begin(), list.end()) == 2);
   assert(list.front().version == "4");
   assert(it->version == "3");
+
+  return 0;
 }
