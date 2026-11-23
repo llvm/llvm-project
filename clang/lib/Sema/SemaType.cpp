@@ -8883,7 +8883,6 @@ static void HandleRISCVRVVVectorBitsTypeAttr(QualType &CurType,
   unsigned MinElts = Info.EC.getKnownMinValue();
   bool IsMask = Info.ElementType == S.Context.BoolTy;
 
-  // Only the minimum VLEN is needed.
   auto VScale = S.Context.getTargetInfo().getVScaleRange(
       S.getLangOpts(), TargetInfo::ArmStreamingKind::NotStreaming);
   if (!VScale || !VScale->first) {
