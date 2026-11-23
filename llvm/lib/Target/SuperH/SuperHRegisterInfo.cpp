@@ -131,7 +131,8 @@ bool SuperHRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int64_t Offset = FrameRef + FrameOffset;
 
   LLVM_DEBUG({
-    dbgs() << "Eliminiate FI " << FI << " @ SP[" << Offset << "]...\n";
+    dbgs() << "Eliminiate FI " << FI << " @ SP[" << Offset << "]" 
+           << " @ " << MF.getName() << "...\n";
   });
 
   // Load effective address of stack slot.

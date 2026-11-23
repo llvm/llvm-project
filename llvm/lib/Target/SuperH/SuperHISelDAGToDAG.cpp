@@ -169,6 +169,21 @@ bool SuperHDAGToDAGISel::SelectFrAddr(SDNode *Op, SDValue N, SDValue &Base,
     return true;
   }
 
+  // Frame indexing with disjoint offset as a bitwise OR.
+  if (N.getOpcode() == ISD::OR && 
+     (N->getFlags() & SDNodeFlags::Disjoint) == SDNodeFlags::Disjoint) {
+    auto LHS = N.getOperand(0);
+    auto RHS = N.getOperand(1);
+    
+    if (isa<FrameIndexSDNode>(LHS) && isa<ConstantSDNode>(RHS)) {
+      auto *F = dyn_cast<FrameIndexSDNode>(LHS);
+      auto *C = dyn_cast<ConstantSDNode>(RHS);
+      Base = CurDAG->getTargetFrameIndex(F->getIndex(), PtrVT);
+      Disp = CurDAG->getTargetConstant(*C->getConstantIntValue(), SDLoc(Op), C->getValueType(0));
+      return true;
+    }
+  }
+
   // Handle frame indexing with offset.
   if (N.getOpcode() == ISD::ADD) {
     auto LHS = N.getOperand(0);

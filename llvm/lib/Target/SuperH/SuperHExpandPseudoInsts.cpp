@@ -884,10 +884,10 @@ bool SuperHExpandPseudo::expand<SH::SHLri>(Block &MBB, BlockIt MBBI) {
   auto DstReg = MI.getOperand(0).getReg();
   int64_t Offset = MI.getOperand(1).getImm();
 
-  if (STI->isSH3() && Offset > 32) {
+  if (STI->isSH3()) {
     BuildMI(MBB, II, DL, TII->get(SH::MOVI), SH::R0)
       .addImm(Offset);
-    BuildMI(MBB, II, DL, TII->get(SH::SHAD), DstReg)
+    BuildMI(MBB, II, DL, TII->get(SH::SHLD), DstReg)
       .addReg(SH::R0);
   } else {
     while (Offset > 0) {
@@ -934,7 +934,7 @@ bool SuperHExpandPseudo::expand<SH::SHRri>(Block &MBB, BlockIt MBBI) {
   auto DstReg = MI.getOperand(0).getReg();
   int64_t Offset = MI.getOperand(1).getImm();
 
-  if (STI->isSH3() && Offset > 32) {
+  if (STI->isSH3()) {
     BuildMI(MBB, II, DL, TII->get(SH::MOVI), SH::R0)
       .addImm(-Offset);
     BuildMI(MBB, II, DL, TII->get(SH::SHLD), DstReg)

@@ -120,8 +120,11 @@ public:
   }
 
   void computeAllBlockSizes() {
+
+    // NOTE: Optimizer may create "holes" in the IDs, 
+    //       so renumber all the blocks.
     MF.RenumberBlocks();
-    
+
     BBInfo.resize(MF.getNumBlockIDs());
     for (MachineBasicBlock &MBB : MF)
       computeBlockSize(&MBB);

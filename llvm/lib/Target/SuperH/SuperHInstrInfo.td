@@ -1647,21 +1647,21 @@ def : Pat<(i16 (trunc  i32:$src)),    (EXTUW i32:$src)>;
 //===--------------------------------------------------------------------------===//
 // Bit Manipulation
 //===--------------------------------------------------------------------------===//
-def : Pat<(i32 (and i32:$dst, i32:$src)), (AND GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (and i16:$dst, i16:$src)), (EXTUW (AND GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (and  i8:$dst,  i8:$src)), (EXTUB (AND GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (and i32:$src, i32:$dst)), (AND    GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (and i16:$src, i16:$dst)), (EXTUW (AND GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (and  i8:$src,  i8:$dst)), (EXTUB (AND GPR:$src, GPR:$dst))>;
 
 def : Pat<(i32 (not  i32:$src)),          (NOT GPR:$src)>;
 def : Pat<(i16 (not  i16:$src)),          (EXTUW (NOT GPR:$src))>;
 def : Pat<(i8  (not   i8:$src)),          (EXTUB (NOT GPR:$src))>;
 
-def : Pat<(i32 (or i32:$dst, i32:$src)),  (OR GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (or i16:$dst, i16:$src)),  (EXTUW (OR GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (or  i8:$dst,  i8:$src)),  (EXTUB (OR GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (or i32:$src, i32:$dst)),  (OR        GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (or i16:$src, i16:$dst)),  (EXTUW (OR GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (or  i8:$src,  i8:$dst)),  (EXTUB (OR GPR:$src, GPR:$dst))>;
 
-def : Pat<(i32 (xor i32:$dst, i32:$src)), (XOR GPR:$src, GPR:$dst)>;
-def : Pat<(i16 (xor i16:$dst, i16:$src)), (EXTUW (XOR GPR:$src, GPR:$dst))>;
-def : Pat<(i8  (xor  i8:$dst,  i8:$src)), (EXTUB (XOR GPR:$src, GPR:$dst))>;
+def : Pat<(i32 (xor i32:$src, i32:$dst)), (XOR        GPR:$src, GPR:$dst)>;
+def : Pat<(i16 (xor i16:$src, i16:$dst)), (EXTUW (XOR GPR:$src, GPR:$dst))>;
+def : Pat<(i8  (xor  i8:$src,  i8:$dst)), (EXTUB (XOR GPR:$src, GPR:$dst))>;
 
 // Optimized codepath for the C not operator.
 def : Pat<(i32 (seteq i32:$src, 0)),       (LNOT GPR:$src)>;
