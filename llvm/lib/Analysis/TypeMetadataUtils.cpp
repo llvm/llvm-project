@@ -242,6 +242,9 @@ llvm::getFunctionAtVTableOffset(GlobalVariable *GV, uint64_t Offset,
 }
 
 bool llvm::isNullVTableSlot(GlobalVariable *GV, uint64_t Offset, Module &M) {
+  if (!GV->isConstant() || !GV->hasDefinitiveInitializer())
+    return false;
+
   const DataLayout &DL = M.getDataLayout();
   Type *FnPtrTy = PointerType::get(M.getContext(), DL.getProgramAddressSpace());
   APInt Off(DL.getIndexTypeSizeInBits(GV->getType()), Offset);
