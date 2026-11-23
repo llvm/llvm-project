@@ -1988,8 +1988,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     case Intrinsic::vector_shuffle: {
       // Result element i only depends on mask element i, so the elements
       // required from the mask are the same as the demanded result elements.
-      APInt DemandedMask(DemandedElts);
-      simplifyAndSetOp(II, 1, DemandedMask, PoisonElts2);
+      simplifyAndSetOp(II, 1, DemandedElts, PoisonElts);
       // Only those source elements are required which are indexed by the
       // demanded elements of the mask. So source elements that are not in the
       // range specified by the following are not required.
