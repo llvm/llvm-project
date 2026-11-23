@@ -196,7 +196,6 @@ private:
   fir::CharBoxValue materializeValue(mlir::Value str);
   mlir::Value getCharBoxBuffer(const fir::CharBoxValue &box);
   mlir::Value createElementAddr(mlir::Value buffer, mlir::Value index);
-  mlir::Value createLoadCharAt(mlir::Value buff, mlir::Value index);
   void createStoreCharAt(mlir::Value str, mlir::Value index, mlir::Value c);
   void createLengthOneAssign(const fir::CharBoxValue &lhs,
                              const fir::CharBoxValue &rhs);

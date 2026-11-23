@@ -27,9 +27,9 @@ for.end:
 }
 
 ; CHECK-LABEL: LV: Checking a loop in 'fp_induction_i64_index_cost'
-; CHECK: Cost of 1 for VF 2: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
-; CHECK: Cost of 1 for VF 4: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
-; CHECK: Cost of 1 for VF 8: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
+; CHECK: Cost of 4 for VF 2: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
+; CHECK: Cost of 4 for VF 4: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
+; CHECK: Cost of 4 for VF 8: vp<%{{[0-9]+}}> = DERIVED-IV ir<0.000000e+00> + vp<%{{[0-9]+}}> * ir<1.000000e+00>
 define void @fp_induction_i64_index_cost(ptr noalias %a, ptr noalias %b, ptr noalias %d, i64 %n) {
 entry:
   br label %loop

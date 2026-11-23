@@ -20,10 +20,10 @@ body:             |
     ; CHECK-NEXT: [[FADD_S:%[0-9]+]]:fpr32 = nofpexcept FADD_S [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FADD_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FADD %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FADD %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -43,10 +43,10 @@ body:             |
     ; CHECK-NEXT: [[FSUB_S:%[0-9]+]]:fpr32 = nofpexcept FSUB_S [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FSUB_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FSUB %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FSUB %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -66,10 +66,10 @@ body:             |
     ; CHECK-NEXT: [[FMUL_S:%[0-9]+]]:fpr32 = nofpexcept FMUL_S [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FMUL_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FMUL %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FMUL %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -89,10 +89,10 @@ body:             |
     ; CHECK-NEXT: [[FDIV_S:%[0-9]+]]:fpr32 = nofpexcept FDIV_S [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FDIV_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FDIV %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FDIV %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -113,11 +113,11 @@ body:             |
     ; CHECK-NEXT: [[FMADD_S:%[0-9]+]]:fpr32 = nofpexcept FMADD_S [[COPY]], [[COPY1]], [[COPY2]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FMADD_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = COPY $f12_f
-    %3:fprb(s32) = G_FMA %0, %1, %2
-    $f10_f = COPY %3(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = COPY $f12_f
+    %3:fprb(f32) = G_FMA %0, %1, %2
+    $f10_f = COPY %3(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -136,9 +136,9 @@ body:             |
     ; CHECK-NEXT: [[FSGNJN_S:%[0-9]+]]:fpr32 = FSGNJN_S [[COPY]], [[COPY]]
     ; CHECK-NEXT: $f10_f = COPY [[FSGNJN_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = G_FNEG %0
-    $f10_f = COPY %1(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = G_FNEG %0
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -157,9 +157,9 @@ body:             |
     ; CHECK-NEXT: [[FSGNJX_S:%[0-9]+]]:fpr32 = FSGNJX_S [[COPY]], [[COPY]]
     ; CHECK-NEXT: $f10_f = COPY [[FSGNJX_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = G_FABS %0
-    $f10_f = COPY %1(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = G_FABS %0
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -178,9 +178,9 @@ body:             |
     ; CHECK-NEXT: [[FSQRT_S:%[0-9]+]]:fpr32 = nofpexcept FSQRT_S [[COPY]], 7
     ; CHECK-NEXT: $f10_f = COPY [[FSQRT_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = G_FSQRT %0
-    $f10_f = COPY %1(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = G_FSQRT %0
+    $f10_f = COPY %1(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -200,10 +200,10 @@ body:             |
     ; CHECK-NEXT: [[FMAX_S:%[0-9]+]]:fpr32 = nofpexcept FMAX_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_f = COPY [[FMAX_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FMAXNUM %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FMAXNUM %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -223,10 +223,10 @@ body:             |
     ; CHECK-NEXT: [[FMIN_S:%[0-9]+]]:fpr32 = nofpexcept FMIN_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_f = COPY [[FMIN_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FMINNUM %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FMINNUM %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -246,10 +246,10 @@ body:             |
     ; CHECK-NEXT: [[FSGNJ_S:%[0-9]+]]:fpr32 = FSGNJ_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_f = COPY [[FSGNJ_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s32) = G_FCOPYSIGN %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f32) = G_FCOPYSIGN %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -270,10 +270,10 @@ body:             |
     ; CHECK-NEXT: [[FSGNJ_S:%[0-9]+]]:fpr32 = FSGNJ_S [[COPY]], [[FCVT_S_D]]
     ; CHECK-NEXT: $f10_f = COPY [[FSGNJ_S]]
     ; CHECK-NEXT: PseudoRET implicit $f10_f
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s32) = G_FCOPYSIGN %0, %1
-    $f10_f = COPY %2(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f32) = G_FCOPYSIGN %0, %1
+    $f10_f = COPY %2(f32)
     PseudoRET implicit $f10_f
 
 ...
@@ -293,10 +293,10 @@ body:             |
     ; CHECK-NEXT: [[FADD_D:%[0-9]+]]:fpr64 = nofpexcept FADD_D [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FADD %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FADD %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -316,10 +316,10 @@ body:             |
     ; CHECK-NEXT: [[FSUB_D:%[0-9]+]]:fpr64 = nofpexcept FSUB_D [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FSUB_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FSUB %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FSUB %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -339,10 +339,10 @@ body:             |
     ; CHECK-NEXT: [[FMUL_D:%[0-9]+]]:fpr64 = nofpexcept FMUL_D [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FMUL_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FMUL %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FMUL %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -362,10 +362,10 @@ body:             |
     ; CHECK-NEXT: [[FDIV_D:%[0-9]+]]:fpr64 = nofpexcept FDIV_D [[COPY]], [[COPY1]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FDIV_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FDIV %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FDIV %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -386,11 +386,11 @@ body:             |
     ; CHECK-NEXT: [[FMADD_D:%[0-9]+]]:fpr64 = nofpexcept FMADD_D [[COPY]], [[COPY1]], [[COPY2]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FMADD_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = COPY $f12_d
-    %3:fprb(s64) = G_FMA %0, %1, %2
-    $f10_d = COPY %3(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = COPY $f12_d
+    %3:fprb(f64) = G_FMA %0, %1, %2
+    $f10_d = COPY %3(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -409,9 +409,9 @@ body:             |
     ; CHECK-NEXT: [[FSGNJN_D:%[0-9]+]]:fpr64 = FSGNJN_D [[COPY]], [[COPY]]
     ; CHECK-NEXT: $f10_d = COPY [[FSGNJN_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = G_FNEG %0
-    $f10_d = COPY %1(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = G_FNEG %0
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -430,9 +430,9 @@ body:             |
     ; CHECK-NEXT: [[FSGNJX_D:%[0-9]+]]:fpr64 = FSGNJX_D [[COPY]], [[COPY]]
     ; CHECK-NEXT: $f10_d = COPY [[FSGNJX_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = G_FABS %0
-    $f10_d = COPY %1(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = G_FABS %0
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -451,9 +451,9 @@ body:             |
     ; CHECK-NEXT: [[FSQRT_D:%[0-9]+]]:fpr64 = nofpexcept FSQRT_D [[COPY]], 7
     ; CHECK-NEXT: $f10_d = COPY [[FSQRT_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = G_FSQRT %0
-    $f10_d = COPY %1(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = G_FSQRT %0
+    $f10_d = COPY %1(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -473,10 +473,10 @@ body:             |
     ; CHECK-NEXT: [[FMAX_D:%[0-9]+]]:fpr64 = nofpexcept FMAX_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_d = COPY [[FMAX_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FMAXNUM %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FMAXNUM %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -496,10 +496,10 @@ body:             |
     ; CHECK-NEXT: [[FMIN_D:%[0-9]+]]:fpr64 = nofpexcept FMIN_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_d = COPY [[FMIN_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FMINNUM %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FMINNUM %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -519,10 +519,10 @@ body:             |
     ; CHECK-NEXT: [[FSGNJ_D:%[0-9]+]]:fpr64 = FSGNJ_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $f10_d = COPY [[FSGNJ_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %2:fprb(s64) = G_FCOPYSIGN %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %2:fprb(f64) = G_FCOPYSIGN %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...
@@ -543,10 +543,10 @@ body:             |
     ; CHECK-NEXT: [[FSGNJ_D:%[0-9]+]]:fpr64 = FSGNJ_D [[COPY]], [[FCVT_D_S]]
     ; CHECK-NEXT: $f10_d = COPY [[FSGNJ_D]]
     ; CHECK-NEXT: PseudoRET implicit $f10_d
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s32) = COPY $f11_f
-    %2:fprb(s64) = G_FCOPYSIGN %0, %1
-    $f10_d = COPY %2(s64)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f32) = COPY $f11_f
+    %2:fprb(f64) = G_FCOPYSIGN %0, %1
+    $f10_d = COPY %2(f64)
     PseudoRET implicit $f10_d
 
 ...

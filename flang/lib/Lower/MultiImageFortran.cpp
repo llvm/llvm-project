@@ -499,6 +499,8 @@ mlir::Value Fortran::lower::genAllocateCoarray(
                              /*errmsg=*/mlir::Value{});
     }
   }
+  if (hasStat)
+    return fir::LoadOp::create(builder, loc, stat);
   return stat;
 }
 
