@@ -54,7 +54,7 @@ class TemplateDeductionInfo {
   /// Have we matched any packs on the parameter side, versus any non-packs on
   /// the argument side, in a context where the opposite matching is also
   /// allowed?
-  bool MatchedPackOnParmToNonPackOnArg = false;
+  bool StrictPackMatch = false;
 
   /// The template parameter depth for which we're performing deduction.
   unsigned DeducedDepth;
@@ -92,13 +92,9 @@ public:
     return DeducedDepth;
   }
 
-  bool hasMatchedPackOnParmToNonPackOnArg() const {
-    return MatchedPackOnParmToNonPackOnArg;
-  }
+  bool hasStrictPackMatch() const { return StrictPackMatch; }
 
-  void setMatchedPackOnParmToNonPackOnArg() {
-    MatchedPackOnParmToNonPackOnArg = true;
-  }
+  void setStrictPackMatch() { StrictPackMatch = true; }
 
   /// Get the number of explicitly-specified arguments.
   unsigned getNumExplicitArgs() const {
@@ -305,7 +301,7 @@ struct DeductionFailureInfo {
 
   /// Return the index of the call argument that this deduction
   /// failure refers to, if any.
-  std::optional<unsigned> getCallArgIndex();
+  UnsignedOrNone getCallArgIndex();
 
   /// Free any memory associated with this deduction failure.
   void Destroy();
@@ -313,6 +309,11 @@ struct DeductionFailureInfo {
   TemplateDeductionResult getResult() const {
     return static_cast<TemplateDeductionResult>(Result);
   }
+};
+
+enum class TemplateSpecCandidateSetKind {
+  Normal,
+  FriendTemplate,
 };
 
 /// TemplateSpecCandidate - This is a generalization of OverloadCandidate
@@ -341,7 +342,8 @@ struct TemplateSpecCandidate {
   }
 
   /// Diagnose a template argument deduction failure.
-  void NoteDeductionFailure(Sema &S, bool ForTakingAddress);
+  void NoteDeductionFailure(Sema &S, bool ForTakingAddress,
+                            TemplateSpecCandidateSetKind CandidateSetKind);
 };
 
 /// TemplateSpecCandidateSet - A set of generalized overload candidates,
@@ -357,11 +359,16 @@ class TemplateSpecCandidateSet {
   // attribute on parameters.
   bool ForTakingAddress;
 
+  TemplateSpecCandidateSetKind CandidateSetKind;
+
   void destroyCandidates();
 
 public:
-  TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false)
-      : Loc(Loc), ForTakingAddress(ForTakingAddress) {}
+  TemplateSpecCandidateSet(SourceLocation Loc, bool ForTakingAddress = false,
+                           TemplateSpecCandidateSetKind CandidateSetKind =
+                               TemplateSpecCandidateSetKind::Normal)
+      : Loc(Loc), ForTakingAddress(ForTakingAddress),
+        CandidateSetKind(CandidateSetKind) {}
   TemplateSpecCandidateSet(const TemplateSpecCandidateSet &) = delete;
   TemplateSpecCandidateSet &
   operator=(const TemplateSpecCandidateSet &) = delete;

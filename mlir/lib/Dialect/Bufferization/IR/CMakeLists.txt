@@ -6,6 +6,8 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   BufferizationDialect.cpp
   BufferViewFlowOpInterface.cpp
   UnstructuredControlFlow.cpp
+  BufferizationTypeInterfaces.cpp
+  ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Bufferization
@@ -14,8 +16,13 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRAllocationOpInterfaceIncGen
   MLIRBufferizationOpsIncGen
   MLIRBufferizationEnumsIncGen
+  MLIRBufferDeallocationOpInterfaceIncGen
+  MLIRBufferizableOpInterfaceIncGen
+  MLIRBufferViewFlowOpInterfaceIncGen
+  MLIRBufferizationTypeInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAffineDialect
   MLIRArithDialect
   MLIRDestinationStyleOpInterface
@@ -23,8 +30,8 @@ add_mlir_dialect_library(MLIRBufferizationDialect
   MLIRFuncDialect
   MLIRFunctionInterfaces
   MLIRIR
-  MLIRSparseTensorDialect
   MLIRSubsetOpInterface
   MLIRTensorDialect
   MLIRMemRefDialect
+  MLIRValueBoundsOpInterface
   )

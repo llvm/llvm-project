@@ -1,8 +1,18 @@
 // Add a few Bogus backend classes so we can create MachineInstrs without
 // depending on a real target.
+
+// Create an allocatable base register class without a real target.
+inline MCRegisterClass createRegisterClass(LaneBitmask LaneMask = {}) {
+  // clang-format off
+  return {0, 0, 0, 0, 0, 0, 0, 0, 0, /*Allocatable=*/true, /*BaseClass=*/true,
+          0, 0, 0, LaneMask, 0, 0, 0, 0, 0, 0, 0, 0};
+  // clang-format on
+}
+
 class BogusTargetLowering : public TargetLowering {
 public:
-  BogusTargetLowering(TargetMachine &TM) : TargetLowering(TM) {}
+  BogusTargetLowering(const TargetMachine &TM, const TargetSubtargetInfo &STI)
+      : TargetLowering(TM, STI) {}
 };
 
 class BogusFrameLowering : public TargetFrameLowering {
@@ -19,14 +29,11 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override { return false; }
 };
 
-static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
-
 class BogusRegisterInfo : public TargetRegisterInfo {
 public:
   BogusRegisterInfo()
-      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
-                           nullptr, nullptr, nullptr, LaneBitmask(~0u), nullptr,
-                           nullptr) {
+      : TargetRegisterInfo(nullptr, nullptr, {}, nullptr, nullptr,
+                           LaneBitmask(~0u), nullptr, nullptr) {
     InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
                        nullptr, nullptr, nullptr, nullptr, 0, nullptr);
   }
@@ -45,8 +52,8 @@ public:
     static RegClassWeight Bogus{1, 16};
     return Bogus;
   }
-  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
-  unsigned getNumRegPressureSets() const override { return 0; }
+  unsigned getRegUnitWeight(MCRegUnit RegUnit) const override { return 1; }
+  unsigned getNumRegPressureSets() const override { return 1; }
   const char *getRegPressureSetName(unsigned Idx) const override {
     return "bogus";
   }
@@ -54,14 +61,23 @@ public:
                                   unsigned Idx) const override {
     return 0;
   }
+  const TargetRegisterClass *
+  getLargestRegClassForRegPressureSet(unsigned Idx) const override {
+    return nullptr;
+  }
   const int *
   getRegClassPressureSets(const TargetRegisterClass *RC) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
   }
-  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+  const int *getRegUnitPressureSets(MCRegUnit RegUnit) const override {
     static const int Bogus[] = {0, -1};
     return &Bogus[0];
+  }
+
+  const TargetRegisterClass *
+  getMinimalPhysRegClass(MCRegister Reg) const override {
+    return nullptr;
   }
 
   Register getFrameRegister(const MachineFunction &MF) const override {
@@ -75,13 +91,21 @@ public:
   }
 };
 
+class BogusTargetInstrInfo : public TargetInstrInfo {
+  BogusRegisterInfo RegInfo;
+
+public:
+  BogusTargetInstrInfo() : TargetInstrInfo(RegInfo) {}
+};
+
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
-      : TargetSubtargetInfo(Triple(""), "", "", "", {}, {}, {}, nullptr,
-                            nullptr, nullptr, nullptr, nullptr, nullptr),
-        FL(), TL(TM) {}
-  ~BogusSubtarget() override {}
+      : TargetSubtargetInfo(Triple(""), "", "", "", "", {}, {}, {}, nullptr,
+                            nullptr, nullptr, nullptr, nullptr, nullptr,
+                            nullptr),
+        FL(), TL(TM, *this) {}
+  ~BogusSubtarget() override = default;
 
   const TargetFrameLowering *getFrameLowering() const override { return &FL; }
 
@@ -91,11 +115,26 @@ public:
 
   const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
 
+  const FeatureBitset &getInlineIgnoreFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineInverseFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
+  const FeatureBitset &getInlineMustMatchFeatures() const override {
+    static constexpr FeatureBitset Features;
+    return Features;
+  }
+
 private:
   BogusFrameLowering FL;
   BogusRegisterInfo TRI;
   BogusTargetLowering TL;
-  TargetInstrInfo TII;
+  BogusTargetInstrInfo TII;
 };
 
 static TargetOptions getTargetOptionsForBogusMachine() {
@@ -108,11 +147,21 @@ class BogusTargetMachine : public CodeGenTargetMachineImpl {
 public:
   BogusTargetMachine()
       : CodeGenTargetMachineImpl(
-            Target(), "", Triple(""), "", "", getTargetOptionsForBogusMachine(),
+            Target(), Triple(""), "", "", getTargetOptionsForBogusMachine(),
             Reloc::Static, CodeModel::Small, CodeGenOptLevel::Default),
-        ST(*this) {}
+        ST(*this) {
+    // With an empty Triple, `initAsmInfo` cannot be called. Provide
+    // default MC{AsmInfo,RegisterInfo,SubtargetInfo} so MCContext can be
+    // created.
+    AsmInfo = std::make_unique<MCAsmInfo>(Options.MCOptions);
+    MRI = std::make_unique<MCRegisterInfo>();
+    STI = std::make_unique<MCSubtargetInfo>(
+        Triple(""), "", "", "", StringTable{""}, ArrayRef<SubtargetFeatureKV>{},
+        ArrayRef<SubtargetSubTypeKV>{}, ArrayRef<SubtargetSubTypeAliasKV>{},
+        nullptr, nullptr, nullptr, nullptr, nullptr, nullptr, nullptr);
+  }
 
-  ~BogusTargetMachine() override {}
+  ~BogusTargetMachine() override = default;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override {
     return &ST;
@@ -127,10 +176,10 @@ BogusTargetMachine *createTargetMachine() {
   return &BogusTM;
 }
 
-std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
-                                                       Module &M) {
+std::unique_ptr<MachineFunction>
+createMachineFunction(LLVMContext &Ctx, Module &M, const Twine &Name = "Test") {
   auto Type = FunctionType::get(Type::getVoidTy(Ctx), false);
-  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, "Test", &M);
+  auto F = Function::Create(Type, GlobalValue::ExternalLinkage, Name, &M);
 
   auto TM = createTargetMachine();
   unsigned FunctionNum = 42;
@@ -140,4 +189,3 @@ std::unique_ptr<MachineFunction> createMachineFunction(LLVMContext &Ctx,
   return std::make_unique<MachineFunction>(*F, *TM, STI, MMI.getContext(),
                                            FunctionNum);
 }
-

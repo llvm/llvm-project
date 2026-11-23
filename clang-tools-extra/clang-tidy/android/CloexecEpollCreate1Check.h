@@ -1,4 +1,4 @@
-//===--- CloexecEpollCreate1Check.h - clang-tidy-----------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_EPOLL_CREATE1_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_EPOLL_CREATE1_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECEPOLLCREATE1CHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECEPOLLCREATE1CHECK_H
 
 #include "CloexecCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// Finds code that uses epoll_create1() without using the EPOLL_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create1.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-epoll-create1.html
 class CloexecEpollCreate1Check : public CloexecCheck {
 public:
   CloexecEpollCreate1Check(StringRef Name, ClangTidyContext *Context)
@@ -27,4 +27,4 @@ public:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_EPOLL_CREATE1_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECEPOLLCREATE1CHECK_H

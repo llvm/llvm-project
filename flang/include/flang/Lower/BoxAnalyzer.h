@@ -403,7 +403,8 @@ public:
                 continue;
               }
             } else if (subs.ubound().isStar()) {
-              assert(Fortran::semantics::IsNamedConstant(sym) &&
+              assert((Fortran::semantics::IsNamedConstant(sym) ||
+                      Fortran::semantics::IsCUDAShared(sym)) &&
                      "expect implied shape constant");
               shapes.push_back(fir::SequenceType::getUnknownExtent());
               continue;
@@ -500,9 +501,10 @@ private:
               sym.GetUltimate()
                   .detailsIf<Fortran::semantics::ObjectEntityDetails>())
         if (objectDetails->init())
-          if (const auto *charExpr = std::get_if<
-                  Fortran::evaluate::Expr<Fortran::evaluate::SomeCharacter>>(
-                  &objectDetails->init()->u))
+          if (const auto *charExpr =
+                  std::get_if<Fortran::evaluate::Expr<Fortran::evaluate::Type<
+                      Fortran::common::TypeCategory::Character>>>(
+                      &objectDetails->init()->u))
             if (Fortran::semantics::MaybeSubscriptIntExpr expr =
                     charExpr->LEN())
               return {Fortran::evaluate::AsGenericExpr(std::move(*expr))};

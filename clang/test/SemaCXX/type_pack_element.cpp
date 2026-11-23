@@ -43,3 +43,10 @@ static_assert(__is_same(__type_pack_element<5, X<0>, X<1>, X<2>, X<3>, X<4>, X<5
 template <SizeT Index, typename ...T>
 using ErrorTypePackElement1 = __type_pack_element<Index, T...>; // expected-error{{may not be accessed at an out of bounds index}}
 using illformed1 = ErrorTypePackElement1<3, X<0>, X<1>>;  // expected-note{{in instantiation}}
+
+namespace GH186655 {
+  template <class {}, class C> struct S;
+  // expected-error@-1 {{cannot be defined in a type specifier}}
+  template <int T> struct S<T, __type_pack_element<sizeof(T)>> {};
+  // expected-error@-1 {{a parameter pack may not be accessed at an out of bounds index}}
+} // namespace GH186655

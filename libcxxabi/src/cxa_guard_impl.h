@@ -406,7 +406,7 @@ private:
     }
 
   private:
-    const char* const calling_func_;
+    [[maybe_unused]] const char* const calling_func_;
   };
 };
 
@@ -637,7 +637,7 @@ struct GlobalStatic {
   static T instance;
 };
 template <class T>
-_LIBCPP_CONSTINIT T GlobalStatic<T>::instance = {};
+constinit T GlobalStatic<T>::instance = {};
 
 enum class Implementation { NoThreads, GlobalMutex, Futex };
 

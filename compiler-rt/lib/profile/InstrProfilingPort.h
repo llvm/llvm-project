@@ -117,9 +117,17 @@ static inline size_t getpagesize(void) {
   return S.dwPageSize;
 }
 #else /* defined(_WIN32) */
+#ifndef COMPILER_RT_PROFILE_BAREMETAL
 #include <unistd.h>
+#endif
 #endif /* defined(_WIN32) */
 
+#ifdef COMPILER_RT_PROFILE_BAREMETAL
+// Baremetal doesn't support logging
+#define PROF_ERR(Format, ...)
+#define PROF_WARN(Format, ...)
+#define PROF_NOTE(Format, ...)
+#else
 #define PROF_ERR(Format, ...)                                                  \
   fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
 
@@ -128,6 +136,7 @@ static inline size_t getpagesize(void) {
 
 #define PROF_NOTE(Format, ...)                                                 \
   fprintf(stderr, "LLVM Profile Note: " Format, __VA_ARGS__);
+#endif /* COMPILER_RT_PROFILE_BAREMETAL */
 
 #ifndef MAP_FILE
 #define MAP_FILE 0
@@ -137,16 +146,6 @@ static inline size_t getpagesize(void) {
 #define O_BINARY 0
 #endif
 
-#if defined(__FreeBSD__)
-
-#include <inttypes.h>
-#include <sys/types.h>
-
-#else /* defined(__FreeBSD__) */
-
-#include <inttypes.h>
 #include <stdint.h>
-
-#endif /* defined(__FreeBSD__) && defined(__i386__) */
 
 #endif /* PROFILE_INSTRPROFILING_PORT_H_ */

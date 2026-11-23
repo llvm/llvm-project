@@ -18,6 +18,10 @@
 // it works with the dynamic runtime.
 // XFAIL: target={{.*netbsd.*}} && !asan-dynamic-runtime
 
+#if defined(_MSC_VER) && !defined(__clang__)
+#  pragma warning(disable : 4273)
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

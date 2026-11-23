@@ -19,12 +19,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/Internalize.h"
-#include "llvm/ADT/SmallString.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
@@ -40,26 +39,15 @@ STATISTIC(NumAliases, "Number of aliases internalized");
 STATISTIC(NumFunctions, "Number of functions internalized");
 STATISTIC(NumGlobals, "Number of global vars internalized");
 
-// APIFile - A file which contains a list of symbol glob patterns that should
-// not be marked external.
-static cl::opt<std::string>
-    APIFile("internalize-public-api-file", cl::value_desc("filename"),
-            cl::desc("A file containing list of symbol names to preserve"));
-
-// APIList - A list of symbol glob patterns that should not be marked internal.
-static cl::list<std::string>
-    APIList("internalize-public-api-list", cl::value_desc("list"),
-            cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
-
 namespace {
 // Helper to load an API list to preserve from file and expose it as a functor
 // for internalization.
 class PreserveAPIList {
 public:
-  PreserveAPIList() {
-    if (!APIFile.empty())
-      LoadFile(APIFile);
-    for (StringRef Pattern : APIList)
+  PreserveAPIList(const IPOOptions &Opts) {
+    if (!Opts.internalize_public_api_file.empty())
+      LoadFile(Opts.internalize_public_api_file);
+    for (StringRef Pattern : Opts.internalize_public_api_list)
       addGlob(Pattern);
   }
 
@@ -132,7 +120,6 @@ bool InternalizePass::shouldPreserveGV(const GlobalValue &GV) {
 
 bool InternalizePass::maybeInternalize(
     GlobalValue &GV, DenseMap<const Comdat *, ComdatInfo> &ComdatMap) {
-  SmallString<0> ComdatName;
   if (Comdat *C = GV.getComdat()) {
     // For GlobalAlias, C is the aliasee object's comdat which may have been
     // redirected. So ComdatMap may not contain C.
@@ -228,17 +215,17 @@ bool InternalizePass::internalizeModule(Module &M) {
   // FIXME: We should probably add this (and the __stack_chk_guard) via some
   // type of call-back in CodeGen.
   AlwaysPreserved.insert("__stack_chk_fail");
-  if (Triple(M.getTargetTriple()).isOSAIX())
+  if (M.getTargetTriple().isOSAIX())
     AlwaysPreserved.insert("__ssp_canary_word");
   else
     AlwaysPreserved.insert("__stack_chk_guard");
 
   // Preserve the RPC interface for GPU host callbacks when internalizing.
-  if (Triple(M.getTargetTriple()).isNVPTX())
-    AlwaysPreserved.insert("__llvm_rpc_server");
+  if (M.getTargetTriple().isNVPTX())
+    AlwaysPreserved.insert("__llvm_rpc_client");
 
   // Mark all functions not in the api as internal.
-  IsWasm = Triple(M.getTargetTriple()).isOSBinFormatWasm();
+  IsWasm = M.getTargetTriple().isOSBinFormatWasm();
   for (Function &I : M) {
     if (!maybeInternalize(I, ComdatMap))
       continue;
@@ -272,11 +259,16 @@ bool InternalizePass::internalizeModule(Module &M) {
   return Changed;
 }
 
-InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
-
 PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!internalizeModule(M))
+  bool Changed =
+      MustPreserveGV
+          ? internalizeModule(M)
+          : llvm::internalizeModule(M, PreserveAPIList(getIPOOptions(M)));
+  if (!Changed)
     return PreservedAnalyses::all();
 
-  return PreservedAnalyses::none();
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

@@ -102,19 +102,17 @@
 @ CHECK-ERRORS:         bkpt #65536
 @ CHECK-ERRORS:              ^
 
-        @ Out of range immediates for v8 HLT instruction.
+        @ Out of range immediates for HLT instruction.
         hlt #65536
         hlt #-1
-@CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
+@CHECK-ERRORS: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #65536
 @CHECK-ERRORS:              ^
-@CHECK-ERRORS-V7: error: invalid instruction
-@CHECK-ERRORS-V8: error: operand must be an immediate in the range [0,65535]
+@CHECK-ERRORS: error: operand must be an immediate in the range [0,65535]
 @CHECK-ERRORS:         hlt #-1
 @CHECK-ERRORS:             ^
 
-        @ Illegal condition code for v8 HLT instruction.
+        @ Illegal condition code for HLT instruction.
         hlteq #2
         hltlt #23
 @CHECK-ERRORS: error: instruction 'hlt' is not predicable, but condition code specified
@@ -136,10 +134,10 @@
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
-@ CHECK-ERRORS-V8: error: invalid instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
+@ CHECK-ERRORS-V8: error: invalid operand for instruction
 
         @ Out of range immediates for DBG
         dbg #-1
@@ -164,17 +162,21 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ p10 and p11 are reserved for NEON
         mcr p10, #2, r5, c1, c1, #4
-        mcrr p11, #8, r5, r4, c1
-@ CHECK-WARN: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
-@ CHECK-WARN: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+        mcr p11, #2, r5, c1, c1, #4
+        mrc p10, #7, r5, c1, c1, #0
+        mrc p11, #7, r5, c1, c1, #0
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
 
         @ Out of range immediate for MOV
         movw r9, 0x10000
@@ -208,12 +210,12 @@
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V8: too many operands for instruction
 @ CHECK-ERRORS: operand must be an immediate in the range [0,15]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,15]
-@ CHECK-ERRORS-V8: invalid instruction
+@ CHECK-ERRORS-V8: invalid operand for instruction
 
         @ Shifter operand validation for PKH instructions.
         pkhbt r2, r2, r3, lsl #-1

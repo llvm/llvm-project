@@ -43,8 +43,8 @@ L<int> l;
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZNK12non_template1L1tMUliE_clEiENKUliE_clEi(ptr
 
 
-// CHECK-LABEL: define linkonce_odr void @_ZNK32lambdas_in_NSDMIs_template_class1LIiEUliE_clEi(ptr
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZNK32lambdas_in_NSDMIs_template_class1LIiEUliE_clEiENKUliE_clEi(ptr
+// CHECK-LABEL: define linkonce_odr void @_ZNK32lambdas_in_NSDMIs_template_class1LIiE2t2MUliE_clEi(ptr
+// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZNK32lambdas_in_NSDMIs_template_class1LIiE2t2MUliE_clEiENKUliE_clEi(ptr
 
 // CHECK-LABEL: define linkonce_odr void @_ZZN15inline_function3fooEvENKUliE_clEi
 // CHECK-LABEL: define linkonce_odr noundef signext i8 @_ZZZN15inline_function3fooEvENKUliE_clEiENKUlcE_clEc

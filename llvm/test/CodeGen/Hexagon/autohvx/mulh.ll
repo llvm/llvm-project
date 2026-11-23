@@ -10,7 +10,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r7 = #124
+; V60-NEXT:     r7 = #-4
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
@@ -28,7 +28,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     r7 = #124
+; V65-NEXT:     r7 = #-4
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)
@@ -46,7 +46,7 @@ define <64 x i16> @mulhs16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V69-NEXT:     v1:0.w = vmpy(v1.h,v0.h)
 ; V69-NEXT:    }
 ; V69-NEXT:    {
-; V69-NEXT:     r7 = #124
+; V69-NEXT:     r7 = #-4
 ; V69-NEXT:    }
 ; V69-NEXT:    {
 ; V69-NEXT:     v1:0 = vshuff(v1,v0,r7)
@@ -72,7 +72,7 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V60-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     r7 = #124
+; V60-NEXT:     r7 = #-4
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v1:0 = vshuff(v1,v0,r7)
@@ -90,7 +90,7 @@ define <64 x i16> @mulhu16(<64 x i16> %a0, <64 x i16> %a1) #0 {
 ; V65-NEXT:     v1:0.uw = vmpy(v1.uh,v0.uh)
 ; V65-NEXT:    }
 ; V65-NEXT:    {
-; V65-NEXT:     r7 = #124
+; V65-NEXT:     r7 = #-4
 ; V65-NEXT:    }
 ; V65-NEXT:    {
 ; V65-NEXT:     v1:0 = vshuff(v1,v0,r7)

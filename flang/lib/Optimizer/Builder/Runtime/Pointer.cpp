@@ -23,5 +23,5 @@ void fir::runtime::genPointerAssociateScalar(fir::FirOpBuilder &builder,
   mlir::FunctionType fTy{func.getFunctionType()};
   llvm::SmallVector<mlir::Value> args{
       fir::runtime::createArguments(builder, loc, fTy, desc, target)};
-  builder.create<fir::CallOp>(loc, func, args);
+  fir::CallOp::create(builder, loc, func, args);
 }

@@ -64,10 +64,29 @@ LIBC_INLINE void unstable_sort_impl(void *array, size_t array_len,
 }
 
 template <typename F>
+LIBC_INLINE void unstable_sort_dispatch(void *array, size_t array_len,
+                                        size_t elem_size, F is_less) {
+  constexpr bool USE_QUICK_SORT = (LIBC_QSORT_IMPL == LIBC_QSORT_QUICK_SORT);
+  unstable_sort_impl<USE_QUICK_SORT>(array, array_len, elem_size, is_less);
+}
+
+template <typename CmpFn>
 LIBC_INLINE void unstable_sort(void *array, size_t array_len, size_t elem_size,
-                               const F &is_less) {
-#define USE_QUICK_SORT ((LIBC_QSORT_IMPL) == (LIBC_QSORT_QUICK_SORT))
-  unstable_sort_impl<USE_QUICK_SORT, F>(array, array_len, elem_size, is_less);
+                               CmpFn compare) {
+  const auto is_less = [compare](const void *a, const void *b) -> bool {
+    return compare(a, b) < 0;
+  };
+  unstable_sort_dispatch(array, array_len, elem_size, is_less);
+}
+
+template <typename CmpFn>
+LIBC_INLINE void unstable_sort(void *array, size_t array_len, size_t elem_size,
+                               CmpFn compare, void *context) {
+  const auto is_less = [compare, context](const void *a,
+                                          const void *b) -> bool {
+    return compare(a, b, context) < 0;
+  };
+  unstable_sort_dispatch(array, array_len, elem_size, is_less);
 }
 
 } // namespace internal

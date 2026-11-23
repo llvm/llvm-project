@@ -8,6 +8,8 @@ if (NOT DEFINED LLDB_TABLEGEN_EXE)
     set(LLVM_LINK_COMPONENTS Support)
 
     add_tablegen(lldb-tblgen LLDB
+      DESTINATION "${CMAKE_INSTALL_BINDIR}"
+      EXPORT LLDB
       LLDBOptionDefEmitter.cpp
       LLDBPropertyDefEmitter.cpp
       LLDBTableGen.cpp

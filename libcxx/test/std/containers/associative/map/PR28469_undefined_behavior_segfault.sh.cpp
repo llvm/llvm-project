@@ -22,13 +22,13 @@
 void dummy() {}
 
 struct F {
-    std::map<int, std::function<void()> > m;
-    F() { m[42] = &dummy; }
+  std::map<int, std::function<void()> > m;
+  F() { m[42] = &dummy; }
 };
 
 int main(int, char**) {
-    F f;
-    f = F();
+  F f;
+  f = F();
 
   return 0;
 }

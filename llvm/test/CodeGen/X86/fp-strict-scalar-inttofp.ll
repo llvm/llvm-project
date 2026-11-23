@@ -62,7 +62,7 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ; AVX-X86-NEXT:    andb $1, %al
 ; AVX-X86-NEXT:    negb %al
 ; AVX-X86-NEXT:    movsbl %al, %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -75,7 +75,7 @@ define float @sitofp_i1tof32(i1 %x) #0 {
 ; AVX-X64-NEXT:    andb $1, %dil
 ; AVX-X64-NEXT:    negb %dil
 ; AVX-X64-NEXT:    movsbl %dil, %eax
-; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i1tof32:
@@ -123,7 +123,7 @@ define float @sitofp_i8tof32(i8 %x) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -134,7 +134,7 @@ define float @sitofp_i8tof32(i8 %x) #0 {
 ; AVX-X64-LABEL: sitofp_i8tof32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movsbl %dil, %eax
-; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i8tof32:
@@ -179,7 +179,7 @@ define float @sitofp_i16tof32(i16 %x) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    movswl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -190,7 +190,7 @@ define float @sitofp_i16tof32(i16 %x) #0 {
 ; AVX-X64-LABEL: sitofp_i16tof32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movswl %di, %eax
-; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i16tof32:
@@ -232,7 +232,7 @@ define float @sitofp_i32tof32(i32 %x) #0 {
 ; AVX-X86:       # %bb.0:
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ssl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -242,7 +242,7 @@ define float @sitofp_i32tof32(i32 %x) #0 {
 ;
 ; AVX-X64-LABEL: sitofp_i32tof32:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i32tof32:
@@ -294,7 +294,7 @@ define float @sitofp_i64tof32(i64 %x) #0 {
 ;
 ; AVX-X64-LABEL: sitofp_i64tof32:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i64tof32:
@@ -314,8 +314,7 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; SSE-X86-NEXT:    pushl %eax
 ; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
 ; SSE-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; SSE-X86-NEXT:    andb $1, %al
-; SSE-X86-NEXT:    movzbl %al, %eax
+; SSE-X86-NEXT:    andl $1, %eax
 ; SSE-X86-NEXT:    cvtsi2ss %eax, %xmm0
 ; SSE-X86-NEXT:    movss %xmm0, (%esp)
 ; SSE-X86-NEXT:    flds (%esp)
@@ -335,9 +334,8 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    andb $1, %al
-; AVX-X86-NEXT:    movzbl %al, %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    andl $1, %eax
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -348,7 +346,7 @@ define float @uitofp_i1tof32(i1 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i1tof32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    andl $1, %edi
-; AVX-X64-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i1tof32:
@@ -395,7 +393,7 @@ define float @uitofp_i8tof32(i8 %x) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -406,7 +404,7 @@ define float @uitofp_i8tof32(i8 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i8tof32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movzbl %dil, %eax
-; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i8tof32:
@@ -451,7 +449,7 @@ define float @uitofp_i16tof32(i16 %x) #0 {
 ; AVX-X86-NEXT:    pushl %eax
 ; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2ss %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX-X86-NEXT:    flds (%esp)
 ; AVX-X86-NEXT:    wait
@@ -462,7 +460,7 @@ define float @uitofp_i16tof32(i16 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i16tof32:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movzwl %di, %eax
-; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i16tof32:
@@ -534,14 +532,14 @@ define float @uitofp_i32tof32(i32 %x) #0 {
 ; AVX1-X64-LABEL: uitofp_i32tof32:
 ; AVX1-X64:       # %bb.0:
 ; AVX1-X64-NEXT:    movl %edi, %eax
-; AVX1-X64-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; AVX1-X64-NEXT:    retq
 ;
 ; AVX512-X86-LABEL: uitofp_i32tof32:
 ; AVX512-X86:       # %bb.0:
 ; AVX512-X86-NEXT:    pushl %eax
 ; AVX512-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX512-X86-NEXT:    vcvtusi2ssl {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX512-X86-NEXT:    vcvtusi2ssl {{[0-9]+}}(%esp), %xmm7, %xmm0
 ; AVX512-X86-NEXT:    vmovss %xmm0, (%esp)
 ; AVX512-X86-NEXT:    flds (%esp)
 ; AVX512-X86-NEXT:    wait
@@ -551,7 +549,7 @@ define float @uitofp_i32tof32(i32 %x) #0 {
 ;
 ; AVX512-X64-LABEL: uitofp_i32tof32:
 ; AVX512-X64:       # %bb.0:
-; AVX512-X64-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-X64-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; AVX512-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i32tof32:
@@ -656,7 +654,7 @@ define float @uitofp_i64tof32(i64 %x) #0 {
 ; AVX1-X64-NEXT:    orq %rax, %rcx
 ; AVX1-X64-NEXT:    testq %rdi, %rdi
 ; AVX1-X64-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-X64-NEXT:    vcvtsi2ss %rcx, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vcvtsi2ss %rcx, %xmm15, %xmm0
 ; AVX1-X64-NEXT:    jns .LBB9_2
 ; AVX1-X64-NEXT:  # %bb.1:
 ; AVX1-X64-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -665,7 +663,7 @@ define float @uitofp_i64tof32(i64 %x) #0 {
 ;
 ; AVX512-X64-LABEL: uitofp_i64tof32:
 ; AVX512-X64:       # %bb.0:
-; AVX512-X64-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-X64-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
 ; AVX512-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i64tof32:
@@ -733,7 +731,7 @@ define double @sitofp_i8tof64(i8 %x) #0 {
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    movsbl 8(%ebp), %eax
-; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -745,7 +743,7 @@ define double @sitofp_i8tof64(i8 %x) #0 {
 ; AVX-X64-LABEL: sitofp_i8tof64:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movsbl %dil, %eax
-; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i8tof64:
@@ -801,7 +799,7 @@ define double @sitofp_i16tof64(i16 %x) #0 {
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    movswl 8(%ebp), %eax
-; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -813,7 +811,7 @@ define double @sitofp_i16tof64(i16 %x) #0 {
 ; AVX-X64-LABEL: sitofp_i16tof64:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movswl %di, %eax
-; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i16tof64:
@@ -866,7 +864,7 @@ define double @sitofp_i32tof64(i32 %x) #0 {
 ; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    vcvtsi2sdl 8(%ebp), %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2sdl 8(%ebp), %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -877,7 +875,7 @@ define double @sitofp_i32tof64(i32 %x) #0 {
 ;
 ; AVX-X64-LABEL: sitofp_i32tof64:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i32tof64:
@@ -900,20 +898,14 @@ define double @sitofp_i32tof64(i32 %x) #0 {
 define double @sitofp_i64tof64(i64 %x) #0 {
 ; SSE-X86-LABEL: sitofp_i64tof64:
 ; SSE-X86:       # %bb.0:
-; SSE-X86-NEXT:    pushl %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa_offset 8
-; SSE-X86-NEXT:    .cfi_offset %ebp, -8
-; SSE-X86-NEXT:    movl %esp, %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa_register %ebp
-; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $8, %esp
-; SSE-X86-NEXT:    fildll 8(%ebp)
+; SSE-X86-NEXT:    .cfi_def_cfa_offset 12
+; SSE-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; SSE-X86-NEXT:    fstpl (%esp)
 ; SSE-X86-NEXT:    fldl (%esp)
 ; SSE-X86-NEXT:    wait
-; SSE-X86-NEXT:    movl %ebp, %esp
-; SSE-X86-NEXT:    popl %ebp
-; SSE-X86-NEXT:    .cfi_def_cfa %esp, 4
+; SSE-X86-NEXT:    addl $8, %esp
+; SSE-X86-NEXT:    .cfi_def_cfa_offset 4
 ; SSE-X86-NEXT:    retl
 ;
 ; SSE-X64-LABEL: sitofp_i64tof64:
@@ -923,25 +915,19 @@ define double @sitofp_i64tof64(i64 %x) #0 {
 ;
 ; AVX-X86-LABEL: sitofp_i64tof64:
 ; AVX-X86:       # %bb.0:
-; AVX-X86-NEXT:    pushl %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa_offset 8
-; AVX-X86-NEXT:    .cfi_offset %ebp, -8
-; AVX-X86-NEXT:    movl %esp, %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa_register %ebp
-; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
-; AVX-X86-NEXT:    fildll 8(%ebp)
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 12
+; AVX-X86-NEXT:    fildll {{[0-9]+}}(%esp)
 ; AVX-X86-NEXT:    fstpl (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
-; AVX-X86-NEXT:    movl %ebp, %esp
-; AVX-X86-NEXT:    popl %ebp
-; AVX-X86-NEXT:    .cfi_def_cfa %esp, 4
+; AVX-X86-NEXT:    addl $8, %esp
+; AVX-X86-NEXT:    .cfi_def_cfa_offset 4
 ; AVX-X86-NEXT:    retl
 ;
 ; AVX-X64-LABEL: sitofp_i64tof64:
 ; AVX-X64:       # %bb.0:
-; AVX-X64-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: sitofp_i64tof64:
@@ -966,8 +952,7 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; SSE-X86-NEXT:    andl $-8, %esp
 ; SSE-X86-NEXT:    subl $8, %esp
 ; SSE-X86-NEXT:    movzbl 8(%ebp), %eax
-; SSE-X86-NEXT:    andb $1, %al
-; SSE-X86-NEXT:    movzbl %al, %eax
+; SSE-X86-NEXT:    andl $1, %eax
 ; SSE-X86-NEXT:    cvtsi2sd %eax, %xmm0
 ; SSE-X86-NEXT:    movsd %xmm0, (%esp)
 ; SSE-X86-NEXT:    fldl (%esp)
@@ -993,9 +978,8 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    movzbl 8(%ebp), %eax
-; AVX-X86-NEXT:    andb $1, %al
-; AVX-X86-NEXT:    movzbl %al, %eax
-; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    andl $1, %eax
+; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -1007,7 +991,7 @@ define double @uitofp_i1tof64(i1 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i1tof64:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    andl $1, %edi
-; AVX-X64-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i1tof64:
@@ -1065,7 +1049,7 @@ define double @uitofp_i8tof64(i8 %x) #0 {
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    movzbl 8(%ebp), %eax
-; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -1077,7 +1061,7 @@ define double @uitofp_i8tof64(i8 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i8tof64:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movzbl %dil, %eax
-; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i8tof64:
@@ -1133,7 +1117,7 @@ define double @uitofp_i16tof64(i16 %x) #0 {
 ; AVX-X86-NEXT:    andl $-8, %esp
 ; AVX-X86-NEXT:    subl $8, %esp
 ; AVX-X86-NEXT:    movzwl 8(%ebp), %eax
-; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X86-NEXT:    vcvtsi2sd %eax, %xmm7, %xmm0
 ; AVX-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX-X86-NEXT:    fldl (%esp)
 ; AVX-X86-NEXT:    wait
@@ -1145,7 +1129,7 @@ define double @uitofp_i16tof64(i16 %x) #0 {
 ; AVX-X64-LABEL: uitofp_i16tof64:
 ; AVX-X64:       # %bb.0:
 ; AVX-X64-NEXT:    movzwl %di, %eax
-; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-X64-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i16tof64:
@@ -1217,7 +1201,7 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ; AVX1-X64-LABEL: uitofp_i32tof64:
 ; AVX1-X64:       # %bb.0:
 ; AVX1-X64-NEXT:    movl %edi, %eax
-; AVX1-X64-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; AVX1-X64-NEXT:    retq
 ;
 ; AVX512-X86-LABEL: uitofp_i32tof64:
@@ -1229,7 +1213,7 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ; AVX512-X86-NEXT:    .cfi_def_cfa_register %ebp
 ; AVX512-X86-NEXT:    andl $-8, %esp
 ; AVX512-X86-NEXT:    subl $8, %esp
-; AVX512-X86-NEXT:    vcvtusi2sdl 8(%ebp), %xmm0, %xmm0
+; AVX512-X86-NEXT:    vcvtusi2sdl 8(%ebp), %xmm7, %xmm0
 ; AVX512-X86-NEXT:    vmovsd %xmm0, (%esp)
 ; AVX512-X86-NEXT:    fldl (%esp)
 ; AVX512-X86-NEXT:    wait
@@ -1240,7 +1224,7 @@ define double @uitofp_i32tof64(i32 %x) #0 {
 ;
 ; AVX512-X64-LABEL: uitofp_i32tof64:
 ; AVX512-X64:       # %bb.0:
-; AVX512-X64-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-X64-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; AVX512-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i32tof64:
@@ -1345,7 +1329,7 @@ define double @uitofp_i64tof64(i64 %x) #0 {
 ; AVX1-X64-NEXT:    orq %rax, %rcx
 ; AVX1-X64-NEXT:    testq %rdi, %rdi
 ; AVX1-X64-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-X64-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX1-X64-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
 ; AVX1-X64-NEXT:    jns .LBB18_2
 ; AVX1-X64-NEXT:  # %bb.1:
 ; AVX1-X64-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
@@ -1354,7 +1338,7 @@ define double @uitofp_i64tof64(i64 %x) #0 {
 ;
 ; AVX512-X64-LABEL: uitofp_i64tof64:
 ; AVX512-X64:       # %bb.0:
-; AVX512-X64-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-X64-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
 ; AVX512-X64-NEXT:    retq
 ;
 ; X87-LABEL: uitofp_i64tof64:

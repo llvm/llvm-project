@@ -28,9 +28,9 @@ namespace __sanitizer {
 // Don't use directly, use __sanitizer::OpenFile() instead.
 uptr internal_open(const char *filename, int flags);
 uptr internal_open(const char *filename, int flags, u32 mode);
-#  if SANITIZER_FREEBSD
+// Closes all file descriptors from lowfd to highfd (inclusive).
+// Returns 0 on success or non-zero if not supported on this platform.
 uptr internal_close_range(fd_t lowfd, fd_t highfd, int flags);
-#  endif
 uptr internal_close(fd_t fd);
 
 uptr internal_read(fd_t fd, void *buf, uptr count);
@@ -67,7 +67,8 @@ uptr internal_ptrace(int request, int pid, void *addr, void *data);
 uptr internal_waitpid(int pid, int *status, int options);
 
 int internal_fork();
-fd_t internal_spawn(const char *argv[], const char *envp[], pid_t *pid);
+bool internal_spawn(const char* argv[], const char* envp[], pid_t* pid,
+                    fd_t fd_stdin, fd_t fd_stdout);
 
 int internal_sysctl(const int *name, unsigned int namelen, void *oldp,
                     uptr *oldlenp, const void *newp, uptr newlen);

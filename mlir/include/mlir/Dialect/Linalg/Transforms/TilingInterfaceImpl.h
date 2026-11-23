@@ -14,6 +14,11 @@ class DialectRegistry;
 
 namespace linalg {
 void registerTilingInterfaceExternalModels(DialectRegistry &registry);
+
+/// Similar to the above registeration, but it is only for `tensor.pack` and
+/// `tensor.unpack` ops.
+void registerTilingInterfaceExternalModelsForPackUnPackOps(
+    DialectRegistry &registry);
 } // namespace linalg
 } // namespace mlir
 

@@ -8,8 +8,10 @@
 
 #include "llvm/CodeGen/MachineLoopUtils.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineDomTreeUpdater.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
+#include <iterator>
 using namespace llvm;
 
 namespace {
@@ -26,7 +28,8 @@ MachineInstr &findEquivalentInstruction(MachineInstr &MI,
 MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
                                              MachineBasicBlock *Loop,
                                              MachineRegisterInfo &MRI,
-                                             const TargetInstrInfo *TII) {
+                                             const TargetInstrInfo *TII,
+                                             MachineDomTreeUpdater *MDTU) {
   MachineFunction &MF = *Loop->getParent();
   MachineBasicBlock *Preheader = *Loop->pred_begin();
   if (Preheader == Loop)
@@ -110,14 +113,20 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
   if (Direction == LPD_Front) {
     Preheader->ReplaceUsesOfBlockWith(Loop, NewBB);
     NewBB->addSuccessor(Loop);
+    if (MDTU)
+      MDTU->splitCriticalEdge(Preheader, Loop, NewBB);
     Loop->replacePhiUsesWith(Preheader, NewBB);
-    Preheader->updateTerminator(Loop);
+    if (auto PreheaderLayoutSuccessor = std::next(Preheader->getIterator());
+        PreheaderLayoutSuccessor != Preheader->getParent()->end())
+      Preheader->updateTerminator(&*PreheaderLayoutSuccessor);
     TII->removeBranch(*NewBB);
     TII->insertBranch(*NewBB, Loop, nullptr, {}, DL);
   } else {
     Loop->replaceSuccessor(Exit, NewBB);
     Exit->replacePhiUsesWith(Loop, NewBB);
     NewBB->addSuccessor(Exit);
+    if (MDTU)
+      MDTU->splitCriticalEdge(Loop, Exit, NewBB);
 
     MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
     SmallVector<MachineOperand, 4> Cond;

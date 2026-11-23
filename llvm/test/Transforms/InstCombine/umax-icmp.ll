@@ -804,4 +804,39 @@ end:
   ret void
 }
 
+define i1 @pr126974(i8 %x) {
+; CHECK-LABEL: @pr126974(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[COND:%.*]] = icmp sgt i8 [[X:%.*]], -2
+; CHECK-NEXT:    br i1 [[COND]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[X]], -1
+; CHECK-NEXT:    ret i1 [[CMP]]
+; CHECK:       if.else:
+; CHECK-NEXT:    ret i1 false
+;
+entry:
+  %cond = icmp sgt i8 %x, -2
+  br i1 %cond, label %if.then, label %if.else
+
+if.then:
+  %umax = call i8 @llvm.umax.i8(i8 %x, i8 -46)
+  %cmp = icmp samesign ult i8 %umax, -32
+  ret i1 %cmp
+
+if.else:
+  ret i1 false
+}
+
+define i32 @select_zero_umax(i32 %pos, i32 %len) {
+; CHECK-LABEL: @select_zero_umax(
+; CHECK-NEXT:    [[CLAMPED:%.*]] = call i32 @llvm.umax.i32(i32 [[POS:%.*]], i32 [[LEN:%.*]])
+; CHECK-NEXT:    ret i32 [[CLAMPED]]
+;
+  %is_zero = icmp eq i32 %pos, 0
+  %clamped = call i32 @llvm.umax.i32(i32 %pos, i32 %len)
+  %out = select i1 %is_zero, i32 %len, i32 %clamped
+  ret i32 %out
+}
+
 declare i32 @llvm.umax.i32(i32, i32)

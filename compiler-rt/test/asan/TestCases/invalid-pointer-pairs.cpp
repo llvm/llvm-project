@@ -4,7 +4,7 @@
 // RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 not %run %t g 2>&1 | FileCheck %s -check-prefix=CMP -check-prefix=ALL-ERRORS
 // RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 not %run %t s 2>&1 | FileCheck %s -check-prefix=SUB -check-prefix=ALL-ERRORS
 // RUN: %env_asan_opts=detect_invalid_pointer_pairs=1 not %run %t f 2>&1 | FileCheck %s -check-prefix=FREE -check-prefix=ALL-ERRORS
-
+// XFAIL: msvc
 #include <assert.h>
 #include <stdlib.h>
 

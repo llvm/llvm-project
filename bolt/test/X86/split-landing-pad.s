@@ -1,5 +1,5 @@
 ## This test reproduces the case where C++ exception handling is used and split
-## function optimization is enabled. In particular, function foo is splitted
+## function optimization is enabled. In particular, function foo is split
 ## to two fragments:
 ##    foo: contains 2 try blocks, which invokes bar to throw exception
 ##    foo.cold.1: contains 2 corresponding catch blocks (landing pad)

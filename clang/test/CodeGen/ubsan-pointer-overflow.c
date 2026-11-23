@@ -12,7 +12,7 @@ void fixed_len_array(int k) {
   // CHECK-NEXT: [[SMULOFLOW:%.*]] = extractvalue { i64, i1 } [[SMUL]], 1, !nosanitize
   // CHECK-NEXT: [[OR:%.+]] = or i1 [[SMULOFLOW]], false, !nosanitize
   // CHECK-NEXT: [[SMULVAL:%.*]] = extractvalue { i64, i1 } [[SMUL]], 0, !nosanitize
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[ARR]] to i64, !nosanitize
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoaddr ptr [[ARR]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], [[SMULVAL]], !nosanitize
   // CHECK: call void @__ubsan_handle_pointer_overflow{{.*}}, i64 [[BASE]], i64 [[COMPGEP]]){{.*}}, !nosanitize
 
@@ -84,7 +84,7 @@ struct S1 {
 // CHECK-LABEL: define{{.*}} void @struct_index
 void struct_index(struct S1 *p) {
   // CHECK: getelementptr inbounds %struct.S1, ptr [[P:%.*]], i64 10
-  // CHECK-NEXT: [[BASE:%.*]] = ptrtoint ptr [[P]] to i64, !nosanitize
+  // CHECK-NEXT: [[BASE:%.*]] = ptrtoaddr ptr [[P]] to i64, !nosanitize
   // CHECK-NEXT: [[COMPGEP:%.*]] = add i64 [[BASE]], 240, !nosanitize
   // CHECK: select
   // CHECK: @__ubsan_handle_pointer_overflow{{.*}} i64 [[BASE]], i64 [[COMPGEP]]) {{.*}}, !nosanitize

@@ -117,69 +117,181 @@ define dso_local void @store_atomic_i64_aligned_seq_cst(i64 %value, ptr %ptr) {
 
 define dso_local void @store_atomic_i128_aligned_unordered(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_unordered:
-; -O0:    ldxp x10, x12, [x9]
+; -O0:    ldxp x12, x10, [x9]
 ; -O0:    cmp x10, x11
 ; -O0:    cmp x12, x13
-; -O0:    stxp w8, x14, x15, [x9]
-; -O0:    stxp w8, x10, x12, [x9]
+; -O0:    stxp w8, x15, x14, [x9]
+; -O0:    stxp w8, x12, x10, [x9]
 ; -O0:    subs x12, x12, x13
 ; -O0:    ccmp x10, x11, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_unordered:
 ; -O1:    ldxp xzr, x8, [x2]
-; -O1:    stxp w8, x1, x0, [x2]
+; -O1:    stxp w8, x0, x1, [x2]
     store atomic i128 %value, ptr %ptr unordered, align 16
     ret void
 }
 
 define dso_local void @store_atomic_i128_aligned_monotonic(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_monotonic:
-; -O0:    ldxp x10, x12, [x9]
+; -O0:    ldxp x12, x10, [x9]
 ; -O0:    cmp x10, x11
 ; -O0:    cmp x12, x13
-; -O0:    stxp w8, x14, x15, [x9]
-; -O0:    stxp w8, x10, x12, [x9]
+; -O0:    stxp w8, x15, x14, [x9]
+; -O0:    stxp w8, x12, x10, [x9]
 ; -O0:    subs x12, x12, x13
 ; -O0:    ccmp x10, x11, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_monotonic:
 ; -O1:    ldxp xzr, x8, [x2]
-; -O1:    stxp w8, x1, x0, [x2]
+; -O1:    stxp w8, x0, x1, [x2]
     store atomic i128 %value, ptr %ptr monotonic, align 16
     ret void
 }
 
 define dso_local void @store_atomic_i128_aligned_release(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_release:
-; -O0:    ldxp x10, x12, [x9]
+; -O0:    ldxp x12, x10, [x9]
 ; -O0:    cmp x10, x11
 ; -O0:    cmp x12, x13
-; -O0:    stlxp w8, x14, x15, [x9]
-; -O0:    stlxp w8, x10, x12, [x9]
+; -O0:    stlxp w8, x15, x14, [x9]
+; -O0:    stlxp w8, x12, x10, [x9]
 ; -O0:    subs x12, x12, x13
 ; -O0:    ccmp x10, x11, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_release:
 ; -O1:    ldxp xzr, x8, [x2]
-; -O1:    stlxp w8, x1, x0, [x2]
+; -O1:    stlxp w8, x0, x1, [x2]
     store atomic i128 %value, ptr %ptr release, align 16
     ret void
 }
 
 define dso_local void @store_atomic_i128_aligned_seq_cst(i128 %value, ptr %ptr) {
 ; -O0-LABEL: store_atomic_i128_aligned_seq_cst:
-; -O0:    ldaxp x10, x12, [x9]
+; -O0:    ldaxp x12, x10, [x9]
 ; -O0:    cmp x10, x11
 ; -O0:    cmp x12, x13
-; -O0:    stlxp w8, x14, x15, [x9]
-; -O0:    stlxp w8, x10, x12, [x9]
+; -O0:    stlxp w8, x15, x14, [x9]
+; -O0:    stlxp w8, x12, x10, [x9]
 ; -O0:    subs x12, x12, x13
 ; -O0:    ccmp x10, x11, #0, eq
 ;
 ; -O1-LABEL: store_atomic_i128_aligned_seq_cst:
 ; -O1:    ldaxp xzr, x8, [x2]
-; -O1:    stlxp w8, x1, x0, [x2]
+; -O1:    stlxp w8, x0, x1, [x2]
     store atomic i128 %value, ptr %ptr seq_cst, align 16
+    ret void
+}
+
+define dso_local void @store_atomic_half_aligned_unordered(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_aligned_unordered:
+; CHECK:    str h0, [x0]
+    store atomic half %value, ptr %ptr unordered, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_half_aligned_monotonic(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_aligned_monotonic:
+; CHECK:    str h0, [x0]
+    store atomic half %value, ptr %ptr monotonic, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_half_aligned_release(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_aligned_release:
+; CHECK:    stlrh w8, [x0]
+    store atomic half %value, ptr %ptr release, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_half_aligned_seq_cst(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_aligned_seq_cst:
+; CHECK:    stlrh w8, [x0]
+    store atomic half %value, ptr %ptr seq_cst, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_aligned_unordered(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_aligned_unordered:
+; CHECK:    str h0, [x0]
+    store atomic bfloat %value, ptr %ptr unordered, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_aligned_monotonic(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_aligned_monotonic:
+; CHECK:    str h0, [x0]
+    store atomic bfloat %value, ptr %ptr monotonic, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_aligned_release(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_aligned_release:
+; CHECK:    stlrh w8, [x0]
+    store atomic bfloat %value, ptr %ptr release, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_aligned_seq_cst(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_aligned_seq_cst:
+; CHECK:    stlrh w8, [x0]
+    store atomic bfloat %value, ptr %ptr seq_cst, align 2
+    ret void
+}
+
+define dso_local void @store_atomic_float_aligned_unordered(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_aligned_unordered:
+; CHECK:    str s0, [x0]
+    store atomic float %value, ptr %ptr unordered, align 4
+    ret void
+}
+
+define dso_local void @store_atomic_float_aligned_monotonic(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_aligned_monotonic:
+; CHECK:    str s0, [x0]
+    store atomic float %value, ptr %ptr monotonic, align 4
+    ret void
+}
+
+define dso_local void @store_atomic_float_aligned_release(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_aligned_release:
+; CHECK:    stlr w8, [x0]
+    store atomic float %value, ptr %ptr release, align 4
+    ret void
+}
+
+define dso_local void @store_atomic_float_aligned_seq_cst(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_aligned_seq_cst:
+; CHECK:    stlr w8, [x0]
+    store atomic float %value, ptr %ptr seq_cst, align 4
+    ret void
+}
+
+define dso_local void @store_atomic_double_aligned_unordered(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_aligned_unordered:
+; CHECK:    str d0, [x0]
+    store atomic double %value, ptr %ptr unordered, align 8
+    ret void
+}
+
+define dso_local void @store_atomic_double_aligned_monotonic(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_aligned_monotonic:
+; CHECK:    str d0, [x0]
+    store atomic double %value, ptr %ptr monotonic, align 8
+    ret void
+}
+
+define dso_local void @store_atomic_double_aligned_release(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_aligned_release:
+; CHECK:    stlr x8, [x0]
+    store atomic double %value, ptr %ptr release, align 8
+    ret void
+}
+
+define dso_local void @store_atomic_double_aligned_seq_cst(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_aligned_seq_cst:
+; CHECK:    stlr x8, [x0]
+    store atomic double %value, ptr %ptr seq_cst, align 8
     ret void
 }
 
@@ -320,5 +432,117 @@ define dso_local void @store_atomic_i128_unaligned_seq_cst(i128 %value, ptr %ptr
 ; CHECK-LABEL: store_atomic_i128_unaligned_seq_cst:
 ; CHECK:    bl __atomic_store
     store atomic i128 %value, ptr %ptr seq_cst, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_half_unaligned_unordered(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_unaligned_unordered:
+; CHECK:    bl __atomic_store
+    store atomic half %value, ptr %ptr unordered, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_half_unaligned_monotonic(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_unaligned_monotonic:
+; CHECK:    bl __atomic_store
+    store atomic half %value, ptr %ptr monotonic, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_half_unaligned_release(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_unaligned_release:
+; CHECK:    bl __atomic_store
+    store atomic half %value, ptr %ptr release, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_half_unaligned_seq_cst(half %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_half_unaligned_seq_cst:
+; CHECK:    bl __atomic_store
+    store atomic half %value, ptr %ptr seq_cst, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_unaligned_unordered(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_unaligned_unordered:
+; CHECK:    bl __atomic_store
+    store atomic bfloat %value, ptr %ptr unordered, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_unaligned_monotonic(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_unaligned_monotonic:
+; CHECK:    bl __atomic_store
+    store atomic bfloat %value, ptr %ptr monotonic, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_unaligned_release(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_unaligned_release:
+; CHECK:    bl __atomic_store
+    store atomic bfloat %value, ptr %ptr release, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_bfloat_unaligned_seq_cst(bfloat %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_bfloat_unaligned_seq_cst:
+; CHECK:    bl __atomic_store
+    store atomic bfloat %value, ptr %ptr seq_cst, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_float_unaligned_unordered(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_unaligned_unordered:
+; CHECK:    bl __atomic_store
+    store atomic float %value, ptr %ptr unordered, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_float_unaligned_monotonic(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_unaligned_monotonic:
+; CHECK:    bl __atomic_store
+    store atomic float %value, ptr %ptr monotonic, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_float_unaligned_release(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_unaligned_release:
+; CHECK:    bl __atomic_store
+    store atomic float %value, ptr %ptr release, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_float_unaligned_seq_cst(float %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_float_unaligned_seq_cst:
+; CHECK:    bl __atomic_store
+    store atomic float %value, ptr %ptr seq_cst, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_double_unaligned_unordered(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_unaligned_unordered:
+; CHECK:    bl __atomic_store
+    store atomic double %value, ptr %ptr unordered, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_double_unaligned_monotonic(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_unaligned_monotonic:
+; CHECK:    bl __atomic_store
+    store atomic double %value, ptr %ptr monotonic, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_double_unaligned_release(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_unaligned_release:
+; CHECK:    bl __atomic_store
+    store atomic double %value, ptr %ptr release, align 1
+    ret void
+}
+
+define dso_local void @store_atomic_double_unaligned_seq_cst(double %value, ptr %ptr) {
+; CHECK-LABEL: store_atomic_double_unaligned_seq_cst:
+; CHECK:    bl __atomic_store
+    store atomic double %value, ptr %ptr seq_cst, align 1
     ret void
 }

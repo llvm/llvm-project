@@ -9,8 +9,8 @@
 #include "src/__support/time/clock_gettime.h"
 #include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_timespec.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/clock_gettime.h"
 #include "src/__support/OSUtil/linux/vdso.h"
-#include "src/__support/OSUtil/syscall.h"
 #include "src/__support/common.h"
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
@@ -25,31 +25,38 @@ namespace internal {
 ErrorOr<int> clock_gettime(clockid_t clockid, timespec *ts) {
   using namespace vdso;
   int ret;
-#if defined(SYS_clock_gettime)
+#if defined(SYS_clock_gettime64)
+  TypedSymbol<VDSOSym::ClockGetTime64> clock_gettime64;
+  if constexpr (sizeof(timespec) == sizeof(__kernel_timespec)) {
+    if (LIBC_LIKELY(clock_gettime64 != nullptr))
+      ret = clock_gettime64(clockid, reinterpret_cast<__kernel_timespec *>(ts));
+    else
+      return linux_syscalls::clock_gettime(
+          clockid, reinterpret_cast<__kernel_timespec *>(ts));
+  } else {
+    __kernel_timespec ts64{};
+    __kernel_timespec *ts64_ptr = nullptr;
+    if (ts != nullptr)
+      ts64_ptr = &ts64;
+    if (ts64_ptr != nullptr && LIBC_LIKELY(clock_gettime64 != nullptr)) {
+      ret = clock_gettime64(clockid, ts64_ptr);
+    } else {
+      auto result = linux_syscalls::clock_gettime(clockid, ts64_ptr);
+      if (!result)
+        return Error(result.error());
+      ret = result.value();
+    }
+    if (ret == 0 && ts != nullptr) {
+      ts->tv_sec = static_cast<decltype(ts->tv_sec)>(ts64.tv_sec);
+      ts->tv_nsec = static_cast<decltype(ts->tv_nsec)>(ts64.tv_nsec);
+    }
+  }
+#elif defined(SYS_clock_gettime)
   TypedSymbol<VDSOSym::ClockGetTime> clock_gettime;
   if (LIBC_LIKELY(clock_gettime != nullptr))
     ret = clock_gettime(clockid, ts);
   else
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime,
-                                            static_cast<long>(clockid),
-                                            reinterpret_cast<long>(ts));
-#elif defined(SYS_clock_gettime64)
-  static_assert(
-      sizeof(time_t) == sizeof(int64_t),
-      "SYS_clock_gettime64 requires struct timespec with 64-bit members.");
-
-  TypedSymbol<VDSOSym::ClockGetTime64> clock_gettime64;
-  __kernel_timespec ts64{};
-  if (LIBC_LIKELY(clock_gettime64 != nullptr))
-    ret = clock_gettime64(clockid, &ts64);
-  else
-    ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_clock_gettime64,
-                                            static_cast<long>(clockid),
-                                            reinterpret_cast<long>(&ts64));
-  if (ret == 0) {
-    ts->tv_sec = static_cast<decltype(ts->tv_sec)>(ts64.tv_sec);
-    ts->tv_nsec = static_cast<decltype(ts->tv_nsec)>(ts64.tv_nsec);
-  }
+    return linux_syscalls::clock_gettime(clockid, ts);
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif

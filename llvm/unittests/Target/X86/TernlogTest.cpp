@@ -25,7 +25,7 @@ static std::unique_ptr<TargetMachine> initTM() {
   LLVMInitializeX86Target();
   LLVMInitializeX86TargetMC();
 
-  auto TT(Triple::normalize("x86_64--"));
+  Triple TT("x86_64--");
   std::string Error;
   const Target *TheTarget = TargetRegistry::lookupTarget(TT, Error);
   return std::unique_ptr<TargetMachine>(
@@ -170,12 +170,12 @@ TEST(TernlogTest, TestConstantFolding) {
   LLVMContext Ctx;
   FunctionAnalysisManager FAM;
   FunctionPassManager FPM;
-  PassBuilder PB;
+  PassBuilder PB(Ctx);
   LoopAnalysisManager LAM;
   CGSCCAnalysisManager CGAM;
   ModuleAnalysisManager MAM;
-  TargetIRAnalysis TIRA = TargetIRAnalysis(
-      [&](const Function &F) { return initTM()->getTargetTransformInfo(F); });
+  std::unique_ptr<TargetMachine> TM = initTM();
+  TargetIRAnalysis TIRA = TM->getTargetIRAnalysis();
 
   FAM.registerPass([&] { return TIRA; });
   PB.registerModuleAnalyses(MAM);

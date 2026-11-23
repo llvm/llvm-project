@@ -14,13 +14,14 @@
 #define LLVM_SUPPORT_RISCVISAUTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <string>
 
 namespace llvm {
 
 namespace RISCVISAUtils {
-constexpr StringLiteral AllStdExts = "mafdqlcbkjtpvnh";
+constexpr StringLiteral AllStdExts = "mafdqlcbkjtvph";
 
 /// Represents the major and version number components of a RISC-V extension.
 struct ExtensionVersion {
@@ -28,19 +29,21 @@ struct ExtensionVersion {
   unsigned Minor;
 };
 
-bool compareExtension(const std::string &LHS, const std::string &RHS);
+LLVM_ABI bool compareExtension(StringRef LHS, StringRef RHS);
 
 /// Helper class for OrderedExtensionMap.
 struct ExtensionComparator {
-  bool operator()(const std::string &LHS, const std::string &RHS) const {
+  using is_transparent = void;
+
+  bool operator()(StringRef LHS, StringRef RHS) const {
     return compareExtension(LHS, RHS);
   }
 };
 
 /// OrderedExtensionMap is std::map, it's specialized to keep entries
 /// in canonical order of extension.
-typedef std::map<std::string, ExtensionVersion, ExtensionComparator>
-    OrderedExtensionMap;
+using OrderedExtensionMap =
+    std::map<std::string, ExtensionVersion, ExtensionComparator>;
 
 } // namespace RISCVISAUtils
 

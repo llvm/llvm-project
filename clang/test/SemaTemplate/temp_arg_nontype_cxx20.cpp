@@ -371,3 +371,35 @@ namespace ReportedRegression2 {
     fn<str>();
   }
 }
+
+namespace GH151531 {
+struct w {
+    int n;
+};
+
+template <const w *X> void f() { static_assert(X->n == 42); }
+
+template <w X> void g() { f<&X>(); }
+
+void test() {
+    constexpr w X = {42};
+    g<X>();
+}
+}
+
+namespace GH215900 {
+// A non-type template parameter of reference type bound to a subobject is
+// represented as a ConstantExpr wrapping a source-less OpaqueValueExpr; the
+// implicit conversion checks used to crash when walking into it.
+struct S {
+  static bool arr[2];
+  bool b;
+};
+bool S::arr[2];
+S s;
+
+template <bool &Ref> int f() { return Ref; }
+template <bool &Ref> int g() { int n = 0; n += Ref; return n; }
+
+int test() { return f<S::arr[1]>() + g<S::arr[0]>() + f<s.b>(); }
+}

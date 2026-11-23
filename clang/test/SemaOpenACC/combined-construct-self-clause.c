@@ -33,22 +33,22 @@ void BoolExpr(int *I, float *F) {
 void WarnMaybeNotUsed(int val1, int val2) {
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel loop self if(val1)
   for (unsigned i = 0; i < 5; ++i);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc serial loop self(val1) if(val1)
   for (unsigned i = 0; i < 5; ++i);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc kernels loop if(val1) self
   for (unsigned i = 0; i < 5; ++i);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel loop if(val1) self(val2)
   for (unsigned i = 0; i < 5; ++i);
 

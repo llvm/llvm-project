@@ -1,0 +1,175 @@
+#ifndef _ALGORITHM_
+#define _ALGORITHM_
+
+#include "iterator"
+
+namespace std {
+
+template <class InputIt, class T>
+InputIt find(InputIt first, InputIt last, const T &value);
+
+template <class InputIt, class UnaryPred>
+InputIt find_if(InputIt first, InputIt last, UnaryPred pred);
+
+template <class InputIt, class UnaryPred>
+InputIt find_if_not(InputIt first, InputIt last, UnaryPred pred);
+
+template <class InputIt, class ForwardIt>
+InputIt find_first_of(InputIt first, InputIt last, ForwardIt s_first,
+                      ForwardIt s_last);
+
+template <class ForwardIt1, class ForwardIt2>
+ForwardIt1 find_end(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_first,
+                    ForwardIt2 s_last);
+
+template <class ForwardIt>
+ForwardIt adjacent_find(ForwardIt first, ForwardIt last);
+
+template <class ForwardIt1, class ForwardIt2>
+ForwardIt1 search(ForwardIt1 first, ForwardIt1 last, ForwardIt2 s_first,
+                  ForwardIt2 s_last);
+
+template <class ForwardIt, class Size, class T>
+ForwardIt search_n(ForwardIt first, ForwardIt last, Size count,
+                   const T &value);
+
+template <class ForwardIt, class T>
+ForwardIt lower_bound(ForwardIt first, ForwardIt last, const T &value);
+
+template <class ForwardIt, class T>
+ForwardIt upper_bound(ForwardIt first, ForwardIt last, const T &value);
+
+template <class ForwardIt, class T>
+ForwardIt partition_point(ForwardIt first, ForwardIt last, const T &value);
+
+template <class ForwardIt>
+ForwardIt min_element(ForwardIt first, ForwardIt last);
+
+template <class ForwardIt>
+ForwardIt max_element(ForwardIt first, ForwardIt last);
+
+template <class ForwardIt>
+ForwardIt is_sorted_until(ForwardIt first, ForwardIt last);
+
+#if __cplusplus >= 201703L
+
+namespace execution {
+struct sequenced_policy {};
+struct parallel_policy {};
+inline constexpr sequenced_policy seq{};
+inline constexpr parallel_policy par{};
+} // namespace execution
+
+// Overloads with execution policies.
+template <class ExecutionPolicy, class InputIt, class T>
+InputIt find(ExecutionPolicy &&policy, InputIt first, InputIt last,
+             const T &value);
+
+template <class ExecutionPolicy, class ForwardIt, class T>
+ForwardIt lower_bound(ExecutionPolicy &&policy, ForwardIt first,
+                      ForwardIt last, const T &value);
+
+#endif // __cplusplus >= 201703L
+
+#if __cplusplus >= 202002L
+
+namespace ranges {
+
+template <typename T>
+auto begin(T &t) -> decltype(t.begin()) { return t.begin(); }
+
+template <typename T>
+auto end(T &t) -> decltype(t.end()) { return t.end(); }
+
+struct __find_fn {
+  template <typename Range, typename T>
+  auto operator()(Range &&r, const T &value) const
+      -> decltype(r.begin());
+  template <typename I, typename S, typename T>
+  I operator()(I first, S last, const T &value) const;
+};
+inline constexpr __find_fn find{};
+
+struct __find_if_fn {
+  template <typename Range, typename Pred>
+  auto operator()(Range &&r, Pred pred) const
+      -> decltype(r.begin());
+  template <typename I, typename S, typename Pred>
+  I operator()(I first, S last, Pred pred) const;
+};
+inline constexpr __find_if_fn find_if{};
+
+struct __find_if_not_fn {
+  template <typename Range, typename Pred>
+  auto operator()(Range &&r, Pred pred) const
+      -> decltype(r.begin());
+  template <typename I, typename S, typename Pred>
+  I operator()(I first, S last, Pred pred) const;
+};
+inline constexpr __find_if_not_fn find_if_not{};
+
+struct __find_first_of_fn {
+  template <typename R1, typename R2>
+  auto operator()(R1 &&r1, R2 &&r2) const -> decltype(r1.begin());
+  template <typename I1, typename S1, typename I2, typename S2>
+  I1 operator()(I1 f1, S1 l1, I2 f2, S2 l2) const;
+};
+inline constexpr __find_first_of_fn find_first_of{};
+
+struct __lower_bound_fn {
+  template <typename Range, typename T>
+  auto operator()(Range &&r, const T &value) const
+      -> decltype(r.begin());
+  template <typename I, typename S, typename T>
+  I operator()(I first, S last, const T &value) const;
+};
+inline constexpr __lower_bound_fn lower_bound{};
+
+struct __upper_bound_fn {
+  template <typename Range, typename T>
+  auto operator()(Range &&r, const T &value) const
+      -> decltype(r.begin());
+  template <typename I, typename S, typename T>
+  I operator()(I first, S last, const T &value) const;
+};
+inline constexpr __upper_bound_fn upper_bound{};
+
+struct __min_element_fn {
+  template <typename Range>
+  auto operator()(Range &&r) const -> decltype(r.begin());
+  template <typename I, typename S>
+  I operator()(I first, S last) const;
+};
+inline constexpr __min_element_fn min_element{};
+
+struct __max_element_fn {
+  template <typename Range>
+  auto operator()(Range &&r) const -> decltype(r.begin());
+  template <typename I, typename S>
+  I operator()(I first, S last) const;
+};
+inline constexpr __max_element_fn max_element{};
+
+struct __adjacent_find_fn {
+  template <typename Range>
+  auto operator()(Range &&r) const -> decltype(r.begin());
+  template <typename I, typename S>
+  I operator()(I first, S last) const;
+};
+inline constexpr __adjacent_find_fn adjacent_find{};
+
+struct __is_sorted_until_fn {
+  template <typename Range>
+  auto operator()(Range &&r) const -> decltype(r.begin());
+  template <typename I, typename S>
+  I operator()(I first, S last) const;
+};
+inline constexpr __is_sorted_until_fn is_sorted_until{};
+
+} // namespace ranges
+
+#endif // __cplusplus >= 202002L
+
+} // namespace std
+
+#endif // _ALGORITHM_

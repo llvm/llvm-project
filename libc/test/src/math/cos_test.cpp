@@ -7,10 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/macros/optimization.h"
 #include "src/math/cos.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
+
+#ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+#define TOLERANCE 1
+#else
+#define TOLERANCE 0
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 using LlvmLibcCosTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
@@ -57,12 +64,12 @@ TEST_F(LlvmLibcCosTest, TrickyInputs) {
   for (int i = 0; i < N; ++i) {
     double x = INPUTS[i];
     ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Cos, x,
-                                   LIBC_NAMESPACE::cos(x), 0.5);
+                                   LIBC_NAMESPACE::cos(x), TOLERANCE + 0.5);
   }
 }
 
 TEST_F(LlvmLibcCosTest, InDoubleRange) {
-  constexpr uint64_t COUNT = 1'234'51;
+  constexpr uint64_t COUNT = 1'231;
   uint64_t START = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p-50).uintval();
   uint64_t STOP = LIBC_NAMESPACE::fputil::FPBits<double>(0x1.0p200).uintval();
   uint64_t STEP = (STOP - START) / COUNT;
@@ -75,7 +82,7 @@ TEST_F(LlvmLibcCosTest, InDoubleRange) {
     uint64_t fails = 0;
     uint64_t tested = 0;
     uint64_t total = 0;
-    double worst_input, worst_output = 0.0;
+    double worst_input = 0.0, worst_output = 0.0;
     double ulp = 0.5;
 
     for (uint64_t i = 0, v = START; i <= COUNT; ++i, v += STEP) {

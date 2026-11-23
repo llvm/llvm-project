@@ -1,4 +1,4 @@
-// RUN: %clang %cflags -o %t %s
+// RUN: %clang %cflags64 -o %t %s
 // RUN: link_fdata --no-lbr %s %t %t.fdata
 // RUN: llvm-bolt %t -o %t.null --data=%t.fdata --dyno-stats | FileCheck %s
 

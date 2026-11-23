@@ -30,7 +30,8 @@ test_failures = 0
 # we exit.
 has_run_tests = False
 
-has_execute_mi = tuple(map(int, gdb.VERSION.split("."))) >= (14, 2)
+has_execute_mi = getattr(gdb, "execute_mi", None) is not None
+
 
 class CheckResult(gdb.Command):
     def __init__(self):

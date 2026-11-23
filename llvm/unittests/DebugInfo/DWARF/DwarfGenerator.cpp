@@ -24,7 +24,6 @@
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/MCTargetOptionsCommandFlags.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/FileSystem.h"
@@ -37,8 +36,6 @@
 
 using namespace llvm;
 using namespace dwarf;
-
-mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace {} // end anonymous namespace
 
@@ -146,7 +143,7 @@ void dwarfgen::DIE::addStrOffsetsBaseAttribute() {
   const MCExpr *Expr =
       MCSymbolRefExpr::create(DG.getStringOffsetsStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -164,7 +161,7 @@ void dwarfgen::DIE::addAddrBaseAttribute() {
 
   const MCExpr *Expr = MCSymbolRefExpr::create(DG.getAddrTableStartSym(), MC);
 
-  if (!Asm->MAI->doesDwarfUseRelocationsAcrossSections())
+  if (!Asm->MAI.doesDwarfUseRelocationsAcrossSections())
     Expr = MCBinaryExpr::createSub(
         Expr, MCSymbolRefExpr::create(SectionStart, MC), MC);
 
@@ -243,7 +240,7 @@ void dwarfgen::LineTable::addByte(uint8_t Value) {
 void dwarfgen::LineTable::addStandardOpcode(uint8_t Opcode,
                                             ArrayRef<ValueAndLength> Operands) {
   Contents.push_back({Opcode, Byte});
-  Contents.insert(Contents.end(), Operands.begin(), Operands.end());
+  llvm::append_range(Contents, Operands);
 }
 
 void dwarfgen::LineTable::addExtendedOpcode(uint64_t Length, uint8_t Opcode,
@@ -251,7 +248,7 @@ void dwarfgen::LineTable::addExtendedOpcode(uint64_t Length, uint8_t Opcode,
   Contents.push_back({0, Byte});
   Contents.push_back({Length, ULEB});
   Contents.push_back({Opcode, Byte});
-  Contents.insert(Contents.end(), Operands.begin(), Operands.end());
+  llvm::append_range(Contents, Operands);
 }
 
 void dwarfgen::LineTable::generate(MCContext &MC, AsmPrinter &Asm) const {
@@ -454,19 +451,18 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
   TripleName = TheTriple.getTriple();
 
   // Create all the MC Objects.
-  MRI.reset(TheTarget->createMCRegInfo(TripleName));
+  MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
     return make_error<StringError>(Twine("no register info for target ") +
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  MCTargetOptions MCOptions = mc::InitMCTargetOptionsFromFlags();
-  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TripleName, MCOptions));
+  MAI.reset(TheTarget->createMCAsmInfo(*MRI, TheTriple, MCOptions));
   if (!MAI)
     return make_error<StringError>("no asm info for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MSTI.reset(TheTarget->createMCSubtargetInfo(TripleName, "", ""));
+  MSTI.reset(TheTarget->createMCSubtargetInfo(TheTriple, "", ""));
   if (!MSTI)
     return make_error<StringError>("no subtarget info for target " + TripleName,
                                    inconvertibleErrorCode());
@@ -482,15 +478,16 @@ llvm::Error dwarfgen::Generator::init(Triple TheTriple, uint16_t V) {
                                        TripleName,
                                    inconvertibleErrorCode());
 
-  TM.reset(TheTarget->createTargetMachine(TripleName, "", "", TargetOptions(),
+  TM.reset(TheTarget->createTargetMachine(TheTriple, "", "", TargetOptions(),
                                           std::nullopt));
   if (!TM)
     return make_error<StringError>("no target machine for target " + TripleName,
                                    inconvertibleErrorCode());
 
-  MC.reset(new MCContext(TheTriple, MAI.get(), MRI.get(), MSTI.get()));
+  MC.reset(new MCContext(TheTriple, *MAI, *MRI, *MSTI));
+  M = std::make_unique<Module>("dwarfgen", Context);
   TLOF = TM->getObjFileLowering();
-  TLOF->Initialize(*MC, *TM);
+  TLOF->initialize(*MC, *TM, *M);
   MC->setObjectFileInfo(TLOF);
 
   MCE = TheTarget->createMCCodeEmitter(*MII, *MC);

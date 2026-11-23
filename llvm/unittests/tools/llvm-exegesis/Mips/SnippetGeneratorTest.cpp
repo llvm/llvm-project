@@ -107,8 +107,7 @@ TEST_F(MipsParallelSnippetGeneratorTest, MemoryUse) {
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
   const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info,
-              HasSubstr("instruction is parallel, repeating a random one."));
+  EXPECT_THAT(CT.Info, HasSubstr("instruction has no tied variables"));
   EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
   ASSERT_THAT(CT.Instructions,
               SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));

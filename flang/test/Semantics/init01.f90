@@ -18,6 +18,7 @@ subroutine objectpointers(j)
   end type
   type(t1), target, save :: o1
   type(t1), save :: o2
+!ERROR: Local variable 'o3' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%c2'
   type(t1), target :: o3
 !ERROR: An initial data target may not be a reference to an ALLOCATABLE 'x1'
   real, pointer :: p1 => x1

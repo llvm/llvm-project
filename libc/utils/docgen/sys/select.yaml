@@ -1,0 +1,31 @@
+posix: posix-2024
+types:
+  fd_set:
+    in-latest-posix: ''
+  sigset_t:
+    in-latest-posix: ''
+  struct timespec:
+    in-latest-posix: ''
+  struct timeval:
+    in-latest-posix: ''
+  suseconds_t:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
+functions:
+  pselect:
+    in-latest-posix: ""
+  select:
+    in-latest-posix: ""
+
+macros:
+  FD_CLR:
+    in-latest-posix: ""
+  FD_ISSET:
+    in-latest-posix: ""
+  FD_SET:
+    in-latest-posix: ""
+  FD_SETSIZE:
+    in-latest-posix: ""
+  FD_ZERO:
+    in-latest-posix: ""

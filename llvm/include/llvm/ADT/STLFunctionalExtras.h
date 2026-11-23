@@ -39,7 +39,7 @@ template<typename Fn> class function_ref;
 template <typename Ret, typename... Params>
 class LLVM_GSL_POINTER function_ref<Ret(Params...)> {
   Ret (*callback)(intptr_t callable, Params ...params) = nullptr;
-  intptr_t callable;
+  intptr_t callable = 0;
 
   template<typename Callable>
   static Ret callback_fn(intptr_t callable, Params ...params) {
@@ -70,10 +70,6 @@ public:
   }
 
   explicit operator bool() const { return callback; }
-
-  bool operator==(const function_ref<Ret(Params...)> &Other) const {
-    return callable == Other.callable;
-  }
 };
 
 } // end namespace llvm

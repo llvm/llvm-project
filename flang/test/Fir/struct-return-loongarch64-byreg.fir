@@ -7,7 +7,6 @@
 /// only the first example in each category checks the entire invocation process,
 /// while the other examples only check the signatures.
 
-// REQUIRES: loongarch-registered-target
 // RUN: fir-opt --split-input-file --target-rewrite="target=loongarch64-unknown-linux-gnu" %s | FileCheck %s
 
 
@@ -40,12 +39,10 @@ func.func private @test_func_i16() -> !ty_i16
 // CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<ti16{i:i16}>>) {
 func.func @test_call_i16(%arg0: !fir.ref<!ty_i16>) {
   // CHECK: %[[OUT:.*]] = fir.call @test_func_i16() : () -> i64
-  // CHECK: %[[STACK:.*]] = llvm.intr.stacksave : !llvm.ptr
   // CHECK: %[[ARR:.*]] = fir.alloca i64
   // CHECK: fir.store %[[OUT]] to %[[ARR]] : !fir.ref<i64>
   // CHECK: %[[CVT:.*]] = fir.convert %[[ARR]] : (!fir.ref<i64>) -> !fir.ref<!fir.type<ti16{i:i16}>>
   // CHECK: %[[LD:.*]] = fir.load %[[CVT]] : !fir.ref<!fir.type<ti16{i:i16}>>
-  // CHECK: llvm.intr.stackrestore %[[STACK]] : !llvm.ptr
   %out = fir.call @test_func_i16() : () -> !ty_i16
   // CHECK: fir.store %[[LD]] to %[[ARG0]] : !fir.ref<!fir.type<ti16{i:i16}>>
   fir.store %out to %arg0 : !fir.ref<!ty_i16>
@@ -137,12 +134,10 @@ func.func private @test_func_i32_f32() -> !ty_i32_f32
 // CHECK-SAME:    %[[ARG0:.*]]: !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>) {
 func.func @test_call_i32_f32(%arg0: !fir.ref<!ty_i32_f32>) {
   // CHECK: %[[OUT:.*]] = fir.call @test_func_i32_f32() : () -> tuple<i32, f32>
-  // CHECK: %[[STACK:.*]] = llvm.intr.stacksave : !llvm.ptr
   // CHECK: %[[ARR:.*]] = fir.alloca tuple<i32, f32>
   // CHECK: fir.store %[[OUT]] to %[[ARR]] : !fir.ref<tuple<i32, f32>>
   // CHECK: %[[CVT:.*]] = fir.convert %[[ARR]] : (!fir.ref<tuple<i32, f32>>) -> !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
   // CHECK: %[[LD:.*]] = fir.load %[[CVT]] : !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
-  // CHECK: llvm.intr.stackrestore %[[STACK]] : !llvm.ptr
   %out = fir.call @test_func_i32_f32() : () -> !ty_i32_f32
   // CHECK: fir.store %[[LD]] to %[[ARG0]] : !fir.ref<!fir.type<ti32_f32{i:i32,j:f32}>>
   fir.store %out to %arg0 : !fir.ref<!ty_i32_f32>

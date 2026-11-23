@@ -56,7 +56,8 @@ STATISTIC(StableHashBailingMetadataUnsupported,
           "Number of encountered unsupported MachineOperands that were "
           "Metadata of an unsupported kind while computing stable hashes");
 
-stable_hash llvm::stableHashValue(const MachineOperand &MO) {
+stable_hash llvm::stableHashValue(const MachineOperand &MO,
+                                  bool SourceQualifyLocalGlobals) {
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
     if (MO.getReg().isVirtual()) {
@@ -68,7 +69,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     }
 
     // Register operands don't have target flags.
-    return stable_hash_combine(MO.getType(), MO.getReg(), MO.getSubReg(),
+    return stable_hash_combine(MO.getType(), MO.getReg().id(), MO.getSubReg(),
                                MO.isDef());
   case MachineOperand::MO_Immediate:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(), MO.getImm());
@@ -97,7 +98,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     const GlobalValue *GV = MO.getGlobal();
     stable_hash GVHash = 0;
     if (auto *GVar = dyn_cast<GlobalVariable>(GV))
-      GVHash = StructuralHash(*GVar);
+      GVHash = StructuralHash(*GVar, SourceQualifyLocalGlobals);
     if (!GVHash) {
       if (!GV->hasName()) {
         ++StableHashBailingGlobalAddress;
@@ -136,7 +137,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           unsigned RegMaskSize =
               MachineOperand::getRegMaskSize(TRI->getNumRegs());
-          const uint32_t *RegMask = MO.getRegMask();
+          const uint32_t *RegMask =
+              MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
           std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
                                                        RegMask + RegMaskSize);
           return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
@@ -164,6 +166,10 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                stable_hash_name(SymbolName));
   }
+  case MachineOperand::MO_LaneMask: {
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               MO.getLaneMask().getAsInteger());
+  }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                MO.getCFIIndex());
@@ -186,7 +192,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
 /// useful for CSE, etc.
 stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
                                   bool HashConstantPoolIndices,
-                                  bool HashMemOperands) {
+                                  bool HashMemOperands,
+                                  bool SourceQualifyLocalGlobals) {
   // Build up a buffer of hash code components.
   SmallVector<stable_hash, 16> HashComponents;
   HashComponents.reserve(MI.getNumOperands() + MI.getNumMemOperands() + 2);
@@ -202,7 +209,7 @@ stable_hash llvm::stableHashValue(const MachineInstr &MI, bool HashVRegs,
       continue;
     }
 
-    stable_hash StableHash = stableHashValue(MO);
+    stable_hash StableHash = stableHashValue(MO, SourceQualifyLocalGlobals);
     if (!StableHash)
       return 0;
     HashComponents.push_back(StableHash);

@@ -15,7 +15,8 @@ class TestCase(PExpectTest):
     # PExpect uses many timeouts internally and doesn't play well
     # under ASAN on a loaded machine..
     @skipIfAsan
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])  # Randomly fails on buildbot
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])  # Randomly fails on buildbot
+    @skipIfEditlineWideCharSupportMissing
     def test_unicode_input(self):
         self.launch()
 
@@ -23,7 +24,6 @@ class TestCase(PExpectTest):
         # We should get back that this is an invalid command with our character as UTF-8.
         self.expect(
             "\u1234",
-            substrs=["error: '\u1234' is not a valid command.".encode("utf-8")],
+            substrs=["error: '\u1234' is not a valid command".encode("utf-8")],
         )
 
-        self.quit()

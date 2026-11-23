@@ -1,15 +1,24 @@
 set(CLANGD_TEST_DEPS
+  clang
   clangd
   ClangdTests
   clangd-indexer
+  clangd-remap
   split-file
-  # No tests for it, but we should still make sure they build.
-  dexp
   )
+
+if (LLVM_INCLUDE_BENCHMARKS)
+  list(APPEND CLANGD_TEST_DEPS IndexBenchmark)
+endif()
 
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)
+endif()
+
+if(CLANGD_BUILD_DEXP)
+  # No tests for it, but we should still make sure they build.
+  list(APPEND CLANGD_TEST_DEPS dexp)
 endif()
 
 if(CLANGD_ENABLE_REMOTE)
@@ -21,6 +30,10 @@ foreach(dep FileCheck count not llvm-config)
     list(APPEND CLANGD_TEST_DEPS ${dep})
   endif()
 endforeach()
+
+add_subdirectory(plugins)
+
+llvm_canonicalize_cmake_booleans(CLANG_PLUGIN_SUPPORT)
 
 configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in

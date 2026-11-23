@@ -44,3 +44,40 @@ func.func @check_folding(%arg0 : !fir.ref<!fir.array<?xi32>>) {
 func.func @check(%arg0: !fir.ref<!fir.array<?xi32>>) {
   return
 }
+
+// -----
+
+// The base address of a descriptor built by fir.create_box is exactly its
+// memref operand (create_box never slices), so box_addr folds to that operand
+// when the result type preserves the memref storage kind.
+// CHECK-LABEL: func @check_create_box_folding
+func.func @check_create_box_folding(%arg0: !fir.ref<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.ref<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.array<?xf32>>
+  %1 = fir.box_addr %0 : (!fir.box<!fir.array<?xf32>>) -> !fir.ref<!fir.array<?xf32>>
+  // CHECK-NOT: fir.box_addr
+  // CHECK: fir.call @check_ref(%arg0)
+  fir.call @check_ref(%1) : (!fir.ref<!fir.array<?xf32>>) -> ()
+  return
+}
+
+func.func @check_ref(%arg0: !fir.ref<!fir.array<?xf32>>) {
+  return
+}
+
+// -----
+
+// When the box_addr result type does not match the create_box memref type the
+// storage kind would change, so the fold must not fire.
+// CHECK-LABEL: func @check_create_box_no_folding
+func.func @check_create_box_no_folding(%arg0: !fir.heap<!fir.array<?xf32>>, %lb: index, %ext: index, %sm: index) {
+  %0 = fir.create_box %arg0 lbs(%lb) extents(%ext) strides(%sm) : (!fir.heap<!fir.array<?xf32>>, index, index, index) -> !fir.box<!fir.heap<!fir.array<?xf32>>>
+  %1 = fir.box_addr %0 : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.ref<!fir.array<?xf32>>
+  // CHECK: %[[ADDR:.*]] = fir.box_addr
+  // CHECK: fir.call @check_ref(%[[ADDR]])
+  fir.call @check_ref(%1) : (!fir.ref<!fir.array<?xf32>>) -> ()
+  return
+}
+
+func.func @check_ref(%arg0: !fir.ref<!fir.array<?xf32>>) {
+  return
+}

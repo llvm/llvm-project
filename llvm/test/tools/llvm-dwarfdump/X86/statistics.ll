@@ -1,4 +1,4 @@
-; RUN: llc -O0 %s -o - -filetype=obj \
+; RUN: llc -O0 -o - -filetype=obj -accel-tables=Apple %s \
 ; RUN:   | llvm-dwarfdump -statistics - | FileCheck %s
 ; CHECK: "version": 9,
 
@@ -55,7 +55,7 @@
 ; CHECK:      "#bytes within functions": [[FUNCSIZE:[0-9]+]]
 ; CHECK:      "#bytes within inlined functions": [[INLINESIZE:[0-9]+]]
 ; CHECK:      "#bytes in __debug_loc": 35,
-; CHECK-NEXT: "#bytes in __debug_abbrev": 384,
+; CHECK-NEXT: "#bytes in __debug_abbrev": 375,
 ; CHECK-NEXT: "#bytes in __debug_info": 459,
 ; CHECK-NEXT: "#bytes in __debug_str": 231,
 ; CHECK-NEXT: "#bytes in __apple_names": 348,
@@ -144,7 +144,7 @@ attributes #1 = { nounwind readnone speculatable }
 attributes #2 = { noinline nounwind optnone ssp uwtable }
 
 !llvm.dbg.cu = !{!2}
-!llvm.module.flags = !{!15, !16, !17, !18}
+!llvm.module.flags = !{!15, !16, !17, !18, !100}
 !llvm.ident = !{!19}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
@@ -166,6 +166,7 @@ attributes #2 = { noinline nounwind optnone ssp uwtable }
 !16 = !{i32 2, !"Debug Info Version", i32 3}
 !17 = !{i32 1, !"wchar_size", i32 4}
 !18 = !{i32 7, !"PIC Level", i32 2}
+!100 = !{i32 2, !"debugger-tuning", !"gdb"}
 !19 = !{!"clang version 6.0.0 (trunk 310529) (llvm/trunk 310534)"}
 !20 = distinct !DISubprogram(name: "square", linkageName: "_Z6squarei", scope: !3, file: !3, line: 8, type: !21, isLocal: false, isDefinition: true, scopeLine: 8, flags: DIFlagPrototyped, isOptimized: false, unit: !2, retainedNodes: !4)
 !21 = !DISubroutineType(types: !22)

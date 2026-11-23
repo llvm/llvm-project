@@ -46,9 +46,16 @@ constexpr void testType(U u) {
 
 struct X {};
 
+template <typename IntT>
+concept CanDoubleWrap = requires(IntT i) { std::views::iota(std::views::iota(i)); };
+
 constexpr bool test() {
   testType<SomeInt>(SomeInt(10));
   testType<SomeInt>(IntComparableWith(SomeInt(10)));
+#ifndef TEST_HAS_NO_INT128
+  testType<__int128_t>(__int128_t(10));
+  testType<__uint128_t>(__uint128_t(10));
+#endif
   testType<signed long>(IntComparableWith<signed long>(10));
   testType<unsigned long>(IntComparableWith<unsigned long>(10));
   testType<int>(IntComparableWith<int>(10));
@@ -67,6 +74,15 @@ constexpr bool test() {
   }
   {
     static_assert(std::same_as<decltype(std::views::iota), decltype(std::ranges::views::iota)>);
+  }
+  { // LWG4096: views::iota(views::iota(0)) should be rejected
+    static_assert(!CanDoubleWrap<int>);
+    static_assert(!CanDoubleWrap<SomeInt>);
+
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(0))>);
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(82))>);
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(SomeInt(0)))>);
+    static_assert(!std::is_invocable_v<decltype(std::views::iota), decltype(std::views::iota(SomeInt(94)))>);
   }
 
   return true;

@@ -10,4 +10,4 @@
 
 #include "src/math/roundevenf16.h"
 
-LIST_ROUNDEVEN_TESTS(float16, LIBC_NAMESPACE::roundevenf16)
+LIST_ROUNDEVEN_TESTS(Roundevenf16, float16, LIBC_NAMESPACE::roundevenf16)

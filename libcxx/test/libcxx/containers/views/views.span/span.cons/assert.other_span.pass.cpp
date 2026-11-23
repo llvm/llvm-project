@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// REQUIRES: can-test-hardening-assertions-fast
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 
 // <span>
@@ -13,21 +14,20 @@
 //
 // Check that we ensure `other.size() == Extent`.
 
-// REQUIRES: has-unix-headers
-// UNSUPPORTED: libcpp-hardening-mode=none
-// XFAIL: libcpp-hardening-mode=debug && availability-verbose_abort-missing
-
 #include <array>
 #include <span>
 
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::array<int, 3> array{0, 1, 2};
-    std::span<int> other(array.data(), 3);
+  std::array<int, 3> array{0, 1, 2};
+  std::span<int> other(array.data(), 3);
 
-    auto invalid_source = [&] { std::span<int, 2> const s(other); (void)s; };
-    TEST_LIBCPP_ASSERT_FAILURE(invalid_source(), "size mismatch in span's constructor (other span)");
+  auto invalid_source = [&] {
+    std::span<int, 2> const s(other);
+    (void)s;
+  };
+  TEST_LIBCPP_ASSERT_FAILURE(invalid_source(), "size mismatch in span's constructor (other span)");
 
-    return 0;
+  return 0;
 }

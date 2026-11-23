@@ -30,7 +30,8 @@ class MachineOperand;
 class MachineRegisterInfo;
 class RegisterClassInfo;
 class TargetInstrInfo;
-class TargetRegisterClass;
+class MCRegisterClass;
+using TargetRegisterClass = MCRegisterClass;
 class TargetRegisterInfo;
 
 class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
@@ -40,11 +41,6 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     const TargetRegisterInfo *TRI;
     const RegisterClassInfo &RegClassInfo;
 
-    /// The set of allocatable registers.
-    /// We'll be ignoring anti-dependencies on non-allocatable registers,
-    /// because they may not be safe to break.
-    const BitVector AllocatableSet;
-
     /// For live regs that are only used in one register class in a
     /// live range, the register class. If the register is not live, the
     /// corresponding value is null. If the register is live but used in
@@ -53,10 +49,10 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
     std::vector<const TargetRegisterClass *> Classes;
 
     /// Map registers to all their references within a live range.
-    std::multimap<unsigned, MachineOperand *> RegRefs;
+    std::multimap<MCRegister, MachineOperand *> RegRefs;
 
     using RegRefIter =
-        std::multimap<unsigned, MachineOperand *>::const_iterator;
+        std::multimap<MCRegister, MachineOperand *>::const_iterator;
 
     /// The index of the most recent kill (proceeding bottom-up),
     /// or ~0u if the register is not live.
@@ -96,15 +92,13 @@ class LLVM_LIBRARY_VISIBILITY CriticalAntiDepBreaker : public AntiDepBreaker {
   private:
     void PrescanInstruction(MachineInstr &MI);
     void ScanInstruction(MachineInstr &MI, unsigned Count);
-    bool isNewRegClobberedByRefs(RegRefIter RegRefBegin,
-                                 RegRefIter RegRefEnd,
-                                 unsigned NewReg);
-    unsigned findSuitableFreeRegister(RegRefIter RegRefBegin,
-                                      RegRefIter RegRefEnd,
-                                      unsigned AntiDepReg,
-                                      unsigned LastNewReg,
-                                      const TargetRegisterClass *RC,
-                                      SmallVectorImpl<unsigned> &Forbid);
+    bool isNewRegClobberedByRefs(RegRefIter RegRefBegin, RegRefIter RegRefEnd,
+                                 MCRegister NewReg);
+    MCRegister
+    findSuitableFreeRegister(RegRefIter RegRefBegin, RegRefIter RegRefEnd,
+                             MCRegister AntiDepReg, MCRegister LastNewReg,
+                             const TargetRegisterClass *RC,
+                             const SmallVectorImpl<Register> &Forbid);
   };
 
 } // end namespace llvm

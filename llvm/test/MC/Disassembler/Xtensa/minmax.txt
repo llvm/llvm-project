@@ -1,0 +1,22 @@
+# RUN: llvm-mc -triple=xtensa -mattr=+minmax -disassemble %s | FileCheck -check-prefixes=CHECK-MINMAX %s
+# RUN: not llvm-mc -triple=xtensa -disassemble %s 2>&1 | FileCheck --implicit-check-not=warning: -check-prefixes=CHECK-CORE %s
+
+## Verify that binary code is correctly disassembled with
+## minmax option enabled. Also verify that dissasembling without
+## minmax option generates warnings.
+
+[0x50,0x34,0x53]
+# CHECK-MINMAX: max a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x50,0x34,0x73]
+# CHECK-MINMAX: maxu a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x50,0x34,0x43]
+# CHECK-MINMAX: min a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x50,0x34,0x63]
+# CHECK-MINMAX: minu a3, a4, a5
+# CHECK-CORE: [[#@LINE-2]]:2: warning: invalid instruction encoding

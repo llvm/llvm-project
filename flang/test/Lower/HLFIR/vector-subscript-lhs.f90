@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:    %[[VAL_11:.*]] = arith.constant 4.200000e+01 : f32
 ! CHECK:    hlfir.yield %[[VAL_11]] : f32
 ! CHECK:  } to {
-! CHECK:    %[[VAL_12:.*]] = hlfir.matmul %[[VAL_9]]#0 %[[VAL_6]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10x5xi64>>) -> !hlfir.expr<5xi64>
+! CHECK:    %[[VAL_12:.*]] = hlfir.matmul %[[VAL_9]]#0 %[[VAL_6]]#0 fastmath(contract) : (!fir.ref<!fir.array<10xi64>>, !fir.ref<!fir.array<10x5xi64>>) -> !hlfir.expr<5xi64>
 ! CHECK:    %[[VAL_13:.*]] = arith.constant 5 : index
 ! CHECK:    %[[VAL_14:.*]] = fir.shape %[[VAL_13]] : (index) -> !fir.shape<1>
 ! CHECK:    hlfir.elemental_addr %[[VAL_14]] unordered : !fir.shape<1> {
@@ -109,7 +109,7 @@ end subroutine
 ! CHECK:  hlfir.region_assign {
 ! CHECK:    %[[VAL_6:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,5>>
 ! CHECK:    %[[VAL_7:.*]] = arith.constant 5 : index
-! CHECK:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_7]] {fortran_attrs = #fir.var_attrs<parameter>, uniq_name = "_QQclX68656C6C6F"} : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
+! CHECK:    %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]] typeparams %[[VAL_7]] uniq_name("_QQclX68656C6C6F") fortran_attrs<parameter> : (!fir.ref<!fir.char<1,5>>, index) -> (!fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>)
 ! CHECK:    hlfir.yield %[[VAL_8]]#0 : !fir.ref<!fir.char<1,5>>
 ! CHECK:  } to {
 ! CHECK:    %[[VAL_9:.*]] = arith.constant 10 : index

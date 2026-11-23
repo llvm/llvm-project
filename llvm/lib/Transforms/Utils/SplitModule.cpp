@@ -125,8 +125,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     if (GV.isDeclaration())
       return;
 
-    if (!GV.hasName())
-      GV.setName("__llvmsplit_unnamed");
+    GV.nameUnnamed();
 
     // Comdat groups must not be partitioned. For comdat groups that contain
     // locals, record all their members here so we can keep them together.
@@ -162,6 +161,7 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   llvm::for_each(M.functions(), recordGVSet);
   llvm::for_each(M.globals(), recordGVSet);
   llvm::for_each(M.aliases(), recordGVSet);
+  llvm::for_each(M.ifuncs(), recordGVSet);
 
   // Assigned all GVs to merged clusters while balancing number of objects in
   // each.
@@ -170,40 +170,24 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
   for (unsigned i = 0; i < N; ++i)
     BalancingQueue.push(std::make_pair(i, 0));
 
-  using SortType = std::pair<unsigned, ClusterMapType::iterator>;
-
-  SmallVector<SortType, 64> Sets;
   SmallPtrSet<const GlobalValue *, 32> Visited;
 
   // To guarantee determinism, we have to sort SCC according to size.
   // When size is the same, use leader's name.
-  for (ClusterMapType::iterator I = GVtoClusterMap.begin(),
-                                E = GVtoClusterMap.end();
-       I != E; ++I)
-    if (I->isLeader())
-      Sets.push_back(
-          std::make_pair(std::distance(GVtoClusterMap.member_begin(I),
-                                       GVtoClusterMap.member_end()),
-                         I));
+  for (const auto &C : GVtoClusterMap) {
+    if (!C->isLeader())
+      continue;
 
-  llvm::sort(Sets, [](const SortType &a, const SortType &b) {
-    if (a.first == b.first)
-      return a.second->getData()->getName() > b.second->getData()->getName();
-    else
-      return a.first > b.first;
-  });
-
-  for (auto &I : Sets) {
     unsigned CurrentClusterID = BalancingQueue.top().first;
     unsigned CurrentClusterSize = BalancingQueue.top().second;
     BalancingQueue.pop();
 
     LLVM_DEBUG(dbgs() << "Root[" << CurrentClusterID << "] cluster_size("
-                      << I.first << ") ----> " << I.second->getData()->getName()
-                      << "\n");
+                      << std::distance(GVtoClusterMap.member_begin(*C),
+                                       GVtoClusterMap.member_end())
+                      << ") ----> " << C->getData()->getName() << "\n");
 
-    for (ClusterMapType::member_iterator MI =
-             GVtoClusterMap.findLeader(I.second);
+    for (ClusterMapType::member_iterator MI = GVtoClusterMap.findLeader(*C);
          MI != GVtoClusterMap.member_end(); ++MI) {
       if (!Visited.insert(*MI).second)
         continue;
@@ -216,18 +200,6 @@ static void findPartitions(Module &M, ClusterIDMapType &ClusterIDMap,
     // Add this set size to the number of entries in this cluster.
     BalancingQueue.push(std::make_pair(CurrentClusterID, CurrentClusterSize));
   }
-}
-
-static void externalize(GlobalValue *GV) {
-  if (GV->hasLocalLinkage()) {
-    GV->setLinkage(GlobalValue::ExternalLinkage);
-    GV->setVisibility(GlobalValue::HiddenVisibility);
-  }
-
-  // Unnamed entities must be named consistently between modules. setName will
-  // give a distinct name to each such entity.
-  if (!GV->hasName())
-    GV->setName("__llvmsplit_unnamed");
 }
 
 // Returns whether GV should be in partition (0-based) I of N.
@@ -257,13 +229,13 @@ void llvm::SplitModule(
     bool PreserveLocals, bool RoundRobin) {
   if (!PreserveLocals) {
     for (Function &F : M)
-      externalize(&F);
+      F.externalize();
     for (GlobalVariable &GV : M.globals())
-      externalize(&GV);
+      GV.externalize();
     for (GlobalAlias &GA : M.aliases())
-      externalize(&GA);
+      GA.externalize();
     for (GlobalIFunc &GIF : M.ifuncs())
-      externalize(&GIF);
+      GIF.externalize();
   }
 
   // This performs splitting without a need for externalization, which might not
@@ -319,7 +291,7 @@ void llvm::SplitModule(
             return isInPartition(GV, I, N);
         }));
     if (I != 0)
-      MPart->setModuleInlineAsm("");
+      MPart->removeModuleInlineAsm();
     ModuleCallback(std::move(MPart));
   }
 }

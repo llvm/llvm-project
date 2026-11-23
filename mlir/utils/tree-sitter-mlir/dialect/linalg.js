@@ -4,7 +4,6 @@ module.exports = {
   linalg_dialect : $ => prec.right(choice(
                      seq(choice(
                              'linalg.batch_matmul',
-                             'linalg.batch_matmul_transpose_b',
                              'linalg.batch_matvec',
                              'linalg.batch_reduce_matmul', 'linalg.broadcast',
                              'linalg.conv_1d_ncw_fcw', 'linalg.conv_1d_nwc_wcf',
@@ -27,7 +26,6 @@ module.exports = {
                              'linalg.dot', 'linalg.elemwise_binary',
                              'linalg.elemwise_unary', 'linalg.fill',
                              'linalg.fill_rng_2d', 'linalg.matmul',
-                             'linalg.matmul_transpose_b',
                              'linalg.matmul_unsigned', 'linalg.matvec',
                              'linalg.mmt4d', 'linalg.pooling_nchw_max',
                              'linalg.pooling_nchw_sum',

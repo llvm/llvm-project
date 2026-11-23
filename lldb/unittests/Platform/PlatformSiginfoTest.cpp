@@ -25,7 +25,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using namespace lldb_private::repro;
 
 namespace {
 class PlatformSiginfoTest : public ::testing::Test {
@@ -61,14 +60,18 @@ public:
     uint64_t total_offset = 0;
     for (auto field_name : llvm::split(path, '.')) {
       uint64_t bit_offset;
-      ASSERT_NE(field_type.GetIndexOfFieldWithName(field_name.str().c_str(),
-                                                   &field_type, &bit_offset),
-                UINT32_MAX);
+      std::string name;
+      auto index_or_err = field_type.GetIndexOfChildWithName(field_name, false);
+      ASSERT_FALSE(!index_or_err);
+      field_type = field_type.GetFieldAtIndex(*index_or_err, name, &bit_offset,
+                                              nullptr, nullptr);
+      ASSERT_TRUE(field_type);
       total_offset += bit_offset;
     }
 
     EXPECT_EQ(total_offset, offset * 8);
-    EXPECT_EQ(field_type.GetByteSize(nullptr), std::optional<uint64_t>(size));
+    EXPECT_EQ(llvm::expectedToOptional(field_type.GetByteSize(nullptr)),
+              std::optional<uint64_t>(size));
   }
 
   void ExpectFields(const CompilerType &container,

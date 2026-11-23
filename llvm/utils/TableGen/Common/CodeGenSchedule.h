@@ -64,7 +64,7 @@ struct CodeGenSchedRW {
         HasVariants(false), IsVariadic(false), IsSequence(false) {}
   CodeGenSchedRW(unsigned Idx, const Record *Def)
       : Index(Idx), TheDef(Def), IsAlias(false), IsVariadic(false) {
-    Name = std::string(Def->getName());
+    Name = Def->getName().str();
     IsRead = Def->isSubClassOf("SchedRead");
     HasVariants = Def->isSubClassOf("SchedVariant");
     if (HasVariants)
@@ -193,7 +193,7 @@ struct CodeGenRegisterFile {
   unsigned MaxMovesEliminatedPerCycle;
   bool AllowZeroMoveEliminationOnly;
 
-  unsigned NumPhysRegs;
+  unsigned NumPhysRegs = 0;
   std::vector<CodeGenRegisterCost> Costs;
 
   CodeGenRegisterFile(StringRef name, const Record *def,
@@ -201,7 +201,7 @@ struct CodeGenRegisterFile {
                       bool AllowZeroMoveElimOnly = false)
       : Name(name), RegisterFileDef(def),
         MaxMovesEliminatedPerCycle(MaxMoveElimPerCy),
-        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly), NumPhysRegs(0) {}
+        AllowZeroMoveEliminationOnly(AllowZeroMoveElimOnly) {}
 
   bool hasDefaultCosts() const { return Costs.empty(); }
 };
@@ -261,16 +261,16 @@ struct CodeGenProcModel {
   std::vector<CodeGenRegisterFile> RegisterFiles;
 
   // Optional Retire Control Unit definition.
-  const Record *RetireControlUnit;
+  const Record *RetireControlUnit = nullptr;
 
   // Load/Store queue descriptors.
-  const Record *LoadQueue;
-  const Record *StoreQueue;
+  const Record *LoadQueue = nullptr;
+  const Record *StoreQueue = nullptr;
 
   CodeGenProcModel(unsigned Idx, std::string Name, const Record *MDef,
                    const Record *IDef)
-      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef),
-        RetireControlUnit(nullptr), LoadQueue(nullptr), StoreQueue(nullptr) {}
+      : Index(Idx), ModelName(std::move(Name)), ModelDef(MDef), ItinsDef(IDef) {
+  }
 
   bool hasItineraries() const {
     return !ItinsDef->getValueAsListOfDefs("IID").empty();
@@ -403,10 +403,6 @@ public:
   STIPredicateFunction(const Record *Rec) : FunctionDeclaration(Rec) {}
   STIPredicateFunction(STIPredicateFunction &&Other) = default;
 
-  bool isCompatibleWith(const STIPredicateFunction &Other) const {
-    return FunctionDeclaration == Other.FunctionDeclaration;
-  }
-
   void addDefinition(const Record *Def) { Definitions.push_back(Def); }
   void addOpcode(const Record *OpcodeRec, OpcodeInfo &&Info) {
     if (Groups.empty() ||
@@ -446,6 +442,9 @@ class CodeGenSchedModels {
   // Per-operand SchedReadWrite types.
   std::vector<CodeGenSchedRW> SchedWrites;
   std::vector<CodeGenSchedRW> SchedReads;
+  // Index in SchedWrites or SchedReads of each SchedWrite or SchedRead def.
+  DenseMap<const Record *, unsigned> SchedWriteIdx;
+  DenseMap<const Record *, unsigned> SchedReadIdx;
 
   // List of unique SchedClasses.
   std::vector<CodeGenSchedClass> SchedClasses;
@@ -467,26 +466,6 @@ class CodeGenSchedModels {
 public:
   CodeGenSchedModels(const RecordKeeper &RK, const CodeGenTarget &TGT);
 
-  // iterator access to the scheduling classes.
-  using class_iterator = std::vector<CodeGenSchedClass>::iterator;
-  using const_class_iterator = std::vector<CodeGenSchedClass>::const_iterator;
-  class_iterator classes_begin() { return SchedClasses.begin(); }
-  const_class_iterator classes_begin() const { return SchedClasses.begin(); }
-  class_iterator classes_end() { return SchedClasses.end(); }
-  const_class_iterator classes_end() const { return SchedClasses.end(); }
-  iterator_range<class_iterator> classes() {
-    return make_range(classes_begin(), classes_end());
-  }
-  iterator_range<const_class_iterator> classes() const {
-    return make_range(classes_begin(), classes_end());
-  }
-  iterator_range<class_iterator> explicit_classes() {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
-  }
-  iterator_range<const_class_iterator> explicit_classes() const {
-    return make_range(classes_begin(), classes_begin() + NumInstrSchedClasses);
-  }
-
   const Record *getModelOrItinDef(const Record *ProcDef) const {
     const Record *ModelDef = ProcDef->getValueAsDef("SchedModel");
     const Record *ItinsDef = ProcDef->getValueAsDef("ProcItin");
@@ -498,15 +477,15 @@ public:
     return ModelDef;
   }
 
-  const CodeGenProcModel &getModelForProc(const Record *ProcDef) const {
+  unsigned getModelIndexForProc(const Record *ProcDef) const {
     const Record *ModelDef = getModelOrItinDef(ProcDef);
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
-    return ProcModels[I->second];
+    return I->second;
   }
 
   const CodeGenProcModel &getProcModel(const Record *ModelDef) const {
-    ProcModelMapTy::const_iterator I = ProcModelMap.find(ModelDef);
+    auto I = ProcModelMap.find(ModelDef);
     assert(I != ProcModelMap.end() && "missing machine model");
     return ProcModels[I->second];
   }
@@ -515,10 +494,6 @@ public:
         static_cast<const CodeGenSchedModels &>(*this).getProcModel(ModelDef));
   }
 
-  // Iterate over the unique processor models.
-  using ProcIter = std::vector<CodeGenProcModel>::const_iterator;
-  ProcIter procModelBegin() const { return ProcModels.begin(); }
-  ProcIter procModelEnd() const { return ProcModels.end(); }
   ArrayRef<CodeGenProcModel> procModels() const { return ProcModels; }
 
   // Return true if any processors have itineraries.
@@ -541,9 +516,11 @@ public:
     return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
   }
   const CodeGenSchedRW &getSchedRW(const Record *Def) const {
-    bool IsRead = Def->isSubClassOf("SchedRead");
-    unsigned Idx = getSchedRWIdx(Def, IsRead);
-    return IsRead ? getSchedRead(Idx) : getSchedWrite(Idx);
+    if (unsigned Idx = SchedReadIdx.lookup(Def))
+      return getSchedRead(Idx);
+    if (unsigned Idx = SchedWriteIdx.lookup(Def))
+      return getSchedWrite(Idx);
+    return Def->isSubClassOf("SchedRead") ? getSchedRead(0) : getSchedWrite(0);
   }
   CodeGenSchedRW &getSchedRW(const Record *Def) {
     return const_cast<CodeGenSchedRW &>(
@@ -567,10 +544,10 @@ public:
   // for NoItinerary.
   unsigned getSchedClassIdx(const CodeGenInstruction &Inst) const;
 
-  using SchedClassIter = std::vector<CodeGenSchedClass>::const_iterator;
-  SchedClassIter schedClassBegin() const { return SchedClasses.begin(); }
-  SchedClassIter schedClassEnd() const { return SchedClasses.end(); }
   ArrayRef<CodeGenSchedClass> schedClasses() const { return SchedClasses; }
+  ArrayRef<CodeGenSchedClass> explicitSchedClasses() const {
+    return schedClasses().take_front(NumInstrSchedClasses);
+  }
 
   unsigned numInstrSchedClasses() const { return NumInstrSchedClasses; }
 

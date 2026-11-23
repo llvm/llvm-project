@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <optional>
 
-#include "Plugins/Process/Utility/lldb-ppc64le-register-enums.h"
+#include "Register/Arch/lldb-ppc64le-register-enums.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Symbol/UnwindPlan.h"
 #include "lldb/Utility/ArchSpec.h"
@@ -19,7 +19,7 @@
 #include "lldb/Utility/LLDBLog.h"
 
 #define DECLARE_REGISTER_INFOS_PPC64LE_STRUCT
-#include "Plugins/Process/Utility/RegisterInfos_ppc64le.h"
+#include "Register/Arch/RegisterInfos_ppc64le.h"
 
 #include "Plugins/Process/Utility/InstructionUtils.h"
 
@@ -118,12 +118,12 @@ bool EmulateInstructionPPC64::CreateFunctionEntryUnwind(
   unwind_plan.Clear();
   unwind_plan.SetRegisterKind(eRegisterKindLLDB);
 
-  UnwindPlan::RowSP row(new UnwindPlan::Row);
+  UnwindPlan::Row row;
 
   // Our previous Call Frame Address is the stack pointer
-  row->GetCFAValue().SetIsRegisterPlusOffset(gpr_r1_ppc64le, 0);
+  row.GetCFAValue().SetIsRegisterPlusOffset(gpr_r1_ppc64le, 0);
 
-  unwind_plan.AppendRow(row);
+  unwind_plan.AppendRow(std::move(row));
   unwind_plan.SetSourceName("EmulateInstructionPPC64");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolYes);

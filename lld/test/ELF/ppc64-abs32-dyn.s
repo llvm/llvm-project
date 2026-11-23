@@ -1,10 +1,12 @@
 # REQUIRES: ppc
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
-# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
 ## Test we don't create R_AARCH64_RELATIVE.
 
-# CHECK: error: relocation R_PPC64_ADDR32 cannot be used against symbol 'hidden'; recompile with -fPIC
+# CHECK:      error: relocation R_PPC64_ADDR32 cannot be used against symbol 'hidden'; recompile with -fPIC
+# CHECK-NEXT: >>> defined in {{.*}}.o
+# CHECK-NEXT: >>> referenced by {{.*}}.o:(.data+0x0)
 
 .globl hidden
 .hidden hidden

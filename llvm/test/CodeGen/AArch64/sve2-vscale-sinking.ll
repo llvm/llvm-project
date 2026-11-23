@@ -115,19 +115,19 @@ define void @gep(i32 noundef %first, i32 noundef %N, ptr nocapture noundef write
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[PTR_ADDR:%.*]] = phi ptr [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR_3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[PTR_ADDR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[PTR_ADDR]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP1:%.*]] = shl i64 [[TMP0]], 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR_ADDR]], i64 [[TMP1]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl i64 [[TMP2]], 4
 ; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[TMP3]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_1]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR_1]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP4:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_1]], i64 [[TMP5]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_2]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR_2]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i64 @llvm.vscale.i64()
 ; CHECK-NEXT:    [[TMP7:%.*]] = shl i64 [[TMP6]], 4
 ; CHECK-NEXT:    [[ADD_PTR_3]] = getelementptr inbounds i8, ptr [[ADD_PTR_2]], i64 [[TMP7]]
@@ -278,22 +278,22 @@ define void @gep_i32(i32 noundef %first, i32 noundef %N, ptr nocapture noundef w
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[LSR_IV:%.*]] = phi i32 [ [[N]], [[ENTRY:%.*]] ], [ [[LSR_IV_NEXT:%.*]], [[FOR_BODY]] ]
 ; CHECK-NEXT:    [[PTR_ADDR:%.*]] = phi ptr [ [[PTR]], [[ENTRY]] ], [ [[ADD_PTR_3:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[PTR_ADDR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[PTR_ADDR]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl i64 [[TMP1]], 4
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[PTR_ADDR]], i64 [[TMP2]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP3:%.*]] = tail call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
 ; CHECK-NEXT:    [[TMP5:%.*]] = shl i64 [[TMP4]], 4
 ; CHECK-NEXT:    [[ADD_PTR_1:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR]], i64 [[TMP5]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_1]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR_1]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = tail call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
 ; CHECK-NEXT:    [[TMP8:%.*]] = shl i64 [[TMP7]], 4
 ; CHECK-NEXT:    [[ADD_PTR_2:%.*]] = getelementptr inbounds i8, ptr [[ADD_PTR_1]], i64 [[TMP8]]
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr [[ADD_PTR_2]], i32 1, <vscale x 16 x i1> [[PG]])
+; CHECK-NEXT:    tail call void @llvm.masked.store.nxv16i8.p0(<vscale x 16 x i8> [[VAL]], ptr align 1 [[ADD_PTR_2]], <vscale x 16 x i1> [[PG]])
 ; CHECK-NEXT:    [[TMP9:%.*]] = tail call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext i32 [[TMP9]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = shl i64 [[TMP10]], 4

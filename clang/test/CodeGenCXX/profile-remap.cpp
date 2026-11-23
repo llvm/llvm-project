@@ -1,10 +1,10 @@
 // REQUIRES: x86-registered-target
 //
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fprofile-sample-use=%S/Inputs/profile-remap.samples -fprofile-remapping-file=%S/Inputs/profile-remap.map -O2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SAMPLES
-// RUN: llvm-profdata merge -output %T.profdata %S/Inputs/profile-remap.proftext
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fprofile-instrument-use-path=%T.profdata -fprofile-remapping-file=%S/Inputs/profile-remap.map -O2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-INSTR
-// RUN: llvm-profdata merge -output %T.profdata %S/Inputs/profile-remap_entry.proftext
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -fprofile-instrument-use-path=%T.profdata -fprofile-remapping-file=%S/Inputs/profile-remap.map -O2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-INSTR
+// RUN: llvm-profdata merge -output %t.profdata %S/Inputs/profile-remap.proftext
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fprofile-instrument-use=llvm -fprofile-instrument-use-path=%t.profdata -fprofile-remapping-file=%S/Inputs/profile-remap.map -O2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-INSTR
+// RUN: llvm-profdata merge -output %t.profdata %S/Inputs/profile-remap_entry.proftext
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -fprofile-instrument-use=llvm -fprofile-instrument-use-path=%t.profdata -fprofile-remapping-file=%S/Inputs/profile-remap.map -O2 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK,CHECK-INSTR
 
 namespace Foo {
   struct X {};

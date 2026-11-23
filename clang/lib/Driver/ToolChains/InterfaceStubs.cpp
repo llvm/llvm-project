@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InterfaceStubs.h"
-#include "CommonArgs.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "llvm/Support/Path.h"
 

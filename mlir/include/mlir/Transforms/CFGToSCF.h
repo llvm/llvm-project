@@ -96,6 +96,12 @@ public:
   /// control-flow paths where an SSA-value is undefined.
   virtual Value getUndefValue(Location loc, OpBuilder &builder, Type type) = 0;
 
+  /// Returns true if this operation (which has >1 successors) can be
+  /// converted to structured control flow by `createStructuredBranchRegionOp`.
+  /// Called during precondition checking, before any IR modifications.
+  /// Default implementation accepts all ops.
+  virtual bool canConvertMultiSuccessorBranchOp(Operation *op) { return true; }
+
   /// Creates a return-like terminator indicating unreachable.
   /// This is required when the transformation encounters a statically known
   /// infinite loop. Since structured control flow ops are not terminators,
@@ -111,6 +117,12 @@ public:
   virtual FailureOr<Operation *>
   createUnreachableTerminator(Location loc, OpBuilder &builder,
                               Region &region) = 0;
+
+  /// Returns true if the given terminator is unreachable.
+  /// These terminators are allowed to be merged into
+  /// the exit block of any other return-like operation in the region, using
+  /// undefined values as operands instead of getting their own exit block.
+  virtual bool isUnreachableTerminator(Operation *op) { return false; }
 
   /// Helper function to create an unconditional branch using
   /// `createCFGSwitchOp`.
@@ -141,11 +153,15 @@ public:
 /// If the region contains only a single kind of return-like operation, all
 /// control flow graph operations will be converted successfully.
 /// Otherwise a single control flow graph operation branching to one block
-/// per return-like operation kind remains.
+/// per return-like operation kind remains. Terminators for which
+/// `CFGToSCFInterface::isUnreachableTerminator` returns true do not get their
+/// own exit block: if any other return-like exit block exists, they are
+/// turned into branches to it with undefined operands instead.
 ///
-/// The transformation currently requires that all control flow graph operations
-/// have no side effects, implement the BranchOpInterface and does not have any
-/// operation produced successor operands.
+/// The transformation currently requires that the region has no unreachable
+/// blocks and that all control flow graph operations have no side effects,
+/// implement the BranchOpInterface and does not have any operation produced
+/// successor operands.
 /// Returns failure if any of the preconditions are violated or if any of the
 /// methods of `interface` failed. The IR is left in an unspecified state.
 ///

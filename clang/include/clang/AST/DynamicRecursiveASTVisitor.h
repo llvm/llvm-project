@@ -134,8 +134,7 @@ public:
   /// Recursively visit a C++ nested-name-specifier.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool
-  TraverseNestedNameSpecifier(MaybeConst<NestedNameSpecifier> *NNS);
+  virtual bool TraverseNestedNameSpecifier(NestedNameSpecifier NNS);
 
   /// Recursively visit a C++ nested-name-specifier with location
   /// information.
@@ -174,21 +173,22 @@ public:
   /// appropriate method.
   ///
   /// \returns false if the visitation was terminated early, true otherwise.
-  virtual bool TraverseTemplateName(TemplateName Template);
+  virtual bool TraverseTemplateName(TemplateName Template,
+                                    bool TraverseQualifier = true);
 
   /// Recursively visit a type, by dispatching to
   /// Traverse*Type() based on the argument's getTypeClass() property.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type).
-  virtual bool TraverseType(QualType T);
+  virtual bool TraverseType(QualType T, bool TraverseQualifier = true);
 
   /// Recursively visit a type with location, by dispatching to
   /// Traverse*TypeLoc() based on the argument type's getTypeClass() property.
   ///
   /// \returns false if the visitation was terminated early, true
   /// otherwise (including when the argument is a Null type location).
-  virtual bool TraverseTypeLoc(TypeLoc TL);
+  virtual bool TraverseTypeLoc(TypeLoc TL, bool TraverseQualifier = true);
 
   /// Recursively visit an Objective-C protocol reference with location
   /// information.
@@ -213,6 +213,11 @@ public:
   virtual bool VisitConceptReference(MaybeConst<ConceptReference> *CR) {
     return true;
   }
+
+  /// Recursively visit a single component of an __builtin_offsetof
+  /// designator (a field, identifier, base-class, or array-index node).
+  virtual bool TraverseOffsetOfNode(const OffsetOfNode *Node);
+  virtual bool VisitOffsetOfNode(const OffsetOfNode *Node) { return true; }
 
   /// Visit a node.
   virtual bool VisitAttr(MaybeConst<Attr> *A) { return true; }
@@ -251,11 +256,11 @@ public:
   // Decls.
 #define ABSTRACT_DECL(DECL)
 #define DECL(CLASS, BASE)                                                      \
+  bool WalkUpFrom##CLASS##Decl(MaybeConst<CLASS##Decl> *D);                    \
   virtual bool Traverse##CLASS##Decl(MaybeConst<CLASS##Decl> *D);
 #include "clang/AST/DeclNodes.inc"
 
 #define DECL(CLASS, BASE)                                                      \
-  bool WalkUpFrom##CLASS##Decl(MaybeConst<CLASS##Decl> *D);                    \
   virtual bool Visit##CLASS##Decl(MaybeConst<CLASS##Decl> *D) { return true; }
 #include "clang/AST/DeclNodes.inc"
 
@@ -272,18 +277,20 @@ public:
   // Types.
 #define ABSTRACT_TYPE(CLASS, BASE)
 #define TYPE(CLASS, BASE)                                                      \
-  virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T);
+  bool WalkUpFrom##CLASS##Type(MaybeConst<CLASS##Type> *T);                    \
+  virtual bool Traverse##CLASS##Type(MaybeConst<CLASS##Type> *T,               \
+                                     bool TraverseQualifier = true);
 #include "clang/AST/TypeNodes.inc"
 
 #define TYPE(CLASS, BASE)                                                      \
-  bool WalkUpFrom##CLASS##Type(MaybeConst<CLASS##Type> *T);                    \
   virtual bool Visit##CLASS##Type(MaybeConst<CLASS##Type> *T) { return true; }
 #include "clang/AST/TypeNodes.inc"
 
   // TypeLocs.
 #define ABSTRACT_TYPELOC(CLASS, BASE)
 #define TYPELOC(CLASS, BASE)                                                   \
-  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL);
+  virtual bool Traverse##CLASS##TypeLoc(CLASS##TypeLoc TL,                     \
+                                        bool TraverseQualifier);
 #include "clang/AST/TypeLocNodes.def"
 
 #define TYPELOC(CLASS, BASE)                                                   \

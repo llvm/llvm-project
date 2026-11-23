@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BinaryOpSingleOutputPerf.h"
+#include "PerfTest.h"
 #include "src/__support/FPUtil/generic/mul.h"
 #include "src/math/fmul.h"
 
@@ -17,8 +17,8 @@ float fmul_placeholder_binary(double x, double y) {
 }
 
 int main() {
-  BINARY_OP_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fmul,
-                                  fmul_placeholder_binary, DOUBLE_ROUNDS,
-                                  "fmul_perf.log")
+  BINARY_INPUT_SINGLE_OUTPUT_PERF_EX(float, double, LIBC_NAMESPACE::fmul,
+                                     fmul_placeholder_binary, DOUBLE_ROUNDS,
+                                     "fmul_perf.log")
   return 0;
 }

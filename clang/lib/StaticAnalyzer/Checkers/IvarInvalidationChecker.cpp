@@ -37,7 +37,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallString.h"
 
 using namespace clang;
 using namespace ento;
@@ -288,7 +287,7 @@ bool IvarInvalidationCheckerImpl::trackIvar(const ObjCIvarDecl *Iv,
   containsInvalidationMethod(IvInterf, Info, /*LookForPartial*/ false);
   if (Info.needsInvalidation()) {
     const ObjCIvarDecl *I = cast<ObjCIvarDecl>(Iv->getCanonicalDecl());
-    TrackedIvars[I] = Info;
+    TrackedIvars[I] = std::move(Info);
     if (!*FirstIvarDecl)
       *FirstIvarDecl = I;
     return true;
@@ -422,7 +421,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
     // Get the corresponding method in the @implementation.
     const ObjCMethodDecl *D = ImplD->getMethod(InterfD->getSelector(),
                                                InterfD->isInstanceMethod());
-    if (D && D->hasBody()) {
+    if (Stmt *Body; D && (Body = D->getBody())) {
       AtImplementationContainsAtLeastOnePartialInvalidationMethod = true;
 
       bool CalledAnotherInvalidationMethod = false;
@@ -432,7 +431,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
                     PropSetterToIvarMap,
                     PropGetterToIvarMap,
                     PropertyToIvarMap,
-                    BR.getContext()).VisitStmt(D->getBody());
+                    BR.getContext()).VisitStmt(Body);
       // If another invalidation method was called, trust that full invalidation
       // has occurred.
       if (CalledAnotherInvalidationMethod)
@@ -471,7 +470,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
     // Get the corresponding method in the @implementation.
     const ObjCMethodDecl *D = ImplD->getMethod(InterfD->getSelector(),
                                                InterfD->isInstanceMethod());
-    if (D && D->hasBody()) {
+    if (Stmt *Body; D && (Body = D->getBody())) {
       AtImplementationContainsAtLeastOneInvalidationMethod = true;
 
       // Get a copy of ivars needing invalidation.
@@ -483,7 +482,7 @@ visit(const ObjCImplementationDecl *ImplD) const {
                     PropSetterToIvarMap,
                     PropGetterToIvarMap,
                     PropertyToIvarMap,
-                    BR.getContext()).VisitStmt(D->getBody());
+                    BR.getContext()).VisitStmt(Body);
       // If another invalidation method was called, trust that full invalidation
       // has occurred.
       if (CalledAnotherInvalidationMethod)
@@ -741,3 +740,5 @@ bool ento::shouldRegisterIvarInvalidationModeling(const CheckerManager &mgr) {
 
 REGISTER_CHECKER(InstanceVariableInvalidation)
 REGISTER_CHECKER(MissingInvalidationMethod)
+
+#undef REGISTER_CHECKER

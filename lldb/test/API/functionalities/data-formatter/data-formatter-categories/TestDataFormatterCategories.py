@@ -16,6 +16,9 @@ class CategoriesDataFormatterTestCase(TestBase):
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
     @expectedFlakeyNetBSD
+    @expectedFailureAll(
+        bugnumber="llvm.org/pr239769", oslist=["windows"], debug_info="dwarf"
+    )
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -335,5 +338,7 @@ class CategoriesDataFormatterTestCase(TestBase):
 
         # and also validate that one can print formatters for a language
         self.expect(
-            "type summary list -l c++", substrs=["vector", "map", "list", "string"]
+            "type summary list -l c++",
+            substrs=["vector", "map", "list", "string"],
+            ordered=False,
         )

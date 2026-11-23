@@ -19,7 +19,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include <cassert>
@@ -35,16 +35,14 @@ namespace {
 
 class OptimizePHIs {
   MachineRegisterInfo *MRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
 
 public:
   bool run(MachineFunction &Fn);
 
 private:
   using InstrSet = SmallPtrSet<MachineInstr *, 16>;
-  using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
-  bool IsSingleValuePHICycle(MachineInstr *MI, unsigned &SingleValReg,
+  bool IsSingleValuePHICycle(MachineInstr *MI, Register &SingleValReg,
                              InstrSet &PHIsInCycle);
   bool IsDeadPHICycle(MachineInstr *MI, InstrSet &PHIsInCycle);
   bool OptimizeBB(MachineBasicBlock &MBB);
@@ -53,9 +51,7 @@ private:
 class OptimizePHIsLegacy : public MachineFunctionPass {
 public:
   static char ID;
-  OptimizePHIsLegacy() : MachineFunctionPass(ID) {
-    initializeOptimizePHIsLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  OptimizePHIsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
@@ -66,6 +62,7 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 };
@@ -85,12 +82,12 @@ PreservedAnalyses OptimizePHIsPass::run(MachineFunction &MF,
     return PreservedAnalyses::all();
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
+  PA.preserve<MachineRegisterClassAnalysis>();
   return PA;
 }
 
 bool OptimizePHIs::run(MachineFunction &Fn) {
   MRI = &Fn.getRegInfo();
-  TII = Fn.getSubtarget().getInstrInfo();
 
   // Find dead PHI cycles and PHI cycles that can be replaced by a single
   // value.  InstCombine does these optimizations, but DAG legalization may
@@ -109,7 +106,7 @@ bool OptimizePHIs::run(MachineFunction &Fn) {
 /// non-copy value. PHIsInCycle is a set used to keep track of the PHIs that
 /// have been scanned. PHIs may be grouped by cycle, several cycles or chains.
 bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
-                                         unsigned &SingleValReg,
+                                         Register &SingleValReg,
                                          InstrSet &PHIsInCycle) {
   assert(MI->isPHI() && "IsSingleValuePHICycle expects a PHI instruction");
   Register DstReg = MI->getOperand(0).getReg();
@@ -144,7 +141,7 @@ bool OptimizePHIs::IsSingleValuePHICycle(MachineInstr *MI,
         return false;
     } else {
       // Fail if there is more than one non-phi/non-move register.
-      if (SingleValReg != 0 && SingleValReg != SrcReg)
+      if (SingleValReg && SingleValReg != SrcReg)
         return false;
       SingleValReg = SrcReg;
     }
@@ -186,19 +183,15 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
       break;
 
     // Check for single-value PHI cycles.
-    unsigned SingleValReg = 0;
+    Register SingleValReg;
     InstrSet PHIsInCycle;
-    if (IsSingleValuePHICycle(MI, SingleValReg, PHIsInCycle) &&
-        SingleValReg != 0) {
+    if (IsSingleValuePHICycle(MI, SingleValReg, PHIsInCycle) && SingleValReg) {
       Register OldReg = MI->getOperand(0).getReg();
       if (!MRI->constrainRegClass(SingleValReg, MRI->getRegClass(OldReg)))
         continue;
 
       MRI->replaceRegWith(OldReg, SingleValReg);
       MI->eraseFromParent();
-
-      // The kill flags on OldReg and SingleValReg may no longer be correct.
-      MRI->clearKillFlags(SingleValReg);
 
       ++NumPHICycles;
       Changed = true;

@@ -1,27 +1,27 @@
 // RUN: %clang_cc1 -triple powerpc64le-linux -O2 -target-cpu pwr7 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 // RUN: %clang_cc1 -triple powerpc64-linux -O2 -target-cpu pwr7 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 // RUN: %clang_cc1 -triple powerpc-linux -O2 -target-cpu pwr7 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-32
 // RUN: %clang_cc1 -triple powerpc64-aix -O2 -target-cpu pwr7 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 // RUN: %clang_cc1 -triple powerpc-aix -O2 -target-cpu pwr7 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-32
 // RUN: %clang_cc1 -triple riscv64-linux -O2 -emit-llvm -fshort-enums \
-// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 // RUN: %clang_cc1 -triple riscv32-linux -O2 -emit-llvm -fshort-enums \
-// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-32
 // RUN: %clang_cc1 -triple i386-linux -O2 -emit-llvm -fshort-enums \
-// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT,CHECK-32
 // RUN: %clang_cc1 -triple x86_64-linux -O2 -emit-llvm -fshort-enums \
-// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,NOEXT,CHECK-64
 // RUN: %clang_cc1 -triple armv7-linux -O2 -emit-llvm -fshort-enums \
-// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-32
+// RUN:   %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-32
 // RUN: %clang_cc1 -triple arm64 -target-abi darwinpcs -O2 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 // RUN: %clang_cc1 -triple aarch64 -target-abi darwinpcs -O2 -emit-llvm \
-// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,CHECK-64
+// RUN:   -fshort-enums %s -o - | FileCheck %s --check-prefixes=CHECK,EXT,CHECK-64
 
 typedef union tu_c {
   signed char a;
@@ -41,26 +41,29 @@ typedef union tu_l {
 } tu_l_t __attribute__((transparent_union));
 
 // CHECK-LABEL: define{{.*}} void @ftest0(
-// CHECK-SAME: i8 noundef signext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// EXT-SAME: i8 noundef signext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// NOEXT-SAME: i8 noundef [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 void ftest0(tu_c_t uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest1(
-// CHECK-SAME: i16 noundef signext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// EXT-SAME: i16 noundef signext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NOEXT-SAME: i16 noundef [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 void ftest1(tu_s_t uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest1b(
-// CHECK-SAME: ptr noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
 void ftest1b(tu_s_t *uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest2(
-// CHECK-SAME: i16 noundef zeroext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// EXT-SAME: i16 noundef zeroext [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// NOEXT-SAME: i16 noundef [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 void ftest2(tu_us_t uc) { }
@@ -82,7 +85,8 @@ typedef union etest {
 } etest_t __attribute__((transparent_union));
 
 // CHECK-LABEL: define{{.*}} void @ftest4(
-// CHECK-SAME: i8 noundef zeroext [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// EXT-SAME: i8 noundef zeroext [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// NOEXT-SAME: i8 noundef [[A_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 void ftest4(etest_t a) {}
@@ -94,14 +98,14 @@ typedef union tu_ptr {
 } tu_ptr_t __attribute__((transparent_union));
 
 // CHECK-LABEL: define{{.*}} void @ftest5(
-// CHECK-SAME: ptr readnone captures(none) [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+// CHECK-SAME: ptr nofree readnone captures(none) [[UC_COERCE:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //
 void ftest5(tu_ptr_t uc) { }
 
 // CHECK-LABEL: define{{.*}} void @ftest6(
-// CHECK-SAME: ptr noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
+// CHECK-SAME: ptr nofree noundef readnone captures(none) [[UC:%.*]]) local_unnamed_addr #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    ret void
 //

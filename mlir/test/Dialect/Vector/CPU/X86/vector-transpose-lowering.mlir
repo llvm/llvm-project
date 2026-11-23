@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
-// NOTE: This file tests lowerings that are implemented in the X86Vector
+// NOTE: This file tests lowerings that are implemented in the X86
 // dialect. Since X86 does not support scalable vectors, all examples in this
 // file use fixed-width vectors.
 
@@ -26,8 +26,7 @@ func.func @transpose4x8xf32(%arg0: vector<4x8xf32>) -> vector<8x4xf32> {
   // CHECK-NEXT: vector.insert {{.*}}[1]
   // CHECK-NEXT: vector.insert {{.*}}[2]
   // CHECK-NEXT: vector.insert {{.*}}[3]
-  // CHECK-NEXT: vector.shape_cast {{.*}} vector<4x8xf32> to vector<32xf32>
-  // CHECK-NEXT: vector.shape_cast {{.*}} vector<32xf32> to vector<8x4xf32>
+  // CHECK-NEXT: vector.shape_cast {{.*}} vector<4x8xf32> to vector<8x4xf32>
   %0 = vector.transpose %arg0, [1, 0] : vector<4x8xf32> to vector<8x4xf32>
   return %0 : vector<8x4xf32>
 }
@@ -54,8 +53,7 @@ func.func @transpose021_1x4x8xf32(%arg0: vector<1x4x8xf32>) -> vector<1x8x4xf32>
   // CHECK-NEXT: vector.insert {{.*}}[1]
   // CHECK-NEXT: vector.insert {{.*}}[2]
   // CHECK-NEXT: vector.insert {{.*}}[3]
-  // CHECK-NEXT: vector.shape_cast {{.*}} vector<4x8xf32> to vector<32xf32>
-  // CHECK-NEXT: vector.shape_cast {{.*}} vector<32xf32> to vector<1x8x4xf32>
+  // CHECK-NEXT: vector.shape_cast {{.*}} vector<4x8xf32> to vector<1x8x4xf32>
   %0 = vector.transpose %arg0, [0, 2, 1] : vector<1x4x8xf32> to vector<1x8x4xf32>
   return %0 : vector<1x8x4xf32>
 }

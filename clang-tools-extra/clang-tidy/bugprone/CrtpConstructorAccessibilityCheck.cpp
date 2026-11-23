@@ -1,4 +1,4 @@
-//===--- CrtpConstructorAccessibilityCheck.cpp - clang-tidy ---------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,9 +24,8 @@ static bool isDerivedParameterBefriended(const CXXRecordDecl *CRTP,
                                          const NamedDecl *Param) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
     const auto *const TTPT =
         dyn_cast<TemplateTypeParmType>(FriendType->getType());
@@ -39,11 +38,11 @@ static bool isDerivedClassBefriended(const CXXRecordDecl *CRTP,
                                      const CXXRecordDecl *Derived) {
   return llvm::any_of(CRTP->friends(), [&](const FriendDecl *Friend) {
     const TypeSourceInfo *const FriendType = Friend->getFriendType();
-    if (!FriendType) {
+    if (!FriendType)
       return false;
-    }
 
-    return FriendType->getType()->getAsCXXRecordDecl() == Derived;
+    return declaresSameEntity(FriendType->getType()->getAsCXXRecordDecl(),
+                              Derived);
   });
 }
 
@@ -55,7 +54,8 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
       CRTP->getTemplateArgs().asArray(), [&](const TemplateArgument &Arg) {
         ++Idx;
         return Arg.getKind() == TemplateArgument::Type &&
-               Arg.getAsType()->getAsCXXRecordDecl() == Derived;
+               declaresSameEntity(Arg.getAsType()->getAsCXXRecordDecl(),
+                                  Derived);
       });
 
   return AnyOf ? CRTP->getSpecializedTemplate()
@@ -67,22 +67,29 @@ getDerivedParameter(const ClassTemplateSpecializationDecl *CRTP,
 static std::vector<FixItHint>
 hintMakeCtorPrivate(const CXXConstructorDecl *Ctor,
                     const std::string &OriginalAccess) {
-  std::vector<FixItHint> Hints;
-
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      Ctor->getBeginLoc().getLocWithOffset(-1), "private:\n"));
-
   const ASTContext &ASTCtx = Ctor->getASTContext();
-  const SourceLocation CtorEndLoc =
-      Ctor->isExplicitlyDefaulted()
-          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(),
-                                             ASTCtx.getSourceManager(),
-                                             ASTCtx.getLangOpts())
-          : Ctor->getEndLoc();
-  Hints.emplace_back(FixItHint::CreateInsertion(
-      CtorEndLoc.getLocWithOffset(1), '\n' + OriginalAccess + ':' + '\n'));
+  const SourceManager &SM = ASTCtx.getSourceManager();
+  const LangOptions &LangOpts = ASTCtx.getLangOpts();
 
-  return Hints;
+  // Insert right before the first token and after the last one, mapped out of
+  // macros. Give up if either end is in the middle of a macro expansion.
+  SourceLocation CtorBeginLoc = Ctor->getBeginLoc();
+  if (CtorBeginLoc.isMacroID() &&
+      !Lexer::isAtStartOfMacroExpansion(CtorBeginLoc, SM, LangOpts,
+                                        &CtorBeginLoc))
+    return {};
+
+  const SourceLocation CtorEndLoc = Lexer::getLocForEndOfToken(
+      Ctor->isExplicitlyDefaulted()
+          ? utils::lexer::findNextTerminator(Ctor->getEndLoc(), SM, LangOpts)
+          : Ctor->getEndLoc(),
+      0, SM, LangOpts);
+  if (CtorEndLoc.isInvalid())
+    return {};
+
+  return {FixItHint::CreateInsertion(CtorBeginLoc, "private:\n"),
+          FixItHint::CreateInsertion(CtorEndLoc,
+                                     '\n' + OriginalAccess + ':' + '\n')};
 }
 
 void CrtpConstructorAccessibilityCheck::registerMatchers(MatchFinder *Finder) {
@@ -104,9 +111,8 @@ void CrtpConstructorAccessibilityCheck::check(
   const CXXRecordDecl *CRTPDeclaration =
       CRTPInstantiation->getSpecializedTemplate()->getTemplatedDecl();
 
-  if (!CRTPDeclaration->hasDefinition()) {
+  if (!CRTPDeclaration->hasDefinition())
     return;
-  }
 
   const auto *DerivedTemplateParameter =
       getDerivedParameter(CRTPInstantiation, DerivedRecord);
@@ -114,9 +120,10 @@ void CrtpConstructorAccessibilityCheck::check(
   assert(DerivedTemplateParameter &&
          "No template parameter corresponds to the derived class of the CRTP.");
 
-  bool NeedsFriend = !isDerivedParameterBefriended(CRTPDeclaration,
-                                                   DerivedTemplateParameter) &&
-                     !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
+  const bool NeedsFriend =
+      !isDerivedParameterBefriended(CRTPDeclaration,
+                                    DerivedTemplateParameter) &&
+      !isDerivedClassBefriended(CRTPDeclaration, DerivedRecord);
 
   const FixItHint HintFriend = FixItHint::CreateInsertion(
       CRTPDeclaration->getBraceRange().getEnd(),
@@ -129,13 +136,10 @@ void CrtpConstructorAccessibilityCheck::check(
         << HintFriend;
   }
 
-  auto WithFriendHintIfNeeded =
-      [&](const DiagnosticBuilder &Diag,
-          bool NeedsFriend) -> const DiagnosticBuilder & {
+  const auto WithFriendHintIfNeeded = [&](const DiagnosticBuilder &Diag,
+                                          bool NeedsFriend) {
     if (NeedsFriend)
       Diag << HintFriend;
-
-    return Diag;
   };
 
   if (!CRTPDeclaration->hasUserDeclaredConstructor()) {
@@ -157,20 +161,20 @@ void CrtpConstructorAccessibilityCheck::check(
   }
 
   for (auto &&Ctor : CRTPDeclaration->ctors()) {
-    if (Ctor->getAccess() == AS_private)
+    if (Ctor->getAccess() == AS_private || Ctor->isDeleted())
       continue;
 
     const bool IsPublic = Ctor->getAccess() == AS_public;
     const std::string Access = IsPublic ? "public" : "protected";
+    const std::vector<FixItHint> CtorHints = hintMakeCtorPrivate(Ctor, Access);
 
     WithFriendHintIfNeeded(
         diag(Ctor->getLocation(),
              "%0 constructor allows the CRTP to be %select{inherited "
              "from|constructed}1 as a regular template class; consider making "
              "it private%select{| and declaring the derived class as friend}2")
-            << Access << IsPublic << NeedsFriend
-            << hintMakeCtorPrivate(Ctor, Access),
-        NeedsFriend);
+            << Access << IsPublic << NeedsFriend << CtorHints,
+        NeedsFriend && !CtorHints.empty());
   }
 }
 

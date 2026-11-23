@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=lowertypetests -lowertypetests-drop-type-tests=all < %s | FileCheck %s
+; RUN: opt -S -passes="drop-type-tests<all>" < %s | FileCheck %s
 
 define void @func() {
 entry:

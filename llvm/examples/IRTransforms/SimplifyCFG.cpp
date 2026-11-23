@@ -32,27 +32,21 @@
 //  * Add implementation using reachability to discover dead blocks.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
-#include "llvm/Support/CommandLine.h"
+#include "llvm/Plugins/PassPlugin.h"
+#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 using namespace PatternMatch;
 
 enum TutorialVersion { V1, V2, V3 };
-static cl::opt<TutorialVersion>
-    Version("tut-simplifycfg-version", cl::desc("Select tutorial version"),
-            cl::Hidden, cl::ValueOptional, cl::init(V1),
-            cl::values(clEnumValN(V1, "v1", "version 1"),
-                       clEnumValN(V2, "v2", "version 2"),
-                       clEnumValN(V3, "v3", "version 3"),
-                       // Sentinel value for unspecified option.
-                       clEnumValN(V3, "", "")));
+static TutorialVersion Version = V1;
 
 #define DEBUG_TYPE "tut-simplifycfg"
 
@@ -140,8 +134,8 @@ static bool eliminateCondBranches_v1(Function &F) {
   // Eliminate branches with constant conditionals.
   for (BasicBlock &BB : F) {
     // Skip blocks without conditional branches as terminators.
-    BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator());
-    if (!BI || !BI->isConditional())
+    CondBrInst *BI = dyn_cast<CondBrInst>(BB.getTerminator());
+    if (!BI)
       continue;
 
     // Skip blocks with conditional branches without ConstantInt conditions.
@@ -158,7 +152,7 @@ static bool eliminateCondBranches_v1(Function &F) {
     // Replace the conditional branch with an unconditional one, by creating
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
-    BranchInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
+    UncondBrInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
     BI->eraseFromParent();
     Changed = true;
   }
@@ -176,8 +170,8 @@ static bool eliminateCondBranches_v2(Function &F, DominatorTree &DT) {
   // Eliminate branches with constant conditionals.
   for (BasicBlock &BB : F) {
     // Skip blocks without conditional branches as terminators.
-    BranchInst *BI = dyn_cast<BranchInst>(BB.getTerminator());
-    if (!BI || !BI->isConditional())
+    CondBrInst *BI = dyn_cast<CondBrInst>(BB.getTerminator());
+    if (!BI)
       continue;
 
     // Skip blocks with conditional branches without ConstantInt conditions.
@@ -194,8 +188,8 @@ static bool eliminateCondBranches_v2(Function &F, DominatorTree &DT) {
     // Replace the conditional branch with an unconditional one, by creating
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
-    BranchInst *NewBranch =
-        BranchInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
+    UncondBrInst *NewBranch =
+        UncondBrInst::Create(BI->getSuccessor(CI->isZero()), BI->getIterator());
     BI->eraseFromParent();
 
     // Delete the edge between BB and RemovedSucc in the DominatorTree, iff
@@ -242,8 +236,8 @@ static bool eliminateCondBranches_v3(Function &F, DominatorTree &DT) {
     // a new unconditional branch to the selected successor and removing the
     // conditional one.
 
-    BranchInst *NewBranch =
-        BranchInst::Create(TakenSucc, BB.getTerminator()->getIterator());
+    UncondBrInst *NewBranch =
+        UncondBrInst::Create(TakenSucc, BB.getTerminator()->getIterator());
     BB.getTerminator()->eraseFromParent();
 
     // Delete the edge between BB and RemovedSucc in the DominatorTree, iff
@@ -368,7 +362,7 @@ static bool doSimplify_v3(Function &F, DominatorTree &DT) {
 }
 
 namespace {
-struct SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
+struct SimplifyCFGPass : public OptionalPassInfoMixin<SimplifyCFGPass> {
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &FAM) {
     switch (Version) {
     case V1:
@@ -391,9 +385,27 @@ struct SimplifyCFGPass : public PassInfoMixin<SimplifyCFGPass> {
 };
 } // namespace
 
+// Selects the tutorial version with -plugin-arg=SimplifyCFG,v1 (or v2, v3).
+static Error parseArguments(ArrayRef<const char *> Args) {
+  std::optional<TutorialVersion> V;
+  if (Args.size() == 1)
+    V = StringSwitch<std::optional<TutorialVersion>>(Args[0])
+            .Case("v1", V1)
+            .Case("v2", V2)
+            .Case("v3", V3)
+            .Default(std::nullopt);
+  if (!V)
+    return createStringError(
+        "SimplifyCFG: expected one argument, v1, v2 or v3");
+  Version = *V;
+  return Error::success();
+}
+
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
-  return {LLVM_PLUGIN_API_VERSION, "SimplifyCFG", LLVM_VERSION_STRING,
+  return {LLVM_PLUGIN_API_VERSION,
+          "SimplifyCFG",
+          LLVM_VERSION_STRING,
           [](PassBuilder &PB) {
             PB.registerPipelineParsingCallback(
                 [](StringRef Name, llvm::FunctionPassManager &PM,
@@ -404,10 +416,12 @@ llvm::PassPluginLibraryInfo getExampleIRTransformsPluginInfo() {
                   }
                   return false;
                 });
-          }};
+          },
+          nullptr,
+          parseArguments};
 }
 
-#ifndef LLVM_SIMPLIFYCFG_LINK_INTO_TOOLS
+#ifndef LLVM_EXAMPLEIRTRANSFORMS_LINK_INTO_TOOLS
 extern "C" LLVM_ATTRIBUTE_WEAK ::llvm::PassPluginLibraryInfo
 llvmGetPassPluginInfo() {
   return getExampleIRTransformsPluginInfo();

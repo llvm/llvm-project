@@ -1,0 +1,44 @@
+# RUN: yaml2obj %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+
+# CHECK:      0000000000001630 <strcmp@plt>:
+# CHECK-NEXT:     1630:       auipc   t3, 0x2
+# CHECK-NEXT:     1634:       ld      t3, 0x1b8(t3)
+# CHECK-NEXT:     1638:       jalr    t1, t3
+# CHECK-NEXT:     163c:       nop
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_RISCV
+  Flags:           [ EF_RISCV_RVC, EF_RISCV_FLOAT_ABI_DOUBLE ]
+Sections:
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x408
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x37E8
+        Symbol:          strcmp
+        Type:            R_RISCV_JUMP_SLOT
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x1610
+    AddressAlign:    0x10
+    Content:         972300003303C34103BE831C130343FD9382831C1353130083B2820067000E00172E0000033E8E1B67030E0013000000
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x37D8
+    AddressAlign:    0x8
+    Content:         '000000000000000000000000000000001016000000000000'
+DynamicSymbols:
+  - Name:            strcmp
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+...

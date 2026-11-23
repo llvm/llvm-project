@@ -1,5 +1,5 @@
 set(LLVM_TARGET_DEFINITIONS Options.td)
-tablegen(LLVM Options.inc -gen-opt-parser-defs)
+llvm_tablegen(Options.inc -gen-opt-parser-defs)
 add_public_tablegen_target(DsymutilTableGen)
 
 set(LLVM_LINK_COMPONENTS
@@ -7,12 +7,15 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   AsmPrinter
+  BitReader
+  BitStreamReader
   CodeGen
   CodeGenTypes
   DWARFLinker
   DWARFLinkerClassic
   DWARFLinkerParallel
   DebugInfoDWARF
+  DebugInfoDWARFLowLevel
   MC
   Object
   Option
@@ -30,8 +33,10 @@ add_llvm_tool(dsymutil
   DwarfLinkerForBinary.cpp
   MachODebugMapParser.cpp
   MachOUtils.cpp
+  PseudoProbeLinker.cpp
   Reproducer.cpp
   RelocationMap.cpp
+  SwiftModule.cpp
 
   DEPENDS
   intrinsics_gen

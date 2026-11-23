@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --sparse-assembler="direct-out=True" -split-input-file | FileCheck %s
+// RUN: mlir-opt %s --sparse-assembler="direct-out=true" -split-input-file | FileCheck %s
 
 // -----
 

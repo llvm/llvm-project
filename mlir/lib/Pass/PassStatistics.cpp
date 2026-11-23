@@ -11,6 +11,8 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 
+#include <cinttypes>
+
 using namespace mlir;
 using namespace mlir::detail;
 
@@ -27,7 +29,7 @@ struct Statistic {
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
-                           MutableArrayRef<Statistic> stats = std::nullopt) {
+                           MutableArrayRef<Statistic> stats = {}) {
   os.indent(indent) << pass << "\n";
   if (stats.empty())
     return;
@@ -48,9 +50,9 @@ static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
 
   // Print each of the statistics.
   for (auto &stat : stats) {
-    os.indent(indent + 2) << llvm::format("(S) %*u %-*s - %s\n", largestValue,
-                                          stat.value, largestName, stat.name,
-                                          stat.desc);
+    os.indent(indent + 2) << llvm::format(
+        "(S) %*" PRIu64 " %-*s - %s\n", static_cast<int>(largestValue),
+        stat.value, static_cast<int>(largestName), stat.name, stat.desc);
   }
 }
 
@@ -219,15 +221,13 @@ void OpPassManager::mergeStatisticsInto(OpPassManager &other) {
 /// Prepare the statistics of passes within the given pass manager for
 /// consumption(e.g. dumping).
 static void prepareStatistics(OpPassManager &pm) {
-  for (Pass &pass : pm.getPasses()) {
-    OpToOpPassAdaptor *adaptor = dyn_cast<OpToOpPassAdaptor>(&pass);
-    if (!adaptor)
-      continue;
-    MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
+  for (auto &adaptor :
+       llvm::make_isa_range<OpToOpPassAdaptor>(pm.getPasses())) {
+    MutableArrayRef<OpPassManager> nestedPms = adaptor.getPassManagers();
 
     // Merge the statistics from the async pass managers into the main nested
     // pass managers.  Prepare recursively before merging.
-    for (auto &asyncPM : adaptor->getParallelPassManagers()) {
+    for (auto &asyncPM : adaptor.getParallelPassManagers()) {
       for (unsigned i = 0, e = asyncPM.size(); i != e; ++i) {
         prepareStatistics(asyncPM[i]);
         asyncPM[i].mergeStatisticsInto(nestedPms[i]);

@@ -1,4 +1,4 @@
-; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgcn-unknown-unknown < %s | FileCheck -check-prefix=ASC -check-prefix=COMMON %s
+; RUN: opt -S -passes='require<profile-summary>,function(codegenprepare)' -mtriple=amdgpu-unknown-unknown < %s | FileCheck -check-prefix=ASC -check-prefix=COMMON %s
 
 ; COMMON-LABEL: @test_sink_ptrtoint_asc(
 ; ASC: addrspacecast
@@ -36,7 +36,7 @@ bb15:                                             ; preds = %bb14, %bb8
   %tmp19 = fsub float 2.187500e-01, %tmp18
   %tmp20 = fsub float 7.187500e-01, %tmp19
   %tmp21 = fcmp ogt float %tmp5, 1.600000e+01
-  %tmp22 = select i1 %tmp21, float 0x7FF8000000000000, float %tmp20
+  %tmp22 = select i1 %tmp21, float +qnan, float %tmp20
   %tmp23 = getelementptr inbounds float, ptr addrspace(1) %arg, i64 %tmp3
   store float %tmp22, ptr addrspace(1) %tmp23, align 4
   ret void

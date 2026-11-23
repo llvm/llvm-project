@@ -10,10 +10,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
@@ -21,13 +21,9 @@
 
 using namespace llvm;
 
-namespace llvm {
-cl::opt<unsigned> AsmMacroMaxNestingDepth(
-    "asm-macro-max-nesting-depth", cl::init(20), cl::Hidden,
-    cl::desc("The maximum nesting depth allowed for assembly macros."));
-}
-
-MCAsmParser::MCAsmParser() = default;
+MCAsmParser::MCAsmParser(MCContext &Ctx, MCStreamer &Out, SourceMgr &SM,
+                         const MCAsmInfo &MAI)
+    : Ctx(Ctx), Out(Out), SrcMgr(SM), MAI(MAI), Lexer(MAI) {}
 
 MCAsmParser::~MCAsmParser() = default;
 
@@ -160,9 +156,20 @@ bool MCAsmParser::parseGNUAttribute(SMLoc L, int64_t &Tag,
   return true;
 }
 
+bool MCAsmParser::parseSymbol(MCSymbol *&Res) {
+  StringRef Name;
+  if (parseIdentifier(Name))
+    return true;
+
+  Res = getContext().parseSymbol(Name);
+  return false;
+}
+
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "  " << *this;
+  MCTargetOptions Opts;
+  dbgs() << "  ";
+  print(dbgs(), MCAsmInfo(Opts));
 #endif
 }

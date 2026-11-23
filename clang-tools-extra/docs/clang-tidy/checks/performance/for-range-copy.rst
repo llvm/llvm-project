@@ -23,14 +23,15 @@ Options
 
 .. option:: WarnOnAllAutoCopies
 
-   When `true`, warns on any use of `auto` as the type of the range-based for
+   When `true`, warns on any use of ``auto`` as the type of the range-based for
    loop variable. Default is `false`.
 
 .. option:: AllowedTypes
 
    A semicolon-separated list of names of types allowed to be copied in each
-   iteration. Regular expressions are accepted, e.g. `[Rr]ef(erence)?$` matches
-   every type with suffix `Ref`, `ref`, `Reference` and `reference`. The default
-   is empty. If a name in the list contains the sequence `::` it is matched
-   against the qualified typename (i.e. `namespace::Type`, otherwise it is
-   matched against only the type name (i.e. `Type`).
+   iteration. Regular expressions are accepted, e.g. ``[Rr]ef(erence)?$``
+   matches every type with suffix ``Ref``, ``ref``, ``Reference`` and
+   ``reference``. The default is empty. If a name in the list contains the
+   sequence `::`, it is matched against the qualified type name
+   (i.e. ``namespace::Type``), otherwise it is matched against only the
+   type name (i.e. ``Type``).

@@ -11,11 +11,12 @@
 
 include "mlir/Pass/PassBase.td"
 
-def OutlineShapeComputation : Pass<"outline-shape-computation", "ModuleOp"> {
+def OutlineShapeComputationPass
+    : Pass<"outline-shape-computation", "ModuleOp"> {
   let summary = "Using shape.func to preserve shape computation";
   let description = [{
     This pass outlines the shape computation part in high level IR by adding
-    shape.func and populate corresponding mapping infoemation into
+    shape.func and populate corresponding mapping information into
     ShapeMappingAnalysis. The shape computation part is usually introduced by
     shape reification, and each single dynamic shape is denoted by shape.with_shape.
 
@@ -79,28 +80,26 @@ def OutlineShapeComputation : Pass<"outline-shape-computation", "ModuleOp"> {
 
     For the above example, the shape computation is inlined in the input IR,
     which is used for two values' (test.abs and test.concat) shape. And the shape
-    compuatation part is outlined in the output IR.
+    computation part is outlined in the output IR.
 
-    And the shape mapping infomation will be:
+    And the shape mapping information will be:
 
     ```
-    // ---- Shape Mapping Infomation -----
+    // ---- Shape Mapping Information -----
     // - Shape for: %0 = "test.abs"(%arg0) : (tensor<?x4x?xf32>) -> tensor<?x4x?xf32> :: @shape_cal_0(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
     // - Shape for: %1 = "test.concat"(%0, %arg1) {axis = 0 : i64} : (tensor<?x4x?xf32>, tensor<2x4x?xf32>) -> tensor<?x4x?xf32> :: @shape_cal_1(<block argument> of type 'tensor<?x4x?xf32>' at index: 0)
     ```
   }];
-  let constructor = "mlir::createOutlineShapeComputationPass()";
   let dependentDialects = ["shape::ShapeDialect"];
 }
 
-def RemoveShapeConstraints : Pass<"remove-shape-constraints", "func::FuncOp"> {
+def RemoveShapeConstraintsPass
+    : Pass<"remove-shape-constraints", "func::FuncOp"> {
   let summary = "Replace all cstr_ ops with a true witness";
-  let constructor = "mlir::createRemoveShapeConstraintsPass()";
 }
 
-def ShapeToShapeLowering : Pass<"shape-to-shape-lowering", "func::FuncOp"> {
+def ShapeToShapeLoweringPass : Pass<"shape-to-shape-lowering", "func::FuncOp"> {
   let summary = "Legalize Shape dialect to be convertible to Arith";
-  let constructor = "mlir::createShapeToShapeLowering()";
 }
 
 #endif // MLIR_DIALECT_SHAPE_TRANSFORMS_PASSES

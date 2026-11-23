@@ -19,9 +19,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
 inline constexpr bool __is_ranges_subrange_v = false;
@@ -35,8 +35,8 @@ concept __tuple_like = __tuple_like_no_subrange<_Tp> || __is_ranges_subrange_v<r
 // As of writing this comment every use of `pair-like` in the standard excludes `ranges::subrange`, so
 // you most likely want to use `__pair_like_no_subrange` if you're looking for `pair-like`.
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___TUPLE_TUPLE_LIKE_H

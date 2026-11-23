@@ -8,9 +8,9 @@ code (e.g. when a different parameter is used instead). The suggested fixes
 either comment parameter name out or remove the parameter completely, if all
 callers of the function are in the same translation unit and can be updated.
 
-The check is similar to the ``-Wunused-parameter`` compiler diagnostic and can be
-used to prepare a codebase to enabling of that diagnostic. By default the check
-is more permissive (see :option:`StrictMode`).
+The check is similar to the `-Wunused-parameter` compiler diagnostic and
+can be used to prepare a codebase to enabling of that diagnostic. By default
+the check is more permissive (see :option:`StrictMode`).
 
 .. code-block:: c++
 
@@ -45,3 +45,11 @@ Options
 
   Determines whether virtual method parameters should be inspected.
   Set to `true` to ignore them. Default is `false`.
+
+.. option:: IgnoreMacroParameters
+
+  When `true`, the check will not report unused parameters whose declarations
+  originate from a macro expansion. This suppresses false positives in code
+  that uses macros to define function signatures where parameters are
+  structurally required by the macro but not used in every expansion.
+  Default is `false`.

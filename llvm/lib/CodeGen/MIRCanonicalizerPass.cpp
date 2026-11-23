@@ -23,6 +23,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenOptions.h"
 #include "MIRVRegNamerUtils.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -36,11 +37,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mir-canonicalizer"
-
-static cl::opt<unsigned>
-    CanonicalizeFunctionNumber("canon-nth-function", cl::Hidden, cl::init(~0u),
-                               cl::value_desc("N"),
-                               cl::desc("Function number to canonicalize."));
 
 namespace {
 
@@ -96,7 +92,6 @@ rescheduleLexographically(std::vector<MachineInstr *> instructions,
     std::string S;
     raw_string_ostream OS(S);
     II->print(OS);
-    OS.flush();
 
     // Trim the assignment, or start from the beginning in the case of a store.
     const size_t i = S.find('=');
@@ -148,7 +143,7 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
   std::map<unsigned, MachineInstr *> MultiUserLookup;
   unsigned UseToBringDefCloserToCount = 0;
   std::vector<MachineInstr *> PseudoIdempotentInstructions;
-  std::vector<unsigned> PhysRegDefs;
+  std::vector<MCRegister> PhysRegDefs;
   for (auto *II : Instructions) {
     for (unsigned i = 1; i < II->getNumOperands(); i++) {
       MachineOperand &MO = II->getOperand(i);
@@ -186,7 +181,8 @@ static bool rescheduleCanonically(unsigned &PseudoIdempotentInstCount,
 
       if (II->getOperand(i).isReg()) {
         if (!II->getOperand(i).getReg().isVirtual())
-          if (!llvm::is_contained(PhysRegDefs, II->getOperand(i).getReg())) {
+          if (!llvm::is_contained(PhysRegDefs,
+                                  II->getOperand(i).getReg().asMCReg())) {
             continue;
           }
       }
@@ -392,8 +388,9 @@ static bool runOnBasicBlock(MachineBasicBlock *MBB,
 bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
 
   static unsigned functionNum = 0;
-  if (CanonicalizeFunctionNumber != ~0U) {
-    if (CanonicalizeFunctionNumber != functionNum++)
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
+  if (Opts.mir_canonicalizer_nth_function != ~0U) {
+    if (Opts.mir_canonicalizer_nth_function != functionNum++)
       return false;
     LLVM_DEBUG(dbgs() << "\n Canonicalizing Function " << MF.getName()
                       << "\n";);
@@ -414,7 +411,7 @@ bool MIRCanonicalizer::runOnMachineFunction(MachineFunction &MF) {
   unsigned BBNum = 0;
   bool Changed = false;
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  VRegRenamer Renamer(MRI);
+  VRegRenamer Renamer(Opts, MRI);
   for (auto *MBB : RPOList)
     Changed |= runOnBasicBlock(MBB, BBNum++, Renamer);
 

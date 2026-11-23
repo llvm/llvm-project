@@ -152,3 +152,19 @@ entry:
   ret void
 }
 
+define void @move_immediate_to_status_registers() {
+; CHECK-LABEL: move_immediate_to_status_registers:
+; CHECK:         .cfi_startproc
+; CHECK-NEXT:  ; %bb.0: ; %entry
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    move.w #9984, %sr
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    ;APP
+; CHECK-NEXT:    move.w #1235, %ccr
+; CHECK-NEXT:    ;NO_APP
+; CHECK-NEXT:    rts
+entry:
+  call void asm sideeffect "move.w #0x2700,%sr", ""()
+  call void asm sideeffect "move.w #1235,%ccr", ""()
+  ret void
+}

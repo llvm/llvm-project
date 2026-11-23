@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "include/llvm-libc-macros/stdfix-macros.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/macros/config.h"
 #include "test/UnitTest/Test.h"
@@ -21,9 +22,14 @@ struct Struct {};
 enum Enum {};
 enum class EnumClass {};
 
-using UnqualObjectTypes = testing::TypeList<int, float, Class, Union, Struct>;
+using UnqualObjectTypes = testing::Types<int, float, Class, Union, Struct>;
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, add_lvalue_reference, UnqualObjectTypes) {
+template <typename T>
+class LlvmLibcTypeTraitsUnqualObjectTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypeTraitsUnqualObjectTest, UnqualObjectTypes);
+
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, add_lvalue_reference) {
+  using T = TypeParam;
   // non-ref cv, adds ref
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<T>, T &>));
   EXPECT_TRUE((is_same_v<add_lvalue_reference_t<const T>, const T &>));
@@ -56,7 +62,8 @@ TEST(LlvmLibcTypeTraitsTest, add_lvalue_reference_void) {
                          const volatile void>));
 }
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, add_pointer, UnqualObjectTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, add_pointer) {
+  using T = TypeParam;
   // object types -> pointer type
   EXPECT_TRUE((is_same_v<add_pointer_t<T>, T *>));
   EXPECT_TRUE((is_same_v<add_pointer_t<const T>, const T *>));
@@ -87,7 +94,8 @@ TEST(LlvmLibcTypeTraitsTest, add_pointer_void) {
       (is_same_v<add_pointer_t<const volatile void>, const volatile void *>));
 }
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, add_rvalue_reference, UnqualObjectTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, add_rvalue_reference) {
+  using T = TypeParam;
 
   // non-ref cv, adds ref
   EXPECT_TRUE((is_same_v<add_rvalue_reference_t<T>, T &&>));
@@ -270,11 +278,16 @@ TEST(LlvmLibcTypeTraitsTest, invoke_result) {
 }
 
 using IntegralAndFloatingTypes =
-    testing::TypeList<bool, char, short, int, long, long long, unsigned char,
-                      unsigned short, unsigned int, unsigned long,
-                      unsigned long long, float, double, long double>;
+    testing::Types<bool, char, short, int, long, long long, unsigned char,
+                   unsigned short, unsigned int, unsigned long,
+                   unsigned long long, float, double, long double>;
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, is_arithmetic, IntegralAndFloatingTypes) {
+template <typename T>
+class LlvmLibcTypeTraitsArithmeticTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypeTraitsArithmeticTest, IntegralAndFloatingTypes);
+
+TYPED_TEST(LlvmLibcTypeTraitsArithmeticTest, is_arithmetic) {
+  using T = TypeParam;
   EXPECT_TRUE((is_arithmetic_v<T>));
   EXPECT_TRUE((is_arithmetic_v<const T>));
   EXPECT_TRUE((is_arithmetic_v<volatile T>));
@@ -337,7 +350,8 @@ TEST(LlvmLibcTypeTraitsTest, is_class) {
   EXPECT_FALSE((is_class_v<EnumClass>));
 }
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, is_const, UnqualObjectTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, is_const) {
+  using T = TypeParam;
   EXPECT_FALSE((is_const_v<T>));
   EXPECT_TRUE((is_const_v<const T>));
 
@@ -347,7 +361,8 @@ TYPED_TEST(LlvmLibcTypeTraitsTest, is_const, UnqualObjectTypes) {
 
 // TODO is_convertible
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, is_destructible, UnqualObjectTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, is_destructible) {
+  using T = TypeParam;
   EXPECT_TRUE((is_destructible_v<T>));
 }
 TEST(LlvmLibcTypeTraitsTest, is_destructible_no_destructor) {
@@ -357,7 +372,8 @@ TEST(LlvmLibcTypeTraitsTest, is_destructible_no_destructor) {
   EXPECT_FALSE((is_destructible_v<S>));
 }
 
-TYPED_TEST(LlvmLibcTypeTraitsTest, is_enum, UnqualObjectTypes) {
+TYPED_TEST(LlvmLibcTypeTraitsUnqualObjectTest, is_enum) {
+  using T = TypeParam;
   EXPECT_FALSE((is_enum_v<T>));
 }
 TEST(LlvmLibcTypeTraitsTest, is_enum_enum) {
@@ -409,7 +425,37 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 // TODO is_scalar
 
-// TODO is_signed
+TEST(LlvmLibcTypeTraitsTest, is_signed) {
+  EXPECT_TRUE((is_signed_v<int>));
+  EXPECT_TRUE((is_signed_v<long>));
+  EXPECT_TRUE((is_signed_v<long long>));
+  EXPECT_FALSE((is_signed_v<unsigned int>));
+  EXPECT_FALSE((is_signed_v<unsigned long>));
+  EXPECT_FALSE((is_signed_v<unsigned long long>));
+  EXPECT_TRUE((is_signed_v<float>));
+  EXPECT_TRUE((is_signed_v<double>));
+  EXPECT_TRUE((is_signed_v<long double>));
+
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+  // for fixed point types
+  EXPECT_TRUE((is_signed_v<fract>));
+  EXPECT_FALSE((is_signed_v<unsigned fract>));
+  EXPECT_TRUE((is_signed_v<accum>));
+  EXPECT_FALSE((is_signed_v<unsigned accum>));
+  EXPECT_TRUE((is_signed_v<sat fract>));
+  EXPECT_FALSE((is_signed_v<unsigned sat fract>));
+  EXPECT_TRUE((is_signed_v<sat accum>));
+  EXPECT_FALSE((is_signed_v<unsigned sat accum>));
+  EXPECT_TRUE((is_signed_v<short fract>));
+  EXPECT_FALSE((is_signed_v<unsigned short fract>));
+  EXPECT_TRUE((is_signed_v<short accum>));
+  EXPECT_FALSE((is_signed_v<unsigned short accum>));
+  EXPECT_TRUE((is_signed_v<long fract>));
+  EXPECT_FALSE((is_signed_v<unsigned long fract>));
+  EXPECT_TRUE((is_signed_v<long accum>));
+  EXPECT_FALSE((is_signed_v<unsigned long accum>));
+#endif
+}
 
 // TODO is_trivially_constructible
 
@@ -419,7 +465,37 @@ TEST(LlvmLibcTypeTraitsTest, is_object) {
 
 // TODO is_union
 
-// TODO is_unsigned
+TEST(LlvmLibcTypeTraitsTest, is_unsigned) {
+  EXPECT_FALSE((is_unsigned_v<int>));
+  EXPECT_FALSE((is_unsigned_v<long>));
+  EXPECT_FALSE((is_unsigned_v<long long>));
+  EXPECT_TRUE((is_unsigned_v<unsigned int>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long long>));
+  EXPECT_FALSE((is_unsigned_v<float>));
+  EXPECT_FALSE((is_unsigned_v<double>));
+  EXPECT_FALSE((is_unsigned_v<long double>));
+
+#ifdef LIBC_COMPILER_HAS_FIXED_POINT
+  // for fixed point types
+  EXPECT_FALSE((is_unsigned_v<fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned fract>));
+  EXPECT_FALSE((is_unsigned_v<accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned accum>));
+  EXPECT_FALSE((is_unsigned_v<sat fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned sat fract>));
+  EXPECT_FALSE((is_unsigned_v<sat accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned sat accum>));
+  EXPECT_FALSE((is_unsigned_v<short fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned short fract>));
+  EXPECT_FALSE((is_unsigned_v<short accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned short accum>));
+  EXPECT_FALSE((is_unsigned_v<long fract>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long fract>));
+  EXPECT_FALSE((is_unsigned_v<long accum>));
+  EXPECT_TRUE((is_unsigned_v<unsigned long accum>));
+#endif
+}
 
 // TODO is_void
 

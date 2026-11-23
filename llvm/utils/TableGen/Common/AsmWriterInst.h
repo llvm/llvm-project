@@ -38,7 +38,7 @@ struct AsmWriterOperand {
   unsigned MIOpNo = 0;
 
   /// Str - For isLiteralTextOperand, this IS the literal text.  For
-  /// isMachineInstrOperand, this is the PrinterMethodName for the operand..
+  /// isMachineInstrOperand, this is the PrinterMethodName for the operand.
   /// For isLiteralStatementOperand, this is the code to insert verbatim
   /// into the asm writer.
   std::string Str;

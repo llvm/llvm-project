@@ -1,0 +1,27 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_DYN
+  Machine:         EM_AARCH64
+  Entry:           0x48000
+ProgramHeaders:
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .text
+    LastSec:         .text
+    VAddr:           0x48000
+    Align:           0x4000
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x48000
+    AddressAlign:    0x4
+    Content:         030F0B0700000000030F0B0700000000C0035FD6FFFFFF97000080D2A80B8052010000D4
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_COMPRESSED ]
+    AddressAlign:    0x1
+    Content:         0200000000000000DD33310000000000010000000000000028B52FFDA000001000CC6207
+...

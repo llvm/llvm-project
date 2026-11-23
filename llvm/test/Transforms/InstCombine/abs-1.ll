@@ -978,3 +978,14 @@ define i32 @abs_diff_signed_slt_no_nsw_swap(i32 %a, i32 %b) {
   %cond = select i1 %cmp, i32 %sub_ba, i32 %sub_ab
   ret i32 %cond
 }
+
+define <2 x i32> @abs_unary_shuffle_ops(<2 x i32> %x) {
+; CHECK-LABEL: @abs_unary_shuffle_ops(
+; CHECK-NEXT:    [[R2:%.*]] = call <2 x i32> @llvm.abs.v2i32(<2 x i32> [[R1:%.*]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <2 x i32> [[R2]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    ret <2 x i32> [[R]]
+;
+  %a = shufflevector <2 x i32> %x, <2 x i32> poison, <2 x i32> <i32 1, i32 0>
+  %r = call <2 x i32> @llvm.abs(<2 x i32> %a, i1 false)
+  ret <2 x i32> %r
+}

@@ -74,9 +74,9 @@ void test_fma(float a0, double a1, long double a2) {
 // CHECK-YES: declare float @fmaf(float noundef, float noundef, float noundef)
 // CHECK-YES: declare double @fma(double noundef, double noundef, double noundef)
 // CHECK-YES: declare x86_fp80 @fmal(x86_fp80 noundef, x86_fp80 noundef, x86_fp80 noundef)
-// CHECK-NO: declare float @llvm.fma.f32(float, float, float) [[NUW_RN2:#[0-9]+]]
-// CHECK-NO: declare double @llvm.fma.f64(double, double, double) [[NUW_RN2]]
-// CHECK-NO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[NUW_RN2]]
+// CHECK-NO: declare float @llvm.fma.f32(float, float, float) [[NUW_RNI]]
+// CHECK-NO: declare double @llvm.fma.f64(double, double, double) [[NUW_RNI]]
+// CHECK-NO: declare x86_fp80 @llvm.fma.f80(x86_fp80, x86_fp80, x86_fp80) [[NUW_RNI]]
 
 // Just checking to make sure these library functions are marked readnone
 void test_builtins(double d, float f, long double ld) {
@@ -85,9 +85,9 @@ void test_builtins(double d, float f, long double ld) {
   double atan_ = atan(d);
   long double atanl_ = atanl(ld);
   float atanf_ = atanf(f);
-// CHECK-NO: declare double @llvm.atan.f64(double) [[NUW_RNI:#[0-9]+]]
-// CHECK-NO: declare x86_fp80 @llvm.atan.f80(x86_fp80) [[NUW_RNI]]
-// CHECK-NO: declare float @llvm.atan.f32(float) [[NUW_RNI]]
+// CHECK-NO: declare double @llvm.atan.f64(double) [[NUW_RN2:#[0-9]+]]
+// CHECK-NO: declare x86_fp80 @llvm.atan.f80(x86_fp80) [[NUW_RN2]]
+// CHECK-NO: declare float @llvm.atan.f32(float) [[NUW_RN2]]
 // CHECK-YES: declare double @atan(double noundef) [[NUW:#[0-9]+]]
 // CHECK-YES: declare x86_fp80 @atanl(x86_fp80 noundef) [[NUW]]
 // CHECK-YES: declare float @atanf(float noundef) [[NUW]]
@@ -95,9 +95,9 @@ void test_builtins(double d, float f, long double ld) {
   double atan2_ = atan2(d, 2);
   long double atan2l_ = atan2l(ld, ld);
   float atan2f_ = atan2f(f, f);
-// CHECK-NO: declare double @llvm.atan2.f64(double, double) [[NUW_RNI]]
-// CHECK-NO: declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80) [[NUW_RNI]]
-// CHECK-NO: declare float @llvm.atan2.f32(float, float) [[NUW_RNI]]
+// CHECK-NO: declare double @llvm.atan2.f64(double, double) [[NUW_RN2]]
+// CHECK-NO: declare x86_fp80 @llvm.atan2.f80(x86_fp80, x86_fp80) [[NUW_RN2]]
+// CHECK-NO: declare float @llvm.atan2.f32(float, float) [[NUW_RN2]]
 // CHECK-YES: declare double @atan2(double noundef, double noundef) [[NUW]]
 // CHECK-YES: declare x86_fp80 @atan2l(x86_fp80 noundef, x86_fp80 noundef) [[NUW]]
 // CHECK-YES: declare float @atan2f(float noundef, float noundef) [[NUW]]
@@ -124,4 +124,4 @@ void test_builtins(double d, float f, long double ld) {
 }
 
 // CHECK-YES: attributes [[NUW]] = { nounwind "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+x87" }
-// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// CHECK-NO-DAG: attributes [[NUW_RNI]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }

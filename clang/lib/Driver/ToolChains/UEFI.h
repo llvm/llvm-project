@@ -55,6 +55,10 @@ public:
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
+
+  llvm::codegenoptions::DebugInfoFormat getDefaultDebugFormat() const override {
+    return llvm::codegenoptions::DIF_CodeView;
+  }
 };
 
 } // namespace toolchains

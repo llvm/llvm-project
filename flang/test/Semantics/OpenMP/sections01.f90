@@ -9,7 +9,7 @@ program omp_sections
   !$omp sections
     !$omp section
     print *, "omp section"
-  !ERROR: At most one NOWAIT clause can appear on the END SECTIONS directive
+  !ERROR: At most one NOWAIT clause can appear on SECTIONS directive
   !$omp end sections nowait nowait
 
 end program omp_sections

@@ -5,12 +5,12 @@
 ; RUN: opt -mattr=+neon -vector-library=sleefgnuabi -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=NEON-SLEEF
 ; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL
 ; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF
-; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL-TAILFOLD
-; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -prefer-predicate-over-epilogue=predicate-dont-vectorize -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF-TAILFOLD
+; RUN: opt -mattr=+sve -vector-library=ArmPL -passes=loop-vectorize -tail-folding-policy=must-fold-tail -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-ARMPL-TAILFOLD
+; RUN: opt -mattr=+sve -vector-library=sleefgnuabi -passes=loop-vectorize -tail-folding-policy=must-fold-tail -debug-only=loop-vectorize -disable-output -S < %s 2>&1 | FileCheck %s --check-prefix=SVE-SLEEF-TAILFOLD
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define void @frem_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @frem_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; NEON-NO-VECLIB-LABEL: 'frem_f64'
 ; NEON-NO-VECLIB:  LV: Found an estimated cost of 10 for VF 1 For instruction: %res = frem double %in, %in
 ; NEON-NO-VECLIB:  Cost of 24 for VF 2: WIDEN ir<%res> = frem ir<%in>, ir<%in>
@@ -71,7 +71,7 @@ define void @frem_f64(ptr noalias %in.ptr, ptr noalias %out.ptr) {
   ret void
 }
 
-define void @frem_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) {
+define void @frem_f32(ptr noalias %in.ptr, ptr noalias %out.ptr) vscale_range(1,16) {
 ; NEON-NO-VECLIB-LABEL: 'frem_f32'
 ; NEON-NO-VECLIB:  LV: Found an estimated cost of 10 for VF 1 For instruction: %res = frem float %in, %in
 ; NEON-NO-VECLIB:  Cost of 24 for VF 2: WIDEN ir<%res> = frem ir<%in>, ir<%in>

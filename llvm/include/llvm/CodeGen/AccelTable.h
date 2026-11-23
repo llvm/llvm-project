@@ -21,6 +21,7 @@
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DJB.h"
 #include "llvm/Support/Debug.h"
 #include <cstdint>
@@ -153,7 +154,7 @@ public:
     }
 
 #ifndef NDEBUG
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
 #endif
   };
@@ -174,19 +175,19 @@ protected:
   HashList Hashes;
   BucketList Buckets;
 
-  void computeBucketCount();
+  LLVM_ABI void computeBucketCount();
 
   AccelTableBase(HashFn *Hash) : Hash(Hash) {}
 
 public:
-  void finalize(AsmPrinter *Asm, StringRef Prefix);
+  LLVM_ABI void finalize(AsmPrinter *Asm, StringRef Prefix);
   ArrayRef<HashList> getBuckets() const { return Buckets; }
   uint32_t getBucketCount() const { return BucketCount; }
   uint32_t getUniqueHashCount() const { return UniqueHashCount; }
   uint32_t getUniqueNameCount() const { return Entries.size(); }
 
 #ifndef NDEBUG
-  void print(raw_ostream &OS) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
   void dump() const { print(dbgs()); }
 #endif
 
@@ -206,7 +207,6 @@ public:
   template <typename... Types>
   void addName(DwarfStringPoolEntryRef Name, Types &&... Args);
   void clear() { Entries.clear(); }
-  void addEntries(AccelTable<DataT> &Table);
   const StringEntries getEntries() const { return Entries; }
 };
 
@@ -243,7 +243,7 @@ public:
     constexpr Atom(uint16_t Type, uint16_t Form) : Type(Type), Form(Form) {}
 
 #ifndef NDEBUG
-    void print(raw_ostream &OS) const;
+    LLVM_ABI void print(raw_ostream &OS) const;
     void dump() const { print(dbgs()); }
 #endif
   };
@@ -270,12 +270,6 @@ struct OffsetAndUnitID {
 };
 
 template <> struct DenseMapInfo<OffsetAndUnitID> {
-  static inline OffsetAndUnitID getEmptyKey() {
-    return OffsetAndUnitID(-1, -1, false);
-  }
-  static inline OffsetAndUnitID getTombstoneKey() {
-    return OffsetAndUnitID(-2, -2, false);
-  }
   static unsigned getHashValue(const OffsetAndUnitID &Val) {
     return (unsigned)llvm::hash_combine(Val.offset(), Val.unitID(), Val.IsTU);
   }
@@ -289,7 +283,7 @@ template <> struct DenseMapInfo<OffsetAndUnitID> {
 /// Apple Data classes, this class is just a DIE wrapper, and does not know to
 /// serialize itself. The complete serialization logic is in the
 /// emitDWARF5AccelTable function.
-class DWARF5AccelTableData : public AccelTableData {
+class LLVM_ABI DWARF5AccelTableData : public AccelTableData {
 public:
   static uint32_t hash(StringRef Name) { return caseFoldingDjbHash(Name); }
 
@@ -380,7 +374,7 @@ public:
   /// Get DIE Tag.
   uint32_t getDieTag() const { return DieTag; }
   /// Used to gather unique data for the abbreviation folding set.
-  void Profile(FoldingSetNodeID &ID) const;
+  LLVM_ABI void Profile(FoldingSetNodeID &ID) const;
   /// Returns attributes for an abbreviation.
   const SmallVector<AttributeEncoding, 1> &getAttributes() const {
     return AttrVect;
@@ -409,9 +403,9 @@ public:
   /// Returns type units that were constructed.
   const TUVectorTy &getTypeUnitsSymbols() { return TUSymbolsOrHashes; }
   /// Add a type unit start symbol.
-  void addTypeUnitSymbol(DwarfTypeUnit &U);
+  LLVM_ABI void addTypeUnitSymbol(DwarfTypeUnit &U);
   /// Add a type unit Signature.
-  void addTypeUnitSignature(DwarfTypeUnit &U);
+  LLVM_ABI void addTypeUnitSignature(DwarfTypeUnit &U);
   /// Convert DIE entries to explicit offset.
   /// Needs to be called after DIE offsets are computed.
   void convertDieToOffset() {
@@ -437,9 +431,10 @@ public:
   }
 };
 
-void emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
-                             StringRef Prefix, const MCSymbol *SecBegin,
-                             ArrayRef<AppleAccelTableData::Atom> Atoms);
+LLVM_ABI void
+emitAppleAccelTableImpl(AsmPrinter *Asm, AccelTableBase &Contents,
+                        StringRef Prefix, const MCSymbol *SecBegin,
+                        ArrayRef<AppleAccelTableData::Atom> Atoms);
 
 /// Emit an Apple Accelerator Table consisting of entries in the specified
 /// AccelTable. The DataT template parameter should be derived from
@@ -451,15 +446,16 @@ void emitAppleAccelTable(AsmPrinter *Asm, AccelTable<DataT> &Contents,
   emitAppleAccelTableImpl(Asm, Contents, Prefix, SecBegin, DataT::Atoms);
 }
 
-void emitDWARF5AccelTable(AsmPrinter *Asm, DWARF5AccelTable &Contents,
-                          const DwarfDebug &DD,
-                          ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
+LLVM_ABI void
+emitDWARF5AccelTable(AsmPrinter *Asm, DWARF5AccelTable &Contents,
+                     const DwarfDebug &DD,
+                     ArrayRef<std::unique_ptr<DwarfCompileUnit>> CUs);
 
 /// Emit a DWARFv5 Accelerator Table consisting of entries in the specified
 /// AccelTable. The \p CUs contains either symbols keeping offsets to the
 /// start of compilation unit, either offsets to the start of compilation
 /// unit themselves.
-void emitDWARF5AccelTable(
+LLVM_ABI void emitDWARF5AccelTable(
     AsmPrinter *Asm, DWARF5AccelTable &Contents,
     ArrayRef<std::variant<MCSymbol *, uint64_t>> CUs,
     llvm::function_ref<std::optional<DWARF5AccelTable::UnitIndexAndEncoding>(
@@ -468,7 +464,7 @@ void emitDWARF5AccelTable(
 
 /// Accelerator table data implementation for simple Apple accelerator tables
 /// with just a DIE reference.
-class AppleAccelTableOffsetData : public AppleAccelTableData {
+class LLVM_ABI AppleAccelTableOffsetData : public AppleAccelTableData {
 public:
   AppleAccelTableOffsetData(const DIE &D) : Die(D) {}
 
@@ -487,7 +483,7 @@ protected:
 };
 
 /// Accelerator table data implementation for Apple type accelerator tables.
-class AppleAccelTableTypeData : public AppleAccelTableOffsetData {
+class LLVM_ABI AppleAccelTableTypeData : public AppleAccelTableOffsetData {
 public:
   AppleAccelTableTypeData(const DIE &D) : AppleAccelTableOffsetData(D) {}
 
@@ -505,7 +501,7 @@ public:
 
 /// Accelerator table data implementation for simple Apple accelerator tables
 /// with a DIE offset but no actual DIE pointer.
-class AppleAccelTableStaticOffsetData : public AppleAccelTableData {
+class LLVM_ABI AppleAccelTableStaticOffsetData : public AppleAccelTableData {
 public:
   AppleAccelTableStaticOffsetData(uint32_t Offset) : Offset(Offset) {}
 
@@ -525,7 +521,8 @@ protected:
 
 /// Accelerator table data implementation for type accelerator tables with
 /// a DIE offset but no actual DIE pointer.
-class AppleAccelTableStaticTypeData : public AppleAccelTableStaticOffsetData {
+class LLVM_ABI AppleAccelTableStaticTypeData
+    : public AppleAccelTableStaticOffsetData {
 public:
   AppleAccelTableStaticTypeData(uint32_t Offset, uint16_t Tag,
                                 bool ObjCClassIsImplementation,

@@ -1,8 +1,8 @@
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -ppc-ctr-loops=false < %s -verify-machineinstrs \
 ; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -ppc-ctr-loops=false < %s -verify-machineinstrs \
 ; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
 
 
@@ -58,7 +58,7 @@ define void @initCombList(ptr nocapture, i32 signext) local_unnamed_addr #0 {
   ret void
 }
 
-attributes #0 = { norecurse nounwind writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { norecurse nounwind writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="ppc64le" "target-features"="+altivec,+bpermd,+crypto,+direct-move,+extdiv,+htm,+power8-vector,+vsx,-power9-vector" "use-soft-float"="false" }
 
 !llvm.ident = !{!0}
 

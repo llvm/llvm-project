@@ -1,10 +1,4 @@
-#include <stdio.h>
-
-void
-AFunction()
-{
-  printf ("I am a function.\n");
-}
+void AFunction() {}
 
 int
 main ()

@@ -1,13 +1,14 @@
 header: sys/auxv.h
-header_template: auxv.h.def
-macros: []
+standards:
+  - gnu
+macros:
+  - macro_name: AT_NULL
+    macro_header: sys-auxv-macros.h
 types: []
 enums: []
 objects: []
 functions:
   - name: getauxval
-    standards:
-      - GNUExtensions
     return_type: unsigned long
     arguments:
       - type: unsigned long

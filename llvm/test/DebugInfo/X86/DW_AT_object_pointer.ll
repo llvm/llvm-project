@@ -1,14 +1,31 @@
-; RUN: llc -mtriple=x86_64-apple-darwin %s -o %t -filetype=obj
-; RUN: llvm-dwarfdump -v -debug-info %t | FileCheck %s
+; RUN: sed 's/TUNE_PLACEHOLDER/gdb/' %s | \
+; RUN:   llc -mtriple=x86_64-apple-darwin -dwarf-version=5 -filetype=obj | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-GDB
+
+; RUN: llc -mtriple=x86_64-apple-darwin -dwarf-version=4 -filetype=obj < %s | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF4
+
+; RUN: llc -mtriple=x86_64-apple-darwin -dwarf-version=5 -filetype=obj < %s | \
+; RUN:      llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefixes=CHECK,CHECK-LLDB-DWARF5
 
 ; CHECK: DW_TAG_formal_parameter [
 ; CHECK-NOT: ""
 ; CHECK: DW_TAG
 ; CHECK: DW_TAG_class_type
-; CHECK: DW_AT_object_pointer [DW_FORM_ref4]     (cu + 0x{{[0-9a-f]*}} => {[[PARAM:0x[0-9a-f]*]]})
+; CHECK: [[DECL:0x[0-9a-f]+]]: DW_TAG_subprogram
+; CHECK:                         DW_AT_name {{.*}} "A"
+; CHECK-LLDB-DWARF5:             DW_AT_object_pointer [DW_FORM_implicit_const] (0)
+; CHECK-GDB-NOT:                 DW_AT_object_pointer
+; CHECK-LLDB-DWARF4-NOT:         DW_AT_object_pointer
+; CHECK: DW_TAG_formal_parameter
+;
+; CHECK: DW_TAG_subprogram
+; CHECK:   DW_AT_object_pointer [DW_FORM_ref4]     (cu + 0x{{[0-9a-f]*}} => {[[PARAM:0x[0-9a-f]*]]})
+; CHECK:   DW_AT_specification [DW_FORM_ref4] (cu + {{.*}} => {[[DECL]]}
 ; CHECK: [[PARAM]]:     DW_TAG_formal_parameter
 ; CHECK-NOT: DW_TAG
-; CHECK: DW_AT_name [DW_FORM_strp]     ( .debug_str[0x{{[0-9a-f]*}}] = "this")
+; CHECK: DW_AT_name
+; CHECK-SAME        = "this")
 
 %class.A = type { i32 }
 
@@ -47,7 +64,7 @@ entry:
 }
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!38}
+!llvm.module.flags = !{!38, !100}
 
 !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.2 (trunk 163586) (llvm/trunk 163570)", isOptimized: false, emissionKind: FullDebug, file: !37, enums: !1, retainedTypes: !1, globals: !1, imports:  !1)
 !1 = !{}
@@ -83,3 +100,4 @@ entry:
 !36 = !DILocalVariable(name: "", line: 7, arg: 1, scope: !5, file: !6, type: !9)
 !37 = !DIFile(filename: "bar.cpp", directory: "/Users/echristo/debug-tests")
 !38 = !{i32 1, !"Debug Info Version", i32 3}
+!100 = !{i32 2, !"debugger-tuning", !"TUNE_PLACEHOLDER"}

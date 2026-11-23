@@ -69,6 +69,8 @@ void test() {
     auto f = std::bind_back([](const Arg&) {}, x);
     // expected-error-re@*:* {{static assertion failed{{.*}}bind_back requires all decay_t<Args> to be constructible from respective Args}}
     // expected-error@*:* {{no matching constructor for initialization}}
+    // expected-error@*:* 0-1{{call to deleted constructor of 'F'}}
+    // expected-error@*:* 0-1{{call to deleted constructor of 'Arg'}}
   }
 
   { // Mandates: (is_move_constructible_v<decay_t<Args>> && ...)

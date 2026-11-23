@@ -39,9 +39,9 @@ void test_get_group_id(int d, global int *out)
 }
 
 // CHECK-LABEL: @test_get_local_id(
-// CHECK: tail call noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.x()
-// CHECK: tail call noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.y()
-// CHECK: tail call noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.z()
+// CHECK: tail call i32 @llvm.r600.read.tidig.x()
+// CHECK: tail call i32 @llvm.r600.read.tidig.y()
+// CHECK: tail call i32 @llvm.r600.read.tidig.z()
 void test_get_local_id(int d, global int *out)
 {
 	switch (d) {
@@ -52,3 +52,6 @@ void test_get_local_id(int d, global int *out)
 	}
 }
 
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.x()
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.y()
+// CHECK: declare noundef range(i32 0, 1024) i32 @llvm.r600.read.tidig.z()

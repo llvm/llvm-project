@@ -1,7 +1,7 @@
 // This file contains references to sections of the Coroutines TS, which can be
 // found at http://wg21.link/coroutines.
 
-// RUN: %clang_cc1 -std=c++20 -verify %s -fcxx-exceptions -fexceptions -Wunused-result
+// RUN: %clang_cc1 -std=c++20 -verify %s -fcxx-exceptions -fexceptions -Wunused-result -Wno-coroutines-unsupported-target
 
 namespace std {
 
@@ -14,5 +14,5 @@ template <> struct coroutine_traits<void>; // expected-note {{forward declaratio
 } // namespace std
 
 void uses_forward_declaration() {
-  co_return; // expected-error {{this function cannot be a coroutine: missing definition of specialization 'coroutine_traits<void>'}}
+  co_return; // expected-error {{this function cannot be a coroutine: missing definition of specialization 'std::coroutine_traits<void>'}}
 }

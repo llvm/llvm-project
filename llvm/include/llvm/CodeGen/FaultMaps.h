@@ -27,13 +27,12 @@ public:
     FaultKindMax
   };
 
-  explicit FaultMaps(AsmPrinter &AP);
+  LLVM_ABI explicit FaultMaps(AsmPrinter &AP);
 
-  static const char *faultTypeToString(FaultKind);
-
-  void recordFaultingOp(FaultKind FaultTy, const MCSymbol *FaultingLabel,
-                        const MCSymbol *HandlerLabel);
-  void serializeToFaultMapSection();
+  LLVM_ABI void recordFaultingOp(FaultKind FaultTy,
+                                 const MCSymbol *FaultingLabel,
+                                 const MCSymbol *HandlerLabel);
+  LLVM_ABI void serializeToFaultMapSection();
   void reset() {
     FunctionInfos.clear();
   }

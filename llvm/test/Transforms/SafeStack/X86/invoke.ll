@@ -1,7 +1,7 @@
 ; RUN: opt -safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
 ; RUN: opt -safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
-; RUN: opt -passes=safe-stack -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=i386-pc-linux-gnu < %s -o - | FileCheck %s
+; RUN: opt -passes='require<libcall-lowering-info>,safe-stack' -S -mtriple=x86_64-pc-linux-gnu < %s -o - | FileCheck %s
 
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
@@ -11,7 +11,7 @@
 define i32 @foo() uwtable safestack personality ptr @__gxx_personality_v0 {
 entry:
   ; CHECK: %[[SP:.*]] = load ptr, ptr @__safestack_unsafe_stack_ptr
-  ; CHECK: %[[STATICTOP:.*]] = getelementptr i8, ptr %[[SP]], i32 -16
+  ; CHECK: %[[STATICTOP:.*]] = getelementptr i8, ptr %[[SP]], {{i32|i64}} -16
   %a = alloca i32, align 4
   %exn.slot = alloca ptr
   %ehselector.slot = alloca i32

@@ -13,17 +13,18 @@ define fastcc void @LzmaDec_DecodeReal2(ptr %p, i1 %arg) {
 ; CHECK-NEXT:    [[RANGE20_I:%.*]] = getelementptr inbounds [[STRUCT_CLZMADEC_1_28_55_82_103_124_145_166_181_196_229_259_334:%.*]], ptr [[P:%.*]], i64 0, i32 4
 ; CHECK-NEXT:    br label [[DO_BODY66_I:%.*]]
 ; CHECK:       do.body66.i:
-; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[DO_COND_I:%.*]] ], [ undef, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP0]]
-; CHECK-NEXT:    br i1 %arg, label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ [[TMP3:%.*]], [[DO_COND_I:%.*]] ], [ zeroinitializer, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <2 x i1> zeroinitializer, <2 x i32> zeroinitializer, <2 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> <i32 0, i32 poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    br i1 [[ARG:%.*]], label [[DO_COND_I]], label [[IF_ELSE_I:%.*]]
 ; CHECK:       if.else.i:
-; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP1]], undef
+; CHECK-NEXT:    [[TMP2:%.*]] = sub <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    br label [[DO_COND_I]]
 ; CHECK:       do.cond.i:
-; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ [[TMP2]], [[IF_ELSE_I]] ], [ [[TMP1]], [[DO_BODY66_I]] ]
-; CHECK-NEXT:    br i1 %arg, label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
+; CHECK-NEXT:    [[TMP3]] = phi <2 x i32> [ [[TMP2]], [[IF_ELSE_I]] ], [ [[TMP5]], [[DO_BODY66_I]] ]
+; CHECK-NEXT:    br i1 [[ARG]], label [[DO_BODY66_I]], label [[DO_END1006_I:%.*]]
 ; CHECK:       do.end1006.i:
-; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> undef, <2 x i32> undef, <2 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select <2 x i1> zeroinitializer, <2 x i32> zeroinitializer, <2 x i32> [[TMP3]]
 ; CHECK-NEXT:    store <2 x i32> [[TMP4]], ptr [[RANGE20_I]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -33,25 +34,25 @@ entry:
   br label %do.body66.i
 
 do.body66.i:                                      ; preds = %do.cond.i, %entry
-  %range.2.i = phi i32 [ %range.4.i, %do.cond.i ], [ undef, %entry ]
-  %code.2.i = phi i32 [ %code.4.i, %do.cond.i ], [ undef, %entry ]
-  %.range.2.i = select i1 undef, i32 undef, i32 %range.2.i
-  %.code.2.i = select i1 undef, i32 undef, i32 %code.2.i
+  %range.2.i = phi i32 [ %range.4.i, %do.cond.i ], [ zeroinitializer, %entry ]
+  %code.2.i = phi i32 [ %code.4.i, %do.cond.i ], [ zeroinitializer, %entry ]
+  %.range.2.i = select i1 zeroinitializer, i32 zeroinitializer, i32 %range.2.i
+  %.code.2.i = select i1 zeroinitializer, i32 zeroinitializer, i32 %code.2.i
   br i1 %arg, label %do.cond.i, label %if.else.i
 
 if.else.i:                                        ; preds = %do.body66.i
-  %sub91.i = sub i32 %.range.2.i, undef
-  %sub92.i = sub i32 %.code.2.i, undef
+  %sub91.i = sub i32 %.range.2.i, zeroinitializer
+  %sub92.i = sub i32 %.code.2.i, zeroinitializer
   br label %do.cond.i
 
 do.cond.i:                                        ; preds = %if.else.i, %do.body66.i
-  %range.4.i = phi i32 [ %sub91.i, %if.else.i ], [ undef, %do.body66.i ]
+  %range.4.i = phi i32 [ %sub91.i, %if.else.i ], [ zeroinitializer, %do.body66.i ]
   %code.4.i = phi i32 [ %sub92.i, %if.else.i ], [ %.code.2.i, %do.body66.i ]
   br i1 %arg, label %do.body66.i, label %do.end1006.i
 
 do.end1006.i:                                     ; preds = %do.cond.i
-  %.range.4.i = select i1 undef, i32 undef, i32 %range.4.i
-  %.code.4.i = select i1 undef, i32 undef, i32 %code.4.i
+  %.range.4.i = select i1 zeroinitializer, i32 zeroinitializer, i32 %range.4.i
+  %.code.4.i = select i1 zeroinitializer, i32 zeroinitializer, i32 %code.4.i
   store i32 %.range.4.i, ptr %range20.i, align 4
   store i32 %.code.4.i, ptr %code21.i, align 4
   ret void

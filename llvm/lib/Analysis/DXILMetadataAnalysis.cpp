@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/DXILMetadataAnalysis.h"
+#include "AnalysisOptions.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -15,6 +16,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #define DEBUG_TYPE "dxil-metadata-analysis"
@@ -24,7 +26,7 @@ using namespace dxil;
 
 static ModuleMetadataInfo collectMetadataInfo(Module &M) {
   ModuleMetadataInfo MMDAI;
-  Triple TT(Triple(M.getTargetTriple()));
+  const Triple &TT = M.getTargetTriple();
   MMDAI.DXILVersion = TT.getDXILVersion();
   MMDAI.ShaderModelVersion = TT.getOSVersion();
   MMDAI.ShaderProfile = TT.getEnvironment();
@@ -35,6 +37,29 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
     auto *MinorMD = mdconst::extract<ConstantInt>(ValVerMD->getOperand(1));
     MMDAI.ValidatorVersion =
         VersionTuple(MajorMD->getZExtValue(), MinorMD->getZExtValue());
+  }
+
+  NamedMDNode *ContentsNode = M.getNamedMetadata("dx.source.contents");
+  NamedMDNode *ArgsNode = M.getNamedMetadata("dx.source.args");
+  if (ContentsNode && ArgsNode) {
+    MMDAI.SourceInfo.emplace();
+    if (auto Type = getAnalysisOptions(M).compress_srci) {
+      MMDAI.SourceInfo->setCompressionType(*Type);
+    } else {
+      // If the option is not specified, pick zlib if available.
+      MMDAI.SourceInfo->setCompressionType(
+          compression::zlib::isAvailable()
+              ? dxbc::SourceInfo::Contents::CompressionType::Zlib
+              : dxbc::SourceInfo::Contents::CompressionType::None);
+    }
+    for (Metadata *FileInfoNode : ContentsNode->operands()) {
+      auto *FileInfo = cast<MDTuple>(FileInfoNode);
+      MMDAI.SourceInfo->addFile(
+          cast<MDString>(FileInfo->getOperand(0))->getString(),
+          cast<MDString>(FileInfo->getOperand(1))->getString());
+    }
+    for (Metadata *ArgNode : ArgsNode->getOperand(0)->operands())
+      MMDAI.SourceInfo->addArg(cast<MDString>(ArgNode)->getString(), "");
   }
 
   // For all HLSL Shader functions
@@ -65,6 +90,22 @@ static ModuleMetadataInfo collectMetadataInfo(Module &M) {
       assert(Success && "Failed to parse Y component of numthreads");
       Success = llvm::to_integer(NumThreadsVec[2], EFP.NumThreadsZ, 10);
       assert(Success && "Failed to parse Z component of numthreads");
+    }
+    // Get wavesize attribute value, if one exists
+    StringRef WaveSizeStr =
+        F.getFnAttribute("hlsl.wavesize").getValueAsString();
+    if (!WaveSizeStr.empty()) {
+      SmallVector<StringRef> WaveSizeVec;
+      WaveSizeStr.split(WaveSizeVec, ',');
+      assert(WaveSizeVec.size() == 3 && "Invalid wavesize specified");
+      // Read in the three component values of numthreads
+      [[maybe_unused]] bool Success =
+          llvm::to_integer(WaveSizeVec[0], EFP.WaveSizeMin, 10);
+      assert(Success && "Failed to parse Min component of wavesize");
+      Success = llvm::to_integer(WaveSizeVec[1], EFP.WaveSizeMax, 10);
+      assert(Success && "Failed to parse Max component of wavesize");
+      Success = llvm::to_integer(WaveSizeVec[2], EFP.WaveSizePref, 10);
+      assert(Success && "Failed to parse Preferred component of wavesize");
     }
     MMDAI.EntryPropertyVec.push_back(EFP);
   }
@@ -109,10 +150,7 @@ DXILMetadataAnalysisPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
 // DXILMetadataAnalysisWrapperPass
 
 DXILMetadataAnalysisWrapperPass::DXILMetadataAnalysisWrapperPass()
-    : ModulePass(ID) {
-  initializeDXILMetadataAnalysisWrapperPassPass(
-      *PassRegistry::getPassRegistry());
-}
+    : ModulePass(ID) {}
 
 DXILMetadataAnalysisWrapperPass::~DXILMetadataAnalysisWrapperPass() = default;
 

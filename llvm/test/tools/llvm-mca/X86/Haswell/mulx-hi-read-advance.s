@@ -74,7 +74,7 @@ add %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxl	(%rdi), %eax, %ecx
 # CHECK-NEXT: 1.     1     8.0    0.0    0.0       addl	%eax, %eax
-# CHECK-NEXT:        1     4.5    0.5    0.0       <total>
+# CHECK-NEXT:        2     4.5    0.5    0.0       <total>
 
 # CHECK:      [1] Code Region
 
@@ -137,4 +137,4 @@ add %rax, %rax
 # CHECK:            [0]    [1]    [2]    [3]
 # CHECK-NEXT: 0.     1     1.0    1.0    0.0       mulxq	(%rdi), %rax, %rcx
 # CHECK-NEXT: 1.     1     8.0    0.0    0.0       addq	%rax, %rax
-# CHECK-NEXT:        1     4.5    0.5    0.0       <total>
+# CHECK-NEXT:        2     4.5    0.5    0.0       <total>

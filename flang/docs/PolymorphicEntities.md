@@ -604,7 +604,7 @@ occurs.
 
 Final subroutines like User-Defined Derived Type Input/Output are stored as
 special bindings in the type descriptor. The runtime is able to handle the
-finalization with a call the the `@_FortranADestroy` function
+finalization with a call to the `@_FortranADestroy` function
 (`flang/include/flang/Runtime/derived-api.h`).
 
 **FIR**

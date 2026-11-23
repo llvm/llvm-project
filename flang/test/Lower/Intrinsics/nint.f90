@@ -14,4 +14,3 @@ subroutine nint_test1(i, a)
     i = nint(a, 8)
     ! CHECK: fir.call @llvm.lround.i64.f64
   end subroutine
-  

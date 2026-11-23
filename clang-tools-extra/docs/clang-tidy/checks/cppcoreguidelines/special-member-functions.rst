@@ -16,7 +16,7 @@ Note that defining a function with ``= delete`` is considered to be a
 definition.
 
 This check implements `C.21
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rc-five>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rc-five>`_
 from the C++ Core Guidelines.
 
 Options
@@ -85,3 +85,8 @@ Options
       struct A : boost::noncopyable {
         ~A() { std::cout << "dtor\n"; }
       };
+
+.. option:: IgnoreMacros
+
+   If set to `true`, the check will not give warnings for classes defined
+   inside macros. Default is `true`.

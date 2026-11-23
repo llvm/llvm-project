@@ -20,6 +20,7 @@
 
 #include "test_macros.h"
 
+// Make sure constructing with a std::seed_seq matches calling seed().
 void
 test1()
 {
@@ -44,10 +45,31 @@ test2()
     assert(e1 == e2);
 }
 
+// Make sure that seeding with a std::seed_seq produces the standard-mandated deterministic
+// output values. test1() and test2() only check that constructor initialization matches
+// seed() initialization, but would pass if both left the engine in an un-twisted state.
+void test3() {
+  unsigned a[] = {15, 22, 288, 37};
+  std::seed_seq sseq(a, a + 4);
+  std::mt19937 e;
+  e.seed(sseq);
+  assert(e() == 192527404u);
+}
+
+void test4() {
+  unsigned a[] = {15, 22, 288, 37};
+  std::seed_seq sseq(a, a + 4);
+  std::mt19937_64 e;
+  e.seed(sseq);
+  assert(e() == 11567978440329390872ull);
+}
+
 int main(int, char**)
 {
     test1();
     test2();
+    test3();
+    test4();
 
-  return 0;
+    return 0;
 }

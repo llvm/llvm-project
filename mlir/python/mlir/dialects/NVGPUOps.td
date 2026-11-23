@@ -9,6 +9,6 @@
 #ifndef PYTHON_BINDINGS_NVGPU_OPS
 #define PYTHON_BINDINGS_NVGPU_OPS
 
-include "mlir/Dialect/NVGPU/IR/NVGPU.td"
+include "mlir/Dialect/NVGPU/IR/NVGPUOps.td"
 
 #endif

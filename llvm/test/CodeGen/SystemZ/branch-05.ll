@@ -9,7 +9,7 @@ define i32 @f1(i32 %x, i32 %y, i32 %op) {
 ; CHECK: llgfr [[OP64:%r[0-5]]], %r4
 ; CHECK: sllg [[INDEX:%r[1-5]]], [[OP64]], 3
 ; CHECK: larl [[BASE:%r[1-5]]]
-; CHECK: lg [[TARGET:%r[1-5]]], 0([[BASE]],[[INDEX]])
+; CHECK: lg [[TARGET:%r[1-5]]], 0([[INDEX]],[[BASE]])
 ; CHECK: br [[TARGET]]
 entry:
   switch i32 %op, label %exit [

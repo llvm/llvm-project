@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple=x86_64-apple-darwin9 | FileCheck %s %}
 // RUN: %clang_cc1 -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -fclang-abi-compat=19 | FileCheck %s --check-prefix=CHECK-CLANG-19
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm %s -o - -triple=x86_64-apple-darwin9 -fclang-abi-compat=19 | FileCheck %s --check-prefix=CHECK-CLANG-19 %}
 
 //CHECK: @_ZTCN16MangleCtorVTable4InstE0_NS_1A4ImplINS1_4WrapEEE
 //CHECK-CLANG-19: @_ZTCN16MangleCtorVTable4InstE0_NS_1A4ImplINS0_4WrapEEE

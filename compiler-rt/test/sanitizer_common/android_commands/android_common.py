@@ -18,33 +18,28 @@ def host_to_device_path(path):
 def adb(args, attempts=1, timeout_sec=600):
     if verbose:
         print(args)
-    tmpname = tempfile.mktemp()
-    out = open(tmpname, "w")
-    ret = 255
-    while attempts > 0 and ret != 0:
-        attempts -= 1
-        ret = subprocess.call(
-            ["timeout", str(timeout_sec), ADB] + args,
-            stdout=out,
-            stderr=subprocess.STDOUT,
-        )
-    if ret != 0:
-        print("adb command failed", args)
-        print(tmpname)
-        out.close()
-        out = open(tmpname, "r")
-        print(out.read())
-    out.close()
-    os.unlink(tmpname)
+    with tempfile.TemporaryFile(mode="w+") as out:
+        ret = 255
+        while attempts > 0 and ret != 0:
+            attempts -= 1
+            ret = subprocess.call(
+                ["timeout", str(timeout_sec), ADB] + args,
+                stdout=out,
+                stderr=subprocess.STDOUT,
+            )
+        if ret != 0:
+            print("adb command failed", args)
+            out.seek(0)
+            print(out.read())
     return ret
 
 
 def pull_from_device(path):
-    tmp = tempfile.mktemp()
-    adb(["pull", path, tmp], 5, 60)
-    text = open(tmp, "r").read()
-    os.unlink(tmp)
-    return text
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp = os.path.join(tmp_dir, "pulled")
+        adb(["pull", path, tmp], 5, 60)
+        with open(tmp, "r") as f:
+            return f.read()
 
 
 def push_to_device(path):

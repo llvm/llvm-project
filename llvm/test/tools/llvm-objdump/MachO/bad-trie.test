@@ -11,7 +11,7 @@ RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-export-info-si
 EXPORT_INFO_SIZE_TOO_BIG: macho-trie-export-info-size-too-big': truncated or malformed object (export info size: 0x1234 in export trie data at node: 0x33 too big and extends past end of trie data)
 
 RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-children-count-byte 2>&1 | FileCheck --check-prefix CHILDREN_COUNT_BYTE %s 
-CHILDREN_COUNT_BYTE: macho-trie-children-count-byte': truncated or malformed object (byte for count of childern in export trie data at node: 0x5 extends past end of trie data)
+CHILDREN_COUNT_BYTE: macho-trie-children-count-byte': truncated or malformed object (byte for count of children in export trie data at node: 0x5 extends past end of trie data)
 
 RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-import-name-start 2>&1 | FileCheck --check-prefix IMPORT_NAME_START %s 
 IMPORT_NAME_START: macho-trie-import-name-start': truncated or malformed object (import name of re-export in export trie data at node: 0x33 starts past end of trie data)
@@ -25,8 +25,8 @@ EDGE_STRING_END: macho-trie-edge-string-end': truncated or malformed object (edg
 RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-not-export-node 2>&1 | FileCheck --check-prefix NOT_EXPORT_NODE %s 
 NOT_EXPORT_NODE: macho-trie-not-export-node': truncated or malformed object (node is not an export node in export trie data at node: 0x5a)
 
-RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-node-loop 2>&1 | FileCheck --check-prefix LOOP_OF_CHILDERN %s 
-LOOP_OF_CHILDERN: macho-trie-node-loop': truncated or malformed object (loop in childern in export trie data at node: 0x42 back to node: 0x5)
+RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-node-loop 2>&1 | FileCheck --check-prefix LOOP_OF_CHILDREN %s
+LOOP_OF_CHILDREN: macho-trie-node-loop': truncated or malformed object (loop in children in export trie data at node: 0x42 back to node: 0x5)
 
 RUN: not llvm-objdump --macho --exports-trie %p/Inputs/macho-trie-bad-library-ordinal 2>&1 | FileCheck --check-prefix BAD_LIBRARY_ORDINAL %s 
 BAD_LIBRARY_ORDINAL: macho-trie-bad-library-ordinal': truncated or malformed object (bad library ordinal: 69 (max 3) in export trie data at node: 0x33)

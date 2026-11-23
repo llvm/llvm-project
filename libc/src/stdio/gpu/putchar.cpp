@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/putchar.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/stdio_macros.h" // for EOF and stdout.
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -21,7 +21,7 @@ LLVM_LIBC_FUNCTION(int, putchar, (int c)) {
   if (1 != written)
     return EOF;
 
-  return 0;
+  return static_cast<int>(uc);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

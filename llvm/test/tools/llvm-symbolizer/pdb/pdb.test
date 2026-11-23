@@ -1,3 +1,5 @@
+RUN: rm -rf %t.exe
+
 RUN: echo 0x401380 > %t.input
 RUN: echo 0x401390 >> %t.input
 RUN: echo 0x4013A0 >> %t.input
@@ -10,6 +12,10 @@ RUN: llvm-symbolizer --obj="%p/Inputs/test.exe" < %t.input \
 RUN:    | FileCheck %s
 RUN: llvm-symbolizer --obj="%p/Inputs/test.exe" --no-demangle < %t.input \
 RUN:    | FileCheck %s --check-prefix=CHECK-NO-DEMANGLE
+
+RUN: cp %p/Inputs/test.exe %t.exe
+RUN: llvm-symbolizer --obj="%t.exe" --pdb="%p/Inputs/test.pdb" < %t.input \
+RUN:    | FileCheck %s
 
 ; Check that -dia works
 RUN: llvm-symbolizer --dia --obj="%p/Inputs/test.exe" < %t.input \

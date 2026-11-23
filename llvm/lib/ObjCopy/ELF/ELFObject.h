@@ -38,6 +38,7 @@ class StringTableSection;
 class SymbolTableSection;
 class RelocationSection;
 class DynamicRelocationSection;
+class DynamicSymbolTableSection;
 class GnuDebugLinkSection;
 class GroupSection;
 class SectionIndexSection;
@@ -109,7 +110,7 @@ protected:
   WritableMemoryBuffer &Out;
 
 public:
-  virtual ~SectionWriter() = default;
+  ~SectionWriter() override = default;
 
   Error visit(const Section &Sec) override;
   Error visit(const OwnedDataSection &Sec) override;
@@ -134,7 +135,7 @@ private:
   using Elf_Sym = typename ELFT::Sym;
 
 public:
-  virtual ~ELFSectionWriter() {}
+  ~ELFSectionWriter() override = default;
   Error visit(const SymbolTableSection &Sec) override;
   Error visit(const RelocationSection &Sec) override;
   Error visit(const GnuDebugLinkSection &Sec) override;
@@ -180,7 +181,7 @@ public:
 
 class BinarySectionWriter : public SectionWriter {
 public:
-  virtual ~BinarySectionWriter() {}
+  ~BinarySectionWriter() override = default;
 
   Error visit(const SymbolTableSection &Sec) override;
   Error visit(const RelocationSection &Sec) override;
@@ -346,7 +347,7 @@ private:
   size_t totalSize() const;
 
 public:
-  virtual ~ELFWriter() {}
+  ~ELFWriter() override = default;
   bool WriteSectionHeaders;
 
   // For --only-keep-debug, select an alternative section/segment layout
@@ -367,7 +368,7 @@ private:
   uint64_t TotalSize = 0;
 
 public:
-  ~BinaryWriter() {}
+  ~BinaryWriter() override = default;
   Error finalize() override;
   Error write() override;
   BinaryWriter(Object &Obj, raw_ostream &Out, const CommonConfig &Config)
@@ -784,7 +785,7 @@ private:
   SymbolTableSection *Symbols = nullptr;
 
 public:
-  virtual ~SectionIndexSection() {}
+  ~SectionIndexSection() override = default;
   void addIndex(uint32_t Index) {
     assert(Size > 0);
     Indexes.push_back(Index);
@@ -875,10 +876,15 @@ struct Relocation {
 // and another which handles the symbol table type. The symbol table type is
 // taken as a type parameter to the class (see RelocSectionWithSymtabBase).
 class RelocationSectionBase : public SectionBase {
+  const bool Dynamic;
+
 protected:
   SectionBase *SecToApplyRel = nullptr;
 
+  explicit RelocationSectionBase(bool Dynamic) : Dynamic(Dynamic) {}
+
 public:
+  bool isDynamic() const { return Dynamic; }
   const SectionBase *getSection() const { return SecToApplyRel; }
   void setSection(SectionBase *Sec) { SecToApplyRel = Sec; }
 
@@ -897,7 +903,9 @@ class RelocSectionWithSymtabBase : public RelocationSectionBase {
   void setSymTab(SymTabType *SymTab) { Symbols = SymTab; }
 
 protected:
-  RelocSectionWithSymtabBase() = default;
+  RelocSectionWithSymtabBase()
+      : RelocationSectionBase(
+            std::is_same_v<SymTabType, DynamicSymbolTableSection>) {}
 
   SymTabType *Symbols = nullptr;
 
@@ -928,9 +936,8 @@ public:
   const Object &getObject() const { return Obj; }
 
   static bool classof(const SectionBase *S) {
-    if (S->OriginalFlags & ELF::SHF_ALLOC)
-      return false;
-    return RelocationSectionBase::classof(S);
+    return RelocationSectionBase::classof(S) &&
+           !static_cast<const RelocationSectionBase *>(S)->isDynamic();
   }
 };
 
@@ -1015,9 +1022,8 @@ public:
       function_ref<bool(const SectionBase *)> ToRemove) override;
 
   static bool classof(const SectionBase *S) {
-    if (!(S->OriginalFlags & ELF::SHF_ALLOC))
-      return false;
-    return S->OriginalType == ELF::SHT_REL || S->OriginalType == ELF::SHT_RELA;
+    return RelocationSectionBase::classof(S) &&
+           static_cast<const RelocationSectionBase *>(S)->isDynamic();
   }
 };
 
@@ -1059,7 +1065,8 @@ protected:
   Error initSections();
 
 public:
-  BasicELFBuilder() : Obj(std::make_unique<Object>()) {}
+  BasicELFBuilder();
+  ~BasicELFBuilder();
 };
 
 class BinaryELFBuilder : public BasicELFBuilder {

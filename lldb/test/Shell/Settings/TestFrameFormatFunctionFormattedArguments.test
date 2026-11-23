@@ -1,0 +1,53 @@
+# XFAIL: target-windows
+
+# Test the ${function.formatted-arguments} frame-format variable.
+
+# RUN: split-file %s %t
+# RUN: %clangxx_host -g -gdwarf %t/main.cpp -o %t.out
+# RUN: %lldb -x -b -s %t/commands.input %t.out -o exit 2>&1 \
+# RUN:       | FileCheck %s
+#
+# RUN: %clangxx_host -O0 %t/main.cpp -o %t-nodebug.out
+# RUN: %lldb -x -b -s %t/commands.input %t-nodebug.out -o exit 2>&1 \
+# RUN:       | FileCheck %s --check-prefix=CHECK-NODEBUG
+
+#--- main.cpp
+struct Foo {
+  void func() {}
+};
+
+void bar() {
+  Foo{}.func();
+}
+
+void foo(int, int x) {
+  bar();
+}
+
+void myFunc(char const * str,
+          void (*fptr)(int, int)) {
+  fptr(5, 10);
+}
+
+int main(int argc, char const *argv[]) {
+    myFunc("hello", &foo);
+    return 0;
+}
+
+#--- commands.input
+settings set -f frame-format "custom-frame '${function.formatted-arguments}'\n"
+break set -n func
+
+run
+bt
+
+# CHECK: custom-frame '(this={{.*}})'
+# CHECK: custom-frame '()'
+# CHECK: custom-frame '({{.*}}=5, x=10)'
+# CHECK: custom-frame '(str="hello", fptr=({{.*}}.out`{{.*}}foo(int,{{.*}}int) at main.cpp:{{[0-9]+}}))'
+# CHECK: custom-frame '(argc=1, argv={{.*}})'
+
+# CHECK-NODEBUG: custom-frame '()'
+# CHECK-NODEBUG: custom-frame '()'
+# CHECK-NODEBUG: custom-frame '(int, int)'
+# CHECK-NODEBUG: custom-frame '(char const*, void (*)(int, int))'

@@ -8,6 +8,7 @@
 #ifndef LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 #define LLVM_TRANSFORMS_VECTORIZE_SANDBOXVECTORIZER_SANDBOXVECTORIZER_H
 
+#include "llvm/Support/Compiler.h"
 #include <memory>
 
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -19,8 +20,11 @@
 namespace llvm {
 
 class TargetTransformInfo;
+struct VectorizeOptions;
 
-class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
+class SandboxVectorizerPass
+    : public OptionalPassInfoMixin<SandboxVectorizerPass> {
+  const VectorizeOptions *Opts = nullptr;
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
@@ -37,7 +41,11 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   // within FPM may register/unregister callbacks, so they need access to
   // Context.
   sandboxir::FunctionPassManager FPM;
+  /// \Returns true if we should attempt to vectorize \p SrcFilePath based on
+  /// `AllowFiles` option.
+  bool allowFile(const std::string &SrcFilePath);
 
+  void buildPipeline();
   bool runImpl(Function &F);
 
 public:
@@ -46,11 +54,11 @@ public:
   // Vectorizer component can't find the vtable for classes like
   // sandboxir::Pass. This way we don't have to make LLVMPasses add a direct
   // dependency on SandboxIR.
-  SandboxVectorizerPass();
-  SandboxVectorizerPass(SandboxVectorizerPass &&);
-  ~SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass();
+  LLVM_ABI SandboxVectorizerPass(SandboxVectorizerPass &&);
+  LLVM_ABI ~SandboxVectorizerPass();
 
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+  LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // namespace llvm

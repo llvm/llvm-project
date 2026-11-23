@@ -12,6 +12,7 @@
 #include <optional>
 #include <unordered_map>
 
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/JSON.h"
 
 #include "lldb/Core/PluginInterface.h"
@@ -555,19 +556,17 @@ private:
     /// \{
 
     /// tid -> data kind -> size
-    llvm::DenseMap<lldb::tid_t, llvm::DenseMap<ConstString, uint64_t>>
-        live_thread_data;
+    llvm::DenseMap<lldb::tid_t, llvm::StringMap<uint64_t>> live_thread_data;
 
     /// cpu id -> data kind -> size
-    llvm::DenseMap<lldb::cpu_id_t, llvm::DenseMap<ConstString, uint64_t>>
+    llvm::DenseMap<lldb::cpu_id_t, llvm::StringMap<uint64_t>>
         live_cpu_data_sizes;
     /// cpu id -> data kind -> bytes
-    llvm::DenseMap<lldb::cpu_id_t,
-                   llvm::DenseMap<ConstString, std::vector<uint8_t>>>
+    llvm::DenseMap<lldb::cpu_id_t, llvm::StringMap<std::vector<uint8_t>>>
         live_cpu_data;
 
     /// data kind -> size
-    llvm::DenseMap<ConstString, uint64_t> live_process_data;
+    llvm::StringMap<uint64_t> live_process_data;
     /// \}
 
     /// The list of cpus being traced. Might be \b std::nullopt depending on the
@@ -579,11 +578,11 @@ private:
     /// \{
 
     /// tid -> data kind -> file
-    llvm::DenseMap<lldb::tid_t, llvm::DenseMap<ConstString, FileSpec>>
+    llvm::DenseMap<lldb::tid_t, llvm::StringMap<FileSpec>>
         postmortem_thread_data;
 
     /// cpu id -> data kind -> file
-    llvm::DenseMap<lldb::cpu_id_t, llvm::DenseMap<ConstString, FileSpec>>
+    llvm::DenseMap<lldb::cpu_id_t, llvm::StringMap<FileSpec>>
         postmortem_cpu_data;
 
     /// \}

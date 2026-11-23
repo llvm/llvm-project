@@ -17,15 +17,19 @@
 namespace llvm {
 
 class MemoryLocation;
+struct NVPTXOptions;
 
 class NVPTXAAResult : public AAResultBase {
+  const NVPTXOptions &CLOpts;
+
 public:
-  NVPTXAAResult() {}
-  NVPTXAAResult(NVPTXAAResult &&Arg) : AAResultBase(std::move(Arg)) {}
+  explicit NVPTXAAResult(const NVPTXOptions &CLOpts) : CLOpts(CLOpts) {}
+  NVPTXAAResult(NVPTXAAResult &&Arg)
+      : AAResultBase(std::move(Arg)), CLOpts(Arg.CLOpts) {}
 
   /// Handle invalidation events from the new pass manager.
   ///
-  /// By definition, this result is stateless and so remains valid.
+  /// This result does not depend on the IR and so remains valid.
   bool invalidate(Function &, const PreservedAnalyses &,
                   FunctionAnalysisManager::Invalidator &Inv) {
     return false;
@@ -36,6 +40,12 @@ public:
 
   ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
                                bool IgnoreLocals);
+
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
+
+  MemoryEffects getMemoryEffects(const Function *F) {
+    return MemoryEffects::unknown();
+  }
 };
 
 /// Analysis pass providing a never-invalidated alias analysis result.
@@ -47,9 +57,7 @@ class NVPTXAA : public AnalysisInfoMixin<NVPTXAA> {
 public:
   using Result = NVPTXAAResult;
 
-  NVPTXAAResult run(Function &F, AnalysisManager<Function> &AM) {
-    return NVPTXAAResult();
-  }
+  NVPTXAAResult run(Function &F, AnalysisManager<Function> &AM);
 };
 
 /// Legacy wrapper pass to provide the NVPTXAAResult object.
@@ -64,10 +72,7 @@ public:
   NVPTXAAResult &getResult() { return *Result; }
   const NVPTXAAResult &getResult() const { return *Result; }
 
-  bool doInitialization(Module &M) override {
-    Result.reset(new NVPTXAAResult());
-    return false;
-  }
+  bool doInitialization(Module &M) override;
 
   bool doFinalization(Module &M) override {
     Result.reset();
@@ -79,22 +84,27 @@ public:
 
 // Wrapper around ExternalAAWrapperPass so that the default
 // constructor gets the callback.
+// Note that NVPTXAA will run before BasicAA for compile time considerations.
 class NVPTXExternalAAWrapper : public ExternalAAWrapperPass {
 public:
   static char ID;
 
   NVPTXExternalAAWrapper()
-      : ExternalAAWrapperPass([](Pass &P, Function &, AAResults &AAR) {
-          if (auto *WrapperPass =
-                  P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
-            AAR.addAAResult(WrapperPass->getResult());
-        }) {}
+      : ExternalAAWrapperPass(
+            [](Pass &P, Function &, AAResults &AAR) {
+              if (auto *WrapperPass =
+                      P.getAnalysisIfAvailable<NVPTXAAWrapperPass>())
+                AAR.addAAResult(WrapperPass->getResult());
+            },
+            /*RunEarly=*/true) {}
+
+  StringRef getPassName() const override {
+    return "NVPTX Address space based Alias Analysis Wrapper";
+  }
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();
-void initializeNVPTXAAWrapperPassPass(PassRegistry &);
 ImmutablePass *createNVPTXExternalAAWrapperPass();
-void initializeNVPTXExternalAAWrapperPass(PassRegistry &);
 
 } // end namespace llvm
 

@@ -508,6 +508,7 @@ void test_collapse(void) {
 #pragma omp distribute simd collapse(5 - 5)
   for (i = 0; i < 16; ++i)
     ;
+#if defined(_OPENMP) && (_OPENMP <= 202111)
 // expected-note@+3 2 {{defined as reduction}}
 #pragma omp target
 #pragma omp teams
@@ -520,7 +521,7 @@ void test_collapse(void) {
 #pragma omp for reduction(+ : i, j)
       for (int k = 0; k < 16; ++k)
         i += j;
-
+#endif
 #pragma omp target
 #pragma omp teams
   for (i = 0; i < 16; ++i)

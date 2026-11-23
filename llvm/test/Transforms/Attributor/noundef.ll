@@ -49,11 +49,11 @@ define internal void @argument_dead_callback_callee(ptr %c) {
 
 define void @callback_caller() {
 ; TUNIT-LABEL: define {{[^@]+}}@callback_caller() {
-; TUNIT-NEXT:    call void @callback_broker(ptr noundef nonnull @argument_dead_callback_callee, ptr nofree readnone align 4294967296 undef)
+; TUNIT-NEXT:    call void @callback_broker(ptr noundef nonnull @argument_dead_callback_callee, ptr nofree readnone undef)
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC-LABEL: define {{[^@]+}}@callback_caller() {
-; CGSCC-NEXT:    call void @callback_broker(ptr noundef nonnull @argument_dead_callback_callee, ptr nofree noundef readnone align 4294967296 null)
+; CGSCC-NEXT:    call void @callback_broker(ptr noundef nonnull @argument_dead_callback_callee, ptr nofree noundef readnone null)
 ; CGSCC-NEXT:    ret void
 ;
   call void @callback_broker(ptr @argument_dead_callback_callee, ptr null)

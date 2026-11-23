@@ -5,10 +5,10 @@
 
 define i8 @f1(i8 %a, i8 %b, i8 %c, i8 %d, i8 %e, i8 %f, i8 %g) {
 ; CHECK-LABEL: f1:
-; CHECK: lb {{%r[0-5]}}, 175(%r15)
-; CHECK: lb {{%r[0-5]}}, 167(%r15)
-; CHECK: ar %r2, %r3
-; CHECK: ar %r2, %r4
+; CHECK-DAG: lb {{%r[0-5]}}, 175(%r15)
+; CHECK-DAG: lb {{%r[0-5]}}, 167(%r15)
+; CHECK-DAG: ar %r2, %r3
+; CHECK-DAG: ar %r2, %r4
 ; CHECK: ar %r2, %r5
 ; CHECK: ar %r2, %r6
 ; CHECK: br %r14

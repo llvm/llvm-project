@@ -65,10 +65,10 @@ void SwiftAggLowering::addTypedData(QualType type, CharUnits begin) {
   // Deal with various aggregate types as special cases:
 
   // Record types.
-  if (auto recType = type->getAs<RecordType>()) {
+  if (auto recType = type->getAsCanonical<RecordType>()) {
     addTypedData(recType->getDecl(), begin);
 
-  // Array types.
+    // Array types.
   } else if (type->isArrayType()) {
     // Incomplete array types (flexible array members?) don't provide
     // data to lay out, and the other cases shouldn't be possible.
@@ -693,7 +693,7 @@ bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
 
 bool swiftcall::isLegalVectorType(CodeGenModule &CGM, CharUnits vectorSize,
                                   llvm::Type *eltTy, unsigned numElts) {
-  assert(numElts > 1 && "illegal vector length");
+  assert(numElts > 0 && "illegal vector length");
   return getSwiftABIInfo(CGM).isLegalVectorType(vectorSize, eltTy, numElts);
 }
 
@@ -721,11 +721,14 @@ void swiftcall::legalizeVectorType(CodeGenModule &CGM, CharUnits origVectorSize,
     return;
   }
 
-  // Try to split the vector into legal subvectors.
   auto numElts = cast<llvm::FixedVectorType>(origVectorTy)->getNumElements();
   auto eltTy = origVectorTy->getElementType();
-  assert(numElts != 1);
+  if (numElts == 1) {
+    components.push_back(eltTy);
+    return;
+  }
 
+  // Try to split the vector into legal subvectors.
   // The largest size that we're still considering making subvectors of.
   // Always a power of 2.
   unsigned logCandidateNumElts = llvm::Log2_32(numElts);
@@ -796,11 +799,14 @@ bool swiftcall::mustPassRecordIndirectly(CodeGenModule &CGM,
 
 static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
                                        bool forReturn,
-                                       CharUnits alignmentForIndirect) {
+                                       CharUnits alignmentForIndirect,
+                                       unsigned IndirectAS) {
   if (lowering.empty()) {
     return ABIArgInfo::getIgnore();
   } else if (lowering.shouldPassIndirectly(forReturn)) {
-    return ABIArgInfo::getIndirect(alignmentForIndirect, /*byval*/ false);
+    return ABIArgInfo::getIndirect(alignmentForIndirect,
+                                   /*AddrSpace=*/IndirectAS,
+                                   /*byval=*/false);
   } else {
     auto types = lowering.getCoerceAndExpandTypes();
     return ABIArgInfo::getCoerceAndExpand(types.first, types.second);
@@ -809,18 +815,21 @@ static ABIArgInfo classifyExpandedType(SwiftAggLowering &lowering,
 
 static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
                                bool forReturn) {
+  unsigned IndirectAS = CGM.getDataLayout().getAllocaAddrSpace();
   if (auto recordType = dyn_cast<RecordType>(type)) {
     auto record = recordType->getDecl();
     auto &layout = CGM.getContext().getASTRecordLayout(record);
 
     if (mustPassRecordIndirectly(CGM, record))
-      return ABIArgInfo::getIndirect(layout.getAlignment(), /*byval*/ false);
+      return ABIArgInfo::getIndirect(layout.getAlignment(),
+                                     /*AddrSpace=*/IndirectAS, /*byval=*/false);
 
     SwiftAggLowering lowering(CGM);
     lowering.addTypedData(recordType->getDecl(), CharUnits::Zero(), layout);
     lowering.finish();
 
-    return classifyExpandedType(lowering, forReturn, layout.getAlignment());
+    return classifyExpandedType(lowering, forReturn, layout.getAlignment(),
+                                IndirectAS);
   }
 
   // Just assume that all of our target ABIs can support returning at least
@@ -836,7 +845,7 @@ static ABIArgInfo classifyType(CodeGenModule &CGM, CanQualType type,
     lowering.finish();
 
     CharUnits alignment = CGM.getContext().getTypeAlignInChars(type);
-    return classifyExpandedType(lowering, forReturn, alignment);
+    return classifyExpandedType(lowering, forReturn, alignment, IndirectAS);
   }
 
   // Member pointer types need to be expanded, but it's a simple form of

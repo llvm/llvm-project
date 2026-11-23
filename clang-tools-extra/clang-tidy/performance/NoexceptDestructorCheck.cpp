@@ -1,4 +1,4 @@
-//===--- NoexceptDestructorCheck.cpp - clang-tidy -------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 
 using namespace clang::ast_matchers;
 
-// FixItHint - comment added to fix list.rst generation in add_new_check.py.
+// FixItHint - comment added to fix list.md generation in add_new_check.py.
 // Do not remove. Fixes are generated in base class.
 
 namespace clang::tidy::performance {

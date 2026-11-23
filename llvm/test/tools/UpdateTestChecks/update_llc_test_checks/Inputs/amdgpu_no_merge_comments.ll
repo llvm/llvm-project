@@ -2,7 +2,7 @@
 ; RUN: llc %S/amdgpu_no_merge_comments-O0.s | FileCheck -check-prefixes=GCN,GFX9-O0 %s
 ; RUN: llc %S/amdgpu_no_merge_comments-O3.s | FileCheck -check-prefixes=GCN,GFX9-O3 %s
 
-target triple = "amdgcn--"
+target triple = "amdgpu9.00--"
 
 define hidden i32 @main(i32 %a) {
   %add = add i32 %a, %a

@@ -7,19 +7,19 @@
 define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 ; WIN32-LABEL: test_argReti1:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    incb %al
+; WIN32-NEXT:    xorb $1, %al
 ; WIN32-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_argReti1:
 ; WIN64:       # %bb.0:
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
 ; WIN64-NEXT:    # kill: def $al killed $al killed $eax
 ; WIN64-NEXT:    retq
 ;
 ; LINUXOSX-LABEL: test_argReti1:
 ; LINUXOSX:       # %bb.0:
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    # kill: def $al killed $al killed $eax
 ; LINUXOSX-NEXT:    retq
   %add = add i1 %a, 1
@@ -30,10 +30,10 @@ define x86_regcallcc i1 @test_argReti1(i1 %a)  {
 define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN32-LABEL: test_CallargReti1:
 ; WIN32:       # %bb.0:
-; WIN32-NEXT:    incb %al
+; WIN32-NEXT:    xorb $1, %al
 ; WIN32-NEXT:    movzbl %al, %eax
 ; WIN32-NEXT:    calll _test_argReti1
-; WIN32-NEXT:    incb %al
+; WIN32-NEXT:    xorb $1, %al
 ; WIN32-NEXT:    retl
 ;
 ; WIN64-LABEL: test_CallargReti1:
@@ -41,11 +41,13 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; WIN64-NEXT:    pushq %rax
 ; WIN64-NEXT:    .seh_stackalloc 8
 ; WIN64-NEXT:    .seh_endprologue
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
 ; WIN64-NEXT:    movzbl %al, %eax
 ; WIN64-NEXT:    callq test_argReti1
-; WIN64-NEXT:    incb %al
+; WIN64-NEXT:    xorb $1, %al
+; WIN64-NEXT:    .seh_startepilogue
 ; WIN64-NEXT:    popq %rcx
+; WIN64-NEXT:    .seh_endepilogue
 ; WIN64-NEXT:    retq
 ; WIN64-NEXT:    .seh_endproc
 ;
@@ -53,10 +55,10 @@ define x86_regcallcc i1 @test_CallargReti1(i1 %a)  {
 ; LINUXOSX:       # %bb.0:
 ; LINUXOSX-NEXT:    pushq %rax
 ; LINUXOSX-NEXT:    .cfi_def_cfa_offset 16
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    movzbl %al, %eax
 ; LINUXOSX-NEXT:    callq *test_argReti1@GOTPCREL(%rip)
-; LINUXOSX-NEXT:    incb %al
+; LINUXOSX-NEXT:    xorb $1, %al
 ; LINUXOSX-NEXT:    popq %rcx
 ; LINUXOSX-NEXT:    .cfi_def_cfa_offset 8
 ; LINUXOSX-NEXT:    retq
@@ -73,7 +75,7 @@ define x86_regcallcc <16 x float> @testf32_inp(<16 x float> %a, <16 x float> %b,
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $32, %esp
+; WIN32-NEXT:    subl $16, %esp
 ; WIN32-NEXT:    movaps %xmm7, (%esp) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm6, %xmm7
 ; WIN32-NEXT:    movaps %xmm5, %xmm6
@@ -362,7 +364,7 @@ define x86_regcallcc <32 x float> @testf32_stack(<32 x float> %a, <32 x float> %
 ; WIN32-NEXT:    pushl %ebp
 ; WIN32-NEXT:    movl %esp, %ebp
 ; WIN32-NEXT:    andl $-16, %esp
-; WIN32-NEXT:    subl $48, %esp
+; WIN32-NEXT:    subl $32, %esp
 ; WIN32-NEXT:    movaps %xmm7, {{[-0-9]+}}(%e{{[sb]}}p) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm6, (%esp) # 16-byte Spill
 ; WIN32-NEXT:    movaps %xmm5, %xmm6

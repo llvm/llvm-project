@@ -26,7 +26,7 @@ int main(int, char**) {
 
     // expected-error-re@*:* {{static assertion failed due to requirement {{.*}}std::shared_ptr<> is not supported}}
     std::ignore = std::inout_ptr(sPtr);
-    // expected-error@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::inout_ptr_t<shared_ptr<int>, _Ptr>' (aka 'inout_ptr_t<std::shared_ptr<int>, int *>'}}
+    // expected-error-re@*:* {{no matching conversion for functional-style cast from 'std::shared_ptr<int>' to 'std::inout_ptr_t<{{(std::)?}}shared_ptr<int>, _Ptr>'{{( \(aka 'inout_ptr_t<std::shared_ptr<int>, int *>')?}}}}
     std::ignore = std::inout_ptr<int*>(sPtr);
   }
 

@@ -109,8 +109,10 @@ handler1:
 ; X64: callq f
 ; X64: [[contbb:\.LBB0_[0-9]+]]: # Block address taken
 ; X64-NEXT:                      # %try.cont
+; X64: .seh_startepilogue
 ; X64: addq $40, %rsp
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_catch_catch@4HA":
@@ -131,11 +133,13 @@ handler1:
 ; X64: movl $2, %ecx
 ; X64: callq f
 ; X64: leaq [[contbb]](%rip), %rax
+; X64: .seh_startepilogue
 ; X64: addq $40, %rsp
 ; X64: popq %rbx
 ; X64: popq %rdi
 ; X64: popq %rsi
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: $handlerMap$0$try_catch_catch:
@@ -182,10 +186,12 @@ try.cont:
 ; X64: callq f
 ; X64: [[contbb:\.LBB1_[0-9]+]]: # Block address taken
 ; X64-NEXT:                      # %try.cont
+; X64: .seh_startepilogue
 ; X64: addq $40, %rsp
 ; X64-NOT: popq
 ; X64: popq %rsi
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_one_csr@4HA":
@@ -200,9 +206,11 @@ try.cont:
 ; X64: leaq 32(%rdx), %rbp
 ; X64: .seh_endprologue
 ; X64: leaq [[contbb]](%rip), %rax
+; X64: .seh_startepilogue
 ; X64: addq $40, %rsp
 ; X64: popq %rsi
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: $handlerMap$0$try_one_csr:
@@ -241,9 +249,11 @@ try.cont:
 ; X64: callq f
 ; X64: [[contbb:\.LBB2_[0-9]+]]: # Block address taken
 ; X64-NEXT:                      # %try.cont
+; X64: .seh_startepilogue
 ; X64: addq $48, %rsp
 ; X64-NOT: popq
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: "?catch$[[catch1bb:[0-9]+]]@?0?try_no_csr@4HA":
@@ -256,8 +266,10 @@ try.cont:
 ; X64: leaq 48(%rdx), %rbp
 ; X64: .seh_endprologue
 ; X64: leaq [[contbb]](%rip), %rax
+; X64: .seh_startepilogue
 ; X64: addq $32, %rsp
 ; X64: popq %rbp
+; X64: .seh_endepilogue
 ; X64: retq
 
 ; X64: $handlerMap$0$try_no_csr:

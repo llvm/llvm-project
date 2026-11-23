@@ -148,6 +148,16 @@ MACRO1  // This should be fine because it is never actually reached
 #if __has_include(stdint.h>)
 #endif
 
+// expected-error@+2 {{missing '(' after '__has_include'}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_include(__has_include)
+#endif
+
+// expected-error@+2 {{missing '(' after '__has_embed'}}
+// expected-error@+1 {{expected "FILENAME" or <FILENAME>}}
+#if __has_include(__has_embed)
+#endif
+
 // expected-error@+1 {{'__has_include' must be used within a preprocessing directive}}
 __has_include
 
@@ -196,4 +206,53 @@ __has_include
 // PR15539
 #ifdef FOO
 #elif __has_include(<foo>)
+#endif
+
+#if __has_include(<stdint.h>\
+)
+#else
+  #error "__has_include failed (10)."
+#endif
+
+#define MACRO6 <stdint.h>
+#if __has_include(MACRO6\
+)
+#else
+  #error "__has_include failed (11)."
+#endif
+
+#if __has_include_next(<stdint.h>/*expected-warning {{#include_next in primary source file}}*/\
+)
+#else
+  #error "__has_include_next failed (9)."
+#endif
+
+#if __has_include_next(MACRO6/*expected-warning {{#include_next in primary source file}}*/\
+) 
+#else
+  #error "__has_include_next failed (10)."
+#endif
+
+#define MACRO7 <std\
+int.h>
+#if __has_include(MACRO7)
+#else
+  #error "__has_include failed (12)."
+#endif
+
+#if __has_include(MACRO7\
+)
+#else
+  #error "__has_include failed (13)."
+#endif
+
+#if __has_include_next(MACRO7) //expected-warning {{#include_next in primary source file}}
+#else
+  #error "__has_include_next failed (11)."
+#endif
+
+#if __has_include_next(MACRO7/*expected-warning {{#include_next in primary source file}}*/\
+) 
+#else
+  #error "__has_include_next failed (12)."
 #endif

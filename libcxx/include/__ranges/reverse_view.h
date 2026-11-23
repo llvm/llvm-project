@@ -36,9 +36,9 @@
 _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace ranges {
 template <view _View>
@@ -59,13 +59,13 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr explicit reverse_view(_View __view) : __base_(std::move(__view)) {}
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() const&
     requires copy_constructible<_View>
   {
     return __base_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _View base() && { return std::move(__base_); }
 
   _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin() {
     if constexpr (_UseCache)
@@ -78,35 +78,35 @@ public:
     return __tmp;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> begin()
     requires common_range<_View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::end(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> end() {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr reverse_iterator<iterator_t<_View>> end() {
     return std::make_reverse_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto end() const
     requires common_range<const _View>
   {
     return std::make_reverse_iterator(ranges::begin(__base_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size()
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires sized_range<_View>
   {
     return ranges::size(__base_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires sized_range<const _View>
   {
     return ranges::size(__base_);
@@ -144,13 +144,13 @@ inline constexpr bool __is_unsized_reverse_subrange<subrange<reverse_iterator<_I
 
 template <class _Tp>
 struct __unwrapped_reverse_subrange {
-  using type =
+  using type _LIBCPP_NODEBUG =
       void; // avoid SFINAE-ing out the overload below -- let the concept requirements do it for better diagnostics
 };
 
 template <class _Iter, subrange_kind _Kind>
 struct __unwrapped_reverse_subrange<subrange<reverse_iterator<_Iter>, reverse_iterator<_Iter>, _Kind>> {
-  using type = subrange<_Iter, _Iter, _Kind>;
+  using type _LIBCPP_NODEBUG = subrange<_Iter, _Iter, _Kind>;
 };
 
 struct __fn : __range_adaptor_closure<__fn> {
@@ -195,9 +195,9 @@ inline constexpr auto reverse = __reverse::__fn{};
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_POP_MACROS
 

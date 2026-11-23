@@ -76,7 +76,7 @@ entry:
 define <2 x i1> @test_vector_base(<2 x ptr> %base, i64 %idx) {
 ; CHECK-LABEL: @test_vector_base(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x ptr> [[BASE:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x ptr> [[BASE:%.*]], splat (ptr null)
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:
@@ -89,7 +89,7 @@ define <2 x i1> @test_vector_index(ptr %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_index(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[BASE:%.*]], i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x ptr> [[DOTSPLATINSERT]], zeroinitializer
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq <2 x ptr> [[DOTSPLATINSERT]], splat (ptr null)
 ; CHECK-NEXT:    [[CND:%.*]] = shufflevector <2 x i1> [[TMP0]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
@@ -102,7 +102,7 @@ entry:
 define <2 x i1> @test_vector_both(<2 x ptr> %base, <2 x i64> %idx) {
 ; CHECK-LABEL: @test_vector_both(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x ptr> [[BASE:%.*]], zeroinitializer
+; CHECK-NEXT:    [[CND:%.*]] = icmp eq <2 x ptr> [[BASE:%.*]], splat (ptr null)
 ; CHECK-NEXT:    ret <2 x i1> [[CND]]
 ;
 entry:

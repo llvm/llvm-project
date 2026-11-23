@@ -9,6 +9,8 @@
 #ifndef _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 #define _LIBCPP___MEMORY_RESOURCE_MEMORY_RESOURCE_H
 
+#include <__assert>
+#include <__bit/popcount.h>
 #include <__config>
 #include <__cstddef/max_align_t.h>
 #include <__cstddef/size_t.h>
@@ -21,6 +23,7 @@
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace pmr {
 
@@ -34,6 +37,7 @@ public:
 
   [[nodiscard]] [[using __gnu__: __returns_nonnull__, __alloc_size__(2), __alloc_align__(3)]]
   _LIBCPP_HIDE_FROM_ABI void* allocate(size_t __bytes, size_t __align = __max_align) {
+    _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(std::__popcount(__align) == 1, "The alignment has to be a power of two");
     return do_allocate(__bytes, __align);
   }
 
@@ -42,7 +46,9 @@ public:
     do_deallocate(__p, __bytes, __align);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool is_equal(const memory_resource& __other) const noexcept { return do_is_equal(__other); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool is_equal(const memory_resource& __other) const noexcept {
+    return do_is_equal(__other);
+  }
 
 private:
   virtual void* do_allocate(size_t, size_t)                       = 0;
@@ -68,7 +74,7 @@ operator!=(const memory_resource& __lhs, const memory_resource& __rhs) noexcept 
 
 // [mem.res.global]
 
-[[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
+[[nodiscard, __gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
 get_default_resource() noexcept;
 
 [[__gnu__::__returns_nonnull__]] _LIBCPP_AVAILABILITY_PMR _LIBCPP_EXPORTED_FROM_ABI memory_resource*
@@ -82,6 +88,7 @@ null_memory_resource() noexcept;
 
 } // namespace pmr
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

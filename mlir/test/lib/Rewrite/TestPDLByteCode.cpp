@@ -55,6 +55,13 @@ static LogicalResult customTypeResultConstraint(PatternRewriter &rewriter,
   return failure();
 }
 
+// Custom constraint that always returns failure
+static LogicalResult customConstraintFailure(PatternRewriter & /*rewriter*/,
+                                             PDLResultList & /*results*/,
+                                             ArrayRef<PDLValue> /*args*/) {
+  return failure();
+}
+
 // Custom constraint that returns a type range of variable length if the op is
 // named test.success_op
 static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
@@ -74,6 +81,19 @@ static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
   return failure();
 }
 
+// Custom constraint that returns a value range if the op is named
+// test.success_op
+static LogicalResult customValueRangeResultConstraint(PatternRewriter &rewriter,
+                                                      PDLResultList &results,
+                                                      ArrayRef<PDLValue> args) {
+  auto *op = args[0].cast<Operation *>();
+  if (op->getName().getStringRef() == "test.success_op") {
+    results.push_back(op->getOperands()); // Returns ValueRange
+    return success();
+  }
+  return failure();
+}
+
 // Custom creator invoked from PDL.
 static Operation *customCreate(PatternRewriter &rewriter, Operation *op) {
   return rewriter.create(OperationState(op->getLoc(), "test.success"));
@@ -87,6 +107,9 @@ static Type customCreateType(PatternRewriter &rewriter) {
 }
 static std::string customCreateStrAttr(PatternRewriter &rewriter) {
   return "test.str";
+}
+static Attribute customCreateNullAttr(PatternRewriter &rewriter) {
+  return Attribute();
 }
 
 /// Custom rewriter invoked from PDL.
@@ -150,13 +173,19 @@ struct TestPDLByteCodePass
                                           customValueResultConstraint);
     pdlPattern.registerConstraintFunction("op_constr_return_type",
                                           customTypeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_multiple_returns_failure",
+                                          customConstraintFailure);
     pdlPattern.registerConstraintFunction("op_constr_return_type_range",
                                           customTypeRangeResultConstraint);
+    pdlPattern.registerConstraintFunction("op_constr_return_value_range",
+                                          customValueRangeResultConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);
     pdlPattern.registerRewriteFunction("var_creator",
                                        customVariadicResultCreate);
     pdlPattern.registerRewriteFunction("type_creator", customCreateType);
     pdlPattern.registerRewriteFunction("str_creator", customCreateStrAttr);
+    pdlPattern.registerRewriteFunction("null_attr_creator",
+                                       customCreateNullAttr);
     pdlPattern.registerRewriteFunction("rewriter", customRewriter);
     patternList.add(std::move(pdlPattern));
 

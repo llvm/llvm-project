@@ -58,4 +58,14 @@
 #pragma omp end declare variant
 #endif
 
+#ifdef __SPIRV__
+#pragma omp begin declare variant match(device = {arch(spirv64)})
+
+#define __OPENMP_SPIRV__
+#include <__clang_spirv_math.h>
+#undef __OPENMP_SPIRV__
+
+#pragma omp end declare variant
+#endif
+
 #endif

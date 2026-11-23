@@ -9,8 +9,11 @@
 #ifndef LLVM_CODEGEN_MACHINELOOPUTILS_H
 #define LLVM_CODEGEN_MACHINELOOPUTILS_H
 
+#include "llvm/Support/Compiler.h"
+
 namespace llvm {
 class MachineBasicBlock;
+class MachineDomTreeUpdater;
 class MachineRegisterInfo;
 class TargetInstrInfo;
 
@@ -30,11 +33,12 @@ enum LoopPeelDirection {
 /// Phis are updated and an unconditional branch inserted at the end of the
 /// clone so as to execute a single iteration.
 ///
-/// The trip count of Loop is not updated.
-MachineBasicBlock *PeelSingleBlockLoop(LoopPeelDirection Direction,
-                                       MachineBasicBlock *Loop,
-                                       MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo *TII);
+/// The trip count of Loop is not updated. If \p MDTU is not null, it is
+/// updated for the CFG changes.
+LLVM_ABI MachineBasicBlock *
+PeelSingleBlockLoop(LoopPeelDirection Direction, MachineBasicBlock *Loop,
+                    MachineRegisterInfo &MRI, const TargetInstrInfo *TII,
+                    MachineDomTreeUpdater *MDTU = nullptr);
 
 } // namespace llvm
 

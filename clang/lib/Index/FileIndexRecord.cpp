@@ -7,10 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "FileIndexRecord.h"
-#include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Path.h"
 
 using namespace clang;
@@ -46,7 +44,7 @@ void FileIndexRecord::addMacroOccurence(SymbolRoleSet Roles, unsigned Offset,
 
 void FileIndexRecord::removeHeaderGuardMacros() {
   llvm::erase_if(Decls, [](const DeclOccurrence &D) {
-    if (const auto *MI = D.DeclOrMacro.dyn_cast<const MacroInfo *>())
+    if (const auto *MI = dyn_cast<const MacroInfo *>(D.DeclOrMacro))
       return MI->isUsedForHeaderGuard();
     return false;
   });

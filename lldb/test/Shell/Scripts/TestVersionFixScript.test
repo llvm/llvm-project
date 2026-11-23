@@ -1,0 +1,11 @@
+# Create a temp dir for output and run the version fix script on the truncated version of lldb-defines.h in the inputs dir.
+RUN: mkdir -p %t/Outputs
+RUN: %python %p/../../../scripts/version-header-fix.py --input_path %p/Inputs/lldb-defines.h --output_path %t/Outputs/lldb-defines.h --major 21 --minor 0 --patch 12
+
+# Check the output
+RUN: cat %t/Outputs/lldb-defines.h | FileCheck %s
+
+# The LLDB version defines must be uncommented and filled in with the values passed into the script.
+CHECK: {{^}}#define LLDB_VERSION 21
+CHECK: {{^}}#define LLDB_REVISION 12
+CHECK: {{^}}#define LLDB_VERSION_STRING "21.0.12"

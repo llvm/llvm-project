@@ -38,7 +38,7 @@ def parse_linespec(linespec, frame, result):
             )
 
     if not matched:
-        mo = re.match("^\+([0-9]+)$", linespec)
+        mo = re.match(r"^\+([0-9]+)$", linespec)
         if mo is not None:
             matched = True
             # print "Matched +<count>"
@@ -54,7 +54,7 @@ def parse_linespec(linespec, frame, result):
             )
 
     if not matched:
-        mo = re.match("^\-([0-9]+)$", linespec)
+        mo = re.match(r"^\-([0-9]+)$", linespec)
         if mo is not None:
             matched = True
             # print "Matched -<count>"
@@ -79,7 +79,7 @@ def parse_linespec(linespec, frame, result):
             breakpoint = target.BreakpointCreateByLocation(file_name, line_number)
 
     if not matched:
-        mo = re.match("\*((0x)?([0-9a-f]+))$", linespec)
+        mo = re.match(r"\*((0x)?([0-9a-f]+))$", linespec)
         if mo is not None:
             matched = True
             # print "Matched <address-expression>"
@@ -124,7 +124,7 @@ Command Options Usage:
 <location-id> serves to disambiguate when multiple locations could be meant."""
 
 
-def jump(debugger, command, result, internal_dict):
+def jump(debugger, command, exe_ctx, result, internal_dict):
     if command == "":
         result.AppendMessage(usage_string())
 
@@ -134,22 +134,20 @@ def jump(debugger, command, result, internal_dict):
         result.AppendMessage("Invalid debugger!")
         return
 
-    target = debugger.GetSelectedTarget()
+    target = exe_ctx.target
     if not target.IsValid():
         result.AppendMessage("jump requires a valid target.")
         return
 
-    process = target.GetProcess()
-    if not process.IsValid():
+    if not exe_ctx.process.IsValid():
         result.AppendMessage("jump requires a valid process.")
         return
 
-    thread = process.GetSelectedThread()
-    if not thread.IsValid():
+    if not exe_ctx.thread.IsValid():
         result.AppendMessage("jump requires a valid thread.")
         return
 
-    frame = thread.GetSelectedFrame()
+    frame = exe_ctx.frame
     if not frame.IsValid():
         result.AppendMessage("jump requires a valid frame.")
         return

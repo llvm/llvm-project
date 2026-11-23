@@ -15,7 +15,7 @@ int rdar93730392(void) {
   int extra = (2 + foo_rdar9373039 ("Clang") + ((4 - ((unsigned int) (2 + foo_rdar9373039 ("Clang")) % 4)) % 4)) + (2 + foo_rdar9373039 ("1.0") + ((4 - ((unsigned int) (2 + foo_rdar9373039 ("1.0")) % 4)) % 4)); // expected-warning {{never read}}
 
   for (int i = 0 ; i < size_rdar9373039 ; ++i)
-    j += x; // expected-warning {{garbage}}
+    j += x; // expected-warning {{uninitialized}}
 
   return j;
 }
@@ -156,7 +156,7 @@ int rdar_12075238_(unsigned long count) {
 // Test that we handle an uninitialized value within a logical expression.
 void PR14635(int *p) {
   int a = 0, b;
-  *p = a || b; // expected-warning {{Assigned value is garbage or undefined}}
+  *p = a || b; // expected-warning {{Assigned value is uninitialized}}
 }
 
 // Test handling floating point values with unary '!'.

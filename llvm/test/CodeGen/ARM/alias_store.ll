@@ -13,4 +13,4 @@ entry:
 ; CHECK: ldr r{{.*}}, [[L:.*]]
 ; CHECK: [[L]]:
 ; CHECK-NEXT: .long XA
-; CHECK: .set XA, X+1
+; CHECK: XA = X+1

@@ -14,5 +14,5 @@
 
 pch_int x = 0;
 
-// CHECK-ERROR: AST file '{{.*}}' was compiled with module cache path '{{.*}}', but the path is currently '{{.*}}'
-// CHECK-SUCCESS-NOT: AST file '{{.*}}' was compiled with module cache path '{{.*}}', but the path is currently '{{.*}}'
+// CHECK-ERROR: precompiled file '{{.*}}' was compiled with module cache path '{{.*}}', but the path is currently '{{.*}}'
+// CHECK-SUCCESS-NOT: precompiled file '{{.*}}' was compiled with module cache path '{{.*}}', but the path is currently '{{.*}}'

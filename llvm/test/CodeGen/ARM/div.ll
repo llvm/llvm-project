@@ -145,3 +145,57 @@ define i64 @f8(i64 %a) {
   %tmp1 = udiv i64 %a, 3
   ret i64 %tmp1
 }
+
+define i8 @sdiv_i8(i8 %a, i8 %b) {
+entry:
+; CHECK-LABEL: sdiv_i8
+; CHECK-SWDIV: __divsi3
+
+; CHECK-THUMB: .thumb_func
+; CHECK-HWDIV: sdiv
+
+; CHECK-EABI: __aeabi_idiv
+        %tmp1 = sdiv i8 %a, %b         ; <i8> [#uses=1]
+        ret i8 %tmp1
+}
+
+
+define i16 @sdiv_i16(i16 %a, i16 %b) {
+entry:
+; CHECK-LABEL: sdiv_i16
+; CHECK-SWDIV: __divsi3
+
+; CHECK-THUMB: .thumb_func
+; CHECK-HWDIV: sdiv
+
+; CHECK-EABI: __aeabi_idiv
+        %tmp1 = sdiv i16 %a, %b         ; <i16> [#uses=1]
+        ret i16 %tmp1
+}
+
+define i8 @udiv_i8(i8 %a, i8 %b) {
+entry:
+; CHECK-LABEL: udiv_i8
+; CHECK-SWDIV: __udivsi3
+
+; CHECK-THUMB: .thumb_func
+; CHECK-HWDIV: udiv
+
+; CHECK-EABI: __aeabi_uidiv
+        %tmp1 = udiv i8 %a, %b         ; <i8> [#uses=1]
+        ret i8 %tmp1
+}
+
+
+define i16 @udiv_i16(i16 %a, i16 %b) {
+entry:
+; CHECK-LABEL: udiv_i16
+; CHECK-SWDIV: __udivsi3
+
+; CHECK-THUMB: .thumb_func
+; CHECK-HWDIV: udiv
+
+; CHECK-EABI: __aeabi_uidiv
+        %tmp1 = udiv i16 %a, %b         ; <i16> [#uses=1]
+        ret i16 %tmp1
+}

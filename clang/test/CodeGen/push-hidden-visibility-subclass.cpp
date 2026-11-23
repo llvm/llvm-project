@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple x86_64-linux-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-unknown -emit-llvm %s -o - | FileCheck %s %}
 
 #pragma GCC visibility push(hidden)
 
@@ -17,4 +18,4 @@ void test() {
   Child x;
 }
 
-// CHECK: @_ZTV5Child = external hidden unnamed_addr constant
+// CHECK: @_ZTV5Child = external hidden constant

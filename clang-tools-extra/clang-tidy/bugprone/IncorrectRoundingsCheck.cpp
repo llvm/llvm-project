@@ -1,4 +1,4 @@
-//===--- IncorrectRoundingsCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,11 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncorrectRoundingsCheck.h"
-#include "clang/AST/DeclBase.h"
-#include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
@@ -29,10 +26,10 @@ AST_MATCHER(FloatingLiteral, floatHalf) {
 
 void IncorrectRoundingsCheck::registerMatchers(MatchFinder *MatchFinder) {
   // Match a floating literal with value 0.5.
-  auto FloatHalf = floatLiteral(floatHalf());
+  const auto FloatHalf = floatLiteral(floatHalf());
 
   // Match a floating point expression.
-  auto FloatType = expr(hasType(realFloatingPointType()));
+  const auto FloatType = expr(hasType(realFloatingPointType()));
 
   // Find expressions of cast to int of the sum of a floating point expression
   // and 0.5.

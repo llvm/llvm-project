@@ -14,10 +14,14 @@
 #define MLIR_DIALECT_GPU_IR_COMPILATIONINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "llvm/IR/Module.h"
 
 namespace llvm {
 class IRBuilderBase;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 }
 
 namespace mlir {
@@ -79,6 +83,12 @@ public:
   std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
   tokenizeCmdOptions() const;
 
+  /// Returns a tokenization of the substr of the command line options that
+  /// starts with `startsWith` and ends with end of the command line options and
+  /// consumes it.
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeAndRemoveSuffixCmdOptions(llvm::StringRef startsWith);
+
   /// Returns the compilation target.
   CompilationTarget getCompilationTarget() const;
 
@@ -105,8 +115,22 @@ public:
   /// for example PTX assembly.
   function_ref<void(StringRef)> getISACallback() const;
 
+  /// Returns the LLVM library options for the LLVMContext and TargetMachine
+  /// that serialization creates, or nullptr for their defaults.
+  const llvm::cl::LibraryOptionsContext *getLibraryOptions() const {
+    return libraryOptions;
+  }
+  /// Sets the LLVM library options. They must outlive the serialization.
+  void setLibraryOptions(const llvm::cl::LibraryOptionsContext *options) {
+    libraryOptions = options;
+  }
+
   /// Returns the default compilation target: `CompilationTarget::Fatbin`.
   static CompilationTarget getDefaultCompilationTarget();
+
+  /// Returns a tokenization of the command line options.
+  static std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+  tokenizeCmdOptions(const std::string &cmdOptions);
 
 protected:
   /// Derived classes must use this constructor to initialize `typeID` to the
@@ -157,9 +181,29 @@ protected:
   /// for example PTX assembly.
   function_ref<void(StringRef)> isaCallback;
 
+  const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr;
+
 private:
   TypeID typeID;
 };
+
+/// This class represents a serialized object (GPU binary) with metadata (e.g.
+/// timings, logs, ...).
+class SerializedObject {
+public:
+  SerializedObject(::mlir::SmallVector<char, 0> object,
+                   DictionaryAttr metadata = {})
+      : object(std::move(object)), metadata(metadata) {}
+
+  const SmallVector<char, 0> &getObject() const { return object; }
+
+  DictionaryAttr getMetadata() const { return metadata; }
+
+private:
+  SmallVector<char, 0> object;
+  DictionaryAttr metadata;
+};
+
 } // namespace gpu
 } // namespace mlir
 

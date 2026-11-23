@@ -30,4 +30,3 @@ void not_array_type() {
   // expected-error-re@*:* {{static assertion failed {{.*}}default_accessor: template argument may not be an array type}}
   [[maybe_unused]] std::default_accessor<int[5]> acc;
 }
-

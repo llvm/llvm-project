@@ -223,6 +223,7 @@ bb12:
 ; CHECK-X32:	jmpq	*%rax
 
 ; CHECK:	.p2align 2
+; CHECK-NEXT:	.type	.LJTI7_0,@object
 ; CHECK-NEXT:	.LJTI7_0:
 ; CHECK-I686:	.long	 .LBB7_2@GOTOFF
 ; CHECK-I686:	.long	 .LBB7_8@GOTOFF

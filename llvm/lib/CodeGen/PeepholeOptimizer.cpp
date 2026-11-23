@@ -66,6 +66,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PeepholeOptimizer.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -94,7 +95,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstdint>
-#include <memory>
 #include <utility>
 
 using namespace llvm;
@@ -106,34 +106,6 @@ using RegSubRegPairAndIdx = TargetInstrInfo::RegSubRegPairAndIdx;
 // Optimize Extensions
 static cl::opt<bool> Aggressive("aggressive-ext-opt", cl::Hidden,
                                 cl::desc("Aggressive extension optimization"));
-
-static cl::opt<bool>
-    DisablePeephole("disable-peephole", cl::Hidden, cl::init(false),
-                    cl::desc("Disable the peephole optimizer"));
-
-/// Specifiy whether or not the value tracking looks through
-/// complex instructions. When this is true, the value tracker
-/// bails on everything that is not a copy or a bitcast.
-static cl::opt<bool>
-    DisableAdvCopyOpt("disable-adv-copy-opt", cl::Hidden, cl::init(false),
-                      cl::desc("Disable advanced copy optimization"));
-
-static cl::opt<bool> DisableNAPhysCopyOpt(
-    "disable-non-allocatable-phys-copy-opt", cl::Hidden, cl::init(false),
-    cl::desc("Disable non-allocatable physical register copy optimization"));
-
-// Limit the number of PHI instructions to process
-// in PeepholeOptimizer::getNextSource.
-static cl::opt<unsigned>
-    RewritePHILimit("rewrite-phi-limit", cl::Hidden, cl::init(10),
-                    cl::desc("Limit the length of PHI chains to lookup"));
-
-// Limit the length of recurrence chain when evaluating the benefit of
-// commuting operands.
-static cl::opt<unsigned> MaxRecurrenceChain(
-    "recurrence-chain-limit", cl::Hidden, cl::init(3),
-    cl::desc("Maximum length of recurrence chain when evaluating the benefit "
-             "of commuting operands"));
 
 STATISTIC(NumReuse, "Number of extension results reused");
 STATISTIC(NumCmps, "Number of compares eliminated");
@@ -153,7 +125,7 @@ class RecurrenceInstr;
 class Rewriter {
 protected:
   MachineInstr &CopyLike;
-  unsigned CurrentSrcIdx = 0; ///< The index of the source being rewritten.
+  int CurrentSrcIdx = 0; ///< The index of the source being rewritten.
 public:
   Rewriter(MachineInstr &CopyLike) : CopyLike(CopyLike) {}
   virtual ~Rewriter() = default;
@@ -197,18 +169,15 @@ public:
   CopyRewriter(MachineInstr &MI) : Rewriter(MI) {
     assert(MI.isCopy() && "Expected copy instruction");
   }
-  virtual ~CopyRewriter() = default;
+  ~CopyRewriter() override = default;
 
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
-    // CurrentSrcIdx > 0 means this function has already been called.
-    if (CurrentSrcIdx > 0)
+    if (++CurrentSrcIdx > 1)
       return false;
-    // This is the first call to getNextRewritableSource.
-    // Move the CurrentSrcIdx to remember that we made that call.
-    CurrentSrcIdx = 1;
+
     // The rewritable source is the argument.
-    const MachineOperand &MOSrc = CopyLike.getOperand(1);
+    const MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
     Src = RegSubRegPair(MOSrc.getReg(), MOSrc.getSubReg());
     // What we track are the alternative sources of the definition.
     const MachineOperand &MODef = CopyLike.getOperand(0);
@@ -217,8 +186,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    if (CurrentSrcIdx != 1)
-      return false;
     MachineOperand &MOSrc = CopyLike.getOperand(CurrentSrcIdx);
     MOSrc.setReg(NewReg);
     MOSrc.setSubReg(NewSubReg);
@@ -229,7 +196,7 @@ public:
 /// Helper class to rewrite uncoalescable copy like instructions
 /// into new COPY (coalescable friendly) instructions.
 class UncoalescableRewriter : public Rewriter {
-  unsigned NumDefs; ///< Number of defs in the bitcast.
+  int NumDefs; ///< Number of defs in the bitcast.
 
 public:
   UncoalescableRewriter(MachineInstr &MI) : Rewriter(MI) {
@@ -383,6 +350,7 @@ class RegSequenceRewriter : public Rewriter {
 public:
   RegSequenceRewriter(MachineInstr &MI) : Rewriter(MI) {
     assert(MI.isRegSequence() && "Invalid instruction");
+    CurrentSrcIdx = -1;
   }
 
   /// \see Rewriter::getNextRewritableSource()
@@ -404,21 +372,13 @@ public:
   bool getNextRewritableSource(RegSubRegPair &Src,
                                RegSubRegPair &Dst) override {
     // We are looking at v0 = REG_SEQUENCE v1, sub1, v2, sub2, etc.
+    CurrentSrcIdx += 2;
+    if (static_cast<unsigned>(CurrentSrcIdx) >= CopyLike.getNumOperands())
+      return false;
 
-    // If this is the first call, move to the first argument.
-    if (CurrentSrcIdx == 0) {
-      CurrentSrcIdx = 1;
-    } else {
-      // Otherwise, move to the next argument and check that it is valid.
-      CurrentSrcIdx += 2;
-      if (CurrentSrcIdx >= CopyLike.getNumOperands())
-        return false;
-    }
     const MachineOperand &MOInsertedReg = CopyLike.getOperand(CurrentSrcIdx);
     Src.Reg = MOInsertedReg.getReg();
-    // If we have to compose sub-register indices, bail out.
-    if ((Src.SubReg = MOInsertedReg.getSubReg()))
-      return false;
+    Src.SubReg = MOInsertedReg.getSubReg();
 
     // We want to track something that is compatible with the related
     // partial definition.
@@ -431,11 +391,6 @@ public:
   }
 
   bool RewriteCurrentSource(Register NewReg, unsigned NewSubReg) override {
-    // We cannot rewrite out of bound operands.
-    // Moreover, rewritable sources are at odd positions.
-    if ((CurrentSrcIdx & 1) != 1 || CurrentSrcIdx > CopyLike.getNumOperands())
-      return false;
-
     MachineOperand &MO = CopyLike.getOperand(CurrentSrcIdx);
     MO.setReg(NewReg);
     MO.setSubReg(NewSubReg);
@@ -444,6 +399,7 @@ public:
 };
 
 class PeepholeOptimizer : private MachineFunction::Delegate {
+  const CodeGenOptions &Opts;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
   MachineRegisterInfo *MRI = nullptr;
@@ -451,8 +407,9 @@ class PeepholeOptimizer : private MachineFunction::Delegate {
   MachineLoopInfo *MLI = nullptr;
 
 public:
-  PeepholeOptimizer(MachineDominatorTree *DT, MachineLoopInfo *MLI)
-      : DT(DT), MLI(MLI) {}
+  PeepholeOptimizer(const CodeGenOptions &Opts, MachineDominatorTree *DT,
+                    MachineLoopInfo *MLI)
+      : Opts(Opts), DT(DT), MLI(MLI) {}
 
   bool run(MachineFunction &MF);
   /// Track Def -> Use info used for rewriting copies.
@@ -462,7 +419,8 @@ public:
   using RecurrenceCycle = SmallVector<RecurrenceInstr, 4>;
 
 private:
-  bool optimizeCmpInstr(MachineInstr &MI);
+  bool optimizeCmpInstr(MachineInstr &MI, MachineFunction &MF,
+                        SmallPtrSet<MachineInstr *, 16> &LocalMIs);
   bool optimizeExtInstr(MachineInstr &MI, MachineBasicBlock &MBB,
                         SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeSelect(MachineInstr &MI,
@@ -474,7 +432,8 @@ private:
   bool optimizeUncoalescableCopy(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &LocalMIs);
   bool optimizeRecurrence(MachineInstr &PHI);
-  bool findNextSource(RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
+  bool findNextSource(const TargetRegisterClass *DefRC, unsigned DefSubReg,
+                      RegSubRegPair RegSubReg, RewriteMapTy &RewriteMap);
   bool isMoveImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
                        DenseMap<Register, MachineInstr *> &ImmDefMIs);
   bool foldImmediate(MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
@@ -511,22 +470,29 @@ private:
   bool isLoadFoldable(MachineInstr &MI,
                       SmallSet<Register, 16> &FoldAsLoadDefCandidates);
 
+  /// Try to fold the load defined by \p FoldReg into \p MI using
+  /// TII->optimizeLoadInstr. On success, updates \p LocalMIs, erases the old
+  /// instructions, and returns the replacement; returns nullptr otherwise.
+  MachineInstr *foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                             Register FoldReg,
+                             SmallPtrSet<MachineInstr *, 16> &LocalMIs);
+
   /// Check whether \p MI is understood by the register coalescer
   /// but may require some rewriting.
-  bool isCoalescableCopy(const MachineInstr &MI) {
+  bool isCoalescableCopy(const MachineInstr &MI) const {
     // SubregToRegs are not interesting, because they are already register
     // coalescer friendly.
     return MI.isCopy() ||
-           (!DisableAdvCopyOpt && (MI.isRegSequence() || MI.isInsertSubreg() ||
-                                   MI.isExtractSubreg()));
+           (Opts.adv_copy_opt && (MI.isRegSequence() || MI.isInsertSubreg() ||
+                                  MI.isExtractSubreg()));
   }
 
   /// Check whether \p MI is a copy like instruction that is
   /// not recognized by the register coalescer.
-  bool isUncoalescableCopy(const MachineInstr &MI) {
-    return MI.isBitcast() || (!DisableAdvCopyOpt && (MI.isRegSequenceLike() ||
-                                                     MI.isInsertSubregLike() ||
-                                                     MI.isExtractSubregLike()));
+  bool isUncoalescableCopy(const MachineInstr &MI) const {
+    return MI.isBitcast() || (Opts.adv_copy_opt && (MI.isRegSequenceLike() ||
+                                                    MI.isInsertSubregLike() ||
+                                                    MI.isExtractSubregLike()));
   }
 
   MachineInstr &rewriteSource(MachineInstr &CopyLike, RegSubRegPair Def,
@@ -537,7 +503,7 @@ private:
   DenseMap<RegSubRegPair, MachineInstr *> CopySrcMIs;
 
   // MachineFunction::Delegate implementation. Used to maintain CopySrcMIs.
-  void MF_HandleInsertion(MachineInstr &MI) override { return; }
+  void MF_HandleInsertion(MachineInstr &MI) override {}
 
   bool getCopySrc(MachineInstr &MI, RegSubRegPair &SrcPair) {
     if (!MI.isCopy())
@@ -575,9 +541,7 @@ class PeepholeOptimizerLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {
-    initializePeepholeOptimizerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -585,16 +549,13 @@ public:
     AU.setPreservesCFG();
     MachineFunctionPass::getAnalysisUsage(AU);
     AU.addRequired<MachineLoopInfoWrapperPass>();
-    AU.addPreserved<MachineLoopInfoWrapperPass>();
     if (Aggressive) {
       AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
     }
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::IsSSA);
+    return MachineFunctionProperties().setIsSSA();
   }
 };
 
@@ -702,6 +663,8 @@ public:
 /// Then, def can be rewritten into def = COPY v0.
 class ValueTracker {
 private:
+  const CodeGenOptions &Opts;
+
   /// The current point into the use-def chain.
   const MachineInstr *Def = nullptr;
 
@@ -754,12 +717,16 @@ public:
   /// Indeed, when \p Reg is a physical register that constructor does not
   /// know which definition of \p Reg it should track.
   /// Use the next constructor to track a physical register.
-  ValueTracker(Register Reg, unsigned DefSubReg, const MachineRegisterInfo &MRI,
+  ValueTracker(const CodeGenOptions &Opts, Register Reg, unsigned DefSubReg,
+               const MachineRegisterInfo &MRI,
                const TargetInstrInfo *TII = nullptr)
-      : DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
+      : Opts(Opts), DefSubReg(DefSubReg), Reg(Reg), MRI(MRI), TII(TII) {
     if (!Reg.isPhysical()) {
-      Def = MRI.getVRegDef(Reg);
-      DefIdx = MRI.def_begin(Reg).getOperandNo();
+      MachineRegisterInfo::def_iterator DI = MRI.def_begin(Reg);
+      if (DI != MRI.def_end()) {
+        Def = DI->getParent();
+        DefIdx = DI.getOperandNo();
+      }
     }
   }
 
@@ -853,14 +820,14 @@ bool PeepholeOptimizer::optimizeExtInstr(
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1024, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1024, 4
     //
     // into this:
     //
     //    %reg1025 = <sext> %reg1024
     //     ...
     //    %reg1027 = COPY %reg1025:4
-    //    %reg1026 = SUBREG_TO_REG 0, %reg1027, 4
+    //    %reg1026 = SUBREG_TO_REG %reg1027, 4
     //
     // The problem here is that SUBREG_TO_REG is there to assert that an
     // implicit zext occurs. It doesn't insert a zext instruction. If we allow
@@ -913,11 +880,8 @@ bool PeepholeOptimizer::optimizeExtInstr(
       if (PHIBBs.count(UseMBB))
         continue;
 
-      // About to add uses of DstReg, clear DstReg's kill flags.
-      if (!Changed) {
-        MRI->clearKillFlags(DstReg);
+      if (!Changed)
         MRI->constrainRegClass(DstReg, DstRC);
-      }
 
       // SubReg defs are illegal in machine SSA phase,
       // we should not generate SubReg defs.
@@ -933,17 +897,23 @@ bool PeepholeOptimizer::optimizeExtInstr(
       // %6:gprc_and_gprc_nor0 = COPY %1.sub_32:g8rc_and_g8rc_nox0
       // %3:gprc_and_gprc_nor0 = COPY %6:gprc_and_gprc_nor0
       //
-      if (UseSrcSubIdx)
-        RC = MRI->getRegClass(UseMI->getOperand(0).getReg());
+      if (UseSrcSubIdx) {
+        RC = MRI->getRegClass(UseMO->getReg());
+        if (UseMO->getSubReg())
+          RC = TRI->getSubRegisterClass(RC, UseMO->getSubReg());
+      }
 
       Register NewVR = MRI->createVirtualRegister(RC);
-      BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
-              TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, 0, SubIdx);
+      [[maybe_unused]] auto Copy = BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
+                                           TII->get(TargetOpcode::COPY), NewVR)
+                                       .addReg(DstReg, {}, SubIdx);
+      LLVM_DEBUG(dbgs() << "  Build new copy: " << *Copy
+                        << "  Changing: " << *UseMI);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
       UseMO->setReg(NewVR);
+      LLVM_DEBUG(dbgs() << "        to: " << *UseMI);
       ++NumReuse;
       Changed = true;
     }
@@ -956,7 +926,9 @@ bool PeepholeOptimizer::optimizeExtInstr(
 /// against already sets (or could be modified to set) the same flag as the
 /// compare, then we can remove the comparison and use the flag from the
 /// previous instruction.
-bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
+bool PeepholeOptimizer::optimizeCmpInstr(
+    MachineInstr &MI, MachineFunction &MF,
+    SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
   // If this instruction is a comparison against zero and isn't comparing a
   // physical register, we can try to optimize it.
   Register SrcReg, SrcReg2;
@@ -967,26 +939,35 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr &MI) {
 
   // Attempt to optimize the comparison instruction.
   LLVM_DEBUG(dbgs() << "Attempting to optimize compare: " << MI);
-  if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
-    LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
-    ++NumCmps;
-    return true;
+  if (!TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "  -> Successfully optimized compare!\n");
+  LocalMIs.erase(&MI);
+  ++NumCmps;
+
+  // The eliminated compare may have been the extra use preventing a
+  // load from being folded into the flag-setting instruction.
+  if (MachineInstr *FlagProducer =
+          SrcReg.isVirtual() ? MRI->getOneNonDBGUser(SrcReg) : nullptr) {
+    MachineInstr *LoadMI = MRI->getVRegDef(SrcReg);
+    // No store between LoadMI and FlagProducer that could change the value.
+    if (LocalMIs.count(FlagProducer) && LoadMI && LoadMI->canFoldAsLoad() &&
+        LoadMI->mayLoad() && LocalMIs.count(LoadMI) &&
+        llvm::none_of(
+            make_range(std::next(LoadMI->getIterator()),
+                       FlagProducer->getIterator()),
+            [](const MachineInstr &I) { return I.isLoadFoldBarrier(); }))
+      foldLoadInto(MF, *FlagProducer, SrcReg, LocalMIs);
   }
 
-  return false;
+  return true;
 }
 
 /// Optimize a select instruction.
 bool PeepholeOptimizer::optimizeSelect(
     MachineInstr &MI, SmallPtrSetImpl<MachineInstr *> &LocalMIs) {
-  unsigned TrueOp = 0;
-  unsigned FalseOp = 0;
-  bool Optimizable = false;
-  SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
-    return false;
-  if (!Optimizable)
-    return false;
+  assert(MI.isSelect() && "Should only be called when MI->isSelect() is true");
   if (!TII->optimizeSelect(MI, LocalMIs))
     return false;
   LLVM_DEBUG(dbgs() << "Deleting select: " << MI);
@@ -1000,8 +981,10 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
   return TII->optimizeCondBranch(MI);
 }
 
-/// Try to find the next source that share the same register file
-/// for the value defined by \p Reg and \p SubReg.
+/// Try to find a better source value that shares the same register file to
+/// replace \p RegSubReg in an instruction like
+/// `DefRC.DefSubReg = COPY RegSubReg`
+///
 /// When true is returned, the \p RewriteMap can be used by the client to
 /// retrieve all Def -> Use along the way up to the next source. Any found
 /// Use that is not itself a key for another entry, is the next source to
@@ -1011,61 +994,71 @@ bool PeepholeOptimizer::optimizeCondBranch(MachineInstr &MI) {
 /// share the same register file as \p Reg and \p SubReg. The client should
 /// then be capable to rewrite all intermediate PHIs to get the next source.
 /// \return False if no alternative sources are available. True otherwise.
-bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
+bool PeepholeOptimizer::findNextSource(const TargetRegisterClass *DefRC,
+                                       unsigned DefSubReg,
+                                       RegSubRegPair RegSubReg,
                                        RewriteMapTy &RewriteMap) {
   // Do not try to find a new source for a physical register.
   // So far we do not have any motivating example for doing that.
   // Thus, instead of maintaining untested code, we will revisit that if
   // that changes at some point.
   Register Reg = RegSubReg.Reg;
-  if (Reg.isPhysical())
-    return false;
-  const TargetRegisterClass *DefRC = MRI->getRegClass(Reg);
-
-  SmallVector<RegSubRegPair, 4> SrcToLook;
   RegSubRegPair CurSrcPair = RegSubReg;
-  SrcToLook.push_back(CurSrcPair);
+  SmallVector<RegSubRegPair, 4> SrcToLook = {CurSrcPair};
 
   unsigned PHICount = 0;
+
+  // Remember the last suitable source in case the search meets an invalid
+  // source.
+  bool FoundSuitable = false;
+  RegSubRegPair SuitablePair = RegSubReg;
+  bool Aborted = false;
   do {
     CurSrcPair = SrcToLook.pop_back_val();
     // As explained above, do not handle physical registers
-    if (CurSrcPair.Reg.isPhysical())
-      return false;
+    if (CurSrcPair.Reg.isPhysical()) {
+      Aborted = true;
+      break;
+    }
 
-    ValueTracker ValTracker(CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
+    ValueTracker ValTracker(Opts, CurSrcPair.Reg, CurSrcPair.SubReg, *MRI, TII);
 
     // Follow the chain of copies until we find a more suitable source, a phi
     // or have to abort.
     while (true) {
       ValueTrackerResult Res = ValTracker.getNextSource();
       // Abort at the end of a chain (without finding a suitable source).
-      if (!Res.isValid())
-        return false;
+      if (!Res.isValid()) {
+        Aborted = true;
+        break;
+      }
 
       // Insert the Def -> Use entry for the recently found source.
-      ValueTrackerResult CurSrcRes = RewriteMap.lookup(CurSrcPair);
-      if (CurSrcRes.isValid()) {
+      auto [InsertPt, WasInserted] = RewriteMap.try_emplace(CurSrcPair, Res);
+
+      if (!WasInserted) {
+        const ValueTrackerResult &CurSrcRes = InsertPt->second;
+
         assert(CurSrcRes == Res && "ValueTrackerResult found must match");
         // An existent entry with multiple sources is a PHI cycle we must avoid.
         // Otherwise it's an entry with a valid next source we already found.
         if (CurSrcRes.getNumSources() > 1) {
           LLVM_DEBUG(dbgs()
                      << "findNextSource: found PHI cycle, aborting...\n");
-          return false;
+          Aborted = true;
         }
         break;
       }
-      RewriteMap.insert(std::make_pair(CurSrcPair, Res));
 
       // ValueTrackerResult usually have one source unless it's the result from
       // a PHI instruction. Add the found PHI edges to be looked up further.
       unsigned NumSrcs = Res.getNumSources();
       if (NumSrcs > 1) {
         PHICount++;
-        if (PHICount >= RewritePHILimit) {
+        if (PHICount >= Opts.rewrite_phi_limit) {
           LLVM_DEBUG(dbgs() << "findNextSource: PHI limit reached\n");
-          return false;
+          Aborted = true;
+          break;
         }
 
         for (unsigned i = 0; i < NumSrcs; ++i)
@@ -1078,12 +1071,14 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       // constraints to the register allocator. Moreover, if we want to extend
       // the live-range of a physical register, unlike SSA virtual register,
       // we will have to check that they aren't redefine before the related use.
-      if (CurSrcPair.Reg.isPhysical())
-        return false;
+      if (CurSrcPair.Reg.isPhysical()) {
+        Aborted = true;
+        break;
+      }
 
       // Keep following the chain if the value isn't any better yet.
       const TargetRegisterClass *SrcRC = MRI->getRegClass(CurSrcPair.Reg);
-      if (!TRI->shouldRewriteCopySrc(DefRC, RegSubReg.SubReg, SrcRC,
+      if (!TRI->shouldRewriteCopySrc(DefRC, DefSubReg, SrcRC,
                                      CurSrcPair.SubReg))
         continue;
 
@@ -1092,10 +1087,31 @@ bool PeepholeOptimizer::findNextSource(RegSubRegPair RegSubReg,
       if (PHICount > 0 && CurSrcPair.SubReg != 0)
         continue;
 
+      // Don't stop at the first suitable source if it is still a subregister;
+      // keep tracing to try to reach a deeper source. Remember it.
+      if (CurSrcPair.SubReg != 0) {
+        SuitablePair = CurSrcPair;
+        FoundSuitable = true;
+        continue;
+      }
+
       // We found a suitable source, and are done with this chain.
       break;
     }
+
+    // A dead-ended chain ends all exploration
+    if (Aborted)
+      break;
   } while (!SrcToLook.empty());
+
+  if (Aborted) {
+    // If aborted with an invalid source, restore the suitable so far, if any.
+    if (!FoundSuitable)
+      return false;
+
+    CurSrcPair = SuitablePair;
+    RewriteMap.erase(SuitablePair);
+  }
 
   // If we did not find a more suitable source, there is nothing to optimize.
   return CurSrcPair.Reg != Reg;
@@ -1123,12 +1139,8 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
 
   unsigned MBBOpIdx = 2;
   for (const RegSubRegPair &RegPair : SrcRegs) {
-    MIB.addReg(RegPair.Reg, 0, RegPair.SubReg);
+    MIB.addReg(RegPair.Reg, {}, RegPair.SubReg);
     MIB.addMBB(OrigPHI.getOperand(MBBOpIdx).getMBB());
-    // Since we're extended the lifetime of RegPair.Reg, clear the
-    // kill flags to account for that and make RegPair.Reg reaches
-    // the new PHI.
-    MRI.clearKillFlags(RegPair.Reg);
     MBBOpIdx += 2;
   }
 
@@ -1191,29 +1203,50 @@ bool PeepholeOptimizer::optimizeCoalescableCopyImpl(Rewriter &&CpyRewriter) {
   bool Changed = false;
   // Get the right rewriter for the current copy.
   // Rewrite each rewritable source.
-  RegSubRegPair Src;
+  RegSubRegPair Dst;
   RegSubRegPair TrackPair;
-  while (CpyRewriter.getNextRewritableSource(Src, TrackPair)) {
+  while (CpyRewriter.getNextRewritableSource(TrackPair, Dst)) {
+    if (Dst.Reg.isPhysical()) {
+      // Do not try to find a new source for a physical register.
+      // So far we do not have any motivating example for doing that.
+      // Thus, instead of maintaining untested code, we will revisit that if
+      // that changes at some point.
+      continue;
+    }
+
+    const TargetRegisterClass *DefRC = MRI->getRegClass(Dst.Reg);
+
     // Keep track of PHI nodes and its incoming edges when looking for sources.
     RewriteMapTy RewriteMap;
     // Try to find a more suitable source. If we failed to do so, or get the
     // actual source, move to the next source.
-    if (!findNextSource(TrackPair, RewriteMap))
+    if (!findNextSource(DefRC, Dst.SubReg, TrackPair, RewriteMap))
       continue;
 
     // Get the new source to rewrite. TODO: Only enable handling of multiple
     // sources (PHIs) once we have a motivating example and testcases for it.
     RegSubRegPair NewSrc = getNewSource(MRI, TII, TrackPair, RewriteMap,
                                         /*HandleMultipleSources=*/false);
-    if (Src.Reg == NewSrc.Reg || NewSrc.Reg == 0)
+    assert(TrackPair.Reg != NewSrc.Reg &&
+           "should not rewrite source to original value");
+    if (!NewSrc.Reg)
       continue;
 
-    // Rewrite source.
-    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg)) {
-      // We may have extended the live-range of NewSrc, account for that.
-      MRI->clearKillFlags(NewSrc.Reg);
+    if (NewSrc.SubReg) {
+      // Verify the register class supports the subregister index. ARM's
+      // copy-like queries return register:subreg pairs where the register's
+      // current class does not directly support the subregister index.
+      const TargetRegisterClass *RC = MRI->getRegClass(NewSrc.Reg);
+      const TargetRegisterClass *WithSubRC =
+          TRI->getSubClassWithSubReg(RC, NewSrc.SubReg);
+      if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+        continue;
       Changed = true;
     }
+
+    // Rewrite source.
+    if (CpyRewriter.RewriteCurrentSource(NewSrc.Reg, NewSrc.SubReg))
+      Changed = true;
   }
 
   // TODO: We could have a clean-up method to tidy the instruction.
@@ -1280,10 +1313,22 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
   Register NewVReg = MRI->createVirtualRegister(DefRC);
 
+  if (NewSrc.SubReg) {
+    const TargetRegisterClass *NewSrcRC = MRI->getRegClass(NewSrc.Reg);
+    const TargetRegisterClass *WithSubRC =
+        TRI->getSubClassWithSubReg(NewSrcRC, NewSrc.SubReg);
+
+    // The new source may not directly support the subregister, but we should be
+    // able to assume it is constrainable to support the subregister (otherwise
+    // ValueTracker was lying and reported a useless value).
+    if (!MRI->constrainRegClass(NewSrc.Reg, WithSubRC))
+      llvm_unreachable("replacement register cannot support subregister");
+  }
+
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVReg)
-          .addReg(NewSrc.Reg, 0, NewSrc.SubReg);
+          .addReg(NewSrc.Reg, {}, NewSrc.SubReg);
 
   if (Def.SubReg) {
     NewCopy->getOperand(0).setSubReg(Def.SubReg);
@@ -1294,11 +1339,6 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   LLVM_DEBUG(dbgs() << "   Replacing: " << CopyLike);
   LLVM_DEBUG(dbgs() << "        With: " << *NewCopy);
   MRI->replaceRegWith(Def.Reg, NewVReg);
-  MRI->clearKillFlags(NewVReg);
-
-  // We extended the lifetime of NewSrc.Reg, clear the kill flags to
-  // account for that.
-  MRI->clearKillFlags(NewSrc.Reg);
 
   return *NewCopy;
 }
@@ -1332,9 +1372,14 @@ bool PeepholeOptimizer::optimizeUncoalescableCopy(
     if (Def.Reg.isPhysical())
       return false;
 
+    // FIXME: Uncoalescable copies are treated differently by
+    // UncoalescableRewriter, and this probably should not share
+    // API. getNextRewritableSource really finds rewritable defs.
+    const TargetRegisterClass *DefRC = MRI->getRegClass(Def.Reg);
+
     // If we do not know how to rewrite this definition, there is no point
     // in trying to kill this instruction.
-    if (!findNextSource(Def, RewriteMap))
+    if (!findNextSource(DefRC, Def.SubReg, Def, RewriteMap))
       return false;
 
     RewritePairs.push_back(Def);
@@ -1377,6 +1422,31 @@ bool PeepholeOptimizer::isLoadFoldable(
   return false;
 }
 
+MachineInstr *
+PeepholeOptimizer::foldLoadInto(MachineFunction &MF, MachineInstr &MI,
+                                Register FoldReg,
+                                SmallPtrSet<MachineInstr *, 16> &LocalMIs) {
+  Register Reg = FoldReg;
+  MachineInstr *DefMI = nullptr;
+  MachineInstr *CopyMI = nullptr;
+  MachineInstr *FoldMI = TII->optimizeLoadInstr(MI, MRI, Reg, DefMI, CopyMI);
+  if (!FoldMI)
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "Replacing: " << MI << "     With: " << *FoldMI);
+  LocalMIs.erase(&MI);
+  LocalMIs.erase(DefMI);
+  LocalMIs.insert(FoldMI);
+  if (CopyMI)
+    LocalMIs.insert(CopyMI);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MF.moveAdditionalCallInfo(&MI, FoldMI);
+  MI.eraseFromParent();
+  DefMI->eraseFromParent();
+  MRI->markUsesInDebugValueAsUndef(FoldReg);
+  ++NumLoadFold;
+  return FoldMI;
+}
+
 bool PeepholeOptimizer::isMoveImmediate(
     MachineInstr &MI, SmallSet<Register, 4> &ImmDefRegs,
     DenseMap<Register, MachineInstr *> &ImmDefMIs) {
@@ -1412,7 +1482,7 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     if (ImmDefRegs.count(Reg) == 0)
       continue;
-    DenseMap<Register, MachineInstr *>::iterator II = ImmDefMIs.find(Reg);
+    auto II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
     if (TII->foldImmediate(MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
@@ -1480,9 +1550,6 @@ bool PeepholeOptimizer::foldRedundantCopy(MachineInstr &MI) {
     return false;
 
   MRI->replaceRegWith(DstReg, PrevDstReg);
-
-  // Lifetime of the previous copy has been extended.
-  MRI->clearKillFlags(PrevDstReg);
   return true;
 }
 
@@ -1494,7 +1561,7 @@ bool PeepholeOptimizer::foldRedundantNAPhysCopy(
     MachineInstr &MI, DenseMap<Register, MachineInstr *> &NAPhysToVirtMIs) {
   assert(MI.isCopy() && "expected a COPY machine instruction");
 
-  if (DisableNAPhysCopyOpt)
+  if (!Opts.non_allocatable_phys_copy_opt)
     return false;
 
   Register DstReg = MI.getOperand(0).getReg();
@@ -1559,7 +1626,7 @@ bool PeepholeOptimizer::findTargetRecurrence(
     return false;
 
   // Give up if the reccurrence chain length is longer than the limit.
-  if (RC.size() >= MaxRecurrenceChain)
+  if (RC.size() >= Opts.recurrence_chain_limit)
     return false;
 
   MachineInstr &MI = *(MRI->use_instr_nodbg_begin(Reg));
@@ -1650,14 +1717,12 @@ PeepholeOptimizerPass::run(MachineFunction &MF,
   auto *DT =
       Aggressive ? &MFAM.getResult<MachineDominatorTreeAnalysis>(MF) : nullptr;
   auto *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  PeepholeOptimizer Impl(DT, MLI);
+  PeepholeOptimizer Impl(getCodeGenOptions(MF), DT, MLI);
   bool Changed = Impl.run(MF);
   if (!Changed)
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
-  PA.preserve<MachineDominatorTreeAnalysis>();
-  PA.preserve<MachineLoopAnalysis>();
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
@@ -1669,7 +1734,7 @@ bool PeepholeOptimizerLegacy::runOnMachineFunction(MachineFunction &MF) {
                  ? &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree()
                  : nullptr;
   auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  PeepholeOptimizer Impl(DT, MLI);
+  PeepholeOptimizer Impl(getCodeGenOptions(MF), DT, MLI);
   return Impl.run(MF);
 }
 
@@ -1678,7 +1743,7 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "********** PEEPHOLE OPTIMIZER **********\n");
   LLVM_DEBUG(dbgs() << "********** Function: " << MF.getName() << '\n');
 
-  if (DisablePeephole)
+  if (!Opts.peephole)
     return false;
 
   TII = MF.getSubtarget().getInstrInfo();
@@ -1752,14 +1817,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
             }
           } else if (MO.isRegMask()) {
             const uint32_t *RegMask = MO.getRegMask();
-            for (auto &RegMI : NAPhysToVirtMIs) {
-              Register Def = RegMI.first;
-              if (MachineOperand::clobbersPhysReg(RegMask, Def)) {
-                LLVM_DEBUG(dbgs()
-                           << "NAPhysCopy: invalidating because of " << *MI);
-                NAPhysToVirtMIs.erase(Def);
-              }
-            }
+            NAPhysToVirtMIs.remove_if([&](const auto &RegMI) {
+              if (!MachineOperand::clobbersPhysReg(RegMask, RegMI.first))
+                return false;
+              LLVM_DEBUG(dbgs()
+                         << "NAPhysCopy: invalidating because of " << *MI);
+              return true;
+            });
           }
         }
       }
@@ -1777,9 +1841,13 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
         NAPhysToVirtMIs.clear();
       }
 
+      if (MI->isCompare() && optimizeCmpInstr(*MI, MF, LocalMIs)) {
+        Changed = true;
+        continue;
+      }
+
       if ((isUncoalescableCopy(*MI) &&
            optimizeUncoalescableCopy(*MI, LocalMIs)) ||
-          (MI->isCompare() && optimizeCmpInstr(*MI)) ||
           (MI->isSelect() && optimizeSelect(*MI, LocalMIs))) {
         // MI is deleted.
         LocalMIs.erase(MI);
@@ -1846,28 +1914,10 @@ bool PeepholeOptimizer::run(MachineFunction &MF) {
           if (FoldAsLoadDefCandidates.count(FoldAsLoadDefReg)) {
             // We need to fold load after optimizeCmpInstr, since
             // optimizeCmpInstr can enable folding by converting SUB to CMP.
-            // Save FoldAsLoadDefReg because optimizeLoadInstr() resets it and
-            // we need it for markUsesInDebugValueAsUndef().
             Register FoldedReg = FoldAsLoadDefReg;
-            MachineInstr *DefMI = nullptr;
             if (MachineInstr *FoldMI =
-                    TII->optimizeLoadInstr(*MI, MRI, FoldAsLoadDefReg, DefMI)) {
-              // Update LocalMIs since we replaced MI with FoldMI and deleted
-              // DefMI.
-              LLVM_DEBUG(dbgs() << "Replacing: " << *MI);
-              LLVM_DEBUG(dbgs() << "     With: " << *FoldMI);
-              LocalMIs.erase(MI);
-              LocalMIs.erase(DefMI);
-              LocalMIs.insert(FoldMI);
-              // Update the call info.
-              if (MI->shouldUpdateAdditionalCallInfo())
-                MI->getMF()->moveAdditionalCallInfo(MI, FoldMI);
-              MI->eraseFromParent();
-              DefMI->eraseFromParent();
-              MRI->markUsesInDebugValueAsUndef(FoldedReg);
+                    foldLoadInto(MF, *MI, FoldAsLoadDefReg, LocalMIs)) {
               FoldAsLoadDefCandidates.erase(FoldedReg);
-              ++NumLoadFold;
-
               // MI is replaced with FoldMI so we can continue trying to fold
               Changed = true;
               MI = FoldMI;
@@ -1899,16 +1949,31 @@ ValueTrackerResult ValueTracker::getNextSourceFromCopy() {
   assert(Def->getNumOperands() - Def->getNumImplicitOperands() == 2 &&
          "Invalid number of operands");
   assert(!Def->hasImplicitDef() && "Only implicit uses are allowed");
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
-  if (Def->getOperand(DefIdx).getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
   // Otherwise, we want the whole source.
   const MachineOperand &Src = Def->getOperand(1);
   if (Src.isUndef())
     return ValueTrackerResult();
-  return ValueTrackerResult(Src.getReg(), Src.getSubReg());
+
+  Register SrcReg = Src.getReg();
+  unsigned SubReg = Src.getSubReg();
+  if (DefSubReg) {
+    const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+    SubReg = TRI->composeSubRegIndices(SubReg, DefSubReg);
+
+    if (SrcReg.isVirtual()) {
+      // TODO: Try constraining on rewrite if we can
+      const TargetRegisterClass *RegRC = MRI.getRegClass(SrcReg);
+      if (!TRI->isSubRegValidForRegClass(RegRC, SubReg))
+        return ValueTrackerResult();
+    } else {
+      if (!TRI->getSubReg(SrcReg, SubReg))
+        return ValueTrackerResult();
+    }
+  }
+
+  return ValueTrackerResult(SrcReg, SubReg);
 }
 
 ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
@@ -1921,11 +1986,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   // Bitcasts with more than one def are not supported.
   if (Def->getDesc().getNumDefs() != 1)
     return ValueTrackerResult();
-  const MachineOperand DefOp = Def->getOperand(DefIdx);
-  if (DefOp.getSubReg() != DefSubReg)
-    // If we look for a different subreg, it means we want a subreg of the src.
-    // Bails as we do not support composing subregs yet.
-    return ValueTrackerResult();
+
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subregister defs in SSA");
 
   unsigned SrcIdx = Def->getNumOperands();
   for (unsigned OpIdx = DefIdx + 1, EndOpIdx = SrcIdx; OpIdx != EndOpIdx;
@@ -1948,6 +2010,8 @@ ValueTrackerResult ValueTracker::getNextSourceFromBitcast() {
   if (SrcIdx >= Def->getNumOperands())
     return ValueTrackerResult();
 
+  const MachineOperand &DefOp = Def->getOperand(DefIdx);
+
   // Stop when any user of the bitcast is a SUBREG_TO_REG, replacing with a COPY
   // will break the assumed guarantees for the upper bits.
   for (const MachineInstr &UseMI : MRI.use_nodbg_instructions(DefOp.getReg())) {
@@ -1965,22 +2029,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
   assert((Def->isRegSequence() || Def->isRegSequenceLike()) &&
          "Invalid definition");
 
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subregs, bail out.
-    // The case we are checking is Def.<subreg> = REG_SEQUENCE.
-    // This should almost never happen as the SSA property is tracked at
-    // the register level (as opposed to the subreg level).
-    // I.e.,
-    // Def.sub0 =
-    // Def.sub1 =
-    // is a valid SSA representation for Def.sub0 and Def.sub1, but not for
-    // Def. Thus, it must not be generated.
-    // However, some code could theoretically generates a single
-    // Def.sub0 (i.e, not defining the other subregs) and we would
-    // have this case.
-    // If we can ascertain (or force) that this never happens, we could
-    // turn that into an assertion.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "illegal subregister def");
 
   SmallVector<RegSubRegPairAndIdx, 8> RegSeqInputRegs;
   if (!TII->getRegSequenceInputs(*Def, DefIdx, RegSeqInputRegs))
@@ -1988,10 +2037,46 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 
   // We are looking at:
   // Def = REG_SEQUENCE v0, sub0, v1, sub1, ...
-  // Check if one of the operand defines the subreg we are interested in.
+  //
+  // Check if one of the operands exactly defines the subreg we are interested
+  // in.
   for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
     if (RegSeqInput.SubIdx == DefSubReg)
       return ValueTrackerResult(RegSeqInput.Reg, RegSeqInput.SubReg);
+  }
+
+  const TargetRegisterInfo *TRI = MRI.getTargetRegisterInfo();
+
+  // If we did not find an exact match, see if we can do a composition to
+  // extract a sub-subregister.
+  for (const RegSubRegPairAndIdx &RegSeqInput : RegSeqInputRegs) {
+    LaneBitmask DefMask = TRI->getSubRegIndexLaneMask(DefSubReg);
+    LaneBitmask ThisOpRegMask = TRI->getSubRegIndexLaneMask(RegSeqInput.SubIdx);
+
+    // Check that this extract reads a subset of this single reg_sequence input.
+    //
+    // FIXME: We should be able to filter this in terms of the indexes directly
+    // without checking the lanemasks.
+    if ((DefMask & ThisOpRegMask) != DefMask)
+      continue;
+
+    unsigned ReverseDefCompose =
+        TRI->reverseComposeSubRegIndices(RegSeqInput.SubIdx, DefSubReg);
+    if (!ReverseDefCompose)
+      continue;
+
+    unsigned ComposedDefInSrcReg1 =
+        TRI->composeSubRegIndices(RegSeqInput.SubReg, ReverseDefCompose);
+
+    // TODO: We should be able to defer checking if the result register class
+    // supports the index to continue looking for a rewritable source.
+    //
+    // TODO: Should we modify the register class to support the index?
+    const TargetRegisterClass *SrcRC = MRI.getRegClass(RegSeqInput.Reg);
+    if (!TRI->isSubRegValidForRegClass(SrcRC, ComposedDefInSrcReg1))
+      return ValueTrackerResult();
+
+    return ValueTrackerResult(RegSeqInput.Reg, ComposedDefInSrcReg1);
   }
 
   // If the subreg we are tracking is super-defined by another subreg,
@@ -2003,12 +2088,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   assert((Def->isInsertSubreg() || Def->isInsertSubregLike()) &&
          "Invalid definition");
-
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subreg, bail out.
-    // Same remark as getNextSourceFromRegSequence.
-    // I.e., this may be turned into an assert.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subreg defs in SSA");
 
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;
@@ -2075,32 +2155,27 @@ ValueTrackerResult ValueTracker::getNextSourceFromExtractSubreg() {
 ValueTrackerResult ValueTracker::getNextSourceFromSubregToReg() {
   assert(Def->isSubregToReg() && "Invalid definition");
   // We are looking at:
-  // Def = SUBREG_TO_REG Imm, v0, sub0
+  // Def = SUBREG_TO_REG v0, sub0
 
   // Bail if we have to compose sub registers.
   // If DefSubReg != sub0, we would have to check that all the bits
   // we track are included in sub0 and if yes, we would have to
   // determine the right subreg in v0.
-  if (DefSubReg != Def->getOperand(3).getImm())
+  if (DefSubReg != Def->getOperand(2).getImm())
     return ValueTrackerResult();
   // Bail if we have to compose sub registers.
   // Likewise, if v0.subreg != 0, we would have to compose it with sub0.
-  if (Def->getOperand(2).getSubReg())
+  if (Def->getOperand(1).getSubReg())
     return ValueTrackerResult();
 
-  return ValueTrackerResult(Def->getOperand(2).getReg(),
-                            Def->getOperand(3).getImm());
+  return ValueTrackerResult(Def->getOperand(1).getReg(),
+                            Def->getOperand(2).getImm());
 }
 
 /// Explore each PHI incoming operand and return its sources.
 ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
   assert(Def->isPHI() && "Invalid definition");
   ValueTrackerResult Res;
-
-  // If we look for a different subreg, bail as we do not support composing
-  // subregs yet.
-  if (Def->getOperand(0).getSubReg() != DefSubReg)
-    return ValueTrackerResult();
 
   // Return all register sources for PHI instructions.
   for (unsigned i = 1, e = Def->getNumOperands(); i < e; i += 2) {
@@ -2130,7 +2205,7 @@ ValueTrackerResult ValueTracker::getNextSourceImpl() {
     return getNextSourceFromBitcast();
   // All the remaining cases involve "complex" instructions.
   // Bail if we did not ask for the advanced tracking.
-  if (DisableAdvCopyOpt)
+  if (!Opts.adv_copy_opt)
     return ValueTrackerResult();
   if (Def->isRegSequence() || Def->isRegSequenceLike())
     return getNextSourceFromRegSequence();

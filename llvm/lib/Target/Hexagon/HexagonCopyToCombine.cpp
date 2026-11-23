@@ -48,12 +48,6 @@ MaxNumOfInstsBetweenNewValueStoreAndTFR("max-num-inst-between-tfr-and-nv-store",
                    cl::desc("Maximum distance between a tfr feeding a store we "
                             "consider the store still to be newifiable"));
 
-namespace llvm {
-  FunctionPass *createHexagonCopyToCombine();
-  void initializeHexagonCopyToCombinePass(PassRegistry&);
-}
-
-
 namespace {
 
 class HexagonCopyToCombine : public MachineFunctionPass  {
@@ -81,8 +75,7 @@ public:
   bool runOnMachineFunction(MachineFunction &Fn) override;
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
 private:
@@ -158,6 +151,7 @@ static bool isCombinableInstType(MachineInstr &MI, const HexagonInstrInfo *TII,
   }
 
   case Hexagon::V6_vassign:
+  case Hexagon::LX_assign:
     return true;
 
   default:
@@ -189,6 +183,7 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
       case Hexagon::A2_tfr:
       case Hexagon::A2_tfrsi:
       case Hexagon::V6_vassign:
+      case Hexagon::LX_assign:
         break;
       default:
         llvm_unreachable("Unexpected opcode");
@@ -198,6 +193,9 @@ static bool areCombinableOperations(const TargetRegisterInfo *TRI,
   verifyOpc(LoOpc);
 
   if (HiOpc == Hexagon::V6_vassign || LoOpc == Hexagon::V6_vassign)
+    return HiOpc == LoOpc;
+
+  if (HiOpc == Hexagon::LX_assign || LoOpc == Hexagon::LX_assign)
     return HiOpc == LoOpc;
 
   if (!AllowC64) {
@@ -229,6 +227,8 @@ static bool isEvenReg(unsigned Reg) {
     return (Reg - Hexagon::R0) % 2 == 0;
   if (Hexagon::HvxVRRegClass.contains(Reg))
     return (Reg - Hexagon::V0) % 2 == 0;
+  if (Hexagon::HlxLRRegClass.contains(Reg))
+    return (Reg - Hexagon::L0) % 2 == 0;
   llvm_unreachable("Invalid register");
 }
 
@@ -385,7 +385,7 @@ bool HexagonCopyToCombine::isSafeToMoveTogether(MachineInstr &I1,
   return true;
 }
 
-/// findPotentialNewifiableTFRs - Finds tranfers that feed stores that could be
+/// findPotentialNewifiableTFRs - Finds transfers that feed stores that could be
 /// newified. (A use of a 64 bit register define can not be newified)
 void
 HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
@@ -464,7 +464,7 @@ bool HexagonCopyToCombine::runOnMachineFunction(MachineFunction &MF) {
   TII = ST->getInstrInfo();
 
   const Function &F = MF.getFunction();
-  bool OptForSize = F.hasFnAttribute(Attribute::OptimizeForSize);
+  bool OptForSize = F.hasOptSize();
 
   // Combine aggressively (for code size)
   ShouldCombineAggressively =
@@ -589,12 +589,16 @@ void HexagonCopyToCombine::combine(MachineInstr &I1, MachineInstr &I2,
     assert(ST->useHVXOps());
     SuperRC = &Hexagon::HvxWRRegClass;
     SubLo = Hexagon::vsub_lo;
+  } else if (Hexagon::HlxLRRegClass.contains(LoRegDef)) {
+    assert(ST->useHLXOps());
+    SuperRC = &Hexagon::HlxLLRRegClass;
+    SubLo = Hexagon::vsub_lo;
   } else
     llvm_unreachable("Unexpected register class");
 
   // Get the double word register.
-  unsigned DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
-  assert(DoubleRegDest != 0 && "Expect a valid register");
+  MCRegister DoubleRegDest = TRI->getMatchingSuperReg(LoRegDef, SubLo, SuperRC);
+  assert(DoubleRegDest.isValid() && "Expect a valid register");
 
   // Setup source operands.
   MachineOperand &LoOperand = IsI1Loreg ? I1.getOperand(1) : I2.getOperand(1);
@@ -755,7 +759,7 @@ void HexagonCopyToCombine::emitCombineIR(MachineBasicBlock::iterator &InsertPt,
                                          MachineOperand &HiOperand,
                                          MachineOperand &LoOperand) {
   Register LoReg = LoOperand.getReg();
-  unsigned LoRegKillFlag = getKillRegState(LoOperand.isKill());
+  RegState LoRegKillFlag = getKillRegState(LoOperand.isKill());
 
   DebugLoc DL = InsertPt->getDebugLoc();
   MachineBasicBlock *BB = InsertPt->getParent();
@@ -802,7 +806,7 @@ void HexagonCopyToCombine::emitCombineRI(MachineBasicBlock::iterator &InsertPt,
                                          unsigned DoubleDestReg,
                                          MachineOperand &HiOperand,
                                          MachineOperand &LoOperand) {
-  unsigned HiRegKillFlag = getKillRegState(HiOperand.isKill());
+  RegState HiRegKillFlag = getKillRegState(HiOperand.isKill());
   Register HiReg = HiOperand.getReg();
 
   DebugLoc DL = InsertPt->getDebugLoc();
@@ -851,8 +855,8 @@ void HexagonCopyToCombine::emitCombineRR(MachineBasicBlock::iterator &InsertPt,
                                          unsigned DoubleDestReg,
                                          MachineOperand &HiOperand,
                                          MachineOperand &LoOperand) {
-  unsigned LoRegKillFlag = getKillRegState(LoOperand.isKill());
-  unsigned HiRegKillFlag = getKillRegState(HiOperand.isKill());
+  RegState LoRegKillFlag = getKillRegState(LoOperand.isKill());
+  RegState HiRegKillFlag = getKillRegState(HiOperand.isKill());
   Register LoReg = LoOperand.getReg();
   Register HiReg = HiOperand.getReg();
 
@@ -867,6 +871,9 @@ void HexagonCopyToCombine::emitCombineRR(MachineBasicBlock::iterator &InsertPt,
   } else if (Hexagon::HvxWRRegClass.contains(DoubleDestReg)) {
     assert(ST->useHVXOps());
     NewOpc = Hexagon::V6_vcombine;
+  } else if (Hexagon::HlxLLRRegClass.contains(DoubleDestReg)) {
+    assert(ST->useHLXOps());
+    NewOpc = Hexagon::LX_combine_w;
   } else
     llvm_unreachable("Unexpected register");
 

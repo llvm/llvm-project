@@ -1,6 +1,7 @@
 #ifndef LLVM_DWP_DWPERROR_H
 #define LLVM_DWP_DWPERROR_H
 
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <string>
@@ -13,7 +14,7 @@ public:
   std::error_code convertToErrorCode() const override {
     llvm_unreachable("Not implemented");
   }
-  static char ID;
+  LLVM_ABI static char ID;
 
 private:
   std::string Info;

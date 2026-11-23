@@ -108,7 +108,7 @@ ForLoopAwaiterBadIncTransform bad_inc_transform() {
   Range<float> R;
   for co_await(auto i : R) {} // expected-warning {{'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated}}
   // expected-error@-1 {{overload resolution selected deleted operator 'co_await'}}
-  // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Range<float>'}}
+  // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Iter<float>'}}
 }
 
 template <class Dummy>
@@ -116,7 +116,7 @@ ForLoopAwaiterBadIncTransform bad_inc_transform_template(Dummy) {
   Range<Dummy> R;
   for co_await(auto i : R) {} // expected-warning {{'for co_await' belongs to CoroutineTS instead of C++20, which is deprecated}}
   // expected-error@-1 {{overload resolution selected deleted operator 'co_await'}}
-  // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Range<long>'}}
+  // expected-note@-2 {{in implicit call to 'operator++' for iterator of type 'Iter<long>'}}
 }
 template ForLoopAwaiterBadIncTransform bad_inc_transform_template(long); // expected-note {{requested here}}
 

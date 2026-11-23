@@ -65,6 +65,8 @@ COMMON_FLAG(
     bool, log_to_syslog, (bool)SANITIZER_ANDROID || (bool)SANITIZER_APPLE,
     "Write all sanitizer output to syslog in addition to other means of "
     "logging.")
+COMMON_FLAG(bool, log_fallback_to_stderr, false,
+            "When set, fallback to stderr if we are unable to open log path.")
 COMMON_FLAG(
     int, verbosity, 0,
     "Verbosity level (0 - silent, 1 - a bit of output, 2+ - more output).")
@@ -111,6 +113,11 @@ COMMON_FLAG(HandleSignalMode, handle_sigfpe, kHandleSignalYes,
 COMMON_FLAG(bool, allow_user_segv_handler, true,
             "Deprecated. True has no effect, use handle_sigbus=1. If false, "
             "handle_*=1 will be upgraded to handle_*=2.")
+COMMON_FLAG(bool, cloak_sanitizer_signal_handlers, false,
+            "If set, signal/sigaction will pretend that sanitizers did not "
+            "preinstall any signal handlers. If the user subsequently installs "
+            "a signal handler, this will disable cloaking for the respective "
+            "signal.")
 COMMON_FLAG(bool, use_sigaltstack, true,
             "If set, uses alternate stack for signal handling.")
 COMMON_FLAG(bool, detect_deadlocks, true,
@@ -163,6 +170,8 @@ COMMON_FLAG(
 COMMON_FLAG(const char *, coverage_dir, ".",
             "Target directory for coverage dumps. Defaults to the current "
             "directory.")
+COMMON_FLAG(bool, print_coverage_summary, true,
+            "Print the SanitizerCoverage dump summary.")
 COMMON_FLAG(const char *, cov_8bit_counters_out, "",
     "If non-empty, write 8bit counters to this file. ")
 COMMON_FLAG(const char *, cov_pcs_out, "",

@@ -22,11 +22,22 @@ def ViewLikeOpInterface : OpInterface<"ViewLikeOpInterface"> {
     another view of buffer.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
 
   let methods = [
     InterfaceMethod<
       "Returns the source buffer from which the view is created.",
-      "::mlir::Value", "getViewSource">
+      "::mlir::Value", "getViewSource">,
+    InterfaceMethod<
+      /*desc=*/[{ Returns the buffer which the view created. }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"getViewDest",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_op->getResult(0);
+      }]
+    >
   ];
 }
 
@@ -64,6 +75,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<
@@ -160,7 +172,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic offsets of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedOffsets",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -174,7 +186,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic sizes of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedSizes",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -188,7 +200,7 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
       /*desc=*/[{
         Return a vector of all the static or dynamic strides of the op.
       }],
-      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult, 4>",
+      /*retTy=*/"::llvm::SmallVector<::mlir::OpFoldResult>",
       /*methodName=*/"getMixedStrides",
       /*args=*/(ins),
       /*methodBody=*/"",
@@ -402,6 +414,20 @@ def OffsetSizeAndStrideOpInterface : OpInterface<"OffsetSizeAndStrideOpInterface
     return ::mlir::detail::verifyOffsetSizeAndStrideOp(
         ::mlir::cast<::mlir::OffsetSizeAndStrideOpInterface>($_op));
   }];
+}
+
+// This trai indicates that pointer-like objects (such as memrefs) returned
+// from this operation will never alias with each other. This provides a
+// guarantee to optimization passes that accesses through different results
+// of this operation can be safely reordered, as they will never reference
+// overlapping memory locations.
+//
+// Operations with this trait take multiple pointer-like operands
+// and return the same operands with additional non-aliasing guarantees.
+// If the access to the results of this operation aliases at runtime, the
+// behavior of such access is undefined.
+def DistinctObjectsTrait : NativeOpTrait<"DistinctObjectsTrait"> {
+  let cppIncludes = ["mlir/Interfaces/ViewLikeInterface.h"];
 }
 
 #endif // MLIR_INTERFACES_VIEWLIKEINTERFACE

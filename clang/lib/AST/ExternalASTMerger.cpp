@@ -206,16 +206,14 @@ public:
                << "\n";
       Source<DeclContext *> FromDC(
           cast<DeclContext>(From)->getPrimaryContext());
-      if (FromOrigins.count(FromDC) &&
-          Parent.HasImporterForOrigin(*FromOrigins.at(FromDC).AST)) {
+      if (auto It = FromOrigins.find(FromDC);
+          It != FromOrigins.end() &&
+          Parent.HasImporterForOrigin(*It->second.AST)) {
         if (LoggingEnabled)
-          logs() << "(ExternalASTMerger*)" << (void*)&Parent
-                 << " forced origin (DeclContext*)"
-                 << (void*)FromOrigins.at(FromDC).DC
-                 << ", (ASTContext*)"
-                 << (void*)FromOrigins.at(FromDC).AST
-                 << "\n";
-        Parent.ForceRecordOrigin(ToDC, FromOrigins.at(FromDC));
+          logs() << "(ExternalASTMerger*)" << (void *)&Parent
+                 << " forced origin (DeclContext*)" << (void *)It->second.DC
+                 << ", (ASTContext*)" << (void *)It->second.AST << "\n";
+        Parent.ForceRecordOrigin(ToDC, It->second);
       } else {
         if (LoggingEnabled)
           logs() << "(ExternalASTMerger*)" << (void*)&Parent
@@ -241,7 +239,7 @@ public:
   ASTImporter &GetReverse() { return Reverse; }
 };
 
-bool HasDeclOfSameType(llvm::ArrayRef<Candidate> Decls, const Candidate &C) {
+bool HasDeclOfSameType(ArrayRef<Candidate> Decls, const Candidate &C) {
   if (isa<FunctionDecl>(C.first.get()))
     return false;
   return llvm::any_of(Decls, [&](const Candidate &D) {
@@ -392,7 +390,8 @@ void ExternalASTMerger::RecordOriginImpl(const DeclContext *ToDC, DCOrigin Origi
 }
 
 ExternalASTMerger::ExternalASTMerger(const ImporterTarget &Target,
-                                     llvm::ArrayRef<ImporterSource> Sources) : LogStream(&llvm::nulls()), Target(Target) {
+                                     ArrayRef<ImporterSource> Sources)
+    : LogStream(&llvm::nulls()), Target(Target) {
   SharedState = std::make_shared<ASTImporterSharedState>(
       *Target.AST.getTranslationUnitDecl());
   AddSources(Sources);
@@ -406,7 +405,7 @@ Decl *ExternalASTMerger::FindOriginalDecl(Decl *D) {
   return nullptr;
 }
 
-void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
+void ExternalASTMerger::AddSources(ArrayRef<ImporterSource> Sources) {
   for (const ImporterSource &S : Sources) {
     assert(&S.getASTContext() != &Target.AST);
     // Check that the associated merger actually imports into the source AST.
@@ -416,7 +415,7 @@ void ExternalASTMerger::AddSources(llvm::ArrayRef<ImporterSource> Sources) {
   }
 }
 
-void ExternalASTMerger::RemoveSources(llvm::ArrayRef<ImporterSource> Sources) {
+void ExternalASTMerger::RemoveSources(ArrayRef<ImporterSource> Sources) {
   if (LoggingEnabled())
     for (const ImporterSource &S : Sources)
       logs() << "(ExternalASTMerger*)" << (void *)this

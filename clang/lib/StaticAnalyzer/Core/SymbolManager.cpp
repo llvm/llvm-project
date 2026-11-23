@@ -14,7 +14,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
-#include "clang/AST/StmtObjC.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Basic/LLVM.h"
@@ -22,9 +21,6 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/Store.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
-#include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -80,10 +76,55 @@ void UnarySymExpr::dumpToStream(raw_ostream &os) const {
     os << ')';
 }
 
+const Stmt *SymbolConjured::getStmt() const {
+  // Sometimes the CFG element is invalid, avoid dereferencing it.
+  if (Elem.getParent() == nullptr ||
+      Elem.getIndexInBlock() >= Elem.getParent()->size())
+    return nullptr;
+  switch (Elem->getKind()) {
+  case CFGElement::Initializer:
+    if (const auto *Init = Elem->castAs<CFGInitializer>().getInitializer()) {
+      return Init->getInit();
+    }
+    return nullptr;
+  case CFGElement::ScopeBegin:
+    return Elem->castAs<CFGScopeBegin>().getTriggerStmt();
+  case CFGElement::ScopeEnd:
+    return Elem->castAs<CFGScopeEnd>().getTriggerStmt();
+  case CFGElement::NewAllocator:
+    return Elem->castAs<CFGNewAllocator>().getAllocatorExpr();
+  case CFGElement::LifetimeEnds:
+    return Elem->castAs<CFGLifetimeEnds>().getTriggerStmt();
+  case CFGElement::LoopExit:
+    return Elem->castAs<CFGLoopExit>().getLoopStmt();
+  case CFGElement::Statement:
+    return Elem->castAs<CFGStmt>().getStmt();
+  case CFGElement::Constructor:
+    return Elem->castAs<CFGConstructor>().getStmt();
+  case CFGElement::CXXRecordTypedCall:
+    return Elem->castAs<CFGCXXRecordTypedCall>().getStmt();
+  case CFGElement::AutomaticObjectDtor:
+    return Elem->castAs<CFGAutomaticObjDtor>().getTriggerStmt();
+  case CFGElement::DeleteDtor:
+    return Elem->castAs<CFGDeleteDtor>().getDeleteExpr();
+  case CFGElement::BaseDtor:
+    return nullptr;
+  case CFGElement::MemberDtor:
+    return nullptr;
+  case CFGElement::TemporaryDtor:
+    return Elem->castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
+  case CFGElement::CleanupFunction:
+    return nullptr;
+  case CFGElement::FullExprCleanup:
+    return nullptr;
+  }
+  return nullptr;
+}
+
 void SymbolConjured::dumpToStream(raw_ostream &os) const {
-  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << LCtx->getID();
-  if (S)
-    os << ", S" << S->getID(LCtx->getDecl()->getASTContext());
+  os << getKindStr() << getSymbolID() << '{' << T << ", LC" << SF->getID();
+  if (auto *S = getStmt())
+    os << ", S" << S->getID(SF->getDecl()->getASTContext());
   else
     os << ", no stmt";
   os << ", #" << Count << '}';
@@ -345,15 +386,14 @@ bool SymbolReaper::isLive(SymbolRef sym) {
   return KnownLive;
 }
 
-bool
-SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
-  if (LCtx == nullptr)
+bool SymbolReaper::isLive(const Expr *ExprVal, const StackFrame *ESF) const {
+  if (SF == nullptr)
     return false;
 
-  if (LCtx != ELCtx) {
-    // If the reaper's location context is a parent of the expression's
-    // location context, then the expression value is now "out of scope".
-    if (LCtx->isParentOf(ELCtx))
+  if (SF != ESF) {
+    // If the reaper's stack frame is a parent of the expression's
+    // stack frame, then the expression value is now "out of scope".
+    if (SF->isParentOf(ESF))
       return false;
     return true;
   }
@@ -363,20 +403,20 @@ SymbolReaper::isLive(const Expr *ExprVal, const LocationContext *ELCtx) const {
   if (!Loc)
     return true;
 
-  return LCtx->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, ExprVal);
+  return SF->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, ExprVal);
 }
 
 bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
-  const StackFrameContext *VarContext = VR->getStackFrame();
+  const StackFrame *VarSF = VR->getStackFrame();
 
-  if (!VarContext)
+  if (!VarSF)
     return true;
 
-  if (!LCtx)
+  if (!SF)
     return false;
-  const StackFrameContext *CurrentContext = LCtx->getStackFrame();
+  const StackFrame *CurrentSF = SF;
 
-  if (VarContext == CurrentContext) {
+  if (VarSF == CurrentSF) {
     // If no statement is provided, everything is live.
     if (!Loc)
       return true;
@@ -386,7 +426,7 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
     if (isa<CXXInheritedCtorInitExpr>(Loc))
       return true;
 
-    if (LCtx->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, VR->getDecl()))
+    if (SF->getAnalysis<RelaxedLiveVariables>()->isLive(Loc, VR->getDecl()))
       return true;
 
     if (!includeStoreBindings)
@@ -410,5 +450,5 @@ bool SymbolReaper::isLive(const VarRegion *VR, bool includeStoreBindings) const{
     return false;
   }
 
-  return VarContext->isParentOf(CurrentContext);
+  return VarSF->isParentOf(CurrentSF);
 }

@@ -28,11 +28,15 @@ define void @test() {
 ; CHECK-SLP-THRESHOLD-NEXT:    [[COND_IN_V:%.*]] = select i1 false, ptr null, ptr null
 ; CHECK-SLP-THRESHOLD-NEXT:    br label [[BB:%.*]]
 ; CHECK-SLP-THRESHOLD:       bb:
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = insertelement <4 x ptr> poison, ptr [[COND_IN_V]], i32 0
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <4 x ptr> [[TMP0]], <4 x ptr> poison, <4 x i32> zeroinitializer
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = getelementptr i64, <4 x ptr> [[TMP1]], <4 x i64> <i64 12, i64 8, i64 4, i64 0>
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP3:%.*]] = call <4 x i64> @llvm.masked.gather.v4i64.v4p0(<4 x ptr> [[TMP2]], i32 8, <4 x i1> splat (i1 true), <4 x i64> poison)
-; CHECK-SLP-THRESHOLD-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i64> [[TMP3]], zeroinitializer
+; CHECK-SLP-THRESHOLD-NEXT:    [[IN_2:%.*]] = getelementptr i64, ptr [[COND_IN_V]], i64 8
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP0:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[COND_IN_V]], <5 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true>, <5 x i64> poison)
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP1:%.*]] = shufflevector <5 x i64> [[TMP0]], <5 x i64> poison, <2 x i32> <i32 4, i32 0>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP2:%.*]] = call <5 x i64> @llvm.masked.load.v5i64.p0(ptr align 8 [[IN_2]], <5 x i1> <i1 true, i1 false, i1 false, i1 false, i1 true>, <5 x i64> poison)
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP3:%.*]] = shufflevector <5 x i64> [[TMP2]], <5 x i64> poison, <2 x i32> <i32 4, i32 0>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP4:%.*]] = shufflevector <2 x i64> [[TMP3]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP5:%.*]] = shufflevector <2 x i64> [[TMP1]], <2 x i64> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP6:%.*]] = shufflevector <5 x i64> [[TMP2]], <5 x i64> [[TMP0]], <4 x i32> <i32 4, i32 0, i32 9, i32 5>
+; CHECK-SLP-THRESHOLD-NEXT:    [[TMP7:%.*]] = icmp eq <4 x i64> [[TMP6]], zeroinitializer
 ; CHECK-SLP-THRESHOLD-NEXT:    ret void
 ;
 entry:
