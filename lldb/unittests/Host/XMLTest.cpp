@@ -11,8 +11,6 @@
 
 using namespace lldb_private;
 
-#if LLDB_ENABLE_LIBXML2
-
 static void assertGetElement(XMLNode &root, const char *element_name,
                              bool expected_uint_success, uint64_t expected_uint,
                              bool expected_double_success,
@@ -87,33 +85,47 @@ TEST(XML, GetAs) {
   ASSERT_GET("negative-float", false, 66, true, -12.5);
 }
 
-#else // !LLDB_ENABLE_LIBXML2
-
-TEST(XML, GracefulNoXML) {
-  std::string test_xml =
-      "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-      "<test>\n"
-      "  <text attribute=\"123\">123</text>\n"
-      "</test>\n";
-
-  XMLDocument doc;
-  ASSERT_FALSE(doc.ParseMemory(test_xml.data(), test_xml.size()));
-
-  XMLNode root = doc.GetRootElement();
-  EXPECT_FALSE(root.IsValid());
-
-  XMLNode node = root.FindFirstChildElementWithName("text");
-  EXPECT_FALSE(node.IsValid());
-
-  uint64_t uint_val;
-  EXPECT_FALSE(node.GetElementTextAsUnsigned(uint_val, 66, 0));
-  EXPECT_EQ(uint_val, 66U);
-  EXPECT_FALSE(node.GetAttributeValueAsUnsigned("attribute", uint_val, 66, 0));
-  EXPECT_EQ(uint_val, 66U);
-
-  double double_val;
-  EXPECT_FALSE(node.GetElementTextAsFloat(double_val, 66.0));
-  EXPECT_EQ(double_val, 66.0);
+static std::string GetText(const XMLNode &node) {
+  std::string text;
+  node.GetElementText(text);
+  return text;
 }
 
-#endif // LLDB_ENABLE_LIBXML2
+TEST(XML, Tree) {
+  std::string test_xml =
+      "<?xml version='1.0' encoding='UTF-8' standalone='no'?>"
+      "<!-- comment --><?pi data?>\n"
+      "<root a='1' b=\"2\">"
+      "<first/>text<second>value</second>"
+      "</root >\n<!-- trailing comment -->\n";
+  XMLDocument doc;
+  ASSERT_TRUE(doc.ParseMemory(test_xml.data(), test_xml.size()))
+      << doc.GetErrors().str();
+
+  EXPECT_FALSE(doc.GetRootElement("other"));
+  XMLNode root = doc.GetRootElement("root");
+  ASSERT_TRUE(root);
+  EXPECT_EQ(root.GetAttributeValue("a"), "1");
+  EXPECT_EQ(root.GetAttributeValue("b"), "2");
+  EXPECT_EQ(root.GetAttributeValue("c", "fail"), "");
+
+  std::vector<std::string> attributes;
+  root.ForEachAttribute([&](llvm::StringRef name, llvm::StringRef value) {
+    attributes.push_back((name + "=" + value).str());
+    return true;
+  });
+  EXPECT_EQ(attributes, (std::vector<std::string>{"a=1", "b=2"}));
+
+  std::vector<std::string> children;
+  root.ForEachChildNode([&](const XMLNode &node) {
+    children.push_back(node.IsElement() ? node.GetName().str() : "#text");
+    return true;
+  });
+  EXPECT_EQ(children, (std::vector<std::string>{"first", "#text", "second"}));
+
+  XMLNode second = root.FindFirstChildElementWithName("second");
+  EXPECT_EQ(GetText(second), "value");
+  EXPECT_EQ(second.GetParent().GetName(), "root");
+  EXPECT_EQ(root.GetElementForPath({"second"}).GetName(), "second");
+  EXPECT_EQ(GetText(root), "text");
+}
