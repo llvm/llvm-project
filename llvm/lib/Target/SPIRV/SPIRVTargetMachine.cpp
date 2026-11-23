@@ -205,6 +205,7 @@ bool SPIRVTargetMachine::parseMachineFunctionInfo(
       static_cast<const yaml::SPIRVMachineFunctionInfo &>(MFI);
   MachineFunction &MF = PFS.MF;
   // SPIRVPrepareFunctions resolves the environment, but does not run on MIR.
+  // Resolve it once, before restoring types, because it resets the registry.
   SPIRVSubtarget &ST =
       *const_cast<SPIRVTargetMachine *>(this)->getMutableSubtargetImpl();
   if (ST.getEnv() == SPIRVSubtarget::Unknown)
@@ -234,7 +235,7 @@ bool SPIRVTargetMachine::parseMachineFunctionInfo(
     if (ParseVReg(Entry.Reg, RegInfo) || ParseVReg(Entry.Type, TypeInfo))
       return true;
     if (MRI.reg_empty(RegInfo->VReg))
-      return Diagnose(Entry.Reg, "use of undefined virtual register");
+      return Diagnose(Entry.Reg, "virtual register is not used or defined");
     const MachineInstr *TypeMI = MRI.getUniqueVRegDef(TypeInfo->VReg);
     if (!TypeMI || !TII.isTypeDeclInstr(*TypeMI))
       return Diagnose(Entry.Type, "expected a SPIR-V type register");

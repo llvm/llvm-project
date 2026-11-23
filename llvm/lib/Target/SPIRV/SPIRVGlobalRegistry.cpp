@@ -273,7 +273,7 @@ getTypeDecls(const MachineFunction &MF) {
   return Res;
 }
 
-void SPIRVGlobalRegistry::restoreFromMIR(MachineFunction &MF) {
+void SPIRVGlobalRegistry::restoreFromMIR(const MachineFunction &MF) {
   for (const MachineInstr *MI : getTypeDecls(MF))
     assignSPIRVTypeToVReg(MI, getSPIRVTypeID(MI), MF);
 }

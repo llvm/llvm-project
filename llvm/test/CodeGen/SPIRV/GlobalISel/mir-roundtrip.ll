@@ -4,6 +4,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown -verify-machineinstrs -start-after=spirv-postlegalizer %t.mir -o %t.s
 ; RUN: diff %t.ref.s %t.s
 
+; The kernel needs the environment on MIR input to emit ContractionOff.
 ; The i1 add checks that finalizeLowering runs on MIR input.
 
 ; CHECK-LABEL: name: foo
@@ -16,8 +17,10 @@
 ; CHECK-NEXT: - { reg: '[[Y:%[0-9]+]]', type: '[[BOOL]]' }
 ; CHECK-NEXT: - { reg: '[[SUM:%[0-9]+]]', type: '[[I32]]' }
 ; CHECK-NEXT: - { reg: '[[T:%[0-9]+]]', type: '[[BOOL]]' }
+; CHECK-NEXT: - { reg: '[[V:%[0-9]+]]', type: '[[I32]]' }
 ; CHECK-NEXT: - { reg: '[[ADD:%[0-9]+]]', type: '[[I32]]' }
 ; CHECK-NEXT: - { reg: '[[TADD:%[0-9]+]]', type: '[[BOOL]]' }
+; CHECK-NEXT: - { reg: '[[SEL:%[0-9]+]]', type: '[[I32]]' }
 ; CHECK-NEXT: body:
 ; CHECK-DAG: [[PTR]]:type(s64) = OpTypePointer 5, [[I32]](s64)
 ; CHECK-DAG: [[BOOL]]:type(s64) = OpTypeBool
@@ -31,10 +34,13 @@
 ; CHECK-DAG: [[SUM]]:iid(i32) = ASSIGN_TYPE [[ADD]](i32), [[I32]](s64)
 ; CHECK-DAG: [[TADD]]:iid(i1) = G_ADD [[X]], [[Y]]
 ; CHECK-DAG: [[T]]:iid(i1) = ASSIGN_TYPE [[TADD]](i1), [[BOOL]](s64)
+; CHECK-DAG: [[SEL]]:iid(i32) = G_SELECT [[T]](i1), [[SUM]], [[A]]
+; CHECK-DAG: [[V]]:iid(i32) = ASSIGN_TYPE [[SEL]](i32), [[I32]](s64)
 
-define spir_func i1 @foo(ptr addrspace(1) %p, i32 %a, i32 %b, i1 %x, i1 %y) {
+define spir_kernel void @foo(ptr addrspace(1) %p, i32 %a, i32 %b, i1 %x, i1 %y) {
   %s = add i32 %a, %b
-  store i32 %s, ptr addrspace(1) %p
   %t = add i1 %x, %y
-  ret i1 %t
+  %v = select i1 %t, i32 %s, i32 %a
+  store i32 %v, ptr addrspace(1) %p
+  ret void
 }
