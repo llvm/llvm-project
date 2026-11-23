@@ -2114,7 +2114,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     finalizeSynthetic(ctx, ctx.in.bss.get());
     finalizeSynthetic(ctx, ctx.in.bssRelRo.get());
-    finalizeSynthetic(ctx, ctx.in.symTabShndx.get());
+    // To make legal ELF file always finalize a symTabShndx that
+    // will be written, even if isNeeded() will return false;
+    auto symTabShndx = ctx.in.symTabShndx.get();
+    if (symTabShndx && symTabShndx->getParent())
+      symTabShndx->finalizeContents();
     finalizeSynthetic(ctx, ctx.in.shStrTab.get());
     finalizeSynthetic(ctx, ctx.in.strTab.get());
     finalizeSynthetic(ctx, ctx.in.got.get());
