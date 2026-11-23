@@ -648,8 +648,8 @@ protected:
 
   /// Rebuilds \p T with the same shape but each element replaced by
   /// \p Combine applied to it. \p FromB selects which side of \p Combine the
-  /// element is passed on (it is the sole non-null argument). Subtrees that
-  /// \p Combine leaves unchanged are shared.
+  /// element is passed on (it is the sole non-null argument).
+  /// Subtrees that \p Combine leaves unchanged are shared.
   template <typename CombineFn>
   TreeTy *transformTree(TreeTy *T, CombineFn &Combine, bool FromB) {
     if (isEmpty(T))
