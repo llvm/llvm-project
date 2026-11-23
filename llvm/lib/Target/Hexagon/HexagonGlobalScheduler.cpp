@@ -126,12 +126,8 @@ static cl::opt<bool>
 static cl::opt<bool>
     ForceNoopHazards("force-noop-hazards", cl::Hidden, cl::init(false),
                      cl::desc("Force noop hazards in scheduler"));
-static cl::opt<bool> OneFloatPerPacket(
-    "single-float-packet", cl::Hidden,
-    cl::desc("Allow only one single floating point instruction in a packet"));
-static cl::opt<bool> OneComplexPerPacket(
-    "single-complex-packet", cl::Hidden,
-    cl::desc("Allow only one complex instruction in a packet"));
+extern cl::opt<bool> OneFloatPerPacket;
+extern cl::opt<bool> OneComplexPerPacket;
 
 namespace llvm {
 FunctionPass *createHexagonGlobalScheduler();
