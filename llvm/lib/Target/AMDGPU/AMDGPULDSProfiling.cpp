@@ -35,8 +35,13 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/LiveRegUnits.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
+#include "llvm/CodeGen/MachineCycleAnalysis.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/xxhash.h"
@@ -51,6 +56,15 @@ namespace {
 struct Site {
   MachineInstr *MI;
   SiteKind Kind;
+};
+
+/// What the pass did to a function.
+enum class Change {
+  None,
+  /// Sites were attached to instructions. No analysis is affected.
+  Annotated,
+  /// Blocks were split and loops were inserted.
+  Instrumented,
 };
 
 class AMDGPULDSProfilingImpl {
@@ -73,7 +87,7 @@ public:
         TRI(*ST.getRegisterInfo()), MRI(MF.getRegInfo()),
         MFI(*MF.getInfo<SIMachineFunctionInfo>()) {}
 
-  bool run();
+  Change run();
 };
 
 class AMDGPULDSProfilingLegacy : public MachineFunctionPass {
@@ -84,11 +98,16 @@ public:
 
   // This must not be skipped: the kernel and its clone have to be numbered
   // identically.
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    return AMDGPULDSProfilingImpl(MF).run();
-  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override { return "AMDGPU LDS Profiling"; }
+
+  // Only profiling clones are modified, so the analyses are kept for every
+  // other function. They are recomputed here for the clones.
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 
 } // end anonymous namespace
@@ -100,10 +119,51 @@ char AMDGPULDSProfilingLegacy::ID = 0;
 
 char &llvm::AMDGPULDSProfilingLegacyID = AMDGPULDSProfilingLegacy::ID;
 
+bool AMDGPULDSProfilingLegacy::runOnMachineFunction(MachineFunction &MF) {
+  Change C = AMDGPULDSProfilingImpl(MF).run();
+  if (C != Change::Instrumented)
+    return C != Change::None;
+
+  // Recompute the analyses of the control flow graph which are available.
+  MachineDominatorTree *MDT = nullptr;
+  if (auto *W = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>()) {
+    MDT = &W->getDomTree();
+    MDT->recalculate(MF);
+  }
+  if (auto *W = getAnalysisIfAvailable<MachineLoopInfoWrapperPass>()) {
+    MachineDominatorTree LocalMDT;
+    if (!MDT) {
+      LocalMDT.recalculate(MF);
+      MDT = &LocalMDT;
+    }
+    W->getLI().releaseMemory();
+    W->getLI().calculate(*MDT);
+  }
+  MachineCycleInfo *MCI = nullptr;
+  if (auto *W = getAnalysisIfAvailable<MachineCycleInfoWrapperPass>()) {
+    MCI = &W->getCycleInfo();
+    MCI->clear();
+    MCI->compute(MF);
+  }
+  if (auto *W =
+          getAnalysisIfAvailable<MachineBlockFrequencyInfoWrapperPass>()) {
+    MachineCycleInfo LocalMCI;
+    if (!MCI) {
+      LocalMCI.compute(MF);
+      MCI = &LocalMCI;
+    }
+    MachineBranchProbabilityInfo LocalMBPI;
+    auto *MBPIW =
+        getAnalysisIfAvailable<MachineBranchProbabilityInfoWrapperPass>();
+    W->getMBFI().calculate(MF, MBPIW ? MBPIW->getMBPI() : LocalMBPI, *MCI);
+  }
+  return true;
+}
+
 PreservedAnalyses
 AMDGPULDSProfilingPass::run(MachineFunction &MF,
                             MachineFunctionAnalysisManager &MFAM) {
-  if (!AMDGPULDSProfilingImpl(MF).run())
+  if (AMDGPULDSProfilingImpl(MF).run() != Change::Instrumented)
     return PreservedAnalyses::all();
   return getMachineFunctionPassPreservedAnalyses();
 }
@@ -407,11 +467,11 @@ void AMDGPULDSProfilingImpl::instrument(MachineInstr &MI, unsigned SiteID,
   }
 }
 
-bool AMDGPULDSProfilingImpl::run() {
+Change AMDGPULDSProfilingImpl::run() {
   const Function &F = MF.getFunction();
   bool IsClone = F.hasFnAttribute(CloneAttr);
   if (!IsClone && !F.hasFnAttribute(OriginalAttr))
-    return false;
+    return Change::None;
 
   // Number the sites. The kernel and its clone are identical here, so this
   // gives the same ids and kinds in both.
@@ -441,7 +501,7 @@ bool AMDGPULDSProfilingImpl::run() {
   MFI.setLDSProfilingSites(Sites.size(),
                            static_cast<uint32_t>(xxh3_64bits(Signature)));
   if (Sites.empty())
-    return false;
+    return Change::None;
 
   LLVMContext &Ctx = F.getContext();
   Type *I32 = Type::getInt32Ty(Ctx);
@@ -454,20 +514,22 @@ bool AMDGPULDSProfilingImpl::run() {
   }
 
   if (!IsClone)
-    return true;
+    return Change::Annotated;
 
   const GlobalVariable *Counters =
       F.getParent()->getNamedGlobal((F.getName() + CountersSuffix).str());
   if (!Counters)
-    return true;
+    return Change::Annotated;
 
+  Change Result = Change::Annotated;
   for (unsigned ID = 0, E = Sites.size(); ID != E; ++ID) {
     if (Sites[ID].Kind == Unsupported)
       continue;
     // The reduction loops have PHIs.
     MF.getProperties().resetNoPHIs();
     instrument(*Sites[ID].MI, ID, *Counters);
+    Result = Change::Instrumented;
   }
 
-  return true;
+  return Result;
 }
