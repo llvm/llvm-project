@@ -59,8 +59,7 @@ define signext i1 @test_i1s(i1 signext %a) {
        ret i1 %r;
 }
 
-; Pack Boolean vector arguments and returns into bytes, even when the last
-; byte is only partly used.
+; Make sure the call reads and writes all the Boolean lanes in one byte.
 ; CHECK: .func  (.param .align 1 .b8 func_retval0[1])
 ; CHECK-LABEL: test_v3i1(
 ; CHECK-NEXT: .param .align 1 .b8 test_v3i1_param_0[1]

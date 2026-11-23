@@ -263,8 +263,12 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
   return std::pair(NumElts / NPerReg, MVT::getVectorVT(EltVT, NPerReg));
 }
 
-// Compute the types and byte offsets of parameter pieces. Boolean vectors stay
-// packed in memory even though the calling convention splits their lanes.
+/// ComputePTXValueVTs - For the given Type \p Ty, returns the set of primitive
+/// legal-ish MVTs that compose it. Unlike ComputeValueVTs, this will legalize
+/// the types as required by the calling convention (with special handling for
+/// i8s).
+/// A fixed-length Boolean vector stays packed here. The calling convention
+/// uses one register per lane.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
@@ -417,7 +421,7 @@ static unsigned canMergeParamLoadStoresStartingAt(
     return 1;
 
   EVT EltVT = ValueVTs[Idx];
-  // Joining partial-byte vector fields would discard padding between them.
+  // Keep the padding between fields when a vector ends partway through a byte.
   if (EltVT.isVector() && !EltVT.isByteSized())
     return 1;
   unsigned EltSize = EltVT.getStoreSize();
@@ -7437,8 +7441,8 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   case ISD::LOAD:
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4: {
-    // Do not move ProxyReg onto a vector load the target cannot yet handle.
-    // replaceProxyReg can convert scalar types, but cannot split a vector.
+    // Leave ProxyReg in place until LLVM has lowered the vector load.
+    // replaceProxyReg can't split the vector into smaller values.
     if (R.getValueType().isVector() &&
         !DCI.DAG.getTargetLoweringInfo().isTypeLegal(R.getValueType()))
       return SDValue();

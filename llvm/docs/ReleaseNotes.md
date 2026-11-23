@@ -414,10 +414,10 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the NVPTX Backend
 
-* Fixed incorrect parameter accesses for Boolean vector arguments and return
-  values. These values now use their packed vector memory representation,
-  fixing incorrect results and out-of-bounds parameter accesses, including
-  for GPU kernel arguments. See [modular/modular#7480](https://github.com/modular/modular/issues/7480).
+* Fixed incorrect results when passing Boolean vectors to GPU kernels and when
+  device functions pass or return them. For example, an `<8 x i1>`
+  argument fits in one byte. NVPTX could read its last lane from byte offset 7.
+  See [modular/modular#7480](https://github.com/modular/modular/issues/7480).
 
 ### Changes to the PowerPC Backend
 

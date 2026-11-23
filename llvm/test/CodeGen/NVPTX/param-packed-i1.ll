@@ -1,8 +1,7 @@
 ; NOTE: Do not autogenerate. The NVPTX check generator skips parameter
 ; declarations. We need to check their sizes as well as the memory accesses.
 ; Related: https://github.com/modular/modular/issues/7480
-; Check the packed memory layout of Boolean vector arguments and returns.
-; Reject extra offset loads in the lane extraction and full-byte tests.
+; The lane tests should only load from the start of the parameter.
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_50 -O0 -verify-machineinstrs | FileCheck %s \
 ; RUN:   --implicit-check-not='ld.param{{.*}}[{{(lane[0-9]+_v[0-9]+i1|all_lanes_v8i1)}}_param_0+'
 ; RUN: llc < %s -mtriple=nvptx64 -mcpu=sm_50 -O3 -verify-machineinstrs | FileCheck %s \
