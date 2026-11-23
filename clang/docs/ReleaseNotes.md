@@ -1448,7 +1448,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   longer requires `-mrvv-vector-bits`; without it, `VLEN` is the minimum
   required by `-march`. A shorter typedef keeps the LMUL, or the mask ratio, of
   the type it was written against, and converts implicitly to and from that
-  sizeless type (truncating, or leaving the upper lanes undefined).
+  sizeless type (truncating, or leaving the upper lanes undefined). The new
+  `__riscv_rvv_vector_bits` macro is defined to `1` to tell code that these
+  rules are available.
 
 - The handling of __int128 arguments with the LP64E ABI now matches gcc.
 

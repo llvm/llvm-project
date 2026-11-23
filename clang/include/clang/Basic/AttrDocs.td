@@ -3373,7 +3373,8 @@ The attribute can be attached to a single RVV vector (such as `vint8m1_t`).
 `VLEN` below is the value set by `-mrvv-vector-bits` (exposed as
 `__riscv_v_fixed_vlen`) if given, otherwise the minimum VLEN required by the
 `-march` string (its `Zvl*b` extension). `-mrvv-vector-bits` is therefore not
-required.
+required. Clang defines `__riscv_rvv_vector_bits` to `1` when these rules are
+available.
 
 For data types, `N` is a size in bits. It must be a positive multiple of the
 element size, `N` divided by the element size must be a power of 2, and `N`

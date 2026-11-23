@@ -215,6 +215,9 @@ void RISCVTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__riscv_v_min_vlen", Twine(MinVLen));
     Builder.defineMacro("__riscv_v_elen", Twine(MaxELen));
     Builder.defineMacro("__riscv_v_elen_fp", Twine(MaxELenFp));
+    // Version of the riscv_rvv_vector_bits rules, as in the RISC-V C API: 1
+    // means N may be shorter than the full type and no fixed VLEN is needed.
+    Builder.defineMacro("__riscv_rvv_vector_bits", "1");
   }
 
   if (ISAInfo->hasExtension("c"))
