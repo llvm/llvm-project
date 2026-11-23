@@ -527,7 +527,7 @@ exit:
   ret float %rdx.next
 }
 
-; Min/max reduction (no identity value).
+; Min/max reduction: the start value stays in the phi.
 define i32 @smax_loaded_start(ptr %a, i64 %n, ptr %p.start) {
 ; CHECK-LABEL: define i32 @smax_loaded_start(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]], ptr [[P_START:%.*]]) #[[ATTR0]] {
@@ -725,6 +725,72 @@ loop:
 
 exit:
   ret i32 %rdx.next
+}
+
+; Reduction used on an uncountable early exit. The result on the early exit
+; applies the start value too.
+define i32 @add_arg_start_early_exit(ptr align 4 dereferenceable(4096) %src, i32 %start) {
+; CHECK-LABEL: define i32 @add_arg_start_early_exit(
+; CHECK-SAME: ptr align 4 dereferenceable(4096) [[SRC:%.*]], i32 [[START:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY_INTERIM:.*]] ]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY_INTERIM]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i32, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[TMP1]] = add <4 x i32> [[VEC_PHI]], [[WIDE_LOAD]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x i32> [[WIDE_LOAD]], zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze <4 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP3]])
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[VECTOR_BODY_INTERIM]]
+; CHECK:       [[VECTOR_BODY_INTERIM]]:
+; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP24:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[RDX_START:%.*]] = add i32 [[TMP6]], [[START]]
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[VECTOR_EARLY_EXIT]]:
+; CHECK-NEXT:    [[FIRST_ACTIVE_LANE:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP3]], i1 false)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[FIRST_ACTIVE_LANE]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 0, i64 [[TMP7]])
+; CHECK-NEXT:    [[TMP9:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP1]], <4 x i32> [[VEC_PHI]]
+; CHECK-NEXT:    [[TMP10:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP9]])
+; CHECK-NEXT:    [[RDX_START1:%.*]] = add i32 [[TMP10]], [[START]]
+; CHECK-NEXT:    br label %[[EARLY_EXIT:.*]]
+; CHECK:       [[EARLY_EXIT]]:
+; CHECK-NEXT:    ret i32 [[RDX_START1]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret i32 [[RDX_START]]
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %rdx = phi i32 [ %start, %entry ], [ %rdx.next, %loop.latch ]
+  %gep = getelementptr inbounds nuw i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep, align 4
+  %rdx.next = add i32 %rdx, %l
+  %cmp = icmp eq i32 %l, 0
+  br i1 %cmp, label %early.exit, label %loop.latch
+
+loop.latch:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, 1024
+  br i1 %ec, label %exit, label %loop.header, !llvm.loop !0
+
+early.exit:
+  %rdx.early = phi i32 [ %rdx.next, %loop.header ]
+  ret i32 %rdx.early
+
+exit:
+  %rdx.lcssa = phi i32 [ %rdx.next, %loop.latch ]
+  ret i32 %rdx.lcssa
 }
 
 !0 = distinct !{!0, !2, !3}
