@@ -715,7 +715,6 @@ As well as:
 *   spirv.GL.SAbs
 *   spirv.GL.Sinh
 *   spirv.GL.SSign
-*   spirv.MemoryBarrier
 *   spirv.mlir.referenceof
 *   spirv.SMod
 *   spirv.SpecConstant

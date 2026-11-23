@@ -239,6 +239,8 @@ private:
   // Field order places the traversal-hot fields (left, right, value) first so
   // that in a node that straddles a cache line they land in the earlier line;
   // the cold factory back-pointer (only touched on create/destroy) goes last.
+  // The reference count shares a word with the bit-fields so that it adds no
+  // padding before a pointer-aligned value.
   ImutAVLTree *left;
   ImutAVLTree *right;
 
@@ -249,9 +251,9 @@ private:
   unsigned IsDigestCached : 1;
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsCanonicalized : 1;
+  uint32_t refCount = 0;
 
   value_type value;
-  uint32_t refCount = 0;
   LLVM_NO_UNIQUE_ADDRESS ImutAVLDetail::CanonicalDigest<Canonicalize> digest;
   Factory *factory;
 
@@ -475,6 +477,15 @@ public:
 
   TreeTy* remove(TreeTy* T, key_type_ref V) {
     T = remove_internal(V,T);
+    recoverNodes(T);
+    return T;
+  }
+
+  /// Returns the tree of the elements of \p T for which \p Pred holds. \p Pred
+  /// is called on the elements in order and must not use this factory.
+  /// Subtrees that keep all of their elements are shared rather than rebuilt.
+  template <typename PredFn> TreeTy *filterTree(TreeTy *T, PredFn Pred) {
+    T = filter_internal(T, Pred);
     recoverNodes(T);
     return T;
   }
@@ -785,6 +796,22 @@ protected:
     }
     return balanceTree(removeMinBinding(getLeft(T), Noderemoved),
                        getValue(T), getRight(T));
+  }
+
+  template <typename PredFn> TreeTy *filter_internal(TreeTy *T, PredFn &Pred) {
+    if (isEmpty(T))
+      return T;
+    TreeTy *L = filter_internal(getLeft(T), Pred);
+    bool Keep = Pred(getValue(T));
+    TreeTy *R = filter_internal(getRight(T), Pred);
+    if (Keep)
+      return L == getLeft(T) && R == getRight(T) ? T
+                                                 : joinTrees(L, getValue(T), R);
+    if (isEmpty(R))
+      return L;
+    TreeTy *Min;
+    R = removeMinBinding(R, Min);
+    return joinTrees(L, getValue(Min), R);
   }
 
 public:
