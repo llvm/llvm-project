@@ -282,7 +282,12 @@ class DAGOperand {
 /// RegClassByHwMode. This permits using RegClassByHwMode in
 /// RegisterOperand contexts without creating an artificial
 /// RegisterClass.
-class RegisterClassLike : DAGOperand;
+class RegisterClassLike : DAGOperand {
+  // Method on the target's MCParsedAsmOperand class used to add MCInst
+  // operands for this register class. If not set, this defaults to
+  // "addRegOperands".
+  string RenderMethod = ?;
+}
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
