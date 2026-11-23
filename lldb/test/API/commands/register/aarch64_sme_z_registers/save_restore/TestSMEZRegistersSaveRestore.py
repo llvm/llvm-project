@@ -184,8 +184,7 @@ class AArch64ZATestCase(TestBase):
         sm = 1 if sve_mode == Mode.SSVE else 0
         svcr_value = "0x{:016x}".format((za << 1) | sm)
         expected_svcr = [svcr_value]
-        if self.hasXMLSupport():
-            expected_svcr.append("(ZA = {}, SM = {})".format(za, sm))
+        expected_svcr.append("(ZA = {}, SM = {})".format(za, sm))
 
         has_zt0 = self.isAArch64SME2()
 

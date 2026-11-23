@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestGDBServerTargetXML(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_regs(self):
@@ -241,7 +240,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs(self):
@@ -449,7 +447,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_regs(self):
@@ -652,7 +649,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         )
         self.match("register read s31", ["s31 = 128"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("RISCV")
     def test_riscv64_regs(self):
@@ -811,7 +807,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
         self.match("register read ft0", ["ft0 = 1.5"])
         self.match("register read ft1", ["ft1 = 3.2053990913985757"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_no_duplicate_subregs(self):
@@ -886,7 +881,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
             error=True,
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_no_duplicate_subregs(self):
@@ -961,7 +955,6 @@ class TestGDBServerTargetXML(GDBRemoteTestBase):
             error=True,
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_no_duplicate_subregs(self):

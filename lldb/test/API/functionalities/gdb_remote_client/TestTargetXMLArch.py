@@ -107,7 +107,6 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestTargetXMLArch(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @expectedFailureAll(archs=["i386"])
     @skipIfRemote
     def test(self):
@@ -130,7 +129,6 @@ class TestTargetXMLArch(GDBRemoteTestBase):
             print(result.GetOutput())
         self.assertTrue(target.GetTriple().startswith("x86_64-unknown-unknown"))
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_register_augmentation(self):

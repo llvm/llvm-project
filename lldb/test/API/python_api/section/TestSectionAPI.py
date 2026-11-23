@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 class SectionAPITestCase(TestBase):
     @no_debug_info_test
-    @skipIfXmlSupportMissing
     def test_get_alignment(self):
         exe = self.getBuildArtifact("aligned.out")
         self.yaml2obj("aligned.yaml", exe)
@@ -23,7 +22,6 @@ class SectionAPITestCase(TestBase):
         self.assertEqual(section.alignment, 0x1000)
 
     @no_debug_info_test
-    @skipIfXmlSupportMissing
     @skipIfZLIBSupportMissing
     def test_compressed_section_data(self):
         exe = self.getBuildArtifact("compressed-sections.out")

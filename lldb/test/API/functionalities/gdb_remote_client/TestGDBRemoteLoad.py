@@ -24,7 +24,6 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         self.dbg.HandleCommand("target modules load -l -s0")
         self.assertPacketLogReceived(["M1000,4:c3c3c3c3", "M1004,2:3232"])
 
-    @skipIfXmlSupportMissing
     def test_flash_load(self):
         """Test loading an object file to a target's flash memory"""
 

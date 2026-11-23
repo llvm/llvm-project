@@ -350,7 +350,6 @@ class ReloadingResponder(MyResponder):
 
 class TestWasm(GDBRemoteTestBase):
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_load_module_with_embedded_symbols_from_remote(self):
         """Test connecting to a WebAssembly stub via GDB-remote and loading a Wasm module with embedded DWARF symbols"""
 
@@ -410,7 +409,6 @@ class TestWasm(GDBRemoteTestBase):
         )
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_load_module_with_stripped_symbols_from_remote(self):
         """Test connecting to a WebAssembly stub via GDB-remote and loading a Wasm module with symbols stripped into a separate Wasm file"""
 
@@ -476,7 +474,6 @@ class TestWasm(GDBRemoteTestBase):
         )
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_simple_wasm_debugging_session(self):
         """Test connecting to a WebAssembly stub via GDB-remote, loading a
         Wasm module with embedded DWARF symbols, setting a breakpoint and
@@ -553,7 +550,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual(b.GetValueAsUnsigned(), 2)
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_max_backtrace_depth(self):
         """Test that a Wasm backtrace stops at the depth the target sets, so
         that a stack recursing without end is not walked to its end."""
@@ -702,7 +698,6 @@ class TestWasm(GDBRemoteTestBase):
         ]
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global(self):
         """Test that a WebAssembly global can be read through the address its
         module gives it, and that a read it cannot serve fails instead of
@@ -754,7 +749,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_without_reported_call_stack(self):
         """Test that a WebAssembly global can be read while the stub reports no
         call stack for the instance holding it."""
@@ -794,7 +788,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_from_multiple_instances(self):
         """Test that a global is read from the instance that holds it when more
         than one instance is loaded."""
@@ -843,7 +836,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_from_default_instance(self):
         """Test that a global is read from the instance a debug session is
         created for, which a stub reports at id zero."""
@@ -869,7 +861,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_variable_located_through_global(self):
         """Test that a variable an outer frame locates through a Wasm global is
         read from the instance the frame is executing."""
@@ -897,7 +888,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_variable_located_through_global_in_innermost_frame(self):
         """Test that a variable the innermost frame locates through a Wasm global
         is read from the instance that frame is executing."""
@@ -925,7 +915,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_variable_located_through_global_without_reported_call_stack(self):
         """Test that a variable a frame locates through a Wasm global is read
         from the instance that frame is executing while the stub reports no call
@@ -953,7 +942,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=False))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_variable_located_through_global_legacy_server(self):
         """Test that a variable the innermost frame locates through a Wasm global
         is read through that frame when the stub cannot be told which instance to
@@ -975,7 +963,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=True))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_legacy_server(self):
         """Test that a global is read through the frame executing the instance
         that holds it when the stub cannot be told which instance to read."""
@@ -1002,7 +989,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.global_reads_received(instance=True))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_legacy_server_without_reported_call_stack(self):
         """Test that a global is out of reach of a stub that can only read a
         global through a frame while it reports no call stack."""
@@ -1016,7 +1002,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertEqual([], self.packets_received("qWasmGlobal:"))
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_legacy_server_other_instance(self):
         """Test that a frame executing one instance is not read as a frame of
         another when the stub can only read a global through a frame."""
@@ -1051,7 +1036,6 @@ class TestWasm(GDBRemoteTestBase):
         self.assertPacketLogReceived(["qWasmGlobal:0;0"])
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_read_global_legacy_server_os_plugin_thread(self):
         """Test that an OS plugin thread doesn't get in the way of computing the right frame."""
 
@@ -1103,7 +1087,6 @@ class TestWasm(GDBRemoteTestBase):
         ]
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_reload_modules(self):
         """Test that the modules a stub no longer reports leave the target,
         the first one it loaded included."""
@@ -1126,7 +1109,6 @@ class TestWasm(GDBRemoteTestBase):
         )
 
     @skipIfAsan
-    @skipIfXmlSupportMissing
     def test_reload_modules_under_same_name(self):
         """Test that a module a stub reloads under the name it had is read
         again from where it was reloaded."""
@@ -1148,7 +1130,6 @@ class TestWasm(GDBRemoteTestBase):
             [(module.name, module.load_address) for module in reloaded_modules],
         )
 
-    @skipIfXmlSupportMissing
     def test_non_wasm_process(self):
         """Test that the plugin falls back to plain GDB remote debugging when
         it is requested by name for a process that isn't WebAssembly."""

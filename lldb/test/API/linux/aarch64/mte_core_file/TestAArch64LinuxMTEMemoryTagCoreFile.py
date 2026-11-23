@@ -236,24 +236,19 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
         # * Bit 0 set to enable the tagged address ABI.
         expected = ["mte_ctrl = 0x000000000007fffb"]
 
-        if self.hasXMLSupport():
-            expected.append(
-                "(STORE_ONLY = 0, TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)"
-            )
+        expected.append(
+            "(STORE_ONLY = 0, TAGS = 65535, TCF = TCF_SYNC, TAGGED_ADDR_ENABLE = 1)"
+        )
 
         self.expect("register read mte_ctrl", substrs=expected)
 
-        if self.hasXMLSupport():
-            # Should get enumerator descriptions for TCF
-            self.expect(
-                "register info mte_ctrl",
-                substrs=[
-                    "TCF: 0 = TCF_NONE, 1 = TCF_SYNC, 2 = TCF_ASYNC, 3 = TCF_ASYMM"
-                ],
-            )
+        # Should get enumerator descriptions for TCF
+        self.expect(
+            "register info mte_ctrl",
+            substrs=["TCF: 0 = TCF_NONE, 1 = TCF_SYNC, 2 = TCF_ASYNC, 3 = TCF_ASYMM"],
+        )
 
     @skipIfLLVMTargetMissing("AArch64")
-    @skipIfXmlSupportMissing
     def test_mte_ctrl_multiple_core_files(self):
         """Core files from machines with different hardware features should
         show different fields, even when loaded into the same session."""

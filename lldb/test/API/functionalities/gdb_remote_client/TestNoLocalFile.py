@@ -10,11 +10,9 @@ class TestNoLocalFile(GDBRemoteTestBase):
     being debugged.  We shouldn't immediately error out, but
     rather lldb should ask debugserver if it knows about the file."""
 
-    @skipIfXmlSupportMissing
     def test_with_python(self):
         self.do_test(False)
 
-    @skipIfXmlSupportMissing
     def test_with_target_ceate(self):
         self.do_test(True)
 

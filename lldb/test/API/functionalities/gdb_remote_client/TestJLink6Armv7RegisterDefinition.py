@@ -6,7 +6,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestJLink6Armv7RegisterDefinition(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test(self):
         """

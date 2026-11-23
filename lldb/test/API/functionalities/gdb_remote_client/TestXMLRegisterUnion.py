@@ -50,7 +50,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["Union members:"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_direct_and_nested_union_metadata(self):
         self.setup_register_test(
@@ -94,7 +93,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_vector_of_union_metadata(self):
         self.setup_register_test(
@@ -127,7 +125,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["Size: 16 bytes", "Vector elements: 2"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_invalid_unions_are_ignored(self):
         self.setup_register_test(
@@ -205,7 +202,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             self.assert_no_union_info(name)
         self.assert_union_info("later", 8, ["value (uint64, 8 bytes)"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_duplicate_union_id_uses_first_definition(self):
         self.setup_register_test(
@@ -224,7 +220,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assert_union_info("u0", 8, ["first (uint64, 8 bytes)"])
         self.expect("register info u0", matching=False, substrs=["second"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_union_ids_are_scoped_to_included_feature(self):
         self.setup_multidoc_test(
@@ -275,7 +270,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assert_union_info("second", 4, ["second (uint32, 4 bytes)"])
         self.assert_no_union_info("unresolved")
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_direct_union_sb_api(self):
         process = self.setup_register_test(
@@ -312,7 +306,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             3.5,
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_union_smaller_than_register_sb_api(self):
         process = self.setup_register_test(
@@ -331,7 +324,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assertEqual(union.GetType().GetByteSize(), 4)
         self.assertEqual(union.GetChildMemberWithName("value").GetValueAsUnsigned(), 42)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_nested_union_and_vector_sb_api(self):
         process = self.setup_register_test(
@@ -357,7 +349,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assertTrue(lane.IsValid())
         self.assertAlmostEqual(lane.GetData().float[0], 4.5)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_byte_view_and_vector_of_unions_sb_api(self):
         process = self.setup_register_test(
@@ -394,7 +385,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         )
         self.expect("register read vu0[2].f32", substrs=["vu0[2].f32 = 3.5"])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_target_sized_union_vector_sb_api(self):
         process = self.setup_register_test(
@@ -423,7 +413,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             0x5678,
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_union_sb_api(self):
@@ -471,7 +460,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
         self.assertEqual(small.GetType().GetByteSize(), 4)
         self.assertEqual(small.GetChildMemberWithName("value").GetValueAsUnsigned(), 42)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_union_cli_and_member_paths(self):
         process = self.setup_register_test(
@@ -571,7 +559,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["(float) $u1.floats[$idx.value] = 3.5"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_exact_dotted_register_name_takes_precedence(self):
         process = self.setup_register_test(
@@ -600,7 +587,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             frame.GetValueForVariablePath("$u0.view.f32").GetValue(), "1.5"
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_invalid_union_member_paths(self):
         process = self.setup_register_test(
@@ -706,7 +692,6 @@ class TestXMLRegisterUnion(GDBRemoteTestBase):
             substrs=["array index 4294967296 is not valid"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_union_cli(self):

@@ -15,7 +15,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 
 class TestThreadPCsReordered(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test_thread_order_changes(self):
         class MyResponder(MockGDBServerResponder):
             # Neither stop sends jstopinfo, and jThreadsInfo is unsupported,

@@ -178,7 +178,6 @@ CHECK-AMD64-DAG: r15l = 0xf1
         is no target XML."""
         self.check_x86_64_regs(False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_x86_64_regs_no_register_info(self):
@@ -294,7 +293,6 @@ CHECK-AARCH64-DAG: w31 = 0x23242526
         is no target XML."""
         self.check_aarch64_regs(False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_aarch64_regs_no_register_info(self):
@@ -380,7 +378,6 @@ CHECK-I386-DAG: dil = 0x71
         no target XML."""
         self.check_i386_regs(False)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("X86")
     def test_i386_regs_no_register_info(self):

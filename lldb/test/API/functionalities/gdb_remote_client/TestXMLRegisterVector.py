@@ -72,7 +72,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             substrs=["Vector elements:"],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_direct_and_nested_vector_metadata(self):
         self.setup_register_test(
@@ -88,7 +87,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assert_vector_info("direct", 8, 2)
         self.assert_vector_info("nested", 24, 3)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_invalid_vectors_are_ignored(self):
         self.setup_register_test(
@@ -158,7 +156,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
 
         self.assert_vector_info("later", 8, 2)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_duplicate_vector_id_uses_first_definition(self):
         process = self.setup_register_test(
@@ -175,7 +172,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         vector = process.GetThreadAtIndex(0).GetFrameAtIndex(0).FindRegister("v0")
         self.assert_float_children(vector, [1.5, 2.5])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_target_type_precedes_builtin_type(self):
         process = self.setup_register_test(
@@ -201,7 +197,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             [1, 2, 3, 4, 5, 6],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_vector_ids_are_scoped_to_included_feature(self):
         first_register = "0000c03f" "00002040"
@@ -254,7 +249,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assert_float_children(frame.FindRegister("first"), [1.5, 2.5])
         self.assert_float_children(frame.FindRegister("second"), [1.5, 2.5, 3.5, 4.5])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_direct_vector_sb_api(self):
         process = self.setup_register_test(
@@ -278,7 +272,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assertTrue(lane.IsValid())
         self.assertAlmostEqual(lane.GetData().float[0], 3.5)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_byte_vector_sb_api(self):
         process = self.setup_register_test(
@@ -301,7 +294,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assertEqual(lane.GetValueAsUnsigned(error, 0xDEADBEEF), 0x10)
         self.assertTrue(error.Success())
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_non_power_of_two_vector_exact_layout(self):
         process = self.setup_register_test(
@@ -317,7 +309,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assertEqual(vector.GetTypeName(), "float[3]")
         self.assert_float_children(vector, [1.5, 2.5, 3.5])
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_nested_vector_sb_api(self):
         process = self.setup_register_test(
@@ -338,7 +329,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assertTrue(lane.IsValid())
         self.assertAlmostEqual(lane.GetData().float[0], 3.5)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_bool_and_single_uint128_vectors(self):
         process = self.setup_register_test(
@@ -368,7 +358,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
         self.assertEqual(wide_child.GetData().uint8s, expected_bytes)
         self.assertEqual(wide_child.GetValue(), "1")
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_vector_sb_api(self):
@@ -390,7 +379,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             self.assert_float_children(vector, [1.5, 2.5])
             self.assertEqual(vector.Cast(ull).GetValueAsUnsigned(), 0x3FC0000040200000)
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_direct_vector_cli(self):
         self.setup_register_test(
@@ -410,7 +398,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     def test_nested_vector_cli(self):
         self.setup_register_test(
@@ -430,7 +417,6 @@ class TestXMLRegisterVector(GDBRemoteTestBase):
             ],
         )
 
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("SystemZ")
     def test_big_endian_vector_cli(self):

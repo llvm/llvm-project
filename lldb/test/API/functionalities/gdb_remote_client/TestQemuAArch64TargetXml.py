@@ -59,7 +59,6 @@ class MyResponder(MockGDBServerResponder):
 
 
 class TestQemuAarch64TargetXml(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test_register_augmentation(self):

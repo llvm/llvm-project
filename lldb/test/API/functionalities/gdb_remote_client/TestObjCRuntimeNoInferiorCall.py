@@ -85,7 +85,6 @@ class MyResponder(MockGDBServerResponder):
 
 class TestObjCRuntimeNoInferiorCall(GDBRemoteTestBase):
     @requireNotWasm("exercises the Darwin dynamic loader")
-    @skipIfXmlSupportMissing
     @skipIfRemote
     @skipIfLLVMTargetMissing("AArch64")
     def test(self):

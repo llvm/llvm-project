@@ -43,7 +43,6 @@ class TestRegion(object):
 
 
 class TestMemoryRegionDirtyPages(GDBRemoteTestBase):
-    @skipIfXmlSupportMissing
     def test(self):
         test_regions = [
             # A memory region where we don't know anything about dirty pages
