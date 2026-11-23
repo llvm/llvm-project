@@ -781,6 +781,9 @@ static mlir::Value emitNeonRShiftImm(CIRGenFunction &cgf, mlir::Value shiftVec,
 
 static cir::VectorType getIntVecFromVecTy(CIRGenBuilderTy &builder,
                                           cir::VectorType vecTy) {
+  if (mlir::isa<cir::MFloat8Type>(vecTy.getElementType()))
+    return cir::VectorType::get(builder.getSInt8Ty(), vecTy.getSize(),
+                                vecTy.getKind());
   if (!cir::isAnyFloatingPointType(vecTy.getElementType()))
     return vecTy;
 
@@ -3769,7 +3772,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   case NEON::BI__builtin_neon_vst1_lane_v:
   case NEON::BI__builtin_neon_vst1q_lane_v: {
-    ops[1] = builder.createBitcast(ops[1], ty);
+    // An mfp8 lane is stored as an i8.
+    cir::VectorType vecTy = ty;
+    if (mlir::isa<cir::MFloat8Type>(ty.getElementType()))
+      vecTy = getIntVecFromVecTy(builder, ty);
+    ops[1] = builder.createBitcast(ops[1], vecTy);
     mlir::Value scalar = builder.createExtractElement(
         loc, ops[1], static_cast<uint64_t>(getIntValueFromConstOp(ops[2])));
     builder.createStore(loc, scalar,
