@@ -6651,8 +6651,8 @@ define void @foo(i32 %arg) {
 
   auto FnHashBefore = Fn.hash();
   auto BBHashBefore = BB.hash();
-  auto *NewI = sandboxir::BinaryOperator::create(
-      sandboxir::Instruction::Opcode::Add, Arg, Arg, BB.end(), Ctx, "Folded");
+  sandboxir::BinaryOperator::create(sandboxir::Instruction::Opcode::Add, Arg,
+                                    Arg, BB.end(), Ctx, "Folded");
   EXPECT_NE(Fn.hash(), FnHashBefore);
   EXPECT_NE(BB.hash(), BBHashBefore);
 }
