@@ -87,9 +87,12 @@ static unsigned getLLVMTypeBitWidth(Type type) {
 static Value createIntegerConstant(Location loc, Type srcType, Type dstType,
                                    PatternRewriter &rewriter,
                                    IntegerAttr scalarAttr) {
-  if (auto vecType = dyn_cast<VectorType>(srcType))
+  scalarAttr = rewriter.getIntegerAttr(getElementTypeOrSelf(dstType),
+                                       scalarAttr.getValue());
+  if (isa<VectorType>(srcType))
     return LLVM::ConstantOp::create(
-        rewriter, loc, dstType, SplatElementsAttr::get(vecType, scalarAttr));
+        rewriter, loc, dstType,
+        SplatElementsAttr::get(cast<VectorType>(dstType), scalarAttr));
   return LLVM::ConstantOp::create(rewriter, loc, dstType, scalarAttr);
 }
 
