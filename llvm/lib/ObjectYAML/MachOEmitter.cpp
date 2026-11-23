@@ -334,15 +334,20 @@ void MachOWriter::writeLoadCommands(raw_ostream &OS) {
 Error MachOWriter::writeSectionData(raw_ostream &OS) {
   uint64_t LinkEditOff = 0;
   for (auto &LC : Obj.LoadCommands) {
-    switch (LC.Data.load_command_data.cmd) {
+    const auto Cmd = LC.Data.load_command_data.cmd;
+    switch (Cmd) {
     case MachO::LC_SEGMENT:
-    case MachO::LC_SEGMENT_64:
-      uint64_t segOff = is64Bit ? LC.Data.segment_command_64_data.fileoff
-                                : LC.Data.segment_command_data.fileoff;
-      if (0 ==
-          strncmp(&LC.Data.segment_command_data.segname[0], "__LINKEDIT", 16)) {
+    case MachO::LC_SEGMENT_64: {
+      const bool IsSegment64 = Cmd == MachO::LC_SEGMENT_64;
+      const uint64_t SegOff = IsSegment64
+                                  ? LC.Data.segment_command_64_data.fileoff
+                                  : LC.Data.segment_command_data.fileoff;
+      const char *SegName = IsSegment64
+                                ? LC.Data.segment_command_64_data.segname
+                                : LC.Data.segment_command_data.segname;
+      if (strncmp(SegName, "__LINKEDIT", 16) == 0) {
         FoundLinkEditSeg = true;
-        LinkEditOff = segOff;
+        LinkEditOff = SegOff;
         if (Obj.RawLinkEditSegment)
           continue;
         writeLinkEditData(OS);
@@ -390,10 +395,12 @@ Error MachOWriter::writeSectionData(raw_ostream &OS) {
           Fill(OS, Sec.size, 0xDEADBEEFu);
         }
       }
-      uint64_t segSize = is64Bit ? LC.Data.segment_command_64_data.filesize
-                                 : LC.Data.segment_command_data.filesize;
-      ZeroToOffset(OS, segOff + segSize);
+      const uint64_t SegSize = IsSegment64
+                                   ? LC.Data.segment_command_64_data.filesize
+                                   : LC.Data.segment_command_data.filesize;
+      ZeroToOffset(OS, SegOff + SegSize);
       break;
+    }
     }
   }
 

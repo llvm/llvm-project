@@ -1,0 +1,55 @@
+# RUN: yaml2obj %s -o %t.linkedit
+# RUN: %python -c "import pathlib, sys; assert pathlib.Path(sys.argv[1]).read_bytes()[128:] == bytes.fromhex('AABBCC')" %t.linkedit
+# RUN: yaml2obj --docnum=2 %s -o %t.data
+# RUN: %python -c "import pathlib, sys; assert len(pathlib.Path(sys.argv[1]).read_bytes()) == 131" %t.data
+
+## Use the layout of the segment load command when emitting deliberately
+## mismatched Mach-O fixtures.
+
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:      0xFEEDFACF
+  cputype:    0x01000007
+  cpusubtype: 3
+  filetype:   2
+  ncmds:      1
+  sizeofcmds: 56
+  flags:      0
+  reserved:   0
+LoadCommands:
+  - cmd:      LC_SEGMENT
+    cmdsize:  56
+    segname:  __LINKEDIT
+    vmaddr:   0
+    vmsize:   0
+    fileoff:  128
+    filesize: 3
+    maxprot:  0
+    initprot: 0
+    nsects:   0
+    flags:    0
+__LINKEDIT: AABBCC
+
+--- !mach-o
+IsLittleEndian: true
+FileHeader:
+  magic:      0xFEEDFACE
+  cputype:    7
+  cpusubtype: 3
+  filetype:   2
+  ncmds:      1
+  sizeofcmds: 72
+  flags:      0
+LoadCommands:
+  - cmd:      LC_SEGMENT_64
+    cmdsize:  72
+    segname:  __DATA
+    vmaddr:   0
+    vmsize:   0
+    fileoff:  128
+    filesize: 3
+    maxprot:  0
+    initprot: 0
+    nsects:   0
+    flags:    0
