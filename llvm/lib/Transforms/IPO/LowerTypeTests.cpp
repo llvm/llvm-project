@@ -3065,6 +3065,7 @@ PreservedAnalyses DropTypeTestsPass::run(Module &M, ModuleAnalysisManager &AM) {
 PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   bool Changed = false;
+  bool ReplacedConstant = false;
   SmallSetVector<Function *, 8> ModifiedFunctions;
   // Figure out whether inlining has exposed a constant address to a lowered
   // type test, and remove the test if so and the address is known to pass the
@@ -3129,9 +3130,9 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
           // LowerTypeTestsModule::lowerTypeTestCall above. If
           // isKnownTypeIdMember passes we just pretend it evaluated to 0. This
           // should cause later passes to remove the range and alignment checks.
-          // The bitset checks won't be removed but those are uncommon. This
-          // only refines an operand, so the users' analyses remain valid.
+          // The bitset checks won't be removed but those are uncommon.
           CE->replaceAllUsesWith(ConstantInt::get(CE->getType(), 0));
+          ReplacedConstant = true;
           Changed = true;
         }
         auto *CI = dyn_cast<ICmpInst>(U.getUser());
@@ -3161,6 +3162,10 @@ PreservedAnalyses SimplifyTypeTestsPass::run(Module &M,
 
   PreservedAnalyses PA;
   PA.preserve<FunctionAnalysisManagerModuleProxy>();
-  PA.preserveSet<AllAnalysesOn<Function>>();
+  // Replacing a constant may affect any function using it, but not its CFG.
+  if (ReplacedConstant)
+    PA.preserveSet<CFGAnalyses>();
+  else
+    PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
