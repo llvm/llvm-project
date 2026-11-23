@@ -39,7 +39,9 @@ static bool validateVectorContractOperands(Value prodOp, bool isVnni) {
     if (readOp.hasOutOfBoundsDim())
       return false;
 
-    // The x86 packed loads read every lane, so they cannot keep a mask.
+    // The x86 packed loads read every lane, so they cannot keep a mask. A read
+    // in `vector.mask` never gets here: the operand is then the `vector.mask`
+    // result, which is rejected below as it is not a load.
     if (readOp.getMask())
       return false;
 
