@@ -244,16 +244,16 @@ struct MaskOpInterface
             rewriter, analysisState, bufferizationState)))
       return failure();
 
-    // TODO: Remove this function when vector.mask bodies can bufferize
-    // out-of-place. This is currently not supported because yielding allocs
-    // from a block leads to a memory leak and because vector.mask supports only
-    // a single op in its body.
+    // Conflict resolution of the masked op may have put tensor copies right
+    // before it. The body allows only the masked op, and the copies only use
+    // values from outside it, so move them in front of the vector.mask.
     auto maskOp = cast<vector::MaskOp>(op);
-    if (!maskOp.getMaskRegion()
-             .front()
-             .getOps<bufferization::AllocTensorOp>()
-             .empty())
-      return op->emitOpError("body must bufferize in-place");
+    Block *body = maskOp.getMaskBlock();
+    Operation *maskedOp = body->getTerminator()->getPrevNode();
+    for (Operation &bodyOp :
+         llvm::make_early_inc_range(body->without_terminator()))
+      if (&bodyOp != maskedOp)
+        rewriter.moveOpBefore(&bodyOp, maskOp);
 
     return success();
   }
