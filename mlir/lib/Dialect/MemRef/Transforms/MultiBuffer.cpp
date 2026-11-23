@@ -329,17 +329,18 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
   OpBuilder::InsertionGuard g(rewriter);
 
   // `memref.view` needs a 1-D byte source with identity layout, so a viewed
-  // byte alloc stays flat. The alloc is replaced by a view of the current slot
-  // so its view users keep their constant byte shifts. A dynamic length has no
-  // constant slot size; leave it unchanged instead of adding a leading
-  // dimension.
+  // byte alloc stays flat, with slots starting at multiples of the alloc
+  // alignment. The alloc is replaced by a view of the current slot so its view
+  // users keep their constant byte shifts. A dynamic length has no constant
+  // slot size; leave it unchanged instead of adding a leading dimension.
   if (hasViewUser(allocOp)) {
     if (!isViewedByteAlloc(allocOp)) {
       LLVM_DEBUG(DBGS() << "Skip alloc: viewed alloc is not a static 1-D i8\n");
       return failure();
     }
     int64_t slotBytes = allocOp.getType().getDimSize(0);
-    int64_t flatBytes = slotBytes * multiBufferingFactor;
+    int64_t slotStride = alignToAllocAlignment(slotBytes, allocOp);
+    int64_t flatBytes = slotStride * (multiBufferingFactor - 1) + slotBytes;
     MemRefType flatType =
         MemRefType::Builder(allocOp.getType()).setShape({flatBytes});
     rewriter.setInsertionPoint(allocOp);
@@ -356,7 +357,7 @@ mlir::memref::multiBuffer(RewriterBase &rewriter, memref::AllocOp allocOp,
     bindDims(rewriter.getContext(), iv, lb, step);
     Value slotOffset = affine::makeComposedAffineApply(
         rewriter, loc,
-        ((iv - lb).floorDiv(step)) % multiBufferingFactor * slotBytes,
+        ((iv - lb).floorDiv(step)) % multiBufferingFactor * slotStride,
         {*inductionVar, lbVal, stepVal});
     Value slot = memref::ViewOp::create(rewriter, loc, allocOp.getType(),
                                         mbAlloc, slotOffset, ValueRange{});

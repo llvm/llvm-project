@@ -375,6 +375,35 @@ func.func @multi_buffer_view(%src: memref<192xi8>) {
 
 // -----
 
+// Viewed byte alloc with an alignment: each slot starts at a multiple of 256
+// bytes, so the slot stride is 256 and the last slot is not padded
+// (4 * 256 + 192 = 1216 bytes).
+// CHECK-DAG: #[[$MAP_VIEW_ALIGNED:.*]] = affine_map<(d0) -> (((d0 - 1) floordiv 3) * 256 - (((d0 - 1) floordiv 3) floordiv 5) * 1280)>
+
+// CHECK-LABEL: func @multi_buffer_view_aligned
+func.func @multi_buffer_view_aligned(%src: memref<192xi8>) {
+// CHECK-DAG: %[[A:.*]] = memref.alloc() alignment = 256 : memref<1216xi8>
+// CHECK-DAG: %[[C128:.*]] = arith.constant 128 : index
+  %0 = memref.alloc() alignment = 256 : memref<192xi8>
+  %c128 = arith.constant 128 : index
+  %c1024 = arith.constant 1024 : index
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+// CHECK: scf.for %[[IV:.*]] =
+  scf.for %arg2 = %c1 to %c1024 step %c3 {
+// CHECK: %[[OFF:.*]] = affine.apply #[[$MAP_VIEW_ALIGNED]](%[[IV]])
+// CHECK: %[[SLOT:.*]] = memref.view %[[A]][%[[OFF]]][] : memref<1216xi8> to memref<192xi8>
+// CHECK: %[[V:.*]] = memref.view %[[SLOT]][%[[C128]]][] : memref<192xi8> to memref<16xf32>
+    %1 = memref.view %0[%c128][] : memref<192xi8> to memref<16xf32>
+    memref.copy %src, %0 : memref<192xi8> to memref<192xi8>
+// CHECK: "some_use"(%[[V]]) : (memref<16xf32>) -> ()
+    "some_use"(%1) : (memref<16xf32>) -> ()
+  }
+  return
+}
+
+// -----
+
 // The view is outside the copy's loop. Inserting the slot in the inner loop
 // would not dominate the view, so the alloc is left unchanged.
 // CHECK-LABEL: func @multi_buffer_view_nested
