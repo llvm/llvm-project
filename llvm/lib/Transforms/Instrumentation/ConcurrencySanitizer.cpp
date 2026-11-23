@@ -366,8 +366,7 @@ bool ConcurrencySanitizer::sanitizeFunction(Function &F,
       ((ClInstrumentMemoryAccesses && !Acc.LoadsAndStores.empty()) ||
        (CheckAtomics && !Acc.AtomicAccesses.empty()) ||
        (ClInstrumentMemIntrinsics && !Acc.MemIntrinCalls.empty()));
-  const bool NeedsRuntimeIgnores =
-      SuppressChecking && Acc.HasCalls && !ClMinimal;
+  const bool NeedsRuntimeIgnores = SuppressChecking && Acc.HasCalls;
   const bool NeedsFuncEntryExit =
       ClInstrumentFuncEntryExit && Acc.HasCalls && !ClMinimal;
   if (!MayInstrument && !NeedsRuntimeIgnores && !NeedsFuncEntryExit)
@@ -659,15 +658,12 @@ bool ConcurrencySanitizer::emitValueCheck(Instruction *I, Value *Addr,
                                           /*isVolatile=*/true, "csan.new");
   New->setMetadata(LLVMContext::MD_nosanitize, NoSanitize);
 
-  // Compare the raw bits. A scalable vector has no fixed integer width.
-  TypeSize Bits = DL.getTypeSizeInBits(LoadTy);
   Type *BitTy;
-  if (Bits.isScalable())
-    BitTy = LoadTy->isPtrOrPtrVectorTy()
-                ? DL.getIntPtrType(LoadTy)
-                : VectorType::getInteger(cast<VectorType>(LoadTy));
+  if (auto *VTy = dyn_cast<VectorType>(LoadTy))
+    BitTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy)
+                                         : VectorType::getInteger(VTy);
   else
-    BitTy = After.getIntNTy(Bits.getFixedValue());
+    BitTy = After.getIntNTy(DL.getTypeSizeInBits(LoadTy).getFixedValue());
   // Separate statements. MSVC evaluates call arguments right-to-left, which
   // emits the casts in the other order and breaks CHECK-NEXT.
   Value *OldBits = After.CreateBitPreservingCastChain(DL, Old, BitTy);

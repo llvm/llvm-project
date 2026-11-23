@@ -184,14 +184,13 @@ define <4 x i32> @load_v4i32(ptr %a) sanitize_concurrency {
 ; CHECK-NEXT:    [[CSAN_OLD:%.*]] = load volatile <4 x i32>, ptr [[A:%.*]], align 16, !nosanitize [[META0]]
 ; CHECK-NEXT:    call void @__csan_delay(i32 0)
 ; CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile <4 x i32>, ptr [[A]], align 16, !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32> [[CSAN_OLD]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[CSAN_NEW]] to i128
-; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[CSAN_CHANGED1:%.*]] = icmp ne <4 x i32> [[CSAN_OLD]], [[CSAN_NEW]]
+; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[CSAN_CHANGED1]])
 ; CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label [[TMP3:%.*]], label [[TMP4:%.*]]
-; CHECK:       2:
+; CHECK:       1:
 ; CHECK-NEXT:    call void @__csan_report_race(ptr [[A]], i64 16, i32 0)
 ; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       3:
+; CHECK:       2:
 ; CHECK-NEXT:    fence syncscope("singlethread") acq_rel
 ; CHECK-NEXT:    [[V:%.*]] = load <4 x i32>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x i32> [[V]]
@@ -207,14 +206,15 @@ define <4 x float> @load_v4f32(ptr %a) sanitize_concurrency {
 ; CHECK-NEXT:    [[CSAN_OLD:%.*]] = load volatile <4 x float>, ptr [[A:%.*]], align 16, !nosanitize [[META0]]
 ; CHECK-NEXT:    call void @__csan_delay(i32 0)
 ; CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile <4 x float>, ptr [[A]], align 16, !nosanitize [[META0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[CSAN_OLD]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x float> [[CSAN_NEW]] to i128
-; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne i128 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[CSAN_OLD]] to <4 x i32>
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[CSAN_NEW]] to <4 x i32>
+; CHECK-NEXT:    [[CSAN_CHANGED1:%.*]] = icmp ne <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[CSAN_CHANGED1]])
 ; CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label [[TMP3:%.*]], label [[TMP4:%.*]]
-; CHECK:       2:
+; CHECK:       3:
 ; CHECK-NEXT:    call void @__csan_report_race(ptr [[A]], i64 16, i32 0)
 ; CHECK-NEXT:    br label [[TMP4]]
-; CHECK:       3:
+; CHECK:       4:
 ; CHECK-NEXT:    fence syncscope("singlethread") acq_rel
 ; CHECK-NEXT:    [[V:%.*]] = load <4 x float>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[V]]
@@ -231,15 +231,14 @@ define <2 x ptr> @load_v2ptr(ptr %a) sanitize_concurrency {
 ; CHECK-NEXT:    call void @__csan_delay(i32 0)
 ; CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile <2 x ptr>, ptr [[A]], align 16, !nosanitize [[META0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint <2 x ptr> [[CSAN_OLD]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <2 x i64> [[TMP1]] to i128
 ; CHECK-NEXT:    [[TMP3:%.*]] = ptrtoint <2 x ptr> [[CSAN_NEW]] to <2 x i64>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <2 x i64> [[TMP3]] to i128
-; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne i128 [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[CSAN_CHANGED1:%.*]] = icmp ne <2 x i64> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = call i1 @llvm.vector.reduce.or.v2i1(<2 x i1> [[CSAN_CHANGED1]])
 ; CHECK-NEXT:    br i1 [[CSAN_CHANGED]], label [[TMP5:%.*]], label [[TMP6:%.*]]
-; CHECK:       4:
+; CHECK:       3:
 ; CHECK-NEXT:    call void @__csan_report_race(ptr [[A]], i64 16, i32 0)
 ; CHECK-NEXT:    br label [[TMP6]]
-; CHECK:       5:
+; CHECK:       4:
 ; CHECK-NEXT:    fence syncscope("singlethread") acq_rel
 ; CHECK-NEXT:    [[V:%.*]] = load <2 x ptr>, ptr [[A]], align 16
 ; CHECK-NEXT:    ret <2 x ptr> [[V]]
@@ -480,6 +479,50 @@ define i32 @unsanitized(ptr %a) {
 entry:
   %v = load i32, ptr %a, align 4
   ret i32 %v
+}
+
+define <262145 x i32> @load_wide_vector(ptr %a) sanitize_concurrency {
+; CHECK-LABEL: @load_wide_vector(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CSAN_OLD:%.*]] = load volatile <262145 x i32>, ptr [[A:%.*]], align 4, !nosanitize [[META0]]
+; CHECK-NEXT:    call void @__csan_delay(i32 0)
+; CHECK-NEXT:    [[CSAN_NEW:%.*]] = load volatile <262145 x i32>, ptr [[A]], align 4, !nosanitize [[META0]]
+; CHECK-NEXT:    [[CSAN_CHANGED:%.*]] = icmp ne <262145 x i32> [[CSAN_OLD]], [[CSAN_NEW]]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i1 @llvm.vector.reduce.or.v262145i1(<262145 x i1> [[CSAN_CHANGED]])
+; CHECK-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; CHECK:       1:
+; CHECK-NEXT:    call void @__csan_report_race(ptr [[A]], i64 1048580, i32 0)
+; CHECK-NEXT:    br label [[TMP2]]
+; CHECK:       2:
+; CHECK-NEXT:    fence syncscope("singlethread") acq_rel
+; CHECK-NEXT:    [[V:%.*]] = load <262145 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    ret <262145 x i32> [[V]]
+;
+entry:
+  %v = load <262145 x i32>, ptr %a, align 4
+  ret <262145 x i32> %v
+}
+
+declare void @callee()
+
+define void @ignore_scope() "sanitize_concurrency_no_checking_at_run_time" {
+; CHECK-LABEL: @ignore_scope(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @__csan_ignore_thread_begin()
+; CHECK-NEXT:    invoke void @callee()
+; CHECK-NEXT:            to label [[DOTNOEXC:%.*]] unwind label [[CSAN_IGNORE_CLEANUP:%.*]]
+; CHECK:       .noexc:
+; CHECK-NEXT:    call void @__csan_ignore_thread_end()
+; CHECK-NEXT:    ret void
+; CHECK:       csan_ignore_cleanup:
+; CHECK-NEXT:    [[CLEANUP_LPAD:%.*]] = landingpad { ptr, i32 }
+; CHECK-NEXT:            cleanup
+; CHECK-NEXT:    call void @__csan_ignore_thread_end()
+; CHECK-NEXT:    resume { ptr, i32 } [[CLEANUP_LPAD]]
+;
+entry:
+  call void @callee()
+  ret void
 }
 
 declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
