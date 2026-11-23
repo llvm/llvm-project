@@ -420,6 +420,9 @@ ErrorOr<ExprId> coalesce_repeat_leaves(ExprId a, ExprId b, ExprPool &pool);
 // when their repetition intervals overlap or are adjacent.  Returns
 // INVALID_EXPR_ID when the pair cannot be coalesced.
 ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
+  if (a == b)
+    return INVALID_EXPR_ID;
+
   // Scan past matching left Concat prefixes (A · X) | (A · Y) -> A · (X | Y)
   // without allocating; collect prefixes only if the suffixes coalesce.
   const ExprId orig_a = a;
@@ -427,8 +430,9 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
   Expr ae = pool.get(a);
   Expr be = pool.get(b);
   while ((ae.has_repeat || be.has_repeat) && ae.kind == ExprKind::Concat &&
-         be.kind == ExprKind::Concat && ae.bin.right != be.bin.right &&
-         ae.bin.left == be.bin.left) {
+         be.kind == ExprKind::Concat && ae.bin.left == be.bin.left) {
+    // Hash-consing guarantees distinct right children when a != b.
+    LIBC_ASSERT(ae.bin.right != be.bin.right);
     ++prefix_depth;
     a = ae.bin.right;
     b = be.bin.right;
@@ -440,6 +444,9 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
 
   auto merge_with_suffix = [&](ExprId lhs, ExprId rhs,
                                ExprId suffix) -> ErrorOr<ExprId> {
+    // make_concat right-associates, so Concat::left is never itself a Concat.
+    LIBC_ASSERT(pool.get(lhs).kind != ExprKind::Concat &&
+                pool.get(rhs).kind != ExprKind::Concat);
     ErrorOr<ExprId> left = coalesce_repeat_leaves(lhs, rhs, pool);
     if (!left.has_value() || *left == INVALID_EXPR_ID)
       return left;
@@ -500,6 +507,7 @@ ErrorOr<ExprId> coalesce_repeat_pair(ExprId a, ExprId b, ExprPool &pool) {
 // intervals overlap or are adjacent.  Returns INVALID_EXPR_ID when they
 // cannot be coalesced.
 ErrorOr<ExprId> coalesce_repeat_leaves(ExprId a, ExprId b, ExprPool &pool) {
+  LIBC_ASSERT(a != b);
   const Expr ae = pool.get(a);
   const Expr be = pool.get(b);
   if (ae.kind != ExprKind::Repeat && be.kind != ExprKind::Repeat)
