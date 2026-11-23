@@ -141,7 +141,11 @@ static void MaybeDieIfNoTaggingAbi(const char *message) {
 #  define ARCH_GET_MAX_TAG_BITS 0x4003
 
 static bool CanUseTaggingAbi() {
-#  if defined(__x86_64__)
+#  if defined(HWASAN_ALIASING_MODE)
+  // Aliasing mode doesn't rely on hardware tagging and must not be combined
+  // with x86 LAM.
+  return false;
+#  elif defined(__x86_64__)
   unsigned long num_bits = 0;
   // Check for x86 LAM support. This API is based on a currently unsubmitted
   // patch to the Linux kernel (as of August 2022) and is thus subject to
@@ -155,10 +159,6 @@ static bool CanUseTaggingAbi() {
     return false;
   // The platform must provide enough bits for HWASan tags.
   if (num_bits < kTagBits)
-    return false;
-  // LAM's tag bits are [63 - num_bits, 63). Make sure ours fall inside them;
-  // e.g. aliasing mode tags bits [39, 42), which LAM can never ignore.
-  if (kAddressTagShift + num_bits < 63)
     return false;
   return true;
 #  else
