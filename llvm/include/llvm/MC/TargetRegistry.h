@@ -742,9 +742,10 @@ struct TargetRegistry {
   /// RegisterTarget - Register the given target. Attempts to register a
   /// target which has already been registered will be ignored.
   ///
-  /// Clients are responsible for ensuring that registration doesn't occur
-  /// while another thread is attempting to access the registry. Typically
-  /// this is done by initializing all targets at program startup.
+  /// This function is safe to call concurrently with other RegisterTarget
+  /// calls, targets(), and lookupTarget(). Registering other per-target
+  /// callbacks (RegisterMCAsmInfo, RegisterTargetMachine, etc.) is not
+  /// synchronized with concurrent accesses to the same Target.
   ///
   /// @param T - The target being registered.
   /// @param Name - The target name. This should be a static string.

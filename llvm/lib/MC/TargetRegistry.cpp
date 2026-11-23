@@ -9,6 +9,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -17,12 +18,16 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/raw_ostream.h"
+#include <atomic>
 #include <cassert>
+#if LLVM_ENABLE_THREADS
+#include <mutex>
+#include <new>
+#endif
 #include <vector>
 using namespace llvm;
 
-// Clients are responsible for avoid race conditions in registration.
-static Target *FirstTarget = nullptr;
+static std::atomic<Target *> FirstTarget{nullptr};
 
 bool Target::isValidFeatureListFormat(StringRef Features) {
   if (Features.empty())
@@ -118,7 +123,8 @@ MCStreamer *Target::createAsmStreamer(MCContext &Ctx,
 }
 
 iterator_range<TargetRegistry::iterator> TargetRegistry::targets() {
-  return make_range(iterator(FirstTarget), iterator());
+  return make_range(iterator(FirstTarget.load(std::memory_order_acquire)),
+                    iterator());
 }
 
 const Target *TargetRegistry::lookupTarget(StringRef ArchName,
@@ -129,10 +135,11 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   // name, because it might be a backend that has no mapping to a target triple.
   const Target *TheTarget = nullptr;
   if (!ArchName.empty()) {
-    auto I = find_if(targets(),
+    auto Targets = targets();
+    auto I = find_if(Targets,
                      [&](const Target &T) { return ArchName == T.getName(); });
 
-    if (I == targets().end()) {
+    if (I == Targets.end()) {
       Error = ("invalid target '" + ArchName + "'.").str();
       return nullptr;
     }
@@ -160,24 +167,25 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
 
 const Target *TargetRegistry::lookupTarget(const Triple &TT,
                                            std::string &Error) {
+  auto Targets = targets();
   // Provide special warning when no targets are initialized.
-  if (targets().begin() == targets().end()) {
+  if (Targets.empty()) {
     Error = "Unable to find target for triple \"" + TT.str() +
             "\" (no targets are registered)";
     return nullptr;
   }
   Triple::ArchType Arch = TT.getArch();
   auto ArchMatch = [&](const Target &T) { return T.ArchMatchFn(Arch); };
-  auto I = find_if(targets(), ArchMatch);
+  auto I = find_if(Targets, ArchMatch);
 
-  if (I == targets().end()) {
+  if (I == Targets.end()) {
     Error =
         "No available targets are compatible with triple \"" + TT.str() + "\"";
     return nullptr;
   }
 
-  auto J = std::find_if(std::next(I), targets().end(), ArchMatch);
-  if (J != targets().end()) {
+  auto J = std::find_if(std::next(I), Targets.end(), ArchMatch);
+  if (J != Targets.end()) {
     Error = std::string("Cannot choose between targets \"") + I->Name +
             "\" and \"" + J->Name + "\"";
     return nullptr;
@@ -194,20 +202,30 @@ void TargetRegistry::RegisterTarget(Target &T, const char *Name,
   assert(Name && ShortDesc && ArchMatchFn &&
          "Missing required target information!");
 
+#if LLVM_ENABLE_THREADS
+  // Use placement new into static storage so the mutex has no load-time global
+  // constructor and is never destroyed during process exit.
+  alignas(std::mutex) static char Storage[sizeof(std::mutex)];
+  static std::mutex *TargetRegistryMutex = new (Storage) std::mutex();
+  std::lock_guard<std::mutex> Lock(*TargetRegistryMutex);
+#endif
+
   // Check if this target has already been initialized, we allow this as a
   // convenience to some clients.
   if (T.Name)
     return;
 
-  // Add to the list of targets.
-  T.Next = FirstTarget;
-  FirstTarget = &T;
-
+  // Initialize the target before publishing it to FirstTarget so concurrent
+  // readers cannot observe a partially initialized Target.
   T.Name = Name;
   T.ShortDesc = ShortDesc;
   T.BackendName = BackendName;
   T.ArchMatchFn = ArchMatchFn;
   T.HasJIT = HasJIT;
+
+  // Add to the list of targets.
+  T.Next = FirstTarget.load(std::memory_order_relaxed);
+  FirstTarget.store(&T, std::memory_order_release);
 }
 
 static int TargetArraySortFn(const std::pair<StringRef, const Target *> *LHS,

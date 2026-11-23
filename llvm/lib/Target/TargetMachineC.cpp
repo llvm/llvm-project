@@ -61,12 +61,11 @@ static LLVMTargetRef wrap(const Target * P) {
 }
 
 LLVMTargetRef LLVMGetFirstTarget() {
-  if (TargetRegistry::targets().begin() == TargetRegistry::targets().end()) {
+  auto Targets = TargetRegistry::targets();
+  if (Targets.empty())
     return nullptr;
-  }
 
-  const Target *target = &*TargetRegistry::targets().begin();
-  return wrap(target);
+  return wrap(&*Targets.begin());
 }
 LLVMTargetRef LLVMGetNextTarget(LLVMTargetRef T) {
   return wrap(unwrap(T)->getNext());
@@ -74,9 +73,10 @@ LLVMTargetRef LLVMGetNextTarget(LLVMTargetRef T) {
 
 LLVMTargetRef LLVMGetTargetFromName(const char *Name) {
   StringRef NameRef = Name;
-  auto I = find_if(TargetRegistry::targets(),
-                   [&](const Target &T) { return T.getName() == NameRef; });
-  return I != TargetRegistry::targets().end() ? wrap(&*I) : nullptr;
+  auto Targets = TargetRegistry::targets();
+  auto I =
+      find_if(Targets, [&](const Target &T) { return T.getName() == NameRef; });
+  return I != Targets.end() ? wrap(&*I) : nullptr;
 }
 
 LLVMBool LLVMGetTargetFromTriple(const char* TripleStr, LLVMTargetRef *T,
