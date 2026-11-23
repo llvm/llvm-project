@@ -1885,10 +1885,11 @@ void CGOpenMPRuntime::registerVTable(const OMPExecutableDirective &D) {
   // Register VTable by scanning through the map clause of OpenMP target region.
   for (const auto *C : D.getClausesOfKind<OMPMapClause>()) {
     for (const auto *E : C->varlist()) {
-      auto [CXXRecord, VD] = OMPMapClause::getVTableDecl(E);
+      const auto Decls = OMPMapClause::getVTableDecl(E);
+      const VarDecl *VD = Decls.second;
       if (!VD)
         continue;
-      OMPMapClause::forEachOffloadVTable(CXXRecord, [&](CXXRecordDecl *RD) {
+      OMPMapClause::forEachOffloadVTable(Decls.first, [&](CXXRecordDecl *RD) {
         emitAndRegisterVTable(CGM, RD, VD);
       });
     }
