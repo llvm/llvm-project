@@ -8,13 +8,13 @@ define <8 x i16> @PR168594() {
 ; SSE-LABEL: PR168594:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pxor %xmm0, %xmm0
-; SSE-NEXT:    psubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    psubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [1,1,1,1,1,1,1,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR168594:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [1,1,1,1,1,1,1,1]
 ; AVX-NEXT:    retq
   %call = call <8 x i16> @llvm.x86.sse2.pavg.w(<8 x i16> splat (i16 1), <8 x i16> zeroinitializer)
   %sub = sub <8 x i16> zeroinitializer, %call

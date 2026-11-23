@@ -20,5 +20,5 @@ entry:
   ret void
 }
 
-declare noundef nonnull ptr @_Znwm(i64 noundef) local_unnamed_addr
+declare noundef nonnull ptr @_Znwm(i64 noundef) local_unnamed_addr allockind("alloc,uninitialized") allocsize(0)
 declare void @llvm.assume(i1 noundef)

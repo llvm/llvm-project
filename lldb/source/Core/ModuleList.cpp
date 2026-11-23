@@ -468,13 +468,13 @@ ModuleSP ModuleList::GetModuleAtIndexUnlocked(size_t idx) const {
   return module_sp;
 }
 
-void ModuleList::FindFunctions(ConstString name,
+void ModuleList::FindFunctions(llvm::StringRef name,
                                FunctionNameType name_type_mask,
                                const ModuleFunctionSearchOptions &options,
                                SymbolContextList &sc_list) const {
   if (name_type_mask & eFunctionNameTypeAuto) {
     std::vector<Module::LookupInfo> lookup_infos =
-        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+        Module::LookupInfo::MakeLookupInfos(ConstString(name), name_type_mask,
                                             eLanguageTypeUnknown);
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const auto &lookup_info : lookup_infos) {
@@ -491,18 +491,18 @@ void ModuleList::FindFunctions(ConstString name,
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctions(name, CompilerDeclContext(), name_type_mask,
-                               options, sc_list);
+      module_sp->FindFunctions(ConstString(name), CompilerDeclContext(),
+                               name_type_mask, options, sc_list);
     }
   }
 }
 
-void ModuleList::FindFunctionSymbols(ConstString name,
+void ModuleList::FindFunctionSymbols(llvm::StringRef name,
                                      lldb::FunctionNameType name_type_mask,
                                      SymbolContextList &sc_list) {
   if (name_type_mask & eFunctionNameTypeAuto) {
     std::vector<Module::LookupInfo> lookup_infos =
-        Module::LookupInfo::MakeLookupInfos(name, name_type_mask,
+        Module::LookupInfo::MakeLookupInfos(ConstString(name), name_type_mask,
                                             eLanguageTypeUnknown);
 
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
@@ -521,7 +521,8 @@ void ModuleList::FindFunctionSymbols(ConstString name,
   } else {
     std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
     for (const ModuleSP &module_sp : m_modules) {
-      module_sp->FindFunctionSymbols(name, name_type_mask, sc_list);
+      module_sp->FindFunctionSymbols(ConstString(name), name_type_mask,
+                                     sc_list);
     }
   }
 }
@@ -541,12 +542,12 @@ void ModuleList::FindCompileUnits(const FileSpec &path,
     module_sp->FindCompileUnits(path, sc_list);
 }
 
-void ModuleList::FindGlobalVariables(ConstString name, size_t max_matches,
+void ModuleList::FindGlobalVariables(llvm::StringRef name, size_t max_matches,
                                      VariableList &variable_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const ModuleSP &module_sp : m_modules) {
-    module_sp->FindGlobalVariables(name, CompilerDeclContext(), max_matches,
-                                   variable_list);
+    module_sp->FindGlobalVariables(ConstString(name), CompilerDeclContext(),
+                                   max_matches, variable_list);
   }
 }
 
@@ -558,12 +559,13 @@ void ModuleList::FindGlobalVariables(const RegularExpression &regex,
     module_sp->FindGlobalVariables(regex, max_matches, variable_list);
 }
 
-void ModuleList::FindSymbolsWithNameAndType(ConstString name,
+void ModuleList::FindSymbolsWithNameAndType(llvm::StringRef name,
                                             SymbolType symbol_type,
                                             SymbolContextList &sc_list) const {
   std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
   for (const ModuleSP &module_sp : m_modules)
-    module_sp->FindSymbolsWithNameAndType(name, symbol_type, sc_list);
+    module_sp->FindSymbolsWithNameAndType(ConstString(name), symbol_type,
+                                          sc_list);
 }
 
 void ModuleList::FindSymbolsMatchingRegExAndType(

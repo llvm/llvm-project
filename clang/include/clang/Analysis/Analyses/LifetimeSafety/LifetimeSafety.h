@@ -164,7 +164,7 @@ public:
   // Reports a parameter captured by an entity that its
   // [[clang::lifetime_capture_by]] attributes do not name. \p CapturerIdx is
   // the index such an attribute uses for that entity, and \p CapturedBy is the
-  // field or global it is captured by, if known.
+  // field, global or parameter it is captured by, if known.
   virtual void reportCaptureByViolation(const ParmVarDecl *PVD,
                                         const LifetimeCaptureByAttr *Attr,
                                         int CapturerIdx,

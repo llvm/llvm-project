@@ -3669,6 +3669,7 @@ cc_library(
         ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":LinalgDialect",
         ":LoopLikeInterface",
         ":MemRefDialect",
@@ -7089,6 +7090,7 @@ cc_library(
         ":GPUDialect",
         ":GPUToLLVMIRTranslation",
         ":IR",
+        ":LLVMDialect",
         ":LLVMToLLVMIRTranslation",
         ":ROCDLDialect",
         ":ROCDLToLLVMIRTranslation",
@@ -9698,6 +9700,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":Analysis",
+        ":ControlFlowInterfaces",
         ":DLTIDialect",
         ":IR",
         ":LLVMConversionIncGen",
@@ -9772,6 +9775,7 @@ cc_library(
     deps = [
         ":DialectUtils",
         ":IR",
+        ":LLVMDialect",
         ":NVVMConversionIncGen",
         ":NVVMDialect",
         ":Support",
