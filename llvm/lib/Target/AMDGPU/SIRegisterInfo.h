@@ -313,15 +313,6 @@ public:
   const TargetRegisterClass *
   getEquivalentSGPRClass(const TargetRegisterClass *VRC) const;
 
-  /// Returns a register class which is compatible with \p SuperRC, such that a
-  /// subregister exists with class \p SubRC with subregister index \p
-  /// SubIdx. If this is impossible (e.g., an unaligned subregister index within
-  /// a register tuple), return null.
-  const TargetRegisterClass *
-  getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
-                           const TargetRegisterClass *SubRC,
-                           unsigned SubIdx) const;
-
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
   bool opCanUseLiteralConstant(unsigned OpType) const;

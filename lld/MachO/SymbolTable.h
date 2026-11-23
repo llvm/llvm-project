@@ -40,16 +40,15 @@ public:
                       InputSection *, uint64_t value, uint64_t size,
                       bool isWeakDef, bool isPrivateExtern,
                       bool isReferencedDynamically, bool noDeadStrip,
-                      bool isWeakDefCanBeHidden, bool isCold = false,
-                      Symbol *known = nullptr);
+                      bool isWeakDefCanBeHidden, bool isCold = false);
   Defined *addDefined(StringRef name, InputFile *file, InputSection *isec,
                       uint64_t value, uint64_t size, bool isWeakDef,
                       bool isPrivateExtern, bool isReferencedDynamically,
                       bool noDeadStrip, bool isWeakDefCanBeHidden,
-                      bool isCold = false, Symbol *known = nullptr) {
+                      bool isCold = false) {
     return addDefined(llvm::CachedHashStringRef(name), file, isec, value, size,
                       isWeakDef, isPrivateExtern, isReferencedDynamically,
-                      noDeadStrip, isWeakDefCanBeHidden, isCold, known);
+                      noDeadStrip, isWeakDefCanBeHidden, isCold);
   }
 
   Defined *aliasDefined(Defined *src, StringRef target, InputFile *newFile,
@@ -69,7 +68,12 @@ public:
                      isPrivateExtern);
   }
 
-  Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef, bool isTlv);
+  Symbol *addDylib(llvm::CachedHashStringRef name, DylibFile *file,
+                   bool isWeakDef, bool isTlv);
+  Symbol *addDylib(StringRef name, DylibFile *file, bool isWeakDef,
+                   bool isTlv) {
+    return addDylib(llvm::CachedHashStringRef(name), file, isWeakDef, isTlv);
+  }
   Symbol *addDynamicLookup(StringRef name);
 
   Symbol *addLazyArchive(StringRef name, ArchiveFile *file,

@@ -196,7 +196,8 @@ public:
   /// Set the string value in this object.
   ///
   /// This version auto detects if the string is mangled by inspecting the
-  /// string value and looking for common mangling prefixes.
+  /// string value and looking for the prefixes of the registered mangling
+  /// schemes.
   ///
   /// \param[in] name
   ///     The already const version of the name for this object.

@@ -53,6 +53,16 @@ let Defs = [R3D, CC], Uses = [R3D, R4D], hasNoSchedulingInfo = 1,
     hasSideEffects = 1 in
   def XPLINK_STACKALLOC : Pseudo<(outs), (ins), []>;
 
+// Call of the XPLINK stack restore stub (see SystemZXPLINKAsmPrinter): the new
+// stack pointer is passed in R1, the stub sets R4. Like the stack extension
+// routine, the stub does not follow the XPLINK calling convention and is
+// called with BASR 3,3. Expands to LARL 3, BASR 3,3 and the call information
+// (10 bytes).
+let Predicates = [IsTargetXPLINK64], Defs = [R1D, R3D, R4D],
+    Uses = [R1D, R4D], hasNoSchedulingInfo = 1, hasSideEffects = 1 in
+  def XPLINK_STACKRESTORE : Alias<10, (outs), (ins),
+                                  [(z_xplink_stackrestore)]>;
+
 //===----------------------------------------------------------------------===//
 // Branch instructions
 //===----------------------------------------------------------------------===//
@@ -2698,9 +2708,16 @@ let isCodeGenOnly = 1, hasSideEffects = 1, IsInsnDirective = 1 in {
 def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
                           (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
 
-// Use LCGR/AGHI for i64 xor with -1.
+// Use LCGR/AGHI for i64 xor with -1 (pre-z15, see NOGRK below).
 def : Pat<(xor GR64:$x, (i64 -1)),
           (AGHI (LCGR GR64:$x), (i64 -1))>;
+
+// Use NOR with both operands equal for xor with -1 (bitwise NOT).
+// Complexity is added so that this is preferred over the LCGR/AGHI pattern.
+let Predicates = [FeatureMiscellaneousExtensions3], AddedComplexity = 1 in {
+  def : Pat<(xor GR32:$x, (i32 -1)), (NORK GR32:$x, GR32:$x)>;
+  def : Pat<(xor GR64:$x, (i64 -1)), (NOGRK GR64:$x, GR64:$x)>;
+}
 
 // Shift/rotate instructions only use the last 6 bits of the second operand
 // register, so we can safely use NILL (16 fewer bits than NILF) to only AND the

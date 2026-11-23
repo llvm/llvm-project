@@ -6,7 +6,6 @@
 
 ---
 name:            valid_and_eq_0_eq_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -36,7 +35,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_1_eq_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -69,7 +67,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_eq_1_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -102,7 +99,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_eq_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -133,7 +129,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_ne_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -164,7 +159,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_ne_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -195,7 +189,6 @@ body:             |
 ...
 ---
 name:            valid_or_ne_0_ne_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -225,7 +218,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_1_ne_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -258,7 +250,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_ne_1_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -291,7 +282,6 @@ body:             |
 ...
 ---
 name:            invalid_or_eq_0_ne_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -322,7 +312,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_eq_0_s32
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -354,7 +343,6 @@ body:             |
 
 ---
 name:            valid_and_eq_0_eq_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -384,7 +372,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_1_eq_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -417,7 +404,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_eq_1_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -450,7 +436,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_eq_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -481,7 +466,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_ne_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -512,7 +496,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_ne_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -543,7 +526,6 @@ body:             |
 ...
 ---
 name:            valid_or_ne_0_ne_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -573,7 +555,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_1_ne_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -606,7 +587,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_ne_1_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -639,7 +619,6 @@ body:             |
 ...
 ---
 name:            invalid_or_eq_0_ne_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -670,7 +649,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_eq_0_s64
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -701,7 +679,6 @@ body:             |
 ...
 ---
 name:            valid_and_eq_0_eq_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -733,7 +710,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_non_0_eq_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -770,7 +746,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_eq_non_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -807,7 +782,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_eq_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -840,7 +814,6 @@ body:             |
 ...
 ---
 name:            invalid_and_eq_0_ne_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -873,7 +846,6 @@ body:             |
 ...
 ---
 name:            invalid_and_ne_0_ne_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -906,7 +878,6 @@ body:             |
 ...
 ---
 name:            valid_or_ne_0_ne_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -938,7 +909,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_non_0_ne_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -975,7 +945,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_ne_non_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1012,7 +981,6 @@ body:             |
 ...
 ---
 name:            invalid_or_eq_0_ne_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1045,7 +1013,6 @@ body:             |
 ...
 ---
 name:            invalid_or_ne_0_eq_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1078,7 +1045,6 @@ body:             |
 ...
 ---
 name:            invalid_or_eq_0_eq_0_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1111,7 +1077,6 @@ body:             |
 ...
 ---
 name:            invalid_p0_src
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1142,7 +1107,6 @@ body:             |
 ...
 ---
 name:            invalid_p0_src_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1175,7 +1139,6 @@ body:             |
 ...
 ---
 name:            invalid_diff_src_ty
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:
@@ -1208,7 +1171,6 @@ body:             |
 ...
 ---
 name:            invalid_diff_src_ty_vec
-tracksRegLiveness: true
 legalized: true
 body:             |
   bb.0:

@@ -13,9 +13,12 @@
 #include "InputFiles.h"
 #include "Target.h"
 
+#include "lld/Common/Utils.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
+
+#include <atomic>
 
 namespace lld {
 namespace macho {
@@ -49,7 +52,9 @@ public:
 
   StringRef getName() const { return {nameData, nameSize}; }
 
-  bool isLive() const { return used; }
+  bool isLive() const {
+    return utils::atomicRef(used).load(std::memory_order_relaxed);
+  }
   bool isLazy() const {
     return symbolKind == LazyArchiveKind || symbolKind == LazyObjectKind;
   }
@@ -97,8 +102,7 @@ protected:
   Symbol(Kind k, StringRef name, InputFile *file)
       : symbolKind(k), nameData(name.data()), file(file), nameSize(name.size()),
         isUsedInRegularObj(!file || isa<ObjFile>(file)),
-        used(!config->deadStrip), hasPendingDefinition(false),
-        pendingOverridesWeakDef(false) {}
+        used(!config->deadStrip) {}
 
   Kind symbolKind;
   const char *nameData;
@@ -110,18 +114,7 @@ public:
   bool isUsedInRegularObj : 1;
 
   // True if this symbol is used from a live section.
-  bool used : 1;
-
-  // True if a file that has already been pulled into the link defines this
-  // symbol, but has not been parsed yet, so the definition is not in the
-  // symbol table yet. Keeps a second archive member or dylib symbol of the same
-  // name from taking effect before parsePendingExtracts() runs.
-  bool hasPendingDefinition : 1;
-
-  // True if a weak dylib symbol of the same name was seen while
-  // hasPendingDefinition was set, so a non-weak pending definition still sets
-  // Defined::overridesWeakDef when parsed.
-  bool pendingOverridesWeakDef : 1;
+  bool used;
 };
 
 class Defined : public Symbol {
@@ -393,13 +386,9 @@ T *replaceSymbol(Symbol *s, ArgT &&...arg) {
 
   bool isUsedInRegularObj = s->isUsedInRegularObj;
   bool used = s->used;
-  bool hasPendingDefinition = s->hasPendingDefinition;
-  bool pendingOverridesWeakDef = s->pendingOverridesWeakDef;
   T *sym = new (s) T(std::forward<ArgT>(arg)...);
   sym->isUsedInRegularObj |= isUsedInRegularObj;
   sym->used |= used;
-  sym->hasPendingDefinition |= hasPendingDefinition;
-  sym->pendingOverridesWeakDef |= pendingOverridesWeakDef;
   return sym;
 }
 

@@ -31,6 +31,7 @@ def MemoryEffectsOpInterface
     an operation.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
 }
 
 // The base class for defining specific memory effects.
@@ -95,7 +96,9 @@ class MemWriteAt<int stage, EffectRange range = PartialEffect>
 def NoMemoryEffect : MemoryEffects<[]>;
 
 // Op has recursively computed side effects.
-def RecursiveMemoryEffects : NativeOpTrait<"HasRecursiveMemoryEffects">;
+def RecursiveMemoryEffects : NativeOpTrait<"HasRecursiveMemoryEffects"> {
+  let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
+}
 
 //===----------------------------------------------------------------------===//
 // Speculation
@@ -104,12 +107,16 @@ def RecursiveMemoryEffects : NativeOpTrait<"HasRecursiveMemoryEffects">;
 // Used to inject an implementation of getSpeculatability.  Users should not use
 // this directly.
 def RecursivelySpeculatableImplTrait
-  : NativeOpTrait<"RecursivelySpeculatableImplTrait">;
+  : NativeOpTrait<"RecursivelySpeculatableImplTrait"> {
+  let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
+}
 
 // Used to inject an implementation of getSpeculatability.  Users should not use
 // this directly.
 def AlwaysSpeculatableImplTrait
-  : NativeOpTrait<"AlwaysSpeculatableImplTrait">;
+  : NativeOpTrait<"AlwaysSpeculatableImplTrait"> {
+  let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
+}
 
 // This op interface enables Op authors to inject custom logic to determine
 // whether an Operation can be speculatively executed.  Ops that implement this
@@ -122,6 +129,7 @@ def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
     operation.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/SideEffectInterfaces.h"];
 
   let methods = [
     InterfaceMethod<[{

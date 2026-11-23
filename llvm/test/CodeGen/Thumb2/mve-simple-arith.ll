@@ -37,16 +37,16 @@ define arm_aapcs_vfpcc <2 x i64> @add_int64_t(<2 x i64> %src1, <2 x i64> %src2) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov lr, r12, d3
+; CHECK-NEXT:    vmov r0, r12, d3
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    vmov r1, r0, d2
+; CHECK-NEXT:    vmov r1, lr, d2
 ; CHECK-NEXT:    vmov r4, r5, d0
-; CHECK-NEXT:    adds.w r2, r2, lr
-; CHECK-NEXT:    adc.w r3, r3, r12
+; CHECK-NEXT:    adds r0, r0, r2
+; CHECK-NEXT:    adc.w r2, r3, r12
 ; CHECK-NEXT:    adds r1, r1, r4
-; CHECK-NEXT:    adcs r0, r5
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r3
+; CHECK-NEXT:    adc.w r3, r5, lr
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = add nsw <2 x i64> %src1, %src2
@@ -112,13 +112,13 @@ define arm_aapcs_vfpcc <2 x double> @add_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d11
-; CHECK-NEXT:    vmov r2, r3, d9
+; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmov q5, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r2, r3, d11
 ; CHECK-NEXT:    bl __aeabi_dadd
-; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
+; CHECK-NEXT:    vmov lr, r12, d8
+; CHECK-NEXT:    vmov r2, r3, d10
 ; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
@@ -168,16 +168,16 @@ define arm_aapcs_vfpcc <2 x i64> @sub_int64_t(<2 x i64> %src1, <2 x i64> %src2) 
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    vmov lr, r12, d1
+; CHECK-NEXT:    vmov r0, r12, d1
 ; CHECK-NEXT:    vmov r2, r3, d3
-; CHECK-NEXT:    vmov r1, r0, d0
+; CHECK-NEXT:    vmov r1, lr, d0
 ; CHECK-NEXT:    vmov r4, r5, d2
-; CHECK-NEXT:    subs.w r2, r2, lr
-; CHECK-NEXT:    sbc.w r3, r3, r12
+; CHECK-NEXT:    subs r0, r2, r0
+; CHECK-NEXT:    sbc.w r2, r3, r12
 ; CHECK-NEXT:    subs r1, r4, r1
-; CHECK-NEXT:    sbc.w r0, r5, r0
-; CHECK-NEXT:    vmov q0[2], q0[0], r1, r2
-; CHECK-NEXT:    vmov q0[3], q0[1], r0, r3
+; CHECK-NEXT:    sbc.w r3, r5, lr
+; CHECK-NEXT:    vmov q0[2], q0[0], r1, r0
+; CHECK-NEXT:    vmov q0[3], q0[1], r3, r2
 ; CHECK-NEXT:    pop {r4, r5, r7, pc}
 entry:
   %0 = sub nsw <2 x i64> %src2, %src1
@@ -243,13 +243,13 @@ define arm_aapcs_vfpcc <2 x double> @sub_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d11
-; CHECK-NEXT:    vmov r2, r3, d9
+; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmov q5, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r2, r3, d11
 ; CHECK-NEXT:    bl __aeabi_dsub
-; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
+; CHECK-NEXT:    vmov lr, r12, d8
+; CHECK-NEXT:    vmov r2, r3, d10
 ; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12
@@ -376,13 +376,13 @@ define arm_aapcs_vfpcc <2 x double> @mul_float64_t(<2 x double> %src1, <2 x doub
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
-; CHECK-NEXT:    vmov q5, q1
-; CHECK-NEXT:    vmov q4, q0
-; CHECK-NEXT:    vmov r0, r1, d11
-; CHECK-NEXT:    vmov r2, r3, d9
+; CHECK-NEXT:    vmov q4, q1
+; CHECK-NEXT:    vmov q5, q0
+; CHECK-NEXT:    vmov r0, r1, d9
+; CHECK-NEXT:    vmov r2, r3, d11
 ; CHECK-NEXT:    bl __aeabi_dmul
-; CHECK-NEXT:    vmov lr, r12, d10
-; CHECK-NEXT:    vmov r2, r3, d8
+; CHECK-NEXT:    vmov lr, r12, d8
+; CHECK-NEXT:    vmov r2, r3, d10
 ; CHECK-NEXT:    vmov d9, r0, r1
 ; CHECK-NEXT:    mov r0, lr
 ; CHECK-NEXT:    mov r1, r12

@@ -27,9 +27,11 @@
 ; RUN:	-r=%t.o,_Znam, \
 ; RUN:	-memprof-report-hinted-sizes \
 ; RUN:	-pass-remarks=memprof-context-disambiguation -save-temps \
-; RUN:	-o %t.out 2>&1 | FileCheck %s --implicit-check-not "call in clone _Z3foov" \
-; RUN:  --check-prefix=SIZESUNHINTED
-; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --implicit-check-not "\"memprof\"=\"cold\""
+; RUN:	-o %t.out 2>&1 | FileCheck %s \
+; RUN:  --implicit-check-not "call in clone _Z3foov marked with memprof allocation attribute cold" \
+; RUN:  --check-prefix=SIZESUNHINTED --check-prefix=REMARKSUNHINTED
+; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s --check-prefix=IRUNHINTED \
+; RUN:  --implicit-check-not "\"memprof\"=\"cold\""
 
 ;; Check that we do hint with a sufficient -memprof-cloning-cold-threshold.
 ; RUN: opt -thinlto-bc -memprof-report-hinted-sizes %s >%t.o
@@ -93,6 +95,10 @@ attributes #0 = { noinline optnone }
 ; SIZESUNHINTED: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning
 ; SIZESUNHINTED: Cold full allocation context 456 with total size 200 is NotColdCold after cloning
 ; SIZESUNHINTED: Cold full allocation context 789 with total size 300 is NotColdCold after cloning
+;; Without aggressive hinting the allocation cannot be disambiguated (the
+;; callsite needed for cloning is missing), so it keeps the ambiguous attribute.
+; REMARKSUNHINTED: call in clone _Z3foov marked with memprof allocation attribute ambiguous
+; IRUNHINTED: "memprof"="ambiguous"
 
 ; SIZESHINTED: NotCold full allocation context 123 with total size 100 is NotColdCold after cloning marked Cold due to cold byte percent
 ; SIZESHINTED: Cold full allocation context 456 with total size 200 is NotColdCold after cloning marked Cold due to cold byte percent

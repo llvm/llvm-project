@@ -26,9 +26,9 @@ define i64 @test_vectorize_select_umin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8
@@ -139,9 +139,9 @@ define i64 @test_vectorize_select_umin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP22]], align 8
@@ -252,9 +252,9 @@ define i64 @test_vectorize_select_smin_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8
@@ -365,9 +365,9 @@ define i64 @test_vectorize_select_smin_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP22]], align 8
@@ -478,9 +478,9 @@ define i64 @test_vectorize_select_umax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8
@@ -591,9 +591,9 @@ define i64 @test_vectorize_select_umax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP22]], align 8
@@ -704,9 +704,9 @@ define i64 @test_vectorize_select_smax_first_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP26:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP23]], align 8
@@ -817,9 +817,9 @@ define i64 @test_vectorize_select_smax_last_idx(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i64> [[STEP_ADD]], splat (i64 2)
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i64> [[STEP_ADD_2]], splat (i64 2)
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i64, ptr [[GEP]], i64 2
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i64, ptr [[GEP]], i64 4
-; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i64, ptr [[GEP]], i64 6
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP]], i64 16
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr i8, ptr [[GEP]], i64 32
+; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr i8, ptr [[GEP]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i64>, ptr [[GEP]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <2 x i64>, ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD9:%.*]] = load <2 x i64>, ptr [[TMP22]], align 8
@@ -977,9 +977,9 @@ define i32 @test_multi_use_reduction_with_trunc_iv(ptr %src, i32 %n) {
 ; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i32> [[STEP_ADD_2]], splat (i32 4)
 ; CHECK-NEXT:    [[IV:%.*]] = add i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 4
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 8
-; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i32, ptr [[GEP_SRC]], i64 12
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 16
+; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 32
+; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr i8, ptr [[GEP_SRC]], i64 48
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[GEP_SRC]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
 ; CHECK-NEXT:    [[WIDE_LOAD10:%.*]] = load <4 x i32>, ptr [[TMP20]], align 4
@@ -1164,4 +1164,4 @@ exit:
 }
 
 
-attributes #0 = { optsize "target-cpu"="neoverse-v2" }
+attributes #0 = { optsize "target-cpu"="neoverse-v2" vscale_range(1,16) }

@@ -132,3 +132,20 @@ subroutine sub1()
   end do
   !$omp end do
 end
+
+! The same restriction applies to the deprecated DEPEND(SINK:) spelling of the
+! iteration vector.
+subroutine sub4()
+  integer :: i, N = 10
+  real :: arrayA(10)
+  real, external :: bar
+
+  !$omp do ordered(1)
+  do i = 1, N
+    !ERROR: The operation in the iteration offset must be + or -
+    !$omp ordered depend(sink: i*1)
+    arrayA(i) = bar(i)
+    !$omp ordered depend(sink: i - 1)
+  end do
+  !$omp end do
+end

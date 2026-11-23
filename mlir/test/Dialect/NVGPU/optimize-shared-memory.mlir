@@ -241,6 +241,36 @@ func.func @abort_if_subview(%arg0: memref<128x128xf16>,
 
 // -----
 
+// A row of 96 f16 elements is 192 bytes, i.e. 12 vectors of 16 bytes, which is
+// not a power of 2. The XOR swizzle would move accesses into the next row;
+// don't swizzle.
+
+// CHECK: @no_swizzle_non_power_of_2_row_f16([[arg0:%.+]]: memref<{{.*}}>, [[ldRow:%.+]]: index, [[ldCol:%.+]]: index, [[stRow:%.+]]: index, [[stCol:%.+]]: index, [[fragRow:%.+]]: index, [[fragCol:%.+]]: index)
+func.func @no_swizzle_non_power_of_2_row_f16(%arg0: memref<128x128xf16>,
+                               %ldRow: index, %ldCol: index,
+                               %stRow: index, %stCol: index,
+                               %fragRow: index, %fragCol :index)
+                                -> vector<4x2xf16> {
+  // CHECK: [[shm:%.+]] = memref.alloc
+  %shm = memref.alloc() : memref<64x96xf16, 3>
+
+  // CHECK-NOT: arith.xori
+  // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stCol]]]
+  %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
+      : memref<128x128xf16> to memref<64x96xf16, 3>
+  %1 = nvgpu.device_async_create_group %0
+  nvgpu.device_async_wait %1 numGroups = 1
+
+  // CHECK-NOT: arith.xori
+  // CHECK: nvgpu.ldmatrix [[shm]][[[fragRow]], [[fragCol]]]
+  %mat = nvgpu.ldmatrix %shm[%fragRow, %fragCol] numTiles = 4 transpose = false
+      : memref<64x96xf16, 3> -> vector<4x2xf16>
+
+  return %mat: vector<4x2xf16>
+}
+
+// -----
+
 // Ensure this case not crash
 
 // CHECK-LABEL: func @test_0_d

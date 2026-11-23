@@ -1,4 +1,4 @@
-; RUN: llc -O0 -asm-verbose -mtriple=x86_64-macosx -debugger-tune=gdb < %s | FileCheck %s
+; RUN: llc -O0 -asm-verbose -mtriple=x86_64-macosx < %s | FileCheck %s
 ; CHECK-NOT: .asciz "X" ## External Name
 ; CHECK: .asciz "Y" ## External Name
 ; Test to check type with no definition is listed in pubtypes section.
@@ -29,7 +29,7 @@ return:                                           ; preds = %entry
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
 !llvm.dbg.cu = !{!3}
-!llvm.module.flags = !{!20}
+!llvm.module.flags = !{!20, !100}
 
 !0 = !DILocalVariable(name: "x", line: 7, arg: 1, scope: !1, file: !2, type: !7)
 !1 = distinct !DISubprogram(name: "foo", linkageName: "foo", line: 7, isLocal: false, isDefinition: true, virtualIndex: 6, isOptimized: false, unit: !3, scopeLine: 7, file: !18, scope: !2, type: !4)
@@ -51,3 +51,4 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 !18 = !DIFile(filename: "a.c", directory: "/tmp/")
 !19 = !{}
 !20 = !{i32 1, !"Debug Info Version", i32 3}
+!100 = !{i32 2, !"debugger-tuning", !"gdb"}

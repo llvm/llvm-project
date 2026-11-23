@@ -13,6 +13,7 @@
 
 #include "StatepointLowering.h"
 #include "SelectionDAGBuilder.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -60,18 +61,6 @@ STATISTIC(NumSlotsAllocatedForStatepoints,
 STATISTIC(NumOfStatepoints, "Number of statepoint nodes encountered");
 STATISTIC(StatepointMaxSlotsRequired,
           "Maximum number of stack slots required for a singe statepoint");
-
-static cl::opt<bool> UseRegistersForDeoptValues(
-    "use-registers-for-deopt-values", cl::Hidden, cl::init(false),
-    cl::desc("Allow using registers for non pointer deopt args"));
-
-static cl::opt<bool> UseRegistersForGCPointersInLandingPad(
-    "use-registers-for-gc-values-in-landing-pad", cl::Hidden, cl::init(false),
-    cl::desc("Allow using registers for gc pointer in landing pad"));
-
-static cl::opt<unsigned> MaxRegistersForGCPointers(
-    "max-registers-for-gc-values", cl::Hidden, cl::init(0),
-    cl::desc("Max number of VRegs allowed to pass GC pointer meta args in"));
 
 // Lowering relocate(undef) as arbitrary constant. Current constant value is
 // chosen such that it's unlikely to be a valid pointer.
@@ -570,12 +559,14 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
     SI.StatepointFlags & (uint64_t)StatepointFlags::DeoptLiveIn;
 
   // Decide which deriver pointers will go on VRegs
-  unsigned MaxVRegPtrs = MaxRegistersForGCPointers.getValue();
+  unsigned MaxVRegPtrs =
+      Builder.DAG.getSelectionDAGOptions().max_registers_for_gc_values;
 
   // Pointers used on exceptional path of invoke statepoint.
   // We cannot assing them to VRegs.
   SmallSet<SDValue, 8> LPadPointers;
-  if (!UseRegistersForGCPointersInLandingPad)
+  if (!Builder.DAG.getSelectionDAGOptions()
+           .use_registers_for_gc_values_in_landing_pad) {
     if (const auto *StInvoke =
             dyn_cast_or_null<InvokeInst>(SI.StatepointInstr)) {
       LandingPadInst *LPI = StInvoke->getLandingPadInst();
@@ -585,6 +576,7 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
           LPadPointers.insert(Builder.getValue(Relocate->getDerivedPtr()));
         }
     }
+  }
 
   LLVM_DEBUG(dbgs() << "Deciding how to lower GC Pointers:\n");
 
@@ -636,7 +628,9 @@ lowerStatepointMetaArgs(SmallVectorImpl<SDValue> &Ops,
       return true;
     if (isGCValue(V, Builder))
       return !LowerAsVReg.count(Builder.getValue(V));
-    return !(LiveInDeopt || UseRegistersForDeoptValues);
+    return !(
+        LiveInDeopt ||
+        Builder.DAG.getSelectionDAGOptions().use_registers_for_deopt_values);
   };
 
   // Before we actually start lowering (and allocating spill slots for values),

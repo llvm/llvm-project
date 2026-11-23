@@ -15,6 +15,7 @@
 
 #include "Context.h"
 #include "Value.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/raw_ostream.h"
 #include <optional>
 #include <string>
@@ -113,6 +114,16 @@ public:
                 bool NoUndef);
   void store(const AnyValue &Ptr, Align Alignment, const AnyValue &Val,
              Type *ValTy);
+
+  /// Copy `Length` bytes from `Src` to `Dest` according to the intrinsic `IID`.
+  /// If `IsLibCall` is true, the C library semantics are used instead.
+  void executeMemTransfer(const AnyValue &Dest, const AnyValue &Src,
+                          const AnyValue &Length, Intrinsic::ID IID,
+                          bool IsLibCall);
+
+  /// Fill `Length` bytes at `Dest` with `Val`.
+  void executeMemSet(const AnyValue &Dest, const AnyValue &Val,
+                     const AnyValue &Length);
 
   void requestProgramExit(ProgramExitInfo::ProgramExitKind Kind,
                           uint64_t ExitCode = 0);

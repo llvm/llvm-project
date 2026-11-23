@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/TextAPI/TextAPIReader.h"
+#include <atomic>
 
 #include <vector>
 
@@ -161,7 +162,7 @@ class ObjFile final : public InputFile {
 public:
   ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
           bool lazy = false, bool forceHidden = false, bool compatArch = true,
-          bool builtFromBitcode = false);
+          bool builtFromBitcode = false, bool deferParse = false);
   ArrayRef<llvm::MachO::data_in_code_entry> getDataInCode() const;
   ArrayRef<uint8_t> getOptimizationHints() const;
   template <class LP> void parse();
@@ -170,6 +171,15 @@ public:
   // the half that inserts into the symbol table, and has to run in file order.
   template <class LP> void parsePrepare();
   template <class LP> void parseFinish();
+  // parseLazy() split the same way: scanLazy() collects the names this file
+  // defines (and references), registerLazy() adds them to the symbol table.
+  template <class LP> void scanLazy();
+  void registerLazy();
+  void clearLazyScan() {
+    lazyDefineds = {};
+    lazyUndefineds = {};
+    symbols.clear();
+  }
   template <class LP>
   void parseLinkerOptions(llvm::SmallVectorImpl<StringRef> &LinkerOptions);
   void parseDeferredRelocations();
@@ -192,6 +202,30 @@ public:
   llvm::DenseMap<ConcatInputSection *, FDE> fdes;
   std::vector<AliasSymbol *> aliases;
 
+  struct PendingSymbol {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+  };
+  // An external section symbol, and the subsection it was found to be in.
+  struct PendingDefined {
+    llvm::CachedHashStringRef name;
+    uint32_t symIndex;
+    InputSection *isec;
+    uint64_t value;
+    uint64_t size;
+  };
+  ArrayRef<PendingSymbol> getLazyDefineds() const { return lazyDefineds; }
+  ArrayRef<llvm::CachedHashStringRef> getLazyUndefineds() const {
+    return lazyUndefineds;
+  }
+  ArrayRef<PendingDefined> getPendingDefineds() const {
+    return pendingDefineds;
+  }
+  ArrayRef<PendingSymbol> getNonSectionSymbols() const {
+    return nonSectionSymbols;
+  }
+  ArrayRef<PendingSymbol> getUndefineds() const { return undefineds; }
+
 private:
   llvm::once_flag initDwarf;
   template <class LP> void parseLazy();
@@ -208,20 +242,10 @@ private:
   // to do with the name but look it up.
   llvm::SmallVector<StringRef, 4> lcLinkerOptions;
   std::vector<std::vector<uint32_t>> symbolsBySection;
-  struct PendingSymbol {
-    llvm::CachedHashStringRef name;
-    uint32_t symIndex;
-  };
   std::vector<PendingSymbol> undefineds;
   std::vector<PendingSymbol> nonSectionSymbols;
-  // An external section symbol, and the subsection it was found to be in.
-  struct PendingDefined {
-    llvm::CachedHashStringRef name;
-    uint32_t symIndex;
-    InputSection *isec;
-    uint64_t value;
-    uint64_t size;
-  };
+  std::vector<PendingSymbol> lazyDefineds;
+  std::vector<llvm::CachedHashStringRef> lazyUndefineds;
   std::vector<PendingDefined> pendingDefineds;
   template <class NList>
   Symbol *parseNonSectionSymbol(const NList &sym,
@@ -262,6 +286,16 @@ public:
 
   void parseLoadCommands(MemoryBufferRef mb);
   void parseReexports(const llvm::MachO::InterfaceFile &interface);
+  // The constructor only records the exported symbols; registerExports()
+  // adds them to the symbol table. It runs from the batch the file was put
+  // on with parseLater(), so in file order. replayExport() does one of them.
+  void registerExports();
+  size_t numExports() const { return pendingExports.size(); }
+  llvm::CachedHashStringRef exportName(size_t i) const {
+    return pendingExports[i].name;
+  }
+  bool exportIsWeakDef(size_t i) const { return pendingExports[i].isWeakDef; }
+  void replayExport(size_t i);
   bool isReferenced() const { return numReferencedSymbols > 0; }
   bool isExplicitlyLinked() const;
   void setExplicitlyLinked() { explicitlyLinked = true; }
@@ -276,7 +310,7 @@ public:
   uint32_t compatibilityVersion = 0;
   uint32_t currentVersion = 0;
   int64_t ordinal = 0; // Ordinal numbering starts from 1, so 0 is a sentinel
-  unsigned numReferencedSymbols = 0;
+  std::atomic<unsigned> numReferencedSymbols{0};
   RefState refState;
   bool reexport = false;
   bool forceNeeded = false;
@@ -310,6 +344,22 @@ private:
   void parseExportedSymbols(uint32_t offset, uint32_t size);
   void loadReexport(StringRef path, DylibFile *umbrella,
                     const llvm::MachO::InterfaceFile *currentTopLevelTapi);
+  void recordExport(llvm::CachedHashStringRef name, DylibFile *file,
+                    DylibFile *owner, bool isWeakDef, bool isTlv);
+
+  // An exported symbol, as the constructor found it: the dylib to attribute
+  // it to (usually exportingFile, or a synthetic dylib made for a $ld$previous
+  // symbol), and whose `symbols` list it goes on.
+  struct PendingExport {
+    llvm::CachedHashStringRef name;
+    DylibFile *file;
+    DylibFile *owner;
+    // Its slot in owner->symbols.
+    uint32_t ownerIndex;
+    bool isWeakDef;
+    bool isTlv;
+  };
+  std::vector<PendingExport> pendingExports;
 
   llvm::DenseSet<llvm::CachedHashStringRef> hiddenSymbols;
 };
@@ -320,16 +370,17 @@ public:
   explicit ArchiveFile(std::unique_ptr<llvm::object::Archive> &&file,
                        bool forceHidden);
   void addLazySymbols();
-  void fetch(const llvm::object::Archive::Symbol &);
+  void fetch(const llvm::object::Archive::Symbol &, bool deferParse = false);
   // LLD normally doesn't use Error for error-handling, but the underlying
   // Archive library does, so this is the cleanest way to wrap it.
-  Error fetch(const llvm::object::Archive::Child &, StringRef reason);
+  Error fetch(const llvm::object::Archive::Child &, StringRef reason,
+              bool deferParse = false);
   const llvm::object::Archive &getArchive() const { return *file; };
   static bool classof(const InputFile *f) { return f->kind() == ArchiveKind; }
 
 private:
   Expected<InputFile *> childToObjectFile(const llvm::object::Archive::Child &c,
-                                          bool lazy);
+                                          bool lazy, bool deferParse = false);
   std::unique_ptr<llvm::object::Archive> file;
   // Keep track of children fetched from the archive by tracking
   // which address offsets have been fetched already.
@@ -343,15 +394,14 @@ class BitcodeFile final : public InputFile {
 public:
   explicit BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                        uint64_t offsetInArchive, bool lazy = false,
-                       bool forceHidden = false, bool compatArch = true);
+                       bool forceHidden = false, bool compatArch = true,
+                       bool deferParse = false);
   static bool classof(const InputFile *f) { return f->kind() == BitcodeKind; }
   void parse();
+  void parseLazy();
 
   std::unique_ptr<llvm::lto::InputFile> obj;
   bool forceHidden;
-
-private:
-  void parseLazy();
 };
 
 extern llvm::SetVector<InputFile *> inputFiles;
@@ -366,6 +416,12 @@ void extract(InputFile &file, StringRef reason);
 
 // Parses the files extract() has pulled into the link. May pull in more.
 void parsePendingExtracts();
+// Queues an object file from the command line to be parsed by the next
+// parsePendingObjects(), together with the other files queued since the last
+// one. The driver calls that before anything else that adds to the symbol
+// table, so files still resolve in command-line order.
+void parseLater(InputFile &file);
+void parsePendingObjects();
 
 namespace detail {
 

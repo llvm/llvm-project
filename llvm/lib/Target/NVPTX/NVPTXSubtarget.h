@@ -23,14 +23,28 @@
 #include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/TargetParser/NVPTXTargetParser.h"
+#include <optional>
+
+#define OPTIONS_STRUCT_DECL
+#include "NVPTXOptions.inc"
 
 #define GET_SUBTARGETINFO_HEADER
 #include "NVPTXGenSubtargetInfo.inc"
 
 namespace llvm {
 
+class Function;
+class LLVMContext;
+class Module;
+
+const NVPTXOptions &getNVPTXOptions(const LLVMContext &C);
+const NVPTXOptions &getNVPTXOptions(const Module &M);
+const NVPTXOptions &getNVPTXOptions(const Function &F);
+
 class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   virtual void anchor();
+
+  const NVPTXOptions &CLOpts;
 
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
@@ -57,6 +71,8 @@ public:
                  const NVPTXTargetMachine &TM);
 
   ~NVPTXSubtarget() override;
+
+  const NVPTXOptions &getCLOpts() const { return CLOpts; }
 
   const TargetFrameLowering *getFrameLowering() const override {
     return &FrameLowering;

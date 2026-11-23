@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CppGenUtilities.h"
 #include "FormatGen.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/EnumInfo.h"
@@ -272,7 +273,8 @@ FieldParser<std::optional<{0}>, std::optional<{0}>>::parse(AsmParser &parser) {{
 }
 
 static void emitParserPrinter(const EnumInfo &enumInfo, StringRef qualName,
-                              raw_ostream &os) {
+                              raw_ostream &os,
+                              SmallVectorImpl<StringRef> &includes) {
   if (!enumInfo.hasParserPrinter())
     return;
 
@@ -285,6 +287,10 @@ static void emitParserPrinter(const EnumInfo &enumInfo, StringRef qualName,
         " cannot be printed unquoted with cases that cannot be keywords");
 
   emitFieldParserDecls(enumInfo, qualName, os);
+  // `::llvm::raw_ostream`, used by the printer.
+  includes.push_back("llvm/Support/raw_ostream.h");
+  // `::mlir::FailureOr`, used by the `FieldParser` specializations.
+  includes.push_back("mlir/Support/LLVM.h");
 
   // Generate the start of the printer for the enum.
   const char *const printerStart = R"(
@@ -351,6 +357,8 @@ inline ::llvm::raw_ostream &operator<<(::llvm::raw_ostream &p, {0} value) {{
                   qualName);
     os << "  if (underlyingValue && !llvm::has_single_bit(underlyingValue))\n"
           "    return p << '\"' << valueStr << '\"';\n";
+    // `::llvm::has_single_bit`.
+    includes.push_back("llvm/ADT/bit.h");
   }
   os << "  return p << valueStr;\n"
         "}\n"
@@ -751,7 +759,8 @@ static void emitUnderlyingToSymFnForBitEnum(const Record &enumDef,
   os << "}\n";
 }
 
-static void emitEnumDecl(const Record &enumDef, raw_ostream &os) {
+static void emitEnumDecl(const Record &enumDef, raw_ostream &os,
+                         SmallVectorImpl<StringRef> &includes) {
   EnumInfo enumInfo(enumDef);
   StringRef enumName = enumInfo.getEnumClassName();
   StringRef cppNamespace = enumInfo.getCppNamespace();
@@ -826,12 +835,14 @@ public:
       StringRef attrClassName = enumInfo.getSpecializedAttrClassName();
       StringRef baseAttrClassName = "IntegerAttr";
       os << formatv(attrClassDecl, enumName, attrClassName, baseAttrClassName);
+      // `::mlir::IntegerAttr`, the base class of the specialized attribute.
+      includes.push_back("mlir/IR/BuiltinAttributes.h");
     }
   } // close `ns`.
 
   // Generate a generic parser and printer for the enum.
   std::string qualName = enumInfo.getQualifiedName();
-  emitParserPrinter(enumInfo, qualName, os);
+  emitParserPrinter(enumInfo, qualName, os, includes);
 
   // Emit DenseMapInfo for this enum class
   emitDenseMapInfo(qualName, underlyingType, cppNamespace, os);
@@ -842,10 +853,23 @@ static bool emitEnumDecls(const RecordKeeper &records, raw_ostream &os) {
 
   ArrayRef<const Record *> defs =
       records.getAllDerivedDefinitionsIfDefined("EnumInfo");
+  if (defs.empty())
+    return false;
+
+  // The required includes are only known once all declarations were
+  // generated, so buffer the declarations until the includes are emitted.
+  SmallVector<StringRef> includes = {
+      // `::llvm::DenseMapInfo`.
+      "llvm/ADT/DenseMapInfo.h",
+      // `::llvm::StringRef`.
+      "llvm/ADT/StringRef.h",
+  };
+  std::string declarations;
+  llvm::raw_string_ostream declOs(declarations);
   if (llvm::any_of(defs, [](const Record *def) {
         return EnumInfo(def).hasParserPrinter();
       }))
-    os << R"(
+    declOs << R"(
 namespace mlir {
 class AsmParser;
 
@@ -855,8 +879,10 @@ struct FieldParser;
 )";
 
   for (const Record *def : defs)
-    emitEnumDecl(*def, os);
+    emitEnumDecl(*def, declOs, includes);
 
+  tblgen::emitIncludes(os, includes);
+  os << declarations;
   return false;
 }
 
@@ -886,11 +912,39 @@ static void emitEnumDef(const Record &enumDef, raw_ostream &os) {
     emitFieldParserDefs(enumInfo, os);
 }
 
+/// Appends the headers declaring the C++ constructs used by the definitions of
+/// `enumInfo`, beyond those already included by the declarations, to
+/// `includes`.
+static void addEnumDefIncludes(const EnumInfo &enumInfo,
+                               SmallVectorImpl<StringRef> &includes) {
+  // `::llvm::StringSwitch`, used to symbolize strings.
+  includes.push_back("llvm/ADT/StringSwitch.h");
+  if (enumInfo.isBitEnum()) {
+    // `::llvm::SmallVector` and `::llvm::join`, used to split and join the
+    // strings of the individual bits.
+    includes.push_back("llvm/ADT/SmallVector.h");
+    includes.push_back("llvm/ADT/StringExtras.h");
+  }
+  // `::mlir::IntegerType`, used by the specialized attribute.
+  if (enumInfo.genSpecializedAttr())
+    includes.push_back("mlir/IR/BuiltinTypes.h");
+
+  // `::mlir::AsmParser`, used by the `FieldParser` specializations.
+  if (enumInfo.hasParserPrinter())
+    includes.push_back("mlir/IR/OpImplementation.h");
+}
+
 static bool emitEnumDefs(const RecordKeeper &records, raw_ostream &os) {
   llvm::emitSourceFileHeader("Enum Utility Definitions", os, records);
 
-  for (const Record *def :
-       records.getAllDerivedDefinitionsIfDefined("EnumInfo"))
+  ArrayRef<const Record *> defs =
+      records.getAllDerivedDefinitionsIfDefined("EnumInfo");
+  SmallVector<StringRef> includes;
+  for (const Record *def : defs)
+    addEnumDefIncludes(EnumInfo(def), includes);
+  tblgen::emitIncludes(os, includes);
+
+  for (const Record *def : defs)
     emitEnumDef(*def, os);
 
   return false;

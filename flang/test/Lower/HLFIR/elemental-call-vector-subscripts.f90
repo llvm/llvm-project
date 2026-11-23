@@ -91,3 +91,88 @@ end subroutine
 ! CHECK:             fir.call @_QPfoo2(%[[VAL_23]]#0){{.*}}: (!fir.ref<i64>) -> ()
 ! CHECK:             hlfir.end_associate %[[VAL_23]]#1, %[[VAL_23]]#2 : !fir.ref<i64>, i1
 ! CHECK:           }
+
+subroutine vector_index(x, a, b)
+  real :: x(:)
+  integer :: a(:), b(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(a+b))
+end subroutine
+subroutine scalar_index(x, a, b, v)
+  real :: x(:,:)
+  integer :: a(:), b(:), v(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(v,sum(a+b)))
+end subroutine
+subroutine character_index(x, a, b)
+  real :: x(:)
+  character(*) :: a(:), b(:)
+  interface
+    elemental subroutine consume(x)
+      real, intent(in) :: x
+    end subroutine
+  end interface
+  call consume(x(len_trim(a//b)))
+end subroutine
+
+! The index expression arrays belong to the enclosing statement, not the
+! per-element address computation. No cleanup may precede the call loop.
+! CHECK-LABEL: func.func @_QPvector_index
+! CHECK: %[[ADD:.*]] = hlfir.elemental
+! CHECK: arith.addi
+! CHECK: %[[CAST:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[ADD]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: hlfir.apply %[[CAST]]
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[CAST]]
+! CHECK-NEXT: hlfir.destroy %[[ADD]]
+! CHECK-NEXT: return
+
+! CHECK-LABEL: func.func @_QPscalar_index
+! CHECK: %[[VECTOR:.*]] = hlfir.elemental
+! CHECK: %[[ADD:.*]] = hlfir.elemental
+! CHECK: %[[SUM:.*]] = hlfir.sum %[[ADD]]
+! CHECK: %[[INDEX:.*]] = fir.convert %[[SUM]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: %[[V:.*]] = hlfir.apply %[[VECTOR]]
+! CHECK: hlfir.designate %{{.*}} (%[[V]], %[[INDEX]])
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[ADD]]
+! CHECK-NEXT: hlfir.destroy %[[VECTOR]]
+! CHECK-NEXT: return
+
+! Character subexpressions retain their per-element cleanup regions, while
+! their containing arrays are cleaned up after the elemental subroutine call.
+! CHECK-LABEL: func.func @_QPcharacter_index
+! CHECK: %[[CHARS:.*]] = hlfir.elemental
+! CHECK: %[[CONCAT:.*]] = hlfir.concat
+! CHECK-NEXT: hlfir.yield_element %[[CONCAT]] : {{.*}} cleanup {
+! CHECK-NEXT: hlfir.destroy %[[CONCAT]]
+! CHECK: %[[LENGTHS:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[CHARS]]
+! CHECK: hlfir.yield_element {{.*}} cleanup {
+! CHECK: hlfir.end_associate
+! CHECK: %[[INDICES:.*]] = hlfir.elemental
+! CHECK: hlfir.apply %[[LENGTHS]]
+! CHECK-NOT: hlfir.destroy
+! CHECK: fir.do_loop
+! CHECK: hlfir.apply %[[INDICES]]
+! CHECK: fir.call @_QPconsume
+! CHECK: }
+! CHECK-NEXT: hlfir.destroy %[[INDICES]]
+! CHECK-NEXT: hlfir.destroy %[[LENGTHS]]
+! CHECK-NEXT: hlfir.destroy %[[CHARS]]
+! CHECK-NEXT: return

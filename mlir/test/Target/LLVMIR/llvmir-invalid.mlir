@@ -118,6 +118,30 @@ llvm.func @powi_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
 
 // -----
 
+llvm.func @powi_intr_vector_exp(%arg0 : vector<4xf32>, %arg1 : vector<4xi32>) -> vector<4xf32> {
+  // expected-error @below{{op operand #1 must be signless integer, but got 'vector<4xi32>'}}
+  %0 = "llvm.intr.powi"(%arg0, %arg1) : (vector<4xf32>, vector<4xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// -----
+
+llvm.func @ldexp_intr_wrong_type(%arg0 : f32, %arg1 : f32) -> f32 {
+  // expected-error @below{{op operand #1 must be signless integer or LLVM dialect-compatible vector of signless integer, but got 'f32'}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (f32, f32) -> f32
+  llvm.return %0 : f32
+}
+
+// -----
+
+llvm.func @ldexp_intr_vector_length_mismatch(%arg0 : vector<4xf32>, %arg1 : vector<8xi32>) -> vector<4xf32> {
+  // expected-error @below{{'llvm.intr.ldexp' op requires the same shape for all operands}}
+  %0 = "llvm.intr.ldexp"(%arg0, %arg1) : (vector<4xf32>, vector<8xi32>) -> vector<4xf32>
+  llvm.return %0 : vector<4xf32>
+}
+
+// -----
+
 llvm.func @memcpy_intr_wrong_type(%src : i64, %dst : i64, %len : i64) {
   // expected-error @below{{op operand #0 must be LLVM pointer type, but got 'i64'}}
   "llvm.intr.memcpy"(%src, %dst, %len) <{isVolatile = false}> : (i64, i64, i64) -> ()

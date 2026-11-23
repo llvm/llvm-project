@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "BitReaderOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::BitReaderOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::BitReaderOptions)
