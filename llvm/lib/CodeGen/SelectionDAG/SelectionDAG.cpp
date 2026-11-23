@@ -5709,15 +5709,12 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   unsigned NumElts = DemandedElts.getBitWidth();
 
-  // Early out for FREEZE.
-  if (Opcode == ISD::FREEZE)
+  // Early out for FREEZE / constant.
+  if (Opcode == ISD::FREEZE || isIntOrFPConstant(Op))
     return true;
 
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
-
-  if (isIntOrFPConstant(Op))
-    return true;
 
   switch (Opcode) {
   case ISD::CONDCODE:
