@@ -1392,12 +1392,12 @@ define i8 @scmp_shl_common_no_nsw(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @scmp_shl_common_no_nsw(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
 ; CHECK-NEXT:    [[AN:%.*]] = shl i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = shl i8 [[B]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = shl nsw i8 [[B]], [[N]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %an = shl i8 %a, %n
-  %bn = shl i8 %b, %n
+  %bn = shl nsw i8 %b, %n
   %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
   ret i8 %r
 }
@@ -1413,6 +1413,21 @@ define i8 @scmp_shl_common_nuw_not_enough(i8 %a, i8 %b, i8 %n) {
 ;
   %an = shl nuw i8 %a, %n
   %bn = shl nuw i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: lshr exact doesn't fold for scmp.
+define i8 @scmp_lshr_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_lshr_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = lshr exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = lshr exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = lshr exact i8 %a, %n
+  %bn = lshr exact i8 %b, %n
   %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
   ret i8 %r
 }
@@ -1444,6 +1459,21 @@ define i8 @scmp_ashr_common_no_exact(i8 %a, i8 %b, i8 %n) {
   ret i8 %r
 }
 
+; Negative test: udiv exact doesn't fold for scmp
+define i8 @scmp_udiv_exact_common(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_udiv_exact_common(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = udiv exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = udiv exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %an = udiv exact i8 %a, %n
+  %bn = udiv exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
 define i8 @scmp_sdiv_exact_common_positive_divisor(i8 %a, i8 %b, i8 range(i8 1, 10) %n) {
 ; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_positive_divisor(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 range(i8 1, 10) [[N:%.*]]) {
@@ -1466,6 +1496,21 @@ define i8 @scmp_sdiv_exact_common_negative_divisor(i8 %a, i8 %b, i8 %n) {
 ;
   %n_neg = icmp slt i8 %n, 0
   call void @llvm.assume(i1 %n_neg)
+  %an = sdiv exact i8 %a, %n
+  %bn = sdiv exact i8 %b, %n
+  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  ret i8 %r
+}
+
+; Negative test: sdiv exact needs to know the sign of divisor
+define i8 @scmp_sdiv_exact_common_unknown_sign_divisor(i8 %a, i8 %b, i8 %n) {
+; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_unknown_sign_divisor(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; CHECK-NEXT:    ret i8 [[R]]
+;
   %an = sdiv exact i8 %a, %n
   %bn = sdiv exact i8 %b, %n
   %r = call i8 @llvm.scmp(i8 %an, i8 %bn)

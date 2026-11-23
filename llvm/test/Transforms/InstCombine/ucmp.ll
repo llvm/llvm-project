@@ -975,12 +975,12 @@ define i8 @ucmp_shl_nsw_common(i8 %a, i8 %b, i8 %n) {
 define i8 @ucmp_shl_common_no_nuw_nor_nsw(i8 %a, i8 %b, i8 %n) {
 ; CHECK-LABEL: define i8 @ucmp_shl_common_no_nuw_nor_nsw(
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = shl i8 [[A]], [[N]]
+; CHECK-NEXT:    [[AN:%.*]] = shl nuw i8 [[A]], [[N]]
 ; CHECK-NEXT:    [[BN:%.*]] = shl i8 [[B]], [[N]]
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %an = shl i8 %a, %n
+  %an = shl nuw i8 %a, %n
   %bn = shl i8 %b, %n
   %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
   ret i8 %r
