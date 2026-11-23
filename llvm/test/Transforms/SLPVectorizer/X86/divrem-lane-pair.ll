@@ -1109,3 +1109,52 @@ exit:
   store i32 %u2, ptr %out, align 4
   ret void
 }
+
+; Without 512-bit vectors the strictfp vector division is scalarized, the
+; division is not paired.
+define void @urem_udiv_strictfp(ptr %a, ptr %b, ptr %r, ptr %q) #0 {
+; CHECK-LABEL: define void @urem_udiv_strictfp(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  store i32 %d0, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+attributes #0 = { strictfp "target-cpu"="skylake" }
