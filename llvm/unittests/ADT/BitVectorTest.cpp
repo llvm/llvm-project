@@ -1258,8 +1258,8 @@ TYPED_TEST(BitVectorTest, EmptyVector) {
   testEmpty(E);
 
   TypeParam F;
-  E.reset(A);
-  testEmpty(E);
+  F.reset(A);
+  testEmpty(F);
 }
 
 /// Make sure calling getData() is legal even on an empty BitVector

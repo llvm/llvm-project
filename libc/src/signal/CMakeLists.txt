@@ -66,6 +66,13 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  sigwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwait
+)
+
+add_entrypoint_object(
   sigwaitinfo
   ALIAS
   DEPENDS

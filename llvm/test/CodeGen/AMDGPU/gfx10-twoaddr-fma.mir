@@ -126,18 +126,13 @@ body:             |
 # GFX10-LIS: V_FMAMK_F16 %0.sub0, 1078523331, %1, implicit $mode, implicit $exec
 ---
 name:            test_fmamk_imm_reg_f16
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.sub1
-    %2 = V_MOV_B32_e32 1078523331, implicit $exec
-    %3 = V_FMAC_F16_e32 %2, %0.sub0, %1, implicit $mode, implicit $exec
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = COPY %0.sub1
+    %2:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+    %3:vgpr_32 = V_FMAC_F16_e32 %2, %0.sub0, %1, implicit $mode, implicit $exec
 
 ...
 
@@ -148,16 +143,12 @@ body:             |
 # GFX10-LIS: V_FMAAK_F16 %0.sub0, %0.sub1, 1078523331, implicit $mode, implicit $exec
 ---
 name:            test_fmaak_f16
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
 
-    %0 = IMPLICIT_DEF
-    %1 = V_MOV_B32_e32 1078523331, implicit $exec
-    %2 = V_FMAC_F16_e32 %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vgpr_32 = V_MOV_B32_e32 1078523331, implicit $exec
+    %2:vgpr_32 = V_FMAC_F16_e32 %0.sub0, %0.sub1, %1, implicit $mode, implicit $exec
     S_ENDPGM 0, implicit %1
 ...
 

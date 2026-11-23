@@ -34,9 +34,7 @@ struct SCFTilingResult;
 
 namespace tensor {
 class InsertSliceOp;
-class PackOp;
 class PadOp;
-class UnPackOp;
 } // namespace tensor
 
 namespace transform {

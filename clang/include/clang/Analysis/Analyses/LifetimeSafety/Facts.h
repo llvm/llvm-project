@@ -235,6 +235,7 @@ public:
     Global, /// Escapes via assignment to global storage.
     This,   /// Escapes via the enclosing object `this`, which outlives the
             /// method.
+    Param,  /// Escapes via storage reachable through a reference parameter.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -322,6 +323,28 @@ public:
                EscapeKind::This;
   }
   SourceLocation getLoc() const { return Loc; }
+  void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
+            const LoanPropagationAnalysis *LPA = nullptr) const override;
+};
+
+/// Represents an origin escaping through storage reachable from a reference
+/// parameter, which the caller can observe after the function returns.
+/// Example: `out = local_view;` for a parameter `std::string_view &out`.
+/// Emitted at function exit; only used to verify annotations, so it does not
+/// keep the origin live.
+class ParamEscapeFact : public OriginEscapesFact {
+  const ParmVarDecl *Param;
+
+public:
+  ParamEscapeFact(OriginID OID, const ParmVarDecl *Param)
+      : OriginEscapesFact(OID, EscapeKind::Param), Param(Param) {}
+
+  static bool classof(const Fact *F) {
+    return F->getKind() == Kind::OriginEscapes &&
+           static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
+               EscapeKind::Param;
+  }
+  const ParmVarDecl *getParam() const { return Param; }
   void dump(llvm::raw_ostream &OS, const LoanManager &, const OriginManager &OM,
             const LoanPropagationAnalysis *LPA = nullptr) const override;
 };
@@ -449,8 +472,7 @@ public:
 
   template <typename FactType, typename... Args>
   FactType *createFact(Args &&...args) {
-    void *Mem = FactAllocator.Allocate<FactType>();
-    FactType *Res = new (Mem) FactType(std::forward<Args>(args)...);
+    FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
     return Res;
   }

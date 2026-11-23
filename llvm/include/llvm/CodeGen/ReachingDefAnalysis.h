@@ -118,8 +118,6 @@ private:
   const TargetInstrInfo *TII = nullptr;
   LoopTraversal::TraversalOrder TraversedMBBOrder;
   unsigned NumRegUnits = 0;
-  unsigned NumStackObjects = 0;
-  int ObjectIndexBegin = 0;
   /// Instruction that defined each register, relative to the beginning of the
   /// current basic block.  When a LiveRegsDefInfo is used to represent a
   /// live-out register, this value is relative to the end of the basic block,

@@ -34,7 +34,6 @@
   !8 = !DILocalVariable(name: "v", scope: !4, file: !3, line: 2, type: !7)
   !10 = !DILocation(line: 2, scope: !4)
 ...
----
 
 ---
 name: wqm_debug_strict_to_exact

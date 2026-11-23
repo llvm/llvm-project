@@ -14,8 +14,8 @@ using namespace lldb_private;
 
 std::unique_ptr<RegisterContextELFCore_riscv64>
 RegisterContextELFCore_riscv64::Create(Thread &thread, const ArchSpec &arch,
-                                         const DataExtractor &gpregset,
-                                         llvm::ArrayRef<CoreNote> notes) {
+                                       const DataExtractor &gpregset,
+                                       llvm::ArrayRef<CoreNote> notes) {
   Flags opt_regsets = RegisterInfo_riscv64::eRegsetMaskDefault;
 
   DataExtractor fpregset = getRegset(notes, arch.GetTriple(), FPR_Desc);
@@ -25,8 +25,7 @@ RegisterContextELFCore_riscv64::Create(Thread &thread, const ArchSpec &arch,
 
   return std::unique_ptr<RegisterContextELFCore_riscv64>(
       new RegisterContextELFCore_riscv64(
-          thread,
-          std::make_unique<RegisterInfo_riscv64>(arch, opt_regsets),
+          thread, std::make_unique<RegisterInfo_riscv64>(arch, opt_regsets),
           gpregset, notes));
 }
 
@@ -61,8 +60,8 @@ bool RegisterContextELFCore_riscv64::WriteFPR() {
   return false;
 }
 
-bool RegisterContextELFCore_riscv64::ReadRegister(
-    const RegisterInfo *reg_info, RegisterValue &value) {
+bool RegisterContextELFCore_riscv64::ReadRegister(const RegisterInfo *reg_info,
+                                                  RegisterValue &value) {
   const uint8_t *src = nullptr;
   lldb::offset_t offset = reg_info->byte_offset;
 
@@ -81,7 +80,7 @@ bool RegisterContextELFCore_riscv64::ReadRegister(
   return error.Success();
 }
 
-bool RegisterContextELFCore_riscv64::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_riscv64::WriteRegister(const RegisterInfo *reg_info,
+                                                   const RegisterValue &value) {
   return false;
 }

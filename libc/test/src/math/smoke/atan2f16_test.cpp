@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/cast.h"
 #include "src/math/atan2f16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
@@ -20,10 +21,11 @@ static constexpr float16 neg_one =
         .get_val();
 
 TEST_F(LlvmLibcAtan2f16Test, SpecialNumbers) {
-  constexpr float16 PI = static_cast<float16>(0x1.92p+1);
-  constexpr float16 PI_OVER_2 = static_cast<float16>(0x1.92p+0);
-  constexpr float16 PI_OVER_4 = static_cast<float16>(0x1.92p-1);
-  constexpr float16 THREE_PI_OVER_4 = static_cast<float16>(0x1.2d8p+1);
+  using LIBC_NAMESPACE::fputil::cast;
+  constexpr float16 PI = cast<float16>(0x1.92p+1f);
+  constexpr float16 PI_OVER_2 = cast<float16>(0x1.92p+0f);
+  constexpr float16 PI_OVER_4 = cast<float16>(0x1.92p-1f);
+  constexpr float16 THREE_PI_OVER_4 = cast<float16>(0x1.2d8p+1f);
 
   EXPECT_FP_EQ(PI, LIBC_NAMESPACE::atan2f16(zero, neg_zero));
   EXPECT_FP_EQ(-PI, LIBC_NAMESPACE::atan2f16(neg_zero, neg_zero));
@@ -39,9 +41,9 @@ TEST_F(LlvmLibcAtan2f16Test, SpecialNumbers) {
   EXPECT_FP_EQ(-THREE_PI_OVER_4, LIBC_NAMESPACE::atan2f16(neg_inf, neg_inf));
 
   EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(aNaN, zero));
-  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(1.0, aNaN));
-  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f16(1.0, inf));
-  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f16(-1.0, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atan2f16(one, aNaN));
+  EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atan2f16(one, inf));
+  EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atan2f16(neg_one, inf));
 
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::atan2f16(sNaN, sNaN),
                               FE_INVALID);
@@ -75,8 +77,9 @@ TEST_F(LlvmLibcAtan2f16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcAtan2f16Test, InRange) {
+  using LIBC_NAMESPACE::fputil::cast;
   // atan2(1, 1) = pi/4
-  EXPECT_FP_EQ(0x1.92p-1f, LIBC_NAMESPACE::atan2f16(one, one));
+  EXPECT_FP_EQ(cast<float16>(0x1.92p-1f), LIBC_NAMESPACE::atan2f16(one, one));
   EXPECT_MATH_ERRNO(0);
 
   // atan2(0, 1) = 0

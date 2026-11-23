@@ -45,7 +45,6 @@ name:            phi_at_exit
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -102,7 +101,6 @@ name:            phi_after_exit
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -159,7 +157,6 @@ name:            temporal_diverge_inloop
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -212,7 +209,6 @@ name:            temporal_uniform_indivloop
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -265,7 +261,6 @@ name:            temporal_diverge_loopuser
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }
@@ -319,7 +314,6 @@ name:            temporal_diverge_loopuser_nested
 alignment:       1
 legalized:       true
 registers:
-  - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
   - { id: 6, class: sgpr_32 }

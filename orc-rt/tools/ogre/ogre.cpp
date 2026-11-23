@@ -14,7 +14,6 @@
 #include "orc-rt-internal/tools/OptionParser.h"
 #include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
 #include "orc-rt/bedrock/sps/AllSPSCI.h"
 #include "orc-rt/connect-socket/SocketConnector.h"
@@ -119,15 +118,8 @@ static Expected<Session::DispatchFn> makeDispatcher() noexcept {
 static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
 
   // Add controller interfaces for calling functions, reading/writing memory,
-  // registering metadata, etc.
+  // registering metadata, creating JIT memory managers, etc.
   if (auto Err = sps::ci::addAll(BI.symbols()))
-    return Err;
-
-  // Add SimpleNativeMemoryMap service to manage JIT'd memory. Acting as a
-  // service means that SimpleNativeMemoryMap is notified when the Session
-  // disconnects and is shut down, so it can free allocated resources.
-  if (auto Err = S.tryCreateService<SimpleNativeMemoryMap>(S, BI.symbols())
-                     .takeError())
     return Err;
 
   // Adds NativeDylibManager, through which the controller can load and search

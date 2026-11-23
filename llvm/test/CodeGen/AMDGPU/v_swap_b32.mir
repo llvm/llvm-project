@@ -137,15 +137,11 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_copy_condense
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
 ...
@@ -154,15 +150,11 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_copy_sparse
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     S_NOP 0
     %0 = COPY %1
     S_NOP 0
@@ -173,15 +165,11 @@ body:             |
 # GCN: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0
     %2.sub1 = COPY %0.sub1
     %0.sub0 = COPY %1.sub0
     %0.sub1 = COPY %1.sub1
@@ -192,15 +180,11 @@ body:             |
 # GCN: %0:vgpr_32, %1:vgpr_32 = V_SWAP_B32 %1, %0, implicit $exec
 ---
 name:            swap_virt_mov
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = V_MOV_B32_e32 %0, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = V_MOV_B32_e32 %0, implicit $exec
     %0 = V_MOV_B32_e32 %1, implicit $exec
     %1 = V_MOV_B32_e32 %2, implicit $exec
 ...
@@ -215,17 +199,12 @@ body:             |
 
 ---
 name:            swap_virt_read_x
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
-    %3 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
+    %3:vgpr_32 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
     S_ENDPGM 0
@@ -242,17 +221,12 @@ body:             |
 
 ---
 name:            swap_virt_read_t_twice
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
-    %3 = COPY %2
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
+    %3:vgpr_32 = COPY %2
     %0 = COPY %1
     %1 = COPY %2
     S_ENDPGM 0
@@ -270,15 +244,11 @@ body:             |
 
 ---
 name:            swap_virt_clobber_y
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     %0 = COPY %1
     %1 = IMPLICIT_DEF
     %1 = COPY %2
@@ -295,15 +265,11 @@ body:             |
 
 ---
 name:            swap_virt_clobber_x1
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     %0 = COPY %1
     %0 = IMPLICIT_DEF
     %1 = COPY %2
@@ -322,15 +288,11 @@ body:             |
 
 ---
 name:            swap_virt_clobber_x2
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     %0 = IMPLICIT_DEF
     %0 = COPY %1
     %1 = COPY %2
@@ -349,15 +311,11 @@ body:             |
 
 ---
 name:            swap_virt_clobber_t
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
     %0 = COPY %1
     %2 = IMPLICIT_DEF
     %1 = COPY %2
@@ -372,17 +330,12 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_overlap_x_full
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0
-    %3 = COPY %0
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0
+    %3:vreg_64 = COPY %0
     %0.sub0 = COPY %1.sub0
     %1.sub0 = COPY %2.sub0
 ...
@@ -395,17 +348,12 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_128, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_overlap_x_part
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
-  - { id: 3, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0
-    %3 = COPY %0.sub0_sub1
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0
+    %3:vreg_64 = COPY %0.sub0_sub1
     %0.sub0 = COPY %1.sub0
     %1.sub0 = COPY %2.sub0
 ...
@@ -419,15 +367,11 @@ body:             |
 # GCN-NEXT: %1:vreg_64 = COPY %2
 ---
 name:            swap_virt_copy_subreg_wide_y
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0
     %0.sub0 = COPY %1.sub0
     %1 = COPY %2
 ...
@@ -440,15 +384,11 @@ body:             |
 # GCN-NEXT: %0.sub1:vreg_64, %1.sub1:vreg_64 = V_SWAP_B32 %1.sub1, %0.sub1, implicit $exec
 ---
 name:            swap_virt_b64
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2:vreg_64 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
 ...
@@ -463,15 +403,11 @@ body:             |
 # GCN-NEXT: %0.sub3:vreg_128, %1.sub3:vreg_128 = V_SWAP_B32 %1.sub3, %0.sub3, implicit $exec
 ---
 name:            swap_virt_b128
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_128 = IMPLICIT_DEF
+    %2:vreg_128 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
 ...
@@ -485,15 +421,11 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub0_1
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0_sub1 = COPY %0.sub0_sub1
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_128 = IMPLICIT_DEF
+    %2.sub0_sub1:vreg_128 = COPY %0.sub0_sub1
     %0.sub0_sub1 = COPY %1.sub0_sub1
     %1.sub0_sub1 = COPY %2.sub0_sub1
     S_ENDPGM 0
@@ -508,15 +440,11 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_b128_sub2_3
-registers:
-  - { id: 0, class: vreg_128 }
-  - { id: 1, class: vreg_128 }
-  - { id: 2, class: vreg_128 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub2_sub3 = COPY %0.sub2_sub3
+    %0:vreg_128 = IMPLICIT_DEF
+    %1:vreg_128 = IMPLICIT_DEF
+    %2.sub2_sub3:vreg_128 = COPY %0.sub2_sub3
     %0.sub2_sub3 = COPY %1.sub2_sub3
     %1.sub2_sub3 = COPY %2.sub2_sub3
     S_ENDPGM 0
@@ -532,15 +460,11 @@ body:             |
 # GCN-NEXT: %1:sgpr_32 = COPY %2
 ---
 name:            swap_virt_s_to_s
-registers:
-  - { id: 0, class: sgpr_32 }
-  - { id: 1, class: sgpr_32 }
-  - { id: 2, class: sgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
+    %0:sgpr_32 = IMPLICIT_DEF
+    %1:sgpr_32 = IMPLICIT_DEF
+    %2:sgpr_32 = COPY %0
     %0 = COPY %1
     %1 = COPY %2
 ...
@@ -552,15 +476,11 @@ body:             |
 # GCN-NEXT: %0.sub0:vreg_64, %1.sub0:vreg_64 = V_SWAP_B32 %1.sub0, %0.sub0, implicit $exec
 ---
 name:            swap_virt_copy_subreg_impdef_super
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0, implicit-def %2, implicit $exec
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0, implicit-def %2, implicit $exec
     %2.sub1 = COPY %0.sub1
     %0.sub0 = COPY %1.sub0
     %0.sub1 = COPY %1.sub1
@@ -577,15 +497,11 @@ body:             |
 # GCN-NEXT: S_ENDPGM 0
 ---
 name:            swap_virt_copy_subreg_impuse_x
-registers:
-  - { id: 0, class: vreg_64 }
-  - { id: 1, class: vreg_64 }
-  - { id: 2, class: vreg_64 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2.sub0 = COPY %0.sub0
+    %0:vreg_64 = IMPLICIT_DEF
+    %1:vreg_64 = IMPLICIT_DEF
+    %2.sub0:vreg_64 = COPY %0.sub0
     %2.sub1 = COPY %0.sub1
     %0.sub0 = COPY %1.sub0, implicit %0
     %0.sub1 = COPY %1.sub1
@@ -616,19 +532,13 @@ body:             |
 
 ---
 name:            swap_exact_max_insns_apart
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
-  - { id: 4, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
-    %3 = IMPLICIT_DEF
-    %4 = COPY %3
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = COPY %3
     %3 = COPY %4
     %4 = COPY %3
     %3 = COPY %4
@@ -672,19 +582,13 @@ body:             |
 
 ---
 name:            swap_too_far
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_32 }
-  - { id: 2, class: vgpr_32 }
-  - { id: 3, class: vgpr_32 }
-  - { id: 4, class: vgpr_32 }
 body:             |
   bb.0:
-    %0 = IMPLICIT_DEF
-    %1 = IMPLICIT_DEF
-    %2 = COPY %0
-    %3 = IMPLICIT_DEF
-    %4 = COPY %3
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_32 = IMPLICIT_DEF
+    %2:vgpr_32 = COPY %0
+    %3:vgpr_32 = IMPLICIT_DEF
+    %4:vgpr_32 = COPY %3
     %3 = COPY %4
     %4 = COPY %3
     %3 = COPY %4

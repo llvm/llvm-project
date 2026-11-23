@@ -5,10 +5,6 @@
 name:            testRLDIC
 alignment:       16
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
-  - { id: 1, class: g8rc }
-  - { id: 2, class: g8rc }
 liveins:
   - { reg: '$x3', virtual-reg: '%0' }
   - { reg: '$x4', virtual-reg: '%1' }

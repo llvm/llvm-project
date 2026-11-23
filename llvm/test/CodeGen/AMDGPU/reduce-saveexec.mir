@@ -133,4 +133,3 @@ body:             |
     $exec = COPY killed $sgpr0_sgpr1
     S_ENDPGM 0
 ...
----

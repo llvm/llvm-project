@@ -348,6 +348,7 @@ class OpenACC_Attr<string name, string attrMnemonic,
                    list<Trait> traits = [],
                    string baseCppClass = "::mlir::Attribute">
     : AttrDef<OpenACC_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["mlir/Dialect/OpenACC/OpenACC.h"];
   let mnemonic = attrMnemonic;
 }
 

@@ -4,12 +4,6 @@
 
 ---
 name:            test_fmamk_reg_imm_f16
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_16 }
-  - { id: 2, class: vgpr_16 }
-  - { id: 3, class: vgpr_16 }
-  - { id: 4, class: vgpr_16 }
 body:             |
   bb.0:
 
@@ -19,22 +13,16 @@ body:             |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[DEF]].lo16
     ; GFX11-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
     ; GFX11-NEXT: [[V_FMA_F16_gfx9_t16_e64_:%[0-9]+]]:vgpr_16 = V_FMA_F16_gfx9_t16_e64 0, [[COPY1]], 0, [[V_MOV_B16_t16_e64_]], 0, [[COPY]], 0, 0, 0, implicit $mode, implicit $exec
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.hi16
-    %2 = COPY %0.lo16
-    %3 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
-    %4 = V_FMAC_F16_t16_e64 0, %2, 0, %3, 0, %1, 0, 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_16 = COPY %0.hi16
+    %2:vgpr_16 = COPY %0.lo16
+    %3:vgpr_16 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
+    %4:vgpr_16 = V_FMAC_F16_t16_e64 0, %2, 0, %3, 0, %1, 0, 0, 0, implicit $mode, implicit $exec
 
 ...
 
 ---
 name:            test_fmaak_f16
-registers:
-  - { id: 0, class: vgpr_32 }
-  - { id: 1, class: vgpr_16 }
-  - { id: 2, class: vgpr_16 }
-  - { id: 3, class: vgpr_16 }
-  - { id: 4, class: vgpr_16 }
 body:             |
   bb.0:
 
@@ -44,11 +32,11 @@ body:             |
     ; GFX11-NEXT: [[COPY1:%[0-9]+]]:vgpr_16 = COPY [[DEF]].lo16
     ; GFX11-NEXT: [[V_MOV_B16_t16_e64_:%[0-9]+]]:vgpr_16 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
     ; GFX11-NEXT: [[V_FMA_F16_gfx9_t16_e64_:%[0-9]+]]:vgpr_16 = V_FMA_F16_gfx9_t16_e64 0, [[COPY]], 0, [[COPY1]], 0, [[V_MOV_B16_t16_e64_]], 0, 0, 0, implicit $mode, implicit $exec
-    %0 = IMPLICIT_DEF
-    %1 = COPY %0.hi16
-    %2 = COPY %0.lo16
-    %3 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
-    %4 = V_FMAC_F16_t16_e64 0, %1, 0, %2, 0, %3, 0, 0, 0, implicit $mode, implicit $exec
+    %0:vgpr_32 = IMPLICIT_DEF
+    %1:vgpr_16 = COPY %0.hi16
+    %2:vgpr_16 = COPY %0.lo16
+    %3:vgpr_16 = V_MOV_B16_t16_e64 0, 1078, 0, implicit $exec
+    %4:vgpr_16 = V_FMAC_F16_t16_e64 0, %1, 0, %2, 0, %3, 0, 0, 0, implicit $mode, implicit $exec
 ...
 
 ---

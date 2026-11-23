@@ -208,7 +208,7 @@ public:
                                      PointerEscapeKind Kind) const;
 
   ExplodedNode *reportLeaks(ArrayRef<SymbolRef> LeakedHandles,
-                            CheckerContext &C, ExplodedNode *Pred) const;
+                            CheckerContext &C) const;
 
   void reportDoubleRelease(SymbolRef HandleSym, const SourceRange &Range,
                            CheckerContext &C) const;
@@ -519,11 +519,7 @@ void FuchsiaHandleChecker::checkDeadSymbols(SymbolReaper &SymReaper,
     State = State->remove<HStateMap>(CurItem.first);
   }
 
-  ExplodedNode *N = C.getPredecessor();
-  if (!LeakedSyms.empty())
-    N = reportLeaks(LeakedSyms, C, N);
-
-  C.addTransition(State, N);
+  C.addTransition(State, reportLeaks(LeakedSyms, C));
 }
 
 // Acquiring a handle is not always successful. In Fuchsia most functions
@@ -609,8 +605,10 @@ ProgramStateRef FuchsiaHandleChecker::checkPointerEscape(
 
 ExplodedNode *
 FuchsiaHandleChecker::reportLeaks(ArrayRef<SymbolRef> LeakedHandles,
-                                  CheckerContext &C, ExplodedNode *Pred) const {
-  ExplodedNode *ErrNode = C.generateNonFatalErrorNode(C.getState(), Pred);
+                                  CheckerContext &C) const {
+  if (LeakedHandles.empty())
+    return C.getPredecessor();
+  ExplodedNode *ErrNode = C.generateNonFatalErrorNode();
   for (SymbolRef LeakedHandle : LeakedHandles) {
     reportBug(LeakedHandle, ErrNode, C, nullptr, LeakBugType,
               "Potential leak of handle");

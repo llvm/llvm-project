@@ -57,7 +57,7 @@ template <class SizeClassAllocator> struct Batch {
   u16 getCount() const { return Count; }
   bool isEmpty() const { return Count == 0U; }
   CompactPtrT get(u16 I) const {
-    DCHECK_LE(I, Count);
+    DCHECK_LT(I, Count);
     return Blocks[I];
   }
   Batch *Next;

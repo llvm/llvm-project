@@ -15,7 +15,6 @@
 #include "MCTargetDesc/RISCVMatInt.h"
 #include "RISCV.h"
 #include "RISCVMachineFunctionInfo.h"
-#include "RISCVStateAttributes.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -860,6 +859,13 @@ std::optional<unsigned> getFoldedOpcode(MachineFunction &MF, MachineInstr &MI,
   case RISCV::ZEXT_H_RV32:
   case RISCV::ZEXT_H_RV64:
     return RISCV::LHU;
+  // A GPR reload feeding an int->FP move can be an FP load from the slot.
+  case RISCV::FMV_H_X:
+    return RISCV::FLH;
+  case RISCV::FMV_W_X:
+    return RISCV::FLW;
+  case RISCV::FMV_D_X:
+    return RISCV::FLD;
   }
 
   switch (RISCV::getRVVMCOpcode(MI.getOpcode())) {
