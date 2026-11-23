@@ -15,7 +15,6 @@
 
 ---
 name:            expandb_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -36,7 +35,6 @@ body:             |
 ...
 ---
 name:            expandb_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -57,7 +55,6 @@ body:             |
 ...
 ---
 name:            expandb_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -78,7 +75,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -99,7 +95,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -120,7 +115,6 @@ body:             |
 ...
 ---
 name:            expandw_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -141,7 +135,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -162,7 +155,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -183,7 +175,6 @@ body:             |
 ...
 ---
 name:            expandd_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -204,7 +195,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -225,7 +215,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -246,7 +235,6 @@ body:             |
 ...
 ---
 name:            expandq_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -267,7 +255,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -288,7 +275,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -309,7 +295,6 @@ body:             |
 ...
 ---
 name:            expandps_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -330,7 +315,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $xmm1
@@ -351,7 +335,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $ymm1
@@ -372,7 +355,6 @@ body:             |
 ...
 ---
 name:            expandpd_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $zmm1
@@ -394,7 +376,6 @@ body:             |
 
 ---
 name:            expandb_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -415,7 +396,6 @@ body:             |
 ...
 ---
 name:            expandb_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -436,7 +416,6 @@ body:             |
 ...
 ---
 name:            expandb_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -457,7 +436,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -478,7 +456,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -499,7 +476,6 @@ body:             |
 ...
 ---
 name:            expandw_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -520,7 +496,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -541,7 +516,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -562,7 +536,6 @@ body:             |
 ...
 ---
 name:            expandd_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -583,7 +556,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -604,7 +576,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -625,7 +596,6 @@ body:             |
 ...
 ---
 name:            expandq_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -646,7 +616,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -667,7 +636,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -688,7 +656,6 @@ body:             |
 ...
 ---
 name:            expandps_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -709,7 +676,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm0, $rdi
@@ -730,7 +696,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm0, $rdi
@@ -751,7 +716,6 @@ body:             |
 ...
 ---
 name:            expandpd_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm0, $rdi
@@ -773,7 +737,6 @@ body:             |
 
 ---
 name:            no_break_expandb_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -789,7 +752,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -805,7 +767,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -821,7 +782,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -837,7 +797,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -853,7 +812,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -869,7 +827,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -885,7 +842,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -901,7 +857,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -917,7 +872,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -933,7 +887,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -949,7 +902,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -965,7 +917,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -981,7 +932,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -997,7 +947,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -1013,7 +962,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $xmm1
@@ -1029,7 +977,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $ymm1
@@ -1045,7 +992,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rrz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $zmm1
@@ -1062,7 +1008,6 @@ body:             |
 
 ---
 name:            no_break_expandb_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1076,7 +1021,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1090,7 +1034,6 @@ body:             |
 ...
 ---
 name:            no_break_expandb_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1104,7 +1047,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1118,7 +1060,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1132,7 +1073,6 @@ body:             |
 ...
 ---
 name:            no_break_expandw_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1146,7 +1086,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1160,7 +1099,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1174,7 +1112,6 @@ body:             |
 ...
 ---
 name:            no_break_expandd_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1188,7 +1125,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1202,7 +1138,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1216,7 +1151,6 @@ body:             |
 ...
 ---
 name:            no_break_expandq_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1230,7 +1164,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1244,7 +1177,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1258,7 +1190,6 @@ body:             |
 ...
 ---
 name:            no_break_expandps_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1272,7 +1203,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_128
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1286,7 +1216,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_256
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi
@@ -1300,7 +1229,6 @@ body:             |
 ...
 ---
 name:            no_break_expandpd_rmz_512
-registers:       []
 body:             |
   bb.0:
     liveins: $k1, $rdi

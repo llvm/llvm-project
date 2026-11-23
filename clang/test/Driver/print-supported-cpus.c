@@ -13,6 +13,9 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mtune=help -fuse-ld=dummy 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=CHECK-X86
 
+// RUN: %clang --target=x86_64-unknown-linux-gnu --print-supported-tune-cpus 2>&1 | \
+// RUN:   FileCheck %s --check-prefix=CHECK-X86
+
 // CHECK-NOT: warning: argument unused during compilation
 // CHECK-X86: Target: x86_64-unknown-linux-gnu
 // CHECK-X86: corei7

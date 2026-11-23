@@ -94,8 +94,8 @@ struct DependencyScanningServiceOptions {
   bool AsyncScanModules = false;
   /// The build session timestamp for validate-once-per-build-session logic.
   std::time_t BuildSessionTimestamp; // = std::chrono::system_clock::now();
-  /// Whether to automatically flush the module cache from memory to disk at the
-  /// end of the service lifetime.
+  /// Whether to automatically flush the module cache from memory to disk. PCMs
+  /// get flushed on a background thread as soon as they're built.
   bool FlushModuleCache = true;
   /// Whether the caching VFS should cache missing filesystem entries.
   bool CacheNegativeStats = shouldCacheNegativeStatsDefault();
@@ -116,11 +116,16 @@ public:
       : Opts(std::move(Opts)), Logger(this->Opts.LogPath) {
     ModCacheEntries.ValidateAgainstInvalidatedPaths =
         this->Opts.ValidateAgainstInvalidatedPaths;
+    if (this->Opts.FlushModuleCache)
+      ModCacheEntries.startBackgroundFlushing(Logger);
   }
 
   ~DependencyScanningService() {
-    if (Opts.FlushModuleCache)
-      ModCacheEntries.flush();
+    if (Opts.FlushModuleCache) {
+      ModCacheEntries.stopBackgroundFlushing();
+      // TODO: Consider allowing clients to skip this to terminate ASAP.
+      ModCacheEntries.flushLeftovers(Logger);
+    }
   }
 
   const DependencyScanningServiceOptions &getOpts() const { return Opts; }

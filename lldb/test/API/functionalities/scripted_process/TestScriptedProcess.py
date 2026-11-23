@@ -266,7 +266,7 @@ class ScriptedProcesTestCase(TestBase):
         )
 
         self.runCmd(
-            "target stop-hook add -k first -v 1 -k second -v 2 -P dummy_scripted_process.DummyStopHook"
+            "target stop-hook add -I true -k first -v 1 -k second -v 2 -P dummy_scripted_process.DummyStopHook"
         )
 
         launch_info = lldb.SBLaunchInfo(None)

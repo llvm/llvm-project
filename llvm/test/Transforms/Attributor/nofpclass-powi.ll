@@ -486,7 +486,7 @@ define <4 x float> @powi_v4f32_i32_constint_odd(<4 x float> %arg) {
 }
 
 define <4 x float> @powi_v4f32_i32_regression(<4 x float> %arg) {
-; CHECK-LABEL: define nofpclass(nzero) <4 x float> @powi_v4f32_i32_regression
+; CHECK-LABEL: define nofpclass(ninf nzero) <4 x float> @powi_v4f32_i32_regression
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) #[[ATTR5]] {
 ; CHECK-NEXT:    [[POWI:%.*]] = call <4 x float> @llvm.powi.v4f32.i32(<4 x float> [[ARG]], i32 noundef 4) #[[ATTR9]]
 ; CHECK-NEXT:    [[USER:%.*]] = fsub <4 x float> [[POWI]], splat (float 1.000000e+00)

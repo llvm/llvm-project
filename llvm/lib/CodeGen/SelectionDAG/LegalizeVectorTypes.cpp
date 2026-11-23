@@ -5444,11 +5444,18 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     // elements. If the wide vector op is eventually going to be expanded to
     // scalar libcalls, then unroll into scalar ops now to avoid unnecessary
     // libcalls on the undef elements.
+
+    // The lane count comes from the result being widened, but operation
+    // legality is queried using the corresponding result 0 type.
     EVT ResVT = N->getValueType(ResNo);
-    EVT WideVecVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
-    if (WideVecVT.isScalableVector())
+    EVT WideResVT = TLI.getTypeToTransformTo(*DAG.getContext(), ResVT);
+    if (WideResVT.isScalableVector())
       return false;
+
     EVT VT0 = N->getValueType(0);
+    EVT WideVecVT = VT0.changeVectorElementCount(
+        *DAG.getContext(), WideResVT.getVectorElementCount());
+
     if (!TLI.isOperationLegalOrCustomOrPromote(N->getOpcode(), WideVecVT) &&
         TLI.isOperationExpandOrLibCall(N->getOpcode(), VT0.getScalarType())) {
       SDValue Unrolled =
@@ -8185,6 +8192,12 @@ bool DAGTypeLegalizer::WidenVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::VECTOR_MATCH:
     Res = WidenVecOp_VECTOR_MATCH(N, OpNo);
     break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+  case ISD::PARTIAL_REDUCE_SUMLA:
+  case ISD::PARTIAL_REDUCE_FMLA:
+    Res = WidenVecOp_PARTIAL_REDUCE_MLA(N);
+    break;
   }
 
   // If Res is null, the sub-method took care of registering the result.
@@ -9307,6 +9320,12 @@ SDValue DAGTypeLegalizer::WidenVecOp_VECTOR_MATCH(SDNode *N, unsigned OpNo) {
   return DAG.getNode(ISD::VECTOR_MATCH, DL, N->getValueType(0),
                      N->getOperand(0), WideNeedle, N->getOperand(2),
                      N->getFlags());
+}
+
+SDValue DAGTypeLegalizer::WidenVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
+  // The accumulator is legal and only the inputs need widening. Expand, as
+  // when widening the result; the extended inputs are widened from there.
+  return TLI.expandPartialReduceMLA(N, DAG);
 }
 
 //===----------------------------------------------------------------------===//

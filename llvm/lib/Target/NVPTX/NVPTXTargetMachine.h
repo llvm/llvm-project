@@ -72,6 +72,8 @@ public:
 
   bool isMachineVerifierClean() const override { return false; }
 
+  bool usesPhysRegsForValues() const override { return false; }
+
   std::pair<const Value *, unsigned>
   getPredicatedAddrSpace(const Value *V) const override;
 }; // NVPTXTargetMachine.

@@ -34,7 +34,6 @@
 #include <cstdint>
 #include <limits>
 #include <list>
-#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -503,7 +502,14 @@ private:
     };
 
     /// The diagnostic states for each file.
-    mutable std::map<FileID, File> Files;
+    mutable llvm::DenseMap<FileID, std::unique_ptr<File>> Files;
+
+    std::pair<File *, bool> getOrInsertFile(FileID ID) const {
+      auto [It, Inserted] = Files.try_emplace(ID);
+      if (Inserted)
+        It->second = std::make_unique<File>();
+      return {It->second.get(), Inserted};
+    }
 
     /// One-entry cache for getFile(): Files gets large, and most
     /// lookups are for the same FileID as the previous one.
