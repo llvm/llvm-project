@@ -2482,6 +2482,12 @@ static bool cannotHoistOrSinkRecipe(VPRecipeBase &R, VPBasicBlock *FirstBB,
       match(&R, m_Intrinsic<Intrinsic::assume>()))
     return vputils::cannotHoistOrSinkRecipe(R, Sinking);
 
+  // TODO: Support outer-loop plans. Their loop region need not form a
+  // single-successor chain, which the alias check below expects, and sinking
+  // only supports stores with an invariant address.
+  if (FirstBB->getPlan()->isOuterLoop())
+    return true;
+
   // Check that the memory operation doesn't alias between FirstBB and LastBB.
   auto MemLoc = vputils::getMemoryLocation(R);
 

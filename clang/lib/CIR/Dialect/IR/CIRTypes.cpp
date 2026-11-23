@@ -1958,18 +1958,3 @@ mlir::LogicalResult cir::PointerType::verify(
 
   return success();
 }
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerTypes() {
-  // Register tablegen'd types.
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsTypes.cpp.inc"
-      >();
-
-  // Register raw C++ types.
-  // TODO(CIR) addTypes<RecordType>();
-}

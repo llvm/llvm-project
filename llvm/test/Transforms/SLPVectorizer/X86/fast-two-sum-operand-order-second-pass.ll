@@ -11,19 +11,15 @@ define void @second_pass_keeps_column(ptr %dst, ptr %p, ptr %q, ptr %r, i32 %i0,
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Q2]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[R]], align 8
 ; CHECK-NEXT:    [[D0A:%.*]] = sitofp i32 [[I0]] to double
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x double> poison, double [[D0A]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP0]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP3]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x double> [[TMP5]], <4 x double> [[TMP4]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <4 x double> <double 1.000000e+00, double poison, double poison, double poison>, <4 x double> [[TMP22]], <4 x i32> <i32 0, i32 5, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <4 x double> [[TMP23]], <4 x double> [[TMP22]], <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x double> [[TMP21]], [[TMP24]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP0]], double [[D0A]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> <double 1.000000e+00, double poison>, <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[D0B:%.*]] = sitofp i32 [[I1]] to double
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <4 x i32> <i32 poison, i32 1, i32 3, i32 0>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP0]], <4 x i32> <i32 poison, i32 1, i32 2, i32 0>
 ; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x double> poison, double [[D0B]], i64 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP8]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP7]], <4 x double> [[TMP24]], <4 x i32> <i32 poison, i32 3, i32 5, i32 1>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> [[TMP1]], <4 x i32> <i32 poison, i32 0, i32 2, i32 1>
 ; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x double> [[TMP10]], <4 x double> <double 1.000000e+00, double poison, double poison, double poison>, <4 x i32> <i32 4, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP12:%.*]] = fmul <4 x double> [[TMP9]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fadd <4 x double> [[TMP6]], [[TMP12]]
@@ -35,7 +31,7 @@ define void @second_pass_keeps_column(ptr %dst, ptr %p, ptr %q, ptr %r, i32 %i0,
 ; CHECK-NEXT:    store <4 x double> [[TMP15]], ptr [[DST]], align 8
 ; CHECK-NEXT:    [[DST4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 32
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x double> [[TMP15]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> [[TMP6]], <2 x i32> <i32 1, i32 6>
+; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x double> [[TMP12]], <4 x double> poison, <2 x i32> <i32 1, i32 2>
 ; CHECK-NEXT:    [[TMP20:%.*]] = fsub <2 x double> [[TMP18]], [[TMP19]]
 ; CHECK-NEXT:    store <2 x double> [[TMP20]], ptr [[DST4]], align 8
 ; CHECK-NEXT:    [[DST6:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 48

@@ -1353,6 +1353,30 @@ public:
   }
 };
 
+/// Converts `spirv.Dot` to `llvm.fmul` followed by an ordered
+/// `llvm.intr.vector.reduce.fadd`.
+class DotPattern : public SPIRVToLLVMConversion<spirv::DotOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::DotOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::DotOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return rewriter.notifyMatchFailure(op, "type conversion failed");
+
+    Location loc = op.getLoc();
+    Value mul = LLVM::FMulOp::create(rewriter, loc, adaptor.getVector1(),
+                                     adaptor.getVector2());
+    // -0.0 is the identity of fadd.
+    Value start = createFPConstant(loc, op.getType(), dstType, rewriter, -0.0);
+    rewriter.replaceOpWithNewOp<LLVM::vector_reduce_fadd>(op, dstType, start,
+                                                          mul);
+    return success();
+  }
+};
+
 /// Converts `spirv.SNegate` to `0 - x`.
 class SNegatePattern : public SPIRVToLLVMConversion<spirv::SNegateOp> {
 public:
@@ -1736,6 +1760,38 @@ public:
                                        {execution, memory, semantics});
 
     rewriter.replaceOp(controlBarrierOp, call);
+    return success();
+  }
+};
+
+class MemoryBarrierPattern
+    : public SPIRVToLLVMConversion<spirv::MemoryBarrierOp> {
+public:
+  using SPIRVToLLVMConversion<spirv::MemoryBarrierOp>::SPIRVToLLVMConversion;
+
+  LogicalResult
+  matchAndRewrite(spirv::MemoryBarrierOp memoryBarrierOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Operation *symbolTable =
+        memoryBarrierOp->getParentWithTrait<OpTrait::SymbolTable>();
+
+    Type i32 = rewriter.getI32Type();
+
+    Type voidTy = rewriter.getType<LLVM::LLVMVoidType>();
+    LLVM::LLVMFuncOp func =
+        lookupOrCreateSPIRVFn(symbolTable, "_Z21__spirv_MemoryBarrierii",
+                              {i32, i32}, voidTy, /*convergent=*/false);
+
+    Location loc = memoryBarrierOp->getLoc();
+    Value memory = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemoryScope()));
+    Value semantics = LLVM::ConstantOp::create(
+        rewriter, loc, i32, static_cast<int32_t>(adaptor.getMemorySemantics()));
+
+    auto call =
+        createSPIRVBuiltinCall(loc, rewriter, func, {memory, semantics});
+
+    rewriter.replaceOp(memoryBarrierOp, call);
     return success();
   }
 };
@@ -2697,7 +2753,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       DirectConversionPattern<spirv::SRemOp, LLVM::SRemOp>,
       DirectConversionPattern<spirv::UDivOp, LLVM::UDivOp>,
       DirectConversionPattern<spirv::UModOp, LLVM::URemOp>, FModPattern,
-      SModPattern, VectorTimesScalarPattern, SNegatePattern,
+      SModPattern, VectorTimesScalarPattern, DotPattern, SNegatePattern,
       ArithmeticWithOverflowPattern<spirv::IAddCarryOp,
                                     LLVM::UAddWithOverflowOp>,
       ArithmeticWithOverflowPattern<spirv::ISubBorrowOp,
@@ -2902,6 +2958,7 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       ControlBarrierPattern<spirv::ControlBarrierOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierArriveOp>,
       ControlBarrierPattern<spirv::INTELControlBarrierWaitOp>,
+      MemoryBarrierPattern,
 
       // Group reduction operations
       GroupReducePattern<spirv::GroupIAddOp>,
