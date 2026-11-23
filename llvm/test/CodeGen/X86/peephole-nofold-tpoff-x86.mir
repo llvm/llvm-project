@@ -41,12 +41,6 @@
 ---
 name:            foo_nopic
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr32 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr8 }
-  - { id: 3, class: gr32 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -72,14 +66,6 @@ body:             |
 ---
 name:            foo_pic
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr32_nosp }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr32 }
-  - { id: 3, class: gr8 }
-  - { id: 4, class: gr32 }
-  - { id: 5, class: gr32 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}

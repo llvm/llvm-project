@@ -5,26 +5,30 @@
 
 ---
 name:            smin_i8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smin_i8
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 24
     ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; RV32I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[ASHR]](s32), [[ASHR1]]
-    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(slt), [[ASHR]](s32), [[ASHR1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](i32), [[COPY]], [[COPY1]]
     ; RV32I-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SHL2]], [[C]](s32)
     ; RV32I-NEXT: $x10 = COPY [[ASHR2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: smin_i8
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 8
     ; RV32ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 8
@@ -43,26 +47,30 @@ body:             |
 
 ---
 name:            smin_i16
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smin_i16
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
     ; RV32I-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[COPY]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[SHL]], [[C]](s32)
     ; RV32I-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[COPY1]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[SHL1]], [[C]](s32)
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[ASHR]](s32), [[ASHR1]]
-    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(slt), [[ASHR]](s32), [[ASHR1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](i32), [[COPY]], [[COPY1]]
     ; RV32I-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[SELECT]], [[C]](s32)
     ; RV32I-NEXT: [[ASHR2:%[0-9]+]]:_(s32) = G_ASHR [[SHL2]], [[C]](s32)
     ; RV32I-NEXT: $x10 = COPY [[ASHR2]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: smin_i16
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY]], 16
     ; RV32ZBB-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(s32) = G_SEXT_INREG [[COPY1]], 16
@@ -81,19 +89,23 @@ body:             |
 
 ---
 name:            smin_i32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11
     ; RV32I-LABEL: name: smin_i32
-    ; RV32I: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32I: liveins: $x10, $x11
+    ; RV32I-NEXT: {{  $}}
+    ; RV32I-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY]](s32), [[COPY1]]
-    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s32), [[COPY]], [[COPY1]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(slt), [[COPY]](s32), [[COPY1]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](i32), [[COPY]], [[COPY1]]
     ; RV32I-NEXT: $x10 = COPY [[SELECT]](s32)
     ; RV32I-NEXT: PseudoRET implicit $x10
     ;
     ; RV32ZBB-LABEL: name: smin_i32
-    ; RV32ZBB: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; RV32ZBB: liveins: $x10, $x11
+    ; RV32ZBB-NEXT: {{  $}}
+    ; RV32ZBB-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; RV32ZBB-NEXT: [[SMIN:%[0-9]+]]:_(s32) = G_SMIN [[COPY]], [[COPY1]]
     ; RV32ZBB-NEXT: $x10 = COPY [[SMIN]](s32)
@@ -107,19 +119,21 @@ body:             |
 
 ---
 name:            smin_i64
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $x10, $x11, $x12, $x13
     ; CHECK-LABEL: name: smin_i64
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
+    ; CHECK: liveins: $x10, $x11, $x12, $x13
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $x10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $x11
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $x12
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s32) = COPY $x13
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(slt), [[COPY1]](s32), [[COPY3]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s32), [[ICMP]], [[ICMP1]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[SELECT]](s32), [[COPY]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(ult), [[COPY]](s32), [[COPY2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i32) = G_ICMP intpred(slt), [[COPY1]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY3]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP2]](i32), [[ICMP]], [[ICMP1]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[SELECT]](i32), [[COPY]], [[COPY2]]
     ; CHECK-NEXT: $x10 = COPY [[SELECT1]](s32)
     ; CHECK-NEXT: PseudoRET implicit $x10
     %0:_(s32) = COPY $x10

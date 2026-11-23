@@ -650,9 +650,10 @@ ExprResult Parser::tryParseCXXIdExpression(CXXScopeSpec &SS,
     if (isAddressOfOperand && isPostfixExpressionSuffixStart())
       isAddressOfOperand = false;
 
-    E = Actions.ActOnIdExpression(
-        getCurScope(), SS, TemplateKWLoc, Name, Tok.is(tok::l_paren),
-        isAddressOfOperand, /*CCC=*/nullptr, /*IsInlineAsmIdentifier=*/false);
+    E = Actions.ActOnIdExpression(getCurScope(), SS, TemplateKWLoc, Name,
+                                  Tok.isOneOf(tok::l_paren, tok::lesslessless),
+                                  isAddressOfOperand, /*CCC=*/nullptr,
+                                  /*IsInlineAsmIdentifier=*/false);
     break;
   }
 

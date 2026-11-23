@@ -4192,7 +4192,7 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(Register Reg) {
+static bool isHReg(MCRegister Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
@@ -4375,6 +4375,12 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
       return std::nullopt;
 
+    // With BWI, KMOVW zeroes the upper mask bits, so it is not a copy.
+    if ((MI.getOpcode() == X86::KMOVWkk ||
+         MI.getOpcode() == X86::KMOVWkk_EVEX) &&
+        Subtarget.hasBWI())
+      return std::nullopt;
+
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   }
   return std::nullopt;
@@ -4406,7 +4412,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     if (STI.is64Bit())
       // Copying to or from a physical H register on x86-64 requires a NOREX
       // move.  Otherwise use a normal move.
-      if (isHReg(Reg) || X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
+      if ((Reg.isPhysical() && isHReg(Reg)) ||
+          X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
         return Load ? X86::MOV8rm_NOREX : X86::MOV8mr_NOREX;
     return Load ? X86::MOV8rm : X86::MOV8mr;
   case 2:

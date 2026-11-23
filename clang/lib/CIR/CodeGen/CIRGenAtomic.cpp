@@ -971,6 +971,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
     rmwOp->setAttr("binop", fetchAttr);
   rmwOp->setAttr("mem_order", orderAttr);
   rmwOp->setAttr("sync_scope", scopeAttr);
+  rmwOp->setAttr("alignment", builder.getAlignmentAttr(ptr.getAlignment()));
   if (expr->isVolatile())
     rmwOp->setAttr("is_volatile", builder.getUnitAttr());
   if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())

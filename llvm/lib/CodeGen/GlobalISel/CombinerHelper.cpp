@@ -1963,7 +1963,7 @@ void CombinerHelper::applyShiftImmedChain(MachineInstr &MI,
 bool CombinerHelper::matchShiftOfShiftedLogic(
     MachineInstr &MI, ShiftOfShiftedLogic &MatchInfo) const {
   // We're trying to match the following pattern with any of
-  // G_SHL/G_ASHR/G_LSHR/G_USHLSAT/G_SSHLSAT shift instructions in combination
+  // G_SHL/G_ASHR/G_LSHR shift instructions in combination
   // with any of G_AND/G_OR/G_XOR logic instructions.
   //   %t1 = SHIFT %X, G_CONSTANT C0
   //   %t2 = LOGIC %t1, %Y
@@ -1975,10 +1975,8 @@ bool CombinerHelper::matchShiftOfShiftedLogic(
   unsigned ShiftOpcode = MI.getOpcode();
   assert((ShiftOpcode == TargetOpcode::G_SHL ||
           ShiftOpcode == TargetOpcode::G_ASHR ||
-          ShiftOpcode == TargetOpcode::G_LSHR ||
-          ShiftOpcode == TargetOpcode::G_USHLSAT ||
-          ShiftOpcode == TargetOpcode::G_SSHLSAT) &&
-         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+          ShiftOpcode == TargetOpcode::G_LSHR) &&
+         "Expected G_SHL, G_ASHR and G_LSHR");
 
   // Match a one-use bitwise logic op.
   Register LogicDest = MI.getOperand(1).getReg();
@@ -2050,9 +2048,8 @@ void CombinerHelper::applyShiftOfShiftedLogic(
     MachineInstr &MI, ShiftOfShiftedLogic &MatchInfo) const {
   unsigned Opcode = MI.getOpcode();
   assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_ASHR ||
-          Opcode == TargetOpcode::G_LSHR || Opcode == TargetOpcode::G_USHLSAT ||
-          Opcode == TargetOpcode::G_SSHLSAT) &&
-         "Expected G_SHL, G_ASHR, G_LSHR, G_USHLSAT and G_SSHLSAT");
+          Opcode == TargetOpcode::G_LSHR) &&
+         "Expected G_SHL, G_ASHR and G_LSHR");
 
   LLT ShlType = MRI.getType(MI.getOperand(2).getReg());
   LLT DestType = MRI.getType(MI.getOperand(0).getReg());
@@ -2123,7 +2120,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
-    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+    if (MRI.hasOneNonDBGUse(N0) && MRI.hasOneNonDBGUse(InnerShift)) {
       MatchInfo.Mask = true;
       MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
       return true;
@@ -2964,8 +2961,9 @@ bool CombinerHelper::matchCombineInsertVecElts(
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
-  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
-                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+  if (MRI.hasOneNonDBGUse(DstReg) &&
+      MRI.use_nodbg_instructions(DstReg).begin()->getOpcode() ==
+          TargetOpcode::G_INSERT_VECTOR_ELT)
     return false;
   MachineInstr *CurrInst = &MI;
   MachineInstr *TmpInst;
@@ -3097,7 +3095,6 @@ bool CombinerHelper::matchHoistLogicOpWithSameOpcodeHands(
   assert(LogicOpcode == TargetOpcode::G_AND ||
          LogicOpcode == TargetOpcode::G_OR ||
          LogicOpcode == TargetOpcode::G_XOR);
-  MachineIRBuilder MIB(MI);
   Register Dst = MI.getOperand(0).getReg();
   Register LHSReg = MI.getOperand(1).getReg();
   Register RHSReg = MI.getOperand(2).getReg();
@@ -5728,9 +5725,16 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
-        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+    if (isPreLegalize()) {
+      // The legalizer can still split a vector G_SMULH or lower it through a
+      // wider G_MUL.
+      if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+        return false;
+    } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
+      // After legalization nothing will fix up an illegal G_SMULH.
       return false;
+    }
     if (Opcode == TargetOpcode::G_SREM &&
         !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
       return false;
@@ -7231,16 +7235,19 @@ bool CombinerHelper::matchCommuteConstantToRHS(MachineInstr &MI) const {
       !mi_match(RHS, MRI, m_MInstr(RHSDef)))
     return false;
 
-  if (!getIConstantVRegVal(LHS, MRI)) {
-    // Skip commuting if LHS is not a constant. But, LHS may be a
-    // G_CONSTANT_FOLD_BARRIER. If so we commute as long as we don't already
-    // have a constant on the RHS.
+  if (!isConstantOrConstantVector(*LHSDef, MRI, /*AllowFP=*/false,
+                                  /*AllowOpaqueConstants=*/false)) {
+    // Skip commuting if LHS is not a constant or a vector of constants. But,
+    // LHS may be a G_CONSTANT_FOLD_BARRIER. If so we commute as long as we
+    // don't already have a constant on the RHS.
     if (LHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER)
       return false;
   }
-  // Commute as long as RHS is not a constant or G_CONSTANT_FOLD_BARRIER.
+  // Commute as long as RHS is not a constant, a vector of constants or
+  // G_CONSTANT_FOLD_BARRIER.
   return RHSDef->getOpcode() != TargetOpcode::G_CONSTANT_FOLD_BARRIER &&
-         !getIConstantVRegVal(RHS, MRI);
+         !isConstantOrConstantVector(*RHSDef, MRI, /*AllowFP=*/false,
+                                     /*AllowOpaqueConstants=*/false);
 }
 
 bool CombinerHelper::matchCommuteFPConstantToRHS(MachineInstr &MI) const {
@@ -8419,6 +8426,15 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
     else
       Mask[I] = Idx - NumElems;
   }
+}
+
+bool CombinerHelper::isZeroOrOneVector(Register Reg) const {
+  if (!MRI.getType(Reg).isFixedVector())
+    return false;
+  return matchUnaryPredicate(MRI, Reg, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && (CI->isZero() || CI->isOne());
+  });
 }
 
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,

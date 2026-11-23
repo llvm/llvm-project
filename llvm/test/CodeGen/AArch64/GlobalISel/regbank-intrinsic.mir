@@ -68,3 +68,4 @@ body:             |
     %ptr:_(p0) = COPY $x0
     %intrin:_(i32) = G_INTRINSIC intrinsic(@llvm.aarch64.neon.uaddlv), %copy(<2 x i32>)
     G_STORE %intrin, %ptr :: (store (i32))
+...

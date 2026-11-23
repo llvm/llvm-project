@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -39,7 +38,6 @@ namespace {
 
 class MachineLateInstrsCleanup {
   const TargetRegisterInfo *TRI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
 
   // Data structures to map regs to their definitions and kills per MBB.
   struct Reg2MIMap : public SmallDenseMap<Register, MachineInstr *> {
@@ -111,7 +109,6 @@ MachineLateInstrsCleanupPass::run(MachineFunction &MF,
 
 bool MachineLateInstrsCleanup::run(MachineFunction &MF) {
   TRI = MF.getSubtarget().getRegisterInfo();
-  TII = MF.getSubtarget().getInstrInfo();
 
   RegDefs.clear();
   RegDefs.resize(MF.getNumBlockIDs());

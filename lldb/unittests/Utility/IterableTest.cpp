@@ -77,3 +77,17 @@ TEST(LockingAdaptedIterableTest, MoveKeepsTheLock) {
   }
   EXPECT_FALSE(mutex.locked);
 }
+
+TEST(LockingAdaptedIterableTest, AdoptsHeldLock) {
+  FlagMutex mutex;
+  Container container(mutex);
+  {
+    std::unique_lock<FlagMutex> lock(mutex);
+    Iterable iterable(container, std::move(lock));
+    EXPECT_FALSE(lock.owns_lock());
+    EXPECT_TRUE(container.begin_locked);
+    EXPECT_TRUE(container.end_locked);
+    EXPECT_TRUE(mutex.locked);
+  }
+  EXPECT_FALSE(mutex.locked);
+}

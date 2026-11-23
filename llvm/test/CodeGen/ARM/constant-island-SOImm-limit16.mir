@@ -57,5 +57,6 @@ body:             |
     $sp = frame-destroy LDMIA_RET $sp, 14, $noreg, def $r11, def $pc, implicit killed $r0
 
  # CHECK: add r1, pc, #OFFSET
+...
 ---
 ...

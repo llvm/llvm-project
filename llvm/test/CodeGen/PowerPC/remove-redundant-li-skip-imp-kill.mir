@@ -33,7 +33,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$x3', virtual-reg: '' }
   - { reg: '$x4', virtual-reg: '' }

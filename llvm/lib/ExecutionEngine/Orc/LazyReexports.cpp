@@ -277,9 +277,6 @@ public:
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;
@@ -333,14 +330,14 @@ void LazyReexportsManager::handleTransferResources(JITDylib &JD,
   }
 }
 
-// Descriptor for the call-controller handler that the ORC runtime calls to
+// Spec for the call-controller handler that the ORC runtime calls to
 // resolve lazy reexports.
 namespace lazy_reexports_sps_handlers {
-struct Resolve {
+struct Resolve
+    : sps::HandlerSpec<shared::SPSExpected<shared::SPSExecutorSymbolDef>(
+          shared::SPSExecutorAddr)> {
   static constexpr SymbolNameSpec Name =
       SymbolNameSpec::c("__orc_rt_resolve_tag");
-  using SPSSig = shared::SPSExpected<shared::SPSExecutorSymbolDef>(
-      shared::SPSExecutorAddr);
 };
 } // namespace lazy_reexports_sps_handlers
 
@@ -354,9 +351,9 @@ LazyReexportsManager::LazyReexportsManager(EmitTrampolinesFn EmitTrampolines,
   using namespace shared;
   ErrorAsOutParameter _(&Err);
   Err = ES.registerCallControllerHandlers(
-      PlatformJD, bindCallControllerHandler<
-                      sps::HandlerSpec<lazy_reexports_sps_handlers::Resolve>>(
-                      this, &LazyReexportsManager::resolve));
+      PlatformJD,
+      bindCallControllerHandler<lazy_reexports_sps_handlers::Resolve>(
+          this, &LazyReexportsManager::resolve));
 }
 
 std::unique_ptr<MaterializationUnit>

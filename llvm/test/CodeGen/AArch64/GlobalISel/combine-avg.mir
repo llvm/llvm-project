@@ -326,3 +326,4 @@ body:             |
     %res:_(i32) = G_LSHR %add_two, %cst_shift
     $w0 = COPY %res(i32)
     RET_ReallyLR implicit $w0
+...

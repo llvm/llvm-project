@@ -266,3 +266,4 @@ body:             |
     %and:_(i32) = G_AND %assert_zext(i32), %mask
     $w0 = COPY %and(i32)
     RET_ReallyLR implicit $w0
+...

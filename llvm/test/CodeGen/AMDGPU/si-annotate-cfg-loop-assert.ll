@@ -14,7 +14,7 @@ define amdgpu_kernel void @test(i32 %arg, i32 %arg1) {
 ; CHECK-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; CHECK-NEXT:    s_cbranch_vccnz .LBB0_3
 ; CHECK-NEXT:  ; %bb.1: ; %bb9
-; CHECK-NEXT:    s_and_b64 vcc, exec, -1
+; CHECK-NEXT:    s_mov_b64 vcc, exec
 ; CHECK-NEXT:  .LBB0_2: ; %bb10
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    s_mov_b64 vcc, vcc

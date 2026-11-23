@@ -153,3 +153,4 @@ body:             |
     %add:gpr(i64), %flags:gpr(i32) = G_USUBO %reg0, %shift
     $x0 = COPY %add(i64)
     RET_ReallyLR implicit $x0
+...

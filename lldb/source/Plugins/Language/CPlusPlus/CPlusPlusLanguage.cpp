@@ -17,6 +17,7 @@
 #include <mutex>
 #include <set>
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Demangle/ItaniumDemangle.h"
@@ -33,9 +34,12 @@
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/VectorType.h"
+#include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/OptionGroupLanguageExpression.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Symbol/SymbolFile.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -54,6 +58,8 @@
 #include "MSVCUndecoratedNameParser.h"
 #include "MsvcStl.h"
 #include "lldb/lldb-enumerations.h"
+
+#include "clang/Basic/Version.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -2444,6 +2450,66 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
   return g_category;
 }
 
+std::vector<lldb::LanguageType>
+CPlusPlusLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
+  // The C++ formatters also apply to C values.
+  if (Language::LanguageIsC(language) ||
+      (Language::LanguageIsCPlusPlus(language) &&
+       language != lldb::eLanguageTypeObjC_plus_plus))
+    return {lldb::eLanguageTypeC_plus_plus};
+  return {};
+}
+
+bool CPlusPlusLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeC_plus_plus)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeC_plus_plus;
+}
+
+#define LLDB_OPTIONS_expression_cplusplus
+#include "LanguageCPlusPlusOptions.inc"
+
+namespace {
+/// The options that C++ adds to the commands that evaluate expressions.
+class CPlusPlusExpressionOptions : public OptionGroupLanguageExpression {
+public:
+  llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
+    return llvm::ArrayRef(g_expression_cplusplus_options);
+  }
+
+  Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
+                        ExecutionContext *execution_context) override {
+    switch (GetDefinitions()[option_idx].short_option) {
+    case 'Q':
+      m_ignore_context_qualifiers = true;
+      break;
+    default:
+      llvm_unreachable("Unimplemented option");
+    }
+    return {};
+  }
+
+  void OptionParsingStarting(ExecutionContext *execution_context) override {
+    m_ignore_context_qualifiers = false;
+  }
+
+  void Apply(EvaluateExpressionOptions &options) const override {
+    options.SetCppIgnoreContextQualifiers(m_ignore_context_qualifiers);
+  }
+
+private:
+  bool m_ignore_context_qualifiers = false;
+};
+} // namespace
+
+std::unique_ptr<OptionGroupLanguageExpression>
+CPlusPlusLanguage::CreateExpressionOptions() {
+  return std::make_unique<CPlusPlusExpressionOptions>();
+}
+
 HardcodedFormatters::HardcodedSummaryFinder
 CPlusPlusLanguage::GetHardcodedSummaries() {
   static llvm::once_flag g_initialize;
@@ -2958,6 +3024,17 @@ static PluginProperties &GetGlobalPluginProperties() {
 
 FormatEntity::Entry CPlusPlusLanguage::GetFunctionNameFormat() const {
   return GetGlobalPluginProperties().GetFunctionNameFormat();
+}
+
+std::string CPlusPlusLanguage::GetVersionInfo() const {
+  llvm::SmallVector<std::string, 2> lines;
+  std::string clang_rev = clang::getClangRevision();
+  if (!clang_rev.empty())
+    lines.push_back("  clang revision " + clang_rev);
+  std::string llvm_rev = clang::getLLVMRevision();
+  if (!llvm_rev.empty())
+    lines.push_back("  llvm revision " + llvm_rev);
+  return llvm::join(lines, "\n");
 }
 
 void CPlusPlusLanguage::DebuggerInitialize(Debugger &debugger) {

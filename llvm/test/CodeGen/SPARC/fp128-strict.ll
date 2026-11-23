@@ -31,7 +31,7 @@ define fp128 @fadd_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fadd_f128:
@@ -59,7 +59,7 @@ define fp128 @fadd_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; HARD32-NEXT:    ld [%sp+64], %o0
 ; HARD32-NEXT:    faddq %f4, %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    std %f0, [%o0]
 ;
 ; HARD-LABEL: fadd_f128:
@@ -93,7 +93,7 @@ define fp128 @fsub_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fsub_f128:
@@ -121,7 +121,7 @@ define fp128 @fsub_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; HARD32-NEXT:    ld [%sp+64], %o0
 ; HARD32-NEXT:    fsubq %f4, %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    std %f0, [%o0]
 ;
 ; HARD-LABEL: fsub_f128:
@@ -155,7 +155,7 @@ define fp128 @fmul_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fmul_f128:
@@ -183,7 +183,7 @@ define fp128 @fmul_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; HARD32-NEXT:    ld [%sp+64], %o0
 ; HARD32-NEXT:    fmulq %f4, %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    std %f0, [%o0]
 ;
 ; HARD-LABEL: fmul_f128:
@@ -217,7 +217,7 @@ define fp128 @fdiv_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fdiv_f128:
@@ -245,7 +245,7 @@ define fp128 @fdiv_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; HARD32-NEXT:    ld [%sp+64], %o0
 ; HARD32-NEXT:    fdivq %f4, %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    std %f0, [%o0]
 ;
 ; HARD-LABEL: fdiv_f128:
@@ -274,7 +274,7 @@ define fp128 @fsqrt_f128(fp128 %a) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fsqrt_f128:
@@ -297,7 +297,7 @@ define fp128 @fsqrt_f128(fp128 %a) nounwind strictfp {
 ; HARD32-NEXT:    ld [%sp+64], %o0
 ; HARD32-NEXT:    fsqrtq %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    std %f0, [%o0]
 ;
 ; HARD-LABEL: fsqrt_f128:
@@ -327,7 +327,7 @@ define fp128 @fpext_f64_f128(double %a) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-24], %f2
 ; SOFT32-NEXT:    std %f0, [%i0+8]
 ; SOFT32-NEXT:    std %f2, [%i0]
-; SOFT32-NEXT:    ret
+; SOFT32-NEXT:    jmp %i7+12
 ; SOFT32-NEXT:    restore
 ;
 ; SOFT64-LABEL: fpext_f64_f128:
@@ -353,7 +353,7 @@ define fp128 @fpext_f64_f128(double %a) nounwind strictfp {
 ; HARD32-NEXT:    fdtoq %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
 ; HARD32-NEXT:    std %f0, [%o0]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    add %sp, 104, %sp
 ;
 ; HARD-LABEL: fpext_f64_f128:
@@ -646,8 +646,8 @@ define fp128 @sitofp_i32_f128(i32 %a) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i1+8]
 ; SOFT32-NEXT:    std %f2, [%i1]
-; SOFT32-NEXT:    ret
-; SOFT32-NEXT:    restore
+; SOFT32-NEXT:    jmp %i7+12
+; SOFT32-NEXT:    restore %g0, %i1, %o0
 ;
 ; SOFT64-LABEL: sitofp_i32_f128:
 ; SOFT64:       ! %bb.0:
@@ -669,7 +669,7 @@ define fp128 @sitofp_i32_f128(i32 %a) nounwind strictfp {
 ; HARD32-NEXT:    fitoq %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
 ; HARD32-NEXT:    std %f0, [%o0]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    add %sp, 96, %sp
 ;
 ; HARD-LABEL: sitofp_i32_f128:
@@ -699,8 +699,8 @@ define fp128 @sitofp_i64_f128(i64 %a) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i2+8]
 ; SOFT32-NEXT:    std %f2, [%i2]
-; SOFT32-NEXT:    ret
-; SOFT32-NEXT:    restore
+; SOFT32-NEXT:    jmp %i7+12
+; SOFT32-NEXT:    restore %g0, %i2, %o0
 ;
 ; SOFT64-LABEL: sitofp_i64_f128:
 ; SOFT64:       ! %bb.0:
@@ -727,8 +727,8 @@ define fp128 @sitofp_i64_f128(i64 %a) nounwind strictfp {
 ; HARD32-NEXT:    ldd [%fp+-16], %f2
 ; HARD32-NEXT:    std %f0, [%i2+8]
 ; HARD32-NEXT:    std %f2, [%i2]
-; HARD32-NEXT:    ret
-; HARD32-NEXT:    restore
+; HARD32-NEXT:    jmp %i7+12
+; HARD32-NEXT:    restore %g0, %i2, %o0
 ;
 ; HARD-LABEL: sitofp_i64_f128:
 ; HARD:       ! %bb.0:
@@ -756,8 +756,8 @@ define fp128 @uitofp_i32_f128(i32 %a) nounwind strictfp {
 ; SOFT32-NEXT:    ldd [%fp+-16], %f2
 ; SOFT32-NEXT:    std %f0, [%i1+8]
 ; SOFT32-NEXT:    std %f2, [%i1]
-; SOFT32-NEXT:    ret
-; SOFT32-NEXT:    restore
+; SOFT32-NEXT:    jmp %i7+12
+; SOFT32-NEXT:    restore %g0, %i1, %o0
 ;
 ; SOFT64-LABEL: uitofp_i32_f128:
 ; SOFT64:       ! %bb.0:
@@ -786,7 +786,7 @@ define fp128 @uitofp_i32_f128(i32 %a) nounwind strictfp {
 ; HARD32-NEXT:    fdtoq %f0, %f0
 ; HARD32-NEXT:    std %f2, [%o0+8]
 ; HARD32-NEXT:    std %f0, [%o0]
-; HARD32-NEXT:    retl
+; HARD32-NEXT:    jmp %o7+12
 ; HARD32-NEXT:    add %sp, 104, %sp
 ;
 ; HARD-LABEL: uitofp_i32_f128:

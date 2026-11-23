@@ -131,6 +131,7 @@ add_libc_test(
   DEPENDS
     libc.src.__support.alloc_checker
     libc.src.__support.checked_ptr
+    libc.src.__support.CPP.nullptr_t
     libc.src.__support.CPP.type_traits
     libc.src.__support.CPP.unique_ptr
     libc.src.__support.CPP.utility
@@ -175,13 +176,18 @@ add_libc_test(
     libc-support-tests
   SRCS
     str_to_float_test.cpp
+    str_to_float128_test.cpp
     str_to_double_test.cpp
     str_to_long_double_test.cpp
   HDRS
     str_to_fp_test.h
   DEPENDS
     libc.hdr.stdint_proxy
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.float128
     libc.src.__support.integer_literals
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.types
     libc.src.__support.str_to_float
     libc.src.__support.uint128
 )

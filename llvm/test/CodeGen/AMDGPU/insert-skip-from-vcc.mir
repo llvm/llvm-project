@@ -591,3 +591,35 @@ body:             |
     S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
     S_ENDPGM 0
 ...
+
+---
+# Backward scan from S_AND must skip the preceding BUNDLE and fold
+# S_MOV -1 into S_CBRANCH_EXECZ.
+# GCN-LABEL: name: and_execz_mov_vccz_after_bundle
+# GCN:       bb.2:
+# GCN-NEXT:    successors: %bb.1(0x80000000)
+# GCN-NEXT:  {{  $}}
+# GCN-NEXT:    BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $exec {
+# GCN-NEXT:      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+# GCN-NEXT:      $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+# GCN-NEXT:    }
+# GCN-NEXT:    S_CBRANCH_EXECZ %bb.1, implicit $exec
+# GCN-NEXT:    S_ENDPGM 0
+name:            and_execz_mov_vccz_after_bundle
+body:             |
+  bb.0:
+    S_NOP 0
+
+  bb.1:
+    S_NOP 0
+
+  bb.2:
+    $sgpr0_sgpr1 = S_MOV_B64 -1
+    BUNDLE implicit-def $vgpr0, implicit-def $vgpr1, implicit $exec {
+      $vgpr0 = V_MOV_B32_e32 0, implicit $exec
+      $vgpr1 = V_MOV_B32_e32 1, implicit $exec
+    }
+    $vcc = S_AND_B64 $exec, killed $sgpr0_sgpr1, implicit-def dead $scc
+    S_CBRANCH_VCCZ %bb.1, implicit killed $vcc
+    S_ENDPGM 0
+...

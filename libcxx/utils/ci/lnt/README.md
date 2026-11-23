@@ -38,6 +38,7 @@ select-anchor-commits --since 2023-01-02 --every week > anchors.txt
 # Find changepoints in the existing data
 curl -sS --fail --compressed -G https://lnt.llvm.org/api/projects/libcxx/suites/microbenchmarks/series            \
      --data-urlencode machine=<machine> --data-urlencode metric=execution_time --data-urlencode has_ordinal=true \
+     --data-urlencode branch=main                                                                                 \
   | detect-changepoints --y metrics.execution_time --series-by test --aggregate median --output changes.jsonl
 
 # Determine which commits to refine based on the change points

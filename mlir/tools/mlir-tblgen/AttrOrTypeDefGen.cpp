@@ -1123,10 +1123,12 @@ void DefGenerator::emitParsePrintDispatch(ArrayRef<AttrOrTypeDef> defs) {
                   {"::mlir::AsmPrinter &", "printer"}});
 
   // The parser dispatch uses a KeywordSwitch, matching on the mnemonic and
-  // calling the def's parse function.
+  // calling the def's parse function. The KeywordSwitch only parses the
+  // mnemonic if `*mnemonic` is empty, so that callers can continue with a
+  // mnemonic they already parsed, e.g. in another dispatch function.
   parse.body() << "  return "
                   "::mlir::AsmParser::KeywordSwitch<::mlir::"
-                  "OptionalParseResult>(parser)\n";
+                  "OptionalParseResult>(parser, mnemonic)\n";
   const char *const getValueForMnemonic =
       R"(    .Case({0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {{
       value = {0}::{1};

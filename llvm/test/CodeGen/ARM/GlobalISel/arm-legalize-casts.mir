@@ -14,15 +14,12 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
-    %0(i32) = COPY $r0
-    %1(p0) = G_INTTOPTR %0(i32)
+    %0:_(i32) = COPY $r0
+    %1:_(p0) = G_INTTOPTR %0(i32)
     ; G_INTTOPTR with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(p0) = G_INTTOPTR {{%[0-9]+}}
     $r0 = COPY %1(p0)
@@ -35,15 +32,12 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
-    %0(p0) = COPY $r0
-    %1(i32) = G_PTRTOINT %0(p0)
+    %0:_(p0) = COPY $r0
+    %1:_(i32) = G_PTRTOINT %0(p0)
     ; G_PTRTOINT with s32 is legal, so we should find it unchanged in the output
     ; CHECK: {{%[0-9]+}}:_(i32) = G_PTRTOINT {{%[0-9]+}}
     $r0 = COPY %1(i32)
@@ -56,17 +50,13 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
-    %0(i32) = COPY $r0
-    %1(i16) = G_TRUNC %0(i32)
-    %2(p0) = G_INTTOPTR %1(i16)
+    %0:_(i32) = COPY $r0
+    %1:_(i16) = G_TRUNC %0(i32)
+    %2:_(p0) = G_INTTOPTR %1(i16)
     ; G_INTTOPTR with s16 should zero extend
     ; CHECK-NOT: G_INTTOPTR {{%[0-9]+}}(i16)
     ; CHECK: [[BITS:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
@@ -83,23 +73,19 @@ legalized:       false
 # CHECK: legalized: true
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.0:
     liveins: $r0
 
-    %0(p0) = COPY $r0
-    %1(i8) = G_PTRTOINT %0(p0)
+    %0:_(p0) = COPY $r0
+    %1:_(i8) = G_PTRTOINT %0(p0)
     ; G_PTRTOINT with s8 should truncate
     ; CHECK-NOT: {{%[0-9]+}}(i8) = G_PTRTOINT
     ; CHECK: [[X32:%[0-9]+]]:_(i32) = G_PTRTOINT {{%[0-9]+}}(p0)
     ; CHECK: [[BITS:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
     ; CHECK: {{%[0-9]+}}:_(i32) = G_AND [[X32]], [[BITS]]
     ; CHECK-NOT: {{%[0-9]+}}(i8) = G_PTRTOINT
-    %2(i32) = G_ZEXT %1(i8)
+    %2:_(i32) = G_ZEXT %1(i8)
     $r0 = COPY %2(i32)
     BX_RET 14, $noreg, implicit $r0
 ...

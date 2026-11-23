@@ -88,8 +88,7 @@ struct UserArea {
 #include "Register/Arch/RegisterInfos_i386.h"
 #undef DECLARE_REGISTER_INFOS_I386_STRUCT
 
-RegisterInfoLinux_i386::RegisterInfoLinux_i386(
-    const ArchSpec &target_arch)
+RegisterInfoLinux_i386::RegisterInfoLinux_i386(const ArchSpec &target_arch)
     : RegisterInfoLinux_x86(
           target_arch,
           {"orig_eax",

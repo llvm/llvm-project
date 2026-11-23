@@ -270,13 +270,17 @@ bool SignalContext::IsStackOverflow() const {
   // to the precise word that was accessed.  Mask off the low bits of sp to
   // take it into account.
   bool IsStackAccess = addr >= (sp & ~0xFFF) && addr < sp + 0xFFFF;
-#else
+#    elif SANITIZER_HPPA
+  // The stack grows up and a frame is written after sp is bumped, so an
+  // overflow faults below sp, by up to the frame size.
+  bool IsStackAccess = addr + 0xFFFF > sp && addr < sp + GetPageSizeCached();
+#    else
   // Let's accept up to a page size away from top of stack. Things like stack
   // probing can trigger accesses with such large offsets.
   bool IsStackAccess = addr + GetPageSizeCached() > sp && addr < sp + 0xFFFF;
-#endif
+#    endif
 
-#if __powerpc__
+#    if __powerpc__
   // Large stack frames can be allocated with e.g.
   //   lis r0,-10000
   //   stdux r1,r1,r0 # store sp to [sp-10000] and update sp by -10000
