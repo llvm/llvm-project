@@ -36,30 +36,30 @@ LLVMInitializeLoongArchTarget() {
   RegisterTargetMachine<LoongArchTargetMachine> X(getTheLoongArch32Target());
   RegisterTargetMachine<LoongArchTargetMachine> Y(getTheLoongArch64Target());
   auto *PR = PassRegistry::getPassRegistry();
-  initializeLoongArchDeadRegisterDefinitionsPass(*PR);
+  initializeLoongArchDeadRegisterDefinitionsLegacyPass(*PR);
   initializeLoongArchMemoryBarrierOptPass(*PR);
-  initializeLoongArchMergeBaseOffsetOptPass(*PR);
-  initializeLoongArchOptWInstrsPass(*PR);
-  initializeLoongArchPreRAExpandPseudoPass(*PR);
+  initializeLoongArchMergeBaseOffsetLegacyPass(*PR);
+  initializeLoongArchOptWInstrsLegacyPass(*PR);
+  initializeLoongArchPreRAExpandPseudoLegacyPass(*PR);
   initializeLoongArchExpandPseudoPass(*PR);
   initializeLoongArchDAGToDAGISelLegacyPass(*PR);
   initializeLoongArchExpandAtomicPseudoPass(*PR);
   initializeLoongArchLateBranchOptPass(*PR);
 }
 
-static cl::opt<bool> EnableLoongArchDeadRegisterElimination(
+cl::opt<bool> EnableLoongArchDeadRegisterElimination(
     "loongarch-enable-dead-defs", cl::Hidden,
     cl::desc("Enable the pass that removes dead"
              " definitons and replaces stores to"
              " them with stores to r0"),
     cl::init(true));
 
-static cl::opt<bool>
+cl::opt<bool>
     EnableLoopDataPrefetch("loongarch-enable-loop-data-prefetch", cl::Hidden,
                            cl::desc("Enable the loop data prefetch pass"),
                            cl::init(true));
 
-static cl::opt<bool>
+cl::opt<bool>
     EnableMergeBaseOffset("loongarch-enable-merge-offset",
                           cl::desc("Enable the merge base offset pass"),
                           cl::init(true), cl::Hidden);
@@ -69,7 +69,7 @@ static cl::opt<bool>
                    cl::desc("Enable sinking and folding of instruction copies"),
                    cl::init(true), cl::Hidden);
 
-static cl::opt<bool>
+cl::opt<bool>
     EnableMachineCombiner("loongarch-enable-machine-combiner",
                           cl::desc("Enable the machine combiner pass"),
                           cl::init(true), cl::Hidden);
@@ -191,7 +191,8 @@ void LoongArchPassConfig::addCodeGenPrepare() {
 }
 
 bool LoongArchPassConfig::addInstSelector() {
-  addPass(createLoongArchISelDag(getLoongArchTargetMachine(), getOptLevel()));
+  addPass(createLoongArchISelDagLegacyPass(getLoongArchTargetMachine(),
+                                           getOptLevel()));
 
   return false;
 }
@@ -217,14 +218,14 @@ void LoongArchPassConfig::addMachineSSAOptimization() {
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isLoongArch64()) {
-    addPass(createLoongArchOptWInstrsPass());
+    addPass(createLoongArchOptWInstrsLegacyPass());
   }
 }
 
 void LoongArchPassConfig::addPreRegAlloc() {
-  addPass(createLoongArchPreRAExpandPseudoPass());
+  addPass(createLoongArchPreRAExpandPseudoLegacyPass());
   if (TM->getOptLevel() != CodeGenOptLevel::None && EnableMergeBaseOffset)
-    addPass(createLoongArchMergeBaseOffsetOptPass());
+    addPass(createLoongArchMergeBaseOffsetLegacyPass());
 }
 
 bool LoongArchPassConfig::addILPOpts() {
@@ -237,14 +238,14 @@ bool LoongArchPassConfig::addILPOpts() {
 bool LoongArchPassConfig::addRegAssignAndRewriteFast() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
-    addPass(createLoongArchDeadRegisterDefinitionsPass());
+    addPass(createLoongArchDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteFast();
 }
 
 bool LoongArchPassConfig::addRegAssignAndRewriteOptimized() {
   if (TM->getOptLevel() != CodeGenOptLevel::None &&
       EnableLoongArchDeadRegisterElimination)
-    addPass(createLoongArchDeadRegisterDefinitionsPass());
+    addPass(createLoongArchDeadRegisterDefinitionsLegacyPass());
   return TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
