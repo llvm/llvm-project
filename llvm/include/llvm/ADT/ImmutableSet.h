@@ -374,7 +374,10 @@ public:
     // We need to clear the mutability bit in case we are
     // destroying the node as part of a sweep in ImutAVLFactory::recoverNodes().
     IsMutable = false;
-    factory->freeNodes.push_back(this);
+    // The children were released above, so reuse the left pointer to link
+    // this node into the factory's free list.
+    left = factory->freeNodes;
+    factory->freeNodes = this;
   }
 };
 
@@ -405,7 +408,8 @@ class ImutAVLFactory
 
   uintptr_t Allocator;
   std::vector<TreeTy*> createdNodes;
-  std::vector<TreeTy*> freeNodes;
+  // Destroyed nodes, linked through their left pointers.
+  TreeTy *freeNodes = nullptr;
 
   bool ownsAllocator() const {
     return (Allocator & 0x1) == 0;
@@ -513,9 +517,10 @@ protected:
   TreeTy* createNode(TreeTy* L, value_type_ref V, TreeTy* R) {
     BumpPtrAllocator& A = getAllocator();
     TreeTy* T;
-    if (!freeNodes.empty()) {
-      T = freeNodes.back();
-      freeNodes.pop_back();
+    if (freeNodes) {
+      T = freeNodes;
+      freeNodes = T->getLeft();
+      assert(!T->isMutable() && "free-list node must have been destroyed");
       assert(T != L);
       assert(T != R);
     } else {

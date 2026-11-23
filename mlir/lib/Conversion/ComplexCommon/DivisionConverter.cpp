@@ -16,6 +16,9 @@
 
 #include "mlir/Conversion/ComplexCommon/DivisionConverter.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMFloatIntrinsicOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 
 using namespace mlir;

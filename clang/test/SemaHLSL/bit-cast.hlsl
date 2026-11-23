@@ -3,16 +3,18 @@
 
 // expected-no-diagnostics
 
+using namespace hlsl;
+
 float test_scalar(int V) {
-  return hlsl::bit_cast<float>(V);
+  return bit_cast<float>(V);
 }
 
 float4 test_vector(int4 V) {
-  return hlsl::bit_cast<float>(V);
+  return bit_cast<float>(V);
 }
 
 float2x3 test_matrix(int2x3 M) {
-  return hlsl::bit_cast<float>(M);
+  return bit_cast<float>(M);
 }
 
-static_assert(hlsl::bit_cast<float>(0x3f800000) == 1.0f, "");
+static_assert(bit_cast<float>(0x3f800000) == 1.0f, "");

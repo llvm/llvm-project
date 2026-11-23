@@ -98,6 +98,27 @@ define fp128 @Test128Ldexp(fp128 %x, i32 %exp) nounwind {
   ret fp128 %r
 }
 
+define dso_local void @Test128SinCos(fp128 %x, ptr %s, ptr %c) nounwind {
+; ANDROID-LABEL: Test128SinCos:
+; ANDROID:       # %bb.0:
+; ANDROID-NEXT:    pushq %rbx
+; ANDROID-NEXT:    subq $16, %rsp
+; ANDROID-NEXT:    movq %rsi, %rbx
+; ANDROID-NEXT:    movq %rsp, %rsi
+; ANDROID-NEXT:    callq sincosl@PLT
+; ANDROID-NEXT:    movaps (%rsp), %xmm0
+; ANDROID-NEXT:    movaps %xmm0, (%rbx)
+; ANDROID-NEXT:    addq $16, %rsp
+; ANDROID-NEXT:    popq %rbx
+; ANDROID-NEXT:    retq
+  %sincos = tail call { fp128, fp128 } @llvm.sincos.f128(fp128 %x)
+  %sin = extractvalue { fp128, fp128 } %sincos, 0
+  %cos = extractvalue { fp128, fp128 } %sincos, 1
+  store fp128 %sin, ptr %s, align 16
+  store fp128 %cos, ptr %c, align 16
+  ret void
+}
+
 declare fp128 @llvm.maxnum.f128(fp128, fp128)
 declare fp128 @llvm.minnum.f128(fp128, fp128)
 declare fp128 @llvm.sqrt.f128(fp128)
@@ -105,3 +126,4 @@ declare fp128 @llvm.sin.f128(fp128)
 declare fp128 @llvm.pow.f128(fp128, fp128)
 declare fp128 @llvm.rint.f128(fp128)
 declare fp128 @llvm.ldexp.f128.i32(fp128, i32)
+declare { fp128, fp128 } @llvm.sincos.f128(fp128)

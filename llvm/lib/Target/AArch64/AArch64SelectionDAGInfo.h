@@ -39,18 +39,20 @@ public:
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align DstAlign, Align SrcAlign,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo,
                                   MachinePointerInfo SrcPtrInfo) const override;
   SDValue EmitTargetCodeForMemset(SelectionDAG &DAG, const SDLoc &dl,
                                   SDValue Chain, SDValue Dst, SDValue Src,
                                   SDValue Size, Align Alignment,
                                   bool isVolatile, bool AlwaysInline,
+                                  bool &IsTailCall,
                                   MachinePointerInfo DstPtrInfo) const override;
   SDValue
   EmitTargetCodeForMemmove(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
                            SDValue Dst, SDValue Src, SDValue Size,
                            Align DstAlign, Align SrcAlign, bool isVolatile,
-                           MachinePointerInfo DstPtrInfo,
+                           bool &IsTailCall, MachinePointerInfo DstPtrInfo,
                            MachinePointerInfo SrcPtrInfo) const override;
 
   std::pair<SDValue, SDValue>
@@ -66,7 +68,8 @@ public:
   SDValue EmitStreamingCompatibleMemLibCall(SelectionDAG &DAG, const SDLoc &DL,
                                             SDValue Chain, SDValue Op0,
                                             SDValue Op1, SDValue Size,
-                                            RTLIB::Libcall LC) const;
+                                            RTLIB::Libcall LC,
+                                            bool &IsTailCall) const;
 };
 } // namespace llvm
 

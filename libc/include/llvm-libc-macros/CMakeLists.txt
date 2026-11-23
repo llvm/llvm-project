@@ -349,6 +349,12 @@ add_macro_header(
 )
 
 add_macro_header(
+  sys_swap_macros
+  HDR
+    sys-swap-macros.h
+)
+
+add_macro_header(
   sys_mman_macros
   HDR
     sys-mman-macros.h
@@ -423,6 +429,12 @@ add_macro_header(
   sys_time_macros
   HDR
     sys-time-macros.h
+)
+
+add_macro_header(
+  sys_timerfd_macros
+  HDR
+    sys-timerfd-macros.h
 )
 
 add_macro_header(

@@ -3598,6 +3598,19 @@ static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
 
   if (DAG.isBoolConstant(V.getOperand(1)) == true)
     return V.getOperand(0);
+
+  // The true value of a SETCC result comes from the boolean contents of the
+  // compared operand type, which can differ from those of the result type.
+  SDValue Op0 = V.getOperand(0);
+  if (Op0.getOpcode() == ISD::SETCC)
+    if (ConstantSDNode *C = isConstOrConstSplat(V.getOperand(1), false)) {
+      EVT OpVT = Op0.getOperand(0).getValueType();
+      if (TLI.getBooleanContents(OpVT) ==
+              TargetLowering::ZeroOrNegativeOneBooleanContent &&
+          C->getAPIntValue().isAllOnes())
+        return Op0;
+    }
+
   if (Force && isConstOrConstSplat(V.getOperand(1), false))
     return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
   return SDValue();
@@ -15686,8 +15699,8 @@ SDValue DAGCombiner::CombineZExtLogicopShiftLoad(SDNode *N) {
                                    Load->getMemoryVT(), Load->getMemOperand());
 
   SDLoc DL1(N1);
-  SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad,
-                              N1.getOperand(1));
+  SDValue ShiftAmt = DAG.getShiftAmountOperand(VT, N1.getOperand(1));
+  SDValue Shift = DAG.getNode(N1.getOpcode(), DL1, VT, ExtLoad, ShiftAmt);
 
   APInt Mask = N0.getConstantOperandAPInt(1).zext(VT.getSizeInBits());
   SDLoc DL0(N0);
@@ -20936,8 +20949,7 @@ SDValue DAGCombiner::visitSINT_TO_FP(SDNode *N) {
 
   // fold (sint_to_fp (trunc nsw x)) -> (sint_to_fp x)
   if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoSignedWrap() &&
-      TLI.isTypeDesirableForOp(ISD::SINT_TO_FP,
-                               N0.getOperand(0).getValueType()))
+      TLI.isTypeDesirableForOp(N, N0.getOperand(0).getValueType()))
     return DAG.getNode(ISD::SINT_TO_FP, DL, VT, N0.getOperand(0));
 
   return SDValue();
@@ -21004,11 +21016,11 @@ SDValue DAGCombiner::visitUINT_TO_FP(SDNode *N) {
     return DAG.getNode(ISD::UINT_TO_FP, DL, VT, Trunc);
   }
 
-  // fold (uint_to_fp (trunc nuw x)) -> (uint_to_fp x)
+  // fold (uint_to_fp (trunc nuw x)) -> (uint_to_fp nneg x)
   if (N0.getOpcode() == ISD::TRUNCATE && N0->getFlags().hasNoUnsignedWrap() &&
-      TLI.isTypeDesirableForOp(ISD::UINT_TO_FP,
-                               N0.getOperand(0).getValueType()))
-    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0.getOperand(0));
+      TLI.isTypeDesirableForOp(N, N0.getOperand(0).getValueType()))
+    return DAG.getNode(ISD::UINT_TO_FP, DL, VT, N0.getOperand(0),
+                       N->getFlags() | SDNodeFlags::NonNeg);
 
   return SDValue();
 }
@@ -31716,9 +31728,6 @@ SDValue DAGCombiner::foldSelectOfBinops(SDNode *N) {
   unsigned BinOpc = N1.getOpcode();
   if (!TLI.isBinOp(BinOpc) || (N2.getOpcode() != BinOpc) ||
       (N1.getResNo() != N2.getResNo()))
-    return SDValue();
-
-  if (N1->getNumOperands() != 2 || N2->getNumOperands() != 2)
     return SDValue();
 
   // The use checks are intentionally on SDNode because we may be dealing
