@@ -2306,6 +2306,9 @@ bool VectorCombine::scalarizeLoadExtract(LoadInst *LI, VectorType *VecTy,
     Align ScalarOpAlignment =
         computeAlignmentAfterScalarization(LI->getAlign(), ElemType, Idx, *DL);
     NewLoad->setAlignment(ScalarOpAlignment);
+    NewLoad->copyMetadata(*LI,
+                          {LLVMContext::MD_mmra, LLVMContext::MD_nontemporal,
+                           LLVMContext::MD_mem_cache_hint});
 
     if (auto *ConstIdx = dyn_cast<ConstantInt>(Idx)) {
       size_t Offset = ConstIdx->getZExtValue() * DL->getTypeStoreSize(ElemType);

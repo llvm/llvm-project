@@ -1050,6 +1050,7 @@
 // SPARC:#define __FLT_MIN_EXP__ (-125)
 // SPARC:#define __FLT_MIN__ 1.17549435e-38F
 // SPARC:#define __FLT_RADIX__ 2
+// SPARC:#define __GCC_ATOMIC_INT_LOCK_FREE 1
 // SPARC:#define __GCC_ATOMIC_LLONG_LOCK_FREE 1
 // SPARC:#define __INT16_C(c) c
 // SPARC:#define __INT16_C_SUFFIX__

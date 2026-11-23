@@ -152,10 +152,3 @@ Type BitVectorAttr::getType() const {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/SMT/IR/SMTAttributes.cpp.inc"
-
-void SMTDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/SMT/IR/SMTAttributes.cpp.inc"
-      >();
-}
