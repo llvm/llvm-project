@@ -8343,17 +8343,21 @@ LogicalResult MaskOp::verify() {
                      [](Type t) { return llvm::isa<VectorType>(t); }) > 1)
     return emitOpError("multiple vector results not supported");
 
-  // Mask checks.
-  Type expectedMaskType = maskableOp.getExpectedMaskType();
-  if (getMask().getType() != expectedMaskType)
-    return emitOpError("expects a ")
-           << expectedMaskType << " mask for the maskable operation";
-
   auto transferOp =
       dyn_cast<VectorTransferOpInterface>(maskableOp.getOperation());
   if (transferOp && transferOp.getMask())
     return emitOpError(
         "doesn't expect a mask operand for the masked transfer operation");
+        
+  if (transferOp &&
+      isa<VectorType>(transferOp.getShapedType().getElementType()))
+    return emitOpError("does not support masks with vector element type");
+
+  // Mask checks.
+  Type expectedMaskType = maskableOp.getExpectedMaskType();
+  if (getMask().getType() != expectedMaskType)
+    return emitOpError("expects a ")
+           << expectedMaskType << " mask for the maskable operation";
 
   // Passthru checks.
   Value passthru = getPassthru();
