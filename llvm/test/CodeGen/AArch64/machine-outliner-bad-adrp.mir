@@ -40,3 +40,4 @@ body:             |
     renamable $x16 = ADRP target-flags(aarch64-page) %const.0
 
     RET undef $lr
+...

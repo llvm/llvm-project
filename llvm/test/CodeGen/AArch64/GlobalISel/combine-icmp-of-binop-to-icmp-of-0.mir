@@ -825,3 +825,4 @@ body:             |
     %ext:_(i32) = G_ZEXT %cmp(i1)
     $w0 = COPY %ext(i32)
     RET_ReallyLR implicit $w0
+...

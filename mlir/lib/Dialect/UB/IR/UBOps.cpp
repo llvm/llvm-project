@@ -39,10 +39,6 @@ void UBDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/UB/IR/UBOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/UB/IR/UBOpsAttributes.cpp.inc"
-      >();
   addInterfaces<UBInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, UBDialect>();
 }

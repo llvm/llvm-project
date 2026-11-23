@@ -115,6 +115,9 @@ void Scheduler::scheduleAndUpdateReadyList(SchedBundle &Bndl) {
     }
     N->setScheduled();
   }
+#ifndef NDEBUG
+  DAG.verify();
+#endif
 }
 
 void Scheduler::notifyCreateInstrBeforeDAGUpdates(DGNode *N) {
@@ -140,12 +143,10 @@ void Scheduler::notifyCreateInstrAfterDAGUpdates(DGNode *N) {
     if (Dir == SchedDirection::BottomUp) {
       for (auto *PredN : N->preds(DAG)) {
         ReadyList.remove(PredN);
-        PredN->incrUnscheduledDeps();
       }
     } else {
       for (auto *SuccN : N->succs(DAG)) {
         ReadyList.remove(SuccN);
-        SuccN->incrUnscheduledDeps();
       }
     }
   }
@@ -161,20 +162,18 @@ void Scheduler::notifyEraseInstr(Instruction *I) {
   ReadyList.remove(N);
   // Also decrement the unscheduledDep counter for the dependents and add them
   // to the ready list if they become ready.
-  auto UpdateNodeAndTryAddToReadyList = [this, N](DGNode *DepN) {
+  auto TryAddToReadyList = [this](DGNode *DepN) {
     if (DepN->scheduled())
       return;
-    if (!N->scheduled() && !DepN->ready())
-      DepN->decrUnscheduledDeps();
     if (DepN->ready() && !ReadyList.contains(DepN))
       ReadyList.insert(DepN);
   };
   if (Dir == SchedDirection::BottomUp) {
     for (auto *DepN : N->preds(DAG))
-      UpdateNodeAndTryAddToReadyList(DepN);
+      TryAddToReadyList(DepN);
   } else if (Dir == SchedDirection::TopDown) {
     for (auto *DepN : N->succs(DAG))
-      UpdateNodeAndTryAddToReadyList(DepN);
+      TryAddToReadyList(DepN);
   }
 }
 
@@ -320,6 +319,9 @@ bool Scheduler::tryScheduleUntil(ArrayRef<Instruction *> Instrs) {
     ReadyList.insert(RetryN);
 
   eraseBundle(InstrsSB);
+#ifndef NDEBUG
+  DAG.verify();
+#endif
   return false;
 }
 
@@ -509,14 +511,27 @@ bool Scheduler::trySchedule(BndlRef<Instruction *> Instrs) {
 #endif
     }
     // Extend the DAG to include Instrs.
-    Interval<Instruction> Extension = DAG.extend(Instrs);
-    // Add nodes from the new interval to ready list if they are ready.
-    for (auto &I : Extension) {
-      auto *N = DAG.getNode(&I);
-      if (N->scheduled())
-        continue;
-      if (N->ready() && !ReadyList.contains(N))
-        ReadyList.insert(N);
+    Interval<Instruction> DAGExtension = DAG.extend(Instrs);
+    if (!DAGExtension.empty()) {
+      // DAG.extend() does not always give us the full range of instrs between
+      // the scheduling frontier and the furthest instr in the DAG, because the
+      // DAG may already include newly created instrs that have not been
+      // scheduled. So we need to include all instructions between the frontier
+      // and the furthest instr in the DAG.
+      Interval<Instruction> Extension = DAGExtension;
+      SchedulingPoint Frontier = *ScheduleFrontierOpt;
+      if (Dir == SchedDirection::BottomUp)
+        Extension = {DAGExtension.top(), &*Frontier.getPrev().getIterator()};
+      else
+        Extension = {&*Frontier.getNext().getIterator(), DAGExtension.bottom()};
+      // Add nodes from the new interval to ready list if they are ready.
+      for (auto &I : Extension) {
+        auto *N = DAG.getNode(&I);
+        if (N->scheduled())
+          continue;
+        if (N->ready() && !ReadyList.contains(N))
+          ReadyList.insert(N);
+      }
     }
     // Try schedule all nodes until we can schedule Instrs back-to-back.
     return tryScheduleUntil(Instrs);

@@ -12,14 +12,6 @@ name:            SMADDLrrr_gpr
 legalized:       true
 regBankSelected: true
 
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: gpr }
-  - { id: 2, class: gpr }
-  - { id: 3, class: gpr }
-  - { id: 4, class: gpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 
 body:             |
   bb.0:
@@ -33,13 +25,13 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:gpr32 = COPY $w2
     ; CHECK-NEXT: [[SMADDLrrr:%[0-9]+]]:gpr64 = SMADDLrrr [[COPY1]], [[COPY2]], [[COPY]]
     ; CHECK-NEXT: $x0 = COPY [[SMADDLrrr]]
-    %0(i64) = COPY $x0
-    %1(i32) = COPY $w1
-    %2(i32) = COPY $w2
-    %3(i64) = G_SEXT %1
-    %4(i64) = G_SEXT %2
-    %5(i64) = G_MUL %3, %4
-    %6(i64) = G_ADD %0, %5
+    %0:gpr(i64) = COPY $x0
+    %1:gpr(i32) = COPY $w1
+    %2:gpr(i32) = COPY $w2
+    %3:gpr(i64) = G_SEXT %1
+    %4:gpr(i64) = G_SEXT %2
+    %5:gpr(i64) = G_MUL %3, %4
+    %6:gpr(i64) = G_ADD %0, %5
     $x0 = COPY %6
 ...
 

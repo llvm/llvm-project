@@ -20,8 +20,8 @@
 #include "lldb/Utility/Scalar.h"
 #include "llvm/Support/Compiler.h"
 
-#include "RegisterContextCore_x86.h"
 #include "Register/Arch/RegisterContext_x86.h"
+#include "RegisterContextCore_x86.h"
 
 using namespace lldb_private;
 using namespace lldb;
@@ -302,7 +302,7 @@ const char *RegisterContextCore_x86::GetRegisterName(unsigned reg) {
 
 // Parse ymm registers and into xmm.bytes and ymmh.bytes.
 bool RegisterContextCore_x86::CopyYMMtoXSTATE(uint32_t reg,
-                                               lldb::ByteOrder byte_order) {
+                                              lldb::ByteOrder byte_order) {
   if (!IsAVX(reg))
     return false;
 
@@ -318,7 +318,7 @@ bool RegisterContextCore_x86::CopyYMMtoXSTATE(uint32_t reg,
 
 // Concatenate xmm.bytes with ymmh.bytes
 bool RegisterContextCore_x86::CopyXSTATEtoYMM(uint32_t reg,
-                                               lldb::ByteOrder byte_order) {
+                                              lldb::ByteOrder byte_order) {
   if (!IsAVX(reg))
     return false;
 

@@ -181,10 +181,12 @@ public:
                         mlir::omp::ReductionClauseOps &result,
                         llvm::SmallVectorImpl<Object> &reductionObjects,
                         llvm::DenseMap<const semantics::Symbol *, mlir::Value>
-                            *reductionVarCache = nullptr) const;
-  bool processTaskReduction(
-      mlir::Location currentLocation, mlir::omp::TaskReductionClauseOps &result,
-      llvm::SmallVectorImpl<Object> &outReductionObjects) const;
+                            *reductionVarCache = nullptr,
+                        bool *hasUserDefinedReduction = nullptr) const;
+  bool processTaskReduction(mlir::Location currentLocation,
+                            mlir::omp::TaskReductionClauseOps &result,
+                            llvm::SmallVectorImpl<Object> &outReductionObjects,
+                            bool *hasUserDefinedReduction = nullptr) const;
   bool processTo(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool
   processUseDeviceAddr(lower::StatementContext &stmtCtx,
@@ -229,8 +231,19 @@ private:
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
       llvm::SmallVectorImpl<Object> &mapObjects,
-      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
-      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
+      llvm::StringRef mapperIdNameRef = "",
+      bool isMotionModifier = false) const;
+
+  void processMapObjectsWithIterator(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::ArrayRef<IteratorRange> iteratorRanges, bool hasIteratorModifier,
+      mlir::omp::ClauseMapFlags mapTypeBits,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+      mlir::omp::MapClauseOps &result,
+      llvm::SmallVectorImpl<Object> &mapObjects,
+      llvm::StringRef mapperIdNameRef = "",
+      bool isMotionModifier = false) const;
 
   lower::AbstractConverter &converter;
   semantics::SemanticsContext &semaCtx;

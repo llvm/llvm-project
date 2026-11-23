@@ -14,6 +14,7 @@
 #include "copyprof_allocator.h"
 #include "copyprof_interceptors.h"
 #include "copyprof_interface_internal.h"
+#include "copyprof_per_object_state.h"
 #include "copyprof_reporting.h"
 #include "copyprof_shadow.h"
 #include "copyprof_state.h"
@@ -53,6 +54,7 @@ static void Initialize() {
   InitializeCommonFlags();
   InitializeInterceptors();
   InitializeShadowMemory();
+  InitializePerObjectTracking();
   InitializeCopyProfAllocator();
   copyprof_init_is_running = false;
   copyprof_is_initialized = true;
@@ -91,7 +93,14 @@ static void MarkConstructedObject(const void* this_ptr, uptr obj_size) {
 
 static void CopyMemberFunctionEnter(const void* this_ptr, uptr obj_size) {
   MaybeUpdateSmfContext(SmfContext::COPY);
-  if (__copyprof_state.copy_nesting_level++ == 0) {
+  // Currently, only top-level copies are reported, so only top-level objects
+  // get per-object state which is then removed when the corresponding top-level
+  // d'tor exits. A nested object copy is not individually marked as a copy and
+  // is typically destroyed by a nested d'tor, so its state would never be
+  // removed (from the object state map).
+  if (__copyprof_state.copy_nesting_level++ == 0 &&
+      __copyprof_state.smf_context == SmfContext::COPY) {
+    InitPerObjectState(this_ptr, obj_size);
     __copyprof_state.current_this_ptr = this_ptr;
   }
 }
@@ -161,10 +170,13 @@ void __copyprof_dtor_exit_callback(const void* this_ptr, uptr obj_size) {
   __copyprof_state.is_transitive_copy &= IsMarkedAsCopy(this_ptr, obj_size);
   if (__copyprof_state.destruct_nesting_level == 0 &&
       __copyprof_state.is_transitive_copy) {
-    // TODO: Dynamic allocation tracking via malloc/new interception will be
-    // added in a subsequent patch. For now, did_allocate is set to true.
-    LogCopyProfReport(GET_CALLER_PC(), GET_CURRENT_FRAME(), obj_size,
-                      /*did_allocate=*/true);
+    LogCopyProfReport(GET_CALLER_PC(), GET_CURRENT_FRAME(),
+                      GetPerObjectTrackedSize(this_ptr),
+                      GetPerObjectDidAllocate(this_ptr));
+  }
+  // Clean up per-object state when top-level destructor exits.
+  if (__copyprof_state.destruct_nesting_level == 0) {
+    RemovePerObjectState(this_ptr);
   }
 }
 

@@ -118,6 +118,10 @@ ARCInstKind llvm::objcarc::GetFunctionClass(const Function *F) {
     return ARCInstKind::FusedRetainAutoreleaseRV;
   case Intrinsic::objc_retainAutoreleasedReturnValue:
     return ARCInstKind::RetainRV;
+  case Intrinsic::objc_claimAutoreleasedReturnValue:
+    // ClaimRV returns its argument at +1 just like RetainRV; it only differs
+    // in not requiring the marker instruction after the call.
+    return ARCInstKind::RetainRV;
   case Intrinsic::objc_retainBlock:
     return ARCInstKind::RetainBlock;
   case Intrinsic::objc_storeStrong:

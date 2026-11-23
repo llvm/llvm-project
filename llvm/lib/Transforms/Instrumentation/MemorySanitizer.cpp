@@ -1097,7 +1097,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     if (MS.CompileKernel) {
       IRBuilder<> IRB(FnPrologueEnd);
-      IRB.disableGEPCanonicalization();
       insertKmsanPrologue(IRB);
     }
 
@@ -1228,7 +1227,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Instruction *CheckTerm = SplitBlockAndInsertIfThen(
           Cmp, &*IRB.GetInsertPoint(), false, MS.OriginStoreWeights);
       IRBuilder<> IRBNew(CheckTerm);
-      IRBNew.disableGEPCanonicalization();
       paintOrigin(IRBNew, updateOrigin(Origin, IRBNew), OriginPtr, StoreSize,
                   OriginAlignment);
     }
@@ -1237,7 +1235,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void materializeStores() {
     for (StoreInst *SI : StoreList) {
       IRBuilder<> IRB(SI);
-      IRB.disableGEPCanonicalization();
       Value *Val = SI->getValueOperand();
       Value *Addr = SI->getPointerOperand();
       Value *Shadow = SI->isAtomic() ? getCleanShadow(Val) : getShadow(Val);
@@ -3008,7 +3005,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitXor(BinaryOperator &I) { handleShadowOr(I); }
 
   void handleIntegerDiv(Instruction &I) {
-    IRBuilder<> IRB(&I);
     // Strict on the second argument.
     insertCheckShadowOf(I.getOperand(1), &I);
     setShadow(&I, getShadow(&I, 0));
@@ -4470,7 +4466,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //       stores are lowered to Intrinsic::masked_store.
   void handleMaskedStore(IntrinsicInst &I) {
     IRBuilder<> IRB(&I);
-    IRB.disableGEPCanonicalization();
     Value *V = I.getArgOperand(0);
     Value *Ptr = I.getArgOperand(1);
     const Align Alignment = I.getParamAlign(1).valueOrOne();
@@ -4632,7 +4627,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(I.arg_size() == 3);
 
     IRBuilder<> IRB(&I);
-    IRB.disableGEPCanonicalization();
 
     Value *Dst = I.getArgOperand(0);
     assert(Dst->getType()->isPointerTy() && "Destination is not a pointer!");
@@ -5561,7 +5555,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// MSan logic, simply by applying the corresponding intrinsic to the shadow.
   void handleNEONVectorStoreIntrinsic(IntrinsicInst &I, bool useLane) {
     IRBuilder<> IRB(&I);
-    IRB.disableGEPCanonicalization();
 
     // Don't use getNumOperands() because it includes the callee
     int numArgOperands = I.arg_size();
@@ -7771,7 +7764,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
     }
     IRBuilder<> IRB(&CB);
-    IRB.disableGEPCanonicalization();
     bool MayCheckCall = MS.EagerChecks;
     if (Function *Func = CB.getCalledFunction()) {
       // __sanitizer_unaligned_{load,store} functions may be called by users
@@ -8609,7 +8601,6 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
-      IRB.disableGEPCanonicalization();
       Value *VAListTag = OrigInst->getArgOperand(0);
 
       Value *RegSaveAreaPtrPtr =
@@ -9485,7 +9476,6 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
     // Copy va_list shadow from the backup copy of the TLS contents.
     for (CallInst *OrigInst : VAStartInstrumentationList) {
       NextNodeIRBuilder IRB(OrigInst);
-      IRB.disableGEPCanonicalization();
       Value *VAListTag = OrigInst->getArgOperand(0);
       copyRegSaveArea(IRB, VAListTag);
       copyOverflowArea(IRB, VAListTag);

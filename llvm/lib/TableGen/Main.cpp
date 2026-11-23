@@ -17,6 +17,7 @@
 #include "llvm/TableGen/Main.h"
 #include "TGLexer.h"
 #include "TGParser.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
@@ -143,6 +144,38 @@ static int preprocessInput(TGLexer &Lex, raw_ostream &OS) {
   return Lex.getCode() == tgtok::Error;
 }
 
+/// Escape a filename in the dependency file so that it is correctly
+/// interpreted by `make`. This is consistent with Clang, GCC, and lld.
+static std::string escapeDependencyFilename(StringRef Filename) {
+  std::string Res;
+  raw_string_ostream OS(Res);
+
+  // Only transform the path to native on Windows, where backslashes are valid
+  // path separators. On non-Windows platforms, we don't want backslashes in
+  // filenames to be incorrectly treated as path separators.
+#ifdef _WIN32
+  SmallString<256> NativePath;
+  sys::path::native(Filename, NativePath);
+#else
+  StringRef NativePath = Filename;
+#endif
+
+  for (unsigned I = 0, E = NativePath.size(); I != E; ++I) {
+    if (NativePath[I] == '#')
+      OS << '\\';
+    else if (NativePath[I] == ' ') {
+      OS << '\\';
+      unsigned J = I;
+      while (J > 0 && NativePath[--J] == '\\')
+        OS << '\\';
+    } else if (NativePath[I] == '$')
+      OS << '$';
+    OS << NativePath[I];
+  }
+
+  return Res;
+}
+
 /// Create a dependency file for `-d` option.
 ///
 /// This functionality is really only for the benefit of the build system.
@@ -156,7 +189,7 @@ static int createDependencyFile(const char *argv0) {
   if (EC)
     return reportError(argv0, "error opening " + DependFilename + ":" +
                                   EC.message() + "\n");
-  DepOut.os() << OutputFilename << ":";
+  DepOut.os() << escapeDependencyFilename(OutputFilename) << ":";
 
   // Emit the primary input file as a dependency. This matches C compilers like
   // Clang and GCC. Without it, a .td file with no `include` directives would
@@ -165,7 +198,7 @@ static int createDependencyFile(const char *argv0) {
   // treats as a missing depfile and re-runs the rule on every incremental
   // build.
   if (InputFilename != "-")
-    DepOut.os() << ' ' << InputFilename;
+    DepOut.os() << ' ' << escapeDependencyFilename(InputFilename);
 
   // Every other buffer in SrcMgr was added by an include directive, and its
   // identifier is the path that the include resolved to. Buffer 1 is the main
@@ -174,7 +207,7 @@ static int createDependencyFile(const char *argv0) {
   for (unsigned I = 2, E = SrcMgr.getNumBuffers(); I <= E; ++I)
     Dependencies.insert(SrcMgr.getMemoryBuffer(I)->getBufferIdentifier().str());
   for (const std::string &Dep : Dependencies)
-    DepOut.os() << ' ' << Dep;
+    DepOut.os() << ' ' << escapeDependencyFilename(Dep);
   DepOut.os() << "\n";
   DepOut.keep();
   return 0;

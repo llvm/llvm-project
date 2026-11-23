@@ -1222,3 +1222,72 @@ for.inc:                                          ; preds = %if.br1, %if.br0
 for.cond.cleanup:                                 ; preds = %for.inc
   ret void
 }
+
+; FIXME: Header phi with varying latch value is treated as a fork, bounds are wrong.
+define void @forked_ptrs_header_phi_varying_latch_value(ptr %Base, ptr %Dest, i64 %n) {
+; FULLDEPTH-LABEL: 'forked_ptrs_header_phi_varying_latch_value'
+; FULLDEPTH-NEXT:    loop:
+; FULLDEPTH-NEXT:      Memory dependences are safe with run-time checks
+; FULLDEPTH-NEXT:      Dependences:
+; FULLDEPTH-NEXT:      Run-time memory checks:
+; FULLDEPTH-NEXT:      Check 0:
+; FULLDEPTH-NEXT:        Comparing group GRP0:
+; FULLDEPTH-NEXT:          %gep.Dest = getelementptr inbounds i32, ptr %Dest, i64 %iv
+; FULLDEPTH-NEXT:        Against group GRP1:
+; FULLDEPTH-NEXT:          %gep.Base = getelementptr i32, ptr %Base, i64 %idx
+; FULLDEPTH-NEXT:      Check 1:
+; FULLDEPTH-NEXT:        Comparing group GRP0:
+; FULLDEPTH-NEXT:          %gep.Dest = getelementptr inbounds i32, ptr %Dest, i64 %iv
+; FULLDEPTH-NEXT:        Against group GRP2:
+; FULLDEPTH-NEXT:          %gep.Base = getelementptr i32, ptr %Base, i64 %idx
+; FULLDEPTH-NEXT:      Grouped accesses:
+; FULLDEPTH-NEXT:        Group GRP0:
+; FULLDEPTH-NEXT:          (Low: %Dest High: ((4 * %n) + %Dest))
+; FULLDEPTH-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; FULLDEPTH-NEXT:        Group GRP1:
+; FULLDEPTH-NEXT:          (Low: %Base High: ((4 * %n) + %Base))
+; FULLDEPTH-NEXT:            Member: {%Base,+,4}<nw><%loop>
+; FULLDEPTH-NEXT:        Group GRP2:
+; FULLDEPTH-NEXT:          (Low: (400 + %Base) High: (404 + %Base))
+; FULLDEPTH-NEXT:            Member: (400 + %Base)
+; FULLDEPTH-EMPTY:
+; FULLDEPTH-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; FULLDEPTH-NEXT:      SCEV assumptions:
+; FULLDEPTH-EMPTY:
+; FULLDEPTH-NEXT:      Expressions re-written:
+;
+; DEPTH2-LABEL: 'forked_ptrs_header_phi_varying_latch_value'
+; DEPTH2-NEXT:    loop:
+; DEPTH2-NEXT:      Report: cannot identify array bounds
+; DEPTH2-NEXT:      Dependences:
+; DEPTH2-NEXT:      Run-time memory checks:
+; DEPTH2-NEXT:      Grouped accesses:
+; DEPTH2-NEXT:        Group GRP0:
+; DEPTH2-NEXT:          (Low: %Dest High: ((4 * %n) + %Dest))
+; DEPTH2-NEXT:            Member: {%Dest,+,4}<nuw><%loop>
+; DEPTH2-NEXT:      Generated run-time checks are incomplete
+; DEPTH2-EMPTY:
+; DEPTH2-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; DEPTH2-NEXT:      SCEV assumptions:
+; DEPTH2-EMPTY:
+; DEPTH2-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %off = phi i64 [ 0, %entry ], [ %off.next, %loop ]
+  %off.next = sub i64 100, %iv
+  %idx = add i64 %iv, %off
+  %gep.Base = getelementptr i32, ptr %Base, i64 %idx
+  %l = load i32, ptr %gep.Base, align 4
+  %gep.Dest = getelementptr inbounds i32, ptr %Dest, i64 %iv
+  store i32 %l, ptr %gep.Dest, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

@@ -93,3 +93,4 @@ body:             |
     %1:gpr(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.aarch64.ldaxr), %0(p0) :: (volatile load (i64) from %ir.addr)
     $x1 = COPY %1
     RET_ReallyLR implicit $x1
+...

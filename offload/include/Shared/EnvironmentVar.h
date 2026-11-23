@@ -65,7 +65,7 @@ public:
       if (!IsPresent) {
         ODBG(OLDT_Init) << "Ignoring invalid value " << EnvStr << " for envar "
                         << Name;
-        Data = Default;
+        Data = std::move(Default);
       }
     }
   }

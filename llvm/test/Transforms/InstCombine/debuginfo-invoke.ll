@@ -27,7 +27,7 @@ lpad159:                                          ; preds = %entry
   br label %common.ret
 }
 
-declare ptr @_Znam(i64)
+declare ptr @_Znam(i64) allockind("alloc,uninitialized") allocsize(0)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3}

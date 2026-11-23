@@ -105,8 +105,8 @@ NativeRegisterContextAIX::CreateHostNativeRegisterContextAIX(
 
 NativeRegisterContextAIX_ppc64::NativeRegisterContextAIX_ppc64(
     const ArchSpec &target_arch, NativeThreadProtocol &native_thread)
-    : NativeRegisterContextRegisterInfo(
-          native_thread, new RegisterInfo_ppc64(target_arch)),
+    : NativeRegisterContextRegisterInfo(native_thread,
+                                        new RegisterInfo_ppc64(target_arch)),
       NativeRegisterContextAIX(native_thread) {
   switch (target_arch.GetMachine()) {
   case llvm::Triple::ppc:

@@ -18,11 +18,11 @@
 #include "src/__support/CPP/array.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/nearest_integer.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -49,7 +49,8 @@ LIBC_INLINE float16 tanhf16(float16 x) {
   uint16_t x_u = x_bits.uintval();
   uint16_t x_abs = x_u & 0x7fffU;
 
-  // When |x| <= 0x1.d2p-4, |x| >= atanh(1 - 2^(-11)), or x is NaN.
+  // When -2^(-14) <= x <= -2^(-9), or |x| <= 0x1.d2p-4,
+  // or |x| >= atanh(1 - 2^(-11)), or x is NaN.
   if (LIBC_UNLIKELY(x_abs <= 0x2f48U || x_abs >= 0x4429U)) {
     // tanh(NaN) = NaN
     if (x_bits.is_nan()) {
@@ -61,44 +62,25 @@ LIBC_INLINE float16 tanhf16(float16 x) {
       return x;
     }
 
+    // When -2^(-14) <= x <= -2^(-9).
+    if (x_u >= 0x8400U && x_u <= 0x9800U) {
+#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+      return x;
+#else
+      switch (fputil::quick_get_round()) {
+      case FE_TONEAREST:
+      case FE_DOWNWARD:
+        return x;
+      default:
+        return FPBits(static_cast<uint16_t>(x_u - 1U)).get_val();
+      }
+#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
+    }
+
     // When |x| <= 0x1.d2p-4.
     if (x_abs <= 0x2f48U) {
       if (LIBC_UNLIKELY(x_abs == 0))
         return x;
-
-      // The correction to x is nonzero but less than half a subnormal ulp.
-      // Select the adjacent half value directly, preserving signed zero.
-      if (LIBC_UNLIKELY(x_abs <= 0x0400U)) {
-        uint16_t out = x_u;
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-        int mode = fputil::quick_get_round();
-        if (mode == FE_TOWARDZERO || (x_bits.is_pos() && mode == FE_DOWNWARD) ||
-            (x_bits.is_neg() && mode == FE_UPWARD))
-          --out;
-#endif
-        int excepts = FE_INEXACT;
-        if ((out & 0x7fffU) < 0x0400U) {
-          fputil::set_errno_if_required(ERANGE);
-          excepts |= FE_UNDERFLOW;
-        }
-        fputil::raise_except_if_required(excepts);
-        return FPBits(out).get_val();
-      }
-
-      // When -2^(-9) <= x < -2^(-14).
-      if (x_u >= 0x8400U && x_u <= 0x9800U) {
-#ifdef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-        return x;
-#else
-        switch (fputil::quick_get_round()) {
-        case FE_TONEAREST:
-        case FE_DOWNWARD:
-          return x;
-        default:
-          return FPBits(static_cast<uint16_t>(x_u - 1U)).get_val();
-        }
-#endif // LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-      }
 
       float xf = x;
       float xf_sq = xf * xf;
@@ -167,7 +149,7 @@ LIBC_INLINE float16 tanhf16(float16 x) {
   unsigned x_mid = static_cast<unsigned>(x_hi_mid) & 0x1f;
   // lo = x - (hi + mid)
   //    = round(x * log2(e) * 2 * 2^5) * log(2) * 0.5 * (-2^(-5)) + x
-  float lo = fputil::multiply_add(kf, LOGF_2 * 0.5f * -0x1.0p-5f, xf);
+  float lo = fputil::sub_multiply(xf, kf, LOGF_2 * 0.5f * 0x1.0p-5f);
 
   uint32_t exp2_hi_mid_bits =
       EXP2_MID_5_BITS[x_mid] +

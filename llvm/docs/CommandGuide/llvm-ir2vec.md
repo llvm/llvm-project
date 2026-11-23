@@ -228,6 +228,15 @@ Specify the weight for register operand embeddings (default: 1.0). This controls
 the relative importance of register operands in the final embedding.
 :::
 
+:::{option} --mtriple=<triple>
+Override the target triple of the input. Without it, the triple comes from the
+embedded LLVM IR of the .mir file, or the host triple if there is none.
+:::
+
+:::{option} --mcpu=<cpu>, --mattr=<features>
+Specify the target CPU and features, as in {program}`llc`.
+:::
+
 **triplets** subcommand:
 
 :::{option} <input-file>

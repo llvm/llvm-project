@@ -538,9 +538,10 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
 #define GET_RUNTIME_LIBCALL_FP_SELECTORS
 #include "llvm/IR/RuntimeLibcalls.inc"
 
-RTLIB::Libcall RTLIB::getOutlineAtomicHelper(const Libcall (&LC)[5][4],
+static RTLIB::Libcall getOutlineAtomicHelper(const RTLIB::Libcall (&LC)[5][4],
                                              AtomicOrdering Order,
                                              uint64_t MemSize) {
+  using namespace RTLIB;
   unsigned ModeN, ModelN;
   switch (MemSize) {
   case 1:
@@ -663,6 +664,15 @@ RTLIB::Libcall RTLIB::getSYNC(unsigned Opc, MVT VT) {
   return UNKNOWN_LIBCALL;
 }
 
+RTLIB::AtomicLibcall
+RTLIB::selectAtomicLibcall(const LibcallLoweringInfo &Libcalls, unsigned Opc,
+                           AtomicOrdering Order, MVT VT) {
+  LibcallImpl Impl = Libcalls.getLibcallImpl(getOUTLINE_ATOMIC(Opc, Order, VT));
+  if (Impl != Unsupported)
+    return {Impl, /*IsOutline=*/true};
+  return {Libcalls.getLibcallImpl(getSYNC(Opc, VT)), /*IsOutline=*/false};
+}
+
 RTLIB::Libcall RTLIB::getMEMCPY_ELEMENT_UNORDERED_ATOMIC(uint64_t ElementSize) {
   switch (ElementSize) {
   case 1:
@@ -719,6 +729,7 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm,
                                        const TargetSubtargetInfo &STI)
     : TM(tm),
       RuntimeLibcallInfo(TM.getTargetTriple(), ExceptionHandling::Default,
+                         TM.getTargetTriple().getDefaultWCharSize(),
                          TM.getTargetTriple().getDefaultFloatABI(),
                          TM.getTargetTriple().getDefaultLongDoubleFormat(),
                          TM.Options.MCOptions.getABIName(), TM.Options.VecLib),
@@ -2185,12 +2196,8 @@ TargetLoweringBase::getIRStackGuard(IRBuilderBase &IRB,
   if (GuardLocalImpl != RTLIB::impl___guard_local)
     return nullptr;
 
-  Module &M = *IRB.getModule();
-  const DataLayout &DL = M.getDataLayout();
-  PointerType *PtrTy =
-      PointerType::get(M.getContext(), DL.getDefaultGlobalsAddressSpace());
-  GlobalVariable *G =
-      M.getOrInsertGlobal(getLibcallImplName(GuardLocalImpl), PtrTy);
+  GlobalValue *G = Libcalls.getRuntimeLibcallsInfo().getOrInsertImplGlobal(
+      *IRB.getModule(), GuardLocalImpl);
   G->setVisibility(GlobalValue::HiddenVisibility);
   return G;
 }

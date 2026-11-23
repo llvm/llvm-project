@@ -317,12 +317,11 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
   }
 
   unsigned RetAddrOffset = 8; // Call Inst + Delay Slot
-  // If the function returns a struct, copy the SRetReturnReg to I0
-  if (MF.getFunction().hasStructRetAttr()) {
-    SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
-    Register Reg = SFI->getSRetReturnReg();
-    if (!Reg)
-      llvm_unreachable("sret virtual register not created in the entry block");
+  // If the function returns a struct, copy the SRetReturnReg to I0. This
+  // covers both an explicit sret parameter and a return value that was
+  // demoted to sret because it does not fit in the return registers.
+  SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
+  if (Register Reg = SFI->getSRetReturnReg()) {
     auto PtrVT = getPointerTy(DAG.getDataLayout());
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, PtrVT);
     Chain = DAG.getCopyToReg(Chain, DL, SP::I0, Val, Glue);
@@ -332,7 +331,9 @@ SparcTargetLowering::LowerReturn_32(SDValue Chain, CallingConv::ID CallConv,
     // A zero-sized return value, e.g. an empty struct or union, is returned
     // without an unimp instruction after the call, so there is nothing for the
     // return to skip over.
-    Type *RetType = MF.getFunction().getParamStructRetType(0);
+    const Function &F = MF.getFunction();
+    Type *RetType =
+        F.hasStructRetAttr() ? F.getParamStructRetType(0) : F.getReturnType();
     if (!RetType->isEmptyTy())
       RetAddrOffset = 12; // CallInst + Delay Slot + Unimp
   }
@@ -591,7 +592,9 @@ SDValue SparcTargetLowering::LowerFormalArguments_32(
     }
   }
 
-  if (MF.getFunction().hasStructRetAttr()) {
+  // Ins[0] is an sret argument both for an explicit sret parameter and for a
+  // return value that was demoted to sret.
+  if (!Ins.empty() && Ins[0].Flags.isSRet()) {
     // Copy the SRet Argument to SRetReturnReg.
     SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
     Register Reg = SFI->getSRetReturnReg();
@@ -827,8 +830,13 @@ bool SparcTargetLowering::IsEligibleForTailCallOptimization(
     return false;
 
   // Do not tail call opt if either the callee or caller returns
-  // a struct and the other does not.
-  if (!Outs.empty() && Caller.hasStructRetAttr() != Outs[0].Flags.isSRet())
+  // a struct and the other does not. On 32-bit SPARC the caller's
+  // return value may have been demoted to sret, in which case it has
+  // an SRetReturnReg but no sret attribute.
+  const SparcMachineFunctionInfo *SFI = MF.getInfo<SparcMachineFunctionInfo>();
+  bool CallerSRet = Caller.hasStructRetAttr() || SFI->getSRetReturnReg();
+  bool CalleeSRet = !Outs.empty() && Outs[0].Flags.isSRet();
+  if (CallerSRet != CalleeSRet)
     return false;
 
   // Byval parameters hand the function a pointer directly into the stack area
@@ -1858,10 +1866,11 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
+  //
+  // 32-bit V9 code can only use 64-bit atomics under the V8+ ABI, which
+  // guarantees that the upper halves of the %g and %o registers are preserved.
   if (Subtarget->isV9()) {
-    // TODO: we _ought_ to be able to support 64-bit atomics on 32-bit sparcv9,
-    // but it hasn't been implemented in the backend yet.
-    if (Subtarget->is64Bit())
+    if (Subtarget->is64Bit() || Subtarget->isV8Plus())
       setMaxAtomicSizeInBitsSupported(64);
     else
       setMaxAtomicSizeInBitsSupported(32);
@@ -1883,6 +1892,13 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   if (Subtarget->is64Bit()) {
     setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Legal);
     setOperationAction(ISD::ATOMIC_SWAP, MVT::i64, Legal);
+    setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
+    setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
+  } else if (Subtarget->isV9() && Subtarget->isV8Plus()) {
+    // As in GCC, 64-bit atomic loads and stores use ldd/std, and 64-bit
+    // compare-and-swap uses casx on values packed into %g/%o registers.
+    // Everything else is expanded to a compare-and-swap loop.
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_LOAD, MVT::i64, Custom);
     setOperationAction(ISD::ATOMIC_STORE, MVT::i64, Custom);
   }
@@ -2010,13 +2026,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_ROUND, MVT::f32, Custom);
   }
 
-  if (Subtarget->fixAllFDIVSQRT()) {
-    // Promote FDIVS and FSQRTS to FDIVD and FSQRTD instructions instead as
-    // the former instructions generate errata on LEON processors.
-    setOperationAction(ISD::FDIV, MVT::f32, Promote);
-    setOperationAction(ISD::FSQRT, MVT::f32, Promote);
-  }
-
   if (Subtarget->hasNoFMULS()) {
     setOperationAction(ISD::FMUL, MVT::f32, Promote);
   }
@@ -2058,11 +2067,6 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Custom);
     }
 
-    if (Subtarget->fixAllFDIVSQRT()) {
-      setOperationAction(ISD::STRICT_FDIV, MVT::f32, Promote);
-      setOperationAction(ISD::STRICT_FSQRT, MVT::f32, Promote);
-    }
-
     if (Subtarget->hasNoFMULS())
       setOperationAction(ISD::STRICT_FMUL, MVT::f32, Promote);
   }
@@ -2075,7 +2079,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::BSWAP, ISD::STORE});
 
   if (Subtarget->hasLeonCycleCounter())
-    setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Custom);
+    setOperationAction({ISD::READCYCLECOUNTER, ISD::READSTEADYCOUNTER},
+                       MVT::i64, Custom);
 
   if (Subtarget->isVIS3()) {
     setOperationAction(ISD::CTLZ, MVT::i32, Legal);
@@ -3498,8 +3503,8 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
   if (MemVT == MVT::f128)
     return LowerF128Store(Op, DAG);
 
-  if (MemVT == MVT::i64) {
-    // Custom handling for i64 stores: turn it into a bitcast and a
+  if (MemVT == MVT::i64 && St->getAlign() >= Align(8)) {
+    // Custom handling for aligned i64 stores: turn it into a bitcast and a
     // v2i32 store.
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
@@ -3555,7 +3560,21 @@ static SDValue LowerFNEGorFABS(SDValue Op, SelectionDAG &DAG, bool isV9) {
 }
 
 static SDValue LowerATOMIC_LOAD_STORE(SDValue Op, SelectionDAG &DAG) {
-  if (isStrongerThanMonotonic(cast<AtomicSDNode>(Op)->getSuccessOrdering())) {
+  auto *AN = cast<AtomicSDNode>(Op);
+
+  // 64-bit atomic store in 32-bit V8+ code: like GCC's atomic_storedi_1, use
+  // std, which is atomic for doubleword-aligned addresses. The load side is
+  // handled in ReplaceNodeResults.
+  if (Op.getOpcode() == ISD::ATOMIC_STORE &&
+      Op.getOperand(1).getValueType() == MVT::i64 &&
+      !DAG.getSubtarget<SparcSubtarget>().is64Bit()) {
+    SDLoc DL(Op);
+    SDValue Val = DAG.getNode(ISD::BITCAST, DL, MVT::v2i32, Op.getOperand(1));
+    return DAG.getStore(AN->getChain(), DL, Val, AN->getBasePtr(),
+                        AN->getMemOperand());
+  }
+
+  if (isStrongerThanMonotonic(AN->getSuccessOrdering())) {
     // Expand with a fence.
     return SDValue();
   }
@@ -3800,11 +3819,48 @@ SDValue SparcTargetLowering::PerformDAGCombine(SDNode *N,
   return SDValue();
 }
 
+static MachineBasicBlock *emitReadCycleCounter(MachineInstr &MI,
+                                               MachineBasicBlock *BB) {
+  MachineFunction &MF = *BB->getParent();
+  const BasicBlock *LLVMBB = BB->getBasicBlock();
+  MachineFunction::iterator It = ++BB->getIterator();
+  MachineBasicBlock *LoopMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MachineBasicBlock *DoneMBB = MF.CreateMachineBasicBlock(LLVMBB);
+  MF.insert(It, LoopMBB);
+  MF.insert(It, DoneMBB);
+
+  DoneMBB->splice(DoneMBB->begin(), BB,
+                  std::next(MachineBasicBlock::iterator(MI)), BB->end());
+  DoneMBB->transferSuccessorsAndUpdatePHIs(BB);
+  BB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(LoopMBB);
+  LoopMBB->addSuccessor(DoneMBB);
+
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  Register Lo = MI.getOperand(0).getReg();
+  Register Hi = MI.getOperand(1).getReg();
+  Register HiAgain = MRI.createVirtualRegister(&SP::IntRegsRegClass);
+  DebugLoc DL = MI.getDebugLoc();
+
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), Hi).addReg(SP::ASR22);
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), Lo).addReg(SP::ASR23);
+  BuildMI(LoopMBB, DL, TII.get(SP::RDASR), HiAgain).addReg(SP::ASR22);
+  BuildMI(LoopMBB, DL, TII.get(SP::SUBCCrr), SP::G0).addReg(Hi).addReg(HiAgain);
+  BuildMI(LoopMBB, DL, TII.get(SP::BCOND)).addMBB(LoopMBB).addImm(SPCC::ICC_NE);
+
+  MI.eraseFromParent();
+  return DoneMBB;
+}
+
 MachineBasicBlock *
 SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unknown SELECT_CC!");
+  default:
+    llvm_unreachable("Unknown custom-inserter instruction");
+  case SP::ReadCycleCounter:
+    return emitReadCycleCounter(MI, BB);
   case SP::SELECT_CC_Int_ICC:
   case SP::SELECT_CC_FP_ICC:
   case SP::SELECT_CC_DFP_ICC:
@@ -4144,14 +4200,15 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(Res.getValue(1));
     return;
   }
-  case ISD::READCYCLECOUNTER: {
+  case ISD::READCYCLECOUNTER:
+  case ISD::READSTEADYCOUNTER: {
     assert(Subtarget->hasLeonCycleCounter());
-    SDValue Lo = DAG.getCopyFromReg(N->getOperand(0), dl, SP::ASR23, MVT::i32);
-    SDValue Hi = DAG.getCopyFromReg(Lo, dl, SP::G0, MVT::i32);
-    SDValue Ops[] = { Lo, Hi };
-    SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Ops);
-    Results.push_back(Pair);
-    Results.push_back(N->getOperand(0));
+    SDVTList VTs = DAG.getVTList(MVT::i32, MVT::i32, MVT::Other);
+    SDValue Counter =
+        DAG.getNode(SPISD::READ_CYCLE_COUNTER, dl, VTs, N->getOperand(0));
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Counter,
+                                  Counter.getValue(1)));
+    Results.push_back(Counter.getValue(2));
     return;
   }
   case ISD::SINT_TO_FP:
@@ -4177,9 +4234,10 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::LOAD: {
     LoadSDNode *Ld = cast<LoadSDNode>(N);
-    // Custom handling only for i64: turn i64 load into a v2i32 load,
-    // and a bitcast.
-    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64)
+    // Custom handling only for aligned i64 loads: turn i64 load into a v2i32
+    // load, and a bitcast.
+    if (Ld->getValueType(0) != MVT::i64 || Ld->getMemoryVT() != MVT::i64 ||
+        Ld->getAlign() < Align(8))
       return;
 
     SDLoc dl(N);
@@ -4191,6 +4249,40 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Res = DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes);
     Results.push_back(Res);
     Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_LOAD: {
+    // 64-bit atomic load in 32-bit V8+ code: like GCC's atomic_loaddi_1, use
+    // ldd, which is atomic for doubleword-aligned addresses. Ordering is
+    // handled by the fences AtomicExpand inserted around it.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    SDValue LoadRes = DAG.getLoad(MVT::v2i32, dl, AN->getChain(),
+                                  AN->getBasePtr(), AN->getMemOperand());
+    Results.push_back(DAG.getNode(ISD::BITCAST, dl, MVT::i64, LoadRes));
+    Results.push_back(LoadRes.getValue(1));
+    return;
+  }
+  case ISD::ATOMIC_CMP_SWAP: {
+    // 64-bit compare-and-swap in 32-bit V8+ code. See CASX_V8PLUS.
+    auto *AN = cast<AtomicSDNode>(N);
+    assert(AN->getMemoryVT() == MVT::i64 && !Subtarget->is64Bit());
+    auto [CmpLo, CmpHi] =
+        DAG.SplitScalar(N->getOperand(2), dl, MVT::i32, MVT::i32);
+    auto [NewLo, NewHi] =
+        DAG.SplitScalar(N->getOperand(3), dl, MVT::i32, MVT::i32);
+    SDValue Ops[] = {N->getOperand(1), CmpHi, CmpLo, NewHi, NewLo,
+                     N->getOperand(0)};
+    MachineSDNode *CAS = DAG.getMachineNode(
+        SP::CASX_V8PLUS, dl,
+        DAG.getVTList(MVT::i32, MVT::i32, MVT::i32, MVT::Other), Ops);
+    DAG.setNodeMemRefs(CAS, {AN->getMemOperand()});
+    DAG.getMachineFunction()
+        .getInfo<SparcMachineFunctionInfo>()
+        ->setUsesV8PlusRegs();
+    SDValue Hi(CAS, 0), Lo(CAS, 1);
+    Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi));
+    Results.push_back(SDValue(CAS, 3));
     return;
   }
   }

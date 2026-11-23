@@ -591,6 +591,9 @@ bool A15SDOptimizer::runOnInstruction(MachineInstr *MI) {
   //                    * Otherwise, fall back on the same strategy as COPY.
   //
 
+  if (MI->isDebugInstr())
+    return false;
+
   // First, get all the reads of D-registers done by this instruction.
   SmallVector<unsigned, 8> Defs = getReadDPRs(MI);
   bool Modified = false;

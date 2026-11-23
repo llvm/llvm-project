@@ -95,11 +95,6 @@ static void write32AArch64Addr(void *T, uint64_t s, uint64_t p, int shift) {
 class RuntimeDyldCOFFAArch64 : public RuntimeDyldCOFF {
 
 private:
-  // When a module is loaded we save the SectionID of the unwind
-  // sections in a table until we receive a request to register all
-  // unregisteredEH frame sections with the memory manager.
-  SmallVector<SID, 2> UnregisteredEHFrameSections;
-  SmallVector<SID, 2> RegisteredEHFrameSections;
   uint64_t ImageBase;
 
   // Fake an __ImageBase pointer by returning the section with the lowest adress

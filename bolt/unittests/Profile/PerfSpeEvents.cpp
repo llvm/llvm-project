@@ -89,7 +89,7 @@ protected:
                    << BI.MispredCount << "}" << "\n";
   }
 
-  /// Parse and check SPE brstack as LBR.
+  /// Parse and check SPE brstack events.
   void parseAndCheckBrstackEvents(
       uint64_t PID, StringRef &Buffer,
       const std::vector<std::pair<Trace, TakenBranchInfo>> &ExpectedSamples) {

@@ -14,6 +14,7 @@
 #ifndef LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 #define LLVM_MC_MCTARGETOPTIONSCOMMANDFLAGS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -22,6 +23,7 @@ class MCTargetOptions;
 class StringRef;
 
 namespace cl {
+class LibraryOptions;
 class LibraryOptionsContext;
 }
 
@@ -29,11 +31,9 @@ namespace mc {
 
 LLVM_ABI StringRef getABIName(const cl::LibraryOptionsContext &C);
 
-/// Create this object with static storage to register mc-related command
-/// line options.
-struct RegisterMCToolOptions {
-  LLVM_ABI RegisterMCToolOptions();
-};
+/// The options that a tool reading getMCTargetOptions passes to
+/// cl::parseCommandLineOptions.
+LLVM_ABI ArrayRef<const cl::LibraryOptions *> getToolOptions();
 
 LLVM_ABI MCTargetOptions getMCTargetOptions(const cl::LibraryOptionsContext &C);
 

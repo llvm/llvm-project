@@ -49,7 +49,7 @@ public:
 
     if (!structType)
       return op->emitError(llvm::formatv(
-          "failed to decorate (unsuported pointee type: '{0}')", pointeeType));
+          "failed to decorate (unsupported pointee type: '{0}')", pointeeType));
 
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());

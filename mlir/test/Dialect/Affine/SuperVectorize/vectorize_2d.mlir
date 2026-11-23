@@ -55,7 +55,7 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   affine.for %i0 = 0 to %M {
     affine.for %i1 = 0 to %N {
       // CHECK: [[C1:%.*]] = arith.constant dense<1.000000e+00> : vector<32x256xf32>
-      // CHECK: vector.transfer_write [[C1]], {{.*}} : vector<32x256xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write [[C1]], {{.*}} : vector<32x256xf32>, memref<?x?xf32> }
       // non-scoped %f1
       affine.store %f1, %A[%i0, %i1] : memref<?x?xf32, 0>
     }
@@ -63,7 +63,7 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
   affine.for %i2 = 0 to %M {
     affine.for %i3 = 0 to %N {
       // CHECK: [[C3:%.*]] = arith.constant dense<2.000000e+00> : vector<32x256xf32>
-      // CHECK: vector.transfer_write [[C3]], {{.*}}  : vector<32x256xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write [[C3]], {{.*}} : vector<32x256xf32>, memref<?x?xf32> }
       // non-scoped %f2
       affine.store %f2, %B[%i2, %i3] : memref<?x?xf32, 0>
     }
@@ -72,13 +72,13 @@ func.func @vector_add_2d(%M : index, %N : index) -> f32 {
     affine.for %i5 = 0 to %N {
       // CHECK: [[SPLAT2:%.*]] = arith.constant dense<2.000000e+00> : vector<32x256xf32>
       // CHECK: [[SPLAT1:%.*]] = arith.constant dense<1.000000e+00> : vector<32x256xf32>
-      // CHECK: [[A5:%.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32>
-      // CHECK: [[B5:%.*]] = vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32>
+      // CHECK: [[A5:%.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32> }
+      // CHECK: [[B5:%.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[{{.*}}], %{{.*}} : memref<?x?xf32>, vector<32x256xf32> }
       // CHECK: [[S5:%.*]] = arith.addf [[A5]], [[B5]] : vector<32x256xf32>
       // CHECK: [[S6:%.*]] = arith.addf [[S5]], [[SPLAT1]] : vector<32x256xf32>
       // CHECK: [[S7:%.*]] = arith.addf [[S5]], [[SPLAT2]] : vector<32x256xf32>
       // CHECK: [[S8:%.*]] = arith.addf [[S7]], [[S6]] : vector<32x256xf32>
-      // CHECK: vector.transfer_write [[S8]], {{.*}} : vector<32x256xf32>, memref<?x?xf32>
+      // CHECK: vector.mask %{{.*}} { vector.transfer_write [[S8]], {{.*}} : vector<32x256xf32>, memref<?x?xf32> }
       //
       %a5 = affine.load %A[%i4, %i5] : memref<?x?xf32, 0>
       %b5 = affine.load %B[%i4, %i5] : memref<?x?xf32, 0>
@@ -113,7 +113,7 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   //      VECT: {{.*}} #[[$map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:   {{.*}} #[[$map_id1]](%[[N]]) step 8 {
   //      VECT:     %[[VC0:.*]] = arith.constant dense<0.000000e+00> : vector<4x8xf32>
-  // VECT-NEXT:     vector.transfer_write %[[VC0]], %{{.*}}[%{{.*}}, %{{.*}}] : vector<4x8xf32>, memref<?x?xf32>
+  // VECT:          vector.mask %{{.*}} { vector.transfer_write %[[VC0]], %{{.*}}[%{{.*}}, %{{.*}}] {in_bounds = [true, true]} : vector<4x8xf32>, memref<?x?xf32> }
   affine.for %i0 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
     affine.for %i1 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       %cst = arith.constant 0.000000e+00 : f32
@@ -123,12 +123,12 @@ func.func @vectorize_matmul(%arg0: memref<?x?xf32>, %arg1: memref<?x?xf32>, %arg
   //      VECT:  affine.for %[[I2:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[M]]) step 4 {
   // VECT-NEXT:    affine.for %[[I3:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[N]]) step 8 {
   // VECT-NEXT:      affine.for %[[I4:.*]] = #[[$map_id1]](%[[C0]]) to #[[$map_id1]](%[[K]]) {
-  //      VECT:        %[[A:.*]] = vector.transfer_read %{{.*}}[%[[I4]], %[[I3]]], %{{.*}} {in_bounds = [true, false], permutation_map = #[[$map_proj_d0d1_zerod1]]} : memref<?x?xf32>, vector<4x8xf32>
-  //      VECT:        %[[B:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I4]]], %{{.*}} {in_bounds = [false, true], permutation_map = #[[$map_proj_d0d1_d0zero]]} : memref<?x?xf32>, vector<4x8xf32>
+  //      VECT:        %[[A:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%[[I4]], %[[I3]]], %{{.*}} {in_bounds = [true, true], permutation_map = #[[$map_proj_d0d1_zerod1]]} : memref<?x?xf32>, vector<4x8xf32> }
+  //      VECT:        %[[B:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%[[I2]], %[[I4]]], %{{.*}} {in_bounds = [true, true], permutation_map = #[[$map_proj_d0d1_d0zero]]} : memref<?x?xf32>, vector<4x8xf32> }
   // VECT-NEXT:        %[[C:.*]] = arith.mulf %[[B]], %[[A]] : vector<4x8xf32>
-  //      VECT:        %[[D:.*]] = vector.transfer_read %{{.*}}[%[[I2]], %[[I3]]], %{{.*}} : memref<?x?xf32>, vector<4x8xf32>
+  //      VECT:        %[[D:.*]] = vector.mask %{{.*}} { vector.transfer_read %{{.*}}[%[[I2]], %[[I3]]], %{{.*}} : memref<?x?xf32>, vector<4x8xf32> }
   // VECT-NEXT:        %[[E:.*]] = arith.addf %[[D]], %[[C]] : vector<4x8xf32>
-  //      VECT:        vector.transfer_write %[[E]], %{{.*}}[%[[I2]], %[[I3]]] : vector<4x8xf32>, memref<?x?xf32>
+  //      VECT:        vector.mask %{{.*}} { vector.transfer_write %[[E]], %{{.*}}[%[[I2]], %[[I3]]] {in_bounds = [true, true]} : vector<4x8xf32>, memref<?x?xf32> }
   affine.for %i2 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%M) {
     affine.for %i3 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%N) {
       affine.for %i4 = affine_map<(d0) -> (d0)>(%c0) to affine_map<(d0) -> (d0)>(%K) {

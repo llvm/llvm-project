@@ -15,8 +15,8 @@ body:            |
     ; CHECK-NEXT: [[LUI:%[0-9]+]]:gpr = LUI 524288
     ; CHECK-NEXT: $x10 = COPY [[LUI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 -2147483648
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 -2147483648
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -35,8 +35,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], 648
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 -2147483000
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 -2147483000
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -55,8 +55,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -1
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 2147483647
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 2147483647
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -75,8 +75,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI [[LUI]], -648
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 2147483000
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 2147483000
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -94,8 +94,8 @@ body:            |
     ; CHECK-NEXT: [[ADDI:%[0-9]+]]:gpr = ADDI $x0, 256
     ; CHECK-NEXT: $x10 = COPY [[ADDI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 256
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 256
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...
@@ -113,8 +113,8 @@ body:            |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr = COPY $x0
     ; CHECK-NEXT: $x10 = COPY [[COPY]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = G_CONSTANT i32 0
-    $x10 = COPY %0(s32)
+    %0:gprb(i32) = G_CONSTANT i32 0
+    $x10 = COPY %0(i32)
     PseudoRET implicit $x10
 
 ...

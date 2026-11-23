@@ -460,6 +460,8 @@ AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
         return AddressClass::eRuntime;
       case eSymbolTypeReExported:
         return AddressClass::eRuntime;
+      case eSymbolTypeASTFile:
+        return AddressClass::eDebug;
       }
     }
   }
@@ -807,6 +809,7 @@ Symtab *ObjectFile::GetSymtab(bool can_create) {
       if (!m_symtab_up->LoadFromCache()) {
         ElapsedTime elapsed(module_sp->GetSymtabParseTime());
         ParseSymtab(*m_symtab_up);
+        m_symtab_up->SetWasParsedFromObjectFile();
         m_symtab_up->Finalize();
       }
     });

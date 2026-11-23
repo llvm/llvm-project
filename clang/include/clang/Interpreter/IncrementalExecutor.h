@@ -17,7 +17,6 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace llvm {
 class Triple;
@@ -46,8 +45,6 @@ public:
 
   /// An optional external IncrementalExecutor.
   std::unique_ptr<IncrementalExecutor> IE;
-  /// Frontend -mllvm arguments for backends that need to restore LLVM options.
-  std::vector<std::string> LLVMArgs;
 
   virtual ~IncrementalExecutorBuilder();
 

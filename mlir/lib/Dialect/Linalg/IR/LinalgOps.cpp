@@ -7063,6 +7063,19 @@ Speculation::Speculatability BatchReduceMatmulOp::getSpeculatability() {
 // ScaledContractOp
 //===----------------------------------------------------------------------===//
 
+/// Returns the iteration dimension and the block size of a scale map result.
+/// Dimension scaling is reported as block size 1.
+static std::pair<unsigned, int64_t> getScaleDimAndBlockSize(AffineExpr expr) {
+  assert((isa<AffineDimExpr>(expr) ||
+          expr.getKind() == AffineExprKind::FloorDiv) &&
+         "expected dimension or block scale expression");
+  if (auto dimExpr = dyn_cast<AffineDimExpr>(expr))
+    return {dimExpr.getPosition(), 1};
+  auto binExpr = cast<AffineBinaryOpExpr>(expr);
+  return {cast<AffineDimExpr>(binExpr.getLHS()).getPosition(),
+          cast<AffineConstantExpr>(binExpr.getRHS()).getValue()};
+}
+
 SmallVector<utils::IteratorType> ScaledContractOp::getIteratorTypesArray() {
   AffineMap outAffineMap = getIndexingMapsArray().pop_back_val();
   // Infer iterator types based on the output.
@@ -7108,19 +7121,17 @@ void ScaledContractOp::regionBuilder(
   // TODO: Support fields with operators besides mult & add.
   Type outType = block.getArgument(4).getType();
 
-  // Build input data value scaling.
-  // Uses specialized arith ops when possible.
-  // Otherwise, constructs computation manually.
+  // Build input data value scaling. A scaling extension reduces its scale
+  // to f8E8M0, so it is used only for scales of that type. Other scales are
+  // applied by value.
   auto buildScaledValue = [&](Value data, Value scale) -> Value {
-    auto dataFloatTy = dyn_cast<FloatType>(data.getType());
-    auto outFloatTy = dyn_cast<FloatType>(outType);
-    if (dataFloatTy && dyn_cast<FloatType>(scale.getType()) && outFloatTy) {
-      unsigned dataWidth = dataFloatTy.getWidth();
-      unsigned outWidth = outFloatTy.getWidth();
-      if (dataWidth < outWidth)
-        return arith::ScalingExtFOp::create(b, outType, data, scale,
-                                            /*fastmath=*/nullptr);
-    }
+    auto dataFloatType = dyn_cast<FloatType>(data.getType());
+    auto outFloatType = dyn_cast<FloatType>(outType);
+    if (dataFloatType && outFloatType &&
+        isa<Float8E8M0FNUType>(scale.getType()) &&
+        dataFloatType.getWidth() < outFloatType.getWidth())
+      return arith::ScalingExtFOp::create(b, outType, data, scale,
+                                          /*fastmath=*/nullptr);
     Value dataAtOutType = helper.buildTypeFn(castSignedness, outType, data);
     Value scaleAtOutType = helper.buildTypeFn(castSignedness, outType, scale);
     return helper.buildBinaryFn(BinaryFn::mul, dataAtOutType, scaleAtOutType,
@@ -7175,8 +7186,8 @@ LogicalResult ScaledContractOp::verify() {
   SmallVector<size_t> outOccurrences;
 
   // Validate inputs and contraction semantics.
-  SmallVector<AffineMap, 5> maps = getIndexingMapsArray();
-  if (maps.size() != 5 || getNumOperands() != 5)
+  if (getIndexingMaps().size() != 5 || getNumDpsInputs() != 4 ||
+      getNumDpsInits() != 1)
     return emitOpError("expected 5 indexing maps and operands");
 
   SmallVector<Type, 5> types = llvm::to_vector(getOperandTypes());
@@ -7195,12 +7206,14 @@ LogicalResult ScaledContractOp::verify() {
                          "greater than output element type bitwidth");
   }
 
-  for (auto &&[affineMap, operandType, isInput] :
-       llvm::zip(SmallVector<AffineMap>{maps[0], maps[2], maps[4]},
-                 SmallVector<Type>{types[0], types[2], types[4]},
-                 SmallVector<bool>{true, true, false})) {
+  SmallVector<OpOperand *> dataOperands = getDataOperands();
+  SmallVector<OpOperand *> scaleOperands = getScaleOperands();
+  SmallVector<OpOperand *> contractionOperands(dataOperands);
+  contractionOperands.push_back(getDpsInitOperand(0));
+  for (OpOperand *operand : contractionOperands) {
     if (failed(checkContractionAffineMapAndType(
-            affineMap, operandType, isInput, iterationSpaceDims, inOccurrences,
+            getMatchingIndexingMap(operand), operand->get().getType(),
+            isDpsInput(operand), iterationSpaceDims, inOccurrences,
             outOccurrences, [&]() { return emitError(); })))
       return failure(); // NB: Validation helper emits relevant error.
   }
@@ -7275,19 +7288,18 @@ LogicalResult ScaledContractOp::verify() {
   };
 
   // Validate scales' maps.
-  for (auto &&[affineMap, operandType] :
-       llvm::zip(SmallVector<AffineMap>{maps[1], maps[3]},
-                 SmallVector<Type>{types[1], types[3]})) {
-    if (failed(checkScaleAffineMapAndType(affineMap, operandType)))
+  for (OpOperand *scale : scaleOperands) {
+    if (failed(checkScaleAffineMapAndType(getMatchingIndexingMap(scale),
+                                          scale->get().getType())))
       return failure(); // NB: Validation helper emits relevant error.
   }
 
   // Cross-validate maps of operand and their scale.
-  for (auto &&[inputMap, inputType, scaleMap, scaleType] :
-       llvm::zip(SmallVector<AffineMap>{maps[0], maps[2]},
-                 SmallVector<Type>{types[0], types[2]},
-                 SmallVector<AffineMap>{maps[1], maps[3]},
-                 SmallVector<Type>{types[1], types[3]})) {
+  for (auto [data, scale] : llvm::zip_equal(dataOperands, scaleOperands)) {
+    AffineMap inputMap = getMatchingIndexingMap(data);
+    AffineMap scaleMap = getMatchingIndexingMap(scale);
+    Type inputType = data->get().getType();
+    Type scaleType = scale->get().getType();
     if (inputMap.getNumResults() < scaleMap.getNumResults())
       return emitError("scale must have at most the same rank as input");
     if (scaleMap.getNumResults() == 0)
@@ -7302,41 +7314,24 @@ LogicalResult ScaledContractOp::verify() {
     //     parts of the input dimension; the factor must match the ratio of
     //     input dim and scale dim sizes.
     for (auto [scaleIdx, scaleExpr] : llvm::enumerate(scaleMap.getResults())) {
-      AffineDimExpr scaleDimExpr = nullptr;
-      std::optional<int64_t> scaleFactor;
-      if (auto dimExpr = dyn_cast<AffineDimExpr>(scaleExpr)) {
-        // Scaling over the whole dimension.
-        scaleDimExpr = dimExpr;
-      } else if (auto scaleBinExpr = dyn_cast<AffineBinaryOpExpr>(scaleExpr)) {
-        // Block scaling over a part of the dimension.
-        assert(scaleBinExpr.getKind() == AffineExprKind::FloorDiv &&
-               "only floordiv is supported for now");
-        auto scaleDim = dyn_cast<AffineDimExpr>(scaleBinExpr.getLHS());
-        assert(scaleDim && "block scale LHS is a dim expression");
-        scaleDimExpr = scaleDim;
-        scaleFactor =
-            dyn_cast<AffineConstantExpr>(scaleBinExpr.getRHS()).getValue();
-      } else {
-        llvm_unreachable("unknown scale expression");
-      }
-      assert(scaleDimExpr && "failed to find scale dim expression");
+      auto [scaleDim, blockSize] = getScaleDimAndBlockSize(scaleExpr);
 
       std::optional<unsigned> inputIdx =
-          inputMap.getResultPosition(scaleDimExpr);
+          inputMap.getResultPosition(getAffineDimExpr(scaleDim, getContext()));
       if (!inputIdx)
         return emitError(
             "scale map must contain corresponding input dimensions only");
 
       // Validate block scaling factor for static shapes.
       // For dynamic shapes, it is assumed that all sizes are correct.
-      if (scaleFactor && inputShape[*inputIdx] != ShapedType::kDynamic &&
+      if (blockSize > 1 && inputShape[*inputIdx] != ShapedType::kDynamic &&
           scaleShape[scaleIdx] != ShapedType::kDynamic &&
-          llvm::divideCeilSigned(inputShape[*inputIdx], *scaleFactor) !=
+          llvm::divideCeilSigned(inputShape[*inputIdx], blockSize) !=
               static_cast<int64_t>(scaleShape[scaleIdx])) {
         return emitError() << "Invalid scale shape at dim " << *inputIdx
                            << ", expected "
                            << llvm::divideCeilSigned(inputShape[*inputIdx],
-                                                     *scaleFactor)
+                                                     blockSize)
                            << " but got " << scaleShape[scaleIdx];
       }
     }
@@ -7362,6 +7357,462 @@ Speculation::Speculatability ScaledContractOp::getSpeculatability() {
   return getGenericSpeculatabilityImpl(cast<LinalgOp>(getOperation()));
 }
 
+namespace {
+/// Iteration space of a decomposed scaled contraction where block scaled dims
+/// are expanded at scaling block boundaries. The epilogue, i.e., the scaling
+/// and the final accumulation, iterates over the dims which are not contracted.
+struct ExpandedScaledContract {
+  /// Expanded shape of each original dim. Empty if the dim is not expanded.
+  SmallVector<SmallVector<int64_t>> expandedShapes;
+  /// Indexing maps of the op's operands in the new iteration space.
+  SmallVector<AffineMap> maps;
+  /// Reassociations reshaping each operand into the new iteration space.
+  SmallVector<SmallVector<ReassociationIndices>> reassociations;
+  /// Indexing map of the contraction's partial results.
+  AffineMap partialResultsMap;
+  /// Replacements dropping the contracted dims from the new iteration space.
+  SmallVector<AffineExpr> epilogueDims;
+  /// Iterator types of the new dims which are not contracted.
+  SmallVector<utils::IteratorType> epilogueIterTypes;
+
+  /// Computes the iteration space of `op` with block scaled dims expanded at
+  /// scaling block boundaries. Fails if a block scaled reduction dim cannot be
+  /// expanded or every reduction dim has dimension scaling.
+  LogicalResult compute(ScaledContractOp op);
+
+  /// Returns the indexing map of an operand in the new iteration space.
+  AffineMap getMap(OpOperand *operand) const {
+    return maps[operand->getOperandNumber()];
+  }
+
+  /// Returns the map in the iteration space without the contracted dims.
+  AffineMap getEpilogueMap(AffineMap map) const {
+    return map.replaceDimsAndSymbols(epilogueDims, {}, epilogueIterTypes.size(),
+                                     0);
+  }
+};
+} // namespace
+
+/// Returns true if the scaling block of a scale spans the whole iteration
+/// range.
+static bool isUniformScale(int64_t loopRange, int64_t blockSize) {
+  return !ShapedType::isDynamic(loopRange) && loopRange <= blockSize;
+}
+
+/// Returns true if all operand dims indexed by the iteration dim are static.
+static bool hasStaticOperandDims(ScaledContractOp op, unsigned dim) {
+  for (auto [map, operand] :
+       llvm::zip_equal(op.getIndexingMapsArray(), op->getOperands())) {
+    auto shapedType = dyn_cast<ShapedType>(operand.getType());
+    if (!shapedType)
+      continue;
+    for (auto [pos, expr] : llvm::enumerate(map.getResults()))
+      if (expr.isFunctionOfDim(dim) && shapedType.isDynamicDim(pos))
+        return false;
+  }
+  return true;
+}
+
+/// Returns the shape of a dim of `size` elements expanded at the boundaries of
+/// the given scaling blocks, e.g., [4, 2, 32] for 256 elements with scaling
+/// blocks of 32 and 64. Returns std::nullopt if the dim cannot be expanded.
+static std::optional<SmallVector<int64_t>>
+getExpandedShapeOfDim(int64_t size, ArrayRef<int64_t> scalingBlockSizes) {
+  // Nested scaling blocks form a chain where each block consists of whole
+  // blocks of the next smaller size. Order the sizes from the smallest to the
+  // largest to traverse the chain.
+  SmallVector<int64_t> blockSizes(scalingBlockSizes);
+  llvm::sort(blockSizes);
+  blockSizes.erase(llvm::unique(blockSizes), blockSizes.end());
+
+  // Scaling blocks must nest within each other and within the dim.
+  if (ShapedType::isDynamic(size) || size % blockSizes.back() != 0)
+    return std::nullopt;
+  for (size_t i = 1, e = blockSizes.size(); i < e; ++i)
+    if (blockSizes[i] % blockSizes[i - 1] != 0)
+      return std::nullopt;
+
+  // Expand from the largest to the smallest scaling block.
+  SmallVector<int64_t> expandedShape = {size / blockSizes.back()};
+  for (size_t i = blockSizes.size() - 1; i > 0; --i)
+    expandedShape.push_back(blockSizes[i] / blockSizes[i - 1]);
+  expandedShape.push_back(blockSizes.front());
+  return expandedShape;
+}
+
+/// Computes the expanded shape of each dim at its scaling block boundaries.
+/// Dims which are not expanded have an empty shape. Fails if a block scaled
+/// reduction dim cannot be expanded.
+static FailureOr<SmallVector<SmallVector<int64_t>>>
+computeExpandedShapes(ScaledContractOp op) {
+  SmallVector<utils::IteratorType> iterTypes = op.getIteratorTypesArray();
+  SmallVector<int64_t> loopRanges = op.getStaticLoopRanges();
+  unsigned numDims = iterTypes.size();
+
+  // Scaling block sizes of each dim. A scaling block spanning the whole dim
+  // needs no expansion.
+  SmallVector<SmallVector<int64_t>> scalingBlockSizes(numDims);
+  for (OpOperand *scale : op.getScaleOperands()) {
+    for (AffineExpr expr : op.getMatchingIndexingMap(scale).getResults()) {
+      auto [dim, blockSize] = getScaleDimAndBlockSize(expr);
+      if (blockSize > 1 && !isUniformScale(loopRanges[dim], blockSize))
+        scalingBlockSizes[dim].push_back(blockSize);
+    }
+  }
+
+  // Expand each block scaled dim at its scaling block boundaries. A parallel
+  // dim which cannot be expanded keeps its semi-affine scale map, but a
+  // reduction dim must be expanded to be contracted within scaling blocks.
+  SmallVector<SmallVector<int64_t>> expandedShapes(numDims);
+  for (unsigned dim = 0; dim < numDims; ++dim) {
+    if (scalingBlockSizes[dim].empty())
+      continue;
+    std::optional<SmallVector<int64_t>> expandedShape;
+    if (hasStaticOperandDims(op, dim))
+      expandedShape =
+          getExpandedShapeOfDim(loopRanges[dim], scalingBlockSizes[dim]);
+    if (!expandedShape) {
+      if (iterTypes[dim] == utils::IteratorType::reduction)
+        return failure();
+      continue;
+    }
+    expandedShapes[dim] = std::move(*expandedShape);
+  }
+  return expandedShapes;
+}
+
+/// Rewrites a scale map result in terms of the new iteration dims.
+static SmallVector<AffineExpr>
+expandScaleExpr(AffineExpr expr, ArrayRef<SmallVector<AffineExpr>> expandedDims,
+                ArrayRef<SmallVector<int64_t>> expandedShapes,
+                ArrayRef<int64_t> loopRanges) {
+  auto [dim, blockSize] = getScaleDimAndBlockSize(expr);
+  // A scaling block spanning the whole dim has a single scale.
+  if (isUniformScale(loopRanges[dim], blockSize))
+    return {getAffineConstantExpr(0, expr.getContext())};
+  if (expandedShapes[dim].empty()) {
+    AffineExpr dimExpr = expandedDims[dim].front();
+    return {blockSize == 1 ? dimExpr : dimExpr.floorDiv(blockSize)};
+  }
+
+  // Index the expanded dims outside the scaling block.
+  SmallVector<AffineExpr> newExprs;
+  int64_t numScales = loopRanges[dim] / blockSize;
+  for (auto [expandedDim, expandedSize] :
+       llvm::zip_equal(expandedDims[dim], expandedShapes[dim])) {
+    if (numScales == 1)
+      break;
+    newExprs.push_back(expandedDim);
+    numScales /= expandedSize;
+  }
+  return newExprs;
+}
+
+LogicalResult ExpandedScaledContract::compute(ScaledContractOp op) {
+  FailureOr<SmallVector<SmallVector<int64_t>>> shapes =
+      computeExpandedShapes(op);
+  if (failed(shapes))
+    return failure();
+  expandedShapes = std::move(*shapes);
+
+  MLIRContext *ctx = op.getContext();
+  SmallVector<utils::IteratorType> iterTypes = op.getIteratorTypesArray();
+  SmallVector<int64_t> loopRanges = op.getStaticLoopRanges();
+  SmallVector<OpOperand *> scales = op.getScaleOperands();
+  unsigned numDims = iterTypes.size();
+
+  SmallVector<SmallVector<AffineExpr>> expandedDims(numDims);
+  SmallVector<utils::IteratorType> newIterTypes;
+  for (unsigned dim = 0; dim < numDims; ++dim) {
+    for (size_t i = 0, e = std::max<size_t>(expandedShapes[dim].size(), 1);
+         i < e; ++i) {
+      expandedDims[dim].push_back(getAffineDimExpr(newIterTypes.size(), ctx));
+      newIterTypes.push_back(iterTypes[dim]);
+    }
+  }
+  unsigned numNewDims = newIterTypes.size();
+
+  // Rewrite maps in the new iteration space. An operand dim expanded into
+  // multiple dims is reshaped according to the reassociation.
+  for (OpOperand &operand : op->getOpOperands()) {
+    bool isScale = llvm::is_contained(scales, &operand);
+    SmallVector<AffineExpr> results;
+    SmallVector<ReassociationIndices> reassociation;
+    for (AffineExpr expr : op.getMatchingIndexingMap(&operand).getResults()) {
+      SmallVector<AffineExpr> newExprs =
+          isScale
+              ? expandScaleExpr(expr, expandedDims, expandedShapes, loopRanges)
+              : expandedDims[cast<AffineDimExpr>(expr).getPosition()];
+      ReassociationIndices &group = reassociation.emplace_back();
+      for (AffineExpr newExpr : newExprs) {
+        group.push_back(results.size());
+        results.push_back(newExpr);
+      }
+    }
+    maps.push_back(AffineMap::get(numNewDims, 0, results, ctx));
+    reassociations.push_back(std::move(reassociation));
+  }
+
+  // Scales must be constant over the contracted dims. Reduction dims indexing
+  // scales are therefore reduced by the final accumulation instead.
+  AffineMap outMap = getMap(op.getDpsInitOperand(0));
+  SmallVector<AffineExpr> partialResultExprs(outMap.getResults());
+  SmallVector<bool> isContracted(numNewDims, false);
+  for (unsigned dim = 0; dim < numNewDims; ++dim) {
+    if (newIterTypes[dim] != utils::IteratorType::reduction)
+      continue;
+    bool isUsedByScale = llvm::any_of(scales, [&](OpOperand *scale) {
+      return getMap(scale).isFunctionOfDim(dim);
+    });
+    if (isUsedByScale)
+      partialResultExprs.push_back(getAffineDimExpr(dim, ctx));
+    else
+      isContracted[dim] = true;
+  }
+  if (!llvm::is_contained(isContracted, true))
+    return failure();
+
+  partialResultsMap = AffineMap::get(numNewDims, 0, partialResultExprs, ctx);
+  for (auto [iterType, contracted] :
+       llvm::zip_equal(newIterTypes, isContracted)) {
+    if (contracted) {
+      epilogueDims.push_back(getAffineConstantExpr(0, ctx));
+      continue;
+    }
+    epilogueDims.push_back(getAffineDimExpr(epilogueIterTypes.size(), ctx));
+    epilogueIterTypes.push_back(iterType);
+  }
+  return success();
+}
+
+/// Reshapes an operand into the new iteration space.
+static Value expandOperand(OpBuilder &b, Location loc, OpOperand *operand,
+                           const ExpandedScaledContract &expanded,
+                           ArrayRef<OpFoldResult> dimSizes) {
+  Value value = operand->get();
+  AffineMap newMap = expanded.getMap(operand);
+  auto tensorType = dyn_cast<RankedTensorType>(value.getType());
+  if (!tensorType || tensorType.getRank() == newMap.getNumResults())
+    return value;
+
+  ArrayRef<ReassociationIndices> reassociation =
+      expanded.reassociations[operand->getOperandNumber()];
+  SmallVector<int64_t> shape;
+  for (auto [group, size] :
+       llvm::zip_equal(reassociation, tensorType.getShape())) {
+    if (group.size() == 1) {
+      shape.push_back(size);
+      continue;
+    }
+    for (int64_t pos : group) {
+      auto dimExpr = cast<AffineDimExpr>(newMap.getResult(pos));
+      shape.push_back(*getConstantIntValue(dimSizes[dimExpr.getPosition()]));
+    }
+  }
+  return tensor::ExpandShapeOp::create(b, loc, tensorType.clone(shape), value,
+                                       reassociation);
+}
+
+/// Returns sizes of the results of a map in the new iteration space.
+static SmallVector<OpFoldResult>
+getMapResultSizes(AffineMap map, ArrayRef<OpFoldResult> dimSizes) {
+  SmallVector<OpFoldResult> sizes;
+  for (AffineExpr expr : map.getResults())
+    sizes.push_back(dimSizes[cast<AffineDimExpr>(expr).getPosition()]);
+  return sizes;
+}
+
+/// Adds `value` into `init`. The sum is computed in the compute type and
+/// converted to the element type of `init`.
+static Value buildSumInto(OpBuilder &b, Location loc, Value value, Value init,
+                          ArrayRef<AffineMap> maps,
+                          ArrayRef<utils::IteratorType> iterTypes,
+                          FloatType computeType, TypeFn castSignedness) {
+  Type initElemType = getElementTypeOrSelf(init);
+  auto genericOp = GenericOp::create(
+      b, loc, TypeRange{init.getType()}, ValueRange{value}, ValueRange{init},
+      maps, iterTypes,
+      [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+        RegionBuilderHelper helper(nestedBuilder,
+                                   *nestedBuilder.getInsertionBlock());
+        Value acc = helper.buildTypeFn(castSignedness, computeType, args[1]);
+        Value sum = helper.buildBinaryFn(BinaryFn::add, acc, args[0]);
+        helper.yieldOutputs(
+            {helper.buildTypeFn(castSignedness, initElemType, sum)});
+      });
+  return genericOp.getResult(0);
+}
+
+/// Given a scaled contraction D = (A * scale_A) * (B * scale_B) + C, this
+/// method decomposes it into:
+///
+/// 1. Expansion of block scaled dims at scaling block boundaries, e.g., `k`
+///    with scale map `k floordiv 32` is expanded into `(ko, kb)`. Inputs,
+///    scales, and output are reshaped accordingly. This removes semi-affine
+///    scale maps where possible, which simplifies further transformations such
+///    as tiling and vectorization.
+///
+/// 2. A low-precision contraction of the unscaled inputs over reduction dims
+///    not used by scales, e.g., `kb`:
+///    T = SUM(A * B)
+///
+/// 3. Scaling of the partial results of each scaling block:
+///    S = T * scale_A * scale_B
+///
+/// 4. Reduction over the remaining reduction dims, e.g., `ko`, and accumulation
+///    into the output:
+///    D = SUM(S) + C
+///
+FailureOr<SmallVector<Value>>
+ScaledContractOp::decomposeOperation(OpBuilder &b) {
+  if (!hasPureTensorSemantics())
+    return failure();
+  // An empty iteration space has no scales to index.
+  if (llvm::is_contained(getStaticLoopRanges(), 0))
+    return failure();
+
+  // Step 1: Expand block scaled dims at scaling block boundaries.
+  ExpandedScaledContract expanded;
+  if (failed(expanded.compute(*this)))
+    return failure();
+
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPoint(*this);
+  Location loc = getLoc();
+  SmallVector<OpOperand *> data = getDataOperands();
+  SmallVector<OpOperand *> scales = getScaleOperands();
+  OpOperand *output = getDpsInitOperand(0);
+  TypeFn castSignedness = getCast();
+  // Intermediate values use at least f32 such that narrow outputs are rounded
+  // only once.
+  auto outType = cast<FloatType>(getElementTypeOrSelf(output->get()));
+  FloatType computeType = outType.getWidth() > 32 ? outType : b.getF32Type();
+
+  // Sizes of dims which are not expanded are taken from the first data operand
+  // or output indexed by the dim.
+  SmallVector<OpOperand *> sizeOperands = {data[0], data[1], output};
+  SmallVector<OpFoldResult> dimSizes;
+  for (auto [dim, expandedShape] : llvm::enumerate(expanded.expandedShapes)) {
+    if (!expandedShape.empty()) {
+      for (int64_t size : expandedShape)
+        dimSizes.push_back(b.getIndexAttr(size));
+      continue;
+    }
+    for (OpOperand *operand : sizeOperands) {
+      std::optional<unsigned> pos =
+          getMatchingIndexingMap(operand).getResultPosition(
+              getAffineDimExpr(dim, getContext()));
+      if (!pos)
+        continue;
+      dimSizes.push_back(tensor::getMixedSize(b, loc, operand->get(), *pos));
+      break;
+    }
+  }
+  SmallVector<OpFoldResult> partialResultSizes =
+      getMapResultSizes(expanded.partialResultsMap, dimSizes);
+
+  // Step 2: Contract the unscaled inputs into zero-initialized partial results.
+  // Narrow integers are accumulated in a wider integer. Otherwise, the compute
+  // type is used.
+  bool hasNarrowIntData = llvm::all_of(data, [](OpOperand *operand) {
+    auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(operand->get()));
+    return intType && intType.getWidth() <= 8;
+  });
+  Type accType = computeType;
+  if (hasNarrowIntData)
+    accType = b.getI32Type();
+  Value accEmpty = tensor::EmptyOp::create(b, loc, partialResultSizes, accType);
+  Value accZero = arith::getZeroConstant(b, loc, accType);
+  Value accInit = FillOp::create(b, loc, accZero, accEmpty).getResult(0);
+  SmallVector<NamedAttribute> contractAttrs;
+  if (auto castAttr = getCastAttr())
+    contractAttrs.push_back(b.getNamedAttr(getCastAttrName(), castAttr));
+  Value partialResults =
+      ContractOp::create(
+          b, loc,
+          ValueRange{expandOperand(b, loc, data[0], expanded, dimSizes),
+                     expandOperand(b, loc, data[1], expanded, dimSizes)},
+          ValueRange{accInit},
+          b.getAffineMapArrayAttr({expanded.getMap(data[0]),
+                                   expanded.getMap(data[1]),
+                                   expanded.partialResultsMap}),
+          contractAttrs)
+          .getResult(0);
+
+  // Step 3: Scale the partial results of each scaling block. Floating-point
+  // partial results are scaled in place. Other partial results are scaled into
+  // a new tensor of the compute type.
+  AffineMap epiloguePartialResultsMap =
+      expanded.getEpilogueMap(expanded.partialResultsMap);
+  SmallVector<Value> scalingInputs = {
+      expandOperand(b, loc, scales[0], expanded, dimSizes),
+      expandOperand(b, loc, scales[1], expanded, dimSizes)};
+  SmallVector<AffineMap> scalingMaps = {
+      expanded.getEpilogueMap(expanded.getMap(scales[0])),
+      expanded.getEpilogueMap(expanded.getMap(scales[1]))};
+  Value scalingInit = partialResults;
+  bool isInPlace = getElementTypeOrSelf(partialResults) == computeType;
+  if (!isInPlace) {
+    scalingInputs.insert(scalingInputs.begin(), partialResults);
+    scalingMaps.insert(scalingMaps.begin(), epiloguePartialResultsMap);
+    scalingInit =
+        tensor::EmptyOp::create(b, loc, partialResultSizes, computeType);
+  }
+  scalingMaps.push_back(epiloguePartialResultsMap);
+  SmallVector<utils::IteratorType> scalingIterTypes(
+      expanded.epilogueIterTypes.size(), utils::IteratorType::parallel);
+  Value scaledResults =
+      GenericOp::create(
+          b, loc, TypeRange{scalingInit.getType()}, scalingInputs,
+          ValueRange{scalingInit}, scalingMaps, scalingIterTypes,
+          [&](OpBuilder &nestedBuilder, Location nestedLoc, ValueRange args) {
+            RegionBuilderHelper helper(nestedBuilder,
+                                       *nestedBuilder.getInsertionBlock());
+            // Scales are converted directly to the compute type.
+            Value partial = isInPlace ? args.back() : args.front();
+            Value scaled =
+                helper.buildTypeFn(castSignedness, computeType, partial);
+            for (Value scale : args.slice(isInPlace ? 0 : 1, 2)) {
+              scaled = helper.buildBinaryFn(
+                  BinaryFn::mul, scaled,
+                  helper.buildTypeFn(castSignedness, computeType, scale));
+            }
+            helper.yieldOutputs({scaled});
+          })
+          .getResult(0);
+
+  // Step 4: Reduce the remaining reduction dims and accumulate into the
+  // output. If the output is narrower than the compute type, the reduction is
+  // performed in the compute type such that the output is rounded only once.
+  Value out = expandOperand(b, loc, output, expanded, dimSizes);
+  Value sumInput = scaledResults;
+  AffineMap inputMap = epiloguePartialResultsMap;
+  AffineMap outputMap = expanded.getEpilogueMap(expanded.getMap(output));
+  SmallVector<utils::IteratorType> iterTypes = expanded.epilogueIterTypes;
+  bool hasReduction =
+      llvm::is_contained(iterTypes, utils::IteratorType::reduction);
+  if (hasReduction && computeType != getElementTypeOrSelf(out)) {
+    Value sumEmpty = tensor::EmptyOp::create(
+        b, loc, getMapResultSizes(expanded.getMap(output), dimSizes),
+        computeType);
+    Value sumZero = arith::getZeroConstant(b, loc, computeType);
+    Value sumInit = FillOp::create(b, loc, sumZero, sumEmpty).getResult(0);
+    sumInput = buildSumInto(b, loc, sumInput, sumInit, {inputMap, outputMap},
+                            iterTypes, computeType, castSignedness);
+
+    int64_t rank = cast<RankedTensorType>(out.getType()).getRank();
+    inputMap = outputMap = b.getMultiDimIdentityMap(rank);
+    iterTypes.assign(rank, utils::IteratorType::parallel);
+  }
+  Value result = buildSumInto(b, loc, sumInput, out, {inputMap, outputMap},
+                              iterTypes, computeType, castSignedness);
+  Type resultType = output->get().getType();
+  if (result.getType() != resultType)
+    result = tensor::CollapseShapeOp::create(
+        b, loc, resultType, result,
+        expanded.reassociations[output->getOperandNumber()]);
+  return SmallVector<Value>{result};
+}
 } // namespace linalg
 } // namespace mlir
 

@@ -296,6 +296,26 @@ func.func @composite_insert_invalid_result_type(%arg0: !spirv.array<4xf32>, %arg
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.CopyObject
+//===----------------------------------------------------------------------===//
+
+func.func @copy_object(%arg0: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: {{%.*}} = spirv.CopyObject {{%.*}} : vector<4xf32>
+  %0 = spirv.CopyObject %arg0 : vector<4xf32>
+  return %0 : vector<4xf32>
+}
+
+// -----
+
+func.func @copy_object_type_mismatch(%arg0: f32) -> f64 {
+  // expected-error @+1 {{failed to verify that all of {operand, result} have same type}}
+  %0 = "spirv.CopyObject"(%arg0) : (f32) -> f64
+  return %0 : f64
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.VectorExtractDynamic
 //===----------------------------------------------------------------------===//
 
