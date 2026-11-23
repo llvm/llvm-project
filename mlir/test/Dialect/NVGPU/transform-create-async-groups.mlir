@@ -259,8 +259,8 @@ builtin.module {
 
 // vector.transfer_write masked by vector.mask: not converted.
 builtin.module {
-  // CHECK-LABEL: @write_masked_by_vector_mask(
-  func.func @write_masked_by_vector_mask(%a: memref<1024x1024xf32>, %sz: index) {
+  // CHECK-LABEL: @negative_write_masked_by_vector_mask(
+  func.func @negative_write_masked_by_vector_mask(%a: memref<1024x1024xf32>, %sz: index) {
     %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
     %c0 = arith.constant 0 : index
     %cst_0 = arith.constant 0.000000e+00 : f32
