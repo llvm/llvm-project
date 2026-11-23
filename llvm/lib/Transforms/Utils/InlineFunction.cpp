@@ -1655,21 +1655,21 @@ static AttrBuilder IdentifyValidPoisonGeneratingAttributes(CallBase &CB) {
   return Valid;
 }
 
-// Preserve a no-infinity return constraint when the original call disappears.
-static void preserveNoInfReturn(CallBase &CB, ArrayRef<ReturnInst *> Returns) {
-  if ((CB.getRetNoFPClass() & fcInf) != fcInf)
-    return;
-
-  for (ReturnInst *RI : Returns) {
-    auto *SI = dyn_cast_if_present<SelectInst>(RI->getReturnValue());
-    if (SI && SI->getType()->isFloatingPointTy() && SI->hasOneUse() &&
-        SI->getParent() == RI->getParent())
-      SI->setHasNoInfs(true);
-  }
+static void propagateReturnNoFPClass(ReturnInst &RI, FPClassTest NoFPClass) {
+  // On a select, ninf constrains only the selected value.
+  if (auto *SI = dyn_cast<SelectInst>(RI.getReturnValue());
+      SI && SI->hasOneUse() && SI->getParent() == RI.getParent() &&
+      (NoFPClass & fcInf) == fcInf)
+    SI->setHasNoInfs(true);
 }
 
 static void AddReturnAttributes(CallBase &CB, ValueToValueMapTy &VMap,
-                                ClonedCodeInfo &InlinedFunctionInfo) {
+                                ClonedCodeInfo &InlinedFunctionInfo,
+                                ArrayRef<ReturnInst *> Returns) {
+  if (FPClassTest NoFPClass = CB.getRetNoFPClass())
+    for (ReturnInst *RI : Returns)
+      propagateReturnNoFPClass(*RI, NoFPClass);
+
   AttrBuilder CallSiteValidUB = IdentifyValidUBGeneratingAttributes(CB);
   AttrBuilder CallSiteValidPG = IdentifyValidPoisonGeneratingAttributes(CB);
   if (!CallSiteValidUB.hasAttributes() && !CallSiteValidPG.hasAttributes())
@@ -2961,10 +2961,8 @@ void llvm::InlineFunctionImpl(CallBase &CB, InlineFunctionInfo &IFI,
     // Add noalias metadata if necessary.
     AddAliasScopeMetadata(CB, VMap, DL, CalleeAAR, InlinedFunctionInfo);
 
-    // Clone return attributes on the callsite into the calls within the inlined
-    // function which feed into its return value.
-    AddReturnAttributes(CB, VMap, InlinedFunctionInfo);
-    preserveNoInfReturn(CB, Returns);
+    // Propagate call-site return attributes into the inlined function.
+    AddReturnAttributes(CB, VMap, InlinedFunctionInfo, Returns);
 
     // Clone attributes on the params of the callsite to calls within the
     // inlined function which use the same param.

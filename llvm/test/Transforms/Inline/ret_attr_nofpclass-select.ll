@@ -56,3 +56,74 @@ define float @caller_select_shared_result(i1 %overflow, float %normal, ptr %out)
   %value = call nofpclass(inf) float @callee_select_with_store(i1 %overflow, float %normal, ptr %out)
   ret float %value
 }
+
+define internal <2 x float> @callee_multi_return(i1 %plain, i1 %sign, <2 x i1> %overflow, <2 x float> %normal) alwaysinline {
+entry:
+  br i1 %plain, label %return_argument, label %choose_sign
+
+return_argument:
+  ret <2 x float> %normal
+
+choose_sign:
+  br i1 %sign, label %positive, label %negative
+
+positive:
+  %upper = select <2 x i1> %overflow, <2 x float> <float +inf, float +inf>, <2 x float> %normal
+  ret <2 x float> %upper
+
+negative:
+  %lower = select <2 x i1> %overflow, <2 x float> <float -inf, float -inf>, <2 x float> %normal
+  ret <2 x float> %lower
+}
+
+define <2 x float> @caller_multi_return(i1 %plain, i1 %sign, <2 x i1> %overflow, <2 x float> %normal) {
+; CHECK-LABEL: define <2 x float> @caller_multi_return(
+; CHECK-SAME: i1 [[PLAIN:%.*]], i1 [[SIGN:%.*]], <2 x i1> [[OVERFLOW:%.*]], <2 x float> [[NORMAL:%.*]]) {
+; CHECK-NEXT:    br i1 [[PLAIN]], label %[[RETURN_ARGUMENT_I:.*]], label %[[CHOOSE_SIGN_I:.*]]
+; CHECK:       [[RETURN_ARGUMENT_I]]:
+; CHECK-NEXT:    br label %[[CALLEE_MULTI_RETURN_EXIT:.*]]
+; CHECK:       [[CHOOSE_SIGN_I]]:
+; CHECK-NEXT:    br i1 [[SIGN]], label %[[POSITIVE_I:.*]], label %[[NEGATIVE_I:.*]]
+; CHECK:       [[POSITIVE_I]]:
+; CHECK-NEXT:    [[UPPER_I:%.*]] = select ninf <2 x i1> [[OVERFLOW]], <2 x float> splat (float +inf), <2 x float> [[NORMAL]]
+; CHECK-NEXT:    br label %[[CALLEE_MULTI_RETURN_EXIT]]
+; CHECK:       [[NEGATIVE_I]]:
+; CHECK-NEXT:    [[LOWER_I:%.*]] = select ninf <2 x i1> [[OVERFLOW]], <2 x float> splat (float -inf), <2 x float> [[NORMAL]]
+; CHECK-NEXT:    br label %[[CALLEE_MULTI_RETURN_EXIT]]
+; CHECK:       [[CALLEE_MULTI_RETURN_EXIT]]:
+; CHECK-NEXT:    [[VALUE1:%.*]] = phi <2 x float> [ [[NORMAL]], %[[RETURN_ARGUMENT_I]] ], [ [[UPPER_I]], %[[POSITIVE_I]] ], [ [[LOWER_I]], %[[NEGATIVE_I]] ]
+; CHECK-NEXT:    ret <2 x float> [[VALUE1]]
+;
+  %value = call nofpclass(inf) <2 x float> @callee_multi_return(i1 %plain, i1 %sign, <2 x i1> %overflow, <2 x float> %normal)
+  ret <2 x float> %value
+}
+
+define internal { float, float } @callee_aggregate_select(i1 %overflow, { float, float } %normal) alwaysinline {
+  %result = select i1 %overflow, { float, float } { float +inf, float 1.0 }, { float, float } %normal
+  ret { float, float } %result
+}
+
+define { float, float } @caller_aggregate_select(i1 %overflow, { float, float } %normal) {
+; CHECK-LABEL: define { float, float } @caller_aggregate_select(
+; CHECK-SAME: i1 [[OVERFLOW:%.*]], { float, float } [[NORMAL:%.*]]) {
+; CHECK-NEXT:    [[RESULT_I:%.*]] = select ninf i1 [[OVERFLOW]], { float, float } { float +inf, float 1.000000e+00 }, { float, float } [[NORMAL]]
+; CHECK-NEXT:    ret { float, float } [[RESULT_I]]
+;
+  %value = call nofpclass(inf) { float, float } @callee_aggregate_select(i1 %overflow, { float, float } %normal)
+  ret { float, float } %value
+}
+
+define internal float @callee_div(float %x) alwaysinline {
+  %result = fdiv float 1.0, %x
+  ret float %result
+}
+
+define float @caller_div(float %x) {
+; CHECK-LABEL: define float @caller_div(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT_I:%.*]] = fdiv float 1.000000e+00, [[X]]
+; CHECK-NEXT:    ret float [[RESULT_I]]
+;
+  %value = call nofpclass(inf) float @callee_div(float %x)
+  ret float %value
+}
