@@ -1615,6 +1615,9 @@ private:
   // some were not. Set when the combined index is created during the thin link.
   bool PartiallySplitLTOUnits = false;
 
+  // True if the current LTO link contains ThinLTO modules.
+  bool HasThinLTOModules = false;
+
   /// True if some of the FunctionSummary contains a ParamAccess.
   bool HasParamAccess = false;
 
@@ -1826,6 +1829,9 @@ public:
 
   bool partiallySplitLTOUnits() const { return PartiallySplitLTOUnits; }
   void setPartiallySplitLTOUnits() { PartiallySplitLTOUnits = true; }
+
+  bool hasThinLTOModules() const { return HasThinLTOModules; }
+  void setHasThinLTOModules() { HasThinLTOModules = true; }
 
   bool hasParamAccess() const { return HasParamAccess; }
 
