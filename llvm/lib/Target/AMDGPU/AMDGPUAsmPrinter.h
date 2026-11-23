@@ -57,9 +57,17 @@ private:
 
   MCCodeEmitter *DumpCodeInstEmitter = nullptr;
 
-  // Symbol for the function end, used by ICache prefetch MCExprs.
-  // Created early in emitFunctionBodyStart when prefetch is enabled.
+  // Symbols used by ICache prefetch operands. Created in
+  // emitFunctionBodyStart when prefetch is enabled. PrefetchLinesSym is the
+  // number of prefetchable cache lines of the function.
+  MCSymbol *PrefetchBeginSym = nullptr;
   MCSymbol *PrefetchEndSym = nullptr;
+  MCSymbol *PrefetchLinesSym = nullptr;
+
+  /// Replace the provisional target cache-line index and sdata operands of an
+  /// s_prefetch_inst_pc_rel inserted by AMDGPUInsertICachePrefetch with
+  /// expressions over the final code layout.
+  void lowerICachePrefetch(MCInst &Inst);
 
   // When appropriate, add a _dvgpr$ symbol.
   void emitDVgprSymbol(MachineFunction &MF);
@@ -164,9 +172,6 @@ public:
 
   bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNum,
                              const char *ExtraCode, raw_ostream &O) override;
-
-  /// Get the symbol for the function end, used for ICache prefetch MCExprs.
-  MCSymbol *getPrefetchEndSym() const { return PrefetchEndSym; }
 
 protected:
   void getAnalysisUsage(AnalysisUsage &AU) const override;

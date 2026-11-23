@@ -55,9 +55,6 @@ struct ICachePrefetchInfo {
   uint64_t ProgramSize;
 };
 
-// Each prefetch can transfer up to 32 cache lines of 128 bytes.
-constexpr unsigned CacheLinesPerPrefetch = 32;
-
 static std::optional<ICachePrefetchInfo>
 getICachePrefetchInfo(MachineFunction &MF);
 
@@ -203,7 +200,7 @@ getICachePrefetchInfo(MachineFunction &MF) {
   unsigned ICacheLines = ICacheSize / CacheLineSize;
   unsigned DescriptorPrefetchLines = Config.InitialSize / CacheLineSize;
   unsigned MaxNumPrefetchInsts = llvm::divideCeil(
-      ICacheLines - DescriptorPrefetchLines, CacheLinesPerPrefetch);
+      ICacheLines - DescriptorPrefetchLines, AMDGPU::MaxInstPrefetchLines);
   if (MaxNumPrefetchInsts == 0)
     return std::nullopt;
 
@@ -330,7 +327,7 @@ bool AMDGPUInsertICachePrefetch::run(MachineFunction &MF,
     for (; Prefetches < TargetPrefetchCount; ++Prefetches) {
       BuildMI(*CandBB, InsertPt, DL, TII->get(AMDGPU::S_PREFETCH_INST_PC_REL))
           .addImm(Info.DescriptorPrefetchLines +
-                  Prefetches * CacheLinesPerPrefetch)
+                  Prefetches * AMDGPU::MaxInstPrefetchLines)
           // Function-relative target cache-line index, fixed up later.
           .addReg(AMDGPU::SGPR_NULL) // soffset
           .addImm(0)                 // sdata (fixed up later)

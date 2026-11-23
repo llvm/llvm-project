@@ -499,53 +499,11 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       AddMove(AMDGPU::EXEC_LO, MCOperand::createImm(0));
     }
 
-    MCInst &TmpInst = Insts.emplace_back();
-    MCInstLowering.lower(MI, TmpInst);
-
-    // Fix up S_PREFETCH_INST_PC_REL instructions inserted by the ICache
-    // prefetch pass. The provisional offset operand holds a function-relative
-    // target cache-line index; replace it and sdata with expressions that use
-    // final code layout.
-    if (MI->getOpcode() == AMDGPU::S_PREFETCH_INST_PC_REL) {
-      const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-      if (MFI->hasICachePrefetch()) {
-        // Operand indices in the MCInst.
-        constexpr unsigned OffsetIdx = 0;
-        constexpr unsigned SdataIdx = 2;
-
-        int64_t TargetCacheLine = TmpInst.getOperand(OffsetIdx).getImm();
-
-        // Emit a symbol for each prefetch instruction to calculate the offset.
-        MCSymbol *InstOffsetSym = createTempSymbol("pref_inst_offset");
-        OutStreamer->emitLabel(InstOffsetSym);
-
-        // Create MCExpr for code size using label subtraction.
-        // This gives the exact code size at assembly time.
-        const MCExpr *CodeSizeExpr = MCBinaryExpr::createSub(
-            MCSymbolRefExpr::create(getPrefetchEndSym(), OutContext),
-            MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
-
-        const MCExpr *TargetCacheLineExpr =
-            MCConstantExpr::create(TargetCacheLine, OutContext);
-
-        // Create an MCExpr for this prefetch instruction's offset in the
-        // function.
-        const MCExpr *PrefetchInstOffset = MCBinaryExpr::createSub(
-            MCSymbolRefExpr::create(InstOffsetSym, OutContext),
-            MCSymbolRefExpr::create(CurrentFnSym, OutContext), OutContext);
-
-        // Create MCExprs that will be evaluated at fixup time when symbol
-        // positions are known.
-        const MCExpr *CachelinesExpr = AMDGPUMCExpr::createPrefetchCachelines(
-            TargetCacheLineExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
-        const MCExpr *OffsetExpr = AMDGPUMCExpr::createPrefetchOffset(
-            TargetCacheLineExpr, CodeSizeExpr, PrefetchInstOffset, OutContext);
-
-        // Replace the offset and sdata operands with MCExprs.
-        TmpInst.getOperand(OffsetIdx) = MCOperand::createExpr(OffsetExpr);
-        TmpInst.getOperand(SdataIdx) = MCOperand::createExpr(CachelinesExpr);
-      }
-    }
+    MCInst &Inst = Insts.emplace_back();
+    MCInstLowering.lower(MI, Inst);
+    if (Opc == AMDGPU::S_PREFETCH_INST_PC_REL &&
+        MF->getInfo<SIMachineFunctionInfo>()->hasICachePrefetch())
+      lowerICachePrefetch(Inst);
     if (IsReplay)
       AddMove(AMDGPU::EXEC_LO, MCOperand::createReg(SavedExec));
 

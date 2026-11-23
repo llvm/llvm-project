@@ -9426,14 +9426,6 @@ bool AMDGPUOperand::isSMRDOffset8() const {
 
 bool AMDGPUOperand::isSMEMOffset() const {
   // Offset range is checked later by validator.
-  // Also accept prefetch offset expressions for ICache prefetch instructions.
-  if (isExpr()) {
-    if (Expr->getKind() == MCExpr::Target) {
-      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
-      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchOffset)
-        return true;
-    }
-  }
   return isImmLiteral();
 }
 
@@ -9444,16 +9436,9 @@ bool AMDGPUOperand::isSMRDLiteralOffset() const {
 }
 
 bool AMDGPUOperand::isPrefetchSdata() const {
-  // Accept immediates or prefetch cachelines expressions.
-  // Immediate range is checked later by validator.
-  if (isExpr()) {
-    if (Expr->getKind() == MCExpr::Target) {
-      const AMDGPUMCExpr *AExpr = static_cast<const AMDGPUMCExpr *>(Expr);
-      if (AExpr->getKind() == AMDGPUMCExpr::AGVK_PrefetchCachelines)
-        return true;
-    }
-  }
-  return isImmLiteral();
+  // Immediate range is checked later by validator. Expressions are resolved by
+  // fixup_si_prefetch_sdata.
+  return isImmLiteral() || isExpr();
 }
 
 //===----------------------------------------------------------------------===//
@@ -9532,8 +9517,6 @@ bool AMDGPUAsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
                   .Case("alignto", AGVK::AGVK_AlignTo)
                   .Case("occupancy", AGVK::AGVK_Occupancy)
                   .Case("instprefsize", AGVK::AGVK_InstPrefSize)
-                  .Case("prefetchcachelines", AGVK::AGVK_PrefetchCachelines)
-                  .Case("prefetchoffset", AGVK::AGVK_PrefetchOffset)
                   .Default(AGVK::AGVK_None);
 
     if (VK != AGVK::AGVK_None && peekToken().is(AsmToken::LParen)) {

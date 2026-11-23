@@ -497,6 +497,10 @@ enum OperandType : unsigned {
   OPERAND_KIMM_LAST = OPERAND_KIMM64
 
 };
+
+/// Maximum number of cache lines a single s_prefetch_inst* can prefetch. The
+/// 5-bit sdata operand encodes the line count minus one.
+constexpr unsigned MaxInstPrefetchLines = 32;
 }
 
 // Input operand modifiers bit-masks

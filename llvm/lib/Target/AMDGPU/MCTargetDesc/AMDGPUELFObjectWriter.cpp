@@ -38,6 +38,12 @@ AMDGPUELFObjectWriter::AMDGPUELFObjectWriter(bool Is64Bit, uint8_t OSABI,
 unsigned AMDGPUELFObjectWriter::getRelocType(const MCFixup &Fixup,
                                              const MCValue &Target,
                                              bool IsPCRel) const {
+  // No relocation describes the 5-bit sdata field.
+  if (Fixup.getKind() == AMDGPU::fixup_si_prefetch_sdata) {
+    reportError(Fixup.getLoc(), "expected an absolute expression");
+    return ELF::R_AMDGPU_NONE;
+  }
+
   if (const auto *SymA = Target.getAddSym()) {
     // SCRATCH_RSRC_DWORD[01] is a special global variable that represents
     // the scratch buffer.

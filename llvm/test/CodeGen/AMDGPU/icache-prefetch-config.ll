@@ -19,7 +19,8 @@
 ; The default threshold is the 32640-byte descriptor capacity.
 define amdgpu_kernel void @above_default_threshold() {
 ; GFX1200-LABEL: above_default_threshold:
-; GFX1200:       s_prefetch_inst_pc_rel prefetchoffset(128,
+; GFX1200:       .set [[TARGET:.Lpref_target[0-9]+]], .Lpref_func_begin{{[0-9]+}}+min(16384,
+; GFX1200-NEXT:  s_prefetch_inst_pc_rel [[TARGET]],
 ; GFX1200:       .amdhsa_inst_pref_size 128
   call void asm sideeffect ".space 40000", ""()
   ret void
@@ -30,11 +31,13 @@ define amdgpu_kernel void @above_default_threshold() {
 ; is also valid and changes the descriptor coverage independently.
 define amdgpu_kernel void @between_override_thresholds() {
 ; THRESHOLD-16K-LABEL: between_override_thresholds:
-; THRESHOLD-16K:       s_prefetch_inst_pc_rel prefetchoffset(64,
+; THRESHOLD-16K:       .set [[TARGET:.Lpref_target[0-9]+]], .Lpref_func_begin{{[0-9]+}}+min(8192,
+; THRESHOLD-16K-NEXT:  s_prefetch_inst_pc_rel [[TARGET]],
 ; THRESHOLD-16K:       .amdhsa_inst_pref_size 64
 ;
 ; EQUAL-16K-LABEL: between_override_thresholds:
-; EQUAL-16K:       s_prefetch_inst_pc_rel prefetchoffset(128,
+; EQUAL-16K:       .set [[TARGET:.Lpref_target[0-9]+]], .Lpref_func_begin{{[0-9]+}}+min(16384,
+; EQUAL-16K-NEXT:  s_prefetch_inst_pc_rel [[TARGET]],
 ; EQUAL-16K:       .amdhsa_inst_pref_size 128
   call void asm sideeffect ".space 20000", ""()
   ret void

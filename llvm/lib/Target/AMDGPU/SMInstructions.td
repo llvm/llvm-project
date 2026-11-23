@@ -8,8 +8,10 @@
 
 def smrd_offset_8 : ImmOperand<i32, "SMRDOffset8", 1>;
 
-// Prefetch sdata operand - accepts immediates or MCExpr for ICache prefetch.
-def PrefetchSdata : ImmOperand<i8, "PrefetchSdata", 1>;
+// Prefetch sdata operand. An expression is resolved by fixup_si_prefetch_sdata.
+def PrefetchSdata : ImmOperand<i8, "PrefetchSdata", 1> {
+  let EncoderMethod = "getPrefetchSdataEncoding";
+}
 
 let EncoderMethod = "getSMEMOffsetEncoding",
     DecoderMethod = "decodeSMEMOffset" in {
@@ -252,8 +254,8 @@ class SM_Prefetch_Pseudo <string opName, RegisterClass baseClass, bit hasSBase,
                           Operand offsetClass = SMEMOffset>
   : SM_Pseudo<opName, (outs),
               !con(!if(hasSBase, (ins baseClass:$sbase), (ins)),
-                   (ins offsetClass:$offset, SReg_32:$soffset, PrefetchSdata:$sdata,
-                        CPol_0:$cpol)),
+                   (ins offsetClass:$offset, SReg_32:$soffset,
+                        PrefetchSdata:$sdata, CPol_0:$cpol)),
               !if(hasSBase, " $sbase,", "") # " $offset, $soffset, $sdata$cpol"> {
   // Mark prefetches as both load and store to prevent reordering with loads
   // and stores. This is also needed for pattern to match prefetch intrinsic.
