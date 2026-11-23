@@ -6113,6 +6113,12 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLIsDebuggingEnabled : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_isdebuggingenabled"];
+  let Attributes = [NoThrow];
+  let Prototype = "bool()";
+}
+
 // Builtins for XRay.
 def XRayCustomEvent : Builtin {
   let Spellings = ["__xray_customevent"];
