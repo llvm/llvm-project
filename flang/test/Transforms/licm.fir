@@ -2965,3 +2965,50 @@ func.func private @_QFcapturedPbump() attributes {fir.host_symbol = @_QPcaptured
 // CHECK: fir.load %[[X]] : !fir.ref<i32>
 // CHECK: fir.result
 // CHECK: {{^ *[}]}}
+
+// -----
+// The call may give the allocatable component of an element of the array a
+// new allocation. The load of the descriptor of the component must remain in
+// the loop after the call.
+// subroutine test_component(a, s)
+//   type t
+//     integer, allocatable :: c
+//   end type
+//   type(t) :: a(:)
+//   integer :: s
+//   associate (e => a(1))
+//     do i = 1, 3
+//       call replace(a)
+//       s = s + e%c
+//     end do
+//   end associate
+// end subroutine
+func.func @_QPtest_component(%arg0: !fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>> {fir.bindc_name = "a"}, %arg1: !fir.ref<i32> {fir.bindc_name = "s"}) {
+  %c1 = arith.constant 1 : index
+  %c3 = arith.constant 3 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.declare %arg0 dummy_scope %0 arg 1 uniq_name("_QFtest_componentEa") : (!fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>>, !fir.dscope) -> !fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>>
+  %2 = fir.declare %arg1 dummy_scope %0 arg 2 uniq_name("_QFtest_componentEs") : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
+  %3 = fir.array_coor %1 %c1 : (!fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>>, index) -> !fir.ref<!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>
+  %4 = fir.coordinate_of %3, c : (!fir.ref<!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>) -> !fir.ref<!fir.box<!fir.heap<i32>>>
+  fir.do_loop %i = %c1 to %c3 step %c1 {
+    fir.call @_QPreplace(%1) : (!fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>>) -> ()
+    %5 = fir.load %4 : !fir.ref<!fir.box<!fir.heap<i32>>>
+    %6 = fir.box_addr %5 : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+    %7 = fir.load %6 : !fir.heap<i32>
+    %8 = fir.load %2 : !fir.ref<i32>
+    %9 = arith.addi %8, %7 : i32
+    fir.store %9 to %2 : !fir.ref<i32>
+  }
+  return
+}
+func.func private @_QPreplace(!fir.box<!fir.array<?x!fir.type<_QFtest_componentTt{c:!fir.box<!fir.heap<i32>>}>>>)
+
+// CHECK-LABEL: func.func @_QPtest_component(
+// CHECK: %[[C:[^ ]+]] = fir.coordinate_of {{.*}}, c :
+// CHECK: fir.do_loop
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.call @_QPreplace(
+// CHECK-NOT: {{^ *[}]}}
+// CHECK: fir.load %[[C]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK: {{^ *[}]}}
