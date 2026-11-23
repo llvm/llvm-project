@@ -190,24 +190,24 @@ void GlobalDCEPass::ScanVTableLoad(Function *Caller, Metadata *TypeId,
   for (const auto &[VTable, VTableOffset] : TypeIdMap[TypeId]) {
     uint64_t SlotOffset = VTableOffset + CallOffset;
 
-    // A slot that is NULL does not reference a function, so there is nothing to
-    // keep alive. We can still perform VFE on this vtable.
-    if (isNullVTableSlot(VTable, SlotOffset, M)) {
-      continue;
-    }
-
     Constant *Ptr =
         getPointerAtOffset(VTable->getInitializer(), SlotOffset, M, VTable);
     if (!Ptr) {
-      LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
-      VFESafeVTables.erase(VTable);
+      // A slot that is NULL does not reference a function, so there is nothing
+      // to keep alive. We can still perform VFE on this vtable.
+      if (!isNullVTableSlot(VTable, SlotOffset, M)) {
+        LLVM_DEBUG(dbgs() << "can't find pointer in vtable!\n");
+        VFESafeVTables.erase(VTable);
+      }
       continue;
     }
 
     auto Callee = dyn_cast<Function>(Ptr->stripPointerCasts());
     if (!Callee) {
-      LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
-      VFESafeVTables.erase(VTable);
+      if (!isNullVTableSlot(VTable, SlotOffset, M)) {
+        LLVM_DEBUG(dbgs() << "vtable entry is not function pointer!\n");
+        VFESafeVTables.erase(VTable);
+      }
       continue;
     }
 
