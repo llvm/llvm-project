@@ -129,8 +129,6 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   if (!CheckOk)
     return false;
 
-  MCInst OrigMCB = MCB;
-
   // Examine the packet and convert pairs of instructions to compound
   // instructions when possible.
   if (!HexagonDisableCompound)
@@ -435,7 +433,7 @@ unsigned HexagonMCInstrInfo::getCVIResources(MCInstrInfo const &MCII,
   int SchedClass = HexagonMCInstrInfo::getDesc(MCII, MCI).getSchedClass();
   int Size = II[SchedClass].LastStage - II[SchedClass].FirstStage;
 
-  // HVX resources used are currenty located at the second to last stage.
+  // HVX resources used are currently located at the second to last stage.
   // This could also be done with a linear search of the stages looking for:
   // CVI_ALL, CVI_MPY01, CVI_XLSHF, CVI_MPY0, CVI_MPY1, CVI_SHIFT, CVI_XLANE,
   // CVI_ZW
@@ -645,6 +643,11 @@ bool HexagonMCInstrInfo::isFloat(MCInstrInfo const &MCII, MCInst const &MCI) {
 bool HexagonMCInstrInfo::isHVX(MCInstrInfo const &MCII, MCInst const &MCI) {
   const uint64_t V = getType(MCII, MCI);
   return HexagonII::TypeCVI_FIRST <= V && V <= HexagonII::TypeCVI_LAST;
+}
+
+bool HexagonMCInstrInfo::isHLX(MCInstrInfo const &MCII, MCInst const &MCI) {
+  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
+  return (F >> HexagonII::isHLXPos) & HexagonII::isHLXMask;
 }
 
 bool HexagonMCInstrInfo::isImmext(MCInst const &MCI) {
@@ -966,9 +969,10 @@ bool HexagonMCInstrInfo::hasTmpDst(MCInstrInfo const &MCII, MCInst const &MCI) {
   return false;
 }
 
-bool HexagonMCInstrInfo::hasHvxTmp(MCInstrInfo const &MCII, MCInst const &MCI) {
-  const uint64_t F = HexagonMCInstrInfo::getDesc(MCII, MCI).TSFlags;
-  return (F >> HexagonII::HasHvxTmpPos) & HexagonII::HasHvxTmpMask;
+bool HexagonMCInstrInfo::isTmpWrite(MCInstrInfo const &MCII,
+                                    MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isTmpWritePos);
 }
 
 bool HexagonMCInstrInfo::requiresSlot(MCSubtargetInfo const &STI,
@@ -1043,6 +1047,18 @@ unsigned HexagonMCInstrInfo::SubregisterBit(MCRegister Consumer,
   if (Producer2 != Hexagon::NoRegister)
     return Consumer == Producer;
   return 0;
+}
+
+bool HexagonMCInstrInfo::isHMXWeight(MCInstrInfo const &MCII,
+                                     MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHMXWeightPos);
+}
+
+bool HexagonMCInstrInfo::isHMXActivation(MCInstrInfo const &MCII,
+                                         MCInst const &MCI) {
+  const auto &MID = HexagonMCInstrInfo::getDesc(MCII, MCI);
+  return HexagonII::getTSFlag(MID, HexagonII::isHMXActivatePos);
 }
 
 bool HexagonMCInstrInfo::LoopNeedsPadding(MCInst const &MCB) {

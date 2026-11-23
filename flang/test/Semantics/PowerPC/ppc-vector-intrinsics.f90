@@ -5,6 +5,15 @@ program test
   vector(integer(4)) :: arg1, arg2, r
   vector(real(4)) :: rr
   integer :: i
+  integer, parameter :: sh(1) = [2]
+  integer, parameter :: shbad(1) = [17]
+
+! An element of a named constant is a constant expression whose value must be
+! usable by the range check (it is folded when the call commits to the PowerPC
+! intrinsic), not a crash.
+  r = vec_sld(arg1, arg2, sh(1))
+!ERROR: Argument #3 must be a constant expression in range 0 to 15
+  r = vec_sld(arg1, arg2, shbad(1))
 
 !ERROR: Actual argument #3 must be a constant expression
   r = vec_sld(arg1, arg2, i)

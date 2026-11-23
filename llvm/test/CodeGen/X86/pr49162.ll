@@ -17,10 +17,7 @@ define ptr @PR49162(ptr %base, ptr %ptr160) {
 ;
 ; X64-LABEL: PR49162:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl 8(%rsi), %eax
-; X64-NEXT:    shll $16, %eax
-; X64-NEXT:    cltq
-; X64-NEXT:    sarq $16, %rax
+; X64-NEXT:    movswq 8(%rsi), %rax
 ; X64-NEXT:    leaq (%rdi,%rax,4), %rax
 ; X64-NEXT:    retq
   %load160 = load i160, ptr %ptr160, align 4

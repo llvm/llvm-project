@@ -12,7 +12,7 @@
 
 // class set
 
-// set& operator=(initializer_list<value_type> il);
+// constexpr set& operator=(initializer_list<value_type> il); // constexpr since C++26
 
 #include <set>
 #include <cassert>
@@ -21,12 +21,12 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 
-void basic_test() {
+TEST_CONSTEXPR_CXX26 void basic_test() {
   {
     typedef std::set<int> C;
     typedef C::value_type V;
     C m = {10, 8};
-    m = {1, 2, 3, 4, 5, 6};
+    m   = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
     assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
@@ -41,7 +41,7 @@ void basic_test() {
     typedef std::set<int, std::less<int>, min_allocator<int> > C;
     typedef C::value_type V;
     C m = {10, 8};
-    m = {1, 2, 3, 4, 5, 6};
+    m   = {1, 2, 3, 4, 5, 6};
     assert(m.size() == 6);
     assert(std::distance(m.begin(), m.end()) == 6);
     C::const_iterator i = m.cbegin();
@@ -54,7 +54,7 @@ void basic_test() {
   }
 }
 
-void duplicate_keys_test() {
+TEST_CONSTEXPR_CXX26 void duplicate_keys_test() {
   test_allocator_statistics alloc_stats;
   typedef std::set<int, std::less<int>, test_allocator<int> > Set;
   {
@@ -69,9 +69,17 @@ void duplicate_keys_test() {
   LIBCPP_ASSERT(alloc_stats.alloc_count == 0);
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   basic_test();
   duplicate_keys_test();
 
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
   return 0;
 }

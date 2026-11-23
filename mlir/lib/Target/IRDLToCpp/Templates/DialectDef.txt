@@ -1,0 +1,27 @@
+R"(
+
+__NAMESPACE_OPEN__
+
+__DIALECT_CPP_NAME__::__DIALECT_CPP_NAME__(::mlir::MLIRContext *context)
+    : ::mlir::Dialect(getDialectNamespace(), context,
+                      ::mlir::TypeID::get<__DIALECT_CPP_NAME__>())
+{
+  initialize();
+}
+
+__DIALECT_CPP_NAME__::~__DIALECT_CPP_NAME__() = default;
+
+
+void __DIALECT_CPP_NAME__::initialize() {
+    addOperations<
+      __OP_LIST__
+    >();
+    addTypes<
+      __TYPE_LIST__
+    >();
+}
+
+__NAMESPACE_CLOSE__
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(__NAMESPACE_PATH__::__DIALECT_CPP_NAME__)
+)"

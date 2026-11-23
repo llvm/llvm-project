@@ -15,10 +15,8 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "mlir/IR/AttributeSupport.h"
 #include "mlir/IR/Builders.h"
-#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "flang/Optimizer/Dialect/FIREnumAttr.cpp.inc"
@@ -296,9 +294,9 @@ void fir::printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerAttributes() {
-  addAttributes<ClosedIntervalAttr, ExactTypeAttr,
-                FortranProcedureFlagsEnumAttr, FortranVariableFlagsAttr,
-                LowerBoundAttr, PointIntervalAttr, RealAttr, ReduceAttr,
-                SubclassAttr, UpperBoundAttr, LocationKindAttr,
-                LocationKindArrayAttr>();
+  addAttributes<ClosedIntervalAttr, ExactTypeAttr, LowerBoundAttr,
+                PointIntervalAttr, RealAttr, SubclassAttr, UpperBoundAttr,
+#define GET_ATTRDEF_LIST
+#include "flang/Optimizer/Dialect/FIRAttr.cpp.inc"
+                >();
 }

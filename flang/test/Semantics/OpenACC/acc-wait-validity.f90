@@ -39,4 +39,7 @@ program openacc_wait_validity
   !ERROR: At most one ASYNC clause can appear on the WAIT directive
   !$acc wait(1) if(.true.) async(1) async
 
+  !ERROR: COPY clause is not allowed on the WAIT directive
+  !$acc wait copy(ifCondition)
+
 end program openacc_wait_validity

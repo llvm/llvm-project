@@ -4,9 +4,9 @@
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s --triple=loongarch64 --show-encoding --defsym=LA64=1 \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ,CHECK64-ASM,CHECK64-ASM-AND-OBJ %s
-# RUN: llvm-mc %s --triple=loongarch32 --filetype=obj | llvm-objdump -d - \
+# RUN: llvm-mc %s --triple=loongarch32 --filetype=obj | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc %s --triple=loongarch64 --filetype=obj --defsym=LA64=1 | llvm-objdump -d - \
+# RUN: llvm-mc %s --triple=loongarch64 --filetype=obj --defsym=LA64=1 | llvm-objdump --no-print-imm-hex -d - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ,CHECK64-ASM-AND-OBJ %s
 
 #############################################################
@@ -20,14 +20,6 @@ ll.w $tp, $s4, 220
 # CHECK-ASM-AND-OBJ: sc.w $t7, $t2, 56
 # CHECK-ASM: encoding: [0xd3,0x39,0x00,0x21]
 sc.w $t7, $t2, 56
-
-# CHECK-ASM-AND-OBJ: llacq.w $t1, $t2
-# CHECK-ASM: encoding: [0xcd,0x81,0x57,0x38]
-llacq.w $t1, $t2
-
-# CHECK-ASM-AND-OBJ: screl.w $t1, $t2
-# CHECK-ASM: encoding: [0xcd,0x85,0x57,0x38]
-screl.w $t1, $t2
 
 
 
@@ -276,6 +268,14 @@ sc.d $t5, $t5, 244
 # CHECK64-ASM-AND-OBJ: sc.q $t7, $t2, $t5
 # CHECK64-ASM: encoding: [0x33,0x3a,0x57,0x38]
 sc.q $t7, $t2, $t5
+
+# CHECK64-ASM-AND-OBJ: llacq.w $t1, $t2
+# CHECK64-ASM: encoding: [0xcd,0x81,0x57,0x38]
+llacq.w $t1, $t2
+
+# CHECK64-ASM-AND-OBJ: screl.w $t1, $t2
+# CHECK64-ASM: encoding: [0xcd,0x85,0x57,0x38]
+screl.w $t1, $t2
 
 # CHECK64-ASM-AND-OBJ: llacq.d $t1, $t2
 # CHECK64-ASM: encoding: [0xcd,0x89,0x57,0x38]

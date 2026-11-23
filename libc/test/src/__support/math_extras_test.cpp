@@ -15,12 +15,15 @@
 namespace LIBC_NAMESPACE_DECL {
 
 // TODO: add UInt<128> support.
-using UnsignedTypesNoBigInt = testing::TypeList<
+using UnsignedTypesNoBigInt = testing::Types<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif // LIBC_TYPES_HAS_INT128
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long, UInt<128>>;
+
+template <typename T> class LlvmLibcBitTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcBitTest, UnsignedTypesNoBigInt);
 
 TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
   EXPECT_EQ(0_u8, (mask_leading_ones<uint8_t, 0>()));
@@ -70,46 +73,63 @@ TEST(LlvmLibcBlockMathExtrasTest, mask_trailing_ones) {
             (mask_leading_ones<UInt128, 128>()));
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingZero) {
+  using T = TypeParam;
   EXPECT_EQ(first_leading_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_zero<T>(~(T(1) << i)),
-              cpp::numeric_limits<T>::digits - i);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(~(T(1) << size_t(i)));
+    EXPECT_EQ(first_leading_zero<T>(lhs), cpp::numeric_limits<T>::digits - i);
+  }
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, FirstLeadingOne) {
+  using T = TypeParam;
   EXPECT_EQ(first_leading_one<T>(static_cast<T>(0)), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_leading_one<T>(T(1) << i),
-              cpp::numeric_limits<T>::digits - i);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(T(1) << size_t(i));
+    EXPECT_EQ(first_leading_one<T>(lhs), cpp::numeric_limits<T>::digits - i);
+  }
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingZero) {
+  using T = TypeParam;
   EXPECT_EQ(first_trailing_zero<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_zero<T>(~(T(1) << i)), i + 1);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(~(T(1) << size_t(i)));
+    EXPECT_EQ(first_trailing_zero<T>(lhs), i + 1);
+  }
 }
 
-TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne, UnsignedTypesNoBigInt) {
-  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 0);
-  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(first_trailing_one<T>(T(1) << i), i + 1);
+TYPED_TEST(LlvmLibcBitTest, FirstTrailingOne) {
+  using T = TypeParam;
+  EXPECT_EQ(first_trailing_one<T>(static_cast<T>(0)), 0);
+  EXPECT_EQ(first_trailing_one<T>(cpp::numeric_limits<T>::max()), 1);
+  for (int i = 0U; i != cpp::numeric_limits<T>::digits; ++i) {
+    auto lhs = T(T(1) << size_t(i));
+    EXPECT_EQ(first_trailing_one<T>(lhs), i + 1);
+  }
 }
 
-TYPED_TEST(LlvmLibcBitTest, CountZeros, UnsignedTypesNoBigInt) {
+TYPED_TEST(LlvmLibcBitTest, CountZeros) {
+  using T = TypeParam;
   EXPECT_EQ(count_zeros(T(0)), cpp::numeric_limits<T>::digits);
   for (int i = 0; i != cpp::numeric_limits<T>::digits; ++i)
-    EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> i), i);
+    EXPECT_EQ(count_zeros<T>(cpp::numeric_limits<T>::max() >> size_t(i)), i);
 }
 
-using UnsignedTypes = testing::TypeList<
+using UnsignedTypes = testing::Types<
 #if defined(LIBC_TYPES_HAS_INT128)
     __uint128_t,
 #endif
     unsigned char, unsigned short, unsigned int, unsigned long,
     unsigned long long>;
 
-TYPED_TEST(LlvmLibcBlockMathExtrasTest, add_overflow, UnsignedTypes) {
+template <typename T>
+class LlvmLibcTypedBlockMathExtrasTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedBlockMathExtrasTest, UnsignedTypes);
+
+TYPED_TEST(LlvmLibcTypedBlockMathExtrasTest, add_overflow) {
+  using T = TypeParam;
   constexpr T ZERO = cpp::numeric_limits<T>::min();
   constexpr T ONE(1);
   constexpr T MAX = cpp::numeric_limits<T>::max();
@@ -134,7 +154,8 @@ TYPED_TEST(LlvmLibcBlockMathExtrasTest, add_overflow, UnsignedTypes) {
   }
 }
 
-TYPED_TEST(LlvmLibcBlockMathExtrasTest, sub_overflow, UnsignedTypes) {
+TYPED_TEST(LlvmLibcTypedBlockMathExtrasTest, sub_overflow) {
+  using T = TypeParam;
   constexpr T ZERO = cpp::numeric_limits<T>::min();
   constexpr T ONE(1);
   constexpr T MAX = cpp::numeric_limits<T>::max();

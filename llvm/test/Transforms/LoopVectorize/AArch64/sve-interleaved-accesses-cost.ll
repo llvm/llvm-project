@@ -5,7 +5,6 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:
 
 ; Test cases for modeling interleave access costs.
 
-; Function Attrs: vscale_range(2,2)
 define void @test_masked_interleave(ptr noalias %A, ptr noalias %B, ptr noalias %C) #0 {
 ; CHECK-LABEL: define void @test_masked_interleave(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) #[[ATTR0:[0-9]+]] {

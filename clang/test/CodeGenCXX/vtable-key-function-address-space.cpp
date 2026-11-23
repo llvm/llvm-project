@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple=amdgcn-amd-amdhsa -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=amdgpu-amd-amdhsa -emit-llvm -o - | FileCheck %s
 // PR5697
 namespace PR5697 {
 struct A {
@@ -9,7 +9,7 @@ struct A {
 
 // A does not have a key function, so the first constructor we emit should
 // cause the vtable to be defined (without assertions.)
-// CHECK: @_ZTVN6PR56971AE = linkonce_odr unnamed_addr addrspace(1) constant
+// CHECK: @_ZTVN6PR56971AE = linkonce_odr addrspace(1) constant
 A::A() { }
 A::A(int) { }
 }

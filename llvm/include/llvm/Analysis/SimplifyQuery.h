@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 
@@ -68,11 +69,15 @@ struct CondContext {
 };
 
 struct SimplifyQuery {
+private:
+  const Function *CtxF = nullptr;
+
+public:
   const DataLayout &DL;
   const TargetLibraryInfo *TLI = nullptr;
   const DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
-  const Instruction *CxtI = nullptr;
+  const Instruction *CtxI = nullptr;
   const DomConditionCache *DC = nullptr;
   const CondContext *CC = nullptr;
 
@@ -85,39 +90,57 @@ struct SimplifyQuery {
   /// possible values for uses of undef. If it is false, simplifications are not
   /// allowed to assume a particular value for a use of undef for example.
   bool CanUseUndef = true;
+  bool AllowEphemerals = false;
 
-  SimplifyQuery(const DataLayout &DL, const Instruction *CXTI = nullptr)
-      : DL(DL), CxtI(CXTI) {}
+  SimplifyQuery(const DataLayout &DL, const Instruction *CtxI = nullptr)
+      : DL(DL), CtxI(CtxI) {}
 
   SimplifyQuery(const DataLayout &DL, const TargetLibraryInfo *TLI,
                 const DominatorTree *DT = nullptr,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                const Instruction *CtxI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true, const DomConditionCache *DC = nullptr)
-      : DL(DL), TLI(TLI), DT(DT), AC(AC), CxtI(CXTI), DC(DC), IIQ(UseInstrInfo),
+      : DL(DL), TLI(TLI), DT(DT), AC(AC), CtxI(CtxI), DC(DC), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
   SimplifyQuery(const DataLayout &DL, const DominatorTree *DT,
                 AssumptionCache *AC = nullptr,
-                const Instruction *CXTI = nullptr, bool UseInstrInfo = true,
+                const Instruction *CtxI = nullptr, bool UseInstrInfo = true,
                 bool CanUseUndef = true)
-      : DL(DL), DT(DT), AC(AC), CxtI(CXTI), IIQ(UseInstrInfo),
+      : DL(DL), DT(DT), AC(AC), CtxI(CtxI), IIQ(UseInstrInfo),
         CanUseUndef(CanUseUndef) {}
 
   SimplifyQuery getWithInstruction(const Instruction *I) const {
     SimplifyQuery Copy(*this);
-    Copy.CxtI = I;
+    Copy.CtxI = I;
     return Copy;
+  }
+  SimplifyQuery getWithFunction(const Function *F) const {
+    SimplifyQuery Copy(*this);
+    Copy.CtxF = F;
+    return Copy;
+  }
+  const Function *getFunction() const {
+    if (CtxF)
+      return CtxF;
+    if (CtxI)
+      return CtxI->getFunction();
+    return nullptr;
   }
   SimplifyQuery getWithoutUndef() const {
     SimplifyQuery Copy(*this);
     Copy.CanUseUndef = false;
     return Copy;
   }
+  SimplifyQuery allowEphemerals(bool AllowEphemerals) const {
+    SimplifyQuery Copy(*this);
+    Copy.AllowEphemerals = AllowEphemerals;
+    return Copy;
+  }
 
   /// If CanUseUndef is true, returns whether \p V is undef.
   /// Otherwise always return false.
-  bool isUndefValue(Value *V) const;
+  LLVM_ABI bool isUndefValue(Value *V) const;
 
   SimplifyQuery getWithoutDomCondCache() const {
     SimplifyQuery Copy(*this);

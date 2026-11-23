@@ -48,6 +48,34 @@ TEST_F(DefineInlineTest, TriggersOnFunctionDecl) {
   // Definition with no body.
   class Bar { Bar() = def^ault; };
   )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // Redeclaration after the definition.
+  void foo() {
+    return;
+  }
+  void f^oo();
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is already a definition.
+  void foo() {
+    return;
+  }
+  void f^oo() {
+    return;
+  }
+  )cpp");
+
+  EXPECT_UNAVAILABLE(R"cpp(
+  // error-ok
+  // Target is deleted.
+  void foo() = delete;
+  void f^oo() {
+    return;
+  }
+  )cpp");
 }
 
 TEST_F(DefineInlineTest, NoForwardDecl) {
@@ -935,10 +963,11 @@ TEST_F(DefineInlineTest, AddInline) {
   // Check we put inline before cv-qualifiers.
   ExtraFiles["a.h"] = "const int foo();";
   apply(R"cpp(#include "a.h"
-              const int fo^o() {})cpp",
+              const int fo^o() { return 0; })cpp",
         &EditedFiles);
-  EXPECT_THAT(EditedFiles, testing::ElementsAre(FileWithContents(
-                               testPath("a.h"), "inline const int foo(){}")));
+  EXPECT_THAT(EditedFiles,
+              testing::ElementsAre(FileWithContents(
+                  testPath("a.h"), "inline const int foo(){ return 0; }")));
 
   // No double inline.
   ExtraFiles["a.h"] = "inline void foo();";

@@ -154,8 +154,10 @@ SPECIALIZE_UTT(is_unbounded_array);     // expected-error 2 {{cannot be speciali
 #  endif
 
 #  if TEST_STD_VER >= 23
-SPECIALIZE_UTT(is_implicit_lifetime); // expected-error 2 {{cannot be specialized}}
-SPECIALIZE_UTT(is_scoped_enum);       // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_UTT(is_implicit_lifetime);                // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_UTT(is_scoped_enum);                      // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(reference_constructs_from_temporary); // expected-error 2 {{cannot be specialized}}
+SPECIALIZE_BTT(reference_converts_from_temporary);   // expected-error 2 {{cannot be specialized}}
 #  endif
 
 #  if TEST_STD_VER >= 26
@@ -177,8 +179,15 @@ struct std::conditional<true, S, S>; // expected-error {{cannot be specialized}}
 template <>
 struct std::enable_if<true, S>; // expected-error {{cannot be specialized}}
 
-#if TEST_STD_VER >= 20
+#  if TEST_STD_VER >= 20
 template <>
 struct std::integral_constant<S, {}>; // expected-error {{cannot be specialized}}
-#endif
+
+template <>
+struct std::common_reference<S>; // expected-error {{cannot be specialized}}
+template <>
+struct std::common_reference<S, S>; // expected-error {{cannot be specialized}}
+template <>
+struct std::common_reference<S, S, S>; // expected-error {{cannot be specialized}}
+#  endif
 #endif

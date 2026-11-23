@@ -4,7 +4,7 @@
 
 
 // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix A
-__attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20.0)))
+__attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=30.0)))
 @interface A
 // A-LABEL: "!testLabel": "c:objc(cs)A"
 // A:      "availability": [
@@ -21,7 +21,7 @@ __attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20
 // A-NEXT:       "patch": 0
 // A-NEXT:     }
 // A-NEXT:     "obsoleted": {
-// A-NEXT:       "major": 20,
+// A-NEXT:       "major": 30,
 // A-NEXT:       "minor": 0,
 // A-NEXT:       "patch": 0
 // A-NEXT:     }
@@ -45,7 +45,7 @@ __attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20
 // CP-NEXT:       "patch": 0
 // CP-NEXT:     }
 // CP-NEXT:     "obsoleted": {
-// CP-NEXT:       "major": 20,
+// CP-NEXT:       "major": 30,
 // CP-NEXT:       "minor": 0,
 // CP-NEXT:       "patch": 0
 // CP-NEXT:     }
@@ -69,7 +69,7 @@ __attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20
 // IP-NEXT:       "patch": 0
 // IP-NEXT:     }
 // IP-NEXT:     "obsoleted": {
-// IP-NEXT:       "major": 20,
+// IP-NEXT:       "major": 30,
 // IP-NEXT:       "minor": 0,
 // IP-NEXT:       "patch": 0
 // IP-NEXT:     }
@@ -77,7 +77,7 @@ __attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20
 // IP-NEXT: ]
 
 // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix MR
-@property int moreRestrictive __attribute__((availability(macos, introduced=10.0, deprecated=11.0, obsoleted=19.0)));
+@property int moreRestrictive __attribute__((availability(macos, introduced=10.0, deprecated=11.0, obsoleted=29.0)));
 // MR-LABEL: "!testLabel": "c:objc(cs)A(py)moreRestrictive"
 // MR:      "availability": [
 // MR-NEXT:   {
@@ -93,7 +93,7 @@ __attribute__((availability(macos, introduced=9.0, deprecated=12.0, obsoleted=20
 // MR-NEXT:       "patch": 0
 // MR-NEXT:     }
 // MR-NEXT:     "obsoleted": {
-// MR-NEXT:       "major": 19,
+// MR-NEXT:       "major": 29,
 // MR-NEXT:       "minor": 0,
 // MR-NEXT:       "patch": 0
 // MR-NEXT:     }
@@ -148,7 +148,7 @@ __attribute__((availability(macos, unavailable)))
 
 @interface D
 // RUN: FileCheck %s --input-file %t/output.symbols.json --check-prefix DIP
-@property int DIP __attribute__((availability(macos, introduced=10.0, deprecated=11.0, obsoleted=19.0)));
+@property int DIP __attribute__((availability(macos, introduced=10.0, deprecated=11.0, obsoleted=29.0)));
 // DIP-LABEL: "!testLabel": "c:objc(cs)D(py)DIP"
 // DIP:      "availability": [
 // DIP-NEXT:   {
@@ -164,7 +164,7 @@ __attribute__((availability(macos, unavailable)))
 // DIP-NEXT:       "patch": 0
 // DIP-NEXT:     }
 // DIP-NEXT:     "obsoleted": {
-// DIP-NEXT:       "major": 19,
+// DIP-NEXT:       "major": 29,
 // DIP-NEXT:       "minor": 0,
 // DIP-NEXT:       "patch": 0
 // DIP-NEXT:     }

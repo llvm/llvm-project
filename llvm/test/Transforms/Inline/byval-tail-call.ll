@@ -22,11 +22,11 @@ define void @bar(ptr byval(i32) %x) {
 define void @foo(ptr %x) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    [[X1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[X1]], align 4
 ; CHECK-NEXT:    call void @ext(ptr nonnull [[X1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    ret void
 ;
   call void @bar(ptr byval(i32) %x)
@@ -42,12 +42,12 @@ define internal void @qux(ptr byval(i32) %x) {
 define void @frob(ptr %x) {
 ; CHECK-LABEL: @frob(
 ; CHECK-NEXT:    [[X1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[X1]], align 4
 ; CHECK-NEXT:    call void @ext(ptr nonnull [[X1]])
 ; CHECK-NEXT:    tail call void @ext(ptr null)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @qux(ptr byval(i32) %x)
@@ -71,11 +71,11 @@ define void @bar2(ptr byval(i32) %x) {
 define void @foobar(ptr %x) {
 ; CHECK-LABEL: @foobar(
 ; CHECK-NEXT:    [[X1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr [[X:%.*]], align 1
 ; CHECK-NEXT:    store i32 [[TMP2]], ptr [[X1]], align 4
 ; CHECK-NEXT:    tail call void @ext2(ptr nonnull byval(i32) [[X1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    ret void
 ;
   tail call void @bar2(ptr byval(i32) %x)
@@ -85,9 +85,9 @@ define void @foobar(ptr %x) {
 define void @barfoo() {
 ; CHECK-LABEL: @barfoo(
 ; CHECK-NEXT:    [[X1:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    tail call void @ext2(ptr nonnull byval(i32) [[X1]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[X1]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[X1]])
 ; CHECK-NEXT:    ret void
 ;
   %x = alloca i32

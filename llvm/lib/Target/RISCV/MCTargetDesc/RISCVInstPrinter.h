@@ -13,16 +13,18 @@
 #ifndef LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVINSTPRINTER_H
 
+#include "MCTargetDesc/RISCVMCOptions.h"
 #include "MCTargetDesc/RISCVMCTargetDesc.h"
 #include "llvm/MC/MCInstPrinter.h"
 
 namespace llvm {
 
 class RISCVInstPrinter : public MCInstPrinter {
+  const RISCVMCOptions &CLOpts;
+
 public:
   RISCVInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                   const MCRegisterInfo &MRI)
-      : MCInstPrinter(MAI, MII, MRI) {}
+                   const MCRegisterInfo &MRI);
 
   bool applyTargetSpecificCLOption(StringRef Opt) override;
 
@@ -31,12 +33,14 @@ public:
   void printRegName(raw_ostream &O, MCRegister Reg) override;
 
   void printOperand(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                    raw_ostream &O, const char *Modifier = nullptr);
+                    raw_ostream &O);
   void printBranchOperand(const MCInst *MI, uint64_t Address, unsigned OpNo,
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printCSRSystemRegister(const MCInst *MI, unsigned OpNo,
                               const MCSubtargetInfo &STI, raw_ostream &O);
   void printFenceArg(const MCInst *MI, unsigned OpNo,
+                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printSMTVType(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
   void printFRMArg(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
@@ -48,10 +52,18 @@ public:
                             const MCSubtargetInfo &STI, raw_ostream &O);
   void printVTypeI(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
                    raw_ostream &O);
+  void printXSfmmVType(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
   void printVMaskReg(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O);
-  void printRlist(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
-                  raw_ostream &O);
+  void printVScaleReg(const MCInst *MI, unsigned OpNo,
+                      const MCSubtargetInfo &STI, raw_ostream &O);
+  void printTileLambda(const MCInst *MI, unsigned OpNo,
+                       const MCSubtargetInfo &STI, raw_ostream &O);
+  void printImm(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                raw_ostream &O);
+  void printRegList(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                    raw_ostream &O);
   void printStackAdj(const MCInst *MI, unsigned OpNo,
                      const MCSubtargetInfo &STI, raw_ostream &O,
                      bool Negate = false);
@@ -71,7 +83,8 @@ public:
   void printCustomAliasOperand(const MCInst *MI, uint64_t Address,
                                unsigned OpIdx, unsigned PrintMethodIdx,
                                const MCSubtargetInfo &STI, raw_ostream &O);
-  static const char *getRegisterName(MCRegister Reg);
+  static const char *getRegisterName(const RISCVMCOptions &CLOpts,
+                                     MCRegister Reg);
   static const char *getRegisterName(MCRegister Reg, unsigned AltIdx);
 };
 } // namespace llvm

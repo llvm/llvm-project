@@ -62,3 +62,8 @@ void placement_new_ptr(void *buf, C *old) {
   C **p = new (buf) C*(old) + 1;
   // CHECK-MESSAGES-NOT: :[[@LINE-1]]:11: warning: arithmetic operation is applied to the result of operator new() instead of its size-like argument
 }
+
+void default_ctor() {
+  struct S {};
+  S *P = new S + 1;
+}

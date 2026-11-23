@@ -99,6 +99,12 @@ namespace llvm {
       return "";
     }
 
+    /// Return the opcode from its SelectionDAG or machine-opcode domain.
+    static unsigned getRawNodeOpcode(const SDNode *Node) {
+      if (Node->isMachineOpcode())
+        return Node->getMachineOpcode();
+      return Node->getOpcode();
+    }
 
     static std::string getSimpleNodeLabel(const SDNode *Node,
                                           const SelectionDAG *G) {
@@ -109,27 +115,33 @@ namespace llvm {
       }
       return Result;
     }
+
     std::string getNodeLabel(const SDNode *Node, const SelectionDAG *Graph);
     static std::string getNodeAttributes(const SDNode *N,
                                          const SelectionDAG *Graph) {
+      const std::string OpcodeAttrs =
+          std::string("llvm_opcode=\"") + utostr(getRawNodeOpcode(N)) +
+          "\",llvm_is_machine_opcode=\"" +
+          (N->isMachineOpcode() ? "true\"" : "false\"");
+
 #ifndef NDEBUG
       const std::string &Attrs = Graph->getGraphAttrs(N);
       if (!Attrs.empty()) {
         if (Attrs.find("shape=") == std::string::npos)
-          return std::string("shape=Mrecord,") + Attrs;
+          return std::string("shape=Mrecord,") + OpcodeAttrs + "," + Attrs;
         else
-          return Attrs;
+          return Attrs + "," + OpcodeAttrs;
       }
 #endif
-      return "shape=Mrecord";
+      return std::string("shape=Mrecord,") + OpcodeAttrs;
     }
 
     static void addCustomGraphFeatures(SelectionDAG *G,
-                                       GraphWriter<SelectionDAG*> &GW) {
+                                       GraphWriter<SelectionDAG *> &GW) {
       GW.emitSimpleNode(nullptr, "plaintext=circle", "GraphRoot");
       if (G->getRoot().getNode())
-        GW.emitEdge(nullptr, -1, G->getRoot().getNode(), G->getRoot().getResNo(),
-                    "color=blue,style=dashed");
+        GW.emitEdge(nullptr, -1, G->getRoot().getNode(),
+                    G->getRoot().getResNo(), "color=blue,style=dashed");
     }
   };
 }
@@ -281,10 +293,11 @@ void SelectionDAG::setSubgraphColor(SDNode *N, const char *Color) {
 #endif
 }
 
+#if !defined(NDEBUG) && LLVM_ENABLE_ABI_BREAKING_CHECKS
 std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   std::string s;
   raw_string_ostream O(s);
-  O << "SU(" << SU->NodeNum << "): ";
+  O << *SU << ": ";
   if (SU->getNode()) {
     SmallVector<SDNode *, 4> GluedNodes;
     for (SDNode *N = SU->getNode(); N; N = N->getGluedNode())
@@ -301,6 +314,7 @@ std::string ScheduleDAGSDNodes::getGraphNodeLabel(const SUnit *SU) const {
   }
   return s;
 }
+#endif
 
 void ScheduleDAGSDNodes::getCustomGraphFeatures(GraphWriter<ScheduleDAG*> &GW) const {
   if (DAG) {

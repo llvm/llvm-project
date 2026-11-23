@@ -85,3 +85,14 @@ func.func @no_expansion(%x: f32) -> f32 {
   %y = arith.addf %x, %c : f32
   func.return %y : f32
 }
+
+// -----
+
+func.func @no_promote_select(%c: i1, %x: bf16, %y: bf16) -> bf16 {
+// CHECK-LABEL: @no_promote_select
+// CHECK-SAME: (%[[C:.+]]: i1, %[[X:.+]]: bf16, %[[Y:.+]]: bf16)
+// CHECK: %[[Z:.+]] = arith.select %[[C]], %[[X]], %[[Y]] : bf16
+// CHECK: return %[[Z]]
+  %z = arith.select %c, %x, %y : bf16
+  func.return %z : bf16
+}

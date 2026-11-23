@@ -20,7 +20,6 @@
 #  include <__support/ibm/gettod_zos.h> // gettimeofdayMonotonic
 #endif
 
-#include "include/apple_availability.h"
 #include <time.h> // clock_gettime and CLOCK_{MONOTONIC,REALTIME,MONOTONIC_RAW}
 
 #if __has_include(<unistd.h>)
@@ -31,7 +30,7 @@
 #  include <sys/time.h> // for gettimeofday and timeval
 #endif
 
-#if defined(__LLVM_LIBC__)
+#if _LIBCPP_LIBC_LLVM_LIBC
 #  define _LIBCPP_HAS_TIMESPEC_GET
 #endif
 
@@ -42,14 +41,14 @@
 #  define _LIBCPP_HAS_CLOCK_GETTIME
 #endif
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 #  define WIN32_LEAN_AND_MEAN
 #  define VC_EXTRA_LEAN
 #  include <windows.h>
 #  if _WIN32_WINNT >= _WIN32_WINNT_WIN8
 #    include <winapifamily.h>
 #  endif
-#endif // defined(_LIBCPP_WIN32API)
+#endif // _WIN32
 
 #if defined(__Fuchsia__)
 #  include <zircon/syscalls.h>
@@ -64,6 +63,7 @@
 #endif
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 
 namespace chrono {
 
@@ -71,7 +71,7 @@ namespace chrono {
 // system_clock
 //
 
-#if defined(_LIBCPP_WIN32API)
+#ifdef _WIN32
 
 #  if _WIN32_WINNT < _WIN32_WINNT_WIN8
 
@@ -124,7 +124,7 @@ static system_clock::time_point __libcpp_system_clock_now() {
 static system_clock::time_point __libcpp_system_clock_now() {
   struct timespec ts;
   if (timespec_get(&ts, TIME_UTC) != TIME_UTC)
-    __throw_system_error(errno, "timespec_get(TIME_UTC) failed");
+    std::__throw_system_error(errno, "timespec_get(TIME_UTC) failed");
   return system_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
 }
 
@@ -133,7 +133,7 @@ static system_clock::time_point __libcpp_system_clock_now() {
 static system_clock::time_point __libcpp_system_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_REALTIME, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_REALTIME) failed");
   return system_clock::time_point(seconds(tp.tv_sec) + microseconds(tp.tv_nsec / 1000));
 }
 
@@ -180,11 +180,11 @@ system_clock::time_point system_clock::from_time_t(time_t t) noexcept { return s
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_MONOTONIC_RAW, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC_RAW) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC_RAW) failed");
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
-#  elif defined(_LIBCPP_WIN32API)
+#  elif defined(_WIN32)
 
 // https://msdn.microsoft.com/en-us/library/windows/desktop/ms644905(v=vs.85).aspx says:
 //    If the function fails, the return value is zero. <snip>
@@ -213,7 +213,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec64 ts;
   if (0 != gettimeofdayMonotonic(&ts))
-    __throw_system_error(errno, "failed to obtain time of day");
+    std::__throw_system_error(errno, "failed to obtain time of day");
 
   return steady_clock::time_point(seconds(ts.tv_sec) + nanoseconds(ts.tv_nsec));
 }
@@ -234,7 +234,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() noexcept {
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec ts;
   if (timespec_get(&ts, TIME_MONOTONIC) != TIME_MONOTONIC)
-    __throw_system_error(errno, "timespec_get(TIME_MONOTONIC) failed");
+    std::__throw_system_error(errno, "timespec_get(TIME_MONOTONIC) failed");
   return steady_clock::time_point(seconds(ts.tv_sec) + microseconds(ts.tv_nsec / 1000));
 }
 
@@ -243,7 +243,7 @@ static steady_clock::time_point __libcpp_steady_clock_now() {
 static steady_clock::time_point __libcpp_steady_clock_now() {
   struct timespec tp;
   if (0 != clock_gettime(CLOCK_MONOTONIC, &tp))
-    __throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
+    std::__throw_system_error(errno, "clock_gettime(CLOCK_MONOTONIC) failed");
   return steady_clock::time_point(seconds(tp.tv_sec) + nanoseconds(tp.tv_nsec));
 }
 
@@ -262,4 +262,5 @@ steady_clock::time_point steady_clock::now() noexcept { return __libcpp_steady_c
 
 } // namespace chrono
 
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_END_NAMESPACE_STD

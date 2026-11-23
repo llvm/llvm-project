@@ -17,8 +17,8 @@ check to remove deprecated names.
 The affected APIs are:
 
 - Member functions of ``testing::Test``, ``testing::TestInfo``,
-  ``testing::TestEventListener``, ``testing::UnitTest``, and any type inheriting
-  from these types
+  ``testing::TestEventListener``, ``testing::UnitTest``, and any type
+  inheriting from these types
 - The macros ``TYPED_TEST_CASE``, ``TYPED_TEST_CASE_P``,
   ``REGISTER_TYPED_TEST_CASE_P``, and ``INSTANTIATE_TYPED_TEST_CASE_P``
 - The type alias ``testing::TestCase``

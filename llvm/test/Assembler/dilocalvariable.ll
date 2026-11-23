@@ -3,13 +3,13 @@
 
 @foo = global i32 0
 
-; CHECK: !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
+; CHECK: !named = !{!0, !3, !4, !5, !6, !7, !8, !9, !10, !11}
 !named = !{!0, !1, !2, !3, !4, !5, !6, !7, !8, !9}
 
 !llvm.module.flags = !{!10}
 !llvm.dbg.cu = !{!1}
 
-!0 = distinct !DISubprogram(unit: !1)
+!0 = distinct !DISubprogram(unit: !1, type: !11)
 !1 = distinct !DICompileUnit(language: DW_LANG_C99, producer: "clang",
                              file: !2,
                              isOptimized: true, flags: "-O2",
@@ -18,18 +18,20 @@
 !3 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !4 = !DILocation(scope: !0)
 
-; CHECK: !5 = !DILocalVariable(name: "foo", arg: 3, scope: !0, file: !2, line: 7, type: !3, flags: DIFlagArtificial, align: 32)
-; CHECK: !6 = !DILocalVariable(name: "foo", scope: !0, file: !2, line: 7, type: !3, flags: DIFlagArtificial)
+; CHECK: !7 = !DILocalVariable(name: "foo", arg: 3, scope: !0, file: !4, line: 7, type: !5, flags: DIFlagArtificial, align: 32)
+; CHECK: !8 = !DILocalVariable(name: "foo", scope: !0, file: !4, line: 7, type: !5, flags: DIFlagArtificial)
 !5 = !DILocalVariable(name: "foo", arg: 3,
                       scope: !0, file: !2, line: 7, type: !3,
                       flags: DIFlagArtificial, align: 32)
 !6 = !DILocalVariable(name: "foo", scope: !0,
                       file: !2, line: 7, type: !3, flags: DIFlagArtificial)
 
-; CHECK: !7 = !DILocalVariable(arg: 1, scope: !0)
-; CHECK: !8 = !DILocalVariable(scope: !0)
+; CHECK: !9 = !DILocalVariable(arg: 1, scope: !0)
+; CHECK: !10 = !DILocalVariable(scope: !0)
 !7 = !DILocalVariable(scope: !0, arg: 1)
 !8 = !DILocalVariable(scope: !0)
 !9 = distinct !{}
 
 !10 = !{i32 2, !"Debug Info Version", i32 3}
+!11 = !DISubroutineType(types: !12)
+!12 = !{null}

@@ -165,10 +165,9 @@ define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_pow2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.4s, #15
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmtst v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    bic v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>

@@ -65,7 +65,9 @@ void MultiAffineFunction::print(raw_ostream &os) const {
   output.print(os);
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void MultiAffineFunction::dump() const { print(llvm::errs()); }
+#endif
 
 SmallVector<DynamicAPInt, 8>
 MultiAffineFunction::valueAt(ArrayRef<DynamicAPInt> point) const {
@@ -143,7 +145,7 @@ void MultiAffineFunction::mergeDivs(MultiAffineFunction &other) {
   SmallVector<DynamicAPInt, 8> div(other.divs.getNumVars() + 1);
   for (unsigned i = 0; i < nDivs; ++i) {
     // Zero fill.
-    std::fill(div.begin(), div.end(), 0);
+    llvm::fill(div, 0);
     // Fill div with dividend from `divs`. Do not fill the constant.
     std::copy(divs.getDividend(i).begin(), divs.getDividend(i).end() - 1,
               div.begin());
@@ -311,7 +313,9 @@ void PWMAFunction::print(raw_ostream &os) const {
   }
 }
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void PWMAFunction::dump() const { print(llvm::errs()); }
+#endif
 
 PWMAFunction PWMAFunction::unionFunction(
     const PWMAFunction &func,
@@ -337,6 +341,9 @@ PWMAFunction PWMAFunction::unionFunction(
     PresburgerSet dom(pieceA.domain);
     for (const Piece &pieceB : func.pieces) {
       PresburgerSet better = tiebreak(pieceB, pieceA);
+      if (better.isIntegerEmpty())
+        continue;
+
       // Add the output of pieceB, where it is better than output of pieceA.
       // The disjuncts in "better" will be disjoint as tiebreak should gurantee
       // that.

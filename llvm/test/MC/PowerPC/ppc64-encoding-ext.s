@@ -3491,12 +3491,18 @@
 # CHECK-BE: mfamr 2                         # encoding: [0x7c,0x5d,0x02,0xa6]
 # CHECK-LE: mfamr 2                         # encoding: [0xa6,0x02,0x5d,0x7c]
             mfamr 2
-# CHECK-BE: mtpid 2                         # encoding: [0x7c,0x50,0x0b,0xa6]
-# CHECK-LE: mtpid 2                         # encoding: [0xa6,0x0b,0x50,0x7c]
+# CHECK-BE: mtspr 48, 2                     # encoding: [0x7c,0x50,0x0b,0xa6]
+# CHECK-LE: mtspr 48, 2                     # encoding: [0xa6,0x0b,0x50,0x7c]
             mtpid 2
-# CHECK-BE: mfpid 2                         # encoding: [0x7c,0x50,0x0a,0xa6]
-# CHECK-LE: mfpid 2                         # encoding: [0xa6,0x0a,0x50,0x7c]
+# CHECK-BE: mtspr 48, 2                     # encoding: [0x7c,0x50,0x0b,0xa6]
+# CHECK-LE: mtspr 48, 2                     # encoding: [0xa6,0x0b,0x50,0x7c]
+            mtpidr 2
+# CHECK-BE: mfspr 2, 48                     # encoding: [0x7c,0x50,0x0a,0xa6]
+# CHECK-LE: mfspr 2, 48                     # encoding: [0xa6,0x0a,0x50,0x7c]
             mfpid 2
+# CHECK-BE: mfspr 2, 48                     # encoding: [0x7c,0x50,0x0a,0xa6]
+# CHECK-LE: mfspr 2, 48                     # encoding: [0xa6,0x0a,0x50,0x7c]
+            mfpidr 2
 # CHECK-BE: mtlr 2                          # encoding: [0x7c,0x48,0x03,0xa6]
 # CHECK-LE: mtlr 2                          # encoding: [0xa6,0x03,0x48,0x7c]
             mtlr 2

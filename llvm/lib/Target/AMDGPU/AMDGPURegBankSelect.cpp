@@ -20,24 +20,24 @@
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineUniformityAnalysis.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/InitializePasses.h"
 
-#define DEBUG_TYPE "amdgpu-regbankselect"
+#define DEBUG_TYPE "amdgpu-reg-bank-select"
 
 using namespace llvm;
 using namespace AMDGPU;
 
 namespace {
 
-class AMDGPURegBankSelect : public MachineFunctionPass {
+class AMDGPURegBankSelectLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPURegBankSelect() : MachineFunctionPass(ID) {
-    initializeAMDGPURegBankSelectPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPURegBankSelectLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -55,27 +55,26 @@ public:
   // This pass assigns register banks to all virtual registers, and we maintain
   // this property in subsequent passes
   MachineFunctionProperties getSetProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    return MachineFunctionProperties().setRegBankSelected();
   }
 };
 
 } // End anonymous namespace.
 
-INITIALIZE_PASS_BEGIN(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                       "AMDGPU Register Bank Select", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelCSEAnalysisWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineUniformityAnalysisPass)
-INITIALIZE_PASS_END(AMDGPURegBankSelect, DEBUG_TYPE,
+INITIALIZE_PASS_END(AMDGPURegBankSelectLegacy, DEBUG_TYPE,
                     "AMDGPU Register Bank Select", false, false)
 
-char AMDGPURegBankSelect::ID = 0;
+char AMDGPURegBankSelectLegacy::ID = 0;
 
-char &llvm::AMDGPURegBankSelectID = AMDGPURegBankSelect::ID;
+char &llvm::AMDGPURegBankSelectLegacyID = AMDGPURegBankSelectLegacy::ID;
 
-FunctionPass *llvm::createAMDGPURegBankSelectPass() {
-  return new AMDGPURegBankSelect();
+FunctionPass *llvm::createAMDGPURegBankSelectLegacyPass() {
+  return new AMDGPURegBankSelectLegacy();
 }
 
 class RegBankSelectHelper {
@@ -83,6 +82,7 @@ class RegBankSelectHelper {
   MachineRegisterInfo &MRI;
   AMDGPU::IntrinsicLaneMaskAnalyzer &ILMA;
   const MachineUniformityInfo &MUI;
+  const SIRegisterInfo &TRI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
   const RegisterBank *VccRB;
@@ -91,14 +91,29 @@ public:
   RegBankSelectHelper(MachineIRBuilder &B,
                       AMDGPU::IntrinsicLaneMaskAnalyzer &ILMA,
                       const MachineUniformityInfo &MUI,
-                      const RegisterBankInfo &RBI)
-      : B(B), MRI(*B.getMRI()), ILMA(ILMA), MUI(MUI),
+                      const SIRegisterInfo &TRI, const RegisterBankInfo &RBI)
+      : B(B), MRI(*B.getMRI()), ILMA(ILMA), MUI(MUI), TRI(TRI),
         SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
         VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
         VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
+  // Temporal divergence copy: COPY to vgpr with implicit use of $exec inside of
+  // the cycle
+  // Note: uniformity analysis does not consider that registers with vgpr def
+  // are divergent (you can have uniform value in vgpr).
+  // - TODO: implicit use of $exec could be implemented as indicator that
+  //   instruction is divergent
+  bool isTemporalDivergenceCopy(Register Reg) {
+    MachineInstr *MI = MRI.getVRegDef(Reg);
+    if (!MI->isCopy() || MI->getNumImplicitOperands() != 1)
+      return false;
+
+    return MI->implicit_operands().begin()->getReg() == TRI.getExec();
+  }
+
   const RegisterBank *getRegBankToAssign(Register Reg) {
-    if (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg))
+    if (!isTemporalDivergenceCopy(Reg) &&
+        (MUI.isUniformAtDef(Reg) || ILMA.isS32S64LaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;
@@ -184,16 +199,16 @@ static Register getVReg(MachineOperand &Op) {
   return Reg;
 }
 
-bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+static bool
+runRegBankSelect(MachineFunction &MF, function_ref<GISelCSEInfo *()> GetCSEInfo,
+                 function_ref<const MachineUniformityInfo *()> GetMUI) {
+  if (MF.getProperties().hasFailedISel())
     return false;
 
+  GISelCSEInfo &CSEInfo = *GetCSEInfo();
+  const MachineUniformityInfo &MUI = *GetMUI();
+
   // Setup the instruction builder with CSE.
-  const TargetPassConfig &TPC = getAnalysis<TargetPassConfig>();
-  GISelCSEAnalysisWrapper &Wrapper =
-      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-  GISelCSEInfo &CSEInfo = Wrapper.get(TPC.getCSEConfig());
   GISelObserverWrapper Observer;
   Observer.addObserver(&CSEInfo);
 
@@ -205,11 +220,10 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   RAIIMFObserverInstaller MFObserverInstaller(MF, Observer);
 
   IntrinsicLaneMaskAnalyzer ILMA(MF);
-  MachineUniformityInfo &MUI =
-      getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
   MachineRegisterInfo &MRI = *B.getMRI();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegBankInfo());
+  RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegisterInfo(),
+                                *ST.getRegBankInfo());
   // Virtual registers at this point don't have register banks.
   // Virtual registers in def and use operands of already inst-selected
   // instruction have register class.
@@ -275,4 +289,31 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
   }
 
   return true;
+}
+
+bool AMDGPURegBankSelectLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return runRegBankSelect(
+      MF,
+      [&]() {
+        GISelCSEAnalysisWrapper &Wrapper =
+            getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+        return &Wrapper.get(getAnalysis<TargetPassConfig>().getCSEConfig());
+      },
+      [&]() {
+        return &getAnalysis<MachineUniformityAnalysisPass>()
+                    .getUniformityInfo();
+      });
+}
+
+PreservedAnalyses
+AMDGPURegBankSelectPass::run(MachineFunction &MF,
+                             MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  if (!runRegBankSelect(
+          MF, [&]() { return MFAM.getResult<GISelCSEAnalysis>(MF).get(); },
+          [&]() { return &MFAM.getResult<MachineUniformityAnalysis>(MF); }))
+    return PreservedAnalyses::all();
+
+  return getMachineFunctionPassPreservedAnalyses();
 }

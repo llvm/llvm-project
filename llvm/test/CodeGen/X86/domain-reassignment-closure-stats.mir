@@ -1,0 +1,71 @@
+# REQUIRES: asserts
+# RUN: llc -run-pass x86-domain-reassignment -mtriple=x86_64-unknown-unknown \
+# RUN:   -mattr=+avx512f,+avx512bw,+avx512dq -stats %s -o /dev/null 2>&1 \
+# RUN:   | FileCheck %s
+
+# Regression test for buildClosure recording the seed register instead of the
+# register actually added to the closure. Before the fix EnclosedEdges only ever
+# held the seed of each closure, so every other member of an already-built
+# closure looked like a fresh seed and a redundant closure was built for it and
+# immediately discarded. The generated code is identical either way (the
+# converted-closure count is unaffected); only the amount of redundant work
+# changes. For test_8bitops the closure has eight members: buggy builds 12
+# closures, the fix builds 2. The number of converted closures stays at 1.
+
+# The leading {{^ *}} anchor prevents a stale "12" count from matching "2".
+# CHECK-DAG: {{^ *}}2 x86-domain-reassignment - Number of closures built by the pass
+# CHECK-DAG: {{^ *}}1 x86-domain-reassignment - Number of closures converted by the pass
+
+--- |
+  target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+  target triple = "x86_64-unknown-unknown"
+
+  define void @test_8bitops() #0 {
+    ret void
+  }
+
+  attributes #0 = { "target-cpu"="skylake-avx512" }
+...
+---
+name:            test_8bitops
+alignment:       16
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+  - { reg: '$zmm0', virtual-reg: '%1' }
+  - { reg: '$zmm1', virtual-reg: '%2' }
+  - { reg: '$zmm2', virtual-reg: '%3' }
+  - { reg: '$zmm3', virtual-reg: '%4' }
+body:             |
+  bb.0:
+    liveins: $rdi, $zmm0, $zmm1, $zmm2, $zmm3
+
+    %0:gr64 = COPY $rdi
+    %1:vr512 = COPY $zmm0
+    %2:vr512 = COPY $zmm1
+    %3:vr512 = COPY $zmm2
+    %4:vr512 = COPY $zmm3
+
+    %5:vk8 = VCMPPDZrri %3, %4, 0, implicit $mxcsr
+    %6:gr32 = COPY %5
+    %7:gr8 = COPY %6.sub_8bit
+
+    %12:gr8 = SHR8ri %7, 2, implicit-def dead $eflags
+    %13:gr8 = SHL8ri %12, 1, implicit-def dead $eflags
+    %14:gr8 = NOT8r %13
+    %15:gr8 = OR8rr %14, %12, implicit-def dead $eflags
+    %16:gr8 = AND8rr %15, %13, implicit-def dead $eflags
+    %17:gr8 = XOR8rr %16, %12, implicit-def dead $eflags
+    %18:gr8 = ADD8rr %17, %14, implicit-def dead $eflags
+
+    %8:gr32 = IMPLICIT_DEF
+    %9:gr32 = INSERT_SUBREG %8, %18, %subreg.sub_8bit_hi
+    %10:vk8wm = COPY %9
+    %11:vr512 = VMOVAPDZrrk %2, %10, %1
+    VMOVAPDZmr %0, 1, $noreg, 0, $noreg, %11
+
+  bb.1:
+
+  bb.2:
+    RET 0
+
+...

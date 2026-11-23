@@ -35,6 +35,7 @@ struct __from_chars_result {
   errc __ec;
 };
 
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 template <class _Fp>
 _LIBCPP_EXPORTED_FROM_ABI __from_chars_result<_Fp> __from_chars_floating_point(
     _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
@@ -44,22 +45,22 @@ extern template __from_chars_result<float> __from_chars_floating_point(
 
 extern template __from_chars_result<double> __from_chars_floating_point(
     _LIBCPP_NOESCAPE const char* __first, _LIBCPP_NOESCAPE const char* __last, chars_format __fmt);
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 template <class _Fp>
-_LIBCPP_HIDE_FROM_ABI from_chars_result
-__from_chars(const char* __first, const char* __last, _Fp& __value, chars_format __fmt) {
+from_chars_result __from_chars(const char* __first, const char* __last, _Fp& __value, chars_format __fmt) {
   __from_chars_result<_Fp> __r = std::__from_chars_floating_point<_Fp>(__first, __last, __fmt);
   if (__r.__ec != errc::invalid_argument)
     __value = __r.__value;
   return {__first + __r.__n, __r.__ec};
 }
 
-_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
+_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT inline from_chars_result
 from_chars(const char* __first, const char* __last, float& __value, chars_format __fmt = chars_format::general) {
   return std::__from_chars<float>(__first, __last, __value, __fmt);
 }
 
-_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT _LIBCPP_HIDE_FROM_ABI inline from_chars_result
+_LIBCPP_AVAILABILITY_FROM_CHARS_FLOATING_POINT inline from_chars_result
 from_chars(const char* __first, const char* __last, double& __value, chars_format __fmt = chars_format::general) {
   return std::__from_chars<double>(__first, __last, __value, __fmt);
 }

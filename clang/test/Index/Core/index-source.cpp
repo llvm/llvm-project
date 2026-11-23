@@ -23,10 +23,10 @@ class Cls { public:
 // CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | SubCls1 | [[SubCls1_USR]]
 class SubCls1 : public Cls {};
-// CHECK: [[@LINE+1]]:13 | type-alias/C | ClsAlias | [[ClsAlias_USR:.*]] | <no-cgname> | Def | rel: 0
+// CHECK: [[@LINE+1]]:13 | type-alias/using-class/C | ClsAlias | [[ClsAlias_USR:.*]] | <no-cgname> | Def | rel: 0
 typedef Cls ClsAlias;
 // CHECK: [[@LINE+5]]:7 | class/C++ | SubCls2 | [[SubCls2_USR:.*]] | <no-cgname> | Def | rel: 0
-// CHECK: [[@LINE+4]]:24 | type-alias/C | ClsAlias | [[ClsAlias_USR]] | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE+4]]:24 | type-alias/using-class/C | ClsAlias | [[ClsAlias_USR]] | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | SubCls2 | [[SubCls2_USR]]
 // CHECK: [[@LINE+2]]:24 | class/C++ | Cls | [[Cls_USR]] | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
 // CHECK-NEXT: RelBase,RelCont | SubCls2 | [[SubCls2_USR]]
@@ -525,9 +525,9 @@ struct Outer {
 
 template<>
 struct rd33122110::Outer::Nested<int>;
-// CHECK: [[@LINE-1]]:8 | namespace/C++ | rd33122110 | c:@N@rd33122110 | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-1]]:20 | struct/C++ | Outer | c:@N@rd33122110@S@Outer | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I
-// CHECK: [[@LINE-3]]:20 | struct/C++ | Outer | c:@N@rd33122110@S@Outer | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-3]]:8 | namespace/C++ | rd33122110 | c:@N@rd33122110 | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | Nested | c:@N@rd33122110@S@Outer@S@Nested>#I
 
 namespace index_offsetof {
@@ -570,3 +570,39 @@ class C : B<A> {};
 // CHECK: [[@LINE-1]]:13 | class/C++ | A | c:@N@clangd_issue_504@S@A | <no-cgname> | Ref,RelCont | rel: 1
 // CHECK-NEXT: RelCont | C | c:@N@clangd_issue_504@S@C
 } // namespace clangd_issue_504
+
+#define TRANSPARENT(_name) struct _name _name; struct _name
+namespace using_type {
+namespace ns1 {
+struct A {};
+typedef A T;
+typedef TRANSPARENT(TS) {};
+}
+namespace ns2 {
+using ns1::A;
+using ns1::T;
+using ns1::TS;
+}
+void foo() {
+  ns2::A a;
+// CHECK: [[@LINE-1]]:8 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | foo | c:@N@using_type@F@foo#
+  ns2::T t;
+// CHECK: [[@LINE-1]]:8 | type-alias/using-struct/C | T | c:index-source.cpp@N@using_type@N@ns1@T@T | <no-cgname> | Ref,RelCont | rel: 1
+}
+struct B : ns2::A {};
+// CHECK: [[@LINE-1]]:17 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | B | c:@N@using_type@S@B
+struct C : ns2::T {};
+// CHECK: [[@LINE-1]]:17 | type-alias/using-struct/C | T | c:index-source.cpp@N@using_type@N@ns1@T@T | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK: [[@LINE-2]]:17 | struct/C | A | c:@N@using_type@N@ns1@S@A | <no-cgname> | Ref,Impl,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | C | c:@N@using_type@S@C
+void bar() {
+  ns2::TS ts;
+// CHECK: [[@LINE-1]]:8 | struct/C | TS | c:@N@using_type@N@ns1@S@TS | <no-cgname> | Ref,RelCont | rel: 1
+// CHECK-NEXT: RelCont | bar | c:@N@using_type@F@bar#
+}
+struct D : ns2::TS {};
+// CHECK: [[@LINE-1]]:17 | struct/C | TS | c:@N@using_type@N@ns1@S@TS | <no-cgname> | Ref,RelBase,RelCont | rel: 1
+// CHECK-NEXT: RelBase,RelCont | D | c:@N@using_type@S@D
+} // namespace using_type

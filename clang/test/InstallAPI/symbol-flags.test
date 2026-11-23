@@ -33,6 +33,7 @@ extern void my_weak_func();
 
 ;--- flags.yaml
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x100000C

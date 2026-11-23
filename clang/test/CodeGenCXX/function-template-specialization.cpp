@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -emit-llvm -triple %itanium_abi_triple %s -o - | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -Wundefined-func-template -verify -triple %itanium_abi_triple %s -o - | FileCheck %s
+// expected-no-diagnostics
 
 // CHECK-DAG: _ZZN7PR219047GetDataIiEERKibE1i = internal global i32 4
 // CHECK-DAG: _ZZN7PR219047GetDataIiEERKibE1i_0 = internal global i32 2
@@ -42,4 +43,20 @@ const int &GetData<int>(bool b) {
   }
   return i;
 }
+}
+
+namespace GH125747 {
+
+template<typename F> constexpr int visit(F f) { return f(0); }
+    
+template <class T> int G(T t);
+    
+int main() { return visit([](auto s) -> int { return G(s); }); }
+    
+template <class T> int G(T t) {
+  return 0;
+}
+
+// CHECK: define {{.*}} @_ZN8GH1257471GIiEEiT_
+
 }

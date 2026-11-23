@@ -18,3 +18,14 @@ struct __declspec(dllexport) CtorClosureOuter {
 
 // CHECK-LABEL: $"??1HasImplicitDtor1@@QAE@XZ" = comdat any
 // CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FCtorClosureInner@CtorClosureOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat
+
+// Member-level dllexport on a nested default constructor needs constructor
+// closure default arguments before the enclosing class is emitted.
+struct MemberExportedCtorClosureOuter {
+  struct MemberExportedCtorClosureInner {
+    __declspec(dllexport) MemberExportedCtorClosureInner(
+        const HasImplicitDtor1 &v = {}) {}
+  };
+};
+
+// CHECK-LABEL: define weak_odr dso_local dllexport x86_thiscallcc void @"??_FMemberExportedCtorClosureInner@MemberExportedCtorClosureOuter@@QAEXXZ"({{.*}}) {{#[0-9]+}} comdat

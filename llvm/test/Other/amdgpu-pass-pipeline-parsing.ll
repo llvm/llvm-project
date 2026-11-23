@@ -1,6 +1,6 @@
 ; REQUIRES: amdgpu-registered-target
 
-; RUN: not opt -S -mtriple=amdgcn-amd-amdhsa -passes='amdgpu-attributor<random>' -disable-output %s 2>&1 | FileCheck %s
+; RUN: not opt -S -mtriple=amdgpu7.00-amd-amdhsa -passes='amdgpu-attributor<random>' -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: amdgpu-attributor: invalid AMDGPUAttributor pass parameter 'random'
 

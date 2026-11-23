@@ -9,7 +9,7 @@ define void @test() {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 1, [[ENTRY:%.*]] ], [ [[IV_DEC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IV_DEC]] = add nsw i8 [[IV]], -1
-; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[IV]], 7
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 [[IV]], 7
 ; CHECK-NEXT:    call void @use(i8 [[SHL]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[SHL]], 0
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[EXIT:%.*]], label [[LOOP]]

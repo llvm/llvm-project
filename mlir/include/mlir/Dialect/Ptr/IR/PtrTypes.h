@@ -13,8 +13,7 @@
 #ifndef MLIR_DIALECT_PTR_IR_PTRTYPES_H
 #define MLIR_DIALECT_PTR_IR_PTRTYPES_H
 
-#include "mlir/IR/Types.h"
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/Ptr/IR/PtrOpsTypes.h.inc"

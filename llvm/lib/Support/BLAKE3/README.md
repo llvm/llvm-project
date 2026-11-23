@@ -1,4 +1,4 @@
-Implementation of BLAKE3, originating from https://github.com/BLAKE3-team/BLAKE3/tree/1.3.1/c
+Implementation of BLAKE3, originating from https://github.com/BLAKE3-team/BLAKE3/tree/1.8.2/c
 
 # Example
 

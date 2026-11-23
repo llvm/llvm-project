@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Compiler.h"
 #include <array>
 
 namespace llvm {
@@ -23,44 +24,29 @@ class StringRef;
 
 namespace X86 {
 
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorVendors : unsigned {
-  VENDOR_DUMMY,
-#define X86_VENDOR(ENUM, STRING) \
-  ENUM,
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
-  VENDOR_OTHER
+  CPU_VENDOR_MAX
 };
 
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorTypes : unsigned {
-  CPU_TYPE_DUMMY,
-#define X86_CPU_TYPE(ENUM, STRING) \
-  ENUM,
+#define X86_CPU_TYPE(ENUM, STRING, ABI_VALUE) ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
   CPU_TYPE_MAX
 };
 
-// This should be kept in sync with libcc/compiler-rt as its included by clang
-// as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorSubtypes : unsigned {
-  CPU_SUBTYPE_DUMMY,
-#define X86_CPU_SUBTYPE(ENUM, STRING) \
-  ENUM,
+#define X86_CPU_SUBTYPE(ENUM, STRING, ABI_VALUE) ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
   CPU_SUBTYPE_MAX
 };
 
-// This should be kept in sync with libcc/compiler-rt as it should be used
-// by clang as a proxy for what's in libgcc/compiler-rt.
 enum ProcessorFeatures {
 #define X86_FEATURE(ENUM, STRING) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
   CPU_FEATURE_MAX,
-
-#define X86_MICROARCH_LEVEL(ENUM, STRING, PRIORITY) FEATURE_##ENUM = PRIORITY,
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE) FEATURE_##ENUM,
 #include "llvm/TargetParser/X86TargetParser.def"
 };
 
@@ -115,6 +101,8 @@ enum CPUKind {
   CK_ArrowlakeS,
   CK_Lunarlake,
   CK_Pantherlake,
+  CK_Wildcatlake,
+  CK_Novalake,
   CK_Sierraforest,
   CK_Grandridge,
   CK_Graniterapids,
@@ -144,6 +132,11 @@ enum CPUKind {
   CK_ZNVER3,
   CK_ZNVER4,
   CK_ZNVER5,
+  CK_ZNVER6,
+  CK_C86_4G_M4,
+  CK_C86_4G_M6,
+  CK_C86_4G_M7,
+  CK_C86_4G_M8,
   CK_x86_64,
   CK_x86_64_v2,
   CK_x86_64_v3,
@@ -153,34 +146,36 @@ enum CPUKind {
 
 /// Parse \p CPU string into a CPUKind. Will only accept 64-bit capable CPUs if
 /// \p Only64Bit is true.
-CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
-CPUKind parseTuneCPU(StringRef CPU, bool Only64Bit = false);
+LLVM_ABI CPUKind parseArchX86(StringRef CPU, bool Only64Bit = false);
+LLVM_ABI CPUKind parseTuneCPU(StringRef CPU, bool Only64Bit = false);
 
 /// Provide a list of valid CPU names. If \p Only64Bit is true, the list will
 /// only contain 64-bit capable CPUs.
-void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
-                          bool Only64Bit = false);
+LLVM_ABI void fillValidCPUArchList(SmallVectorImpl<StringRef> &Values,
+                                   bool Only64Bit = false);
 /// Provide a list of valid -mtune names.
-void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
-                          bool Only64Bit = false);
+LLVM_ABI void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values,
+                                   bool Only64Bit = false);
 
 /// Get the key feature prioritizing target multiversioning.
-ProcessorFeatures getKeyFeature(CPUKind Kind);
+LLVM_ABI ProcessorFeatures getKeyFeature(CPUKind Kind);
 
 /// Fill in the features that \p CPU supports into \p Features.
 /// "+" will be append in front of each feature if NeedPlus is true.
-void getFeaturesForCPU(StringRef CPU, SmallVectorImpl<StringRef> &Features,
-                       bool NeedPlus = false);
+LLVM_ABI void getFeaturesForCPU(StringRef CPU,
+                                SmallVectorImpl<StringRef> &Features,
+                                bool NeedPlus = false);
 
 /// Set or clear entries in \p Features that are implied to be enabled/disabled
 /// by the provided \p Feature.
-void updateImpliedFeatures(StringRef Feature, bool Enabled,
-                           StringMap<bool> &Features);
+LLVM_ABI void updateImpliedFeatures(StringRef Feature, bool Enabled,
+                                    StringMap<bool> &Features);
 
-char getCPUDispatchMangling(StringRef Name);
-bool validateCPUSpecificCPUDispatch(StringRef Name);
-std::array<uint32_t, 4> getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
-unsigned getFeaturePriority(ProcessorFeatures Feat);
+LLVM_ABI char getCPUDispatchMangling(StringRef Name);
+LLVM_ABI bool validateCPUSpecificCPUDispatch(StringRef Name);
+LLVM_ABI std::array<uint32_t, 4>
+getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs);
+LLVM_ABI unsigned getFeaturePriority(ProcessorFeatures Feat);
 
 } // namespace X86
 } // namespace llvm

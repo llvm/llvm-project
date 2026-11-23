@@ -51,12 +51,11 @@ module m
   logical, parameter :: test_rd_u_all = ieee_support_rounding(ieee_up)
   logical, parameter :: test_rd_u_4 = ieee_support_rounding(ieee_up, 1.)
   logical, parameter :: test_rd_u_8 = ieee_support_rounding(ieee_up, 1.d0)
+  logical, parameter :: test_rd_aw_not = .not. ieee_support_rounding(ieee_away)
+  logical, parameter :: test_rd_ot_not = .not. ieee_support_rounding(ieee_other)
   logical, parameter :: test_sq_all = ieee_support_sqrt()
   logical, parameter :: test_sq_4 = ieee_support_sqrt(1.)
   logical, parameter :: test_sq_8 = ieee_support_sqrt(1.d0)
-  logical, parameter :: test_std_all = ieee_support_standard()
-  logical, parameter :: test_std_4 = ieee_support_standard(1.)
-  logical, parameter :: test_std_8 = ieee_support_standard(1.d0)
   logical, parameter :: test_sn_all = ieee_support_subnormal()
   logical, parameter :: test_sn_4 = ieee_support_subnormal(1.)
   logical, parameter :: test_sn_8 = ieee_support_subnormal(1.d0)
@@ -64,5 +63,8 @@ module m
   logical, parameter :: test_uc_all = .not. ieee_support_underflow_control()
   logical, parameter :: test_uc_4 = ieee_support_underflow_control(1.)
   logical, parameter :: test_uc_8 = ieee_support_underflow_control(1.d0)
+  logical, parameter :: test_std_all = ieee_support_standard()
+  logical, parameter :: test_std_4 = ieee_support_standard(1.)
+  logical, parameter :: test_std_8 = ieee_support_standard(1.d0)
 #endif
 end

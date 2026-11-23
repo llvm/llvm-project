@@ -6,7 +6,9 @@ target triple = "i386-apple-darwin7"
 
 define void @bar(i32 %Size) nounwind noinline {
 entry:
-        %malloccall = tail call ptr @malloc(i32 trunc (i64 mul (i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), i64 2000000) to i32))
+  %mul = mul i64 ptrtoint (ptr getelementptr (i32, ptr null, i32 1) to i64), 2000000
+  %trunc = trunc i64 %mul to i32
+  %malloccall = tail call ptr @malloc(i32 %trunc)
 	%.sub = getelementptr [1000000 x %struct.foo], ptr %malloccall, i32 0, i32 0		; <ptr> [#uses=1]
 	store ptr %.sub, ptr @X, align 4
 	ret void

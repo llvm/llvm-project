@@ -68,10 +68,9 @@ public:
 
   bool WarnBeforeDetach() const override;
 
-  size_t ReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                    Status &error) override;
+  bool ShouldUseMemoryCache(const ProcessAddress &process_addr) override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+  size_t DoReadMemory(const ProcessAddress &addr, void *buf, size_t size,
                       Status &error) override;
 
   ArchSpec GetArchitecture();

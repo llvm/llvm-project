@@ -11,12 +11,12 @@ entry:
   %n = alloca i8, align 1
   %i = alloca i8, align 1
   %cleanup.dest.slot = alloca i32, align 1
-  call  void @llvm.lifetime.start.p0(i64 1, ptr %sum) #3
+  call  void @llvm.lifetime.start.p0(ptr %sum) #3
   store i8 0, ptr %sum, align 1
-  call  void @llvm.lifetime.start.p0(i64 1, ptr %n) #3
+  call  void @llvm.lifetime.start.p0(ptr %n) #3
   %call = call  i8 @idi(i8 10)
   store i8 %call, ptr %n, align 1
-  call  void @llvm.lifetime.start.p0(i64 1, ptr %i) #3
+  call  void @llvm.lifetime.start.p0(ptr %i) #3
   store i8 0, ptr %i, align 1
   br label %for.cond
 
@@ -61,9 +61,9 @@ for.inc:                                          ; preds = %if.end
 ; CHECK: final.cleanup:
 ; CHECK-NEXT: ; [[NO20:.*]] = MemoryPhi({if.then,[[NO9:.*]]},{for.cond.cleanup,[[NO8:.*]]})
 ; CHECK-NEXT: ; [[NO12:.*]] = MemoryDef([[NO20]])
-; CHECK-NEXT: call void @llvm.lifetime.end.p0(i64 1, ptr %i)
+; CHECK-NEXT: call void @llvm.lifetime.end.p0(ptr %i)
 final.cleanup:                                          ; preds = %if.then, %for.cond.cleanup
-  call  void @llvm.lifetime.end.p0(i64 1, ptr %i) #3
+  call  void @llvm.lifetime.end.p0(ptr %i) #3
   br label %for.end
 
 ; CHECK: for.end:
@@ -71,23 +71,23 @@ final.cleanup:                                          ; preds = %if.then, %for
 ; CHECK-NEXT:  %3 = load i8, ptr %sum, align 1
 for.end:                                          ; preds = %final.cleanup
   %8 = load i8, ptr %sum, align 1
-  call  void @llvm.lifetime.start.p0(i64 1, ptr %res.addr.i)
+  call  void @llvm.lifetime.start.p0(ptr %res.addr.i)
   store i8 %8, ptr %res.addr.i, align 1
   %9 = load i8, ptr %res.addr.i, align 1
   call  void @foo(i8 %9) #3
-  call  void @llvm.lifetime.end.p0(i64 1, ptr %res.addr.i)
-  call  void @llvm.lifetime.end.p0(i64 1, ptr %n) #3
-  call  void @llvm.lifetime.end.p0(i64 1, ptr %sum) #3
+  call  void @llvm.lifetime.end.p0(ptr %res.addr.i)
+  call  void @llvm.lifetime.end.p0(ptr %n) #3
+  call  void @llvm.lifetime.end.p0(ptr %sum) #3
   ret void
 }
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)  #1
+declare void @llvm.lifetime.start.p0(ptr nocapture)  #1
 
 declare i8 @idi(i8)
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)  #1
+declare void @llvm.lifetime.end.p0(ptr nocapture)  #1
 
 ; Function Attrs: nounwind
 declare void @foo(i8)

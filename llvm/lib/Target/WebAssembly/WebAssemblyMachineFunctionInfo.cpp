@@ -18,7 +18,7 @@
 #include "WebAssemblySubtarget.h"
 #include "WebAssemblyUtilities.h"
 #include "llvm/CodeGen/Analysis.h"
-#include "llvm/CodeGen/WasmEHFuncInfo.h"
+#include "llvm/IR/Module.h"
 #include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
@@ -28,8 +28,6 @@ MachineFunctionInfo *WebAssemblyFunctionInfo::clone(
     BumpPtrAllocator &Allocator, MachineFunction &DestMF,
     const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
     const {
-  // TODO: Implement cloning for WasmEHFuncInfo. This will have invalid block
-  // references.
   return DestMF.cloneInfo<WebAssemblyFunctionInfo>(*this);
 }
 
@@ -69,40 +67,54 @@ void llvm::computeSignatureVTs(const FunctionType *Ty,
                                SmallVectorImpl<MVT> &Results) {
   computeLegalValueVTs(ContextFunc, TM, Ty->getReturnType(), Results);
 
-  MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
+  const DataLayout &DL = ContextFunc.getDataLayout();
+  MVT PtrVT = MVT::getIntegerVT(DL.getPointerSizeInBits());
   if (!WebAssembly::canLowerReturn(
           Results.size(),
           &TM.getSubtarget<WebAssemblySubtarget>(ContextFunc))) {
     // WebAssembly can't lower returns of multiple values without demoting to
     // sret unless multivalue is enabled (see
     // WebAssemblyTargetLowering::CanLowerReturn). So replace multiple return
-    // values with a poitner parameter.
+    // values with a pointer parameter.
     Results.clear();
     Params.push_back(PtrVT);
   }
 
-  for (auto *Param : Ty->params())
+  std::optional<size_t> SwiftAsyncIdx;
+  for (auto [I, Param] : enumerate(Ty->params())) {
+    if (TargetFunc && TargetFunc->hasParamAttribute(I, Attribute::SwiftAsync))
+      SwiftAsyncIdx = Params.size();
     computeLegalValueVTs(ContextFunc, TM, Param, Params);
+  }
+  // ABI contract: the async context must always be available in local 0.
+  if (SwiftAsyncIdx)
+    WebAssembly::moveToFront(Params, *SwiftAsyncIdx);
   if (Ty->isVarArg())
     Params.push_back(PtrVT);
 
-  // For swiftcc, emit additional swiftself and swifterror parameters
-  // if there aren't. These additional parameters are also passed for caller.
-  // They are necessary to match callee and caller signature for indirect
-  // call.
+  // For swiftcc and swifttailcc, emit additional swiftself, swifterror, and
+  // (for swifttailcc) swiftasync parameters if there aren't. These additional
+  // parameters are also passed for caller. They are necessary to match callee
+  // and caller signature for indirect call.
 
-  if (TargetFunc && TargetFunc->getCallingConv() == CallingConv::Swift) {
-    MVT PtrVT = MVT::getIntegerVT(TM.createDataLayout().getPointerSizeInBits());
+  if (TargetFunc && (TargetFunc->getCallingConv() == CallingConv::Swift ||
+                     TargetFunc->getCallingConv() == CallingConv::SwiftTail)) {
+    MVT PtrVT = MVT::getIntegerVT(DL.getPointerSizeInBits());
     bool HasSwiftErrorArg = false;
     bool HasSwiftSelfArg = false;
+    bool HasSwiftAsyncArg = false;
     for (const auto &Arg : TargetFunc->args()) {
       HasSwiftErrorArg |= Arg.hasAttribute(Attribute::SwiftError);
       HasSwiftSelfArg |= Arg.hasAttribute(Attribute::SwiftSelf);
+      HasSwiftAsyncArg |= Arg.hasAttribute(Attribute::SwiftAsync);
     }
-    if (!HasSwiftErrorArg)
-      Params.push_back(PtrVT);
     if (!HasSwiftSelfArg)
       Params.push_back(PtrVT);
+    if (!HasSwiftErrorArg)
+      Params.push_back(PtrVT);
+    if (TargetFunc->getCallingConv() == CallingConv::SwiftTail &&
+        !HasSwiftAsyncArg)
+      Params.insert(Params.begin(), PtrVT);
   }
 }
 
@@ -128,24 +140,6 @@ yaml::WebAssemblyFunctionInfo::WebAssemblyFunctionInfo(
     Params.push_back(EVT(VT).getEVTString());
   for (auto VT : MFI.getResults())
     Results.push_back(EVT(VT).getEVTString());
-
-  //  MFI.getWasmEHFuncInfo() is non-null only for functions with the
-  //  personality function.
-
-  if (auto *EHInfo = MF.getWasmEHFuncInfo()) {
-    // SrcToUnwindDest can contain stale mappings in case BBs are removed in
-    // optimizations, in case, for example, they are unreachable. We should not
-    // include their info.
-    SmallPtrSet<const MachineBasicBlock *, 16> MBBs;
-    for (const auto &MBB : MF)
-      MBBs.insert(&MBB);
-    for (auto KV : EHInfo->SrcToUnwindDest) {
-      auto *SrcBB = cast<MachineBasicBlock *>(KV.first);
-      auto *DestBB = cast<MachineBasicBlock *>(KV.second);
-      if (MBBs.count(SrcBB) && MBBs.count(DestBB))
-        SrcToUnwindDest[SrcBB->getNumber()] = DestBB->getNumber();
-    }
-  }
 }
 
 void yaml::WebAssemblyFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -159,13 +153,4 @@ void WebAssemblyFunctionInfo::initializeBaseYamlFields(
     addParam(WebAssembly::parseMVT(VT.Value));
   for (auto VT : YamlMFI.Results)
     addResult(WebAssembly::parseMVT(VT.Value));
-
-  // FIXME: WasmEHInfo is defined in the MachineFunction, but serialized
-  // here. Either WasmEHInfo should be moved out of MachineFunction, or the
-  // serialization handling should be moved to MachineFunction.
-  if (WasmEHFuncInfo *WasmEHInfo = MF.getWasmEHFuncInfo()) {
-    for (auto KV : YamlMFI.SrcToUnwindDest)
-      WasmEHInfo->setUnwindDest(MF.getBlockNumbered(KV.first),
-                                MF.getBlockNumbered(KV.second));
-  }
 }

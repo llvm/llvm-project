@@ -10,9 +10,10 @@
 ; CHECK: endloop0
 
 ; Function Attrs: nounwind
-define ptr @f0(ptr nocapture readonly %a0, i32 %a1, i32 %a2, i32 %a3,  ptr %b) #0 {
+define ptr @f0(ptr nocapture readonly %a0, i32 %a1, i32 %a2, i32 %a3, ptr %b, ptr %c) #0 {
 b0:
-  br i1 undef, label %b1, label %b3
+  %cond = freeze i1 poison
+  br i1 %cond, label %b1, label %b3
 
 b1:                                               ; preds = %b0
   br label %b2
@@ -20,8 +21,8 @@ b1:                                               ; preds = %b0
 b2:                                               ; preds = %b2, %b1
   %v1 = phi ptr [ %a0, %b1 ], [ %v2, %b2 ]
   %v2 = phi ptr [ undef, %b1 ], [ %v15, %b2 ]
-  %v3 = phi ptr [ null, %b1 ], [ %v4, %b2 ]
-  %v4 = phi ptr [ null, %b1 ], [ %v14, %b2 ]
+  %v3 = phi ptr [ %c, %b1 ], [ %v4, %b2 ]
+  %v4 = phi ptr [ %c, %b1 ], [ %v14, %b2 ]
   %v5 = phi i32 [ 0, %b1 ], [ %v13, %b2 ]
   %v6 = phi ptr [ undef, %b1 ], [ %v12, %b2 ]
   %a = mul i32 %v5, %a2

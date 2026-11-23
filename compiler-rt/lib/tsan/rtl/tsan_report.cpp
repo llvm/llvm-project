@@ -29,25 +29,13 @@ class Decorator: public __sanitizer::SanitizerCommonDecorator {
   const char *Mutex()   { return Magenta(); }
 };
 
-ReportDesc::ReportDesc()
-    : tag(kExternalTagNone)
-    , stacks()
-    , mops()
-    , locs()
-    , mutexes()
-    , threads()
-    , unique_tids()
-    , sleep()
-    , count() {
-}
+ReportDesc::ReportDesc() = default;
 
-ReportMop::ReportMop()
-    : mset() {
-}
+ReportMop::ReportMop() = default;
+ReportMop::~ReportMop() = default;
 
-ReportDesc::~ReportDesc() {
-  // FIXME(dvyukov): it must be leaking a lot of memory.
-}
+// FIXME(dvyukov): it must be leaking a lot of memory.
+ReportDesc::~ReportDesc() = default;
 
 #if !SANITIZER_GO
 
@@ -317,8 +305,9 @@ void PrintReport(const ReportDesc *rep) {
       } else {
         PrintStack(rep->stacks[i]);
         if (i == 0)
-          Printf("    Hint: use TSAN_OPTIONS=second_deadlock_stack=1 "
-                 "to get more informative warning message\n\n");
+          Printf(
+              "    HINT: use TSAN_OPTIONS=second_deadlock_stack=1 "
+              "to get more informative warning message\n\n");
       }
     }
   } else {

@@ -4,6 +4,8 @@ add_lldb_unittest(LLDBServerTests
   TestBase.cpp
   TestClient.cpp
 
+  LINK_COMPONENTS
+    Support
   LINK_LIBS
     lldbHost
     lldbCore
@@ -14,8 +16,6 @@ add_lldb_unittest(LLDBServerTests
     lldbPluginProcessGDBRemote
 
     LLVMTestingSupport
-  LINK_COMPONENTS
-    Support
   )
 
 add_dependencies(LLDBServerTests lldb-server ${ALL_LLDB_TEST_EXECUTABLES})

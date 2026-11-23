@@ -64,7 +64,6 @@ CommandObjectHelp::CommandOptions::GetDefinitions() {
 }
 
 void CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
-  CommandObject::CommandMap::iterator pos;
   CommandObject *cmd_obj;
   const size_t argc = command.GetArgumentCount();
 
@@ -129,7 +128,7 @@ void CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
           for (size_t match_idx = 0; match_idx < num_matches; match_idx++) {
             s.Printf("\n\t%s", matches.GetStringAtIndex(match_idx));
           }
-          s.Printf("\n");
+          s.PutCString("\n");
           result.AppendError(s.GetString());
           return;
         } else if (!sub_cmd_obj) {
@@ -168,6 +167,7 @@ void CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {
       for (size_t i = 0; i < match_count; i++) {
         output_strm.Printf("\t%s\n", matches.GetStringAtIndex(i));
       }
+      result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Maybe the user is asking for help about a command argument rather than
       // a command.

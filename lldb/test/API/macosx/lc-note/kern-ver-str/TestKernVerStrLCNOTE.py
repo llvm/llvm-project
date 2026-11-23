@@ -17,7 +17,7 @@ class TestKernVerStrLCNOTE(TestBase):
         bugnumber="This test is looking explicitly for a dSYM",
     )
     @skipIf(archs=no_match(["x86_64"]))
-    @skipUnlessDarwin
+    @requireDarwin
     def test_lc_note(self):
         self.build()
         self.test_exe = self.getBuildArtifact("a.out")
@@ -32,7 +32,7 @@ class TestKernVerStrLCNOTE(TestBase):
             lambda: os.environ.pop("LLDB_APPLE_DSYMFORUUID_EXECUTABLE", None)
         )
 
-        dwarfdump_uuid_regex = re.compile("UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
+        dwarfdump_uuid_regex = re.compile(r"UUID: ([-0-9a-fA-F]+) \(([^\(]+)\) .*")
         dwarfdump_cmd_output = subprocess.check_output(
             ('/usr/bin/dwarfdump --uuid "%s"' % self.test_exe), shell=True
         ).decode("utf-8")

@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <CL/sycl.hpp>
+#include <cstdlib>
+
 #include <level_zero/ze_api.h>
 #include <sycl/ext/oneapi/backend/level_zero.hpp>
+#include <sycl/sycl.hpp>
 
 #ifdef _WIN32
 #define SYCL_RUNTIME_EXPORT __declspec(dllexport)
@@ -27,13 +29,13 @@ auto catchAll(F &&func) {
   try {
     return func();
   } catch (const std::exception &e) {
-    fprintf(stdout, "An exception was thrown: %s\n", e.what());
-    fflush(stdout);
-    abort();
+    fprintf(stderr, "SYCL runtime error: %s\n", e.what());
+    fflush(stderr);
+    std::exit(EXIT_FAILURE);
   } catch (...) {
-    fprintf(stdout, "An unknown exception was thrown\n");
-    fflush(stdout);
-    abort();
+    fprintf(stderr, "SYCL runtime error: unknown exception was thrown\n");
+    fflush(stderr);
+    std::exit(EXIT_FAILURE);
   }
 }
 
@@ -41,8 +43,8 @@ auto catchAll(F &&func) {
   {                                                                            \
     ze_result_t status = (call);                                               \
     if (status != ZE_RESULT_SUCCESS) {                                         \
-      fprintf(stdout, "L0 error %d\n", status);                                \
-      fflush(stdout);                                                          \
+      fprintf(stderr, "L0 error %d\n", status);                                \
+      fflush(stderr);                                                          \
       abort();                                                                 \
     }                                                                          \
   }
@@ -64,9 +66,12 @@ static sycl::device getDefaultDevice() {
       isDeviceInitialised = true;
       return syclDevice;
     }
-    throw std::runtime_error("getDefaultDevice failed");
-  } else
+    throw std::runtime_error(
+        "no Level-Zero SYCL platform found; the MLIR SYCL runtime wrapper "
+        "currently requires a Level-Zero backend");
+  } else {
     return syclDevice;
+  }
 }
 
 static sycl::context getDefaultContext() {
@@ -80,8 +85,7 @@ static void *allocDeviceMemory(sycl::queue *queue, size_t size, bool isShared) {
     memPtr = sycl::aligned_alloc_shared(64, size, getDefaultDevice(),
                                         getDefaultContext());
   } else {
-    memPtr = sycl::aligned_alloc_device(64, size, getDefaultDevice(),
-                                        getDefaultContext());
+    memPtr = sycl::aligned_alloc_device(64, size, *queue);
   }
   if (memPtr == nullptr) {
     throw std::runtime_error("mem allocation failed!");
@@ -206,4 +210,9 @@ extern "C" SYCL_RUNTIME_EXPORT void
 mgpuModuleUnload(ze_module_handle_t module) {
 
   catchAll([&]() { L0_SAFE_CALL(zeModuleDestroy(module)); });
+}
+
+extern "C" SYCL_RUNTIME_EXPORT void
+mgpuMemcpy(void *dst, void *src, size_t sizeBytes, sycl::queue *queue) {
+  catchAll([&]() { queue->memcpy(dst, src, sizeBytes).wait(); });
 }

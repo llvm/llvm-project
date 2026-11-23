@@ -1,7 +1,6 @@
 ; Check that debug intrinsics do not affect code generation.
 
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
-; RUN: llc --try-experimental-debuginfo-iterators < %s -mtriple=x86_64-unknown-unknown -mattr=+avx | FileCheck --check-prefix=X86-CHECK %s
 
 define i64 @simulate(<2 x i32> %a) {
 entry:
@@ -92,7 +91,9 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !2 = !DIFile(filename: "test.ll", directory: ".")
 !3 = !{i32 2, !"Dwarf Version", i32 4}
 !4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = distinct !DISubprogram(name: "simulateWithDebugIntrinsic", scope: !2, file: !2, line: 64, isLocal: false, isDefinition: true, scopeLine: 65, unit: !1)
+!5 = distinct !DISubprogram(name: "simulateWithDebugIntrinsic", scope: !2, file: !2, line: 64, isLocal: false, isDefinition: true, scopeLine: 65, unit: !1, type: !10)
 !6 = !DILocalVariable(name: "randv", scope: !5, file: !2, line: 69)
 !7 = !DIExpression()
 !8 = !DILocation(line: 132, column: 2, scope: !5)
+!9 = !{null}
+!10 = !DISubroutineType(types: !9)

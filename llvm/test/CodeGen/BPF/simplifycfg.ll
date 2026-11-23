@@ -38,15 +38,15 @@ target triple = "bpf"
 %struct.FrameData = type { ptr }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test() #0 {
+define dso_local i32 @test() {
 entry:
   %frame_ptr = alloca ptr, align 8
   %frame = alloca %struct.FrameData, align 8
   %i = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 8, ptr %frame_ptr) #3
-  call void @llvm.lifetime.start.p0(i64 8, ptr %frame) #3
+  call void @llvm.lifetime.start.p0(i64 8, ptr %frame_ptr)
+  call void @llvm.lifetime.start.p0(i64 8, ptr %frame)
   call void @get_frame_ptr(ptr %frame_ptr)
-  call void @llvm.lifetime.start.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.start.p0(i64 4, ptr %i)
   store i32 0, ptr %i, align 4, !tbaa !2
   br label %for.cond
 
@@ -61,7 +61,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond
-  call void @llvm.lifetime.end.p0(i64 4, ptr %i) #3
+  call void @llvm.lifetime.end.p0(i64 4, ptr %i)
   br label %for.end
 
 for.body:                                         ; preds = %for.cond
@@ -93,25 +93,20 @@ for.end:                                          ; preds = %for.cond.cleanup
   %5 = load ptr, ptr %frame_ptr, align 8, !tbaa !6
   %cmp2 = icmp eq ptr %5, null
   %conv = zext i1 %cmp2 to i32
-  call void @llvm.lifetime.end.p0(i64 8, ptr %frame) #3
-  call void @llvm.lifetime.end.p0(i64 8, ptr %frame_ptr) #3
+  call void @llvm.lifetime.end.p0(i64 8, ptr %frame)
+  call void @llvm.lifetime.end.p0(i64 8, ptr %frame_ptr)
   ret i32 %conv
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 
-declare dso_local void @get_frame_ptr(ptr) #2
+declare dso_local void @get_frame_ptr(ptr)
 
-declare dso_local i32 @get_data(ptr, ptr) #2
+declare dso_local i32 @get_data(ptr, ptr)
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
-
-attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { argmemonly nounwind willreturn }
-attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="all" "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

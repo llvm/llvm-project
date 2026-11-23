@@ -14,7 +14,7 @@ EOF
 // RUN: mkdir %t.dir
 // RUN: cp %p/../Inputs/modules-empty/1.o %p/../Inputs/modules-empty/Empty.pcm \
 // RUN: %t.dir
-// RUN: dsymutil -f -oso-prepend-path=%t.dir \
+// RUN: dsymutil --linker classic -f -oso-prepend-path=%t.dir \
 // RUN:   -verify \
 // RUN:   -y %p/dummy-debug-map.map -o - \
 // RUN:     | llvm-dwarfdump --debug-info - | FileCheck %s
@@ -29,6 +29,6 @@ int main() {
 }
 
 // The empty CU from the pcm should not get copied into the dSYM.
-// Check that module name occured only once.
-// CHECK: "Empty"
-// CHECK-NOT: "Empty"
+// Check that module name occurred only once.
+// CHECK: DW_AT_name ("Empty")
+// CHECK-NOT: DW_AT_name ("Empty")

@@ -17,7 +17,7 @@ program omp_parallel_shared
     arr(i) = 0.0
   end do
 
-  !ERROR: A variable that is part of another variable (as an array or structure element) cannot appear in a SHARED clause
+  !ERROR: A structure component cannot appear in a SHARED clause
   !$omp parallel shared(arr,intx,my_var%array(1))
   do i = 1, 10
     c(i) = a(i) + b(i) + k

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DebugInfo/DWARF/DWARFListTable.h"
+#include "llvm/Support/EndianStream.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -98,5 +101,66 @@ TEST(DWARFListTableHeader, OffsetEntryCount) {
   EXPECT_FALSE(!!Offset1);
   EXPECT_EQ(Header.length(), sizeof(SecData) - 1);
 }
+
+struct VersionTestCase {
+  uint16_t Version;
+  bool Supported;
+};
+
+struct ListTableVersionFixture
+    : public testing::TestWithParam<VersionTestCase> {};
+
+TEST_P(ListTableVersionFixture, VersionTest) {
+  // Tests that we correctly reject unsupported DWARF versions.
+
+  const auto [Version, Supported] = GetParam();
+
+  std::string SecData;
+  llvm::raw_string_ostream OS(SecData);
+  OS.write("\x10\x00\x00\x00", 4); // Length
+  llvm::support::endian::write<uint16_t>(OS, Version, llvm::endianness::little);
+  OS.write("\x08", 1);             // Address size
+  OS.write("\x00", 1);             // Segment selector size
+  OS.write("\x01\x00\x00\x00", 4); // Offset entry count
+  OS.write("\x04\x00\x00\x00", 4); // offset[0]
+  OS.write("\x04", 1);             // DW_RLE_offset_pair
+  OS.write("\x01", 1);             // ULEB128 starting offset
+  OS.write("\x02", 1);             // ULEB128 ending offset
+  OS.write("\x00", 1);             // DW_RLE_end_of_list
+  OS.flush();
+
+  DWARFDataExtractor Extractor(SecData,
+                               /*isLittleEndian=*/true,
+                               /*AddrSize=*/4);
+  DWARFListTableHeader Header(/*SectionName=*/".debug_rnglists",
+                              /*ListTypeString=*/"range");
+  uint64_t Offset = 0;
+  auto Err = Header.extract(Extractor, &Offset);
+
+  if (Supported) {
+    EXPECT_THAT_ERROR(std::move(Err), llvm::Succeeded());
+    EXPECT_EQ(Header.getVersion(), Version);
+  } else {
+    EXPECT_THAT_ERROR(std::move(Err),
+                      llvm::FailedWithMessage(
+                          llvm::formatv("unrecognised .debug_rnglists table "
+                                        "version {0} in table at offset 0x0",
+                                        Version)
+                              .str()));
+  }
+}
+
+VersionTestCase g_version_test_cases[] = {
+    {/* 1 less than min. */ 4, false},
+    {/* 1 above max. */ 7, false},
+    {/* maximum */ 0xFFFF, false},
+
+    // Supported Versions
+    {5, true},
+    {6, true},
+};
+
+INSTANTIATE_TEST_SUITE_P(UnsupportedVersionTestParams, ListTableVersionFixture,
+                         testing::ValuesIn(g_version_test_cases));
 
 } // end anonymous namespace

@@ -18,15 +18,10 @@
 #include "clang/Basic/Sanitizers.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/SpecialCaseList.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 #include <memory>
+#include <utility>
 #include <vector>
-
-namespace llvm {
-namespace vfs {
-class FileSystem;
-}
-} // namespace llvm
-
 namespace clang {
 
 class SanitizerSpecialCaseList : public llvm::SpecialCaseList {
@@ -43,16 +38,23 @@ public:
   bool inSection(SanitizerMask Mask, StringRef Prefix, StringRef Query,
                  StringRef Category = StringRef()) const;
 
+  // Query ignorelisted entries if any bit in Mask matches the entry's section.
+  // Return NotFound (0,0) if not found. If found, return the file index number
+  // and the line number (FileIdx, LineNo) (FileIdx starts with 1 and LineNo
+  // starts with 0).
+  std::pair<unsigned, unsigned>
+  inSectionBlame(SanitizerMask Mask, StringRef Prefix, StringRef Query,
+                 StringRef Category = StringRef()) const;
+
 protected:
   // Initialize SanitizerSections.
   void createSanitizerSections();
 
   struct SanitizerSection {
-    SanitizerSection(SanitizerMask SM, SectionEntries &E)
-        : Mask(SM), Entries(E){};
+    SanitizerSection(SanitizerMask SM, const Section &S) : Mask(SM), S(S) {};
 
     SanitizerMask Mask;
-    SectionEntries &Entries;
+    const Section &S;
   };
 
   std::vector<SanitizerSection> SanitizerSections;

@@ -14,8 +14,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPU.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIMachineFunctionInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -27,13 +27,11 @@ using namespace llvm;
 
 namespace {
 
-class AMDGPUReserveWWMRegs : public MachineFunctionPass {
+class AMDGPUReserveWWMRegsLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  AMDGPUReserveWWMRegs() : MachineFunctionPass(ID) {
-    initializeAMDGPUReserveWWMRegsPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPUReserveWWMRegsLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -47,16 +45,34 @@ public:
   }
 };
 
+class AMDGPUReserveWWMRegs {
+public:
+  bool run(MachineFunction &MF);
+};
+
 } // End anonymous namespace.
 
-INITIALIZE_PASS(AMDGPUReserveWWMRegs, DEBUG_TYPE,
-                "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_BEGIN(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                      "AMDGPU Reserve WWM Registers", false, false)
+INITIALIZE_PASS_END(AMDGPUReserveWWMRegsLegacy, DEBUG_TYPE,
+                    "AMDGPU Reserve WWM Registers", false, false)
 
-char AMDGPUReserveWWMRegs::ID = 0;
+char AMDGPUReserveWWMRegsLegacy::ID = 0;
 
-char &llvm::AMDGPUReserveWWMRegsID = AMDGPUReserveWWMRegs::ID;
+char &llvm::AMDGPUReserveWWMRegsLegacyID = AMDGPUReserveWWMRegsLegacy::ID;
 
-bool AMDGPUReserveWWMRegs::runOnMachineFunction(MachineFunction &MF) {
+bool AMDGPUReserveWWMRegsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  return AMDGPUReserveWWMRegs().run(MF);
+}
+
+PreservedAnalyses
+AMDGPUReserveWWMRegsPass::run(MachineFunction &MF,
+                              MachineFunctionAnalysisManager &) {
+  AMDGPUReserveWWMRegs().run(MF);
+  return PreservedAnalyses::all();
+}
+
+bool AMDGPUReserveWWMRegs::run(MachineFunction &MF) {
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   bool Changed = false;
@@ -88,8 +104,8 @@ bool AMDGPUReserveWWMRegs::runOnMachineFunction(MachineFunction &MF) {
       MO.setIsRenamable(false);
   }
 
-  // Now clear the NonWWMRegMask earlier set during wwm-regalloc.
-  MFI->clearNonWWMRegAllocMask();
+  // Now clear the PerLaneVGPRMask earlier set during wwm-regalloc.
+  MFI->clearPerLaneVGPRAllocMask();
 
   return Changed;
 }

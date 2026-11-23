@@ -1,7 +1,7 @@
-# RUN: llc -emit-call-site-info -start-before=livedebugvalues -stop-after=machineverifier -o - %s \
+# RUN: llc -emit-call-site-info -start-before=live-debug-values -stop-after=machineverifier -o - %s \
 # RUN:   | FileCheck %s -check-prefix=MIR
 
-# RUN: llc -emit-call-site-info -start-before=livedebugvalues -filetype=obj -o - %s \
+# RUN: llc -emit-call-site-info -start-before=live-debug-values -filetype=obj -o - %s \
 # RUN:   | llvm-dwarfdump - | FileCheck %s -check-prefix=DWARF -implicit-check-not=DW_OP_entry_value
 
 # // Original Source
@@ -97,9 +97,9 @@ stack:
       stack-id: default, callee-saved-register: '$fp', callee-saved-restored: true,
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 callSites:
-  - { bb: 0, offset: 8, fwdArgRegs:
+  - { bb: '%bb.0', offset: 8, fwdArgRegs:
       - { arg: 0, reg: '$w0' } }
-  - { bb: 0, offset: 10, fwdArgRegs:
+  - { bb: '%bb.0', offset: 10, fwdArgRegs:
       - { arg: 0, reg: '$w0' } }
 body:             |
   bb.0.entry:

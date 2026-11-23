@@ -17,6 +17,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PostRASchedulerList.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/AntiDepBreaker.h"
@@ -35,10 +37,10 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetMachine.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "post-RA-sched"
@@ -47,151 +49,140 @@ STATISTIC(NumNoops, "Number of noops inserted");
 STATISTIC(NumStalls, "Number of pipeline stalls");
 STATISTIC(NumFixedAnti, "Number of fixed anti-dependencies");
 
-// Post-RA scheduling is enabled with
-// TargetSubtargetInfo.enablePostRAScheduler(). This flag can be used to
-// override the target.
-static cl::opt<bool>
-EnablePostRAScheduler("post-RA-scheduler",
-                       cl::desc("Enable scheduling after register allocation"),
-                       cl::init(false), cl::Hidden);
-static cl::opt<std::string>
-EnableAntiDepBreaking("break-anti-dependencies",
-                      cl::desc("Break post-RA scheduling anti-dependencies: "
-                               "\"critical\", \"all\", or \"none\""),
-                      cl::init("none"), cl::Hidden);
-
-// If DebugDiv > 0 then only schedule MBB with (ID % DebugDiv) == DebugMod
-static cl::opt<int>
-DebugDiv("postra-sched-debugdiv",
-                      cl::desc("Debug control MBBs that are scheduled"),
-                      cl::init(0), cl::Hidden);
-static cl::opt<int>
-DebugMod("postra-sched-debugmod",
-                      cl::desc("Debug control MBBs that are scheduled"),
-                      cl::init(0), cl::Hidden);
-
 AntiDepBreaker::~AntiDepBreaker() = default;
 
 namespace {
-  class PostRAScheduler : public MachineFunctionPass {
-    const TargetInstrInfo *TII = nullptr;
-    RegisterClassInfo RegClassInfo;
+class PostRAScheduler {
+  const TargetInstrInfo *TII = nullptr;
+  MachineLoopInfo *MLI = nullptr;
+  AliasAnalysis *AA = nullptr;
+  const TargetMachine *TM = nullptr;
+  const RegisterClassInfo *RegClassInfo = nullptr;
 
-  public:
-    static char ID;
-    PostRAScheduler() : MachineFunctionPass(ID) {}
+public:
+  PostRAScheduler(MachineFunction &MF, MachineLoopInfo *MLI, AliasAnalysis *AA,
+                  const TargetMachine *TM,
+                  const RegisterClassInfo *RegClassInfo)
+      : TII(MF.getSubtarget().getInstrInfo()), MLI(MLI), AA(AA), TM(TM),
+        RegClassInfo(RegClassInfo) {}
+  bool run(MachineFunction &MF);
+};
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesCFG();
-      AU.addRequired<AAResultsWrapperPass>();
-      AU.addRequired<TargetPassConfig>();
-      AU.addRequired<MachineDominatorTreeWrapperPass>();
-      AU.addPreserved<MachineDominatorTreeWrapperPass>();
-      AU.addRequired<MachineLoopInfoWrapperPass>();
-      AU.addPreserved<MachineLoopInfoWrapperPass>();
-      MachineFunctionPass::getAnalysisUsage(AU);
-    }
+class PostRASchedulerLegacy : public MachineFunctionPass {
+public:
+  static char ID;
+  PostRASchedulerLegacy() : MachineFunctionPass(ID) {}
 
-    MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
-    }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesCFG();
+    AU.addRequired<AAResultsWrapperPass>();
+    AU.addRequired<TargetPassConfig>();
+    AU.addRequired<MachineLoopInfoWrapperPass>();
+    AU.addRequired<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 
-    bool runOnMachineFunction(MachineFunction &Fn) override;
-  };
-  char PostRAScheduler::ID = 0;
+  MachineFunctionProperties getRequiredProperties() const override {
+    return MachineFunctionProperties().setNoVRegs();
+  }
 
-  class SchedulePostRATDList : public ScheduleDAGInstrs {
-    /// AvailableQueue - The priority queue to use for the available SUnits.
-    ///
-    LatencyPriorityQueue AvailableQueue;
+  bool runOnMachineFunction(MachineFunction &Fn) override;
+};
+char PostRASchedulerLegacy::ID = 0;
 
-    /// PendingQueue - This contains all of the instructions whose operands have
-    /// been issued, but their results are not ready yet (due to the latency of
-    /// the operation).  Once the operands becomes available, the instruction is
-    /// added to the AvailableQueue.
-    std::vector<SUnit*> PendingQueue;
+class SchedulePostRATDList : public ScheduleDAGInstrs {
+  /// AvailableQueue - The priority queue to use for the available SUnits.
+  ///
+  LatencyPriorityQueue AvailableQueue;
 
-    /// HazardRec - The hazard recognizer to use.
-    ScheduleHazardRecognizer *HazardRec;
+  /// PendingQueue - This contains all of the instructions whose operands have
+  /// been issued, but their results are not ready yet (due to the latency of
+  /// the operation).  Once the operands becomes available, the instruction is
+  /// added to the AvailableQueue.
+  std::vector<SUnit *> PendingQueue;
 
-    /// AntiDepBreak - Anti-dependence breaking object, or NULL if none
-    AntiDepBreaker *AntiDepBreak;
+  /// HazardRec - The hazard recognizer to use.
+  ScheduleHazardRecognizer *HazardRec;
 
-    /// AA - AliasAnalysis for making memory reference queries.
-    AliasAnalysis *AA;
+  /// AntiDepBreak - Anti-dependence breaking object, or NULL if none
+  AntiDepBreaker *AntiDepBreak;
 
-    /// The schedule. Null SUnit*'s represent noop instructions.
-    std::vector<SUnit*> Sequence;
+  /// AA - AliasAnalysis for making memory reference queries.
+  AliasAnalysis *AA;
 
-    /// Ordered list of DAG postprocessing steps.
-    std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
+  /// The schedule. Null SUnit*'s represent noop instructions.
+  std::vector<SUnit *> Sequence;
 
-    /// The index in BB of RegionEnd.
-    ///
-    /// This is the instruction number from the top of the current block, not
-    /// the SlotIndex. It is only used by the AntiDepBreaker.
-    unsigned EndIndex = 0;
+  /// Ordered list of DAG postprocessing steps.
+  std::vector<std::unique_ptr<ScheduleDAGMutation>> Mutations;
 
-  public:
-    SchedulePostRATDList(
-        MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
-        const RegisterClassInfo &,
-        TargetSubtargetInfo::AntiDepBreakMode AntiDepMode,
-        SmallVectorImpl<const TargetRegisterClass *> &CriticalPathRCs);
+  /// The index in BB of RegionEnd.
+  ///
+  /// This is the instruction number from the top of the current block, not
+  /// the SlotIndex. It is only used by the AntiDepBreaker.
+  unsigned EndIndex = 0;
 
-    ~SchedulePostRATDList() override;
+public:
+  SchedulePostRATDList(
+      MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
+      const RegisterClassInfo &,
+      TargetSubtargetInfo::AntiDepBreakMode AntiDepMode,
+      SmallVectorImpl<const TargetRegisterClass *> &CriticalPathRCs);
 
-    /// startBlock - Initialize register live-range state for scheduling in
-    /// this block.
-    ///
-    void startBlock(MachineBasicBlock *BB) override;
+  ~SchedulePostRATDList() override;
 
-    // Set the index of RegionEnd within the current BB.
-    void setEndIndex(unsigned EndIdx) { EndIndex = EndIdx; }
+  /// startBlock - Initialize register live-range state for scheduling in
+  /// this block.
+  ///
+  void startBlock(MachineBasicBlock *BB) override;
 
-    /// Initialize the scheduler state for the next scheduling region.
-    void enterRegion(MachineBasicBlock *bb,
-                     MachineBasicBlock::iterator begin,
-                     MachineBasicBlock::iterator end,
-                     unsigned regioninstrs) override;
+  // Set the index of RegionEnd within the current BB.
+  void setEndIndex(unsigned EndIdx) { EndIndex = EndIdx; }
 
-    /// Notify that the scheduler has finished scheduling the current region.
-    void exitRegion() override;
+  /// Initialize the scheduler state for the next scheduling region.
+  void enterRegion(MachineBasicBlock *bb, MachineBasicBlock::iterator begin,
+                   MachineBasicBlock::iterator end,
+                   unsigned regioninstrs) override;
 
-    /// Schedule - Schedule the instruction range using list scheduling.
-    ///
-    void schedule() override;
+  /// Notify that the scheduler has finished scheduling the current region.
+  void exitRegion() override;
 
-    void EmitSchedule();
+  /// Schedule - Schedule the instruction range using list scheduling.
+  ///
+  void schedule() override;
 
-    /// Observe - Update liveness information to account for the current
-    /// instruction, which will not be scheduled.
-    ///
-    void Observe(MachineInstr &MI, unsigned Count);
+  void EmitSchedule();
 
-    /// finishBlock - Clean up register live-range state.
-    ///
-    void finishBlock() override;
+  /// Observe - Update liveness information to account for the current
+  /// instruction, which will not be scheduled.
+  ///
+  void Observe(MachineInstr &MI, unsigned Count);
 
-  private:
-    /// Apply each ScheduleDAGMutation step in order.
-    void postProcessDAG();
+  /// finishBlock - Clean up register live-range state.
+  ///
+  void finishBlock() override;
 
-    void ReleaseSucc(SUnit *SU, SDep *SuccEdge);
-    void ReleaseSuccessors(SUnit *SU);
-    void ScheduleNodeTopDown(SUnit *SU, unsigned CurCycle);
-    void ListScheduleTopDown();
+private:
+  /// Apply each ScheduleDAGMutation step in order.
+  void postProcessDAG();
 
-    void dumpSchedule() const;
-    void emitNoop(unsigned CurCycle);
-  };
-}
+  void ReleaseSucc(SUnit *SU, SDep *SuccEdge);
+  void ReleaseSuccessors(SUnit *SU);
+  void ScheduleNodeTopDown(SUnit *SU, unsigned CurCycle);
+  void ListScheduleTopDown();
 
-char &llvm::PostRASchedulerID = PostRAScheduler::ID;
+  void dumpSchedule() const;
+  void emitNoop(unsigned CurCycle);
+};
+} // namespace
 
-INITIALIZE_PASS(PostRAScheduler, DEBUG_TYPE,
-                "Post RA top-down list latency scheduler", false, false)
+char &llvm::PostRASchedulerID = PostRASchedulerLegacy::ID;
+
+INITIALIZE_PASS_BEGIN(PostRASchedulerLegacy, DEBUG_TYPE,
+                      "Post RA top-down list latency scheduler", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineRegisterClassInfoWrapperPass)
+INITIALIZE_PASS_END(PostRASchedulerLegacy, DEBUG_TYPE,
+                    "Post RA top-down list latency scheduler", false, false)
 
 SchedulePostRATDList::SchedulePostRATDList(
     MachineFunction &MF, MachineLoopInfo &MLI, AliasAnalysis *AA,
@@ -253,56 +244,49 @@ LLVM_DUMP_METHOD void SchedulePostRATDList::dumpSchedule() const {
 }
 #endif
 
-static bool enablePostRAScheduler(const TargetSubtargetInfo &ST,
+static bool enablePostRAScheduler(const CodeGenOptions &Opts,
+                                  const TargetSubtargetInfo &ST,
                                   CodeGenOptLevel OptLevel) {
   // Check for explicit enable/disable of post-ra scheduling.
-  if (EnablePostRAScheduler.getPosition() > 0)
-    return EnablePostRAScheduler;
-
-  return ST.enablePostRAScheduler() &&
-         OptLevel >= ST.getOptLevelToEnablePostRAScheduler();
+  return valueOr(Opts.post_RA_scheduler,
+                 ST.enablePostRAScheduler() &&
+                     OptLevel >= ST.getOptLevelToEnablePostRAScheduler());
 }
 
-bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
-  if (skipFunction(Fn.getFunction()))
-    return false;
-
-  const auto &Subtarget = Fn.getSubtarget();
-  TargetPassConfig *PassConfig = &getAnalysis<TargetPassConfig>();
+bool PostRAScheduler::run(MachineFunction &MF) {
+  const CodeGenOptions &Opts = getCodeGenOptions(MF);
+  const auto &Subtarget = MF.getSubtarget();
   // Check that post-RA scheduling is enabled for this target.
-  if (!enablePostRAScheduler(Subtarget, PassConfig->getOptLevel()))
+  if (!enablePostRAScheduler(Opts, Subtarget, TM->getOptLevel()))
     return false;
 
-  TII = Subtarget.getInstrInfo();
-  MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   TargetSubtargetInfo::AntiDepBreakMode AntiDepMode =
       Subtarget.getAntiDepBreakMode();
-  if (EnableAntiDepBreaking.getPosition() > 0) {
-    AntiDepMode = (EnableAntiDepBreaking == "all")
-      ? TargetSubtargetInfo::ANTIDEP_ALL
-      : ((EnableAntiDepBreaking == "critical")
-         ? TargetSubtargetInfo::ANTIDEP_CRITICAL
-         : TargetSubtargetInfo::ANTIDEP_NONE);
+  if (auto Mode = Opts.break_anti_dependencies) {
+    AntiDepMode =
+        (*Mode == "all")
+            ? TargetSubtargetInfo::ANTIDEP_ALL
+            : ((*Mode == "critical") ? TargetSubtargetInfo::ANTIDEP_CRITICAL
+                                     : TargetSubtargetInfo::ANTIDEP_NONE);
   }
   SmallVector<const TargetRegisterClass *, 4> CriticalPathRCs;
   Subtarget.getCriticalPathRCs(CriticalPathRCs);
-  RegClassInfo.runOnMachineFunction(Fn);
 
   LLVM_DEBUG(dbgs() << "PostRAScheduler\n");
 
-  SchedulePostRATDList Scheduler(Fn, MLI, AA, RegClassInfo, AntiDepMode,
+  SchedulePostRATDList Scheduler(MF, *MLI, AA, *RegClassInfo, AntiDepMode,
                                  CriticalPathRCs);
 
   // Loop over all of the basic blocks
-  for (auto &MBB : Fn) {
+  for (auto &MBB : MF) {
 #ifndef NDEBUG
-    // If DebugDiv > 0 then only schedule MBB with (ID % DebugDiv) == DebugMod
-    if (DebugDiv > 0) {
+    // If -postra-sched-debugdiv=D is positive, only schedule MBBs with
+    // ID % D == -postra-sched-debugmod.
+    if (Opts.postra_sched_debugdiv > 0) {
       static int bbcnt = 0;
-      if (bbcnt++ % DebugDiv != DebugMod)
+      if (bbcnt++ % Opts.postra_sched_debugdiv != Opts.postra_sched_debugmod)
         continue;
-      dbgs() << "*** DEBUG scheduling " << Fn.getName() << ":"
+      dbgs() << "*** DEBUG scheduling " << MF.getName() << ":"
              << printMBBReference(MBB) << " ***\n";
     }
 #endif
@@ -320,7 +304,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
       // Calls are not scheduling boundaries before register allocation, but
       // post-ra we don't gain anything by scheduling across calls since we
       // don't need to worry about register pressure.
-      if (MI.isCall() || TII->isSchedulingBoundary(MI, &MBB, Fn)) {
+      if (MI.isCall() || TII->isSchedulingBoundary(MI, &MBB, MF)) {
         Scheduler.enterRegion(&MBB, I, Current, CurrentCount - Count);
         Scheduler.setEndIndex(CurrentCount);
         Scheduler.schedule();
@@ -351,6 +335,41 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
   }
 
   return true;
+}
+
+bool PostRASchedulerLegacy::runOnMachineFunction(MachineFunction &MF) {
+  if (skipFunction(MF.getFunction()))
+    return false;
+
+  MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  AliasAnalysis *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+  const TargetMachine *TM =
+      &getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
+  RegisterClassInfo *RegClassInfo =
+      &getAnalysis<MachineRegisterClassInfoWrapperPass>().getRCI();
+  PostRAScheduler Impl(MF, MLI, AA, TM, RegClassInfo);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+PostRASchedulerPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
+  auto &FAM = MFAM.getResult<FunctionAnalysisManagerMachineFunctionProxy>(MF)
+                  .getManager();
+  AliasAnalysis *AA = &FAM.getResult<AAManager>(MF.getFunction());
+  const RegisterClassInfo &RegClassInfo =
+      MFAM.getResult<MachineRegisterClassAnalysis>(MF);
+  PostRAScheduler Impl(MF, MLI, AA, TM, &RegClassInfo);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 /// StartBlock - Initialize register live-range state for scheduling in

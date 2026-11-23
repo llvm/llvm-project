@@ -33,22 +33,22 @@ struct HasBool {
 template<typename T>
 void WarnMaybeNotUsed() {
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self if(T::B)
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self(T::B) if(T::B)
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(T::B) self
   while(0);
 
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(T::B) self(T::B)
   while(0);
 
@@ -58,37 +58,37 @@ void WarnMaybeNotUsed() {
   // expected-error@+4{{no member named 'Invalid' in 'HasBool'}}
   // expected-note@#NOT_USED_INST{{in instantiation of function template specialization 'WarnMaybeNotUsed<HasBool>' requested here}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self if(T::Invalid)
   while(0);
 
   // expected-error@+3{{no member named 'Invalid' in 'HasBool'}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self(T::Invalid) if(T::B)
   while(0);
 
   // expected-error@+3{{no member named 'Invalid' in 'HasBool'}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'self' clause is here}}
 #pragma acc parallel self(T::B) if(T::Invalid)
   while(0);
 
   // expected-error@+3{{no member named 'Invalid' in 'HasBool'}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(T::Invalid) self
   while(0);
 
   // expected-error@+3{{no member named 'Invalid' in 'HasBool'}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(T::Invalid) self(T::B)
   while(0);
 
   // expected-error@+3{{no member named 'Invalid' in 'HasBool'}}
   // expected-warning@+2{{OpenACC construct 'self' has no effect when an 'if' clause evaluates to true}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'if' clause is here}}
 #pragma acc parallel if(T::B) self(T::Invalid)
   while(0);
 }

@@ -1,5 +1,6 @@
-# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %T/inline-record.out
-# RUN: %lldb %T/inline-record.out -o "target symbols add -s inline-record.out %S/Inputs/inline-record.syms" \
+# RUN: mkdir -p %t.dir
+# RUN: yaml2obj %S/Inputs/basic-elf.yaml -o %t.dir/inline-record.out
+# RUN: %lldb %t.dir/inline-record.out -o "target symbols add -s inline-record.out %S/Inputs/inline-record.syms" \
 # RUN:   -s %s | FileCheck --match-full-lines %s
 
 # CHECK-LABEL: (lldb) image lookup -a 0x400010 -v

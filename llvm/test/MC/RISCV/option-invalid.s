@@ -53,7 +53,7 @@
 # CHECK: :[[#@LINE+1]]:13: error: expected newline
 .option rvc foo
 
-# CHECK: :[[#@LINE+1]]:12: warning: unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'arch', 'relax' or 'norelax'
+# CHECK: :[[#@LINE+1]]:12: warning: unknown option, expected 'push', 'pop', 'rvc', 'norvc', 'arch', 'relax', 'norelax', 'exact', or 'noexact'
 .option bar
 
 # CHECK: :[[#@LINE+1]]:12: error: .option pop with no .option push
@@ -67,3 +67,17 @@
 
 # CHECK: :[[#@LINE+1]]:15: error: bad arch string switching from rv32 to rv64
 .option arch, rv64gc
+
+## Enabling +zca (or +zca,+zcb,+zcmp,+zcmt) followed by +f should not imply Zcf
+## (which requires C or Zce).
+.option arch, rv32i
+.option arch, +zca
+.option arch, +f
+# CHECK: :[[#@LINE+1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions){{$}}
+c.flw fa0, 0(a0)
+
+.option arch, rv32i
+.option arch, +zca, +zcb, +zcmp, +zcmt
+.option arch, +f
+# CHECK: :[[#@LINE+1]]:1: error: instruction requires the following: 'C' (Compressed Instructions) and 'F' (Single-Precision Floating-Point) or 'Zcf' (Compressed Single-Precision Floating-Point Instructions){{$}}
+c.flw fa0, 0(a0)

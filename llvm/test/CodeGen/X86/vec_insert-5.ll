@@ -10,16 +10,16 @@ define void  @t1(i32 %a, ptr %P) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,0,1,1]
 ; X86-NEXT:    pslld $12, %xmm0
-; X86-NEXT:    psllq $32, %xmm0
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movd %edi, %xmm0
-; X64-NEXT:    pslld $12, %xmm0
 ; X64-NEXT:    psllq $32, %xmm0
+; X64-NEXT:    pslld $12, %xmm0
 ; X64-NEXT:    movq %xmm0, (%rsi)
 ; X64-NEXT:    retq
  %tmp12 = shl i32 %a, 12

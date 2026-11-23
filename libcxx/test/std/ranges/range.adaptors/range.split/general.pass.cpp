@@ -204,9 +204,6 @@ bool test_nontrivial_characters() {
       {"hijk", 5},
   };
 
-  Vec expected1 = {m1, m2};
-  Vec expected2 = {m3};
-
   std::ranges::split_view v(Vec{m1, m2, sep, m3}, sep);
 
   // Segment 1: {m1, m2}

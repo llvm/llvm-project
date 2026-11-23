@@ -19,6 +19,10 @@
 // LINK: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK: wasm-ld{{.*}}" "-L/foo/lib" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
 
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -Wl,--no-demangle 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_NO_DEMANGLE %s
+// LINK_NO_DEMANGLE: wasm-ld{{.*}}"--no-demangle"
+
 // A basic C link command-line with optimization with unknown OS.
 
 // RUN: %clang -### -O2 --target=wasm32-unknown-unknown --sysroot=/foo %s 2>&1 \
@@ -75,11 +79,16 @@
 // Thread-related command line tests.
 
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
-// RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -pthread 2>&1 \
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
-// PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"
+// PTHREAD: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+//
+// '-pthread' with '-nostdlib' should still set '--shared-memory' but not include '-lpthread'
+// RUN: %clang -### --target=wasm32-unknown-unknown --sysroot=/foo %s -pthread -nostdlib 2>&1 \
+// RUN:  | FileCheck -check-prefix=PTHREAD-NOSTDLIB %s
+// PTHREAD-NOSTDLIB: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// PTHREAD-NOSTDLIB: wasm-ld{{.*}}" "--shared-memory" "-o" "a.out"
 
 // '-pthread' not allowed with '-mno-atomics'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -105,35 +114,52 @@
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_SIGN_EXT %s
 // PTHREAD_NO_SIGN_EXT: invalid argument '-pthread' not allowed with '-mno-sign-ext'
 
+// 'wasm32-wasi-threads' does the same thing as '-pthread'
+// RUN: %clang -### --target=wasm32-wasi-threads --sysroot=/foo %s 2>&1 \
+// RUN:  | FileCheck -check-prefix=WASI_THREADS %s
+// WASI_THREADS: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
+// WASI_THREADS: wasm-ld{{.*}}" "--shared-memory" "-lpthread"
+
 // '-mllvm -emscripten-cxx-exceptions-allowed=foo,bar' sets
 // '-mllvm --force-attribute=foo:noinline -mllvm --force-attribute=bar:noinline'
 // RUN: %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -mllvm -enable-emscripten-cxx-exceptions \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
 // RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
 // RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
 // EMSCRIPTEN_EH_ALLOWED_NOINLINE: "-cc1" {{.*}} "-mllvm" "--force-attribute=foo:noinline" "-mllvm" "--force-attribute=bar:noinline"
 
 // '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
+// '-femscripten-exceptions'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -emscripten-cxx-exceptions-allowed 2>&1 \
 // RUN:   | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_WO_ENABLE %s
-// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-mllvm -enable-emscripten-cxx-exceptions'
+// EMSCRIPTEN_EH_ALLOWED_WO_ENABLE: invalid argument '-mllvm -emscripten-cxx-exceptions-allowed' only allowed with '-femscripten-exceptions'
+
+// '-femscripten-exceptions' sets '-exception-model=emscripten'
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EXCEPTIONS %s
+// EMSCRIPTEN_EXCEPTIONS: "-cc1" {{.*}} "-exception-model=emscripten"
+
+// '-femscripten-exceptions' satisfies the '-emscripten-cxx-exceptions-allowed'
+// companion requirement.
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -femscripten-exceptions \
+// RUN:    -mllvm -emscripten-cxx-exceptions-allowed=foo,bar 2>&1 \
+// RUN:  | FileCheck -check-prefix=EMSCRIPTEN_EH_ALLOWED_NOINLINE %s
+
+// '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
+// RUN: not %clang -### --target=wasm32-unknown-unknown \
+// RUN:     --sysroot=/foo %s -fwasm-exceptions -femscripten-exceptions 2>&1 \
+// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_FEMSCRIPTEN_EH %s
+// WASM_EXCEPTIONS_FEMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-femscripten-exceptions'
 
 // '-fwasm-exceptions' sets +exception-handling, -multivalue, -reference-types,
-// "-exception-model=wasm", and '-mllvm -wasm-enable-eh'
+// and "-exception-model=wasm"
 // RUN: %clang -### --target=wasm32-unknown-unknown \
 // RUN:    --sysroot=/foo %s -fwasm-exceptions 2>&1 \
 // RUN:  | FileCheck -check-prefix=WASM_EXCEPTIONS %s
-// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm" "-mllvm" "-wasm-enable-eh"
-
-// '-fwasm-exceptions' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -fwasm-exceptions \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_EXCEPTIONS_EMSCRIPTEN_EH %s
-// WASM_EXCEPTIONS_EMSCRIPTEN_EH: invalid argument '-fwasm-exceptions' not allowed with '-enable-emscripten-cxx-exceptions'
+// WASM_EXCEPTIONS: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
 // '-fwasm-exceptions' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -167,14 +193,6 @@
 // RUN:  | FileCheck -check-prefix=WASM_SJLJ %s
 // WASM_SJLJ: "-cc1" {{.*}} "-target-feature" "+exception-handling" "-target-feature" "+multivalue" "-target-feature" "+reference-types" "-exception-model=wasm"
 
-// '-mllvm -wasm-enable-sjlj' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_SJLJ_EMSCRIPTEN_EH %s
-// WASM_SJLJ_EMSCRIPTEN_EH: invalid argument '-wasm-enable-sjlj' not allowed with '-enable-emscripten-cxx-exceptions'
-
 // '-mllvm -wasm-enable-sjlj' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
 // RUN:     --sysroot=/foo %s -mllvm -wasm-enable-sjlj \
@@ -201,14 +219,6 @@
 // RUN:     -mno-reference-types 2>&1 \
 // RUN:   | FileCheck -check-prefix=WASM_SJLJ_NO_REFERENCE_TYPES %s
 // WASM_SJLJ_NO_REFERENCE_TYPES: invalid argument '-wasm-enable-sjlj' not allowed with '-mno-reference-types'
-
-// '-mllvm -wasm-use-legacy-eh' not allowed with
-// '-mllvm -enable-emscripten-cxx-exceptions'
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:     --sysroot=/foo %s -mllvm -wasm-use-legacy-eh \
-// RUN:     -mllvm -enable-emscripten-cxx-exceptions 2>&1 \
-// RUN:   | FileCheck -check-prefix=WASM_LEGACY_EH_EMSCRIPTEN_EH %s
-// WASM_LEGACY_EH_EMSCRIPTEN_EH: invalid argument '-wasm-use-legacy-eh' not allowed with '-enable-emscripten-cxx-exceptions'
 
 // '-mllvm -wasm-use-legacy-eh' not allowed with '-mllvm -enable-emscripten-sjlj'
 // RUN: not %clang -### --target=wasm32-unknown-unknown \
@@ -285,3 +295,16 @@
 // RUN:   | FileCheck -check-prefix=LINK_WASIP2_USE_WASMLD %s
 // LINK_WASIP2_USE_WASMLD: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
 // LINK_WASIP2_USE_WASMLD: wasm-ld{{.*}}" "-m" "wasm32" {{.*}} "[[temp]]" {{.*}}
+
+// Basic `wasm32-linux-muslwali` compile-link test.
+
+// RUN: %clang -### --target=wasm32-linux-muslwali --sysroot=/foo %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WALI_BASIC %s
+// LINK_WALI_BASIC: "-cc1" {{.*}} "-o" "[[temp:[^"]*]]"
+// LINK_WALI_BASIC: wasm-ld{{.*}}" "-L/foo/lib/wasm32-linux-muslwali" "crt1.o" "[[temp]]" "-lc" "{{.*[/\\]}}libclang_rt.builtins.a" "-o" "a.out"
+
+// Test that `wasm32-wasip3` passes `--cooperative-threading` to the linker.
+
+// RUN: %clang -### --target=wasm32-wasip3 -fuse-ld=lld %s --sysroot /foo 2>&1 \
+// RUN:   | FileCheck -check-prefix=LINK_WASIP3_COOP %s
+// LINK_WASIP3_COOP: wasm-ld{{.*}}" {{.*}} "--cooperative-threading"

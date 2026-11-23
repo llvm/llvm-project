@@ -1,17 +1,14 @@
-#RUN: not --crash llc -mtriple=aarch64 -o - -global-isel -run-pass=none -verify-machineinstrs %s 2>&1 | FileCheck %s
+# RUN: not --crash llc -mtriple=aarch64 -run-pass=none -filetype=null %s 2>&1 | FileCheck %s
 # REQUIRES: aarch64-registered-target
 
 ---
-name:            test_assert_align
-legalized:       true
-regBankSelected: false
-selected:        false
+name: test_assert_align
 tracksRegLiveness: true
-liveins:
-body:             |
+body: |
   bb.0:
     liveins: $x0, $q0
     %ptr:_(p0) = COPY $x0
 
     ; CHECK: Bad machine code: alignment immediate must be >= 1
     %v:_(s32) = G_ASSERT_ALIGN %ptr:_(p0), 0
+...

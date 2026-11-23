@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupport.h"
-#include "llvm/ExecutionEngine/Orc/DebugObjectManagerPlugin.h"
 #include "llvm/ExecutionEngine/Orc/Debugging/DebuggerSupportPlugin.h"
+#include "llvm/ExecutionEngine/Orc/Debugging/ELFDebugObjectPlugin.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 
 #define DEBUG_TYPE "orc"
@@ -24,26 +24,19 @@ Error enableDebuggerSupport(LLJIT &J) {
     return make_error<StringError>("Cannot enable LLJIT debugger support: "
                                    "Debugger support requires JITLink",
                                    inconvertibleErrorCode());
-  auto ProcessSymsJD = J.getProcessSymbolsJITDylib();
-  if (!ProcessSymsJD)
-    return make_error<StringError>("Cannot enable LLJIT debugger support: "
-                                   "Process symbols are not available",
-                                   inconvertibleErrorCode());
-
   auto &ES = J.getExecutionSession();
   const auto &TT = J.getTargetTriple();
 
   switch (TT.getObjectFormat()) {
   case Triple::ELF: {
-    auto Registrar = createJITLoaderGDBRegistrar(ES);
-    if (!Registrar)
-      return Registrar.takeError();
-    ObjLinkingLayer->addPlugin(std::make_unique<DebugObjectManagerPlugin>(
-        ES, std::move(*Registrar), false, true));
-    return Error::success();
+    Error TargetSymErr = Error::success();
+    ObjLinkingLayer->addPlugin(
+        std::make_unique<ELFDebugObjectPlugin>(ES, false, TargetSymErr));
+    return TargetSymErr;
   }
   case Triple::MachO: {
-    auto DS = GDBJITDebugInfoRegistrationPlugin::Create(ES, *ProcessSymsJD, TT);
+    auto DS = GDBJITDebugInfoRegistrationPlugin::Create(
+        ES, ES.getBootstrapJITDylib());
     if (!DS)
       return DS.takeError();
     ObjLinkingLayer->addPlugin(std::move(*DS));

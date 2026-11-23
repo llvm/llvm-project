@@ -17,27 +17,37 @@ namespace Fortran::runtime::cuda {
 extern "C" {
 
 /// Perform allocation of the descriptor.
-int RTDECL(CUFPointerAllocate)(Descriptor &, int64_t stream = -1,
-    bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+int RTDECL(CUFPointerAllocate)(Descriptor &, int64_t *stream = nullptr,
+    bool *pinned = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, bool deviceInit = false);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary.
-int RTDECL(CUFPointerAllocateSync)(Descriptor &, int64_t stream = -1,
-    bool hasStat = false, const Descriptor *errMsg = nullptr,
-    const char *sourceFile = nullptr, int sourceLine = 0);
+int RTDECL(CUFPointerAllocateSync)(Descriptor &, int64_t *stream = nullptr,
+    bool *pinned = nullptr, bool hasStat = false,
+    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
+    int sourceLine = 0, bool deviceInit = false);
 
 /// Perform allocation of the descriptor without synchronization. Assign data
 /// from source.
 int RTDEF(CUFPointerAllocateSource)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream = -1, bool hasStat = false,
-    const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
-    int sourceLine = 0);
+    const Descriptor &source, int64_t *stream = nullptr, bool *pinned = nullptr,
+    bool hasStat = false, const Descriptor *errMsg = nullptr,
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    bool sourceIsDevice = false);
 
 /// Perform allocation of the descriptor with synchronization of it when
 /// necessary. Assign data from source.
 int RTDEF(CUFPointerAllocateSourceSync)(Descriptor &pointer,
-    const Descriptor &source, int64_t stream = -1, bool hasStat = false,
+    const Descriptor &source, int64_t *stream = nullptr, bool *pinned = nullptr,
+    bool hasStat = false, const Descriptor *errMsg = nullptr,
+    const char *sourceFile = nullptr, int sourceLine = 0,
+    bool sourceIsDevice = false);
+
+/// Perform deallocation of the descriptor with synchronization of it when
+/// necessary.
+int RTDECL(CUFPointerDeallocate)(Descriptor &, bool hasStat = false,
     const Descriptor *errMsg = nullptr, const char *sourceFile = nullptr,
     int sourceLine = 0);
 

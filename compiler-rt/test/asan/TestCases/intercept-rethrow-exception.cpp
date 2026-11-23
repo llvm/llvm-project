@@ -9,12 +9,18 @@
 // The current implementation of this functionality requires special
 // combination of libraries that are not used by default on NetBSD
 // XFAIL: target={{.*netbsd.*}}
-// FIXME: Bug 42703
+// FIXME: https://github.com/llvm/llvm-project/issues/42048
 // XFAIL: target={{.*solaris.*}}
 
 // https://reviews.llvm.org/D111703 made compiler incompatible with released NDK.
 // UNSUPPORTED: android && arm-target-arch
 
+// FIXME: Fails on Android: the stack is still poisoned after
+// std::rethrow_exception, so the __cxa_rethrow_primary_exception
+// interceptor does not run.
+// XFAIL: android
+
+#include "defines.h"
 #include <assert.h>
 #include <exception>
 #include <sanitizer/asan_interface.h>
@@ -28,7 +34,7 @@ namespace {
 // [[noreturn]] because the scenario we're emulating doesn't always throw. If it
 // were [[noreturn]], the calling code would emit a call to
 // __asan_handle_no_return.
-void __attribute__((no_sanitize("address")))
+void ATTRIBUTE_NO_SANITIZE_ADDRESS
 uninstrumented_rethrow_exception(std::exception_ptr const &exc_ptr) {
   std::rethrow_exception(exc_ptr);
 }

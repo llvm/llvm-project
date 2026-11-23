@@ -49,26 +49,24 @@ int main()
       static double dfi(int i) { return i + 3.14; }
       static Local localfi(int) { return Local{}; }
     };
-    auto l4 = [](auto (*fp)(int)) -> int { return fp(3); }; //expected-error{{no viable conversion from returned value of type 'Local' to function return type 'int'}} 
+    auto l4 = [](auto (*fp)(int)) -> int { return fp(3); }; //expected-error{{no viable conversion from returned value of type 'Local' to function return type 'int'}}
     l4(&Local::ifi);
     l4(&Local::cfi);
     l4(&Local::dfi);
-    l4(&Local::localfi); //expected-note{{in instantiation of function template specialization}}  
+    l4(&Local::localfi); //expected-note{{in instantiation of function template specialization}}
   }
   {
     auto unnamed_parameter = [](auto, auto) -> void { };
     unnamed_parameter(3, '4');
   }
   {
-    auto l = [](auto 
-                      (*)(auto)) { }; //expected-error{{'auto' not allowed}}
+    auto l = [](auto (*)(auto)) { }; //expected-error{{'auto' not allowed}} expected-warning {{'auto' parameters are a C++20 extension}}
     //FIXME: These diagnostics might need some work.
-    auto l2 = [](char auto::*pm) { };  //expected-error{{cannot combine with previous}}\
-                                         expected-error{{'pm' does not point into a class}}
-    auto l3 = [](char (auto::*pmf)()) { };  //expected-error{{'auto' not allowed}}\
-                                              expected-error{{'pmf' does not point into a class}}\
-                                              expected-error{{function cannot return function type 'char ()'}}
+    auto l2 = [](char auto::*pm) { };       // expected-error {{cannot combine with previous 'char' declaration specifier}} \
+                                               expected-error{{'pm' does not point into a class}}
+    auto l3 = [](char (auto::*pmf)()) { };  // expected-error{{'auto' not allowed}}\
+                                               expected-error{{'pmf' does not point into a class}}\
+                                               expected-error{{function cannot return function type 'char ()'}} \
+                                               expected-warning {{'auto' parameters are a C++20 extension}}
   }
 }
-
-

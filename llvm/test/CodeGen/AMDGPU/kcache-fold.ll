@@ -44,7 +44,7 @@ main_body:
   %clamp.i4 = call float @llvm.minnum.f32(float %max.0.i3, float 1.000000e+00)
   %max.0.i1 = call float @llvm.maxnum.f32(float %tmp37, float 0.000000e+00)
   %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
-  %tmp38 = insertelement <4 x float> undef, float %clamp.i, i32 0
+  %tmp38 = insertelement <4 x float> poison, float %clamp.i, i32 0
   %tmp39 = insertelement <4 x float> %tmp38, float %clamp.i6, i32 1
   %tmp40 = insertelement <4 x float> %tmp39, float %clamp.i4, i32 2
   %tmp41 = insertelement <4 x float> %tmp40, float %clamp.i2, i32 3
@@ -96,7 +96,7 @@ main_body:
   %clamp.i4 = call float @llvm.minnum.f32(float %max.0.i3, float 1.000000e+00)
   %max.0.i1 = call float @llvm.maxnum.f32(float %tmp37, float 0.000000e+00)
   %clamp.i2 = call float @llvm.minnum.f32(float %max.0.i1, float 1.000000e+00)
-  %tmp38 = insertelement <4 x float> undef, float %clamp.i, i32 0
+  %tmp38 = insertelement <4 x float> poison, float %clamp.i, i32 0
   %tmp39 = insertelement <4 x float> %tmp38, float %clamp.i6, i32 1
   %tmp40 = insertelement <4 x float> %tmp39, float %clamp.i4, i32 2
   %tmp41 = insertelement <4 x float> %tmp40, float %clamp.i2, i32 3

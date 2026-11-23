@@ -108,7 +108,7 @@ private:
   InputSection *isec;
   // Insert new relocs here so that we don't invalidate iterators into the
   // existing relocs vector.
-  SmallVector<Reloc, 6> newRelocs;
+  SmallVector<Relocation, 6> newRelocs;
 };
 
 } // namespace lld::macho

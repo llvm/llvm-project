@@ -23,13 +23,13 @@ entry:
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "x", scope: !2, file: !3, line: 5, type: !14, isLocal: true, isDefinition: true)
-!2 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", scope: null, file: !3, line: 4, type: !4, isLocal: false, isDefinition: true, scopeLine: 4, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !11)
+!2 = distinct !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", scope: null, file: !3, line: 4, type: !4, isLocal: false, isDefinition: true, scopeLine: 4, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !8, declaration: !11, retainedNodes: !10)
 !3 = !DIFile(filename: "nsNativeAppSupportBase.ii", directory: "/Users/espindola/mozilla-central/obj-x86_64-apple-darwin11.2.0/toolkit/library")
 !4 = !DISubroutineType(types: !5)
 !5 = !{null, !6}
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7, size: 64, align: 64, flags: DIFlagArtificial)
 !7 = !DICompositeType(tag: DW_TAG_structure_type, name: "foo", file: !3, line: 1, flags: DIFlagFwdDecl)
-!8 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.0 ()", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, retainedTypes: !9, globals: !10, imports: !9)
+!8 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !3, producer: "clang version 3.0 ()", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !9, retainedTypes: !9, imports: !9)
 !9 = !{}
 !10 = !{!0}
 !11 = !DISubprogram(name: "bar", linkageName: "_ZN3foo3barEv", scope: !12, file: !3, line: 2, type: !4, isLocal: false, isDefinition: false, scopeLine: 2, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false)

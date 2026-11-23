@@ -29,3 +29,12 @@ CHECK-FOO: 0000000000[[#%x,ORG:]] [[#%x,ORGSIZE:]] t foo.org.0
 CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+ORGSIZE]]
 ## original FDE comes second
 CHECK-FOO: FDE {{.*}} pc=00[[#%x,ORG]]...00[[#%x,ORG+OPTSIZE]]
+
+## Check that incomplete instructions are replaced with int3:
+RUN: llvm-objdump %t.out --disassemble-symbols=main.org.0 \
+RUN:   | FileCheck %s --check-prefix=CHECK-NOP
+CHECK-NOP: main.org.0
+CHECK-NOP-NEXT: jmp
+CHECK-NOP-NEXT: int3
+CHECK-NOP-NEXT: int3
+CHECK-NOP-NEXT: int3

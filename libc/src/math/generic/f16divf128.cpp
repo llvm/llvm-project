@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/f16divf128.h"
-#include "src/__support/FPUtil/generic/div.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/f16divf128.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float16, f16divf128, (float128 x, float128 y)) {
-  return fputil::generic::div<float16>(x, y);
+  return math::f16divf128(x, y);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

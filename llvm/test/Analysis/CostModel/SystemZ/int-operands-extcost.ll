@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes="print<cost-model>" 2>&1 -disable-output -mtriple=systemz-unknown -mcpu=z13 \
+; RUN: opt < %s -passes="print<cost-model>" -disable-output -mtriple=systemz-unknown -mcpu=z13 2>&1 \
 ; RUN:  | FileCheck %s
 ;
 ; Test that i8/i16 operands get extra costs for extensions to i32 only in
@@ -41,5 +41,5 @@ define void @icmp() {
 ; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   %a3 = add i16 %li16_1, 1
 ; CHECK: Cost Model: Found an estimated cost of 3 for instruction:   %5 = icmp slt i16 %a2, %a3
 ; CHECK: Cost Model: Found an estimated cost of 2 for instruction:   %6 = icmp slt i16 %a2, 123
-; CHECK: Cost Model: Found an estimated cost of 1 for instruction:   ret void
+; CHECK: Cost Model: Found an estimated cost of 0 for instruction:   ret void
 }

@@ -20,6 +20,11 @@ esync
 # CHECK: encoding: [0x00,0x20,0x00]
 isync
 
+# Instruction format CALLX
+# CHECK-INST: ill
+# CHECK: encoding: [0x00,0x00,0x00]
+ill
+
 # Instruction format RRR
 # CHECK-INST: nop
 # CHECK: encoding: [0xf0,0x20,0x00]

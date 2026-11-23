@@ -8,8 +8,8 @@
 # RUN:    --print-finalized \
 # RUN:    --tail-duplication=moderate --tail-duplication-minimum-offset=1 \
 # RUN:    --tail-duplication-const-copy-propagation=1 -o %t.out | FileCheck %s
-# RUN: %t.exe; echo $?
-# RUN: %t.out; echo $?
+# RUN: not %t.exe
+# RUN: not %t.out
 
 # FDATA: 1 main 14 1 main #.BB2# 0 10
 # FDATA: 1 main 16 1 main #.BB2# 0 20

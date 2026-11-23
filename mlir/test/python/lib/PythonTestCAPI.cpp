@@ -11,6 +11,9 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/CAPI/Wrap.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
+#include "mlir/IR/Remarks.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(PythonTest, python_test,
                                       python_test::PythonTestDialect)
@@ -41,4 +44,21 @@ MlirTypeID mlirPythonTestTestTypeGetTypeID(void) {
 
 bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value) {
   return mlirTypeIsATensor(wrap(unwrap(value).getType()));
+}
+
+void mlirPythonTestEmitDiagnosticWithNote(MlirContext ctx) {
+  auto diag =
+      mlir::emitError(unwrap(mlirLocationUnknownGet(ctx)), "created error");
+  diag.attachNote() << "attached note";
+}
+
+void mlirPythonTestEmitLinkedRemarks(MlirLocation location) {
+  using namespace mlir::remark;
+  mlir::Location loc = unwrap(location);
+  loc.getContext()->getRemarkEngine()->enableHistory();
+  analysis(loc, RemarkOpts::name("First").category("Test"));
+  analysis(loc, RemarkOpts::name("Second").category("Test"));
+  missed(loc, RemarkOpts::name("Consumer").category("Test"))
+      << relatedTo(RemarkQuery().kind(RemarkKind::RemarkAnalysis).at(loc))
+      << mlir::remark::detail::Remark::Arg("RelatedTo", "999");
 }

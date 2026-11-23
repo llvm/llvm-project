@@ -436,6 +436,12 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case G_RESET_FPENV:
     OperandsMapping = getOperandsMapping({nullptr});
     break;
+  case G_BITCAST: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    OperandsMapping = Size == 64 ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
+                                 : &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    break;
+  }
   default:
     return getInvalidInstructionMapping();
   }
@@ -445,7 +451,7 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     for (const auto &Mapping : OperandsMapping[i]) {
       assert(
           (Mapping.RegBank->getID() != ARM::FPRRegBankID ||
-           MF.getSubtarget<ARMSubtarget>().hasVFP2Base()) &&
+           MF.getSubtarget<ARMSubtarget>().hasFPRegs()) &&
           "Trying to use floating point register bank on target without vfp");
     }
   }

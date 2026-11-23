@@ -55,6 +55,9 @@ private:
 };
 
 struct ExecutionEngineOptions {
+  /// Library options for the LLVMContext and the default TargetMachine.
+  const llvm::cl::LibraryOptionsContext *libraryOptions = nullptr;
+
   /// If `llvmModuleBuilder` is provided, it will be used to create an LLVM
   /// module from the given MLIR IR. Otherwise, a default
   /// `translateModuleToLLVMIR` function will be used to translate to LLVM IR.
@@ -157,8 +160,7 @@ public:
 
   /// Invokes the function with the given name passing it the list of opaque
   /// pointers to the actual arguments.
-  llvm::Error invokePacked(StringRef name,
-                           MutableArrayRef<void *> args = std::nullopt);
+  llvm::Error invokePacked(StringRef name, MutableArrayRef<void *> args = {});
 
   /// Trait that defines how a given type is passed to the JIT code. This
   /// defaults to passing the address but can be specialized.
@@ -228,6 +230,13 @@ public:
       llvm::function_ref<llvm::orc::SymbolMap(llvm::orc::MangleAndInterner)>
           symbolMap);
 
+  /// Initialize the ExecutionEngine. Global constructors specified by
+  /// `llvm.mlir.global_ctors` will be run. One common scenario is that kernel
+  /// binary compiled from `gpu.module` gets loaded during initialization. Make
+  /// sure all symbols are resolvable before initialization by calling
+  /// `registerSymbols` or including shared libraries.
+  void initialize();
+
 private:
   /// Ordering of llvmContext and jit is important for destruction purposes: the
   /// jit must be destroyed before the context.
@@ -251,6 +260,8 @@ private:
   /// Destroy functions in the libraries loaded by the ExecutionEngine that are
   /// called when this ExecutionEngine is destructed.
   SmallVector<LibraryDestroyFn> destroyFns;
+
+  bool isInitialized = false;
 };
 
 } // namespace mlir

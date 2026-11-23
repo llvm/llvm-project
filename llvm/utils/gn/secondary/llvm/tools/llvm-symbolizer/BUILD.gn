@@ -36,6 +36,7 @@ driver_executable("llvm-symbolizer") {
     "//llvm/lib/DebugInfo/Symbolize",
     "//llvm/lib/Debuginfod",
     "//llvm/lib/Demangle",
+    "//llvm/lib/HTTP",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",

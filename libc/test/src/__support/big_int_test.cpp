@@ -35,7 +35,7 @@ template <typename T> auto create(Value value) {
   __builtin_unreachable();
 }
 
-using Types = testing::TypeList< //
+using BigIntTypes = testing::Types< //
 #ifdef LIBC_TYPES_HAS_INT64
     BigInt<64, false, uint64_t>, // 64-bits unsigned (1 x uint64_t)
     BigInt<64, true, uint64_t>,  // 64-bits   signed (1 x uint64_t)
@@ -50,9 +50,14 @@ using Types = testing::TypeList< //
     BigInt<64, true, uint16_t>   // 64-bits   signed (4 x uint16_t)
     >;
 
+template <typename T>
+class LlvmLibcTypedUIntClassTest : public testing::Test {};
+TYPED_TEST_SUITE(LlvmLibcTypedUIntClassTest, BigIntTypes);
+
 #define ASSERT_SAME(A, B) ASSERT_TRUE((A) == (B))
 
-TYPED_TEST(LlvmLibcUIntClassTest, Additions, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, Additions) {
+  using T = TypeParam;
   ASSERT_SAME(create<T>(ZERO) + create<T>(ZERO), create<T>(ZERO));
   ASSERT_SAME(create<T>(ONE) + create<T>(ZERO), create<T>(ONE));
   ASSERT_SAME(create<T>(ZERO) + create<T>(ONE), create<T>(ONE));
@@ -63,7 +68,8 @@ TYPED_TEST(LlvmLibcUIntClassTest, Additions, Types) {
   ASSERT_SAME(create<T>(MAX) + create<T>(ONE), create<T>(MIN));
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, Subtraction, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, Subtraction) {
+  using T = TypeParam;
   ASSERT_SAME(create<T>(ZERO) - create<T>(ZERO), create<T>(ZERO));
   ASSERT_SAME(create<T>(ONE) - create<T>(ONE), create<T>(ZERO));
   ASSERT_SAME(create<T>(ONE) - create<T>(ZERO), create<T>(ONE));
@@ -73,7 +79,8 @@ TYPED_TEST(LlvmLibcUIntClassTest, Subtraction, Types) {
   ASSERT_SAME(create<T>(MIN) - create<T>(ONE), create<T>(MAX));
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, Multiplication, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, Multiplication) {
+  using T = TypeParam;
   ASSERT_SAME(create<T>(ZERO) * create<T>(ZERO), create<T>(ZERO));
   ASSERT_SAME(create<T>(ZERO) * create<T>(ONE), create<T>(ZERO));
   ASSERT_SAME(create<T>(ONE) * create<T>(ZERO), create<T>(ZERO));
@@ -135,7 +142,8 @@ TEST(LlvmLibcUIntClassTest, SignedMulDiv) {
   }
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, Division, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, Division) {
+  using T = TypeParam;
   ASSERT_SAME(create<T>(ZERO) / create<T>(ONE), create<T>(ZERO));
   ASSERT_SAME(create<T>(MAX) / create<T>(ONE), create<T>(MAX));
   ASSERT_SAME(create<T>(MAX) / create<T>(MAX), create<T>(ONE));
@@ -158,7 +166,8 @@ TYPED_TEST(LlvmLibcUIntClassTest, Division, Types) {
   }
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, is_neg, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, is_neg) {
+  using T = TypeParam;
   EXPECT_FALSE(create<T>(ZERO).is_neg());
   EXPECT_FALSE(create<T>(ONE).is_neg());
   EXPECT_FALSE(create<T>(TWO).is_neg());
@@ -166,7 +175,8 @@ TYPED_TEST(LlvmLibcUIntClassTest, is_neg, Types) {
   EXPECT_FALSE(create<T>(MAX).is_neg());
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, Masks, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, Masks) {
+  using T = TypeParam;
   if constexpr (!T::SIGNED) {
     constexpr size_t BITS = T::BITS;
     // mask_trailing_ones
@@ -192,13 +202,14 @@ TYPED_TEST(LlvmLibcUIntClassTest, Masks, Types) {
   }
 }
 
-TYPED_TEST(LlvmLibcUIntClassTest, CountBits, Types) {
+TYPED_TEST(LlvmLibcTypedUIntClassTest, CountBits) {
+  using T = TypeParam;
   if constexpr (!T::SIGNED) {
     for (size_t i = 0; i < T::BITS; ++i) {
       const auto l_one = T::all_ones() << i; // 0b111...000
       const auto r_one = T::all_ones() >> i; // 0b000...111
-      const int zeros = i;
-      const int ones = T::BITS - zeros;
+      const int zeros = static_cast<int>(i);
+      const int ones = static_cast<int>(T::BITS - static_cast<size_t>(zeros));
       ASSERT_EQ(cpp::countr_one(r_one), ones);
       ASSERT_EQ(cpp::countl_one(l_one), ones);
       ASSERT_EQ(cpp::countr_zero(l_one), zeros);
@@ -249,7 +260,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeUint128) {
 }
 #endif // LIBC_TYPES_HAS_INT128
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
   static_assert(cpp::is_trivially_copyable<LL_UInt128>::value);
   static_assert(sizeof(LL_UInt128) == sizeof(float128));
@@ -260,7 +271,7 @@ TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat128) {
     EXPECT_TRUE(value == forth);
   }
 }
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #ifdef LIBC_TYPES_HAS_FLOAT16
 TEST(LlvmLibcUIntClassTest, BitCastToFromNativeFloat16) {
@@ -770,6 +781,7 @@ TEST(LlvmLibcUIntClassTest, FullMulTests) {
   } while (0)
 
 TEST(LlvmLibcUIntClassTest, QuickMulHiTests) {
+  TEST_QUICK_MUL_HI(64, 1);
   TEST_QUICK_MUL_HI(128, 1);
   TEST_QUICK_MUL_HI(192, 2);
   TEST_QUICK_MUL_HI(256, 3);
@@ -871,13 +883,13 @@ TEST(LlvmLibcUIntClassTest, ConstructorFromUInt128Tests) {
   ASSERT_EQ(static_cast<int>(c >> 64), 123);
   ASSERT_EQ(static_cast<uint64_t>(d), static_cast<uint64_t>(b));
   ASSERT_EQ(static_cast<uint64_t>(d >> 64), static_cast<uint64_t>(b >> 64));
-  ASSERT_EQ(c + d, LL_Int128(a + b));
+  ASSERT_EQ(c + d, LL_Int128(a + static_cast<__uint128_t>(b)));
 
   ASSERT_EQ(static_cast<int>(e), 1);
   ASSERT_EQ(static_cast<int>(e >> 64), 123);
   ASSERT_EQ(static_cast<uint64_t>(f), static_cast<uint64_t>(b));
   ASSERT_EQ(static_cast<uint64_t>(f >> 64), static_cast<uint64_t>(b >> 64));
-  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + b));
+  ASSERT_EQ(LL_UInt192(e + f), LL_UInt192(a + static_cast<__uint128_t>(b)));
 }
 
 TEST(LlvmLibcUIntClassTest, WordTypeUInt128Tests) {

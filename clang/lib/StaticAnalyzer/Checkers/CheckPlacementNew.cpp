@@ -111,32 +111,12 @@ bool PlacementNewChecker::checkPlaceCapacityIsSufficient(
   if (!SizeOfPlaceCI)
     return true;
 
-  if ((SizeOfPlaceCI->getValue() < SizeOfTargetCI->getValue()) ||
-      (IsArrayTypeAllocated &&
-       SizeOfPlaceCI->getValue() >= SizeOfTargetCI->getValue())) {
-    if (ExplodedNode *N = C.generateErrorNode(C.getState())) {
-      std::string Msg;
-      // TODO: use clang constant
-      if (IsArrayTypeAllocated &&
-          SizeOfPlaceCI->getValue() > SizeOfTargetCI->getValue())
-        Msg = std::string(llvm::formatv(
-            "{0} bytes is possibly not enough for array allocation which "
-            "requires {1} bytes. Current overhead requires the size of {2} "
-            "bytes",
-            SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue(),
-            *SizeOfPlaceCI->getValue().get() - SizeOfTargetCI->getValue()));
-      else if (IsArrayTypeAllocated &&
-               SizeOfPlaceCI->getValue() == SizeOfTargetCI->getValue())
-        Msg = std::string(llvm::formatv(
-            "Storage provided to placement new is only {0} bytes, "
-            "whereas the allocated array type requires more space for "
-            "internal needs",
-            SizeOfPlaceCI->getValue()));
-      else
-        Msg = std::string(llvm::formatv(
-            "Storage provided to placement new is only {0} bytes, "
-            "whereas the allocated type requires {1} bytes",
-            SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue()));
+  if ((SizeOfPlaceCI->getValue() < SizeOfTargetCI->getValue())) {
+    if (ExplodedNode *N = C.addSink(C.getState())) {
+      std::string Msg =
+          llvm::formatv("Storage provided to placement new is only {0} bytes, "
+                        "whereas the allocated type requires {1} bytes",
+                        SizeOfPlaceCI->getValue(), SizeOfTargetCI->getValue());
 
       auto R = std::make_unique<PathSensitiveBugReport>(SBT, Msg, N);
       bugreporter::trackExpressionValue(N, NE->getPlacementArg(0), *R);
@@ -153,7 +133,7 @@ void PlacementNewChecker::emitBadAlignReport(const Expr *P, CheckerContext &C,
                                              unsigned AllocatedTAlign,
                                              unsigned StorageTAlign) const {
   ProgramStateRef State = C.getState();
-  if (ExplodedNode *N = C.generateErrorNode(State)) {
+  if (ExplodedNode *N = C.addSink(State)) {
     std::string Msg(llvm::formatv("Storage type is aligned to {0} bytes but "
                                   "allocated type is aligned to {1} bytes",
                                   StorageTAlign, AllocatedTAlign));

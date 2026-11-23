@@ -1,6 +1,5 @@
 """Test printing ObjC objects that use unbacked properties - so that the static ivar offsets are incorrect."""
 
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -8,6 +7,8 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCIvarStripped(TestBase):
+    SHARED_BUILD_TESTCASE = False
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -35,13 +36,7 @@ class TestObjCIvarStripped(TestBase):
             breakpoint.IsValid() and breakpoint.GetNumLocations() > 0, VALID_BREAKPOINT
         )
 
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process, "Created a process.")
-        self.assertEqual(process.GetState(), lldb.eStateStopped, "Stopped it too.")
-
-        thread_list = lldbutil.get_threads_stopped_at_breakpoint(process, breakpoint)
-        self.assertEqual(len(thread_list), 1)
-        thread = thread_list[0]
+        _, _, thread, _ = lldbutil.run_to_breakpoint_do_run(self, target, breakpoint)
 
         frame = thread.GetFrameAtIndex(0)
         self.assertTrue(frame, "frame 0 is valid")

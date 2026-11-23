@@ -10,16 +10,12 @@ declare i32 @thunk_called_fn(i32, i32, i32, i32)
 define i32 @a() #0 {
 ; V8A-LABEL: a:
 ; V8A:       // %bb.0: // %entry
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 16
 ; V8A-NEXT:    .cfi_offset w30, -16
-; V8A-NEXT:    mov w0, #1 // =0x1
-; V8A-NEXT:    mov w1, #2 // =0x2
-; V8A-NEXT:    mov w2, #3 // =0x3
-; V8A-NEXT:    mov w3, #4 // =0x4
-; V8A-NEXT:    bl thunk_called_fn
+; V8A-NEXT:    bl OUTLINED_FUNCTION_1
 ; V8A-NEXT:    add w0, w0, #8
 ; V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V8A-NEXT:    hint #29
@@ -27,16 +23,12 @@ define i32 @a() #0 {
 ;
 ; V83A-LABEL: a:
 ; V83A:       // %bb.0: // %entry
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
-; V83A-NEXT:    mov w0, #1 // =0x1
-; V83A-NEXT:    mov w1, #2 // =0x2
-; V83A-NEXT:    mov w2, #3 // =0x3
-; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    bl thunk_called_fn
+; V83A-NEXT:    bl OUTLINED_FUNCTION_1
 ; V83A-NEXT:    add w0, w0, #8
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    retaa
@@ -49,16 +41,12 @@ entry:
 define i32 @b() #0 {
 ; V8A-LABEL: b:
 ; V8A:       // %bb.0: // %entry
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 16
 ; V8A-NEXT:    .cfi_offset w30, -16
-; V8A-NEXT:    mov w0, #1 // =0x1
-; V8A-NEXT:    mov w1, #2 // =0x2
-; V8A-NEXT:    mov w2, #3 // =0x3
-; V8A-NEXT:    mov w3, #4 // =0x4
-; V8A-NEXT:    bl thunk_called_fn
+; V8A-NEXT:    bl OUTLINED_FUNCTION_1
 ; V8A-NEXT:    add w0, w0, #88
 ; V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V8A-NEXT:    hint #29
@@ -66,16 +54,12 @@ define i32 @b() #0 {
 ;
 ; V83A-LABEL: b:
 ; V83A:       // %bb.0: // %entry
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
-; V83A-NEXT:    mov w0, #1 // =0x1
-; V83A-NEXT:    mov w1, #2 // =0x2
-; V83A-NEXT:    mov w2, #3 // =0x3
-; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    bl thunk_called_fn
+; V83A-NEXT:    bl OUTLINED_FUNCTION_1
 ; V83A-NEXT:    add w0, w0, #88
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    retaa
@@ -88,17 +72,12 @@ entry:
 define hidden i32 @c(ptr %fptr) #0 {
 ; V8A-LABEL: c:
 ; V8A:       // %bb.0: // %entry
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 16
 ; V8A-NEXT:    .cfi_offset w30, -16
-; V8A-NEXT:    mov x8, x0
-; V8A-NEXT:    mov w0, #1 // =0x1
-; V8A-NEXT:    mov w1, #2 // =0x2
-; V8A-NEXT:    mov w2, #3 // =0x3
-; V8A-NEXT:    mov w3, #4 // =0x4
-; V8A-NEXT:    blr x8
+; V8A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:    add w0, w0, #8
 ; V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V8A-NEXT:    hint #29
@@ -106,17 +85,12 @@ define hidden i32 @c(ptr %fptr) #0 {
 ;
 ; V83A-LABEL: c:
 ; V83A:       // %bb.0: // %entry
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
-; V83A-NEXT:    mov x8, x0
-; V83A-NEXT:    mov w0, #1 // =0x1
-; V83A-NEXT:    mov w1, #2 // =0x2
-; V83A-NEXT:    mov w2, #3 // =0x3
-; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    blr x8
+; V83A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V83A-NEXT:    add w0, w0, #8
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    retaa
@@ -129,17 +103,12 @@ entry:
 define hidden i32 @d(ptr %fptr) #0 {
 ; V8A-LABEL: d:
 ; V8A:       // %bb.0: // %entry
-; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    hint #25
+; V8A-NEXT:    .cfi_negate_ra_state
 ; V8A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V8A-NEXT:    .cfi_def_cfa_offset 16
 ; V8A-NEXT:    .cfi_offset w30, -16
-; V8A-NEXT:    mov x8, x0
-; V8A-NEXT:    mov w0, #1 // =0x1
-; V8A-NEXT:    mov w1, #2 // =0x2
-; V8A-NEXT:    mov w2, #3 // =0x3
-; V8A-NEXT:    mov w3, #4 // =0x4
-; V8A-NEXT:    blr x8
+; V8A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V8A-NEXT:    add w0, w0, #88
 ; V8A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V8A-NEXT:    hint #29
@@ -147,17 +116,12 @@ define hidden i32 @d(ptr %fptr) #0 {
 ;
 ; V83A-LABEL: d:
 ; V83A:       // %bb.0: // %entry
-; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    paciasp
+; V83A-NEXT:    .cfi_negate_ra_state
 ; V83A-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; V83A-NEXT:    .cfi_def_cfa_offset 16
 ; V83A-NEXT:    .cfi_offset w30, -16
-; V83A-NEXT:    mov x8, x0
-; V83A-NEXT:    mov w0, #1 // =0x1
-; V83A-NEXT:    mov w1, #2 // =0x2
-; V83A-NEXT:    mov w2, #3 // =0x3
-; V83A-NEXT:    mov w3, #4 // =0x4
-; V83A-NEXT:    blr x8
+; V83A-NEXT:    bl OUTLINED_FUNCTION_0
 ; V83A-NEXT:    add w0, w0, #88
 ; V83A-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; V83A-NEXT:    retaa

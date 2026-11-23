@@ -1,0 +1,16 @@
+# Check that the parallel linker handles a universal binary, which exercises
+# linking multiple architectures concurrently. Each slice defines a uniquely
+# named variable, so seeing all three confirms every slice was linked; the
+# classic linker is checked too for parity.
+
+# REQUIRES: object-emission,system-darwin
+
+# RUN: dsymutil --linker parallel -oso-prepend-path %p/.. %p/../Inputs/fat-test.dylib -o %t.parallel.dSYM
+# RUN: llvm-dwarfdump -debug-info %t.parallel.dSYM/Contents/Resources/DWARF/fat-test.dylib | FileCheck %s
+
+# RUN: dsymutil --linker classic -oso-prepend-path %p/.. %p/../Inputs/fat-test.dylib -o %t.classic.dSYM
+# RUN: llvm-dwarfdump -debug-info %t.classic.dSYM/Contents/Resources/DWARF/fat-test.dylib | FileCheck %s
+
+# CHECK-DAG: DW_AT_name{{.*}}"i386_var"
+# CHECK-DAG: DW_AT_name{{.*}}"x86_64_var"
+# CHECK-DAG: DW_AT_name{{.*}}"x86_64h_var"

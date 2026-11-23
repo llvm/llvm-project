@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy %s -o - | FileCheck %s
-# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=EXPAND
+# RUN: llc -mtriple=aarch64-linux-gnu -run-pass=greedy -aarch64-stack-hazard-size=0 %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64-linux-gnu -start-before=greedy -stop-after=aarch64-expand-pseudo -aarch64-stack-hazard-size=0 %s -o - | FileCheck %s --check-prefix=EXPAND
 --- |
   ; ModuleID = '<stdin>'
   source_filename = "<stdin>"
@@ -14,20 +14,18 @@
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_virtreg_ppr_to_pnr() #1 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2() #0 { entry: unreachable }
-  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2strided() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr2strided() #2 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr3() #0 { entry: unreachable }
   define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4() #0 { entry: unreachable }
-  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4strided() #0 { entry: unreachable }
+  define aarch64_sve_vector_pcs void @spills_fills_stack_id_zpr4strided() #2 { entry: unreachable }
 
   attributes #0 = { nounwind "target-features"="+sve" }
   attributes #1 = { nounwind "target-features"="+sve2p1" }
+  attributes #2 = { nounwind "target-features"="+sve,+sme2" "aarch64_pstate_sm_enabled" }
 
 ...
 ---
 name: spills_fills_stack_id_ppr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: ppr }
 stack:
 liveins:
   - { reg: '$p0', virtual-reg: '%0' }
@@ -38,7 +36,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-predicate-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr
     ; EXPAND: STR_PXI $p0, $sp, 7
@@ -68,9 +66,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: ppr2 }
 stack:
 liveins:
   - { reg: '$p0_p1', virtual-reg: '%0' }
@@ -81,7 +76,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-predicate-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2
     ; EXPAND: STR_PXI $p0, $sp, 6
@@ -113,9 +108,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_ppr2mul2
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: ppr2mul2 }
 stack:
 liveins:
   - { reg: '$p0_p1', virtual-reg: '%0' }
@@ -126,7 +118,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_ppr2
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 4, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-predicate-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_ppr2mul2
     ; EXPAND: STR_PXI $p0, $sp, 6
@@ -158,9 +150,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_pnr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: pnr }
 stack:
 liveins:
   - { reg: '$pn0', virtual-reg: '%0' }
@@ -171,7 +160,7 @@ body:             |
     ; CHECK-LABEL: name: spills_fills_stack_id_pnr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-predicate-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_pnr
     ; EXPAND: STR_PXI $pn0, $sp, 7
@@ -201,16 +190,13 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_pnr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: pnr_p8to15 }
 stack:
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; CHECK: stack:
     ; CHECK:      - { id: 0, name: '', type: spill-slot, offset: 0, size: 2, alignment: 2
-    ; CHECK-NEXT:     stack-id: scalable-vector, callee-saved-register: ''
+    ; CHECK-NEXT:     stack-id: scalable-predicate-vector, callee-saved-register: ''
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_virtreg_pnr
     ; EXPAND: renamable $pn8 = WHILEGE_CXX_B
@@ -244,10 +230,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_virtreg_ppr_to_pnr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: ppr }
-  - { id: 1, class: pnr_p8to15 }
 stack:
 body:             |
   bb.0.entry:
@@ -278,9 +260,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr }
 stack:
 liveins:
   - { reg: '$z0', virtual-reg: '%0' }
@@ -313,15 +292,12 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr2
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr2 }
 stack:
 liveins:
-  - { reg: '$z0_z1', virtual-reg: '%0' }
+  - { reg: '$z1_z2', virtual-reg: '%0' }
 body:             |
   bb.0.entry:
-    liveins: $z0_z1
+    liveins: $z1_z2
 
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr2
     ; CHECK: stack:
@@ -329,12 +305,12 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr2
-    ; EXPAND: STR_ZXI $z0, $sp, 0
-    ; EXPAND: STR_ZXI $z1, $sp, 1
-    ; EXPAND: $z0 = LDR_ZXI $sp, 0
-    ; EXPAND: $z1 = LDR_ZXI $sp, 1
+    ; EXPAND: STR_ZXI $z1, $sp, 0
+    ; EXPAND: STR_ZXI $z2, $sp, 1
+    ; EXPAND: $z1 = LDR_ZXI $sp, 0
+    ; EXPAND: $z2 = LDR_ZXI $sp, 1
 
-    %0:zpr2 = COPY $z0_z1
+    %0:zpr2 = COPY $z1_z2
 
     $z0_z1_z2_z3     = IMPLICIT_DEF
     $z4_z5_z6_z7     = IMPLICIT_DEF
@@ -345,14 +321,11 @@ body:             |
     $z24_z25_z26_z27 = IMPLICIT_DEF
     $z28_z29_z30_z31 = IMPLICIT_DEF
 
-    $z0_z1 = COPY %0
+    $z1_z2 = COPY %0
     RET_ReallyLR
 ...
 ---
 name: spills_fills_stack_id_zpr2strided
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr2strided }
 stack:
 liveins:
   - { reg: '$z0_z8', virtual-reg: '%0' }
@@ -395,9 +368,6 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr3
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr3 }
 stack:
 liveins:
   - { reg: '$z0_z1_z2', virtual-reg: '%0' }
@@ -434,15 +404,12 @@ body:             |
 ...
 ---
 name: spills_fills_stack_id_zpr4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr4 }
 stack:
 liveins:
-  - { reg: '$z0_z1_z2_z3', virtual-reg: '%0' }
+  - { reg: '$z1_z2_z3_z4', virtual-reg: '%0' }
 body:             |
   bb.0.entry:
-    liveins: $z0_z1_z2_z3
+    liveins: $z1_z2_z3_z4
 
     ; CHECK-LABEL: name: spills_fills_stack_id_zpr4
     ; CHECK: stack:
@@ -450,16 +417,16 @@ body:             |
     ; CHECK-NEXT:     stack-id: scalable-vector
 
     ; EXPAND-LABEL: name: spills_fills_stack_id_zpr4
-    ; EXPAND: STR_ZXI $z0, $sp, 0
-    ; EXPAND: STR_ZXI $z1, $sp, 1
-    ; EXPAND: STR_ZXI $z2, $sp, 2
-    ; EXPAND: STR_ZXI $z3, $sp, 3
-    ; EXPAND: $z0 = LDR_ZXI $sp, 0
-    ; EXPAND: $z1 = LDR_ZXI $sp, 1
-    ; EXPAND: $z2 = LDR_ZXI $sp, 2
-    ; EXPAND: $z3 = LDR_ZXI $sp, 3
+    ; EXPAND: STR_ZXI $z1, $sp, 0
+    ; EXPAND: STR_ZXI $z2, $sp, 1
+    ; EXPAND: STR_ZXI $z3, $sp, 2
+    ; EXPAND: STR_ZXI $z4, $sp, 3
+    ; EXPAND: $z1 = LDR_ZXI $sp, 0
+    ; EXPAND: $z2 = LDR_ZXI $sp, 1
+    ; EXPAND: $z3 = LDR_ZXI $sp, 2
+    ; EXPAND: $z4 = LDR_ZXI $sp, 3
 
-    %0:zpr4 = COPY $z0_z1_z2_z3
+    %0:zpr4 = COPY $z1_z2_z3_z4
 
     $z0_z1_z2_z3     = IMPLICIT_DEF
     $z4_z5_z6_z7     = IMPLICIT_DEF
@@ -470,14 +437,11 @@ body:             |
     $z24_z25_z26_z27 = IMPLICIT_DEF
     $z28_z29_z30_z31 = IMPLICIT_DEF
 
-    $z0_z1_z2_z3 = COPY %0
+    $z1_z2_z3_z4 = COPY %0
     RET_ReallyLR
 ...
 ---
 name: spills_fills_stack_id_zpr4strided
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: zpr4strided }
 stack:
 liveins:
   - { reg: '$z0_z4_z8_z12', virtual-reg: '%0' }

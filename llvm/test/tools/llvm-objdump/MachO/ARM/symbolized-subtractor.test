@@ -11,5 +11,5 @@ PCinst:
 	.section	__TEXT,__cstring,cstring_literals
 Str: 
 	.asciz	"Hello world\n"
-# CHECK: movw	r3, :lower16:((Str-PCinst)-4)
-# CHECK: movt	r3, :upper16:((Str-PCinst)-4)
+# CHECK: movw	r3, :lower16:(Str-PCinst-4)
+# CHECK: movt	r3, :upper16:(Str-PCinst-4)

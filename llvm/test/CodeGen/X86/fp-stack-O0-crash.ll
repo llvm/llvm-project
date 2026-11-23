@@ -31,14 +31,14 @@ if.end:                                           ; preds = %if.then, %cond.fals
 
 ; PR10575
 ; This produces a FP0 = IMPLICIT_DEF instruction.
-define void @__m_rankmerge_MOD_dindexmerge_() nounwind {
+define void @__m_rankmerge_MOD_dindexmerge_(i1 %arg) nounwind {
 entry:
   br label %"20"
 
 "20":                                             ; preds = %"23", %entry
     %0 = phi double [ undef, %entry ], [ %0, %"23" ]
     %1 = phi double [ 0.000000e+00, %entry ], [ %2, %"23" ]
-    br i1 undef, label %"21", label %"23"
+    br i1 %arg, label %"21", label %"23"
 
 "21":                                             ; preds = %"20"
     ret void

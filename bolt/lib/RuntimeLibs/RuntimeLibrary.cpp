@@ -18,6 +18,7 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
 
 #define DEBUG_TYPE "bolt-rtlib"
 
@@ -38,6 +39,23 @@ std::string RuntimeLibrary::getLibPathByToolPath(StringRef ToolPath,
     llvm::sys::path::append(LibPath, "lib" LLVM_LIBDIR_SUFFIX);
   }
   llvm::sys::path::append(LibPath, LibFileName);
+  if (!llvm::sys::fs::exists(LibPath)) {
+    // If it is a symlink, check the directory that the symlink points to.
+    if (llvm::sys::fs::is_symlink_file(ToolPath)) {
+      SmallString<256> RealPath;
+      llvm::sys::fs::real_path(ToolPath, RealPath);
+      if (llvm::ErrorOr<std::string> P =
+              llvm::sys::findProgramByName(RealPath)) {
+        outs() << "BOLT-INFO: library not found: " << LibPath << "\n"
+               << "BOLT-INFO: " << ToolPath << " is a symlink; will look up "
+               << LibFileName
+               << " at the target directory that the symlink points to\n";
+        return getLibPath(*P, LibFileName);
+      }
+    }
+    errs() << "BOLT-ERROR: library not found: " << LibPath << "\n";
+    exit(1);
+  }
   return std::string(LibPath);
 }
 
@@ -77,9 +95,10 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
   file_magic Magic = identify_magic(B->getBuffer());
 
   if (Magic == file_magic::archive) {
-    Error Err = Error::success();
-    object::Archive Archive(B.get()->getMemBufferRef(), Err);
-    for (const object::Archive::Child &C : Archive.children(Err)) {
+    std::unique_ptr<object::Archive> Archive;
+    Error Err = object::Archive::create(B->getMemBufferRef()).moveInto(Archive);
+    check_error(std::move(Err), B->getBufferIdentifier());
+    for (const object::Archive::Child &C : Archive->children(Err)) {
       std::unique_ptr<object::Binary> Bin = cantFail(C.getAsBinary());
       if (object::ObjectFile *Obj = dyn_cast<object::ObjectFile>(&*Bin))
         Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
@@ -87,9 +106,9 @@ void RuntimeLibrary::loadLibrary(StringRef LibPath, BOLTLinker &Linker,
     check_error(std::move(Err), B->getBufferIdentifier());
   } else if (Magic == file_magic::elf_relocatable ||
              Magic == file_magic::elf_shared_object) {
-    std::unique_ptr<object::ObjectFile> Obj = cantFail(
-        object::ObjectFile::createObjectFile(B.get()->getMemBufferRef()),
-        "error creating in-memory object");
+    std::unique_ptr<object::ObjectFile> Obj =
+        cantFail(object::ObjectFile::createObjectFile(B->getMemBufferRef()),
+                 "error creating in-memory object");
     Linker.loadObject(Obj->getMemoryBufferRef(), MapSections);
   } else {
     errs() << "BOLT-ERROR: unrecognized library format: " << LibPath << "\n";

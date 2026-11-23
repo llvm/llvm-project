@@ -3,7 +3,8 @@
 // mapping the heap early, in __msan_init.
 //
 // RUN: %clangxx_msan -O0 %s -o %t_1
-// RUN: %clangxx_msan -O0 -DHEAP_ADDRESS=$(%run %t_1) %s -o %t_2 && %run %t_2
+// RUN: %run %t_1 > %t.heap_address
+// RUN: %clangxx_msan -O0 -DHEAP_ADDRESS=%{readfile:%t.heap_address} %s -o %t_2 && %run %t_2
 //
 // This test only makes sense for the 64-bit allocator. The 32-bit allocator
 // does not have a fixed mapping. Exclude platforms that use the 32-bit

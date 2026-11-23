@@ -198,3 +198,24 @@ entry:
   %V128 = shufflevector <4 x half> %a, <4 x half> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x half> %V128
 }
+
+define <8 x bfloat> @v8bf16(<8 x bfloat> %a) {
+; CHECK-LABEL: v8bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    ret
+entry:
+  %V128 = shufflevector <8 x bfloat> %a, <8 x bfloat> undef, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
+  ret <8 x bfloat> %V128
+}
+
+define <4 x bfloat> @v4bf16(<4 x bfloat> %a) {
+; CHECK-LABEL: v4bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    rev64 v0.4h, v0.4h
+; CHECK-NEXT:    ret
+entry:
+  %V128 = shufflevector <4 x bfloat> %a, <4 x bfloat> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  ret <4 x bfloat> %V128
+}

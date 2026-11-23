@@ -25,22 +25,23 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 
+#include "llvm/ADT/StringMap.h"
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::formatters;
 
 namespace lldb_private {
 namespace formatters {
-std::map<ConstString, CXXFunctionSummaryFormat::Callback> &
+llvm::StringMap<CXXFunctionSummaryFormat::Callback> &
 NSArray_Additionals::GetAdditionalSummaries() {
-  static std::map<ConstString, CXXFunctionSummaryFormat::Callback> g_map;
+  static llvm::StringMap<CXXFunctionSummaryFormat::Callback> g_map;
   return g_map;
 }
 
-std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback> &
+llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> &
 NSArray_Additionals::GetAdditionalSynthetics() {
-  static std::map<ConstString, CXXSyntheticChildren::CreateFrontEndCallback>
-      g_map;
+  static llvm::StringMap<CXXSyntheticChildren::CreateFrontEndCallback> g_map;
   return g_map;
 }
 
@@ -55,10 +56,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override = 0;
-
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
 
 protected:
   virtual lldb::addr_t GetDataAddress() = 0;
@@ -220,10 +217,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
-
 private:
   ExecutionContextRef m_exe_ctx_ref;
   uint8_t m_ptr_size = 8;
@@ -310,7 +303,7 @@ public:
 
   bool MightHaveChildren() override;
 
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 };
 
 class NSArray1SyntheticFrontEnd : public SyntheticChildrenFrontEnd {
@@ -325,9 +318,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
-  size_t GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 };
 } // namespace formatters
 } // namespace lldb_private
@@ -360,21 +351,23 @@ bool lldb_private::formatters::NSArraySummaryProvider(
 
   uint64_t value = 0;
 
-  ConstString class_name(descriptor->GetClassName());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
-  static const ConstString g_NSArrayI("__NSArrayI");
-  static const ConstString g_NSArrayM("__NSArrayM");
-  static const ConstString g_NSArrayI_Transfer("__NSArrayI_Transfer");
-  static const ConstString g_NSFrozenArrayM("__NSFrozenArrayM");
-  static const ConstString g_NSArray0("__NSArray0");
-  static const ConstString g_NSArray1("__NSSingleObjectArrayI");
-  static const ConstString g_NSArrayCF("__NSCFArray");
-  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
-  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
-  static const ConstString g_NSCallStackArray("_NSCallStackArray");
-  static const ConstString g_NSConstantArray("NSConstantArray");
+  static constexpr llvm::StringLiteral g_NSArrayI("__NSArrayI");
+  static constexpr llvm::StringLiteral g_NSArrayM("__NSArrayM");
+  static constexpr llvm::StringLiteral g_NSArrayI_Transfer(
+      "__NSArrayI_Transfer");
+  static constexpr llvm::StringLiteral g_NSFrozenArrayM("__NSFrozenArrayM");
+  static constexpr llvm::StringLiteral g_NSArray0("__NSArray0");
+  static constexpr llvm::StringLiteral g_NSArray1("__NSSingleObjectArrayI");
+  static constexpr llvm::StringLiteral g_NSArrayCF("__NSCFArray");
+  static constexpr llvm::StringLiteral g_NSArrayMLegacy("__NSArrayM_Legacy");
+  static constexpr llvm::StringLiteral g_NSArrayMImmutable(
+      "__NSArrayM_Immutable");
+  static constexpr llvm::StringLiteral g_NSCallStackArray("_NSCallStackArray");
+  static constexpr llvm::StringLiteral g_NSConstantArray("NSConstantArray");
 
-  if (class_name.IsEmpty())
+  if (class_name.empty())
     return false;
 
   if (class_name == g_NSArrayI) {
@@ -495,8 +488,8 @@ lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetChildAtIndex(
   object_at_idx += (pyhs_idx * m_ptr_size);
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 template <typename D32, typename D64>
@@ -530,21 +523,6 @@ lldb_private::formatters::GenericNSArrayMSyntheticFrontEnd<D32, D64>::Update() {
 
   return error.Success() ? lldb::ChildCacheState::eReuse
                          : lldb::ChildCacheState::eRefetch;
-}
-
-bool
-lldb_private::formatters::NSArrayMSyntheticFrontEndBase::MightHaveChildren() {
-  return true;
-}
-
-size_t
-lldb_private::formatters::NSArrayMSyntheticFrontEndBase::GetIndexOfChildWithName(
-    ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
 }
 
 template <typename D32, typename D64>
@@ -623,17 +601,6 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
 }
 
 template <typename D32, typename D64, bool Inline>
-size_t
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  GetIndexOfChildWithName(ConstString name) {
-  const char *item_name = name.GetCString();
-  uint32_t idx = ExtractIndexFromString(item_name);
-  if (idx < UINT32_MAX && idx >= CalculateNumChildrenIgnoringErrors())
-    return UINT32_MAX;
-  return idx;
-}
-
-template <typename D32, typename D64, bool Inline>
 llvm::Expected<uint32_t>
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<
     D32, D64, Inline>::CalculateNumChildren() {
@@ -675,13 +642,6 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64,
 }
 
 template <typename D32, typename D64, bool Inline>
-bool
-lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
-  MightHaveChildren() {
-  return true;
-}
-
-template <typename D32, typename D64, bool Inline>
 lldb::ValueObjectSP
 lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
   GetChildAtIndex(uint32_t idx) {
@@ -705,17 +665,17 @@ lldb_private::formatters::GenericNSArrayISyntheticFrontEnd<D32, D64, Inline>::
     return lldb::ValueObjectSP();
   StreamString idx_name;
   idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromAddress(idx_name.GetString(), object_at_idx,
-                                      m_exe_ctx_ref, m_id_type);
+  return CreateChildValueObjectFromAddress(idx_name.GetString(), object_at_idx,
+                                           m_exe_ctx_ref, m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp) {}
 
-size_t
+llvm::Expected<size_t>
 lldb_private::formatters::NSArray0SyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
+    llvm::StringRef name) {
   return UINT32_MAX;
 }
 
@@ -743,10 +703,10 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::NSArray1SyntheticFrontEnd(
     lldb::ValueObjectSP valobj_sp)
     : SyntheticChildrenFrontEnd(*valobj_sp.get()) {}
 
-size_t
+llvm::Expected<size_t>
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetIndexOfChildWithName(
-    ConstString name) {
-  static const ConstString g_zero("[0]");
+    llvm::StringRef name) {
+  static constexpr llvm::StringLiteral g_zero("[0]");
 
   if (name == g_zero)
     return 0;
@@ -764,14 +724,10 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::NSArray1SyntheticFrontEnd::MightHaveChildren() {
-  return true;
-}
-
 lldb::ValueObjectSP
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  static const ConstString g_zero("[0]");
+  static ConstString g_zero("[0]");
 
   if (idx == 0) {
     TypeSystemClangSP scratch_ts_sp =
@@ -816,20 +772,19 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
   if (!descriptor || !descriptor->IsValid())
     return nullptr;
 
-  ConstString class_name(descriptor->GetClassName());
+  llvm::StringRef class_name(descriptor->GetClassName());
 
-  static const ConstString g_NSArrayI("__NSArrayI");
-  static const ConstString g_NSConstantArray("NSConstantArray");
-  static const ConstString g_NSArrayI_Transfer("__NSArrayI_Transfer");
-  static const ConstString g_NSFrozenArrayM("__NSFrozenArrayM");
-  static const ConstString g_NSArrayM("__NSArrayM");
-  static const ConstString g_NSArray0("__NSArray0");
-  static const ConstString g_NSArray1("__NSSingleObjectArrayI");
-  static const ConstString g_NSArrayMLegacy("__NSArrayM_Legacy");
-  static const ConstString g_NSArrayMImmutable("__NSArrayM_Immutable");
-  static const ConstString g_NSCallStackArray("_NSCallStackArray");
+  static constexpr llvm::StringLiteral g_NSArrayI("__NSArrayI");
+  static constexpr llvm::StringLiteral g_NSConstantArray("NSConstantArray");
+  static constexpr llvm::StringLiteral g_NSArrayI_Transfer(
+      "__NSArrayI_Transfer");
+  static constexpr llvm::StringLiteral g_NSFrozenArrayM("__NSFrozenArrayM");
+  static constexpr llvm::StringLiteral g_NSArrayM("__NSArrayM");
+  static constexpr llvm::StringLiteral g_NSArray0("__NSArray0");
+  static constexpr llvm::StringLiteral g_NSArray1("__NSSingleObjectArrayI");
+  static constexpr llvm::StringLiteral g_NSCallStackArray("_NSCallStackArray");
 
-  if (class_name.IsEmpty())
+  if (class_name.empty())
     return nullptr;
 
   if (class_name == g_NSArrayI) {
@@ -839,7 +794,7 @@ lldb_private::formatters::NSArraySyntheticFrontEndCreator(
       return (new Foundation1430::NSArrayISyntheticFrontEnd(valobj_sp));
     return (new Foundation1300::NSArrayISyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSArrayI_Transfer) {
-      return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
+    return (new Foundation1436::NSArrayI_TransferSyntheticFrontEnd(valobj_sp));
   } else if (class_name == g_NSConstantArray) {
     return new ConstantArray::NSConstantArraySyntheticFrontEnd(valobj_sp);
   } else if (class_name == g_NSFrozenArrayM) {

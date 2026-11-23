@@ -175,6 +175,8 @@ public:
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
   ValueWithRealFlags<Real> MODULO(const Real &,
       Rounding rounding = TargetCharacteristics::defaultRounding) const;
+  ValueWithRealFlags<Real> KahanSummation(const Real &, Real &correction,
+      Rounding rounding = TargetCharacteristics::defaultRounding) const;
 
   template <typename INT> constexpr INT EXPONENT() const {
     if (Exponent() == maxExponent) {
@@ -442,6 +444,27 @@ public:
   // or parenthesized constant expression that produces this value.
   llvm::raw_ostream &AsFortran(
       llvm::raw_ostream &, int kind, bool minimal = false) const;
+  std::string AsFortran(int kind, bool minimal = false) const;
+
+  /// Number of bytes that FromRawBytes/StoreRawBytes would accesses.
+  /// Note that for REAL(10), this is 16 because X87IntegerContainer specifies
+  /// an alignment of 16 bytes which adds 6 unitialized bytes of limbs.
+  static constexpr std::size_t bytesStored() { return Word::bytesStored(); }
+
+  /// De-serializes a real from \p raw. \p expectedSize must match the the
+  /// number of bytes to be read.
+  static Real FromRawBytes(
+      const void *raw, [[maybe_unused]] std::size_t expectedSize) {
+    return Real{Word::FromRawBytes(raw, expectedSize)};
+  }
+
+  /// Serializes this real to \p dst. \p expectedSize must match the the number
+  /// of bytes to be written. If \p changed points to a boolean, it will be set
+  /// to true if any bytes at \p dst have changed.
+  void StoreRawBytes(void *dst, [[maybe_unused]] size_t expectedSize,
+      bool *changed = nullptr) const {
+    word_.StoreRawBytes(dst, expectedSize, changed);
+  }
 
 private:
   using Significand = Integer<significandBits>; // no implicit bit
@@ -490,7 +513,22 @@ private:
       bool isNegative, int exponent, const Fraction &, Rounding, RoundingBits,
       bool multiply = false);
 
-  Word word_{}; // an Integer<>
+  // Require alignment, in case code generation on x86_64 decides that our
+  // Real object is suitable for SSE2 instructions and then gets surprised
+  // by unaligned address.
+  // On AIX, -Waix-compat diagnoses passing by value a struct with a 16-byte
+  // aligned member (here, word_ of a Real<Integer<128>>) as not binary
+  // compatible with IBM XL C/C++ for AIX 16.1.0 or older. Compatibility with
+  // those compilers is not a concern: they cannot compile this C++17 code.
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunknown-warning-option"
+#pragma clang diagnostic ignored "-Waix-compat"
+#endif
+  alignas(Word::alignment / 8) Word word_{}; // an Integer<>
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 };
 
 extern template class Real<Integer<16>, 11>; // IEEE half format

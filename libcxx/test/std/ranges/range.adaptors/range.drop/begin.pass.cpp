@@ -14,7 +14,9 @@
 // constexpr auto begin() const
 //   requires random_access_range<const V> && sized_range<const V>;
 
+#include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"

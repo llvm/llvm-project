@@ -18,7 +18,8 @@ declare i8 @bar(i8);
 ; CHECK: rcall   .-2
 ; CHECK-NEXT: 00000000: R_AVR_13_PCREL bar
 ; CHECK-NEXT: cpi     r24, 0x7b
-; CHECK-NEXT: brne    .+4
+; CHECK-NEXT: brne    .-2
+; CHECK-NEXT: R_AVR_7_PCREL .text+0xa
 ; CHECK-NEXT: ldi     r24, 0x64
 ; CHECK-NEXT: ret
 ; CHECK-NEXT: ldi     r24, 0xc8

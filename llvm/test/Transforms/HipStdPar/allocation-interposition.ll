@@ -16,6 +16,16 @@ declare void @__hipstdpar_hidden_free(ptr)
 
 declare ptr @__hipstdpar_hidden_malloc(i64)
 
+declare ptr @__hipstdpar_hidden_memalign(i64, i64)
+
+declare ptr @__hipstdpar_hidden_mmap(ptr, i64, i32, i32, i32, i64)
+
+declare i32 @__hipstdpar_hidden_munmap(ptr, i64)
+
+declare ptr @__hipstdpar_mmap(ptr, i64, i32, i32, i32, i64)
+
+declare i32 @__hipstdpar_munmap(ptr, i64)
+
 declare ptr @__hipstdpar_realloc(ptr, i64)
 
 declare ptr @__hipstdpar_realloc_array(ptr, i64, i64)
@@ -171,7 +181,21 @@ define dso_local noundef i32 @allocs() {
   ; CHECK: call void @__hipstdpar_free(ptr noundef %28)
   call void @__libc_free(ptr noundef %28)
 
-  ret i32 0
+  ; CHECK: %29 = call ptr @__libc_malloc(i64 noundef 8)
+  %29 = call ptr @__hipstdpar_hidden_malloc(i64 noundef 8)
+  ; CHECK: call void @__libc_free(ptr noundef %29)
+  call void @__hipstdpar_hidden_free(ptr noundef %29)
+
+  ; CHECK: %30 = call ptr @__libc_memalign(i64 noundef 8, i64 noundef 4)
+  %30 = call ptr @__hipstdpar_hidden_memalign(i64 noundef 8, i64 noundef 4)
+  ; CHECK: %31 = call ptr @mmap(ptr %30, i64 8, i32 0, i32 0, i32 0, i64 0)
+  %31 = call ptr @__hipstdpar_hidden_mmap(ptr %30, i64 8, i32 0, i32 0, i32 0, i64 0)
+  ; CHECK: %32 = call i32 @munmap(ptr %31, i64 8)
+  %32 = call i32 @__hipstdpar_hidden_munmap(ptr %31, i64 8)
+  ; CHECK: call void @__libc_free(ptr noundef %30)
+  call void @__hipstdpar_hidden_free(ptr noundef %30)
+
+  ret i32 %32
 }
 
 declare noalias ptr @aligned_alloc(i64 noundef, i64 noundef)
@@ -221,3 +245,7 @@ declare void @__libc_free(ptr noundef)
 declare ptr @__libc_malloc(i64 noundef)
 
 declare ptr @__libc_memalign(i64 noundef, i64 noundef)
+
+declare ptr @mmap(ptr noundef, i64 noundef, i32 noundef, i32 noundef, i32 noundef, i64 noundef)
+
+declare i32 @munmap(ptr noundef, i64 noundef)

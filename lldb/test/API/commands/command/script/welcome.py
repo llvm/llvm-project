@@ -26,6 +26,12 @@ class TargetnameCommand(object):
         print("Current target " + file.GetFilename(), file=result)
         if args == "fail":
             result.SetError("a test for error in command")
+        if args == "fail-sberror":
+            result.SetError(lldb.SBError("a test for SBError in command"), "fallback")
+        if args == "success-sberror":
+            success = lldb.SBError("cleared")
+            success.Clear()
+            result.SetError(success, "fallback")
 
     def get_flags(self):
         return lldb.eCommandRequiresTarget

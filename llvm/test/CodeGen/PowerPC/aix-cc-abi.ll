@@ -4,7 +4,7 @@
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM32PWR4 %s
 
 ; RUN: llc -verify-machineinstrs -mcpu=pwr4 -mattr=-altivec \
-; RUN:  -mtriple powerpc64-ibm-aix-xcoff < %s | \
+; RUN:  -mtriple powerpc64-ibm-aix-xcoff --code-model=small < %s | \
 ; RUN: FileCheck --check-prefixes=CHECKASM,ASM64PWR4 %s
 
 define void @call_test_chars() {
@@ -1213,14 +1213,14 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM32PWR4-NEXT:    addc 3, 3, 6
 ; ASM32PWR4-NEXT:    addze 6, 7
 ; ASM32PWR4-NEXT:    addc 3, 3, 9
-; ASM32PWR4-NEXT:    lwz 5, 84(1)
+; ASM32PWR4-NEXT:    lwz 7, 84(1)
 ; ASM32PWR4-NEXT:    addze 6, 6
 ; ASM32PWR4-NEXT:    addc 3, 3, 31
-; ASM32PWR4-NEXT:    lwz 7, 80(1)
+; ASM32PWR4-NEXT:    lwz 5, 80(1)
 ; ASM32PWR4-NEXT:    adde 6, 6, 30
-; ASM32PWR4-NEXT:    addc 3, 3, 5
+; ASM32PWR4-NEXT:    addc 3, 3, 7
 ; ASM32PWR4-NEXT:    lbz 8, 91(1)
-; ASM32PWR4-NEXT:    adde 5, 6, 7
+; ASM32PWR4-NEXT:    adde 5, 6, 5
 ; ASM32PWR4-NEXT:    addc 3, 3, 8
 ; ASM32PWR4-NEXT:    lbz 6, 103(1)
 ; ASM32PWR4-NEXT:    addze 5, 5
@@ -1238,30 +1238,30 @@ define i64 @test_ints_stack(i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, i32 %i6
 ; ASM64PWR4-LABEL: test_ints_stack:
 ; ASM64PWR4:       # %bb.0: # %entry
 ; ASM64PWR4-NEXT:    add 3, 3, 4
-; ASM64PWR4-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; ASM64PWR4-NEXT:    lha 0, 126(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 5
 ; ASM64PWR4-NEXT:    add 3, 3, 6
 ; ASM64PWR4-NEXT:    add 3, 3, 7
-; ASM64PWR4-NEXT:    std 2, -16(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 8
-; ASM64PWR4-NEXT:    add 3, 3, 9
 ; ASM64PWR4-NEXT:    ld 6, 112(1)
+; ASM64PWR4-NEXT:    add 3, 3, 9
 ; ASM64PWR4-NEXT:    add 3, 3, 10
 ; ASM64PWR4-NEXT:    extsw 3, 3
-; ASM64PWR4-NEXT:    lha 0, 126(1)
+; ASM64PWR4-NEXT:    lbz 5, 135(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 6
 ; ASM64PWR4-NEXT:    add 3, 3, 0
-; ASM64PWR4-NEXT:    lbz 5, 135(1)
 ; ASM64PWR4-NEXT:    lwz 7, 140(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 5
 ; ASM64PWR4-NEXT:    lwa 12, 148(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 7
 ; ASM64PWR4-NEXT:    add 3, 3, 12
+; ASM64PWR4-NEXT:    std 31, -8(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    ld 31, 152(1)
 ; ASM64PWR4-NEXT:    lbz 5, 167(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 31
-; ASM64PWR4-NEXT:    lwa 11, 172(1)
+; ASM64PWR4-NEXT:    std 2, -16(1) # 8-byte Folded Spill
 ; ASM64PWR4-NEXT:    add 3, 3, 5
+; ASM64PWR4-NEXT:    lwa 11, 172(1)
 ; ASM64PWR4-NEXT:    add 3, 3, 11
 ; ASM64PWR4-NEXT:    lbz 2, 183(1)
 ; ASM64PWR4-NEXT:    lbz 6, 191(1)
@@ -1667,7 +1667,6 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    lis 7, 16313
 ; ASM64PWR4-NEXT:    lwz 3, 0(3)
 ; ASM64PWR4-NEXT:    ld 4, 0(4)
-; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    stw 3, 152(1)
 ; ASM64PWR4-NEXT:    ld 3, L..C22(2) # %const.0
 ; ASM64PWR4-NEXT:    std 4, 160(1)
@@ -1686,6 +1685,7 @@ define void @caller_fpr_stack() {
 ; ASM64PWR4-NEXT:    ld 4, L..C29(2) # %const.7
 ; ASM64PWR4-NEXT:    lfd 9, 0(3)
 ; ASM64PWR4-NEXT:    ld 3, L..C30(2) # %const.8
+; ASM64PWR4-NEXT:    lwz 5, 0(5)
 ; ASM64PWR4-NEXT:    lfd 1, 0(4)
 ; ASM64PWR4-NEXT:    lis 4, 16320
 ; ASM64PWR4-NEXT:    ori 4, 4, 41943

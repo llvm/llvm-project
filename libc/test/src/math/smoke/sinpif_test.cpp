@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/errno/libc_errno.h"
+#include "hdr/errno_macros.h"
+#include "hdr/stdint_proxy.h"
 #include "src/math/sinpif.h"
 #include "test/UnitTest/FPMatcher.h"
-
-#include <stdint.h>
 
 using LlvmLibcSinpifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
 TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
-  LIBC_NAMESPACE::libc_errno = 0;
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::sinpif(sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif(aNaN));
   EXPECT_MATH_ERRNO(0);
@@ -31,6 +31,11 @@ TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif(neg_inf));
   EXPECT_MATH_ERRNO(EDOM);
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(0x1.1abe4p-130f,
+                              LIBC_NAMESPACE::sinpif(0x1.68p-132f),
+                              FE_UNDERFLOW | FE_INEXACT);
+  EXPECT_MATH_ERRNO(ERANGE);
 }
 
 TEST_F(LlvmLibcSinpifTest, Integers) {

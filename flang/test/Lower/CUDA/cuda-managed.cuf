@@ -1,0 +1,20 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+! Check for implicit data transfer of managed variable
+
+subroutine testr2(N1,N2)
+  real(4), managed :: ai4(N1,N2)
+  real(4), allocatable :: bRefi4(:)
+
+  integer :: i1, i2
+
+  allocate(bRefi4(N1))
+  do i1 = 1, N1
+    bRefi4(i1) = (ai4(i1,1)+ai4(i1,N2))*N2/2
+  enddo
+  deallocate(bRefi4)
+
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtestr2
+! CHECK-NOT: cuf.data_transfer

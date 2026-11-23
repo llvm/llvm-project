@@ -1,5 +1,5 @@
 ; RUN: llvm-as %s -o %t1.o
-; RUN: %gold -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -m elf_x86_64 -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -r %t1.o -o %t
 ; RUN: llvm-readobj --symbols %t | FileCheck %s
 

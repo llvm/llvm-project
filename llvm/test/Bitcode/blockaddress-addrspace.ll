@@ -1,22 +1,22 @@
 ; RUN: rm -rf %t && split-file %s %t
-; RUN: llvm-as %t/global-use-good.ll -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/global-use-bad.ll -o /dev/null 2>&1 | FileCheck %t/global-use-bad.ll
-; RUN: llvm-as %t/global-fwddecl-good.ll -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/global-fwddecl-bad.ll -o /dev/null 2>&1 | FileCheck %t/global-fwddecl-bad.ll
-; RUN: llvm-as %t/return-fwddecl-good.ll  -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/return-fwddecl-bad.ll -o /dev/null 2>&1 | FileCheck %t/return-fwddecl-bad.ll
-; RUN: llvm-as %t/return-self-good.ll  -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/return-self-bad.ll -o /dev/null 2>&1 | FileCheck %t/return-self-bad.ll
-; RUN: not llvm-as %t/return-self-bad-2.ll -o /dev/null 2>&1 | FileCheck %t/return-self-bad-2.ll
-; RUN: not llvm-as %t/return-unknown-fn-bad.ll -o /dev/null 2>&1 | FileCheck %t/return-unknown-fn-bad.ll
-; RUN: llvm-as %t/call-fwddecl-good.ll  -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/call-fwddecl-bad.ll -o /dev/null 2>&1 | FileCheck %t/call-fwddecl-bad.ll
-; RUN: llvm-as %t/phi-good.ll  -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/phi-bad.ll -o /dev/null 2>&1 | FileCheck %t/phi-bad.ll
-; RUN: llvm-as %t/fwddecl-phi-good.ll  -o - | llvm-dis -o /dev/null
-; RUN: not llvm-as %t/fwddecl-phi-bad.ll -o /dev/null 2>&1 | FileCheck %t/fwddecl-phi-bad.ll
-; RUN: not llvm-as %t/bad-type-not-ptr.ll -o /dev/null 2>&1 | FileCheck %t/bad-type-not-ptr.ll
-; RUN: not llvm-as %t/bad-type-not-i8-ptr.ll -o /dev/null 2>&1 | FileCheck %t/bad-type-not-i8-ptr.ll
+; RUN: llvm-as %t/global-use-good.ll -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/global-use-bad.ll -disable-output 2>&1 | FileCheck %t/global-use-bad.ll
+; RUN: llvm-as %t/global-fwddecl-good.ll -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/global-fwddecl-bad.ll -disable-output 2>&1 | FileCheck %t/global-fwddecl-bad.ll
+; RUN: llvm-as %t/return-fwddecl-good.ll  -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/return-fwddecl-bad.ll -disable-output 2>&1 | FileCheck %t/return-fwddecl-bad.ll
+; RUN: llvm-as %t/return-self-good.ll  -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/return-self-bad.ll -disable-output 2>&1 | FileCheck %t/return-self-bad.ll
+; RUN: not llvm-as %t/return-self-bad-2.ll -disable-output 2>&1 | FileCheck %t/return-self-bad-2.ll
+; RUN: not llvm-as %t/return-unknown-fn-bad.ll -disable-output 2>&1 | FileCheck %t/return-unknown-fn-bad.ll
+; RUN: llvm-as %t/call-fwddecl-good.ll  -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/call-fwddecl-bad.ll -disable-output 2>&1 | FileCheck %t/call-fwddecl-bad.ll
+; RUN: llvm-as %t/phi-good.ll  -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/phi-bad.ll -disable-output 2>&1 | FileCheck %t/phi-bad.ll
+; RUN: llvm-as %t/fwddecl-phi-good.ll  -o - | llvm-dis -disable-output
+; RUN: not llvm-as %t/fwddecl-phi-bad.ll -disable-output 2>&1 | FileCheck %t/fwddecl-phi-bad.ll
+; RUN: not llvm-as %t/bad-type-not-ptr.ll -disable-output 2>&1 | FileCheck %t/bad-type-not-ptr.ll
+; RUN: not llvm-as %t/bad-type-not-i8-ptr.ll -disable-output 2>&1 | FileCheck %t/bad-type-not-i8-ptr.ll
 
 
 ;--- global-use-good.ll

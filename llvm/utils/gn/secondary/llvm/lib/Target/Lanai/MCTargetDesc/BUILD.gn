@@ -56,7 +56,6 @@ static_library("MCTargetDesc") {
     "LanaiInstPrinter.cpp",
     "LanaiMCAsmInfo.cpp",
     "LanaiMCCodeEmitter.cpp",
-    "LanaiMCExpr.cpp",
     "LanaiMCTargetDesc.cpp",
   ]
 }

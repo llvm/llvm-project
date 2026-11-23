@@ -4,6 +4,7 @@
 #include "benchmark/benchmark.h"
 #include "output_test.h"
 
+namespace {
 // ========================================================================= //
 // ------------------------ Thousands Customisation ------------------------ //
 // ========================================================================= //
@@ -166,8 +167,9 @@ ADD_CASES(
 // VS2013 does not allow this function to be passed as a lambda argument
 // to CHECK_BENCHMARK_RESULTS()
 void CheckThousands(Results const& e) {
-  if (e.name != "BM_Counters_Thousands/repeats:2")
+  if (e.name != "BM_Counters_Thousands/repeats:2") {
     return;  // Do not check the aggregates!
+  }
 
   // check that the values are within 0.01% of the expected values
   CHECK_FLOAT_COUNTER_VALUE(e, "t0_1000000DefaultBase", EQ, 1000 * 1000,
@@ -178,9 +180,13 @@ void CheckThousands(Results const& e) {
   CHECK_FLOAT_COUNTER_VALUE(e, "t4_1048576Base1024", EQ, 1024 * 1024, 0.0001);
 }
 CHECK_BENCHMARK_RESULTS("BM_Counters_Thousands", &CheckThousands);
+}  // end namespace
 
 // ========================================================================= //
 // --------------------------- TEST CASES END ------------------------------ //
 // ========================================================================= //
 
-int main(int argc, char* argv[]) { RunOutputTests(argc, argv); }
+int main(int argc, char* argv[]) {
+  benchmark::MaybeReenterWithoutASLR(argc, argv);
+  RunOutputTests(argc, argv);
+}

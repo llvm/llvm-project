@@ -2,6 +2,7 @@
 
 // RUN: %clang_cc1 -std=c++20 -emit-pch %s -o %t
 // RUN: %clang_cc1 -std=c++20 -include-pch %t -verify %s
+// RUN: %clang_cc1 -std=c++20 -include-pch %t -verify %s -fexperimental-new-constant-interpreter
 
 // expected-no-diagnostics
 

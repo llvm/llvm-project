@@ -43,17 +43,12 @@ private:
   // Insert instructions to initialize the global base register in the
   // first MBB of the function.
   void initGlobalBaseReg(MachineFunction &MF);
-
-  void initMips16SPAliasReg(MachineFunction &MF);
 };
 
 class Mips16DAGToDAGISelLegacy : public MipsDAGToDAGISelLegacy {
 public:
   explicit Mips16DAGToDAGISelLegacy(MipsTargetMachine &TM, CodeGenOptLevel OL);
 };
-
-FunctionPass *createMips16ISelDag(MipsTargetMachine &TM,
-                                  CodeGenOptLevel OptLevel);
 }
 
 #endif

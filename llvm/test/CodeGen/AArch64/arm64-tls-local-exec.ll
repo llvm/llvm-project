@@ -7,7 +7,16 @@
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=small -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -verify-machineinstrs -show-mc-encoding -code-model=large -tls-size=48 < %s | FileCheck %s --check-prefix=CHECK-48
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=large -tls-size=48 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-48-RELOC %s
-;
+
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -tls-size=12 < %s | FileCheck %s --check-prefix=CHECK-12
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -tls-size=12 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-12-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=tiny -tls-size=24 < %s | FileCheck %s --check-prefix=CHECK-24
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=tiny -tls-size=24 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=small -tls-size=32 < %s | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=small -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=large -tls-size=48 < %s | FileCheck %s --check-prefix=CHECK-48
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=large -tls-size=48 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-48-RELOC %s
+
 ; Test the maximum TLS size for each code model (fallback to a smaller size from the specified size)
 ; RUN: llc -mtriple=arm64-none-linux-gnu -verify-machineinstrs -show-mc-encoding -tls-size=32 < %s | FileCheck %s --check-prefix=CHECK-32
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
@@ -15,7 +24,14 @@
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=tiny -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -verify-machineinstrs -show-mc-encoding -code-model=small -tls-size=48 < %s | FileCheck %s --check-prefix=CHECK-32
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=small -tls-size=48 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
-;
+
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -tls-size=32 < %s | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=tiny -tls-size=32 < %s | FileCheck %s --check-prefix=CHECK-24
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=tiny -tls-size=32 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=small -tls-size=48 < %s | FileCheck %s --check-prefix=CHECK-32
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=small -tls-size=48 | llvm-objdump -r - | FileCheck --check-prefix=CHECK-32-RELOC %s
+
 ; Test the default TLS size for each code model
 ; RUN: llc -mtriple=arm64-none-linux-gnu -verify-machineinstrs -show-mc-encoding < %s | FileCheck --check-prefix=CHECK-24 %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
@@ -25,6 +41,15 @@
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=small | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -verify-machineinstrs -show-mc-encoding -code-model=large < %s | FileCheck %s --check-prefix=CHECK-24
 ; RUN: llc -mtriple=arm64-none-linux-gnu -filetype=obj < %s -code-model=large | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-24 %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=tiny < %s | FileCheck %s --check-prefix=CHECK-24
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=tiny | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=small < %s | FileCheck %s --check-prefix=CHECK-24
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=small | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -verify-machineinstrs -code-model=large < %s | FileCheck %s --check-prefix=CHECK-24
+; RUN: llc -mtriple=arm64-none-linux-gnu -global-isel -filetype=obj < %s -code-model=large | llvm-objdump -r - | FileCheck --check-prefix=CHECK-24-RELOC %s
 
 @local_exec_var = thread_local(localexec) global i32 0
 

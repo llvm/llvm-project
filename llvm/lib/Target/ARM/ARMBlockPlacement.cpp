@@ -218,7 +218,7 @@ bool ARMBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
     return false;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Running on " << MF.getName() << "\n");
   MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-  TII = static_cast<const ARMBaseInstrInfo *>(ST.getInstrInfo());
+  TII = ST.getInstrInfo();
   BBUtils = std::make_unique<ARMBasicBlockUtils>(MF);
   MF.RenumberBlocks();
   BBUtils->computeAllBlockSizes();
@@ -278,7 +278,7 @@ void ARMBlockPlacement::moveBasicBlock(MachineBasicBlock *BB,
         BuildMI(From, Terminator.getDebugLoc(), TII->get(ARM::t2B));
     MIB.addMBB(To);
     MIB.addImm(ARMCC::CondCodes::AL);
-    MIB.addReg(ARM::NoRegister);
+    MIB.addReg(Register());
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Adding unconditional branch from "
                       << From->getName() << " to " << To->getName() << ": "
                       << *MIB.getInstr());

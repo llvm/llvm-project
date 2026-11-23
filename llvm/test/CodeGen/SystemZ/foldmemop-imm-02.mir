@@ -19,17 +19,6 @@
 ---
 name:            fun0
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: grx32bit }
-  - { id: 1, class: grx32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: grx32bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: grx32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3l', virtual-reg: '%3' }
@@ -73,17 +62,6 @@ body:             |
 ---
 name:            fun1
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3d', virtual-reg: '%3' }
@@ -125,22 +103,11 @@ body:             |
 # CHECK: 	mvhi	160(%r15), 0            # 4-byte Folded Spill
 # CHECK:	mvc	160(4,%r15), 0(%r2)     # 4-byte Folded Spill
 # CHECK-LABEL: .LBB2_2:
-# CHECK:        l       %r0, 160(%r15)          # 4-byte Folded Reload
+# CHECK:        l       %r0, 160(%r15)          # 4-byte Reload
 # CHECK:        clfi    %r0, 65536
 ---
 name:            fun2
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: grx32bit }
-  - { id: 1, class: grx32bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr32bit }
-  - { id: 4, class: grx32bit }
-  - { id: 5, class: grx32bit }
-  - { id: 6, class: gr32bit }
-  - { id: 7, class: gr32bit }
-  - { id: 8, class: grx32bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3l', virtual-reg: '%3' }
@@ -182,22 +149,11 @@ body:             |
 # CHECK: 	mvghi	160(%r15), 0            # 8-byte Folded Spill
 # CHECK:	mvc	160(8,%r15), 0(%r2)     # 8-byte Folded Spill
 # CHECK-LABEL: .LBB3_2:
-# CHECK:        lg      %r0, 160(%r15)          # 8-byte Folded Reload
+# CHECK:        lg      %r0, 160(%r15)          # 8-byte Reload
 # CHECK:        clgfi   %r0, 65536
 ---
 name:            fun3
 alignment:       16
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: gr64bit }
-  - { id: 1, class: gr64bit }
-  - { id: 2, class: addr64bit }
-  - { id: 3, class: gr64bit }
-  - { id: 4, class: gr64bit }
-  - { id: 5, class: gr64bit }
-  - { id: 6, class: gr64bit }
-  - { id: 7, class: gr64bit }
-  - { id: 8, class: gr64bit }
 liveins:
   - { reg: '$r2d', virtual-reg: '%2' }
   - { reg: '$r3d', virtual-reg: '%3' }

@@ -7,7 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "FMinTest.h"
+#include "src/__support/FPUtil/float128.h"
 
 #include "src/math/fminf128.h"
 
-LIST_FMIN_TESTS(float128, LIBC_NAMESPACE::fminf128)
+#ifndef LIBC_TYPES_HAS_NATIVE_FLOAT128
+using float128 = LIBC_NAMESPACE::fputil::Float128;
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
+
+LIST_FMIN_TESTS(Fminf128, float128, LIBC_NAMESPACE::fminf128)

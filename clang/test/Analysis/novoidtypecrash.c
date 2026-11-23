@@ -3,7 +3,7 @@ x;
 y(void **z) { // no-crash
   *z = x;
   int *w;
-  y(&w);
+  y((void**)&w);
   *w;
 }
 

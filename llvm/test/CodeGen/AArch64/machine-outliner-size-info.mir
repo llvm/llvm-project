@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=prologepilog \
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=prolog-epilog \
 # RUN: -run-pass=machine-outliner %s -pass-remarks-analysis='size-info' \
 # RUN: -pass-remarks-output=%t.yaml -o /dev/null < %s 2> %t; \
 # RUN: cat %t %t.yaml | FileCheck %s
@@ -50,7 +50,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: true
 fixedStack:
 body:             |
   bb.0:
@@ -80,3 +79,4 @@ body:             |
     $w9 = ORRWri $wzr, 1
     $w9 = ORRWri $wzr, 2
     RET undef $lr
+...

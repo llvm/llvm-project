@@ -377,6 +377,7 @@ def : ProcessorModel<"star-mc1", CortexM4Model,         [ARMv8mMainline,
                                                          FeatureHasSlowFPVFMx,
                                                          FeatureUseMISched,
                                                          FeatureHasNoBranchPredictor,
+                                                         FeatureAvoidMULS,
                                                          FeatureFixCMSE_CVE_2021_35465]>;
 
 def : ProcessorModel<"cortex-m35p", CortexM4Model,      [ARMv8mMainline,
@@ -410,6 +411,17 @@ def : ProcessorModel<"cortex-m85", CortexM85Model,      [ARMv81mMainline,
                                                          HasMVEFloatOps]>;
 
 def : ProcessorModel<"cortex-m52", CortexM55Model,      [ARMv81mMainline,
+                                                         FeatureDSP,
+                                                         FeatureFPARMv8_D16,
+                                                         FeatureHasNoBranchPredictor,
+                                                         FeaturePACBTI,
+                                                         FeatureUseMISched,
+                                                         FeaturePreferBranchAlign32,
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureMVEVectorCostFactor1,
+                                                         HasMVEFloatOps]>;
+
+def : ProcessorModel<"star-mc3", CortexM55Model,      [ARMv81mMainline,
                                                          FeatureDSP,
                                                          FeatureFPARMv8_D16,
                                                          FeatureHasNoBranchPredictor,

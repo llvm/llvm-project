@@ -1,4 +1,5 @@
 // RUN: mlir-opt -allow-unregistered-dialect -convert-scf-to-emitc %s | FileCheck %s
+// RUN: mlir-opt -allow-unregistered-dialect -convert-to-emitc="filter-dialects=scf" %s | FileCheck %s
 
 // CHECK-LABEL:   func.func @switch_no_result(
 // CHECK-SAME:                                %[[ARG_0:.*]]: index) {

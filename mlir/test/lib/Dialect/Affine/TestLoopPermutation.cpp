@@ -42,6 +42,12 @@ private:
   ListOption<unsigned> permList{*this, "permutation-map",
                                 llvm::cl::desc("Specify the loop permutation"),
                                 llvm::cl::OneOrMore};
+
+  /// Specify whether to check validity of loop permutation.
+  Option<bool> checkValidity{
+      *this, "check-validity",
+      llvm::cl::desc("Check validity of the loop permutation"),
+      llvm::cl::init(false)};
 };
 
 } // namespace
@@ -60,6 +66,9 @@ void TestLoopPermutation::runOnOperation() {
     // Permute if the nest's size is consistent with the specified
     // permutation.
     if (nest.size() >= 2 && nest.size() == permMap.size()) {
+      if (checkValidity.getValue() &&
+          !isValidLoopInterchangePermutation(nest, permMap))
+        continue;
       permuteLoops(nest, permMap);
     }
   }

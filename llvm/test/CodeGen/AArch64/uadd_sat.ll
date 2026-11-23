@@ -2,12 +2,6 @@
 ; RUN: llc < %s -mtriple=aarch64-- | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc < %s -mtriple=aarch64-- -global-isel | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-declare i4 @llvm.uadd.sat.i4(i4, i4)
-declare i8 @llvm.uadd.sat.i8(i8, i8)
-declare i16 @llvm.uadd.sat.i16(i16, i16)
-declare i32 @llvm.uadd.sat.i32(i32, i32)
-declare i64 @llvm.uadd.sat.i64(i64, i64)
-
 define i32 @func(i32 %x, i32 %y) nounwind {
 ; CHECK-SD-LABEL: func:
 ; CHECK-SD:       // %bb.0:

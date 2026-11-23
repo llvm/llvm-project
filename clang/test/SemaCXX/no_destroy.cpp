@@ -28,14 +28,14 @@ int main() {
   [[clang::always_destroy]] static int p4;
 }
 
-[[clang::always_destroy]] [[clang::no_destroy]] int p; // expected-error{{'no_destroy' and 'always_destroy' attributes are not compatible}} // expected-note{{here}}
-[[clang::no_destroy]] [[clang::always_destroy]] int p2; // expected-error{{'always_destroy' and 'no_destroy' attributes are not compatible}} // expected-note{{here}}
+[[clang::always_destroy]] [[clang::no_destroy]] int p; // expected-error{{'clang::no_destroy' and 'clang::always_destroy' attributes are not compatible}} // expected-note{{here}}
+[[clang::no_destroy]] [[clang::always_destroy]] int p2; // expected-error{{'clang::always_destroy' and 'clang::no_destroy' attributes are not compatible}} // expected-note{{here}}
 
-[[clang::always_destroy]] void f() {} // expected-warning{{'always_destroy' attribute only applies to variables}}
-struct [[clang::no_destroy]] DoesntApply {};  // expected-warning{{'no_destroy' attribute only applies to variables}}
+[[clang::always_destroy]] void f() {} // expected-warning{{'clang::always_destroy' attribute only applies to variables}}
+struct [[clang::no_destroy]] DoesntApply {};  // expected-warning{{'clang::no_destroy' attribute only applies to variables}}
 
-[[clang::no_destroy(0)]] int no_args; // expected-error{{'no_destroy' attribute takes no arguments}}
-[[clang::always_destroy(0)]] int no_args2; // expected-error{{'always_destroy' attribute takes no arguments}}
+[[clang::no_destroy(0)]] int no_args; // expected-error{{'clang::no_destroy' attribute takes no arguments}}
+[[clang::always_destroy(0)]] int no_args2; // expected-error{{'clang::always_destroy' attribute takes no arguments}}
 
 // expected-error@+1 {{temporary of type 'SecretDestructor' has private destructor}}
 SecretDestructor arr[10];

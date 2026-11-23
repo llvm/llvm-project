@@ -3621,24 +3621,24 @@ define i32 @bextr64_32_b0(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-BMI2-LABEL: bextr64_32_b0:
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI2-NEXT:    shrdl %cl, %esi, %edx
+; X86-BMI2-NEXT:    shrdl %cl, %esi, %eax
 ; X86-BMI2-NEXT:    testb $32, %cl
 ; X86-BMI2-NEXT:    je .LBB31_2
 ; X86-BMI2-NEXT:  # %bb.1:
-; X86-BMI2-NEXT:    shrxl %ecx, %esi, %edx
+; X86-BMI2-NEXT:    shrxl %ecx, %esi, %eax
 ; X86-BMI2-NEXT:  .LBB31_2:
 ; X86-BMI2-NEXT:    xorl %ecx, %ecx
-; X86-BMI2-NEXT:    testb $32, %al
+; X86-BMI2-NEXT:    testb $32, %dl
 ; X86-BMI2-NEXT:    jne .LBB31_4
 ; X86-BMI2-NEXT:  # %bb.3:
 ; X86-BMI2-NEXT:    movl $-1, %ecx
-; X86-BMI2-NEXT:    shlxl %eax, %ecx, %ecx
+; X86-BMI2-NEXT:    shlxl %edx, %ecx, %ecx
 ; X86-BMI2-NEXT:  .LBB31_4:
-; X86-BMI2-NEXT:    andnl %edx, %ecx, %eax
+; X86-BMI2-NEXT:    andnl %eax, %ecx, %eax
 ; X86-BMI2-NEXT:    popl %esi
 ; X86-BMI2-NEXT:    retl
 ;
@@ -3949,24 +3949,24 @@ define i32 @bextr64_32_b3(i64 %val, i64 %numskipbits, i8 %numlowbits) nounwind {
 ; X86-BMI2-LABEL: bextr64_32_b3:
 ; X86-BMI2:       # %bb.0:
 ; X86-BMI2-NEXT:    pushl %esi
-; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-BMI2-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-BMI2-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI2-NEXT:    shrdl %cl, %esi, %edx
+; X86-BMI2-NEXT:    shrdl %cl, %esi, %eax
 ; X86-BMI2-NEXT:    testb $32, %cl
 ; X86-BMI2-NEXT:    je .LBB34_2
 ; X86-BMI2-NEXT:  # %bb.1:
-; X86-BMI2-NEXT:    shrxl %ecx, %esi, %edx
+; X86-BMI2-NEXT:    shrxl %ecx, %esi, %eax
 ; X86-BMI2-NEXT:  .LBB34_2:
 ; X86-BMI2-NEXT:    xorl %ecx, %ecx
-; X86-BMI2-NEXT:    testb $32, %al
+; X86-BMI2-NEXT:    testb $32, %dl
 ; X86-BMI2-NEXT:    jne .LBB34_4
 ; X86-BMI2-NEXT:  # %bb.3:
 ; X86-BMI2-NEXT:    movl $-1, %ecx
-; X86-BMI2-NEXT:    shlxl %eax, %ecx, %ecx
+; X86-BMI2-NEXT:    shlxl %edx, %ecx, %ecx
 ; X86-BMI2-NEXT:  .LBB34_4:
-; X86-BMI2-NEXT:    andnl %edx, %ecx, %eax
+; X86-BMI2-NEXT:    andnl %eax, %ecx, %eax
 ; X86-BMI2-NEXT:    popl %esi
 ; X86-BMI2-NEXT:    retl
 ;

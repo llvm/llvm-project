@@ -20,6 +20,10 @@
 // XFAIL: target={{sparc.*-.*-linux.*}}
 
 // UNSUPPORTED: ios
+// Waiting for https://github.com/llvm/llvm-project/pull/236879: libunwind skips
+// CFI instructions at the faulting PC in signal frames, causing SIGILL on
+// AArch64 PAC-RET prologues under FEAT_FPAC.
+// UNSUPPORTED: android && aarch64-target-arch
 
 #include <assert.h>
 #include <stdlib.h>
@@ -71,7 +75,7 @@ void recursive_func(uintptr_t parent_frame_address) {
   z13 = t13;
 #else
   char buf[BS];
-  // Check that the stack grows in the righ direction, unless we use fake stack.
+  // Check that the stack grows in the right direction, unless we use fake stack.
   assert(parent_frame_address > (uintptr_t)__builtin_frame_address(0));
   buf[rand() % BS] = 1;
   buf[rand() % BS] = 2;

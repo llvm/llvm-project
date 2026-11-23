@@ -14,7 +14,7 @@ export int x;
 module;
 
 #include "std-10-2-ex1.h"
-// expected-error@std-10-2-ex1.h:* {{export declaration can only be used within a module purview}}
+// expected-error@std-10-2-ex1.h:* {{export declaration can only be used within a module interface}}
 
 export module M1;
 export namespace {} // expected-error {{anonymous namespaces cannot be exported}}

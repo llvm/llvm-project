@@ -88,12 +88,14 @@ export module module; // expected-error {{'module' is an invalid name for a modu
 export module import; // expected-error {{'import' is an invalid name for a module}}
 
 //--- _Test.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
 export module _Test;  // loud-warning {{'_Test' is a reserved name for a module}}
 
 //--- __test.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
@@ -101,6 +103,7 @@ export module __test; // loud-warning {{'__test' is a reserved name for a module
 export int a = 43;
 
 //--- te__st.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
@@ -108,6 +111,7 @@ export module te__st; // loud-warning {{'te__st' is a reserved name for a module
 export int a = 43;
 
 //--- std.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
@@ -116,36 +120,42 @@ export module std;    // loud-warning {{'std' is a reserved name for a module}}
 export int a = 43;
 
 //--- std.foo.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
 export module std.foo;// loud-warning {{'std' is a reserved name for a module}}
 
 //--- std0.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
 export module std0;   // loud-warning {{'std0' is a reserved name for a module}}
 
 //--- std1000000.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
 export module std1000000; // loud-warning {{'std1000000' is a reserved name for a module}}
 
 //--- should_diag._Test.cppm
+module;
 #ifdef NODIAGNOSTICS
 // expected-no-diagnostics
 #endif
 export module should_diag._Test; // loud-warning {{'_Test' is a reserved name for a module}}
 
 //--- system-module.cppm
+module; // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 // Show that being in a system header doesn't save you from diagnostics about
 // use of an invalid module-name identifier.
 # 34 "reserved-names-1.cpp" 1 3
 export module module;       // expected-error {{'module' is an invalid name for a module}}
 
 //--- system._Test.import.cppm
+module; // expected-error {{missing 'module' declaration at end of global module fragment introduced here}}
 # 34 "reserved-names-1.cpp" 1 3
 export module _Test.import; // expected-error {{'import' is an invalid name for a module}}
 

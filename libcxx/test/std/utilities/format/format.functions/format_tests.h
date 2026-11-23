@@ -3190,6 +3190,15 @@ void format_tests(TestFunction check, ExceptionTest check_exception) {
     check(SV("hello 09azAZ!"), SV("hello {}"), data);
   }
   {
+    // https://llvm.org/PR115935
+    // Contents after the embedded null character are discarded.
+    CharT buffer[] = {CharT('a'), CharT('b'), CharT('c'), 0, CharT('d'), CharT('e'), CharT('f'), 0};
+    check(SV("hello abc"), SV("hello {}"), buffer);
+    // Even when the last element of the array is not null character.
+    CharT buffer2[] = {CharT('a'), CharT('b'), CharT('c'), 0, CharT('d'), CharT('e'), CharT('f')};
+    check(SV("hello abc"), SV("hello {}"), buffer2);
+  }
+  {
     std::basic_string<CharT> data = STR("world");
     check(SV("hello world"), SV("hello {}"), data);
   }

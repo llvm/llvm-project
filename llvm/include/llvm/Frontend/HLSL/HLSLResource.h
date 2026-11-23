@@ -13,37 +13,24 @@
 #ifndef LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 #define LLVM_FRONTEND_HLSL_HLSLRESOURCE_H
 
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/DXILABI.h"
 
 namespace llvm {
-class GlobalVariable;
-class MDNode;
+class Type;
 
 namespace hlsl {
 
 // For now we use DXIL ABI enum values directly. This may change in the future.
 using dxil::ResourceClass;
-using dxil::ElementType;
-using dxil::ResourceKind;
+using dxil::ResourceDimension;
 
-class FrontendResource {
-  MDNode *Entry;
+const unsigned CBufferRowSizeInBytes = 16U;
 
-public:
-  FrontendResource(MDNode *E);
-  FrontendResource(GlobalVariable *GV, ResourceKind RK, ElementType ElTy,
-                   bool IsROV, uint32_t ResIndex, uint32_t Space);
+/// Converts a scalar or vector LLVM type to its DXIL element type. Integer
+/// signedness must be supplied separately because LLVM integer types are
+/// signless.
+LLVM_ABI dxil::ElementType getDXILElementType(Type *Ty, bool IsSigned);
 
-  GlobalVariable *getGlobalVariable();
-  StringRef getSourceType();
-  ResourceKind getResourceKind();
-  ElementType getElementType();
-  bool getIsROV();
-  uint32_t getResourceIndex();
-  uint32_t getSpace();
-  MDNode *getMetadata() { return Entry; }
-};
 } // namespace hlsl
 } // namespace llvm
 

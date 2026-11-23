@@ -18,7 +18,7 @@ class raw_ostream;
 namespace pdb {
 class NativeSession;
 
-class NativePublicSymbol : public NativeRawSymbol {
+class LLVM_ABI NativePublicSymbol : public NativeRawSymbol {
 public:
   NativePublicSymbol(NativeSession &Session, SymIndexId Id,
                      const codeview::PublicSym32 &Sym);

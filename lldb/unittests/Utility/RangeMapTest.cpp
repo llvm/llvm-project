@@ -238,3 +238,24 @@ TEST(RangeDataVector, FindEntryIndexesThatContain_Overlap) {
   EXPECT_THAT(FindEntryIndexes(39, Map), testing::ElementsAre(10));
   EXPECT_THAT(FindEntryIndexes(40, Map), testing::ElementsAre());
 }
+
+TEST(RangeDataVector, CombineConsecutiveEntriesWithEqualData) {
+  RangeDataVectorT Map;
+  Map.Append(EntryT(0, 10, 47));
+  Map.Append(EntryT(10, 10, 47));
+  Map.Sort();
+  Map.CombineConsecutiveEntriesWithEqualData();
+  EXPECT_THAT(FindEntryIndexes(5, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(15, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(25, Map), testing::ElementsAre());
+
+  Map.Clear();
+  Map.Append(EntryT(0, 10, 47));
+  Map.Append(EntryT(20, 10, 47));
+  Map.Sort();
+  Map.CombineConsecutiveEntriesWithEqualData();
+  EXPECT_THAT(FindEntryIndexes(5, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(15, Map), testing::ElementsAre());
+  EXPECT_THAT(FindEntryIndexes(25, Map), testing::ElementsAre(47));
+  EXPECT_THAT(FindEntryIndexes(35, Map), testing::ElementsAre());
+}

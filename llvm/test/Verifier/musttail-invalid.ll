@@ -1,4 +1,4 @@
-; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as %s -disable-output 2>&1 | FileCheck %s
 
 ; Each musttail call should fail to validate.
 
@@ -69,7 +69,7 @@ define void @mismatched_alignment(ptr byval(i32) align 4 %a) {
 
 declare i32 @not_tail_pos_callee()
 define i32 @not_tail_pos() {
-; CHECK: musttail call must precede a ret with an optional bitcast
+; CHECK: musttail call must precede a ret
   %v = musttail call i32 @not_tail_pos_callee()
   %w = add i32 %v, 1
   ret i32 %w

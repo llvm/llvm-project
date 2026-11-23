@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Option/OptTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 
@@ -58,19 +59,22 @@ public:
     InputClass,
     UnknownClass,
     FlagClass,
+    FlagOrEqClass,
     JoinedClass,
     ValuesClass,
     SeparateClass,
+    SeparateOrEqClass,
     RemainingArgsClass,
     RemainingArgsJoinedClass,
     CommaJoinedClass,
     MultiArgClass,
     JoinedOrSeparateClass,
-    JoinedAndSeparateClass
+    JoinedAndSeparateClass,
   };
 
   enum RenderStyleKind {
     RenderCommaJoinedStyle,
+    RenderEqStyle,
     RenderJoinedStyle,
     RenderSeparateStyle,
     RenderValuesStyle
@@ -81,7 +85,7 @@ protected:
   const OptTable *Owner;
 
 public:
-  Option(const OptTable::Info *Info, const OptTable *Owner);
+  LLVM_ABI Option(const OptTable::Info *Info, const OptTable *Owner);
 
   bool isValid() const {
     return Info != nullptr;
@@ -89,7 +93,8 @@ public:
 
   unsigned getID() const {
     assert(Info && "Must have a valid info!");
-    return Info->ID;
+    assert(Owner && "Must have a valid owner!");
+    return Owner->getOptionID(*Info);
   }
 
   OptionClass getKind() const {
@@ -98,11 +103,7 @@ public:
   }
 
   /// Get the name of this option without any prefix.
-  StringRef getName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionName(Info->ID);
-  }
+  StringRef getName() const { return Owner->getOptionName(getID()); }
 
   const Option getGroup() const {
     assert(Info && "Must have a valid info!");
@@ -119,47 +120,33 @@ public:
   /// Get the alias arguments as a \0 separated list.
   /// E.g. ["foo", "bar"] would be returned as "foo\0bar\0".
   const char *getAliasArgs() const {
-    assert(Info && "Must have a valid info!");
-    assert((!Info->AliasArgs || Info->AliasArgs[0] != 0) &&
-           "AliasArgs should be either 0 or non-empty.");
-
-    return Info->AliasArgs;
+    return Owner->getOptionAliasArgs(getID());
   }
+
+  bool hasAliasArgs() const { return *getAliasArgs() != '\0'; }
 
   /// Get the default prefix for this option.
-  StringRef getPrefix() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefix(Info->ID);
-  }
+  StringRef getPrefix() const { return Owner->getOptionPrefix(getID()); }
 
   /// Get the name of this option with the default prefix.
   StringRef getPrefixedName() const {
-    assert(Info && "Must have a valid info!");
-    assert(Owner && "Must have a valid owner!");
-    return Owner->getOptionPrefixedName(Info->ID);
+    return Owner->getOptionPrefixedName(getID());
   }
 
   /// Get the help text for this option.
-  StringRef getHelpText() const {
-    assert(Info && "Must have a valid info!");
-    return Info->HelpText;
-  }
+  StringRef getHelpText() const { return Owner->getOptionHelpText(getID()); }
 
   /// Get the meta-variable list for this option.
-  StringRef getMetaVar() const {
-    assert(Info && "Must have a valid info!");
-    return Info->MetaVar;
-  }
+  StringRef getMetaVar() const { return Owner->getOptionMetaVar(getID()); }
 
-  unsigned getNumArgs() const { return Info->Param; }
+  unsigned getNumArgs() const { return Owner->getExtra(*Info).Param; }
 
-  bool hasNoOptAsInput() const { return Info->Flags & RenderAsInput;}
+  bool hasNoOptAsInput() const { return hasFlag(RenderAsInput); }
 
   RenderStyleKind getRenderStyle() const {
-    if (Info->Flags & RenderJoined)
+    if (hasFlag(RenderJoined))
       return RenderJoinedStyle;
-    if (Info->Flags & RenderSeparate)
+    if (hasFlag(RenderSeparate))
       return RenderSeparateStyle;
     switch (getKind()) {
     case GroupClass:
@@ -169,6 +156,9 @@ public:
     case JoinedClass:
     case JoinedAndSeparateClass:
       return RenderJoinedStyle;
+    case FlagOrEqClass:
+    case SeparateOrEqClass:
+      return RenderEqStyle;
     case CommaJoinedClass:
       return RenderCommaJoinedStyle;
     case FlagClass:
@@ -185,12 +175,12 @@ public:
 
   /// Test if this option has the flag \a Val.
   bool hasFlag(unsigned Val) const {
-    return Info->Flags & Val;
+    return Owner->getExtra(*Info).Flags & Val;
   }
 
   /// Test if this option has the visibility flag \a Val.
   bool hasVisibilityFlag(unsigned Val) const {
-    return Info->Visibility & Val;
+    return Owner->getExtra(*Info).Visibility & Val;
   }
 
   /// getUnaliasedOption - Return the final option this option
@@ -213,7 +203,13 @@ public:
   /// Note that matches against options which are an alias should never be
   /// done -- aliases do not participate in matching and so such a query will
   /// always be false.
-  bool matches(OptSpecifier ID) const;
+  LLVM_ABI bool matches(OptSpecifier ID) const;
+
+  bool isRegisteredSC(StringRef SubCommand) const {
+    assert(Info && "Must have a valid info!");
+    assert(Owner && "Must have a valid owner!");
+    return Owner->isValidForSubCommand(Info, SubCommand);
+  }
 
   /// Potentially accept the current argument, returning a new Arg instance,
   /// or 0 if the option does not accept this argument (or the argument is
@@ -227,16 +223,17 @@ public:
   /// underlying storage to represent a Joined argument.
   /// \p GroupedShortOption If true, we are handling the fallback case of
   /// parsing a prefix of the current argument as a short option.
-  std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
-                              bool GroupedShortOption, unsigned &Index) const;
+  LLVM_ABI std::unique_ptr<Arg> accept(const ArgList &Args, StringRef CurArg,
+                                       bool GroupedShortOption,
+                                       unsigned &Index) const;
 
 private:
   std::unique_ptr<Arg> acceptInternal(const ArgList &Args, StringRef CurArg,
                                       unsigned &Index) const;
 
 public:
-  void print(raw_ostream &O, bool AddNewLine = true) const;
-  void dump() const;
+  LLVM_ABI void print(raw_ostream &O, bool AddNewLine = true) const;
+  LLVM_ABI void dump() const;
 };
 
 } // end namespace opt

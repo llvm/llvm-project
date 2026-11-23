@@ -6,6 +6,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
+@requireExpressionEvaluation
 class FPEvalTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().

@@ -21,6 +21,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 // RUN: %clang_cc1 -O3 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
 // RUN:   -fsanitize=memtag-globals -o %t.out %s
@@ -43,6 +44,7 @@
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-P
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-Q
 // RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-R
+// RUN: FileCheck %s --input-file=%t.out --check-prefix=CHECK-S
 
 /// Ensure that emulated TLS also doesn't get sanitized.
 // RUN: %clang_cc1 -S -x c++ -std=c++11 -triple aarch64-linux-android31 \
@@ -51,6 +53,7 @@
 // CHECK-A: .memtag global_int
 // CHECK-A: .globl global_int
 // CHECK-A: .p2align 4, 0x0
+// CHECK-A: .zero 16
 // CHECK-A: .size global_int, 16
 int global_int;
 // CHECK-B: .memtag _ZL9local_int
@@ -66,6 +69,7 @@ static char local_buffer[16];
 // CHECK-D: .p2align 4, 0x0
 // CHECK-D: _ZL22local_buffer_local_end:
 // CHECK-D: .xword _ZL12local_buffer+16
+// CHECK-D: .zero 8
 // CHECK-D: .size _ZL22local_buffer_local_end, 16
 static char* local_buffer_local_end = &local_buffer[16];
 // CHECK-E: .memtag local_buffer_global_end
@@ -73,18 +77,21 @@ static char* local_buffer_local_end = &local_buffer[16];
 // CHECK-E  .p2align 4, 0x0
 // CHECK-E: local_buffer_global_end:
 // CHECK-E: .xword _ZL12local_buffer+16
+// CHECK-E: .zero 8
 // CHECK-E: .size local_buffer_global_end, 16
 char* local_buffer_global_end = &local_buffer[16];
 
 // CHECK-F: .memtag global_buffer
 // CHECK-F: .globl global_buffer
 // CHECK-F: .p2align 4, 0x0
+// CHECK-F: .zero 16
 // CHECK-F: .size global_buffer, 16
 char global_buffer[16];
 // CHECK-G: .memtag _ZL23global_buffer_local_end
 // CHECK-G: .p2align 4, 0x0
 // CHECK-G: _ZL23global_buffer_local_end:
 // CHECK-G: .xword global_buffer+16
+// CHECK-G: .zero 8
 // CHECK-G: .size _ZL23global_buffer_local_end, 16
 static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .memtag global_buffer_global_end
@@ -93,6 +100,10 @@ static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .xword global_buffer+16
 // CHECK-H: .size global_buffer_global_end, 16
 char* global_buffer_global_end = &global_buffer[16];
+
+// CHECK-S-NOT: .memtag zero_sized
+struct empty {};
+char zero_sized[0];
 
 class MyClass {
  public:
@@ -104,6 +115,7 @@ class MyClass {
 // CHECK-I: .memtag _ZN7MyClass12my_class_intE
 // CHECK-I: .globl _ZN7MyClass12my_class_intE
 // CHECK-I: .p2align 4, 0x0
+// CHECK-I: .zero 16
 // CHECK-I: .size _ZN7MyClass12my_class_intE, 16
 int MyClass::my_class_int;
 // CHECK-NOT: .memtag _ZN7MyClass18my_class_const_intE
@@ -112,10 +124,12 @@ const int MyClass::my_class_const_int = 1;
 // CHECK-J: .memtag global_my_class
 // CHECK-J: .globl global_my_class
 // CHECK-J: .p2align 4, 0x0
+// CHECK-J: .zero 8
 // CHECK-J: .size global_my_class, 16
 MyClass global_my_class;
 // CHECK-K: .memtag _ZL14local_my_class
 // CHECK-K: .p2align 4, 0x0
+// CHECK-K: .zero 8
 // CHECK-K: .size _ZL14local_my_class, 16
 static MyClass local_my_class;
 
@@ -123,12 +137,14 @@ static MyClass local_my_class;
 static const char local_const_string[] = "this is a local string";
 // CHECK-L: .memtag _ZL12local_string
 // CHECK-L: .p2align 4, 0x0
+// CHECK-L: .zero 9
 // CHECK-L: .size _ZL12local_string, 32
 static char local_string[] = "this is a local string";
 
 // CHECK-M: .memtag global_atomic_int
 // CHECK-M: .globl global_atomic_int
 // CHECK-M: .p2align 4, 0x0
+// CHECK-M: .zero 16
 // CHECK-M: .size global_atomic_int, 16
 _Atomic(int) global_atomic_int;
 // CHECK-N: .memtag _ZL16local_atomic_int
@@ -144,6 +160,7 @@ union MyUnion {
 // CHECK-O: .memtag global_union
 // CHECK-O: .globl global_union
 // CHECK-O: .p2align 4, 0x0
+// CHECK-O: .zero 16
 // CHECK-O: .size global_union, 16
 MyUnion global_union;
 // CHECK-P: .memtag _ZL11local_union
@@ -231,32 +248,33 @@ int f(int x) {
       global_my_class.virtual_func() +
       local_my_class.virtual_func() +
       local_const_string[0] +
+  // GOT pointers may be spilled before use at -O0.
   // CHECK-Q-DAG: adrp  [[REG_J:x[0-9]+]], :got:_ZL12local_string
-  // CHECK-Q-DAG: ldr   [[REG_J2:x[0-9]+]], [[[REG_J]], :got_lo12:_ZL12local_string]
-  // CHECK-Q-DAG: ldrsb {{.*}}, [[[REG_J2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_J]], :got_lo12:_ZL12local_string]
+  // CHECK-Q-DAG: ldrsb {{.*}}, [{{x[0-9]+}}]
       local_string[0] +
   // CHECK-Q-DAG: adrp  [[REG_K:x[0-9]+]], :got:_ZL16local_atomic_int
-  // CHECK-Q-DAG: ldr   [[REG_K2:x[0-9]+]], [[[REG_K]], :got_lo12:_ZL16local_atomic_int]
-  // CHECK-Q-DAG: ldar {{.*}}, [[[REG_K2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_K]], :got_lo12:_ZL16local_atomic_int]
+  // CHECK-Q-DAG: ldar {{.*}}, [{{x[0-9]+}}]
       local_atomic_int +
   // CHECK-Q-DAG: adrp [[REG_L:x[0-9]+]], :got:global_atomic_int
-  // CHECK-Q-DAG: ldr  [[REG_L2:x[0-9]+]], [[[REG_L]], :got_lo12:global_atomic_int]
-  // CHECK-Q-DAG: ldar {{.*}}, [[[REG_L2]]]
+  // CHECK-Q-DAG: ldr  {{x[0-9]+}}, [[[REG_L]], :got_lo12:global_atomic_int]
+  // CHECK-Q-DAG: ldar {{.*}}, [{{x[0-9]+}}]
       global_atomic_int +
   // CHECK-Q-DAG: adrp [[REG_M:x[0-9]+]], :got:global_union
-  // CHECK-Q-DAG: ldr  [[REG_M2:x[0-9]+]], [[[REG_M]], :got_lo12:global_union]
-  // CHECK-Q-DAG: ldr  {{.*}}, [[[REG_M2]]]
+  // CHECK-Q-DAG: ldr  {{x[0-9]+}}, [[[REG_M]], :got_lo12:global_union]
+  // CHECK-Q-DAG: ldr  {{.*}}, [{{x[0-9]+}}]
       global_union.i +
   // CHECK-Q-DAG: adrp  [[REG_N:x[0-9]+]], :got:_ZL11local_union
-  // CHECK-Q-DAG: ldr   [[REG_N2:x[0-9]+]], [[[REG_N]], :got_lo12:_ZL11local_union]
-  // CHECK-Q-DAG: ldrsb {{.*}}, [[[REG_N2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_N]], :got_lo12:_ZL11local_union]
+  // CHECK-Q-DAG: ldrsb {{.*}}, [{{x[0-9]+}}]
       local_union.c +
   /// Global variables - ignore.
       global_tls +
       local_tls +
   // CHECK-Q-DAG: adrp  [[REG_O:x[0-9]+]], :got:_ZZ1fiE12function_int
-  // CHECK-Q-DAG: ldr   [[REG_O2:x[0-9]+]], [[[REG_O]], :got_lo12:_ZZ1fiE12function_int]
-  // CHECK-Q-DAG: ldr   {{.*}}, [[[REG_O2]]]
+  // CHECK-Q-DAG: ldr   {{x[0-9]+}}, [[[REG_O]], :got_lo12:_ZZ1fiE12function_int]
+  // CHECK-Q-DAG: ldr   {{.*}}, [{{x[0-9]+}}]
       function_int;
 }
 

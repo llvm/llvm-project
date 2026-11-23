@@ -3,10 +3,10 @@
 ; RUN: llc -mtriple=mips < %s | FileCheck --check-prefixes=ALL,O32-INV %s
 ; RUN: llc -mtriple=mipsel < %s | FileCheck --check-prefixes=ALL,O32-INV %s
 
-; RUN-TODO: llc -mtriple=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
-; RUN-TODO: llc -mtriple=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
-; RUN-TODO: llc -mtriple=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
+; RUN: llc -verify-machineinstrs -mtriple=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,ALL-INV,O32-INV %s
 
 ; RUN: llc -mtriple=mips64 -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 ; RUN: llc -mtriple=mips64el -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s

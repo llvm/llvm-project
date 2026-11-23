@@ -28,9 +28,9 @@ namespace llvm {
 class DirectXTargetMachine;
 
 class DirectXSubtarget : public DirectXGenSubtargetInfo {
+  DirectXInstrInfo InstrInfo;
   DirectXFrameLowering FL;
   DirectXTargetLowering TL;
-  DirectXInstrInfo InstrInfo;
 
   virtual void anchor(); // virtual anchor method
 
@@ -49,6 +49,10 @@ public:
   const DirectXFrameLowering *getFrameLowering() const override { return &FL; }
 
   const DirectXInstrInfo *getInstrInfo() const override { return &InstrInfo; }
+
+  const DirectXRegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo.getRegisterInfo();
+  }
 };
 
 } // end namespace llvm

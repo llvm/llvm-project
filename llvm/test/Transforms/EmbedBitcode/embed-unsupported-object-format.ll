@@ -2,4 +2,4 @@
 
 @a = global i32 1
 
-; CHECK: LLVM ERROR: EmbedBitcode pass currently only supports ELF object format
+; CHECK: LLVM ERROR: EmbedBitcode pass currently only supports COFF and ELF object formats

@@ -17,11 +17,11 @@ static int g_verbose = 0;
 
 #if defined(DNBLOG_ENABLED)
 
-#include "PThreadMutex.h"
 #include <cstdarg>
 #include <cstdio>
 #include <cstdlib>
 #include <mach/mach.h>
+#include <mutex>
 #include <pthread.h>
 #include <sys/time.h>
 #include <unistd.h>
@@ -64,8 +64,8 @@ bool DNBLogEnabledForAny(uint32_t mask) {
 }
 static inline void _DNBLogVAPrintf(uint32_t flags, const char *format,
                                    va_list args) {
-  static PThreadMutex g_LogThreadedMutex(PTHREAD_MUTEX_RECURSIVE);
-  PTHREAD_MUTEX_LOCKER(locker, g_LogThreadedMutex);
+  static std::recursive_mutex g_LogThreadedMutex;
+  std::lock_guard<std::recursive_mutex> guard(g_LogThreadedMutex);
 
   if (g_log_callback)
     g_log_callback(g_log_baton, flags, format, args);

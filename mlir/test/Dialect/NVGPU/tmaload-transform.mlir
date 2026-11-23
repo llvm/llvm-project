@@ -38,7 +38,7 @@ func.func @main() {
     //      CHECK: gpu.barrier
     //
     //      CHECK: %[[c0:.*]] = arith.constant 0 : index
-    //      CHECK: %[[TIDX:.*]] = gpu.thread_id  x
+    //      CHECK: %[[TIDX:.*]] = gpu.thread_id x
     //      CHECK: %[[CMP:.*]] = arith.cmpi eq, %[[TIDX]], %[[c0]] : index
     //
     //      CHECK: scf.if %[[CMP]] {

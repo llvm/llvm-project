@@ -18,4 +18,3 @@ entry:
   ret i16 %mul.0
 }
 
-declare i16 @llvm.vector.reduce.mul.v4i32(<4 x i16>)

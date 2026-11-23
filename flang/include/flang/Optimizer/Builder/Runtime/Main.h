@@ -24,7 +24,9 @@ class GlobalOp;
 namespace fir::runtime {
 
 void genMain(fir::FirOpBuilder &builder, mlir::Location loc,
-             const std::vector<Fortran::lower::EnvironmentDefault> &defs);
+             const std::vector<Fortran::lower::EnvironmentDefault> &defs,
+             bool initCuda = false, bool initCoarrayEnv = false,
+             unsigned fpExceptionTraps = 0);
 }
 
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_MAIN_H

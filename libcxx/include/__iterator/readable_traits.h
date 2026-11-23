@@ -10,12 +10,12 @@
 #ifndef _LIBCPP___ITERATOR_READABLE_TRAITS_H
 #define _LIBCPP___ITERATOR_READABLE_TRAITS_H
 
+#include <__concepts/primary_template.h>
 #include <__concepts/same_as.h>
 #include <__config>
 #include <__type_traits/conditional.h>
 #include <__type_traits/is_array.h>
 #include <__type_traits/is_object.h>
-#include <__type_traits/is_primary_template.h>
 #include <__type_traits/remove_cv.h>
 #include <__type_traits/remove_cvref.h>
 #include <__type_traits/remove_extent.h>
@@ -24,9 +24,9 @@
 #  pragma GCC system_header
 #endif
 
-_LIBCPP_BEGIN_NAMESPACE_STD
-
 #if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_BEGIN_NAMESPACE_STD
 
 // [readable.traits]
 template <class>
@@ -74,8 +74,8 @@ template <__has_member_value_type _Tp>
            same_as<remove_cv_t<typename _Tp::element_type>, remove_cv_t<typename _Tp::value_type>>
 struct indirectly_readable_traits<_Tp> : __cond_value_type<typename _Tp::value_type> {};
 
-#endif // _LIBCPP_STD_VER >= 20
-
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ITERATOR_READABLE_TRAITS_H

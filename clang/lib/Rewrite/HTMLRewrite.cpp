@@ -17,9 +17,7 @@
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/ADT/RewriteBuffer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
@@ -249,7 +247,7 @@ static void AddLineNumber(RewriteBuffer &RB, unsigned LineNo,
     RB.InsertTextBefore(B, OS.str());
   } else {
     RB.InsertTextBefore(B, OS.str());
-    RB.InsertTextBefore(E, "</td></tr>");
+    RB.InsertTextAfter(E, "</td></tr>");
   }
 }
 
@@ -295,7 +293,8 @@ void html::AddLineNumbers(Rewriter& R, FileID FID) {
   // Add one big table tag that surrounds all of the code.
   std::string s;
   llvm::raw_string_ostream os(s);
-  os << "<table class=\"code\" data-fileid=\"" << FID.getHashValue() << "\">\n";
+  os << "<table class=\"code\" data-fileid=\"" << FID.getOpaqueValue()
+     << "\">\n";
   RB.InsertTextBefore(0, os.str());
   RB.InsertTextAfter(FileEnd - FileBeg, "</table>");
 }
@@ -636,8 +635,8 @@ static void HighlightMacrosImpl(
   // Temporarily change the diagnostics object so that we ignore any generated
   // diagnostics from this pass.
   DiagnosticsEngine TmpDiags(PP.getDiagnostics().getDiagnosticIDs(),
-                             &PP.getDiagnostics().getDiagnosticOptions(),
-                      new IgnoringDiagConsumer);
+                             PP.getDiagnostics().getDiagnosticOptions(),
+                             new IgnoringDiagConsumer);
 
   // FIXME: This is a huge hack; we reuse the input preprocessor because we want
   // its state, but we aren't actually changing it (we hope). This should really

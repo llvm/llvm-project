@@ -1,0 +1,11 @@
+## Windows has no umask so this test makes no sense.
+# UNSUPPORTED: system-windows
+
+# RUN: touch %t
+# RUN: chmod 644 %t && ls -l %t | cut -f 1 -d ' ' > %t.644
+# RUN: chmod 600 %t && ls -l %t | cut -f 1 -d ' ' > %t.600
+# RUN: chmod 666 %t && ls -l %t | cut -f 1 -d ' ' > %t.666
+
+# RUN: umask 022 && rm %t && touch %t && ls -l %t | cut -f 1 -d ' ' | cmp - %t.644
+# RUN: umask 177 && rm %t && touch %t && ls -l %t | cut -f 1 -d ' ' | cmp - %t.600
+# RUN: umask 000 && rm %t && touch %t && ls -l %t | cut -f 1 -d ' ' | cmp - %t.666
