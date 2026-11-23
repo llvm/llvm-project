@@ -1028,7 +1028,7 @@ public:
   }
 
   mlir::Value createIsNaN(mlir::Location loc, mlir::Value operand) {
-    return createFCompare(loc, cir::FCmpOpKind::une, operand, operand);
+    return createFCompare(loc, cir::FCmpOpKind::uno, operand, operand);
   }
 
   mlir::Value createShift(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
