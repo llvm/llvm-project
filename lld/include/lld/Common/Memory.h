@@ -24,6 +24,11 @@
 #include "llvm/Support/Allocator.h"
 
 namespace lld {
+inline llvm::BumpPtrAllocator &bAllocThreadLocal() {
+  thread_local llvm::BumpPtrAllocator alloc;
+  return alloc;
+}
+
 // A base class only used by the CommonLinkerContext to keep track of the
 // SpecificAlloc<> instances.
 struct SpecificAllocBase {
@@ -87,7 +92,6 @@ template <typename T, typename... U> T *makeThreadLocal(U &&...args) {
 template <typename T> T *makeThreadLocalN(size_t n) {
   return new (getSpecificAllocSingletonThreadLocal<T>().Allocate(n)) T[n];
 }
-
 } // namespace lld
 
 #endif
