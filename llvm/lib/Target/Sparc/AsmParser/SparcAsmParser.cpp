@@ -125,7 +125,7 @@ class SparcAsmParser : public MCTargetAsmParser {
   // returns true if Tok is matched to a register and returns register in RegNo.
   MCRegister matchRegisterName(const AsmToken &Tok, unsigned &RegKind);
 
-  bool matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
+  ParseStatus matchSparcAsmModifiers(const MCExpr *&EVal, SMLoc &EndLoc);
 
   bool is64Bit() const { return getSTI().getTargetTriple().isSPARC64(); }
 
@@ -1490,9 +1490,13 @@ SparcAsmParser::parseSparcAsmOperand(std::unique_ptr<SparcOperand> &Op) {
         Op = SparcOperand::CreateReg(Reg, RegKind, S, E);
       break;
     }
-    if (matchSparcAsmModifiers(EVal, E)) {
+    ParseStatus Res = matchSparcAsmModifiers(EVal, E);
+    if (Res.isSuccess()) {
       E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
       Op = SparcOperand::CreateImm(EVal, S, E);
+    } else if (Res.isNoMatch()) {
+      // Neither a register name nor a relocation specifier.
+      Error(getLoc(), "invalid register name");
     }
     break;
   }
@@ -1726,19 +1730,20 @@ SparcAsmParser::adjustPICRelocation(uint16_t RelType, const MCExpr *subExpr) {
   return MCSpecifierExpr::create(subExpr, RelType, getContext());
 }
 
-bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
-                                            SMLoc &EndLoc) {
+ParseStatus SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
+                                                   SMLoc &EndLoc) {
+  // A relocation specifier is an identifier followed by '('.
   AsmToken Tok = Parser.getTok();
-  if (!Tok.is(AsmToken::Identifier))
-    return false;
+  if (!Tok.is(AsmToken::Identifier) ||
+      !getLexer().peekTok().is(AsmToken::LParen))
+    return ParseStatus::NoMatch;
 
   StringRef name = Tok.getString();
 
   auto VK = Sparc::parseSpecifier(name);
   switch (VK) {
   case 0:
-    Error(getLoc(), "invalid relocation specifier");
-    return false;
+    return Error(getLoc(), "invalid relocation specifier");
 
   case ELF::R_SPARC_GOTDATA_OP:
   case ELF::R_SPARC_TLS_GD_ADD:
@@ -1749,24 +1754,22 @@ bool SparcAsmParser::matchSparcAsmModifiers(const MCExpr *&EVal,
   case ELF::R_SPARC_TLS_LDM_ADD:
   case ELF::R_SPARC_TLS_LDM_CALL:
   case ELF::R_SPARC_TLS_LDO_ADD:
-    // These are special-cased at tablegen level.
-    return false;
+    // These are special-cased at tablegen level and are only valid as the
+    // trailing relocation operand, see parseTailRelocSym.
+    return Error(getLoc(), "unexpected relocation specifier");
 
   default:
     break;
   }
 
   Parser.Lex(); // Eat the identifier.
-  if (Parser.getTok().getKind() != AsmToken::LParen)
-    return false;
-
   Parser.Lex(); // Eat the LParen token.
   const MCExpr *subExpr;
   if (Parser.parseParenExpression(subExpr, EndLoc))
-    return false;
+    return ParseStatus::Failure;
 
   EVal = adjustPICRelocation(VK, subExpr);
-  return true;
+  return ParseStatus::Success;
 }
 
 bool SparcAsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
