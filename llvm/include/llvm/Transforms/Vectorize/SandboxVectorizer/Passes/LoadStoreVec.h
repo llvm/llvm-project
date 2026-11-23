@@ -36,11 +36,11 @@ class Instruction;
 class Type;
 class Constant;
 
-/// Helper for LoadStoreVec::createConstantVector(). Reinterprets the bits of
-/// one scalar constant as another type of the same size, for example float
-/// 1.0 as i32 0x3f800000, or a null pointer as i64 0. createConstantVector()
-/// flattens, slices, and packs those scalars into a constant vector.
-class ScalarConstReinterpret {
+/// Reinterprets the bits of a value as another type of the same size, for
+/// example float 1.0 as i32 0x3f800000, a null pointer as i64 0, or <2 x i32>
+/// as double. Used by createConstantVector() to pack constants, and by
+/// vectorizeLoads() to unpack each load from the vector load.
+class SameSizeReinterpret {
   /// A single cast in the chain built by getCastChain().
   using CastStep = std::pair<Instruction::Opcode, Type *>;
 
@@ -61,7 +61,7 @@ public:
   LLVM_ABI static bool canReinterpret(Type *SrcTy, Type *DestTy,
                                       const DataLayout &DL);
 
-  /// Reinterprets scalar constant \p C as \p DestTy, e.g., float 1.0 to i32
+  /// Reinterprets constant \p C as \p DestTy, e.g., float 1.0 to i32
   /// 0x3f800000, or a null pointer to i64 0. \returns nullptr if a
   /// non-integral pointer is involved.
   LLVM_ABI static Constant *reinterpretConstant(Constant *C, Type *DestTy,
@@ -76,7 +76,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   InstructionCost CostBefore = 0;
   const Analyses *A = nullptr;
   Context *Ctx = nullptr;
-  std::unique_ptr<LegalityAnalysis> Legality;
+  LegalityAnalysis *Legality = nullptr;
   VecUtils::DeadInstructionMorgue DeadInstrMorgue;
 
   /// Saves the IR along with the current cost of \p Rgn, so that

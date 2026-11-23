@@ -1267,6 +1267,15 @@ bool AArch64CallLowering::lowerTailCall(
   if (TRI->isAnyArgRegReserved(MF))
     TRI->emitReservedArgRegCallError(MF);
 
+  // Assign the outgoing arguments once. determineAssignments() modifies the
+  // flags of split values in place, so it must not run twice on OutArgs.
+  SmallVector<CCValAssign, 16> OutLocs;
+  CCState OutInfo(CalleeCC, Info.IsVarArg, MF, OutLocs, F.getContext());
+  AArch64OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg,
+                                        Subtarget, /*IsReturn*/ false);
+  if (!determineAssignments(Assigner, OutArgs, OutInfo))
+    return false;
+
   // FPDiff is the byte offset of the call's argument area from the callee's.
   // Stores to callee stack arguments will be placed in FixedStackSlots offset
   // by this amount for a tail call. In a sibling call it must be 0 because the
@@ -1283,13 +1292,6 @@ bool AArch64CallLowering::lowerTailCall(
     // before handling assignments, because FPDiff must be known for memory
     // arguments.
     unsigned NumReusableBytes = FuncInfo->getBytesInStackArgArea();
-    SmallVector<CCValAssign, 16> OutLocs;
-    CCState OutInfo(CalleeCC, false, MF, OutLocs, F.getContext());
-
-    AArch64OutgoingValueAssigner CalleeAssigner(AssignFnFixed, AssignFnVarArg,
-                                                Subtarget, /*IsReturn*/ false);
-    if (!determineAssignments(CalleeAssigner, OutArgs, OutInfo))
-      return false;
 
     // The callee will pop the argument stack as a tail call. Thus, we must
     // keep it 16-byte aligned.
@@ -1315,14 +1317,10 @@ bool AArch64CallLowering::lowerTailCall(
 
   const auto &Forwards = FuncInfo->getForwardedMustTailRegParms();
 
-  AArch64OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg,
-                                        Subtarget, /*IsReturn*/ false);
-
   // Do the actual argument marshalling.
   OutgoingArgHandler Handler(MIRBuilder, MRI, MIB,
                              /*IsTailCall*/ true, FPDiff);
-  if (!determineAndHandleAssignments(Handler, Assigner, OutArgs, MIRBuilder,
-                                     CalleeCC, Info.IsVarArg))
+  if (!handleAssignments(Handler, OutArgs, OutInfo, OutLocs, MIRBuilder))
     return false;
 
   Mask = getMaskForArgs(OutArgs, Info, *TRI, MF);

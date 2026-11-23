@@ -1621,6 +1621,53 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
       dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
 }
 
+/// The #cir.vector_spec entry holds TargetInfo::getMaxVectorAlign().
+uint64_t cir::VectorType::getMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return 0;
+}
+
+bool cir::VectorType::areCompatible(
+    mlir::DataLayoutEntryListRef oldLayout,
+    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
+    const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the vector alignment cap already in
+  // effect. No entry means the target imposes no limit.
+  uint64_t oldMax = getMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::VectorSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult
+cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                               mlir::Location loc) const {
+  cir::VectorType keyTy = getMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<VectorType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected vector data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::VectorSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.vector_spec attribute";
+  }
+  return mlir::success();
+}
+
 mlir::LogicalResult cir::VectorType::verify(
     llvm::function_ref<mlir::InFlightDiagnostic()> emitError,
     mlir::Type elementType, llvm::ElementCount size) {

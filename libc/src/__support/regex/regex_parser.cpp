@@ -133,10 +133,8 @@ ErrorOr<ExprId> parse_bracket_expr(cpp::string_view &rem, int cflags,
       rem.remove_prefix(delim_pos + 2);
       if (name == "<" || name == ">")
         return Error(REG_BADPAT);
-      cpp::optional<ByteSet> opt = lookup_posix_class(name);
-      if (!opt.has_value())
+      if (!add_posix_class(name, bs))
         return Error(REG_ECTYPE);
-      bs |= *opt;
       if (rem.starts_with('-') && !rem.starts_with("-]"))
         return Error(REG_ERANGE);
       continue;
@@ -266,18 +264,18 @@ ErrorOr<ExprId> parse_quantified_atom(cpp::string_view &rem, int cflags,
     case 'd':
     case 's':
     case 'w': {
-      const ByteSet bs = (c == 'd')   ? digit_class_set()
-                         : (c == 's') ? space_class_set()
-                                      : word_class_set();
+      const ByteSet &bs = (c == 'd')   ? DIGIT_CLASS_SET
+                          : (c == 's') ? SPACE_CLASS_SET
+                                       : WORD_CLASS_SET;
       atom = pool.make_byte_set(bs);
       break;
     }
     case 'D':
     case 'S':
     case 'W': {
-      ByteSet bs = (c == 'D')   ? digit_class_set()
-                   : (c == 'S') ? space_class_set()
-                                : word_class_set();
+      ByteSet bs = (c == 'D')   ? DIGIT_CLASS_SET
+                   : (c == 'S') ? SPACE_CLASS_SET
+                                : WORD_CLASS_SET;
       bs.flip();
       bs.reset(0);
       if (cflags & REG_NEWLINE)
@@ -414,6 +412,7 @@ struct ParsedAtomStack {
   }
 
   ExprId pop() {
+    LIBC_ASSERT(count > 0);
     --count;
     return atoms[count];
   }
