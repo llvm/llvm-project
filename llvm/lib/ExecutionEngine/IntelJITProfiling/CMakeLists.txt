@@ -36,10 +36,19 @@ endif()
 
 set(LLVM_INTEL_JIT_LIBS ${LLVM_PTHREAD_LIB} ${LLVM_INTEL_JIT_LIBS})
 
+set(ITTNOTIFY_STATIC_SOURCE ${ITTAPI_SOURCE_DIR}/ittapi/src/ittnotify/ittnotify_static.c)
+
+# ittnotify_static.c is third-party code from intel/ittapi. It casts away const
+# when freeing the strings it allocates, which trips LLVM's -Wcast-qual.
+if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
+  set_source_files_properties(${ITTNOTIFY_STATIC_SOURCE}
+                              PROPERTIES COMPILE_OPTIONS "-Wno-cast-qual")
+endif()
+
 
 add_llvm_component_library(LLVMIntelJITProfiling
   jitprofiling.c
-  ${ITTAPI_SOURCE_DIR}/ittapi/src/ittnotify/ittnotify_static.c
+  ${ITTNOTIFY_STATIC_SOURCE}
 
   LINK_LIBS ${LLVM_INTEL_JIT_LIBS}
 
