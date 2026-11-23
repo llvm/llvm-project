@@ -6051,7 +6051,8 @@ bool BoUpSLP::analyzeConstantStrideCandidate(
         SortedIndices.empty() ? PointerOps[I] : PointerOps[SortedIndices[I]];
     std::optional<int64_t> Offset =
         getPointersDiff(ScalarTy, PointerOps[0], ScalarTy, Ptr, *DL, *SE);
-    assert(Offset && "sortPtrAccesses should have validated this pointer");
+    if (!Offset)
+      return false;
     SortedOffsetsFromBase[I] = *Offset;
   }
 
