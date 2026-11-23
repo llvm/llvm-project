@@ -12,6 +12,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/Support/Casting.h"
 
@@ -234,11 +235,12 @@ const char *SBTypeSummary::GetData() {
     const char *fname = script_summary_ptr->GetFunctionName();
     const char *ftext = script_summary_ptr->GetPythonScript();
     if (ftext && *ftext)
-      return ConstString(ftext).GetCString();
-    return ConstString(fname).GetCString();
+      return StringPool::GetSystemPool().Intern(ftext);
+    return StringPool::GetSystemPool().Intern(fname);
   } else if (StringSummaryFormat *string_summary_ptr =
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get()))
-    return ConstString(string_summary_ptr->GetSummaryString()).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        string_summary_ptr->GetSummaryString());
   return nullptr;
 }
 

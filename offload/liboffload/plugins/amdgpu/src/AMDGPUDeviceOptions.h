@@ -27,6 +27,8 @@ struct AMDGPUDeviceOptionsTy {
   /// through environment variables override the architecture defaults.
   AMDGPUDeviceOptionsTy(StringRef Arch, bool IsAPU) {
     // Adjust the defaults here for specific architectures.
+    if (Arch == "gfx90a" || Arch == "gfx950" || (Arch == "gfx942" && !IsAPU))
+      UseMultipleSdmaEngines = true;
 
     // Read the environment variables after the architecture defaults are set so
     // that values set by the user take precedence.

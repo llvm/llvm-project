@@ -13,6 +13,7 @@
 
 #include "llvm/Support/KnownBits.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/bit.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -797,6 +798,17 @@ KnownBits KnownBits::abs(bool IntMinIsPoison) const {
   }
 
   return KnownAbs;
+}
+
+KnownBits KnownBits::ctlz(bool ZeroIsPoison) const {
+  unsigned BitWidth = getBitWidth();
+  unsigned MaxLZ = countMaxLeadingZeros();
+  if (ZeroIsPoison)
+    MaxLZ = std::min(MaxLZ, BitWidth - 1);
+
+  KnownBits Result(BitWidth);
+  Result.Zero.setBitsFrom(llvm::bit_width(MaxLZ));
+  return Result;
 }
 
 KnownBits KnownBits::reduceAdd(unsigned NumElts) const {

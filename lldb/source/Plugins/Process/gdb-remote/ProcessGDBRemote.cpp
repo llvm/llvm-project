@@ -3507,8 +3507,8 @@ bool ProcessGDBRemote::DoCanAllocateMemory() {
   options.include_symbols = true;
   options.include_inlines = false;
   SymbolContextList sc_list;
-  GetTarget().GetImages().FindFunctions(
-      ConstString("mmap"), eFunctionNameTypeFull, options, sc_list);
+  GetTarget().GetImages().FindFunctions("mmap", eFunctionNameTypeFull, options,
+                                        sc_list);
   return !sc_list.IsEmpty();
 }
 
@@ -4615,7 +4615,7 @@ bool ProcessGDBRemote::AcceleratorBreakpointHit(
   for (size_t i = 0; i < symbol_names.size(); ++i) {
     args.symbol_values[i].name = symbol_names[i];
     SymbolContextList sc_list;
-    target.GetImages().FindSymbolsWithNameAndType(ConstString(symbol_names[i]),
+    target.GetImages().FindSymbolsWithNameAndType(symbol_names[i],
                                                   eSymbolTypeAny, sc_list);
     for (const SymbolContext &sc : sc_list) {
       if (!sc.symbol)

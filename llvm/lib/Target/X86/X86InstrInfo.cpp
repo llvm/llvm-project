@@ -4375,6 +4375,12 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
       return std::nullopt;
 
+    // With BWI, KMOVW zeroes the upper mask bits, so it is not a copy.
+    if ((MI.getOpcode() == X86::KMOVWkk ||
+         MI.getOpcode() == X86::KMOVWkk_EVEX) &&
+        Subtarget.hasBWI())
+      return std::nullopt;
+
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   }
   return std::nullopt;

@@ -22,7 +22,7 @@ B makeB();
 A *deact_simple() { return new A(makeB()); }
 
 // CIR-LABEL: cir.func {{.*}} @_Z12deact_simplev() -> !cir.ptr<!rec_A>{{.*}} {
-// CIR:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
+// CIR:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[NEW_RESULT:.*]] = cir.alloca "__new_result" {{.*}} : !cir.ptr<!cir.ptr<!rec_A>>
 // CIR:   %[[TMP:.*]] = cir.alloca "ref.tmp0" {{.*}} : !cir.ptr<!rec_B>
 // CIR:   %[[ACTIVE:.*]] = cir.alloca "cleanup.isactive" {{.*}} : !cir.ptr<!cir.bool>

@@ -668,6 +668,7 @@ public:
         auto xchg = cir::AtomicXchgOp::create(
             builder, loc, intAddr.getPointer(), one,
             cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            builder.getI64IntegerAttr(intAddr.getAlignment().getQuantity()),
             lv.isVolatileQualified());
         return builder.createCast(cir::CastKind::int_to_bool, xchg.getResult(),
                                   builder.getBoolTy());
@@ -688,6 +689,7 @@ public:
         auto rmw = cir::AtomicFetchOp::create(
             builder, loc, lv.getPointer(), one, kind,
             cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+            builder.getI64IntegerAttr(lv.getAlignment().getQuantity()),
             lv.isVolatileQualified(), /*fetch_first=*/true);
         mlir::Value oldVal = rmw->getResult(0);
         // Prefix returns new value; postfix returns old value.
@@ -709,6 +711,7 @@ public:
           auto rmw = cir::AtomicFetchOp::create(
               builder, loc, lv.getPointer(), amt, kind,
               cir::MemOrder::SequentiallyConsistent, cir::SyncScopeKind::System,
+              builder.getI64IntegerAttr(lv.getAlignment().getQuantity()),
               lv.isVolatileQualified(), /*fetch_first=*/true);
           mlir::Value oldVal = rmw->getResult(0);
           if (isPre)

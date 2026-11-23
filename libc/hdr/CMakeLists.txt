@@ -297,6 +297,14 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  syslog_macros
+  HDRS
+    syslog_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.syslog_macros
+)
+
+add_proxy_header_library(
   sys_mman_macros
   HDRS
     sys_mman_macros.h
