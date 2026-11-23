@@ -1340,14 +1340,7 @@ define bfloat @test_fabs(bfloat %a) #0 {
 ;
 ; CHECK-FP16-LABEL: test_fabs:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, sp, #4
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-FP16-NEXT:    and r0, r0, #127
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
 ; CHECK-FP16-NEXT:    bx lr
   %r = call bfloat @llvm.fabs.bf16(bfloat %a)
   ret bfloat %r
@@ -1373,8 +1366,6 @@ define bfloat @test_fabs_sub(bfloat %a, bfloat %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_fabs_sub:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s1
 ; CHECK-NOFP16-NEXT:    vmov r1, s0
 ; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
@@ -1384,19 +1375,12 @@ define bfloat @test_fabs_sub(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    vsub.f32 s0, s2, s0
 ; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp]
-; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    and r0, r0, #127
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    bfc r0, #15, #17
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_fabs_sub:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, sp, #4
 ; CHECK-FP16-NEXT:    vmov r0, s0
 ; CHECK-FP16-NEXT:    vmov r1, s1
 ; CHECK-FP16-NEXT:    lsl r0, r0, #16
@@ -1405,12 +1389,7 @@ define bfloat @test_fabs_sub(bfloat %a, bfloat %b) #0 {
 ; CHECK-FP16-NEXT:    vmov s0, r1
 ; CHECK-FP16-NEXT:    vsub.f32 s0, s2, s0
 ; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-FP16-NEXT:    and r0, r0, #127
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
 ; CHECK-FP16-NEXT:    bx lr
   %s = fsub bfloat %a, %b
   %r = call bfloat @llvm.fabs.bf16(bfloat %s)
@@ -1437,14 +1416,7 @@ define bfloat @test_fneg(bfloat %a) #0 {
 ;
 ; CHECK-FP16-LABEL: test_fneg:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, sp, #4
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-FP16-NEXT:    eor r0, r0, #128
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    vneg.f16 s0, s0
 ; CHECK-FP16-NEXT:    bx lr
   %r = fneg bfloat %a
   ret bfloat %r
@@ -1472,8 +1444,6 @@ define bfloat @test_fneg_add(bfloat %a, bfloat %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_fneg_add:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s1
 ; CHECK-NOFP16-NEXT:    vmov r1, s0
 ; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
@@ -1483,19 +1453,12 @@ define bfloat @test_fneg_add(bfloat %a, bfloat %b) #0 {
 ; CHECK-NOFP16-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-NOFP16-NEXT:    vcvtb.bf16.f32 s0, s0
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    strh r0, [sp]
-; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    eor r0, r0, #128
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    eor r0, r0, #32768
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_fneg_add:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, sp, #4
 ; CHECK-FP16-NEXT:    vmov r0, s0
 ; CHECK-FP16-NEXT:    vmov r1, s1
 ; CHECK-FP16-NEXT:    lsl r0, r0, #16
@@ -1504,12 +1467,7 @@ define bfloat @test_fneg_add(bfloat %a, bfloat %b) #0 {
 ; CHECK-FP16-NEXT:    vmov s0, r1
 ; CHECK-FP16-NEXT:    vadd.f32 s0, s2, s0
 ; CHECK-FP16-NEXT:    vcvtb.bf16.f32 s0, s0
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-FP16-NEXT:    eor r0, r0, #128
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    vneg.f16 s0, s0
 ; CHECK-FP16-NEXT:    bx lr
   %s = fadd bfloat %a, %b
   %r = fneg bfloat %s
@@ -1538,39 +1496,31 @@ define bfloat @test_copysign(bfloat %a, bfloat %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_copysign:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #8
-; CHECK-NOFP16-NEXT:    sub sp, sp, #8
-; CHECK-NOFP16-NEXT:    vmov r1, s1
-; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    uxth r1, r1
-; CHECK-NOFP16-NEXT:    strh r1, [sp, #4]
+; CHECK-NOFP16-NEXT:    .pad #4
+; CHECK-NOFP16-NEXT:    sub sp, sp, #4
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
 ; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    ldrb r1, [sp, #5]
 ; CHECK-NOFP16-NEXT:    strh r0, [sp]
+; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    and r1, r1, #128
-; CHECK-NOFP16-NEXT:    and r0, r0, #127
-; CHECK-NOFP16-NEXT:    orr r0, r0, r1
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
-; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #8
+; CHECK-NOFP16-NEXT:    lsr r0, r0, #7
+; CHECK-NOFP16-NEXT:    bfi r1, r0, #15, #1
+; CHECK-NOFP16-NEXT:    vmov s0, r1
+; CHECK-NOFP16-NEXT:    add sp, sp, #4
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_copysign:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #8
-; CHECK-FP16-NEXT:    sub sp, sp, #8
-; CHECK-FP16-NEXT:    vstr.16 s1, [sp, #4]
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #5]
-; CHECK-FP16-NEXT:    ldrb r1, [sp, #1]
-; CHECK-FP16-NEXT:    and r0, r0, #128
-; CHECK-FP16-NEXT:    and r1, r1, #127
-; CHECK-FP16-NEXT:    orr r0, r1, r0
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #8
+; CHECK-FP16-NEXT:    .pad #4
+; CHECK-FP16-NEXT:    sub sp, sp, #4
+; CHECK-FP16-NEXT:    vstr.16 s1, [sp]
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-FP16-NEXT:    vneg.f16 s2, s0
+; CHECK-FP16-NEXT:    tst r0, #128
+; CHECK-FP16-NEXT:    vseleq.f16 s0, s0, s2
+; CHECK-FP16-NEXT:    add sp, sp, #4
 ; CHECK-FP16-NEXT:    bx lr
   %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   ret bfloat %r
@@ -1589,35 +1539,21 @@ define bfloat @test_copysign_f32(bfloat %a, float %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_copysign_f32:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #4
-; CHECK-NOFP16-NEXT:    sub sp, sp, #4
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
 ; CHECK-NOFP16-NEXT:    vmov r1, s1
-; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    and r1, r1, #-2147483648
-; CHECK-NOFP16-NEXT:    strh r0, [sp]
-; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    and r0, r0, #127
-; CHECK-NOFP16-NEXT:    orr r0, r0, r1, lsr #24
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
+; CHECK-NOFP16-NEXT:    bfc r0, #15, #17
+; CHECK-NOFP16-NEXT:    lsr r1, r1, #31
+; CHECK-NOFP16-NEXT:    bfi r0, r1, #15, #1
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #4
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_copysign_f32:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #4
-; CHECK-FP16-NEXT:    sub sp, sp, #4
 ; CHECK-FP16-NEXT:    vmov r0, s1
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r1, [sp, #1]
-; CHECK-FP16-NEXT:    and r1, r1, #127
-; CHECK-FP16-NEXT:    and r0, r0, #-2147483648
-; CHECK-FP16-NEXT:    orr r0, r1, r0, lsr #24
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
-; CHECK-FP16-NEXT:    add sp, sp, #4
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
+; CHECK-FP16-NEXT:    vneg.f16 s2, s0
+; CHECK-FP16-NEXT:    tst r0, #-2147483648
+; CHECK-FP16-NEXT:    vseleq.f16 s0, s0, s2
 ; CHECK-FP16-NEXT:    bx lr
   %tb = fptrunc float %b to bfloat
   %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %tb)
@@ -1637,37 +1573,29 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_copysign_f64:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #16
-; CHECK-NOFP16-NEXT:    sub sp, sp, #16
+; CHECK-NOFP16-NEXT:    .pad #8
+; CHECK-NOFP16-NEXT:    sub sp, sp, #8
 ; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    vstr d1, [sp, #8]
-; CHECK-NOFP16-NEXT:    ldrb r1, [sp, #15]
-; CHECK-NOFP16-NEXT:    and r1, r1, #128
-; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    strh r0, [sp, #4]
-; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #5]
-; CHECK-NOFP16-NEXT:    and r0, r0, #127
-; CHECK-NOFP16-NEXT:    orr r0, r0, r1
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #5]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp, #4]
+; CHECK-NOFP16-NEXT:    vstr d1, [sp]
+; CHECK-NOFP16-NEXT:    ldrb r1, [sp, #7]
+; CHECK-NOFP16-NEXT:    lsr r1, r1, #7
+; CHECK-NOFP16-NEXT:    bfc r0, #15, #17
+; CHECK-NOFP16-NEXT:    bfi r0, r1, #15, #1
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #16
+; CHECK-NOFP16-NEXT:    add sp, sp, #8
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_copysign_f64:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #16
-; CHECK-FP16-NEXT:    sub sp, sp, #16
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp, #4]
-; CHECK-FP16-NEXT:    vstr d1, [sp, #8]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #15]
-; CHECK-FP16-NEXT:    ldrb r1, [sp, #5]
-; CHECK-FP16-NEXT:    and r0, r0, #128
-; CHECK-FP16-NEXT:    and r1, r1, #127
-; CHECK-FP16-NEXT:    orr r0, r1, r0
-; CHECK-FP16-NEXT:    strb r0, [sp, #5]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp, #4]
-; CHECK-FP16-NEXT:    add sp, sp, #16
+; CHECK-FP16-NEXT:    .pad #8
+; CHECK-FP16-NEXT:    sub sp, sp, #8
+; CHECK-FP16-NEXT:    vstr d1, [sp]
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #7]
+; CHECK-FP16-NEXT:    vneg.f16 s2, s0
+; CHECK-FP16-NEXT:    tst r0, #128
+; CHECK-FP16-NEXT:    vseleq.f16 s0, s0, s2
+; CHECK-FP16-NEXT:    add sp, sp, #8
 ; CHECK-FP16-NEXT:    bx lr
   %tb = fptrunc double %b to bfloat
   %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %tb)
@@ -1688,43 +1616,35 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) #0 {
 ;
 ; CHECK-NOFP16-LABEL: test_copysign_extended:
 ; CHECK-NOFP16:       @ %bb.0:
-; CHECK-NOFP16-NEXT:    .pad #8
-; CHECK-NOFP16-NEXT:    sub sp, sp, #8
-; CHECK-NOFP16-NEXT:    vmov r1, s1
-; CHECK-NOFP16-NEXT:    vmov r0, s0
-; CHECK-NOFP16-NEXT:    uxth r1, r1
-; CHECK-NOFP16-NEXT:    strh r1, [sp, #4]
+; CHECK-NOFP16-NEXT:    .pad #4
+; CHECK-NOFP16-NEXT:    sub sp, sp, #4
+; CHECK-NOFP16-NEXT:    vmov r0, s1
+; CHECK-NOFP16-NEXT:    vmov r1, s0
 ; CHECK-NOFP16-NEXT:    uxth r0, r0
-; CHECK-NOFP16-NEXT:    ldrb r1, [sp, #5]
 ; CHECK-NOFP16-NEXT:    strh r0, [sp]
+; CHECK-NOFP16-NEXT:    bfc r1, #15, #17
 ; CHECK-NOFP16-NEXT:    ldrb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    and r1, r1, #128
-; CHECK-NOFP16-NEXT:    and r0, r0, #127
-; CHECK-NOFP16-NEXT:    orr r0, r0, r1
-; CHECK-NOFP16-NEXT:    strb r0, [sp, #1]
-; CHECK-NOFP16-NEXT:    ldrh r0, [sp]
-; CHECK-NOFP16-NEXT:    lsl r0, r0, #16
+; CHECK-NOFP16-NEXT:    lsr r0, r0, #7
+; CHECK-NOFP16-NEXT:    bfi r1, r0, #15, #1
+; CHECK-NOFP16-NEXT:    lsl r0, r1, #16
 ; CHECK-NOFP16-NEXT:    vmov s0, r0
-; CHECK-NOFP16-NEXT:    add sp, sp, #8
+; CHECK-NOFP16-NEXT:    add sp, sp, #4
 ; CHECK-NOFP16-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: test_copysign_extended:
 ; CHECK-FP16:       @ %bb.0:
-; CHECK-FP16-NEXT:    .pad #8
-; CHECK-FP16-NEXT:    sub sp, sp, #8
-; CHECK-FP16-NEXT:    vstr.16 s1, [sp, #4]
-; CHECK-FP16-NEXT:    vstr.16 s0, [sp]
-; CHECK-FP16-NEXT:    ldrb r0, [sp, #5]
-; CHECK-FP16-NEXT:    ldrb r1, [sp, #1]
-; CHECK-FP16-NEXT:    and r0, r0, #128
-; CHECK-FP16-NEXT:    and r1, r1, #127
-; CHECK-FP16-NEXT:    orr r0, r1, r0
-; CHECK-FP16-NEXT:    strb r0, [sp, #1]
-; CHECK-FP16-NEXT:    vldr.16 s0, [sp]
+; CHECK-FP16-NEXT:    .pad #4
+; CHECK-FP16-NEXT:    sub sp, sp, #4
+; CHECK-FP16-NEXT:    vstr.16 s1, [sp]
+; CHECK-FP16-NEXT:    vabs.f16 s0, s0
+; CHECK-FP16-NEXT:    ldrb r0, [sp, #1]
+; CHECK-FP16-NEXT:    vneg.f16 s2, s0
+; CHECK-FP16-NEXT:    tst r0, #128
+; CHECK-FP16-NEXT:    vseleq.f16 s0, s0, s2
 ; CHECK-FP16-NEXT:    vmov r0, s0
 ; CHECK-FP16-NEXT:    lsl r0, r0, #16
 ; CHECK-FP16-NEXT:    vmov s0, r0
-; CHECK-FP16-NEXT:    add sp, sp, #8
+; CHECK-FP16-NEXT:    add sp, sp, #4
 ; CHECK-FP16-NEXT:    bx lr
   %r = call bfloat @llvm.copysign.bf16(bfloat %a, bfloat %b)
   %xr = fpext bfloat %r to float
