@@ -88,6 +88,9 @@ into `generic` device code.
 The `code` list is only needed when the architecture is a virtual one that
 several devices share, and it names the real devices to compile the device code
 for ahead of time.
+Currently, only SYCL device code for Intel GPUs has a `code` list: the
+architecture is an IGCA target, e.g. `igca_30r`, and `code` lists its Intel
+GPUs, e.g. `xe-mtl-u`.
 
 ## Debugging
 

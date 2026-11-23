@@ -9994,6 +9994,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         StringRef Name = TargetID ? StringRef(*TargetID) : Arg;
         // A SYCL device image for an Intel GPU is labeled with the GPU's IGCA
         // target.
+        // TODO: Drop the SYCL check along with the one in getOffloadArchs.
         if (Kind == Action::OFK_SYCL)
           if (OffloadArch ID = StringToOffloadArch(Name); ID.isIntelGPU())
             Name = OffloadArchToVirtualArchString(ID);
