@@ -15,6 +15,10 @@
 # RUN: yaml2obj -DSUBTYPE=0xC0000002 %t/helper.yaml -o %t/kernel.o
 # RUN: yaml2obj -DSUBTYPE=0xC1000002 %t/helper.yaml -o %t/kernel-v1.o
 # RUN: yaml2obj -DSUBTYPE=0x82000002 %t/helper.yaml -o %t/v2.o
+# RUN: yaml2obj -DSUBTYPE=0xC2000002 %t/helper.yaml -o %t/kernel-v2.o
+## The kernel bit without the versioned bit, and a bit no version uses.
+# RUN: yaml2obj -DSUBTYPE=0x40000002 %t/helper.yaml -o %t/kernel-unversioned.o
+# RUN: yaml2obj -DSUBTYPE=0xD0000002 %t/helper.yaml -o %t/extra-bit.o
 # RUN: llvm-ar rcs %t/v1.a %t/v1.o
 
 # DEFINE: %{lld} = %no-fatal-warnings-lld -arch arm64e -arch_errors_fatal \
@@ -27,6 +31,9 @@
 # RUN: not %{lld} %t/kernel.o 2>&1 | FileCheck %s --check-prefix=KERNEL
 # RUN: not %{lld} %t/kernel-v1.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V1
 # RUN: not %{lld} %t/v2.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/kernel-v2.o 2>&1 | FileCheck %s --check-prefix=KERNEL-V2
+# RUN: not %{lld} %t/kernel-unversioned.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
+# RUN: not %{lld} %t/extra-bit.o 2>&1 | FileCheck %s --check-prefix=UNKNOWN
 
 # RUN: %{lld} -static %t/old.o
 # RUN: %{lld} -static %t/kernel.o
@@ -45,7 +52,8 @@
 # V1:        error: {{.*}}v1.{{[oa]}} has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # KERNEL:    error: {{.*}}kernel.o has architecture arm64e.kernel which is incompatible with target architecture arm64e
 # KERNEL-V1: error: {{.*}}kernel-v1.o has architecture arm64e.kernel.v1 which is incompatible with target architecture arm64e
-# UNKNOWN:   error: {{.*}}v2.o has architecture unknown which is incompatible with target architecture arm64e
+# KERNEL-V2: error: {{.*}}kernel-v2.o has architecture arm64e.kernel.v2 which is incompatible with target architecture arm64e
+# UNKNOWN:   error: {{.*}}.o has architecture unknown which is incompatible with target architecture arm64e
 # WARN:      warning: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64e
 # V1-ARM64:  error: {{.*}}v1.o has architecture arm64e.v1 which is incompatible with target architecture arm64
 

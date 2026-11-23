@@ -185,19 +185,20 @@ static bool checkCompatibility(const InputFile *input) {
 }
 
 // The CPU subtype of an arm64e object also holds its pointer authentication
-// ABI version. ld-prime names each version as a separate architecture.
+// ABI version. ld-prime names only these subtypes, and any other is unknown.
 static StringRef getArm64eArchName(uint32_t cpuSubtype) {
-  if (!CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(cpuSubtype))
-    return "arm64e.old";
-  bool isKernel = CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(cpuSubtype);
-  switch (CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(cpuSubtype)) {
-  case 0:
-    return isKernel ? "arm64e.kernel" : "arm64e";
-  case 1:
-    return isKernel ? "arm64e.kernel.v1" : "arm64e.v1";
-  default:
-    return "unknown";
-  }
+  const std::pair<uint32_t, StringRef> names[] = {
+      {CPU_SUBTYPE_ARM64E, "arm64e.old"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, false), "arm64e"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, false), "arm64e.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(0, true), "arm64e.kernel"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(1, true), "arm64e.kernel.v1"},
+      {CPU_SUBTYPE_ARM64E_WITH_PTRAUTH_VERSION(2, true), "arm64e.kernel.v2"},
+  };
+  for (auto [subtype, name] : names)
+    if (subtype == cpuSubtype)
+      return name;
+  return "unknown";
 }
 
 // Like ld-prime, take only userland pointer authentication ABI version 0, even
