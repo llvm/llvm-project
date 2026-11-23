@@ -129,6 +129,7 @@
 ; O2-NEXT:     postra-machine-sink
 ; O2-NEXT:     shrink-wrap
 ; O2-NEXT:     prolog-epilog
+; O2-NEXT:     loongarch-late-branch-opt
 ; O2-NEXT:     machine-latecleanup
 ; O2-NEXT:     branch-folder
 ; O2-NEXT:     tailduplication

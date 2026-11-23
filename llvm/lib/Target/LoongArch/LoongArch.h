@@ -114,7 +114,15 @@ public:
 };
 
 FunctionPass *createLoongArchExpandPseudoLegacyPass();
-FunctionPass *createLoongArchLateBranchOptPass();
+
+class LoongArchLateBranchOptPass
+    : public OptionalPassInfoMixin<LoongArchLateBranchOptPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createLoongArchLateBranchOptLegacyPass();
 void initializeLoongArchAsmPrinterPass(PassRegistry &);
 void initializeLoongArchDAGToDAGISelLegacyPass(PassRegistry &);
 void initializeLoongArchDeadRegisterDefinitionsLegacyPass(PassRegistry &);
@@ -124,7 +132,7 @@ void initializeLoongArchMergeBaseOffsetLegacyPass(PassRegistry &);
 void initializeLoongArchOptWInstrsLegacyPass(PassRegistry &);
 void initializeLoongArchPreRAExpandPseudoLegacyPass(PassRegistry &);
 void initializeLoongArchExpandPseudoLegacyPass(PassRegistry &);
-void initializeLoongArchLateBranchOptPass(PassRegistry &);
+void initializeLoongArchLateBranchOptLegacyPass(PassRegistry &);
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_LOONGARCH_H

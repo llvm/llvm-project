@@ -51,6 +51,7 @@ protected:
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
   Expected<bool>
   addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
+  void addMachineLateOptimization(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addPreEmitPass2(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -121,6 +122,14 @@ Expected<bool> LoongArchCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     addMachineFunctionPass(LoongArchDeadRegisterDefinitionsPass(), PMW);
 
   return Base::addRegAssignAndRewriteOptimized(PMW);
+}
+
+void LoongArchCodeGenPassBuilder::addMachineLateOptimization(
+    PassManagerWrapper &PMW) {
+  if (getOptLevel() != CodeGenOptLevel::None)
+    addMachineFunctionPass(LoongArchLateBranchOptPass(), PMW);
+
+  Base::addMachineLateOptimization(PMW);
 }
 
 void LoongArchCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
