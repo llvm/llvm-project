@@ -2,6 +2,7 @@
 # RUN: llc -mtriple=x86_64-- -run-pass=peephole-opt -o - %s | FileCheck %s
 
 # Sink EFLAGS' use+def below last use-only, allowing removal of extra compare.
+# Do not sink if the use+def's EFLAGS def is live.
 
 ---
 name: cond_sub
@@ -31,3 +32,36 @@ body: |
     $rax = COPY %4
     $rcx = COPY %8
     RET 0, $rax, $rcx
+...
+---
+name: eflags_live_after_sbb
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: eflags_live_after_sbb
+    ; CHECK: [[DEF:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF2:%[0-9]+]]:gr64 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
+    ; CHECK-NEXT: CMP64rr [[DEF]], [[DEF1]], implicit-def $eflags
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_]], %subreg.sub_32bit
+    ; CHECK-NEXT: [[CMOV64rr:%[0-9]+]]:gr64 = CMOV64rr [[SUBREG_TO_REG]], [[DEF1]], 3, implicit $eflags
+    ; CHECK-NEXT: [[SBB64ri32_:%[0-9]+]]:gr64 = SBB64ri32 [[DEF2]], -1, implicit-def $eflags, implicit $eflags
+    ; CHECK-NEXT: $rax = COPY [[CMOV64rr]]
+    ; CHECK-NEXT: $rdx = COPY [[SBB64ri32_]]
+    ; CHECK-NEXT: $cl = COPY [[SETCCr]]
+    ; CHECK-NEXT: RET 0, $rax, $rdx, $cl
+    %0:gr64 = IMPLICIT_DEF
+    %1:gr64 = IMPLICIT_DEF
+    %2:gr64 = IMPLICIT_DEF
+    CMP64rr %0, %1, implicit-def $eflags
+    %3:gr64 = SBB64ri32 %2, -1, implicit-def $eflags, implicit $eflags
+    %4:gr8 = SETCCr 2, implicit $eflags
+    %5:gr32 = MOV32r0 implicit-def dead $eflags
+    CMP64rr %0, %1, implicit-def $eflags
+    %6:gr64 = SUBREG_TO_REG %5, %subreg.sub_32bit
+    %7:gr64 = CMOV64rr %6, %1, 3, implicit $eflags
+    $rax = COPY %7
+    $rdx = COPY %3
+    $cl = COPY %4
+    RET 0, $rax, $rdx, $cl
