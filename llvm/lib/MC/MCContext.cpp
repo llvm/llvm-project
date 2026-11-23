@@ -591,12 +591,10 @@ MCSectionELF *
 MCContext::createELFRelSection(const Twine &Name, unsigned Type, unsigned Flags,
                                unsigned EntrySize, const MCSymbolELF *Group,
                                const MCSectionELF *RelInfoSection) {
-  // Create a symbol table entry, which will be reused by
-  // getOrCreateSectionSymbol in createELFSectionImpl.
   SmallString<128> Buffer;
-  StringRef Key = getSymbolTableEntry(Name.toStringRef(Buffer)).getKey();
-  return createELFSectionImpl(
-      Key, Type, Flags, EntrySize, Group, true, true,
+  StringRef SectionName = allocateString(Name.toStringRef(Buffer));
+  return new (ELFAllocator.Allocate()) MCSectionELF(
+      SectionName, Type, Flags, EntrySize, Group, true, true, nullptr,
       static_cast<const MCSymbolELF *>(RelInfoSection->getBeginSymbol()));
 }
 
