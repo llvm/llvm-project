@@ -2518,11 +2518,10 @@ SDValue SelectionDAG::getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
   return SDValue(N, 0);
 }
 
-SDValue SelectionDAG::getFreeze(SDValue V) {
-  return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
-}
-
 SDValue SelectionDAG::getFreeze(SDValue V, UndefPoisonKind Kind) {
+  // TODO: Remove isGuaranteedNotToBeUndefOrPoison handling from getNode().
+  if (Kind == UndefPoisonKind::UndefOrPoison)
+    return getFreeze(V);
   APInt DemandedElts = getDemandAllEltsMask(V);
   return getFreeze(V, DemandedElts, Kind);
 }
@@ -2531,7 +2530,7 @@ SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
                                 UndefPoisonKind Kind) {
   if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind))
     return V;
-  return getFreeze(V);
+  return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
 }
 
 /// getShiftAmountOperand - Return the specified value casted to
