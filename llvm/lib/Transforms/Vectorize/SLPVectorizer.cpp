@@ -20934,8 +20934,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
                 VectorCasts
                     .insert(std::make_pair(ScalarTE, FTy->getElementType()))
                     .second) {
-              InstructionCost C = getDemotedEntryCastCost(
-                  *TTI, FTy, It->second, *DL, getCastContextHint(*ScalarTE),
+              InstructionCost C = getDemotedTypeCastCost(
+                  *TTI, FTy, It->second, getCastContextHint(*ScalarTE),
                   CostKind);
               LLVM_DEBUG(dbgs() << "SLP: Adding cost " << C
                                 << " for extending externally used vector with "
@@ -22510,9 +22510,8 @@ InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
   InstructionCost Cost = 0;
   for (const TreeEntry *E : make_first_range(EntryMasks))
     if (auto It = MinBWs.find(E); It != MinBWs.end())
-      Cost += getDemotedEntryCastCost(*TTI, cast<FixedVectorType>(VecTy),
-                                      It->second, *DL, getCastContextHint(*E),
-                                      CostKind);
+      Cost += getDemotedTypeCastCost(*TTI, VecTy, It->second,
+                                     getCastContextHint(*E), CostKind);
   auto Vector = EntryMasks.takeVector();
   Cost += getEntriesLanesShuffleCost(
       MutableArrayRef(Vector.data(), Vector.size()), Base, ScalarTy,
