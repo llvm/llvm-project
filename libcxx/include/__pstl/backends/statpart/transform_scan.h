@@ -57,8 +57,8 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
     _BinaryOperation __reduce,
     _UnaryOperation __transform,
     _Tp __init) noexcept {
-  // Perform either an inclusive or an exclusive scanning, depending on the flavour of __transform_scan.
-  // The order of arguments follows transform_inclusive_scan and implicitly changes when the exclusive branch is called.
+  // Perform either an inclusive or an exclusive scan, depending on the flavour of __transform_scan.
+  // The arguments follow transform_inclusive_scan's order, the exclusive branch reorders them implicitly.
   auto __leaf_scan =
       [](auto&& __leaf_first,
          auto&& __leaf_last,
@@ -94,8 +94,8 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
             _ForwardIterator1 __chunk_last,
             __decoupled_lookback_partition<_Tp>* __optional_lookback_partition) {
           // Handling of the first chunk.
-          // It is special because it doesn't have a previous partition and must immediately push its inclusive prefix
-          // once the local reduction is complete.
+          // It is special because it doesn't have a previous partition and must immediately publish its inclusive
+          // prefix once the local reduction is complete.
           if (__optional_lookback_partition != nullptr) {
             // Calculate and publish the inclusive prefix only if the storage for this partition exists.
             // For the edge case when the entire workset consists of a single partition, the lookback won't be used.
@@ -124,12 +124,12 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
       // Derive the destination iterator for this chunk.
       _ForwardIterator2 __chunk_result = __result + (__chunk_first - __first);
 
-      // Depending on the state of the previous chunk, either immediately compute and publish the inclusive prefix,
+      // Depending on the state of the previous partition, either immediately compute and publish the inclusive prefix,
       // or first compute the inclusive prefix of the previous partition by ourselves and then compute and publish
       // our inclusive prefix.
       __decoupled_lookback_partition<_Tp>* __prev_partition = __lookback_partition - 1;
       if (__prev_partition->__acquire_available_status() & __decoupled_lookback_status_prefix_available) {
-        // Use the existing inclusive prefix directly (avoid copies)
+        // Use the existing inclusive prefix directly.
         const _Tp& __exclusive_prefix = __prev_partition->__inclusive_prefix();
         // Calculate and publish the inclusive prefix for the current chunk.
         __lookback_partition->__construct_inclusive_prefix(__reduce(__exclusive_prefix, std::move(__aggregate)));
