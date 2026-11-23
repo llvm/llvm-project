@@ -3,7 +3,9 @@
 
 ; An fdiv with afn has a cheap lowering. In fdiv_all_afn every lane has afn,
 ; so the vector fdiv keeps the cheap cost of its context. In fdiv_mixed only
-; lane 0 has afn, so the vector fdiv must not take that cost from lane 0.
+; lane 0 has afn, so the vector fdiv must not take that cost from lane 0. In
+; fdiv_alt_fmul the vector fdiv gets afn from its only fdiv lane, so the fmul
+; lane without afn must not block the cheap cost.
 
 define void @fdiv_mixed(ptr %a, ptr %b, ptr %out) {
 ; CHECK-LABEL: define void @fdiv_mixed(
@@ -94,5 +96,46 @@ entry:
   store float %d2, ptr %o2, align 4
   %o3 = getelementptr inbounds float, ptr %out, i64 3
   store float %d3, ptr %o3, align 4
+  ret void
+}
+
+define void @fdiv_alt_fmul(ptr %a, ptr %b, ptr %c, ptr %d, ptr %out) {
+; CHECK-LABEL: define void @fdiv_alt_fmul(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x float>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x float>, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[C]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x float>, ptr [[D]], align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x float> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x float> [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fdiv afn <2 x float> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x float> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> [[TMP7]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    store <2 x float> [[TMP8]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load float, ptr %a, align 4
+  %ap1 = getelementptr inbounds float, ptr %a, i64 1
+  %a1 = load float, ptr %ap1, align 4
+  %b0 = load float, ptr %b, align 4
+  %bp1 = getelementptr inbounds float, ptr %b, i64 1
+  %b1 = load float, ptr %bp1, align 4
+  %c0 = load float, ptr %c, align 4
+  %cp1 = getelementptr inbounds float, ptr %c, i64 1
+  %c1 = load float, ptr %cp1, align 4
+  %d0 = load float, ptr %d, align 4
+  %dp1 = getelementptr inbounds float, ptr %d, i64 1
+  %d1 = load float, ptr %dp1, align 4
+  %x0 = fadd float %a0, %c0
+  %x1 = fadd float %a1, %c1
+  %y0 = fadd float %b0, %d0
+  %y1 = fadd float %b1, %d1
+  %r0 = fdiv afn float %x0, %y0
+  %r1 = fmul float %x1, %y1
+  store float %r0, ptr %out, align 4
+  %o1 = getelementptr inbounds float, ptr %out, i64 1
+  store float %r1, ptr %o1, align 4
   ret void
 }
