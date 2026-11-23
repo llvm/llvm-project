@@ -7082,6 +7082,18 @@ public:
   static OMPMapClause *CreateEmpty(const ASTContext &C,
                                    const OMPMappableExprListSizeTy &Sizes);
 
+  /// Return the class whose vtable is registered for offloading when \p E is
+  /// mapped, and the mapped variable. Either may be null.
+  static std::pair<CXXRecordDecl *, const VarDecl *>
+  getVTableDecl(const Expr *E);
+
+  /// Call \p Fn on \p RD and on each dynamic class reachable through the
+  /// fields and bases of a dynamic class; these are the vtables registered
+  /// for offloading. Sema and CodeGen share this so they agree on the set.
+  static void
+  forEachOffloadVTable(CXXRecordDecl *RD,
+                       llvm::function_ref<void(CXXRecordDecl *)> Fn);
+
   /// Fetches Expr * of iterator modifier.
   Expr *getIteratorModifier() {
     return getTrailingObjects<Expr *>()[2 * varlist_size()];

@@ -14,6 +14,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprOpenMP.h"
@@ -1269,6 +1270,52 @@ OMPMapClause::CreateEmpty(const ASTContext &C,
   OMPMapClause *Clause = new (Mem) OMPMapClause(Sizes);
   Clause->setIteratorModifier(nullptr);
   return Clause;
+}
+
+std::pair<CXXRecordDecl *, const VarDecl *>
+OMPMapClause::getVTableDecl(const Expr *E) {
+  QualType VDTy = E->getType();
+  CXXRecordDecl *CXXRecord = nullptr;
+  if (const auto *RefType = VDTy->getAs<LValueReferenceType>())
+    VDTy = RefType->getPointeeType();
+  if (VDTy->isPointerType())
+    CXXRecord = VDTy->getPointeeType()->getAsCXXRecordDecl();
+  else
+    CXXRecord = VDTy->getAsCXXRecordDecl();
+
+  const VarDecl *VD = nullptr;
+  if (const auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+    // Handle BindingDecls by redirecting to their DecompositionDecl.
+    if (const auto *BD = dyn_cast<BindingDecl>(DRE->getDecl()))
+      VD = cast<VarDecl>(BD->getDecomposedDecl());
+    else
+      VD = dyn_cast<VarDecl>(DRE->getDecl());
+  } else if (const auto *MRE = dyn_cast<MemberExpr>(E)) {
+    if (const auto *BaseDRE = dyn_cast<DeclRefExpr>(MRE->getBase()))
+      VD = dyn_cast<VarDecl>(BaseDRE->getDecl());
+  }
+  return {CXXRecord, VD};
+}
+
+static void
+forEachOffloadVTableImpl(CXXRecordDecl *RD,
+                         llvm::SmallPtrSetImpl<const CXXRecordDecl *> &Visited,
+                         llvm::function_ref<void(CXXRecordDecl *)> Fn) {
+  if (!RD || !RD->hasDefinition() || !RD->isDynamicClass() ||
+      !Visited.insert(RD).second)
+    return;
+  Fn(RD);
+  for (const FieldDecl *Field : RD->fields())
+    forEachOffloadVTableImpl(Field->getType()->getAsCXXRecordDecl(), Visited,
+                             Fn);
+  for (const CXXBaseSpecifier &Base : RD->bases())
+    forEachOffloadVTableImpl(Base.getType()->getAsCXXRecordDecl(), Visited, Fn);
+}
+
+void OMPMapClause::forEachOffloadVTable(
+    CXXRecordDecl *RD, llvm::function_ref<void(CXXRecordDecl *)> Fn) {
+  llvm::SmallPtrSet<const CXXRecordDecl *, 8> Visited;
+  forEachOffloadVTableImpl(RD, Visited, Fn);
 }
 
 OMPToClause *OMPToClause::Create(
