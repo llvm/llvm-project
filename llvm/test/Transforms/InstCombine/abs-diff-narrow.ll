@@ -220,3 +220,25 @@ bb:
   %sel = select i1 %cmp, i32 %neg, i32 %sub
   ret i32 %sel
 }
+
+define i32 @abs_diff_zext_nneg_different_zexts(i8 %a, i8 %b) {
+; CHECK-LABEL: define i32 @abs_diff_zext_nneg_different_zexts(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[ZA1:%.*]] = zext nneg i8 [[A]] to i32
+; CHECK-NEXT:    [[ZA2:%.*]] = zext i8 [[A]] to i32
+; CHECK-NEXT:    [[ZB:%.*]] = zext i8 [[B]] to i32
+; CHECK-NEXT:    [[C:%.*]] = icmp ugt i8 [[A]], [[B]]
+; CHECK-NEXT:    [[T:%.*]] = sub nsw i32 [[ZA1]], [[ZB]]
+; CHECK-NEXT:    [[F:%.*]] = sub nsw i32 [[ZB]], [[ZA2]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[C]], i32 [[T]], i32 [[F]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %za1 = zext nneg i8 %a to i32
+  %za2 = zext i8 %a to i32
+  %zb = zext i8 %b to i32
+  %c = icmp ugt i8 %a, %b
+  %t = sub nsw i32 %za1, %zb
+  %f = sub nsw i32 %zb, %za2
+  %r = select i1 %c, i32 %t, i32 %f
+  ret i32 %r
+}

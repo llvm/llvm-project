@@ -1512,10 +1512,12 @@ static Value *foldAbsDiff(ICmpInst *Cmp, Value *TVal, Value *FVal,
   
   // With any pair of no-wrap subtracts:
   // (A > B) ? (A - B) : (B - A) --> abs(A - B)
+  Value *ZExtA, *ZExtB;
   bool UnsignedMatch =
       Pred == CmpInst::ICMP_UGT &&
-      match(TI, m_Sub(m_ZExt(m_Specific(A)), m_ZExt(m_Specific(B)))) &&
-      match(FI, m_Sub(m_ZExt(m_Specific(B)), m_ZExt(m_Specific(A))));
+      match(TI, m_Sub(m_CombineAnd(m_Value(ZExtA), m_ZExt(m_Specific(A))),
+                      m_CombineAnd(m_Value(ZExtB), m_ZExt(m_Specific(B))))) &&
+      match(FI, m_Sub(m_Specific(ZExtB), m_Specific(ZExtA)));
 
   bool SignedMatch = 
     Pred == CmpInst::ICMP_SGT &&
