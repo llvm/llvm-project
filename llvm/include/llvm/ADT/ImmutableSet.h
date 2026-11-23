@@ -660,8 +660,9 @@ protected:
     auto NewElem = FromB ? Combine(nullptr, &E) : Combine(&E, nullptr);
     if (L == getLeft(T) && R == getRight(T) &&
         ImutInfo::isDataEqual(ImutInfo::DataOfValue(NewElem),
-                              ImutInfo::DataOfValue(E)))
+                              ImutInfo::DataOfValue(E))) {
       return T;
+    }
     return createNode(L, NewElem, R);
   }
 
