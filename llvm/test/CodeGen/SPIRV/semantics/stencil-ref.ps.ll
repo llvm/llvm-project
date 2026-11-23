@@ -4,10 +4,13 @@
 
 ; SV_StencilRef is lowered to a store to the FragStencilRefEXT built-in, which
 ; requires the StencilExportEXT capability from SPV_EXT_shader_stencil_export.
+; Writing it also requires the StencilRefReplacingEXT execution mode.
 ; ERROR: LLVM ERROR: FragStencilRefEXT requires the following SPIR-V extension: SPV_EXT_shader_stencil_export
 
 ; CHECK-DAG: OpCapability StencilExportEXT
 ; CHECK-DAG: OpExtension "SPV_EXT_shader_stencil_export"
+; CHECK-DAG: OpEntryPoint Fragment %[[#MAIN:]] "main"
+; CHECK-DAG: OpExecutionMode %[[#MAIN]] StencilRefReplacingEXT
 ; CHECK-DAG: OpDecorate %[[#STENCIL:]] BuiltIn FragStencilRefEXT
 ; CHECK-DAG: %[[#INT:]] = OpTypeInt 32 0
 ; CHECK-DAG: %[[#PTR:]] = OpTypePointer Output %[[#INT]]

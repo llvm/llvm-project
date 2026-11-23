@@ -614,6 +614,13 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
         emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
+        // Vulkan: "To write to FragStencilRefEXT, a shader must declare the
+        // StencilRefReplacingEXT execution mode." The StencilExportEXT
+        // capability is only required by that built-in.
+        if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                               SPIRV::Capability::StencilExportEXT))
+          emitSimpleExecutionMode(FReg,
+                                  SPIRV::ExecutionMode::StencilRefReplacingEXT);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
