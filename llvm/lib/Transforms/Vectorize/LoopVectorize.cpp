@@ -6748,19 +6748,53 @@ void LoopVectorizationPlanner::addReductionResultComputation(
 
       VPIRFlags Flags(RecurrenceKind, PhiR->isOrdered(), PhiR->isInLoop(),
                       PhiR->getFastMathFlagsOrNone());
-      FinalReductionResult = Builder.createNaryOp(
-          VPInstruction::ComputeReductionResult, {ReductionOp}, Flags, ExitDL);
-      if (ExtendOpc != Instruction::CastOpsEnd)
-        FinalReductionResult = Builder.createScalarCast(
-            ExtendOpc, FinalReductionResult, PhiTy, {});
+      auto CreateResult = [&](VPValue *V) {
+        VPInstruction *Res = Builder.createNaryOp(
+            VPInstruction::ComputeReductionResult, {V}, Flags, ExitDL);
+        if (ExtendOpc != Instruction::CastOpsEnd)
+          Res = Builder.createScalarCast(ExtendOpc, Res, PhiTy, {});
+        return Res;
+      };
+      FinalReductionResult = CreateResult(ReductionOp);
+
+      // On early exits, lanes up to and including the exiting lane use the
+      // updated accumulators, the other lanes the phi.
+      for (VPUser *U : to_vector(OrigExitingVPV->users())) {
+        VPValue *Lane;
+        if (!match(U, m_ExtractLane(
+                          m_VPValue(Lane, m_FirstActiveLane(m_VPValue())),
+                          m_Specific(OrigExitingVPV))))
+          continue;
+        auto *ExtractR = cast<VPInstruction>(U);
+        Builder.setInsertPoint(ExtractR);
+        Type *LaneTy = Lane->getScalarType();
+        VPValue *One = Plan->getConstantInt(LaneTy, 1);
+        VPValue *Mask = Builder.createNaryOp(
+            VPInstruction::WideActiveLaneMask,
+            {Plan->getZero(LaneTy), Builder.createAdd(Lane, One), One});
+        Mask = Builder.createNaryOp(VPInstruction::ExtractVectorForPart,
+                                    {Mask, Plan->getConstantInt(64, 0)});
+        VPValue *Blend = Builder.createSelect(Mask, OrigExitingVPV, PhiR);
+        if (ExtendOpc != Instruction::CastOpsEnd)
+          Blend = Builder.createWidenCast(Instruction::Trunc, Blend,
+                                          RdxDesc.getRecurrenceType());
+        ExtractR->replaceAllUsesWith(CreateResult(Blend));
+        ExtractR->eraseFromParent();
+      }
     }
 
-    // Update all users outside the vector region. Also replace redundant
-    // extracts.
+    // Update all users in the middle block, which computes the final result.
+    // Also replace redundant extracts.
     for (auto *U : to_vector(OrigExitingVPV->users())) {
       auto *Parent = cast<VPRecipeBase>(U)->getParent();
       if (FinalReductionResult == U || Parent->getParent())
         continue;
+      if (Parent != MiddleVPBB) {
+        assert(match(U, m_Select(m_VPValue(), m_Specific(OrigExitingVPV),
+                                 m_Specific(PhiR))) &&
+               "only users outside middle block must be blends created above");
+        continue;
+      }
       // Skip ComputeReductionResult and FindIV reductions when they are not the
       // final result.
       if (match(U, m_VPInstruction<VPInstruction::ComputeReductionResult>()) ||
@@ -7151,11 +7185,10 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
         return MiddleBuilder.createNaryOp(VPInstruction::ResumeForEpilogue,
                                           ResumePhi->operands());
       }));
-  for (VPRecipeBase &R :
-       make_early_inc_range(MainPlan.getScalarPreheader()->phis())) {
-    auto *ResumePhi = cast<VPPhi>(&R);
-    ResumePhi->replaceAllUsesWith(ResumePhi->getOperand(1));
-    ResumePhi->eraseFromParent();
+  for (VPPhi &ResumePhi : make_early_inc_range(
+           map_range(MainPlan.getScalarPreheader()->phis(), CastTo<VPPhi>))) {
+    ResumePhi.replaceAllUsesWith(ResumePhi.getOperand(1));
+    ResumePhi.eraseFromParent();
   }
   return {VectorTCMarker, std::move(ResumeValues)};
 }
@@ -7411,13 +7444,14 @@ static void preparePlanForEpilogueVectorLoop(
 
   // Re-use the SCEVs expanded for the main loop instead of expanding them
   // again, which also lets simplifyLiveInsWithSCEV fold their users.
+  // Others are expanded with the epilogue plan.
   // TODO: Remove once the epilogue plan uses the main plan's VPValues directly.
   for (VPExpandSCEVRecipe &ExpandR : make_early_inc_range(
            make_isa_range<VPExpandSCEVRecipe>(*Plan.getEntry()))) {
-    assert(ExpandedSCEVs.contains(ExpandR.getSCEV()) &&
-           "Epilogue plan needs a SCEV not expanded for the main loop");
-    VPValue *ExpandedVal =
-        Plan.getOrAddLiveIn(ExpandedSCEVs.lookup(ExpandR.getSCEV()));
+    Value *V = ExpandedSCEVs.lookup(ExpandR.getSCEV());
+    if (!V)
+      continue;
+    VPValue *ExpandedVal = Plan.getOrAddLiveIn(V);
     ExpandR.replaceAllUsesWith(ExpandedVal);
     if (Plan.getTripCount() == &ExpandR)
       Plan.resetTripCount(ExpandedVal);

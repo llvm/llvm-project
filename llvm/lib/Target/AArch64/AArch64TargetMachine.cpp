@@ -453,7 +453,7 @@ public:
   void addPreEmitPass() override;
   void addPostBBSections() override;
   void addPreEmitPass2() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteOptimized() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
 };
@@ -814,9 +814,9 @@ void AArch64PassConfig::addPreEmitPass2() {
   addPass(createUnpackMachineBundlesLegacy(nullptr));
 }
 
-bool AArch64PassConfig::addRegAssignAndRewriteOptimized() {
+void AArch64PassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createAArch64PostCoalescerPass());
-  return TargetPassConfig::addRegAssignAndRewriteOptimized();
+  TargetPassConfig::addRegAssignAndRewriteOptimized();
 }
 
 MachineFunctionInfo *AArch64TargetMachine::createMachineFunctionInfo(

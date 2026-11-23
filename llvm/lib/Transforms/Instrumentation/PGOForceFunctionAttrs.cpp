@@ -61,7 +61,16 @@ PreservedAnalyses PGOForceFunctionAttrsPass::run(Module &M,
       F.addFnAttr(Attribute::NoInline);
       break;
     }
+
+    FAM.clear(F, F.getName());
     MadeChange = true;
   }
-  return MadeChange ? PreservedAnalyses::none() : PreservedAnalyses::all();
+
+  if (!MadeChange)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
+  return PA;
 }

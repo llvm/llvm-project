@@ -76,7 +76,7 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   InstructionCost CostBefore = 0;
   const Analyses *A = nullptr;
   Context *Ctx = nullptr;
-  std::unique_ptr<LegalityAnalysis> Legality;
+  LegalityAnalysis *Legality = nullptr;
   VecUtils::DeadInstructionMorgue DeadInstrMorgue;
 
   /// Saves the IR along with the current cost of \p Rgn, so that
