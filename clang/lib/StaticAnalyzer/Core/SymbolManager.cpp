@@ -264,8 +264,7 @@ void SymbolReaper::markDependentsLive(SymbolMapTy::iterator LI) {
   LI->second = HaveMarkedDependents;
 
   // Marking the dependents inserts into TheLiving, invalidating LI.
-  if (const SymbolRefSmallVectorTy *Deps =
-          SymMgr.getDependentSymbols(LI->first)) {
+  if (const auto *Deps = SymMgr.getDependentSymbols(LI->first)) {
     for (const auto I : *Deps) {
       if (TheLiving.contains(I))
         continue;
