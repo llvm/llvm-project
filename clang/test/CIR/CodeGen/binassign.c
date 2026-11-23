@@ -112,7 +112,7 @@ int ignore_result_assign() {
 }
 
 // CIR-LABEL: cir.func{{.*}} @ignore_result_assign() -> !s32i
-// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:         %[[ARR:.*]] = cir.alloca "arr" {{.*}} : !cir.ptr<!cir.array<!s32i x 10>>
 // CIR:         %[[I:.*]] = cir.alloca "i" {{.*}} : !cir.ptr<!s32i>
 // CIR:         %[[J:.*]] = cir.alloca "j" {{.*}} : !cir.ptr<!s32i>
@@ -155,7 +155,7 @@ int ignore_result_assign() {
 // LLVM:         store i32 123, ptr %[[I_PTR]]
 // LLVM:         store i32 123, ptr %[[J_PTR]]
 // LLVM:         store i32 5, ptr %[[I_PTR]]
-// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_PTR]], i32 0, i64 5
+// LLVM:         %[[GEP:.*]] = getelementptr inbounds [10 x i32], ptr %[[ARR_PTR]], i64 0, i64 5
 // LLVM:         %[[ARR_VAL:.*]] = load i32, ptr %[[GEP]]
 // LLVM:         store i32 %[[ARR_VAL]], ptr %[[J_PTR]]
 // LLVM:         store ptr null, ptr %[[Q_PTR]]

@@ -3463,6 +3463,7 @@ cc_library(
         "//mlir:IR",
         "//mlir:LLVMCommonConversion",
         "//mlir:LLVMDialect",
+        "//mlir:LLVMIRTransforms",
         "//mlir:LLVMToLLVMIRTranslation",
         "//mlir:OpenMPDialect",
         "//mlir:OpenMPToLLVM",

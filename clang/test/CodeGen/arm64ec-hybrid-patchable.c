@@ -1,5 +1,5 @@
 // REQUIRES: aarch64-registered-target
-// RUN: %clang_cc1 -triple arm64ec-pc-windows -fms-extensions -emit-llvm -o - %s -verify | FileCheck %s
+// RUN: %clang_cc1 -fno-module-local-hints -triple arm64ec-pc-windows -fms-extensions -emit-llvm -o - %s -verify | FileCheck %s
 
 // CHECK: ;    Function Attrs: hybrid_patchable noinline nounwind optnone
 // CHECK-NEXT: define dso_local i32 @func() #0 {

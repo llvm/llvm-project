@@ -272,6 +272,11 @@ struct LateParsedTypeAttrInfo {
       : Kind(Kind), NameLoc(NameLoc) {}
 };
 
+/// The late-parsed type attributes of a declaration specifier, declarator or
+/// declarator chunk, as Sema sees them. Almost always empty, so no inline
+/// storage.
+using LateParsedTypeAttrInfoList = SmallVector<LateParsedTypeAttrInfo *, 0>;
+
 /// Captures information about "declaration specifiers".
 ///
 /// "Declaration specifiers" encompasses storage-class-specifiers,
@@ -467,7 +472,7 @@ private:
   ParsedAttributes Attrs;
 
   // late attributes
-  LateParsedAttrList LateParsedAttrs;
+  LateParsedTypeAttrInfoList LateParsedAttrs;
 
   // Scope specifier for the type spec, if applicable.
   CXXScopeSpec TypeScope;
@@ -545,8 +550,7 @@ public:
         FS_virtual_specified(false), FS_noreturn_specified(false),
         FriendSpecifiedFirst(false), ConstexprSpecifier(static_cast<unsigned>(
                                          ConstexprSpecKind::Unspecified)),
-        Attrs(attrFactory), LateParsedAttrs(LateParsedAttrList::forTypeAttrs()),
-        writtenBS(), ObjCQualifiers(nullptr) {}
+        Attrs(attrFactory), writtenBS(), ObjCQualifiers(nullptr) {}
 
   // storage-class-specifier
   SCS getStorageClassSpec() const { return (SCS)StorageClassSpec; }
@@ -946,8 +950,8 @@ public:
   ParsedAttributes &getAttributes() { return Attrs; }
   const ParsedAttributes &getAttributes() const { return Attrs; }
 
-  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
-  const LateParsedAttrList &getLateAttributes() const {
+  LateParsedTypeAttrInfoList &getLateAttributes() { return LateParsedAttrs; }
+  const LateParsedTypeAttrInfoList &getLateAttributes() const {
     return LateParsedAttrs;
   }
 
@@ -1328,7 +1332,7 @@ public:
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() : LateAttrList(LateParsedAttrList::forTypeAttrs()) {}
+  DeclaratorChunk() {};
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
@@ -1346,7 +1350,7 @@ struct DeclaratorChunk {
   }
 
   ParsedAttributesView AttrList;
-  LateParsedAttrList LateAttrList;
+  LateParsedTypeAttrInfoList LateAttrList;
 
   struct PointerTypeInfo {
     /// The type qualifiers: const/volatile/restrict/unaligned/atomic.
@@ -2059,7 +2063,7 @@ private:
   /// corresponding constructor parameter.
   const ParsedAttributesView &DeclarationAttrs;
 
-  LateParsedAttrList LateParsedAttrs;
+  LateParsedTypeAttrInfoList LateParsedAttrs;
 
   /// The asm label, if specified.
   Expr *AsmLabel;
@@ -2126,8 +2130,7 @@ public:
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
         HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
-        DeclarationAttrs(DeclarationAttrs),
-        LateParsedAttrs(LateParsedAttrList::forTypeAttrs()), AsmLabel(nullptr),
+        DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
         TrailingRequiresClause(nullptr),
         InventedTemplateParameterList(nullptr) {
     assert(llvm::all_of(DeclarationAttrs,
@@ -2452,7 +2455,7 @@ public:
   /// of those attributes from the parameter.
   void AddTypeInfo(const DeclaratorChunk &TI, ParsedAttributes &&attrs,
                    SourceLocation EndLoc,
-                   const LateParsedAttrList &LateAttrs = {}) {
+                   const LateParsedTypeAttrInfoList &LateAttrs = {}) {
     DeclTypeInfo.push_back(TI);
     DeclTypeInfo.back().getAttrs().prepend(attrs.begin(), attrs.end());
     getAttributePool().takeAllFrom(attrs.getPool());
@@ -2790,8 +2793,8 @@ public:
     return DeclarationAttrs;
   }
 
-  LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
-  const LateParsedAttrList &getLateAttributes() const {
+  LateParsedTypeAttrInfoList &getLateAttributes() { return LateParsedAttrs; }
+  const LateParsedTypeAttrInfoList &getLateAttributes() const {
     return LateParsedAttrs;
   }
 

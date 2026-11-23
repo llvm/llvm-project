@@ -15,10 +15,10 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
@@ -172,7 +172,7 @@ LIBC_INLINE constexpr float16 exp10m1f16(float16 x) {
   auto [exp2_hi_mid, exp10_lo] = exp10_range_reduction(x);
   // exp10m1(x) = exp2((hi + mid) * log2(lo)) * exp10(lo) - 1
   return fputil::cast<float16>(
-      fputil::multiply_add(exp2_hi_mid, exp10_lo, -1.0f));
+      fputil::multiply_sub(exp2_hi_mid, exp10_lo, 1.0f));
 }
 
 } // namespace math

@@ -2490,36 +2490,27 @@ define void @expanded_bounds_non_affine_outer(ptr %dst, ptr %src, i64 %k, i64 %m
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl i64 [[K]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[TMP0]], -4
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[M]], -1
-; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[TMP2]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[N]], 2
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP3]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = zext i64 [[TMP2]] to i65
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[M]], -2
-; CHECK-NEXT:    [[TMP8:%.*]] = zext i64 [[TMP7]] to i65
-; CHECK-NEXT:    [[TMP9:%.*]] = mul i65 [[TMP6]], [[TMP8]]
-; CHECK-NEXT:    [[TMP10:%.*]] = lshr i65 [[TMP9]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc i65 [[TMP10]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = shl i64 [[TMP11]], 3
-; CHECK-NEXT:    [[TMP13:%.*]] = sub i64 [[TMP5]], [[TMP12]]
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP13]]
+; CHECK-NEXT:    [[SCEVGEP5:%.*]] = getelementptr i8, ptr [[SRC]], i64 [[TMP4]]
 ; CHECK-NEXT:    [[SCEVGEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 [[TMP4]]
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = phi ptr [ [[SCEVGEP7:%.*]], %[[OUTER_LATCH:.*]] ], [ [[SCEVGEP5]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[INDUCTION_IV:%.*]] = phi ptr [ [[SCEVGEP1:%.*]], %[[OUTER_LATCH]] ], [ [[SRC]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = mul i64 [[OUTER_IV]], -8
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = mul i64 [[OUTER_IV]], -8
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[K_SUB:%.*]] = sub i64 [[K]], [[OUTER_IV]]
 ; CHECK-NEXT:    [[ROW:%.*]] = mul i64 [[OUTER_IV]], [[K_SUB]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DST]], [[SCEVGEP]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[SRC]], [[SCEVGEP2]]
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[INDUCTION_IV]], [[SCEVGEP2]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    [[TMP14:%.*]] = mul i64 [[OUTER_IV]], -8
-; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[TMP1]], [[TMP14]]
-; CHECK-NEXT:    [[STRIDE_CHECK:%.*]] = icmp slt i64 [[TMP15]], 0
-; CHECK-NEXT:    [[TMP16:%.*]] = or i1 [[FOUND_CONFLICT]], [[STRIDE_CHECK]]
-; CHECK-NEXT:    br i1 [[TMP16]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP17:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP17]]
@@ -2557,6 +2548,8 @@ define void @expanded_bounds_non_affine_outer(ptr %dst, ptr %src, i64 %k, i64 %m
 ; CHECK:       [[OUTER_LATCH]]:
 ; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add i64 [[OUTER_IV]], 1
 ; CHECK-NEXT:    [[EC2:%.*]] = icmp eq i64 [[OUTER_IV_NEXT]], [[M]]
+; CHECK-NEXT:    [[SCEVGEP1]] = getelementptr i8, ptr [[INDUCTION_IV]], i64 [[TMP6]]
+; CHECK-NEXT:    [[SCEVGEP7]] = getelementptr i8, ptr [[SCEVGEP]], i64 [[TMP7]]
 ; CHECK-NEXT:    br i1 [[EC2]], label %[[EXIT:.*]], label %[[OUTER]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

@@ -379,6 +379,7 @@ def hlfir_ConcatOp : hlfir_Op<"concat",
 
   let builders = [OpBuilder<(ins "mlir::ValueRange":$strings,"mlir::Value":$len)>];
 
+  let hasCanonicalizer = 1;
   let hasVerifier = 1;
 }
 

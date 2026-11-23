@@ -187,7 +187,6 @@ struct MissingFeatures {
   static bool asmNoConvergent() { return false; }
   static bool asmUnwindClobber() { return false; }
   static bool asmVectorType() { return false; }
-  static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeNoBuiltin() { return false; }
   static bool branchProtection() { return false; }
@@ -277,6 +276,7 @@ struct MissingFeatures {
   static bool peepholeProtection() { return false; }
   static bool pgoUse() { return false; }
   static bool pointerAuthentication() { return false; }
+  static bool pointerFieldProtection() { return false; }
   static bool preservedAccessIndexRegion() { return false; }
   static bool returnValueSlotFeatures() { return false; }
   static bool runCleanupsScope() { return false; }

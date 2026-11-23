@@ -211,6 +211,39 @@ loop.end:
   ret i64 %retval
 }
 
+define i64 @same_exit_block_pre_inc_use1_with_reduction() !dbg !61 {
+; CHECK-DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'
+; CHECK-DEBUG:       LV: Loop passed LoopVectorizationLegality checks!
+; CHECK-DEBUG:       LV: VPlan created successfully. Loop can be vectorized.
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop, !dbg !62
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
+  %red = phi i64 [ %red.next, %loop.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld2 = load i8, ptr %arrayidx1, align 1
+  %ld2.zext = zext i8 %ld2 to i64
+  %red.next = add i64 %red, %ld2.zext
+  %cmp3 = icmp eq i8 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end, !dbg !62
+
+loop.inc:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %loop, label %loop.end, !dbg !62
+
+loop.end:
+  %final.ind = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  %retval = add i64 %red.next, %final.ind
+  ret i64 %retval
+}
 
 ; == SOME ILLEGAL EXAMPLES ==
 
@@ -543,40 +576,6 @@ loop.inc:
 
 loop.end:
   %retval = phi i64 [ %ext, %loop ], [ 67, %loop.inc ]
-  ret i64 %retval
-}
-
-define i64 @same_exit_block_pre_inc_use1_with_reduction() !dbg !61 {
-; CHECK-DEBUG-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'
-; CHECK-DEBUG:       LV: Not vectorizing: Found reduction used on an early exit.
-; CHECK-REMARK:      foo.c:170:3: loop not vectorized: Cannot vectorize early exit loop with reduction used on an early exit
-entry:
-  %p1 = alloca [1024 x i8]
-  %p2 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
-  call void @init_mem(ptr %p2, i64 1024)
-  br label %loop, !dbg !62
-
-loop:
-  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
-  %red = phi i64 [ %red.next, %loop.inc ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
-  %ld1 = load i8, ptr %arrayidx, align 1
-  %arrayidx1 = getelementptr inbounds i8, ptr %p2, i64 %index
-  %ld2 = load i8, ptr %arrayidx1, align 1
-  %ld2.zext = zext i8 %ld2 to i64
-  %red.next = add i64 %red, %ld2.zext
-  %cmp3 = icmp eq i8 %ld1, %ld2
-  br i1 %cmp3, label %loop.inc, label %loop.end, !dbg !62
-
-loop.inc:
-  %index.next = add i64 %index, 1
-  %exitcond = icmp ne i64 %index.next, 67
-  br i1 %exitcond, label %loop, label %loop.end, !dbg !62
-
-loop.end:
-  %final.ind = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
-  %retval = add i64 %red.next, %final.ind
   ret i64 %retval
 }
 

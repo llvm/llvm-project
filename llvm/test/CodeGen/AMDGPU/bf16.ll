@@ -13419,7 +13419,7 @@ define bfloat @v_fadd_bf16_fpimm_0(bfloat %arg0) #0 {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0
+; GFX1250-NEXT:    v_pk_add_bf16 v0, v0, 1.0 op_sel:[0,1] op_sel_hi:[1,0]
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
   %add = fadd bfloat %arg0, 1.0
   ret bfloat %add
@@ -28974,7 +28974,7 @@ define bfloat @v_neg_rsq_bf16(bfloat %x) #0 {
 ; GFX1250FAKE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250FAKE16-NEXT:    v_rsq_bf16_e32 v0, v0
 ; GFX1250FAKE16-NEXT:    v_nop
-; GFX1250FAKE16-NEXT:    s_delay_alu instid0(TRANS32_DEP_1)
+; GFX1250FAKE16-NEXT:    s_wait_alu depctr_va_vdst(0)
 ; GFX1250FAKE16-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
 ; GFX1250FAKE16-NEXT:    s_set_pc_i64 s[30:31]
   %sqrt = call contract bfloat @llvm.sqrt.bf16(bfloat %x)

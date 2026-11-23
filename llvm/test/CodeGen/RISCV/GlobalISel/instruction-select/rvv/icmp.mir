@@ -21,9 +21,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLTU_VV_MF8_:%[0-9]+]]:vr = PseudoVMSLTU_VV_MF8 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLTU_VV_MF8_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s1>) = G_ICMP intpred(ult), %0(<vscale x 1 x s8>), %0
-    $v8 = COPY %1(<vscale x 1 x s1>)
+    %0:vrb(<vscale x 1 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i1>) = G_ICMP intpred(ult), %0(<vscale x 1 x i8>), %0
+    $v8 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -44,9 +44,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLT_VV_MF4_:%[0-9]+]]:vr = PseudoVMSLT_VV_MF4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLT_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s1>) = G_ICMP intpred(slt), %0(<vscale x 2 x s8>), %0
-    $v8 = COPY %1(<vscale x 2 x s1>)
+    %0:vrb(<vscale x 2 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i1>) = G_ICMP intpred(slt), %0(<vscale x 2 x i8>), %0
+    $v8 = COPY %1(<vscale x 2 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -67,9 +67,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLEU_VV_MF2_:%[0-9]+]]:vr = PseudoVMSLEU_VV_MF2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLEU_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s1>) = G_ICMP intpred(uge), %0(<vscale x 4 x s8>), %0
-    $v8 = COPY %1(<vscale x 4 x s1>)
+    %0:vrb(<vscale x 4 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i1>) = G_ICMP intpred(uge), %0(<vscale x 4 x i8>), %0
+    $v8 = COPY %1(<vscale x 4 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -90,9 +90,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLE_VV_M1_:%[0-9]+]]:vr = PseudoVMSLE_VV_M1 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLE_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s1>) = G_ICMP intpred(sge), %0(<vscale x 8 x s8>), %0
-    $v8 = COPY %1(<vscale x 8 x s1>)
+    %0:vrb(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i1>) = G_ICMP intpred(sge), %0(<vscale x 8 x i8>), %0
+    $v8 = COPY %1(<vscale x 8 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -113,9 +113,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLTU_VV_M2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 16 x s1>) = G_ICMP intpred(ugt), %0(<vscale x 16 x s8>), %0
-    $v8 = COPY %1(<vscale x 16 x s1>)
+    %0:vrb(<vscale x 16 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 16 x i1>) = G_ICMP intpred(ugt), %0(<vscale x 16 x i8>), %0
+    $v8 = COPY %1(<vscale x 16 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -136,9 +136,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLT_VV_M4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 32 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 32 x s1>) = G_ICMP intpred(sgt), %0(<vscale x 32 x s8>), %0
-    $v8 = COPY %1(<vscale x 32 x s1>)
+    %0:vrb(<vscale x 32 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 32 x i1>) = G_ICMP intpred(sgt), %0(<vscale x 32 x i8>), %0
+    $v8 = COPY %1(<vscale x 32 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -159,9 +159,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLEU_VV_M8 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 3 /* e8 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 64 x s8>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 64 x s1>) = G_ICMP intpred(ule), %0(<vscale x 64 x s8>), %0
-    $v8 = COPY %1(<vscale x 64 x s1>)
+    %0:vrb(<vscale x 64 x i8>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 64 x i1>) = G_ICMP intpred(ule), %0(<vscale x 64 x i8>), %0
+    $v8 = COPY %1(<vscale x 64 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -182,9 +182,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLE_VV_MF4_:%[0-9]+]]:vr = PseudoVMSLE_VV_MF4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLE_VV_MF4_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s1>) = G_ICMP intpred(sle), %0(<vscale x 1 x s16>), %0
-    $v8 = COPY %1(<vscale x 1 x s1>)
+    %0:vrb(<vscale x 1 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i1>) = G_ICMP intpred(sle), %0(<vscale x 1 x i16>), %0
+    $v8 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -205,9 +205,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSNE_VV_MF2_:%[0-9]+]]:vr = PseudoVMSNE_VV_MF2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSNE_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s1>) = G_ICMP intpred(ne), %0(<vscale x 2 x s16>), %0
-    $v8 = COPY %1(<vscale x 2 x s1>)
+    %0:vrb(<vscale x 2 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i1>) = G_ICMP intpred(ne), %0(<vscale x 2 x i16>), %0
+    $v8 = COPY %1(<vscale x 2 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -228,9 +228,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSEQ_VV_M1_:%[0-9]+]]:vr = PseudoVMSEQ_VV_M1 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSEQ_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s1>) = G_ICMP intpred(eq), %0(<vscale x 4 x s16>), %0
-    $v8 = COPY %1(<vscale x 4 x s1>)
+    %0:vrb(<vscale x 4 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i1>) = G_ICMP intpred(eq), %0(<vscale x 4 x i16>), %0
+    $v8 = COPY %1(<vscale x 4 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -251,9 +251,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLTU_VV_M2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s1>) = G_ICMP intpred(ult), %0(<vscale x 8 x s16>), %0
-    $v8 = COPY %1(<vscale x 8 x s1>)
+    %0:vrb(<vscale x 8 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i1>) = G_ICMP intpred(ult), %0(<vscale x 8 x i16>), %0
+    $v8 = COPY %1(<vscale x 8 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -274,9 +274,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLT_VV_M4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 16 x s1>) = G_ICMP intpred(slt), %0(<vscale x 16 x s16>), %0
-    $v8 = COPY %1(<vscale x 16 x s1>)
+    %0:vrb(<vscale x 16 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 16 x i1>) = G_ICMP intpred(slt), %0(<vscale x 16 x i16>), %0
+    $v8 = COPY %1(<vscale x 16 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -297,9 +297,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLEU_VV_M8 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 4 /* e16 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 32 x s16>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 32 x s1>) = G_ICMP intpred(uge), %0(<vscale x 32 x s16>), %0
-    $v8 = COPY %1(<vscale x 32 x s1>)
+    %0:vrb(<vscale x 32 x i16>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 32 x i1>) = G_ICMP intpred(uge), %0(<vscale x 32 x i16>), %0
+    $v8 = COPY %1(<vscale x 32 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -320,9 +320,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLE_VV_MF2_:%[0-9]+]]:vr = PseudoVMSLE_VV_MF2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLE_VV_MF2_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s1>) = G_ICMP intpred(sge), %0(<vscale x 1 x s32>), %0
-    $v8 = COPY %1(<vscale x 1 x s1>)
+    %0:vrb(<vscale x 1 x i32>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i1>) = G_ICMP intpred(sge), %0(<vscale x 1 x i32>), %0
+    $v8 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -343,9 +343,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSLTU_VV_M1_:%[0-9]+]]:vr = PseudoVMSLTU_VV_M1 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSLTU_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s1>) = G_ICMP intpred(ugt), %0(<vscale x 2 x s32>), %0
-    $v8 = COPY %1(<vscale x 2 x s1>)
+    %0:vrb(<vscale x 2 x i32>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i1>) = G_ICMP intpred(ugt), %0(<vscale x 2 x i32>), %0
+    $v8 = COPY %1(<vscale x 2 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -366,9 +366,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLT_VV_M2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s1>) = G_ICMP intpred(sgt), %0(<vscale x 4 x s32>), %0
-    $v8 = COPY %1(<vscale x 4 x s1>)
+    %0:vrb(<vscale x 4 x i32>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i1>) = G_ICMP intpred(sgt), %0(<vscale x 4 x i32>), %0
+    $v8 = COPY %1(<vscale x 4 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -389,9 +389,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLEU_VV_M4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s1>) = G_ICMP intpred(ule), %0(<vscale x 8 x s32>), %0
-    $v8 = COPY %1(<vscale x 8 x s1>)
+    %0:vrb(<vscale x 8 x i32>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i1>) = G_ICMP intpred(ule), %0(<vscale x 8 x i32>), %0
+    $v8 = COPY %1(<vscale x 8 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -412,9 +412,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLE_VV_M8 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 5 /* e32 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 16 x s1>) = G_ICMP intpred(sle), %0(<vscale x 16 x s32>), %0
-    $v8 = COPY %1(<vscale x 16 x s1>)
+    %0:vrb(<vscale x 16 x i32>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 16 x i1>) = G_ICMP intpred(sle), %0(<vscale x 16 x i32>), %0
+    $v8 = COPY %1(<vscale x 16 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -435,9 +435,9 @@ body:             |
     ; RV64I-NEXT: [[PseudoVMSEQ_VV_M1_:%[0-9]+]]:vr = PseudoVMSEQ_VV_M1 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8 = COPY [[PseudoVMSEQ_VV_M1_]]
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 1 x s1>) = G_ICMP intpred(eq), %0(<vscale x 1 x s64>), %0
-    $v8 = COPY %1(<vscale x 1 x s1>)
+    %0:vrb(<vscale x 1 x i64>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 1 x i1>) = G_ICMP intpred(eq), %0(<vscale x 1 x i64>), %0
+    $v8 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -458,9 +458,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSNE_VV_M2 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 2 x s1>) = G_ICMP intpred(ne), %0(<vscale x 2 x s64>), %0
-    $v8 = COPY %1(<vscale x 2 x s1>)
+    %0:vrb(<vscale x 2 x i64>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 2 x i1>) = G_ICMP intpred(ne), %0(<vscale x 2 x i64>), %0
+    $v8 = COPY %1(<vscale x 2 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -481,9 +481,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLTU_VV_M4 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 4 x s1>) = G_ICMP intpred(ult), %0(<vscale x 4 x s64>), %0
-    $v8 = COPY %1(<vscale x 4 x s1>)
+    %0:vrb(<vscale x 4 x i64>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 4 x i1>) = G_ICMP intpred(ult), %0(<vscale x 4 x i64>), %0
+    $v8 = COPY %1(<vscale x 4 x i1>)
     PseudoRET implicit $v8
 
 ...
@@ -504,9 +504,9 @@ body:             |
     ; RV64I-NEXT: early-clobber %1:vr = PseudoVMSLTU_VV_M8 [[DEF]], [[DEF]], -1 /* vl=VLMAX */, 6 /* e64 */
     ; RV64I-NEXT: $v8 = COPY %1
     ; RV64I-NEXT: PseudoRET implicit $v8
-    %0:vrb(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-    %1:vrb(<vscale x 8 x s1>) = G_ICMP intpred(ult), %0(<vscale x 8 x s64>), %0
-    $v8 = COPY %1(<vscale x 8 x s1>)
+    %0:vrb(<vscale x 8 x i64>) = G_IMPLICIT_DEF
+    %1:vrb(<vscale x 8 x i1>) = G_ICMP intpred(ult), %0(<vscale x 8 x i64>), %0
+    $v8 = COPY %1(<vscale x 8 x i1>)
     PseudoRET implicit $v8
 
 ...
