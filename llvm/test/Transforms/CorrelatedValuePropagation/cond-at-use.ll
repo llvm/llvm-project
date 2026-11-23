@@ -537,13 +537,19 @@ define i16 @umin_freeze_both(i16 %x, i16 %y) {
   ret i16 %sel
 }
 
-; Not folded: the select is beyond the number of uses LVI inspects.
+; The select is several uses away from the min/max; %avail may be undef, so it
+; needs to be frozen.
+; uint64_t refill(uint64_t bits, uint32_t w, int avail) {
+;   int need = avail < 0 ? -avail : 0; // -min(avail, 0)
+;   uint64_t add = avail < 0 ? (uint64_t)w << need : 0;
+;   return bits | add;
+; }
 define i64 @refill(i64 %bits, i32 %w, ptr %availp) {
 ; CHECK-LABEL: @refill(
 ; CHECK-NEXT:    [[AVAIL:%.*]] = load i32, ptr [[AVAILP:%.*]], align 4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AVAIL]], 0
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[AVAIL]], i32 0)
-; CHECK-NEXT:    [[NEED:%.*]] = sub nsw i32 0, [[MIN]]
+; CHECK-NEXT:    [[AVAIL_FR:%.*]] = freeze i32 [[AVAIL]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AVAIL_FR]], 0
+; CHECK-NEXT:    [[NEED:%.*]] = sub nsw i32 0, [[AVAIL_FR]]
 ; CHECK-NEXT:    [[W64:%.*]] = zext i32 [[W:%.*]] to i64
 ; CHECK-NEXT:    [[NEED64:%.*]] = zext nneg i32 [[NEED]] to i64
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[W64]], [[NEED64]]
@@ -553,6 +559,64 @@ define i64 @refill(i64 %bits, i32 %w, ptr %availp) {
 ;
   %avail = load i32, ptr %availp, align 4
   %cmp = icmp slt i32 %avail, 0 ; avail may be undef -> freeze it
+  %min = call i32 @llvm.smin.i32(i32 %avail, i32 0)
+  %need = sub nsw i32 0, %min
+  %w64 = zext i32 %w to i64
+  %need64 = zext nneg i32 %need to i64
+  %shl = shl i64 %w64, %need64
+  %add = select i1 %cmp, i64 %shl, i64 0
+  %or = or i64 %add, %bits
+  ret i64 %or
+}
+
+; The select condition is several uses away from the min/max.
+define i32 @smin_shl_select(i32 %x, i32 noundef %m) {
+; CHECK-LABEL: @smin_shl_select(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[M:%.*]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[M]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SHL]], i32 0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp slt i32 %m, 0
+  %min = call i32 @llvm.smin.i32(i32 %m, i32 0)
+  %neg = sub i32 0, %min
+  %shl = shl i32 %x, %neg
+  %sel = select i1 %cmp, i32 %shl, i32 0
+  ret i32 %sel
+}
+
+; Same as @smin_shl_select, but %m may be undef -> freeze it.
+define i32 @smin_shl_select_freeze(i32 %x, i32 %m) {
+; CHECK-LABEL: @smin_shl_select_freeze(
+; CHECK-NEXT:    [[M_FR:%.*]] = freeze i32 [[M:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[M_FR]], 0
+; CHECK-NEXT:    [[NEG:%.*]] = sub i32 0, [[M_FR]]
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[NEG]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[SHL]], i32 0
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %cmp = icmp slt i32 %m, 0
+  %min = call i32 @llvm.smin.i32(i32 %m, i32 0)
+  %neg = sub i32 0, %min
+  %shl = shl i32 %x, %neg
+  %sel = select i1 %cmp, i32 %shl, i32 0
+  ret i32 %sel
+}
+
+; Same as @refill, but %avail is noundef, so no freeze is needed.
+define i64 @refill_noundef(i64 %bits, i32 %w, i32 noundef %avail) {
+; CHECK-LABEL: @refill_noundef(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[AVAIL:%.*]], 0
+; CHECK-NEXT:    [[NEED:%.*]] = sub nsw i32 0, [[AVAIL]]
+; CHECK-NEXT:    [[W64:%.*]] = zext i32 [[W:%.*]] to i64
+; CHECK-NEXT:    [[NEED64:%.*]] = zext nneg i32 [[NEED]] to i64
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[W64]], [[NEED64]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[CMP]], i64 [[SHL]], i64 0
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[ADD]], [[BITS:%.*]]
+; CHECK-NEXT:    ret i64 [[OR]]
+;
+  %cmp = icmp slt i32 %avail, 0
   %min = call i32 @llvm.smin.i32(i32 %avail, i32 0)
   %need = sub nsw i32 0, %min
   %w64 = zext i32 %w to i64

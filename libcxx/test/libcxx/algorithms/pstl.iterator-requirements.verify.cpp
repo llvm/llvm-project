@@ -282,6 +282,20 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    (void)std::remove_copy(
+        pol, non_fwd, non_fwd, out, val);                 // expected-error@*:* {{static assertion failed: remove_copy}}
+    (void)std::remove_copy(pol, it, it, non_fwd, val);    // expected-error@*:* {{static assertion failed: remove_copy}}
+    (void)std::remove_copy(pol, it, it, non_output, val); // expected-error@*:* {{static assertion failed: remove_copy}}
+
+    (void)std::remove_copy_if(
+        pol, non_fwd, non_fwd, out, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+    (void)std::remove_copy_if(
+        pol, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+    (void)std::remove_copy_if(
+        pol, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: remove_copy_if}}
+  }
+
+  {
     (void)std::replace_if(
         pol, non_fwd, non_fwd, pred, val);               // expected-error@*:* {{static assertion failed: replace_if}}
     (void)std::replace(pol, non_fwd, non_fwd, val, val); // expected-error@*:* {{static assertion failed: replace}}
